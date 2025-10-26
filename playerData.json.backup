@@ -883,10 +883,12 @@
           "storeHistory": [],
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "C1",
+              "currentLocation": "E2",
               "exploredCoordinates": [
                 "C2",
-                "C1"
+                "C1",
+                "F2",
+                "E2"
               ],
               "itemsFound": [],
               "movementHistory": [
@@ -904,6 +906,16 @@
                   "from": "C2",
                   "to": "C1",
                   "timestamp": "2025-10-26T10:14:30.888Z"
+                },
+                {
+                  "from": "C1",
+                  "to": "F2",
+                  "timestamp": "2025-10-26T10:20:27.221Z"
+                },
+                {
+                  "from": "F2",
+                  "to": "E2",
+                  "timestamp": "2025-10-26T10:20:58.633Z"
                 }
               ]
             }
@@ -8980,14 +8992,15 @@
           ],
           "mapProgress": {
             "map_7x7_1758651530323": {
-              "currentLocation": "E4",
+              "currentLocation": "F3",
               "exploredCoordinates": [
                 "A1",
                 "B2",
                 "C3",
                 "D3",
                 "E3",
-                "E4"
+                "E4",
+                "F3"
               ],
               "itemsFound": [],
               "movementHistory": [
@@ -9025,6 +9038,11 @@
                   "from": "E3",
                   "to": "E4",
                   "timestamp": "2025-09-23T18:55:17.365Z"
+                },
+                {
+                  "from": "E4",
+                  "to": "F3",
+                  "timestamp": "2025-10-26T10:21:48.617Z"
                 }
               ]
             }

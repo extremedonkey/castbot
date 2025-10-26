@@ -32115,11 +32115,12 @@ Are you sure you want to continue?`;
             mode: 'player_view'
           });
 
-          // Send follow-up via webhook using PATCH to edit deferred response
-          console.log('🔍 Sending webhook follow-up for coordinate modal');
+          // Send follow-up via webhook using POST to create new follow-up message
+          // POST is more reliable than PATCH for deferred interactions and doesn't require edit permissions
+          console.log('🔍 Sending webhook follow-up for coordinate modal via POST');
           const webhookUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`;
           const webhookResponse = await fetch(webhookUrl, {
-            method: 'PATCH',
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(ui)
           });
@@ -32133,11 +32134,11 @@ Are you sure you want to continue?`;
         } catch (error) {
           console.error('❌ ERROR in deferred coordinate modal:', error.message, error);
 
-          // Try to send error follow-up via webhook
+          // Try to send error follow-up via webhook using POST
           try {
             const errorUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`;
             const errorResponse = await fetch(errorUrl, {
-              method: 'PATCH',
+              method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 content: `❌ Error: ${error.message}`,
@@ -32194,11 +32195,12 @@ Are you sure you want to continue?`;
             mode: 'player_view'
           });
 
-          // Send follow-up via webhook using PATCH to edit deferred response
-          console.log('🔍 Sending webhook follow-up for stamina modal');
+          // Send follow-up via webhook using POST to create new follow-up message
+          // POST is more reliable than PATCH for deferred interactions and doesn't require edit permissions
+          console.log('🔍 Sending webhook follow-up for stamina modal via POST');
           const webhookUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`;
           const webhookResponse = await fetch(webhookUrl, {
-            method: 'PATCH',
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(ui)
           });
@@ -32212,11 +32214,11 @@ Are you sure you want to continue?`;
         } catch (error) {
           console.error('❌ ERROR in deferred stamina modal:', error.message, error);
 
-          // Try to send error follow-up via webhook
+          // Try to send error follow-up via webhook using POST
           try {
             const errorUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`;
             const errorResponse = await fetch(errorUrl, {
-              method: 'PATCH',
+              method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 content: `❌ Error: ${error.message}`,
@@ -32231,7 +32233,7 @@ Are you sure you want to continue?`;
           }
         }
       })(); // Fire and forget
-      
+
     } else if (custom_id.startsWith('map_admin_currency_modal_')) {
       // Handle currency edit submission
       try {
