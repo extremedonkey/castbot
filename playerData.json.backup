@@ -883,9 +883,10 @@
           "storeHistory": [],
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "C2",
+              "currentLocation": "C1",
               "exploredCoordinates": [
-                "C2"
+                "C2",
+                "C1"
               ],
               "itemsFound": [],
               "movementHistory": [
@@ -898,6 +899,11 @@
                   "from": "C2",
                   "to": "C2",
                   "timestamp": "2025-10-20T17:41:06.489Z"
+                },
+                {
+                  "from": "C2",
+                  "to": "C1",
+                  "timestamp": "2025-10-26T10:14:30.888Z"
                 }
               ]
             }
@@ -8944,9 +8950,9 @@
       },
       "1086246253819613274": {
         "safari": {
-          "currency": 40,
+          "currency": 118,
           "history": [],
-          "lastInteraction": 1758653056674,
+          "lastInteraction": 1761473901084,
           "achievements": [],
           "inventory": {
             "super_potion_322766": {
