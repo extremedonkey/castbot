@@ -834,115 +834,97 @@ Before deploying conversion to production, verify:
 
 ---
 
-## 🔄 Discord Role Operations: Metadata vs Physical Consolidation
+## 🔄 Discord Role Renaming: Standard Name Enforcement
 
-### CRITICAL DESIGN DECISION REQUIRED
+### CONFIRMED DESIGN: Rename Existing Roles to New Standard
 
-This section clarifies TWO DIFFERENT approaches to conversion. **We must choose which one to implement:**
+**Based on Reece's clarification:** The conversion will **rename existing Discord roles** to match `dstState.json` role names. Multiple roles can have the same name (Discord allows this) - admin cleans up duplicates manually.
+
+**NOT doing:** Role merging, player migration, role deletion
+**YES doing:** Role renaming via Discord API, adding timezoneId metadata
 
 ---
 
-### Option A: Metadata-Only Conversion (CURRENT DESIGN - LOW RISK)
+**Example scenario** (matching Reece's test):
 
-**What happens:**
-- ✅ Discord roles kept EXACTLY as-is ("PST", "PDT" remain separate)
-- ✅ Only playerData.json updated (add `timezoneId` field)
-- ✅ No Discord API role modifications
-- ✅ Players keep their current role assignments
+### BEFORE Conversion
 
-**Visual representation:**
+**Discord Server Roles:**
+- Role ID `1320094467486908507`: Name = "PST (UTC-8)"
+- Role ID `1335635312508145728`: Name = "MST (UTC-7)"
+- Role ID `1320094564731850803`: Name = "CST (UTC-6)"
 
-```mermaid
-graph TB
-    subgraph Discord["Discord Server (UNCHANGED)"]
-        R1["Role: PST<br/>12 players assigned"]
-        R2["Role: PDT<br/>8 players assigned"]
-    end
-
-    subgraph PlayerData["playerData.json (UPDATED)"]
-        M1["roleId_PST:<br/>{offset: -8, timezoneId: 'PT'}"]
-        M2["roleId_PDT:<br/>{offset: -7, timezoneId: 'PT'}"]
-    end
-
-    subgraph DST["dstState.json"]
-        PT["PT: currentOffset varies<br/>(DST toggle changes this)"]
-    end
-
-    R1 --> M1
-    R2 --> M2
-    M1 --> PT
-    M2 --> PT
-
-    style Discord fill:#ffd43b
-    style PlayerData fill:#51cf66
-    style PT fill:#51cf66
-```
-
-**Conversion code (simplified):**
-```javascript
-// NO Discord API modifications!
-async function convertExistingTimezones_MetadataOnly(guild) {
-  const timezones = playerData[guild.id].timezones;
-
-  for (const [roleId, tzData] of Object.entries(timezones)) {
-    const role = await guild.roles.fetch(roleId);  // Read-only
-    const timezoneId = detectTimezoneId(role.name, tzData.offset);
-
-    if (timezoneId) {
-      // ONLY update playerData, NOT Discord
-      tzData.timezoneId = timezoneId;
-    }
-  }
-
-  await savePlayerData(playerData);
-  // Discord roles completely untouched!
+**playerData.json:**
+```json
+{
+  "1320094467486908507": { "offset": -8 },
+  "1335635312508145728": { "offset": -7 },
+  "1320094564731850803": { "offset": -6 }
 }
 ```
 
-**Pros:**
-- ✅ **Zero Discord disruption** - Roles never change
-- ✅ **Instant rollback** - Just remove timezoneId field
-- ✅ **No permission issues** - Don't need MANAGE_ROLES
-- ✅ **Players unaffected** - Keep existing assignments
-- ✅ **Safe to test** - Can't break anything
+### AFTER Conversion
 
-**Cons:**
-- ❌ **Messy role list** - Server still has PST + PDT roles
-- ❌ **Confusing for admins** - Which role to assign?
-- ❌ **No visual cleanup** - Old dual-role structure visible
+**Discord Server Roles (renamed via API):**
+- Role ID `1320094467486908507`: Name = **"PST / PDT"** ✅ (renamed!)
+- Role ID `1335635312508145728`: Name = **"MST / MDT"** ✅ (renamed!)
+- Role ID `1320094564731850803`: Name = **"CST / CDT"** ✅ (renamed!)
 
-**When to use:**
-- Initial rollout (minimize risk)
-- Servers with complex role hierarchies
-- Servers where admin doesn't want role changes
+**playerData.json (enhanced with metadata):**
+```json
+{
+  "1320094467486908507": {
+    "offset": -8,
+    "timezoneId": "PT",
+    "dstObserved": true,
+    "standardName": "PST (UTC-8)"
+  },
+  "1335635312508145728": {
+    "offset": -7,
+    "timezoneId": "MT",
+    "dstObserved": true,
+    "standardName": "MST (UTC-7)"
+  },
+  "1320094564731850803": {
+    "offset": -6,
+    "timezoneId": "CT",
+    "dstObserved": true,
+    "standardName": "CST (UTC-6)"
+  }
+}
+```
+
+**Key points:**
+- ✅ Role IDs unchanged (players keep assignments)
+- ✅ Role names updated to standard format
+- ✅ Multiple roles can have same name (e.g., both PST and PDT → "PST / PDT")
+- ✅ Admin manually deletes duplicates later if desired
 
 ---
 
-### Option B: Physical Role Consolidation (HIGH RISK - NOT YET DESIGNED)
-
-**What happens:**
-- 🔄 Discord roles renamed/consolidated via API
-- 🔄 "PST" + "PDT" → single "PST / PDT" role
-- 🔄 Players migrated to new role
-- 🔄 Old roles optionally deleted
-
-**Visual representation:**
+### Visual Representation
 
 ```mermaid
 flowchart TB
-    subgraph Before["BEFORE: Discord Server"]
-        B1["Role: PST<br/>12 players"]
-        B2["Role: PDT<br/>8 players"]
+    subgraph Before["BEFORE: Discord + playerData"]
+        D1["Discord Role<br/>ID: 123<br/>Name: PST (UTC-8)"]
+        D2["Discord Role<br/>ID: 456<br/>Name: PDT (UTC-7)"]
+        P1["playerData<br/>123: {offset: -8}"]
+        P2["playerData<br/>456: {offset: -7}"]
     end
 
     subgraph Process["Conversion Process"]
-        C1[Rename PST → 'PST / PDT']
-        C2[Migrate PDT players → PST]
-        C3[Delete PDT role]
+        C1[1. Detect timezone<br/>PST → PT]
+        C2[2. Lookup dstState<br/>PT.roleFormat = 'PST / PDT']
+        C3[3. Rename role via API<br/>role.setName]
+        C4[4. Add timezoneId<br/>to playerData]
     end
 
-    subgraph After["AFTER: Discord Server"]
-        A1["Role: PST / PDT<br/>20 players (merged!)"]
+    subgraph After["AFTER: Discord + playerData"]
+        A1["Discord Role<br/>ID: 123<br/>Name: PST / PDT ✅"]
+        A2["Discord Role<br/>ID: 456<br/>Name: PST / PDT ✅"]
+        A3["playerData<br/>123: {offset: -8, timezoneId: PT}"]
+        A4["playerData<br/>456: {offset: -7, timezoneId: PT}"]
     end
 
     Before --> Process
@@ -953,150 +935,345 @@ flowchart TB
     style After fill:#51cf66
 ```
 
-**Conversion code (conceptual - NOT IMPLEMENTED):**
+---
+
+### Technical Implementation
+
+**Discord API Method:** `role.setName(newName)`
+
+**Documentation:** https://discord.com/developers/docs/resources/guild#modify-guild-role
+
+**Existing pattern in CastBot:** executeSetup() already creates roles, follows similar pattern
+
+**Conversion algorithm:**
+
 ```javascript
-// ⚠️ HIGH RISK - Modifies Discord directly!
-async function convertExistingTimezones_PhysicalConsolidation(guild) {
-  const consolidationPlan = {
-    PT: { roles: ['PST', 'PDT'], target: 'PST / PDT' },
-    MT: { roles: ['MST', 'MDT'], target: 'MST / MDT' },
-    // ...
+/**
+ * Convert existing timezone roles to new standard
+ * - Renames Discord roles to match dstState.json roleFormat
+ * - Adds timezoneId to playerData entries
+ * - Does NOT delete roles, does NOT migrate players
+ */
+async function convertExistingTimezones(guild) {
+  const dstState = await loadDSTState();
+  const playerData = await loadPlayerData();
+  const timezones = playerData[guild.id]?.timezones || {};
+
+  const results = {
+    renamed: [],      // Roles renamed successfully
+    unchanged: [],    // Role name already correct
+    unmapped: [],     // Couldn't detect timezone
+    failed: []        // API error during rename
   };
 
-  for (const [tzId, plan] of Object.entries(consolidationPlan)) {
-    // Step 1: Find roles to consolidate
-    const rolesToMerge = [];
-    for (const roleName of plan.roles) {
-      const role = guild.roles.cache.find(r => r.name === roleName);
-      if (role) rolesToMerge.push(role);
+  for (const [roleId, tzData] of Object.entries(timezones)) {
+    // Skip if already converted
+    if (tzData.timezoneId) {
+      console.log(`✅ Role ${roleId} already has timezoneId, skipping`);
+      continue;
     }
 
-    if (rolesToMerge.length === 0) continue;
-
-    // Step 2: Create or rename to new standard name
-    let targetRole = guild.roles.cache.find(r => r.name === plan.target);
-
-    if (!targetRole) {
-      // Option 2a: Rename first role
-      targetRole = rolesToMerge[0];
-      await targetRole.setName(plan.target);
+    // Step 1: Fetch role from Discord API
+    const role = await guild.roles.fetch(roleId).catch(() => null);
+    if (!role) {
+      console.log(`⚠️ Role ${roleId} no longer exists in Discord`);
+      continue;
     }
 
-    // Step 3: Migrate players from other roles
-    for (const oldRole of rolesToMerge.slice(1)) {
-      for (const member of oldRole.members.values()) {
-        await member.roles.add(targetRole);
-        await member.roles.remove(oldRole);
+    // Step 2: Detect timezone from name + offset
+    const timezoneId = detectTimezoneId(role.name, tzData.offset);
+    if (!timezoneId) {
+      results.unmapped.push({ roleId, name: role.name, offset: tzData.offset });
+      console.log(`❌ Could not detect timezone for role "${role.name}" (offset: ${tzData.offset})`);
+      continue;
+    }
+
+    // Step 3: Look up new role name from dstState.json
+    const newRoleName = dstState[timezoneId].roleFormat;
+
+    // Step 4: Rename role if needed
+    if (role.name !== newRoleName) {
+      try {
+        await role.setName(newRoleName);
+        console.log(`🔄 Renamed role: "${role.name}" → "${newRoleName}" (ID: ${roleId})`);
+        results.renamed.push({
+          roleId,
+          oldName: role.name,
+          newName: newRoleName,
+          timezoneId
+        });
+      } catch (error) {
+        console.error(`❌ Failed to rename role ${roleId}:`, error);
+        results.failed.push({ roleId, name: role.name, error: error.message });
+        continue;
       }
-
-      // Step 4: Delete old role (DESTRUCTIVE!)
-      await oldRole.delete('Timezone consolidation');
+    } else {
+      results.unchanged.push({ roleId, name: role.name, timezoneId });
+      console.log(`✅ Role "${role.name}" already has correct name`);
     }
 
-    // Step 5: Update playerData
-    playerData[guild.id].timezones[targetRole.id] = {
-      offset: tzData.standardOffset,
-      timezoneId: tzId
-    };
+    // Step 5: Add metadata to playerData
+    tzData.timezoneId = timezoneId;
+    tzData.dstObserved = dstState[timezoneId].dstObserved;
+    tzData.standardName = dstState[timezoneId].standardName;
+  }
+
+  // Step 6: Save updated playerData
+  await savePlayerData(playerData);
+
+  return results;
+}
+```
+
+---
+
+### Conversion Report Example
+
+Based on Reece's test server example:
+
+```
+🔄 Timezone Conversion Results for 'EpochORG S7: Rumrunners':
+
+✅ Renamed 13 roles to new standard:
+  - "PST (UTC-8)" → "PST / PDT" (timezoneId: PT)
+  - "MST (UTC-7)" → "MST / MDT" (timezoneId: MT)
+  - "CST (UTC-6)" → "CST / CDT" (timezoneId: CT)
+  - "EST (UTC-5)" → "EST / EDT" (timezoneId: ET)
+  - "ADT (UTC-3)" → "AST / ADT" (timezoneId: AT)
+  - "GMT (UTC+0)" → "GMT / BST" (timezoneId: GMT)
+  - "BST (UTC+1)" → "GMT / BST" (timezoneId: GMT)
+  - "CEST (UTC+2)" → "CET / CEST" (timezoneId: CET)
+  - "IST (UTC+5:30)" → "IST" (timezoneId: IST)
+  - "GMT+8 (UTC+8)" → "GMT+8" (timezoneId: GMT8)
+  - "AEST (UTC+11)" → "AEST / AEDT" (timezoneId: AEST)
+  - "NZT (UTC+13)" → "NZST / NZDT" (timezoneId: NZST)
+  - "NZDT (UTC+13)" → "NZST / NZDT" (timezoneId: NZST)
+
+⚠️ 0 roles could not be mapped
+❌ 0 rename operations failed
+
+📊 Summary:
+  - Old format roles: 13
+  - Renamed successfully: 13
+  - Duplicate names after conversion: 2 pairs
+    → "GMT / BST" (2 roles) - admin can manually delete one
+    → "NZST / NZDT" (2 roles) - admin can manually delete one
+
+✅ All roles now linked to dstState.json via timezoneId
+✅ DST toggle will work for all converted roles
+```
+
+---
+
+### Permission Requirements
+
+**Discord API Permission:** `MANAGE_ROLES` (0x10000000)
+
+**Check in executeSetup():**
+```javascript
+// Check if bot has permission to rename roles
+const botMember = await guild.members.fetch(client.user.id);
+if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) {
+  console.warn('⚠️ Bot lacks MANAGE_ROLES permission - cannot rename roles');
+  // Skip renaming, only add timezoneId metadata
+  return { renamed: [], permissionError: true };
+}
+```
+
+**CastBot likely already has this** - executeSetup() creates roles, which requires same permission.
+
+---
+
+### Edge Cases Handled
+
+#### Case 1: Duplicate Names After Conversion
+
+**Scenario:** Server has "PST (UTC-8)" and "PDT (UTC-7)", both rename to "PST / PDT"
+
+**Outcome:**
+- ✅ Both roles exist with same name (Discord allows this)
+- ✅ Both linked to timezoneId "PT"
+- ✅ DST toggle updates both simultaneously
+- ✅ Admin sees duplicate in role list, can manually delete one
+
+**No code changes needed** - Discord natively supports duplicate role names.
+
+#### Case 2: Role Name Already Correct
+
+**Scenario:** Server has "PST / PDT" (already using new format)
+
+**Outcome:**
+```javascript
+if (role.name === newRoleName) {
+  // Skip rename, just add timezoneId
+  results.unchanged.push({ roleId, name: role.name });
+}
+```
+
+#### Case 3: Role Deleted Between Detection and Rename
+
+**Scenario:** Admin deletes role during conversion
+
+**Outcome:**
+```javascript
+try {
+  await role.setName(newRoleName);
+} catch (error) {
+  // Discord API returns 404 or 403
+  results.failed.push({ roleId, error: error.message });
+  // Continue with next role, don't crash
+}
+```
+
+#### Case 4: Discord Rate Limit Hit
+
+**Scenario:** 50+ roles renamed in quick succession
+
+**Outcome:**
+```javascript
+// Add delay between renames to avoid rate limit
+for (const [roleId, tzData] of Object.entries(timezones)) {
+  // ... rename logic ...
+  await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
+}
+```
+
+**Discord rate limit:** 50 modifications per 10 seconds per guild
+**Our delay:** 5 renames/second = well under limit
+
+---
+
+### Integration with executeSetup()
+
+**Location:** `roleManager.js:583` (executeSetup function)
+
+**Add conversion call BEFORE role creation:**
+
+```javascript
+async function executeSetup(guildId, guild, options = {}) {
+  console.log(`🔍 DEBUG: Starting role setup for guild ${guildId}`);
+
+  const playerData = await loadPlayerData();
+  const guildData = playerData[guildId] || {};
+  const currentTimezones = guildData.timezones || {};
+
+  // ✅ NEW: Convert existing roles to new standard
+  if (options.convertTimezones !== false) {
+    console.log('🔄 Converting existing timezone roles to new standard...');
+    const conversionResults = await convertExistingTimezones(guild);
+
+    console.log(`✅ Conversion complete:`);
+    console.log(`   Renamed: ${conversionResults.renamed.length} roles`);
+    console.log(`   Unchanged: ${conversionResults.unchanged.length} roles`);
+    console.log(`   Unmapped: ${conversionResults.unmapped.length} roles`);
+    console.log(`   Failed: ${conversionResults.failed.length} roles`);
+  }
+
+  // EXISTING: Create missing roles
+  console.log('🔍 DEBUG: Processing timezone roles...');
+  for (const timezone of STANDARD_TIMEZONE_ROLES) {
+    // ... existing logic continues ...
   }
 }
 ```
 
+**Conversion runs automatically** on every setup execution, but:
+- Idempotent (safe to re-run)
+- Skips already-converted roles
+- Only renames roles that match patterns
+
+---
+
+### Safety Features
+
+#### 1. Idempotent Operation
+
+```javascript
+// Already converted? Skip
+if (tzData.timezoneId) {
+  console.log(`✅ Role ${roleId} already has timezoneId, skipping`);
+  continue;
+}
+```
+
+#### 2. Non-Destructive (No Deletion)
+
+- ✅ Roles renamed, NOT deleted
+- ✅ Players keep role assignments
+- ✅ Admin can manually clean up duplicates
+- ✅ Reversible (can rename back if needed)
+
+#### 3. Error Isolation
+
+```javascript
+// One role failure doesn't stop conversion
+try {
+  await role.setName(newRoleName);
+} catch (error) {
+  results.failed.push({ roleId, error });
+  continue; // Process next role
+}
+```
+
+#### 4. Permission Checking
+
+```javascript
+// Gracefully degrade if no permission
+if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) {
+  // Still add timezoneId metadata
+  // Just skip renaming
+}
+```
+
+---
+
+### Pros and Cons
+
 **Pros:**
-- ✅ **Clean role list** - Only "PST / PDT" visible
-- ✅ **Clear for admins** - One role per timezone
-- ✅ **Visual consistency** - Matches new standard
-- ✅ **Eliminates confusion** - No more "which role to pick?"
+- ✅ **Standard role names** - All servers use "PST / PDT" format
+- ✅ **Non-destructive** - Roles renamed, not deleted
+- ✅ **Players unaffected** - Keep their role assignments
+- ✅ **Idempotent** - Safe to re-run multiple times
+- ✅ **Moderate risk** - Renaming is reversible
+- ✅ **Duplicate handling** - Discord allows same names, admin cleans up
+- ✅ **DST toggle ready** - All roles linked to dstState.json
+- ✅ **Permission check** - Gracefully degrades if lacking MANAGE_ROLES
 
 **Cons:**
-- ❌ **HIGH RISK** - Role deletion is irreversible
-- ❌ **Player migration complexity** - Must reassign all players
-- ❌ **Audit log spam** - Every player gets role change notification
-- ❌ **Slow operation** - Discord rate limits (50 changes/sec)
-- ❌ **Requires MANAGE_ROLES permission** - CastBot might not have it
-- ❌ **Rollback difficult** - Can't undo role deletion
-- ❌ **Edge cases:** Role position/permissions/color lost during migration
+- ⚠️ **Duplicate role names** - Both PST and PDT become "PST / PDT"
+- ⚠️ **Admin cleanup needed** - Manual deletion of duplicates
+- ⚠️ **Requires MANAGE_ROLES** - Won't rename without permission
+- ⚠️ **Discord rate limits** - Slow down for 50+ roles
 
-**Critical risks:**
-1. **Role hierarchy preserved?** - If PST is above/below PDT, which position wins?
-2. **Role permissions?** - Does PST have special permissions that PDT doesn't?
-3. **Role color?** - PST might be red, PDT blue - which color to keep?
-4. **Concurrent changes?** - What if admin renames role during conversion?
-5. **Partial failure?** - What if 500 player migrations, 250 succeed then Discord rate limit hits?
-
-**When to use:**
-- ONLY after extensive testing
-- Servers that explicitly request cleanup
-- With admin confirmation dialog first
-
----
-
-### Comparison Table
-
-| Aspect | Option A: Metadata-Only | Option B: Physical Consolidation |
-|--------|-------------------------|-----------------------------------|
-| **Discord roles** | Unchanged | Renamed/deleted |
-| **Player assignments** | Unchanged | Migrated |
-| **Risk level** | LOW | HIGH |
-| **Rollback** | Easy (remove field) | Hard (can't restore deleted roles) |
-| **Implementation time** | 30 minutes | 2-3 hours + extensive testing |
-| **Permissions required** | None (read-only) | MANAGE_ROLES |
-| **Visual cleanup** | No | Yes |
-| **Testing needed** | Minimal | Extensive |
-| **Recommended for** | Initial rollout | Future enhancement (optional) |
-
----
-
-### Recommendation: Start with Option A, Optionally Add Option B Later
-
-**Phase 2b Implementation Plan:**
-1. **IMPLEMENT:** Option A (metadata-only) - Safe, fast, reversible
-2. **DEPLOY:** Test on production servers
-3. **EVALUATE:** Gather feedback on messy role lists
-4. **DECIDE:** If needed, design Option B as separate feature
-
-**If implementing Option B later:**
-- Make it **opt-in** via button in Production Menu
-- Show **preview of changes** before executing
-- Require **explicit admin confirmation**
-- Add **progress tracking** (X of Y players migrated)
-- Include **error recovery** (partial migration handling)
-
----
-
-### Question for Reece: Which Option Did You Expect?
-
-Based on your comment:
-> "my expectation is that if a server had a role called 'PST' and another role called 'PDT (UTC-7)', CastBot would interact with the discord API to update both to our new standard (PST / PDT from memory)"
-
-**This sounds like you're expecting Option B** (physical consolidation), but the document so far describes **Option A** (metadata-only).
-
-**Clarifying questions:**
-1. **Do you want Discord roles renamed?** (PST → PST / PDT)
-2. **Do you want old roles deleted?** (Delete PDT after migrating players)
-3. **Or is metadata-only acceptable?** (Keep PST, PDT separate, just link to same timezoneId)
-
-**My recommendation:** Start with Option A (metadata-only) for safety, then add Option B as optional cleanup feature if desired.
+**Risk Assessment: MODERATE**
+- Lower than role deletion (reversible)
+- Higher than metadata-only (touches Discord)
+- Acceptable for production rollout
 
 ---
 
 ## 🎓 Key Takeaways
 
 `★ Insight ─────────────────────────────────────`
-The conversion process is **low-risk** because it's **additive, not destructive**. We're not deleting roles, not moving players, not changing Discord - we're just adding a `timezoneId` field that links existing roles to the global DST state. The many-to-many mapping means players with the "wrong" seasonal variant (PST in summer) automatically get the correct time when admin toggles DST.
+The conversion **renames Discord roles** to standard format and adds `timezoneId` metadata. Multiple roles can have the same name (e.g., both PST and PDT → "PST / PDT") - Discord allows this. Admin manually cleans up duplicates. No player migration, no role deletion - just renaming + metadata enhancement.
 `─────────────────────────────────────────────────`
 
 **The genius of this design:**
-1. Players keep their current roles (no disruption)
-2. Wrong variant choices auto-fix (improves data quality)
-3. Admin controls DST globally (one toggle, all servers update)
-4. Backwards compatible (legacy offset still works)
-5. Idempotent (safe to run multiple times)
+1. **Standard names** - All servers use "PST / PDT" format from dstState.json
+2. **Players unaffected** - Keep their role assignments (no migration)
+3. **Non-destructive** - Roles renamed, not deleted (reversible)
+4. **DST toggle ready** - All roles linked to global state
+5. **Duplicate handling** - Discord supports same names, admin cleans up later
+6. **Idempotent** - Safe to re-run multiple times
 
-**Next steps:** Implement Phase 2b (conversion function) per RaP 0990 lines 2552-2617.
+**Implementation priority:**
+1. **Phase 2b** - Implement `convertExistingTimezones()` function
+2. **Test** - Run on test servers, verify role renaming works
+3. **Deploy** - Integrate into `executeSetup()`, roll out to production
+4. **Monitor** - Track conversion success rates, handle edge cases
 
 ---
 
-**Document Version:** 1.0
+**Document Version:** 2.0 (Revised based on Reece's clarification)
 **Author:** Claude Code
-**Review Status:** Awaiting Reece approval before implementation
+**Review Status:** Design confirmed - ready for implementation
