@@ -32076,97 +32076,131 @@ Are you sure you want to continue?`;
       }
     } else if (custom_id.startsWith('map_admin_coordinate_modal_')) {
       // Handle player move coordinate submission
-      try {
-        const targetUserId = custom_id.split('_').pop();
-        const guildId = req.body.guild_id;
-        const coordinate = components[0].components[0].value?.trim().toUpperCase();
-        
-        console.log(`🛡️ Processing map admin move to ${coordinate} for user ${targetUserId}`);
-        
-        // Validate coordinate format
-        if (!coordinate.match(/^[A-Z][1-9]\d?$/)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Invalid coordinate format. Use letter + number (e.g., B3, D5).',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        const { movePlayerToCoordinate, createMapAdminUI } = await import('./safariMapAdmin.js');
-        
-        await movePlayerToCoordinate(guildId, targetUserId, coordinate, client);
-        
-        // Return updated player view
-        const ui = await createMapAdminUI({
-          guildId,
-          userId: targetUserId,
-          mode: 'player_view'
-        });
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: ui
-        });
-        
-      } catch (error) {
-        console.error('Error in map_admin_coordinate_modal:', error);
+      const targetUserId = custom_id.split('_').pop();
+      const guildId = req.body.guild_id;
+      const coordinate = components[0].components[0].value?.trim().toUpperCase();
+
+      console.log(`🛡️ Processing map admin move to ${coordinate} for user ${targetUserId}`);
+
+      // Validate coordinate format immediately
+      if (!coordinate.match(/^[A-Z][1-9]\d?$/)) {
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `❌ Error: ${error.message}`,
+            content: '❌ Invalid coordinate format. Use letter + number (e.g., B3, D5).',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
       }
+
+      // ✅ Send deferred response immediately (within 3 seconds)
+      res.send({
+        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+
+      // ✅ Execute long-running operations in background with webhook follow-up
+      (async () => {
+        try {
+          const { movePlayerToCoordinate, createMapAdminUI } = await import('./safariMapAdmin.js');
+
+          await movePlayerToCoordinate(guildId, targetUserId, coordinate, client);
+
+          // Create updated UI
+          const ui = await createMapAdminUI({
+            guildId,
+            userId: targetUserId,
+            mode: 'player_view'
+          });
+
+          // Send follow-up via webhook
+          await fetch(`https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(ui)
+          });
+
+          console.log(`✅ SUCCESS: Moved player ${targetUserId} to ${coordinate}`);
+        } catch (error) {
+          console.error('❌ ERROR in deferred coordinate modal:', error);
+
+          // Send error follow-up via webhook
+          await fetch(`https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: `❌ Error: ${error.message}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            })
+          });
+        }
+      })(); // Fire and forget
       
     } else if (custom_id.startsWith('map_admin_stamina_modal_')) {
       // Handle stamina set submission
-      try {
-        const targetUserId = custom_id.split('_').pop();
-        const guildId = req.body.guild_id;
-        const amount = parseInt(components[0].components[0].value?.trim());
-        
-        console.log(`🛡️ Processing stamina set to ${amount} for user ${targetUserId}`);
-        
-        // Allow 99 as special test value for unlimited stamina
-        if (isNaN(amount) || amount < 0 || (amount > 10 && amount !== 99)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Invalid amount. Please enter a number between 0 and 10 (or 99 for test mode).',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        const { setPlayerStamina, createMapAdminUI } = await import('./safariMapAdmin.js');
-        
-        await setPlayerStamina(guildId, targetUserId, amount);
-        
-        // Return updated player view
-        const ui = await createMapAdminUI({
-          guildId,
-          userId: targetUserId,
-          mode: 'player_view'
-        });
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: ui
-        });
-        
-      } catch (error) {
-        console.error('Error in map_admin_stamina_modal:', error);
+      const targetUserId = custom_id.split('_').pop();
+      const guildId = req.body.guild_id;
+      const amount = parseInt(components[0].components[0].value?.trim());
+
+      console.log(`🛡️ Processing stamina set to ${amount} for user ${targetUserId}`);
+
+      // Validate amount immediately
+      if (isNaN(amount) || amount < 0 || (amount > 10 && amount !== 99)) {
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `❌ Error: ${error.message}`,
+            content: '❌ Invalid amount. Please enter a number between 0 and 10 (or 99 for test mode).',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
       }
+
+      // ✅ Send deferred response immediately (within 3 seconds)
+      res.send({
+        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+
+      // ✅ Execute long-running operations in background with webhook follow-up
+      (async () => {
+        try {
+          const { setPlayerStamina, createMapAdminUI } = await import('./safariMapAdmin.js');
+
+          await setPlayerStamina(guildId, targetUserId, amount);
+
+          // Create updated UI
+          const ui = await createMapAdminUI({
+            guildId,
+            userId: targetUserId,
+            mode: 'player_view'
+          });
+
+          // Send follow-up via webhook
+          await fetch(`https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(ui)
+          });
+
+          console.log(`✅ SUCCESS: Set stamina for player ${targetUserId} to ${amount}`);
+        } catch (error) {
+          console.error('❌ ERROR in deferred stamina modal:', error);
+
+          // Send error follow-up via webhook
+          await fetch(`https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: `❌ Error: ${error.message}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            })
+          });
+        }
+      })(); // Fire and forget
       
     } else if (custom_id.startsWith('map_admin_currency_modal_')) {
       // Handle currency edit submission
