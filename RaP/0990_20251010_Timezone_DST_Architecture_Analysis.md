@@ -249,6 +249,36 @@
 - ✅ Clear user feedback about what needs fixing
 - ✅ Re-running setup after fixing hierarchy successfully converts all 14 roles
 
+### ✅ Phase 1 Complete - Timezone Conversion & DST Toggle (January 27, 2025)
+
+**Fully Implemented and Tested:**
+1. ✅ Timezone conversion system (detectTimezoneId, convertExistingTimezones)
+2. ✅ Auto-rename legacy roles to DST-aware format
+3. ✅ Hierarchy failure prevention (no duplicate roles)
+4. ✅ DST toggle manager (manual button in reece_stuff_menu)
+5. ✅ Enhanced timezone descriptions (show displayName from dstState.json)
+
+**Git Commits:**
+- `a752e3b6` - Timezone conversion implementation
+- `314ed3a2` - Fix missing loadDSTState import
+- `ba67d9fd` - Track already-converted roles
+- `06b2ff05` - CRITICAL: Save converted metadata to playerData
+- `a21fa0c3` - Prevent duplicate role creation on hierarchy failures
+- `43cc50e3` - Enhanced timezone string select descriptions
+
+**Enhanced User Experience (Timezone Descriptions):**
+- **BEFORE:** String select showed "MST / MDT - UTC-6" (not very helpful)
+- **AFTER:** String select shows "MST / MDT - Mountain Time" (clearer!)
+- **Implementation:** playerManagement.js lines 922-980
+  - Loads dstState.json at selector build time
+  - Checks if role has `timezoneId` field
+  - Uses `displayName` from dstState if available
+  - Falls back to UTC offset for legacy roles
+- **Affected Locations:**
+  - Player menu → Set Timezone
+  - Production Team player view
+  - Season Application process
+
 #### Next Steps for Fresh Instance
 
 1. **Test Fixed Conversion on Production Server**
@@ -258,6 +288,7 @@
    - Check Discord roles actually renamed
    - **CRITICAL:** Verify playerData.json has `timezoneId` fields persisted
    - Test DST toggle shows ALL timezones (not just PT)
+   - Test timezone selector shows displayName descriptions
 
 2. **Debug Any Conversion Issues**
    - Check logs: `tail -f /tmp/castbot-dev.log | grep "timezone"`

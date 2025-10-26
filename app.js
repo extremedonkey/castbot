@@ -32115,26 +32115,41 @@ Are you sure you want to continue?`;
             mode: 'player_view'
           });
 
-          // Send follow-up via webhook
-          await fetch(`https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`, {
+          // Send follow-up via webhook using PATCH to edit deferred response
+          console.log('🔍 Sending webhook follow-up for coordinate modal');
+          const webhookUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`;
+          const webhookResponse = await fetch(webhookUrl, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(ui)
           });
 
-          console.log(`✅ SUCCESS: Moved player ${targetUserId} to ${coordinate}`);
-        } catch (error) {
-          console.error('❌ ERROR in deferred coordinate modal:', error);
+          if (!webhookResponse.ok) {
+            const errorData = await webhookResponse.text();
+            throw new Error(`Webhook returned ${webhookResponse.status}: ${errorData}`);
+          }
 
-          // Send error follow-up via webhook
-          await fetch(`https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              content: `❌ Error: ${error.message}`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            })
-          });
+          console.log(`✅ SUCCESS: Moved player ${targetUserId} to ${coordinate} and sent webhook follow-up`);
+        } catch (error) {
+          console.error('❌ ERROR in deferred coordinate modal:', error.message, error);
+
+          // Try to send error follow-up via webhook
+          try {
+            const errorUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`;
+            const errorResponse = await fetch(errorUrl, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                content: `❌ Error: ${error.message}`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              })
+            });
+            if (!errorResponse.ok) {
+              console.error(`Failed to send error webhook: ${errorResponse.status}`);
+            }
+          } catch (webhookError) {
+            console.error('❌ Failed to send error webhook:', webhookError.message);
+          }
         }
       })(); // Fire and forget
       
@@ -32179,26 +32194,41 @@ Are you sure you want to continue?`;
             mode: 'player_view'
           });
 
-          // Send follow-up via webhook
-          await fetch(`https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`, {
+          // Send follow-up via webhook using PATCH to edit deferred response
+          console.log('🔍 Sending webhook follow-up for stamina modal');
+          const webhookUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`;
+          const webhookResponse = await fetch(webhookUrl, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(ui)
           });
 
-          console.log(`✅ SUCCESS: Set stamina for player ${targetUserId} to ${amount}`);
-        } catch (error) {
-          console.error('❌ ERROR in deferred stamina modal:', error);
+          if (!webhookResponse.ok) {
+            const errorData = await webhookResponse.text();
+            throw new Error(`Webhook returned ${webhookResponse.status}: ${errorData}`);
+          }
 
-          // Send error follow-up via webhook
-          await fetch(`https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              content: `❌ Error: ${error.message}`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            })
-          });
+          console.log(`✅ SUCCESS: Set stamina for player ${targetUserId} to ${amount} and sent webhook follow-up`);
+        } catch (error) {
+          console.error('❌ ERROR in deferred stamina modal:', error.message, error);
+
+          // Try to send error follow-up via webhook
+          try {
+            const errorUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`;
+            const errorResponse = await fetch(errorUrl, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                content: `❌ Error: ${error.message}`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              })
+            });
+            if (!errorResponse.ok) {
+              console.error(`Failed to send error webhook: ${errorResponse.status}`);
+            }
+          } catch (webhookError) {
+            console.error('❌ Failed to send error webhook:', webhookError.message);
+          }
         }
       })(); // Fire and forget
       
