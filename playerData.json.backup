@@ -883,12 +883,13 @@
           "storeHistory": [],
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "E2",
+              "currentLocation": "B1",
               "exploredCoordinates": [
                 "C2",
                 "C1",
                 "F2",
-                "E2"
+                "E2",
+                "B1"
               ],
               "itemsFound": [],
               "movementHistory": [
@@ -916,6 +917,11 @@
                   "from": "F2",
                   "to": "E2",
                   "timestamp": "2025-10-26T10:20:58.633Z"
+                },
+                {
+                  "from": "E2",
+                  "to": "B1",
+                  "timestamp": "2025-10-26T10:26:03.834Z"
                 }
               ]
             }
@@ -8904,9 +8910,9 @@
     "players": {
       "391415444084490240": {
         "safari": {
-          "currency": 967,
+          "currency": 1045,
           "history": [],
-          "lastInteraction": 1761429871575,
+          "lastInteraction": 1761474322609,
           "achievements": [],
           "inventory": {
             "great_ball_653283": {
@@ -8914,6 +8920,10 @@
               "numAttacksAvailable": 0
             },
             "charmander_561486": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "pikachu_601425": {
               "quantity": 1,
               "numAttacksAvailable": 0
             }
@@ -8962,9 +8972,9 @@
       },
       "1086246253819613274": {
         "safari": {
-          "currency": 118,
+          "currency": 196,
           "history": [],
-          "lastInteraction": 1761473901084,
+          "lastInteraction": 1761474338800,
           "achievements": [],
           "inventory": {
             "super_potion_322766": {
@@ -8992,7 +9002,7 @@
           ],
           "mapProgress": {
             "map_7x7_1758651530323": {
-              "currentLocation": "F3",
+              "currentLocation": "E4",
               "exploredCoordinates": [
                 "A1",
                 "B2",
@@ -9043,6 +9053,11 @@
                   "from": "E4",
                   "to": "F3",
                   "timestamp": "2025-10-26T10:21:48.617Z"
+                },
+                {
+                  "from": "F3",
+                  "to": "E4",
+                  "timestamp": "2025-10-26T10:23:41.117Z"
                 }
               ]
             }
