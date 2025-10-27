@@ -782,6 +782,241 @@ async function convertExistingTimezones(guild, currentTimezones) {
 }
 
 /**
+ * Consolidate duplicate timezone roles into single roles
+ * Finds roles with same timezoneId, migrates members to most-populated role, deletes duplicates
+ * @param {Guild} guild - Discord guild object
+ * @param {Object} currentTimezones - Existing timezone data from playerData
+ * @returns {Object} Consolidation results { merged, deleted, errors, preview }
+ */
+async function consolidateTimezoneRoles(guild, currentTimezones) {
+    console.log(`🔀 Starting timezone role consolidation for guild ${guild.id}`);
+
+    const results = {
+        merged: [],      // Successfully merged role groups
+        deleted: [],     // Roles deleted after merge
+        errors: [],      // Errors during consolidation
+        preview: []      // Preview of what will happen
+    };
+
+    // Group roles by timezoneId
+    const rolesByTimezoneId = {};
+    for (const [roleId, tzData] of Object.entries(currentTimezones)) {
+        if (!tzData.timezoneId) {
+            console.log(`⚠️ Role ${roleId} missing timezoneId, skipping`);
+            continue;
+        }
+
+        if (!rolesByTimezoneId[tzData.timezoneId]) {
+            rolesByTimezoneId[tzData.timezoneId] = [];
+        }
+
+        rolesByTimezoneId[tzData.timezoneId].push({ roleId, tzData });
+    }
+
+    // Process each timezone group
+    for (const [timezoneId, roles] of Object.entries(rolesByTimezoneId)) {
+        // Only consolidate if there are duplicates
+        if (roles.length <= 1) {
+            console.log(`✅ Timezone ${timezoneId} has only 1 role, skipping`);
+            continue;
+        }
+
+        console.log(`🔀 Found ${roles.length} duplicate roles for ${timezoneId}, consolidating...`);
+
+        try {
+            // Fetch Discord roles and count members
+            const roleData = [];
+            for (const { roleId, tzData } of roles) {
+                const discordRole = await guild.roles.fetch(roleId).catch(() => null);
+                if (!discordRole) {
+                    console.log(`⚠️ Role ${roleId} no longer exists in Discord, skipping`);
+                    continue;
+                }
+
+                // Fetch all members with this role
+                await guild.members.fetch(); // Ensure member cache is populated
+                const members = guild.members.cache.filter(m => m.roles.cache.has(roleId));
+
+                roleData.push({
+                    roleId,
+                    discordRole,
+                    tzData,
+                    memberCount: members.size,
+                    members: members.map(m => m.id)
+                });
+            }
+
+            if (roleData.length <= 1) {
+                console.log(`⚠️ Only 1 valid Discord role found for ${timezoneId}, skipping`);
+                continue;
+            }
+
+            // Sort by member count (descending), then by role ID (ascending) for tie-breaking
+            // Primary: role with most members wins
+            // Secondary: if equal members, older role (lower snowflake ID) wins
+            roleData.sort((a, b) => {
+                if (b.memberCount !== a.memberCount) {
+                    return b.memberCount - a.memberCount; // Higher count wins
+                }
+                // Tie-breaker: Lower role ID wins (older role)
+                return a.roleId.localeCompare(b.roleId);
+            });
+
+            const winner = roleData[0];
+            const losers = roleData.slice(1);
+
+            console.log(`🏆 Winner: ${winner.discordRole.name} (${winner.memberCount} members, ID: ${winner.roleId})`);
+
+            losers.forEach(loser => {
+                console.log(`  ⤷ Loser: ${loser.discordRole.name} (${loser.memberCount} members, ID: ${loser.roleId})`);
+            });
+
+            // Migrate members from losers to winner
+            const migratedMembers = [];
+            for (const loser of losers) {
+                for (const memberId of loser.members) {
+                    try {
+                        const member = guild.members.cache.get(memberId);
+                        if (!member) continue;
+
+                        // Remove loser role
+                        await member.roles.remove(loser.roleId);
+
+                        // Add winner role (only if they don't already have it)
+                        if (!member.roles.cache.has(winner.roleId)) {
+                            await member.roles.add(winner.roleId);
+                        }
+
+                        migratedMembers.push(memberId);
+                        console.log(`  ↔️ Migrated member ${member.user.tag} from ${loser.discordRole.name} to ${winner.discordRole.name}`);
+
+                        // Rate limit: 50ms between role changes
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    } catch (error) {
+                        console.error(`❌ Failed to migrate member ${memberId}:`, error.message);
+                        results.errors.push({
+                            timezoneId,
+                            memberId,
+                            error: error.message
+                        });
+                    }
+                }
+            }
+
+            // Verify losers now have 0 members before deleting
+            for (const loser of losers) {
+                await guild.members.fetch(); // Refresh cache
+                const remainingMembers = guild.members.cache.filter(m => m.roles.cache.has(loser.roleId));
+
+                if (remainingMembers.size > 0) {
+                    console.error(`❌ Role ${loser.discordRole.name} still has ${remainingMembers.size} members, NOT deleting`);
+                    results.errors.push({
+                        timezoneId,
+                        roleId: loser.roleId,
+                        roleName: loser.discordRole.name,
+                        error: `Still has ${remainingMembers.size} members after migration`
+                    });
+                    continue;
+                }
+
+                // Delete the empty loser role
+                try {
+                    await loser.discordRole.delete('CastBot timezone consolidation - duplicate role merged');
+                    console.log(`🗑️ Deleted role: ${loser.discordRole.name} (ID: ${loser.roleId})`);
+
+                    results.deleted.push({
+                        roleId: loser.roleId,
+                        roleName: loser.discordRole.name,
+                        timezoneId
+                    });
+
+                    // Rate limit: 200ms between role deletions
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                } catch (error) {
+                    console.error(`❌ Failed to delete role ${loser.discordRole.name}:`, error.message);
+                    results.errors.push({
+                        timezoneId,
+                        roleId: loser.roleId,
+                        roleName: loser.discordRole.name,
+                        error: error.message
+                    });
+                }
+            }
+
+            // NEW: Update winner role - rename and add metadata
+            const dstState = await loadDSTState();
+            const standardRoleName = dstState[timezoneId]?.roleFormat;
+
+            let wasRenamed = false;
+            let metadataAdded = false;
+
+            // Step 1: Rename winner role to standard format if needed
+            if (standardRoleName && winner.discordRole.name !== standardRoleName) {
+                try {
+                    await winner.discordRole.setName(standardRoleName);
+                    console.log(`🔄 Renamed winner: "${winner.discordRole.name}" → "${standardRoleName}"`);
+                    wasRenamed = true;
+                    // Rate limit: 200ms after rename
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                } catch (error) {
+                    console.warn(`⚠️ Could not rename winner role ${winner.roleId}:`, error.message);
+                    // Non-critical error - continue with consolidation
+                    results.errors.push({
+                        timezoneId,
+                        roleId: winner.roleId,
+                        roleName: winner.discordRole.name,
+                        error: `Rename failed: ${error.message}`,
+                        severity: 'warning'
+                    });
+                }
+            } else if (standardRoleName && winner.discordRole.name === standardRoleName) {
+                console.log(`✅ Winner role "${winner.discordRole.name}" already has correct name`);
+            }
+
+            // Step 2: Add metadata to winner role if missing
+            if (!winner.tzData.timezoneId) {
+                winner.tzData.timezoneId = timezoneId;
+                winner.tzData.dstObserved = dstState[timezoneId]?.dstObserved || false;
+                winner.tzData.standardName = dstState[timezoneId]?.standardName || null;
+                metadataAdded = true;
+                console.log(`📝 Added metadata to winner role ${winner.roleId}: timezoneId="${timezoneId}"`);
+            } else {
+                console.log(`✅ Winner role ${winner.roleId} already has timezoneId metadata`);
+            }
+
+            // Record successful merge
+            results.merged.push({
+                timezoneId,
+                winner: {
+                    roleId: winner.roleId,
+                    roleName: wasRenamed ? standardRoleName : winner.discordRole.name,
+                    finalMemberCount: winner.memberCount + migratedMembers.length,
+                    wasRenamed,
+                    metadataAdded
+                },
+                losers: losers.map(l => ({
+                    roleId: l.roleId,
+                    roleName: l.discordRole.name,
+                    membersMigrated: l.memberCount
+                })),
+                totalMigrated: migratedMembers.length
+            });
+
+        } catch (error) {
+            console.error(`❌ Failed to consolidate ${timezoneId}:`, error);
+            results.errors.push({
+                timezoneId,
+                error: error.message
+            });
+        }
+    }
+
+    console.log(`✅ Consolidation complete: ${results.merged.length} merged, ${results.deleted.length} deleted, ${results.errors.length} errors`);
+
+    return results;
+}
+
+/**
  * Execute comprehensive setup process for pronouns and timezones
  * Handles role creation, existing role detection, timezone conversion, and CastBot integration
  * @param {string} guildId - Discord guild ID
@@ -1790,5 +2025,6 @@ export {
     canBotManageRoles,
     generateHierarchyWarning,
     testRoleHierarchy,
-    nukeRoles
+    nukeRoles,
+    consolidateTimezoneRoles
 };

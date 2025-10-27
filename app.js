@@ -1042,7 +1042,12 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setCustomId('admin_dst_toggle')
       .setLabel('DST Manager')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🌍')
+      .setEmoji('🌍'),
+    new ButtonBuilder()
+      .setCustomId('merge_timezone_roles')
+      .setLabel('Merge Duplicate Timezones')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🔀')
   ];
 
   // Player Data section buttons
@@ -9267,6 +9272,90 @@ Your server is now ready for Tycoons gameplay!`;
           return {
             flags: (1 << 15), // IS_COMPONENTS_V2
             components: [container],
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'merge_timezone_roles') {
+      // Merge Duplicate Timezone Roles - consolidates multiple roles with same timezoneId
+      return ButtonHandlerFactory.create({
+        id: 'merge_timezone_roles',
+        ephemeral: true,
+        deferred: true, // This will take a while
+        handler: async (context) => {
+          // Security check - only allow specific Discord ID
+          if (context.userId !== '391415444084490240') {
+            return {
+              content: 'Access denied. This feature is restricted.'
+            };
+          }
+
+          console.log('🔀 DEBUG: Starting timezone role consolidation');
+
+          // Load playerData to get timezone roles
+          const { loadPlayerData, savePlayerData } = await import('./storage.js');
+          const { consolidateTimezoneRoles } = await import('./roleManager.js');
+
+          const playerData = await loadPlayerData();
+          const guildData = playerData[context.guildId] || {};
+          const timezones = guildData.timezones || {};
+
+          if (Object.keys(timezones).length === 0) {
+            return {
+              content: '⚠️ **No timezone roles found**\n\nThis server doesn\'t have any timezone roles configured.',
+              ephemeral: true
+            };
+          }
+
+          // Run consolidation (modifies timezones object in-place for winner metadata)
+          const results = await consolidateTimezoneRoles(context.guild, timezones);
+
+          // Clean up playerData.json - remove deleted role IDs
+          for (const deleted of results.deleted) {
+            delete playerData[context.guildId].timezones[deleted.roleId];
+          }
+
+          // Save updated playerData (includes deleted roles + winner metadata changes)
+          await savePlayerData(playerData);
+
+          // Build response
+          let response = '## 🔀 Timezone Role Consolidation Complete\n\n';
+
+          if (results.merged.length === 0) {
+            response += '✅ **No duplicate roles found!**\n\nAll timezone roles are already consolidated.';
+          } else {
+            response += `**Merged:** ${results.merged.length} timezone groups\n`;
+            response += `**Deleted:** ${results.deleted.length} duplicate roles\n`;
+            response += `**Errors:** ${results.errors.length}\n\n`;
+
+            if (results.merged.length > 0) {
+              response += '### 📋 Consolidation Details\n\n';
+              results.merged.forEach(merge => {
+                response += `**${merge.timezoneId}:**\n`;
+                response += `  ✅ Kept: ${merge.winner.roleName} (${merge.winner.finalMemberCount} members)\n`;
+                if (merge.winner.wasRenamed) {
+                  response += `    🔄 Renamed to standard format\n`;
+                }
+                if (merge.winner.metadataAdded) {
+                  response += `    📝 Added DST-aware metadata\n`;
+                }
+                merge.losers.forEach(loser => {
+                  response += `  🗑️ Removed: ${loser.roleName} (${loser.membersMigrated} migrated)\n`;
+                });
+                response += '\n';
+              });
+            }
+
+            if (results.errors.length > 0) {
+              response += '### ⚠️ Errors\n\n';
+              results.errors.forEach(err => {
+                response += `- ${err.timezoneId || err.roleName || 'Unknown'}: ${err.error}\n`;
+              });
+            }
+          }
+
+          return {
+            content: response,
             ephemeral: true
           };
         }

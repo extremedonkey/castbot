@@ -118,6 +118,15 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
+  'merge_timezone_roles': {
+    label: 'Merge Duplicate Timezones',
+    description: 'Consolidate duplicate timezone roles with same timezoneId',
+    emoji: '🔀',
+    style: 'Secondary',
+    parent: 'reece_stuff_menu',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
   'nuke_roles': {
     label: 'Nuke Roles',
     description: 'Remove all roles from server (DANGEROUS)',
