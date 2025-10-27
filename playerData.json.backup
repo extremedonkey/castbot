@@ -11560,9 +11560,6 @@
         "dstObserved": true,
         "standardName": "NZST (UTC+12)",
         "timezoneId": "NZST"
-      },
-      "1432347299526213642": {
-        "offset": -8
       }
     },
     "pronounRoleIDs": [

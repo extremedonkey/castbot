@@ -9318,26 +9318,33 @@ Your server is now ready for Tycoons gameplay!`;
           // Save updated playerData (includes deleted roles + winner metadata changes)
           await savePlayerData(playerData);
 
-          // Build response
-          let response = '## 🔀 Timezone Role Consolidation Complete\n\n';
+          // Build response following LEAN design standards
+          let response = '## 🔀 Timezone Role Consolidation\n\n';
 
           if (results.merged.length === 0) {
-            response += '✅ **No duplicate roles found!**\n\nAll timezone roles are already consolidated.';
+            response += '> **`✅ Already Consolidated`**\n\n';
+            response += 'All timezone roles are already consolidated. No duplicates found!';
           } else {
-            response += `**Merged:** ${results.merged.length} timezone groups\n`;
-            response += `**Deleted:** ${results.deleted.length} duplicate roles\n`;
-            response += `**Errors:** ${results.errors.length}\n\n`;
+            // Summary section
+            response += '> **`📊 Summary`**\n\n';
+            response += `✅ Merged: ${results.merged.length} timezone group${results.merged.length === 1 ? '' : 's'}\n`;
+            response += `✅ Deleted: ${results.deleted.length} duplicate role${results.deleted.length === 1 ? '' : 's'}\n`;
+            response += `✅ Migrated: ${results.memberChanges.length} member${results.memberChanges.length === 1 ? '' : 's'}\n`;
+            if (results.errors.length > 0) {
+              response += `⚠️ Errors: ${results.errors.length}\n`;
+            }
 
+            // Details section
             if (results.merged.length > 0) {
-              response += '### 📋 Consolidation Details\n\n';
+              response += '\n> **`📋 Details`**\n\n';
               results.merged.forEach(merge => {
                 response += `**${merge.timezoneId}:**\n`;
                 response += `  ✅ Kept: ${merge.winner.roleName} (${merge.winner.finalMemberCount} members)\n`;
                 if (merge.winner.wasRenamed) {
-                  response += `    🔄 Renamed to standard format\n`;
+                  response += `  🔄 Renamed to standard format\n`;
                 }
                 if (merge.winner.metadataAdded) {
-                  response += `    📝 Added DST-aware metadata\n`;
+                  response += `  📝 Added DST-aware metadata\n`;
                 }
                 merge.losers.forEach(loser => {
                   response += `  🗑️ Removed: ${loser.roleName} (${loser.membersMigrated} migrated)\n`;
@@ -9346,10 +9353,34 @@ Your server is now ready for Tycoons gameplay!`;
               });
             }
 
+            // Member changes section (with 4000 char limit protection)
+            if (results.memberChanges.length > 0) {
+              response += '> **`👥 Member Changes`**\n\n';
+
+              // Calculate available space (4000 char limit - current response - buffer for errors section)
+              const errorSectionEstimate = results.errors.length * 80; // ~80 chars per error
+              const availableSpace = 4000 - response.length - errorSectionEstimate - 200; // 200 char buffer
+
+              let memberSection = '';
+              let shownCount = 0;
+              for (const change of results.memberChanges) {
+                const line = `• ${change.username}: ${change.fromRole} → ${change.toRole}\n`;
+                if ((memberSection + line).length > availableSpace && shownCount > 0) {
+                  const remaining = results.memberChanges.length - shownCount;
+                  memberSection += `\n_...and ${remaining} more member${remaining === 1 ? '' : 's'}_\n`;
+                  break;
+                }
+                memberSection += line;
+                shownCount++;
+              }
+              response += memberSection;
+            }
+
+            // Errors section
             if (results.errors.length > 0) {
-              response += '### ⚠️ Errors\n\n';
+              response += '\n> **`⚠️ Errors`**\n\n';
               results.errors.forEach(err => {
-                response += `- ${err.timezoneId || err.roleName || 'Unknown'}: ${err.error}\n`;
+                response += `• ${err.timezoneId || err.roleName || 'Unknown'}: ${err.error}\n`;
               });
             }
           }

@@ -795,7 +795,8 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
         merged: [],      // Successfully merged role groups
         deleted: [],     // Roles deleted after merge
         errors: [],      // Errors during consolidation
-        preview: []      // Preview of what will happen
+        preview: [],     // Preview of what will happen
+        memberChanges: [] // Track member migrations for reporting
     };
 
     // Load dstState to infer timezoneId from offset for legacy roles
@@ -812,9 +813,82 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
         return null; // Custom timezone, can't infer
     };
 
-    // Group roles by timezoneId (actual or inferred)
-    const rolesByTimezoneId = {};
+    // Helper: Try to match role name against dstState patterns
+    const findTimezoneIdFromRoleName = (roleName) => {
+        for (const [timezoneId, tz] of Object.entries(dstState)) {
+            // Match exact roleFormat (e.g., "PST / PDT")
+            if (tz.roleFormat && roleName === tz.roleFormat) {
+                return { timezoneId, matchType: 'roleFormat' };
+            }
+            // Match standardName (e.g., "PST (UTC-8)")
+            if (tz.standardName && roleName === tz.standardName) {
+                return { timezoneId, matchType: 'standardName' };
+            }
+            // Match standardNameDST (e.g., "PDT (UTC-7)")
+            if (tz.standardNameDST && roleName === tz.standardNameDST) {
+                return { timezoneId, matchType: 'standardNameDST' };
+            }
+            // Match abbreviation patterns (e.g., "PST", "PDT")
+            if (tz.standardAbbrev && roleName === tz.standardAbbrev) {
+                return { timezoneId, matchType: 'abbrev' };
+            }
+            if (tz.dstAbbrev && roleName === tz.dstAbbrev) {
+                return { timezoneId, matchType: 'abbrev' };
+            }
+        }
+        return null;
+    };
+
+    // Step 1: Find ALL timezone roles (registered in playerData + unregistered in Discord)
+    const allTimezoneRoles = new Map(); // roleId -> { roleId, tzData, isRegistered, source }
+
+    // Add registered roles from playerData
     for (const [roleId, tzData] of Object.entries(currentTimezones)) {
+        allTimezoneRoles.set(roleId, {
+            roleId,
+            tzData,
+            isRegistered: true,
+            source: 'playerData'
+        });
+    }
+
+    // Scan Discord roles for unregistered timezone roles
+    console.log(`🔍 Scanning Discord roles for unregistered timezone roles...`);
+    const discordRoles = await guild.roles.fetch();
+    for (const [roleId, discordRole] of discordRoles) {
+        // Skip if already in playerData
+        if (allTimezoneRoles.has(roleId)) continue;
+
+        // Try to match role name against timezone patterns
+        const match = findTimezoneIdFromRoleName(discordRole.name);
+        if (match) {
+            const tz = dstState[match.timezoneId];
+            console.log(`🔍 Found unregistered timezone role: "${discordRole.name}" → ${match.timezoneId} (matched ${match.matchType})`);
+
+            // Create minimal tzData for unregistered role
+            const inferredTzData = {
+                offset: tz.currentOffset, // Use current DST-aware offset
+                timezoneId: match.timezoneId,
+                dstObserved: tz.dstObserved,
+                standardName: tz.standardName
+            };
+
+            allTimezoneRoles.set(roleId, {
+                roleId,
+                tzData: inferredTzData,
+                isRegistered: false,
+                source: 'discord_unregistered'
+            });
+        }
+    }
+
+    console.log(`📊 Found ${allTimezoneRoles.size} total timezone roles (${Object.keys(currentTimezones).length} registered + ${allTimezoneRoles.size - Object.keys(currentTimezones).length} unregistered)`);
+
+    // Step 2: Group roles by timezoneId (from all sources)
+    const rolesByTimezoneId = {};
+    for (const [roleId, roleInfo] of allTimezoneRoles) {
+        const tzData = roleInfo.tzData;
+
         // Get actual timezoneId or infer from offset
         let timezoneId = tzData.timezoneId;
         let isInferred = false;
@@ -836,7 +910,13 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
             rolesByTimezoneId[timezoneId] = [];
         }
 
-        rolesByTimezoneId[timezoneId].push({ roleId, tzData, isInferred });
+        rolesByTimezoneId[timezoneId].push({
+            roleId,
+            tzData,
+            isInferred,
+            isRegistered: roleInfo.isRegistered,
+            source: roleInfo.source
+        });
     }
 
     // Process each timezone group
@@ -852,7 +932,7 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
         try {
             // Fetch Discord roles and count members
             const roleData = [];
-            for (const { roleId, tzData, isInferred } of roles) {
+            for (const { roleId, tzData, isInferred, isRegistered, source } of roles) {
                 const discordRole = await guild.roles.fetch(roleId).catch(() => null);
                 if (!discordRole) {
                     console.log(`⚠️ Role ${roleId} no longer exists in Discord, skipping`);
@@ -868,6 +948,8 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
                     discordRole,
                     tzData,
                     isInferred,
+                    isRegistered,
+                    source,
                     hasDSTMetadata: !!tzData.timezoneId, // True if DST-aware, false if legacy
                     memberCount: members.size,
                     members: members.map(m => m.id)
@@ -879,11 +961,16 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
                 continue;
             }
 
-            // Sort by DST metadata presence (prefer DST-aware), then member count, then role ID
-            // Priority 1: Prefer roles WITH timezoneId metadata (DST-aware) over legacy roles
-            // Priority 2: Higher member count wins
-            // Priority 3: Older role (lower snowflake ID) wins
+            // Sort by registration status, DST metadata, member count, then role ID
+            // Priority 1: Prefer registered roles (in playerData) over unregistered
+            // Priority 2: Prefer roles WITH timezoneId metadata (DST-aware) over legacy roles
+            // Priority 3: Higher member count wins
+            // Priority 4: Older role (lower snowflake ID) wins
             roleData.sort((a, b) => {
+                // Prefer registered roles over unregistered
+                if (a.isRegistered !== b.isRegistered) {
+                    return b.isRegistered ? 1 : -1; // Registered wins
+                }
                 // Prefer DST-aware roles (have metadata) over legacy roles (no metadata)
                 if (a.hasDSTMetadata !== b.hasDSTMetadata) {
                     return b.hasDSTMetadata ? 1 : -1; // DST-aware wins
@@ -900,15 +987,18 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
             const losers = roleData.slice(1);
 
             const winnerType = winner.hasDSTMetadata ? '✅ DST-aware' : '⚠️ LEGACY';
-            console.log(`🏆 Winner: ${winner.discordRole.name} (${winner.memberCount} members, ${winnerType}, ID: ${winner.roleId})`);
+            const winnerReg = winner.isRegistered ? '📝 Registered' : '⚠️ Unregistered';
+            console.log(`🏆 Winner: ${winner.discordRole.name} (${winner.memberCount} members, ${winnerType}, ${winnerReg}, ID: ${winner.roleId})`);
 
             losers.forEach(loser => {
                 const loserType = loser.hasDSTMetadata ? '✅ DST-aware' : '⚠️ LEGACY';
-                console.log(`  ⤷ Loser: ${loser.discordRole.name} (${loser.memberCount} members, ${loserType}, ID: ${loser.roleId})`);
+                const loserReg = loser.isRegistered ? '📝 Registered' : '⚠️ Unregistered';
+                console.log(`  ⤷ Loser: ${loser.discordRole.name} (${loser.memberCount} members, ${loserType}, ${loserReg}, ID: ${loser.roleId})`);
             });
 
             // Migrate members from losers to winner
             const migratedMembers = [];
+            const memberChanges = []; // Track for reporting
             for (const loser of losers) {
                 for (const memberId of loser.members) {
                     try {
@@ -924,6 +1014,13 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
                         }
 
                         migratedMembers.push(memberId);
+                        memberChanges.push({
+                            userId: memberId,
+                            username: member.user.tag,
+                            fromRole: loser.discordRole.name,
+                            toRole: winner.discordRole.name,
+                            timezoneId
+                        });
                         console.log(`  ↔️ Migrated member ${member.user.tag} from ${loser.discordRole.name} to ${winner.discordRole.name}`);
 
                         // Rate limit: 50ms between role changes
@@ -938,6 +1035,9 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
                     }
                 }
             }
+
+            // Track member changes in results
+            results.memberChanges.push(...memberChanges);
 
             // Verify losers now have 0 members before deleting
             for (const loser of losers) {
@@ -1018,6 +1118,12 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
                 console.log(`📝 Added metadata to winner role ${winner.roleId}: timezoneId="${timezoneId}"`);
             } else {
                 console.log(`✅ Winner role ${winner.roleId} already has timezoneId metadata`);
+            }
+
+            // Step 3: Register winner in playerData if it was unregistered
+            if (!winner.isRegistered) {
+                currentTimezones[winner.roleId] = winner.tzData;
+                console.log(`📝 Registered winner role ${winner.roleId} in playerData (was unregistered)`);
             }
 
             // Record successful merge
