@@ -226,44 +226,80 @@
     },
     "timezones": {
       "1320094346288300124": {
-        "offset": -5
+        "offset": -5,
+        "timezoneId": "ET",
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)"
       },
       "1320094564731850803": {
-        "offset": -6
+        "offset": -6,
+        "timezoneId": "CT",
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)"
       },
       "1330207937330679938": {
-        "offset": 13
+        "offset": 13,
+        "timezoneId": "NZST",
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)"
       },
       "1335635316077498409": {
-        "offset": 1
+        "offset": 1,
+        "timezoneId": "GMT",
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)"
       },
       "1335635318027845754": {
-        "offset": 2
+        "offset": 2,
+        "timezoneId": "CET",
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
       },
       "1335635320045043785": {
-        "offset": 5.5
+        "offset": 5.5,
+        "timezoneId": "IST",
+        "dstObserved": false,
+        "standardName": "IST (UTC+5.5)"
       },
       "1335635324444868708": {
-        "offset": 13
+        "offset": 13,
+        "timezoneId": "NZST",
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)"
       },
       "1320094634646704350": {
-        "offset": -3
+        "offset": -3,
+        "timezoneId": "AT",
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
       },
       "1320094467486908507": {
-        "offset": -8
+        "offset": -8,
+        "timezoneId": "PT",
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)"
       },
       "1335635312508145728": {
         "offset": -7,
         "timezoneId": "MT"
       },
       "1328044184673714248": {
-        "offset": 0
+        "offset": 0,
+        "timezoneId": "GMT",
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)"
       },
       "1330207345619374131": {
-        "offset": 8
+        "offset": 8,
+        "timezoneId": "GMT8",
+        "dstObserved": false,
+        "standardName": "GMT+8 (UTC+8)"
       },
       "1328044491860607118": {
-        "offset": 10
+        "offset": 10,
+        "timezoneId": "AEST",
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)"
       },
       "1431904575392186448": {
         "offset": -8,

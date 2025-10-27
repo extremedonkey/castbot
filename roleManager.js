@@ -705,7 +705,8 @@ async function convertExistingTimezones(guild, currentTimezones) {
         renamed: [],      // Roles renamed successfully
         unchanged: [],    // Role name already correct
         unmapped: [],     // Couldn't detect timezone
-        failed: []        // API error during rename
+        failed: [],       // API error during rename
+        orphaned: []      // Roles deleted from Discord but still in playerData
     };
 
     for (const [roleId, tzData] of Object.entries(currentTimezones)) {
@@ -722,6 +723,15 @@ async function convertExistingTimezones(guild, currentTimezones) {
                     timezoneId: tzData.timezoneId,
                     alreadyConverted: true  // Flag to indicate this was already done
                 });
+            } else {
+                // Already-converted role was deleted from Discord - clean it up
+                console.log(`🗑️ Already-converted role ${roleId} (${tzData.timezoneId}) no longer exists in Discord, removing from playerData`);
+                delete currentTimezones[roleId];
+                results.orphaned.push({
+                    roleId,
+                    timezoneId: tzData.timezoneId,
+                    offset: tzData.offset
+                });
             }
             continue;
         }
@@ -729,7 +739,15 @@ async function convertExistingTimezones(guild, currentTimezones) {
         // Step 1: Fetch role from Discord API
         const role = await guild.roles.fetch(roleId).catch(() => null);
         if (!role) {
-            console.log(`⚠️ Role ${roleId} no longer exists in Discord, skipping`);
+            console.log(`🗑️ Role ${roleId} no longer exists in Discord, removing from playerData`);
+            // Delete orphaned role from playerData (in-place modification)
+            delete currentTimezones[roleId];
+            // Track for reporting
+            results.orphaned.push({
+                roleId,
+                timezoneId: tzData.timezoneId || 'unknown',
+                offset: tzData.offset
+            });
             continue;
         }
 
@@ -780,7 +798,7 @@ async function convertExistingTimezones(guild, currentTimezones) {
         tzData.standardName = dstState[timezoneId].standardName;
     }
 
-    console.log(`✅ Conversion complete: ${results.renamed.length} renamed, ${results.unchanged.length} unchanged, ${results.unmapped.length} unmapped, ${results.failed.length} failed`);
+    console.log(`✅ Conversion complete: ${results.renamed.length} renamed, ${results.unchanged.length} unchanged, ${results.unmapped.length} unmapped, ${results.failed.length} failed, ${results.orphaned.length} orphaned (cleaned up)`);
 
     return results;
 }
@@ -1250,6 +1268,7 @@ async function executeSetup(guildId, guild) {
         results.timezones.converted = conversionResults.renamed;
         results.timezones.unmapped = conversionResults.unmapped;
         results.timezones.conversionFailed = conversionResults.failed;
+        results.timezones.orphaned = conversionResults.orphaned;
 
         // Mark converted roles as "already in CastBot" (they now have timezoneId)
         conversionResults.renamed.forEach(conv => {
@@ -1669,6 +1688,16 @@ function generateSetupResponseV2(results) {
             sections.push('### ❌ Conversion Failures:');
             results.timezones.conversionFailed.forEach(role => {
                 sections.push(`• ${role.name} - ${role.error}`);
+            });
+            sections.push('');
+        }
+
+        // Show orphaned roles that were cleaned up
+        if (results.timezones.orphaned && results.timezones.orphaned.length > 0) {
+            sections.push('### 🗑️ Cleaned Up Orphaned Roles:');
+            sections.push(`**${results.timezones.orphaned.length} roles** were removed from CastBot because they no longer exist in Discord:\n`);
+            results.timezones.orphaned.forEach(orphan => {
+                sections.push(`• Role ID: ${orphan.roleId} (${orphan.timezoneId || 'unknown timezone'}, offset: ${orphan.offset})`);
             });
             sections.push('');
         }
