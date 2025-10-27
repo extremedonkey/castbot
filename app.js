@@ -9318,76 +9318,95 @@ Your server is now ready for Tycoons gameplay!`;
           // Save updated playerData (includes deleted roles + winner metadata changes)
           await savePlayerData(playerData);
 
-          // Build response following LEAN design standards
-          let response = '## 🔀 Timezone Role Consolidation\n\n';
+          // Build response using Components V2 Container following LEAN design standards
+          const containerComponents = [];
+
+          // Header
+          containerComponents.push({ type: 10, content: '## 🔀 Timezone Role Consolidation' });
+          containerComponents.push({ type: 14 }); // Separator
 
           if (results.merged.length === 0) {
-            response += '> **`✅ Already Consolidated`**\n\n';
-            response += 'All timezone roles are already consolidated. No duplicates found!';
+            // Already consolidated
+            containerComponents.push({ type: 10, content: '> **`✅ Already Consolidated`**' });
+            containerComponents.push({ type: 10, content: 'All timezone roles are already consolidated. No duplicates found!' });
           } else {
             // Summary section
-            response += '> **`📊 Summary`**\n\n';
-            response += `✅ Merged: ${results.merged.length} timezone group${results.merged.length === 1 ? '' : 's'}\n`;
-            response += `✅ Deleted: ${results.deleted.length} duplicate role${results.deleted.length === 1 ? '' : 's'}\n`;
-            response += `✅ Migrated: ${results.memberChanges.length} member${results.memberChanges.length === 1 ? '' : 's'}\n`;
+            containerComponents.push({ type: 10, content: '> **`📊 Summary`**' });
+            let summaryContent = `✅ Merged: ${results.merged.length} timezone group${results.merged.length === 1 ? '' : 's'}\n`;
+            summaryContent += `✅ Deleted: ${results.deleted.length} duplicate role${results.deleted.length === 1 ? '' : 's'}\n`;
+            summaryContent += `✅ Migrated: ${results.memberChanges.length} member${results.memberChanges.length === 1 ? '' : 's'}`;
             if (results.errors.length > 0) {
-              response += `⚠️ Errors: ${results.errors.length}\n`;
+              summaryContent += `\n⚠️ Errors: ${results.errors.length}`;
             }
+            containerComponents.push({ type: 10, content: summaryContent });
+            containerComponents.push({ type: 14 }); // Separator
 
             // Details section
             if (results.merged.length > 0) {
-              response += '\n> **`📋 Details`**\n\n';
+              containerComponents.push({ type: 10, content: '> **`📋 Details`**' });
+              let detailsContent = '';
               results.merged.forEach(merge => {
-                response += `**${merge.timezoneId}:**\n`;
-                response += `  ✅ Kept: ${merge.winner.roleName} (${merge.winner.finalMemberCount} members)\n`;
+                detailsContent += `**${merge.timezoneId}:**\n`;
+                detailsContent += `  ✅ Kept: ${merge.winner.roleName} (${merge.winner.finalMemberCount} members)\n`;
                 if (merge.winner.wasRenamed) {
-                  response += `  🔄 Renamed to standard format\n`;
+                  detailsContent += `  🔄 Renamed to standard format\n`;
                 }
                 if (merge.winner.metadataAdded) {
-                  response += `  📝 Added DST-aware metadata\n`;
+                  detailsContent += `  📝 Added DST-aware metadata\n`;
                 }
                 merge.losers.forEach(loser => {
-                  response += `  🗑️ Removed: ${loser.roleName} (${loser.membersMigrated} migrated)\n`;
+                  detailsContent += `  🗑️ Removed: ${loser.roleName} (${loser.membersMigrated} migrated)\n`;
                 });
-                response += '\n';
+                detailsContent += '\n';
               });
+              containerComponents.push({ type: 10, content: detailsContent.trim() });
+              containerComponents.push({ type: 14 }); // Separator
             }
 
             // Member changes section (with 4000 char limit protection)
             if (results.memberChanges.length > 0) {
-              response += '> **`👥 Member Changes`**\n\n';
+              containerComponents.push({ type: 10, content: '> **`👥 Member Changes`**' });
 
-              // Calculate available space (4000 char limit - current response - buffer for errors section)
-              const errorSectionEstimate = results.errors.length * 80; // ~80 chars per error
-              const availableSpace = 4000 - response.length - errorSectionEstimate - 200; // 200 char buffer
-
-              let memberSection = '';
+              // Build member changes content with truncation
+              let memberContent = '';
               let shownCount = 0;
+              const maxChars = 2000; // Conservative limit for this section
+
               for (const change of results.memberChanges) {
                 const line = `• ${change.username}: ${change.fromRole} → ${change.toRole}\n`;
-                if ((memberSection + line).length > availableSpace && shownCount > 0) {
+                if ((memberContent + line).length > maxChars && shownCount > 0) {
                   const remaining = results.memberChanges.length - shownCount;
-                  memberSection += `\n_...and ${remaining} more member${remaining === 1 ? '' : 's'}_\n`;
+                  memberContent += `\n_...and ${remaining} more member${remaining === 1 ? '' : 's'}_`;
                   break;
                 }
-                memberSection += line;
+                memberContent += line;
                 shownCount++;
               }
-              response += memberSection;
+              containerComponents.push({ type: 10, content: memberContent.trim() });
+              containerComponents.push({ type: 14 }); // Separator
             }
 
             // Errors section
             if (results.errors.length > 0) {
-              response += '\n> **`⚠️ Errors`**\n\n';
+              containerComponents.push({ type: 10, content: '> **`⚠️ Errors`**' });
+              let errorContent = '';
               results.errors.forEach(err => {
-                response += `• ${err.timezoneId || err.roleName || 'Unknown'}: ${err.error}\n`;
+                errorContent += `• ${err.timezoneId || err.roleName || 'Unknown'}: ${err.error}\n`;
               });
+              containerComponents.push({ type: 10, content: errorContent.trim() });
             }
           }
 
+          // Build Container (type 17) following Components V2 standards
+          const consolidationContainer = {
+            type: 17, // Container
+            accent_color: results.merged.length === 0 ? 0x3498DB : 0x27ae60, // Blue if nothing done, Green for success
+            components: containerComponents
+          };
+
           return {
-            content: response,
-            ephemeral: true
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+            components: [consolidationContainer]
           };
         }
       })(req, res, client);
