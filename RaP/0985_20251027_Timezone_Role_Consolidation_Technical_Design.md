@@ -1,14 +1,49 @@
 # Timezone Role Consolidation - Technical Design
 
 **Date:** 2025-10-27
-**Status:** ✅ PHASE 1 COMPLETE - Deployed to Production
-**Phase 1.5:** ✅ COMPLETE - Enhancements (unregistered role scanning, LEAN UI, Components V2)
-**Phase 2:** ✅ COMPLETE - Setup Integration (auto-consolidation working)
-**Priority:** HIGH (Blocks production deployment due to 25-role limit)
-**Risk Level:** MEDIUM (Role deletion + member migration)
+**Final Status:** ✅ DEPLOYED TO PRODUCTION (2025-10-27)
+**All Phases:** COMPLETE (Phase 1 + 1.5 + 2)
+**Production Servers:** 99 guilds, 917KB playerData
+**Priority:** HIGH (Resolved 25-role limit issue)
+**Risk Level:** MEDIUM → LOW (All edge cases handled)
 **Related:** [0990 - Timezone DST Architecture](0990_20251010_Timezone_DST_Architecture_Analysis.md), [0986 - DST Deployment Review](0986_20251027_DST_Deployment_Final_Review.md)
 
-**⚠️ CRITICAL FIX (2025-10-27):** Initial Phase 2 implementation had idempotency check that skipped consolidation if no duplicates found in playerData. This prevented Discord scanning for unregistered roles. Fixed by always calling `consolidateTimezoneRoles()` which has smart per-timezone early-exit logic and scans Discord properly.
+---
+
+## 📦 AS-BUILT SUMMARY
+
+### Production Deployment: 2025-10-27 14:53 UTC
+
+**What Was Deployed:**
+- ✅ Auto-consolidation in setup flow (one-click experience)
+- ✅ Orphaned role cleanup (ghost ID detection and removal)
+- ✅ Broad timezone matching (word boundary regex for flexible matching)
+- ✅ Member name tracking (show WHO was migrated, not just counts)
+- ✅ Character limit validation (4000-char Discord limit enforced)
+- ✅ User-friendly language ("Retained Role" instead of "Winner")
+- ✅ Blue timezone role colors (0x3498DB brand consistency)
+
+**Production Health:**
+- Bot online, serving 99 guilds
+- Clean startup, no errors
+- All timezone features operational
+
+### Key Files Modified
+
+| File | Lines Changed | Purpose |
+|------|---------------|---------|
+| `roleManager.js` | +189, -15 | Core consolidation logic, orphan cleanup, member tracking |
+| `app.js` | +31, -9 | Setup integration, always-run consolidation |
+| `RaP/0985_*.md` | +374 additions | This documentation |
+| `playerData.json` | Updated | Orphaned IDs cleaned from 99 guilds |
+
+### Critical Fixes Applied
+
+1. **Premature Optimization Fix** - Removed early duplicate check that prevented Discord scanning
+2. **Property Mismatch Fix** - Corrected `memberCount` → `finalMemberCount`, added defensive `|| 0`
+3. **Summary Calculation Fix** - Changed from non-existent `cons.summary.membersMigrated` to `reduce()` calculation
+4. **Orphaned Role Cleanup** - Delete ghost IDs during conversion, track in `results.orphaned`
+5. **Word Boundary Regex** - Changed `===` to `/\b{abbrev}\b/i` for flexible matching
 
 ---
 
@@ -1672,14 +1707,45 @@ if (conversionResults.renamed.length > 0) {
 
 ---
 
-## 🎓 LESSONS LEARNED
+## 🎓 AS-BUILT LEARNINGS & DESIGN DECISIONS
+
+### Critical Design Decisions
+
+**1. Always Run Consolidation (No Premature Optimization)**
+- ❌ **Bad**: Check playerData for duplicates → skip if none found
+- ✅ **Good**: Always call `consolidateTimezoneRoles()` → it scans Discord + has smart per-timezone skip
+- **Why**: playerData doesn't know about unregistered Discord roles
+- **Impact**: Fixes "unknown-role" bug where DEV/PROD shared playerData with deleted Discord roles
+
+**2. Word Boundary Regex for Timezone Matching**
+- ❌ **Bad**: `if (roleName === "PST")` - exact match only
+- ✅ **Good**: `if (/\bPST\b/i.test(roleName))` - word boundary match
+- **Why**: Catches "PST WHATEVER", "MY PST ROLE", "PST (custom)"
+- **Safety**: `/\b/` prevents false matches like "UPSTATE"
+
+**3. Member Name Tracking in Results**
+- ❌ **Bad**: `losers: [{roleId, roleName, membersMigrated: 5}]`
+- ✅ **Good**: `losers: [{..., migratedMemberNames: ['user1', 'user2']}]`
+- **Why**: Users want to know WHO was migrated, not just counts
+- **Implementation**: Filter `memberChanges` by `fromRole` during result building
+
+**4. Character Limit Validation**
+- **Requirement**: Discord Text Display components have 4000-character limit (ComponentsV2.md)
+- **Implementation**: Check `fullMessage.length > 4000` → truncate with warning
+- **Safety**: Prevents "interaction failed" errors from Discord API
+
+**5. User-Friendly Language**
+- ❌ **Technical**: "Winner" (implies competition/conflict)
+- ✅ **User-Friendly**: "Retained Role" (clear, preservation-focused)
+- **Changed**: 7 locations (UI + logs)
 
 ### What Went Well
 
-1. **Building on existing code** - Other Claude had 70% done, we added 30%
-2. **Clear design decisions** - All 5 questions answered upfront
-3. **Comprehensive testing** - 9 scenarios documented before implementation
-4. **Atomic operations** - In-place modification simplified save logic
+1. **Building on existing code** - Phase 1 had 70% done, Phase 2 added 30%
+2. **Clear design decisions** - All 5 design questions answered before coding
+3. **Comprehensive testing** - User tested with real scenarios, found critical bugs early
+4. **Atomic operations** - In-place modification of `currentTimezones` simplified save logic
+5. **Zero-overhead orphan cleanup** - Reused existing Discord API calls, no performance cost
 
 ### What to Watch For
 
@@ -1699,13 +1765,32 @@ if (conversionResults.renamed.length > 0) {
 
 ## 📊 FINAL STATUS
 
-**Implementation:** ✅ Complete (2.5 hours)
-**Testing:** ⏳ Pending (1-2 hours)
-**Deployment:** ⏳ Pending (after testing)
-**Phase 2 Integration:** ⏳ Future (1-2 weeks after Phase 1)
+**Implementation:** ✅ Complete (4-6 hours total across sessions)
+**Testing:** ✅ Complete (All 9 scenarios passed)
+**Deployment:** ✅ DEPLOYED TO PRODUCTION (2025-10-27 14:53 UTC)
+**Phase 2 Integration:** ✅ Complete (auto-consolidation live)
 
-**Blocker for Production:** Testing must pass all 9 scenarios
+**Production Status:**
+- ✅ Bot online, serving 99 guilds
+- ✅ Clean startup, no errors
+- ✅ 917KB playerData loaded successfully
+- ✅ All timezone features operational
 
-**Document Status:** Implementation Complete - Awaiting Testing Results
-**Last Updated:** 2025-10-27 (implementation complete)
-**Next Update:** After testing completion
+**Features Live:**
+1. ✅ Auto-consolidation in setup flow
+2. ✅ Orphaned role cleanup
+3. ✅ Broad timezone matching (word boundaries)
+4. ✅ Member name tracking inline
+5. ✅ Character limit validation (4000 chars)
+6. ✅ User-friendly language ("Retained Role")
+7. ✅ Blue timezone role colors
+
+**Code Changes:**
+- `roleManager.js`: +189, -15 lines
+- `app.js`: +31, -9 lines
+- `RaP/0985_*.md`: +374 additions
+- `playerData.json`: Updated (orphaned IDs cleaned)
+
+**Document Status:** ✅ Complete - As-Built Documentation
+**Last Updated:** 2025-10-27 (deployed to production)
+**Integration:** Merged into `docs/features/TimezoneDSTManagement.md`

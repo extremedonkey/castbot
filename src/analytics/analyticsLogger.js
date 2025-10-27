@@ -728,6 +728,117 @@ async function logNewServerInstall(guild, ownerInfo = null) {
 }
 
 /**
+ * Post setup run announcement to Discord analytics channel
+ * @param {Object} guild - Discord.js Guild object
+ * @param {string} userId - User ID who ran setup
+ * @param {string} userName - Display name of user who ran setup
+ */
+async function logSetupRun(guild, userId, userName) {
+  try {
+    // Skip if Discord client not available
+    if (!discordClient) {
+      return;
+    }
+
+    // Load environment config
+    const { loadEnvironmentConfig } = await import('../../storage.js');
+    const envConfig = await loadEnvironmentConfig();
+
+    const loggingConfig = envConfig.liveDiscordLogging;
+
+    // Check if logging is enabled
+    if (!loggingConfig.enabled) {
+      return;
+    }
+
+    // Get environment-specific timezone offset
+    const { getLoggingTimezoneOffset } = await import('../../storage.js');
+    const timezoneOffset = await getLoggingTimezoneOffset();
+
+    // Apply environment-specific timezone offset
+    const utcDate = new Date();
+    const localDate = new Date(utcDate.getTime() + (timezoneOffset * 60 * 60 * 1000));
+
+    // Format timestamp: [12:34PM] Thu 19 Jun 25
+    const hours = localDate.getHours();
+    const minutes = localDate.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    const timeStr = `${displayHours}:${minutes}${ampm}`;
+
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dayName = days[localDate.getDay()];
+    const day = localDate.getDate();
+    const month = months[localDate.getMonth()];
+    const year = localDate.getFullYear().toString().slice(-2);
+    const dateStr = `${dayName} ${day} ${month} ${year}`;
+
+    const timestamp = `[${timeStr}] ${dateStr}`;
+
+    // Create the announcement message in the same format as server install
+    const announcementMessage = `# ${timestamp} | 🛠️✨ **Setup Run**: \`${guild.name}\` (${guild.id}) | User: ${userName} (${userId})`;
+
+    // Also write to analytics log file
+    const analyticsLogEntry = `${timestamp} | SETUP_RUN | ${guild.name} (${guild.id}) | User: ${userName} (${userId})\n`;
+
+    // Ensure logs directory exists
+    const logDir = path.dirname('./logs/user-analytics.log');
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+
+    // Append to analytics log file
+    fs.appendFileSync('./logs/user-analytics.log', analyticsLogEntry);
+
+    // Get target channel if not cached
+    if (!targetChannel) {
+      try {
+        const { getLoggingChannelId } = await import('../../storage.js');
+        const targetChannelId = await getLoggingChannelId();
+
+        const targetGuild = await discordClient.guilds.fetch(loggingConfig.targetGuildId);
+        targetChannel = await targetGuild.channels.fetch(targetChannelId);
+
+        if (!targetChannel) {
+          console.error('Discord Logging: Target channel not found for setup run announcement');
+          return;
+        }
+      } catch (error) {
+        console.error('Discord Logging: Error fetching target channel for setup run:', error);
+        return;
+      }
+    }
+
+    // Rate limiting check (simple implementation)
+    const now = Date.now();
+    if (now - runtimeState.lastMessageTime < 1200) { // 1.2 seconds between messages
+      // Add to queue for later processing
+      runtimeState.rateLimitQueue.push({ message: announcementMessage, targetChannel });
+      console.log(`📊 Setup run announcement queued (rate limited): ${guild.name}`);
+      return;
+    }
+
+    // Post to Discord channel
+    await targetChannel.send(announcementMessage);
+    runtimeState.lastMessageTime = now;
+
+    // Start queue processing if needed (singleton ensures only one processor runs)
+    if (runtimeState.rateLimitQueue.length > 0) {
+      setTimeout(async () => {
+        await queueProcessor.startProcessing();
+      }, 1200);
+    }
+
+    console.log(`📢 Setup run announcement posted to Discord: ${guild.name} (${guild.id})`);
+
+  } catch (error) {
+    console.error('Discord Setup Run Announcement Error (non-critical):', error);
+    // Don't throw - this should never break the main bot functionality
+  }
+}
+
+/**
  * Post Safari-specific log to guild's Safari log channel
  * @param {string} guildId - Discord guild ID
  * @param {string} userId - User who performed the action
@@ -941,4 +1052,4 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
   }
 }
 
-export { logInteraction, getLogFilePath, setDiscordClient, logNewServerInstall };
+export { logInteraction, getLogFilePath, setDiscordClient, logNewServerInstall, logSetupRun };

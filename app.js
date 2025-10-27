@@ -6261,9 +6261,20 @@ To fix this:
             flags: InteractionResponseFlags.EPHEMERAL | (1 << 15) // Add IS_COMPONENTS_V2 flag
           }
         });
-        
+
         console.log('✅ DEBUG: Setup completed successfully');
-        
+
+        // Post setup run announcement to Discord analytics channel
+        try {
+          const { logSetupRun } = await import('./src/analytics/analyticsLogger.js');
+          const userId = req.body.member.user.id;
+          const userName = req.body.member.user.global_name || req.body.member.user.username;
+          await logSetupRun(guild, userId, userName);
+        } catch (error) {
+          console.error('⚠️ Failed to log setup run announcement:', error);
+          // Don't break setup if announcement fails
+        }
+
       } catch (error) {
         console.error('❌ ERROR: setup_castbot handler failed:', error);
         const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;

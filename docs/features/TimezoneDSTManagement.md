@@ -408,28 +408,88 @@ This change affects all servers using the "PST / PDT" role with the new DST syst
 
 ## Role Consolidation
 
-### Duplicate Role Merging
+**Status:** ✅ Production-Ready (Deployed 2025-10-27)
+**Documentation:** [RaP 0985](../../RaP/0985_20251027_Timezone_Role_Consolidation_Technical_Design.md)
 
-**Purpose:** Consolidate multiple roles with same `timezoneId` to reduce role count.
+### Overview
 
-**Location:** `/menu` → Reece's Tools → Merge Duplicate Timezones
-**Access:** Restricted to admin user (ID: `391415444084490240`)
-**Effect:** Server-specific (only affects current server)
+**Purpose:** Consolidate multiple roles with same `timezoneId` to reduce role count and clean up orphaned entries.
 
-### Consolidation Process
+**Two Access Methods:**
+1. **Automatic:** Runs during `/menu` → Tools → "Run Setup" (Phase 2 integration)
+2. **Manual:** `/menu` → Reece's Tools → "Merge Duplicate Timezones" (admin button)
 
+**Effect:** Server-specific (consolidation affects current server only)
+
+### Automatic Consolidation (Phase 2)
+
+**Deployed:** 2025-10-27
+**Integration Point:** `app.js:6226-6249` in `setup_castbot` handler
+
+**Flow:**
 ```
-1. Group roles by timezoneId
+User runs Setup
+  ↓
+executeSetup() - converts/creates timezone roles
+  ↓
+consolidateTimezoneRoles() - ALWAYS runs (scans Discord + playerData)
+  ↓
+Scans Discord for unregistered roles
+  ↓
+Groups by timezoneId, merges duplicates
+  ↓
+Cleans orphaned role IDs (deleted from Discord)
+  ↓
+Updates playerData, shows results
+```
+
+**Key Features:**
+- ✅ Scans ALL Discord roles (not just playerData)
+- ✅ Detects unregistered timezone roles (via name pattern matching)
+- ✅ Cleans orphaned role IDs (ghost entries from deleted Discord roles)
+- ✅ Shows member names inline (who was migrated)
+- ✅ Validates 4000-character limit (ComponentsV2.md compliance)
+- ✅ Smart per-timezone skip (no overhead when no duplicates)
+
+### Consolidation Algorithm
+
+**Step-by-Step Process:**
+```
+1. Scan Discord roles for unregistered timezone roles
+   ├─ Match 5 patterns per timezone: roleFormat, standardName, standardNameDST, abbreviations (word boundary)
+   ├─ Example: Finds "PST", "PST WHATEVER", "MY PST ROLE", "PST (UTC-8)"
+   └─ Infer timezoneId from pattern + offset validation
    ↓
-2. Sort by member count (most members wins)
+2. Group all roles (registered + unregistered) by timezoneId
+   ├─ Skip groups with only 1 role (no work needed)
+   └─ Process groups with 2+ roles
    ↓
-3. Migrate all members to winner role
+3. Select "retained role" (winner) via 4-tier priority
+   ├─ Priority 1: Registered in playerData (over unregistered)
+   ├─ Priority 2: Has DST metadata (timezoneId field)
+   ├─ Priority 3: Most members
+   └─ Priority 4: Oldest role (lower snowflake ID - tie-breaker)
    ↓
-4. Verify loser roles have 0 members
+4. Migrate members from loser roles to retained role
+   ├─ Track member usernames for reporting
+   ├─ Rate limit: 50ms between migrations
+   └─ Continue on error (partial success better than total failure)
    ↓
-5. Delete empty loser roles
+5. Verify loser roles have 0 members (refresh cache)
    ↓
-6. Update playerData.json (remove deleted role IDs)
+6. Delete empty loser roles
+   ├─ Rate limit: 200ms between deletions
+   └─ Track deleted role IDs for playerData cleanup
+   ↓
+7. Update retained role (if needed)
+   ├─ Rename to standard format (e.g., "PST (UTC-8)" → "PST / PDT")
+   ├─ Set blue color (0x3498DB)
+   ├─ Add DST metadata (timezoneId, dstObserved, standardName)
+   └─ Register in playerData (if was unregistered)
+   ↓
+8. Clean up playerData.json
+   ├─ Remove deleted role IDs
+   └─ Save atomically
 ```
 
 ### Example Consolidation
@@ -474,7 +534,7 @@ playerData.json:
   const timezones = guildData.timezones || {};
 
   // Run consolidation
-  const results = await consolidateTimezoneRoles(context.guild, timezones);
+  const results = await consolidateTimezoneRoles(guild, timezones);
 
   // Clean up playerData - remove deleted roles
   for (const deleted of results.deleted) {
@@ -490,6 +550,315 @@ playerData.json:
 ---
 
 ## Technical Implementation
+
+### File Structure
+
+```
+/castbot
+├── dstState.json              # Global timezone definitions (195 lines)
+├── roleManager.js             # Conversion & consolidation logic
+│   ├── detectTimezoneId()               (lines 584-685)
+│   ├── convertExistingTimezones()       (lines 696-782)
+│   ├── consolidateTimezoneRoles()       (lines 791-965)
+│   └── executeSetup()                   (lines 974-1240)
+├── storage.js                 # DST state management
+│   ├── loadDSTState()                   (lines 406-418)
+│   ├── saveDSTState()                   (lines 420-424)
+│   └── getDSTOffset()                   (lines 426-429)
+├── app.js                     # Button handlers
+│   ├── admin_dst_toggle                 (lines 9185-9278)
+│   ├── dst_timezone_select              (lines 19655-19708)
+│   └── merge_timezone_roles             (lines 9279-9357)
+├── playerManagement.js        # UI & time display
+│   └── buildTimezoneSelector()          (lines 922-982)
+└── castlistV2.js             # Castlist time calculations
+    └── formatPlayerTime()               (lines 392-411, 606-623)
+```
+
+### Data Flow: Time Calculation
+
+```
+Player views castlist
+  ↓
+getTimezoneRole(playerId)
+  ↓
+Check: tzData.timezoneId exists?
+  ├─ YES → loadDSTState() → getDSTOffset(timezoneId) → currentOffset
+  └─ NO  → use tzData.offset (legacy)
+  ↓
+calculateTime(currentOffset)
+  ↓
+Display formatted time
+```
+
+### Data Flow: DST Toggle
+
+```
+Admin clicks DST Manager
+  ↓
+Load dstState.json + playerData.json
+  ↓
+Build dropdown with unique timezoneIds
+  ↓
+Admin selects timezone + new state
+  ↓
+Update dstState[timezoneId].currentOffset
+Update dstState[timezoneId].isDST
+  ↓
+Save dstState.json (atomic write)
+  ↓
+All servers instantly use new offset
+  ↓
+Players see correct time (no action needed)
+```
+
+---
+
+## Data Structures
+
+### dstState.json Schema
+
+```json
+{
+  "timezoneId": {
+    "displayName": "string",        // Full name (e.g., "Pacific Time")
+    "roleFormat": "string",         // Discord role name (e.g., "PST / PDT")
+    "standardOffset": "number",     // Winter offset (e.g., -8)
+    "dstOffset": "number",          // Summer offset (e.g., -7)
+    "currentOffset": "number",      // Active offset (updated by toggle)
+    "isDST": "boolean",             // Currently in DST?
+    "standardAbbrev": "string",     // Winter abbreviation (e.g., "PST")
+    "dstAbbrev": "string",          // Summer abbreviation (e.g., "PDT")
+    "dstObserved": "boolean",       // Does this timezone use DST?
+    "standardName": "string",       // Legacy format (e.g., "PST (UTC-8)")
+    "standardNameDST": "string"     // Legacy DST format (e.g., "PDT (UTC-7)")
+  }
+}
+```
+
+### playerData.json Schema Extensions
+
+```json
+{
+  "guildId": {
+    "timezones": {
+      "roleId": {
+        "offset": "number",           // BACKWARDS COMPAT: Static offset
+        "timezoneId": "string",       // NEW: Links to dstState.json
+        "dstObserved": "boolean",     // NEW: Metadata from dstState
+        "standardName": "string"      // NEW: Original role name
+      }
+    }
+  }
+}
+```
+
+### STANDARD_TIMEZONE_ROLES Schema
+
+**Location:** `roleManager.js:136-290`
+
+```javascript
+{
+  id: "string",              // timezoneId (e.g., "PT")
+  name: "string",            // Discord role name (e.g., "PST / PDT")
+  description: "string",     // Friendly name (e.g., "Pacific Time")
+  offset: "number",          // Standard offset (e.g., -8)
+  offsetDST: "number",       // DST offset (e.g., -7) [optional]
+  dstObserved: "boolean",    // Does this timezone use DST?
+  standardName: "string",    // Legacy format (e.g., "PST (UTC-8)")
+  standardNameDST: "string"  // Legacy DST format (e.g., "PDT (UTC-7)") [optional]
+}
+```
+
+---
+
+## Deployment Guide
+
+### Pre-Deployment Checklist
+
+- [x] Code committed to main branch
+- [x] All 5 critical bugs fixed
+- [x] Testing completed on dev/regression servers
+- [x] Backwards compatibility verified
+- [x] Error handling tested (hierarchy failures)
+- [x] Rollback plan documented
+- [ ] **CRITICAL: Copy `dstState.json` to production server** (file is gitignored!)
+- [ ] Test on 1-2 production servers
+- [ ] Monitor logs for 24 hours
+- [ ] Update documentation with deployment date
+
+### Deployment Steps
+
+#### 1. Backup Production Data
+```bash
+# SSH to Lightsail
+ssh -i ~/.ssh/castbot-key.pem bitnami@13.238.148.170
+
+# Backup playerData.json
+cp /home/bitnami/castbot/playerData.json \
+   /home/bitnami/castbot/playerData.json.pre-dst-deploy
+```
+
+#### 2. Copy dstState.json to Production
+**IMPORTANT:** `dstState.json` is in `.gitignore`, must be copied manually!
+
+```bash
+# From WSL (local machine)
+scp -i ~/.ssh/castbot-key.pem \
+    /home/reece/castbot/dstState.json \
+    bitnami@13.238.148.170:/home/bitnami/castbot/
+```
+
+#### 3. Deploy Code
+```bash
+# From WSL (local machine)
+npm run deploy-remote-wsl
+```
+
+#### 4. Verify Deployment
+```bash
+# SSH to Lightsail
+pm2 logs castbot-pm --lines 50
+
+# Look for:
+# ✅ Loaded playerData.json
+# 🌍 Loaded DST state: 16 timezones
+```
+
+### Post-Deployment Testing
+
+1. Pick test server (e.g., CastBot Regression Green)
+2. Run `/menu` → Production Menu → Initial Setup
+3. Verify timezone conversion works
+4. Check conversion report shows renamed roles
+5. Test DST toggle: `/menu` → Reece's Tools → DST Manager
+6. Verify dropdown shows ALL timezones (not just PT)
+7. Toggle timezone, verify success message
+8. Check castlist shows correct times
+9. Test timezone selector: `/menu` → Set Timezone
+10. Verify descriptions show displayName (e.g., "Pacific Time")
+
+### Rollback Plan
+
+```bash
+# On Lightsail production server
+git log --oneline -10  # Find commit before a752e3b6
+git checkout <previous-commit>
+pm2 restart castbot-pm
+
+# Restore backup if needed
+cp /home/bitnami/castbot/playerData.json.pre-dst-deploy \
+   /home/bitnami/castbot/playerData.json
+pm2 restart castbot-pm
+```
+
+---
+
+## Future Enhancements
+
+### Not Yet Implemented
+
+#### 1. Automatic DST Switching
+**Complexity:** MODERATE
+**Risk:** MEDIUM (external dependency)
+
+**Implementation:**
+- Cloud API polling (WorldTimeAPI.org)
+- Scheduled CRON job (runs twice/year)
+- Automatic toggle when DST changes detected
+- Fallback to manual if API fails
+
+#### 2. Automatic Legacy Role Cleanup
+**Complexity:** MODERATE
+**Risk:** MEDIUM (role deletion is destructive)
+
+**Implementation:**
+- Delete old dual roles after conversion
+- Migrate users from old roles to new roles
+- User confirmation before deletion
+- Audit trail for deleted roles
+
+#### 3. Timezone Selector Improvements
+**Complexity:** LOW
+**Risk:** LOW
+
+**Potential Features:**
+- Group timezones by region (dropdown sections)
+- Show current time for each timezone
+- Popular timezones at top
+- Recently used timezones
+
+#### 4. DST Schedule Display
+**Complexity:** LOW
+**Risk:** LOW
+
+**Potential Features:**
+- Show next DST change date
+- Countdown to next toggle
+- Historical DST change log
+- Timezone-specific DST rules
+
+---
+
+## Known Limitations
+
+### Minor Limitations
+
+1. **Verbose Error Logging**
+   - Discord API errors (hierarchy failures) log full stack traces
+   - **Impact:** Development logs are verbose
+   - **Mitigation:** Errors caught and handled gracefully
+   - **Future:** Could add log level control
+
+2. **Legacy Role Cleanup**
+   - Old roles not automatically deleted after conversion
+   - **Impact:** Servers may have duplicate names (Discord allows this)
+   - **Mitigation:** Admins manually delete old roles OR use consolidation feature
+   - **Future:** Automatic cleanup option with confirmation
+
+3. **dstState.json in .gitignore**
+   - File must be manually copied to production
+   - **Impact:** Not tracked in git, manual deployment step
+   - **Recommendation:** Remove from `.gitignore` (it's configuration, not data)
+   - **Workaround:** Documented deployment step
+
+---
+
+## Git Commit History
+
+**Major Milestones:**
+- `a752e3b6` - Timezone conversion system implementation
+- `314ed3a2` - Fix missing loadDSTState import
+- `ba67d9fd` - Track already-converted roles
+- `06b2ff05` - **CRITICAL:** Save converted metadata to playerData
+- `a21fa0c3` - Prevent duplicate role creation on hierarchy failures
+- `43cc50e3` - Enhanced timezone string select descriptions
+- `766a4be6` - Add DST Toggle Manager to Admin Tools
+- `8e7524ab` - Fix DST-aware time calculation in castlistV2 and playerManagement
+- `f1d319c9` - Document many-to-many timezone mapping design
+
+---
+
+`★ Insight ─────────────────────────────────────`
+
+**The Genius of This Design:**
+
+The timezone/DST system solves a 20-role problem with a 3-layer architecture:
+1. **Global State** - Single source of truth for all timezones
+2. **Server Links** - Many-to-many mapping (old roles → new system)
+3. **Discord Roles** - Physical roles users keep (no migration!)
+
+Key innovation: Players can have "wrong" role (PST in summer) but see correct time because system reads from global state, not role name. This makes conversion non-destructive and backwards-compatible.
+
+`─────────────────────────────────────────────────`
+
+---
+
+**Document Version:** 1.1
+**Last Updated:** 2025-10-27 (AS-BUILT)
+**Deployment Status:** ✅ DEPLOYED TO PRODUCTION (2025-10-27 14:53 UTC)
+**Production:** 99 guilds, 917KB playerData
+**Author:** Claude Code (Generated from RaP 0985, 0990, 0989)
 
 ### File Structure
 
