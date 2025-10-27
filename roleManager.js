@@ -1677,7 +1677,7 @@ function generateSetupResponseV2(results) {
         // Show each merged group
         cons.merged.forEach(merge => {
             sections.push(`### ${merge.timezoneId}`);
-            sections.push(`• ✅ Winner: <@&${merge.winner.roleId}> (${merge.winner.memberCount} members)`);
+            sections.push(`• ✅ Winner: <@&${merge.winner.roleId}> (${merge.winner.finalMemberCount || 0} members)`);
 
             if (merge.winner.wasRenamed) {
                 sections.push(`  🔄 Renamed to standard format: "${merge.winner.roleName}"`);
@@ -1688,13 +1688,16 @@ function generateSetupResponseV2(results) {
             }
 
             merge.losers.forEach(loser => {
-                sections.push(`• 🗑️ Removed: ${loser.roleName} (${loser.membersMigrated} members migrated)`);
+                const migratedCount = loser.membersMigrated || 0;
+                sections.push(`• 🗑️ Removed: ${loser.roleName} (${migratedCount} members migrated)`);
             });
 
             sections.push('');
         });
 
-        sections.push(`**Summary:** ${cons.deleted.length} roles deleted, ${cons.summary.membersMigrated || 0} members migrated\n`);
+        // Calculate total members migrated from all merged groups
+        const totalMembersMigrated = cons.merged.reduce((sum, merge) => sum + (merge.totalMigrated || 0), 0);
+        sections.push(`**Summary:** ${cons.deleted.length} roles deleted, ${totalMembersMigrated} members migrated\n`);
 
         // Show consolidation errors if any
         if (cons.errors && cons.errors.length > 0) {
