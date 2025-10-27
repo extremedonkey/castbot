@@ -6224,15 +6224,15 @@ To fix this:
         const setupResults = await executeSetup(guildId, guild);
 
         // NEW: Auto-consolidate duplicate timezone roles (Phase 2 integration)
+        // Always run consolidation - it scans Discord for unregistered roles and has smart early-exit per timezone
         const playerData = await loadPlayerData();
         const timezones = playerData[guildId]?.timezones || {};
 
-        const duplicateCheck = checkForDuplicateTimezones(timezones);
-        if (duplicateCheck.hasDuplicates) {
-          console.log(`🔀 Auto-consolidating ${duplicateCheck.duplicateCount} timezone groups after setup...`);
+        console.log(`🔀 Running timezone consolidation (includes Discord scan for unregistered roles)...`);
+        const consolidationResults = await consolidateTimezoneRoles(guild, timezones);
 
-          const consolidationResults = await consolidateTimezoneRoles(guild, timezones);
-
+        // Only update playerData and results if consolidation actually merged roles
+        if (consolidationResults.merged.length > 0) {
           // Clean up deleted roles from playerData
           for (const deleted of consolidationResults.deleted) {
             delete playerData[guildId].timezones[deleted.roleId];
@@ -6245,7 +6245,7 @@ To fix this:
 
           console.log(`✅ Consolidated ${consolidationResults.merged.length} groups, deleted ${consolidationResults.deleted.length} roles`);
         } else {
-          console.log(`✅ No duplicate timezones found, skipping consolidation`);
+          console.log(`✅ No duplicates found (consolidation scanned Discord and playerData)`);
         }
 
         // Generate detailed Components V2 response
