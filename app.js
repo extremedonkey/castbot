@@ -9339,11 +9339,20 @@ Your server is now ready for Tycoons gameplay!`;
               summaryContent += `\n⚠️ Errors: ${results.errors.length}`;
             }
             containerComponents.push({ type: 10, content: summaryContent });
-            containerComponents.push({ type: 14 }); // Separator
 
-            // Details section
+            // Details section with inline member changes
             if (results.merged.length > 0) {
               containerComponents.push({ type: 10, content: '> **`📋 Details`**' });
+
+              // Group member changes by timezoneId for easy lookup
+              const changesByTimezone = {};
+              results.memberChanges.forEach(change => {
+                if (!changesByTimezone[change.timezoneId]) {
+                  changesByTimezone[change.timezoneId] = [];
+                }
+                changesByTimezone[change.timezoneId].push(change);
+              });
+
               let detailsContent = '';
               results.merged.forEach(merge => {
                 detailsContent += `**${merge.timezoneId}:**\n`;
@@ -9354,41 +9363,30 @@ Your server is now ready for Tycoons gameplay!`;
                 if (merge.winner.metadataAdded) {
                   detailsContent += `  📝 Added DST-aware metadata\n`;
                 }
+
+                // Show loser roles and their migrated members
                 merge.losers.forEach(loser => {
-                  detailsContent += `  🗑️ Removed: ${loser.roleName} (${loser.membersMigrated} migrated)\n`;
+                  detailsContent += `  🗑️ Removed: ${loser.roleName}\n`;
+
+                  // Find members who were migrated FROM this specific loser role
+                  const migratedFromThisRole = changesByTimezone[merge.timezoneId]?.filter(
+                    change => change.fromRole === loser.roleName
+                  ) || [];
+
+                  if (migratedFromThisRole.length > 0) {
+                    migratedFromThisRole.forEach(change => {
+                      detailsContent += `    • ${change.username}\n`;
+                    });
+                  }
                 });
                 detailsContent += '\n';
               });
               containerComponents.push({ type: 10, content: detailsContent.trim() });
-              containerComponents.push({ type: 14 }); // Separator
-            }
-
-            // Member changes section (with 4000 char limit protection)
-            if (results.memberChanges.length > 0) {
-              containerComponents.push({ type: 10, content: '> **`👥 Member Changes`**' });
-
-              // Build member changes content with truncation
-              let memberContent = '';
-              let shownCount = 0;
-              const maxChars = 2000; // Conservative limit for this section
-
-              for (const change of results.memberChanges) {
-                const line = `• ${change.username}: ${change.fromRole} → ${change.toRole}\n`;
-                if ((memberContent + line).length > maxChars && shownCount > 0) {
-                  const remaining = results.memberChanges.length - shownCount;
-                  memberContent += `\n_...and ${remaining} more member${remaining === 1 ? '' : 's'}_`;
-                  break;
-                }
-                memberContent += line;
-                shownCount++;
-              }
-              containerComponents.push({ type: 10, content: memberContent.trim() });
-              containerComponents.push({ type: 14 }); // Separator
             }
 
             // Errors section
             if (results.errors.length > 0) {
-              containerComponents.push({ type: 10, content: '> **`⚠️ Errors`**' });
+              containerComponents.push({ type: 10, content: '\n> **`⚠️ Errors`**' });
               let errorContent = '';
               results.errors.forEach(err => {
                 errorContent += `• ${err.timezoneId || err.roleName || 'Unknown'}: ${err.error}\n`;
