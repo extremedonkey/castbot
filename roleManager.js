@@ -38,7 +38,7 @@ const STANDARD_PRONOUN_ROLES = [
 // Pronoun role colors matching heart emojis (RGB to integer conversion)
 const PRONOUN_COLORS = {
     'He/Him': 0xFF0000,      // ❤️ Red
-    'She/Her': 0xFFC0CB,     // 🩷 Pink 
+    'She/Her': 0xFFC0CB,     // 🩷 Pink
     'They/Them': 0x800080,   // 💜 Purple
     'They/He': 0x00FF00,     // 💚 Green
     'She/They': 0x87CEEB,    // 🩵 Light Blue
@@ -46,6 +46,9 @@ const PRONOUN_COLORS = {
     'Any': 0xA52A2A,         // 🤎 Brown
     'All Pronouns': 0xFFFFFF // 🤍 White (same as Any)
 };
+
+// Timezone role color - consistent blue branding
+const TIMEZONE_ROLE_COLOR = 0x3498DB; // Blue for all timezone roles
 
 // Heart emojis for pronoun reactions
 const PRONOUN_HEART_EMOJIS = {
@@ -745,7 +748,8 @@ async function convertExistingTimezones(guild, currentTimezones) {
         if (role.name !== newRoleName) {
             try {
                 await role.setName(newRoleName);
-                console.log(`🔄 Renamed role: "${role.name}" → "${newRoleName}" (ID: ${roleId})`);
+                await role.setColor(TIMEZONE_ROLE_COLOR);
+                console.log(`🔄 Renamed role: "${role.name}" → "${newRoleName}" (blue color applied, ID: ${roleId})`);
                 results.renamed.push({
                     roleId,
                     oldName: role.name,
@@ -779,6 +783,41 @@ async function convertExistingTimezones(guild, currentTimezones) {
     console.log(`✅ Conversion complete: ${results.renamed.length} renamed, ${results.unchanged.length} unchanged, ${results.unmapped.length} unmapped, ${results.failed.length} failed`);
 
     return results;
+}
+
+/**
+ * Check if duplicate timezone roles exist (same timezoneId)
+ * Used to determine if consolidation is needed (idempotent check)
+ * @param {Object} timezones - Guild timezones from playerData (guildId.timezones)
+ * @returns {Object} Duplicate analysis { hasDuplicates, duplicateCount, groups }
+ */
+function checkForDuplicateTimezones(timezones) {
+    const byTimezoneId = {};
+    let duplicateCount = 0;
+
+    // Group roles by timezoneId
+    for (const [roleId, tzData] of Object.entries(timezones)) {
+        // Skip roles without timezoneId (custom timezones)
+        if (!tzData.timezoneId) continue;
+
+        if (!byTimezoneId[tzData.timezoneId]) {
+            byTimezoneId[tzData.timezoneId] = [];
+        }
+        byTimezoneId[tzData.timezoneId].push(roleId);
+    }
+
+    // Count timezone groups with 2+ roles
+    for (const [timezoneId, roleIds] of Object.entries(byTimezoneId)) {
+        if (roleIds.length > 1) {
+            duplicateCount++;
+        }
+    }
+
+    return {
+        hasDuplicates: duplicateCount > 0,
+        duplicateCount,
+        groups: byTimezoneId
+    };
 }
 
 /**
@@ -1090,7 +1129,8 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
             if (standardRoleName && winner.discordRole.name !== standardRoleName) {
                 try {
                     await winner.discordRole.setName(standardRoleName);
-                    console.log(`🔄 Renamed winner: "${winner.discordRole.name}" → "${standardRoleName}"`);
+                    await winner.discordRole.setColor(TIMEZONE_ROLE_COLOR);
+                    console.log(`🔄 Renamed winner: "${winner.discordRole.name}" → "${standardRoleName}" (blue color applied)`);
                     wasRenamed = true;
                     // Rate limit: 200ms after rename
                     await new Promise(resolve => setTimeout(resolve, 200));
@@ -1365,6 +1405,7 @@ async function executeSetup(guildId, guild) {
                 console.log(`🔨 DEBUG: Creating new timezone role ${timezone.name}`);
                 const newRole = await guild.roles.create({
                     name: timezone.name,
+                    color: TIMEZONE_ROLE_COLOR,
                     mentionable: true,
                     reason: 'CastBot timezone role generation'
                 });
@@ -1625,7 +1666,47 @@ function generateSetupResponseV2(results) {
             sections.push('');
         }
     }
-    
+
+    // Consolidation Section (Phase 2 integration)
+    if (results.timezones?.consolidation && results.timezones.consolidation.merged.length > 0) {
+        const cons = results.timezones.consolidation;
+        sections.push('## 🔀 Duplicate Role Consolidation\n');
+
+        sections.push(`**${cons.merged.length} timezone groups** were consolidated by merging duplicate roles:\n`);
+
+        // Show each merged group
+        cons.merged.forEach(merge => {
+            sections.push(`### ${merge.timezoneId}`);
+            sections.push(`• ✅ Winner: <@&${merge.winner.roleId}> (${merge.winner.memberCount} members)`);
+
+            if (merge.winner.wasRenamed) {
+                sections.push(`  🔄 Renamed to standard format: "${merge.winner.roleName}"`);
+            }
+
+            if (merge.winner.metadataAdded) {
+                sections.push(`  📝 Added DST metadata (timezoneId, dstObserved, standardName)`);
+            }
+
+            merge.losers.forEach(loser => {
+                sections.push(`• 🗑️ Removed: ${loser.roleName} (${loser.membersMigrated} members migrated)`);
+            });
+
+            sections.push('');
+        });
+
+        sections.push(`**Summary:** ${cons.deleted.length} roles deleted, ${cons.summary.membersMigrated || 0} members migrated\n`);
+
+        // Show consolidation errors if any
+        if (cons.errors && cons.errors.length > 0) {
+            sections.push('### ⚠️ Consolidation Warnings:');
+            cons.errors.forEach(error => {
+                const severityIcon = error.severity === 'warning' ? '⚠️' : '❌';
+                sections.push(`${severityIcon} ${error.error}`);
+            });
+            sections.push('');
+        }
+    }
+
     // Warnings and Errors Section
     const allWarnings = [...results.pronouns.hierarchyWarnings, ...results.timezones.hierarchyWarnings];
     const allFailed = [...results.pronouns.failed, ...results.timezones.failed];
@@ -2168,5 +2249,6 @@ export {
     generateHierarchyWarning,
     testRoleHierarchy,
     nukeRoles,
+    checkForDuplicateTimezones,
     consolidateTimezoneRoles
 };

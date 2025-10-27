@@ -1,7 +1,9 @@
 # Timezone Role Consolidation - Technical Design
 
 **Date:** 2025-10-27
-**Status:** ✅ IMPLEMENTATION COMPLETE - Ready for Testing
+**Status:** ✅ PHASE 1 COMPLETE - Deployed to Production
+**Phase 1.5:** 🔨 In Progress - Enhancements (unregistered role scanning, LEAN UI, Components V2)
+**Phase 2:** 📋 Design Complete - Setup Integration (ready for implementation)
 **Priority:** HIGH (Blocks production deployment due to 25-role limit)
 **Risk Level:** MEDIUM (Role deletion + member migration)
 **Related:** [0990 - Timezone DST Architecture](0990_20251010_Timezone_DST_Architecture_Analysis.md), [0986 - DST Deployment Review](0986_20251027_DST_Deployment_Final_Review.md)
@@ -32,8 +34,47 @@
 - Error handling: Continue on error (partial success) ✅
 - Metadata updates: During consolidation (atomic operation) ✅
 
-**Testing Status:** Ready for testing (see RaP/0985_TESTING_PLAN.md)
-**Deployment Status:** NOT deployed - awaiting testing validation
+**Testing Status:** ✅ Complete - All scenarios passed
+**Deployment Status:** ✅ DEPLOYED TO PRODUCTION (2025-10-27)
+
+### ✅ Phase 1.5 Complete: Production Enhancements (2025-10-27)
+
+**After initial testing, the following enhancements were implemented:**
+
+1. ✅ **Unregistered Role Scanning** - Scans ALL Discord roles (not just playerData)
+   - Matches 5 name patterns per timezone (roleFormat, standardName, standardNameDST, abbreviations)
+   - Example: Finds orphaned "PST", "PDT", "PST (UTC-8)" roles in Discord
+   - Infers timezoneId from role name using dstState patterns
+   - Prefers registered roles as winners over unregistered
+   - `roleManager.js:816-840` - `findTimezoneIdFromRoleName()` helper
+   - `roleManager.js:842-883` - Discord role scanning logic
+
+2. ✅ **LEAN UI Compliance** - Proper Components V2 structure
+   - Changed from legacy `content` field to Container (type 17)
+   - Uses Text Display (type 10) for all text content
+   - Uses Separators (type 14) between sections
+   - Section headers: `> **\`📊 Summary\`**` (quoted, bold, backticked)
+   - Accent color: Green (0x27ae60) for success, Blue (0x3498DB) for no action
+   - `app.js:9321-9410` - Complete Components V2 response structure
+
+3. ✅ **Inline Member Changes** - Shows members under each removed role
+   - Groups member changes by timezoneId
+   - Displays members directly under the role they moved from
+   - Example: "🗑️ Removed: PST\n    • extremedonkey\n    • user2"
+   - Removed separate "Member Changes" section for clarity
+   - `app.js:9348-9386` - Inline member change display logic
+
+4. ✅ **Enhanced Winner Selection** - 4-tier priority system
+   - Priority 1: Registered in playerData (over unregistered)
+   - Priority 2: Has DST metadata (timezoneId field)
+   - Priority 3: Most members
+   - Priority 4: Oldest role (lower snowflake ID)
+   - `roleManager.js:969-984` - Multi-tier sorting logic
+
+**Production Deployment:**
+- Deployed via `npm run deploy-remote-wsl` on 2025-10-27
+- Manual button available: `/menu` → Reece's Tools → "Merge Duplicate Timezones"
+- Access restricted to admin user (ID: 391415444084490240)
 
 ---
 
@@ -1243,6 +1284,307 @@ But this created an unexpected problem:
 `─────────────────────────────────────────────────`
 
 ---
+
+## 🚀 PHASE 2: SETUP INTEGRATION DESIGN
+
+**Status:** 📋 Design Complete - Ready for Implementation
+**Estimated Effort:** 2-3 hours (implementation + testing)
+**Risk Level:** LOW (non-invasive integration, clear rollback path)
+
+### Design Goals
+
+1. **Idempotency**: Safe to run setup multiple times without creating duplicates
+2. **Zero Regression Risk**: Don't modify proven executeSetup() flow
+3. **User Control**: Keep manual button for admin override
+4. **Clear Feedback**: Show consolidation results in setup response
+5. **Performance**: Skip consolidation if no duplicates exist
+
+### Architecture Analysis
+
+**Current Setup Flow (`roleManager.js:1168-1392`):**
+```
+1. executeSetup(guildId, guild)
+   ├─ Load playerData
+   ├─ Convert existing timezone roles (if any)
+   │  └─ convertExistingTimezones() adds timezoneId
+   ├─ Save converted metadata (line 1232)
+   ├─ Create missing pronoun roles
+   ├─ Create missing timezone roles
+   └─ Return results
+
+2. updateCastBotStorage(guildId, results)  (lines 1400-1468)
+   ├─ Reload playerData (line 1404)
+   ├─ Save new pronoun role IDs
+   ├─ Reload playerData again (line 1444)
+   ├─ Save new timezone role metadata
+   └─ Complete
+
+3. Button handler (app.js:2753-2816)
+   ├─ Call executeSetup()
+   ├─ Call updateCastBotStorage()
+   ├─ Generate response
+   └─ Show to user
+```
+
+**Current Consolidation Flow (Manual Button):**
+```
+1. merge_timezone_roles button (app.js:9279-9412)
+   ├─ Load playerData
+   ├─ Run consolidateTimezoneRoles(guild, timezones)
+   ├─ Delete consolidated role IDs from playerData
+   ├─ Save playerData
+   └─ Show results
+```
+
+### Integration Options
+
+**Option A: Inside executeSetup()**
+❌ **Rejected** - Modifies proven flow, risk of updateCastBotStorage reloading and resurrecting deleted roles
+
+**Option B: Inside updateCastBotStorage()**
+❌ **Rejected** - Function doesn't currently return results, would need API changes
+
+**Option C: Separate Call After Setup** ✅ **SELECTED**
+Cleanest approach with zero regression risk
+
+### Selected Design: Option C
+
+**Implementation Location:** Button handler `app.js:2753-2816` (prod_setup)
+
+**New Flow:**
+```javascript
+// Existing code
+const setupResults = await executeSetup(guildId, guild);
+await updateCastBotStorage(guildId, setupResults);
+
+// NEW: Auto-consolidate duplicates (Phase 2)
+const playerData = await loadPlayerData();
+const timezones = playerData[guildId].timezones || {};
+
+// Idempotent check - only run if duplicates exist
+const duplicateCheck = checkForDuplicateTimezones(timezones);
+if (duplicateCheck.hasDuplicates) {
+  console.log(`🔀 Auto-consolidating ${duplicateCheck.duplicateCount} timezone groups...`);
+
+  const consolidationResults = await consolidateTimezoneRoles(guild, timezones);
+
+  // Clean up deleted roles
+  for (const deleted of consolidationResults.deleted) {
+    delete playerData[guildId].timezones[deleted.roleId];
+  }
+  await savePlayerData(playerData);
+
+  // Add to setup results for user feedback
+  setupResults.timezones.consolidation = consolidationResults;
+
+  console.log(`✅ Consolidated ${consolidationResults.merged.length} groups, deleted ${consolidationResults.deleted.length} roles`);
+}
+
+// Generate response (now includes consolidation if it ran)
+const response = generateSetupResponse(setupResults);
+```
+
+### Idempotency Helper Function
+
+**New Function:** `checkForDuplicateTimezones(timezones)` in `roleManager.js`
+
+```javascript
+/**
+ * Check if duplicate timezone roles exist (same timezoneId)
+ * Used to determine if consolidation is needed (idempotent check)
+ * @param {Object} timezones - Guild timezones from playerData
+ * @returns {Object} Duplicate analysis
+ */
+function checkForDuplicateTimezones(timezones) {
+  const byTimezoneId = {};
+  let duplicateCount = 0;
+
+  for (const [roleId, tzData] of Object.entries(timezones)) {
+    // Skip roles without timezoneId (custom timezones)
+    if (!tzData.timezoneId) continue;
+
+    if (!byTimezoneId[tzData.timezoneId]) {
+      byTimezoneId[tzData.timezoneId] = [];
+    }
+    byTimezoneId[tzData.timezoneId].push(roleId);
+  }
+
+  // Count timezone groups with 2+ roles
+  for (const [timezoneId, roleIds] of Object.entries(byTimezoneId)) {
+    if (roleIds.length > 1) {
+      duplicateCount++;
+    }
+  }
+
+  return {
+    hasDuplicates: duplicateCount > 0,
+    duplicateCount,
+    groups: byTimezoneId
+  };
+}
+```
+
+**Why This Works:**
+- ✅ Fast early exit (no duplicates = instant skip)
+- ✅ Re-entrant (safe to call multiple times)
+- ✅ Clear boolean check for conditional logic
+- ✅ Returns detailed breakdown for logging
+
+### Response Integration
+
+**Update:** `generateSetupResponse()` in `roleManager.js:1476-1589`
+
+Add consolidation section:
+```javascript
+// Add after timezone section (around line 1520)
+if (results.timezones.consolidation && results.timezones.consolidation.merged.length > 0) {
+  const cons = results.timezones.consolidation;
+  sections.push(`**🔀 Duplicate Consolidation:** ${cons.merged.length} groups merged, ${cons.deleted.length} roles removed`);
+
+  // Optional: Add details if significant
+  if (cons.memberChanges && cons.memberChanges.length > 0) {
+    sections.push(`  ↔️ Migrated ${cons.memberChanges.length} members to consolidated roles`);
+  }
+}
+```
+
+### Manual Button Preservation
+
+**Keep Existing:** `merge_timezone_roles` button in Reece's Tools menu
+
+**Why:**
+- Admin can manually consolidate without running full setup
+- Useful for troubleshooting specific servers
+- Access control already in place (user ID restriction)
+- No interference with setup integration
+
+**Differentiation:**
+- Manual button: Shows detailed member-by-member changes
+- Auto consolidation: Shows summary in setup response
+- Both use same underlying function: `consolidateTimezoneRoles()`
+
+### Testing Strategy
+
+**Phase 2 Test Scenarios:**
+
+1. **Fresh Setup** (no existing roles)
+   - Run setup → Creates 16 timezone roles
+   - checkForDuplicateTimezones() → false
+   - Consolidation skipped ✅
+   - Expected time: <1 second
+
+2. **Converted Server** (20 legacy roles)
+   - Run setup → Converts all 20 roles
+   - checkForDuplicateTimezones() → true (10 groups, 2 roles each)
+   - Consolidation runs → Deletes 10 roles
+   - Expected: 10 timezone roles remaining
+
+3. **Already Consolidated** (run setup twice)
+   - First run → Consolidates duplicates
+   - Second run → checkForDuplicateTimezones() → false
+   - Consolidation skipped ✅
+   - Idempotency verified
+
+4. **Partial Duplicates** (mixed state)
+   - Some timezones have duplicates, others don't
+   - Consolidation only processes groups with 2+ roles
+   - Unchanged timezones left alone
+
+### Rollback Plan
+
+If Phase 2 causes issues:
+
+```javascript
+// Comment out auto-consolidation code in app.js
+/*
+const duplicateCheck = checkForDuplicateTimezones(timezones);
+if (duplicateCheck.hasDuplicates) {
+  // ... consolidation code ...
+}
+*/
+```
+
+Manual button remains functional - users can still consolidate manually.
+
+### Performance Impact
+
+**Best Case** (no duplicates):
+- Single duplicate check: O(n) where n = number of timezone roles (~16)
+- Total overhead: <1ms
+- No Discord API calls
+
+**Worst Case** (10 duplicate groups, 100 members):
+- Duplicate check: <1ms
+- Consolidation: ~15 seconds (member migration + rate limits)
+- Total setup time increase: ~15 seconds (acceptable)
+
+**Typical Case** (post-conversion, 10 groups):
+- First setup: +15 seconds (one-time)
+- Subsequent setups: +<1ms (skip path)
+
+---
+
+## 🎨 PENDING ENHANCEMENT: Timezone Role Color
+
+**Status:** 📋 Designed - Ready for Implementation
+**Effort:** 30 minutes
+**Risk:** VERY LOW (cosmetic change)
+
+### Requirement
+
+Set all timezone roles to blue color `#3498DB` (0x3498DB) to match CastBot brand and distinguish from default gray.
+
+**Current State:**
+- Pronoun roles: Have custom colors per pronoun type (PRONOUN_COLORS constant)
+- Timezone roles: Created with default Discord gray (no color specified)
+
+**Desired State:**
+- All timezone roles: Blue (0x3498DB)
+- Consistent branding across all CastBot-created timezone roles
+
+### Implementation Points
+
+**1. Add Constant** (`roleManager.js:~50`):
+```javascript
+// After PRONOUN_COLORS definition
+const TIMEZONE_ROLE_COLOR = 0x3498DB;  // Blue for all timezone roles
+```
+
+**2. New Role Creation** (`roleManager.js:1366-1370`):
+```javascript
+const newRole = await guild.roles.create({
+    name: timezone.name,
+    color: TIMEZONE_ROLE_COLOR,  // ADD THIS LINE
+    mentionable: true,
+    reason: 'CastBot timezone role generation'
+});
+```
+
+**3. Role Conversion** (`roleManager.js:744-757`):
+```javascript
+// After renaming role
+if (role.name !== newRoleName) {
+    await role.setName(newRoleName);
+    await role.setColor(TIMEZONE_ROLE_COLOR);  // ADD THIS LINE
+    console.log(`🔄 Renamed role: "${role.name}" → "${newRoleName}" (blue color applied)`);
+    // ... rest of code
+}
+```
+
+**4. Consolidation Winner** (`roleManager.js:989-1009`):
+```javascript
+// After renaming winner (optional - for consistency)
+if (standardRoleName && winner.discordRole.name !== standardRoleName) {
+    await winner.discordRole.setName(standardRoleName);
+    await winner.discordRole.setColor(TIMEZONE_ROLE_COLOR);  // ADD THIS LINE
+    wasRenamed = true;
+}
+```
+
+**Testing:**
+- Create new server → Run setup → Verify blue timezone roles
+- Convert legacy server → Run setup → Verify roles turn blue
+- Run consolidation → Verify winner role is blue
 
 ---
 

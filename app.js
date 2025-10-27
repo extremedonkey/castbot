@@ -105,7 +105,9 @@ import {
   canBotManageRole,
   canBotManageRoles,
   generateHierarchyWarning,
-  testRoleHierarchy
+  testRoleHierarchy,
+  checkForDuplicateTimezones,
+  consolidateTimezoneRoles
 } from './roleManager.js';
 import { 
   createPlayerInventoryDisplay,
@@ -6220,7 +6222,32 @@ To fix this:
         // Execute comprehensive setup using roleManager
         console.log('🔍 DEBUG: Calling executeSetup from roleManager');
         const setupResults = await executeSetup(guildId, guild);
-        
+
+        // NEW: Auto-consolidate duplicate timezone roles (Phase 2 integration)
+        const playerData = await loadPlayerData();
+        const timezones = playerData[guildId]?.timezones || {};
+
+        const duplicateCheck = checkForDuplicateTimezones(timezones);
+        if (duplicateCheck.hasDuplicates) {
+          console.log(`🔀 Auto-consolidating ${duplicateCheck.duplicateCount} timezone groups after setup...`);
+
+          const consolidationResults = await consolidateTimezoneRoles(guild, timezones);
+
+          // Clean up deleted roles from playerData
+          for (const deleted of consolidationResults.deleted) {
+            delete playerData[guildId].timezones[deleted.roleId];
+          }
+          await savePlayerData(playerData);
+
+          // Add consolidation results to setup results for display
+          setupResults.timezones = setupResults.timezones || {};
+          setupResults.timezones.consolidation = consolidationResults;
+
+          console.log(`✅ Consolidated ${consolidationResults.merged.length} groups, deleted ${consolidationResults.deleted.length} roles`);
+        } else {
+          console.log(`✅ No duplicate timezones found, skipping consolidation`);
+        }
+
         // Generate detailed Components V2 response
         const componentsV2Response = generateSetupResponseV2(setupResults);
         
