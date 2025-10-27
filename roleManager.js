@@ -867,12 +867,19 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
             if (tz.standardNameDST && roleName === tz.standardNameDST) {
                 return { timezoneId, matchType: 'standardNameDST' };
             }
-            // Match abbreviation patterns (e.g., "PST", "PDT")
-            if (tz.standardAbbrev && roleName === tz.standardAbbrev) {
-                return { timezoneId, matchType: 'abbrev' };
+            // Match abbreviation patterns with word boundaries (e.g., "PST", "PST WHATEVER", "WHATEVER PST")
+            // Uses regex word boundaries to avoid false matches like "UPSTATE"
+            if (tz.standardAbbrev) {
+                const abbrevRegex = new RegExp(`\\b${tz.standardAbbrev}\\b`, 'i');
+                if (abbrevRegex.test(roleName)) {
+                    return { timezoneId, matchType: 'abbrev' };
+                }
             }
-            if (tz.dstAbbrev && roleName === tz.dstAbbrev) {
-                return { timezoneId, matchType: 'abbrev' };
+            if (tz.dstAbbrev) {
+                const abbrevRegex = new RegExp(`\\b${tz.dstAbbrev}\\b`, 'i');
+                if (abbrevRegex.test(roleName)) {
+                    return { timezoneId, matchType: 'abbrev' };
+                }
             }
         }
         return null;
@@ -1027,7 +1034,7 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
 
             const winnerType = winner.hasDSTMetadata ? '✅ DST-aware' : '⚠️ LEGACY';
             const winnerReg = winner.isRegistered ? '📝 Registered' : '⚠️ Unregistered';
-            console.log(`🏆 Winner: ${winner.discordRole.name} (${winner.memberCount} members, ${winnerType}, ${winnerReg}, ID: ${winner.roleId})`);
+            console.log(`🏆 Retained: ${winner.discordRole.name} (${winner.memberCount} members, ${winnerType}, ${winnerReg}, ID: ${winner.roleId})`);
 
             losers.forEach(loser => {
                 const loserType = loser.hasDSTMetadata ? '✅ DST-aware' : '⚠️ LEGACY';
@@ -1130,7 +1137,7 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
                 try {
                     await winner.discordRole.setName(standardRoleName);
                     await winner.discordRole.setColor(TIMEZONE_ROLE_COLOR);
-                    console.log(`🔄 Renamed winner: "${winner.discordRole.name}" → "${standardRoleName}" (blue color applied)`);
+                    console.log(`🔄 Renamed retained role: "${winner.discordRole.name}" → "${standardRoleName}" (blue color applied)`);
                     wasRenamed = true;
                     // Rate limit: 200ms after rename
                     await new Promise(resolve => setTimeout(resolve, 200));
@@ -1146,7 +1153,7 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
                     });
                 }
             } else if (standardRoleName && winner.discordRole.name === standardRoleName) {
-                console.log(`✅ Winner role "${winner.discordRole.name}" already has correct name`);
+                console.log(`✅ Retained role "${winner.discordRole.name}" already has correct name`);
             }
 
             // Step 2: Add metadata to winner role if missing
@@ -1155,15 +1162,15 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
                 winner.tzData.dstObserved = dstState[timezoneId]?.dstObserved || false;
                 winner.tzData.standardName = dstState[timezoneId]?.standardName || null;
                 metadataAdded = true;
-                console.log(`📝 Added metadata to winner role ${winner.roleId}: timezoneId="${timezoneId}"`);
+                console.log(`📝 Added metadata to retained role ${winner.roleId}: timezoneId="${timezoneId}"`);
             } else {
-                console.log(`✅ Winner role ${winner.roleId} already has timezoneId metadata`);
+                console.log(`✅ Retained role ${winner.roleId} already has timezoneId metadata`);
             }
 
             // Step 3: Register winner in playerData if it was unregistered
             if (!winner.isRegistered) {
                 currentTimezones[winner.roleId] = winner.tzData;
-                console.log(`📝 Registered winner role ${winner.roleId} in playerData (was unregistered)`);
+                console.log(`📝 Registered retained role ${winner.roleId} in playerData (was unregistered)`);
             }
 
             // Record successful merge
@@ -1677,7 +1684,7 @@ function generateSetupResponseV2(results) {
         // Show each merged group
         cons.merged.forEach(merge => {
             sections.push(`### ${merge.timezoneId}`);
-            sections.push(`• ✅ Winner: <@&${merge.winner.roleId}> (${merge.winner.finalMemberCount || 0} members)`);
+            sections.push(`• ✅ Retained Role: <@&${merge.winner.roleId}> (${merge.winner.finalMemberCount || 0} members)`);
 
             if (merge.winner.wasRenamed) {
                 sections.push(`  🔄 Renamed to standard format: "${merge.winner.roleName}"`);
