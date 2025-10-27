@@ -1201,11 +1201,16 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
                     wasRenamed,
                     metadataAdded
                 },
-                losers: losers.map(l => ({
-                    roleId: l.roleId,
-                    roleName: l.discordRole.name,
-                    membersMigrated: l.memberCount
-                })),
+                losers: losers.map(l => {
+                    // Find members that were migrated from this specific loser role
+                    const migratedFromThisRole = memberChanges.filter(mc => mc.fromRole === l.discordRole.name);
+                    return {
+                        roleId: l.roleId,
+                        roleName: l.discordRole.name,
+                        membersMigrated: l.memberCount,
+                        migratedMemberNames: migratedFromThisRole.map(mc => mc.username)
+                    };
+                }),
                 totalMigrated: migratedMembers.length
             });
 
@@ -1726,6 +1731,13 @@ function generateSetupResponseV2(results) {
             merge.losers.forEach(loser => {
                 const migratedCount = loser.membersMigrated || 0;
                 sections.push(`• 🗑️ Removed: ${loser.roleName} (${migratedCount} members migrated)`);
+
+                // Show member names inline if any were migrated
+                if (loser.migratedMemberNames && loser.migratedMemberNames.length > 0) {
+                    loser.migratedMemberNames.forEach(username => {
+                        sections.push(`    • ${username}`);
+                    });
+                }
             });
 
             sections.push('');
@@ -1787,9 +1799,17 @@ function generateSetupResponseV2(results) {
     }
     
     // Calculate character count for the detailed message
-    const fullMessage = sections.join('\n');
+    let fullMessage = sections.join('\n');
     console.log(`📊 DEBUG: Setup response V2 character count: ${fullMessage.length} characters`);
-    
+
+    // Discord Text Display limit is 4000 characters (ComponentsV2.md)
+    const CHAR_LIMIT = 4000;
+    if (fullMessage.length > CHAR_LIMIT) {
+        console.warn(`⚠️ Setup response exceeded ${CHAR_LIMIT} character limit (${fullMessage.length} chars), truncating...`);
+        // Truncate and add warning
+        fullMessage = fullMessage.substring(0, CHAR_LIMIT - 150) + '\n\n---\n\n⚠️ **Response truncated** - Message exceeded 4000 character limit. Full details logged to console.';
+    }
+
     // Create Components V2 Container with TextDisplay
     return {
         type: 17, // Container component

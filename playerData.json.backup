@@ -243,12 +243,6 @@
         "dstObserved": true,
         "standardName": "NZST (UTC+12)"
       },
-      "1335635316077498409": {
-        "offset": 1,
-        "timezoneId": "GMT",
-        "dstObserved": true,
-        "standardName": "GMT (UTC+0)"
-      },
       "1335635318027845754": {
         "offset": 2,
         "timezoneId": "CET",
@@ -260,12 +254,6 @@
         "timezoneId": "IST",
         "dstObserved": false,
         "standardName": "IST (UTC+5.5)"
-      },
-      "1335635324444868708": {
-        "offset": 13,
-        "timezoneId": "NZST",
-        "dstObserved": true,
-        "standardName": "NZST (UTC+12)"
       },
       "1320094634646704350": {
         "offset": -3,
@@ -301,53 +289,11 @@
         "dstObserved": true,
         "standardName": "AEST (UTC+10)"
       },
-      "1431904575392186448": {
-        "offset": -8,
-        "dstObserved": true,
-        "standardName": "PST (UTC-8)",
-        "timezoneId": "PT"
-      },
-      "1431904577149472819": {
-        "offset": -7,
-        "dstObserved": true,
-        "standardName": "MST (UTC-7)",
-        "timezoneId": "MT"
-      },
-      "1431904579179774045": {
-        "offset": -6,
-        "dstObserved": true,
-        "standardName": "CST (UTC-6)",
-        "timezoneId": "CT"
-      },
-      "1431904581360681030": {
-        "offset": -5,
-        "dstObserved": true,
-        "standardName": "EST (UTC-5)",
-        "timezoneId": "ET"
-      },
-      "1431904583122161726": {
-        "offset": -4,
-        "dstObserved": true,
-        "standardName": "AST (UTC-4)",
-        "timezoneId": "AT"
-      },
       "1431904586062495794": {
         "offset": -3.5,
         "dstObserved": true,
         "standardName": "NST (UTC-3:30)",
         "timezoneId": "NT"
-      },
-      "1431904587991879682": {
-        "offset": 0,
-        "dstObserved": true,
-        "standardName": "GMT (UTC+0)",
-        "timezoneId": "GMT"
-      },
-      "1431904589854146701": {
-        "offset": 1,
-        "dstObserved": true,
-        "standardName": "CET (UTC+1)",
-        "timezoneId": "CET"
       },
       "1431904591611433001": {
         "offset": 2,
@@ -361,41 +307,17 @@
         "standardName": "SAST (UTC+2)",
         "timezoneId": "SAST"
       },
-      "1431904595428249621": {
-        "offset": 5.5,
-        "dstObserved": false,
-        "standardName": "IST (UTC+5.5)",
-        "timezoneId": "IST"
-      },
       "1431904597546504304": {
         "offset": 7,
         "dstObserved": false,
         "standardName": "ICT (UTC+7)",
         "timezoneId": "ICT"
       },
-      "1431904601661247530": {
-        "offset": 8,
-        "dstObserved": false,
-        "standardName": "GMT+8 (UTC+8)",
-        "timezoneId": "GMT8"
-      },
       "1431904603489833151": {
         "offset": 9,
         "dstObserved": false,
         "standardName": "JST (UTC+9)",
         "timezoneId": "JST"
-      },
-      "1431904605989765132": {
-        "offset": 10,
-        "dstObserved": true,
-        "standardName": "AEST (UTC+10)",
-        "timezoneId": "AEST"
-      },
-      "1431904608141443203": {
-        "offset": 12,
-        "dstObserved": true,
-        "standardName": "NZST (UTC+12)",
-        "timezoneId": "NZST"
       }
     },
     "pronounRoleIDs": [
@@ -3165,15 +3087,146 @@
         "castlist": "default"
       }
     },
-    "timezones": {},
-    "pronounRoleIDs": [],
+    "timezones": {
+      "1432378931025022986": {
+        "offset": -8,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)",
+        "timezoneId": "PT"
+      },
+      "1432378932929364062": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)",
+        "timezoneId": "MT"
+      },
+      "1432378935059943534": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)",
+        "timezoneId": "CT"
+      },
+      "1432378936662167553": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)",
+        "timezoneId": "ET"
+      },
+      "1432378938537017425": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)",
+        "timezoneId": "AT"
+      },
+      "1432378940441231373": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)",
+        "timezoneId": "NT"
+      },
+      "1432378942144118846": {
+        "offset": 0,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)",
+        "timezoneId": "GMT"
+      },
+      "1432378944530944220": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)",
+        "timezoneId": "CET"
+      },
+      "1432378946250473545": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "EET (UTC+2)",
+        "timezoneId": "EET"
+      },
+      "1432378948091904155": {
+        "offset": 2,
+        "dstObserved": false,
+        "standardName": "SAST (UTC+2)",
+        "timezoneId": "SAST"
+      },
+      "1432378950184599644": {
+        "offset": 5.5,
+        "dstObserved": false,
+        "standardName": "IST (UTC+5.5)",
+        "timezoneId": "IST"
+      },
+      "1432378952101658797": {
+        "offset": 7,
+        "dstObserved": false,
+        "standardName": "ICT (UTC+7)",
+        "timezoneId": "ICT"
+      },
+      "1432378954223714405": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": "GMT+8 (UTC+8)",
+        "timezoneId": "GMT8"
+      },
+      "1432378956581175468": {
+        "offset": 9,
+        "dstObserved": false,
+        "standardName": "JST (UTC+9)",
+        "timezoneId": "JST"
+      },
+      "1432378958376341565": {
+        "offset": 10,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)",
+        "timezoneId": "AEST"
+      },
+      "1432378960229957905": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)",
+        "timezoneId": "NZST"
+      }
+    },
+    "pronounRoleIDs": [
+      "1432378922955178035",
+      "1432378924809060437",
+      "1432378926923120711",
+      "1432378928894447697",
+      "1267460138994761728",
+      "1267460138260758639",
+      "1267460139087171776",
+      "1267460139871633458"
+    ],
     "ownerInfo": {
       "username": "mpschettig",
       "globalName": "Tylenol Boy",
       "discriminator": "0",
       "tag": "mpschettig"
     },
-    "analyticsVersion": "1.0"
+    "analyticsVersion": "1.0",
+    "reactionMappings": {
+      "1432379233216233686": {
+        "mapping": {
+          "1️⃣": "1432378958376341565",
+          "2️⃣": "1432378938537017425",
+          "3️⃣": "1432378944530944220",
+          "4️⃣": "1432378935059943534",
+          "5️⃣": "1432378946250473545",
+          "6️⃣": "1432378936662167553",
+          "7️⃣": "1432378942144118846",
+          "8️⃣": "1432378954223714405",
+          "9️⃣": "1432378952101658797",
+          "🔟": "1432378950184599644",
+          "🇦": "1432378956581175468",
+          "🇧": "1432378932929364062",
+          "🇨": "1432378940441231373",
+          "🇩": "1432378960229957905",
+          "🇪": "1432378931025022986",
+          "🇫": "1432378948091904155",
+          "isTimezone": true
+        },
+        "createdAt": 1761576232722,
+        "lastAccessed": 1761576232722
+      }
+    }
   },
   "1240325979214188615": {
     "serverName": "EpochORG S5: Incan Empire",
