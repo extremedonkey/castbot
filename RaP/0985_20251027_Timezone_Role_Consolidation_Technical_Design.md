@@ -2,11 +2,13 @@
 
 **Date:** 2025-10-27
 **Status:** ✅ PHASE 1 COMPLETE - Deployed to Production
-**Phase 1.5:** 🔨 In Progress - Enhancements (unregistered role scanning, LEAN UI, Components V2)
-**Phase 2:** 📋 Design Complete - Setup Integration (ready for implementation)
+**Phase 1.5:** ✅ COMPLETE - Enhancements (unregistered role scanning, LEAN UI, Components V2)
+**Phase 2:** ✅ COMPLETE - Setup Integration (auto-consolidation working)
 **Priority:** HIGH (Blocks production deployment due to 25-role limit)
 **Risk Level:** MEDIUM (Role deletion + member migration)
 **Related:** [0990 - Timezone DST Architecture](0990_20251010_Timezone_DST_Architecture_Analysis.md), [0986 - DST Deployment Review](0986_20251027_DST_Deployment_Final_Review.md)
+
+**⚠️ CRITICAL FIX (2025-10-27):** Initial Phase 2 implementation had idempotency check that skipped consolidation if no duplicates found in playerData. This prevented Discord scanning for unregistered roles. Fixed by always calling `consolidateTimezoneRoles()` which has smart per-timezone early-exit logic and scans Discord properly.
 
 ---
 
@@ -75,6 +77,30 @@
 - Deployed via `npm run deploy-remote-wsl` on 2025-10-27
 - Manual button available: `/menu` → Reece's Tools → "Merge Duplicate Timezones"
 - Access restricted to admin user (ID: 391415444084490240)
+
+### ✅ Phase 2 Complete: Setup Integration (2025-10-27)
+
+**Code Locations:**
+- `app.js:6226-6249` - Auto-consolidation after setup
+- `roleManager.js:1664-1702` - Consolidation results in setup response
+- `roleManager.js:50-51` - TIMEZONE_ROLE_COLOR constant (0x3498DB)
+- `roleManager.js:751, 1132, 1406` - Blue color applied in 3 locations
+
+**Features Implemented:**
+1. ✅ **Auto-consolidation** - Always runs after setup, scans Discord for unregistered roles
+2. ✅ **Response integration** - Shows consolidation results in setup response
+3. ✅ **Timezone role colors** - All timezone roles now blue (0x3498DB)
+4. ✅ **Smart early-exit** - Per-timezone skip logic (no overhead when no duplicates)
+
+**⚠️ Critical Fix Applied:**
+- **Problem:** Initial implementation had `checkForDuplicateTimezones()` that only checked playerData
+- **Impact:** Skipped consolidation when unregistered Discord roles existed (not in playerData)
+- **Solution:** Removed early idempotency check, always call `consolidateTimezoneRoles()`
+- **Result:** Function scans Discord properly, has own per-timezone early-exit logic
+- **Code:** `app.js:6231-6232` - Always run consolidation, check results for display
+
+**Testing Status:** ✅ Verified - Unregistered roles now detected and merged during setup
+**Deployment Status:** ⏳ READY FOR PRODUCTION (needs user approval)
 
 ---
 
