@@ -6775,6 +6775,90 @@ async function clearCorruptedAttacks(guildId) {
 }
 
 /**
+ * Create attack results display container
+ * Formats attack/defense results into Components V2 structure
+ * @param {Array} attackResults - Array of attack result objects
+ * @param {Array} consumptionResults - Array of item consumption results
+ * @returns {Object} Discord response object with Components V2
+ */
+function createAttackResultsDisplay(attackResults, consumptionResults) {
+    const components = [
+        {
+            type: 10, // Text Display
+            content: "## ⚔️ Attack Results"
+        },
+        { type: 14 } // Separator
+    ];
+
+    // Add defender results
+    if (attackResults && attackResults.length > 0) {
+        for (const result of attackResults) {
+            const attackSummary = result.attackers
+                ?.map(a => `⚔️ ${a.name || 'Unknown'} used ${a.quantity || 1}x ${a.itemName || 'Unknown Item'} (${a.damage || 0} damage)`)
+                .join('\n') || 'No attacks';
+
+            const changeText = result.damageDealt > 0
+                ? `-${result.damageDealt}`
+                : '+0';
+
+            components.push(
+                {
+                    type: 10, // Text Display
+                    content: `> **\`${result.defenderName || 'Unknown'}\`**\n\n` +
+                             `**Attacks Received:**\n${attackSummary}\n\n` +
+                             `**Defense:**\n🛡️ ${result.totalDefense || 0} total defense\n\n` +
+                             `**Result:**\n💰 ${result.originalCurrency || 0} → ${result.newCurrency || 0} (${changeText})`
+                },
+                { type: 14 } // Separator
+            );
+        }
+    }
+
+    // Add consumption results
+    if (consumptionResults && consumptionResults.length > 0) {
+        const consumptionByPlayer = {};
+        for (const consumption of consumptionResults) {
+            const playerName = consumption.playerName || 'Unknown';
+            if (!consumptionByPlayer[playerName]) {
+                consumptionByPlayer[playerName] = [];
+            }
+            consumptionByPlayer[playerName].push(consumption);
+        }
+
+        for (const [playerName, consumptions] of Object.entries(consumptionByPlayer)) {
+            const consumptionSummary = consumptions
+                .map(c => `⚔️ ${c.quantityConsumed || 0}x ${c.itemName || 'Unknown'} consumed (${c.originalQuantity || 0} → ${c.newQuantity || 0})`)
+                .join('\n');
+
+            components.push(
+                {
+                    type: 10, // Text Display
+                    content: `> **\`${playerName}\`**\n\n**Items Consumed:**\n${consumptionSummary}`
+                },
+                { type: 14 } // Separator
+            );
+        }
+    }
+
+    // If no results at all, show a message
+    if ((!attackResults || attackResults.length === 0) && (!consumptionResults || consumptionResults.length === 0)) {
+        components.push({
+            type: 10, // Text Display
+            content: '*No attacks were processed this round.*'
+        });
+    }
+
+    return {
+        flags: (1 << 15), // IS_COMPONENTS_V2
+        components: [{
+            type: 17, // Container
+            accent_color: 0xe74c3c, // Red (attack theme)
+            components: components
+        }]
+    };
+}
+
+/**
  * Create V2 round results display with player-centric cards
  * @param {string} guildId - Guild ID
  * @param {Object} roundData - Round processing results
