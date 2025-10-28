@@ -6572,8 +6572,9 @@ async function processAttackQueue(guildId, currentRound, playerData, items, clie
                 originalCurrency,
                 newCurrency: defender.safari.currency,
                 attackCount: attacks.length,
-                attackers: attacks.map(a => ({ 
-                    name: a.attackingPlayerName, 
+                attackers: attacks.map(a => ({
+                    attackerId: a.attackingPlayer, // Include attacker ID for filtering
+                    name: a.attackingPlayerName,
                     damage: a.totalDamage,
                     itemName: a.itemName,
                     quantity: a.attacksPlanned

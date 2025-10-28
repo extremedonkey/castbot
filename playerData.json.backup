@@ -500,14 +500,14 @@
     ],
     "icon": "https://cdn.discordapp.com/icons/1127596863885934652/21246f7f1ab8a24074a5bdb6ae3b6ba2.webp",
     "ownerId": "391415444084490240",
-    "memberCount": 84,
+    "memberCount": 83,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1688910442087,
-    "lastUpdated": 1760019729400,
+    "lastUpdated": 1761652120626,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -826,19 +826,50 @@
           "1398904036643831818"
         ],
         "safari": {
-          "currency": 100,
+          "currency": 40,
           "history": [],
           "lastInteraction": 1760982066454,
           "achievements": [],
           "inventory": {
-            "nurturer_361363": 1,
+            "nurturer_361363": {
+              "quantity": 1,
+              "numAttacksAvailable": 1
+            },
             "territory_forager_404120": 1,
             "nest_guardian_461600": 1,
-            "raider_499497": 1
+            "raider_499497": {
+              "quantity": 5,
+              "numAttacksAvailable": 0
+            }
           },
           "cooldowns": {},
           "buttonUses": {},
-          "storeHistory": [],
+          "storeHistory": [
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1761656252680
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1761656256604
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1761656259595
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1761656265781
+            }
+          ],
           "mapProgress": {
             "map_7x7_1753981993871": {
               "currentLocation": "E2",
@@ -3232,14 +3263,14 @@
     "serverName": "EpochORG S5: Incan Empire",
     "icon": "https://cdn.discordapp.com/icons/1240325979214188615/156095a9edb1de2f24dfac78d2904a04.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 62,
+    "memberCount": 61,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1715787157587,
-    "lastUpdated": 1761319456749,
+    "lastUpdated": 1761652123867,
     "players": {},
     "tribes": {
       "1241383870260056095": {
@@ -3315,14 +3346,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 562,
+    "memberCount": 563,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1761471732312,
+    "lastUpdated": 1761652120169,
     "players": {
       "235148962103951360": {
         "emojiCode": "<:Carl_bot:1380989603783249950>"
@@ -8649,14 +8680,14 @@
     "serverName": "EpochORG S4: Ancient Egypt",
     "icon": "https://cdn.discordapp.com/icons/1209015985798127696/fab803057622fa548002ca6920f860ac.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 78,
+    "memberCount": 76,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1708322273445,
-    "lastUpdated": 1761408945634,
+    "lastUpdated": 1761652123374,
     "ownerInfo": {
       "username": "mpschettig",
       "globalName": "Tylenol Boy",
