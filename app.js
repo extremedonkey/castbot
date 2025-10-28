@@ -14460,6 +14460,18 @@ Your server is now ready for Tycoons gameplay!`;
             const { showCalculateResultsConfig } = await import('./customActionUI.js');
             return await showCalculateResultsConfig(context.guildId, buttonId, actionIndex);
 
+          // For calculate_attack, show new entity interface
+          } else if (actionType === 'calculate_attack') {
+            // Determine the action index for new action
+            const { loadSafariContent } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+            const currentButton = safariData[context.guildId]?.buttons?.[buttonId];
+            const actionIndex = currentButton?.actions?.length || 0;
+
+            console.log(`✅ SUCCESS: safari_action_type_select - showing calculate_attack entity for ${buttonId}[${actionIndex}]`);
+            const { showCalculateAttackConfig } = await import('./customActionUI.js');
+            return await showCalculateAttackConfig(context.guildId, buttonId, actionIndex);
+
           // For update_currency, delegate to safari_add_action handler  
           } else if (actionType === 'update_currency') {
             // Simulate the safari_add_action custom_id and call its handler
