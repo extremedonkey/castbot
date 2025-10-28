@@ -9945,7 +9945,9 @@ Your server is now ready for Tycoons gameplay!`;
             const response = await createAttackPlanningUI(context.guildId, context.userId, itemId, client);
 
             console.log(`✅ SUCCESS: safari_attack_player - created attack UI for ${itemId}`);
-            return response;
+
+            // Unwrap response for deferred pattern (ButtonHandlerFactory expects just the data, not {type, data})
+            return response.data || response;
 
           } catch (error) {
             console.error(`❌ ERROR: safari_attack_player - ${error.message}`);
