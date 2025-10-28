@@ -1422,7 +1422,7 @@ async function sendFollowUpMessages(token, responses) {
 /**
  * Execute all actions for a button
  */
-async function executeButtonActions(guildId, buttonId, userId, interaction, forceConditionsFail = false) {
+async function executeButtonActions(guildId, buttonId, userId, interaction, client, forceConditionsFail = false) {
     try {
         console.log(`🚀 DEBUG: Executing button actions for ${buttonId} by user ${userId}`);
         

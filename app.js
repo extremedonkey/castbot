@@ -4437,7 +4437,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               channel: { name: context.channelName } // Pass channel information for logging
             };
 
-            const result = await executeButtonActions(guildId, buttonId, context.userId, interactionData);
+            const result = await executeButtonActions(guildId, buttonId, context.userId, interactionData, client);
 
             console.log(`✅ SUCCESS (DEFERRED): ${custom_id} - completed`);
             return {
@@ -4469,7 +4469,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               channel: { name: context.channelName } // Pass channel information for logging
             };
 
-            const result = await executeButtonActions(guildId, buttonId, context.userId, interactionData);
+            const result = await executeButtonActions(guildId, buttonId, context.userId, interactionData, client);
 
             console.log(`✅ SUCCESS: ${custom_id} - completed`);
             return {
@@ -13762,7 +13762,7 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Execute button actions as a test
         const userId = req.body.member?.user?.id || req.body.user?.id;
-        const result = await executeButtonActions(guildId, buttonId, userId, req.body);
+        const result = await executeButtonActions(guildId, buttonId, userId, req.body, client);
         
         // Add test indicator to the result
         const testResult = {
@@ -22213,12 +22213,13 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             member: context.member, // Add member data for role operations
             channelName: context.channelName || 'Unknown' // Add channel name for logging
           };
-          
+
           const result = await executeButtonActions(
             context.guildId,
             actionId,
             context.userId,
-            interactionData // Pass proper interaction data with token
+            interactionData, // Pass proper interaction data with token
+            client
           );
           
           console.log(`✅ SUCCESS: custom_action_test - tested ${actionId}`);
@@ -35017,7 +35018,8 @@ Are you sure you want to continue?`;
             guildId,
             matchingAction.id,  // Use the button ID, not the actions array
             userId,
-            interactionData
+            interactionData,
+            client
           );
           
           // Log the player command
@@ -35162,6 +35164,7 @@ Are you sure you want to continue?`;
               firstFalseAction.actionId,
               userId,
               interactionData,
+              client,
               true // forceConditionsFail - treat as if conditions failed
             );
             
