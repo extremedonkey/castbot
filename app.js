@@ -22253,11 +22253,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       })(req, res, client);
       
     } else if (custom_id.startsWith('custom_action_test_')) {
-      // Handle test action button
+      // Handle test action button with deferred response (actions can take >3s)
       return ButtonHandlerFactory.create({
         id: 'custom_action_test',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        deferred: true, // Required - executeButtonActions can run slow operations (calculate_results, calculate_attack, Discord API calls)
         handler: async (context) => {
           console.log(`🔍 START: custom_action_test - user ${context.userId}`);
           

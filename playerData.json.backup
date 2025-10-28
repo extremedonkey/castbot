@@ -736,8 +736,8 @@
             "nest_guardian_461600": 1,
             "raider_499497": 1
           },
-          "currency": 100,
-          "lastInteraction": 1760972349301,
+          "currency": 194,
+          "lastInteraction": 1761658097282,
           "history": [],
           "storeHistory": [],
           "achievements": [],
@@ -749,9 +749,9 @@
         "emojiCode": "<:Natadwen:1396856838158417931>",
         "age": "29",
         "safari": {
-          "currency": 100,
+          "currency": 194,
           "history": [],
-          "lastInteraction": 1760972350409,
+          "lastInteraction": 1761658097824,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -804,7 +804,7 @@
             }
           },
           "isPaused": true,
-          "currency": 36,
+          "currency": 130,
           "inventory": {
             "nurturer_361363": 1,
             "territory_forager_404120": 1,
@@ -816,7 +816,7 @@
           "achievements": [],
           "cooldowns": {},
           "buttonUses": {},
-          "lastInteraction": 1760972350967
+          "lastInteraction": 1761658099054
         }
       },
       "391415444084490240": {
@@ -826,9 +826,9 @@
           "1398904036643831818"
         ],
         "safari": {
-          "currency": 10,
+          "currency": 104,
           "history": [],
-          "lastInteraction": 1760982066454,
+          "lastInteraction": 1761658099647,
           "achievements": [],
           "inventory": {
             "nurturer_361363": {
@@ -958,15 +958,21 @@
           "1401201426436456468"
         ],
         "safari": {
-          "currency": 100,
+          "currency": 194,
           "history": [],
-          "lastInteraction": 1760972352026,
+          "lastInteraction": 1761658100689,
           "achievements": [],
           "inventory": {
-            "nurturer_361363": 1,
+            "nurturer_361363": {
+              "quantity": 1,
+              "numAttacksAvailable": 1
+            },
             "territory_forager_404120": 1,
             "nest_guardian_461600": 1,
-            "raider_499497": 1
+            "raider_499497": {
+              "quantity": 1,
+              "numAttacksAvailable": 1
+            }
           },
           "cooldowns": {},
           "buttonUses": {},
@@ -977,9 +983,9 @@
         "age": "45",
         "emojiCode": "<:Serviver:1396856842994585651>",
         "safari": {
-          "currency": 100,
+          "currency": 194,
           "history": [],
-          "lastInteraction": 1760972352978,
+          "lastInteraction": 1761658101197,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -996,9 +1002,9 @@
         "age": "22",
         "emojiCode": "<:kayl:1396856849126522991>",
         "safari": {
-          "currency": 100,
+          "currency": 194,
           "history": [],
-          "lastInteraction": 1760972353601,
+          "lastInteraction": 1761658101717,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1077,7 +1083,7 @@
             }
           },
           "isPaused": false,
-          "currency": 100,
+          "currency": 194,
           "inventory": {
             "nurturer_361363": 1,
             "territory_forager_404120": 1,
@@ -1089,16 +1095,16 @@
           "achievements": [],
           "cooldowns": {},
           "buttonUses": {},
-          "lastInteraction": 1760972357921
+          "lastInteraction": 1761658102237
         }
       },
       "676262975132139522": {
         "emojiCode": "<:Belle:1382413449342091405>",
         "age": "28",
         "safari": {
-          "currency": 100,
+          "currency": 194,
           "history": [],
-          "lastInteraction": 1760972354631,
+          "lastInteraction": 1761658101375,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1144,9 +1150,9 @@
       "977455730300956683": {
         "emojiCode": "<:morgane:1382413461094535281>",
         "safari": {
-          "currency": 100,
+          "currency": 194,
           "history": [],
-          "lastInteraction": 1760972355134,
+          "lastInteraction": 1761658101834,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1162,9 +1168,9 @@
       },
       "480712959824363520": {
         "safari": {
-          "currency": 100,
+          "currency": 194,
           "history": [],
-          "lastInteraction": 1760972358460,
+          "lastInteraction": 1761658102455,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1184,9 +1190,9 @@
       },
       "1088078919409881098": {
         "safari": {
-          "currency": 100,
+          "currency": 194,
           "history": [],
-          "lastInteraction": 1760972359642,
+          "lastInteraction": 1761658107592,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1201,9 +1207,9 @@
       },
       "208197633846542336": {
         "safari": {
-          "currency": 100,
+          "currency": 194,
           "history": [],
-          "lastInteraction": 1760972356278,
+          "lastInteraction": 1761658108962,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1219,9 +1225,9 @@
       },
       "235148962103951360": {
         "safari": {
-          "currency": 100,
+          "currency": 194,
           "history": [],
-          "lastInteraction": 1760972360175,
+          "lastInteraction": 1761658110312,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1325,7 +1331,7 @@
             }
           },
           "isPaused": false,
-          "currency": 100,
+          "currency": 194,
           "inventory": {
             "nurturer_361363": 1,
             "territory_forager_404120": 1,
@@ -1337,15 +1343,15 @@
           "achievements": [],
           "cooldowns": {},
           "buttonUses": {},
-          "lastInteraction": 1760972361222
+          "lastInteraction": 1761658110847
         }
       },
       "1086246253819613274": {
         "age": "60s",
         "safari": {
-          "currency": 100,
+          "currency": 194,
           "history": [],
-          "lastInteraction": 1760972348712,
+          "lastInteraction": 1761658111804,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1443,20 +1449,20 @@
             "nest_guardian_461600": 1,
             "raider_499497": 1
           },
-          "currency": 100,
+          "currency": 194,
           "history": [],
           "achievements": [],
           "cooldowns": {},
           "buttonUses": {},
           "storeHistory": [],
-          "lastInteraction": 1760972366028
+          "lastInteraction": 1761658112378
         }
       },
       "630470402900230146": {
         "safari": {
-          "currency": 100,
+          "currency": 194,
           "history": [],
-          "lastInteraction": 1760972356797,
+          "lastInteraction": 1761658113514,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1506,9 +1512,9 @@
       },
       "719547106318352496": {
         "safari": {
-          "currency": 100,
+          "currency": 194,
           "history": [],
-          "lastInteraction": 1760980807317,
+          "lastInteraction": 1761658114002,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
