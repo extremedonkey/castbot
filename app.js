@@ -14450,11 +14450,40 @@ Your server is now ready for Tycoons gameplay!`;
 
           // For calculate_results, show new entity interface
           } else if (actionType === 'calculate_results') {
-            // Determine the action index for new action
-            const { loadSafariContent } = await import('./safariManager.js');
+            // Load safari content to create the action
+            const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
             const safariData = await loadSafariContent();
             const currentButton = safariData[context.guildId]?.buttons?.[buttonId];
+
+            if (!currentButton) {
+              return {
+                content: '❌ Button not found.',
+                ephemeral: true
+              };
+            }
+
             const actionIndex = currentButton?.actions?.length || 0;
+
+            // Create the action immediately with default values (eager save pattern)
+            if (!currentButton.actions) {
+              currentButton.actions = [];
+            }
+
+            // Only create if it doesn't already exist
+            if (!currentButton.actions[actionIndex]) {
+              currentButton.actions[actionIndex] = {
+                type: 'calculate_results',
+                order: actionIndex,
+                config: {
+                  scope: 'all_players'
+                },
+                executeOn: 'true'
+              };
+
+              // Save immediately
+              await saveSafariContent(safariData);
+              console.log(`💾 SAVED: safari_action_type_select - created calculate_results action with defaults for ${buttonId}[${actionIndex}]`);
+            }
 
             console.log(`✅ SUCCESS: safari_action_type_select - showing calculate_results entity for ${buttonId}[${actionIndex}]`);
             const { showCalculateResultsConfig } = await import('./customActionUI.js');
@@ -14462,11 +14491,41 @@ Your server is now ready for Tycoons gameplay!`;
 
           // For calculate_attack, show new entity interface
           } else if (actionType === 'calculate_attack') {
-            // Determine the action index for new action
-            const { loadSafariContent } = await import('./safariManager.js');
+            // Load safari content to create the action
+            const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
             const safariData = await loadSafariContent();
             const currentButton = safariData[context.guildId]?.buttons?.[buttonId];
+
+            if (!currentButton) {
+              return {
+                content: '❌ Button not found.',
+                ephemeral: true
+              };
+            }
+
             const actionIndex = currentButton?.actions?.length || 0;
+
+            // Create the action immediately with default values (eager save pattern)
+            if (!currentButton.actions) {
+              currentButton.actions = [];
+            }
+
+            // Only create if it doesn't already exist
+            if (!currentButton.actions[actionIndex]) {
+              currentButton.actions[actionIndex] = {
+                type: 'calculate_attack',
+                order: actionIndex,
+                config: {
+                  playerScope: 'all_players',
+                  displayMode: 'silent'
+                },
+                executeOn: 'true'
+              };
+
+              // Save immediately
+              await saveSafariContent(safariData);
+              console.log(`💾 SAVED: safari_action_type_select - created calculate_attack action with defaults for ${buttonId}[${actionIndex}]`);
+            }
 
             console.log(`✅ SUCCESS: safari_action_type_select - showing calculate_attack entity for ${buttonId}[${actionIndex}]`);
             const { showCalculateAttackConfig } = await import('./customActionUI.js');
