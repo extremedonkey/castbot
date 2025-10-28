@@ -641,8 +641,8 @@ function getActionSummary(action, number, guildItems = {}, guildButtons = {}) {
       const playerScope = action?.config?.playerScope || 'all_players';
       const displayMode = action?.config?.displayMode || 'silent';
       const attackScopeText = playerScope === 'executing_player' ? 'Executing Player' : 'All Players';
-      const displayText = displayMode === 'display_text' ? 'Display Results' : 'Silent';
-      return `**\`${number}. Calculate Attack\`** ${attackScopeText} | ${displayText}`;
+      const displayModeText = displayMode === 'display_text' ? 'Display Results' : 'Silent';
+      return `**\`${number}. Calculate Attack\`** ${attackScopeText} | ${displayModeText}`;
     default:
       return `**${number}. ${action.type || 'Unknown Action'}**`;
   }
