@@ -4145,12 +4145,15 @@ async function calculateSimpleResults(guildId) {
 
         let totalEarnings = 0;
         let processedPlayers = 0;
+        const playerEarnings = []; // Track individual player earnings for display
+        const itemContributions = {}; // Track which items contributed to earnings
 
         // Process each eligible player
         for (const player of eligiblePlayers) {
             console.log(`🔄 DEBUG: Processing player ${player.playerName} (${player.userId})`);
 
-            let playerEarnings = 0;
+            let earnings = 0;
+            const itemsUsed = [];
 
             // Process each inventory item using goodOutcomeValue
             for (const [itemId, inventoryItem] of Object.entries(player.inventory)) {
@@ -4168,16 +4171,37 @@ async function calculateSimpleResults(guildId) {
                 const goodValue = item.goodOutcomeValue || 0;
                 if (goodValue !== 0) {
                     const itemEarnings = quantity * goodValue;
-                    playerEarnings += itemEarnings;
+                    earnings += itemEarnings;
+                    itemsUsed.push({ name: item.name, quantity, earnings: itemEarnings });
+
+                    // Track item contributions
+                    if (!itemContributions[item.name]) {
+                        itemContributions[item.name] = { totalEarnings: 0, totalQuantity: 0 };
+                    }
+                    itemContributions[item.name].totalEarnings += itemEarnings;
+                    itemContributions[item.name].totalQuantity += quantity;
+
                     console.log(`💰 DEBUG: ${player.playerName} - ${item.name} x${quantity} = ${itemEarnings}`);
                 }
             }
 
             // Update player currency if earnings > 0
-            if (playerEarnings !== 0) {
-                await updateCurrency(guildId, player.userId, playerEarnings);
-                console.log(`💰 DEBUG: Updated ${player.playerName} currency by ${playerEarnings}`);
-                totalEarnings += playerEarnings;
+            if (earnings !== 0) {
+                await updateCurrency(guildId, player.userId, earnings);
+                console.log(`💰 DEBUG: Updated ${player.playerName} currency by ${earnings}`);
+                totalEarnings += earnings;
+                playerEarnings.push({
+                    playerName: player.playerName,
+                    earnings,
+                    itemsUsed
+                });
+            } else {
+                // Track zero earners too
+                playerEarnings.push({
+                    playerName: player.playerName,
+                    earnings: 0,
+                    itemsUsed: []
+                });
             }
 
             processedPlayers++;
@@ -4189,6 +4213,8 @@ async function calculateSimpleResults(guildId) {
             success: true,
             processedPlayers,
             totalEarnings,
+            playerEarnings, // Individual player breakdown
+            itemContributions, // Item-level breakdown
             message: `Results calculated for ${processedPlayers} players`
         };
 
@@ -6842,7 +6868,7 @@ function createAttackResultsDisplay(attackResults, consumptionResults) {
 
 /**
  * Create harvest results display container
- * Formats harvest earnings into Components V2 structure
+ * Formats harvest earnings into Components V2 structure with detailed breakdown
  * @param {Object} harvestResult - Harvest result object from calculateSimpleResults or calculateSinglePlayerResults
  * @param {string} scope - Calculation scope (all_players or single_player)
  * @returns {Object} Discord response object with Components V2
@@ -6858,7 +6884,7 @@ function createHarvestResultsDisplay(harvestResult, scope) {
 
     // Add results based on scope
     if (scope === 'single_player') {
-        // Single player results
+        // Single player results - show player name and earnings
         components.push({
             type: 10, // Text Display
             content: `> **\`${harvestResult.playerName || 'Unknown Player'}\`**\n\n` +
@@ -6866,13 +6892,67 @@ function createHarvestResultsDisplay(harvestResult, scope) {
                      `**📊 Status:** Harvest processed successfully`
         });
     } else {
-        // All players results
+        // All players results - show detailed breakdown
+        const totalEarnings = harvestResult.totalEarnings || 0;
+        const processedPlayers = harvestResult.processedPlayers || 0;
+        const playerEarnings = harvestResult.playerEarnings || [];
+        const itemContributions = harvestResult.itemContributions || {};
+
+        // Calculate stats
+        const earnersCount = playerEarnings.filter(p => p.earnings > 0).length;
+        const zeroEarnersCount = processedPlayers - earnersCount;
+        const avgEarnings = earnersCount > 0 ? Math.round(totalEarnings / earnersCount) : 0;
+
+        // Summary stats
         components.push({
             type: 10, // Text Display
-            content: `**📊 Players Processed:** ${harvestResult.processedPlayers || 0}\n` +
-                     `**💰 Total Earnings:** ${harvestResult.totalEarnings || 0} currency\n` +
-                     `**🌾 Status:** All players' harvest completed`
+            content: `**📊 Summary**\n` +
+                     `• **Total:** ${totalEarnings} currency\n` +
+                     `• **Players:** ${processedPlayers} processed (${earnersCount} earned, ${zeroEarnersCount} earned nothing)\n` +
+                     `• **Average:** ${avgEarnings} currency per earner`
         });
+
+        components.push({ type: 14 }); // Separator
+
+        // Top earners (limit to top 10 for component budget)
+        if (earnersCount > 0) {
+            const topEarners = playerEarnings
+                .filter(p => p.earnings > 0)
+                .sort((a, b) => b.earnings - a.earnings)
+                .slice(0, 10);
+
+            const earnersText = topEarners
+                .map((p, idx) => {
+                    const itemsSummary = p.itemsUsed?.map(i => `${i.quantity}x ${i.name}`).join(', ') || 'No items';
+                    return `**${idx + 1}. ${p.playerName}** - ${p.earnings} currency\n   └ ${itemsSummary}`;
+                })
+                .join('\n');
+
+            const headerText = earnersCount > 10
+                ? `**🏆 Top 10 Earners** (of ${earnersCount} total)`
+                : `**🏆 Top Earners**`;
+
+            components.push({
+                type: 10, // Text Display
+                content: `${headerText}\n\n${earnersText}`
+            });
+
+            components.push({ type: 14 }); // Separator
+        }
+
+        // Item contributions breakdown
+        const itemEntries = Object.entries(itemContributions);
+        if (itemEntries.length > 0) {
+            const sortedItems = itemEntries.sort((a, b) => b[1].totalEarnings - a[1].totalEarnings);
+            const itemsText = sortedItems
+                .map(([itemName, data]) => `• **${itemName}**: ${data.totalEarnings} currency (${data.totalQuantity} used)`)
+                .join('\n');
+
+            components.push({
+                type: 10, // Text Display
+                content: `**📦 Item Contributions**\n\n${itemsText}`
+            });
+        }
     }
 
     return {
