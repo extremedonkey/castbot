@@ -1708,6 +1708,91 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, forc
                     }
                     break;
 
+                case 'calculate_attack':
+                    try {
+                        console.log(`⚔️ DEBUG: Executing calculate_attack action for guild ${guildId}`);
+
+                        // Get configuration (defaults match user requirements)
+                        const playerScope = action.config?.playerScope || 'all_players';
+                        const displayMode = action.config?.displayMode || 'silent';
+                        console.log(`🎯 DEBUG: Calculate attack - playerScope: ${playerScope}, displayMode: ${displayMode}`);
+
+                        // Load data
+                        const safariData = await loadSafariContent();
+                        const playerData = await loadPlayerData();
+                        const currentRound = safariData[guildId]?.safariConfig?.currentRound || 1;
+                        const items = safariData[guildId]?.items || {};
+
+                        console.log(`⚔️ Processing attacks for round ${currentRound}`);
+
+                        // Process attack queue
+                        const { attackResults, attackQueue } = await processAttackQueue(
+                            guildId,
+                            currentRound,
+                            playerData,
+                            items,
+                            client
+                        );
+
+                        console.log(`⚔️ Processed ${attackResults.length} defended players`);
+
+                        // Filter results by player scope if needed
+                        let filteredResults = attackResults;
+                        if (playerScope === 'executing_player') {
+                            filteredResults = attackResults.filter(result =>
+                                result.defenderId === userId ||
+                                result.attackers?.some(a => a.attackerId === userId)
+                            );
+                            console.log(`⚔️ Filtered to ${filteredResults.length} results for executing player`);
+                        }
+
+                        // Consume attack items
+                        const consumptionResults = await consumeAttackItems(
+                            attackQueue,
+                            playerData,
+                            guildId,
+                            items
+                        );
+
+                        console.log(`⚔️ Consumed items for ${consumptionResults.length} attackers`);
+
+                        // Save player data
+                        await savePlayerData(playerData);
+                        console.log('⚔️ Player data saved after attack resolution');
+
+                        // Clear processed attack queue
+                        await clearProcessedAttackQueue(guildId, currentRound);
+                        console.log(`⚔️ Cleared attack queue for round ${currentRound}`);
+
+                        // Return results based on display mode
+                        if (displayMode === 'display_text') {
+                            // Show formatted attack results
+                            result = createAttackResultsDisplay(filteredResults, consumptionResults);
+                            responses.push(result);
+                            console.log('⚔️ SUCCESS: Attack results displayed');
+                        } else {
+                            // Silent mode - no output
+                            console.log('⚔️ SUCCESS: Attacks processed silently (no display)');
+                        }
+                    } catch (error) {
+                        console.error('Error executing calculate_attack action:', error);
+                        result = {
+                            flags: (1 << 15), // IS_COMPONENTS_V2
+                            components: [{
+                                type: 17, // Container
+                                accent_color: 0xE74C3C, // Red accent for error
+                                components: [
+                                    {
+                                        type: 10, // Text Display
+                                        content: '## ❌ Error Processing Attacks\n\nPlease try again or contact an administrator.'
+                                    }
+                                ]
+                            }]
+                        };
+                        responses.push(result);
+                    }
+                    break;
+
                 default:
                     console.log(`⚠️ Unknown action type: ${action.type}`);
             }

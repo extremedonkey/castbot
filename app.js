@@ -4373,6 +4373,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_display_text_execute_on_') &&
         !custom_id.startsWith('safari_calculate_results_scope_') &&
         !custom_id.startsWith('safari_calculate_results_execute_on_') &&
+        !custom_id.startsWith('safari_calculate_attack_scope_') &&
+        !custom_id.startsWith('safari_calculate_attack_display_') &&
+        !custom_id.startsWith('safari_calculate_attack_execute_on_') &&
         !custom_id.startsWith('safari_all_server_items_') &&
         !custom_id.startsWith('safari_progress_') &&
         !custom_id.startsWith('safari_inv_page_') &&  // Exclude inventory pagination buttons
@@ -16392,6 +16395,12 @@ Your server is now ready for Tycoons gameplay!`;
             const { showCalculateResultsConfig } = await import('./customActionUI.js');
             return await showCalculateResultsConfig(context.guildId, actionId, actionIndex);
 
+          } else if (action.type === 'calculate_attack') {
+            // Show calculate attack configuration entity
+            console.log(`✅ SUCCESS: safari_edit_action - showing calculate_attack config for ${actionId}[${actionIndex}]`);
+            const { showCalculateAttackConfig } = await import('./customActionUI.js');
+            return await showCalculateAttackConfig(context.guildId, actionId, actionIndex);
+
           } else if (action.type === 'give_role' || action.type === 'remove_role') {
             // Show role configuration UI inline
             console.log(`✅ SUCCESS: safari_edit_action - showing role config for ${actionId}[${actionIndex}]`);
@@ -16739,6 +16748,234 @@ Your server is now ready for Tycoons gameplay!`;
           const updatedConfig = await showCalculateResultsConfig(context.guildId, buttonId, actionIndex);
 
           console.log(`✅ SUCCESS: safari_calculate_results_execute_on - updated to ${executeOnValue}`);
+          return {
+            ...updatedConfig,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_calculate_attack_scope_')) {
+      // Handle calculate attack scope selection
+      return ButtonHandlerFactory.create({
+        id: 'safari_calculate_attack_scope',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: safari_calculate_attack_scope - user ${context.userId}`);
+
+          // Parse buttonId and actionIndex from custom_id
+          const parts = context.customId.replace('safari_calculate_attack_scope_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          const scopeValue = context.values[0];
+
+          // Validate parsing
+          if (isNaN(actionIndex) || actionIndex < 0) {
+            console.error(`❌ Invalid actionIndex parsed: ${actionIndex} from ${context.customId}`);
+            return {
+              content: '❌ Invalid action configuration. Please recreate this action.',
+              ephemeral: true
+            };
+          }
+
+          console.log(`🎯 SCOPE: safari_calculate_attack_scope - setting to ${scopeValue} for ${buttonId}[${actionIndex}]`);
+
+          // Load and update safari data
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+
+          if (!button) {
+            console.error(`❌ Button ${buttonId} not found during scope update for guild ${context.guildId}`);
+            return {
+              content: `❌ Button "${buttonId}" not found.\n\nThe button you're trying to update no longer exists.`,
+              ephemeral: true
+            };
+          }
+
+          // Initialize actions array if needed
+          if (!button.actions) {
+            button.actions = [];
+          }
+
+          // Create action if it doesn't exist (for new actions)
+          if (!button.actions[actionIndex]) {
+            button.actions[actionIndex] = {
+              type: 'calculate_attack',
+              order: actionIndex,
+              config: {
+                playerScope: 'all_players',
+                displayMode: 'silent'
+              },
+              executeOn: 'true'
+            };
+          }
+
+          // Update player scope in config
+          if (!button.actions[actionIndex].config) {
+            button.actions[actionIndex].config = {};
+          }
+          button.actions[actionIndex].config.playerScope = scopeValue;
+
+          // Save updated data
+          await saveSafariContent(safariData);
+
+          // Return updated configuration UI
+          const { showCalculateAttackConfig } = await import('./customActionUI.js');
+          const updatedConfig = await showCalculateAttackConfig(context.guildId, buttonId, actionIndex);
+
+          console.log(`✅ SUCCESS: safari_calculate_attack_scope - updated to ${scopeValue}`);
+          return {
+            ...updatedConfig,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_calculate_attack_display_')) {
+      // Handle calculate attack display mode selection
+      return ButtonHandlerFactory.create({
+        id: 'safari_calculate_attack_display',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: safari_calculate_attack_display - user ${context.userId}`);
+
+          // Parse buttonId and actionIndex from custom_id
+          const parts = context.customId.replace('safari_calculate_attack_display_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          const displayValue = context.values[0];
+
+          // Validate parsing
+          if (isNaN(actionIndex) || actionIndex < 0) {
+            console.error(`❌ Invalid actionIndex parsed: ${actionIndex} from ${context.customId}`);
+            return {
+              content: '❌ Invalid action configuration. Please recreate this action.',
+              ephemeral: true
+            };
+          }
+
+          console.log(`🎯 DISPLAY: safari_calculate_attack_display - setting to ${displayValue} for ${buttonId}[${actionIndex}]`);
+
+          // Load and update safari data
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+
+          if (!button) {
+            console.error(`❌ Button ${buttonId} not found during display update for guild ${context.guildId}`);
+            return {
+              content: `❌ Button "${buttonId}" not found.\n\nThe button you're trying to update no longer exists.`,
+              ephemeral: true
+            };
+          }
+
+          // Initialize actions array if needed
+          if (!button.actions) {
+            button.actions = [];
+          }
+
+          // Create action if it doesn't exist (for new actions)
+          if (!button.actions[actionIndex]) {
+            button.actions[actionIndex] = {
+              type: 'calculate_attack',
+              order: actionIndex,
+              config: {
+                playerScope: 'all_players',
+                displayMode: 'silent'
+              },
+              executeOn: 'true'
+            };
+          }
+
+          // Update display mode in config
+          if (!button.actions[actionIndex].config) {
+            button.actions[actionIndex].config = {};
+          }
+          button.actions[actionIndex].config.displayMode = displayValue;
+
+          // Save updated data
+          await saveSafariContent(safariData);
+
+          // Return updated configuration UI
+          const { showCalculateAttackConfig } = await import('./customActionUI.js');
+          const updatedConfig = await showCalculateAttackConfig(context.guildId, buttonId, actionIndex);
+
+          console.log(`✅ SUCCESS: safari_calculate_attack_display - updated to ${displayValue}`);
+          return {
+            ...updatedConfig,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_calculate_attack_execute_on_')) {
+      // Handle calculate attack execute on condition changes
+      return ButtonHandlerFactory.create({
+        id: 'safari_calculate_attack_execute_on',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: safari_calculate_attack_execute_on - user ${context.userId}`);
+
+          // Parse buttonId and actionIndex from custom_id
+          const parts = context.customId.replace('safari_calculate_attack_execute_on_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          const executeOnValue = context.values[0];
+
+          // Validate parsing
+          if (isNaN(actionIndex) || actionIndex < 0) {
+            console.error(`❌ Invalid actionIndex parsed: ${actionIndex} from ${context.customId}`);
+            return {
+              content: '❌ Invalid action configuration. Please recreate this action.',
+              ephemeral: true
+            };
+          }
+
+          console.log(`🎯 EXECUTE ON: safari_calculate_attack_execute_on - setting to ${executeOnValue} for ${buttonId}[${actionIndex}]`);
+
+          // Load and update safari data
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+
+          if (!button) {
+            console.error(`❌ Button ${buttonId} not found during executeOn update for guild ${context.guildId}`);
+            return {
+              content: `❌ Button "${buttonId}" not found.\n\nThe button you're trying to update no longer exists.`,
+              ephemeral: true
+            };
+          }
+
+          // Initialize actions array if needed
+          if (!button.actions) {
+            button.actions = [];
+          }
+
+          // Create action if it doesn't exist (for new actions)
+          if (!button.actions[actionIndex]) {
+            button.actions[actionIndex] = {
+              type: 'calculate_attack',
+              order: actionIndex,
+              config: {
+                playerScope: 'all_players',
+                displayMode: 'silent'
+              },
+              executeOn: 'true'
+            };
+          }
+
+          // Update executeOn field
+          button.actions[actionIndex].executeOn = executeOnValue;
+
+          // Save updated data
+          await saveSafariContent(safariData);
+
+          // Return updated configuration UI
+          const { showCalculateAttackConfig } = await import('./customActionUI.js');
+          const updatedConfig = await showCalculateAttackConfig(context.guildId, buttonId, actionIndex);
+
+          console.log(`✅ SUCCESS: safari_calculate_attack_execute_on - updated to ${executeOnValue}`);
           return {
             ...updatedConfig,
             ephemeral: true

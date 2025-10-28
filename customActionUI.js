@@ -322,7 +322,8 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
                   { label: 'Give Role', value: 'give_role', emoji: { name: '👑' } },
                   { label: 'Remove Role', value: 'remove_role', emoji: { name: '🚫' } },
                   { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' } },
-                  { label: 'Calculate Results', value: 'calculate_results', emoji: { name: '🌾' } }
+                  { label: 'Calculate Results', value: 'calculate_results', emoji: { name: '🌾' } },
+                  { label: 'Calculate Attack', value: 'calculate_attack', emoji: { name: '⚔️' } }
                 ]
               }]
             });
@@ -635,6 +636,13 @@ function getActionSummary(action, number, guildItems = {}, guildButtons = {}) {
       const scope = action?.config?.scope || 'all_players';
       const scopeText = scope === 'single_player' ? 'Single Player' : 'All Players';
       return `**\`${number}. Calculate Results\`** ${scopeText}`;
+    case 'calculate_attack':
+      // Check player scope and display mode
+      const playerScope = action?.config?.playerScope || 'all_players';
+      const displayMode = action?.config?.displayMode || 'silent';
+      const attackScopeText = playerScope === 'executing_player' ? 'Executing Player' : 'All Players';
+      const displayText = displayMode === 'display_text' ? 'Display Results' : 'Silent';
+      return `**\`${number}. Calculate Attack\`** ${attackScopeText} | ${displayText}`;
     default:
       return `**${number}. ${action.type || 'Unknown Action'}**`;
   }
@@ -1924,6 +1932,178 @@ export async function showCalculateResultsConfig(guildId, buttonId, actionIndex)
           components: [{
             type: 3, // String Select
             custom_id: `safari_calculate_results_execute_on_${buttonId}_${actionIndex}`,
+            placeholder: 'Select when to execute...',
+            options: [
+              {
+                label: 'Execute if all conditions are TRUE',
+                value: 'true',
+                description: 'Only execute when conditions are met',
+                emoji: { name: '✅' },
+                default: (action?.executeOn || 'true') === 'true'
+              },
+              {
+                label: 'Execute if all conditions are FALSE',
+                value: 'false',
+                description: 'Only execute when conditions are NOT met',
+                emoji: { name: '❌' },
+                default: (action?.executeOn || 'true') === 'false'
+              }
+            ]
+          }]
+        },
+
+        { type: 14 }, // Separator
+
+        // Back and Delete Action buttons
+        {
+          type: 1, // Action Row
+          components: [
+            {
+              type: 2, // Button
+              custom_id: `custom_action_editor_${buttonId}`,
+              label: '← Back',
+              style: 2, // Secondary
+              emoji: { name: '⚡' }
+            },
+            {
+              type: 2, // Button
+              custom_id: `safari_remove_action_${buttonId}_${actionIndex}`,
+              label: 'Delete Action',
+              style: 4, // Danger (red)
+              emoji: { name: '🗑️' }
+            }
+          ]
+        }
+      ]
+    }],
+    flags: (1 << 15), // IS_COMPONENTS_V2
+    ephemeral: true
+  };
+}
+
+/**
+ * Show configuration UI for calculate_attack action
+ * Mirrors calculate_results pattern with attack-specific options
+ */
+export async function showCalculateAttackConfig(guildId, buttonId, actionIndex) {
+  // Load safari data to get existing action information
+  const safariData = await loadSafariContent();
+  const button = safariData[guildId]?.buttons?.[buttonId];
+
+  let action = null;
+  let isEdit = false;
+
+  if (button && button.actions && button.actions[actionIndex]) {
+    action = button.actions[actionIndex];
+    isEdit = true;
+  }
+
+  // Get current settings (defaults match user requirements)
+  const currentPlayerScope = action?.config?.playerScope || 'all_players';
+  const currentDisplayMode = action?.config?.displayMode || 'silent';
+
+  // Build preview text based on current configuration
+  let previewText = "No configuration set yet";
+  if (action && action.type === 'calculate_attack') {
+    const scopePart = currentPlayerScope === 'all_players' ? 'all eligible players' : 'only the executing player';
+    const displayPart = currentDisplayMode === 'display_text' ? 'with attack results displayed' : 'silently';
+    previewText = `⚔️ **Attack Processing**\n\nProcesses attacks for ${scopePart} ${displayPart}.`;
+  }
+
+  // Build the configuration UI
+  return {
+    components: [{
+      type: 17, // Container
+      accent_color: 0xf39c12, // Orange accent for attack (Safari theme)
+      components: [
+        {
+          type: 10, // Text Display
+          content: `## ⚔️ Calculate Attack Configuration`
+        },
+
+        { type: 14 }, // Separator
+
+        {
+          type: 10,
+          content: "Calculate Attack processes the attack queue, applies damage based on defense calculations, and consumes attack items. Use this to create PvP mechanics where players can attack each other using items."
+        },
+
+        { type: 14 }, // Separator
+
+        // Player Scope Selection section
+        {
+          type: 10,
+          content: '### Player Scope\nWhich players should have their attacks processed?'
+        },
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_calculate_attack_scope_${buttonId}_${actionIndex}`,
+            placeholder: 'Select player scope...',
+            options: [
+              {
+                label: 'All Players - Process entire attack queue',
+                value: 'all_players',
+                description: 'Process all queued attacks for all players (default)',
+                emoji: { name: '👥' },
+                default: currentPlayerScope === 'all_players'
+              },
+              {
+                label: 'Executing Player Only - Process their attacks',
+                value: 'executing_player',
+                description: 'Process only attacks involving the triggering player',
+                emoji: { name: '👤' },
+                default: currentPlayerScope === 'executing_player'
+              }
+            ]
+          }]
+        },
+
+        { type: 14 }, // Separator
+
+        // Display Mode Selection section
+        {
+          type: 10,
+          content: '### Display Mode\nShould attack results be displayed?'
+        },
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_calculate_attack_display_${buttonId}_${actionIndex}`,
+            placeholder: 'Select display mode...',
+            options: [
+              {
+                label: 'Silent - No output',
+                value: 'silent',
+                description: 'Process attacks without showing results (default)',
+                emoji: { name: '🔇' },
+                default: currentDisplayMode === 'silent'
+              },
+              {
+                label: 'Display Text - Show attack results',
+                value: 'display_text',
+                description: 'Show formatted attack results in container',
+                emoji: { name: '📊' },
+                default: currentDisplayMode === 'display_text'
+              }
+            ]
+          }]
+        },
+
+        { type: 14 }, // Separator
+
+        // Execution Condition section
+        {
+          type: 10,
+          content: '### Execution Condition\nWhen should this action be triggered?'
+        },
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_calculate_attack_execute_on_${buttonId}_${actionIndex}`,
             placeholder: 'Select when to execute...',
             options: [
               {

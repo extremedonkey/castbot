@@ -1910,6 +1910,30 @@ export const BUTTON_REGISTRY = {
     category: 'safari_management',
     type: 'role_select'
   },
+  'safari_calculate_attack_scope': {
+    label: 'Attack Player Scope',
+    description: 'Select which players to process attacks for (all players or executing player)',
+    emoji: '👥',
+    style: 'Primary',
+    category: 'safari_custom_actions',
+    type: 'select_menu'
+  },
+  'safari_calculate_attack_display': {
+    label: 'Attack Display Mode',
+    description: 'Select whether to display attack results or process silently',
+    emoji: '📊',
+    style: 'Primary',
+    category: 'safari_custom_actions',
+    type: 'select_menu'
+  },
+  'safari_calculate_attack_execute_on': {
+    label: 'Attack Execution Condition',
+    description: 'Select when calculate attack action should execute (conditions true/false)',
+    emoji: '✅',
+    style: 'Primary',
+    category: 'safari_custom_actions',
+    type: 'select_menu'
+  },
 
   // === CONDITIONAL LOGIC SYSTEM ===
   // Condition Manager buttons
