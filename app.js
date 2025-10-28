@@ -3332,6 +3332,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'safari_remove_action',
         'safari_all_server_items',
         'safari_store_items_select_back',
+        'safari_attack_player',
         'custom_action_add_condition',
         'custom_action_remove_condition',
         'custom_action_test',
@@ -9927,32 +9928,34 @@ Your server is now ready for Tycoons gameplay!`;
         }
       });
     } else if (custom_id.startsWith('safari_attack_player_')) {
-      // Handle attack player button click
-      try {
-        const guildId = req.body.guild_id;
-        const userId = req.body.member?.user?.id || req.body.user?.id;
-        const itemId = custom_id.replace('safari_attack_player_', '');
-        
-        console.log(`⚔️ DEBUG: User ${userId} wants to attack with item ${itemId}`);
-        
-        // Import attack system functions
-        const { createAttackPlanningUI } = await import('./safariManager.js');
-        
-        // Create attack planning UI
-        const response = await createAttackPlanningUI(guildId, userId, itemId, client);
-        
-        return res.send(response);
-        
-      } catch (error) {
-        console.error('Error in safari_attack_player handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error loading attack interface.',
-            flags: InteractionResponseFlags.EPHEMERAL
+      // Handle attack player button click with deferred response (takes >3s due to Discord API lookups)
+      return ButtonHandlerFactory.create({
+        id: 'safari_attack_player',
+        deferred: true, // Required - fetching 20+ player names from Discord API takes >3 seconds
+        handler: async (context) => {
+          const itemId = context.customId.replace('safari_attack_player_', '');
+
+          console.log(`⚔️ START: safari_attack_player - user ${context.userId} attacking with item ${itemId}`);
+
+          try {
+            // Import attack system functions
+            const { createAttackPlanningUI } = await import('./safariManager.js');
+
+            // Create attack planning UI (slow - fetches all player names from Discord)
+            const response = await createAttackPlanningUI(context.guildId, context.userId, itemId, client);
+
+            console.log(`✅ SUCCESS: safari_attack_player - created attack UI for ${itemId}`);
+            return response;
+
+          } catch (error) {
+            console.error(`❌ ERROR: safari_attack_player - ${error.message}`);
+            return {
+              content: '❌ Error loading attack interface.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            };
           }
-        });
-      }
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_use_item_')) {
       // Handle consumable item use (stamina boost)
       return ButtonHandlerFactory.create({

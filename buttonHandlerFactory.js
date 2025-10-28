@@ -775,6 +775,13 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari'
   },
+  'safari_attack_player': {
+    label: 'Attack Player',
+    description: 'Select target player for attack with attack item',
+    emoji: '⚔️',
+    style: 'Danger',
+    category: 'safari'
+  },
   'safari_view_player_inventory': {
     label: '👀 View Player Inventory',
     description: 'Admin view of any player Safari inventory',

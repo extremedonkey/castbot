@@ -804,7 +804,7 @@
             }
           },
           "isPaused": true,
-          "currency": 100,
+          "currency": 36,
           "inventory": {
             "nurturer_361363": 1,
             "territory_forager_404120": 1,
@@ -826,7 +826,7 @@
           "1398904036643831818"
         ],
         "safari": {
-          "currency": 40,
+          "currency": 25,
           "history": [],
           "lastInteraction": 1760982066454,
           "achievements": [],
@@ -838,8 +838,8 @@
             "territory_forager_404120": 1,
             "nest_guardian_461600": 1,
             "raider_499497": {
-              "quantity": 5,
-              "numAttacksAvailable": 0
+              "quantity": 1,
+              "numAttacksAvailable": 1
             }
           },
           "cooldowns": {},
@@ -868,6 +868,12 @@
               "storeId": "the_hatchery_637531",
               "price": 15,
               "timestamp": 1761656265781
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1761656570814
             }
           ],
           "mapProgress": {
