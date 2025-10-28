@@ -4373,6 +4373,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_display_text_edit_') &&
         !custom_id.startsWith('safari_display_text_execute_on_') &&
         !custom_id.startsWith('safari_calculate_results_scope_') &&
+        !custom_id.startsWith('safari_calculate_results_display_') &&
         !custom_id.startsWith('safari_calculate_results_execute_on_') &&
         !custom_id.startsWith('safari_calculate_attack_scope_') &&
         !custom_id.startsWith('safari_calculate_attack_display_') &&
@@ -16749,6 +16750,85 @@ Your server is now ready for Tycoons gameplay!`;
           const updatedConfig = await showCalculateResultsConfig(context.guildId, buttonId, actionIndex);
 
           console.log(`✅ SUCCESS: safari_calculate_results_scope - updated to ${scopeValue}`);
+          return {
+            ...updatedConfig,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_calculate_results_display_')) {
+      // Handle calculate results display mode selection
+      return ButtonHandlerFactory.create({
+        id: 'safari_calculate_results_display',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: safari_calculate_results_display - user ${context.userId}`);
+
+          // Parse buttonId and actionIndex from custom_id
+          const parts = context.customId.replace('safari_calculate_results_display_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          const displayModeValue = context.values[0];
+
+          // Validate parsing
+          if (isNaN(actionIndex) || actionIndex < 0) {
+            console.error(`❌ Invalid actionIndex parsed: ${actionIndex} from ${context.customId}`);
+            return {
+              content: '❌ Invalid action configuration. Please recreate this action.',
+              ephemeral: true
+            };
+          }
+
+          console.log(`📊 DISPLAY: safari_calculate_results_display - setting to ${displayModeValue} for ${buttonId}[${actionIndex}]`);
+
+          // Load and update safari data
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+
+          if (!button) {
+            console.error(`❌ Button ${buttonId} not found during display mode update for guild ${context.guildId}`);
+            return {
+              content: `❌ Button "${buttonId}" not found.\n\nThe button you're trying to update no longer exists.`,
+              ephemeral: true
+            };
+          }
+
+          // Initialize actions array if needed
+          if (!button.actions) {
+            button.actions = [];
+          }
+
+          // Create action if it doesn't exist (for new actions)
+          if (!button.actions[actionIndex]) {
+            button.actions[actionIndex] = {
+              type: 'calculate_results',
+              order: actionIndex,
+              config: {
+                scope: 'all_players',
+                displayMode: 'silent'
+              },
+              executeOn: 'true'
+            };
+          }
+
+          // Update display mode in config
+          if (!button.actions[actionIndex].config) {
+            button.actions[actionIndex].config = {};
+          }
+          button.actions[actionIndex].config.displayMode = displayModeValue;
+
+          // Update metadata
+          button.metadata.lastModified = Date.now();
+
+          await saveSafariContent(safariData);
+
+          // Return updated configuration UI
+          const { showCalculateResultsConfig } = await import('./customActionUI.js');
+          const updatedConfig = await showCalculateResultsConfig(context.guildId, buttonId, actionIndex);
+
+          console.log(`✅ SUCCESS: safari_calculate_results_display - updated to ${displayModeValue}`);
           return {
             ...updatedConfig,
             ephemeral: true

@@ -1637,9 +1637,10 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                     try {
                         console.log(`🌾 DEBUG: Executing calculate_results action for guild ${guildId}`);
 
-                        // Get scope configuration (default to all_players for backwards compatibility)
+                        // Get configuration (defaults for backwards compatibility)
                         const scope = action.config?.scope || 'all_players';
-                        console.log(`🎯 DEBUG: Calculate results scope: ${scope}`);
+                        const displayMode = action.config?.displayMode || 'silent';
+                        console.log(`🎯 DEBUG: Calculate results - scope: ${scope}, displayMode: ${displayMode}`);
 
                         let harvestResult;
                         if (scope === 'single_player') {
@@ -1659,36 +1660,16 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                             console.log(`🌾 SUCCESS: All players results completed - ${harvestResult.processedPlayers} players, ${harvestResult.totalEarnings} total earnings`);
                         }
 
-                        // Create formatted response message with proper container structure
-                        let responseContent;
-                        let headerContent;
-                        if (scope === 'single_player') {
-                            headerContent = `## ✅ Results Calculated!\n\n**Single Player Processing Complete**`;
-                            responseContent = `👤 **Player:** ${harvestResult.playerName}\n💰 **Earnings:** ${harvestResult.totalEarnings} currency`;
+                        // Return results based on display mode
+                        if (displayMode === 'display_text') {
+                            // Show formatted harvest results
+                            result = createHarvestResultsDisplay(harvestResult, scope);
+                            responses.push(result);
+                            console.log('🌾 SUCCESS: Harvest results displayed');
                         } else {
-                            headerContent = `## ✅ Results Calculated!\n\n**All Players Processing Complete**`;
-                            responseContent = `📊 **Players Processed:** ${harvestResult.processedPlayers}\n💰 **Total Earnings:** ${harvestResult.totalEarnings} currency`;
+                            // Silent mode - no output
+                            console.log('🌾 SUCCESS: Harvest processed silently (no display)');
                         }
-
-                        result = {
-                            flags: (1 << 15), // IS_COMPONENTS_V2
-                            components: [{
-                                type: 17, // Container
-                                accent_color: 0x2ECC71, // Green accent for success
-                                components: [
-                                    {
-                                        type: 10, // Text Display
-                                        content: headerContent
-                                    },
-                                    { type: 14 }, // Separator
-                                    {
-                                        type: 10, // Text Display
-                                        content: responseContent
-                                    }
-                                ]
-                            }]
-                        };
-                        responses.push(result);
                     } catch (error) {
                         console.error('Error executing calculate_results action:', error);
                         result = {
@@ -6854,6 +6835,51 @@ function createAttackResultsDisplay(attackResults, consumptionResults) {
         components: [{
             type: 17, // Container
             accent_color: 0xe74c3c, // Red (attack theme)
+            components: components
+        }]
+    };
+}
+
+/**
+ * Create harvest results display container
+ * Formats harvest earnings into Components V2 structure
+ * @param {Object} harvestResult - Harvest result object from calculateSimpleResults or calculateSinglePlayerResults
+ * @param {string} scope - Calculation scope (all_players or single_player)
+ * @returns {Object} Discord response object with Components V2
+ */
+function createHarvestResultsDisplay(harvestResult, scope) {
+    const components = [
+        {
+            type: 10, // Text Display
+            content: "## 🌾 Harvest Results"
+        },
+        { type: 14 } // Separator
+    ];
+
+    // Add results based on scope
+    if (scope === 'single_player') {
+        // Single player results
+        components.push({
+            type: 10, // Text Display
+            content: `> **\`${harvestResult.playerName || 'Unknown Player'}\`**\n\n` +
+                     `**💰 Earnings:** ${harvestResult.totalEarnings || 0} currency\n` +
+                     `**📊 Status:** Harvest processed successfully`
+        });
+    } else {
+        // All players results
+        components.push({
+            type: 10, // Text Display
+            content: `**📊 Players Processed:** ${harvestResult.processedPlayers || 0}\n` +
+                     `**💰 Total Earnings:** ${harvestResult.totalEarnings || 0} currency\n` +
+                     `**🌾 Status:** All players' harvest completed`
+        });
+    }
+
+    return {
+        flags: (1 << 15), // IS_COMPONENTS_V2
+        components: [{
+            type: 17, // Container
+            accent_color: 0x2ecc71, // Green (harvest theme)
             components: components
         }]
     };

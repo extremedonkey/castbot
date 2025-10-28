@@ -826,7 +826,7 @@
           "1398904036643831818"
         ],
         "safari": {
-          "currency": 25,
+          "currency": 10,
           "history": [],
           "lastInteraction": 1760982066454,
           "achievements": [],
@@ -874,6 +874,12 @@
               "storeId": "the_hatchery_637531",
               "price": 15,
               "timestamp": 1761656570814
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1761656575055
             }
           ],
           "mapProgress": {

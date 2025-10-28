@@ -1917,6 +1917,30 @@ export const BUTTON_REGISTRY = {
     category: 'safari_management',
     type: 'role_select'
   },
+  'safari_calculate_results_scope': {
+    label: 'Results Calculation Scope',
+    description: 'Select which players to process harvest results for (all players or executing player)',
+    emoji: '👥',
+    style: 'Primary',
+    category: 'safari_custom_actions',
+    type: 'select_menu'
+  },
+  'safari_calculate_results_display': {
+    label: 'Results Display Mode',
+    description: 'Select whether to display harvest results or process silently',
+    emoji: '📊',
+    style: 'Primary',
+    category: 'safari_custom_actions',
+    type: 'select_menu'
+  },
+  'safari_calculate_results_execute_on': {
+    label: 'Results Execution Condition',
+    description: 'Select when calculate results action should execute (conditions true/false)',
+    emoji: '✅',
+    style: 'Primary',
+    category: 'safari_custom_actions',
+    type: 'select_menu'
+  },
   'safari_calculate_attack_scope': {
     label: 'Attack Player Scope',
     description: 'Select which players to process attacks for (all players or executing player)',

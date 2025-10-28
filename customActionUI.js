@@ -1857,17 +1857,16 @@ export async function showCalculateResultsConfig(guildId, buttonId, actionIndex)
     isEdit = true;
   }
 
-  // Get current scope setting (default to all_players for backwards compatibility)
+  // Get current settings (default to all_players and silent for backwards compatibility)
   const currentScope = action?.config?.scope || 'all_players';
+  const currentDisplayMode = action?.config?.displayMode || 'silent';
 
   // Build preview text based on current configuration
   let previewText = "No configuration set yet";
   if (action && action.type === 'calculate_results') {
-    if (currentScope === 'all_players') {
-      previewText = "📊 **All Players**\n\nProcesses all eligible Safari players and updates their currency.";
-    } else if (currentScope === 'single_player') {
-      previewText = "👤 **Single Player**\n\nProcesses only the player who clicked this button and updates their currency.";
-    }
+    const scopePart = currentScope === 'all_players' ? 'all eligible players' : 'only the executing player';
+    const displayPart = currentDisplayMode === 'display_text' ? 'with earnings displayed' : 'silently';
+    previewText = `🌾 **Harvest Results**\n\nProcesses results for ${scopePart} ${displayPart}.`;
   }
 
   // Build the configuration UI
@@ -1915,6 +1914,38 @@ export async function showCalculateResultsConfig(guildId, buttonId, actionIndex)
                 description: 'Process only the player who clicks this button',
                 emoji: { name: '👤' },
                 default: currentScope === 'single_player'
+              }
+            ]
+          }]
+        },
+
+        { type: 14 }, // Separator
+
+        // Display Mode Selection section
+        {
+          type: 10,
+          content: '### Display Mode\nShould harvest results be displayed?'
+        },
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_calculate_results_display_${buttonId}_${actionIndex}`,
+            placeholder: 'Select display mode...',
+            options: [
+              {
+                label: 'Silent - No output',
+                value: 'silent',
+                description: 'Process results without showing earnings (default)',
+                emoji: { name: '🔇' },
+                default: currentDisplayMode === 'silent'
+              },
+              {
+                label: 'Display Text - Show harvest earnings',
+                value: 'display_text',
+                description: 'Show formatted earnings results in container',
+                emoji: { name: '📊' },
+                default: currentDisplayMode === 'display_text'
               }
             ]
           }]
