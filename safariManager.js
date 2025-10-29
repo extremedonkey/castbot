@@ -1656,7 +1656,7 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                             console.log(`🌾 SUCCESS: Single player results completed - ${harvestResult.playerName}, ${harvestResult.totalEarnings} earnings`);
                         } else {
                             // Default behavior: process all players
-                            harvestResult = await calculateSimpleResults(guildId);
+                            harvestResult = await calculateSimpleResults(guildId, client);
                             console.log(`🌾 SUCCESS: All players results completed - ${harvestResult.processedPlayers} players, ${harvestResult.totalEarnings} total earnings`);
                         }
 
@@ -4132,9 +4132,10 @@ async function sortPlayersForResults(eligiblePlayers, priorityRoles, client, gui
 /**
  * Calculate simple results for all eligible players using goodOutcomeValue
  * @param {string} guildId - Guild ID
+ * @param {Object} client - Discord client for fetching display names
  * @returns {Promise<Object>} Result summary with player count and total earnings
  */
-async function calculateSimpleResults(guildId) {
+async function calculateSimpleResults(guildId, client = null) {
     try {
         console.log(`🌾 DEBUG: Calculating simple results for guild ${guildId}`);
 
@@ -4150,7 +4151,20 @@ async function calculateSimpleResults(guildId) {
 
         // Process each eligible player
         for (const player of eligiblePlayers) {
-            console.log(`🔄 DEBUG: Processing player ${player.playerName} (${player.userId})`);
+            // Fetch actual Discord display name
+            let displayName = `Player ${player.userId.slice(-4)}`;
+            try {
+                if (client) {
+                    const guild = client.guilds.cache.get(guildId);
+                    const member = await guild?.members?.fetch(player.userId);
+                    displayName = member?.displayName || member?.user?.username || displayName;
+                }
+            } catch (e) {
+                // Use fallback name
+                console.log(`⚠️ DEBUG: Could not fetch Discord name for ${player.userId}, using fallback`);
+            }
+
+            console.log(`🔄 DEBUG: Processing player ${displayName} (${player.userId})`);
 
             let earnings = 0;
             const itemsUsed = [];
@@ -4188,17 +4202,17 @@ async function calculateSimpleResults(guildId) {
             // Update player currency if earnings > 0
             if (earnings !== 0) {
                 await updateCurrency(guildId, player.userId, earnings);
-                console.log(`💰 DEBUG: Updated ${player.playerName} currency by ${earnings}`);
+                console.log(`💰 DEBUG: Updated ${displayName} currency by ${earnings}`);
                 totalEarnings += earnings;
                 playerEarnings.push({
-                    playerName: player.playerName,
+                    playerName: displayName, // Use actual Discord display name
                     earnings,
                     itemsUsed
                 });
             } else {
                 // Track zero earners too
                 playerEarnings.push({
-                    playerName: player.playerName,
+                    playerName: displayName, // Use actual Discord display name
                     earnings: 0,
                     itemsUsed: []
                 });
