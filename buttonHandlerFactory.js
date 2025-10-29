@@ -782,6 +782,13 @@ export const BUTTON_REGISTRY = {
     style: 'Danger',
     category: 'safari'
   },
+  'safari_schedule_attack': {
+    label: 'Schedule Attack',
+    description: 'Confirm and schedule attack against target player for next round',
+    emoji: '⚔️',
+    style: 'Danger',
+    category: 'safari'
+  },
   'safari_view_player_inventory': {
     label: '👀 View Player Inventory',
     description: 'Admin view of any player Safari inventory',

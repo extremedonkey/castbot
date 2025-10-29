@@ -10094,46 +10094,30 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id.startsWith('safari_schedule_attack_')) {
-      // Handle attack scheduling
-      try {
-        const guildId = req.body.guild_id;
-        const attackerId = req.body.member?.user?.id || req.body.user?.id;
-        
-        // Parse custom_id properly: safari_schedule_attack_itemId_targetId_quantity
-        // Handle itemIds with underscores (e.g., raider_499497)
-        const parts = custom_id.split('_');
-        const itemId = parts[3] + '_' + parts[4]; // Reconstruct itemId (e.g., raider_499497)
-        const targetId = parts[5] !== 'none' ? parts[5] : null;
-        const quantity = parseInt(parts[6]) || 0;
-        
-        console.log(`⚔️ DEBUG: Scheduling attack - Attacker: ${attackerId}, Item: ${itemId}, Target: ${targetId}, Quantity: ${quantity}`);
-        
-        // Get attack details from message components
-        // This will be implemented with proper state management
-        const { scheduleAttack } = await import('./safariManager.js');
-        const response = await scheduleAttack(guildId, attackerId, itemId, req.body, client);
-        
-        console.log(`📤 DEBUG: About to send response via Express:`, JSON.stringify(response, null, 2));
-        
-        try {
-          const result = res.send(response);
-          console.log(`✅ DEBUG: Express res.send() completed successfully`);
-          return result;
-        } catch (sendError) {
-          console.error(`❌ DEBUG: Error in res.send():`, sendError);
-          throw sendError;
+      // Handle attack scheduling with deferred response (logging + data operations take >3s)
+      return ButtonHandlerFactory.create({
+        id: 'safari_schedule_attack',
+        deferred: true, // Required - scheduleAttack does logging, data operations, Discord API calls
+        handler: async (context) => {
+          console.log(`🔍 START: safari_schedule_attack - user ${context.userId}`);
+
+          // Parse custom_id properly: safari_schedule_attack_itemId_targetId_quantity
+          // Handle itemIds with underscores (e.g., raider_499497)
+          const parts = context.customId.split('_');
+          const itemId = parts[3] + '_' + parts[4]; // Reconstruct itemId (e.g., raider_499497)
+          const targetId = parts[5] !== 'none' ? parts[5] : null;
+          const quantity = parseInt(parts[6]) || 0;
+
+          console.log(`⚔️ DEBUG: Scheduling attack - Attacker: ${context.userId}, Item: ${itemId}, Target: ${targetId}, Quantity: ${quantity}`);
+
+          // Schedule the attack
+          const { scheduleAttack } = await import('./safariManager.js');
+          const response = await scheduleAttack(context.guildId, context.userId, itemId, req.body, context.client);
+
+          console.log(`✅ SUCCESS: safari_schedule_attack - scheduled ${quantity}x ${itemId} for target ${targetId}`);
+          return response;
         }
-        
-      } catch (error) {
-        console.error('Error in safari_schedule_attack handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error scheduling attack.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id === 'safari_customize_terms') {
       // Handle "⚙️ Customize Terms" button - NEW Components V2 Interface (MIGRATED TO FACTORY)
       return ButtonHandlerFactory.create({
