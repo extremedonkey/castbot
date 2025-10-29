@@ -2647,7 +2647,10 @@ export class ButtonHandlerFactory {
         
         // 7. Handle deferred response update
         if (config.deferred && result) {
-          return updateDeferredResponse(context.token, result);
+          // Unwrap data field if handler returned full interaction response
+          // Some handlers return { type: 4, data: {...} } instead of just {...}
+          const webhookData = result.data || result;
+          return updateDeferredResponse(context.token, webhookData);
         }
         
       } catch (error) {
