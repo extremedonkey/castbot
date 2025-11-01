@@ -12,7 +12,7 @@ import {
     loadPlayerData
 } from './storage.js';
 import { capitalize } from './utils.js';
-import { sortCastlistMembers } from './castlistSorter.js';
+import { sortCastlistMembers, sortVanityRolesForDisplay } from './castlistSorter.js';
 
 /**
  * Components V2 Castlist Module for CastBot
@@ -207,24 +207,30 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
     // Add vanity roles if available
     let vanityRolesInfo = '';
     if (playerData?.vanityRoles && playerData.vanityRoles.length > 0) {
-        const validVanityRoles = [];
+        // Check if we should sort vanity roles (only for vanity_role strategy)
+        const shouldSort = tribeData?.castlistSettings?.sortStrategy === 'vanity_role';
+
+        // Fetch all role names upfront
+        const rolesWithNames = [];
         for (const roleId of playerData.vanityRoles) {
             try {
-                // Try to find the role in the member's guild
                 const role = member.guild.roles.cache.get(roleId);
                 if (role) {
-                    // Use Discord role mention format <@&roleId>
-                    validVanityRoles.push(`<@&${roleId}>`);
+                    rolesWithNames.push({ id: roleId, name: role.name });
                 }
-                // If role doesn't exist, silently skip it (graceful handling)
             } catch (error) {
-                // Silently skip invalid roles
                 console.debug(`Skipping invalid vanity role ${roleId} for player ${member.id}`);
             }
         }
-        
-        if (validVanityRoles.length > 0) {
-            vanityRolesInfo = validVanityRoles.join(' ');
+
+        // Sort if vanity_role strategy is active
+        const orderedRoles = shouldSort
+            ? sortVanityRolesForDisplay(rolesWithNames)
+            : rolesWithNames;
+
+        // Render in order
+        if (orderedRoles.length > 0) {
+            vanityRolesInfo = orderedRoles.map(r => `<@&${r.id}>`).join(' ');
         }
     }
     

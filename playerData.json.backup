@@ -823,8 +823,7 @@
         "age": "32",
         "emojiCode": "<:ReeceBot:1396856819690766460>",
         "vanityRoles": [
-          "1398904036643831818",
-          "1335645031226277959"
+          "1434189671260491796"
         ],
         "safari": {
           "currency": 668,
@@ -1097,7 +1096,10 @@
           "cooldowns": {},
           "buttonUses": {},
           "lastInteraction": 1761750961455
-        }
+        },
+        "vanityRoles": [
+          "1434189711777202344"
+        ]
       },
       "676262975132139522": {
         "emojiCode": "<:Belle:1382413449342091405>",
@@ -1345,7 +1347,10 @@
           "cooldowns": {},
           "buttonUses": {},
           "lastInteraction": 1761750971447
-        }
+        },
+        "vanityRoles": [
+          "1434189745843601540"
+        ]
       },
       "1086246253819613274": {
         "age": "60s",
@@ -1435,7 +1440,10 @@
               "regenConfig": "hourly"
             }
           }
-        }
+        },
+        "vanityRoles": [
+          "1434189625609551984"
+        ]
       },
       "1100826875435163780": {
         "age": "16"
@@ -1821,6 +1829,15 @@
           "default"
         ],
         "castlist": "default"
+      },
+      "1434189967323566261": {
+        "name": "Tribe 1434189967323566261",
+        "emoji": "🏕️",
+        "color": null,
+        "castlistIds": [
+          "castlist_1762007922583_1331657596087566398"
+        ],
+        "castlist": "CastBot Winners"
       }
     },
     "timezones": {
@@ -2873,7 +2890,7 @@
         "createdAt": 1759671885172,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "placements",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -2884,8 +2901,8 @@
           "migratedFrom": "virtual_TXVsdGlC",
           "migrationDate": 1759671885172
         },
-        "modifiedAt": 1761974553354,
-        "modifiedBy": "391415444084490240"
+        "modifiedAt": 1762007488357,
+        "modifiedBy": "system"
       },
       "castlist_1760891080792_1331657596087566398": {
         "id": "castlist_1760891080792_1331657596087566398",
@@ -2930,6 +2947,27 @@
         "modifiedAt": 1761973906883,
         "modifiedBy": "391415444084490240",
         "seasonId": "season_03859e4abc554bb5"
+      },
+      "castlist_1762007922583_1331657596087566398": {
+        "id": "castlist_1762007922583_1331657596087566398",
+        "name": "CastBot Winners",
+        "type": "custom",
+        "createdAt": 1762007922583,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "vanity_role",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public",
+          "seasonId": "season_cac1b81de8914c79"
+        },
+        "metadata": {
+          "emoji": "🏆",
+          "description": "",
+          "lastModified": 1762007922583
+        },
+        "modifiedAt": 1762008145871,
+        "modifiedBy": "system"
       }
     },
     "placements": {
@@ -3394,14 +3432,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 573,
+    "memberCount": 572,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1761974424666,
+    "lastUpdated": 1762007740905,
     "players": {
       "235148962103951360": {
         "emojiCode": "<:Carl_bot:1380989603783249950>"
@@ -5442,7 +5480,10 @@
         "showPlayerEmojis": false,
         "color": "#c99738",
         "analyticsName": "🏆 Winner 🏆",
-        "analyticsAdded": 1749987859643
+        "analyticsAdded": 1749987859643,
+        "castlistIds": [
+          "castlist_1762007777205_system"
+        ]
       },
       "1406847946758033539": {
         "emoji": "🦖",
@@ -5467,11 +5508,7 @@
       "1431941439951994901": {
         "name": "Tribe 1431941439951994901",
         "emoji": "🏕️",
-        "color": null,
-        "castlistIds": [
-          "castlist_1761471975027_974318870057848842"
-        ],
-        "castlist": "Reece AST Test"
+        "color": null
       }
     },
     "timezones": {
@@ -6232,23 +6269,26 @@
         "modifiedAt": 1760892424820,
         "modifiedBy": "391415444084490240"
       },
-      "castlist_1761471975027_974318870057848842": {
-        "id": "castlist_1761471975027_974318870057848842",
-        "name": "Reece AST Test",
-        "type": "custom",
-        "createdAt": 1761471975028,
-        "createdBy": "391415444084490240",
+      "castlist_1762007777205_system": {
+        "id": "castlist_1762007777205_system",
+        "name": "Winners",
+        "type": "system",
+        "createdAt": 1762007777205,
+        "createdBy": "migration",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "vanity_role",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
         },
         "metadata": {
-          "emoji": "📋",
-          "description": "",
-          "lastModified": 1761471975028
-        }
+          "description": "Upgraded from legacy castlist 'Winners'",
+          "emoji": "🏆",
+          "migratedFrom": "virtual_V2lubmVycw",
+          "migrationDate": 1762007777205
+        },
+        "modifiedAt": 1762007787564,
+        "modifiedBy": "system"
       }
     },
     "placements": {

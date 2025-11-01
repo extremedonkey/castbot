@@ -175,7 +175,7 @@ function parseSeasonNumber(roleName) {
 /**
  * Categorize a role name into sorting priority groups
  * @param {string} roleName - The role name to categorize
- * @returns {Object} { category: 'season'|'alpha'|'numeric'|'other', value: any }
+ * @returns {Object} { category: 'season'|'alpha'|'numeric'|'emoji'|'other', value: any }
  */
 function categorizeRoleName(roleName) {
   if (!roleName) {
@@ -203,7 +203,13 @@ function categorizeRoleName(roleName) {
     return { category: 'numeric', value: numValue, original: roleName };
   }
 
-  // Everything else (symbols, etc.)
+  // Check if starts with emoji (anything that's not alphanumeric)
+  // This catches: 🏆Winners, 😀Happy, etc.
+  if (!/[a-z0-9]/i.test(firstChar)) {
+    return { category: 'emoji', value: roleName, original: roleName };
+  }
+
+  // Everything else (shouldn't reach here)
   return { category: 'other', value: roleName, original: roleName };
 }
 
@@ -213,7 +219,8 @@ function categorizeRoleName(roleName) {
  * 1. Season roles (S1, S2, S11, Season 1, etc.) - sorted numerically
  * 2. Alphabetical roles (a-z) - sorted alphabetically
  * 3. Numeric roles (1-N) - sorted numerically
- * 4. No vanity roles - sorted alphabetically by display name
+ * 4. Emoji roles (🏆Winners, 😀Happy, etc.) - sorted alphabetically
+ * 5. No vanity roles - sorted alphabetically by display name
  * @param {Array} members - Array of member objects
  * @param {Object} tribeData - Tribe data with castlistSettings
  * @param {Object} options - Options containing pre-loaded playerData and guildId
@@ -232,6 +239,7 @@ function sortByVanityRole(members, tribeData, options = {}) {
   const seasonRoles = [];
   const alphaRoles = [];
   const numericRoles = [];
+  const emojiRoles = [];
   const noVanityRoles = [];
 
   members.forEach(member => {
@@ -283,6 +291,9 @@ function sortByVanityRole(members, tribeData, options = {}) {
       case 'numeric':
         numericRoles.push(member);
         break;
+      case 'emoji':
+        emojiRoles.push(member);
+        break;
       default:
         noVanityRoles.push(member);
     }
@@ -299,6 +310,9 @@ function sortByVanityRole(members, tribeData, options = {}) {
   // Numeric roles: Sort numerically
   numericRoles.sort((a, b) => a.vanitySortValue - b.vanitySortValue);
 
+  // Emoji roles: Sort alphabetically by role name
+  emojiRoles.sort((a, b) => a.vanitySortValue.localeCompare(b.vanitySortValue));
+
   // No vanity roles: Sort alphabetically by display name
   noVanityRoles.sort((a, b) => {
     const nameA = a.displayName || a.nickname || a.user?.username || a.username || '';
@@ -306,10 +320,67 @@ function sortByVanityRole(members, tribeData, options = {}) {
     return nameA.localeCompare(nameB);
   });
 
-  console.log(`[SORTER] Vanity role sort: ${seasonRoles.length} season, ${alphaRoles.length} alpha, ${numericRoles.length} numeric, ${noVanityRoles.length} no vanity`);
+  console.log(`[SORTER] Vanity role sort: ${seasonRoles.length} season, ${alphaRoles.length} alpha, ${numericRoles.length} numeric, ${emojiRoles.length} emoji, ${noVanityRoles.length} no vanity`);
 
-  // Combine in priority order, with no-vanity mixed alphabetically at the end
-  return [...seasonRoles, ...alphaRoles, ...numericRoles, ...noVanityRoles];
+  // Combine in priority order
+  return [...seasonRoles, ...alphaRoles, ...numericRoles, ...emojiRoles, ...noVanityRoles];
+}
+
+/**
+ * Sort vanity role objects for display purposes
+ * Uses same categorization as member sorting but works on role objects directly
+ * Priority order: Season → Alpha → Numeric → Emoji → Other
+ * @param {Array<{id: string, name: string}>} roles - Array of role objects with id and name
+ * @returns {Array<{id: string, name: string}>} Sorted role objects in display order
+ */
+export function sortVanityRolesForDisplay(roles) {
+  if (!roles || roles.length === 0) {
+    return [];
+  }
+
+  // Categorize all roles
+  const categorized = roles.map(role => ({
+    ...role,
+    category: categorizeRoleName(role.name)
+  }));
+
+  // Group by category
+  const groups = {
+    season: [],
+    alpha: [],
+    numeric: [],
+    emoji: [],
+    other: []
+  };
+
+  categorized.forEach(role => {
+    const cat = role.category.category;
+    if (groups[cat]) {
+      groups[cat].push(role);
+    } else {
+      groups.other.push(role);
+    }
+  });
+
+  // Sort each group appropriately
+  groups.season.sort((a, b) => a.category.value - b.category.value);
+  groups.alpha.sort((a, b) => a.category.value.localeCompare(b.category.value));
+  groups.numeric.sort((a, b) => a.category.value - b.category.value);
+  groups.emoji.sort((a, b) => a.category.value.localeCompare(b.category.value));
+  groups.other.sort((a, b) => a.name.localeCompare(b.name));
+
+  // Combine in priority order and strip category metadata
+  const sorted = [
+    ...groups.season,
+    ...groups.alpha,
+    ...groups.numeric,
+    ...groups.emoji,
+    ...groups.other
+  ].map(({ id, name }) => ({ id, name }));
+
+  console.log(`[SORTER] Sorted ${roles.length} vanity roles for display: ${sorted.map(r => r.name).join(', ')}`);
+
+  return sorted;
 }
 
 // Future sorting functions can be added below
