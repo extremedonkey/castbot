@@ -3396,7 +3396,19 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'map_drop_save',
         'map_drop_remove',
         'map_drop_style',
-        'map_drop_type'
+        'map_drop_type',
+        // Player management patterns
+        'admin_set_pronouns',
+        'admin_set_timezone',
+        'admin_set_age',
+        'admin_manage_vanity',
+        'admin_integrated_pronouns',
+        'admin_integrated_timezone',
+        'admin_integrated_age',
+        'admin_integrated_vanity',
+        'player_integrated_pronouns',
+        'player_integrated_timezone',
+        'player_integrated_age'
       ];
       
       for (const pattern of dynamicPatterns) {
