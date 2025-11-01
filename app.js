@@ -6169,56 +6169,50 @@ To fix this:
         });
       }
     } else if (custom_id === 'admin_manage_player') {
-      // Admin player management - use new modular system
-      MenuBuilder.trackLegacyMenu('admin_manage_player', 'Admin player management interface');
-      try {
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        const channelId = req.body.channel_id;
-        
-        // Check admin permissions
-        const member = await guild.members.fetch(req.body.member.user.id);
-        if (!hasAdminPermissions(member)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+      // 🔘 Convert to ButtonHandlerFactory
+      return ButtonHandlerFactory.create({
+        id: 'admin_manage_player',
+        handler: async (context) => {
+          MenuBuilder.trackLegacyMenu('admin_manage_player', 'Admin player management interface');
+          const { guildId, userId, channelId, client, member } = context;
+          const guild = await client.guilds.fetch(guildId);
+
+          // Check admin permissions
+          if (!hasAdminPermissions(member)) {
+            return {
               content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
               flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        // Load player data
-        const playerData = await loadPlayerData();
-
-        // Create player management UI using the new module
-        const managementUI = await createPlayerManagementUI({
-          mode: PlayerManagementMode.ADMIN,
-          targetMember: null, // No member selected initially
-          playerData,
-          guildId,
-          userId: req.body.member.user.id,
-          showUserSelect: true,
-          showVanityRoles: true,
-          title: `Player Management | ${guild.name}`,
-          client
-        });
-
-        // Remove ephemeral flag for production menu context
-        managementUI.flags = (1 << 15); // Only IS_COMPONENTS_V2
-
-        return await sendProductionSubmenuResponse(res, channelId, managementUI.components);
-        
-      } catch (error) {
-        console.error('Error handling admin_manage_player button:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error loading player management interface.',
-            flags: InteractionResponseFlags.EPHEMERAL
+            };
           }
-        });
-      }
+
+          // Load player data
+          const playerData = await loadPlayerData();
+
+          // Create player management UI using the new module
+          const managementUI = await createPlayerManagementUI({
+            mode: PlayerManagementMode.ADMIN,
+            targetMember: null, // No member selected initially
+            playerData,
+            guildId,
+            userId,
+            showUserSelect: true,
+            showVanityRoles: true,
+            title: `Player Management | ${guild.name}`,
+            client
+          });
+
+          // Check if we should update the production menu message
+          const shouldUpdate = await shouldUpdateProductionMenuMessage(channelId);
+          if (shouldUpdate) {
+            // Return components only for UPDATE_MESSAGE
+            return { components: managementUI.components };
+          } else {
+            // Return full response for new message
+            managementUI.flags = (1 << 15); // Only IS_COMPONENTS_V2
+            return managementUI;
+          }
+        }
+      })(req, res, client);
     } else if (custom_id === 'setup_castbot') {
       // Execute setup using new roleManager module
       try {
@@ -29189,65 +29183,57 @@ Are you sure you want to continue?`;
         }
       }
     } else if (custom_id === 'admin_player_select_update') {
-      // Handle admin player selection using new modular system
-      try {
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        const selectedPlayerIds = data.values || [];
-        
-        // Load player data
-        const playerData = await loadPlayerData();
-        let targetMember = null;
-        let titleContent = `Player Management | ${guild.name}`;
+      // 🔘 Convert to ButtonHandlerFactory
+      return ButtonHandlerFactory.create({
+        id: 'admin_player_select_update',
+        updateMessage: true, // Update existing message
+        handler: async (context) => {
+          const { guildId, client, values } = context;
+          const guild = await client.guilds.fetch(guildId);
+          const selectedPlayerIds = values || [];
 
-        // Handle player selection/deselection
-        if (selectedPlayerIds.length > 0) {
-          const selectedPlayerId = selectedPlayerIds[0];
-          
-          // Get selected player info
-          try {
-            targetMember = await guild.members.fetch(selectedPlayerId);
-            titleContent = `Player Management | ${targetMember.displayName}`;
-          } catch (error) {
-            console.log('Player not found, keeping no selection');
-            targetMember = null;
+          // Load player data
+          const playerData = await loadPlayerData();
+          let targetMember = null;
+          let titleContent = `Player Management | ${guild.name}`;
+
+          // Handle player selection/deselection
+          if (selectedPlayerIds.length > 0) {
+            const selectedPlayerId = selectedPlayerIds[0];
+
+            // Get selected player info
+            try {
+              targetMember = await guild.members.fetch(selectedPlayerId);
+              titleContent = `Player Management | ${targetMember.displayName}`;
+            } catch (error) {
+              console.log('Player not found, keeping no selection');
+              targetMember = null;
+            }
           }
+
+          // Create player management UI using the new module
+          const managementUI = await createPlayerManagementUI({
+            mode: PlayerManagementMode.ADMIN,
+            targetMember,
+            playerData,
+            guildId,
+            showUserSelect: true,
+            showVanityRoles: true,
+            title: titleContent,
+            bottomLeftButton: {
+              label: '⬅️ Menu',
+              customId: 'prod_menu_back',
+              style: ButtonStyle.Secondary
+            },
+            client
+          });
+
+          // Remove ephemeral flag for update message
+          managementUI.flags = (1 << 15); // Only IS_COMPONENTS_V2
+
+          return managementUI;
         }
-
-        // Create player management UI using the new module
-        const managementUI = await createPlayerManagementUI({
-          mode: PlayerManagementMode.ADMIN,
-          targetMember,
-          playerData,
-          guildId,
-          showUserSelect: true,
-          showVanityRoles: true,
-          title: titleContent,
-          bottomLeftButton: {
-            label: '⬅️ Menu',
-            customId: 'prod_menu_back',
-            style: ButtonStyle.Secondary
-          }
-        });
-
-        // Remove ephemeral flag for update message
-        managementUI.flags = (1 << 15); // Only IS_COMPONENTS_V2
-
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: managementUI
-        });
-
-      } catch (error) {
-        console.error('Error handling admin player selection update:', error);
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            content: 'Error updating player management interface.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id === 'admin_select_player') {
       // Legacy handler - redirect to new system
       return res.send({

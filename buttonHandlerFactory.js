@@ -2184,9 +2184,31 @@ export const BUTTON_REGISTRY = {
   },
 
   // === PLAYER MANAGEMENT - INTEGRATED HANDLERS ===
+  'admin_manage_player': {
+    label: 'Manage Players',
+    description: 'Admin player management interface with user selector',
+    emoji: '🧑‍🤝‍🧑',
+    style: 'Primary',
+    category: 'player_management'
+  },
+  'admin_player_select_update': {
+    label: 'Player Select (Admin)',
+    description: 'User select dropdown for admin player management',
+    emoji: '👥',
+    style: 'Secondary',
+    category: 'player_management'
+  },
   'admin_integrated_vanity': {
     label: 'Vanity Roles',
     description: 'Manage player vanity roles with auto-refresh (deferred response)',
+    emoji: '✨',
+    style: 'Primary',
+    category: 'player_management',
+    usesDeferred: true
+  },
+  'admin_integrated_vanity_*': {
+    label: 'Vanity Roles (Dynamic)',
+    description: 'Manage player vanity roles with user ID (pattern handler)',
     emoji: '✨',
     style: 'Primary',
     category: 'player_management',
@@ -2200,6 +2222,14 @@ export const BUTTON_REGISTRY = {
     category: 'player_management',
     usesDeferred: true
   },
+  'admin_integrated_pronouns_*': {
+    label: 'Pronouns (Dynamic)',
+    description: 'Manage player pronouns with user ID (pattern handler)',
+    emoji: '🏷️',
+    style: 'Primary',
+    category: 'player_management',
+    usesDeferred: true
+  },
   'admin_integrated_timezone': {
     label: 'Timezone',
     description: 'Manage player timezone with auto-refresh (deferred response)',
@@ -2208,9 +2238,25 @@ export const BUTTON_REGISTRY = {
     category: 'player_management',
     usesDeferred: true
   },
+  'admin_integrated_timezone_*': {
+    label: 'Timezone (Dynamic)',
+    description: 'Manage player timezone with user ID (pattern handler)',
+    emoji: '🌍',
+    style: 'Primary',
+    category: 'player_management',
+    usesDeferred: true
+  },
   'admin_integrated_age': {
     label: 'Age',
     description: 'Manage player age with auto-refresh (deferred response)',
+    emoji: '🎂',
+    style: 'Primary',
+    category: 'player_management',
+    usesDeferred: true
+  },
+  'admin_integrated_age_*': {
+    label: 'Age (Dynamic)',
+    description: 'Manage player age with user ID (pattern handler)',
     emoji: '🎂',
     style: 'Primary',
     category: 'player_management',
