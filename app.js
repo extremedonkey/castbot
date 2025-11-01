@@ -3360,6 +3360,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'castlist_delete_confirm',
         'castlist_edit_info',
         'castlist_manage_tribes',
+        'castlist_view', // View button (already factory)
+        'castlist_add_tribe', // Add Tribe button (already factory)
+        'castlist_order', // Order button (already factory)
+        'castlist_placements', // Placements button (already factory)
+        'castlist_tribe_select', // Tribe multi-select (already factory)
+        'castlist_sort', // Sort strategy select (already factory)
+        'castlist2_nav', // Castlist2 navigation (already factory)
+        'castlist2_tribe_prev', // Castlist2 tribe prev (already factory)
+        'castlist2_tribe_next', // Castlist2 tribe next (already factory)
+        'castlist2_prev', // Castlist2 page prev (already factory)
+        'castlist2_next', // Castlist2 page next (already factory)
         // Conditional logic system
         'condition_manager',
         'condition_edit',
