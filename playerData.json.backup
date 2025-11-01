@@ -3432,14 +3432,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 572,
+    "memberCount": 562,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1762007740905,
+    "lastUpdated": 1761474658977,
     "players": {
       "235148962103951360": {
         "emojiCode": "<:Carl_bot:1380989603783249950>"
@@ -5482,7 +5482,7 @@
         "analyticsName": "🏆 Winner 🏆",
         "analyticsAdded": 1749987859643,
         "castlistIds": [
-          "castlist_1762007777205_system"
+          "castlist_1762009143029_system"
         ]
       },
       "1406847946758033539": {
@@ -5505,10 +5505,32 @@
           "castlist_1760892362223_system"
         ]
       },
-      "1431941439951994901": {
-        "name": "Tribe 1431941439951994901",
+      "1412295882979934328": {
+        "name": "Tribe 1412295882979934328",
         "emoji": "🏕️",
-        "color": null
+        "color": "#df2424",
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "Active Castlist"
+      },
+      "1410422085125275709": {
+        "name": "Tribe 1410422085125275709",
+        "emoji": "🏕️",
+        "color": "#2b567a",
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "Active Castlist"
+      },
+      "1410421932314071060": {
+        "name": "Tribe 1410421932314071060",
+        "emoji": "🏕️",
+        "color": "#b2ce90",
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "Active Castlist"
       }
     },
     "timezones": {
@@ -5536,12 +5558,6 @@
         "dstObserved": true,
         "standardName": "EST (UTC-5)"
       },
-      "1353716905797750884": {
-        "offset": 0,
-        "timezoneId": "GMT",
-        "dstObserved": true,
-        "standardName": "GMT (UTC+0)"
-      },
       "1353716907026550798": {
         "offset": 1,
         "timezoneId": "GMT",
@@ -5565,18 +5581,6 @@
         "dstObserved": true,
         "standardName": "NST (UTC-3:30)",
         "timezoneId": "NT"
-      },
-      "1401192835511877634": {
-        "offset": -2.5,
-        "dstObserved": true,
-        "standardName": "NST (UTC-3:30)",
-        "timezoneId": "NT"
-      },
-      "1401192837239803986": {
-        "offset": 1,
-        "dstObserved": true,
-        "standardName": "GMT (UTC+0)",
-        "timezoneId": "GMT"
       },
       "1401192838774915122": {
         "offset": 10,
@@ -5645,26 +5649,43 @@
     },
     "analyticsVersion": "1.0",
     "reactionMappings": {
-      "1431936884254441572": {
+      "1432404109197316347": {
+        "mapping": {
+          "🤍": "1353716899057504338",
+          "🤎": "979090097465086072",
+          "💛": "1353716896402505800",
+          "❤️": "975536776968044564",
+          "🩷": "1081386366828552312",
+          "🩵": "1353716895131631626",
+          "💚": "1401192818243928084",
+          "💜": "975536782391246878",
+          "isPronoun": true
+        },
+        "createdAt": 1761582157108,
+        "lastAccessed": 1761582157108
+      },
+      "1432404187081080844": {
         "mapping": {
           "1️⃣": "1401192838774915122",
-          "2️⃣": "1353716907026550798",
+          "2️⃣": "1431941439951994901",
           "3️⃣": "1353716908431638630",
-          "4️⃣": "1401192837239803986",
-          "5️⃣": "1353716903205408808",
+          "4️⃣": "1353716903205408808",
+          "5️⃣": "1431941441994752164",
           "6️⃣": "1353716904547717171",
-          "7️⃣": "1353716905797750884",
+          "7️⃣": "1353716907026550798",
           "8️⃣": "1353716909861765150",
-          "9️⃣": "1401207657800536174",
-          "🔟": "1353716901724815471",
-          "🇦": "1401192835511877634",
-          "🇧": "1401192833825771571",
-          "🇨": "1353716900365860894",
-          "🇩": "1401207600363737098",
+          "9️⃣": "1431941443961753720",
+          "🔟": "1401207657800536174",
+          "🇦": "1431941445664637031",
+          "🇧": "1353716901724815471",
+          "🇨": "1401192833825771571",
+          "🇩": "1431941447975829514",
+          "🇪": "1353716900365860894",
+          "🇫": "1401207600363737098",
           "isTimezone": true
         },
-        "createdAt": 1761470766960,
-        "lastAccessed": 1761470766960
+        "createdAt": 1761582181178,
+        "lastAccessed": 1761582181178
       }
     },
     "applicationConfigs": {
@@ -5823,6 +5844,23 @@
         "lastUpdated": 1760168278337,
         "seasonId": "season_ddb0fef37a464200",
         "seasonName": "SEASON 12 - JURASSIC PARK",
+        "questions": []
+      },
+      "config_1762009432081_391415444084490240": {
+        "buttonText": "Apply to Season 1 - Buffy",
+        "explanatoryText": "Inaugural  Servivorg (then called CouchCast) season!",
+        "completionDescription": "Thank you for completing your application! A host will review it soon.",
+        "completionImage": null,
+        "channelFormat": "📝%name%-app",
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "draft",
+        "createdAt": 1762009432081,
+        "lastUpdated": 1762009432081,
+        "seasonId": "season_d07e555bdaef42e5",
+        "seasonName": "Season 1 - Buffy",
         "questions": []
       }
     },
@@ -6145,7 +6183,8 @@
         "avatarURL": "https://cdn.discordapp.com/avatars/338264402245582848/a_f780227bcd0f24744eabb97a28be4f31.gif?size=128",
         "channelName": "📝dru-app",
         "createdAt": "2025-10-16T04:49:11.825Z",
-        "configId": "config_1759025879573_468655730975703041"
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 0
       },
       "1428475382251651223": {
         "userId": "1417946570082615493",
@@ -6266,29 +6305,51 @@
           "migratedFrom": "virtual_UzE",
           "migrationDate": 1760892362223
         },
-        "modifiedAt": 1760892424820,
-        "modifiedBy": "391415444084490240"
+        "modifiedAt": 1762010881150,
+        "modifiedBy": "391415444084490240",
+        "seasonId": "season_d07e555bdaef42e5"
       },
-      "castlist_1762007777205_system": {
-        "id": "castlist_1762007777205_system",
-        "name": "Winners",
+      "default": {
+        "id": "default",
+        "name": "Active Castlist",
         "type": "system",
-        "createdAt": 1762007777205,
-        "createdBy": "migration",
+        "createdAt": 1762008832918,
+        "createdBy": "system",
         "settings": {
-          "sortStrategy": "vanity_role",
+          "sortStrategy": "alphabetical",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
         },
         "metadata": {
-          "description": "Upgraded from legacy castlist 'Winners'",
+          "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
+          "emoji": "📋",
+          "isDefault": true
+        },
+        "modifiedAt": 1762008856006,
+        "modifiedBy": "391415444084490240",
+        "seasonId": "season_fc058f8886fc4fdc"
+      },
+      "castlist_1762009143029_system": {
+        "id": "castlist_1762009143029_system",
+        "name": "Winners",
+        "type": "system",
+        "createdAt": 1762009143029,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "All Servivorg Winners",
           "emoji": "🏆",
           "migratedFrom": "virtual_V2lubmVycw",
-          "migrationDate": 1762007777205
+          "migrationDate": 1762009143029
         },
-        "modifiedAt": 1762007787564,
-        "modifiedBy": "system"
+        "modifiedAt": 1762009162716,
+        "modifiedBy": "391415444084490240"
       }
     },
     "placements": {
@@ -6472,6 +6533,20 @@
           "placement": 14,
           "updatedBy": "391415444084490240",
           "updatedAt": "2025-10-11T07:51:40.062Z"
+        }
+      },
+      "global": {
+        "470706722596716547": {
+          "placement": 99,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-01T15:24:46.705Z"
+        }
+      },
+      "season_d07e555bdaef42e5": {
+        "756383872379256933": {
+          "placement": 1,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-01T15:28:23.556Z"
         }
       }
     }

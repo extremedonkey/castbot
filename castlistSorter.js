@@ -13,6 +13,18 @@
  * @returns {Array} Sorted array of members
  */
 export function sortCastlistMembers(members, tribeData, options = {}) {
+  // 🔧 FIX: Clear any existing placement data from previous sorting operations
+  // Member objects are cached by Discord.js and reused across different castlist views
+  // This prevents stale placement prefixes from other castlists from persisting
+  const membersWithStaleData = members.filter(m => m.displayPrefix || m.placement);
+  if (membersWithStaleData.length > 0) {
+    console.log(`[SORTER] Clearing stale placement data from ${membersWithStaleData.length} member(s)`);
+  }
+  members.forEach(member => {
+    delete member.displayPrefix;
+    delete member.placement;
+  });
+
   // Default to alphabetical if no tribe data provided
   if (!tribeData) {
     return sortAlphabetical(members);
