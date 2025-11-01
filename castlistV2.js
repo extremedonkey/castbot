@@ -357,7 +357,10 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
     }
 
     // Create header with proper format: Line 1 = castlist name, Line 2 = tribe info
-    const castlistDisplay = castlistName !== 'default' ? `## ${castlistName} Castlist` : '## Castlist';
+    // For default/active castlist, show just "Castlist" without duplication
+    const castlistDisplay = (castlistName !== 'default' && castlistName !== 'Active Castlist')
+        ? `## ${castlistName} Castlist`
+        : '## Castlist';
     const tribeHeaderText = `${tribe.emoji || ''} **${tribe.name}** ${tribe.emoji || ''}`.trim();
     const paginationText = totalPages > 1 ? ` \`${currentPage + 1}/${totalPages}\`` : '';
 
