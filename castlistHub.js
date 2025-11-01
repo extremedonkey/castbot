@@ -314,15 +314,14 @@ async function createCastlistDetailsSection(guildId, castlist) {
     content = `> **\`✅ Active Castlist\`**\n` +
       `-# Current castlist for the current phase of the game. Use the Manage Tribes button for swaps and merge.\n` +
       seasonLine + // Season line (if any)
-      `\n**Tribes Using This Castlist:**\n${tribesDisplay}`;
+      `\n> **\`Tribes on Castlist\`**\n${tribesDisplay}`;
   } else {
     // Regular castlist rendering
     content = `> **\`${castlist.metadata?.emoji || '📋'} ${castlist.name}\`**\n` +
       `-# ${castlist.metadata?.description || 'No description'}\n` +
-      `-# Type: ${castlist.type} | Created: <t:${Math.floor((castlist.createdAt || Date.now()) / 1000)}:R>\n` +
       seasonLine + // Season line (if any)
       (castlist.isVirtual ? `-# ⚠️ Legacy castlist - will be upgraded on first edit\n` : '') +
-      `\n**Tribes Using This Castlist:**\n${tribesDisplay}`;
+      `\n> **\`Tribes on Castlist\`**\n${tribesDisplay}`;
   }
 
   return {
