@@ -18727,7 +18727,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         handler: async (context) => {
           const { guildId, userId, member, client } = context;
           const guild = await client.guilds.fetch(guildId);
-          const selectedValues = context.data.values || [];
+          const selectedValues = context.values || []; // ButtonHandlerFactory provides values directly, not context.data.values
 
           // Parse action type and target player
           let actionType, targetPlayerId, mode;
