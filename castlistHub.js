@@ -430,7 +430,7 @@ async function createHotSwappableInterface(guildId, castlist, activeButton) {
       // Create role select for adding/removing tribes
       // Get tribes currently using this castlist
       const tribesUsingCastlist = await castlistManager.getTribesUsingCastlist(guildId, castlist.id);
-      
+
       return {
         type: 1, // ActionRow
         components: [{
@@ -438,7 +438,7 @@ async function createHotSwappableInterface(guildId, castlist, activeButton) {
           custom_id: `castlist_tribe_select_${castlist.id}`,
           placeholder: 'Select roles to manage as tribes (add/remove)...',
           min_values: 0,
-          max_values: 25, // Discord limit
+          max_values: 15, // Practical limit (20+ tribes per castlist is rare, leaves room for Edit Tribe modal)
           default_values: tribesUsingCastlist.map(roleId => ({
             id: roleId,
             type: 'role'
