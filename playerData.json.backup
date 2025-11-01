@@ -1577,11 +1577,10 @@
     "tribes": {
       "1380906521084559401": {
         "emoji": null,
-        "castlist": "default",
+        "castlist": "castlist_1759760768839_1331657596087566398",
         "showPlayerEmojis": true,
         "color": "#607d8b",
         "castlistIds": [
-          "default",
           "castlist_1759760768839_1331657596087566398",
           "castlist_1759638936214_system"
         ]
@@ -1612,7 +1611,8 @@
         "analyticsName": "🧟‍♂️ 👑 Castbot MVPs 🧟‍♂️",
         "analyticsAdded": 1754751381750,
         "castlistIds": [
-          "castlist_1759638936214_system"
+          "castlist_1759638936214_system",
+          "default"
         ],
         "castlist": "Castbot MVPs"
       },
@@ -1629,7 +1629,6 @@
       },
       "1409191262279700622": {
         "emoji": "🐻‍❄️",
-        "castlist": "default",
         "showPlayerEmojis": false,
         "color": "#000001",
         "analyticsName": "🐻‍❄️ LOSTvivor Alumni 🐻‍❄️",
@@ -1645,10 +1644,7 @@
           "391415444084490240": {
             "placement": "3"
           }
-        },
-        "castlistIds": [
-          "default"
-        ]
+        }
       },
       "1379077934953922611": {
         "emoji": null,
@@ -1660,21 +1656,13 @@
       "1368969395795398716": {
         "name": "Tribe 1368969395795398716",
         "emoji": "🏕️",
-        "type": "default",
-        "castlistIds": [
-          "default"
-        ],
-        "castlist": "default"
+        "type": "default"
       },
       "1368969393819746336": {
         "name": "Tribe 1368969393819746336",
         "emoji": "🏕️",
         "type": "default",
-        "color": "#e74c3c",
-        "castlistIds": [
-          "default"
-        ],
-        "castlist": "default"
+        "color": "#e74c3c"
       },
       "1415062472007749765": {
         "name": "Tribe 1415062472007749765",
@@ -1705,11 +1693,7 @@
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "🧓 Ask 🧓",
-        "analyticsAdded": 1759422827344,
-        "castlistIds": [
-          "default"
-        ],
-        "castlist": "default"
+        "analyticsAdded": 1759422827344
       },
       "1424250096698130603": {
         "emoji": "🗝️",
@@ -1812,8 +1796,7 @@
         "emoji": "🏕️",
         "color": null,
         "castlistIds": [
-          "castlist_1760891080792_1331657596087566398",
-          "default"
+          "castlist_1760891080792_1331657596087566398"
         ],
         "castlist": "My Cool Castlist"
       },
@@ -1822,8 +1805,7 @@
         "emoji": "🏕️",
         "color": null,
         "castlistIds": [
-          "castlist_1760891080792_1331657596087566398",
-          "default"
+          "castlist_1760891080792_1331657596087566398"
         ],
         "castlist": "My Cool Castlist"
       },
@@ -1841,8 +1823,7 @@
         "emoji": "🏕️",
         "color": null,
         "castlistIds": [
-          "castlist_1759638936214_system",
-          "default"
+          "castlist_1759638936214_system"
         ],
         "castlist": "Castbot MVPs"
       },
@@ -1850,6 +1831,24 @@
         "name": "Tribe 1335645034380525708",
         "emoji": "🏕️",
         "color": null,
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "default"
+      },
+      "1424400564858650644": {
+        "name": "Tribe 1424400564858650644",
+        "emoji": "🏕️",
+        "color": "#e91e63",
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "default"
+      },
+      "1425702665806938183": {
+        "name": "Tribe 1425702665806938183",
+        "emoji": "🏕️",
+        "color": "#e91e63",
         "castlistIds": [
           "default"
         ],
@@ -2873,7 +2872,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1761976731071,
+        "modifiedAt": 1761977146567,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
