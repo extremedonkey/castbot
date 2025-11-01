@@ -18835,24 +18835,15 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             }
           } else if (actionType === 'vanity') {
             // Handle vanity roles (admin only)
+            // Note: Vanity roles are display-only metadata for castlists, not actual Discord role assignments
             const playerData = await loadPlayerData();
             if (!playerData[guildId].players[targetPlayerId]) {
               playerData[guildId].players[targetPlayerId] = {};
             }
 
-            // Remove old vanity roles
-            const oldVanityRoles = playerData[guildId].players[targetPlayerId].vanityRoles || [];
-            if (oldVanityRoles.length > 0) {
-              await targetMember.roles.remove(oldVanityRoles).catch(console.error);
-            }
-
-            // Save and add new vanity roles
+            // Update vanity roles in playerData only (no Discord role sync)
             playerData[guildId].players[targetPlayerId].vanityRoles = selectedValues;
             await savePlayerData(playerData);
-
-            if (selectedValues.length > 0) {
-              await targetMember.roles.add(selectedValues);
-            }
           }
 
           // Rebuild the interface with the same active button
