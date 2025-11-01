@@ -278,19 +278,29 @@ function sortByVanityRole(members, tribeData, options = {}) {
     // Categorize all vanity roles
     const categorizedRoles = vanityRoleNames.map(name => categorizeRoleName(name));
 
-    // Find the "first alphabetically" role as tie-breaker per user requirement
-    const firstAlphaRole = categorizedRoles
+    // Find highest priority category first, then use alphabetical within that category
+    // Priority order: season > alpha > numeric > emoji > other
+    const categoryPriority = { season: 1, alpha: 2, numeric: 3, emoji: 4, other: 5 };
+
+    const priorityRole = categorizedRoles
       .sort((a, b) => {
-        // Sort by original name alphabetically
+        // First, sort by category priority
+        const priorityA = categoryPriority[a.category] || 999;
+        const priorityB = categoryPriority[b.category] || 999;
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+
+        // Within same category, sort alphabetically by role name
         const nameA = a.original || '';
         const nameB = b.original || '';
         return nameA.localeCompare(nameB);
       })[0];
 
     // Attach sorting metadata to member
-    member.vanityCategory = firstAlphaRole.category;
-    member.vanitySortValue = firstAlphaRole.value;
-    member.vanityRoleName = firstAlphaRole.original;
+    member.vanityCategory = priorityRole.category;
+    member.vanitySortValue = priorityRole.value;
+    member.vanityRoleName = priorityRole.original;
 
     // Add to appropriate group
     switch (firstAlphaRole.category) {
