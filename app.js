@@ -6213,16 +6213,9 @@ To fix this:
             client
           });
 
-          // Check if we should update the production menu message
-          const shouldUpdate = await shouldUpdateProductionMenuMessage(channelId);
-          if (shouldUpdate) {
-            // Return components only for UPDATE_MESSAGE
-            return { components: managementUI.components };
-          } else {
-            // Return full response for new message
-            managementUI.flags = (1 << 15); // Only IS_COMPONENTS_V2
-            return managementUI;
-          }
+          // ALWAYS create new ephemeral message for admin interface (never update production menu)
+          managementUI.flags = (1 << 15) | InteractionResponseFlags.EPHEMERAL;
+          return managementUI;
         }
       })(req, res, client);
     } else if (custom_id === 'setup_castbot') {
