@@ -160,25 +160,25 @@ function sortAlphabetical(members, reverse = false) {
 
 /**
  * Parse season number from vanity role name
- * Handles patterns like "S1", "S11", "Season 1", "Season 11"
+ * Handles patterns like "S1", "S6.5", "S11", "Season 1", "Season 6.5"
  * @param {string} roleName - The role name to parse
  * @returns {Object|null} { type: 'season', number: 1 } or null if not a season role
  */
 function parseSeasonNumber(roleName) {
   if (!roleName) return null;
 
-  // Pattern 1: "S1 - Something", "S11 - Something" (Sx where x is 1-2 digits)
-  const sxPattern = /^S(\d{1,2})\s/i;
+  // Pattern 1: "S1 - Something", "S6.5 - Something", "S11 - Something" (Sx where x is 1-2 digits with optional decimal)
+  const sxPattern = /^S(\d{1,2}(?:\.\d+)?)\s/i;
   const sxMatch = roleName.match(sxPattern);
   if (sxMatch) {
-    return { type: 'season', number: parseInt(sxMatch[1]) };
+    return { type: 'season', number: parseFloat(sxMatch[1]) };
   }
 
-  // Pattern 2: "Season 1", "Season 11" (Season followed by space and digits)
-  const seasonPattern = /^Season\s+(\d{1,2})/i;
+  // Pattern 2: "Season 1", "Season 6.5", "Season 11" (Season followed by space and digits with optional decimal)
+  const seasonPattern = /^Season\s+(\d{1,2}(?:\.\d+)?)/i;
   const seasonMatch = roleName.match(seasonPattern);
   if (seasonMatch) {
-    return { type: 'season', number: parseInt(seasonMatch[1]) };
+    return { type: 'season', number: parseFloat(seasonMatch[1]) };
   }
 
   return null;
