@@ -30,6 +30,9 @@ export function sortCastlistMembers(members, tribeData, options = {}) {
     case 'reverse_alpha':
       return sortAlphabetical(members, true);
 
+    case 'vanity_role':
+      return sortByVanityRole(members, tribeData, options);
+
     // Future sorting strategies can be added here
     // case 'by_age':
     //   return sortByAge(members, tribeData, options);
@@ -141,6 +144,172 @@ function sortAlphabetical(members, reverse = false) {
     const result = nameA.localeCompare(nameB);
     return reverse ? -result : result;
   });
+}
+
+/**
+ * Parse season number from vanity role name
+ * Handles patterns like "S1", "S11", "Season 1", "Season 11"
+ * @param {string} roleName - The role name to parse
+ * @returns {Object|null} { type: 'season', number: 1 } or null if not a season role
+ */
+function parseSeasonNumber(roleName) {
+  if (!roleName) return null;
+
+  // Pattern 1: "S1 - Something", "S11 - Something" (Sx where x is 1-2 digits)
+  const sxPattern = /^S(\d{1,2})\s/i;
+  const sxMatch = roleName.match(sxPattern);
+  if (sxMatch) {
+    return { type: 'season', number: parseInt(sxMatch[1]) };
+  }
+
+  // Pattern 2: "Season 1", "Season 11" (Season followed by space and digits)
+  const seasonPattern = /^Season\s+(\d{1,2})/i;
+  const seasonMatch = roleName.match(seasonPattern);
+  if (seasonMatch) {
+    return { type: 'season', number: parseInt(seasonMatch[1]) };
+  }
+
+  return null;
+}
+
+/**
+ * Categorize a role name into sorting priority groups
+ * @param {string} roleName - The role name to categorize
+ * @returns {Object} { category: 'season'|'alpha'|'numeric'|'other', value: any }
+ */
+function categorizeRoleName(roleName) {
+  if (!roleName) {
+    return { category: 'other', value: '' };
+  }
+
+  // Check for season patterns first (highest priority)
+  const seasonData = parseSeasonNumber(roleName);
+  if (seasonData) {
+    return { category: 'season', value: seasonData.number, original: roleName };
+  }
+
+  const firstChar = roleName.charAt(0);
+
+  // Check if starts with a letter (a-z, case insensitive)
+  if (/[a-z]/i.test(firstChar)) {
+    return { category: 'alpha', value: roleName.toLowerCase(), original: roleName };
+  }
+
+  // Check if starts with a digit
+  if (/\d/.test(firstChar)) {
+    // Extract leading number for proper numeric sorting
+    const numMatch = roleName.match(/^(\d+)/);
+    const numValue = numMatch ? parseInt(numMatch[1]) : 0;
+    return { category: 'numeric', value: numValue, original: roleName };
+  }
+
+  // Everything else (symbols, etc.)
+  return { category: 'other', value: roleName, original: roleName };
+}
+
+/**
+ * Sort members by their vanity roles
+ * Priority order:
+ * 1. Season roles (S1, S2, S11, Season 1, etc.) - sorted numerically
+ * 2. Alphabetical roles (a-z) - sorted alphabetically
+ * 3. Numeric roles (1-N) - sorted numerically
+ * 4. No vanity roles - sorted alphabetically by display name
+ * @param {Array} members - Array of member objects
+ * @param {Object} tribeData - Tribe data with castlistSettings
+ * @param {Object} options - Options containing pre-loaded playerData and guildId
+ * @returns {Array} Sorted array
+ */
+function sortByVanityRole(members, tribeData, options = {}) {
+  const { playerData, guildId } = options;
+
+  // Fallback to alphabetical if no data available
+  if (!playerData || !guildId) {
+    console.warn('[SORTER] No playerData or guildId provided for vanity sorting, falling back to alphabetical');
+    return sortAlphabetical(members);
+  }
+
+  // Group members by vanity role category
+  const seasonRoles = [];
+  const alphaRoles = [];
+  const numericRoles = [];
+  const noVanityRoles = [];
+
+  members.forEach(member => {
+    const userId = member.user?.id || member.id;
+    const vanityRoles = playerData[guildId]?.players?.[userId]?.vanityRoles || [];
+
+    if (vanityRoles.length === 0) {
+      // No vanity roles - sort alphabetically at the end (mixed)
+      noVanityRoles.push(member);
+      return;
+    }
+
+    // Get all vanity role names from Discord role cache
+    const vanityRoleNames = vanityRoles
+      .map(roleId => member.guild?.roles?.cache?.get(roleId)?.name)
+      .filter(name => name); // Filter out null/undefined
+
+    if (vanityRoleNames.length === 0) {
+      // Has vanity role IDs but can't resolve names - treat as no vanity
+      noVanityRoles.push(member);
+      return;
+    }
+
+    // Categorize all vanity roles
+    const categorizedRoles = vanityRoleNames.map(name => categorizeRoleName(name));
+
+    // Find the "first alphabetically" role as tie-breaker per user requirement
+    const firstAlphaRole = categorizedRoles
+      .sort((a, b) => {
+        // Sort by original name alphabetically
+        const nameA = a.original || '';
+        const nameB = b.original || '';
+        return nameA.localeCompare(nameB);
+      })[0];
+
+    // Attach sorting metadata to member
+    member.vanityCategory = firstAlphaRole.category;
+    member.vanitySortValue = firstAlphaRole.value;
+    member.vanityRoleName = firstAlphaRole.original;
+
+    // Add to appropriate group
+    switch (firstAlphaRole.category) {
+      case 'season':
+        seasonRoles.push(member);
+        break;
+      case 'alpha':
+        alphaRoles.push(member);
+        break;
+      case 'numeric':
+        numericRoles.push(member);
+        break;
+      default:
+        noVanityRoles.push(member);
+    }
+  });
+
+  // Sort each group appropriately
+
+  // Season roles: Sort by season number (ascending: S1, S2, S11)
+  seasonRoles.sort((a, b) => a.vanitySortValue - b.vanitySortValue);
+
+  // Alpha roles: Sort alphabetically by role name
+  alphaRoles.sort((a, b) => a.vanitySortValue.localeCompare(b.vanitySortValue));
+
+  // Numeric roles: Sort numerically
+  numericRoles.sort((a, b) => a.vanitySortValue - b.vanitySortValue);
+
+  // No vanity roles: Sort alphabetically by display name
+  noVanityRoles.sort((a, b) => {
+    const nameA = a.displayName || a.nickname || a.user?.username || a.username || '';
+    const nameB = b.displayName || b.nickname || b.user?.username || b.username || '';
+    return nameA.localeCompare(nameB);
+  });
+
+  console.log(`[SORTER] Vanity role sort: ${seasonRoles.length} season, ${alphaRoles.length} alpha, ${numericRoles.length} numeric, ${noVanityRoles.length} no vanity`);
+
+  // Combine in priority order, with no-vanity mixed alphabetically at the end
+  return [...seasonRoles, ...alphaRoles, ...numericRoles, ...noVanityRoles];
 }
 
 // Future sorting functions can be added below

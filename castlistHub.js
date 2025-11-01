@@ -492,18 +492,25 @@ async function createHotSwappableInterface(guildId, castlist, activeButton) {
               default: currentStrategy === 'alphabetical'
             },
             {
+              label: 'Placements',
+              value: 'placements',
+              description: 'Sort by ranking (1st, 2nd, 3rd...)',
+              emoji: { name: '🏅' },
+              default: currentStrategy === 'placements'
+            },
+            {
+              label: 'Vanity Role (Winners)',
+              value: 'vanity_role',
+              description: "Useful for Winners' castlist (assign @S1 - Winner and will list in order)",
+              emoji: { name: '🏆' },
+              default: currentStrategy === 'vanity_role'
+            },
+            {
               label: 'Reverse Alphabetical (Z-A)',
               value: 'reverse_alpha',
               description: 'Sort players by name in reverse',
               emoji: { name: '🔤' },
               default: currentStrategy === 'reverse_alpha'
-            },
-            {
-              label: 'Placements',
-              value: 'placements',
-              description: 'Sort by ranking (1st, 2nd, 3rd...)',
-              emoji: { name: '🏆' },
-              default: currentStrategy === 'placements'
             },
             {
               label: 'Age',

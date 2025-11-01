@@ -823,7 +823,8 @@
         "age": "32",
         "emojiCode": "<:ReeceBot:1396856819690766460>",
         "vanityRoles": [
-          "1398904036643831818"
+          "1398904036643831818",
+          "1335645031226277959"
         ],
         "safari": {
           "currency": 668,
@@ -1575,16 +1576,6 @@
       }
     },
     "tribes": {
-      "1380906521084559401": {
-        "emoji": null,
-        "castlist": "castlist_1759760768839_1331657596087566398",
-        "showPlayerEmojis": true,
-        "color": "#607d8b",
-        "castlistIds": [
-          "castlist_1759760768839_1331657596087566398",
-          "castlist_1759638936214_system"
-        ]
-      },
       "1333822520737927281": {
         "emoji": null,
         "showPlayerEmojis": false,
@@ -1592,10 +1583,9 @@
         "analyticsName": "🤖Mr CastBot",
         "analyticsAdded": 1751070525853,
         "castlistIds": [
-          "default",
           "castlist_1759638936214_system"
         ],
-        "castlist": "default"
+        "castlist": "Castbot MVPs"
       },
       "1391142520787832904": {
         "emoji": "👀",
@@ -1611,21 +1601,16 @@
         "analyticsName": "🧟‍♂️ 👑 Castbot MVPs 🧟‍♂️",
         "analyticsAdded": 1754751381750,
         "castlistIds": [
-          "castlist_1759638936214_system",
-          "default"
+          "castlist_1759638936214_system"
         ],
         "castlist": "Castbot MVPs"
       },
       "1335645032891547670": {
         "emoji": "🤷‍♀️",
-        "castlist": "default",
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "🤷‍♀️ Any 🤷‍♀️",
-        "analyticsAdded": 1756021096260,
-        "castlistIds": [
-          "default"
-        ]
+        "analyticsAdded": 1756021096260
       },
       "1409191262279700622": {
         "emoji": "🐻‍❄️",
@@ -1676,8 +1661,7 @@
         "analyticsName": "🪄 ar.3 🪄",
         "analyticsAdded": 1759081799205,
         "castlistIds": [
-          "castlist_1760891080792_1331657596087566398",
-          "default"
+          "castlist_1760891080792_1331657596087566398"
         ],
         "castlist": "My Cool Castlist"
       },
@@ -1738,11 +1722,7 @@
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "ar.2",
-        "analyticsAdded": 1759674806361,
-        "castlistIds": [
-          "default"
-        ],
-        "castlist": "default"
+        "analyticsAdded": 1759674806361
       },
       "castlist_1759760454082_1331657596087566398": {
         "id": "castlist_1759760454082_1331657596087566398",
@@ -1812,29 +1792,17 @@
       "1431726505569943633": {
         "name": "Tribe 1431726505569943633",
         "emoji": "🏕️",
-        "color": null,
-        "castlistIds": [
-          "default"
-        ],
-        "castlist": "default"
+        "color": null
       },
       "1431726526789058682": {
         "name": "Tribe 1431726526789058682",
         "emoji": "🏕️",
-        "color": null,
-        "castlistIds": [
-          "castlist_1759638936214_system"
-        ],
-        "castlist": "Castbot MVPs"
+        "color": null
       },
       "1335645034380525708": {
         "name": "Tribe 1335645034380525708",
         "emoji": "🏕️",
-        "color": null,
-        "castlistIds": [
-          "default"
-        ],
-        "castlist": "default"
+        "color": null
       },
       "1424400564858650644": {
         "name": "Tribe 1424400564858650644",
@@ -2883,7 +2851,7 @@
         "createdAt": 1759638936215,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "reverse_alpha",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -2894,8 +2862,8 @@
           "migratedFrom": "virtual_bGVnYWN5TGlzdA",
           "migrationDate": 1759638936215
         },
-        "modifiedAt": 1761976281727,
-        "modifiedBy": "391415444084490240",
+        "modifiedAt": 1762006373273,
+        "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
       "castlist_1759671885172_system": {
@@ -10184,8 +10152,7 @@
         "showPlayerEmojis": true,
         "color": "#607d8b",
         "castlistIds": [
-          "default",
-          "castlist_1759760768839_1331657596087566398"
+          "default"
         ]
       },
       "1333822520737927281": {
