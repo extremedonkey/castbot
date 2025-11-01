@@ -1608,7 +1608,7 @@
         "castlistIds": [
           "castlist_1759638936214_system"
         ],
-        "castlist": "noLongerLegacy"
+        "castlist": "Castbot MVPs"
       },
       "1335645032891547670": {
         "emoji": "🤷‍♀️",
@@ -1671,7 +1671,11 @@
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "🪄 ar.3 🪄",
-        "analyticsAdded": 1759081799205
+        "analyticsAdded": 1759081799205,
+        "castlistIds": [
+          "castlist_1760891080792_1331657596087566398"
+        ],
+        "castlist": "My Cool Castlist"
       },
       "1388327092634124368": {
         "emoji": null,
@@ -1755,7 +1759,10 @@
         "showPlayerEmojis": false,
         "color": "#e91e63",
         "analyticsName": "🅰️ Season: Multi-A! 🅰️",
-        "analyticsAdded": 1760020667612
+        "analyticsAdded": 1760020667612,
+        "castlistIds": [
+          "default"
+        ]
       },
       "1429437994984800256": {
         "emoji": "☎️",
@@ -1767,11 +1774,7 @@
       "1425702665806938183": {
         "name": "Tribe 1425702665806938183",
         "emoji": "🏕️",
-        "color": "#e91e63",
-        "castlistIds": [
-          "castlist_1760891080792_1331657596087566398"
-        ],
-        "castlist": "My Cool Castlist"
+        "color": "#e91e63"
       },
       "1431726492223672381": {
         "name": "Tribe 1431726492223672381",
@@ -1795,6 +1798,24 @@
           "castlist_1761424028120_1331657596087566398"
         ],
         "castlist": "PST Test"
+      },
+      "1368969402967654420": {
+        "name": "Tribe 1368969402967654420",
+        "emoji": "🏕️",
+        "color": null,
+        "castlistIds": [
+          "castlist_1760891080792_1331657596087566398"
+        ],
+        "castlist": "My Cool Castlist"
+      },
+      "1368969401067372625": {
+        "name": "Tribe 1368969401067372625",
+        "emoji": "🏕️",
+        "color": null,
+        "castlistIds": [
+          "castlist_1760891080792_1331657596087566398"
+        ],
+        "castlist": "My Cool Castlist"
       }
     },
     "timezones": {
@@ -2814,7 +2835,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1759639383328,
+        "modifiedAt": 1761975168043,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -2853,12 +2874,12 @@
           "visibility": "public"
         },
         "metadata": {
-          "description": "",
+          "description": "The multi-B castlist!",
           "emoji": "🅱️",
           "migratedFrom": "virtual_TXVsdGlC",
           "migrationDate": 1759671885172
         },
-        "modifiedAt": 1759671896374,
+        "modifiedAt": 1761974553354,
         "modifiedBy": "391415444084490240"
       },
       "castlist_1760891080792_1331657596087566398": {
@@ -2878,7 +2899,10 @@
           "emoji": "😎",
           "description": "",
           "lastModified": 1760891080792
-        }
+        },
+        "seasonId": "season_cac1b81de8914c79",
+        "modifiedAt": 1761974779410,
+        "modifiedBy": "391415444084490240"
       },
       "castlist_1761424028120_1331657596087566398": {
         "id": "castlist_1761424028120_1331657596087566398",

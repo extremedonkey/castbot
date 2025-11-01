@@ -316,9 +316,11 @@ async function createCastlistDetailsSection(guildId, castlist) {
       seasonLine + // Season line (if any)
       `\n> **\`Tribes on Castlist\`**\n${tribesDisplay}`;
   } else {
-    // Regular castlist rendering
+    // Regular castlist rendering - only show description if it exists
+    const descriptionLine = castlist.metadata?.description ? `-# ${castlist.metadata.description}\n` : '';
+
     content = `> **\`${castlist.metadata?.emoji || '📋'} ${castlist.name}\`**\n` +
-      `-# ${castlist.metadata?.description || 'No description'}\n` +
+      descriptionLine + // Only included if description exists
       seasonLine + // Season line (if any)
       (castlist.isVirtual ? `-# ⚠️ Legacy castlist - will be upgraded on first edit\n` : '') +
       `\n> **\`Tribes on Castlist\`**\n${tribesDisplay}`;
@@ -366,7 +368,7 @@ function createManagementButtons(castlistId, enabled = true, activeButton = null
       .setLabel('Edit Info')
       .setStyle(activeButton === CastlistButtonType.EDIT_INFO ? ButtonStyle.Primary : ButtonStyle.Secondary)
       .setEmoji('✏️')
-      .setDisabled(!enabled),
+      .setDisabled(!enabled || castlistId === 'default'), // Disable for Active Castlist (system-managed)
     new ButtonBuilder()
       .setCustomId(`castlist_add_tribe${suffix}`)
       .setLabel('Manage Tribes')
