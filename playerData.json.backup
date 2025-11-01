@@ -6337,7 +6337,7 @@
         "createdAt": 1762009143029,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "vanity_role",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -6348,8 +6348,8 @@
           "migratedFrom": "virtual_V2lubmVycw",
           "migrationDate": 1762009143029
         },
-        "modifiedAt": 1762009162716,
-        "modifiedBy": "391415444084490240"
+        "modifiedAt": 1762011344222,
+        "modifiedBy": "system"
       }
     },
     "placements": {
