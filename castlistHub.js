@@ -205,7 +205,12 @@ export async function createCastlistHub(guildId, options = {}) {
         activeButton
       );
       if (hotSwapInterface) {
-        container.components.push(hotSwapInterface);
+        // Handle both single components and arrays (for multi-component interfaces)
+        if (Array.isArray(hotSwapInterface)) {
+          container.components.push(...hotSwapInterface);
+        } else {
+          container.components.push(hotSwapInterface);
+        }
       } else if (!activeButton) {
         // Show placeholder when no button is active
         container.components.push({
@@ -431,20 +436,40 @@ async function createHotSwappableInterface(guildId, castlist, activeButton) {
       // Get tribes currently using this castlist
       const tribesUsingCastlist = await castlistManager.getTribesUsingCastlist(guildId, castlist.id);
 
-      return {
+      // CRITICAL: default_values cannot exceed max_values or Discord rejects the component
+      // If castlist has more than 15 tribes, we can only show the first 15 as pre-selected
+      const maxTribeLimit = 15;
+      const defaultValues = tribesUsingCastlist.slice(0, maxTribeLimit).map(roleId => ({
+        id: roleId,
+        type: 'role'
+      }));
+
+      // Build interface components
+      const interfaceComponents = [];
+
+      // Show warning if castlist exceeds limit
+      if (tribesUsingCastlist.length > maxTribeLimit) {
+        interfaceComponents.push({
+          type: 10, // Text Display
+          content: `⚠️ **Over Limit**: This castlist has ${tribesUsingCastlist.length} tribes (max: ${maxTribeLimit}). Only first ${maxTribeLimit} pre-selected. Remove tribes to get below limit.`
+        });
+      }
+
+      // Add the role select
+      interfaceComponents.push({
         type: 1, // ActionRow
         components: [{
           type: 6, // Role Select
           custom_id: `castlist_tribe_select_${castlist.id}`,
           placeholder: 'Select roles to manage as tribes (add/remove)...',
           min_values: 0,
-          max_values: 15, // Practical limit (20+ tribes per castlist is rare, leaves room for Edit Tribe modal)
-          default_values: tribesUsingCastlist.map(roleId => ({
-            id: roleId,
-            type: 'role'
-          }))
+          max_values: maxTribeLimit, // Practical limit (20+ tribes per castlist is rare, leaves room for Edit Tribe modal)
+          default_values: defaultValues
         }]
-      };
+      });
+
+      // Return single component or array based on warning presence
+      return interfaceComponents.length === 1 ? interfaceComponents[0] : interfaceComponents;
     
     case CastlistButtonType.ORDER:
       // Create sort strategy select

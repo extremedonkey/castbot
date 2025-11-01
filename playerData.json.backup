@@ -1612,8 +1612,7 @@
         "analyticsName": "🧟‍♂️ 👑 Castbot MVPs 🧟‍♂️",
         "analyticsAdded": 1754751381750,
         "castlistIds": [
-          "castlist_1759638936214_system",
-          "default"
+          "castlist_1759638936214_system"
         ],
         "castlist": "Castbot MVPs"
       },
@@ -1778,32 +1777,12 @@
           "seasonId": "season_cac1b81de8914c79"
         }
       },
-      "1424400564858650644": {
-        "emoji": "🅰️",
-        "castlist": "default",
-        "showPlayerEmojis": false,
-        "color": "#e91e63",
-        "analyticsName": "🅰️ Season: Multi-A! 🅰️",
-        "analyticsAdded": 1760020667612,
-        "castlistIds": [
-          "default"
-        ]
-      },
       "1429437994984800256": {
         "emoji": "☎️",
         "showPlayerEmojis": false,
         "color": "#e74c3c",
         "analyticsName": "☎️ telethonTest ☎️",
         "analyticsAdded": 1760875071897
-      },
-      "1425702665806938183": {
-        "name": "Tribe 1425702665806938183",
-        "emoji": "🏕️",
-        "color": "#e91e63",
-        "castlistIds": [
-          "default"
-        ],
-        "castlist": "default"
       },
       "1431726492223672381": {
         "name": "Tribe 1431726492223672381",
@@ -1833,7 +1812,8 @@
         "emoji": "🏕️",
         "color": null,
         "castlistIds": [
-          "castlist_1760891080792_1331657596087566398"
+          "castlist_1760891080792_1331657596087566398",
+          "default"
         ],
         "castlist": "My Cool Castlist"
       },
@@ -1846,15 +1826,6 @@
           "default"
         ],
         "castlist": "My Cool Castlist"
-      },
-      "1335645034380525708": {
-        "name": "Tribe 1335645034380525708",
-        "emoji": "🏕️",
-        "color": null,
-        "castlistIds": [
-          "default"
-        ],
-        "castlist": "default"
       },
       "1431726505569943633": {
         "name": "Tribe 1431726505569943633",
@@ -1870,9 +1841,19 @@
         "emoji": "🏕️",
         "color": null,
         "castlistIds": [
-          "castlist_1759638936214_system"
+          "castlist_1759638936214_system",
+          "default"
         ],
         "castlist": "Castbot MVPs"
+      },
+      "1335645034380525708": {
+        "name": "Tribe 1335645034380525708",
+        "emoji": "🏕️",
+        "color": null,
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "default"
       }
     },
     "timezones": {
@@ -2892,7 +2873,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1761976148571,
+        "modifiedAt": 1761976731071,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -2910,11 +2891,11 @@
         },
         "metadata": {
           "description": "The new and improved list!",
-          "emoji": "✨",
+          "emoji": "🏆",
           "migratedFrom": "virtual_bGVnYWN5TGlzdA",
           "migrationDate": 1759638936215
         },
-        "modifiedAt": 1760871539022,
+        "modifiedAt": 1761976281727,
         "modifiedBy": "391415444084490240",
         "seasonId": "season_cac1b81de8914c79"
       },
