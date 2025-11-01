@@ -36,9 +36,12 @@ export async function createCastlistHub(guildId, options = {}) {
     showVirtual = true
   } = options;
   
+  // Load player data for season lookups
+  const playerData = await loadPlayerData();
+
   // Get all castlists (including virtual)
   const allCastlists = await castlistManager.getAllCastlists(guildId);
-  
+
   // Get migration stats
   const stats = await castlistManager.getMigrationStats(guildId);
   
@@ -52,7 +55,7 @@ export async function createCastlistHub(guildId, options = {}) {
   // Header
   container.components.push({
     type: 10, // Text Display
-    content: `## 📋 Castlists | Manage All Cast Lists\n-# ${stats.total} castlists (${stats.real} managed, ${stats.virtual} legacy)`
+    content: `## 📋 Castlist Manager`
   });
   
   // Separator
@@ -108,8 +111,21 @@ export async function createCastlistHub(guildId, options = {}) {
 
     const emoji = castlist.metadata?.emoji || '📋';
     const label = castlist.isVirtual ? `${castlist.name} [Legacy]` : castlist.name;
-    const description = castlist.metadata?.description ||
-      (castlist.isVirtual ? 'Legacy castlist - click to upgrade' : 'Managed castlist');
+
+    // Build description with priority: custom description > season name > fallback
+    let description;
+    if (castlist.metadata?.description) {
+      // Priority 1: Use custom description if exists
+      description = castlist.metadata.description;
+    } else if (castlist.seasonId) {
+      // Priority 2: Look up season name if seasonId exists
+      const season = Object.values(playerData[guildId]?.applicationConfigs || {})
+        .find(config => config.seasonId === castlist.seasonId);
+      description = season ? season.seasonName : 'Managed castlist';
+    } else {
+      // Priority 3: Fallback based on castlist type
+      description = castlist.isVirtual ? 'Legacy castlist - click to upgrade' : 'Managed castlist';
+    }
 
     selectMenu.addOptions({
       label: label.substring(0, 100),
@@ -291,13 +307,24 @@ async function createCastlistDetailsSection(guildId, castlist) {
   }
 
   // Build the details section
-  const content = `> **\`${castlist.metadata?.emoji || '📋'} ${castlist.name}\`**\n` +
-    `-# ${castlist.metadata?.description || 'No description'}\n` +
-    `-# Type: ${castlist.type} | Created: <t:${Math.floor((castlist.createdAt || Date.now()) / 1000)}:R>\n` +
-    seasonLine + // Season line (if any)
-    (castlist.isVirtual ? `-# ⚠️ Legacy castlist - will be upgraded on first edit\n` : '') +
-    `\n**Tribes Using This Castlist:**\n${tribesDisplay}`;
-  
+  let content;
+
+  if (castlist.id === 'default') {
+    // Special rendering for Active Castlist (default)
+    content = `> **\`✅ Active Castlist\`**\n` +
+      `-# Current castlist for the current phase of the game. Use the Manage Tribes button for swaps and merge.\n` +
+      seasonLine + // Season line (if any)
+      `\n**Tribes Using This Castlist:**\n${tribesDisplay}`;
+  } else {
+    // Regular castlist rendering
+    content = `> **\`${castlist.metadata?.emoji || '📋'} ${castlist.name}\`**\n` +
+      `-# ${castlist.metadata?.description || 'No description'}\n` +
+      `-# Type: ${castlist.type} | Created: <t:${Math.floor((castlist.createdAt || Date.now()) / 1000)}:R>\n` +
+      seasonLine + // Season line (if any)
+      (castlist.isVirtual ? `-# ⚠️ Legacy castlist - will be upgraded on first edit\n` : '') +
+      `\n**Tribes Using This Castlist:**\n${tribesDisplay}`;
+  }
+
   return {
     type: 10, // Text Display
     content: content
