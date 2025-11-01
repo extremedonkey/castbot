@@ -303,7 +303,7 @@ function sortByVanityRole(members, tribeData, options = {}) {
     member.vanityRoleName = priorityRole.original;
 
     // Add to appropriate group
-    switch (firstAlphaRole.category) {
+    switch (priorityRole.category) {
       case 'season':
         seasonRoles.push(member);
         break;
