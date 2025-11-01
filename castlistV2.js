@@ -799,9 +799,10 @@ function createCastlistRows(allCastlists, castlistTribes, includeAddButton = tru
             .setEmoji('📋')
     );
     
-    // Add buttons for custom castlists (sorted alphabetically, excluding "default")
+    // Add buttons for custom castlists (sorted alphabetically, excluding "default" and "Active Castlist")
+    // Note: "default" is the ID, "Active Castlist" is the name - both refer to the same castlist
     const customCastlists = Array.from(allCastlists)
-        .filter(name => name !== 'default')
+        .filter(name => name !== 'default' && name !== 'Active Castlist')
         .sort();
         
     for (const castlistName of customCastlists) {
