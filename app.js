@@ -18716,6 +18716,34 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       return await handlePlayerButtonClick(req, res, custom_id, playerData, client);
     // Removed disabled legacy vanity handler
     // Removed disabled legacy timezone handler
+    } else if ((custom_id.startsWith('admin_integrated_age') || custom_id.startsWith('player_integrated_age')) &&
+               req.body.data.values?.[0] === 'age_custom') {
+      // 🔘 Handle age_custom modal separately (modals cannot be deferred)
+      const mode = custom_id.startsWith('player_integrated_') ? 'player' : 'admin';
+      const targetPlayerId = mode === 'player' ?
+        req.body.member?.user?.id || req.body.user?.id :
+        custom_id.split('_')[3];
+
+      const modal = new ModalBuilder()
+        .setCustomId(mode === 'admin' ? `admin_age_modal_${targetPlayerId}` : 'player_age_modal')
+        .setTitle('Set Player Age');
+
+      const ageInput = new TextInputBuilder()
+        .setCustomId('age')
+        .setLabel('Enter your age')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+        .setMaxLength(10)
+        .setPlaceholder("e.g. 25 or '30s'");
+
+      const row = new ActionRowBuilder().addComponents(ageInput);
+      modal.addComponents(row);
+
+      return res.send({
+        type: InteractionResponseType.MODAL,
+        data: modal.toJSON()
+      });
+
     } else if (custom_id.startsWith('admin_integrated_age') || custom_id.startsWith('player_integrated_age') ||
                custom_id.startsWith('admin_integrated_pronouns') || custom_id.startsWith('player_integrated_pronouns') ||
                custom_id.startsWith('admin_integrated_timezone') || custom_id.startsWith('player_integrated_timezone') ||
@@ -18724,6 +18752,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       return ButtonHandlerFactory.create({
         id: custom_id,
         deferred: true, // CRITICAL: These operations can take >3 seconds with large playerData
+        updateMessage: true, // Update existing message instead of creating new one
         handler: async (context) => {
           const { guildId, userId, member, client } = context;
           const guild = await client.guilds.fetch(guildId);
@@ -18803,35 +18832,13 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               }
             }
           } else if (actionType === 'age') {
-            // Handle age selection
+            // Handle age selection (modal case handled separately above)
             if (selectedValues.length > 0) {
               const ageValue = selectedValues[0];
-              if (ageValue === 'age_custom') {
-                // Show modal for custom age
-                const modal = new ModalBuilder()
-                  .setCustomId(mode === 'admin' ? `admin_age_modal_${targetPlayerId}` : 'player_age_modal')
-                  .setTitle('Set Player Age');
-
-                const ageInput = new TextInputBuilder()
-                  .setCustomId('age')
-                  .setLabel('Enter your age')
-                  .setStyle(TextInputStyle.Short)
-                  .setRequired(true)
-                  .setMaxLength(10)
-                  .setPlaceholder("e.g. 25 or '30s'");
-
-                const row = new ActionRowBuilder().addComponents(ageInput);
-                modal.addComponents(row);
-
-                return {
-                  type: InteractionResponseType.MODAL,
-                  modal: modal.toJSON()
-                };
-              } else {
-                // Direct age selection
-                const age = ageValue.replace('age_', '');
-                await updatePlayer(guildId, targetPlayerId, { age });
-              }
+              // age_custom is handled by separate modal handler above
+              // Only process direct age selections here
+              const age = ageValue.replace('age_', '');
+              await updatePlayer(guildId, targetPlayerId, { age });
             }
           } else if (actionType === 'vanity') {
             // Handle vanity roles (admin only)

@@ -822,9 +822,7 @@
       "391415444084490240": {
         "age": "32",
         "emojiCode": "<:ReeceBot:1396856819690766460>",
-        "vanityRoles": [
-          "1434189671260491796"
-        ],
+        "vanityRoles": [],
         "safari": {
           "currency": 668,
           "history": [],
@@ -6294,7 +6292,7 @@
         "createdAt": 1760892362223,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "placements",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -6305,8 +6303,8 @@
           "migratedFrom": "virtual_UzE",
           "migrationDate": 1760892362223
         },
-        "modifiedAt": 1762010881150,
-        "modifiedBy": "391415444084490240",
+        "modifiedAt": 1762011899525,
+        "modifiedBy": "system",
         "seasonId": "season_d07e555bdaef42e5"
       },
       "default": {
