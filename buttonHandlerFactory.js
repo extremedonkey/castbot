@@ -2181,6 +2181,64 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     restrictedUser: '391415444084490240', // Reece only
     category: 'experimental'
+  },
+
+  // === PLAYER MANAGEMENT - INTEGRATED HANDLERS ===
+  'admin_integrated_vanity': {
+    label: 'Vanity Roles',
+    description: 'Manage player vanity roles with auto-refresh (deferred response)',
+    emoji: '✨',
+    style: 'Primary',
+    category: 'player_management',
+    usesDeferred: true
+  },
+  'admin_integrated_pronouns': {
+    label: 'Pronouns',
+    description: 'Manage player pronouns with auto-refresh (deferred response)',
+    emoji: '🏷️',
+    style: 'Primary',
+    category: 'player_management',
+    usesDeferred: true
+  },
+  'admin_integrated_timezone': {
+    label: 'Timezone',
+    description: 'Manage player timezone with auto-refresh (deferred response)',
+    emoji: '🌍',
+    style: 'Primary',
+    category: 'player_management',
+    usesDeferred: true
+  },
+  'admin_integrated_age': {
+    label: 'Age',
+    description: 'Manage player age with auto-refresh (deferred response)',
+    emoji: '🎂',
+    style: 'Primary',
+    category: 'player_management',
+    usesDeferred: true
+  },
+  'player_integrated_pronouns': {
+    label: 'My Pronouns',
+    description: 'Set my pronouns with auto-refresh (deferred response)',
+    emoji: '🏷️',
+    style: 'Primary',
+    category: 'player_menu',
+    usesDeferred: true
+  },
+  'player_integrated_timezone': {
+    label: 'My Timezone',
+    description: 'Set my timezone with auto-refresh (deferred response)',
+    emoji: '🌍',
+    style: 'Primary',
+    category: 'player_menu',
+    usesDeferred: true
+  },
+  'player_integrated_age': {
+    label: 'My Age',
+    description: 'Set my age with auto-refresh (deferred response)',
+    emoji: '🎂',
+    style: 'Primary',
+    category: 'player_menu',
+    usesDeferred: true
   }
 };
 

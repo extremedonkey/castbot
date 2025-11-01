@@ -18720,6 +18720,186 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                custom_id.startsWith('admin_integrated_pronouns') || custom_id.startsWith('player_integrated_pronouns') ||
                custom_id.startsWith('admin_integrated_timezone') || custom_id.startsWith('player_integrated_timezone') ||
                custom_id.startsWith('admin_integrated_vanity')) {
+      // 🔘 Convert to ButtonHandlerFactory with deferred response
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        deferred: true, // CRITICAL: These operations can take >3 seconds with large playerData
+        handler: async (context) => {
+          const { guildId, userId, member, client } = context;
+          const guild = await client.guilds.fetch(guildId);
+          const selectedValues = context.data.values || [];
+
+          // Parse action type and target player
+          let actionType, targetPlayerId, mode;
+
+          if (custom_id.startsWith('player_integrated_')) {
+            mode = 'player';
+            targetPlayerId = userId;
+            actionType = custom_id.replace('player_integrated_', '').split('_')[0];
+          } else {
+            mode = 'admin';
+            const parts = custom_id.split('_');
+            actionType = parts[2]; // pronouns, timezone, age, or vanity
+            targetPlayerId = parts[3];
+          }
+
+          const targetMember = await guild.members.fetch(targetPlayerId);
+
+          // Handle the selection based on type
+          if (actionType === 'pronouns') {
+            try {
+              // Remove all current pronoun roles
+              const pronounRoleIDs = await getGuildPronouns(guildId);
+              const currentPronounRoles = targetMember.roles.cache.filter(role =>
+                pronounRoleIDs.includes(role.id)
+              );
+              if (currentPronounRoles.size > 0) {
+                await targetMember.roles.remove(currentPronounRoles.map(role => role.id));
+              }
+              // Add new roles
+              if (selectedValues.length > 0) {
+                await targetMember.roles.add(selectedValues);
+              }
+            } catch (error) {
+              console.error('❌ Pronoun role assignment failed:', error);
+              if (error.code === 50013) {
+                // Discord permission error - send non-ephemeral message
+                return {
+                  content: '⚠️ **Permission Error**: Unable to assign pronoun roles. Please advise the production team to move the CastBot role to the top of the Discord hierarchy, above pronoun roles.',
+                  flags: 0 // Non-ephemeral message
+                };
+              } else {
+                // Other errors - send ephemeral message
+                return {
+                  content: '❌ Failed to update pronoun roles. Please try again.',
+                  flags: InteractionResponseFlags.EPHEMERAL
+                };
+              }
+            }
+          } else if (actionType === 'timezone') {
+            // Remove current timezone role
+            const timezones = await getGuildTimezones(guildId);
+            const timezoneRoleIds = Object.keys(timezones);
+            const currentTimezoneRole = targetMember.roles.cache.find(role =>
+              timezoneRoleIds.includes(role.id)
+            );
+            if (currentTimezoneRole) {
+              try {
+                await targetMember.roles.remove(currentTimezoneRole.id);
+              } catch (error) {
+                console.warn(`🚨 Could not remove timezone role ${currentTimezoneRole.id}:`, error.message);
+              }
+            }
+            // Add new timezone
+            if (selectedValues.length > 0) {
+              try {
+                await targetMember.roles.add(selectedValues[0]);
+              } catch (error) {
+                console.error(`❌ Failed to add timezone role ${selectedValues[0]}:`, error.message);
+                return {
+                  content: '❌ Failed to update timezone. The selected role may no longer exist.',
+                  flags: InteractionResponseFlags.EPHEMERAL
+                };
+              }
+            }
+          } else if (actionType === 'age') {
+            // Handle age selection
+            if (selectedValues.length > 0) {
+              const ageValue = selectedValues[0];
+              if (ageValue === 'age_custom') {
+                // Show modal for custom age
+                const modal = new ModalBuilder()
+                  .setCustomId(mode === 'admin' ? `admin_age_modal_${targetPlayerId}` : 'player_age_modal')
+                  .setTitle('Set Player Age');
+
+                const ageInput = new TextInputBuilder()
+                  .setCustomId('age')
+                  .setLabel('Enter your age')
+                  .setStyle(TextInputStyle.Short)
+                  .setRequired(true)
+                  .setMaxLength(10)
+                  .setPlaceholder("e.g. 25 or '30s'");
+
+                const row = new ActionRowBuilder().addComponents(ageInput);
+                modal.addComponents(row);
+
+                return {
+                  type: InteractionResponseType.MODAL,
+                  modal: modal.toJSON()
+                };
+              } else {
+                // Direct age selection
+                const age = ageValue.replace('age_', '');
+                await updatePlayer(guildId, targetPlayerId, { age });
+              }
+            }
+          } else if (actionType === 'vanity') {
+            // Handle vanity roles (admin only)
+            const playerData = await loadPlayerData();
+            if (!playerData[guildId].players[targetPlayerId]) {
+              playerData[guildId].players[targetPlayerId] = {};
+            }
+
+            // Remove old vanity roles
+            const oldVanityRoles = playerData[guildId].players[targetPlayerId].vanityRoles || [];
+            if (oldVanityRoles.length > 0) {
+              await targetMember.roles.remove(oldVanityRoles).catch(console.error);
+            }
+
+            // Save and add new vanity roles
+            playerData[guildId].players[targetPlayerId].vanityRoles = selectedValues;
+            await savePlayerData(playerData);
+
+            if (selectedValues.length > 0) {
+              await targetMember.roles.add(selectedValues);
+            }
+          }
+
+          // Rebuild the interface with the same active button
+          const freshPlayerData = await loadPlayerData();
+          const activeButton = actionType === 'vanity' ? 'vanity' : actionType;
+
+          // Check if this is an application channel context for player mode
+          let isApplicationChannel = false;
+          let customTitle = '';
+          let hideBottomButtons = false;
+
+          if (mode === 'player') {
+            const channelId = context.channelId;
+            isApplicationChannel = freshPlayerData[guildId]?.applications &&
+              Object.values(freshPlayerData[guildId].applications).some(app => app.channelId === channelId);
+
+            if (isApplicationChannel) {
+              customTitle = 'Set your age, pronouns and timezone.';
+              hideBottomButtons = true;
+            } else {
+              customTitle = 'CastBot | Player Menu';
+            }
+          }
+
+          const updatedUI = await createPlayerManagementUI({
+            mode: mode === 'admin' ? PlayerManagementMode.ADMIN : PlayerManagementMode.PLAYER,
+            targetMember,
+            playerData: freshPlayerData,
+            guildId,
+            userId,
+            showUserSelect: mode === 'admin',
+            showVanityRoles: mode === 'admin',
+            title: mode === 'admin' ?
+              `Player Management | ${targetMember.displayName}` :
+              customTitle,
+            activeButton,
+            hideBottomButtons: mode === 'player' ? hideBottomButtons : false,
+            isApplicationContext: mode === 'player' ? isApplicationChannel : false,
+            client
+          });
+
+          // Return UI for UPDATE_MESSAGE (ButtonHandlerFactory handles the response type)
+          return updatedUI;
+        }
+      })(req, res, client);
+    // Legacy handler removed - now using ButtonHandlerFactory above
+    } else if (false && custom_id.startsWith('admin_integrated_OLD')) {
       // 🔍 DEBUG: Log which integrated handler is being used
       console.log('🔍 DEBUG: Integrated select handler triggered for custom_id:', custom_id);
       // Handle ALL integrated select changes with auto-refresh
