@@ -2183,6 +2183,36 @@ export const BUTTON_REGISTRY = {
     category: 'experimental'
   },
 
+  // === PLAYER MANAGEMENT - BUTTON HANDLERS ===
+  'admin_set_pronouns_*': {
+    label: 'Set Pronouns Button',
+    description: 'Opens pronouns management interface',
+    emoji: '🏷️',
+    style: 'Secondary',
+    category: 'player_management'
+  },
+  'admin_set_timezone_*': {
+    label: 'Set Timezone Button',
+    description: 'Opens timezone management interface',
+    emoji: '🌍',
+    style: 'Secondary',
+    category: 'player_management'
+  },
+  'admin_set_age_*': {
+    label: 'Set Age Button',
+    description: 'Opens age management interface',
+    emoji: '🎂',
+    style: 'Secondary',
+    category: 'player_management'
+  },
+  'admin_manage_vanity_*': {
+    label: 'Manage Vanity Button',
+    description: 'Opens vanity roles management interface',
+    emoji: '✨',
+    style: 'Secondary',
+    category: 'player_management'
+  },
+
   // === PLAYER MANAGEMENT - INTEGRATED HANDLERS ===
   'admin_manage_player': {
     label: 'Manage Players',

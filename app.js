@@ -18705,9 +18705,15 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         });
       }
     } else if (custom_id.startsWith('admin_set_pronouns_') || custom_id.startsWith('admin_set_timezone_') || custom_id.startsWith('admin_set_age_') || custom_id.startsWith('admin_manage_vanity_')) {
-      // Use new modular handler for all admin buttons
-      const playerData = await loadPlayerData();
-      return await handlePlayerButtonClick(req, res, custom_id, playerData, client);
+      // 🔘 Convert to ButtonHandlerFactory
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        updateMessage: true, // Update existing message
+        handler: async (context) => {
+          const playerData = await loadPlayerData();
+          return await handlePlayerButtonClick(req, res, custom_id, playerData, context.client);
+        }
+      })(req, res, client);
     // Removed disabled legacy vanity handler
     // Removed disabled legacy timezone handler
     } else if ((custom_id.startsWith('admin_integrated_age') || custom_id.startsWith('player_integrated_age')) &&
@@ -18745,8 +18751,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       // 🔘 Convert to ButtonHandlerFactory with deferred response
       return ButtonHandlerFactory.create({
         id: custom_id,
-        deferred: true, // CRITICAL: These operations can take >3 seconds with large playerData
-        updateMessage: true, // Update existing message instead of creating new one
+        updateMessage: true, // Update existing message (like admin_player_select_update)
         handler: async (context) => {
           const { guildId, userId, member, client } = context;
           const guild = await client.guilds.fetch(guildId);
