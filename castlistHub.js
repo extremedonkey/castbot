@@ -76,7 +76,8 @@ export async function createCastlistHub(guildId, options = {}) {
       label: 'Active Castlist',
       value: 'default',
       description: 'Select if you don\'t know what you\'re doing. Castlist for active phase of the game.',
-      emoji: '✅'
+      emoji: '✅',
+      default: selectedCastlistId === 'default' // Mark as default if selected
     });
     addedCount++;
   }
@@ -131,7 +132,8 @@ export async function createCastlistHub(guildId, options = {}) {
       label: label.substring(0, 100),
       value: castlist.id.substring(0, 100),
       description: description.substring(0, 100),
-      emoji: emoji
+      emoji: emoji,
+      default: selectedCastlistId === castlist.id // Mark as default if selected
     });
 
     addedCount++;
@@ -151,22 +153,9 @@ export async function createCastlistHub(guildId, options = {}) {
   if (selectedCastlistId && selectedCastlistId !== 'none') {
     selectMenu.setDisabled(false); // Ensure it's enabled
   }
-  
+
   const selectRow = new ActionRowBuilder().addComponents(selectMenu);
   const selectComponent = selectRow.toJSON();
-
-  // Add default_values for dropdown persistence if we have a selection
-  // Exclude 'none' and 'create_new' (not real castlists)
-  if (selectedCastlistId &&
-      selectedCastlistId !== 'none' &&
-      selectedCastlistId !== 'create_new' &&
-      selectComponent.components[0]) {
-    selectComponent.components[0].default_values = [{
-      id: selectedCastlistId,
-      type: 'string'
-    }];
-    console.log(`📋 Setting default_values for castlist select: ${selectedCastlistId}`);
-  }
 
   container.components.push(selectComponent);
 
