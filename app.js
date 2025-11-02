@@ -18226,7 +18226,7 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id === 'prod_view_pronouns') {
-      // Display all pronoun roles
+      // Display all pronoun roles with LEAN design
       return ButtonHandlerFactory.create({
         id: 'prod_view_pronouns',
         updateMessage: true,  // Button click - update existing message
@@ -18235,27 +18235,55 @@ Your server is now ready for Tycoons gameplay!`;
           const guild = await client.guilds.fetch(guildId);
           const pronounRoleIDs = await getGuildPronouns(guildId);
 
-          let pronounList = '## Pronoun Roles\n\n';
-
+          // Build pronoun list content
+          let pronounContent = '';
           if (!pronounRoleIDs?.length) {
-            pronounList += 'No pronoun roles found. Use **Edit Pronouns** to add some.';
+            pronounContent = 'No pronoun roles configured.\n\nUse **Edit Pronouns** below to add roles.';
           } else {
             for (const roleId of pronounRoleIDs) {
               const role = guild.roles.cache.get(roleId);
               if (role) {
-                pronounList += `<@&${roleId}>\n`;
+                pronounContent += `<@&${roleId}>\n`;
               }
             }
           }
+
+          // Action buttons
+          const actionRow = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('prod_edit_pronouns')
+                .setLabel('Edit Pronouns')
+                .setEmoji('💙')
+                .setStyle(ButtonStyle.Secondary)
+            );
+
+          // Navigation row
+          const navRow = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('prod_manage_pronouns_timezones')
+                .setLabel('← Pronouns & Timezones')
+                .setStyle(ButtonStyle.Secondary)
+            );
+
+          // Build LEAN container
+          const containerComponents = [
+            { type: 10, content: '## 💜 Pronoun Roles | Server Identity' },
+            { type: 14 }, // Separator
+            { type: 10, content: `> **\`💜 Configured Roles\`**` },
+            { type: 10, content: pronounContent },
+            { type: 14 }, // Separator
+            actionRow.toJSON(),
+            { type: 14 }, // Separator before navigation
+            navRow.toJSON()
+          ];
 
           return {
             components: [{
               type: 17, // Container
               accent_color: 0x9B59B6, // Purple - identity/pronouns theme
-              components: [{
-                type: 10, // Text Display
-                content: pronounList
-              }]
+              components: containerComponents
             }]
           };
         }
