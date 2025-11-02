@@ -666,6 +666,151 @@ handler: async (context) => {
 }
 ```
 
+### 14. ButtonHandlerFactory ephemeral vs updateMessage Confusion
+
+**Symptom**: Handler with `ephemeral: true` shows "This interaction failed" and creates public messages instead of private
+
+**Root Cause**: **CRITICAL MISUNDERSTANDING** - ButtonHandlerFactory has TWO different flags with different purposes:
+
+1. **`ephemeral: true`** - For NEW messages (slash commands, initial responses)
+2. **`updateMessage: true`** - For BUTTON CLICKS (updating existing messages)
+
+**The Problem**: When you click a button, you want UPDATE_MESSAGE (type 7), NOT CHANNEL_MESSAGE_WITH_SOURCE (type 4).
+
+**Critical Discovery from Production Bug**:
+```javascript
+// ❌ WRONG - Using ephemeral for button clicks
+return ButtonHandlerFactory.create({
+  id: 'prod_view_pronouns',
+  ephemeral: true,  // This creates NEW message, not update!
+  handler: async (context) => {
+    return { content: 'Data here' };
+  }
+})(req, res, client);
+
+// Result:
+// - Creates NEW message (CHANNEL_MESSAGE_WITH_SOURCE)
+// - Message is PUBLIC (ephemeral doesn't work for updates)
+// - Slow (creating new vs updating existing)
+// - "This interaction failed" (Discord rejects new message format)
+```
+
+**✅ CORRECT - Use updateMessage for button clicks**:
+```javascript
+return ButtonHandlerFactory.create({
+  id: 'prod_view_pronouns',
+  updateMessage: true,  // Updates existing message with button
+  handler: async (context) => {
+    return { content: 'Data here' };
+  }
+})(req, res, client);
+
+// Result:
+// - Updates existing message (UPDATE_MESSAGE)
+// - Inherits ephemeral state from parent message
+// - Fast (instant update)
+// - Works perfectly
+```
+
+**When to Use Each Flag**:
+
+| Scenario | Use | Reason |
+|----------|-----|--------|
+| **Button click** | `updateMessage: true` | Updates message containing button |
+| **Select menu** | `updateMessage: true` | Updates message containing select |
+| **Slash command** | `ephemeral: true` | Creates new private message |
+| **New ephemeral message** | `ephemeral: true` | Initial response needs privacy |
+| **Modal submission** | Neither (returns modal) | Different response type |
+
+**ButtonHandlerFactory Behavior**:
+```javascript
+// WITHOUT updateMessage flag:
+shouldUpdateMessage = config.updateMessage && !isModal;  // false
+// Uses: CHANNEL_MESSAGE_WITH_SOURCE (type 4)
+// Creates: NEW message
+// ephemeral flag: Ignored for new messages from buttons
+
+// WITH updateMessage: true:
+shouldUpdateMessage = config.updateMessage && !isModal;  // true
+// Uses: UPDATE_MESSAGE (type 7)
+// Updates: Existing message
+// ephemeral: Inherited from parent
+```
+
+**Why This Causes "This interaction failed"**:
+1. Button click expects UPDATE_MESSAGE response
+2. `ephemeral: true` without `updateMessage` creates NEW message (CHANNEL_MESSAGE_WITH_SOURCE)
+3. Discord rejects because button clicks should update, not create
+4. User sees "This interaction failed"
+
+**The Fix - Production Examples**:
+```javascript
+// Fixed: prod_view_pronouns (View button)
+return ButtonHandlerFactory.create({
+  id: 'prod_view_pronouns',
+  updateMessage: true,  // ✅ Button click
+  handler: async (context) => { ... }
+});
+
+// Fixed: prod_edit_timezones (Edit button)
+return ButtonHandlerFactory.create({
+  id: 'prod_edit_timezones',
+  updateMessage: true,  // ✅ Button click
+  handler: async (context) => { ... }
+});
+
+// Fixed: prod_manage_pronouns_timezones (Management menu)
+return ButtonHandlerFactory.create({
+  id: 'prod_manage_pronouns_timezones',
+  updateMessage: true,  // ✅ Button click from production menu
+  handler: async (context) => { ... }
+});
+```
+
+**Root Cause Analysis**:
+
+**Why This Mistake Happened**:
+1. **Misleading CLAUDE.md guidance** - Said `ephemeral: true // Optional` without clarifying it's for NEW messages only
+2. **No clear rule** - Documentation didn't state "Button clicks = updateMessage: true"
+3. **Pattern confusion** - Thought `ephemeral` would make button response private
+4. **Factory abstraction** - Didn't realize Factory needs explicit `updateMessage` flag for UPDATE_MESSAGE
+5. **No auto-detection** - Assumed Factory would auto-detect button clicks (it doesn't!)
+
+**How to Prevent This**:
+1. **ALWAYS use `updateMessage: true` for button clicks**
+2. **ONLY use `ephemeral: true` for slash commands or new messages**
+3. **Check logs** - "This interaction failed" = wrong response type
+4. **Test immediately** - Button clicks should be instant (UPDATE_MESSAGE)
+5. **Update CLAUDE.md** - Add clear rule about button clicks
+
+**Updated Quick Reference**:
+```javascript
+// Button click pattern (most common):
+ButtonHandlerFactory.create({
+  id: 'my_button',
+  updateMessage: true,  // MANDATORY for button clicks
+  handler: async (context) => { ... }
+})
+
+// Slash command pattern:
+ButtonHandlerFactory.create({
+  id: 'my_command',
+  ephemeral: true,  // For new private messages
+  handler: async (context) => { ... }
+})
+```
+
+**Performance Impact**:
+- **UPDATE_MESSAGE**: ~50-150ms (instant)
+- **NEW MESSAGE**: ~200-500ms (slow, creates new)
+
+**Affected Handlers Fixed** (2025-11-02):
+- `prod_manage_pronouns_timezones`
+- `prod_view_pronouns`
+- `prod_edit_pronouns`
+- `prod_edit_timezones`
+- `prod_add_timezone`
+
 ## Quick Reference
 
 **Always Remember**:

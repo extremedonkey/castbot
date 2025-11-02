@@ -85,8 +85,8 @@ type: 13  // WRONG - Invalid separator (use type 14)
 } else if (custom_id === 'my_button') {
   return ButtonHandlerFactory.create({
     id: 'my_button',
-    ephemeral: true,  // MANDATORY for admin interfaces, optional for player features
-    deferred: true,   // Required if operation takes >3 seconds
+    updateMessage: true,  // MANDATORY for button clicks (updates existing message)
+    deferred: true,       // Required if operation takes >3 seconds
     handler: async (context) => {
       const { guildId, userId, member, client } = context;
       // Your logic here (10-20 lines max)
@@ -96,11 +96,16 @@ type: 13  // WRONG - Invalid separator (use type 14)
 }
 ```
 
-**Ephemeral Best Practices:**
-- **Admin interfaces** → ALWAYS `ephemeral: true` (settings, management, configuration)
-- **Player features** → Usually public unless sensitive (menus, game actions, results)
-- **Error messages** → ALWAYS `ephemeral: true` (prevents channel clutter)
-- **Success confirmations** → Usually `ephemeral: true` (user-specific feedback)
+**CRITICAL: updateMessage vs ephemeral**:
+- **Button clicks** → ALWAYS `updateMessage: true` (updates message with button, inherits ephemeral)
+- **Select menus** → ALWAYS `updateMessage: true` (updates message with select)
+- **Slash commands** → Use `ephemeral: true` (creates new private message)
+- **New messages** → Use `ephemeral: true` if private needed
+
+**Why updateMessage is Required**:
+- Without it: Creates NEW public message (slow, "interaction failed")
+- With it: Updates existing message (fast, inherits ephemeral from parent)
+- ButtonHandlerFactory does NOT auto-detect button clicks!
 
 **❌ WRONG - Legacy Pattern (DO NOT COPY):**
 ```javascript

@@ -18237,7 +18237,7 @@ Your server is now ready for Tycoons gameplay!`;
       // Display all pronoun roles
       return ButtonHandlerFactory.create({
         id: 'prod_view_pronouns',
-        ephemeral: true,
+        updateMessage: true,  // Button click - update existing message
         handler: async (context) => {
           const { guildId, client } = context;
           const guild = await client.guilds.fetch(guildId);
@@ -18336,7 +18336,7 @@ Your server is now ready for Tycoons gameplay!`;
       // Show role select menu for timezone editing
       return ButtonHandlerFactory.create({
         id: 'prod_edit_timezones',
-        ephemeral: true,
+        updateMessage: true,  // Button click - update existing message
         handler: async (context) => {
           const { guildId } = context;
           const timezones = await getGuildTimezones(guildId);
@@ -18369,7 +18369,7 @@ Your server is now ready for Tycoons gameplay!`;
       // Show role select menu for pronoun editing
       return ButtonHandlerFactory.create({
         id: 'prod_edit_pronouns',
-        ephemeral: true,
+        updateMessage: true,  // Button click - update existing message
         handler: async (context) => {
           const { guildId } = context;
           const pronounRoleIDs = await getGuildPronouns(guildId);
@@ -20208,7 +20208,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       // Show role select menu for adding a timezone with offset
       return ButtonHandlerFactory.create({
         id: 'prod_add_timezone',
-        ephemeral: true,
+        updateMessage: true,  // Button click - update existing message
         handler: async (context) => {
           // Use Discord.js RoleSelectMenuBuilder for selecting existing roles
           const roleSelect = new RoleSelectMenuBuilder()

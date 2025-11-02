@@ -2455,6 +2455,29 @@
         },
         "createdAt": 1761572415472,
         "lastAccessed": 1761572415472
+      },
+      "1434393146200031363": {
+        "mapping": {
+          "1️⃣": "1431726526789058682",
+          "2️⃣": "1431726505569943633",
+          "3️⃣": "1431726511932575975",
+          "4️⃣": "1431726501602132139",
+          "5️⃣": "1431726513988042852",
+          "6️⃣": "1391142510859915358",
+          "7️⃣": "1391142522428067842",
+          "8️⃣": "1431726522649280532",
+          "9️⃣": "1431726520430366810",
+          "🔟": "1431726518358380547",
+          "🇦": "1431726524641447936",
+          "🇧": "1391142502429495328",
+          "🇨": "1391142517944357025",
+          "🇩": "1409024736490422364",
+          "🇪": "1391142497484275712",
+          "🇫": "1431726516210766007",
+          "isTimezone": true
+        },
+        "createdAt": 1762056386027,
+        "lastAccessed": 1762056386027
       }
     },
     "availability": {
@@ -13687,6 +13710,24 @@
     "players": {},
     "tribes": {},
     "timezones": {},
-    "pronounRoleIDs": []
+    "pronounRoleIDs": [],
+    "serverName": "CastBot Regression Orange",
+    "icon": "https://cdn.discordapp.com/icons/1412422613774368851/e3c4d9107556739bad258aeb536a6f35.webp",
+    "ownerId": "391415444084490240",
+    "memberCount": 5,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1756818192667,
+    "lastUpdated": 1762055630879,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0"
   }
 }
