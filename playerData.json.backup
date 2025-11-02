@@ -1922,6 +1922,18 @@
       },
       "1368969402967654420": {
         "offset": 4
+      },
+      "1431726526789058682": {
+        "offset": 10,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)",
+        "timezoneId": "AEST"
+      },
+      "1409024736490422364": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)",
+        "timezoneId": "NZST"
       }
     },
     "pronounRoleIDs": [
@@ -3133,12 +3145,12 @@
         },
         "metadata": {
           "description": "The multi-B castlist!",
-          "emoji": "🅱️",
+          "emoji": "👸",
           "migratedFrom": "virtual_TXVsdGlC",
           "migrationDate": 1759671885172
         },
-        "modifiedAt": 1762007488357,
-        "modifiedBy": "system"
+        "modifiedAt": 1762072755883,
+        "modifiedBy": "391415444084490240"
       },
       "castlist_1760891080792_1331657596087566398": {
         "id": "castlist_1760891080792_1331657596087566398",
