@@ -118,7 +118,7 @@ export async function createEditInfoModalForNew(guildId) {
       // Emoji field (Label + Text Input)
       {
         type: 18, // Label
-        label: 'Season Emoji',
+        label: 'Castlist Emoji',
         component: {
           type: 4, // Text Input
           custom_id: 'castlist_emoji',
@@ -443,10 +443,10 @@ export async function handleCastlistButton(req, res, client, custom_id) {
                 }
               },
 
-              // Season Emoji field (Label + Text Input)
+              // Castlist Emoji field (Label + Text Input)
               {
                 type: 18, // Label
-                label: 'Season Emoji',
+                label: 'Castlist Emoji',
                 component: {
                   type: 4, // Text Input
                   custom_id: 'castlist_emoji',

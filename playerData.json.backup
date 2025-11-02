@@ -2989,6 +2989,93 @@
         "startHour": 4,
         "channelId": "1337754151655833694",
         "createdAt": 1762059354327
+      },
+      "1434406031026552995": {
+        "slots": [
+          {
+            "emoji": "1️⃣",
+            "utcHour": 5
+          },
+          {
+            "emoji": "2️⃣",
+            "utcHour": 6
+          },
+          {
+            "emoji": "3️⃣",
+            "utcHour": 7
+          },
+          {
+            "emoji": "4️⃣",
+            "utcHour": 8
+          },
+          {
+            "emoji": "5️⃣",
+            "utcHour": 9
+          },
+          {
+            "emoji": "6️⃣",
+            "utcHour": 10
+          },
+          {
+            "emoji": "7️⃣",
+            "utcHour": 11
+          },
+          {
+            "emoji": "8️⃣",
+            "utcHour": 12
+          },
+          {
+            "emoji": "9️⃣",
+            "utcHour": 13
+          },
+          {
+            "emoji": "🔟",
+            "utcHour": 14
+          },
+          {
+            "emoji": "🇦",
+            "utcHour": 15
+          },
+          {
+            "emoji": "🇧",
+            "utcHour": 16
+          },
+          {
+            "emoji": "🇨",
+            "utcHour": 17
+          },
+          {
+            "emoji": "🇩",
+            "utcHour": 18
+          },
+          {
+            "emoji": "🇪",
+            "utcHour": 19
+          },
+          {
+            "emoji": "🇫",
+            "utcHour": 20
+          },
+          {
+            "emoji": "🇬",
+            "utcHour": 21
+          },
+          {
+            "emoji": "🇭",
+            "utcHour": 22
+          },
+          {
+            "emoji": "🇮",
+            "utcHour": 23
+          },
+          {
+            "emoji": "🇯",
+            "utcHour": 0
+          }
+        ],
+        "startHour": 4,
+        "channelId": "1337754151655833694",
+        "createdAt": 1762059464928
       }
     },
     "activeSeason": {
