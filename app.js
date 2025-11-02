@@ -18289,7 +18289,7 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id === 'prod_edit_pronouns') {
-      // Show role select menu for pronoun editing
+      // Show role select menu for pronoun editing with LEAN design
       return ButtonHandlerFactory.create({
         id: 'prod_edit_pronouns',
         updateMessage: true,  // Button click - update existing message
@@ -18310,22 +18310,34 @@ Your server is now ready for Tycoons gameplay!`;
             roleSelect.setDefaultRoles(limitedRoles);
           }
 
-          const row = new ActionRowBuilder().addComponents(roleSelect);
+          const selectRow = new ActionRowBuilder().addComponents(roleSelect);
+
+          // Navigation row
+          const navRow = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('prod_manage_pronouns_timezones')
+                .setLabel('← Pronouns & Timezones')
+                .setStyle(ButtonStyle.Secondary)
+            );
+
+          // Build LEAN container
+          const containerComponents = [
+            { type: 10, content: '## 💙 Edit Pronoun Roles | Bulk Modify' },
+            { type: 14 }, // Separator
+            { type: 10, content: `> **\`💙 Role Selection\`**` },
+            { type: 10, content: 'Select which roles should be pronoun roles. Currently selected roles are already ticked. Add or remove roles as needed.' },
+            { type: 14 }, // Separator
+            selectRow.toJSON(),
+            { type: 14 }, // Separator before navigation
+            navRow.toJSON()
+          ];
 
           return {
             components: [{
               type: 17, // Container
               accent_color: 0xE91E63, // Pink - personal identity theme
-              components: [
-                {
-                  type: 10, // Text Display
-                  content: '## Edit Pronoun Roles\n\nSelect which roles should be pronoun roles. Currently selected roles are already ticked. Add or remove roles as needed.'
-                },
-                {
-                  type: 14 // Separator
-                },
-                row.toJSON()
-              ]
+              components: containerComponents
             }]
           };
         }
@@ -20140,7 +20152,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         });
       }
     } else if (custom_id === 'prod_add_timezone') {
-      // Show role select menu for adding a timezone with offset
+      // Show role select menu for adding a timezone with offset and LEAN design
       return ButtonHandlerFactory.create({
         id: 'prod_add_timezone',
         updateMessage: true,  // Button click - update existing message
@@ -20152,22 +20164,34 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             .setMinValues(1)
             .setMaxValues(1);
 
-          const row = new ActionRowBuilder().addComponents(roleSelect);
+          const selectRow = new ActionRowBuilder().addComponents(roleSelect);
+
+          // Navigation row
+          const navRow = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('prod_manage_pronouns_timezones')
+                .setLabel('← Pronouns & Timezones')
+                .setStyle(ButtonStyle.Secondary)
+            );
+
+          // Build LEAN container
+          const containerComponents = [
+            { type: 10, content: '## 🗺️ Add Timezone | Set UTC Offset' },
+            { type: 14 }, // Separator
+            { type: 10, content: `> **\`🗺️ Role Selection\`**` },
+            { type: 10, content: 'Select an existing role from your server.\n\n**Example Positive UTC values:** 4 corresponds to UTC+4, 5.5 corresponds to UTC+5:30.\n**Example negative UTC values:** -5, -3.5.\n**Enter 0** where the offset is 0, like GMT.' },
+            { type: 14 }, // Separator
+            selectRow.toJSON(),
+            { type: 14 }, // Separator before navigation
+            navRow.toJSON()
+          ];
 
           return {
             components: [{
               type: 17, // Container
               accent_color: 0xFF9800, // Orange - "add new" action theme
-              components: [
-                {
-                  type: 10, // Text Display
-                  content: '## Add Timezone\n\nSelect an existing role from your server.\n\n**Example Positive UTC values:** 4 corresponds to UTC+4, 5.5 corresponds to UTC+5:30.\n**Example negative UTC values:** -5, -3.5.\n**Enter 0** where the offset is 0, like GMT.'
-                },
-                {
-                  type: 14 // Separator
-                },
-                row.toJSON()
-              ]
+              components: containerComponents
             }]
           };
         }

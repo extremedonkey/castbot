@@ -1924,6 +1924,9 @@
         "dstObserved": false,
         "standardName": "JST (UTC+9)",
         "timezoneId": "JST"
+      },
+      "1368969393819746336": {
+        "offset": -3.5
       }
     },
     "pronounRoleIDs": [
