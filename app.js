@@ -6404,17 +6404,9 @@ To fix this:
             components: pronounsTimezoneComponents
           };
 
-          // Inline sendProductionSubmenuResponse logic
-          const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(channelId);
-          const responseType = shouldUpdateMessage
-            ? InteractionResponseType.UPDATE_MESSAGE
-            : InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE;
-
-          console.log(`🔍 DEBUG: Using response type: ${shouldUpdateMessage ? 'UPDATE_MESSAGE' : 'CHANNEL_MESSAGE_WITH_SOURCE'}`);
-
+          // ButtonHandlerFactory automatically uses UPDATE_MESSAGE for button clicks
+          // No need to check - it will update the message containing this button
           return {
-            type: responseType,
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag
             components: [pronounsTimezoneContainer]
           };
         }

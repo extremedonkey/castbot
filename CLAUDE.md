@@ -32,7 +32,12 @@ const playerData = await loadPlayerData();
 console.log('Data size:', JSON.stringify(playerData).length);  // Should be ~170KB
 ```
 
-## 🔴 CRITICAL: Components V2 Types - ALWAYS USE THESE
+## 🔴 CRITICAL: Components V2 - ALL Discord UI Must Use This
+
+**📚 MANDATORY DOCUMENTATION:**
+- **[ComponentsV2.md](docs/standards/ComponentsV2.md)** - Complete component reference (READ THIS FIRST)
+- **[DiscordInteractionAPI.md](docs/standards/DiscordInteractionAPI.md)** - Interaction fundamentals
+- **[ComponentsV2Issues.md](docs/troubleshooting/ComponentsV2Issues.md)** - "This interaction failed" fixes
 
 **YOU MUST USE THESE EXACT TYPES - NO EXCEPTIONS:**
 ```javascript
@@ -60,7 +65,9 @@ type: 13  // WRONG - Invalid separator (use type 14)
 **UPDATE_MESSAGE Rules:**
 - NEVER include `ephemeral: true` in UPDATE_MESSAGE responses
 - NEVER include `flags` field in UPDATE_MESSAGE responses
+- NEVER include `type` field in ButtonHandlerFactory responses (auto-detected)
 - Always return the full Container structure
+- ButtonHandlerFactory automatically strips flags for UPDATE_MESSAGE
 
 ## 🔴 CRITICAL: Button Handler Factory - MANDATORY FOR ALL NEW BUTTONS
 
