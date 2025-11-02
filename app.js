@@ -6326,7 +6326,7 @@ To fix this:
       // Show pronouns/timezones management menu
       return ButtonHandlerFactory.create({
         id: 'prod_manage_pronouns_timezones',
-        ephemeral: true,  // Admin interface - always private
+        updateMessage: true,  // Update the production menu message (button click)
         handler: async (context) => {
           MenuBuilder.trackLegacyMenu('prod_manage_pronouns_timezones', 'Pronouns & Timezones submenu');
 
