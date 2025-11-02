@@ -62,6 +62,83 @@ type: 13  // WRONG - Invalid separator (use type 14)
 - NEVER include `flags` field in UPDATE_MESSAGE responses
 - Always return the full Container structure
 
+## 🔴 CRITICAL: Button Handler Factory - MANDATORY FOR ALL NEW BUTTONS
+
+**ALL new buttons MUST use ButtonHandlerFactory pattern - NO EXCEPTIONS!**
+
+**🚨 QUICK CHECK BEFORE CREATING ANY BUTTON:**
+1. **Search ButtonHandlerRegistry.md** - Check if button already exists
+2. **Search for similar buttons**: `grep -A20 "similar_feature" app.js`
+3. **Use ButtonHandlerFactory pattern** (see below)
+4. **Register in BUTTON_REGISTRY** - Add button metadata to buttonHandlerFactory.js
+5. **Test and verify logs** - Should show `[✨ FACTORY]`, NOT `[🪨 LEGACY]`
+
+**✅ CORRECT Factory Pattern:**
+```javascript
+} else if (custom_id === 'my_button') {
+  return ButtonHandlerFactory.create({
+    id: 'my_button',
+    ephemeral: true,  // Optional: make response private
+    deferred: true,   // Required if operation takes >3 seconds
+    handler: async (context) => {
+      const { guildId, userId, member, client } = context;
+      // Your logic here (10-20 lines max)
+      return { content: 'Success!' };
+    }
+  })(req, res, client);
+}
+```
+
+**❌ WRONG - Legacy Pattern (DO NOT COPY):**
+```javascript
+// DON'T COPY THIS - 164 legacy handlers still exist but are being migrated
+} else if (custom_id === 'bad_example') {
+  try {
+    const guildId = req.body.guild_id;
+    // ... 50+ lines of boilerplate ...
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: { content: '...' }
+    });
+  } catch (error) { }
+}
+```
+
+**Button Registration (MANDATORY):**
+Add to `buttonHandlerFactory.js` BUTTON_REGISTRY:
+```javascript
+'my_button': {
+  label: 'My Button',
+  description: 'What this button does',
+  emoji: '🔘',
+  style: 'Primary',
+  category: 'feature_name',
+  parent: 'parent_menu_id'  // Optional
+}
+```
+
+**Self-Check After Implementation:**
+```bash
+# Test your button in Discord, then check logs:
+tail -f /tmp/castbot-dev.log | grep "my_button"
+
+# Expected: [✨ FACTORY] my_button
+# If you see: [🪨 LEGACY] → You created legacy code, fix immediately!
+# If you see: [⚱️ UNREGISTERED] → Add to BUTTON_REGISTRY
+```
+
+**Why Factory is Mandatory:**
+- **80% code reduction** (50 lines → 10 lines per handler)
+- **Automatic error handling** - Factory catches all errors
+- **Consistent context** - No more missing `guildId` or `client` variables
+- **Built-in logging** - Automatic debug output with status indicators
+- **Permission checking** - Centralized permission validation
+- **Natural language search** - Find buttons by description/label
+
+**Documentation:**
+- **Full Guide**: [docs/enablers/ButtonHandlerFactory.md](docs/enablers/ButtonHandlerFactory.md)
+- **Button Catalog**: [docs/enablers/ButtonHandlerRegistry.md](docs/enablers/ButtonHandlerRegistry.md)
+
 ## 🚨 MANDATORY AFTER ANY CODE CHANGES - RESTART DEV
 
 **🔴 CRITICAL: ALWAYS restart development after making code changes!**
@@ -247,60 +324,10 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 
 ### Mandatory Patterns
 
-**🚨 BUTTON CREATION QUICK CHECK:**
-1. **ALWAYS search for similar buttons first**: `grep -A20 "similar_feature" app.js`
-2. **If you see `[🪨 LEGACY]` in logs after testing** → You created legacy, fix it immediately
-3. **Use ButtonHandlerFactory pattern** (see below)
-
-**Button Handler Factory** - ALL new buttons MUST use this pattern:
-```javascript
-} else if (custom_id === 'my_button') {
-  return ButtonHandlerFactory.create({
-    id: 'my_button',
-    ephemeral: true,  // Optional: make response private
-    deferred: true,   // Required if operation takes >3 seconds
-    handler: async (context) => {
-      const { guildId, userId, member, client } = context;
-      // Your logic here (10-20 lines max)
-      return { content: 'Success!' };
-    }
-  })(req, res, client);
-}
-```
-
-**❌ NEVER copy this legacy pattern (even though 164 still exist):**
-```javascript
-// DON'T COPY THIS - IT'S LEGACY
-} else if (custom_id === 'bad_example') {
-  try {
-    return res.send({
-      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-      data: { content: '...' }
-    });
-  } catch (error) { }
-}
-```
-
-**🚨 Button Registration** - Add to BUTTON_REGISTRY or see `[⚱️ UNREGISTERED]` warnings:
-```javascript
-// In buttonHandlerFactory.js BUTTON_REGISTRY:
-'my_button': {
-  label: 'My Button',
-  description: 'What this button does',
-  emoji: '🔘',
-  style: 'Primary',
-  category: 'feature_name'
-}
-```
-
-**📊 Self-Check After Creating Button:**
-```bash
-# Test your button and check logs:
-tail -f /tmp/castbot-dev.log | grep "my_button"
-
-# If you see [🪨 LEGACY] → Convert to ButtonHandlerFactory
-# If you see [⚱️ UNREGISTERED] → Add to BUTTON_REGISTRY
-```
+**Button Handler Factory** - See CRITICAL section above for full details. Quick reference:
+- **ALL new buttons** must use ButtonHandlerFactory.create()
+- **Register in BUTTON_REGISTRY** (buttonHandlerFactory.js)
+- **Check logs** for [✨ FACTORY] (good) vs [🪨 LEGACY] (bad)
 
 **Menu System Architecture** - Track and migrate menus systematically:
 ```javascript
@@ -467,17 +494,11 @@ import { ButtonHandlerFactory } from './buttonHandlerFactory.js';  // Button man
 - Full guide: [docs/troubleshooting/ComponentsV2Issues.md](docs/troubleshooting/ComponentsV2Issues.md)
 
 **Common Issues:**
-- Button not working → Check BUTTON_REGISTRY registration (CRITICAL!)
-- Missing variables → Ensure context extraction
-- Permission errors → Use BigInt for permission checks  
-- Menu crashes → Check 5-button limit per ActionRow
-- String Select limits → Maximum 25 options
-- Invalid emoji format → Use Unicode (🍎) not shortcuts (:apple:)
-- Round results ephemeral → Set `ephemeral: false` in ButtonHandlerFactory
-- Double handler execution → Missing BUTTON_REGISTRY entry
-- Button shows "[🪨 LEGACY]" in logs → Not registered in BUTTON_REGISTRY
-- Menu shows "[⚱️ MENULEGACY]" in logs → Needs migration to MenuBuilder
-- Menu not tracking → Add `MenuBuilder.trackLegacyMenu()` call
+- **Button issues** → See CRITICAL: Button Handler Factory section above
+- **Permission errors** → Use BigInt for permission checks
+- **Menu crashes** → Check 5-button limit per ActionRow
+- **String Select limits** → Maximum 25 options
+- **Invalid emoji format** → Use Unicode (🍎) not shortcuts (:apple:)
 
 ## 🎯 Available Commands
 

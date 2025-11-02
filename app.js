@@ -6324,96 +6324,101 @@ To fix this:
       })(req, res, client);
     } else if (custom_id === 'prod_manage_pronouns_timezones') {
       // Show pronouns/timezones management menu
-      MenuBuilder.trackLegacyMenu('prod_manage_pronouns_timezones', 'Pronouns & Timezones submenu');
-      try {
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        const channelId = req.body.channel_id;
-        
-        const managementRow1 = new ActionRowBuilder()
-          .addComponents(
-            new ButtonBuilder()
-              .setCustomId('prod_view_timezones')
-              .setLabel('View Timezones')
-              .setStyle(ButtonStyle.Primary)
-              .setEmoji('🌍'),
-            new ButtonBuilder()
-              .setCustomId('prod_edit_timezones')
-              .setLabel('Bulk Modify (no offset)')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('⏲️'),
-            new ButtonBuilder()
-              .setCustomId('prod_add_timezone')
-              .setLabel('🗺️ Add Timezone (incl. Offset)')
-              .setStyle(ButtonStyle.Secondary),
-            new ButtonBuilder()
-              .setCustomId('prod_timezone_react')
-              .setLabel('Post React for Timezones')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('👍')
-          );
-          
-        const managementRow2 = new ActionRowBuilder()
-          .addComponents(
-            new ButtonBuilder()
-              .setCustomId('prod_view_pronouns')
-              .setLabel('View Pronouns')
-              .setStyle(ButtonStyle.Primary)
-              .setEmoji('💜'),
-            new ButtonBuilder()
-              .setCustomId('prod_edit_pronouns')
-              .setLabel('Edit Pronouns')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('💙'),
-            new ButtonBuilder()
-              .setCustomId('prod_pronoun_react')
-              .setLabel('Post React for Pronouns')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('👍')
+      return ButtonHandlerFactory.create({
+        id: 'prod_manage_pronouns_timezones',
+        handler: async (context) => {
+          MenuBuilder.trackLegacyMenu('prod_manage_pronouns_timezones', 'Pronouns & Timezones submenu');
+
+          const { guildId, channelId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
+
+          const managementRow1 = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('prod_view_timezones')
+                .setLabel('View Timezones')
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('🌍'),
+              new ButtonBuilder()
+                .setCustomId('prod_edit_timezones')
+                .setLabel('Bulk Modify (no offset)')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('⏲️'),
+              new ButtonBuilder()
+                .setCustomId('prod_add_timezone')
+                .setLabel('🗺️ Add Timezone (incl. Offset)')
+                .setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder()
+                .setCustomId('prod_timezone_react')
+                .setLabel('Post React for Timezones')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('👍')
+            );
+
+          const managementRow2 = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('prod_view_pronouns')
+                .setLabel('View Pronouns')
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('💜'),
+              new ButtonBuilder()
+                .setCustomId('prod_edit_pronouns')
+                .setLabel('Edit Pronouns')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('💙'),
+              new ButtonBuilder()
+                .setCustomId('prod_pronoun_react')
+                .setLabel('Post React for Pronouns')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('👍')
+            );
+
+          // Create Components V2 Container
+          const pronounsTimezoneComponents = [
+            {
+              type: 10, // Text Display component
+              content: `## Manage Pronouns & Timezones | ${guild.name}`
+            },
+            {
+              type: 14 // Separator
+            },
+            {
+              type: 10, // Text Display component
+              content: `> **Select an action to manage your server's pronoun and timezone roles:**`
+            },
+            managementRow1.toJSON(),
+            managementRow2.toJSON()
+          ];
+
+          // Always add Back to Main Menu button
+          const backRow = createBackToMainMenuButton();
+          pronounsTimezoneComponents.push(
+            { type: 14 }, // Separator
+            backRow.toJSON()
           );
 
-        // Create Components V2 Container
-        const pronounsTimezoneComponents = [
-          {
-            type: 10, // Text Display component
-            content: `## Manage Pronouns & Timezones | ${guild.name}`
-          },
-          {
-            type: 14 // Separator
-          },
-          {
-            type: 10, // Text Display component
-            content: `> **Select an action to manage your server's pronoun and timezone roles:**`
-          },
-          managementRow1.toJSON(),
-          managementRow2.toJSON()
-        ];
-        
-        // Always add Back to Main Menu button
-        const backRow = createBackToMainMenuButton();
-        pronounsTimezoneComponents.push(
-          { type: 14 }, // Separator
-          backRow.toJSON()
-        );
-        
-        const pronounsTimezoneContainer = {
-          type: 17, // Container component
-          accent_color: 0x9B59B6, // Purple accent color for pronouns/timezones
-          components: pronounsTimezoneComponents
-        };
+          const pronounsTimezoneContainer = {
+            type: 17, // Container component
+            accent_color: 0x9B59B6, // Purple accent color for pronouns/timezones
+            components: pronounsTimezoneComponents
+          };
 
-        return await sendProductionSubmenuResponse(res, channelId, [pronounsTimezoneContainer]);
-        
-      } catch (error) {
-        console.error('Error handling prod_manage_pronouns_timezones button:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error loading pronouns/timezones management interface.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+          // Inline sendProductionSubmenuResponse logic
+          const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(channelId);
+          const responseType = shouldUpdateMessage
+            ? InteractionResponseType.UPDATE_MESSAGE
+            : InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE;
+
+          console.log(`🔍 DEBUG: Using response type: ${shouldUpdateMessage ? 'UPDATE_MESSAGE' : 'CHANNEL_MESSAGE_WITH_SOURCE'}`);
+
+          return {
+            type: responseType,
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [pronounsTimezoneContainer]
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_availability') {
       // Show availability management menu
       return ButtonHandlerFactory.create({
@@ -18237,47 +18242,33 @@ Your server is now ready for Tycoons gameplay!`;
       }
     } else if (custom_id === 'prod_view_pronouns') {
       // Display all pronoun roles
-      try {
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        const pronounRoleIDs = await getGuildPronouns(guildId);
-        
-        if (!pronounRoleIDs?.length) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '## Pronoun Roles\n\nNo pronoun roles found. Use **Edit Pronouns** to add some.',
-              flags: InteractionResponseFlags.EPHEMERAL
+      return ButtonHandlerFactory.create({
+        id: 'prod_view_pronouns',
+        ephemeral: true,
+        handler: async (context) => {
+          const { guildId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
+          const pronounRoleIDs = await getGuildPronouns(guildId);
+
+          if (!pronounRoleIDs?.length) {
+            return {
+              content: '## Pronoun Roles\n\nNo pronoun roles found. Use **Edit Pronouns** to add some.'
+            };
+          }
+
+          let pronounList = '## Pronoun Roles\n\n';
+          for (const roleId of pronounRoleIDs) {
+            const role = guild.roles.cache.get(roleId);
+            if (role) {
+              pronounList += `<@&${roleId}>\n`;
             }
-          });
+          }
+
+          return {
+            content: pronounList
+          };
         }
-        
-        let pronounList = '## Pronoun Roles\n\n';
-        for (const roleId of pronounRoleIDs) {
-          const role = guild.roles.cache.get(roleId);
-          if (role) {
-            pronounList += `<@&${roleId}>\n`;
-          }
-        }
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: pronounList,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error viewing pronouns:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error displaying pronoun roles.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id === 'prod_view_tribes') {
       // Display all tribes organized by castlist
       try {
@@ -18350,91 +18341,67 @@ Your server is now ready for Tycoons gameplay!`;
       }
     } else if (custom_id === 'prod_edit_timezones') {
       // Show role select menu for timezone editing
-      try {
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        const timezones = await getGuildTimezones(guildId);
-        
-        // Get existing timezone role IDs
-        const existingTimezoneRoles = Object.keys(timezones);
-        
-        // Use Discord.js RoleSelectMenuBuilder for better compatibility
-        const roleSelect = new RoleSelectMenuBuilder()
-          .setCustomId('prod_edit_timezones_select')
-          .setPlaceholder('Select roles to add/remove as timezone roles')
-          .setMinValues(0)
-          .setMaxValues(25);
-        
-        // Set default values if any exist (limited to Discord's 25 role maximum)
-        if (existingTimezoneRoles.length > 0) {
-          const limitedRoles = existingTimezoneRoles.slice(0, 25);
-          roleSelect.setDefaultRoles(limitedRoles);
-        }
+      return ButtonHandlerFactory.create({
+        id: 'prod_edit_timezones',
+        ephemeral: true,
+        handler: async (context) => {
+          const { guildId } = context;
+          const timezones = await getGuildTimezones(guildId);
 
-        const row = new ActionRowBuilder()
-          .addComponents(roleSelect);
+          // Get existing timezone role IDs
+          const existingTimezoneRoles = Object.keys(timezones);
 
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
+          // Use Discord.js RoleSelectMenuBuilder for better compatibility
+          const roleSelect = new RoleSelectMenuBuilder()
+            .setCustomId('prod_edit_timezones_select')
+            .setPlaceholder('Select roles to add/remove as timezone roles')
+            .setMinValues(0)
+            .setMaxValues(25);
+
+          // Set default values if any exist (limited to Discord's 25 role maximum)
+          if (existingTimezoneRoles.length > 0) {
+            const limitedRoles = existingTimezoneRoles.slice(0, 25);
+            roleSelect.setDefaultRoles(limitedRoles);
+          }
+
+          const row = new ActionRowBuilder().addComponents(roleSelect);
+
+          return {
             content: '## Edit Timezone Roles\n\nSelect which roles should be timezone roles. Currently selected roles are already ticked. Add or remove roles as needed.\n\n**Note:** If you add any new timezones, you need to set the offset afterwards using the \'Add Timezone\' button.',
-            components: [row.toJSON()],
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error in prod_edit_timezones:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error loading timezone role editor.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+            components: [row.toJSON()]
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_edit_pronouns') {
       // Show role select menu for pronoun editing
-      try {
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        const pronounRoleIDs = await getGuildPronouns(guildId);
-        
-        // Use Discord.js RoleSelectMenuBuilder for better compatibility
-        const roleSelect = new RoleSelectMenuBuilder()
-          .setCustomId('prod_edit_pronouns_select')
-          .setPlaceholder('Select roles to add/remove as pronoun roles')
-          .setMinValues(0)
-          .setMaxValues(25);
-        
-        // Set default values if any exist (limited to Discord's 25 role maximum)
-        if (pronounRoleIDs && pronounRoleIDs.length > 0) {
-          const limitedRoles = pronounRoleIDs.slice(0, 25);
-          roleSelect.setDefaultRoles(limitedRoles);
-        }
+      return ButtonHandlerFactory.create({
+        id: 'prod_edit_pronouns',
+        ephemeral: true,
+        handler: async (context) => {
+          const { guildId } = context;
+          const pronounRoleIDs = await getGuildPronouns(guildId);
 
-        const row = new ActionRowBuilder()
-          .addComponents(roleSelect);
+          // Use Discord.js RoleSelectMenuBuilder for better compatibility
+          const roleSelect = new RoleSelectMenuBuilder()
+            .setCustomId('prod_edit_pronouns_select')
+            .setPlaceholder('Select roles to add/remove as pronoun roles')
+            .setMinValues(0)
+            .setMaxValues(25);
 
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
+          // Set default values if any exist (limited to Discord's 25 role maximum)
+          if (pronounRoleIDs && pronounRoleIDs.length > 0) {
+            const limitedRoles = pronounRoleIDs.slice(0, 25);
+            roleSelect.setDefaultRoles(limitedRoles);
+          }
+
+          const row = new ActionRowBuilder().addComponents(roleSelect);
+
+          return {
             content: '## Edit Pronoun Roles\n\nSelect which roles should be pronoun roles. Currently selected roles are already ticked. Add or remove roles as needed.',
-            components: [row.toJSON()],
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error in prod_edit_pronouns:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error loading pronoun role editor.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+            components: [row.toJSON()]
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_add_tribe') {
       // Step 1: Role selection for tribe - Using ComponentsV2 Container
       try {
@@ -20246,74 +20213,54 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       }
     } else if (custom_id === 'prod_add_timezone') {
       // Show role select menu for adding a timezone with offset
-      try {
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        
-        // Use Discord.js RoleSelectMenuBuilder for selecting existing roles
-        const roleSelect = new RoleSelectMenuBuilder()
-          .setCustomId('prod_add_timezone_select')
-          .setPlaceholder('Select an existing role from your server')
-          .setMinValues(1)
-          .setMaxValues(1);
-        
-        const row = new ActionRowBuilder().addComponents(roleSelect);
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
+      return ButtonHandlerFactory.create({
+        id: 'prod_add_timezone',
+        ephemeral: true,
+        handler: async (context) => {
+          // Use Discord.js RoleSelectMenuBuilder for selecting existing roles
+          const roleSelect = new RoleSelectMenuBuilder()
+            .setCustomId('prod_add_timezone_select')
+            .setPlaceholder('Select an existing role from your server')
+            .setMinValues(1)
+            .setMaxValues(1);
+
+          const row = new ActionRowBuilder().addComponents(roleSelect);
+
+          return {
             content: '## Add Timezone\n\nSelect an existing role from your server.\n\n**Example Positive UTC values:** 4 corresponds to UTC+4, 5.5 corresponds to UTC+5:30.\n**Example negative UTC values:** -5, -3.5.\n**Enter 0** where the offset is 0, like GMT.',
-            components: [row.toJSON()],
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error in prod_add_timezone:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error displaying role selection.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+            components: [row.toJSON()]
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_add_timezone_select') {
       // Handle role selection for adding timezone - show offset modal
-      try {
-        const selectedRoleId = data.values[0]; // Single role selection
-        
-        // Create offset input modal
-        const modal = new ModalBuilder()
-          .setCustomId(`prod_timezone_offset_modal_${selectedRoleId}`)
-          .setTitle('Set Offset');
+      return ButtonHandlerFactory.create({
+        id: 'prod_add_timezone_select',
+        handler: async (context) => {
+          const selectedRoleId = context.values[0]; // Single role selection
 
-        const offsetInput = new TextInputBuilder()
-          .setCustomId('offset')
-          .setLabel('UTC Offset')
-          .setStyle(TextInputStyle.Short)
-          .setRequired(true)
-          .setMaxLength(10)
-          .setPlaceholder('e.g. 4, -5, 5.5, 0');
+          // Create offset input modal
+          const modal = new ModalBuilder()
+            .setCustomId(`prod_timezone_offset_modal_${selectedRoleId}`)
+            .setTitle('Set Offset');
 
-        const row = new ActionRowBuilder().addComponents(offsetInput);
-        modal.addComponents(row);
+          const offsetInput = new TextInputBuilder()
+            .setCustomId('offset')
+            .setLabel('UTC Offset')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(10)
+            .setPlaceholder('e.g. 4, -5, 5.5, 0');
 
-        return res.send({
-          type: InteractionResponseType.MODAL,
-          data: modal.toJSON()
-        });
-        
-      } catch (error) {
-        console.error('Error handling timezone role selection for offset:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error showing offset input.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+          const row = new ActionRowBuilder().addComponents(offsetInput);
+          modal.addComponents(row);
+
+          return {
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'dst_timezone_select') {
       // Handle DST timezone selection - toggle DST state
       return ButtonHandlerFactory.create({

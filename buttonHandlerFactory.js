@@ -281,6 +281,56 @@ export const BUTTON_REGISTRY = {
     parent: 'prod_setup'
   },
 
+  // === PRONOUNS & TIMEZONES MANAGEMENT ===
+  'prod_manage_pronouns_timezones': {
+    label: 'Pronouns & Timezones',
+    description: 'Manage server pronoun and timezone roles',
+    emoji: '💜',
+    style: 'Secondary',
+    category: 'production_admin',
+    parent: 'production_menu'
+  },
+  'prod_view_timezones': {
+    label: 'View Timezones',
+    description: 'Display all configured timezone roles with UTC offsets',
+    emoji: '🌍',
+    style: 'Primary',
+    category: 'pronouns_timezones',
+    parent: 'prod_manage_pronouns_timezones'
+  },
+  'prod_edit_timezones': {
+    label: 'Bulk Modify (no offset)',
+    description: 'Add/remove timezone roles without setting UTC offsets',
+    emoji: '⏲️',
+    style: 'Secondary',
+    category: 'pronouns_timezones',
+    parent: 'prod_manage_pronouns_timezones'
+  },
+  'prod_add_timezone': {
+    label: 'Add Timezone (incl. Offset)',
+    description: 'Add timezone role with UTC offset configuration',
+    emoji: '🗺️',
+    style: 'Secondary',
+    category: 'pronouns_timezones',
+    parent: 'prod_manage_pronouns_timezones'
+  },
+  'prod_view_pronouns': {
+    label: 'View Pronouns',
+    description: 'Display all configured pronoun roles',
+    emoji: '💜',
+    style: 'Primary',
+    category: 'pronouns_timezones',
+    parent: 'prod_manage_pronouns_timezones'
+  },
+  'prod_edit_pronouns': {
+    label: 'Edit Pronouns',
+    description: 'Add/remove pronoun roles for server',
+    emoji: '💙',
+    style: 'Secondary',
+    category: 'pronouns_timezones',
+    parent: 'prod_manage_pronouns_timezones'
+  },
+
   // === RESTART TESTING TRACKER ===
   'restart_test_not_tested': {
     label: '⏳ Not Tested',
