@@ -85,7 +85,7 @@ type: 13  // WRONG - Invalid separator (use type 14)
 } else if (custom_id === 'my_button') {
   return ButtonHandlerFactory.create({
     id: 'my_button',
-    ephemeral: true,  // Optional: make response private
+    ephemeral: true,  // MANDATORY for admin interfaces, optional for player features
     deferred: true,   // Required if operation takes >3 seconds
     handler: async (context) => {
       const { guildId, userId, member, client } = context;
@@ -95,6 +95,12 @@ type: 13  // WRONG - Invalid separator (use type 14)
   })(req, res, client);
 }
 ```
+
+**Ephemeral Best Practices:**
+- **Admin interfaces** → ALWAYS `ephemeral: true` (settings, management, configuration)
+- **Player features** → Usually public unless sensitive (menus, game actions, results)
+- **Error messages** → ALWAYS `ephemeral: true` (prevents channel clutter)
+- **Success confirmations** → Usually `ephemeral: true` (user-specific feedback)
 
 **❌ WRONG - Legacy Pattern (DO NOT COPY):**
 ```javascript
