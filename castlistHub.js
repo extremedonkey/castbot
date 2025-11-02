@@ -370,13 +370,13 @@ function createManagementButtons(castlistId, enabled = true, activeButton = null
       .setDisabled(!enabled),
     new ButtonBuilder()
       .setCustomId(`castlist_edit_info${suffix}`)
-      .setLabel('Edit Info')
+      .setLabel('Edit')
       .setStyle(activeButton === CastlistButtonType.EDIT_INFO ? ButtonStyle.Primary : ButtonStyle.Secondary)
       .setEmoji('✏️')
       .setDisabled(!enabled || castlistId === 'default'), // Disable for Active Castlist (system-managed)
     new ButtonBuilder()
       .setCustomId(`castlist_add_tribe${suffix}`)
-      .setLabel('Manage Tribes')
+      .setLabel('Tribes')
       .setStyle(activeButton === CastlistButtonType.ADD_TRIBE ? ButtonStyle.Primary : ButtonStyle.Secondary)
       .setEmoji('🏕️')
       .setDisabled(!enabled),
