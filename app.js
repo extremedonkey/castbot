@@ -3306,15 +3306,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     // Check exact match first, then check dynamic patterns
     let isFactoryButton = BUTTON_REGISTRY[custom_id];
 
-    // Debug logging for prod_view_tribes
-    if (custom_id === 'prod_view_tribes') {
-      console.log('🔍 DEBUG prod_view_tribes:', {
-        inRegistry: custom_id in BUTTON_REGISTRY,
-        value: BUTTON_REGISTRY[custom_id],
-        isFactoryButton: !!isFactoryButton
-      });
-    }
-
     if (!isFactoryButton) {
       // Check for dynamic patterns in registry
       const dynamicPatterns = [
