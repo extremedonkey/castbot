@@ -18189,7 +18189,7 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'prod_view_timezones') {
-      // Display all timezone roles
+      // Display all timezone roles with LEAN design
       return ButtonHandlerFactory.create({
         id: 'prod_view_timezones',
         updateMessage: true,  // Button click - update existing message
@@ -18198,29 +18198,62 @@ Your server is now ready for Tycoons gameplay!`;
           const guild = await client.guilds.fetch(guildId);
           const timezones = await getGuildTimezones(guildId);
 
-          let timezoneList = '## Timezone Roles\n\n';
-
+          // Build timezone list content
+          let timezoneContent = '';
           if (!Object.keys(timezones).length) {
-            timezoneList += 'No timezone roles found. Use **Edit Timezones** to add some.';
+            timezoneContent = 'No timezone roles configured.\n\nUse **Edit Timezones** or **Add Timezone** below to configure roles.';
           } else {
             for (const [roleId, timezoneData] of Object.entries(timezones)) {
               const role = guild.roles.cache.get(roleId);
               if (role) {
                 const offset = timezoneData.offset;
                 const offsetStr = offset >= 0 ? `UTC+${offset}` : `UTC${offset}`;
-                timezoneList += `<@&${roleId}> - ${offsetStr}\n`;
+                timezoneContent += `<@&${roleId}> - ${offsetStr}\n`;
               }
             }
           }
 
+          // Action buttons
+          const actionRow = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('prod_edit_timezones')
+                .setLabel('Bulk Modify')
+                .setEmoji('⏲️')
+                .setStyle(ButtonStyle.Secondary),
+              new ButtonBuilder()
+                .setCustomId('prod_add_timezone')
+                .setLabel('Add Timezone')
+                .setEmoji('🗺️')
+                .setStyle(ButtonStyle.Secondary)
+            );
+
+          // Navigation row
+          const navRow = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('prod_manage_pronouns_timezones')
+                .setLabel('← Pronouns & Timezones')
+                .setStyle(ButtonStyle.Secondary)
+            );
+
+          // Build LEAN container
+          const containerComponents = [
+            { type: 10, content: '## 🌍 Timezone Roles | Global Time Configuration' },
+            { type: 14 }, // Separator
+            { type: 10, content: `> **\`🌍 Configured Roles\`**` },
+            { type: 10, content: timezoneContent },
+            { type: 14 }, // Separator
+            actionRow.toJSON(),
+            { type: 14 }, // Separator before navigation
+            navRow.toJSON()
+          ];
+
           return {
             components: [{
               type: 17, // Container
-              accent_color: 0x3498DB, // Blue - matching Edit Timezones theme
-              components: [{
-                type: 10, // Text Display
-                content: timezoneList
-              }]
+              accent_color: 0x3498DB, // Blue - global/time theme
+              components: containerComponents
             }]
           };
         }
