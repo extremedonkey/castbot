@@ -13914,7 +13914,63 @@
         "showPlayerEmojis": false,
         "color": "#9b59b6",
         "analyticsName": "🔮Psychic Conversion",
-        "analyticsAdded": 1762100044535
+        "analyticsAdded": 1762100044535,
+        "castlistIds": [
+          "default"
+        ]
+      },
+      "1434563860316291154": {
+        "emoji": null,
+        "castlist": "default",
+        "showPlayerEmojis": false,
+        "color": "#f1c40f",
+        "analyticsName": "a brand new day ☀️",
+        "analyticsAdded": 1762100084872,
+        "castlistIds": [
+          "default"
+        ]
+      }
+    },
+    "players": {},
+    "timezones": {},
+    "serverName": "CastBot Regression Orange",
+    "icon": "https://cdn.discordapp.com/icons/1412422613774368851/e3c4d9107556739bad258aeb536a6f35.webp",
+    "ownerId": "391415444084490240",
+    "memberCount": 5,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1756818192667,
+    "lastUpdated": 1762100407779,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0",
+    "castlistConfigs": {
+      "default": {
+        "id": "default",
+        "name": "Active Castlist",
+        "type": "system",
+        "createdAt": 1762100522472,
+        "createdBy": "system",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
+          "emoji": "📋",
+          "isDefault": true
+        },
+        "modifiedAt": 1762100554162,
+        "modifiedBy": "system"
       }
     }
   }
