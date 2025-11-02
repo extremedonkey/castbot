@@ -164,12 +164,16 @@ export async function createCastlistHub(guildId, options = {}) {
   }
 
   container.components.push(selectComponent);
-  
+
+  // Track selected castlist for navigation buttons
+  let selectedCastlist = null;
+
   // If a castlist is selected, show details and management options
   if (selectedCastlistId && selectedCastlistId !== 'none') {
     // Note: "create_new" won't reach here - it triggers a modal directly from the select handler
 
     const castlist = await castlistManager.getCastlist(guildId, selectedCastlistId);
+    selectedCastlist = castlist; // Store for navigation
 
     if (castlist) {
       // Separator
@@ -193,8 +197,7 @@ export async function createCastlistHub(guildId, options = {}) {
         castlist.name  // Pass castlist name for show_castlist2
       );
       container.components.push(managementButtons.buttonRow1.toJSON());
-      container.components.push(managementButtons.deleteRow.toJSON());
-      
+
       // Separator before hot-swappable area
       container.components.push({ type: 14 });
       
@@ -233,8 +236,7 @@ export async function createCastlistHub(guildId, options = {}) {
 
     const disabledButtons = createManagementButtons(null, false, null, false, null);
     container.components.push(disabledButtons.buttonRow1.toJSON());
-    container.components.push(disabledButtons.deleteRow.toJSON());
-    
+
     // Disabled placeholder
     container.components.push({ type: 14 });
     container.components.push({
@@ -255,6 +257,28 @@ export async function createCastlistHub(guildId, options = {}) {
   container.components.push({ type: 14 });
   const navButtons = new ActionRowBuilder()
     .addComponents(createBackButton('prod_menu_back'));
+
+  // Add Delete and Swap/Merge buttons if castlist is selected
+  if (selectedCastlist) {
+    const suffix = selectedCastlist.id ? `_${selectedCastlist.id}` : '';
+    const isDefaultCastlist = selectedCastlist.id === 'default';
+
+    navButtons.addComponents(
+      new ButtonBuilder()
+        .setCustomId(`castlist_delete${suffix}`)
+        .setLabel('Delete')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('🗑️')
+        .setDisabled(isDefaultCastlist), // Disable for default
+      new ButtonBuilder()
+        .setCustomId(`castlist_swap_merge${suffix}`)
+        .setLabel('Swap/Merge')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('🔀')
+        .setDisabled(true) // Always disabled - not implemented yet
+    );
+  }
+
   container.components.push(navButtons.toJSON());
   
   return {
@@ -317,7 +341,7 @@ async function createCastlistDetailsSection(guildId, castlist) {
   if (castlist.id === 'default') {
     // Special rendering for Active Castlist (default)
     content = `> **\`✅ Active Castlist\`**\n` +
-      `-# Current castlist for the current phase of the game. Use the Manage Tribes button for swaps and merge.\n` +
+      `-# Current castlist for the current phase of the game. Use the Tribes button for swaps and merge.\n` +
       seasonLine + // Season line (if any)
       `\n> **\`Tribes on Castlist\`**\n${tribesDisplay}`;
   } else {
@@ -344,7 +368,7 @@ async function createCastlistDetailsSection(guildId, castlist) {
  * @param {string} activeButton - Which button is active
  * @param {boolean} isVirtual - Whether castlist is virtual
  * @param {string} castlistName - The castlist name (for non-virtual castlists)
- * @returns {Object} Object with buttonRow1 and deleteRow
+ * @returns {Object} Object with buttonRow1, castlistId, and enabled state
  */
 function createManagementButtons(castlistId, enabled = true, activeButton = null, isVirtual = false, castlistName = null) {
   const buttonRow1 = new ActionRowBuilder();
@@ -394,25 +418,7 @@ function createManagementButtons(castlistId, enabled = true, activeButton = null
       .setDisabled(!enabled)
   );
 
-  // Row 2: Delete and Swap/Merge buttons
-  const deleteRow = new ActionRowBuilder();
-  const isDefaultCastlist = castlistId === 'default';
-  deleteRow.addComponents(
-    new ButtonBuilder()
-      .setCustomId(enabled ? `castlist_delete${suffix}` : 'castlist_delete')
-      .setLabel('Delete Castlist')
-      .setStyle(ButtonStyle.Danger)
-      .setEmoji('🗑️')
-      .setDisabled(!enabled || isDefaultCastlist), // Disable for default
-    new ButtonBuilder()
-      .setCustomId(`castlist_swap_merge${suffix}`)
-      .setLabel('Swap/Merge')
-      .setStyle(ButtonStyle.Secondary) // Always secondary (not implemented yet)
-      .setEmoji('🔀')
-      .setDisabled(true) // Always disabled - not implemented yet
-  );
-
-  return { buttonRow1, deleteRow };
+  return { buttonRow1, castlistId, enabled };
 }
 
 /**
