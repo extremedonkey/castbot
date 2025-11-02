@@ -18243,22 +18243,27 @@ Your server is now ready for Tycoons gameplay!`;
           const guild = await client.guilds.fetch(guildId);
           const pronounRoleIDs = await getGuildPronouns(guildId);
 
-          if (!pronounRoleIDs?.length) {
-            return {
-              content: '## Pronoun Roles\n\nNo pronoun roles found. Use **Edit Pronouns** to add some.'
-            };
-          }
-
           let pronounList = '## Pronoun Roles\n\n';
-          for (const roleId of pronounRoleIDs) {
-            const role = guild.roles.cache.get(roleId);
-            if (role) {
-              pronounList += `<@&${roleId}>\n`;
+
+          if (!pronounRoleIDs?.length) {
+            pronounList += 'No pronoun roles found. Use **Edit Pronouns** to add some.';
+          } else {
+            for (const roleId of pronounRoleIDs) {
+              const role = guild.roles.cache.get(roleId);
+              if (role) {
+                pronounList += `<@&${roleId}>\n`;
+              }
             }
           }
 
           return {
-            content: pronounList
+            components: [{
+              type: 17, // Container
+              components: [{
+                type: 10, // Text Display
+                content: pronounList
+              }]
+            }]
           };
         }
       })(req, res, client);
@@ -18360,8 +18365,19 @@ Your server is now ready for Tycoons gameplay!`;
           const row = new ActionRowBuilder().addComponents(roleSelect);
 
           return {
-            content: '## Edit Timezone Roles\n\nSelect which roles should be timezone roles. Currently selected roles are already ticked. Add or remove roles as needed.\n\n**Note:** If you add any new timezones, you need to set the offset afterwards using the \'Add Timezone\' button.',
-            components: [row.toJSON()]
+            components: [{
+              type: 17, // Container
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: '## Edit Timezone Roles\n\nSelect which roles should be timezone roles. Currently selected roles are already ticked. Add or remove roles as needed.\n\n**Note:** If you add any new timezones, you need to set the offset afterwards using the \'Add Timezone\' button.'
+                },
+                {
+                  type: 14 // Separator
+                },
+                row.toJSON()
+              ]
+            }]
           };
         }
       })(req, res, client);
@@ -18390,8 +18406,19 @@ Your server is now ready for Tycoons gameplay!`;
           const row = new ActionRowBuilder().addComponents(roleSelect);
 
           return {
-            content: '## Edit Pronoun Roles\n\nSelect which roles should be pronoun roles. Currently selected roles are already ticked. Add or remove roles as needed.',
-            components: [row.toJSON()]
+            components: [{
+              type: 17, // Container
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: '## Edit Pronoun Roles\n\nSelect which roles should be pronoun roles. Currently selected roles are already ticked. Add or remove roles as needed.'
+                },
+                {
+                  type: 14 // Separator
+                },
+                row.toJSON()
+              ]
+            }]
           };
         }
       })(req, res, client);
@@ -20220,8 +20247,19 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const row = new ActionRowBuilder().addComponents(roleSelect);
 
           return {
-            content: '## Add Timezone\n\nSelect an existing role from your server.\n\n**Example Positive UTC values:** 4 corresponds to UTC+4, 5.5 corresponds to UTC+5:30.\n**Example negative UTC values:** -5, -3.5.\n**Enter 0** where the offset is 0, like GMT.',
-            components: [row.toJSON()]
+            components: [{
+              type: 17, // Container
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: '## Add Timezone\n\nSelect an existing role from your server.\n\n**Example Positive UTC values:** 4 corresponds to UTC+4, 5.5 corresponds to UTC+5:30.\n**Example negative UTC values:** -5, -3.5.\n**Enter 0** where the offset is 0, like GMT.'
+                },
+                {
+                  type: 14 // Separator
+                },
+                row.toJSON()
+              ]
+            }]
           };
         }
       })(req, res, client);

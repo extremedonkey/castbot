@@ -70,7 +70,9 @@
       "Bash(curl -s \"https://ibb.co/Rkd1wvc6\" -o /tmp/user_error.html)",
       "Bash(curl -s \"https://i.ibb.co/1tj3WvTX/image.png\" -o /tmp/user_error.png)",
       "Bash(for line in 4810 4908 5108 5955 6196 6982)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Edit(/home/reece/castbot/**)",
+      "Write(/home/reece/castbot/**)"
     ],
     "deny": [],
     "ask": []

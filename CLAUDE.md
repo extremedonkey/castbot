@@ -5,7 +5,7 @@ This file provides guidance to Claude Code when working with CastBot. This is a 
 ## 🔴 Production Safety - NEVER Do These
 
 1. **Use unapproved PM2 commands** (see approved list below)
-2. **Modify production without explicit permission**
+2. **Modify production without explicit permission** Even if the user reports a bug, always deploy to test first and confirm before deploying to production
 3. **Use `pm2 delete` followed by `pm2 start`** - This loses environment context
 4. **Create new PM2 processes** with `pm2 start app.js --args`
 5. **Ignore "Discord client public key" errors** - Environment not loaded
