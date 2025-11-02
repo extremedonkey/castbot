@@ -982,10 +982,11 @@ async function createReeceStuffMenu(guildId, channelId = null) {
   const hasPlayerData = !!playerData[guildId];
   
   // Check if there are roles to nuke
-  // 1. Check if pronouns or timezones exist in playerData
+  // Note: Button is always enabled now because nuke operation uses dstState.json pattern matching
+  // to detect roles even if they're not registered in playerData (useful for dev cleanup)
   const hasPronounRoles = playerData[guildId]?.pronounRoleIDs?.length > 0;
   const hasTimezoneRoles = playerData[guildId]?.timezones && Object.keys(playerData[guildId].timezones).length > 0;
-  const hasRolesInData = hasPronounRoles || hasTimezoneRoles;
+  const hasRolesInData = true;  // Always enabled - pattern matching detects unregistered roles
   
   // Check if this channel has an application (for Emergency App Re-Init)
   const isApplicationChannel = channelId && !!playerData[guildId]?.applications?.[channelId];
