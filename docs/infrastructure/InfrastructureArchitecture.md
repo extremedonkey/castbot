@@ -261,6 +261,7 @@ if (DEBUG) {
 3. **SSL/TLS Configuration**
    - **Certificate Authority**: Let's Encrypt (ACME v2)
    - **Management Tool**: bncert-tool + Lego client
+   - **Setup Guide**: [Bitnami: Generate and Install Let's Encrypt SSL](https://docs.bitnami.com/aws/how-to/generate-install-lets-encrypt-ssl/)
    - **Certificate Path**: `/opt/bitnami/letsencrypt/certificates/castbotaws.reecewagner.com.{crt,key}`
    - **Apache Config**: `/opt/bitnami/apache/conf/vhosts/myapp-https-vhost.conf`
    - **Auto-Renewal**: Cron job runs daily at 19:39 UTC
@@ -1101,6 +1102,8 @@ sudo /opt/bitnami/bncert-tool
 # Verify renewal cron job exists
 sudo crontab -l | grep letsencrypt
 # Should show: 39 19 * * * sudo /opt/bitnami/letsencrypt/lego...
+
+# Reference: https://docs.bitnami.com/aws/how-to/generate-install-lets-encrypt-ssl/
 ```
 
 #### Environment not loaded
@@ -1211,6 +1214,7 @@ echo "$(date): AWS restart verified, all systems operational" >> /var/log/castbo
 
 ## Related Documentation
 
+### Internal Documentation
 - [LoggingStandards.md](../standards/LoggingStandards.md) - Detailed logging patterns
 - [DevWorkflow.md](../workflow/DevWorkflow.md) - Development process
 - [CLAUDE.md](../../CLAUDE.md) - Quick reference and safety rules
@@ -1218,7 +1222,14 @@ echo "$(date): AWS restart verified, all systems operational" >> /var/log/castbo
 - [ButtonHandlerFactory.md](../enablers/ButtonHandlerFactory.md) - Button handler patterns
 - [EntityEditFramework.md](../enablers/EntityEditFramework.md) - Entity management system
 - [MenuSystemArchitecture.md](../enablers/MenuSystemArchitecture.md) - Menu navigation system
+- [ProductionMonitoring.md](ProductionMonitoring.md) - Comprehensive health monitoring guide
 - **Production Architecture Diagram** - Visual reference in `Castbot Architecture - Prod Only.pdf`
+
+### External References
+- [Bitnami: Generate and Install Let's Encrypt SSL](https://docs.bitnami.com/aws/how-to/generate-install-lets-encrypt-ssl/) - SSL certificate setup guide
+- [AWS Lightsail Documentation](https://docs.aws.amazon.com/lightsail/) - AWS infrastructure reference
+- [PM2 Documentation](https://pm2.keymetrics.io/docs/usage/quick-start/) - Process manager reference
+- [Apache HTTP Server Documentation](https://httpd.apache.org/docs/2.4/) - Web server configuration
 
 ## Architectural Documentation
 
