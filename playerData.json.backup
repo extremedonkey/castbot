@@ -2902,6 +2902,93 @@
         "startHour": 12,
         "channelId": "1337754151655833694",
         "createdAt": 1756038966969
+      },
+      "1434405570018017380": {
+        "slots": [
+          {
+            "emoji": "1️⃣",
+            "utcHour": 5
+          },
+          {
+            "emoji": "2️⃣",
+            "utcHour": 6
+          },
+          {
+            "emoji": "3️⃣",
+            "utcHour": 7
+          },
+          {
+            "emoji": "4️⃣",
+            "utcHour": 8
+          },
+          {
+            "emoji": "5️⃣",
+            "utcHour": 9
+          },
+          {
+            "emoji": "6️⃣",
+            "utcHour": 10
+          },
+          {
+            "emoji": "7️⃣",
+            "utcHour": 11
+          },
+          {
+            "emoji": "8️⃣",
+            "utcHour": 12
+          },
+          {
+            "emoji": "9️⃣",
+            "utcHour": 13
+          },
+          {
+            "emoji": "🔟",
+            "utcHour": 14
+          },
+          {
+            "emoji": "🇦",
+            "utcHour": 15
+          },
+          {
+            "emoji": "🇧",
+            "utcHour": 16
+          },
+          {
+            "emoji": "🇨",
+            "utcHour": 17
+          },
+          {
+            "emoji": "🇩",
+            "utcHour": 18
+          },
+          {
+            "emoji": "🇪",
+            "utcHour": 19
+          },
+          {
+            "emoji": "🇫",
+            "utcHour": 20
+          },
+          {
+            "emoji": "🇬",
+            "utcHour": 21
+          },
+          {
+            "emoji": "🇭",
+            "utcHour": 22
+          },
+          {
+            "emoji": "🇮",
+            "utcHour": 23
+          },
+          {
+            "emoji": "🇯",
+            "utcHour": 0
+          }
+        ],
+        "startHour": 4,
+        "channelId": "1337754151655833694",
+        "createdAt": 1762059354327
       }
     },
     "activeSeason": {
@@ -13756,114 +13843,8 @@
   "1412422613774368851": {
     "players": {},
     "tribes": {},
-    "timezones": {
-      "1434384001338052648": {
-        "offset": -8,
-        "dstObserved": true,
-        "standardName": "PST (UTC-8)",
-        "timezoneId": "PT"
-      },
-      "1434384003007254659": {
-        "offset": -7,
-        "dstObserved": true,
-        "standardName": "MST (UTC-7)",
-        "timezoneId": "MT"
-      },
-      "1434384004689297548": {
-        "offset": -6,
-        "dstObserved": true,
-        "standardName": "CST (UTC-6)",
-        "timezoneId": "CT"
-      },
-      "1434384006383931454": {
-        "offset": -5,
-        "dstObserved": true,
-        "standardName": "EST (UTC-5)",
-        "timezoneId": "ET"
-      },
-      "1434384008644661289": {
-        "offset": -4,
-        "dstObserved": true,
-        "standardName": "AST (UTC-4)",
-        "timezoneId": "AT"
-      },
-      "1434384010020258015": {
-        "offset": -3.5,
-        "dstObserved": true,
-        "standardName": "NST (UTC-3:30)",
-        "timezoneId": "NT"
-      },
-      "1434384012021071992": {
-        "offset": 0,
-        "dstObserved": true,
-        "standardName": "GMT (UTC+0)",
-        "timezoneId": "GMT"
-      },
-      "1434384013493276683": {
-        "offset": 1,
-        "dstObserved": true,
-        "standardName": "CET (UTC+1)",
-        "timezoneId": "CET"
-      },
-      "1434384015367868599": {
-        "offset": 2,
-        "dstObserved": true,
-        "standardName": "EET (UTC+2)",
-        "timezoneId": "EET"
-      },
-      "1434384017255563386": {
-        "offset": 2,
-        "dstObserved": false,
-        "standardName": "SAST (UTC+2)",
-        "timezoneId": "SAST"
-      },
-      "1434384018908123226": {
-        "offset": 5.5,
-        "dstObserved": false,
-        "standardName": "IST (UTC+5.5)",
-        "timezoneId": "IST"
-      },
-      "1434384020506022041": {
-        "offset": 7,
-        "dstObserved": false,
-        "standardName": "ICT (UTC+7)",
-        "timezoneId": "ICT"
-      },
-      "1434384022208778321": {
-        "offset": 8,
-        "dstObserved": false,
-        "standardName": "GMT+8 (UTC+8)",
-        "timezoneId": "GMT8"
-      },
-      "1434384024578822154": {
-        "offset": 9,
-        "dstObserved": false,
-        "standardName": "JST (UTC+9)",
-        "timezoneId": "JST"
-      },
-      "1434384026415923223": {
-        "offset": 10,
-        "dstObserved": true,
-        "standardName": "AEST (UTC+10)",
-        "timezoneId": "AEST"
-      },
-      "1434384028437450814": {
-        "offset": 12,
-        "dstObserved": true,
-        "standardName": "NZST (UTC+12)",
-        "timezoneId": "NZST"
-      }
-    },
-    "pronounRoleIDs": [
-      "1434404744922923189",
-      "1434404746692923477",
-      "1434404748370645043",
-      "1434404750421393449",
-      "1434404752166223936",
-      "1434404754489872427",
-      "1434404756285296721",
-      "1434404758503817338"
-    ],
+    "timezones": {},
+    "pronounRoleIDs": [],
     "serverName": "CastBot Regression Orange",
     "icon": "https://cdn.discordapp.com/icons/1412422613774368851/e3c4d9107556739bad258aeb536a6f35.webp",
     "ownerId": "391415444084490240",
