@@ -6350,8 +6350,9 @@ To fix this:
                 .setEmoji('⏲️'),
               new ButtonBuilder()
                 .setCustomId('prod_add_timezone')
-                .setLabel('🗺️ Add Timezone (incl. Offset)')
-                .setStyle(ButtonStyle.Secondary),
+                .setLabel('Custom Timezone')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('🗺️'),
               new ButtonBuilder()
                 .setCustomId('prod_timezone_react')
                 .setLabel('Post React for Timezones')
@@ -6384,7 +6385,7 @@ To fix this:
           const pronounsTimezoneComponents = [
             {
               type: 10, // Text Display component
-              content: `## 💜 Pronouns & Timezones | Role Management`
+              content: `## 💜 Pronouns & Timezones | Role Management\n\nUse Custom Timezone to add timezones not supported by CastBot, customise Pronouns, or display Reaction Panels. Only use this if you know what you are doing - run CastBot Setup if you just want to set up standard pronouns and timezone roles!`
             },
             {
               type: 14 // Separator
