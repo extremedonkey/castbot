@@ -72,7 +72,8 @@
       "Bash(for line in 4810 4908 5108 5955 6196 6982)",
       "Bash(git rm:*)",
       "Edit(/home/reece/castbot/**)",
-      "Write(/home/reece/castbot/**)"
+      "Write(/home/reece/castbot/**)",
+      "Bash(curl -s \"https://i.ibb.co/v43RNMtW/image.png\" -o /tmp/cpu_graph.png)"
     ],
     "deny": [],
     "ask": []

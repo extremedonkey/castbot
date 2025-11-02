@@ -1764,20 +1764,12 @@
       "1391142497484275712": {
         "name": "Tribe 1391142497484275712",
         "emoji": "🏕️",
-        "color": null,
-        "castlistIds": [
-          "castlist_1761424028120_1331657596087566398"
-        ],
-        "castlist": "MST Test"
+        "color": null
       },
       "1391142499283763300": {
         "name": "Tribe 1391142499283763300",
         "emoji": "🏕️",
-        "color": null,
-        "castlistIds": [
-          "castlist_1761424028120_1331657596087566398"
-        ],
-        "castlist": "PST Test"
+        "color": null
       },
       "1368969402967654420": {
         "name": "Tribe 1368969402967654420",
@@ -3169,28 +3161,6 @@
         "seasonId": "season_cac1b81de8914c79",
         "modifiedAt": 1761974779410,
         "modifiedBy": "391415444084490240"
-      },
-      "castlist_1761424028120_1331657596087566398": {
-        "id": "castlist_1761424028120_1331657596087566398",
-        "name": "PST Test",
-        "type": "custom",
-        "createdAt": 1761424028120,
-        "createdBy": "391415444084490240",
-        "settings": {
-          "sortStrategy": "alphabetical",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public",
-          "seasonId": "season_cac1b81de8914c79"
-        },
-        "metadata": {
-          "emoji": "🌏",
-          "description": "Testin' the PSTzz",
-          "lastModified": 1761424028120
-        },
-        "modifiedAt": 1761973906883,
-        "modifiedBy": "391415444084490240",
-        "seasonId": "season_03859e4abc554bb5"
       },
       "castlist_1762007922583_1331657596087566398": {
         "id": "castlist_1762007922583_1331657596087566398",

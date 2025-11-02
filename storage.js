@@ -406,15 +406,38 @@ let dstStateCache = null;
 export async function loadDSTState() {
   if (dstStateCache) return dstStateCache;
 
-  try {
-    const data = await fs.readFile('./dstState.json', 'utf8');
-    dstStateCache = JSON.parse(data);
-    console.log('✅ DST state loaded:', Object.keys(dstStateCache).length, 'timezones');
-    return dstStateCache;
-  } catch (error) {
-    console.warn('⚠️ dstState.json not found, using fallback');
-    return {};
+  // Try multiple paths in order of preference
+  const paths = [
+    './dstState.json',                                    // Relative path (normal)
+    '/opt/bitnami/projects/castbot/dstState.json',       // Absolute prod path
+    '/home/reece/castbot/dstState.json',                 // Absolute dev path
+  ];
+
+  for (const filepath of paths) {
+    try {
+      const data = await fs.readFile(filepath, 'utf8');
+      dstStateCache = JSON.parse(data);
+      console.log(`✅ DST state loaded from ${filepath}:`, Object.keys(dstStateCache).length, 'timezones');
+      return dstStateCache;
+    } catch (error) {
+      // Try next path
+      continue;
+    }
   }
+
+  // If all paths fail, log error but return minimal defaults to prevent crashes
+  console.error('❌ CRITICAL: dstState.json not found in any location! Using minimal defaults to prevent crashes.');
+  console.error('Searched paths:', paths.join(', '));
+
+  // Return minimal defaults with common timezones to prevent crashes
+  // This allows the bot to continue functioning even if dstState.json is missing
+  dstStateCache = {
+    "PT": { "displayName": "Pacific Time", "roleFormat": "PST / PDT", "standardOffset": -8, "dstOffset": -7, "currentOffset": -8, "isDST": false },
+    "MT": { "displayName": "Mountain Time", "roleFormat": "MST / MDT", "standardOffset": -7, "dstOffset": -6, "currentOffset": -7, "isDST": false },
+    "CT": { "displayName": "Central Time", "roleFormat": "CST / CDT", "standardOffset": -6, "dstOffset": -5, "currentOffset": -6, "isDST": false },
+    "ET": { "displayName": "Eastern Time", "roleFormat": "EST / EDT", "standardOffset": -5, "dstOffset": -4, "currentOffset": -5, "isDST": false },
+  };
+  return dstStateCache;
 }
 
 export async function saveDSTState(state) {

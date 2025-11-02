@@ -760,6 +760,11 @@ async function convertExistingTimezones(guild, currentTimezones) {
         }
 
         // Step 3: Look up new role name from dstState.json
+        if (!dstState[timezoneId]) {
+            console.error(`❌ CRITICAL: timezoneId "${timezoneId}" detected from role "${role.name}" but not found in dstState.json!`);
+            results.unmapped.push({ roleId, name: role.name, offset: tzData.offset, error: 'Missing in dstState' });
+            continue;
+        }
         const newRoleName = dstState[timezoneId].roleFormat;
 
         // Step 4: Rename role if needed
