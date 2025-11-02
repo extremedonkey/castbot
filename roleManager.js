@@ -2553,6 +2553,63 @@ async function nukeRoles(guildId, client) {
     return results;
 }
 
+/**
+ * Build the tribes view menu showing all tribes organized by castlist
+ * @param {string} guildId - Discord guild ID
+ * @param {Object} client - Discord client instance
+ * @returns {Object} Components V2 container structure
+ */
+async function buildTribesViewMenu(guildId, client) {
+    const guild = await client.guilds.fetch(guildId);
+    const playerData = await loadPlayerData();
+    const tribes = playerData[guildId]?.tribes || {};
+
+    // Check if any tribes exist
+    if (!Object.keys(tribes).length) {
+        return {
+            content: '## Tribes\n\nNo tribes found. Use **Add Tribe** to create some.'
+        };
+    }
+
+    // Group tribes by castlist
+    const castlistGroups = {};
+    for (const [roleId, tribeData] of Object.entries(tribes)) {
+        if (!tribeData) continue; // Skip null/undefined tribe entries
+        const castlistName = tribeData.castlist || 'default';
+        if (!castlistGroups[castlistName]) {
+            castlistGroups[castlistName] = [];
+        }
+        castlistGroups[castlistName].push({ roleId, ...tribeData });
+    }
+
+    let tribeList = '## Tribes\n\n';
+
+    // Sort castlists with default first
+    const sortedCastlists = Object.keys(castlistGroups).sort((a, b) => {
+        if (a === 'default') return -1;
+        if (b === 'default') return 1;
+        return a.localeCompare(b);
+    });
+
+    for (const castlistName of sortedCastlists) {
+        const castlistDisplay = castlistName === 'default' ? 'Castlist (default)' : `Castlist (${castlistName})`;
+        tribeList += `**${castlistDisplay}**\n`;
+
+        for (const tribe of castlistGroups[castlistName]) {
+            const role = guild.roles.cache.get(tribe.roleId);
+            if (role) {
+                const emoji = tribe.emoji ? `${tribe.emoji} ` : '';
+                tribeList += `• ${emoji}${role.name}\n`;
+            }
+        }
+        tribeList += '\n';
+    }
+
+    return {
+        content: tribeList
+    };
+}
+
 export {
     STANDARD_PRONOUN_ROLES,
     STANDARD_TIMEZONE_ROLES,
@@ -2573,5 +2630,6 @@ export {
     consolidateTimezoneRoles,
     buildPronounsViewMenu,
     buildTimezonesViewMenu,
-    buildTimezoneEditMenu
+    buildTimezoneEditMenu,
+    buildTribesViewMenu
 };
