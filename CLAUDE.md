@@ -262,6 +262,30 @@ npm run logs-prod-errors       # Error logs only
 npm run logs-prod -- --filter "user ID"  # Filtered logs
 ```
 
+### 🚨 Production Infrastructure Troubleshooting
+
+**If Discord commands fail immediately after AWS restart** (shows "interaction failed"):
+
+**Quick Fix** (2 minutes):
+```bash
+ssh -i ~/.ssh/castbot-key.pem bitnami@13.238.148.170
+sudo systemctl stop nginx && sudo /opt/bitnami/apache/bin/apachectl start
+curl -I https://castbotaws.reecewagner.com/interactions  # Verify: HTTP/1.1 200 OK
+```
+
+**Root Cause**: AWS restarts stop Apache (SSL/HTTPS), nginx auto-starts and blocks port 80.
+
+**Comprehensive Troubleshooting**: See [InfrastructureArchitecture.md - Troubleshooting](docs/infrastructure/InfrastructureArchitecture.md#troubleshooting) for:
+- Complete diagnostic checklist (7-step verification)
+- Post-AWS-restart verification procedure
+- Bot-initiated health monitoring (Discord alerts when Apache down)
+- SSL certificate issues
+- Critical files reference
+
+**Prevention** (already configured):
+- Apache auto-start enabled: `sudo systemctl enable bitnami`
+- nginx auto-start disabled: `sudo systemctl disable nginx`
+
 ## ⚠️ Production Environment Variables
 
 **CRITICAL**: Production relies on `.env` file being loaded by dotenv

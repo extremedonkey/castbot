@@ -39,7 +39,7 @@ graph TB
             end
             
             subgraph "Infrastructure"
-                NG[nginx Reverse Proxy<br/>443 ↔ 3000<br/>Let's Encrypt SSL]
+                AP[Apache Reverse Proxy<br/>443 ↔ 3000<br/>Let's Encrypt SSL<br/>bncert-tool]
                 FW[Firewall<br/>127.0.0.1:3000]
             end
         end
@@ -58,16 +58,16 @@ graph TB
     APP --> FF
     APP --> ENV
     PM2 --> APP
-    NG --> FW
+    AP --> FW
     FW --> APP
-    DO --> NG
+    DO --> AP
     HV -->|NS Records| DO
-    
+
     style DC fill:#7289da
     style DG fill:#7289da
     style APP fill:#68d391
     style PM2 fill:#4299e1
-    style NG fill:#ed8936
+    style AP fill:#ed8936
     style DO fill:#0080FF
     style HV fill:#805ad5
 ```
@@ -127,12 +127,13 @@ graph TB
 | Aspect | Development | Production |
 |--------|------------|------------|
 | **Infrastructure** | Local machine | AWS Lightsail (Ubuntu/Bitnami) |
-| **Server IP** | localhost | 13.238.148.170 |
-| **Domain** | adapted-deeply-stag.ngrok-free.app | castbot.reecewagner.com |
+| **Server IP** | localhost | 13.238.148.170 (Static IP) |
+| **Domain** | adapted-deeply-stag.ngrok-free.app | castbotaws.reecewagner.com |
 | **Process Manager** | Node directly | PM2 |
-| **Web Server** | None (direct node) | nginx reverse proxy |
-| **SSL/TLS** | ngrok handles | Let's Encrypt via nginx |
-| **Port** | 3000 (tunneled) | 443→3000 (proxied) |
+| **Web Server** | None (direct node) | Apache reverse proxy |
+| **SSL/TLS** | ngrok handles | Let's Encrypt via Apache (bncert-tool) |
+| **SSL Cert Location** | N/A | /opt/bitnami/letsencrypt/certificates/ |
+| **Port** | 3000 (tunneled) | 443→3000 (proxied by Apache) |
 | **Firewall** | None needed | 127.0.0.1:3000 restricted |
 | **Logging** | File + tail | PM2 logs with rotation |
 | **Startup** | Manual (dev-start.sh) | PM2 saved state |
@@ -224,28 +225,54 @@ if (DEBUG) {
 ### Infrastructure Stack
 
 #### AWS Lightsail Instance
-- **Platform**: Ubuntu with Bitnami stack
-- **Instance IP**: 13.238.148.170
-- **Domain**: castbot.reecewagner.com
+- **Platform**: Ubuntu 20.04 LTS with Bitnami LAMP Stack
+- **Instance Specifications**: 512 MB RAM, 2 vCPUs, 20 GB SSD
+- **AWS Region**: ap-southeast-2a (Sydney)
+- **Static IP**: 13.238.148.170
+- **IPv6 Address**: 2406:da1c:5b:7a00:450e:d561:e949:d529
+- **Private IPv4**: 172.26.0.160
+- **Domain**: castbotaws.reecewagner.com
 - **Interactions Endpoint**: https://castbotaws.reecewagner.com/interactions
+- **Discord Application ID**: 1319912453248647170
 - **Node Version**: 22.11.0
+- **Web Server**: Apache (via Bitnami)
+- **SSL Management**: bncert-tool (Bitnami HTTPS Configuration Tool)
 
 #### Network Architecture
 1. **Domain Management**
-   - Registrar: Hover (reecewagner.com)
-   - NS Records: Point to DigitalOcean
-   - A Record: castbot.reecewagner.com → AWS IP
+   - **Primary Domain**: reecewagner.com
+   - **Registrar**: Hover
+   - **DNS Provider**: DigitalOcean
+   - **NS Records**: Point to DigitalOcean nameservers
+   - **A Record**: castbotaws.reecewagner.com → 13.238.148.170
+   - **TTL**: 300 seconds
 
 2. **Request Flow**
    ```
-   Discord → HTTPS (443) → nginx → HTTP (3000) → Express App
+   Discord → HTTPS (443) → Apache → HTTP (3000) → Express App
+            ↓
+      Let's Encrypt SSL Termination
+            ↓
+      Reverse Proxy (mod_proxy)
+            ↓
+      localhost:3000 (PM2/Node)
    ```
 
-3. **Security Layers**
-   - nginx reverse proxy with SSL termination
-   - Let's Encrypt certificates (auto-renewal)
-   - Firewall restricting port 3000 to localhost only
-   - PM2 process isolation
+3. **SSL/TLS Configuration**
+   - **Certificate Authority**: Let's Encrypt (ACME v2)
+   - **Management Tool**: bncert-tool + Lego client
+   - **Certificate Path**: `/opt/bitnami/letsencrypt/certificates/castbotaws.reecewagner.com.{crt,key}`
+   - **Apache Config**: `/opt/bitnami/apache/conf/vhosts/myapp-https-vhost.conf`
+   - **Auto-Renewal**: Cron job runs daily at 19:39 UTC
+   - **Renewal Command**: `/opt/bitnami/letsencrypt/lego renew && Apache graceful restart`
+   - **Certificate Validity**: 90 days (auto-renewed at 30 days remaining)
+
+4. **Security Layers**
+   - **Apache reverse proxy** with SSL termination on port 443
+   - **Let's Encrypt certificates** with automated renewal
+   - **Firewall**: Port 3000 restricted to localhost only (127.0.0.1)
+   - **PM2 process isolation** (non-root user execution)
+   - **HTTP→HTTPS redirect** on port 80
 
 ### Application Architecture
 
@@ -514,18 +541,352 @@ tail -f /tmp/castbot-dev.log
 
 ### Production Issues
 
-**Environment not loaded**
+#### 🚨 CRITICAL: After AWS Lightsail Restart
+
+**Problem**: Bot appears "online" in PM2 but Discord commands fail immediately with "interaction failed"
+
+**Root Cause**: AWS restarts stop Apache, nginx auto-starts instead, blocking port 80 and preventing Apache from starting. This means:
+- No HTTPS on port 443 (Discord can't reach bot)
+- Bot's Discord client connects (outgoing works)
+- Incoming webhook requests fail (HTTPS broken)
+
+**Quick Diagnosis** (30 seconds):
+```bash
+# SSH to production
+ssh -i ~/.ssh/castbot-key.pem bitnami@13.238.148.170
+
+# Check which service is on port 80/443
+sudo netstat -tlnp | grep -E ':(80|443)'
+
+# Expected output:
+tcp6  :::443  :::*  LISTEN  <pid>/httpd   # Apache on 443 ✅
+tcp6  :::80   :::*  LISTEN  <pid>/httpd   # Apache on 80 ✅
+
+# Problem output:
+tcp   :::80   :::*  LISTEN  <pid>/nginx   # nginx blocking! ❌
+# (no line for 443 = HTTPS down)
+```
+
+**The Fix** (2 minutes):
+```bash
+# Stop nginx, start Apache
+sudo systemctl stop nginx
+sudo /opt/bitnami/apache/bin/apachectl start
+
+# Verify Apache is running on both ports
+sudo netstat -tlnp | grep -E ':(80|443)'
+
+# Test HTTPS endpoint
+curl -I https://castbotaws.reecewagner.com/interactions
+# Expected: HTTP/1.1 200 OK
+
+# Verify bot is accessible
+pm2 list
+# Status should remain: online
+```
+
+**Prevent Future Occurrences**:
+```bash
+# Enable Apache auto-start (already done if you ran setup)
+sudo systemctl enable bitnami
+
+# Disable nginx auto-start (already done if you ran setup)
+sudo systemctl disable nginx
+
+# Verify configuration
+systemctl is-enabled bitnami  # Should show: enabled
+systemctl is-enabled nginx    # Should show: disabled
+```
+
+#### HTTPS/SSL Troubleshooting Checklist
+
+**When Discord commands immediately fail**, run this diagnostic:
+
+```bash
+# 1. Check ports (most common issue)
+sudo netstat -tlnp | grep -E ':(80|443)'
+# Expected: httpd on both 80 and 443
+# If nginx appears: Stop nginx, start Apache (see above)
+
+# 2. Check Apache status
+systemctl status bitnami
+# Expected: active (running)
+# If inactive: sudo /opt/bitnami/apache/bin/apachectl start
+
+# 3. Check SSL certificates
+sudo ls -la /opt/bitnami/apache/conf/*.crt
+# Should show symlinks with recent dates
+# If missing: SSL certificates lost, see recovery below
+
+# 4. Test HTTPS endpoint locally
+curl -I https://localhost:443/interactions
+# Expected: HTTP/1.1 200 OK
+# If failed: Apache not proxying correctly
+
+# 5. Test HTTPS endpoint externally
+curl -I https://castbotaws.reecewagner.com/interactions
+# Expected: HTTP/1.1 200 OK
+# If failed: DNS or firewall issue
+
+# 6. Check bot status
+pm2 list
+# Status: online (not errored/stopped)
+# Memory: ~60-150MB (normal range)
+# Restarts (↺): Should not be increasing
+
+# 7. Check bot logs for errors
+pm2 logs castbot-pm --lines 50 --nostream
+# Look for:
+# ✅ "Listening on port 3000"
+# ✅ "Discord client is ready!"
+# ✅ "DST state loaded"
+# ❌ "Cannot find package" errors
+# ❌ "ECONNREFUSED" errors
+```
+
+#### Bot-Initiated Health Monitoring
+
+**Key Insight**: Even when Apache is down and Discord can't reach the bot, the bot's Discord client remains connected! This means the bot can send alerts even when it can't receive commands.
+
+**How It Works**:
+```
+Discord → HTTPS (443) → ❌ Apache Down → Bot (unreachable)
+Bot → Discord Gateway (WebSocket) → ✅ Still Connected → Can send messages!
+```
+
+**Proposed Health Check Script** (`/opt/bitnami/projects/castbot/scripts/health-check.sh`):
+
+```bash
+#!/bin/bash
+# CastBot Production Health Check
+# Runs every 5 minutes via cron
+# Alerts to Discord if Apache/HTTPS fails
+
+HEALTH_LOG="/var/log/castbot-health.log"
+ALERT_CHANNEL_ID="<your-admin-channel-id>"
+
+log_message() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$HEALTH_LOG"
+}
+
+# Check 1: Apache running on port 443?
+if ! sudo netstat -tlnp | grep -q ':::443.*httpd'; then
+    log_message "❌ CRITICAL: Apache not listening on port 443!"
+
+    # Try to restart Apache
+    log_message "Attempting to restart Apache..."
+    sudo systemctl stop nginx 2>/dev/null
+    sudo /opt/bitnami/apache/bin/apachectl start
+
+    # Alert to Discord via bot (bot client is still connected!)
+    cd /opt/bitnami/projects/castbot
+    node -e "
+        import('./healthAlert.js').then(module => {
+            module.sendHealthAlert({
+                severity: 'CRITICAL',
+                issue: 'Apache not running on port 443',
+                action: 'Attempted auto-restart',
+                channelId: '$ALERT_CHANNEL_ID'
+            });
+        });
+    "
+
+    sleep 3
+
+    # Verify restart succeeded
+    if sudo netstat -tlnp | grep -q ':::443.*httpd'; then
+        log_message "✅ Apache successfully restarted"
+    else
+        log_message "❌ FAILED: Apache restart failed, manual intervention required"
+    fi
+else
+    log_message "✅ Apache healthy on port 443"
+fi
+
+# Check 2: HTTPS endpoint responding?
+HTTPS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://localhost:443/interactions)
+if [ "$HTTPS_STATUS" != "200" ]; then
+    log_message "❌ WARNING: HTTPS endpoint returned $HTTPS_STATUS"
+else
+    log_message "✅ HTTPS endpoint responding"
+fi
+
+# Check 3: Bot process healthy?
+PM2_STATUS=$(pm2 jlist | jq -r '.[] | select(.name=="castbot-pm") | .pm2_env.status')
+if [ "$PM2_STATUS" != "online" ]; then
+    log_message "❌ WARNING: Bot status is $PM2_STATUS, attempting restart"
+    pm2 restart castbot-pm
+else
+    log_message "✅ Bot process healthy"
+fi
+```
+
+**Setup Health Monitoring**:
+```bash
+# Create health alert module (in castbot directory)
+cat > /opt/bitnami/projects/castbot/healthAlert.js << 'EOF'
+import { Client, GatewayIntentBits } from 'discord.js';
+import dotenv from 'dotenv';
+dotenv.config();
+
+export async function sendHealthAlert({ severity, issue, action, channelId }) {
+    const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+
+    await client.login(process.env.DISCORD_TOKEN);
+
+    const channel = await client.channels.fetch(channelId);
+    await channel.send({
+        embeds: [{
+            title: `🚨 ${severity}: Production Health Alert`,
+            description: `**Issue**: ${issue}\n**Action Taken**: ${action}`,
+            color: severity === 'CRITICAL' ? 0xFF0000 : 0xFFA500,
+            timestamp: new Date().toISOString(),
+            footer: { text: 'CastBot Health Monitor' }
+        }]
+    });
+
+    await client.destroy();
+}
+EOF
+
+# Install health check script
+sudo cp /opt/bitnami/projects/castbot/scripts/health-check.sh /usr/local/bin/
+sudo chmod +x /usr/local/bin/health-check.sh
+
+# Add to crontab (runs every 5 minutes)
+(crontab -l 2>/dev/null; echo "*/5 * * * * /usr/local/bin/health-check.sh") | crontab -
+```
+
+**Limitations**:
+- If bot process crashes completely, no alerts sent
+- If Discord Gateway connection breaks, no alerts sent
+- If entire server is down, no alerts possible
+- Consider external monitoring (e.g., UptimeRobot) as backup
+
+#### SSL Certificate Issues
+
+**Certificate Expired or Missing**:
+```bash
+# Check certificate validity
+sudo openssl x509 -in /opt/bitnami/letsencrypt/certificates/castbotaws.reecewagner.com.crt -noout -dates
+
+# If expired or missing, regenerate:
+sudo /opt/bitnami/bncert-tool
+# Follow prompts:
+# - Domain: castbotaws.reecewagner.com
+# - Enable HTTP to HTTPS redirect: Yes
+# - Enable non-www to www redirect: No
+# - Enable www to non-www redirect: No
+
+# Verify renewal cron job exists
+sudo crontab -l | grep letsencrypt
+# Should show: 39 19 * * * sudo /opt/bitnami/letsencrypt/lego...
+```
+
+#### Environment not loaded
 ```bash
 # From app directory
-cd /path/to/castbot
+cd /opt/bitnami/projects/castbot
 pm2 restart castbot-pm
 ```
 
-**Process not starting**
+#### Process not starting
 ```bash
 pm2 logs castbot-pm --lines 100
 # Check for errors, fix, then
 pm2 restart castbot-pm
+```
+
+#### Port Conflicts
+
+**nginx blocking Apache**:
+```bash
+# Check what's using ports
+sudo lsof -i :80
+sudo lsof -i :443
+
+# If nginx is running:
+sudo systemctl stop nginx
+sudo systemctl disable nginx
+
+# Start Apache
+sudo /opt/bitnami/apache/bin/apachectl start
+```
+
+### Post-AWS-Restart Checklist
+
+After ANY AWS Lightsail restart (planned or unplanned), verify these in order:
+
+#### 1. Apache Service (Most Critical)
+```bash
+# Check Apache is running on both ports
+sudo netstat -tlnp | grep -E ':(80|443)'
+# Expected: httpd on both 80 and 443
+
+# If Apache not running:
+sudo systemctl stop nginx
+sudo /opt/bitnami/apache/bin/apachectl start
+```
+
+#### 2. HTTPS Endpoint
+```bash
+# Test endpoint responds
+curl -I https://castbotaws.reecewagner.com/interactions
+# Expected: HTTP/1.1 200 OK
+
+# If fails: Check Apache vhost config
+sudo cat /opt/bitnami/apache/conf/vhosts/myapp-https-vhost.conf
+# Verify ProxyPass line: ProxyPass / http://localhost:3000/
+```
+
+#### 3. Bot Process
+```bash
+# Check PM2 status
+pm2 list
+# Status should be: online
+# Restarts (↺) should not be increasing
+
+# Check bot logs
+pm2 logs castbot-pm --lines 20
+# Look for:
+# ✅ "Discord client is ready!"
+# ✅ "Listening on port 3000"
+```
+
+#### 4. Discord Commands
+Test in Discord:
+- `/menu` - Should respond within 1-2 seconds
+- `/castlist` - Should display castlist
+- Click any button - Should not show "interaction failed"
+
+#### 5. Verification Complete
+```bash
+# Record successful restart
+echo "$(date): AWS restart verified, all systems operational" >> /var/log/castbot-restarts.log
+```
+
+### Critical Files Reference
+
+**If things break**, these are the files to check:
+
+```bash
+# SSL Certificates
+/opt/bitnami/letsencrypt/certificates/castbotaws.reecewagner.com.crt
+/opt/bitnami/letsencrypt/certificates/castbotaws.reecewagner.com.key
+
+# Apache Configuration
+/opt/bitnami/apache/conf/vhosts/myapp-https-vhost.conf  # HTTPS + reverse proxy
+/opt/bitnami/apache/conf/vhosts/myapp-http-vhost.conf   # HTTP redirect
+
+# Bot Data
+/opt/bitnami/projects/castbot/playerData.json           # 933KB, 99 guilds
+/opt/bitnami/projects/castbot/safariContent.json        # Safari items/stores
+/opt/bitnami/projects/castbot/.env                      # Discord credentials
+
+# Logs
+~/.pm2/logs/castbot-pm-out.log                         # Bot stdout
+~/.pm2/logs/castbot-pm-error.log                        # Bot errors
+/opt/bitnami/apache/logs/error_log                      # Apache errors
 ```
 
 ## Related Documentation
