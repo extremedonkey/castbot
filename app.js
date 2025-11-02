@@ -107,7 +107,10 @@ import {
   generateHierarchyWarning,
   testRoleHierarchy,
   checkForDuplicateTimezones,
-  consolidateTimezoneRoles
+  consolidateTimezoneRoles,
+  buildPronounsViewMenu,
+  buildTimezonesViewMenu,
+  buildTimezoneEditMenu
 } from './roleManager.js';
 import { 
   createPlayerInventoryDisplay,
@@ -18194,68 +18197,7 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'prod_view_timezones',
         updateMessage: true,  // Button click - update existing message
         handler: async (context) => {
-          const { guildId, client } = context;
-          const guild = await client.guilds.fetch(guildId);
-          const timezones = await getGuildTimezones(guildId);
-
-          // Build timezone list content
-          let timezoneContent = '';
-          if (!Object.keys(timezones).length) {
-            timezoneContent = 'No timezone roles configured.\n\nUse **Edit Timezones** or **Add Timezone** below to configure roles.';
-          } else {
-            for (const [roleId, timezoneData] of Object.entries(timezones)) {
-              const role = guild.roles.cache.get(roleId);
-              if (role) {
-                const offset = timezoneData.offset;
-                const offsetStr = offset >= 0 ? `UTC+${offset}` : `UTC${offset}`;
-                timezoneContent += `<@&${roleId}> - ${offsetStr}\n`;
-              }
-            }
-          }
-
-          // Action buttons
-          const actionRow = new ActionRowBuilder()
-            .addComponents(
-              new ButtonBuilder()
-                .setCustomId('prod_edit_timezones')
-                .setLabel('Bulk Modify')
-                .setEmoji('⏲️')
-                .setStyle(ButtonStyle.Secondary),
-              new ButtonBuilder()
-                .setCustomId('prod_add_timezone')
-                .setLabel('Add Timezone')
-                .setEmoji('🗺️')
-                .setStyle(ButtonStyle.Secondary)
-            );
-
-          // Navigation row
-          const navRow = new ActionRowBuilder()
-            .addComponents(
-              new ButtonBuilder()
-                .setCustomId('prod_manage_pronouns_timezones')
-                .setLabel('← Pronouns & Timezones')
-                .setStyle(ButtonStyle.Secondary)
-            );
-
-          // Build LEAN container
-          const containerComponents = [
-            { type: 10, content: '## 🌍 Timezone Roles | Global Time Configuration' },
-            { type: 14 }, // Separator
-            { type: 10, content: `> **\`🌍 Configured Roles\`**` },
-            { type: 10, content: timezoneContent },
-            { type: 14 }, // Separator
-            actionRow.toJSON(),
-            { type: 14 }, // Separator before navigation
-            navRow.toJSON()
-          ];
-
-          return {
-            components: [{
-              type: 17, // Container
-              accent_color: 0x3498DB, // Blue - global/time theme
-              components: containerComponents
-            }]
-          };
+          return await buildTimezonesViewMenu(context.guildId, context.client);
         }
       })(req, res, client);
     } else if (custom_id === 'prod_view_pronouns') {
@@ -18264,61 +18206,7 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'prod_view_pronouns',
         updateMessage: true,  // Button click - update existing message
         handler: async (context) => {
-          const { guildId, client } = context;
-          const guild = await client.guilds.fetch(guildId);
-          const pronounRoleIDs = await getGuildPronouns(guildId);
-
-          // Build pronoun list content
-          let pronounContent = '';
-          if (!pronounRoleIDs?.length) {
-            pronounContent = 'No pronoun roles configured.\n\nUse **Edit Pronouns** below to add roles.';
-          } else {
-            for (const roleId of pronounRoleIDs) {
-              const role = guild.roles.cache.get(roleId);
-              if (role) {
-                pronounContent += `<@&${roleId}>\n`;
-              }
-            }
-          }
-
-          // Action buttons
-          const actionRow = new ActionRowBuilder()
-            .addComponents(
-              new ButtonBuilder()
-                .setCustomId('prod_edit_pronouns')
-                .setLabel('Edit Pronouns')
-                .setEmoji('💙')
-                .setStyle(ButtonStyle.Secondary)
-            );
-
-          // Navigation row
-          const navRow = new ActionRowBuilder()
-            .addComponents(
-              new ButtonBuilder()
-                .setCustomId('prod_manage_pronouns_timezones')
-                .setLabel('← Pronouns & Timezones')
-                .setStyle(ButtonStyle.Secondary)
-            );
-
-          // Build LEAN container
-          const containerComponents = [
-            { type: 10, content: '## 💜 Pronoun Roles | Server Identity' },
-            { type: 14 }, // Separator
-            { type: 10, content: `> **\`💜 Configured Roles\`**` },
-            { type: 10, content: pronounContent },
-            { type: 14 }, // Separator
-            actionRow.toJSON(),
-            { type: 14 }, // Separator before navigation
-            navRow.toJSON()
-          ];
-
-          return {
-            components: [{
-              type: 17, // Container
-              accent_color: 0x9B59B6, // Purple - identity/pronouns theme
-              components: containerComponents
-            }]
-          };
+          return await buildPronounsViewMenu(context.guildId, context.client);
         }
       })(req, res, client);
     } else if (custom_id === 'prod_view_tribes') {
@@ -18392,48 +18280,12 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'prod_edit_timezones') {
-      // Show role select menu for timezone editing
+      // Show role select menu for timezone editing with LEAN design
       return ButtonHandlerFactory.create({
         id: 'prod_edit_timezones',
         updateMessage: true,  // Button click - update existing message
         handler: async (context) => {
-          const { guildId } = context;
-          const timezones = await getGuildTimezones(guildId);
-
-          // Get existing timezone role IDs
-          const existingTimezoneRoles = Object.keys(timezones);
-
-          // Use Discord.js RoleSelectMenuBuilder for better compatibility
-          const roleSelect = new RoleSelectMenuBuilder()
-            .setCustomId('prod_edit_timezones_select')
-            .setPlaceholder('Select roles to add/remove as timezone roles')
-            .setMinValues(0)
-            .setMaxValues(25);
-
-          // Set default values if any exist (limited to Discord's 25 role maximum)
-          if (existingTimezoneRoles.length > 0) {
-            const limitedRoles = existingTimezoneRoles.slice(0, 25);
-            roleSelect.setDefaultRoles(limitedRoles);
-          }
-
-          const row = new ActionRowBuilder().addComponents(roleSelect);
-
-          return {
-            components: [{
-              type: 17, // Container
-              accent_color: 0x3498DB, // Blue - global/time theme
-              components: [
-                {
-                  type: 10, // Text Display
-                  content: '## Edit Timezone Roles\n\nSelect which roles should be timezone roles. Currently selected roles are already ticked. Add or remove roles as needed.\n\n**Note:** If you add any new timezones, you need to set the offset afterwards using the \'Add Timezone\' button.'
-                },
-                {
-                  type: 14 // Separator
-                },
-                row.toJSON()
-              ]
-            }]
-          };
+          return await buildTimezoneEditMenu(context.guildId);
         }
       })(req, res, client);
     } else if (custom_id === 'prod_edit_pronouns') {

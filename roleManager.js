@@ -1824,6 +1824,169 @@ function generateSetupResponseV2(results) {
 }
 
 /**
+ * Build pronoun roles view menu with LEAN UI design
+ * @param {string} guildId - Discord guild ID
+ * @param {Object} client - Discord.js client
+ * @returns {Object} Components V2 container structure
+ */
+async function buildPronounsViewMenu(guildId, client) {
+    const guild = await client.guilds.fetch(guildId);
+    const pronounRoleIDs = await getGuildPronouns(guildId);
+
+    // Build pronoun list content
+    let pronounContent = '';
+    if (!pronounRoleIDs?.length) {
+        pronounContent = 'No pronoun roles configured.\n\nUse **Edit Pronouns** from the main Pronouns & Timezones menu to add roles.';
+    } else {
+        for (const roleId of pronounRoleIDs) {
+            const role = guild.roles.cache.get(roleId);
+            if (role) {
+                pronounContent += `<@&${roleId}>\n`;
+            }
+        }
+    }
+
+    // Navigation row only (no action buttons)
+    const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import('discord.js');
+    const navRow = new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('prod_manage_pronouns_timezones')
+                .setLabel('← Pronouns & Timezones')
+                .setStyle(ButtonStyle.Secondary)
+        );
+
+    // Build LEAN container
+    const containerComponents = [
+        { type: 10, content: '## 💜 Pronouns | Roles for Castlist' },
+        { type: 14 }, // Separator
+        { type: 10, content: `> **\`💜 Configured Roles\`**` },
+        { type: 10, content: pronounContent },
+        { type: 14 }, // Separator before navigation
+        navRow.toJSON()
+    ];
+
+    return {
+        components: [{
+            type: 17, // Container
+            accent_color: 0x9B59B6, // Purple - identity/pronouns theme
+            components: containerComponents
+        }]
+    };
+}
+
+/**
+ * Build timezone roles view menu with LEAN UI design
+ * @param {string} guildId - Discord guild ID
+ * @param {Object} client - Discord.js client
+ * @returns {Object} Components V2 container structure
+ */
+async function buildTimezonesViewMenu(guildId, client) {
+    const guild = await client.guilds.fetch(guildId);
+    const timezones = await getGuildTimezones(guildId);
+
+    // Build timezone list content
+    let timezoneContent = '';
+    if (!Object.keys(timezones).length) {
+        timezoneContent = 'No timezone roles configured.\n\nUse **Edit Timezones** or **Add Timezone** from the main Pronouns & Timezones menu to configure roles.';
+    } else {
+        for (const [roleId, timezoneData] of Object.entries(timezones)) {
+            const role = guild.roles.cache.get(roleId);
+            if (role) {
+                const offset = timezoneData.offset;
+                const offsetStr = offset >= 0 ? `UTC+${offset}` : `UTC${offset}`;
+                timezoneContent += `<@&${roleId}> - ${offsetStr}\n`;
+            }
+        }
+    }
+
+    // Navigation row only (no action buttons)
+    const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import('discord.js');
+    const navRow = new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('prod_manage_pronouns_timezones')
+                .setLabel('← Pronouns & Timezones')
+                .setStyle(ButtonStyle.Secondary)
+        );
+
+    // Build LEAN container
+    const containerComponents = [
+        { type: 10, content: '## 🌍 Timezone Roles | Global Time Configuration' },
+        { type: 14 }, // Separator
+        { type: 10, content: `> **\`🌍 Configured Roles\`**` },
+        { type: 10, content: timezoneContent },
+        { type: 14 }, // Separator before navigation
+        navRow.toJSON()
+    ];
+
+    return {
+        components: [{
+            type: 17, // Container
+            accent_color: 0x3498DB, // Blue - global/time theme
+            components: containerComponents
+        }]
+    };
+}
+
+/**
+ * Build timezone edit menu with LEAN UI design
+ * @param {string} guildId - Discord guild ID
+ * @returns {Object} Components V2 container structure
+ */
+async function buildTimezoneEditMenu(guildId) {
+    const timezones = await getGuildTimezones(guildId);
+
+    // Get existing timezone role IDs
+    const existingTimezoneRoles = Object.keys(timezones);
+
+    // Use Discord.js RoleSelectMenuBuilder for better compatibility
+    const { ActionRowBuilder, ButtonBuilder, ButtonStyle, RoleSelectMenuBuilder } = await import('discord.js');
+    const roleSelect = new RoleSelectMenuBuilder()
+        .setCustomId('prod_edit_timezones_select')
+        .setPlaceholder('Select roles to add/remove as timezone roles')
+        .setMinValues(0)
+        .setMaxValues(25);
+
+    // Set default values if any exist (limited to Discord's 25 role maximum)
+    if (existingTimezoneRoles.length > 0) {
+        const limitedRoles = existingTimezoneRoles.slice(0, 25);
+        roleSelect.setDefaultRoles(limitedRoles);
+    }
+
+    const selectRow = new ActionRowBuilder().addComponents(roleSelect);
+
+    // Navigation row
+    const navRow = new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('prod_manage_pronouns_timezones')
+                .setLabel('← Pronouns & Timezones')
+                .setStyle(ButtonStyle.Secondary)
+        );
+
+    // Build LEAN container
+    const containerComponents = [
+        { type: 10, content: '## ⏲️ Edit Timezone Roles | Bulk Modify' },
+        { type: 14 }, // Separator
+        { type: 10, content: `> **\`⏲️ Role Selection\`**` },
+        { type: 10, content: 'Select which roles should be timezone roles. Currently selected roles are already ticked. Add or remove roles as needed.\n\n**Note:** If you add any new timezones, you need to set the offset afterwards using the \'Add Timezone\' button.' },
+        { type: 14 }, // Separator
+        selectRow.toJSON(),
+        { type: 14 }, // Separator before navigation
+        navRow.toJSON()
+    ];
+
+    return {
+        components: [{
+            type: 17, // Container
+            accent_color: 0x3498DB, // Blue - global/time theme
+            components: containerComponents
+        }]
+    };
+}
+
+/**
  * Create timezone reaction message with emoji-based role selection
  * Handles Discord's 20-reaction limit gracefully
  * @param {Object} guildData - Guild data with timezone roles
@@ -2309,5 +2472,8 @@ export {
     testRoleHierarchy,
     nukeRoles,
     checkForDuplicateTimezones,
-    consolidateTimezoneRoles
+    consolidateTimezoneRoles,
+    buildPronounsViewMenu,
+    buildTimezonesViewMenu,
+    buildTimezoneEditMenu
 };
