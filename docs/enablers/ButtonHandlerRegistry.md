@@ -7,14 +7,20 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 ### **Main Production Menu Buttons**
 | Custom ID | Label | Location | Handler Function | Status |
 |-----------|-------|----------|------------------|--------|
-| `prod_setup` | 🪛 Setup | app.js:~3200 | Direct handler | ✅ Active |
-| `prod_manage_pronouns_timezones` | 💜 Manage Pronouns/Timezones | app.js:~3300 | Direct handler | ✅ Active |
+| `prod_setup` | 🪛 Tools | menuBuilder.js:~12 | MenuBuilder | ✅ Active |
 | `prod_manage_tribes` | 🔥 Manage Tribes | app.js:~3400 | Direct handler | ✅ Active |
 | `admin_manage_player` | 🧑‍🤝‍🧑 Manage Players | app.js:~3500 | Direct handler | ✅ Active |
 | `prod_season_applications` | 📝 Season Applications | app.js:~3600 | Direct handler | ✅ Active |
 | `prod_setup_tycoons` | 💰 Tycoons | app.js:~3700 | Direct handler | ✅ Active |
 | `prod_player_menu` | 👤 My Profile | app.js:~4797 | Direct handler | ✅ Active |
 | `reece_stuff_menu` | 😌 Reece Stuff | app.js:~4022 | Direct handler | ✅ Active |
+
+### **Tools Menu Buttons** (Accessed via prod_setup)
+| Custom ID | Label | Location | Handler Function | Status |
+|-----------|-------|----------|------------------|--------|
+| `setup_castbot` | 🪛 Run Setup | app.js:TBD | Direct handler | ✅ Active |
+| `prod_manage_pronouns_timezones` | 💜 Pronouns & Timezones | app.js:~6328 | ButtonHandlerFactory | ✅ Active |
+| `prod_availability` | 🕐 Availability | app.js:~6425 | ButtonHandlerFactory | ✅ Active |
 
 ### **Reece Stuff Submenu Buttons**
 | Custom ID | Label | Location | Handler Function | Status |

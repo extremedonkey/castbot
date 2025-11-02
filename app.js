@@ -753,12 +753,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setCustomId('prod_manage_tribes')
       .setLabel('Tribes')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🔥'),
-    new ButtonBuilder()
-      .setCustomId('prod_manage_pronouns_timezones')
-      .setLabel('Pronouns & Timezones')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💜')
+      .setEmoji('🔥')
   );
   
   // Live Analytics button moved to Reece Stuff submenu
@@ -6380,7 +6375,14 @@ To fix this:
             );
 
           // Create Components V2 Container with LEAN design
-          const backRow = createBackToMainMenuButton();
+          const backRow = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('prod_setup')
+                .setLabel('← Tools')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('🪛')
+            );
 
           const pronounsTimezoneComponents = [
             {
@@ -6450,7 +6452,7 @@ To fix this:
                 .setStyle(ButtonStyle.Danger)
                 .setEmoji('🗑️')
             );
-          
+
           // Create Components V2 Container
           const availabilityComponents = [
             {
@@ -6470,9 +6472,16 @@ To fix this:
             },
             availabilityRow1.toJSON()
           ];
-          
-          // Add Back to Main Menu button
-          const backRow = createBackToMainMenuButton();
+
+          // Add Back to Tools button
+          const backRow = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('prod_setup')
+                .setLabel('← Tools')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('🪛')
+            );
           availabilityComponents.push(
             { type: 14 }, // Separator
             backRow.toJSON()

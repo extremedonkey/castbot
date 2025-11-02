@@ -288,7 +288,7 @@ export const BUTTON_REGISTRY = {
     emoji: '💜',
     style: 'Secondary',
     category: 'production_admin',
-    parent: 'production_menu'
+    parent: 'prod_setup'
   },
   'prod_view_timezones': {
     label: 'View Timezones',
@@ -2196,6 +2196,7 @@ export const BUTTON_REGISTRY = {
     emoji: '🕐',
     style: 'Secondary',
     category: 'admin',
+    parent: 'prod_setup',
     menu: 'availability_menu'
   },
   'prod_availability_react': {

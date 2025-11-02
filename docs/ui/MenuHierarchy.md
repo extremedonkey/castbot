@@ -21,8 +21,7 @@
 │  │      │  ├─ 📋 Castlists
 │  │      │  ├─ 📝 Season Applications [Secondary]
 │  │      │  ├─ 🧑‍🤝‍🧑 Players
-│  │      │  ├─ 🔥 Tribes
-│  │      │  └─ 💜 Pronouns & Timezones
+│  │      │  └─ 🔥 Tribes
 │  │      │
 │  │      ├─ 🦁 Idol Hunts, Challenges and Safari
 │  │      │  ├─ 🏪 Stores
@@ -32,7 +31,7 @@
 │  │      │  └─ 💰 Currency
 │  │      │
 │  │      ├─ 🚀 Advanced Features
-│  │      │  ├─ 🪛 Setup
+│  │      │  ├─ 🪛 Tools → 🪛 Tools Menu (Setup, Pronouns & Timezones, Availability)
 │  │      │  ├─ 🧮 Analytics [Reece Only]
 │  │      │  ├─ 🦁 Safari
 │  │      │  └─ 🪪 Player Menu [Preview]
@@ -66,6 +65,38 @@
 │  │  └─ ☢️ Nuke safariContent
 │  │
 │  └─ ← Menu [Back]
+│
+│
+├─ 🪛 Tools Menu [EPHEMERAL]
+│  │
+│  ├─ 🪛 Run Setup
+│  ├─ 💜 Pronouns & Timezones → 💜 Pronouns & Timezones Menu
+│  ├─ 🕐 Availability → 🕐 Availability Menu
+│  └─ ❓ Need Help? [Link]
+│
+│
+├─ 💜 Pronouns & Timezones Menu [EPHEMERAL]
+│  │
+│  ├─ 🌍 Timezone Management
+│  │  ├─ 🌍 View Timezones
+│  │  ├─ ⏲️ Bulk Modify (no offset)
+│  │  ├─ 🗺️ Custom Timezone
+│  │  └─ 👍 Post React for Timezones
+│  │
+│  ├─ 💜 Pronoun Management
+│  │  ├─ 💜 View Pronouns
+│  │  ├─ 💙 Edit Pronouns
+│  │  └─ 👍 Post React for Pronouns
+│  │
+│  └─ ← Tools [Back to Tools Menu]
+│
+│
+├─ 🕐 Availability Menu [EPHEMERAL]
+│  │
+│  ├─ 📅 Post Availability Times
+│  ├─ 👥 View Availability Groups
+│  ├─ 🗑️ Clear My Availability
+│  └─ ← Tools [Back to Tools Menu]
 │
 │
 ├─ 🦁 Safari Menu [EPHEMERAL]
@@ -140,6 +171,30 @@
 - **Purpose**: Server analytics, admin tools, danger zone
 - **Accent Color**: Blue (0x3498DB)
 
+### Tools Menu
+- **Access**: Admin only
+- **Visibility**: Ephemeral
+- **Location**: `menuBuilder.js` - MENU_REGISTRY['setup_menu']
+- **Purpose**: CastBot setup, pronoun/timezone management, availability system
+- **Accent Color**: Blue (0x3498DB)
+- **Back Navigation**: Returns to Production Menu
+
+### Pronouns & Timezones Menu
+- **Access**: Admin only
+- **Visibility**: Ephemeral
+- **Location**: `app.js` - `prod_manage_pronouns_timezones` handler
+- **Purpose**: Manage server pronoun and timezone roles
+- **Accent Color**: Purple (0x9B59B6)
+- **Back Navigation**: Returns to Tools Menu
+
+### Availability Menu
+- **Access**: Admin only
+- **Visibility**: Ephemeral
+- **Location**: `app.js` - `prod_availability` handler
+- **Purpose**: Player availability management system
+- **Accent Color**: Blue (0x3498DB)
+- **Back Navigation**: Returns to Tools Menu
+
 ---
 
 ## Navigation Patterns
@@ -175,18 +230,42 @@ const backButton = new ButtonBuilder()
 - **Back Target**: Production Menu
 
 ### Player Management
-- **Production Menu**: Players, Tribes, Pronouns & Timezones
+- **Production Menu**: Players, Tribes
 - **Submenus**: Individual management screens
 - **Back Target**: Production Menu
 
+### Tools & Setup
+- **Production Menu**: Tools (button that opens Tools Menu)
+- **Tools Menu**: Run Setup, Pronouns & Timezones, Availability, Need Help?
+- **Submenus**: Pronouns & Timezones Menu, Availability Menu
+- **Back Target**: Tools Menu → Production Menu
+
 ### Analytics & Admin
-- **Production Menu**: Analytics (Reece only), Setup
+- **Production Menu**: Analytics (Reece only)
 - **Submenus**: Analytics Menu (Reece only)
 - **Back Target**: Production Menu
 
 ---
 
 ## Recent Changes
+
+### 2025-02-11: Tools Menu Reorganization
+**Rationale**: Consolidate setup-related features (initial setup, pronouns/timezones, availability) under a single Tools menu to reduce Production Menu clutter and create logical grouping.
+
+**Changes**:
+1. Moved "Pronouns & Timezones" button from Production Menu to Tools Menu
+2. Updated Pronouns & Timezones Menu back button: `prod_menu_back` → `prod_setup`
+3. Updated Availability Menu back button: `prod_menu_back` → `prod_setup`
+4. Updated BUTTON_REGISTRY parent fields:
+   - `prod_manage_pronouns_timezones`: `parent: 'production_menu'` → `parent: 'prod_setup'`
+   - `prod_availability`: Added `parent: 'prod_setup'`
+5. Updated MenuHierarchy.md with new Tools Menu structure and submenu details
+
+**New Menu Flow**:
+```
+Production Menu → Tools → Pronouns & Timezones Menu
+                       → Availability Menu
+```
 
 ### 2025-01-19: Safari Feature Reorganization
 **Rationale**: Safari features (Stores, Items, Rounds, Currency) can be used independently for Challenges and Idol Hunts without full Safari implementation (see [SeasonLifecycle.md](../concepts/SeasonLifecycle.md)).

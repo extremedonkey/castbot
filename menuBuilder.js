@@ -34,6 +34,13 @@ export const MENU_REGISTRY = {
               },
               {
                 type: 2, // Button
+                custom_id: 'prod_manage_pronouns_timezones',
+                label: 'Pronouns & Timezones',
+                style: 2, // Secondary (Grey)
+                emoji: { name: '💜' }
+              },
+              {
+                type: 2, // Button
                 custom_id: 'prod_availability',
                 label: 'Availability',
                 style: 2, // Secondary (Grey)
