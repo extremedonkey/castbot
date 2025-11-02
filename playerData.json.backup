@@ -13907,112 +13907,24 @@
     }
   },
   "1412422613774368851": {
-    "players": {},
     "tribes": {
-      "1434383372523798539": {
-        "emoji": "🆕",
-        "showPlayerEmojis": false,
-        "color": "#f1c40f",
-        "analyticsName": "🆕 newTribe 🆕",
-        "analyticsAdded": 1762093686152
-      },
-      "1434383335127388221": {
-        "name": "Tribe 1434383335127388221",
-        "emoji": "🏕️",
-        "color": "#e74c3c",
-        "castlistIds": [
-          "default"
-        ],
-        "castlist": "Active Castlist"
-      },
-      "1434551680464064623": {
-        "emoji": "🐛",
-        "showPlayerEmojis": false,
-        "color": "#3498db",
-        "analyticsName": "🐛 midTribe 🐛",
-        "analyticsAdded": 1762094212014
-      },
-      "1412424780568596545": {
-        "emoji": "🤖",
-        "castlist": "midTribe",
-        "showPlayerEmojis": false,
-        "color": null,
-        "analyticsName": "🤖 CastBot 🤖",
-        "analyticsAdded": 1762094454193,
-        "castlistIds": [
-          "castlist_1762094575715_system"
-        ]
-      },
-      "1434381688267472909": {
-        "emoji": "👨‍💻",
-        "castlist": "default",
-        "showPlayerEmojis": false,
-        "color": null,
-        "analyticsName": "👨‍💻 CastBot-Dev (Dynamic Castlist) 👨‍💻",
-        "analyticsAdded": 1762094693623,
-        "castlistIds": [
-          "default"
-        ]
-      },
-      "1434555299787837521": {
-        "emoji": "🧙‍♂️",
-        "castlist": "Kadabra's List",
-        "showPlayerEmojis": false,
-        "color": "#9b59b6",
-        "analyticsName": "🧙‍♂️ 🔮Psychic Conversion 🧙‍♂️",
-        "analyticsAdded": 1762095086286,
-        "castlistIds": [
-          "castlist_1762095168497_system",
-          "default"
-        ]
-      },
-      "1434561196723277894": {
-        "emoji": "💤",
-        "castlist": "default",
-        "showPlayerEmojis": false,
-        "color": "#2ecc71",
-        "analyticsName": "💤 defaultTest 💤",
-        "analyticsAdded": 1762096482647,
-        "castlistIds": [
-          "default"
-        ]
-      },
       "1434563860316291154": {
-        "name": "Tribe 1434563860316291154",
-        "emoji": "🏕️",
+        "emoji": "☀️",
+        "castlist": "default",
+        "showPlayerEmojis": false,
         "color": "#f1c40f",
-        "castlistIds": [
-          "default"
-        ],
-        "castlist": "Active Castlist"
+        "analyticsName": "☀️ a brand new day ☀️ ☀️",
+        "analyticsAdded": 1762099146554
       }
     },
+    "players": {},
     "timezones": {},
-    "pronounRoleIDs": [],
-    "serverName": "CastBot Regression Orange",
-    "icon": "https://cdn.discordapp.com/icons/1412422613774368851/e3c4d9107556739bad258aeb536a6f35.webp",
-    "ownerId": "391415444084490240",
-    "memberCount": 5,
-    "description": null,
-    "vanityURLCode": null,
-    "preferredLocale": "en-US",
-    "partnered": false,
-    "verified": false,
-    "createdTimestamp": 1756818192667,
-    "lastUpdated": 1762055630879,
-    "ownerInfo": {
-      "username": "extremedonkey",
-      "globalName": "Reece",
-      "discriminator": "0",
-      "tag": "extremedonkey"
-    },
-    "analyticsVersion": "1.0",
     "castlistConfigs": {
       "default": {
         "id": "default",
         "name": "Active Castlist",
         "type": "system",
-        "createdAt": 1762093893407,
+        "createdAt": 1762099305882,
         "createdBy": "system",
         "settings": {
           "sortStrategy": "alphabetical",
@@ -14024,46 +13936,6 @@
           "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
           "emoji": "📋",
           "isDefault": true
-        },
-        "modifiedAt": 1762097717279,
-        "modifiedBy": "system"
-      },
-      "castlist_1762094575715_system": {
-        "id": "castlist_1762094575715_system",
-        "name": "midTribe",
-        "type": "system",
-        "createdAt": 1762094575715,
-        "createdBy": "migration",
-        "settings": {
-          "sortStrategy": "alphabetical",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public"
-        },
-        "metadata": {
-          "description": "Upgraded from legacy castlist 'midTribe'",
-          "emoji": "🏕️",
-          "migratedFrom": "virtual_bWlkVHJpYmU",
-          "migrationDate": 1762094575715
-        }
-      },
-      "castlist_1762095168497_system": {
-        "id": "castlist_1762095168497_system",
-        "name": "Kadabra's List",
-        "type": "system",
-        "createdAt": 1762095168497,
-        "createdBy": "migration",
-        "settings": {
-          "sortStrategy": "alphabetical",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public"
-        },
-        "metadata": {
-          "description": "Upgraded from legacy castlist 'Kadabra's List'",
-          "emoji": "📋",
-          "migratedFrom": "virtual_S2FkYWJyYSdzIExpc3Q",
-          "migrationDate": 1762095168497
         }
       }
     }
