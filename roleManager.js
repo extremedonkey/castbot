@@ -2339,9 +2339,79 @@ function formatOffset(offset) {
  * @param {Object} client - Discord.js client instance
  * @returns {Object} Results object with counts and details
  */
+/**
+ * Helper: Escape special regex characters
+ * @param {string} str - String to escape
+ * @returns {string} Escaped string safe for regex
+ */
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Determines if a Discord role matches any timezone pattern in dstState.json
+ * Does NOT require registration in playerData - pattern match is sufficient
+ *
+ * @param {Object} role - Discord.js Role object with .id and .name
+ * @param {Object} dstState - Loaded dstState.json object
+ * @returns {Object|false} { timezoneId, reason, matchType } or false
+ */
+function isTimezoneRole(role, dstState) {
+    const roleName = role.name;
+
+    for (const [timezoneId, tzInfo] of Object.entries(dstState)) {
+        // TIER 1: Exact match on current standard format
+        if (roleName === tzInfo.roleFormat) {
+            return {
+                timezoneId,
+                reason: `Exact match on roleFormat: "${tzInfo.roleFormat}"`,
+                matchType: 'exact'
+            };
+        }
+
+        // TIER 2: Exact match on legacy formats
+        const legacyFormats = [
+            tzInfo.standardName,     // "PST (UTC-8)"
+            tzInfo.standardNameDST   // "PDT (UTC-7)" (if exists)
+        ].filter(Boolean);
+
+        for (const legacyFormat of legacyFormats) {
+            if (roleName === legacyFormat) {
+                return {
+                    timezoneId,
+                    reason: `Exact match on legacy format: "${legacyFormat}"`,
+                    matchType: 'exact_legacy'
+                };
+            }
+        }
+
+        // TIER 3: Word boundary matching on abbreviations
+        // Handles "My PST Role", "PST WHATEVER", etc.
+        const abbrevs = [
+            tzInfo.standardAbbrev,   // "PST"
+            tzInfo.dstAbbrev         // "PDT" (if exists)
+        ].filter(Boolean);
+
+        for (const abbrev of abbrevs) {
+            // Use word boundary to avoid false positives
+            // e.g., "PST" matches "PST", "My PST Role" but not "PAST"
+            const wordBoundaryRegex = new RegExp(`\\b${escapeRegex(abbrev)}\\b`, 'i');
+            if (wordBoundaryRegex.test(roleName)) {
+                return {
+                    timezoneId,
+                    reason: `Abbreviation match: "${abbrev}" in "${roleName}"`,
+                    matchType: 'fuzzy'
+                };
+            }
+        }
+    }
+
+    return false;
+}
+
 async function nukeRoles(guildId, client) {
     console.log(`💥 DEBUG: Starting role nuke for guild ${guildId}`);
-    
+
     const results = {
         success: true,
         pronounsCleared: 0,
@@ -2351,55 +2421,82 @@ async function nukeRoles(guildId, client) {
     };
 
     try {
-        // 1. Clear CastBot storage data for this guild
-        console.log('🗃️ DEBUG: Clearing CastBot storage data...');
+        // Load playerData once for all operations
         const playerData = await loadPlayerData();
-        
-        if (playerData[guildId]) {
-            // Clear pronoun and timezone role arrays
-            if (playerData[guildId].pronounRoleIDs) {
-                results.pronounsCleared = playerData[guildId].pronounRoleIDs.length;
-                playerData[guildId].pronounRoleIDs = [];
+        const guildData = playerData[guildId];
+
+        if (!guildData) {
+            console.log('⚠️ DEBUG: No guild data found in playerData.json');
+        }
+
+        // PHASE 1: Clear ALL timezone entries from playerData
+        // (Aggressive approach - nuke the entire timezones object)
+        console.log('🗃️ DEBUG: Phase 1 - Clearing CastBot storage data...');
+
+        if (guildData) {
+            // Clear pronouns
+            if (guildData.pronounRoleIDs) {
+                results.pronounsCleared = guildData.pronounRoleIDs.length;
+                guildData.pronounRoleIDs = [];
             }
-            
-            if (playerData[guildId].timezones) {
-                results.timezonesCleared = Object.keys(playerData[guildId].timezones).length;
-                playerData[guildId].timezones = {};
+
+            // Clear ALL timezones (we'll verify against Discord roles in Phase 3)
+            if (guildData.timezones) {
+                results.timezonesCleared = Object.keys(guildData.timezones).length;
+                guildData.timezones = {};
             }
-            
-            // Save the updated data
+
             await savePlayerData(playerData);
             console.log(`✅ DEBUG: Cleared ${results.pronounsCleared} pronouns and ${results.timezonesCleared} timezones from storage`);
         }
 
-        // 2. Delete Discord roles that match CastBot patterns
-        console.log('🗑️ DEBUG: Deleting Discord roles...');
+        // PHASE 2: Scan Discord roles and mark for deletion
+        console.log('🗑️ DEBUG: Phase 2 - Scanning Discord roles for deletion...');
         const guild = client?.guilds?.cache?.get(guildId);
-        
+
         if (!guild) {
             results.errors.push('Could not access guild - Discord client may not be available');
             return results;
         }
 
+        // Load dstState.json for timezone detection
+        const dstState = await loadDSTState();
         const roles = guild.roles.cache;
         const rolesToDelete = [];
+        const roleIdsToDelete = new Set(); // Track IDs for playerData cleanup
 
-        // Find roles to delete
+        // Find roles to delete via pattern matching
         roles.forEach(role => {
-            const shouldDelete = isCastBotRole(role);
-            if (shouldDelete) {
+            // Check if timezone role (uses dstState.json)
+            const tzMatch = isTimezoneRole(role, dstState);
+            if (tzMatch) {
                 rolesToDelete.push(role);
-                console.log(`🎯 DEBUG: Marked for deletion: ${role.name} (${role.id}) - ${shouldDelete.reason}`);
+                roleIdsToDelete.add(role.id);
+                console.log(`🎯 DEBUG: Marked for deletion: ${role.name} (${role.id}) - ${tzMatch.reason}`);
+                return;
+            }
+
+            // Check if pronoun role
+            const pronounName = role.name;
+            if (PRONOUN_COLORS.hasOwnProperty(pronounName)) {
+                const expectedColor = PRONOUN_COLORS[pronounName];
+                if (role.color === expectedColor) {
+                    rolesToDelete.push(role);
+                    roleIdsToDelete.add(role.id);
+                    console.log(`🎯 DEBUG: Marked for deletion: ${role.name} (${role.id}) - Pronoun name and color match`);
+                    return;
+                }
             }
         });
 
-        // Delete the roles
+        // PHASE 3: Delete Discord roles
+        console.log(`🗑️ DEBUG: Phase 3 - Deleting ${rolesToDelete.length} Discord roles...`);
         for (const role of rolesToDelete) {
             try {
                 await role.delete('Nuke Roles - Testing reset');
                 results.rolesDeleted++;
                 console.log(`🗑️ DEBUG: Deleted role: ${role.name}`);
-                
+
                 // Small delay to avoid rate limits
                 await new Promise(resolve => setTimeout(resolve, 100));
             } catch (error) {
@@ -2409,8 +2506,39 @@ async function nukeRoles(guildId, client) {
             }
         }
 
+        // PHASE 4: Final cleanup - Remove any remaining references to deleted role IDs
+        // This catches edge cases where roles were in playerData but not in our cleared sections
+        console.log('🧹 DEBUG: Phase 4 - Final playerData cleanup...');
+        if (guildData && roleIdsToDelete.size > 0) {
+            let extraCleanupCount = 0;
+
+            // Check for orphaned timezone entries (shouldn't happen after Phase 1, but safety check)
+            if (guildData.timezones) {
+                for (const roleId of Object.keys(guildData.timezones)) {
+                    if (roleIdsToDelete.has(roleId)) {
+                        delete guildData.timezones[roleId];
+                        extraCleanupCount++;
+                    }
+                }
+            }
+
+            // Check for orphaned pronoun entries
+            if (guildData.pronounRoleIDs) {
+                const beforeLength = guildData.pronounRoleIDs.length;
+                guildData.pronounRoleIDs = guildData.pronounRoleIDs.filter(id => !roleIdsToDelete.has(id));
+                extraCleanupCount += beforeLength - guildData.pronounRoleIDs.length;
+            }
+
+            if (extraCleanupCount > 0) {
+                await savePlayerData(playerData);
+                console.log(`🧹 DEBUG: Cleaned up ${extraCleanupCount} additional playerData references`);
+            } else {
+                console.log('✅ DEBUG: No additional cleanup needed - all references already cleared');
+            }
+        }
+
         console.log(`💥 DEBUG: Nuke complete! Deleted ${results.rolesDeleted} roles, cleared ${results.pronounsCleared} pronouns and ${results.timezonesCleared} timezones`);
-        
+
     } catch (error) {
         console.error('❌ DEBUG: Error during role nuke:', error);
         results.success = false;
@@ -2418,42 +2546,6 @@ async function nukeRoles(guildId, client) {
     }
 
     return results;
-}
-
-/**
- * Determines if a role was created by CastBot and should be deleted during nuke
- * @param {Object} role - Discord role object
- * @returns {Object|false} Object with reason if should delete, false otherwise
- */
-function isCastBotRole(role) {
-    // Check timezone pattern: Name like "PST (UTC-8)" or "AEDT (UTC+11)"
-    const timezonePattern = /^[A-Z]{2,4} \(UTC[+-][\d:]+\)$/;
-    if (timezonePattern.test(role.name)) {
-        return { reason: 'Timezone pattern match' };
-    }
-
-    // Check for GMT+X timezone pattern specifically (handles cases like "GMT+8 (UTC+8)")
-    const gmtPattern = /^GMT[+-]\d+(\.\d+)? \(UTC[+-]\d+(\:\d+)?\)$/;
-    if (gmtPattern.test(role.name)) {
-        return { reason: 'GMT timezone pattern match' };
-    }
-
-    // Check for standalone UTC patterns that might be timezone roles
-    const standaloneUtcPattern = /^UTC[+-]\d+(\:\d+)?$/;
-    if (standaloneUtcPattern.test(role.name)) {
-        return { reason: 'Standalone UTC timezone pattern match' };
-    }
-
-    // Check pronoun pattern: If role name matches our standard pronouns AND has our color
-    const pronounName = role.name;
-    if (PRONOUN_COLORS.hasOwnProperty(pronounName)) {
-        const expectedColor = PRONOUN_COLORS[pronounName];
-        if (role.color === expectedColor) {
-            return { reason: 'Pronoun name and color match' };
-        }
-    }
-
-    return false;
 }
 
 export {
@@ -2470,6 +2562,7 @@ export {
     canBotManageRoles,
     generateHierarchyWarning,
     testRoleHierarchy,
+    isTimezoneRole,
     nukeRoles,
     checkForDuplicateTimezones,
     consolidateTimezoneRoles,
