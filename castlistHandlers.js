@@ -663,7 +663,8 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
 
           // Update legacy field (set to first castlist or this one)
           if (!tribes[roleId].castlist || tribes[roleId].castlistIds[0] === actualCastlistId) {
-            tribes[roleId].castlist = castlistName;
+            // CRITICAL: For default castlist, always use 'default' string, not 'Active Castlist'
+            tribes[roleId].castlist = (actualCastlistId === 'default') ? 'default' : castlistName;
           }
         }
         console.log(`[CASTLIST] Added tribe ${roleId} to castlist (in memory)`);
