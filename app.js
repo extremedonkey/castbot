@@ -6378,29 +6378,35 @@ To fix this:
                 .setEmoji('👍')
             );
 
-          // Create Components V2 Container
+          // Create Components V2 Container with LEAN design
+          const backRow = createBackToMainMenuButton();
+
           const pronounsTimezoneComponents = [
             {
               type: 10, // Text Display component
-              content: `## Manage Pronouns & Timezones | ${guild.name}`
+              content: `## 💜 Pronouns & Timezones | Role Management`
             },
             {
               type: 14 // Separator
             },
             {
               type: 10, // Text Display component
-              content: `> **Select an action to manage your server's pronoun and timezone roles:**`
+              content: `> **\`🌍 Timezone Management\`**`
             },
             managementRow1.toJSON(),
-            managementRow2.toJSON()
-          ];
-
-          // Always add Back to Main Menu button
-          const backRow = createBackToMainMenuButton();
-          pronounsTimezoneComponents.push(
-            { type: 14 }, // Separator
+            {
+              type: 14 // Separator
+            },
+            {
+              type: 10, // Text Display component
+              content: `> **\`💜 Pronoun Management\`**`
+            },
+            managementRow2.toJSON(),
+            {
+              type: 14 // Separator before navigation
+            },
             backRow.toJSON()
-          );
+          ];
 
           const pronounsTimezoneContainer = {
             type: 17, // Container component
