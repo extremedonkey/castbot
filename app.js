@@ -8307,15 +8307,14 @@ To fix this:
       })(req, res, client);
     } else if (custom_id === 'reece_stuff_menu') {
       // Handle Reece Stuff submenu - special admin features (MIGRATED TO FACTORY)
-      const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(req.body.channel_id);
-      
       return ButtonHandlerFactory.create({
         id: 'reece_stuff_menu',
-        updateMessage: shouldUpdateMessage,
+        updateMessage: true,  // Button clicks always update (per CLAUDE.md)
+        deferred: true,       // Required: loads 933KB playerData + safariContent + Discord API calls
         handler: async (context) => {
           console.log(`🔍 START: reece_stuff_menu - user ${context.userId}`);
           MenuBuilder.trackLegacyMenu('reece_stuff_menu', 'Analytics and admin tools menu');
-          
+
           // Security check - only allow specific Discord ID
           if (context.userId !== '391415444084490240') {
             console.log(`❌ ACCESS DENIED: reece_stuff_menu - user ${context.userId} not authorized`);
@@ -8324,10 +8323,10 @@ To fix this:
               ephemeral: true
             };
           }
-          
-          // Create Reece Stuff submenu
+
+          // Create Reece Stuff submenu (loads playerData.json 933KB + safariContent.json)
           const reeceMenuData = await createReeceStuffMenu(context.guildId, context.channelId);
-          
+
           console.log(`✅ SUCCESS: reece_stuff_menu - completed`);
           return {
             ...reeceMenuData,
