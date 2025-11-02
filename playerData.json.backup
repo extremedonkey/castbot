@@ -1917,9 +1917,6 @@
         "standardName": "JST (UTC+9)",
         "timezoneId": "JST"
       },
-      "1368969393819746336": {
-        "offset": -3.5
-      },
       "1368969402967654420": {
         "offset": 4
       },
@@ -13911,7 +13908,58 @@
   },
   "1412422613774368851": {
     "players": {},
-    "tribes": {},
+    "tribes": {
+      "1434383372523798539": {
+        "emoji": "🆕",
+        "showPlayerEmojis": false,
+        "color": "#f1c40f",
+        "analyticsName": "🆕 newTribe 🆕",
+        "analyticsAdded": 1762093686152
+      },
+      "1434383335127388221": {
+        "name": "Tribe 1434383335127388221",
+        "emoji": "🏕️",
+        "color": "#e74c3c",
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "Active Castlist"
+      },
+      "1434551680464064623": {
+        "emoji": "🐛",
+        "showPlayerEmojis": false,
+        "color": "#3498db",
+        "analyticsName": "🐛 midTribe 🐛",
+        "analyticsAdded": 1762094212014
+      },
+      "1412424780568596545": {
+        "emoji": "🤖",
+        "castlist": "midTribe",
+        "showPlayerEmojis": false,
+        "color": null,
+        "analyticsName": "🤖 CastBot 🤖",
+        "analyticsAdded": 1762094454193,
+        "castlistIds": [
+          "castlist_1762094575715_system"
+        ]
+      },
+      "1434381688267472909": {
+        "emoji": "👨‍💻",
+        "castlist": "default",
+        "showPlayerEmojis": false,
+        "color": null,
+        "analyticsName": "👨‍💻 CastBot-Dev (Dynamic Castlist) 👨‍💻",
+        "analyticsAdded": 1762094693623
+      },
+      "1434555299787837521": {
+        "emoji": "🧙‍♂️",
+        "castlist": "Kadabra's List",
+        "showPlayerEmojis": false,
+        "color": "#9b59b6",
+        "analyticsName": "🧙‍♂️ 🔮Psychic Conversion 🧙‍♂️",
+        "analyticsAdded": 1762095086286
+      }
+    },
     "timezones": {},
     "pronounRoleIDs": [],
     "serverName": "CastBot Regression Orange",
@@ -13931,6 +13979,47 @@
       "discriminator": "0",
       "tag": "extremedonkey"
     },
-    "analyticsVersion": "1.0"
+    "analyticsVersion": "1.0",
+    "castlistConfigs": {
+      "default": {
+        "id": "default",
+        "name": "Active Castlist",
+        "type": "system",
+        "createdAt": 1762093893407,
+        "createdBy": "system",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
+          "emoji": "📋",
+          "isDefault": true
+        },
+        "modifiedAt": 1762094128782,
+        "modifiedBy": "system"
+      },
+      "castlist_1762094575715_system": {
+        "id": "castlist_1762094575715_system",
+        "name": "midTribe",
+        "type": "system",
+        "createdAt": 1762094575715,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Upgraded from legacy castlist 'midTribe'",
+          "emoji": "🏕️",
+          "migratedFrom": "virtual_bWlkVHJpYmU",
+          "migrationDate": 1762094575715
+        }
+      }
+    }
   }
 }
