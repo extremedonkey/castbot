@@ -110,7 +110,8 @@ import {
   consolidateTimezoneRoles,
   buildPronounsViewMenu,
   buildTimezonesViewMenu,
-  buildTimezoneEditMenu
+  buildTimezoneEditMenu,
+  buildTribesViewMenu
 } from './roleManager.js';
 import { 
   createPlayerInventoryDisplay,
@@ -18227,74 +18228,13 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
     } else if (custom_id === 'prod_view_tribes') {
       // Display all tribes organized by castlist
-      try {
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        const playerData = await loadPlayerData();
-        const tribes = playerData[guildId]?.tribes || {};
-        
-        if (!Object.keys(tribes).length) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '## Tribes\n\nNo tribes found. Use **Add Tribe** to create some.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
+      return ButtonHandlerFactory.create({
+        id: 'prod_view_tribes',
+        updateMessage: true,  // Button click - update existing message
+        handler: async (context) => {
+          return await buildTribesViewMenu(context.guildId, context.client);
         }
-        
-        // Group tribes by castlist
-        const castlistGroups = {};
-        for (const [roleId, tribeData] of Object.entries(tribes)) {
-          if (!tribeData) continue; // Skip null/undefined tribe entries
-          const castlistName = tribeData.castlist || 'default';
-          if (!castlistGroups[castlistName]) {
-            castlistGroups[castlistName] = [];
-          }
-          castlistGroups[castlistName].push({ roleId, ...tribeData });
-        }
-        
-        let tribeList = '## Tribes\n\n';
-        
-        // Sort castlists with default first
-        const sortedCastlists = Object.keys(castlistGroups).sort((a, b) => {
-          if (a === 'default') return -1;
-          if (b === 'default') return 1;
-          return a.localeCompare(b);
-        });
-        
-        for (const castlistName of sortedCastlists) {
-          const castlistDisplay = castlistName === 'default' ? 'Castlist (default)' : `Castlist (${castlistName})`;
-          tribeList += `**${castlistDisplay}**\n`;
-          
-          for (const tribe of castlistGroups[castlistName]) {
-            const role = guild.roles.cache.get(tribe.roleId);
-            if (role) {
-              const emoji = tribe.emoji ? `${tribe.emoji} ` : '';
-              tribeList += `• ${emoji}${role.name}\n`;
-            }
-          }
-          tribeList += '\n';
-        }
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: tribeList,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error viewing tribes:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error displaying tribes.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id === 'prod_edit_timezones') {
       // Show role select menu for timezone editing with LEAN design
       return ButtonHandlerFactory.create({

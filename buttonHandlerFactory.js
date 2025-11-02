@@ -331,6 +331,16 @@ export const BUTTON_REGISTRY = {
     parent: 'prod_manage_pronouns_timezones'
   },
 
+  // === TRIBE MANAGEMENT ===
+  'prod_view_tribes': {
+    label: 'View Tribes',
+    description: 'Display all tribes organized by castlist',
+    emoji: '🔥',
+    style: 'Primary',
+    category: 'tribe_management',
+    parent: 'prod_manage_tribes'
+  },
+
   // === RESTART TESTING TRACKER ===
   'restart_test_not_tested': {
     label: '⏳ Not Tested',
