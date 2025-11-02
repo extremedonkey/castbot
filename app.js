@@ -18189,50 +18189,42 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'prod_view_timezones') {
-      // Display all timezone roles with Components V2
-      try {
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        const timezones = await getGuildTimezones(guildId);
-        
-        if (!Object.keys(timezones).length) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '## Timezone Roles\n\nNo timezone roles found. Use **Edit Timezones** to add some.',
-              flags: InteractionResponseFlags.EPHEMERAL
+      // Display all timezone roles
+      return ButtonHandlerFactory.create({
+        id: 'prod_view_timezones',
+        updateMessage: true,  // Button click - update existing message
+        handler: async (context) => {
+          const { guildId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
+          const timezones = await getGuildTimezones(guildId);
+
+          let timezoneList = '## Timezone Roles\n\n';
+
+          if (!Object.keys(timezones).length) {
+            timezoneList += 'No timezone roles found. Use **Edit Timezones** to add some.';
+          } else {
+            for (const [roleId, timezoneData] of Object.entries(timezones)) {
+              const role = guild.roles.cache.get(roleId);
+              if (role) {
+                const offset = timezoneData.offset;
+                const offsetStr = offset >= 0 ? `UTC+${offset}` : `UTC${offset}`;
+                timezoneList += `<@&${roleId}> - ${offsetStr}\n`;
+              }
             }
-          });
+          }
+
+          return {
+            components: [{
+              type: 17, // Container
+              accent_color: 0x3498DB, // Blue - matching Edit Timezones theme
+              components: [{
+                type: 10, // Text Display
+                content: timezoneList
+              }]
+            }]
+          };
         }
-        
-        let timezoneList = '## Timezone Roles\n\n';
-        for (const [roleId, timezoneData] of Object.entries(timezones)) {
-          const role = guild.roles.cache.get(roleId);
-          if (role) {
-            const offset = timezoneData.offset;
-            const offsetStr = offset >= 0 ? `UTC+${offset}` : `UTC${offset}`;
-            timezoneList += `<@&${roleId}> - ${offsetStr}\n`;
-          }
-        }
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: timezoneList,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error viewing timezones:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error displaying timezone roles.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id === 'prod_view_pronouns') {
       // Display all pronoun roles
       return ButtonHandlerFactory.create({
@@ -18259,6 +18251,7 @@ Your server is now ready for Tycoons gameplay!`;
           return {
             components: [{
               type: 17, // Container
+              accent_color: 0x9B59B6, // Purple - identity/pronouns theme
               components: [{
                 type: 10, // Text Display
                 content: pronounList
@@ -18367,6 +18360,7 @@ Your server is now ready for Tycoons gameplay!`;
           return {
             components: [{
               type: 17, // Container
+              accent_color: 0x3498DB, // Blue - global/time theme
               components: [
                 {
                   type: 10, // Text Display
@@ -18408,6 +18402,7 @@ Your server is now ready for Tycoons gameplay!`;
           return {
             components: [{
               type: 17, // Container
+              accent_color: 0xE91E63, // Pink - personal identity theme
               components: [
                 {
                   type: 10, // Text Display
@@ -20249,6 +20244,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           return {
             components: [{
               type: 17, // Container
+              accent_color: 0xFF9800, // Orange - "add new" action theme
               components: [
                 {
                   type: 10, // Text Display
