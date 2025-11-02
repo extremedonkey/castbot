@@ -264,6 +264,11 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 
 ### 🚨 Production Infrastructure Troubleshooting
 
+**⚠️ AVOID RESTARTING AWS LIGHTSAIL** - It stops Apache and causes 3-5 minutes downtime. Only restart for:
+- AWS security patches (scheduled maintenance)
+- Complete server hang (last resort)
+- Never restart just to "fix" the bot - diagnose first!
+
 **If Discord commands fail immediately after AWS restart** (shows "interaction failed"):
 
 **Quick Fix** (2 minutes):
@@ -274,6 +279,26 @@ curl -I https://castbotaws.reecewagner.com/interactions  # Verify: HTTP/1.1 200 
 ```
 
 **Root Cause**: AWS restarts stop Apache (SSL/HTTPS), nginx auto-starts and blocks port 80.
+
+**🔍 CRITICAL: Diagnose BEFORE Acting** - Follow this decision tree:
+
+```
+Bot not responding?
+│
+├─ Discord commands fail IMMEDIATELY (< 1 second)?
+│  └─ Infrastructure issue (Apache/HTTPS down)
+│     → Check ports: sudo netstat -tlnp | grep -E ':(80|443)'
+│     → Fix: Restart Apache (see above)
+│     → Do NOT touch code or node_modules!
+│
+└─ Bot process crash-looping or errors in logs?
+   └─ Code/dependency issue
+      → Check PM2 logs: pm2 logs castbot-pm --lines 50
+      → Identify error type:
+         ├─ Missing dependencies → npm install issue
+         ├─ Code bug → Git revert or fix
+         └─ Environment issue → Check .env loaded
+```
 
 **Comprehensive Troubleshooting**: See [InfrastructureArchitecture.md - Troubleshooting](docs/infrastructure/InfrastructureArchitecture.md#troubleshooting) for:
 - Complete diagnostic checklist (7-step verification)

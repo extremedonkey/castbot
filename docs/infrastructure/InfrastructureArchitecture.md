@@ -521,6 +521,326 @@ const config = {
 };
 ```
 
+## Production Recovery Protocol
+
+### 🚨 When Production Breaks: Systematic Diagnosis Over Panic
+
+**Key Principle**: **DIAGNOSE FIRST, ACT SECOND**. Rushed recovery attempts cause more damage than the original issue.
+
+#### Case Study: 2025-11-02 Incident
+
+**What Went Wrong**:
+1. Initial deployment caused DST-related crash (legitimate code bug)
+2. Rollback attempt used OLD backup (pre-deployment, wrong git version)
+3. Parallel operations: Copying node_modules AND running npm install simultaneously
+4. Result: Corrupted hybrid state, 3+ hours debugging, AWS restart needed
+5. **Real issue discovered**: Apache was down (2-minute fix), but corrupted state made diagnosis impossible
+
+**What Should Have Been Done**:
+1. Diagnose the actual error first (check PM2 logs for specific error)
+2. Identify issue type: Infrastructure vs. Code vs. Dependencies
+3. Apply targeted fix (not "try everything")
+4. Never mix operations (copying + npm install simultaneously)
+5. Use git reset --hard, not old backups
+
+### Decision Tree: Production Failure Diagnosis
+
+```
+🚨 Production Issue Reported
+│
+├─ STEP 1: Check Infrastructure (30 seconds)
+│  │
+│  ├─ Commands fail IMMEDIATELY (< 1 second)?
+│  │  └─ [HTTPS Issue] Check: sudo netstat -tlnp | grep -E ':(80|443)'
+│  │     ├─ No httpd on 443? → Infrastructure failure (Apache down)
+│  │     │  └─ FIX: sudo systemctl stop nginx && sudo /opt/bitnami/apache/bin/apachectl start
+│  │     │  └─ STOP HERE - Do not touch code!
+│  │     └─ httpd running? → Continue to Step 2
+│  │
+│  └─ Commands work but slow/errors appear after delay?
+│     └─ Continue to Step 2 (not infrastructure)
+│
+├─ STEP 2: Check Bot Process Health (30 seconds)
+│  │
+│  ├─ Check PM2 status: pm2 list
+│  │  ├─ Status: "stopped" or "errored"? → Bot crashed
+│  │  │  └─ Continue to Step 3 (analyze crash reason)
+│  │  ├─ Status: "online" but restarts (↺) increasing rapidly?
+│  │  │  └─ Crash loop - Continue to Step 3
+│  │  └─ Status: "online" with stable restarts?
+│  │     └─ Bot healthy - Issue is elsewhere (database, Discord API, etc.)
+│  │
+│  └─ View recent logs: pm2 logs castbot-pm --lines 50 --nostream
+│     └─ Identify error pattern → Continue to Step 3
+│
+└─ STEP 3: Classify Error Type (1 minute)
+   │
+   ├─ Error: "Cannot find package 'X'"
+   │  └─ [DEPENDENCY ISSUE]
+   │     └─ Follow: Dependency Recovery Protocol (see below)
+   │
+   ├─ Error: "TypeError/ReferenceError" with line numbers
+   │  └─ [CODE BUG]
+   │     └─ Follow: Code Bug Recovery Protocol (see below)
+   │
+   ├─ Error: "ECONNREFUSED" or network errors
+   │  └─ [EXTERNAL SERVICE]
+   │     └─ Check: Discord API status, database connections
+   │
+   └─ Error: "Cannot read properties of undefined"
+      └─ [CODE BUG - Null/Undefined]
+         └─ Follow: Code Bug Recovery Protocol (see below)
+```
+
+### Recovery Protocol: Infrastructure Failure (Apache Down)
+
+**Symptoms**: Commands fail instantly (< 1 second), "interaction failed"
+
+**Diagnosis** (30 seconds):
+```bash
+ssh -i ~/.ssh/castbot-key.pem bitnami@13.238.148.170
+sudo netstat -tlnp | grep -E ':(80|443)'
+# If no httpd on 443 → Apache is down
+```
+
+**Recovery** (2 minutes):
+```bash
+# Stop nginx (if running)
+sudo systemctl stop nginx
+
+# Start Apache
+sudo /opt/bitnami/apache/bin/apachectl start
+
+# Verify HTTPS working
+curl -I https://castbotaws.reecewagner.com/interactions
+# Expected: HTTP/1.1 200 OK
+
+# Check bot still running
+pm2 list
+# Status should be: online
+```
+
+**CRITICAL**: Do NOT touch code, node_modules, or restart PM2 for infrastructure issues!
+
+### Recovery Protocol: Dependency Issues
+
+**Symptoms**: "Cannot find package 'X'" in PM2 logs
+
+**Diagnosis** (1 minute):
+```bash
+ssh -i ~/.ssh/castbot-key.pem bitnami@13.238.148.170
+cd /opt/bitnami/projects/castbot
+
+# Check if node_modules exists
+ls -lah node_modules/
+# If missing or suspiciously small → Corrupted
+
+# Check package.json exists
+ls -lah package.json
+```
+
+**Recovery** (5-10 minutes):
+```bash
+# NEVER do parallel operations!
+# NEVER mix old/new node_modules!
+
+# Step 1: Stop bot
+pm2 stop castbot-pm
+
+# Step 2: Clean dependencies completely
+rm -rf node_modules package-lock.json
+
+# Step 3: Fresh install (use --no-audit if hanging)
+npm install --production --no-audit --no-fund
+
+# Step 4: Restart bot
+pm2 restart castbot-pm
+
+# Step 5: Monitor startup (wait 30 seconds)
+pm2 logs castbot-pm --lines 30
+
+# Step 6: Verify success
+# Should see:
+# ✅ "Discord client is ready!"
+# ✅ "Listening on port 3000"
+# ❌ NO "Cannot find package" errors
+```
+
+**What NOT to Do**:
+- ❌ Copy node_modules from backup (version mismatches)
+- ❌ Run npm install while copying (creates hybrid corruption)
+- ❌ Install individual packages (use package.json)
+- ❌ Use npm install without stopping bot first
+
+### Recovery Protocol: Code Bugs
+
+**Symptoms**: TypeError, ReferenceError, null/undefined errors in logs
+
+**Diagnosis** (2 minutes):
+```bash
+# Check recent commits
+cd /opt/bitnami/projects/castbot
+git log --oneline -5
+
+# View error in context
+pm2 logs castbot-pm --err --lines 50 --nostream | grep -A10 "Error"
+
+# Identify error location (file:line)
+# Example: "at roleManager.js:763"
+```
+
+**Recovery Option A: Revert Recent Changes** (5 minutes):
+```bash
+# If error appeared after recent deployment
+pm2 stop castbot-pm
+
+# Check what changed
+git log --oneline -5
+git show HEAD  # Review last commit
+
+# Revert to last known good commit
+git log --oneline -10
+# Find commit before problematic deployment
+git reset --hard <commit-hash>
+
+# Restart bot
+pm2 restart castbot-pm
+
+# Monitor logs
+pm2 logs castbot-pm --lines 30
+```
+
+**Recovery Option B: Fix Bug in Place** (variable time):
+```bash
+# If you know the fix
+pm2 stop castbot-pm
+
+# Fix the code (add null checks, etc.)
+# Edit affected file
+
+# Restart bot
+pm2 restart castbot-pm
+
+# If fix works, commit it
+git add <file>
+git commit -m "Fix: <description>"
+git push
+```
+
+**What NOT to Do**:
+- ❌ Use old backups instead of git reset
+- ❌ Mix backup files with git versions
+- ❌ Make multiple changes without testing each
+- ❌ Deploy fixes without committing to git
+
+### Recovery Protocol: Corrupted/Mixed State
+
+**Symptoms**:
+- PM2 shows "online" but errors appear
+- Files don't match git commits
+- node_modules has mixed versions
+- "Frankenstein state" (mix of old/new)
+
+**This is the WORST case** - Requires full clean rebuild:
+
+```bash
+# Step 1: Backup current data files ONLY
+cd /opt/bitnami/projects
+cp castbot/playerData.json /tmp/playerData-rescue.json
+cp castbot/safariContent.json /tmp/safariContent-rescue.json
+cp castbot/.env /tmp/env-rescue
+
+# Step 2: Stop bot
+pm2 stop castbot-pm
+
+# Step 3: Move corrupted state away
+mv castbot castbot-CORRUPTED-$(date +%Y%m%d-%H%M%S)
+
+# Step 4: Fresh clone from GitHub
+git clone https://github.com/extremedonkey/castbot.git castbot
+cd castbot
+
+# Step 5: Restore ONLY data files
+cp /tmp/playerData-rescue.json playerData.json
+cp /tmp/safariContent-rescue.json safariContent.json
+cp /tmp/env-rescue .env
+
+# Step 6: Fresh npm install
+npm install --production --no-audit --no-fund
+
+# Step 7: Verify files
+ls -lah playerData.json  # Should be ~933KB
+grep DISCORD_TOKEN .env  # Should show token
+
+# Step 8: Restart bot with PM2
+pm2 start app.js --name castbot-pm
+
+# Step 9: Monitor startup
+pm2 logs castbot-pm --lines 50
+
+# Step 10: Test functionality
+# Try /menu command in Discord
+```
+
+**Prevention**: Never get into corrupted state by:
+- Always diagnose before acting
+- Never mix old backups with git versions
+- Never run parallel operations (copying + npm install)
+- Use git reset --hard, not manual file copying
+
+### Golden Rules for Production Recovery
+
+1. **STOP and DIAGNOSE** - Don't rush into fixes
+   - Check infrastructure first (Apache, ports)
+   - Then check bot process (PM2 status, logs)
+   - Then identify specific error type
+
+2. **ONE OPERATION AT A TIME** - Never run parallel operations
+   - ❌ Copying files while npm install runs
+   - ❌ Editing code while bot running
+   - ❌ Multiple terminal sessions doing different things
+
+3. **GIT IS SOURCE OF TRUTH** - Never use old backups
+   - ✅ Use `git reset --hard <commit>`
+   - ✅ Use `git revert <commit>`
+   - ❌ Don't copy files from backup folders
+   - ❌ Don't mix backup files with git versions
+
+4. **CLEAN SLATE FOR DEPENDENCIES** - Never mix old/new
+   - ✅ `rm -rf node_modules && npm install`
+   - ❌ Don't copy node_modules from backups
+   - ❌ Don't run npm install on top of corrupted modules
+
+5. **VERIFY EACH STEP** - Don't assume success
+   - Check PM2 logs after each restart
+   - Test Discord commands after each fix
+   - Monitor for 1-2 minutes to ensure stability
+
+6. **DOCUMENT AS YOU GO** - For future reference
+   - What error appeared?
+   - What fixed it?
+   - How to prevent recurrence?
+
+### Incident Response Checklist
+
+Print this and keep it handy for emergencies:
+
+```
+☐ 1. STOP - Don't panic, don't rush
+☐ 2. DIAGNOSE - Check infrastructure first
+    ☐ Check ports: netstat -tlnp | grep -E ':(80|443)'
+    ☐ Check PM2: pm2 list
+    ☐ Check logs: pm2 logs castbot-pm --lines 50
+☐ 3. CLASSIFY - What type of error?
+    ☐ Infrastructure (Apache down)
+    ☐ Dependencies (Cannot find package)
+    ☐ Code bug (TypeError, ReferenceError)
+    ☐ Mixed/corrupted state
+☐ 4. APPLY TARGETED FIX - Follow protocol above
+☐ 5. VERIFY - Test commands, monitor logs
+☐ 6. DOCUMENT - What happened, what fixed it
+```
+
 ## Troubleshooting
 
 ### Development Issues

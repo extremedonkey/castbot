@@ -73,7 +73,8 @@
       "Bash(git rm:*)",
       "Edit(/home/reece/castbot/**)",
       "Write(/home/reece/castbot/**)",
-      "Bash(curl -s \"https://i.ibb.co/v43RNMtW/image.png\" -o /tmp/cpu_graph.png)"
+      "Bash(curl -s \"https://i.ibb.co/v43RNMtW/image.png\" -o /tmp/cpu_graph.png)",
+      "WebFetch(domain:docs.bitnami.com)"
     ],
     "deny": [],
     "ask": []
