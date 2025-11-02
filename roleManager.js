@@ -2564,49 +2564,72 @@ async function buildTribesViewMenu(guildId, client) {
     const playerData = await loadPlayerData();
     const tribes = playerData[guildId]?.tribes || {};
 
+    // Build tribe list content
+    let tribeContent = '';
+
     // Check if any tribes exist
     if (!Object.keys(tribes).length) {
-        return {
-            content: '## Tribes\n\nNo tribes found. Use **Add Tribe** to create some.'
-        };
-    }
-
-    // Group tribes by castlist
-    const castlistGroups = {};
-    for (const [roleId, tribeData] of Object.entries(tribes)) {
-        if (!tribeData) continue; // Skip null/undefined tribe entries
-        const castlistName = tribeData.castlist || 'default';
-        if (!castlistGroups[castlistName]) {
-            castlistGroups[castlistName] = [];
-        }
-        castlistGroups[castlistName].push({ roleId, ...tribeData });
-    }
-
-    let tribeList = '## Tribes\n\n';
-
-    // Sort castlists with default first
-    const sortedCastlists = Object.keys(castlistGroups).sort((a, b) => {
-        if (a === 'default') return -1;
-        if (b === 'default') return 1;
-        return a.localeCompare(b);
-    });
-
-    for (const castlistName of sortedCastlists) {
-        const castlistDisplay = castlistName === 'default' ? 'Castlist (default)' : `Castlist (${castlistName})`;
-        tribeList += `**${castlistDisplay}**\n`;
-
-        for (const tribe of castlistGroups[castlistName]) {
-            const role = guild.roles.cache.get(tribe.roleId);
-            if (role) {
-                const emoji = tribe.emoji ? `${tribe.emoji} ` : '';
-                tribeList += `• ${emoji}${role.name}\n`;
+        tribeContent = 'No tribes found.\n\nUse **Add Tribe** from the main Tribe Management menu to create tribes.';
+    } else {
+        // Group tribes by castlist
+        const castlistGroups = {};
+        for (const [roleId, tribeData] of Object.entries(tribes)) {
+            if (!tribeData) continue; // Skip null/undefined tribe entries
+            const castlistName = tribeData.castlist || 'default';
+            if (!castlistGroups[castlistName]) {
+                castlistGroups[castlistName] = [];
             }
+            castlistGroups[castlistName].push({ roleId, ...tribeData });
         }
-        tribeList += '\n';
+
+        // Sort castlists with default first
+        const sortedCastlists = Object.keys(castlistGroups).sort((a, b) => {
+            if (a === 'default') return -1;
+            if (b === 'default') return 1;
+            return a.localeCompare(b);
+        });
+
+        for (const castlistName of sortedCastlists) {
+            const castlistDisplay = castlistName === 'default' ? 'Castlist (default)' : `Castlist (${castlistName})`;
+            tribeContent += `**${castlistDisplay}**\n`;
+
+            for (const tribe of castlistGroups[castlistName]) {
+                const role = guild.roles.cache.get(tribe.roleId);
+                if (role) {
+                    const emoji = tribe.emoji ? `${tribe.emoji} ` : '';
+                    tribeContent += `• ${emoji}${role.name}\n`;
+                }
+            }
+            tribeContent += '\n';
+        }
     }
+
+    // Navigation row only (no action buttons)
+    const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import('discord.js');
+    const navRow = new ActionRowBuilder()
+        .addComponents(
+            new ButtonBuilder()
+                .setCustomId('prod_manage_tribes')
+                .setLabel('← Tribe Management')
+                .setStyle(ButtonStyle.Secondary)
+        );
+
+    // Build LEAN container
+    const containerComponents = [
+        { type: 10, content: '## 🔥 Tribes | Organized by Castlist' },
+        { type: 14 }, // Separator
+        { type: 10, content: `> **\`🔥 Configured Tribes\`**` },
+        { type: 10, content: tribeContent },
+        { type: 14 }, // Separator before navigation
+        navRow.toJSON()
+    ];
 
     return {
-        content: tribeList
+        components: [{
+            type: 17, // Container
+            accent_color: 0xE67E22, // Orange - tribes/fire theme
+            components: containerComponents
+        }]
     };
 }
 
