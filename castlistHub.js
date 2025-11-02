@@ -156,11 +156,16 @@ export async function createCastlistHub(guildId, options = {}) {
   const selectComponent = selectRow.toJSON();
 
   // Add default_values for dropdown persistence if we have a selection
-  if (selectedCastlistId && selectedCastlistId !== 'none' && selectComponent.components[0]) {
+  // Exclude 'none' and 'create_new' (not real castlists)
+  if (selectedCastlistId &&
+      selectedCastlistId !== 'none' &&
+      selectedCastlistId !== 'create_new' &&
+      selectComponent.components[0]) {
     selectComponent.components[0].default_values = [{
       id: selectedCastlistId,
       type: 'string'
     }];
+    console.log(`📋 Setting default_values for castlist select: ${selectedCastlistId}`);
   }
 
   container.components.push(selectComponent);
