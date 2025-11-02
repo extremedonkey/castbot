@@ -587,26 +587,26 @@ function checkRoleHierarchy(guild, role) {
 function detectTimezoneId(roleName, offset) {
     const name = roleName.toLowerCase();
 
-    // Pacific Time: offset -8 or -7, name contains PST/PDT/Pacific
-    if ((name.includes('pst') || name.includes('pdt') || name.includes('pacific'))
+    // Pacific Time: offset -8 or -7, name contains PST/PDT/Pacific/PT (word boundary)
+    if ((name.includes('pst') || name.includes('pdt') || name.includes('pacific') || /\bpt\b/.test(name))
         && (offset === -8 || offset === -7)) {
         return 'PT';
     }
 
-    // Mountain Time: offset -7 or -6, name contains MST/MDT/Mountain
-    if ((name.includes('mst') || name.includes('mdt') || name.includes('mountain'))
+    // Mountain Time: offset -7 or -6, name contains MST/MDT/Mountain/MT (word boundary)
+    if ((name.includes('mst') || name.includes('mdt') || name.includes('mountain') || /\bmt\b/.test(name))
         && (offset === -7 || offset === -6)) {
         return 'MT';
     }
 
-    // Central Time: offset -6 or -5, name contains CST/CDT/Central
-    if ((name.includes('cst') || name.includes('cdt') || name.includes('central'))
+    // Central Time: offset -6 or -5, name contains CST/CDT/Central/CT (word boundary)
+    if ((name.includes('cst') || name.includes('cdt') || name.includes('central') || /\bct\b/.test(name))
         && (offset === -6 || offset === -5)) {
         return 'CT';
     }
 
-    // Eastern Time: offset -5 or -4, name contains EST/EDT/Eastern
-    if ((name.includes('est') || name.includes('edt') || name.includes('eastern'))
+    // Eastern Time: offset -5 or -4, name contains EST/EDT/Eastern/ET (word boundary)
+    if ((name.includes('est') || name.includes('edt') || name.includes('eastern') || /\bet\b/.test(name))
         && (offset === -5 || offset === -4)) {
         return 'ET';
     }
