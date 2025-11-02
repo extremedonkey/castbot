@@ -13914,7 +13914,10 @@
         "showPlayerEmojis": false,
         "color": "#f1c40f",
         "analyticsName": "☀️ a brand new day ☀️ ☀️",
-        "analyticsAdded": 1762099146554
+        "analyticsAdded": 1762099146554,
+        "castlistIds": [
+          "default"
+        ]
       }
     },
     "players": {},
@@ -13924,7 +13927,7 @@
         "id": "default",
         "name": "Active Castlist",
         "type": "system",
-        "createdAt": 1762099305882,
+        "createdAt": 1762099591238,
         "createdBy": "system",
         "settings": {
           "sortStrategy": "alphabetical",
@@ -13936,7 +13939,9 @@
           "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
           "emoji": "📋",
           "isDefault": true
-        }
+        },
+        "modifiedAt": 1762099591248,
+        "modifiedBy": "system"
       }
     }
   }

@@ -645,7 +645,8 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
             emoji: '🏕️',
             color: roleColor,
             castlistIds: [actualCastlistId],  // Add directly here
-            castlist: castlistName  // Legacy field
+            // CRITICAL: For default castlist, always use 'default' string, not 'Active Castlist'
+            castlist: (actualCastlistId === 'default') ? 'default' : castlistName  // Legacy field
           };
         } else {
           // Update existing tribe

@@ -4786,9 +4786,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           // CURRENT: Multi-castlist array matching (PRIMARY FORMAT)
           (tribe.castlistIds && Array.isArray(tribe.castlistIds) &&
            tribe.castlistIds.includes(castlistIdForNavigation)) ||
-          // Default castlist special cases
-          (!tribe.castlist && !tribe.castlistId && !tribe.castlistIds &&
-           (castlistName === 'default' || requestedCastlist === 'default')) ||
+          // Default castlist special cases - REMOVED broad fallback
+          // that included ALL tribes with no castlist fields
           (tribe.castlist === 'default' &&
            (castlistName === 'Active Castlist' || requestedCastlist === 'default')) ||
           (tribe.castlistId === 'default' &&
@@ -8062,9 +8061,7 @@ To fix this:
             // CURRENT: Multi-castlist array matching (PRIMARY FORMAT)
             (tribe.castlistIds && Array.isArray(tribe.castlistIds) &&
              tribe.castlistIds.includes(requestedCastlistId)) ||
-            // Default castlist special cases
-            (!tribe.castlist && !tribe.castlistId && !tribe.castlistIds &&
-             (castlistName === 'default' || requestedCastlistId === 'default')) ||
+            // Default castlist special cases - REMOVED broad fallback
             (tribe.castlist === 'default' &&
              (castlistName === 'Active Castlist' || requestedCastlistId === 'default')) ||
             (tribe.castlistId === 'default' &&
@@ -8204,23 +8201,38 @@ To fix this:
       const tribeIndex = parts[parts.length - 3];
 
       // The castlistId starts at a known position and extends backward
-      // Find the castlist by looking for "castlist_" pattern
+      // Find the castlist by looking for "castlist_" pattern OR "default"
       let castlistIdStartIdx = -1;
+      let castlistId;
+      let seasonContext;
+
+      // Special handling for default castlist which doesn't have "castlist_" prefix
       for (let i = parts.length - 4; i >= 3; i--) {
         if (parts[i] === 'castlist') {
+          castlistIdStartIdx = i;
+          break;
+        } else if (parts[i] === 'default' && i === parts.length - 4) {
+          // Default castlist special case
           castlistIdStartIdx = i;
           break;
         }
       }
 
       if (castlistIdStartIdx === -1) {
-        console.error(`❌ Could not find 'castlist' in button ID: ${custom_id}`);
+        console.error(`❌ Could not find 'castlist' or 'default' in button ID: ${custom_id}`);
         throw new Error('Invalid button ID format - missing castlist identifier');
       }
 
       const playerId = parts[2];
-      const seasonContext = parts.slice(3, castlistIdStartIdx).join('_') || 'global';
-      const castlistId = parts.slice(castlistIdStartIdx, parts.length - 3).join('_');
+
+      // Handle both formats
+      if (parts[castlistIdStartIdx] === 'default') {
+        castlistId = 'default';
+        seasonContext = parts.slice(3, castlistIdStartIdx).join('_') || 'global';
+      } else {
+        seasonContext = parts.slice(3, castlistIdStartIdx).join('_') || 'global';
+        castlistId = parts.slice(castlistIdStartIdx, parts.length - 3).join('_');
+      }
 
       return ButtonHandlerFactory.create({
         id: 'edit_placement',
@@ -30175,9 +30187,8 @@ Are you sure you want to continue?`;
             tribe.castlist === castlistEntity?.name ||              // Legacy name matching
             tribe.castlistId === castlistId ||                      // Transitional ID matching
             (tribe.castlistIds && Array.isArray(tribe.castlistIds) &&
-             tribe.castlistIds.includes(castlistId)) ||             // CURRENT: Multi-castlist array
-            (!tribe.castlist && !tribe.castlistId && !tribe.castlistIds &&
-             castlistId === 'default')  // Default fallback
+             tribe.castlistIds.includes(castlistId))                // CURRENT: Multi-castlist array
+            // REMOVED: Default fallback that included ALL tribes with no castlist fields
           );
 
           if (matchesCastlist) {
