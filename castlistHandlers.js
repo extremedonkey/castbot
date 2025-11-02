@@ -189,8 +189,54 @@ export async function handleCastlistSelect(req, res, client) {
         }
       }
 
-      // Materialize virtual castlists immediately on selection
-      if (selectedCastlistId && castlistVirtualAdapter.isVirtualId(selectedCastlistId)) {
+      // Materialize castlists immediately on selection (including default)
+      if (selectedCastlistId === 'default') {
+        // Default castlist needs to be created/ensured on selection, not later
+        console.log(`[CASTLIST] Ensuring default castlist exists on selection`);
+
+        try {
+          // This creates the default entity if it doesn't exist
+          await castlistManager.updateCastlist(context.guildId, 'default', {});
+
+          // Also migrate any existing default tribes to new format NOW
+          const playerData = await loadPlayerData();
+          const tribes = playerData[context.guildId]?.tribes || {};
+          let migratedCount = 0;
+
+          for (const [roleId, tribe] of Object.entries(tribes)) {
+            if (!tribe) continue;
+            if (tribe.castlist === 'default' && (!tribe.castlistIds || !tribe.castlistIds.includes('default'))) {
+              console.log(`[CASTLIST] Migrating tribe ${roleId} to new format`);
+              if (!tribe.castlistIds) {
+                tribe.castlistIds = [];
+              }
+              if (!tribe.castlistIds.includes('default')) {
+                tribe.castlistIds.push('default');
+              }
+              tribe.castlist = 'default';
+              migratedCount++;
+            }
+          }
+
+          if (migratedCount > 0) {
+            await savePlayerData(playerData);
+            console.log(`[CASTLIST] Migrated ${migratedCount} default tribes to new format`);
+          }
+        } catch (error) {
+          console.error('[CASTLIST] ❌ Default creation failed:', error);
+          return {
+            components: [{
+              type: 17, // Container
+              components: [{
+                type: 10, // Text Display
+                content: `❌ **Unable to initialize default castlist**\n\n**Error**: ${error.message}`
+              }]
+            }],
+            flags: (1 << 15) // IS_COMPONENTS_V2
+          };
+        }
+      } else if (selectedCastlistId && castlistVirtualAdapter.isVirtualId(selectedCastlistId)) {
+        // Handle other virtual castlists
         console.log(`[CASTLIST] Materializing virtual castlist on selection: ${selectedCastlistId}`);
 
         try {
@@ -536,45 +582,11 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
       // This ensures changes persist to real data structure
       let actualCastlistId = castlistId;
 
-      // Special handling for default castlist - create real entity on first modification
-      if (castlistId === 'default') {
-        console.log(`[CASTLIST] Materializing default castlist on tribe management`);
-        // This will create the default entity in castlistConfigs if it doesn't exist
-        // We use updateCastlist with empty updates just to trigger creation
-        await castlistManager.updateCastlist(context.guildId, 'default', {});
-        actualCastlistId = 'default'; // Keep using 'default' as the ID
+      // Note: Default castlist is now handled in handleCastlistSelect (when selected from dropdown)
+      // This eliminates the need for special handling here
 
-        // CRITICAL: Migrate existing tribes from legacy format to new format ONCE
-        // This ensures all tribes with castlist: "default" get converted to use castlistIds array
-        const playerData = await loadPlayerData();
-        const tribes = playerData[context.guildId]?.tribes || {};
-        let migratedCount = 0;
-
-        for (const [roleId, tribe] of Object.entries(tribes)) {
-          if (!tribe) continue; // Skip null/undefined tribe entries
-          // Only migrate if tribe has legacy format AND hasn't been migrated yet
-          // Check if castlistIds doesn't exist or doesn't include 'default'
-          if (tribe.castlist === 'default' && (!tribe.castlistIds || !tribe.castlistIds.includes('default'))) {
-            console.log(`[CASTLIST] Migrating tribe ${roleId} from legacy to new format`);
-            if (!tribe.castlistIds) {
-              tribe.castlistIds = [];
-            }
-            if (!tribe.castlistIds.includes('default')) {
-              tribe.castlistIds.push('default');
-            }
-            // Keep castlist field for backwards compatibility
-            tribe.castlist = 'default';
-            migratedCount++;
-          }
-        }
-
-        if (migratedCount > 0) {
-          await savePlayerData(playerData);
-          console.log(`[CASTLIST] Migrated ${migratedCount} tribes to new format`);
-        }
-      }
-      // Handle other virtual castlists
-      else if (castlistVirtualAdapter.isVirtualId(castlistId)) {
+      // Only handle non-default virtual castlists here (edge case if called directly)
+      if (castlistId !== 'default' && castlistVirtualAdapter.isVirtualId(castlistId)) {
         console.log(`[CASTLIST] Materializing virtual castlist before tribe updates`);
         actualCastlistId = await castlistVirtualAdapter.materializeCastlist(context.guildId, castlistId);
       }

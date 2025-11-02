@@ -13908,40 +13908,13 @@
   },
   "1412422613774368851": {
     "tribes": {
-      "1434563860316291154": {
-        "emoji": "☀️",
+      "1434555299787837521": {
+        "emoji": null,
         "castlist": "default",
         "showPlayerEmojis": false,
-        "color": "#f1c40f",
-        "analyticsName": "☀️ a brand new day ☀️ ☀️",
-        "analyticsAdded": 1762099146554,
-        "castlistIds": [
-          "default"
-        ]
-      }
-    },
-    "players": {},
-    "timezones": {},
-    "castlistConfigs": {
-      "default": {
-        "id": "default",
-        "name": "Active Castlist",
-        "type": "system",
-        "createdAt": 1762099591238,
-        "createdBy": "system",
-        "settings": {
-          "sortStrategy": "alphabetical",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public"
-        },
-        "metadata": {
-          "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
-          "emoji": "📋",
-          "isDefault": true
-        },
-        "modifiedAt": 1762099591248,
-        "modifiedBy": "system"
+        "color": "#9b59b6",
+        "analyticsName": "🔮Psychic Conversion",
+        "analyticsAdded": 1762100044535
       }
     }
   }
