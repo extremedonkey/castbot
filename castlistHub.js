@@ -231,13 +231,10 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
     }
   } else {
     // No castlist selected - show disabled buttons
-    container.components.push({ type: 14 });
-
     const disabledButtons = createManagementButtons(null, false, null, false, null);
     container.components.push(disabledButtons.buttonRow1.toJSON());
 
     // Disabled placeholder
-    container.components.push({ type: 14 });
     container.components.push({
       type: 1, // ActionRow
       components: [{
@@ -340,17 +337,15 @@ async function createCastlistDetailsSection(guildId, castlist) {
     // Special rendering for Active Castlist (default)
     content = `> **\`✅ Active Castlist\`**\n` +
       `-# Current castlist for the current phase of the game. Use the Tribes button for swaps and merge.\n` +
-      seasonLine + // Season line (if any)
-      `\n> **\`Tribes on Castlist\`**\n${tribesDisplay}`;
+      seasonLine;
   } else {
     // Regular castlist rendering - only show description if it exists
     const descriptionLine = castlist.metadata?.description ? `-# ${castlist.metadata.description}\n` : '';
 
     content = `> ${castlist.metadata?.emoji || '📋'} **\`${castlist.name}\`**\n` +
-      descriptionLine + // Only included if description exists
-      seasonLine + // Season line (if any)
-      (castlist.isVirtual ? `-# ⚠️ Legacy castlist - will be upgraded on first edit\n` : '') +
-      `\n> **\`Tribes on Castlist\`**\n${tribesDisplay}`;
+      descriptionLine +
+      seasonLine +
+      (castlist.isVirtual ? `-# ⚠️ Legacy castlist - will be upgraded on first edit\n` : '');
   }
 
   return {
@@ -455,16 +450,6 @@ async function createHotSwappableInterface(guildId, castlist, activeButton, clie
 
       // Build interface components
       const interfaceComponents = [];
-
-      // Instructions with new instant toggle UX
-      interfaceComponents.push({
-        type: 10, // Text Display
-        content: `### Manage Tribes\n\n✅ **Ticked roles** = Currently on castlist\n` +
-                 `• **Select new role** → Adds tribe instantly\n` +
-                 `• **Deselect ticked role** → Removes tribe instantly\n` +
-                 `• **Click Edit** → Modify tribe settings\n\n` +
-                 `💡 Any Discord role can become a tribe (max 6)`
-      });
 
       // Component budget safety check (count entire hub, not just interface)
       let maxTribeLimit = 6;

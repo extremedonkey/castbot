@@ -1596,7 +1596,7 @@
           "castlist_1762185466287_1331657596087566398",
           "castlist_1762185922054_1331657596087566398"
         ],
-        "castlist": "aNewHope",
+        "castlist": "Castbot MVPs",
         "displayName": "Mr CastBot"
       },
       "1391142520787832904": {
@@ -1613,9 +1613,10 @@
         "analyticsName": "🧟‍♂️ 👑 Castbot MVPs 🧟‍♂️",
         "analyticsAdded": 1754751381750,
         "castlistIds": [
-          "castlist_1759638936214_system"
+          "castlist_1759638936214_system",
+          "castlist_1762187500959_1331657596087566398"
         ],
-        "castlist": "Castbot MVPs"
+        "castlist": "the BIG castlist"
       },
       "1335645032891547670": {
         "emoji": "🤷‍♀️",
@@ -1810,10 +1811,10 @@
         "emoji": "🍆",
         "color": "#E91E63",
         "castlistIds": [
-          "default",
-          "castlist_1762186784322_1331657596087566398"
+          "default"
         ],
-        "castlist": "A big large hope"
+        "castlist": "default",
+        "displayName": "My Custom Tribe Name"
       },
       "1425702665806938183": {
         "name": "Tribe 1425702665806938183",
@@ -1838,12 +1839,7 @@
         ],
         "castlist": "winners"
       },
-      "1368969346600407181": {
-        "castlistIds": [
-          "castlist_1762179347687_1331657596087566398"
-        ],
-        "castlist": "MOI CASTLIST"
-      },
+      "1368969346600407181": {},
       "1434914674788401212": {
         "emoji": null,
         "castlist": "CastBot Winners",
@@ -3217,24 +3213,6 @@
         "modifiedAt": 1762179941473,
         "modifiedBy": "391415444084490240"
       },
-      "castlist_1762179347687_1331657596087566398": {
-        "id": "castlist_1762179347687_1331657596087566398",
-        "name": "MOI CASTLIST",
-        "type": "custom",
-        "createdAt": 1762179347689,
-        "createdBy": "391415444084490240",
-        "settings": {
-          "sortStrategy": "alphabetical",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public"
-        },
-        "metadata": {
-          "emoji": "🐈",
-          "description": "Meow!",
-          "lastModified": 1762179347689
-        }
-      },
       "castlist_1762185466287_1331657596087566398": {
         "id": "castlist_1762185466287_1331657596087566398",
         "name": "That New Castlist!",
@@ -3271,22 +3249,23 @@
           "lastModified": 1762185922054
         }
       },
-      "castlist_1762186784322_1331657596087566398": {
-        "id": "castlist_1762186784322_1331657596087566398",
-        "name": "A big large hope",
+      "castlist_1762187500959_1331657596087566398": {
+        "id": "castlist_1762187500959_1331657596087566398",
+        "name": "the BIG castlist",
         "type": "custom",
-        "createdAt": 1762186784322,
+        "createdAt": 1762187500959,
         "createdBy": "391415444084490240",
         "settings": {
           "sortStrategy": "alphabetical",
           "showRankings": false,
           "maxDisplay": 25,
-          "visibility": "public"
+          "visibility": "public",
+          "seasonId": "season_03859e4abc554bb5"
         },
         "metadata": {
-          "emoji": "7️⃣",
+          "emoji": "🍆",
           "description": "",
-          "lastModified": 1762186784322
+          "lastModified": 1762187500959
         }
       }
     },
