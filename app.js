@@ -31654,7 +31654,6 @@ Are you sure you want to continue?`;
         newTribeRoleIds.forEach(id => assignments[id] = []);
 
         if (autoRandomize === 'yes') {
-          const channel = await guild.channels.fetch(channelId);
           const shuffled = shuffleArray(playerArray);
 
           // Calculate how many players to assign
@@ -31666,8 +31665,25 @@ Are you sure you want to continue?`;
           const playersToAssign = shuffled.slice(0, totalToAssign);
           const unassignedPlayers = shuffled.slice(totalToAssign);
 
+          // Helper: Send message via REST API (channel.send doesn't support raw Components V2)
+          const sendMessage = async (messageData) => {
+            const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(messageData)
+            });
+
+            if (!response.ok) {
+              const error = await response.text();
+              console.error(`🔀 [TRIBE SWAP] Failed to send message:`, error);
+            }
+          };
+
           // Opening ceremony
-          await channel.send({
+          await sendMessage({
             flags: (1 << 15),
             components: [{
               type: 17,
@@ -31690,7 +31706,7 @@ Are you sure you want to continue?`;
             const avatarUrl = player.user.displayAvatarURL({ size: 128 });
 
             // Dramatic reveal
-            await channel.send({
+            await sendMessage({
               flags: (1 << 15),
               components: [{
                 type: 17,
@@ -31725,7 +31741,7 @@ Are you sure you want to continue?`;
 
           // Handle unassigned players
           if (unassignedPlayers.length > 0) {
-            await channel.send({
+            await sendMessage({
               flags: (1 << 15),
               components: [{
                 type: 17,
@@ -31820,18 +31836,24 @@ Are you sure you want to continue?`;
 
         console.log(`🔀 [TRIBE SWAP] Swap complete! Archive: ${archiveCastlistId}`);
 
-        // Post completion message
-        const channel = await guild.channels.fetch(channelId);
-        await channel.send({
-          flags: (1 << 15),
-          components: [{
-            type: 17,
-            accent_color: 0x00FF00,
+        // Post completion message (via REST API)
+        await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            flags: (1 << 15),
             components: [{
-              type: 10,
-              content: `# ✅ Tribe Swap Complete!\n\n**Summary:**\n- **${playerArray.length}** players processed\n- **${newTribeRoleIds.length}** new tribes created\n- Previous tribes archived to: **${archiveName.trim()}**\n${vanityRoles === 'yes' ? '- Old tribe roles kept as vanity indicators' : ''}\n\nThe game continues... 🎮`
+              type: 17,
+              accent_color: 0x00FF00,
+              components: [{
+                type: 10,
+                content: `# ✅ Tribe Swap Complete!\n\n**Summary:**\n- **${playerArray.length}** players processed\n- **${newTribeRoleIds.length}** new tribes created\n- Previous tribes archived to: **${archiveName.trim()}**\n${vanityRoles === 'yes' ? '- Old tribe roles kept as vanity indicators' : ''}\n\nThe game continues... 🎮`
+              }]
             }]
-          }]
+          })
         });
 
         // Return to castlist hub
