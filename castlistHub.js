@@ -174,18 +174,6 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
     selectedCastlist = castlist; // Store for navigation
 
     if (castlist) {
-      // Separator
-      container.components.push({ type: 14 });
-      
-      // Castlist details section
-      const detailsSection = await createCastlistDetailsSection(guildId, castlist);
-      if (detailsSection) {
-        container.components.push(detailsSection);
-      }
-      
-      // Separator before buttons
-      container.components.push({ type: 14 });
-      
       // Management buttons
       const managementButtons = createManagementButtons(
         castlist.id,
