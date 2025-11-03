@@ -28,9 +28,10 @@ export const CastlistButtonType = {
  * Create the main Castlist Management Hub menu
  * @param {string} guildId - The guild ID
  * @param {Object} options - Menu options
+ * @param {Object} client - Discord client (required for tribe operations)
  * @returns {Object} Discord interaction response
  */
-export async function createCastlistHub(guildId, options = {}) {
+export async function createCastlistHub(guildId, options = {}, client = null) {
   const {
     selectedCastlistId = null,
     activeButton = null,
@@ -202,7 +203,8 @@ export async function createCastlistHub(guildId, options = {}) {
       const hotSwapInterface = await createHotSwappableInterface(
         guildId,
         castlist,
-        activeButton
+        activeButton,
+        client
       );
       if (hotSwapInterface) {
         // Handle both single components and arrays (for multi-component interfaces)
@@ -424,7 +426,7 @@ function createManagementButtons(castlistId, enabled = true, activeButton = null
  * @param {string} activeButton - The active button type
  * @returns {Object|null} Hot-swap interface component
  */
-async function createHotSwappableInterface(guildId, castlist, activeButton) {
+async function createHotSwappableInterface(guildId, castlist, activeButton, client) {
   if (!activeButton) return null;
   
   switch (activeButton) {
@@ -481,7 +483,7 @@ async function createHotSwappableInterface(guildId, castlist, activeButton) {
         const role = guild ? await guild.roles.fetch(tribe.roleId).catch(() => null) : null;
         const roleName = role?.name || tribe.roleId;
 
-        interfaceComponents.push({
+        const tribeSection = {
           type: 9, // Section
           components: [{
             type: 10, // Text Display
@@ -495,7 +497,10 @@ async function createHotSwappableInterface(guildId, castlist, activeButton) {
             style: 2, // Secondary
             emoji: { name: "✏️" }
           }
-        });
+        };
+
+        console.log(`[TRIBES] Adding Section for tribe ${roleName}:`, JSON.stringify(tribeSection, null, 2));
+        interfaceComponents.push(tribeSection);
       }
 
       // Separator before Role Select

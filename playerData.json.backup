@@ -1690,7 +1690,11 @@
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "🧓 Ask 🧓",
-        "analyticsAdded": 1759422827344
+        "analyticsAdded": 1759422827344,
+        "castlistIds": [
+          "castlist_1762185466287_1331657596087566398"
+        ],
+        "castlist": "That New Castlist!"
       },
       "1424250096698130603": {
         "emoji": "🗝️",
@@ -1824,9 +1828,10 @@
         "color": "#e91e63",
         "castlistIds": [
           "default",
-          "castlist_1762185466287_1331657596087566398"
+          "castlist_1762185466287_1331657596087566398",
+          "castlist_1762185922054_1331657596087566398"
         ],
-        "castlist": "That New Castlist!"
+        "castlist": "aNewHope"
       },
       "1434189967323566261": {
         "name": "Tribe 1434189967323566261",
@@ -3277,6 +3282,24 @@
           "emoji": "📋",
           "description": "",
           "lastModified": 1762185466287
+        }
+      },
+      "castlist_1762185922054_1331657596087566398": {
+        "id": "castlist_1762185922054_1331657596087566398",
+        "name": "aNewHope",
+        "type": "custom",
+        "createdAt": 1762185922054,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "emoji": "📋",
+          "description": "",
+          "lastModified": 1762185922054
         }
       }
     },
