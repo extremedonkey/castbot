@@ -1799,12 +1799,7 @@
       "1368969401067372625": {
         "name": "Tribe 1368969401067372625",
         "emoji": "🏕️",
-        "color": null,
-        "castlistIds": [
-          "default"
-        ],
-        "castlistId": "default",
-        "castlist": "default"
+        "color": null
       },
       "1431726505569943633": {
         "name": "Tribe 1431726505569943633",
@@ -1869,14 +1864,9 @@
         "analyticsAdded": 1762180748073
       },
       "1398904036643831818": {
-        "castlistIds": [
-          "default"
-        ],
         "emoji": null,
         "displayName": null,
-        "color": "#e74c3c",
-        "castlistId": "default",
-        "castlist": "default"
+        "color": "#e74c3c"
       }
     },
     "timezones": {
@@ -3175,7 +3165,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1762211722144,
+        "modifiedAt": 1762212785704,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -12339,14 +12329,14 @@
     "serverName": "Triumph Hub",
     "icon": "https://cdn.discordapp.com/icons/1080166267136262154/174fdda5d62bc8c2227e31f8111e7f05.webp",
     "ownerId": "572291395365109770",
-    "memberCount": 450,
+    "memberCount": 448,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1677602106604,
-    "lastUpdated": 1762177439005,
+    "lastUpdated": 1762212733615,
     "players": {
       "572291395365109770": {
         "age": "29"

@@ -31776,15 +31776,15 @@ Are you sure you want to continue?`;
           }
         }
 
-        // Create archive castlist
+        // Create archive castlist (uses castlistConfigs, not castlists!)
         const timestamp = Date.now();
         const archiveCastlistId = `castlist_archive_${timestamp}`;
 
-        if (!playerData[guildId].castlists) {
-          playerData[guildId].castlists = {};
+        if (!playerData[guildId].castlistConfigs) {
+          playerData[guildId].castlistConfigs = {};
         }
 
-        playerData[guildId].castlists[archiveCastlistId] = {
+        playerData[guildId].castlistConfigs[archiveCastlistId] = {
           id: archiveCastlistId,
           name: archiveName.trim(),
           type: 'custom',
@@ -31848,26 +31848,43 @@ Are you sure you want to continue?`;
           console.log(`🔀 [TRIBE SWAP]   + Added "${role.name}" (${roleId}) to default`);
         }
 
-        // Handle vanity roles
+        // Handle vanity roles (add old tribe roles as decorative badges on player cards)
         if (vanityRoles === 'yes') {
-          console.log(`🔀 [TRIBE SWAP] Enabling vanity roles - old tribes will be visible on default castlist`);
-          for (const tribe of currentDefaultTribes) {
-            const tribeData = playerData[guildId].tribes[tribe.roleId];
-            if (tribeData) {
-              const oldRole = guild.roles.cache.get(tribe.roleId);
-              const tribeName = oldRole?.name || 'Unknown';
+          console.log(`🔀 [TRIBE SWAP] Adding old tribe roles as vanity badges to ${playerArray.length} players...`);
+          const { getPlayer, updatePlayer } = await import('./storage.js');
 
-              // Add default back (players will show both old and new roles)
-              if (!tribeData.castlistIds.includes('default')) {
-                tribeData.castlistIds.push('default');
+          let vanityPlayersUpdated = 0;
+          for (const player of playerArray) {
+            // Find which old tribe this player was in
+            for (const oldTribe of currentDefaultTribes) {
+              const oldRole = guild.roles.cache.get(oldTribe.roleId);
+              if (oldRole && oldRole.members.has(player.id)) {
+                // Add old tribe role to player's vanityRoles array
+                const currentPlayer = await getPlayer(guildId, player.id) || {};
+                const currentVanityRoles = currentPlayer.vanityRoles || [];
+
+                // Add old tribe role if not already present (additive)
+                if (!currentVanityRoles.includes(oldTribe.roleId)) {
+                  const newVanityRoles = [...currentVanityRoles, oldTribe.roleId];
+                  await updatePlayer(guildId, player.id, { vanityRoles: newVanityRoles });
+                  vanityPlayersUpdated++;
+                  console.log(`🔀 [TRIBE SWAP]   ✨ Vanity: ${player.user.username} → added "${oldRole.name}" badge`);
+                }
+
+                // Mark tribe as eligible for vanity display
+                const tribeData = playerData[guildId].tribes[oldTribe.roleId];
+                if (tribeData) {
+                  tribeData.isVanity = true;
+                }
+
+                break; // Player can only be in one old tribe
               }
-              tribeData.isVanity = true;
-
-              console.log(`🔀 [TRIBE SWAP]   ✨ Vanity: "${tribeName}" now on both archive AND default`);
             }
           }
+
+          console.log(`🔀 [TRIBE SWAP] ✅ Added vanity badges to ${vanityPlayersUpdated} players`);
         } else {
-          console.log(`🔀 [TRIBE SWAP] Vanity roles disabled - old tribes only on archive`);
+          console.log(`🔀 [TRIBE SWAP] Vanity roles disabled - old tribes won't appear as player badges`);
         }
 
         await savePlayerData(playerData);
