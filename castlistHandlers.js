@@ -597,15 +597,20 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
 
       console.log(`[CASTLIST] Tribe selection changed for castlist ${castlistId}`);
 
-      // Get previously selected tribes from database
-      const tribesUsingCastlist = await castlistManager.getTribesUsingCastlist(context.guildId, castlistId);
-      const previouslySelectedRoles = tribesUsingCastlist.map(t => t.roleId);
+      // Get previously selected tribes from database (returns array of roleId strings)
+      const previouslySelectedRoles = await castlistManager.getTribesUsingCastlist(context.guildId, castlistId);
+
+      // DEBUG: Log what we got from the database
+      console.log(`[CASTLIST] Previously selected:`, JSON.stringify(previouslySelectedRoles));
+      console.log(`[CASTLIST] Newly selected:`, JSON.stringify(newlySelectedRoles));
 
       // Calculate changes (instant toggle detection)
       const addedRoles = newlySelectedRoles.filter(r => !previouslySelectedRoles.includes(r));
       const removedRoles = previouslySelectedRoles.filter(r => !newlySelectedRoles.includes(r));
 
       console.log(`[CASTLIST] Added: ${addedRoles.length}, Removed: ${removedRoles.length}`);
+      console.log(`[CASTLIST] Added roleIds:`, JSON.stringify(addedRoles));
+      console.log(`[CASTLIST] Removed roleIds:`, JSON.stringify(removedRoles));
 
       // Prepare operations (atomic pattern - validate before applying)
       const operations = [];
