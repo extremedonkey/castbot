@@ -8,6 +8,7 @@ import { ButtonStyle } from 'discord-api-types/v10';
 import { castlistManager } from './castlistManager.js';
 import { loadPlayerData } from './storage.js';
 import { createBackButton } from './src/ui/backButtonFactory.js';
+import { parseTextEmoji } from './utils/emojiUtils.js';
 
 /**
  * Button types for castlist management
@@ -110,7 +111,9 @@ export async function createCastlistHub(guildId, options = {}) {
     // Skip virtual if not showing
     if (castlist.isVirtual && !showVirtual) continue;
 
-    const emoji = castlist.metadata?.emoji || '📋';
+    // Parse emoji (supports Unicode and Discord custom emoji format)
+    const emojiRaw = castlist.metadata?.emoji || '📋';
+    const { emoji } = parseTextEmoji(emojiRaw, '📋');
     const label = castlist.isVirtual ? `${castlist.name} [Legacy]` : castlist.name;
 
     // Build description with priority: custom description > season name > fallback

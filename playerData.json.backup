@@ -1585,16 +1585,17 @@
     },
     "tribes": {
       "1333822520737927281": {
-        "emoji": null,
+        "emoji": "<:castbot:1333820342275149824>",
         "showPlayerEmojis": false,
-        "color": "#3498db",
+        "color": "#3498DB",
         "analyticsName": "🤖Mr CastBot",
         "analyticsAdded": 1751070525853,
         "castlistIds": [
           "castlist_1759638936214_system",
           "castlist_1762007922583_1331657596087566398"
         ],
-        "castlist": "Castbot MVPs"
+        "castlist": "Castbot MVPs",
+        "displayName": "Mr CastBot"
       },
       "1391142520787832904": {
         "emoji": "👀",
@@ -1666,13 +1667,15 @@
       "1368969399251501126": {
         "emoji": "🪄",
         "showPlayerEmojis": false,
-        "color": null,
+        "color": "#FF7AAA",
         "analyticsName": "🪄 ar.3 🪄",
         "analyticsAdded": 1759081799205,
         "castlistIds": [
-          "castlist_1760891080792_1331657596087566398"
+          "castlist_1760891080792_1331657596087566398",
+          "castlist_1762007922583_1331657596087566398"
         ],
-        "castlist": "My Cool Castlist"
+        "castlist": "CastBot Winners",
+        "displayName": "The AR3 Tribe"
       },
       "1388327092634124368": {
         "emoji": null,
@@ -1831,11 +1834,17 @@
       "1380906521084559401": {
         "name": "Tribe 1380906521084559401",
         "emoji": "🏕️",
-        "color": "#607d8b",
+        "color": "#607D8B",
         "castlistIds": [
           "castlist_1762007922583_1331657596087566398"
         ],
         "castlist": "CastBot Winners"
+      },
+      "1368969346600407181": {
+        "castlistIds": [
+          "castlist_1762179347687_1331657596087566398"
+        ],
+        "castlist": "MOI CASTLIST"
       }
     },
     "timezones": {
@@ -2111,6 +2120,23 @@
         "createdBy": "391415444084490240",
         "createdAt": 1760207677911,
         "lastUpdated": 1760207677911
+      },
+      "config_1762176889589_391415444084490240": {
+        "buttonText": "Apply to Best Practice Season Creation",
+        "explanatoryText": "It's the best!",
+        "completionDescription": "Thank you for completing your application! A host will review it soon.",
+        "completionImage": null,
+        "channelFormat": "📝%name%-app",
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "draft",
+        "createdAt": 1762176889589,
+        "lastUpdated": 1762176889589,
+        "seasonId": "season_83d410d017c64375",
+        "seasonName": "Best Practice Season Creation",
+        "questions": []
       }
     },
     "ownerInfo": {
@@ -3108,7 +3134,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1761977146567,
+        "modifiedAt": 1762179591788,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -3197,6 +3223,24 @@
         },
         "modifiedAt": 1762071020773,
         "modifiedBy": "391415444084490240"
+      },
+      "castlist_1762179347687_1331657596087566398": {
+        "id": "castlist_1762179347687_1331657596087566398",
+        "name": "MOI CASTLIST",
+        "type": "custom",
+        "createdAt": 1762179347689,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "emoji": "🐈",
+          "description": "Meow!",
+          "lastModified": 1762179347689
+        }
       }
     },
     "placements": {
@@ -12212,14 +12256,14 @@
     "serverName": "Triumph Hub",
     "icon": "https://cdn.discordapp.com/icons/1080166267136262154/174fdda5d62bc8c2227e31f8111e7f05.webp",
     "ownerId": "572291395365109770",
-    "memberCount": 444,
+    "memberCount": 450,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1677602106604,
-    "lastUpdated": 1760973143595,
+    "lastUpdated": 1762177439005,
     "players": {
       "572291395365109770": {
         "age": "29"
@@ -13015,7 +13059,10 @@
       "1364765059246723153": {
         "emoji": "<:Benbecula:1364793949931438142>",
         "castlist": "default",
-        "color": "#1f2528"
+        "color": "#1f2528",
+        "castlistIds": [
+          "default"
+        ]
       },
       "1430343099137265775": {
         "emoji": "<:Daci:1430352593846272030>",
@@ -13023,7 +13070,10 @@
         "showPlayerEmojis": false,
         "color": "#94ffd4",
         "analyticsName": "<:Daci:1430352593846272030> Daci <:Daci:1430352593846272030>",
-        "analyticsAdded": 1761170535224
+        "analyticsAdded": 1761170535224,
+        "castlistIds": [
+          "default"
+        ]
       },
       "1430343265340882954": {
         "emoji": "<:Sanyi:1430352733679911116>",
@@ -13031,7 +13081,20 @@
         "showPlayerEmojis": false,
         "color": "#eda861",
         "analyticsName": "<:Sanyi:1430352733679911116> Sanyi <:Sanyi:1430352733679911116>",
-        "analyticsAdded": 1761170558389
+        "analyticsAdded": 1761170558389,
+        "castlistIds": [
+          "default"
+        ]
+      },
+      "1433639154700517406": {
+        "castlistIds": [
+          "castlist_1762177698087_1080166267136262154"
+        ],
+        "castlist": "Túbião",
+        "emoji": "<:tubiao:1433639042041512057>",
+        "displayName": "Tubiao",
+        "color": "#6E150B",
+        "analyticsName": "Tubiao"
       }
     },
     "timezones": {
@@ -13909,6 +13972,47 @@
         "startHour": 22,
         "channelId": "1088622568329719848",
         "createdAt": 1760309065858
+      }
+    },
+    "castlistConfigs": {
+      "default": {
+        "id": "default",
+        "name": "Active Castlist",
+        "type": "system",
+        "createdAt": 1762177497311,
+        "createdBy": "system",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
+          "emoji": "📋",
+          "isDefault": true
+        },
+        "modifiedAt": 1762177497326,
+        "modifiedBy": "system"
+      },
+      "castlist_1762177698087_1080166267136262154": {
+        "id": "castlist_1762177698087_1080166267136262154",
+        "name": "Túbião",
+        "type": "custom",
+        "createdAt": 1762177698087,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public",
+          "seasonId": "season_ade639e773d34dc8"
+        },
+        "metadata": {
+          "emoji": "📃",
+          "description": "",
+          "lastModified": 1762177698087
+        }
       }
     }
   },

@@ -119,14 +119,15 @@ export async function createEditInfoModalForNew(guildId) {
       {
         type: 18, // Label
         label: 'Castlist Emoji',
+        description: 'Normal or discord emoji in the form <:castbot:1333820342275149824>',
         component: {
           type: 4, // Text Input
           custom_id: 'castlist_emoji',
           style: 1, // Short
           required: false,
           value: '📋', // Default emoji
-          placeholder: 'Enter an emoji (e.g., 📋)',
-          max_length: 10
+          placeholder: 'Enter an emoji (e.g., 📋 or <:custom:123>)',
+          max_length: 60
         }
       },
 
@@ -493,14 +494,15 @@ export async function handleCastlistButton(req, res, client, custom_id) {
               {
                 type: 18, // Label
                 label: 'Castlist Emoji',
+                description: 'Normal or discord emoji in the form <:castbot:1333820342275149824>',
                 component: {
                   type: 4, // Text Input
                   custom_id: 'castlist_emoji',
                   style: 1, // Short
                   required: false,
                   value: castlist.metadata?.emoji || '',
-                  placeholder: 'Single emoji to represent this Castlist.',
-                  max_length: 10
+                  placeholder: 'Enter an emoji (e.g., 📋 or <:custom:123>)',
+                  max_length: 60
                 }
               },
 
