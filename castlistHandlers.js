@@ -657,6 +657,13 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
         activeButton: CastlistButtonType.ADD_TRIBE
       });
 
+      // Debug: Check component structure
+      console.log(`[CASTLIST] Returning hub with ${hubData.components?.length || 0} top-level components`);
+      if (hubData.components?.[0]?.type === 17) {
+        const containerComponents = hubData.components[0].components || [];
+        console.log(`[CASTLIST] Container has ${containerComponents.length} child components`);
+      }
+
       return hubData;
     }
   })(req, res, client);

@@ -434,8 +434,22 @@ async function createHotSwappableInterface(guildId, castlist, activeButton) {
       return null;
     
     case CastlistButtonType.ADD_TRIBE:
-      // Get tribes currently using this castlist
-      const tribesUsingCastlist = await castlistManager.getTribesUsingCastlist(guildId, castlist.id);
+      // Get tribe roleIds currently using this castlist
+      const tribeRoleIds = await castlistManager.getTribesUsingCastlist(guildId, castlist.id);
+
+      // Load full tribe objects from playerData
+      const { loadPlayerData } = await import('./storage.js');
+      const playerData = await loadPlayerData();
+      const tribes = [];
+      for (const roleId of tribeRoleIds) {
+        const tribeData = playerData[guildId]?.tribes?.[roleId];
+        if (tribeData) {
+          tribes.push({
+            roleId,
+            ...tribeData
+          });
+        }
+      }
 
       // Build interface components
       const interfaceComponents = [];
@@ -452,19 +466,26 @@ async function createHotSwappableInterface(guildId, castlist, activeButton) {
 
       // Component budget safety check (count entire hub, not just interface)
       let maxTribeLimit = 6;
-      const estimatedTotal = 22 + interfaceComponents.length + tribesUsingCastlist.length; // Base + instructions + sections
+      const estimatedTotal = 22 + interfaceComponents.length + tribes.length; // Base + instructions + sections
       if (estimatedTotal > 35) {
         console.warn(`[TRIBES] Component count high: ${estimatedTotal}/40, limiting to 5 tribes`);
         maxTribeLimit = 5; // Reduce limit if approaching budget
       }
 
+      // Fetch guild once for all tribes
+      const guild = tribes.length > 0 ? await client.guilds.fetch(guildId) : null;
+
       // Section for each existing tribe with Edit button accessory
-      for (const tribe of tribesUsingCastlist) {
+      for (const tribe of tribes) {
+        // Get role name from Discord
+        const role = guild ? await guild.roles.fetch(tribe.roleId).catch(() => null) : null;
+        const roleName = role?.name || tribe.roleId;
+
         interfaceComponents.push({
           type: 9, // Section
           components: [{
             type: 10, // Text Display
-            content: `${tribe.emoji || '🏕️'} **${tribe.displayName || tribe.name}**\n` +
+            content: `${tribe.emoji || '🏕️'} **${tribe.displayName || roleName}**\n` +
                      `-# ${tribe.color ? `Color: ${tribe.color}` : 'No custom settings'}`
           }],
           accessory: {
@@ -478,7 +499,7 @@ async function createHotSwappableInterface(guildId, castlist, activeButton) {
       }
 
       // Separator before Role Select
-      if (tribesUsingCastlist.length > 0) {
+      if (tribes.length > 0) {
         interfaceComponents.push({ type: 14 }); // Separator
       }
 
@@ -488,12 +509,12 @@ async function createHotSwappableInterface(guildId, castlist, activeButton) {
         components: [{
           type: 6, // Role Select
           custom_id: `castlist_tribe_select_${castlist.id}`,
-          placeholder: tribesUsingCastlist.length > 0
+          placeholder: tribes.length > 0
             ? 'Add or remove tribes...'
             : 'Select roles to add as tribes...',
           min_values: 0, // CRITICAL: Allow deselecting all (enables remove)
           max_values: maxTribeLimit, // ENFORCED: Component budget limit
-          default_values: tribesUsingCastlist.map(tribe => ({
+          default_values: tribes.map(tribe => ({
             id: tribe.roleId,
             type: "role"
           }))

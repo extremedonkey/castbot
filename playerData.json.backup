@@ -1592,9 +1592,10 @@
         "analyticsAdded": 1751070525853,
         "castlistIds": [
           "castlist_1759638936214_system",
-          "castlist_1762007922583_1331657596087566398"
+          "castlist_1762007922583_1331657596087566398",
+          "castlist_1762185466287_1331657596087566398"
         ],
-        "castlist": "Castbot MVPs",
+        "castlist": "That New Castlist!",
         "displayName": "Mr CastBot"
       },
       "1391142520787832904": {
@@ -1822,9 +1823,10 @@
         "emoji": "🏕️",
         "color": "#e91e63",
         "castlistIds": [
-          "default"
+          "default",
+          "castlist_1762185466287_1331657596087566398"
         ],
-        "castlist": "default"
+        "castlist": "That New Castlist!"
       },
       "1434189967323566261": {
         "name": "Tribe 1434189967323566261",
@@ -3257,6 +3259,24 @@
           "emoji": "🐈",
           "description": "Meow!",
           "lastModified": 1762179347689
+        }
+      },
+      "castlist_1762185466287_1331657596087566398": {
+        "id": "castlist_1762185466287_1331657596087566398",
+        "name": "That New Castlist!",
+        "type": "custom",
+        "createdAt": 1762185466287,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "emoji": "📋",
+          "description": "",
+          "lastModified": 1762185466287
         }
       }
     },
