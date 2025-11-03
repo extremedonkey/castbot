@@ -8184,103 +8184,130 @@ To fix this:
       const { handleCastlistSort } = await import('./castlistHandlers.js');
       return handleCastlistSort(req, res, client, custom_id);
     } else if (custom_id.startsWith('castlist_tribe_select_')) {
-      // Handle tribe role selection - show modal for editing
+      // Handle tribe role selection - instant toggle add/remove with deduplication
+      const { handleCastlistTribeSelect } = await import('./castlistHandlers.js');
+      return handleCastlistTribeSelect(req, res, client, custom_id);
+    } else if (custom_id.startsWith('tribe_edit_button|')) {
+      // Handle tribe edit button - opens modal with existing tribe data
+      // Button ID format: tribe_edit_button|{roleId}|{castlistId}
+      const [prefix, roleId, castlistId] = custom_id.split('|');
+
+      // Validate button format
+      if (prefix !== 'tribe_edit_button') {
+        console.error(`[TRIBE EDIT] Invalid button prefix: ${prefix}`);
+        return res.send({
+          type: 4,
+          data: {
+            content: '❌ Error: Invalid button format',
+            flags: 64 // Ephemeral
+          }
+        });
+      }
+
+      if (!/^\d{17,19}$/.test(roleId)) {
+        console.error(`[TRIBE EDIT] Invalid role ID: ${roleId}`);
+        return res.send({
+          type: 4,
+          data: {
+            content: '❌ Error: Invalid role ID',
+            flags: 64
+          }
+        });
+      }
+
+      if (!castlistId) {
+        console.error(`[TRIBE EDIT] Missing castlist ID`);
+        return res.send({
+          type: 4,
+          data: {
+            content: '❌ Error: Missing castlist ID',
+            flags: 64
+          }
+        });
+      }
+
       return ButtonHandlerFactory.create({
-        id: 'castlist_tribe_select',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        handler: async (context, req, res) => {
-          const castlistId = context.customId.replace('castlist_tribe_select_', '');
-          const selectedRoleId = context.values[0]; // Single selection
-          const resolvedRoles = req.body.data.resolved?.roles || {};
-          const guildId = context.guildId;
+        id: custom_id,
+        updateMessage: false, // Returns modal, not message update
+        handler: async (context) => {
+          console.log(`[TRIBE EDIT] Opening editor for role ${roleId}, castlist ${castlistId}`);
 
-          console.log(`[CASTLIST] Opening tribe editor modal for role ${selectedRoleId}, castlist ${castlistId}`);
-
-          // Load existing tribe data to pre-fill modal
+          // Load existing tribe data
           const { loadPlayerData } = await import('./storage.js');
           const playerData = await loadPlayerData();
-          const tribeData = playerData[guildId]?.tribes?.[selectedRoleId] || {};
+          const tribeData = playerData[context.guildId]?.tribes?.[roleId] || {};
 
-          // Get role info for display
-          const roleInfo = resolvedRoles[selectedRoleId];
-          const roleName = roleInfo?.name || 'Unknown Role';
+          // Get role info
+          const guild = await client.guilds.fetch(context.guildId);
+          const role = await guild.roles.fetch(roleId);
+          const roleName = role?.name || 'Unknown Role';
 
-          // Return modal directly using res.send()
-          return res.send({
-            type: InteractionResponseType.MODAL,
+          // Return modal (NO REMOVE FIELD - use instant toggle instead)
+          return {
+            type: 9, // MODAL
             data: {
-              custom_id: `tribe_edit_modal_${selectedRoleId}_${castlistId}`,
-              title: `Edit Tribe: ${roleName.substring(0, 30)}`,
+              custom_id: `tribe_edit_modal|${roleId}|${castlistId}`,
+              title: `Edit: ${roleName.substring(0, 30)}`,
               components: [
                 {
-                  type: 1, // Action Row
-                  components: [{
+                  type: 18, // Label (Components V2)
+                  label: 'Tribe Emoji',
+                  description: 'Unicode or Discord custom emoji',
+                  component: {
                     type: 4, // Text Input
                     custom_id: 'tribe_emoji',
-                    label: 'Tribe Emoji',
                     style: 1, // Short
-                    placeholder: '🔥 or <:custom:123456789012345678>',
-                    value: tribeData.emoji || '', // Pre-fill existing emoji
+                    placeholder: '🔥 or <:custom:123>',
+                    value: tribeData.emoji || '',
                     required: false,
-                    max_length: 100
-                  }]
+                    max_length: 60 // Support custom emojis
+                  }
                 },
                 {
-                  type: 1, // Action Row
-                  components: [{
+                  type: 18, // Label
+                  label: 'Display Name',
+                  description: 'Override role name in castlist',
+                  component: {
                     type: 4, // Text Input
                     custom_id: 'tribe_display_name',
-                    label: 'Display Name (Optional)',
                     style: 1, // Short
-                    placeholder: 'Custom display name for this tribe',
+                    placeholder: 'Custom tribe name',
                     value: tribeData.displayName || '',
                     required: false,
                     max_length: 50
-                  }]
+                  }
                 },
                 {
-                  type: 1, // Action Row
-                  components: [{
+                  type: 18, // Label
+                  label: 'Accent Color',
+                  description: 'Hex color code for tribe styling',
+                  component: {
                     type: 4, // Text Input
                     custom_id: 'tribe_color',
-                    label: 'Accent Color (Hex)',
                     style: 1, // Short
-                    placeholder: '#FF5733 or leave blank',
+                    placeholder: '#FF5733',
                     value: tribeData.color || '',
                     required: false,
                     max_length: 7
-                  }]
+                  }
                 },
                 {
-                  type: 1, // Action Row
-                  components: [{
+                  type: 18, // Label
+                  label: 'Analytics Name',
+                  description: 'Name for tracking and reports',
+                  component: {
                     type: 4, // Text Input
                     custom_id: 'tribe_analytics_name',
-                    label: 'Analytics Name (Optional)',
                     style: 1, // Short
-                    placeholder: 'Name for tracking and reports',
+                    placeholder: 'Analytics identifier',
                     value: tribeData.analyticsName || '',
                     required: false,
                     max_length: 30
-                  }]
-                },
-                {
-                  type: 1, // Action Row
-                  components: [{
-                    type: 4, // Text Input
-                    custom_id: 'tribe_remove',
-                    label: 'Remove from Castlist? (type "remove")',
-                    style: 1, // Short
-                    placeholder: 'Leave blank to keep, type "remove" to delete',
-                    value: '',
-                    required: false,
-                    max_length: 10
-                  }]
+                  }
                 }
               ]
             }
-          });
+          };
         }
       })(req, res, client);
     } else if (custom_id.startsWith('edit_placement_')) {
@@ -31334,17 +31361,16 @@ Are you sure you want to continue?`;
           }
         });
       }
-    } else if (custom_id.startsWith('tribe_edit_modal_')) {
+    } else if (custom_id.startsWith('tribe_edit_modal|')) {
       // Handle tribe edit modal submission from CastlistV3 Hub
+      // NEW: Uses pipe delimiters, no "remove" field (instant toggle instead)
       try {
-        const parts = custom_id.split('_');
-        const roleId = parts[3];
-        const castlistId = parts.slice(4).join('_');
+        const [prefix, roleId, castlistId] = custom_id.split('|');
         const guildId = req.body.guild_id;
 
         console.log(`[CASTLIST] Processing tribe edit modal for role ${roleId}, castlist ${castlistId}`);
 
-        // Extract modal values
+        // Extract modal values (NO tribe_remove field)
         const components = req.body.data.components;
         const getFieldValue = (customId) => {
           for (const row of components) {
@@ -31358,55 +31384,10 @@ Are you sure you want to continue?`;
         const displayName = getFieldValue('tribe_display_name');
         const colorInput = getFieldValue('tribe_color');
         const analyticsName = getFieldValue('tribe_analytics_name');
-        const removeCommand = getFieldValue('tribe_remove');
 
         const playerData = await loadPlayerData();
         if (!playerData[guildId]) playerData[guildId] = {};
         if (!playerData[guildId].tribes) playerData[guildId].tribes = {};
-
-        // Handle removal
-        if (removeCommand?.toLowerCase() === 'remove') {
-          // Remove tribe from castlist
-          const tribe = playerData[guildId].tribes[roleId];
-          if (tribe) {
-            // Remove from castlistIds array
-            if (tribe.castlistIds && Array.isArray(tribe.castlistIds)) {
-              tribe.castlistIds = tribe.castlistIds.filter(id => id !== castlistId);
-
-              // Update legacy field
-              if (tribe.castlistIds.length > 0) {
-                const firstId = tribe.castlistIds[0];
-                if (firstId === 'default') {
-                  tribe.castlist = 'default';
-                } else {
-                  const { castlistManager } = await import('./castlistManager.js');
-                  const firstCastlist = await castlistManager.getCastlist(guildId, firstId);
-                  tribe.castlist = firstCastlist?.name || firstId;
-                }
-              } else {
-                // No castlists left - remove tribe entirely
-                delete playerData[guildId].tribes[roleId];
-              }
-            } else {
-              // Legacy single castlist format - just delete
-              delete playerData[guildId].tribes[roleId];
-            }
-          }
-          await savePlayerData(playerData);
-
-          // Return updated hub
-          const { createCastlistHub } = await import('./castlistHub.js');
-          const hubData = await createCastlistHub(guildId, {
-            message: `✅ Removed <@&${roleId}> from castlist`,
-            selectedCastlistId: castlistId,
-            activeButton: 'add_tribe' // Keep tribe interface active
-          });
-
-          return res.send({
-            type: InteractionResponseType.UPDATE_MESSAGE,
-            data: hubData
-          });
-        }
 
         // Validate and process emoji
         let processedEmoji = null;

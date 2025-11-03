@@ -921,28 +921,75 @@ BEFORE Role Select:
 }
 ```
 
-### Toggle Detection Logic
+### Toggle Detection Logic with Race Condition Protection
 
-**How to detect add vs remove**:
+**Interaction Deduplication** (prevents rapid double-clicks):
+```javascript
+// At top of handler file (module-level)
+const recentInteractions = new Map();
+const INTERACTION_TIMEOUT = 5000; // 5 seconds
+
+function deduplicateInteraction(guildId, castlistId) {
+  const key = `${guildId}_${castlistId}`;
+  if (recentInteractions.has(key)) {
+    return false; // Duplicate, reject
+  }
+  recentInteractions.set(key, Date.now());
+  setTimeout(() => recentInteractions.delete(key), INTERACTION_TIMEOUT);
+  return true; // Allowed
+}
+```
+
+**Toggle detection with atomic operations**:
 ```javascript
 // Discord sends NEW selection in req.body.data.values
 const newlySelectedRoles = context.values || []; // Array of role IDs
 
+// Deduplicate rapid interactions
+if (!deduplicateInteraction(context.guildId, castlistId)) {
+  console.log(`[CASTLIST] Duplicate interaction detected, ignoring`);
+  return; // Silently ignore duplicate
+}
+
 // Get PREVIOUS selection from database
-const tribesUsingCastlist = await castlistManager.getTribesUsingCastlist(guildId, castlistId);
+const tribesUsingCastlist = await castlistManager.getTribesUsingCastlist(context.guildId, castlistId);
 const previouslySelectedRoles = tribesUsingCastlist.map(t => t.roleId);
 
 // Calculate changes
 const addedRoles = newlySelectedRoles.filter(r => !previouslySelectedRoles.includes(r));
 const removedRoles = previouslySelectedRoles.filter(r => !newlySelectedRoles.includes(r));
 
-// Process
+// Prepare operations (validate before applying)
+const operations = [];
 for (const roleId of addedRoles) {
-  await castlistManager.addTribeToCastlist(guildId, castlistId, { roleId, /* defaults */ });
+  operations.push({ type: 'add', roleId });
+}
+for (const roleId of removedRoles) {
+  operations.push({ type: 'remove', roleId });
 }
 
-for (const roleId of removedRoles) {
-  await castlistManager.removeTribeFromCastlist(guildId, roleId);
+// Apply atomically (all-or-nothing)
+try {
+  for (const op of operations) {
+    if (op.type === 'add') {
+      const roleInfo = context.resolved?.roles?.[op.roleId];
+      await castlistManager.addTribeToCastlist(context.guildId, castlistId, {
+        roleId: op.roleId,
+        name: roleInfo?.name || 'Unknown Role',
+        castlist: castlistId,
+        emoji: null,
+        color: null,
+        displayName: null,
+        analyticsName: null
+      });
+    } else {
+      await castlistManager.removeTribeFromCastlist(context.guildId, op.roleId);
+    }
+  }
+} catch (error) {
+  console.error(`[CASTLIST] Operation failed:`, error);
+  // Note: Individual operations may need rollback in future (requires backup)
+  throw error;
 }
 ```
 
@@ -963,64 +1010,41 @@ CastBot has **46 different button ID parsing patterns** with inconsistent approa
 - `roleId`: Discord snowflake (18-19 digits, no underscores)
 - `castlistId`: Can contain underscores (e.g., `castlist_1762007922583_1331657596087566398`)
 
-### Recommended Pattern: Parse from END
+### Recommended Pattern: Pipe Delimiters ✅
+
+**Why pipe delimiters**:
+- ✅ No conflicts with Discord snowflakes or castlist IDs (only use `_` and digits)
+- ✅ Clean, simple parsing with no ambiguity
+- ✅ Handles any variable-length IDs without rejoining arrays
+- ✅ Commonly used in Discord bot development
 
 **Button ID format**:
 ```javascript
 // Edit button on tribe section:
-`tribe_edit_button_${roleId}_${castlistId}`
+`tribe_edit_button|${roleId}|${castlistId}`
 
 // Example:
-'tribe_edit_button_1380906521084559401_castlist_1762007922583_1331657596087566398'
-                    ↑ roleId (fixed)      ↑ castlistId (variable length with underscores)
+'tribe_edit_button|1380906521084559401|castlist_1762007922583_1331657596087566398'
+                  ↑ roleId              ↑ castlistId (can contain underscores)
 ```
 
-**Parsing logic** (parse from END):
+**Parsing logic**:
 ```javascript
-// ✅ CORRECT - Parse from end to handle underscores in castlistId
-const parts = custom_id.split('_');
-
-// Last element is the guild ID portion of castlistId
-// Second-to-last is the timestamp portion
-// Third-to-last is "castlist" prefix OR the entire castlistId if no prefix
-
-// Simpler approach: Find roleId position (always after "button")
-const buttonIdx = parts.indexOf('button');
-if (buttonIdx === -1 || parts.length < buttonIdx + 3) {
-  throw new Error('Invalid tribe_edit_button format');
-}
-
-const roleId = parts[buttonIdx + 1]; // Immediately after "button"
-const castlistId = parts.slice(buttonIdx + 2).join('_'); // Everything after roleId
-
-console.log(`Parsed: roleId=${roleId}, castlistId=${castlistId}`);
+// ✅ CORRECT - Pipe delimiter makes parsing trivial
+const [prefix, roleId, castlistId] = custom_id.split('|');
 
 // Validation
+if (prefix !== 'tribe_edit_button') {
+  throw new Error(`Invalid button prefix: ${prefix}`);
+}
 if (!/^\d{17,19}$/.test(roleId)) {
   throw new Error(`Invalid role ID format: ${roleId}`);
 }
 if (!castlistId || castlistId.length === 0) {
   throw new Error('Missing castlist ID');
 }
-```
 
-**Why this works**:
-- ✅ `roleId` is always a snowflake (no underscores, fixed format)
-- ✅ `castlistId` can have arbitrary underscores
-- ✅ Finding "button" keyword is unambiguous
-- ✅ Rejoin everything after roleId handles variable-length castlistId
-- ✅ Validation catches malformed IDs early
-
-### Alternative: Structured Delimiter
-
-**If button IDs get too complex**, use different delimiter:
-```javascript
-// Pipe delimiter (no conflicts with Discord IDs)
-custom_id: `tribe_edit_button|${roleId}|${castlistId}`
-
-// Parse:
-const [prefix, roleId, castlistId] = custom_id.split('|');
-// Clean, simple, no ambiguity
+console.log(`Parsed: roleId=${roleId}, castlistId=${castlistId}`);
 ```
 
 ---
@@ -1129,6 +1153,15 @@ case CastlistButtonType.ADD_TRIBE:
              `💡 Any Discord role can become a tribe (max 6)`
   });
 
+  // Component budget safety check (count entire hub, not just interface)
+  // Note: countComponents() should recursively count all nested components
+  let maxTribeLimit = 6;
+  const estimatedTotal = 22 + interfaceComponents.length; // 22 base components + new interface
+  if (estimatedTotal > 35) {
+    console.warn(`[TRIBES] Component count high: ${estimatedTotal}/40, limiting to 5 tribes`);
+    maxTribeLimit = 5; // Reduce limit if approaching budget
+  }
+
   // Section for each existing tribe
   for (const tribe of tribesUsingCastlist) {
     interfaceComponents.push({
@@ -1140,7 +1173,7 @@ case CastlistButtonType.ADD_TRIBE:
       }],
       accessory: {
         type: 2, // Button
-        custom_id: `tribe_edit_button_${tribe.roleId}_${castlist.id}`,
+        custom_id: `tribe_edit_button|${tribe.roleId}|${castlist.id}`,
         label: "Edit",
         style: 2, // Secondary
         emoji: { name: "✏️" }
@@ -1180,8 +1213,20 @@ case CastlistButtonType.ADD_TRIBE:
 
 **Current code**: Opens modal immediately for single selection
 
-**New code**: Detect add/remove, process instantly, refresh hub
+**New code**: Detect add/remove, process instantly with deduplication and atomic operations
 ```javascript
+// At top of file - interaction deduplication
+const recentInteractions = new Map();
+const INTERACTION_TIMEOUT = 5000;
+
+function deduplicateInteraction(guildId, castlistId) {
+  const key = `${guildId}_${castlistId}`;
+  if (recentInteractions.has(key)) return false;
+  recentInteractions.set(key, Date.now());
+  setTimeout(() => recentInteractions.delete(key), INTERACTION_TIMEOUT);
+  return true;
+}
+
 export async function handleCastlistTribeSelect(req, res, client, custom_id) {
   return ButtonHandlerFactory.create({
     id: custom_id,
@@ -1189,6 +1234,12 @@ export async function handleCastlistTribeSelect(req, res, client, custom_id) {
     handler: async (context) => {
       const castlistId = custom_id.replace('castlist_tribe_select_', '');
       const newlySelectedRoles = context.values || [];
+
+      // Deduplicate rapid interactions
+      if (!deduplicateInteraction(context.guildId, castlistId)) {
+        console.log(`[CASTLIST] Duplicate interaction, ignoring`);
+        return; // Silently ignore
+      }
 
       console.log(`[CASTLIST] Tribe selection changed for castlist ${castlistId}`);
 
@@ -1202,25 +1253,38 @@ export async function handleCastlistTribeSelect(req, res, client, custom_id) {
 
       console.log(`[CASTLIST] Added: ${addedRoles.length}, Removed: ${removedRoles.length}`);
 
-      // Process additions
+      // Prepare operations (atomic pattern)
+      const operations = [];
       for (const roleId of addedRoles) {
-        const roleInfo = context.resolved?.roles?.[roleId];
-        await castlistManager.addTribeToCastlist(context.guildId, castlistId, {
-          roleId: roleId,
-          name: roleInfo?.name || 'Unknown Role',
-          castlist: castlistId,
-          emoji: null, // User can edit via Edit button
-          color: null,
-          displayName: null,
-          analyticsName: null
-        });
-        console.log(`[CASTLIST] ✅ Added tribe ${roleInfo?.name} (${roleId})`);
+        operations.push({ type: 'add', roleId });
+      }
+      for (const roleId of removedRoles) {
+        operations.push({ type: 'remove', roleId });
       }
 
-      // Process removals
-      for (const roleId of removedRoles) {
-        await castlistManager.removeTribeFromCastlist(context.guildId, roleId);
-        console.log(`[CASTLIST] ✅ Removed tribe ${roleId}`);
+      // Apply atomically
+      try {
+        for (const op of operations) {
+          if (op.type === 'add') {
+            const roleInfo = context.resolved?.roles?.[op.roleId];
+            await castlistManager.addTribeToCastlist(context.guildId, castlistId, {
+              roleId: op.roleId,
+              name: roleInfo?.name || 'Unknown Role',
+              castlist: castlistId,
+              emoji: null,
+              color: null,
+              displayName: null,
+              analyticsName: null
+            });
+            console.log(`[CASTLIST] ✅ Added tribe ${roleInfo?.name} (${op.roleId})`);
+          } else {
+            await castlistManager.removeTribeFromCastlist(context.guildId, op.roleId);
+            console.log(`[CASTLIST] ✅ Removed tribe ${op.roleId}`);
+          }
+        }
+      } catch (error) {
+        console.error(`[CASTLIST] Operation failed:`, error);
+        throw error; // Let ButtonHandlerFactory handle error display
       }
 
       // Refresh hub with updated tribes
@@ -1241,13 +1305,13 @@ export async function handleCastlistTribeSelect(req, res, client, custom_id) {
 
 **Add new handler**:
 ```javascript
-} else if (custom_id.startsWith('tribe_edit_button_')) {
-  // Parse button ID
-  const parts = custom_id.split('_');
-  const buttonIdx = parts.indexOf('button');
+} else if (custom_id.startsWith('tribe_edit_button|')) {
+  // Parse button ID with pipe delimiters
+  const [prefix, roleId, castlistId] = custom_id.split('|');
 
-  if (buttonIdx === -1 || parts.length < buttonIdx + 3) {
-    console.error(`[TRIBE EDIT] Invalid button format: ${custom_id}`);
+  // Validate
+  if (prefix !== 'tribe_edit_button') {
+    console.error(`[TRIBE EDIT] Invalid button prefix: ${prefix}`);
     return res.send({
       type: 4,
       data: {
@@ -1257,16 +1321,23 @@ export async function handleCastlistTribeSelect(req, res, client, custom_id) {
     });
   }
 
-  const roleId = parts[buttonIdx + 1];
-  const castlistId = parts.slice(buttonIdx + 2).join('_');
-
-  // Validate
   if (!/^\d{17,19}$/.test(roleId)) {
     console.error(`[TRIBE EDIT] Invalid role ID: ${roleId}`);
     return res.send({
       type: 4,
       data: {
         content: '❌ Error: Invalid role ID',
+        flags: 64
+      }
+    });
+  }
+
+  if (!castlistId) {
+    console.error(`[TRIBE EDIT] Missing castlist ID`);
+    return res.send({
+      type: 4,
+      data: {
+        content: '❌ Error: Missing castlist ID',
         flags: 64
       }
     });
@@ -1291,7 +1362,7 @@ export async function handleCastlistTribeSelect(req, res, client, custom_id) {
       return {
         type: 9, // MODAL
         data: {
-          custom_id: `tribe_edit_modal_${roleId}_${castlistId}`,
+          custom_id: `tribe_edit_modal|${roleId}|${castlistId}`,
           title: `Edit: ${roleName.substring(0, 30)}`,
           components: [
             {

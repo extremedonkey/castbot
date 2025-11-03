@@ -10,6 +10,18 @@ import { castlistVirtualAdapter } from './castlistVirtualAdapter.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { PermissionFlagsBits, InteractionResponseType } from 'discord.js';
 
+// Interaction deduplication for rapid role select changes
+const recentInteractions = new Map();
+const INTERACTION_TIMEOUT = 5000; // 5 seconds
+
+function deduplicateInteraction(guildId, castlistId) {
+  const key = `${guildId}_${castlistId}`;
+  if (recentInteractions.has(key)) return false; // Duplicate, reject
+  recentInteractions.set(key, Date.now());
+  setTimeout(() => recentInteractions.delete(key), INTERACTION_TIMEOUT);
+  return true; // Allowed
+}
+
 /**
  * Create the Edit Info modal for a NEW castlist
  * Similar to the edit modal but with no pre-filled values and a different submit handler
@@ -569,108 +581,75 @@ export function handleCastlistSort(req, res, client, custom_id) {
 /**
  * Handle tribe role selection
  */
-export async function handleCastlistTribeSelect(req, res, client, custom_id) {
-  try {
-    const castlistId = custom_id.replace('castlist_tribe_select_', '');
-    const selectedRoleId = req.body.data.values?.[0]; // Single selection now
-    const resolvedRoles = req.body.data.resolved?.roles || {};
-    const guildId = req.body.guild_id;
+export function handleCastlistTribeSelect(req, res, client, custom_id) {
+  return ButtonHandlerFactory.create({
+    id: custom_id,
+    updateMessage: true, // ✅ Update message for instant toggle UX
+    handler: async (context) => {
+      const castlistId = custom_id.replace('castlist_tribe_select_', '');
+      const newlySelectedRoles = context.values || []; // Array of role IDs
 
-    console.log(`[CASTLIST] Opening tribe editor modal for role ${selectedRoleId}, castlist ${castlistId}`);
+      // Deduplicate rapid interactions (prevent double-clicks)
+      if (!deduplicateInteraction(context.guildId, castlistId)) {
+        console.log(`[CASTLIST] Duplicate interaction detected for ${castlistId}, ignoring`);
+        return; // Silently ignore duplicate
+      }
 
-    // Load existing tribe data to pre-fill modal
-    const playerData = await loadPlayerData();
-    const tribeData = playerData[guildId]?.tribes?.[selectedRoleId] || {};
+      console.log(`[CASTLIST] Tribe selection changed for castlist ${castlistId}`);
 
-    // Get role info for display
-    const roleInfo = resolvedRoles[selectedRoleId];
-    const roleName = roleInfo?.name || 'Unknown Role';
+      // Get previously selected tribes from database
+      const tribesUsingCastlist = await castlistManager.getTribesUsingCastlist(context.guildId, castlistId);
+      const previouslySelectedRoles = tribesUsingCastlist.map(t => t.roleId);
 
-    return res.send({
-      type: InteractionResponseType.MODAL,
-      data: {
-        custom_id: `tribe_edit_modal_${selectedRoleId}_${castlistId}`,
-        title: `Edit Tribe: ${roleName.substring(0, 30)}`,
-        components: [
-          {
-            type: 1, // Action Row
-            components: [{
-              type: 4, // Text Input
-              custom_id: 'tribe_emoji',
-              label: 'Tribe Emoji',
-              style: 1, // Short
-              placeholder: '🔥 or <:custom:123456789012345678>',
-              value: tribeData.emoji || '', // Pre-fill existing emoji
-              required: false,
-              max_length: 100
-            }]
-          },
-          {
-            type: 1, // Action Row
-            components: [{
-              type: 4, // Text Input
-              custom_id: 'tribe_display_name',
-              label: 'Display Name (Optional)',
-              style: 1, // Short
-              placeholder: 'Custom display name for this tribe',
-              value: tribeData.displayName || '',
-              required: false,
-              max_length: 50
-            }]
-          },
-          {
-            type: 1, // Action Row
-            components: [{
-              type: 4, // Text Input
-              custom_id: 'tribe_color',
-              label: 'Accent Color (Hex)',
-              style: 1, // Short
-              placeholder: '#FF5733 or leave blank',
-              value: tribeData.color || '',
-              required: false,
-              max_length: 7
-            }]
-          },
-          {
-            type: 1, // Action Row
-            components: [{
-              type: 4, // Text Input
-              custom_id: 'tribe_analytics_name',
-              label: 'Analytics Name (Optional)',
-              style: 1, // Short
-              placeholder: 'Name for tracking and reports',
-              value: tribeData.analyticsName || '',
-              required: false,
-              max_length: 30
-            }]
-          },
-          {
-            type: 1, // Action Row
-            components: [{
-              type: 4, // Text Input
-              custom_id: 'tribe_remove',
-              label: 'Remove from Castlist? (type "remove")',
-              style: 1, // Short
-              placeholder: 'Leave blank to keep, type "remove" to delete',
-              value: '',
-              required: false,
-              max_length: 10
-            }]
+      // Calculate changes (instant toggle detection)
+      const addedRoles = newlySelectedRoles.filter(r => !previouslySelectedRoles.includes(r));
+      const removedRoles = previouslySelectedRoles.filter(r => !newlySelectedRoles.includes(r));
+
+      console.log(`[CASTLIST] Added: ${addedRoles.length}, Removed: ${removedRoles.length}`);
+
+      // Prepare operations (atomic pattern - validate before applying)
+      const operations = [];
+      for (const roleId of addedRoles) {
+        operations.push({ type: 'add', roleId });
+      }
+      for (const roleId of removedRoles) {
+        operations.push({ type: 'remove', roleId });
+      }
+
+      // Apply atomically (all-or-nothing)
+      try {
+        for (const op of operations) {
+          if (op.type === 'add') {
+            const roleInfo = context.resolved?.roles?.[op.roleId];
+            await castlistManager.addTribeToCastlist(context.guildId, castlistId, {
+              roleId: op.roleId,
+              name: roleInfo?.name || 'Unknown Role',
+              castlist: castlistId,
+              emoji: null, // User can edit via Edit button
+              color: null,
+              displayName: null,
+              analyticsName: null
+            });
+            console.log(`[CASTLIST] ✅ Added tribe ${roleInfo?.name} (${op.roleId})`);
+          } else {
+            await castlistManager.removeTribeFromCastlist(context.guildId, op.roleId);
+            console.log(`[CASTLIST] ✅ Removed tribe ${op.roleId}`);
           }
-        ]
+        }
+      } catch (error) {
+        console.error(`[CASTLIST] Tribe operation failed:`, error);
+        throw error; // Let ButtonHandlerFactory handle error display
       }
-    });
-  } catch (error) {
-    console.error(`[CASTLIST] Error showing tribe edit modal:`, error);
-    // Fall back to CHANNEL_MESSAGE_WITH_SOURCE for select menu error
-    return res.send({
-      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-      data: {
-        flags: (1 << 6), // Ephemeral
-        content: '❌ Error opening tribe editor. Please try again.'
-      }
-    });
-  }
+
+      // Refresh hub with updated tribes (keeps Tribes button active)
+      const hubData = await createCastlistHub(context.guildId, {
+        selectedCastlistId: castlistId,
+        activeButton: CastlistButtonType.ADD_TRIBE
+      });
+
+      return hubData;
+    }
+  })(req, res, client);
 }
 
 

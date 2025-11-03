@@ -434,34 +434,74 @@ async function createHotSwappableInterface(guildId, castlist, activeButton) {
       return null;
     
     case CastlistButtonType.ADD_TRIBE:
-      // Create role select for tribe editing
       // Get tribes currently using this castlist
       const tribesUsingCastlist = await castlistManager.getTribesUsingCastlist(guildId, castlist.id);
 
       // Build interface components
       const interfaceComponents = [];
 
-      // Add descriptive text
+      // Instructions with new instant toggle UX
       interfaceComponents.push({
         type: 10, // Text Display
-        content: `### Edit Tribe Settings\n\nSelect any role to:\n• **Add** it as a new tribe\n• **Edit** emoji and settings\n• **Remove** from castlist (type "remove" in modal)\n\n💡 **Tip:** Any Discord role can become a tribe!`
+        content: `### Manage Tribes\n\n✅ **Ticked roles** = Currently on castlist\n` +
+                 `• **Select new role** → Adds tribe instantly\n` +
+                 `• **Deselect ticked role** → Removes tribe instantly\n` +
+                 `• **Click Edit** → Modify tribe settings\n\n` +
+                 `💡 Any Discord role can become a tribe (max 6)`
       });
 
-      // Add the role select (single-select for editing)
+      // Component budget safety check (count entire hub, not just interface)
+      let maxTribeLimit = 6;
+      const estimatedTotal = 22 + interfaceComponents.length + tribesUsingCastlist.length; // Base + instructions + sections
+      if (estimatedTotal > 35) {
+        console.warn(`[TRIBES] Component count high: ${estimatedTotal}/40, limiting to 5 tribes`);
+        maxTribeLimit = 5; // Reduce limit if approaching budget
+      }
+
+      // Section for each existing tribe with Edit button accessory
+      for (const tribe of tribesUsingCastlist) {
+        interfaceComponents.push({
+          type: 9, // Section
+          components: [{
+            type: 10, // Text Display
+            content: `${tribe.emoji || '🏕️'} **${tribe.displayName || tribe.name}**\n` +
+                     `-# ${tribe.color ? `Color: ${tribe.color}` : 'No custom settings'}`
+          }],
+          accessory: {
+            type: 2, // Button
+            custom_id: `tribe_edit_button|${tribe.roleId}|${castlist.id}`,
+            label: "Edit",
+            style: 2, // Secondary
+            emoji: { name: "✏️" }
+          }
+        });
+      }
+
+      // Separator before Role Select
+      if (tribesUsingCastlist.length > 0) {
+        interfaceComponents.push({ type: 14 }); // Separator
+      }
+
+      // Role Select with pre-selection for instant toggle
       interfaceComponents.push({
         type: 1, // ActionRow
         components: [{
           type: 6, // Role Select
           custom_id: `castlist_tribe_select_${castlist.id}`,
-          placeholder: 'Select a tribe role to edit settings...',
-          min_values: 1,
-          max_values: 1  // Single select only for modal editing
-          // No default_values - user must explicitly select
+          placeholder: tribesUsingCastlist.length > 0
+            ? 'Add or remove tribes...'
+            : 'Select roles to add as tribes...',
+          min_values: 0, // CRITICAL: Allow deselecting all (enables remove)
+          max_values: maxTribeLimit, // ENFORCED: Component budget limit
+          default_values: tribesUsingCastlist.map(tribe => ({
+            id: tribe.roleId,
+            type: "role"
+          }))
         }]
       });
 
-      // Return single component or array based on warning presence
-      return interfaceComponents.length === 1 ? interfaceComponents[0] : interfaceComponents;
+      // Return interface components
+      return interfaceComponents;
     
     case CastlistButtonType.ORDER:
       // Create sort strategy select
