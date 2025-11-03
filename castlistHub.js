@@ -259,7 +259,7 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       .setLabel('Swap/Merge')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🔀')
-      .setDisabled(true) // Always disabled - not implemented yet
+      .setDisabled(!isDefaultCastlist) // Only enabled for default castlist
   );
 
   container.components.push(navButtons.toJSON());

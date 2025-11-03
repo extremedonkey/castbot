@@ -451,6 +451,14 @@ export const BUTTON_REGISTRY = {
     style: 'Danger',
     category: 'castlist'
   },
+  'castlist_swap_merge': {
+    label: 'Swap/Merge Tribes',
+    description: 'Create dramatic tribe swap with automatic role assignment and archival',
+    emoji: '🔀',
+    style: 'Secondary',
+    category: 'castlist',
+    parent: 'castlist_hub_main'
+  },
   'edit_placement_*': {
     label: 'Edit Placement',
     description: 'Edit player season placement (1st, 2nd, etc.)',
