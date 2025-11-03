@@ -777,17 +777,702 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
 
 ## Implementation Backlog
 
-### 1. Must Have - Tribe Emoji Editor (Immediate)
-**Status**: Ready to implement
-**Effort**: 1-2 hours
+### 1. PRIORITY 1 MUST HAVE - Castlist Tribe Sections (Instant Toggle + Visual Display)
+**Status**: ✅ Approved for implementation - November 2024
+**Effort**: 4-6 hours (Stage 1 implementation)
+**Priority**: P1 - Critical UX improvement
 
-Tasks:
-- [ ] Modify `castlist_tribe_select` to single-select mode
-- [ ] Add modal handler for `tribe_edit_modal_*`
-- [ ] Implement emoji validation (Unicode + Discord custom)
-- [ ] Add fields for display name, color, analytics name
-- [ ] Test with various emoji formats
-- [ ] Update hub to show success message
+---
+
+## Original User Requirements (Verbatim)
+
+> Now, the following Role Select (castlist_tribe_select_*) is used to Add / Edit and Remove tribes to a castlist. Once the user selects a value, it immediately brings up a modal to add or edit the tribe.
+>
+> However, I'm feeling the UX is very clunky, especially with the need to type "remove" in the modal to remove a tribe.
+>
+> What I'm considering is:
+> * Keep the string select
+> * Investigate if it is possible to 'pre-select' [...] such that):
+> GIVEN a castlist is selected, pre-select / tick any Roles (associated tribes) with that castlist in the String select
+> IF the user selects an existing / ticked role, the handler should immediately remove the tribe
+> IF the user selects a new role / tribe, immediately add it to the castlist AND
+> Update the castlist_hub_main UI /castlist_select with a section that prints out the Tribe Name AND an 'Edit' accessory that enables the user to Edit the specific tribe (calling the existing tribe editor modal, that has been shifted to the button handler rather than the string select)
+
+**User Decisions:**
+1. ✅ Agree with Stage 1 recommendation (pre-selection + Section UI + instant toggle)
+2. ✅ Keep instant behavior (no confirmation for remove)
+3. ✅ Enforce max 6 tribes limit (safety margin for component budget)
+4. ✅ Role Select should allow searching at any time
+
+---
+
+## Feature Overview
+
+**Current UX (Clunky):**
+```
+User flow:
+1. Click "Tribes" button → Role Select appears
+2. Select role → Modal opens with 5 fields
+3. To ADD: Fill fields → Submit
+4. To EDIT: Select same role → Modal opens → Edit → Submit
+5. To REMOVE: Select role → Modal → Type "remove" → Submit ❌ CLUNKY!
+```
+
+**New UX (Instant & Visual):**
+```
+User flow:
+1. Click "Tribes" button → See all tribes as Section components with Edit buttons
+2. Role Select below shows ticked/pre-selected roles (currently on castlist)
+3. To ADD: Select new role → ✅ Added instantly
+4. To REMOVE: Deselect ticked role → ✅ Removed instantly
+5. To EDIT: Click Edit button on tribe section → Modal opens → Edit → Submit
+```
+
+**Key Improvements:**
+- ✅ **Visual feedback**: See all tribes at a glance with Sections
+- ✅ **Instant add/remove**: No modal required for simple operations
+- ✅ **Pre-selection**: Discord shows which tribes are assigned (ticked)
+- ✅ **Organized layout**: Sections with Edit accessory buttons
+- ✅ **Reduced friction**: 3 clicks → 1 click for add/remove
+
+---
+
+## Component Budget Analysis
+
+**Maximum Discord limit**: 40 components per message
+
+**Current Castlist Hub usage** (from user's inventory):
+```
+1. Container (main wrapper)
+2. Castlist Manager Text Display (header)
+3. Divider
+4. ActionRow for Castlist Select
+5. Castlist Select (String Select)
+6. Divider
+7. Text Display (instructions - 1 or 2)
+8. Divider
+9. ActionRow for buttons
+10-14. Buttons in ActionRow (5 management buttons)
+15. Divider
+16. ActionRow for Add Tribe
+17. Add Tribe Role Select
+18. Divider
+19. ActionRow for bottom buttons
+20-22. Bottom buttons (3)
+
+= 22 components used
+= 18 components remaining
+```
+
+**New Tribe Sections allocation** (with 6 tribes max):
+```
+BEFORE Role Select:
+- Text Display (instructions): 1 component
+- Section (tribe 1): 1 component (includes Edit button accessory)
+- Section (tribe 2): 1 component
+- Section (tribe 3): 1 component
+- Section (tribe 4): 1 component
+- Section (tribe 5): 1 component
+- Section (tribe 6): 1 component
+- Divider (before Role Select): 1 component
+
+= 8 components for 6 tribes
+= 10 components remaining (safe margin)
+```
+
+**Enforcement**: Role Select `max_values: 6` to prevent exceeding component budget.
+
+---
+
+## Technical Design
+
+### Discord Components V2 Pre-Selection Pattern
+
+**Role Select with default_values** (from ComponentsV2.md):
+```javascript
+{
+  type: 6, // Role Select
+  custom_id: `castlist_tribe_select_${castlistId}`,
+  placeholder: 'Add or remove tribes...',
+  min_values: 0, // ⚠️ CRITICAL: Allows deselecting all (required for remove)
+  max_values: 6, // ENFORCED: Component budget safety
+  default_values: [ // ✅ Pre-selects currently assigned tribes
+    { id: "1380906521084559401", type: "role" },
+    { id: "1333822520737927281", type: "role" }
+  ]
+}
+```
+
+**Section with Button Accessory** (working example from castlistV2.js:302-311):
+```javascript
+{
+  type: 9, // Section
+  components: [{
+    type: 10, // Text Display (EXACTLY ONE - Discord requirement)
+    content: "🏕️ **Tribe Name**\n-# Display Name • Color: #FF5733 • Analytics: production"
+  }],
+  accessory: {
+    type: 2, // Button
+    custom_id: `tribe_edit_button_${roleId}_${castlistId}`,
+    label: "Edit",
+    style: 2, // Secondary
+    emoji: { name: "✏️" }
+  }
+}
+```
+
+### Toggle Detection Logic
+
+**How to detect add vs remove**:
+```javascript
+// Discord sends NEW selection in req.body.data.values
+const newlySelectedRoles = context.values || []; // Array of role IDs
+
+// Get PREVIOUS selection from database
+const tribesUsingCastlist = await castlistManager.getTribesUsingCastlist(guildId, castlistId);
+const previouslySelectedRoles = tribesUsingCastlist.map(t => t.roleId);
+
+// Calculate changes
+const addedRoles = newlySelectedRoles.filter(r => !previouslySelectedRoles.includes(r));
+const removedRoles = previouslySelectedRoles.filter(r => !newlySelectedRoles.includes(r));
+
+// Process
+for (const roleId of addedRoles) {
+  await castlistManager.addTribeToCastlist(guildId, castlistId, { roleId, /* defaults */ });
+}
+
+for (const roleId of removedRoles) {
+  await castlistManager.removeTribeFromCastlist(guildId, roleId);
+}
+```
+
+---
+
+## Button ID Parsing Strategy
+
+**⚠️ CRITICAL**: See [RaP 0992](../../RaP/0992_20251005_ButtonIdParsing_TechnicalDebt.md) for why this matters.
+
+### The Problem (from RaP 0992)
+
+CastBot has **46 different button ID parsing patterns** with inconsistent approaches:
+- Some parse from START (breaks with underscores in IDs)
+- Some parse from END (safer, handles variable-length IDs)
+- Some use magic string search (fragile, breaks with unexpected IDs)
+
+**Our button IDs will contain:**
+- `roleId`: Discord snowflake (18-19 digits, no underscores)
+- `castlistId`: Can contain underscores (e.g., `castlist_1762007922583_1331657596087566398`)
+
+### Recommended Pattern: Parse from END
+
+**Button ID format**:
+```javascript
+// Edit button on tribe section:
+`tribe_edit_button_${roleId}_${castlistId}`
+
+// Example:
+'tribe_edit_button_1380906521084559401_castlist_1762007922583_1331657596087566398'
+                    ↑ roleId (fixed)      ↑ castlistId (variable length with underscores)
+```
+
+**Parsing logic** (parse from END):
+```javascript
+// ✅ CORRECT - Parse from end to handle underscores in castlistId
+const parts = custom_id.split('_');
+
+// Last element is the guild ID portion of castlistId
+// Second-to-last is the timestamp portion
+// Third-to-last is "castlist" prefix OR the entire castlistId if no prefix
+
+// Simpler approach: Find roleId position (always after "button")
+const buttonIdx = parts.indexOf('button');
+if (buttonIdx === -1 || parts.length < buttonIdx + 3) {
+  throw new Error('Invalid tribe_edit_button format');
+}
+
+const roleId = parts[buttonIdx + 1]; // Immediately after "button"
+const castlistId = parts.slice(buttonIdx + 2).join('_'); // Everything after roleId
+
+console.log(`Parsed: roleId=${roleId}, castlistId=${castlistId}`);
+
+// Validation
+if (!/^\d{17,19}$/.test(roleId)) {
+  throw new Error(`Invalid role ID format: ${roleId}`);
+}
+if (!castlistId || castlistId.length === 0) {
+  throw new Error('Missing castlist ID');
+}
+```
+
+**Why this works**:
+- ✅ `roleId` is always a snowflake (no underscores, fixed format)
+- ✅ `castlistId` can have arbitrary underscores
+- ✅ Finding "button" keyword is unambiguous
+- ✅ Rejoin everything after roleId handles variable-length castlistId
+- ✅ Validation catches malformed IDs early
+
+### Alternative: Structured Delimiter
+
+**If button IDs get too complex**, use different delimiter:
+```javascript
+// Pipe delimiter (no conflicts with Discord IDs)
+custom_id: `tribe_edit_button|${roleId}|${castlistId}`
+
+// Parse:
+const [prefix, roleId, castlistId] = custom_id.split('|');
+// Clean, simple, no ambiguity
+```
+
+---
+
+## Working Pattern: Button → Modal → Update Message
+
+**From production logs** (`edit_placement` button flow):
+
+### Step 1: User clicks button
+```javascript
+// Interaction received:
+custom_id: 'edit_placement_391415444084490240_global_castlist_1762007922583_1331657596087566398_0_0_edit'
+type: 3 // MESSAGE_COMPONENT (button click)
+```
+
+### Step 2: Handler returns MODAL (type 9)
+```javascript
+return res.send({
+  type: 9, // InteractionResponseType.MODAL
+  data: {
+    custom_id: `save_placement_${playerId}_${namespace}_${castlistId}_${tribeIndex}_${page}_${mode}`,
+    title: 'Edit Placement',
+    components: [
+      {
+        type: 18, // Label
+        label: 'Placement Value',
+        component: {
+          type: 4, // Text Input
+          custom_id: 'placement_value',
+          style: 1, // Short
+          value: currentPlacement.toString(),
+          required: true
+        }
+      }
+    ]
+  }
+});
+```
+
+### Step 3: User submits modal
+```javascript
+// Interaction received:
+type: 5 // MODAL_SUBMIT
+custom_id: 'save_placement_391415444084490240_global_castlist_1762007922583_1331657596087566398_0_0_edit'
+data: {
+  components: [{
+    components: [{
+      custom_id: 'placement_value',
+      value: '11' // User's input
+    }]
+  }]
+}
+```
+
+### Step 4: Handler returns UPDATE_MESSAGE
+```javascript
+// Save the data
+await savePlayerData(playerData);
+
+// Refresh the castlist display
+const responseData = await buildCastlist2ResponseData(/* ... */);
+
+// Update the ORIGINAL message
+return res.send({
+  type: 7, // InteractionResponseType.UPDATE_MESSAGE
+  data: responseData // Full Components V2 structure
+});
+```
+
+**Key observations**:
+- ✅ Modal custom_id encodes ALL context needed to refresh UI
+- ✅ UPDATE_MESSAGE refreshes the original message (castlist display)
+- ✅ No separate "back to menu" button needed - modal submit updates in place
+- ✅ User sees updated data immediately (placement changed from 15th → 11th)
+
+---
+
+## Implementation Steps
+
+### Phase 1: Update Castlist Hub UI (castlistHub.js)
+
+**File**: `castlistHub.js:436-464` (Tribes button hot-swap interface)
+
+**Current code**:
+```javascript
+case CastlistButtonType.ADD_TRIBE:
+  // Text Display with instructions
+  // Role Select (type 6) with NO default_values
+```
+
+**New code**:
+```javascript
+case CastlistButtonType.ADD_TRIBE:
+  // Get tribes currently using this castlist
+  const tribesUsingCastlist = await castlistManager.getTribesUsingCastlist(guildId, castlist.id);
+
+  const interfaceComponents = [];
+
+  // Instructions
+  interfaceComponents.push({
+    type: 10, // Text Display
+    content: `### Manage Tribes\n\n✅ **Ticked roles** = Currently on castlist\n` +
+             `• **Select new role** → Adds tribe instantly\n` +
+             `• **Deselect ticked role** → Removes tribe instantly\n` +
+             `• **Click Edit** → Modify tribe settings\n\n` +
+             `💡 Any Discord role can become a tribe (max 6)`
+  });
+
+  // Section for each existing tribe
+  for (const tribe of tribesUsingCastlist) {
+    interfaceComponents.push({
+      type: 9, // Section
+      components: [{
+        type: 10, // Text Display
+        content: `${tribe.emoji || '🏕️'} **${tribe.displayName || tribe.name}**\n` +
+                 `-# ${tribe.color ? `Color: ${tribe.color}` : 'No custom settings'}`
+      }],
+      accessory: {
+        type: 2, // Button
+        custom_id: `tribe_edit_button_${tribe.roleId}_${castlist.id}`,
+        label: "Edit",
+        style: 2, // Secondary
+        emoji: { name: "✏️" }
+      }
+    });
+  }
+
+  // Separator before Role Select
+  if (tribesUsingCastlist.length > 0) {
+    interfaceComponents.push({ type: 14 }); // Separator
+  }
+
+  // Role Select with pre-selection
+  interfaceComponents.push({
+    type: 1, // ActionRow
+    components: [{
+      type: 6, // Role Select
+      custom_id: `castlist_tribe_select_${castlist.id}`,
+      placeholder: tribesUsingCastlist.length > 0
+        ? 'Add or remove tribes...'
+        : 'Select roles to add as tribes...',
+      min_values: 0, // CRITICAL: Allow deselecting all
+      max_values: 6, // ENFORCED: Component budget limit
+      default_values: tribesUsingCastlist.map(tribe => ({
+        id: tribe.roleId,
+        type: "role"
+      }))
+    }]
+  });
+
+  return interfaceComponents;
+```
+
+### Phase 2: Update Role Select Handler (castlistHandlers.js)
+
+**File**: `castlistHandlers.js:572-674`
+
+**Current code**: Opens modal immediately for single selection
+
+**New code**: Detect add/remove, process instantly, refresh hub
+```javascript
+export async function handleCastlistTribeSelect(req, res, client, custom_id) {
+  return ButtonHandlerFactory.create({
+    id: custom_id,
+    updateMessage: true, // ✅ Update message, not modal
+    handler: async (context) => {
+      const castlistId = custom_id.replace('castlist_tribe_select_', '');
+      const newlySelectedRoles = context.values || [];
+
+      console.log(`[CASTLIST] Tribe selection changed for castlist ${castlistId}`);
+
+      // Get previously selected tribes
+      const tribesUsingCastlist = await castlistManager.getTribesUsingCastlist(context.guildId, castlistId);
+      const previouslySelectedRoles = tribesUsingCastlist.map(t => t.roleId);
+
+      // Calculate changes
+      const addedRoles = newlySelectedRoles.filter(r => !previouslySelectedRoles.includes(r));
+      const removedRoles = previouslySelectedRoles.filter(r => !newlySelectedRoles.includes(r));
+
+      console.log(`[CASTLIST] Added: ${addedRoles.length}, Removed: ${removedRoles.length}`);
+
+      // Process additions
+      for (const roleId of addedRoles) {
+        const roleInfo = context.resolved?.roles?.[roleId];
+        await castlistManager.addTribeToCastlist(context.guildId, castlistId, {
+          roleId: roleId,
+          name: roleInfo?.name || 'Unknown Role',
+          castlist: castlistId,
+          emoji: null, // User can edit via Edit button
+          color: null,
+          displayName: null,
+          analyticsName: null
+        });
+        console.log(`[CASTLIST] ✅ Added tribe ${roleInfo?.name} (${roleId})`);
+      }
+
+      // Process removals
+      for (const roleId of removedRoles) {
+        await castlistManager.removeTribeFromCastlist(context.guildId, roleId);
+        console.log(`[CASTLIST] ✅ Removed tribe ${roleId}`);
+      }
+
+      // Refresh hub with updated tribes
+      const hubData = await createCastlistHub(context.guildId, {
+        selectedCastlistId: castlistId,
+        activeButton: 'add_tribe' // Keep Tribes button active
+      });
+
+      return hubData;
+    }
+  })(req, res, client);
+}
+```
+
+### Phase 3: Add Edit Button Handler (app.js)
+
+**File**: `app.js` (in button handler section)
+
+**Add new handler**:
+```javascript
+} else if (custom_id.startsWith('tribe_edit_button_')) {
+  // Parse button ID
+  const parts = custom_id.split('_');
+  const buttonIdx = parts.indexOf('button');
+
+  if (buttonIdx === -1 || parts.length < buttonIdx + 3) {
+    console.error(`[TRIBE EDIT] Invalid button format: ${custom_id}`);
+    return res.send({
+      type: 4,
+      data: {
+        content: '❌ Error: Invalid button format',
+        flags: 64 // Ephemeral
+      }
+    });
+  }
+
+  const roleId = parts[buttonIdx + 1];
+  const castlistId = parts.slice(buttonIdx + 2).join('_');
+
+  // Validate
+  if (!/^\d{17,19}$/.test(roleId)) {
+    console.error(`[TRIBE EDIT] Invalid role ID: ${roleId}`);
+    return res.send({
+      type: 4,
+      data: {
+        content: '❌ Error: Invalid role ID',
+        flags: 64
+      }
+    });
+  }
+
+  return ButtonHandlerFactory.create({
+    id: custom_id,
+    updateMessage: false, // Returns modal, not message update
+    handler: async (context) => {
+      console.log(`[TRIBE EDIT] Opening editor for role ${roleId}, castlist ${castlistId}`);
+
+      // Load existing tribe data
+      const playerData = await loadPlayerData();
+      const tribeData = playerData[context.guildId]?.tribes?.[roleId] || {};
+
+      // Get role info
+      const guild = await client.guilds.fetch(context.guildId);
+      const role = await guild.roles.fetch(roleId);
+      const roleName = role?.name || 'Unknown Role';
+
+      // Return modal (NO REMOVE FIELD!)
+      return {
+        type: 9, // MODAL
+        data: {
+          custom_id: `tribe_edit_modal_${roleId}_${castlistId}`,
+          title: `Edit: ${roleName.substring(0, 30)}`,
+          components: [
+            {
+              type: 18, // Label
+              label: 'Tribe Emoji',
+              description: 'Unicode or Discord custom emoji',
+              component: {
+                type: 4, // Text Input
+                custom_id: 'tribe_emoji',
+                style: 1, // Short
+                placeholder: '🔥 or <:custom:123>',
+                value: tribeData.emoji || '',
+                required: false,
+                max_length: 60 // Support custom emojis
+              }
+            },
+            {
+              type: 18, // Label
+              label: 'Display Name',
+              description: 'Override role name in castlist',
+              component: {
+                type: 4, // Text Input
+                custom_id: 'tribe_display_name',
+                style: 1, // Short
+                placeholder: 'Custom tribe name',
+                value: tribeData.displayName || '',
+                required: false,
+                max_length: 50
+              }
+            },
+            {
+              type: 18, // Label
+              label: 'Accent Color',
+              description: 'Hex color code for tribe styling',
+              component: {
+                type: 4, // Text Input
+                custom_id: 'tribe_color',
+                style: 1, // Short
+                placeholder: '#FF5733',
+                value: tribeData.color || '',
+                required: false,
+                max_length: 7
+              }
+            },
+            {
+              type: 18, // Label
+              label: 'Analytics Name',
+              description: 'Name for tracking and reports',
+              component: {
+                type: 4, // Text Input
+                custom_id: 'tribe_analytics_name',
+                style: 1, // Short
+                placeholder: 'Analytics identifier',
+                value: tribeData.analyticsName || '',
+                required: false,
+                max_length: 30
+              }
+            }
+          ]
+        }
+      };
+    }
+  })(req, res, client);
+}
+```
+
+### Phase 4: Update Modal Submit Handler (castlistHandlers.js)
+
+**File**: `castlistHandlers.js` - Existing `tribe_edit_modal_*` handler
+
+**Changes needed**:
+1. Remove "remove" field logic (no longer in modal)
+2. Save updated tribe data
+3. Return to hub with updated UI
+
+```javascript
+// In existing handler, REMOVE these lines:
+if (values.tribe_remove?.trim().toLowerCase() === 'remove') {
+  // Remove tribe logic
+}
+
+// Keep the rest (save emoji, displayName, color, analyticsName)
+// Return to hub:
+const hubData = await createCastlistHub(guildId, {
+  selectedCastlistId: castlistId,
+  activeButton: 'add_tribe' // Keep Tribes button active
+});
+
+return res.send({
+  type: 7, // UPDATE_MESSAGE
+  data: hubData
+});
+```
+
+---
+
+## Testing Checklist
+
+### Functional Testing
+
+**Pre-selection**:
+- [ ] Tribes button clicked → Role Select shows ticked roles for tribes on castlist
+- [ ] Empty castlist → No roles pre-selected
+- [ ] Max 6 tribes → All 6 pre-selected
+- [ ] Refresh hub → Pre-selection persists correctly
+
+**Add tribe (instant)**:
+- [ ] Select new role → Tribe added to castlist immediately
+- [ ] Section appears above Role Select with tribe name
+- [ ] Role becomes ticked in select menu
+- [ ] Hub UI refreshes automatically
+- [ ] Can add up to 6 tribes total
+- [ ] Attempting to add 7th tribe → Discord prevents (max_values enforced)
+
+**Remove tribe (instant)**:
+- [ ] Deselect ticked role → Tribe removed from castlist immediately
+- [ ] Section disappears from UI
+- [ ] Role becomes unticked in select menu
+- [ ] Hub UI refreshes automatically
+- [ ] Can remove all tribes (min_values: 0 works)
+
+**Edit tribe**:
+- [ ] Click Edit button on tribe section → Modal opens
+- [ ] Modal shows current values (emoji, display name, color, analytics name)
+- [ ] Submit with changes → Tribe updated, hub refreshes
+- [ ] Submit with no changes → No error, hub refreshes
+- [ ] Submit with invalid emoji → Validation error (future enhancement)
+
+### Edge Cases
+
+**Component budget**:
+- [ ] 6 tribes + all other components < 40 total
+- [ ] Adding 6th tribe → Success
+- [ ] Attempting 7th tribe → Discord prevents (max_values: 6)
+- [ ] Component count logged and verified
+
+**Button ID parsing**:
+- [ ] Tribe edit button with castlistId containing underscores → Parses correctly
+- [ ] Invalid button format → Error message shown
+- [ ] Missing roleId or castlistId → Error message shown
+
+**Data consistency**:
+- [ ] Add tribe → `playerData[guildId].tribes[roleId]` created
+- [ ] Remove tribe → `playerData[guildId].tribes[roleId]` deleted
+- [ ] Edit tribe → Only specified fields updated
+- [ ] Multiple rapid clicks → No duplicate tribes created
+
+**Error handling**:
+- [ ] Role doesn't exist → Error message shown
+- [ ] Castlist doesn't exist → Error message shown
+- [ ] Database save failure → Error message, no partial update
+- [ ] Modal submit failure → Error message, original state preserved
+
+### UI/UX Validation
+
+**Visual feedback**:
+- [ ] Section components display tribe emoji, name, settings clearly
+- [ ] Edit button accessory properly aligned
+- [ ] Separator between tribes and Role Select
+- [ ] Instructions clear and concise
+- [ ] Hub refreshes smoothly (no flicker or delay)
+
+**Interaction flow**:
+- [ ] Add → Hub updates (< 1 second)
+- [ ] Remove → Hub updates (< 1 second)
+- [ ] Edit → Modal → Submit → Hub updates (< 2 seconds)
+- [ ] No "interaction failed" errors
+- [ ] All operations feel instant and responsive
+
+---
+
+## Success Criteria
+
+- ✅ Zero "interaction failed" errors during tribe management
+- ✅ Add/remove operations complete in < 1 second
+- ✅ Edit modal opens in < 500ms
+- ✅ Component count never exceeds 40
+- ✅ Button ID parsing never fails for valid IDs
+- ✅ All existing castlist features continue working
+- ✅ No data loss or corruption during operations
+- ✅ User reports improved UX (less friction, more intuitive)
 
 ### 2. Should Have - TribeManager Core
 **Status**: Designed

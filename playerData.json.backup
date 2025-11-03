@@ -1845,6 +1845,14 @@
           "castlist_1762179347687_1331657596087566398"
         ],
         "castlist": "MOI CASTLIST"
+      },
+      "1434914674788401212": {
+        "emoji": null,
+        "castlist": "CastBot Winners",
+        "showPlayerEmojis": false,
+        "color": "#1abc9c",
+        "analyticsName": "MoarWork",
+        "analyticsAdded": 1762180748073
       }
     },
     "timezones": {
@@ -3134,7 +3142,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1762179599019,
+        "modifiedAt": 1762182412527,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -3256,9 +3264,9 @@
           "updatedAt": "2025-09-30T16:45:38.122Z"
         },
         "391415444084490240": {
-          "placement": 15,
+          "placement": 11,
           "updatedBy": "391415444084490240",
-          "updatedAt": "2025-10-19T09:32:50.680Z"
+          "updatedAt": "2025-11-03T15:19:56.337Z"
         },
         "683102296380276766": {
           "placement": 7,
