@@ -2144,7 +2144,16 @@
         "lastUpdated": 1762176889589,
         "seasonId": "season_83d410d017c64375",
         "seasonName": "Best Practice Season Creation",
-        "questions": []
+        "questions": [
+          {
+            "id": "question_4d656cff4d7d4a58",
+            "order": 1,
+            "questionTitle": "My Tribe",
+            "questionText": "Woo",
+            "imageURL": "",
+            "createdAt": 1762183379430
+          }
+        ]
       }
     },
     "ownerInfo": {

@@ -621,18 +621,28 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
         for (const op of operations) {
           if (op.type === 'add') {
             const roleInfo = context.resolved?.roles?.[op.roleId];
-            await castlistManager.addTribeToCastlist(context.guildId, castlistId, {
-              roleId: op.roleId,
-              name: roleInfo?.name || 'Unknown Role',
-              castlist: castlistId,
-              emoji: null, // User can edit via Edit button
-              color: null,
-              displayName: null,
-              analyticsName: null
-            });
+            const playerData = await loadPlayerData();
+
+            // Ensure guild structure exists
+            if (!playerData[context.guildId]) playerData[context.guildId] = {};
+            if (!playerData[context.guildId].tribes) playerData[context.guildId].tribes = {};
+
+            // Create tribe if it doesn't exist
+            if (!playerData[context.guildId].tribes[op.roleId]) {
+              playerData[context.guildId].tribes[op.roleId] = {
+                castlistIds: [],
+                castlist: null // Will be set by linkTribeToCastlist
+              };
+              await savePlayerData(playerData);
+              console.log(`[CASTLIST] Created new tribe for role ${op.roleId}`);
+            }
+
+            // Link tribe to castlist
+            await castlistManager.linkTribeToCastlist(context.guildId, op.roleId, castlistId);
             console.log(`[CASTLIST] ✅ Added tribe ${roleInfo?.name} (${op.roleId})`);
           } else {
-            await castlistManager.removeTribeFromCastlist(context.guildId, op.roleId);
+            // Unlink tribe from castlist
+            await castlistManager.unlinkTribeFromCastlist(context.guildId, op.roleId, castlistId);
             console.log(`[CASTLIST] ✅ Removed tribe ${op.roleId}`);
           }
         }
