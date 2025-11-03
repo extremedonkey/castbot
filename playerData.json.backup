@@ -1673,10 +1673,9 @@
         "analyticsName": "🪄 ar.3 🪄",
         "analyticsAdded": 1759081799205,
         "castlistIds": [
-          "castlist_1762007922583_1331657596087566398",
-          "castlist_1762186241498_1331657596087566398"
+          "castlist_1762007922583_1331657596087566398"
         ],
-        "castlist": "oldHOPE",
+        "castlist": "winners",
         "displayName": "The AR3 Tribe"
       },
       "1388327092634124368": {
@@ -1693,10 +1692,9 @@
         "analyticsName": "🧓 Ask 🧓",
         "analyticsAdded": 1759422827344,
         "castlistIds": [
-          "castlist_1762185466287_1331657596087566398",
-          "castlist_1762186241498_1331657596087566398"
+          "castlist_1762185466287_1331657596087566398"
         ],
-        "castlist": "oldHOPE"
+        "castlist": "That New Castlist!"
       },
       "1424250096698130603": {
         "emoji": "🗝️",
@@ -1809,24 +1807,22 @@
       },
       "1424400564858650644": {
         "name": "Tribe 1424400564858650644",
-        "emoji": "🏕️",
-        "color": "#e91e63",
+        "emoji": "🍆",
+        "color": "#E91E63",
         "castlistIds": [
-          "default"
+          "default",
+          "castlist_1762186784322_1331657596087566398"
         ],
-        "castlist": "default"
+        "castlist": "A big large hope"
       },
       "1425702665806938183": {
         "name": "Tribe 1425702665806938183",
-        "emoji": "🏕️",
-        "color": "#e91e63",
         "castlistIds": [
           "default",
           "castlist_1762185466287_1331657596087566398",
-          "castlist_1762185922054_1331657596087566398",
-          "castlist_1762186558738_1331657596087566398"
+          "castlist_1762185922054_1331657596087566398"
         ],
-        "castlist": "MEDIUMHOPE"
+        "castlist": "default"
       },
       "1434189967323566261": {
         "name": "Tribe 1434189967323566261",
@@ -1838,10 +1834,9 @@
         "emoji": "🏕️",
         "color": "#607D8B",
         "castlistIds": [
-          "castlist_1762007922583_1331657596087566398",
-          "castlist_1762186241498_1331657596087566398"
+          "castlist_1762007922583_1331657596087566398"
         ],
-        "castlist": "oldHOPE"
+        "castlist": "winners"
       },
       "1368969346600407181": {
         "castlistIds": [
@@ -3276,11 +3271,11 @@
           "lastModified": 1762185922054
         }
       },
-      "castlist_1762186241498_1331657596087566398": {
-        "id": "castlist_1762186241498_1331657596087566398",
-        "name": "oldHOPE",
+      "castlist_1762186784322_1331657596087566398": {
+        "id": "castlist_1762186784322_1331657596087566398",
+        "name": "A big large hope",
         "type": "custom",
-        "createdAt": 1762186241498,
+        "createdAt": 1762186784322,
         "createdBy": "391415444084490240",
         "settings": {
           "sortStrategy": "alphabetical",
@@ -3289,27 +3284,9 @@
           "visibility": "public"
         },
         "metadata": {
-          "emoji": "📋",
+          "emoji": "7️⃣",
           "description": "",
-          "lastModified": 1762186241498
-        }
-      },
-      "castlist_1762186558738_1331657596087566398": {
-        "id": "castlist_1762186558738_1331657596087566398",
-        "name": "MEDIUMHOPE",
-        "type": "custom",
-        "createdAt": 1762186558738,
-        "createdBy": "391415444084490240",
-        "settings": {
-          "sortStrategy": "alphabetical",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public"
-        },
-        "metadata": {
-          "emoji": "📋",
-          "description": "",
-          "lastModified": 1762186558738
+          "lastModified": 1762186784322
         }
       }
     },

@@ -542,8 +542,8 @@ export async function handleCastlistButton(req, res, client, custom_id) {
       const hubData = await createCastlistHub(context.guildId, {
         selectedCastlistId: castlistId,
         activeButton: buttonType // Set the active button
-      });
-      
+      }, context.client);
+
       return hubData;
     }
   })(req, res, client);
