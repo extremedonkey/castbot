@@ -344,7 +344,7 @@ async function createCastlistDetailsSection(guildId, castlist) {
     // Regular castlist rendering - only show description if it exists
     const descriptionLine = castlist.metadata?.description ? `-# ${castlist.metadata.description}\n` : '';
 
-    content = `> **\`${castlist.metadata?.emoji || '📋'} ${castlist.name}\`**\n` +
+    content = `> ${castlist.metadata?.emoji || '📋'} **\`${castlist.name}\`**\n` +
       descriptionLine + // Only included if description exists
       seasonLine + // Season line (if any)
       (castlist.isVirtual ? `-# ⚠️ Legacy castlist - will be upgraded on first edit\n` : '') +

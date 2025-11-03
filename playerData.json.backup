@@ -3134,7 +3134,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1762179591788,
+        "modifiedAt": 1762179599019,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -3205,7 +3205,7 @@
       },
       "castlist_1762007922583_1331657596087566398": {
         "id": "castlist_1762007922583_1331657596087566398",
-        "name": "CastBot Winners",
+        "name": "winners",
         "type": "custom",
         "createdAt": 1762007922583,
         "createdBy": "391415444084490240",
@@ -3217,11 +3217,11 @@
           "seasonId": "season_cac1b81de8914c79"
         },
         "metadata": {
-          "emoji": "🍵",
+          "emoji": "<:castbot:1333820342275149824>",
           "description": "Cool people inc!",
           "lastModified": 1762007922583
         },
-        "modifiedAt": 1762071020773,
+        "modifiedAt": 1762179941473,
         "modifiedBy": "391415444084490240"
       },
       "castlist_1762179347687_1331657596087566398": {
