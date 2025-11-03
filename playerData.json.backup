@@ -1613,9 +1613,13 @@
         "analyticsName": "🧟‍♂️ 👑 Castbot MVPs 🧟‍♂️",
         "analyticsAdded": 1754751381750,
         "castlistIds": [
-          "castlist_1759638936214_system"
+          "castlist_1759638936214_system",
+          "castlist_archive_1762212309078",
+          "default"
         ],
-        "castlist": "Castbot MVPs"
+        "castlist": "castTESTSWAP1",
+        "castlistId": "castlist_archive_1762212309078",
+        "isVanity": true
       },
       "1335645032891547670": {
         "emoji": "🤷‍♀️",
@@ -1783,12 +1787,24 @@
       "1368969402967654420": {
         "name": "Tribe 1368969402967654420",
         "emoji": "🏕️",
-        "color": null
+        "color": null,
+        "castlistIds": [
+          "castlist_archive_1762212309078",
+          "default"
+        ],
+        "castlist": "castTESTSWAP1",
+        "castlistId": "castlist_archive_1762212309078",
+        "isVanity": true
       },
       "1368969401067372625": {
         "name": "Tribe 1368969401067372625",
         "emoji": "🏕️",
-        "color": null
+        "color": null,
+        "castlistIds": [
+          "default"
+        ],
+        "castlistId": "default",
+        "castlist": "default"
       },
       "1431726505569943633": {
         "name": "Tribe 1431726505569943633",
@@ -1810,19 +1826,23 @@
         "emoji": "🍆",
         "color": "#E91E63",
         "castlistIds": [
-          "default"
+          "castlist_archive_1762195873894"
         ],
-        "castlist": "default",
-        "displayName": "My Custom Tribe Name"
+        "castlist": "castlist_archive_1762195873894",
+        "displayName": "My Custom Tribe Name",
+        "castlistId": "castlist_archive_1762195873894",
+        "isVanity": true
       },
       "1425702665806938183": {
         "name": "Tribe 1425702665806938183",
         "castlistIds": [
-          "default",
           "castlist_1762185466287_1331657596087566398",
-          "castlist_1762185922054_1331657596087566398"
+          "castlist_1762185922054_1331657596087566398",
+          "castlist_archive_1762195873894"
         ],
-        "castlist": "default"
+        "castlist": "That New Castlist!",
+        "castlistId": "castlist_archive_1762195873894",
+        "isVanity": true
       },
       "1434189967323566261": {
         "name": "Tribe 1434189967323566261",
@@ -1837,7 +1857,7 @@
           "castlist_1762007922583_1331657596087566398",
           "castlist_1762187500959_1331657596087566398"
         ],
-        "castlist": "the BIG one"
+        "castlist": "winners"
       },
       "1368969346600407181": {},
       "1434914674788401212": {
@@ -1847,6 +1867,16 @@
         "color": "#1abc9c",
         "analyticsName": "MoarWork",
         "analyticsAdded": 1762180748073
+      },
+      "1398904036643831818": {
+        "castlistIds": [
+          "default"
+        ],
+        "emoji": null,
+        "displayName": null,
+        "color": "#e74c3c",
+        "castlistId": "default",
+        "castlist": "default"
       }
     },
     "timezones": {
@@ -3145,7 +3175,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1762195171752,
+        "modifiedAt": 1762211722144,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -3483,6 +3513,30 @@
           "placement": 5,
           "updatedBy": "391415444084490240",
           "updatedAt": "2025-10-19T12:03:37.486Z"
+        }
+      }
+    },
+    "castlists": {
+      "castlist_archive_1762195873894": {
+        "id": "castlist_archive_1762195873894",
+        "name": "OG Tribes",
+        "type": "custom",
+        "createdAt": 1762195873894,
+        "createdBy": "391415444084490240",
+        "metadata": {
+          "description": "Archived from tribe swap on 11/4/2025",
+          "emoji": "📦"
+        }
+      },
+      "castlist_archive_1762212309078": {
+        "id": "castlist_archive_1762212309078",
+        "name": "castTESTSWAP1",
+        "type": "custom",
+        "createdAt": 1762212309078,
+        "createdBy": "391415444084490240",
+        "metadata": {
+          "description": "Archived from tribe swap on 11/4/2025",
+          "emoji": "📦"
         }
       }
     }

@@ -31665,12 +31665,14 @@ Are you sure you want to continue?`;
           const playersToAssign = shuffled.slice(0, totalToAssign);
           const unassignedPlayers = shuffled.slice(totalToAssign);
 
+          console.log(`🔀 [TRIBE SWAP] Starting dramatic reveal for ${playersToAssign.length} players`);
+
           // Helper: Send message via REST API (channel.send doesn't support raw Components V2)
           const sendMessage = async (messageData) => {
             const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
               method: 'POST',
               headers: {
-                'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+                'Authorization': `Bot ${process.env.DISCORD_TOKEN}`,
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify(messageData)
@@ -31679,7 +31681,10 @@ Are you sure you want to continue?`;
             if (!response.ok) {
               const error = await response.text();
               console.error(`🔀 [TRIBE SWAP] Failed to send message:`, error);
+              throw new Error(`Failed to send message: ${error}`);
             }
+
+            return await response.json();
           };
 
           // Opening ceremony
@@ -31699,11 +31704,25 @@ Are you sure you want to continue?`;
 
           // Round-robin reveal
           let currentTribeIndex = 0;
+          let playerCount = 0;
 
           for (const player of playersToAssign) {
+            playerCount++;
             const tribeRoleId = newTribeRoleIds[currentTribeIndex];
             const tribeRole = guild.roles.cache.get(tribeRoleId);
             const avatarUrl = player.user.displayAvatarURL({ size: 128 });
+
+            // Find player's old tribe
+            let oldTribeName = 'Unknown';
+            for (const oldTribe of currentDefaultTribes) {
+              const oldRole = guild.roles.cache.get(oldTribe.roleId);
+              if (oldRole && oldRole.members.has(player.id)) {
+                oldTribeName = oldRole.name;
+                break;
+              }
+            }
+
+            console.log(`🔀 [TRIBE SWAP] ${playerCount}/${playersToAssign.length}: ${player.user.username} swapped from ${oldTribeName} → ${tribeRole.name}`);
 
             // Dramatic reveal
             await sendMessage({
@@ -31739,8 +31758,11 @@ Are you sure you want to continue?`;
             currentTribeIndex = (currentTribeIndex + 1) % newTribeRoleIds.length;
           }
 
+          console.log(`🔀 [TRIBE SWAP] Dramatic reveal complete - assigned ${playerCount} players`);
+
           // Handle unassigned players
           if (unassignedPlayers.length > 0) {
+            console.log(`🔀 [TRIBE SWAP] ${unassignedPlayers.length} players require manual assignment`);
             await sendMessage({
               flags: (1 << 15),
               components: [{
@@ -31774,12 +31796,16 @@ Are you sure you want to continue?`;
           }
         };
 
-        console.log(`🔀 [TRIBE SWAP] Created archive castlist: ${archiveCastlistId}`);
+        console.log(`🔀 [TRIBE SWAP] Created archive castlist: ${archiveName.trim()} (${archiveCastlistId})`);
 
         // Move old tribes to archive
+        console.log(`🔀 [TRIBE SWAP] Moving ${currentDefaultTribes.length} old tribes to archive...`);
         for (const tribe of currentDefaultTribes) {
           const tribeData = playerData[guildId].tribes[tribe.roleId];
           if (tribeData) {
+            const oldRole = guild.roles.cache.get(tribe.roleId);
+            const tribeName = oldRole?.name || 'Unknown';
+
             // Update castlistIds array
             if (!tribeData.castlistIds) tribeData.castlistIds = [];
 
@@ -31790,10 +31816,13 @@ Are you sure you want to continue?`;
             tribeData.castlistIds.push(archiveCastlistId);
             tribeData.castlistId = archiveCastlistId;
             tribeData.castlist = archiveName.trim();
+
+            console.log(`🔀 [TRIBE SWAP]   - Moved "${tribeName}" (${tribe.roleId}) to archive`);
           }
         }
 
         // Add new tribes to default castlist
+        console.log(`🔀 [TRIBE SWAP] Adding ${newTribeRoleIds.length} new tribes to default castlist...`);
         for (const roleId of newTribeRoleIds) {
           const role = guild.roles.cache.get(roleId);
 
@@ -31815,32 +31844,42 @@ Are you sure you want to continue?`;
           }
           tribe.castlistId = 'default';
           tribe.castlist = 'default';
+
+          console.log(`🔀 [TRIBE SWAP]   + Added "${role.name}" (${roleId}) to default`);
         }
 
         // Handle vanity roles
         if (vanityRoles === 'yes') {
-          console.log(`🔀 [TRIBE SWAP] Enabling vanity roles for old tribes`);
+          console.log(`🔀 [TRIBE SWAP] Enabling vanity roles - old tribes will be visible on default castlist`);
           for (const tribe of currentDefaultTribes) {
             const tribeData = playerData[guildId].tribes[tribe.roleId];
             if (tribeData) {
+              const oldRole = guild.roles.cache.get(tribe.roleId);
+              const tribeName = oldRole?.name || 'Unknown';
+
               // Add default back (players will show both old and new roles)
               if (!tribeData.castlistIds.includes('default')) {
                 tribeData.castlistIds.push('default');
               }
               tribeData.isVanity = true;
+
+              console.log(`🔀 [TRIBE SWAP]   ✨ Vanity: "${tribeName}" now on both archive AND default`);
             }
           }
+        } else {
+          console.log(`🔀 [TRIBE SWAP] Vanity roles disabled - old tribes only on archive`);
         }
 
         await savePlayerData(playerData);
 
-        console.log(`🔀 [TRIBE SWAP] Swap complete! Archive: ${archiveCastlistId}`);
+        console.log(`🔀 [TRIBE SWAP] ✅ Swap complete! Archive: ${archiveName.trim()}`);
+        console.log(`🔀 [TRIBE SWAP] 📊 Summary: ${playerArray.length} players, ${newTribeRoleIds.length} new tribes, ${currentDefaultTribes.length} old tribes archived`);
 
         // Post completion message (via REST API)
         await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bot ${process.env.DISCORD_BOT_TOKEN}`,
+            'Authorization': `Bot ${process.env.DISCORD_TOKEN}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -31850,7 +31889,7 @@ Are you sure you want to continue?`;
               accent_color: 0x00FF00,
               components: [{
                 type: 10,
-                content: `# ✅ Tribe Swap Complete!\n\n**Summary:**\n- **${playerArray.length}** players processed\n- **${newTribeRoleIds.length}** new tribes created\n- Previous tribes archived to: **${archiveName.trim()}**\n${vanityRoles === 'yes' ? '- Old tribe roles kept as vanity indicators' : ''}\n\nThe game continues... 🎮`
+                content: `# ✅ Tribe Swap Complete!\n\n**Summary:**\n- **${playerArray.length}** players processed\n- **${newTribeRoleIds.length}** new tribes created\n- **${currentDefaultTribes.length}** old tribes archived to: **${archiveName.trim()}**\n${vanityRoles === 'yes' ? '- ✨ Old tribe roles kept as vanity indicators' : ''}\n\nThe game continues... 🎮`
               }]
             }]
           })
