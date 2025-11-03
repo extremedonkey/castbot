@@ -8,7 +8,7 @@ import { createCastlistHub, CastlistButtonType } from './castlistHub.js';
 import { castlistManager } from './castlistManager.js';
 import { castlistVirtualAdapter } from './castlistVirtualAdapter.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
-import { PermissionFlagsBits } from 'discord.js';
+import { PermissionFlagsBits, InteractionResponseType } from 'discord.js';
 
 /**
  * Create the Edit Info modal for a NEW castlist
