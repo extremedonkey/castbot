@@ -657,19 +657,12 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
         activeButton: CastlistButtonType.ADD_TRIBE
       }, context.client);
 
-      // Debug: Check component structure
-      console.log(`[CASTLIST] Returning hub with ${hubData.components?.length || 0} top-level components`);
+      // Debug: Check component structure after removal
+      console.log(`[CASTLIST] After removal - Hub has ${hubData.components?.length || 0} top-level components`);
       if (hubData.components?.[0]?.type === 17) {
         const containerComponents = hubData.components[0].components || [];
-        console.log(`[CASTLIST] Container has ${containerComponents.length} child components`);
-
-        // Log Section components specifically
         const sections = containerComponents.filter(c => c.type === 9);
-        console.log(`[CASTLIST] Found ${sections.length} Section components (type 9)`);
-
-        // Log full response structure (first 3000 chars)
-        const responseStr = JSON.stringify(hubData, null, 2);
-        console.log(`[CASTLIST] Hub response structure (${responseStr.length} chars):`, responseStr.substring(0, 3000));
+        console.log(`[CASTLIST] After removal - ${sections.length} Section components remain`);
       }
 
       return hubData;
