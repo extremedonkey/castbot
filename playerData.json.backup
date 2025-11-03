@@ -1693,9 +1693,10 @@
         "analyticsName": "🧓 Ask 🧓",
         "analyticsAdded": 1759422827344,
         "castlistIds": [
-          "castlist_1762185466287_1331657596087566398"
+          "castlist_1762185466287_1331657596087566398",
+          "castlist_1762186241498_1331657596087566398"
         ],
-        "castlist": "That New Castlist!"
+        "castlist": "oldHOPE"
       },
       "1424250096698130603": {
         "emoji": "🗝️",
@@ -1822,9 +1823,10 @@
         "castlistIds": [
           "default",
           "castlist_1762185466287_1331657596087566398",
-          "castlist_1762185922054_1331657596087566398"
+          "castlist_1762185922054_1331657596087566398",
+          "castlist_1762186558738_1331657596087566398"
         ],
-        "castlist": "aNewHope"
+        "castlist": "MEDIUMHOPE"
       },
       "1434189967323566261": {
         "name": "Tribe 1434189967323566261",
@@ -3290,6 +3292,24 @@
           "emoji": "📋",
           "description": "",
           "lastModified": 1762186241498
+        }
+      },
+      "castlist_1762186558738_1331657596087566398": {
+        "id": "castlist_1762186558738_1331657596087566398",
+        "name": "MEDIUMHOPE",
+        "type": "custom",
+        "createdAt": 1762186558738,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "emoji": "📋",
+          "description": "",
+          "lastModified": 1762186558738
         }
       }
     },

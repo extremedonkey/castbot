@@ -31381,8 +31381,14 @@ Are you sure you want to continue?`;
           }
 
           for (const row of components) {
+            // Handle Label (type 18) wrapper with nested component (Components V2 format)
+            if (row?.type === 18 && row?.component) {
+              if (row.component.custom_id === customId) {
+                return row.component.value || '';
+              }
+            }
             // Handle ActionRow format (type 1) with nested components
-            if (row?.components && Array.isArray(row.components)) {
+            else if (row?.components && Array.isArray(row.components)) {
               const field = row.components.find(c => c?.custom_id === customId);
               if (field) return field.value || '';
             }
@@ -31515,7 +31521,7 @@ Are you sure you want to continue?`;
           message: `✅ Updated settings for ${tribe.emoji || ''} **${roleName}**`,
           selectedCastlistId: castlistId,
           activeButton: 'add_tribe' // Keep tribe interface active
-        });
+        }, client);
 
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
