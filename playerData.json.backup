@@ -1593,9 +1593,10 @@
         "castlistIds": [
           "castlist_1759638936214_system",
           "castlist_1762007922583_1331657596087566398",
-          "castlist_1762185466287_1331657596087566398"
+          "castlist_1762185466287_1331657596087566398",
+          "castlist_1762185922054_1331657596087566398"
         ],
-        "castlist": "That New Castlist!",
+        "castlist": "aNewHope",
         "displayName": "Mr CastBot"
       },
       "1391142520787832904": {
@@ -1672,10 +1673,10 @@
         "analyticsName": "🪄 ar.3 🪄",
         "analyticsAdded": 1759081799205,
         "castlistIds": [
-          "castlist_1760891080792_1331657596087566398",
-          "castlist_1762007922583_1331657596087566398"
+          "castlist_1762007922583_1331657596087566398",
+          "castlist_1762186241498_1331657596087566398"
         ],
-        "castlist": "CastBot Winners",
+        "castlist": "oldHOPE",
         "displayName": "The AR3 Tribe"
       },
       "1388327092634124368": {
@@ -1783,20 +1784,12 @@
       "1368969402967654420": {
         "name": "Tribe 1368969402967654420",
         "emoji": "🏕️",
-        "color": null,
-        "castlistIds": [
-          "castlist_1760891080792_1331657596087566398"
-        ],
-        "castlist": "My Cool Castlist"
+        "color": null
       },
       "1368969401067372625": {
         "name": "Tribe 1368969401067372625",
         "emoji": "🏕️",
-        "color": null,
-        "castlistIds": [
-          "castlist_1760891080792_1331657596087566398"
-        ],
-        "castlist": "My Cool Castlist"
+        "color": null
       },
       "1431726505569943633": {
         "name": "Tribe 1431726505569943633",
@@ -1843,9 +1836,10 @@
         "emoji": "🏕️",
         "color": "#607D8B",
         "castlistIds": [
-          "castlist_1762007922583_1331657596087566398"
+          "castlist_1762007922583_1331657596087566398",
+          "castlist_1762186241498_1331657596087566398"
         ],
-        "castlist": "CastBot Winners"
+        "castlist": "oldHOPE"
       },
       "1368969346600407181": {
         "castlistIds": [
@@ -3205,28 +3199,6 @@
         "modifiedAt": 1762072755883,
         "modifiedBy": "391415444084490240"
       },
-      "castlist_1760891080792_1331657596087566398": {
-        "id": "castlist_1760891080792_1331657596087566398",
-        "name": "My Cool Castlist",
-        "type": "custom",
-        "createdAt": 1760891080792,
-        "createdBy": "391415444084490240",
-        "settings": {
-          "sortStrategy": "alphabetical",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public",
-          "seasonId": "season_9a8360f7864d4120"
-        },
-        "metadata": {
-          "emoji": "😎",
-          "description": "",
-          "lastModified": 1760891080792
-        },
-        "seasonId": "season_cac1b81de8914c79",
-        "modifiedAt": 1761974779410,
-        "modifiedBy": "391415444084490240"
-      },
       "castlist_1762007922583_1331657596087566398": {
         "id": "castlist_1762007922583_1331657596087566398",
         "name": "winners",
@@ -3300,6 +3272,24 @@
           "emoji": "📋",
           "description": "",
           "lastModified": 1762185922054
+        }
+      },
+      "castlist_1762186241498_1331657596087566398": {
+        "id": "castlist_1762186241498_1331657596087566398",
+        "name": "oldHOPE",
+        "type": "custom",
+        "createdAt": 1762186241498,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "emoji": "📋",
+          "description": "",
+          "lastModified": 1762186241498
         }
       }
     },

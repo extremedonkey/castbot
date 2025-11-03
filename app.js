@@ -31372,10 +31372,25 @@ Are you sure you want to continue?`;
 
         // Extract modal values (NO tribe_remove field)
         const components = req.body.data.components;
+        console.log(`[CASTLIST] Modal components structure:`, JSON.stringify(components, null, 2).substring(0, 500));
+
         const getFieldValue = (customId) => {
+          if (!components || !Array.isArray(components)) {
+            console.warn(`[CASTLIST] Components is not an array:`, typeof components);
+            return '';
+          }
+
           for (const row of components) {
-            const field = row.components.find(c => c.custom_id === customId);
-            if (field) return field.value;
+            // Handle ActionRow format (type 1) with nested components
+            if (row?.components && Array.isArray(row.components)) {
+              const field = row.components.find(c => c?.custom_id === customId);
+              if (field) return field.value || '';
+            }
+            // Handle direct array format (flattened)
+            else if (Array.isArray(row)) {
+              const field = row.find(c => c?.custom_id === customId);
+              if (field) return field.value || '';
+            }
           }
           return '';
         };
@@ -31384,6 +31399,13 @@ Are you sure you want to continue?`;
         const displayName = getFieldValue('tribe_display_name');
         const colorInput = getFieldValue('tribe_color');
         const analyticsName = getFieldValue('tribe_analytics_name');
+
+        console.log(`[CASTLIST] Extracted modal values:`, {
+          emoji: emojiInput,
+          displayName,
+          color: colorInput,
+          analyticsName
+        });
 
         const playerData = await loadPlayerData();
         if (!playerData[guildId]) playerData[guildId] = {};
