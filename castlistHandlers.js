@@ -275,11 +275,11 @@ export async function handleCastlistSelect(req, res, client) {
         }
       }
 
-      // Display hub with real ID (or null)
+      // Display hub with real ID - auto-show tribes
       const hubData = await createCastlistHub(context.guildId, {
         selectedCastlistId: selectedCastlistId || null,
-        activeButton: null // Reset active button on new selection
-      });
+        activeButton: CastlistButtonType.ADD_TRIBE // Auto-show tribes on selection
+      }, context.client);
 
       return hubData;
     }

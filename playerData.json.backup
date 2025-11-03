@@ -1616,7 +1616,7 @@
           "castlist_1759638936214_system",
           "castlist_1762187500959_1331657596087566398"
         ],
-        "castlist": "the BIG castlist"
+        "castlist": "the BIG one"
       },
       "1335645032891547670": {
         "emoji": "🤷‍♀️",
@@ -3251,7 +3251,7 @@
       },
       "castlist_1762187500959_1331657596087566398": {
         "id": "castlist_1762187500959_1331657596087566398",
-        "name": "the BIG castlist",
+        "name": "the BIG one",
         "type": "custom",
         "createdAt": 1762187500959,
         "createdBy": "391415444084490240",
@@ -3266,7 +3266,10 @@
           "emoji": "🍆",
           "description": "",
           "lastModified": 1762187500959
-        }
+        },
+        "seasonId": "season_1deffdb1dac8496b",
+        "modifiedAt": 1762187809409,
+        "modifiedBy": "391415444084490240"
       }
     },
     "placements": {
