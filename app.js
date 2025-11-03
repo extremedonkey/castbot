@@ -31238,6 +31238,206 @@ Are you sure you want to continue?`;
           }
         });
       }
+    } else if (custom_id.startsWith('tribe_edit_modal_')) {
+      // Handle tribe edit modal submission from CastlistV3 Hub
+      try {
+        const parts = custom_id.split('_');
+        const roleId = parts[3];
+        const castlistId = parts.slice(4).join('_');
+        const guildId = req.body.guild_id;
+
+        console.log(`[CASTLIST] Processing tribe edit modal for role ${roleId}, castlist ${castlistId}`);
+
+        // Extract modal values
+        const components = req.body.data.components;
+        const getFieldValue = (customId) => {
+          for (const row of components) {
+            const field = row.components.find(c => c.custom_id === customId);
+            if (field) return field.value;
+          }
+          return '';
+        };
+
+        const emojiInput = getFieldValue('tribe_emoji');
+        const displayName = getFieldValue('tribe_display_name');
+        const colorInput = getFieldValue('tribe_color');
+        const analyticsName = getFieldValue('tribe_analytics_name');
+        const removeCommand = getFieldValue('tribe_remove');
+
+        const playerData = await loadPlayerData();
+        if (!playerData[guildId]) playerData[guildId] = {};
+        if (!playerData[guildId].tribes) playerData[guildId].tribes = {};
+
+        // Handle removal
+        if (removeCommand?.toLowerCase() === 'remove') {
+          // Remove tribe from castlist
+          const tribe = playerData[guildId].tribes[roleId];
+          if (tribe) {
+            // Remove from castlistIds array
+            if (tribe.castlistIds && Array.isArray(tribe.castlistIds)) {
+              tribe.castlistIds = tribe.castlistIds.filter(id => id !== castlistId);
+
+              // Update legacy field
+              if (tribe.castlistIds.length > 0) {
+                const firstId = tribe.castlistIds[0];
+                if (firstId === 'default') {
+                  tribe.castlist = 'default';
+                } else {
+                  const { castlistManager } = await import('./castlistManager.js');
+                  const firstCastlist = await castlistManager.getCastlist(guildId, firstId);
+                  tribe.castlist = firstCastlist?.name || firstId;
+                }
+              } else {
+                // No castlists left - remove tribe entirely
+                delete playerData[guildId].tribes[roleId];
+              }
+            } else {
+              // Legacy single castlist format - just delete
+              delete playerData[guildId].tribes[roleId];
+            }
+          }
+          await savePlayerData(playerData);
+
+          // Return updated hub
+          const { createCastlistHub } = await import('./castlistHub.js');
+          const hubData = await createCastlistHub(guildId, {
+            message: `✅ Removed <@&${roleId}> from castlist`,
+            selectedCastlistId: castlistId,
+            activeButton: 'add_tribe' // Keep tribe interface active
+          });
+
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: hubData
+          });
+        }
+
+        // Validate and process emoji
+        let processedEmoji = null;
+        if (emojiInput !== undefined && emojiInput !== '') {
+          const trimmed = emojiInput.trim();
+
+          // Check for custom Discord emoji
+          const customEmojiMatch = trimmed.match(/<a?:(\w+):(\d{17,19})>/);
+          if (customEmojiMatch) {
+            processedEmoji = trimmed; // Valid custom emoji
+          } else {
+            // Simple Unicode emoji check (can be improved)
+            if (/^[\u{1F300}-\u{1F9FF}\u{2600}-\u{27BF}]/u.test(trimmed) && trimmed.length <= 8) {
+              processedEmoji = trimmed;
+            } else {
+              console.warn(`[CASTLIST] Invalid emoji format: ${emojiInput}`);
+            }
+          }
+        }
+
+        // Validate hex color
+        let processedColor = null;
+        if (colorInput && colorInput.trim()) {
+          const colorTrimmed = colorInput.trim();
+          if (/^#[0-9A-Fa-f]{6}$/.test(colorTrimmed)) {
+            processedColor = colorTrimmed.toUpperCase();
+          } else {
+            console.warn(`[CASTLIST] Invalid color format: ${colorInput}`);
+          }
+        }
+
+        // Initialize tribe if it doesn't exist
+        if (!playerData[guildId].tribes[roleId]) {
+          // Get castlist name for legacy field
+          const { castlistManager } = await import('./castlistManager.js');
+          const castlist = await castlistManager.getCastlist(guildId, castlistId);
+          const castlistName = castlist?.name || 'default';
+
+          playerData[guildId].tribes[roleId] = {
+            castlistIds: [castlistId],
+            castlist: (castlistId === 'default') ? 'default' : castlistName
+          };
+        }
+
+        const tribe = playerData[guildId].tribes[roleId];
+
+        // Ensure castlist linkage
+        if (!tribe.castlistIds) {
+          tribe.castlistIds = [];
+        }
+        if (!tribe.castlistIds.includes(castlistId)) {
+          tribe.castlistIds.push(castlistId);
+
+          // Update legacy field
+          const { castlistManager } = await import('./castlistManager.js');
+          const castlist = await castlistManager.getCastlist(guildId, castlistId);
+          tribe.castlist = (castlistId === 'default') ? 'default' : (castlist?.name || castlistId);
+        }
+
+        // Update fields (empty string clears the field)
+        if (emojiInput !== undefined) {
+          if (emojiInput === '') {
+            delete tribe.emoji;
+          } else if (processedEmoji) {
+            tribe.emoji = processedEmoji;
+          }
+        }
+
+        if (displayName !== undefined) {
+          if (displayName.trim()) {
+            tribe.displayName = displayName.trim();
+          } else {
+            delete tribe.displayName;
+          }
+        }
+
+        if (colorInput !== undefined) {
+          if (processedColor) {
+            tribe.color = processedColor;
+          } else if (!colorInput.trim()) {
+            delete tribe.color;
+          }
+        }
+
+        if (analyticsName !== undefined) {
+          if (analyticsName.trim()) {
+            tribe.analyticsName = analyticsName.trim();
+          } else {
+            delete tribe.analyticsName;
+          }
+        }
+
+        await savePlayerData(playerData);
+
+        // Get role name for success message
+        const guild = await client.guilds.fetch(guildId);
+        const role = guild.roles.cache.get(roleId);
+        const roleName = role?.name || 'tribe';
+
+        // Return updated hub
+        const { createCastlistHub } = await import('./castlistHub.js');
+        const hubData = await createCastlistHub(guildId, {
+          message: `✅ Updated settings for ${tribe.emoji || ''} **${roleName}**`,
+          selectedCastlistId: castlistId,
+          activeButton: 'add_tribe' // Keep tribe interface active
+        });
+
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: hubData
+        });
+
+      } catch (error) {
+        console.error('[CASTLIST] Error processing tribe edit modal:', error);
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            components: [{
+              type: 17, // Container
+              components: [{
+                type: 10, // Text Display
+                content: '❌ Error updating tribe settings. Please try again.'
+              }]
+            }]
+          }
+        });
+      }
     } else if (custom_id === 'age_modal' || custom_id === 'player_age_modal') {
       // Use new modular handler for player age modal
       const playerData = await loadPlayerData();

@@ -1591,7 +1591,8 @@
         "analyticsName": "🤖Mr CastBot",
         "analyticsAdded": 1751070525853,
         "castlistIds": [
-          "castlist_1759638936214_system"
+          "castlist_1759638936214_system",
+          "castlist_1762007922583_1331657596087566398"
         ],
         "castlist": "Castbot MVPs"
       },
@@ -1825,7 +1826,12 @@
       "1434189967323566261": {
         "name": "Tribe 1434189967323566261",
         "emoji": "🏕️",
-        "color": null,
+        "color": null
+      },
+      "1380906521084559401": {
+        "name": "Tribe 1380906521084559401",
+        "emoji": "🏕️",
+        "color": "#607d8b",
         "castlistIds": [
           "castlist_1762007922583_1331657596087566398"
         ],
@@ -7513,14 +7519,14 @@
     "serverName": "EmeraldORG: Fire Emblem Three Houses",
     "icon": "https://cdn.discordapp.com/icons/1385042963310055515/4bea7eb65723bab308c21c06332836be.webp",
     "ownerId": "676262975132139522",
-    "memberCount": 113,
+    "memberCount": 112,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1750290375307,
-    "lastUpdated": 1761568282748,
+    "lastUpdated": 1762174117807,
     "ownerInfo": {
       "username": "deadlybelle",
       "globalName": "Belle",
@@ -13929,6 +13935,15 @@
         "castlistIds": [
           "default"
         ]
+      },
+      "1412424780568596545": {
+        "name": "Tribe 1412424780568596545",
+        "emoji": "🏕️",
+        "color": null,
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "default"
       }
     },
     "players": {},

@@ -431,39 +431,29 @@ async function createHotSwappableInterface(guildId, castlist, activeButton) {
       return null;
     
     case CastlistButtonType.ADD_TRIBE:
-      // Create role select for adding/removing tribes
+      // Create role select for tribe editing
       // Get tribes currently using this castlist
       const tribesUsingCastlist = await castlistManager.getTribesUsingCastlist(guildId, castlist.id);
-
-      // CRITICAL: default_values cannot exceed max_values or Discord rejects the component
-      // If castlist has more than 15 tribes, we can only show the first 15 as pre-selected
-      const maxTribeLimit = 15;
-      const defaultValues = tribesUsingCastlist.slice(0, maxTribeLimit).map(roleId => ({
-        id: roleId,
-        type: 'role'
-      }));
 
       // Build interface components
       const interfaceComponents = [];
 
-      // Show warning if castlist exceeds limit
-      if (tribesUsingCastlist.length > maxTribeLimit) {
-        interfaceComponents.push({
-          type: 10, // Text Display
-          content: `⚠️ **Over Limit**: This castlist has ${tribesUsingCastlist.length} tribes (max: ${maxTribeLimit}). Only first ${maxTribeLimit} pre-selected. Remove tribes to get below limit.`
-        });
-      }
+      // Add descriptive text
+      interfaceComponents.push({
+        type: 10, // Text Display
+        content: `### Edit Tribe Settings\n\nSelect any role to:\n• **Add** it as a new tribe\n• **Edit** emoji and settings\n• **Remove** from castlist (type "remove" in modal)\n\n💡 **Tip:** Any Discord role can become a tribe!`
+      });
 
-      // Add the role select
+      // Add the role select (single-select for editing)
       interfaceComponents.push({
         type: 1, // ActionRow
         components: [{
           type: 6, // Role Select
           custom_id: `castlist_tribe_select_${castlist.id}`,
-          placeholder: 'Select roles to manage as tribes (add/remove)...',
-          min_values: 0,
-          max_values: maxTribeLimit, // Practical limit (20+ tribes per castlist is rare, leaves room for Edit Tribe modal)
-          default_values: defaultValues
+          placeholder: 'Select a tribe role to edit settings...',
+          min_values: 1,
+          max_values: 1  // Single select only for modal editing
+          // No default_values - user must explicitly select
         }]
       });
 

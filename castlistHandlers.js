@@ -569,139 +569,114 @@ export function handleCastlistSort(req, res, client, custom_id) {
  */
 export function handleCastlistTribeSelect(req, res, client, custom_id) {
   const castlistId = custom_id.replace('castlist_tribe_select_', '');
-  const selectedRoles = req.body.data.values || [];
+  const selectedRoleId = req.body.data.values?.[0]; // Single selection now
   const resolvedRoles = req.body.data.resolved?.roles || {};
+  const guildId = req.body.guild_id;
 
-  return ButtonHandlerFactory.create({
-    id: custom_id,
-    updateMessage: true,
-    handler: async (context) => {
-      console.log(`📋 Updating tribes for ${castlistId}: ${selectedRoles.length} roles selected`);
+  // Return modal response directly (not UPDATE_MESSAGE)
+  return (async () => {
+    try {
+      console.log(`[CASTLIST] Opening tribe editor modal for role ${selectedRoleId}, castlist ${castlistId}`);
 
-      // CRITICAL: Materialize virtual castlist before updating tribes
-      // This ensures changes persist to real data structure
-      let actualCastlistId = castlistId;
-
-      // Note: Default castlist is now handled in handleCastlistSelect (when selected from dropdown)
-      // This eliminates the need for special handling here
-
-      // Only handle non-default virtual castlists here (edge case if called directly)
-      if (castlistId !== 'default' && castlistVirtualAdapter.isVirtualId(castlistId)) {
-        console.log(`[CASTLIST] Materializing virtual castlist before tribe updates`);
-        actualCastlistId = await castlistVirtualAdapter.materializeCastlist(context.guildId, castlistId);
-      }
-
-      // Load data ONCE (following store multi-select pattern)
+      // Load existing tribe data to pre-fill modal
       const playerData = await loadPlayerData();
-      const tribes = playerData[context.guildId]?.tribes || {};
+      const tribeData = playerData[guildId]?.tribes?.[selectedRoleId] || {};
 
-      // Get current tribes using this castlist (use original ID for lookup)
-      const currentTribes = await castlistManager.getTribesUsingCastlist(context.guildId, castlistId);
+      // Get role info for display
+      const roleInfo = resolvedRoles[selectedRoleId];
+      const roleName = roleInfo?.name || 'Unknown Role';
 
-      // Calculate changes (exactly like store implementation)
-      const toRemove = currentTribes.filter(t => !selectedRoles.includes(t));
-      const toAdd = selectedRoles.filter(r => !currentTribes.includes(r));
-
-      console.log(`[CASTLIST] Processing changes: Remove ${toRemove.length} tribes, Add ${toAdd.length} tribes`);
-
-      // Get castlist entity for name (needed for legacy field)
-      const castlist = await castlistManager.getCastlist(context.guildId, actualCastlistId);
-      const castlistName = castlist?.name || 'default';
-
-      // Process ALL removals in memory
-      for (const tribeId of toRemove) {
-        const tribe = tribes[tribeId];
-        if (tribe) {
-          // Remove from castlistIds array
-          if (tribe.castlistIds && Array.isArray(tribe.castlistIds)) {
-            tribe.castlistIds = tribe.castlistIds.filter(id => id !== actualCastlistId);
-
-            // Update legacy field based on remaining castlists
-            if (tribe.castlistIds.length > 0) {
-              // Set to first remaining castlist's name
-              const firstId = tribe.castlistIds[0];
-              if (firstId === 'default') {
-                tribe.castlist = 'default';
-              } else {
-                const firstCastlist = await castlistManager.getCastlist(context.guildId, firstId);
-                tribe.castlist = firstCastlist?.name || firstId;
-              }
-            } else {
-              // No castlists left - clean up
-              delete tribe.castlistIds;
-              delete tribe.castlist;
+      return res.send({
+        type: InteractionResponseType.MODAL,
+        data: {
+          custom_id: `tribe_edit_modal_${selectedRoleId}_${castlistId}`,
+          title: `Edit Tribe: ${roleName.substring(0, 30)}`,
+          components: [
+            {
+              type: 1, // Action Row
+              components: [{
+                type: 4, // Text Input
+                custom_id: 'tribe_emoji',
+                label: 'Tribe Emoji',
+                style: 1, // Short
+                placeholder: '🔥 or <:custom:123456789012345678>',
+                value: tribeData.emoji || '', // Pre-fill existing emoji
+                required: false,
+                max_length: 100
+              }]
+            },
+            {
+              type: 1, // Action Row
+              components: [{
+                type: 4, // Text Input
+                custom_id: 'tribe_display_name',
+                label: 'Display Name (Optional)',
+                style: 1, // Short
+                placeholder: 'Custom display name for this tribe',
+                value: tribeData.displayName || '',
+                required: false,
+                max_length: 50
+              }]
+            },
+            {
+              type: 1, // Action Row
+              components: [{
+                type: 4, // Text Input
+                custom_id: 'tribe_color',
+                label: 'Accent Color (Hex)',
+                style: 1, // Short
+                placeholder: '#FF5733 or leave blank',
+                value: tribeData.color || '',
+                required: false,
+                max_length: 7
+              }]
+            },
+            {
+              type: 1, // Action Row
+              components: [{
+                type: 4, // Text Input
+                custom_id: 'tribe_analytics_name',
+                label: 'Analytics Name (Optional)',
+                style: 1, // Short
+                placeholder: 'Name for tracking and reports',
+                value: tribeData.analyticsName || '',
+                required: false,
+                max_length: 30
+              }]
+            },
+            {
+              type: 1, // Action Row
+              components: [{
+                type: 4, // Text Input
+                custom_id: 'tribe_remove',
+                label: 'Remove from Castlist? (type "remove")',
+                style: 1, // Short
+                placeholder: 'Leave blank to keep, type "remove" to delete',
+                value: '',
+                required: false,
+                max_length: 10
+              }]
             }
-          } else if (tribe.castlistId === actualCastlistId) {
-            // Handle legacy single ID format
-            delete tribe.castlistId;
-            delete tribe.castlist;
-          } else if (tribe.castlist === castlistName) {
-            // Handle legacy string format
-            delete tribe.castlist;
-          }
-          console.log(`[CASTLIST] Removed tribe ${tribeId} from castlist (in memory)`);
+          ]
         }
-      }
-
-      // Process ALL additions in memory
-      for (const roleId of toAdd) {
-        // Extract role color from Discord API
-        const roleData = resolvedRoles[roleId];
-        const roleColor = roleData?.color ? `#${roleData.color.toString(16).padStart(6, '0')}` : null;
-
-        // Initialize or update tribe
-        if (!tribes[roleId]) {
-          // Create new tribe with castlist already assigned
-          tribes[roleId] = {
-            name: `Tribe ${roleId}`,
-            emoji: '🏕️',
-            color: roleColor,
-            castlistIds: [actualCastlistId],  // Add directly here
-            // CRITICAL: For default castlist, always use 'default' string, not 'Active Castlist'
-            castlist: (actualCastlistId === 'default') ? 'default' : castlistName  // Legacy field
-          };
-        } else {
-          // Update existing tribe
-          if (roleColor && !tribes[roleId].color) {
-            tribes[roleId].color = roleColor;
-          }
-
-          // Add to castlistIds array
-          if (!tribes[roleId].castlistIds) {
-            tribes[roleId].castlistIds = [];
-          }
-          if (!tribes[roleId].castlistIds.includes(actualCastlistId)) {
-            tribes[roleId].castlistIds.push(actualCastlistId);
-          }
-
-          // Update legacy field (set to first castlist or this one)
-          if (!tribes[roleId].castlist || tribes[roleId].castlistIds[0] === actualCastlistId) {
-            // CRITICAL: For default castlist, always use 'default' string, not 'Active Castlist'
-            tribes[roleId].castlist = (actualCastlistId === 'default') ? 'default' : castlistName;
-          }
-        }
-        console.log(`[CASTLIST] Added tribe ${roleId} to castlist (in memory)`);
-      }
-
-      // Save ONCE at the end - NO MORE linkTribeToCastlist calls!
-      await savePlayerData(playerData);
-
-      // Log summary
-      if (toRemove.length > 0 || toAdd.length > 0) {
-        console.log(`[CASTLIST] ✅ Successfully updated castlist: ${toAdd.length} added, ${toRemove.length} removed`);
-      } else {
-        console.log(`[CASTLIST] No changes made - selection unchanged`);
-      }
-
-      // Refresh the UI with Add Tribe button still active
-      const hubData = await createCastlistHub(context.guildId, {
-        selectedCastlistId: castlistId,
-        activeButton: 'add_tribe' // Keep Add Tribe button active
       });
-
-      return hubData;
+    } catch (error) {
+      console.error(`[CASTLIST] Error showing tribe edit modal:`, error);
+      // Fall back to UPDATE_MESSAGE with error
+      return res.send({
+        type: InteractionResponseType.UPDATE_MESSAGE,
+        data: {
+          components: [{
+            type: 17, // Container
+            components: [{
+              type: 10, // Text Display
+              content: '❌ Error opening tribe editor. Please try again.'
+            }]
+          }]
+        }
+      });
     }
-  })(req, res, client);
+  })();
 }
 
 
