@@ -8184,9 +8184,105 @@ To fix this:
       const { handleCastlistSort } = await import('./castlistHandlers.js');
       return handleCastlistSort(req, res, client, custom_id);
     } else if (custom_id.startsWith('castlist_tribe_select_')) {
-      // Handle tribe role selection
-      const { handleCastlistTribeSelect } = await import('./castlistHandlers.js');
-      return handleCastlistTribeSelect(req, res, client, custom_id);
+      // Handle tribe role selection - show modal for editing
+      return ButtonHandlerFactory.create({
+        id: 'castlist_tribe_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context, req, res) => {
+          const castlistId = context.customId.replace('castlist_tribe_select_', '');
+          const selectedRoleId = context.values[0]; // Single selection
+          const resolvedRoles = req.body.data.resolved?.roles || {};
+          const guildId = context.guildId;
+
+          console.log(`[CASTLIST] Opening tribe editor modal for role ${selectedRoleId}, castlist ${castlistId}`);
+
+          // Load existing tribe data to pre-fill modal
+          const { loadPlayerData } = await import('./storage.js');
+          const playerData = await loadPlayerData();
+          const tribeData = playerData[guildId]?.tribes?.[selectedRoleId] || {};
+
+          // Get role info for display
+          const roleInfo = resolvedRoles[selectedRoleId];
+          const roleName = roleInfo?.name || 'Unknown Role';
+
+          // Return modal directly using res.send()
+          return res.send({
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: `tribe_edit_modal_${selectedRoleId}_${castlistId}`,
+              title: `Edit Tribe: ${roleName.substring(0, 30)}`,
+              components: [
+                {
+                  type: 1, // Action Row
+                  components: [{
+                    type: 4, // Text Input
+                    custom_id: 'tribe_emoji',
+                    label: 'Tribe Emoji',
+                    style: 1, // Short
+                    placeholder: '🔥 or <:custom:123456789012345678>',
+                    value: tribeData.emoji || '', // Pre-fill existing emoji
+                    required: false,
+                    max_length: 100
+                  }]
+                },
+                {
+                  type: 1, // Action Row
+                  components: [{
+                    type: 4, // Text Input
+                    custom_id: 'tribe_display_name',
+                    label: 'Display Name (Optional)',
+                    style: 1, // Short
+                    placeholder: 'Custom display name for this tribe',
+                    value: tribeData.displayName || '',
+                    required: false,
+                    max_length: 50
+                  }]
+                },
+                {
+                  type: 1, // Action Row
+                  components: [{
+                    type: 4, // Text Input
+                    custom_id: 'tribe_color',
+                    label: 'Accent Color (Hex)',
+                    style: 1, // Short
+                    placeholder: '#FF5733 or leave blank',
+                    value: tribeData.color || '',
+                    required: false,
+                    max_length: 7
+                  }]
+                },
+                {
+                  type: 1, // Action Row
+                  components: [{
+                    type: 4, // Text Input
+                    custom_id: 'tribe_analytics_name',
+                    label: 'Analytics Name (Optional)',
+                    style: 1, // Short
+                    placeholder: 'Name for tracking and reports',
+                    value: tribeData.analyticsName || '',
+                    required: false,
+                    max_length: 30
+                  }]
+                },
+                {
+                  type: 1, // Action Row
+                  components: [{
+                    type: 4, // Text Input
+                    custom_id: 'tribe_remove',
+                    label: 'Remove from Castlist? (type "remove")',
+                    style: 1, // Short
+                    placeholder: 'Leave blank to keep, type "remove" to delete',
+                    value: '',
+                    required: false,
+                    max_length: 10
+                  }]
+                }
+              ]
+            }
+          });
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('edit_placement_')) {
       // Handle placement edit button - show modal (MIGRATED TO FACTORY)
       // 🔧 FIX: Parse full navigation context from button ID
