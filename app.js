@@ -36053,13 +36053,38 @@ Are you sure you want to continue?`;
 
       // Now do the expensive operations asynchronously
       try {
-        
+
         // Load safari data and find matching action
         const { loadSafariContent } = await import('./safariManager.js');
         const safariData = await loadSafariContent();
         const activeMapId = safariData[guildId]?.maps?.active;
-        const locationActions = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord]?.buttons || [];
-        
+
+        // Detect actual location from channelId if coord is 'global'
+        let actualLocation = coord;
+        if (coord === 'global') {
+          const coordinates = safariData[guildId]?.maps?.[activeMapId]?.coordinates || {};
+
+          // Search for matching channelId in map coordinates
+          for (const [coordKey, coordData] of Object.entries(coordinates)) {
+            if (coordData.channelId === channelId) {
+              actualLocation = coordKey;
+              console.log(`📍 DEBUG: Global button in location channel - detected ${actualLocation} from channelId ${channelId}`);
+              break;
+            }
+          }
+
+          // If no match found, set to null to skip location search
+          if (actualLocation === 'global') {
+            console.log(`🌍 DEBUG: Global button in non-location channel - using global-only search`);
+            actualLocation = null;
+          }
+        }
+
+        // Get location-specific actions (empty if actualLocation is null)
+        const locationActions = actualLocation
+          ? safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[actualLocation]?.buttons || []
+          : [];
+
         // Search for a matching action with modal trigger
         let matchingAction = null;
         for (const actionId of locationActions) {
@@ -36074,19 +36099,19 @@ Are you sure you want to continue?`;
         }
         
         if (matchingAction) {
-          console.log(`✅ Found matching action for command "${command}"`);
-          
+          console.log(`✅ Found matching action for command "${command}" at location ${actualLocation || 'global'}`);
+
           // Execute the action
           const { executeButtonActions } = await import('./safariManager.js');
-          
+
           // Create proper interaction object for the execution
           const interactionData = {
             token: req.body.token,
             applicationId: req.body.application_id,
             member: req.body.member,
-            channelName: `#${req.body.channel?.name || coord.toLowerCase()}`
+            channelName: `#${req.body.channel?.name || (actualLocation || 'unknown').toLowerCase()}`
           };
-          
+
           const result = await executeButtonActions(
             guildId,
             matchingAction.id,  // Use the button ID, not the actions array
@@ -36094,18 +36119,18 @@ Are you sure you want to continue?`;
             interactionData,
             client
           );
-          
+
           // Log the player command
           try {
             const { logCustomAction } = await import('./safariLogger.js');
             const userData = req.body.member?.user || {};
-            
+
             await logCustomAction({
               guildId,
               userId,
               username: userData.username || 'Unknown',
               displayName: req.body.member?.nick || userData.global_name || userData.username || 'Unknown',
-              location: coord,
+              location: actualLocation || 'global',
               actionType: 'player_command',
               actionId: command,
               executedActions: matchingAction.actions?.map(action => ({
@@ -36114,7 +36139,7 @@ Are you sure you want to continue?`;
                 result: 'executed'
               })) || [],
               success: true,
-              channelName: `#${req.body.channel?.name || coord.toLowerCase()}`
+              channelName: `#${req.body.channel?.name || (actualLocation || 'unknown').toLowerCase()}`
             });
           } catch (logError) {
             console.error('Error logging player command:', logError);
@@ -36127,10 +36152,10 @@ Are you sure you want to continue?`;
           });
         } else {
           // No matching command found
-          console.log(`❌ No matching action found for command "${command}" at ${coord}`);
+          console.log(`❌ No matching action found for command "${command}" at ${actualLocation || 'location'}`);
 
           // NEW: Search global actions (orphan actions) as fallback
-          console.log(`🌍 DEBUG: No location match for "${command}" at ${coord}, searching global actions`);
+          console.log(`🌍 DEBUG: No location match for "${command}" at ${actualLocation || 'location'}, searching global actions`);
 
           for (const actionId of Object.keys(safariData[guildId]?.buttons || {})) {
             const action = safariData[guildId].buttons[actionId];
@@ -36177,7 +36202,7 @@ Are you sure you want to continue?`;
                 userId,
                 username: userData.username || 'Unknown',
                 displayName: req.body.member?.nick || userData.global_name || userData.username || 'Unknown',
-                location: coord,
+                location: 'global',
                 actionType: 'player_command',
                 actionId: command,
                 executedActions: matchingAction.actions?.map(action => ({
@@ -36186,7 +36211,7 @@ Are you sure you want to continue?`;
                   result: 'executed'
                 })) || [],
                 success: true,
-                channelName: `#${req.body.channel?.name || coord.toLowerCase()}`
+                channelName: `#${req.body.channel?.name || 'unknown'}`
               });
             } catch (logError) {
               console.error('Error logging player command:', logError);
@@ -36201,7 +36226,7 @@ Are you sure you want to continue?`;
           }
 
           // Still no match found - proceed with existing executeOn:"false" logic
-          console.log(`❌ No matching action found for command "${command}" at ${coord} or globally`);
+          console.log(`❌ No matching action found for command "${command}" at ${actualLocation || 'location'} or globally`);
 
           // Check for actions with executeOn: "false" to execute when no match is found
           let falseActions = [];
