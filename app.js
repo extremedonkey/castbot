@@ -4867,9 +4867,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Pass ID for lookups, name for display
       const responseData = await buildCastlist2ResponseData(guild, tribes, castlistIdForNavigation, navigationState, memberObj, channelId, permissionChecker, displayMode, castlistName, { playerData, guildId });
 
-        // Update existing message (button click response)
+        // Post castlist as NEW public message (button posts to channel)
         return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: responseData
         });
       } catch (error) {
@@ -4879,9 +4879,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
         // Graceful error response - don't crash the bot!
         return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            flags: (1 << 15), // IS_COMPONENTS_V2
+            flags: (1 << 6), // EPHEMERAL - error only visible to clicker
             components: [{
               type: 17, // Container
               components: [{
