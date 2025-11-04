@@ -823,7 +823,8 @@
         "age": "36",
         "emojiCode": "<:ReeceBot:1396856819690766460>",
         "vanityRoles": [
-          "1434189671260491796"
+          "1434189671260491796",
+          "1333822411912642630"
         ],
         "safari": {
           "currency": 668,
@@ -1148,7 +1149,10 @@
             }
           },
           "isPaused": false
-        }
+        },
+        "vanityRoles": [
+          "1333822411912642630"
+        ]
       },
       "977455730300956683": {
         "emojiCode": "<:morgane:1382413461094535281>",
@@ -1615,10 +1619,11 @@
         "castlistIds": [
           "castlist_1759638936214_system",
           "castlist_archive_1762212309078",
-          "default"
+          "castlist_archive_1762213156171",
+          "castlist_archive_1762214433510"
         ],
-        "castlist": "castTESTSWAP1",
-        "castlistId": "castlist_archive_1762212309078",
+        "castlist": "theB12swap",
+        "castlistId": "castlist_archive_1762214433510",
         "isVanity": true
       },
       "1335645032891547670": {
@@ -1790,10 +1795,11 @@
         "color": null,
         "castlistIds": [
           "castlist_archive_1762212309078",
-          "default"
+          "castlist_archive_1762213156171",
+          "castlist_archive_1762214433510"
         ],
-        "castlist": "castTESTSWAP1",
-        "castlistId": "castlist_archive_1762212309078",
+        "castlist": "theB12swap",
+        "castlistId": "castlist_archive_1762214433510",
         "isVanity": true
       },
       "1368969401067372625": {
@@ -1857,7 +1863,6 @@
       "1368969346600407181": {},
       "1434914674788401212": {
         "emoji": null,
-        "castlist": "CastBot Winners",
         "showPlayerEmojis": false,
         "color": "#1abc9c",
         "analyticsName": "MoarWork",
@@ -1867,6 +1872,31 @@
         "emoji": null,
         "displayName": null,
         "color": "#e74c3c"
+      },
+      "1382424526092107929": {
+        "emoji": null,
+        "displayName": null,
+        "color": "#95a5a6"
+      },
+      "1368969348399632546": {
+        "castlistIds": [
+          "default"
+        ],
+        "emoji": null,
+        "displayName": null,
+        "color": null,
+        "castlistId": "default",
+        "castlist": "default"
+      },
+      "1368969349976821815": {
+        "castlistIds": [
+          "default"
+        ],
+        "emoji": null,
+        "displayName": null,
+        "color": null,
+        "castlistId": "default",
+        "castlist": "default"
       }
     },
     "timezones": {
@@ -3165,7 +3195,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1762212785704,
+        "modifiedAt": 1762214702379,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -3290,6 +3320,17 @@
         "seasonId": "season_1deffdb1dac8496b",
         "modifiedAt": 1762187809409,
         "modifiedBy": "391415444084490240"
+      },
+      "castlist_archive_1762214433510": {
+        "id": "castlist_archive_1762214433510",
+        "name": "theB12swap",
+        "type": "custom",
+        "createdAt": 1762214433510,
+        "createdBy": "391415444084490240",
+        "metadata": {
+          "description": "Archived from tribe swap on 11/4/2025",
+          "emoji": "📦"
+        }
       }
     },
     "placements": {
@@ -3523,6 +3564,17 @@
         "name": "castTESTSWAP1",
         "type": "custom",
         "createdAt": 1762212309078,
+        "createdBy": "391415444084490240",
+        "metadata": {
+          "description": "Archived from tribe swap on 11/4/2025",
+          "emoji": "📦"
+        }
+      },
+      "castlist_archive_1762213156171": {
+        "id": "castlist_archive_1762213156171",
+        "name": "plsWORK",
+        "type": "custom",
+        "createdAt": 1762213156171,
         "createdBy": "391415444084490240",
         "metadata": {
           "description": "Archived from tribe swap on 11/4/2025",

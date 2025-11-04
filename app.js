@@ -31711,36 +31711,47 @@ Are you sure you want to continue?`;
             const tribeRoleId = newTribeRoleIds[currentTribeIndex];
             const tribeRole = guild.roles.cache.get(tribeRoleId);
             const avatarUrl = player.user.displayAvatarURL({ size: 128 });
+            const displayName = player.displayName || player.user.username;
 
-            // Find player's old tribe
+            // Find player's old tribe (save both name AND role ID)
             let oldTribeName = 'Unknown';
+            let oldTribeRoleId = null;
             for (const oldTribe of currentDefaultTribes) {
               const oldRole = guild.roles.cache.get(oldTribe.roleId);
               if (oldRole && oldRole.members.has(player.id)) {
                 oldTribeName = oldRole.name;
+                oldTribeRoleId = oldTribe.roleId;
                 break;
               }
             }
 
-            console.log(`🔀 [TRIBE SWAP] ${playerCount}/${playersToAssign.length}: ${player.user.username} swapped from ${oldTribeName} → ${tribeRole.name}`);
+            console.log(`🔀 [TRIBE SWAP] ${playerCount}/${playersToAssign.length}: ${displayName} swapped from ${oldTribeName} → ${tribeRole.name}`);
 
-            // Dramatic reveal
+            // Dramatic reveal with formal swap text above
             await sendMessage({
               flags: (1 << 15),
               components: [{
                 type: 17,
                 accent_color: tribeRole.color || 0x5865F2,
-                components: [{
-                  type: 9, // Section
-                  components: [{
-                    type: 10,
-                    content: `# ${tribeRole.name.toUpperCase()}\n\n## ${player.user.username}!`
-                  }],
-                  accessory: {
-                    type: 11, // Thumbnail
-                    media: { url: avatarUrl }
+                components: [
+                  {
+                    type: 10, // Text Display - formal swap message
+                    content: oldTribeRoleId
+                      ? `${displayName} swaps from <@&${oldTribeRoleId}> into <@&${tribeRoleId}>`
+                      : `${displayName} joins <@&${tribeRoleId}>`
+                  },
+                  {
+                    type: 9, // Section - dramatic reveal
+                    components: [{
+                      type: 10,
+                      content: `# ${tribeRole.name.toUpperCase()}\n\n## ${displayName}!`
+                    }],
+                    accessory: {
+                      type: 11, // Thumbnail
+                      media: { url: avatarUrl }
+                    }
                   }
-                }]
+                ]
               }]
             });
 
@@ -31769,7 +31780,7 @@ Are you sure you want to continue?`;
                 type: 17,
                 components: [{
                   type: 10,
-                  content: `# ⏸️ Manual Assignment Required\n\n${unassignedPlayers.length} player(s) awaiting tribe assignment:\n${unassignedPlayers.map(p => `- ${p.user.username}`).join('\n')}`
+                  content: `# ⏸️ Manual Assignment Required\n\n${unassignedPlayers.length} player(s) awaiting tribe assignment:\n${unassignedPlayers.map(p => `- ${p.displayName || p.user.username}`).join('\n')}`
                 }]
               }]
             });
@@ -31784,17 +31795,26 @@ Are you sure you want to continue?`;
           playerData[guildId].castlistConfigs = {};
         }
 
+        // Check if default castlist has a seasonId and copy it to archive
+        const defaultCastlistConfig = playerData[guildId].castlistConfigs?.['default'];
+        const seasonId = defaultCastlistConfig?.seasonId || null;
+
         playerData[guildId].castlistConfigs[archiveCastlistId] = {
           id: archiveCastlistId,
           name: archiveName.trim(),
           type: 'custom',
           createdAt: timestamp,
           createdBy: userId,
+          seasonId: seasonId, // Preserve season ID if present
           metadata: {
             description: `Archived from tribe swap on ${new Date(timestamp).toLocaleDateString()}`,
             emoji: '📦'
           }
         };
+
+        if (seasonId) {
+          console.log(`🔀 [TRIBE SWAP] Archive inherits seasonId: ${seasonId}`);
+        }
 
         console.log(`🔀 [TRIBE SWAP] Created archive castlist: ${archiveName.trim()} (${archiveCastlistId})`);
 
@@ -31851,24 +31871,37 @@ Are you sure you want to continue?`;
         // Handle vanity roles (add old tribe roles as decorative badges on player cards)
         if (vanityRoles === 'yes') {
           console.log(`🔀 [TRIBE SWAP] Adding old tribe roles as vanity badges to ${playerArray.length} players...`);
-          const { getPlayer, updatePlayer } = await import('./storage.js');
+
+          // Initialize players structure if it doesn't exist
+          if (!playerData[guildId].players) {
+            playerData[guildId].players = {};
+          }
 
           let vanityPlayersUpdated = 0;
           for (const player of playerArray) {
+            const displayName = player.displayName || player.user.username;
+
             // Find which old tribe this player was in
             for (const oldTribe of currentDefaultTribes) {
               const oldRole = guild.roles.cache.get(oldTribe.roleId);
               if (oldRole && oldRole.members.has(player.id)) {
-                // Add old tribe role to player's vanityRoles array
-                const currentPlayer = await getPlayer(guildId, player.id) || {};
-                const currentVanityRoles = currentPlayer.vanityRoles || [];
+                // Initialize player object if it doesn't exist
+                if (!playerData[guildId].players[player.id]) {
+                  playerData[guildId].players[player.id] = {};
+                }
+
+                // Get or initialize vanityRoles array
+                if (!playerData[guildId].players[player.id].vanityRoles) {
+                  playerData[guildId].players[player.id].vanityRoles = [];
+                }
+
+                const vanityRolesArray = playerData[guildId].players[player.id].vanityRoles;
 
                 // Add old tribe role if not already present (additive)
-                if (!currentVanityRoles.includes(oldTribe.roleId)) {
-                  const newVanityRoles = [...currentVanityRoles, oldTribe.roleId];
-                  await updatePlayer(guildId, player.id, { vanityRoles: newVanityRoles });
+                if (!vanityRolesArray.includes(oldTribe.roleId)) {
+                  vanityRolesArray.push(oldTribe.roleId);
                   vanityPlayersUpdated++;
-                  console.log(`🔀 [TRIBE SWAP]   ✨ Vanity: ${player.user.username} → added "${oldRole.name}" badge`);
+                  console.log(`🔀 [TRIBE SWAP]   ✨ Vanity: ${displayName} → added "${oldRole.name}" badge (${oldTribe.roleId})`);
                 }
 
                 // Mark tribe as eligible for vanity display
