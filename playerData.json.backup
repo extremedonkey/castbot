@@ -717,14 +717,14 @@
     "serverName": "CastBot",
     "icon": "https://cdn.discordapp.com/icons/1331657596087566398/84e48ab9d15d35611b80ce584bb80f95.webp",
     "ownerId": "391415444084490240",
-    "memberCount": 30,
+    "memberCount": 31,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1737562311909,
-    "lastUpdated": 1760886120725,
+    "lastUpdated": 1762291718615,
     "players": {
       "233762709932474370": {
         "emojiCode": "<:Geo:1396856830281388144>",

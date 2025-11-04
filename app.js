@@ -4681,40 +4681,40 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       })(req, res, client);
     } else if (custom_id.startsWith('show_castlist2') || (req.body.data && req.body.data.custom_id && req.body.data.custom_id.startsWith('show_castlist2'))) {
       // Handle show_castlist2 - reuse existing logic but decode virtual IDs
-      const currentCustomId = req.body.data?.custom_id?.startsWith('show_castlist2') ? req.body.data.custom_id : custom_id;
-      
-      // Extract castlist ID and display mode
-      // Check if it ends with _edit specifically
-      const displayMode = currentCustomId.endsWith('_edit') ? 'edit' : 'view';
+      try {
+        const currentCustomId = req.body.data?.custom_id?.startsWith('show_castlist2') ? req.body.data.custom_id : custom_id;
 
-      // Extract castlist ID
-      let requestedCastlist;
-      if (displayMode === 'edit') {
-        // Remove the _edit suffix
-        const withoutEdit = currentCustomId.slice(0, -5); // Remove '_edit'
-        requestedCastlist = withoutEdit.replace('show_castlist2_', '') || 'default';
-      } else {
-        // No edit suffix, extract everything after show_castlist2_
-        requestedCastlist = currentCustomId.replace('show_castlist2_', '') || 'default';
-      }
+        // Extract castlist ID and display mode
+        // Check if it ends with _edit specifically
+        const displayMode = currentCustomId.endsWith('_edit') ? 'edit' : 'view';
 
-      // Decode virtual castlist ID if needed
-      const { castlistVirtualAdapter } = await import('./castlistVirtualAdapter.js');
-      requestedCastlist = castlistVirtualAdapter.decodeVirtualId(requestedCastlist);
-      
-      console.log('Processing show_castlist2 for:', requestedCastlist, 'in mode:', displayMode);
-      
-      // The rest of the existing show_castlist2 logic is already in app.js
-      // Just continue with the existing flow using the decoded castlist name
-      const guildId = req.body.guild_id;
-      const userId = req.body.member?.user?.id || req.body.user?.id;
-      const channelId = req.body.channel_id || null;
-      const member = req.body.member || null;
-      const guild = await client.guilds.fetch(guildId);
+        // Extract castlist ID
+        let requestedCastlist;
+        if (displayMode === 'edit') {
+          // Remove the _edit suffix
+          const withoutEdit = currentCustomId.slice(0, -5); // Remove '_edit'
+          requestedCastlist = withoutEdit.replace('show_castlist2_', '') || 'default';
+        } else {
+          // No edit suffix, extract everything after show_castlist2_
+          requestedCastlist = currentCustomId.replace('show_castlist2_', '') || 'default';
+        }
 
-      // Ensure member cache is populated (fixes missing members issue)
-      // This mirrors what /castlist does successfully
-      await guild.members.fetch();
+        // Decode virtual castlist ID if needed
+        const { castlistVirtualAdapter } = await import('./castlistVirtualAdapter.js');
+        requestedCastlist = castlistVirtualAdapter.decodeVirtualId(requestedCastlist);
+
+        console.log('Processing show_castlist2 for:', requestedCastlist, 'in mode:', displayMode);
+
+        // The rest of the existing show_castlist2 logic is already in app.js
+        // Just continue with the existing flow using the decoded castlist name
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        const channelId = req.body.channel_id || null;
+        const member = req.body.member || null;
+        const guild = await client.guilds.fetch(guildId);
+
+        // REMOVED: guild.members.fetch() - causes timeout crashes for large guilds
+        // Members are fetched per-role below which is much faster
 
       // Import necessary functions that DO exist
       const { loadPlayerData } = await import('./storage.js');
@@ -4776,21 +4776,16 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           continue;  // Skip to next tribe
         }
 
-        // Check legacy 'castlist', transitional 'castlistId', and current 'castlistIds' array
-        // Special handling for Active/Default castlist
+        // Check legacy 'castlist' string and current 'castlistIds' array
+        // Note: castlistId (singular) removed - only castlistIds[] supported now
         const matchesCastlist = (
-          // Legacy string matching
+          // Legacy string matching (for backwards compatibility)
           tribe.castlist === castlistName ||
-          // Transitional entity ID matching (singular)
-          tribe.castlistId === castlistIdForNavigation ||
           // CURRENT: Multi-castlist array matching (PRIMARY FORMAT)
           (tribe.castlistIds && Array.isArray(tribe.castlistIds) &&
            tribe.castlistIds.includes(castlistIdForNavigation)) ||
-          // Default castlist special cases - REMOVED broad fallback
-          // that included ALL tribes with no castlist fields
+          // Default castlist special cases
           (tribe.castlist === 'default' &&
-           (castlistName === 'Active Castlist' || requestedCastlist === 'default')) ||
-          (tribe.castlistId === 'default' &&
            (castlistName === 'Active Castlist' || requestedCastlist === 'default')) ||
           // Array support for default castlist
           (tribe.castlistIds?.includes('default') &&
@@ -4872,11 +4867,31 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Pass ID for lookups, name for display
       const responseData = await buildCastlist2ResponseData(guild, tribes, castlistIdForNavigation, navigationState, memberObj, channelId, permissionChecker, displayMode, castlistName, { playerData, guildId });
 
-      // Update existing message (button click response)
-      return res.send({
-        type: InteractionResponseType.UPDATE_MESSAGE,
-        data: responseData
-      });
+        // Update existing message (button click response)
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: responseData
+        });
+      } catch (error) {
+        console.error('❌ [CASTLIST] Error in show_castlist2 handler:', error);
+        console.error('  Castlist:', requestedCastlist);
+        console.error('  Stack:', error.stack);
+
+        // Graceful error response - don't crash the bot!
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [{
+              type: 17, // Container
+              components: [{
+                type: 10, // TextDisplay
+                content: `# ❌ Error Loading Castlist\n\n**Castlist**: ${requestedCastlist || 'unknown'}\n**Error**: ${error.message}\n\nThis castlist may have data issues. Please contact an admin.`
+              }]
+            }]
+          }
+        });
+      }
     } else if (custom_id.startsWith('rank_')) {
       // Handle ranking button clicks - USING CAST RANKING MANAGER
       return ButtonHandlerFactory.create({
