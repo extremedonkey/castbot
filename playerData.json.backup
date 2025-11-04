@@ -743,7 +743,10 @@
           "achievements": [],
           "cooldowns": {},
           "buttonUses": {}
-        }
+        },
+        "vanityRoles": [
+          "1368969348399632546"
+        ]
       },
       "455951495272202240": {
         "emojiCode": "<:Natadwen:1396856838158417931>",
@@ -762,7 +765,10 @@
           "cooldowns": {},
           "buttonUses": {},
           "storeHistory": []
-        }
+        },
+        "vanityRoles": [
+          "1368969348399632546"
+        ]
       },
       "572291395365109770": {
         "emojiCode": "<:Megan:1396856854314745957>",
@@ -817,14 +823,18 @@
           "cooldowns": {},
           "buttonUses": {},
           "lastInteraction": 1761750957194
-        }
+        },
+        "vanityRoles": [
+          "1368969349976821815"
+        ]
       },
       "391415444084490240": {
         "age": "36",
         "emojiCode": "<:ReeceBot:1396856819690766460>",
         "vanityRoles": [
           "1434189671260491796",
-          "1333822411912642630"
+          "1333822411912642630",
+          "1368969349976821815"
         ],
         "safari": {
           "currency": 668,
@@ -946,7 +956,9 @@
       "251452487997980673": {
         "emojiCode": "<:Patrick:1396856834236747977>",
         "age": "20",
-        "vanityRoles": []
+        "vanityRoles": [
+          "1368969348399632546"
+        ]
       },
       "705936744595587112": {
         "emojiCode": null
@@ -956,7 +968,8 @@
         "emojiCode": "<:Mike:1396856858475495454>",
         "vanityRoles": [
           "1368969393819746336",
-          "1401201426436456468"
+          "1401201426436456468",
+          "1368969349976821815"
         ],
         "safari": {
           "currency": 758,
@@ -997,7 +1010,10 @@
           "cooldowns": {},
           "buttonUses": {},
           "storeHistory": []
-        }
+        },
+        "vanityRoles": [
+          "1368969348399632546"
+        ]
       },
       "538540453973327873": {
         "age": "22",
@@ -1046,7 +1062,10 @@
             }
           },
           "isPaused": false
-        }
+        },
+        "vanityRoles": [
+          "1368969349976821815"
+        ]
       },
       "443545183997657120": {
         "emojiCode": null
@@ -1099,7 +1118,8 @@
           "lastInteraction": 1761750961455
         },
         "vanityRoles": [
-          "1434189711777202344"
+          "1434189711777202344",
+          "1368969349976821815"
         ]
       },
       "676262975132139522": {
@@ -1151,7 +1171,8 @@
           "isPaused": false
         },
         "vanityRoles": [
-          "1333822411912642630"
+          "1333822411912642630",
+          "1368969348399632546"
         ]
       },
       "977455730300956683": {
@@ -1171,7 +1192,10 @@
           "buttonUses": {},
           "storeHistory": []
         },
-        "age": "37"
+        "age": "37",
+        "vanityRoles": [
+          "1368969349976821815"
+        ]
       },
       "480712959824363520": {
         "safari": {
@@ -1228,7 +1252,10 @@
           "buttonUses": {},
           "storeHistory": []
         },
-        "emojiCode": "<:DieselFuryy:1396856824904552609>"
+        "emojiCode": "<:DieselFuryy:1396856824904552609>",
+        "vanityRoles": [
+          "1368969349976821815"
+        ]
       },
       "235148962103951360": {
         "safari": {
@@ -1353,7 +1380,8 @@
           "lastInteraction": 1761750971447
         },
         "vanityRoles": [
-          "1434189745843601540"
+          "1434189745843601540",
+          "1368969348399632546"
         ]
       },
       "1086246253819613274": {
@@ -1521,7 +1549,10 @@
               "regenConfig": "hourly"
             }
           }
-        }
+        },
+        "vanityRoles": [
+          "1368969348399632546"
+        ]
       },
       "719547106318352496": {
         "safari": {
@@ -1596,11 +1627,9 @@
         "analyticsAdded": 1751070525853,
         "castlistIds": [
           "castlist_1759638936214_system",
-          "castlist_1762007922583_1331657596087566398",
-          "castlist_1762185466287_1331657596087566398",
-          "castlist_1762185922054_1331657596087566398"
+          "castlist_1762007922583_1331657596087566398"
         ],
-        "castlist": "winners",
+        "castlist": "Castbot MVPs",
         "displayName": "Mr CastBot"
       },
       "1391142520787832904": {
@@ -1619,11 +1648,8 @@
         "castlistIds": [
           "castlist_1759638936214_system",
           "castlist_archive_1762212309078",
-          "castlist_archive_1762213156171",
-          "castlist_archive_1762214433510"
+          "castlist_archive_1762213156171"
         ],
-        "castlist": "theB12swap",
-        "castlistId": "castlist_archive_1762214433510",
         "isVanity": true
       },
       "1335645032891547670": {
@@ -1699,11 +1725,7 @@
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "🧓 Ask 🧓",
-        "analyticsAdded": 1759422827344,
-        "castlistIds": [
-          "castlist_1762185466287_1331657596087566398"
-        ],
-        "castlist": "That New Castlist!"
+        "analyticsAdded": 1759422827344
       },
       "1424250096698130603": {
         "emoji": "🗝️",
@@ -1795,11 +1817,8 @@
         "color": null,
         "castlistIds": [
           "castlist_archive_1762212309078",
-          "castlist_archive_1762213156171",
-          "castlist_archive_1762214433510"
+          "castlist_archive_1762213156171"
         ],
-        "castlist": "theB12swap",
-        "castlistId": "castlist_archive_1762214433510",
         "isVanity": true
       },
       "1368969401067372625": {
@@ -1837,11 +1856,9 @@
       "1425702665806938183": {
         "name": "Tribe 1425702665806938183",
         "castlistIds": [
-          "castlist_1762185466287_1331657596087566398",
-          "castlist_1762185922054_1331657596087566398",
           "castlist_archive_1762195873894"
         ],
-        "castlist": "That New Castlist!",
+        "castlist": "aNewHope",
         "castlistId": "castlist_archive_1762195873894",
         "isVanity": true
       },
@@ -1880,15 +1897,27 @@
       },
       "1368969348399632546": {
         "castlistIds": [
-          "default"
+          "castlist_archive_1762215772785"
         ],
         "emoji": null,
         "displayName": null,
         "color": null,
-        "castlistId": "default",
-        "castlist": "default"
+        "castlistId": "castlist_archive_1762215772785",
+        "castlist": "Swap2",
+        "isVanity": true
       },
       "1368969349976821815": {
+        "castlistIds": [
+          "castlist_archive_1762215772785"
+        ],
+        "emoji": null,
+        "displayName": null,
+        "color": null,
+        "castlistId": "castlist_archive_1762215772785",
+        "castlist": "Swap2",
+        "isVanity": true
+      },
+      "1368969353323745405": {
         "castlistIds": [
           "default"
         ],
@@ -1897,6 +1926,24 @@
         "color": null,
         "castlistId": "default",
         "castlist": "default"
+      },
+      "1368969355064381543": {
+        "castlistIds": [
+          "default"
+        ],
+        "emoji": null,
+        "displayName": null,
+        "color": null,
+        "castlistId": "default",
+        "castlist": "default"
+      },
+      "1434057043370705007": {
+        "emoji": null,
+        "castlist": "nuOldCastList",
+        "showPlayerEmojis": false,
+        "color": "#9b59b6",
+        "analyticsName": "Nu Role",
+        "analyticsAdded": 1762260313378
       }
     },
     "timezones": {
@@ -3195,7 +3242,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1762214702379,
+        "modifiedAt": 1762216032815,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -3263,42 +3310,6 @@
         "modifiedAt": 1762179941473,
         "modifiedBy": "391415444084490240"
       },
-      "castlist_1762185466287_1331657596087566398": {
-        "id": "castlist_1762185466287_1331657596087566398",
-        "name": "That New Castlist!",
-        "type": "custom",
-        "createdAt": 1762185466287,
-        "createdBy": "391415444084490240",
-        "settings": {
-          "sortStrategy": "alphabetical",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public"
-        },
-        "metadata": {
-          "emoji": "📋",
-          "description": "",
-          "lastModified": 1762185466287
-        }
-      },
-      "castlist_1762185922054_1331657596087566398": {
-        "id": "castlist_1762185922054_1331657596087566398",
-        "name": "aNewHope",
-        "type": "custom",
-        "createdAt": 1762185922054,
-        "createdBy": "391415444084490240",
-        "settings": {
-          "sortStrategy": "alphabetical",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public"
-        },
-        "metadata": {
-          "emoji": "📋",
-          "description": "",
-          "lastModified": 1762185922054
-        }
-      },
       "castlist_1762187500959_1331657596087566398": {
         "id": "castlist_1762187500959_1331657596087566398",
         "name": "the BIG one",
@@ -3321,12 +3332,13 @@
         "modifiedAt": 1762187809409,
         "modifiedBy": "391415444084490240"
       },
-      "castlist_archive_1762214433510": {
-        "id": "castlist_archive_1762214433510",
-        "name": "theB12swap",
+      "castlist_archive_1762215772785": {
+        "id": "castlist_archive_1762215772785",
+        "name": "Swap2",
         "type": "custom",
-        "createdAt": 1762214433510,
+        "createdAt": 1762215772785,
         "createdBy": "391415444084490240",
+        "seasonId": "season_cac1b81de8914c79",
         "metadata": {
           "description": "Archived from tribe swap on 11/4/2025",
           "emoji": "📦"
@@ -3374,6 +3386,11 @@
           "placement": 7,
           "updatedBy": "391415444084490240",
           "updatedAt": "2025-10-05T12:12:47.507Z"
+        },
+        "863115100268789781": {
+          "placement": 1,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-04T12:54:47.232Z"
         }
       },
       "season_cac1b81de8914c79": {

@@ -4872,9 +4872,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Pass ID for lookups, name for display
       const responseData = await buildCastlist2ResponseData(guild, tribes, castlistIdForNavigation, navigationState, memberObj, channelId, permissionChecker, displayMode, castlistName, { playerData, guildId });
 
-      // Send as new message (not update) - this posts to the channel
+      // Update existing message (button click response)
       return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        type: InteractionResponseType.UPDATE_MESSAGE,
         data: responseData
       });
     } else if (custom_id.startsWith('rank_')) {
