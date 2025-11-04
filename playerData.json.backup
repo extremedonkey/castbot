@@ -1709,7 +1709,7 @@
         "castlistIds": []
       },
       "1368969399251501126": {
-        "emoji": "🪄",
+        "emoji": "<:castbot:1333820342275149824>",
         "showPlayerEmojis": false,
         "color": "#FF7AAA",
         "analyticsName": "🪄 ar.3 🪄",
@@ -1853,19 +1853,11 @@
         "name": "Tribe 1424400564858650644",
         "emoji": "🍆",
         "color": "#E91E63",
-        "castlistIds": [
-          "castlist_archive_1762195873894"
-        ],
-        "castlist": "castlist_archive_1762195873894",
         "displayName": "My Custom Tribe Name",
         "isVanity": true
       },
       "1425702665806938183": {
         "name": "Tribe 1425702665806938183",
-        "castlistIds": [
-          "castlist_archive_1762195873894"
-        ],
-        "castlist": "aNewHope",
         "isVanity": true
       },
       "1434189967323566261": {
@@ -1908,23 +1900,15 @@
         "castlistIds": []
       },
       "1368969348399632546": {
-        "castlistIds": [
-          "castlist_archive_1762215772785"
-        ],
         "emoji": null,
         "displayName": null,
         "color": null,
-        "castlist": "Swap2",
         "isVanity": true
       },
       "1368969349976821815": {
-        "castlistIds": [
-          "castlist_archive_1762215772785"
-        ],
         "emoji": null,
         "displayName": null,
         "color": null,
-        "castlist": "Swap2",
         "isVanity": true
       },
       "1368969353323745405": {
@@ -1953,6 +1937,28 @@
         "analyticsName": "Nu Role",
         "analyticsAdded": 1762260313378,
         "castlistIds": []
+      },
+      "1435401451357732884": {
+        "emoji": "💂‍♀️",
+        "castlist": "NeutralTestAB",
+        "showPlayerEmojis": false,
+        "color": "#e91e63",
+        "analyticsName": "💂‍♀️ neutralTestA 💂‍♀️",
+        "analyticsAdded": 1762297372141,
+        "castlistIds": [
+          "castlist_1762297524486_system"
+        ]
+      },
+      "1435401499260751943": {
+        "emoji": "🍅",
+        "castlist": "NeutralTestAB",
+        "showPlayerEmojis": false,
+        "color": "#3498db",
+        "analyticsName": "🍅 neutralTestB 🍅",
+        "analyticsAdded": 1762297399528,
+        "castlistIds": [
+          "castlist_1762297524486_system"
+        ]
       }
     },
     "timezones": {
@@ -3341,29 +3347,6 @@
         "modifiedAt": 1762187809409,
         "modifiedBy": "391415444084490240"
       },
-      "castlist_archive_1762215772785": {
-        "id": "castlist_archive_1762215772785",
-        "name": "Swap2",
-        "type": "custom",
-        "createdAt": 1762215772785,
-        "createdBy": "391415444084490240",
-        "seasonId": "season_cac1b81de8914c79",
-        "metadata": {
-          "description": "Archived from tribe swap on 11/4/2025",
-          "emoji": "📦"
-        }
-      },
-      "castlist_archive_1762195873894": {
-        "id": "castlist_archive_1762195873894",
-        "name": "OG Tribes",
-        "type": "custom",
-        "createdAt": 1762195873894,
-        "createdBy": "391415444084490240",
-        "metadata": {
-          "description": "Archived from tribe swap on 11/4/2025",
-          "emoji": "📦"
-        }
-      },
       "castlist_archive_1762212309078": {
         "id": "castlist_archive_1762212309078",
         "name": "castTESTSWAP1",
@@ -3372,8 +3355,10 @@
         "createdBy": "391415444084490240",
         "metadata": {
           "description": "Archived from tribe swap on 11/4/2025",
-          "emoji": "📦"
-        }
+          "emoji": "🐁"
+        },
+        "modifiedAt": 1762296152383,
+        "modifiedBy": "391415444084490240"
       },
       "castlist_archive_1762213156171": {
         "id": "castlist_archive_1762213156171",
@@ -3386,23 +3371,27 @@
           "emoji": "📦"
         }
       },
-      "castlist_1759760454082_1331657596087566398": {
-        "id": "castlist_1759760454082_1331657596087566398",
-        "name": "hguyjgh",
-        "type": "custom",
-        "createdAt": 1759760454082,
-        "createdBy": "391415444084490240",
-        "metadata": {
-          "emoji": "📋",
-          "description": "jknjk",
-          "createdBy": "391415444084490240",
-          "createdAt": 1759760454082,
-          "lastModified": 1759760454082
-        },
+      "castlist_1762297524486_system": {
+        "id": "castlist_1762297524486_system",
+        "name": "NeutralTestAB",
+        "type": "system",
+        "createdAt": 1762297524486,
+        "createdBy": "migration",
         "settings": {
           "sortStrategy": "alphabetical",
-          "seasonId": "season_cac1b81de8914c79"
-        }
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Upgraded from legacy castlist 'NeutralTestAB'",
+          "emoji": "🍅",
+          "migratedFrom": "virtual_TmV1dHJhbFRlc3RBQg",
+          "migrationDate": 1762297524486
+        },
+        "modifiedAt": 1762297621941,
+        "modifiedBy": "391415444084490240",
+        "seasonId": "season_9a8360f7864d4120"
       }
     },
     "placements": {
@@ -3614,6 +3603,11 @@
           "placement": 2,
           "updatedBy": "391415444084490240",
           "updatedAt": "2025-10-05T14:50:01.041Z"
+        },
+        "1328366050848411658": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-04T23:07:24.151Z"
         }
       },
       "season_03859e4abc554bb5": {

@@ -337,6 +337,8 @@ Bot not responding?
 - **🧭 CASTLIST NAVIGATION** → [docs/features/CastlistNavigationParsing.md](docs/features/CastlistNavigationParsing.md) - Button parsing & identifier resolution
 
 **Safari Subsystems:**
+- **CUSTOM ACTIONS** → [docs/features/SafariCustomActions.md](docs/features/SafariCustomActions.md) - Dynamic, configurable action system (triggers, drops, workflows)
+- **PLAYER COMMANDS** → [docs/features/PlayerCommands.md](docs/features/PlayerCommands.md) - Text-based Custom Action invocation system
 - **MAP EXPLORER** → [docs/features/SafariMapExplorer.md](docs/features/SafariMapExplorer.md)
 - **MAP SYSTEM** → [docs/features/SafariMapSystem.md](docs/features/SafariMapSystem.md) - User/admin guide
 - **MAP TECHNICAL** → [docs/features/SafariMapTechnical.md](docs/features/SafariMapTechnical.md) - Developer reference
