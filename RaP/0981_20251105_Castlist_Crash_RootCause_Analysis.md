@@ -408,3 +408,95 @@ For future features:
 **Deployment**: Development → Production ready
 
 **Next Steps**: Monitor logs for any castlist errors, but bot will no longer crash from them.
+
+## 🔄 Rollback Plan
+
+**If issues arise, rollback to previous stable state:**
+
+### Git Commit Reference
+```bash
+# Last stable commit before fixes (baseline):
+git log --oneline --before="2025-11-05" -1
+# Likely: fc8282d0 "Auto-show tribes when castlist selected"
+
+# Rollback command (if needed):
+git revert HEAD~3..HEAD  # Revert last 3 commits
+# Or hard reset (destructive):
+# git reset --hard fc8282d0
+```
+
+### Key Files Modified
+1. **`/home/reece/castbot/app.js`** - Main interaction handler
+   - Lines 4684-4899: `show_castlist2` handler
+   - Removed: `await guild.members.fetch()` (line 4717)
+   - Added: try-catch wrapper with error handling
+   - Removed: `tribe.castlistId` checks (line 4779-4793)
+   - **Rollback**: Restore original handler WITHOUT try-catch (risky)
+
+2. **`/home/reece/castbot/playerData.json`** - Guild data
+   - **Backup**: `/home/reece/castbot/playerData.json.backup`
+   - Modified: Guild `1331657596087566398`
+   - Changes: Moved 3 castlists, removed invalid keys, consolidated fields
+   - **Rollback**: `cp playerData.json.backup playerData.json`
+
+3. **`/tmp/cleanup_castlist_data.js`** - Cleanup script (executed once)
+   - Used for one-time data migration
+   - **No rollback needed** - Script not part of runtime
+
+### Rollback Risks
+- **DO NOT rollback app.js** - Removes bot crash protection
+- **Data rollback safe** - Backup preserves original state
+- **Recommended approach**: Fix forward, don't rollback critical error handling
+
+### Verification After Rollback
+```bash
+# Check data integrity
+node -e "const d = require('./playerData.json'); console.log('Size:', JSON.stringify(d).length)"
+# Should be ~170KB
+
+# Check castlist buttons work
+# 1. /menu → Production Menu → Click "Active Castlist"
+# 2. Should post castlist without crash
+# 3. Check logs: tail -f /tmp/castbot-dev.log
+```
+
+## 📋 Current State (Post-Fix)
+
+### Code State
+- **app.js** (Lines 4684-4899): show_castlist2 handler
+  - ✅ No `guild.members.fetch()` call
+  - ✅ Wrapped in try-catch with graceful error handling
+  - ✅ Uses `CHANNEL_MESSAGE_WITH_SOURCE` (Type 4) - posts NEW public message
+  - ✅ Only checks `tribe.castlist` (legacy) and `tribe.castlistIds[]` (modern)
+  - ✅ Error responses are ephemeral (only visible to clicker)
+
+### Data State
+- **Guild**: `1331657596087566398`
+- **castlistConfigs**: 9 entries (6 original + 3 moved from wrong location)
+  - `castlist_archive_1762195873894` (moved from `castlists`)
+  - `aNewHope` (moved from `castlists`)
+  - `Castbot MVPs` (moved from `castlists`)
+  - 6 other valid castlists
+- **castlists node**: Deleted (was invalid storage location)
+- **tribes**:
+  - All valid Discord role IDs (17-19 digit snowflakes)
+  - All using `castlistIds[]` array (no `castlistId` singular)
+  - Some retain legacy `tribe.castlist` string for backwards compatibility
+
+### Behavior State
+- **Working castlists**: All previously-crashing castlists now load successfully
+- **Error handling**: Errors show ephemeral message to user, bot continues running
+- **Performance**: Fast role-level member fetches (no timeout risk)
+- **Production flow**: `/menu` (ephemeral) → click button → NEW public castlist (correct)
+
+### Known Limitations
+1. **Sort strategy not visible** - Production Menu buttons show only castlist names
+2. **Archive castlists work but metadata hidden** - Can post them but can't see settings
+3. **Virtual Adapter not used** - Legacy string matching still in use
+
+### Next Enhancement
+**20-minute Production Menu update** (documented in RaP 0982):
+- Use Virtual Adapter to show castlist metadata (emoji, description, sort strategy)
+- Make modern castlist settings visible in menu
+- Enable users to see which castlists use placement/vanity sorting
+- Implementation: Next task after rollback plan documentation

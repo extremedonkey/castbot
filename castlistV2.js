@@ -1,4 +1,4 @@
-import { 
+import {
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle
@@ -13,6 +13,8 @@ import {
 } from './storage.js';
 import { capitalize } from './utils.js';
 import { sortCastlistMembers, sortVanityRolesForDisplay } from './castlistSorter.js';
+import { castlistManager } from './castlistManager.js';
+import { parseTextEmoji } from './utils/emojiUtils.js';
 
 /**
  * Components V2 Castlist Module for CastBot
@@ -751,87 +753,90 @@ function countComponents(components) {
 }
 
 /**
- * Extract castlist data from guild tribes for UI components
+ * Extract castlist data using Virtual Adapter pattern for modern castlist entities
  * @param {Object} playerData - Guild player data
  * @param {string} guildId - Discord guild ID
- * @returns {Object} Object containing allCastlists Set and castlistTribes mapping
+ * @returns {Promise<Object>} Object containing allCastlists Map and castlistEntities
  */
-function extractCastlistData(playerData, guildId) {
-    const allCastlists = new Set();
-    const castlistTribes = {}; // Track tribes per castlist to get emojis
-    
-    if (playerData[guildId]?.tribes) {
-        Object.entries(playerData[guildId].tribes).forEach(([roleId, tribeData]) => {
-            if (!tribeData) return; // Skip null/undefined tribe entries
-            const castlistName = tribeData.castlist || 'default';
-            allCastlists.add(castlistName);
-            
-            // Store tribe info for each castlist (for emojis)
-            if (!castlistTribes[castlistName]) {
-                castlistTribes[castlistName] = [];
-            }
-            castlistTribes[castlistName].push({
-                roleId,
-                emoji: tribeData.emoji
-            });
-        });
-    }
-    
-    return { allCastlists, castlistTribes };
+async function extractCastlistData(playerData, guildId) {
+    // Use Virtual Adapter to get all castlists (modern entities + legacy strings)
+    const allCastlists = await castlistManager.getAllCastlists(guildId);
+
+    console.log(`[CASTLIST] Extracted ${allCastlists.size} castlists using Virtual Adapter`);
+
+    return { allCastlists };
 }
 
 /**
- * Create castlist button rows with pagination to handle Discord's 5-button ActionRow limit
- * @param {Set} allCastlists - Set of all castlist names
- * @param {Object} castlistTribes - Mapping of castlists to their tribe data
- * @param {boolean} includeAddButton - Whether to include the "+" button for adding castlists
+ * Create castlist button rows with metadata display using Virtual Adapter pattern
+ * Shows sort strategy, emoji, and description for each castlist
+ * @param {Map} allCastlists - Map of castlist entities from Virtual Adapter
+ * @param {boolean} includeAddButton - Whether to include the "+" button (deprecated, ignored)
+ * @param {boolean} hasStores - Whether stores exist (deprecated, ignored)
  * @returns {Array} Array of ActionRow JSON objects
  */
-function createCastlistRows(allCastlists, castlistTribes, includeAddButton = true, hasStores = false) {
+function createCastlistRows(allCastlists, includeAddButton = true, hasStores = false) {
     const castlistButtons = [];
-    
-    // Add default castlist button
-    castlistButtons.push(
-        new ButtonBuilder()
-            .setCustomId('show_castlist2_default')
-            .setLabel('Show Castlist')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('📋')
-    );
-    
-    // Add buttons for custom castlists (sorted alphabetically, excluding "default" and "Active Castlist")
-    // Note: "default" is the ID, "Active Castlist" is the name - both refer to the same castlist
-    const customCastlists = Array.from(allCastlists)
-        .filter(name => name !== 'default' && name !== 'Active Castlist')
-        .sort();
-        
-    for (const castlistName of customCastlists) {
-        // Get emoji from first tribe with an emoji in this castlist
-        const tribesInCastlist = castlistTribes[castlistName] || [];
-        const emojiTribe = tribesInCastlist.find(tribe => tribe.emoji);
-        const emoji = emojiTribe?.emoji || '📋';
-        
+
+    // Add default castlist button first
+    const defaultCastlist = allCastlists.get('default');
+    if (defaultCastlist) {
         castlistButtons.push(
             new ButtonBuilder()
-                .setCustomId(`show_castlist2_${castlistName}`)
-                .setLabel(castlistName)
+                .setCustomId('show_castlist2_default')
+                .setLabel('Active Castlist')
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('✅')
+        );
+    }
+
+    // Sort castlists: real first, then virtual (legacy), excluding default
+    const sortedCastlists = [...allCastlists.values()]
+        .filter(c => c.id !== 'default')
+        .sort((a, b) => {
+            if (a.isVirtual !== b.isVirtual) {
+                return a.isVirtual ? 1 : -1; // Real first
+            }
+            return a.name.localeCompare(b.name);
+        });
+
+    // Add buttons for remaining castlists with metadata
+    for (const castlist of sortedCastlists) {
+        // Parse emoji (supports Unicode and Discord custom emoji format)
+        const emojiRaw = castlist.metadata?.emoji || '📋';
+        const { emoji } = parseTextEmoji(emojiRaw, '📋');
+
+        // Determine sort strategy emoji for button label
+        const sortStrategyEmoji = castlist.settings?.sortStrategy === 'placements' ? '🥇 ' :
+                                castlist.settings?.sortStrategy === 'vanity_role' ? '🎭 ' :
+                                '';
+
+        // Build button label with sort strategy indicator
+        const label = castlist.isVirtual
+            ? `${castlist.name} [Legacy]`
+            : `${sortStrategyEmoji}${castlist.name}`;
+
+        castlistButtons.push(
+            new ButtonBuilder()
+                .setCustomId(`show_castlist2_${castlist.id}`)
+                .setLabel(label.substring(0, 80)) // Discord button label limit
                 .setStyle(ButtonStyle.Secondary)
                 .setEmoji(emoji)
         );
     }
-    
-    // Plus button removed - no longer needed
-    
+
     // Split buttons into rows of max 5 buttons each
     const rows = [];
     const maxButtonsPerRow = 5;
-    
+
     for (let i = 0; i < castlistButtons.length; i += maxButtonsPerRow) {
         const rowButtons = castlistButtons.slice(i, i + maxButtonsPerRow);
         const row = new ActionRowBuilder().addComponents(rowButtons);
         rows.push(row.toJSON());
     }
-    
+
+    console.log(`[CASTLIST] Created ${rows.length} button row(s) for ${castlistButtons.length} castlist(s)`);
+
     return rows;
 }
 

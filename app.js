@@ -702,12 +702,12 @@ function hasCastRankingPermissions(member, guildId) {
 async function createProductionMenuInterface(guild, playerData, guildId, userId = null) {
   // Track legacy menu usage
   MenuBuilder.trackLegacyMenu('createProductionMenuInterface', 'Main production menu');
-  
-  // Extract castlist data using reusable function
-  const { allCastlists, castlistTribes } = extractCastlistData(playerData, guildId);
 
-  // Create castlist rows with pagination support (include admin + button)
-  const castlistRows = createCastlistRows(allCastlists, castlistTribes, true, false);
+  // Extract castlist data using Virtual Adapter pattern for modern entities
+  const { allCastlists } = await extractCastlistData(playerData, guildId);
+
+  // Create castlist rows with metadata display (sort strategy, emoji, description)
+  const castlistRows = createCastlistRows(allCastlists, true, false);
   
   // Debug logging for castlist pagination
   console.log(`Created ${castlistRows.length} castlist row(s) for ${allCastlists.size} castlist(s)`);
