@@ -1824,7 +1824,11 @@ const processedInteractions = new Map();
  */
 function generateTipsScreen(index) {
   // Base URL for locally-hosted screenshots (served via Express static middleware)
-  const baseUrl = 'https://castbotaws.reecewagner.com/img/tips';
+  // Environment-aware: dev uses ngrok tunnel, production uses static domain
+  const isDev = process.env.NODE_ENV !== 'production';
+  const baseUrl = isDev
+    ? 'https://adapted-deeply-stag.ngrok-free.app/img/tips'
+    : 'https://castbotaws.reecewagner.com/img/tips';
 
   // Define all 10 CastBot feature screenshots
   // Images stored locally in /img/tips/ as 1.png through 10.png
