@@ -1811,6 +1811,138 @@ app.use('/img', express.static('./img'));
 // Keep track of processed interactions to prevent duplicates
 const processedInteractions = new Map();
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// HELPER: Generate Tips Screen (Paginated Media Gallery)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/**
+ * Generate paginated tips screen showing one screenshot at a time
+ * Pattern: Similar to castRankingManager navigation (stateless pagination)
+ *
+ * @param {number} index - Current screenshot index (0-9)
+ * @returns {Object} UPDATE_MESSAGE response with Components V2 structure
+ */
+function generateTipsScreen(index) {
+  // Define all 10 CastBot feature screenshots
+  const screenshots = [
+    {
+      url: 'https://cdn.discordapp.com/attachments/1393487920886845482/1395848590521536543/image.png?ex=68fc7b0d&is=68fb298d&hm=01ed8d2e32ed9721757791ccf03f417768ac14cf57ceb12da2b0700bfc0c7ae8&',
+      title: '🦁 Safari System',
+      description: 'Create adventure challenges with maps, items, and player progression'
+    },
+    {
+      url: 'https://cdn.discordapp.com/attachments/1395819813640601742/1395845331568165027/image.png?ex=68fc7804&is=68fb2684&hm=e16fb5ccb48e9b2ad50679c35d6c1584080e9ab55fa26adae0d83d0a974a7dd1&',
+      title: '📋 Dynamic Castlists',
+      description: 'Organize cast members with placements, alumni, and custom formatting'
+    },
+    {
+      url: 'https://cdn.discordapp.com/attachments/1395819813640601742/1395844571656884364/image.png?ex=68fc774f&is=68fb25cf&hm=f5d3be2960feb1a3c2abac64b94720c100e9f68ed7ca07c63cb668fbb0e566ce&',
+      title: '📊 Production Menu',
+      description: 'Comprehensive admin interface for managing all CastBot features'
+    },
+    {
+      url: 'https://cdn.discordapp.com/attachments/1395819813640601742/1395844807884144640/image.png?ex=68fc7787&is=68fb2607&hm=0b5cc8728f40a35ff749aedc67d23fd9ea7349e10442700ad440d952b6fe1e3f&',
+      title: '🏆 Cast Rankings',
+      description: 'Let players anonymously vote on applicants with visual ranking interface'
+    },
+    {
+      url: 'https://cdn.discordapp.com/attachments/1396857713165602867/1396858075406930000/image.png?ex=68fcdb75&is=68fb89f5&hm=dc33bebc1e252aa63715a879a0813e3ae820dd367e7461437071d846485882af&',
+      title: '🎬 Season Management',
+      description: 'Configure applications, questions, and production workflows'
+    },
+    {
+      url: 'https://cdn.discordapp.com/attachments/1424036358522933268/1424037413315149894/Screenshot_20251004-221110.png?ex=68fcdbb0&is=68fb8a30&hm=da0da3efcecdbc00713aa5ff0c9a3a4db64b56bc1217e88067e44d22d5d27208&',
+      title: '📱 Mobile View',
+      description: 'CastBot works seamlessly on mobile devices with responsive design'
+    },
+    {
+      url: 'https://cdn.discordapp.com/attachments/1413166085347217529/1413332595613372597/Screenshot_20250905-091814.png?ex=68fcce4d&is=68fb7ccd&hm=cf77f4acb404efda6f8d2a1144f78c9f81789fa3794edf30e1f1dfa776ff58a4&',
+      title: '🎮 Player Menu',
+      description: 'Access your profile, seasons, and interactive features from one place'
+    },
+    {
+      url: 'https://cdn.discordapp.com/attachments/1413166085347217529/1413331729095196732/Screenshot_20250905-091519.png?ex=68fccd7e&is=68fb7bfe&hm=5fd5da0a7f633fc9c0d428defcd5d4e4687163f14630ac882a98dbf16a2e39cb&',
+      title: '🗺️ Safari Map Explorer',
+      description: 'Interactive map system with fog of war and location tracking'
+    },
+    {
+      url: 'https://cdn.discordapp.com/attachments/1412433607137427596/1414027501461569568/image.png?ex=68fcb27b&is=68fb60fb&hm=6d326b8fd73ded4ed8766c3517aa41e528f014acd23819ae3bc80b947586bcf9&',
+      title: '📝 Application Builder',
+      description: 'Create custom season applications with multiple question types'
+    },
+    {
+      url: 'https://cdn.discordapp.com/attachments/1412433607137427596/1413213874995597402/image.png?ex=68fc5fbc&is=68fb0e3c&hm=c58ab61bc4f76225c428d5f562b2e2a621cb17e77bac38b3490edf4bed731c08&',
+      title: '⚙️ Settings & Configuration',
+      description: 'Fine-tune CastBot behavior for your server needs'
+    }
+  ];
+
+  const currentScreenshot = screenshots[index];
+  const totalCount = screenshots.length;
+
+  return {
+    type: InteractionResponseType.UPDATE_MESSAGE,
+    data: {
+      components: [
+        {
+          type: 17, // Container
+          accent_color: 0x9b59b6, // Purple for tips/features
+          components: [
+            {
+              type: 10, // Text Display
+              content: `## 💡 CastBot Features Tour (${index + 1}/${totalCount})\n\n### ${currentScreenshot.title}\n\n${currentScreenshot.description}`
+            },
+            { type: 14 }, // Separator
+            {
+              type: 12, // Media Gallery - ONE screenshot at a time
+              items: [
+                {
+                  media: { url: currentScreenshot.url },
+                  description: currentScreenshot.title
+                }
+              ]
+            },
+            { type: 14 }, // Separator
+            {
+              type: 10,
+              content: `> **\`📸 Feature Showcase (${index + 1}/${totalCount})\`**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• ${totalCount} features total - discover everything CastBot can do!`
+            },
+            { type: 14 }, // Separator before navigation
+            {
+              type: 1, // Action Row - Navigation buttons
+              components: [
+                {
+                  type: 2, // Button
+                  custom_id: `tips_prev_${index}`,
+                  label: '◀ Previous',
+                  style: 2, // Secondary (grey)
+                  disabled: index === 0
+                },
+                {
+                  type: 2, // Button
+                  custom_id: `tips_next_${index}`,
+                  label: 'Next ▶',
+                  style: 2, // Secondary (grey)
+                  disabled: index === totalCount - 1
+                },
+                {
+                  type: 2, // Button
+                  custom_id: 'dm_back_to_welcome',
+                  label: '← Back',
+                  style: 2, // Secondary (grey)
+                  emoji: { name: '🏠' }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async function (req, res) {
     console.log("Got headers:", JSON.stringify(req.headers, null, 2));
     console.log("Got body:", req.body);
@@ -7406,138 +7538,6 @@ To fix this:
           return showApplicationQuestion(res, config, context.channelId, 0);
         }
       })(req, res, client);
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // HELPER: Generate Tips Screen (Paginated Media Gallery)
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-    /**
-     * Generate paginated tips screen showing one screenshot at a time
-     * Pattern: Similar to castRankingManager navigation (stateless pagination)
-     *
-     * @param {number} index - Current screenshot index (0-9)
-     * @returns {Object} UPDATE_MESSAGE response with Components V2 structure
-     */
-    function generateTipsScreen(index) {
-      // Define all 10 CastBot feature screenshots
-      const screenshots = [
-        {
-          url: 'https://cdn.discordapp.com/attachments/1393487920886845482/1395848590521536543/image.png?ex=68fc7b0d&is=68fb298d&hm=01ed8d2e32ed9721757791ccf03f417768ac14cf57ceb12da2b0700bfc0c7ae8&',
-          title: '🦁 Safari System',
-          description: 'Create adventure challenges with maps, items, and player progression'
-        },
-        {
-          url: 'https://cdn.discordapp.com/attachments/1395819813640601742/1395845331568165027/image.png?ex=68fc7804&is=68fb2684&hm=e16fb5ccb48e9b2ad50679c35d6c1584080e9ab55fa26adae0d83d0a974a7dd1&',
-          title: '📋 Dynamic Castlists',
-          description: 'Organize cast members with placements, alumni, and custom formatting'
-        },
-        {
-          url: 'https://cdn.discordapp.com/attachments/1395819813640601742/1395844571656884364/image.png?ex=68fc774f&is=68fb25cf&hm=f5d3be2960feb1a3c2abac64b94720c100e9f68ed7ca07c63cb668fbb0e566ce&',
-          title: '📊 Production Menu',
-          description: 'Comprehensive admin interface for managing all CastBot features'
-        },
-        {
-          url: 'https://cdn.discordapp.com/attachments/1395819813640601742/1395844807884144640/image.png?ex=68fc7787&is=68fb2607&hm=0b5cc8728f40a35ff749aedc67d23fd9ea7349e10442700ad440d952b6fe1e3f&',
-          title: '🏆 Cast Rankings',
-          description: 'Let players anonymously vote on applicants with visual ranking interface'
-        },
-        {
-          url: 'https://cdn.discordapp.com/attachments/1396857713165602867/1396858075406930000/image.png?ex=68fcdb75&is=68fb89f5&hm=dc33bebc1e252aa63715a879a0813e3ae820dd367e7461437071d846485882af&',
-          title: '🎬 Season Management',
-          description: 'Configure applications, questions, and production workflows'
-        },
-        {
-          url: 'https://cdn.discordapp.com/attachments/1424036358522933268/1424037413315149894/Screenshot_20251004-221110.png?ex=68fcdbb0&is=68fb8a30&hm=da0da3efcecdbc00713aa5ff0c9a3a4db64b56bc1217e88067e44d22d5d27208&',
-          title: '📱 Mobile View',
-          description: 'CastBot works seamlessly on mobile devices with responsive design'
-        },
-        {
-          url: 'https://cdn.discordapp.com/attachments/1413166085347217529/1413332595613372597/Screenshot_20250905-091814.png?ex=68fcce4d&is=68fb7ccd&hm=cf77f4acb404efda6f8d2a1144f78c9f81789fa3794edf30e1f1dfa776ff58a4&',
-          title: '🎮 Player Menu',
-          description: 'Access your profile, seasons, and interactive features from one place'
-        },
-        {
-          url: 'https://cdn.discordapp.com/attachments/1413166085347217529/1413331729095196732/Screenshot_20250905-091519.png?ex=68fccd7e&is=68fb7bfe&hm=5fd5da0a7f633fc9c0d428defcd5d4e4687163f14630ac882a98dbf16a2e39cb&',
-          title: '🗺️ Safari Map Explorer',
-          description: 'Interactive map system with fog of war and location tracking'
-        },
-        {
-          url: 'https://cdn.discordapp.com/attachments/1412433607137427596/1414027501461569568/image.png?ex=68fcb27b&is=68fb60fb&hm=6d326b8fd73ded4ed8766c3517aa41e528f014acd23819ae3bc80b947586bcf9&',
-          title: '📝 Application Builder',
-          description: 'Create custom season applications with multiple question types'
-        },
-        {
-          url: 'https://cdn.discordapp.com/attachments/1412433607137427596/1413213874995597402/image.png?ex=68fc5fbc&is=68fb0e3c&hm=c58ab61bc4f76225c428d5f562b2e2a621cb17e77bac38b3490edf4bed731c08&',
-          title: '⚙️ Settings & Configuration',
-          description: 'Fine-tune CastBot behavior for your server needs'
-        }
-      ];
-
-      const currentScreenshot = screenshots[index];
-      const totalCount = screenshots.length;
-
-      return {
-        type: InteractionResponseType.UPDATE_MESSAGE,
-        data: {
-          components: [
-            {
-              type: 17, // Container
-              accent_color: 0x9b59b6, // Purple for tips/features
-              components: [
-                {
-                  type: 10, // Text Display
-                  content: `## 💡 CastBot Features Tour (${index + 1}/${totalCount})\n\n### ${currentScreenshot.title}\n\n${currentScreenshot.description}`
-                },
-                { type: 14 }, // Separator
-                {
-                  type: 12, // Media Gallery - ONE screenshot at a time
-                  items: [
-                    {
-                      media: { url: currentScreenshot.url },
-                      description: currentScreenshot.title
-                    }
-                  ]
-                },
-                { type: 14 }, // Separator
-                {
-                  type: 10,
-                  content: `> **\`📸 Feature Showcase (${index + 1}/${totalCount})\`**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• ${totalCount} features total - discover everything CastBot can do!`
-                },
-                { type: 14 }, // Separator before navigation
-                {
-                  type: 1, // Action Row - Navigation buttons
-                  components: [
-                    {
-                      type: 2, // Button
-                      custom_id: `tips_prev_${index}`,
-                      label: '◀ Previous',
-                      style: 2, // Secondary (grey)
-                      disabled: index === 0
-                    },
-                    {
-                      type: 2, // Button
-                      custom_id: `tips_next_${index}`,
-                      label: 'Next ▶',
-                      style: 2, // Secondary (grey)
-                      disabled: index === totalCount - 1
-                    },
-                    {
-                      type: 2, // Button
-                      custom_id: 'dm_back_to_welcome',
-                      label: '← Back',
-                      style: 2, // Secondary (grey)
-                      emoji: { name: '🏠' }
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      };
-    }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     } else if (custom_id === 'msg_test') {
       // Test sending a message from CastBot to user (USING DISCORD MESSENGER SERVICE)
