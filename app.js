@@ -1822,71 +1822,82 @@ const processedInteractions = new Map();
  * @param {number} index - Current screenshot index (0-9)
  * @returns {Object} UPDATE_MESSAGE response with Components V2 structure
  */
-function generateTipsScreen(index) {
-  // Base URL for locally-hosted screenshots (served via Express static middleware)
-  // Environment-aware: dev uses ngrok tunnel, production uses static domain
-  const isDev = process.env.NODE_ENV !== 'production';
-  const baseUrl = isDev
-    ? 'https://adapted-deeply-stag.ngrok-free.app/img/tips'
-    : 'https://castbotaws.reecewagner.com/img/tips';
-
+function generateTipsScreen(index, useAttachments = false) {
   // Define all 10 CastBot feature screenshots
   // Images stored locally in /img/tips/ as 1.png through 10.png
+  // useAttachments: if true, use attachment:// URLs; if false, use web URLs (legacy)
+
   const screenshots = [
     {
-      url: `${baseUrl}/1.png`,
+      filename: '1.png',
       title: '🦁 Safari System',
       description: 'Create adventure challenges with maps, items, and player progression'
     },
     {
-      url: `${baseUrl}/2.png`,
+      filename: '2.png',
       title: '📋 Dynamic Castlists',
       description: 'Organize cast members with placements, alumni, and custom formatting'
     },
     {
-      url: `${baseUrl}/3.png`,
+      filename: '3.png',
       title: '📊 Production Menu',
       description: 'Comprehensive admin interface for managing all CastBot features'
     },
     {
-      url: `${baseUrl}/4.png`,
+      filename: '4.png',
       title: '🏆 Cast Rankings',
       description: 'Let players anonymously vote on applicants with visual ranking interface'
     },
     {
-      url: `${baseUrl}/5.png`,
+      filename: '5.png',
       title: '🎬 Season Management',
       description: 'Configure applications, questions, and production workflows'
     },
     {
-      url: `${baseUrl}/6.png`,
+      filename: '6.png',
       title: '📱 Mobile View',
       description: 'CastBot works seamlessly on mobile devices with responsive design'
     },
     {
-      url: `${baseUrl}/7.png`,
+      filename: '7.png',
       title: '🎮 Player Menu',
       description: 'Access your profile, seasons, and interactive features from one place'
     },
     {
-      url: `${baseUrl}/8.png`,
+      filename: '8.png',
       title: '🗺️ Safari Map Explorer',
       description: 'Interactive map system with fog of war and location tracking'
     },
     {
-      url: `${baseUrl}/9.png`,
+      filename: '9.png',
       title: '📝 Application Builder',
       description: 'Create custom season applications with multiple question types'
     },
     {
-      url: `${baseUrl}/10.png`,
+      filename: '10.png',
       title: '⚙️ Settings & Configuration',
       description: 'Fine-tune CastBot behavior for your server needs'
     }
   ];
 
+  // Generate URL based on method
+  const getImageUrl = (filename) => {
+    if (useAttachments) {
+      // Use attachment:// protocol to reference files sent with message
+      return `attachment://${filename}`;
+    } else {
+      // Legacy: use web URLs (environment-aware for backwards compatibility)
+      const isDev = process.env.NODE_ENV !== 'production';
+      const baseUrl = isDev
+        ? 'https://adapted-deeply-stag.ngrok-free.app/img/tips'
+        : 'https://castbotaws.reecewagner.com/img/tips';
+      return `${baseUrl}/${filename}`;
+    }
+  };
+
   const currentScreenshot = screenshots[index];
   const totalCount = screenshots.length;
+  const imageUrl = getImageUrl(currentScreenshot.filename);
 
   return {
     type: InteractionResponseType.UPDATE_MESSAGE,
@@ -1905,7 +1916,7 @@ function generateTipsScreen(index) {
               type: 12, // Media Gallery - ONE screenshot at a time
               items: [
                 {
-                  media: { url: currentScreenshot.url },
+                  media: { url: imageUrl },
                   description: currentScreenshot.title
                 }
               ]
@@ -7611,16 +7622,49 @@ To fix this:
 
     } else if (custom_id === 'dm_view_tips') {
       // Show paginated tips gallery (start at index 0)
+      // Send all 10 images as attachments once, then navigate via attachment:// URLs
       return ButtonHandlerFactory.create({
         id: 'dm_view_tips',
         handler: async (context) => {
-          console.log(`💡 dm_view_tips clicked - showing paginated tips (index 0)`);
-          return generateTipsScreen(0);
+          console.log(`💡 dm_view_tips clicked - loading all tip images as attachments`);
+
+          const fs = await import('fs/promises');
+          const path = await import('path');
+
+          // Load all 10 images from disk as attachments
+          const attachments = [];
+          for (let i = 1; i <= 10; i++) {
+            const filePath = path.join('/home/reece/castbot/img/tips', `${i}.png`);
+            try {
+              const fileBuffer = await fs.readFile(filePath);
+              attachments.push({
+                file: fileBuffer,
+                name: `${i}.png`
+              });
+            } catch (error) {
+              console.error(`❌ Failed to load ${filePath}:`, error);
+            }
+          }
+
+          console.log(`✅ Loaded ${attachments.length} tip images from disk`);
+
+          // Generate first screen with attachment references
+          const firstScreen = generateTipsScreen(0, true); // true = use attachment URLs
+
+          // Return response with all attachments
+          return {
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+              files: attachments,
+              ...firstScreen.data
+            }
+          };
         }
       })(req, res, client);
 
     } else if (custom_id.startsWith('tips_next_') || custom_id.startsWith('tips_prev_')) {
       // Handle tips pagination navigation
+      // Attachments are already in the message, just need to reference different attachment:// URLs
       return ButtonHandlerFactory.create({
         id: custom_id,
         handler: async (context) => {
@@ -7643,7 +7687,8 @@ To fix this:
             return { content: '❌ Navigation error', ephemeral: true };
           }
 
-          return generateTipsScreen(newIndex);
+          // Use attachment URLs (true) since attachments are already in the message
+          return generateTipsScreen(newIndex, true);
         }
       })(req, res, client);
 
