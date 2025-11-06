@@ -11,11 +11,18 @@
 
 **COMPLETED (2025-11-06):**
 - ✅ **Tips Pagination System** - One screenshot at a time with Previous/Next navigation
-  - Helper function: `generateTipsScreen(index)` in app.js:7421
+  - Helper function: `generateTipsScreen(index)` in app.js:1825
   - Button handlers: `dm_view_tips`, `tips_next_*`, `tips_prev_*` in app.js:7471-7507
   - Button registry: Registered in buttonHandlerFactory.js:214-239
   - Pattern: Stateless pagination via button IDs (adapted from castRankingManager.js)
   - Benefits: Cleaner UX, better focus, reduced cognitive load
+
+- ✅ **Local Image Storage Migration** - Stable, server-hosted screenshots
+  - Location: `/img/tips/1.png` through `10.png` (2.5MB total)
+  - Public URLs: `https://castbotaws.reecewagner.com/img/tips/[1-10].png`
+  - Version controlled: All images tracked in git repository
+  - Easy updates: Replace file + deploy, or hot-swap via SSH
+  - Zero external dependencies: No Discord CDN, no expiring URLs
 
 **PENDING:**
 - ⏳ Full setupWizard.js module (welcome screen, timezone setup, pronoun setup)
@@ -488,6 +495,70 @@ function generateTipsScreen(index) {
 8. 🗺️ Safari Map Explorer
 9. 📝 Application Builder
 10. ⚙️ Settings & Configuration
+
+### 📦 Local Image Storage Architecture - ✅ MIGRATED
+
+**Migration completed:** 2025-11-06
+
+**Storage Location:**
+```
+/home/reece/castbot/img/tips/
+├── 1.png  (69KB)  - Safari System
+├── 2.png  (429KB) - Dynamic Castlists
+├── 3.png  (85KB)  - Production Menu
+├── 4.png  (38KB)  - Cast Rankings
+├── 5.png  (133KB) - Season Management
+├── 6.png  (430KB) - Mobile View
+├── 7.png  (532KB) - Player Menu
+├── 8.png  (510KB) - Safari Map Explorer
+├── 9.png  (176KB) - Application Builder
+└── 10.png (127KB) - Settings & Configuration
+
+Total: 2.5MB (tracked in git repository)
+```
+
+**Public URLs:**
+```
+https://castbotaws.reecewagner.com/img/tips/1.png
+https://castbotaws.reecewagner.com/img/tips/2.png
+... through 10.png
+```
+
+**Static File Serving:**
+```javascript
+// app.js:1809 - Already configured
+app.use('/img', express.static('./img'));
+```
+
+**Benefits of Local Storage:**
+- ✅ **Stable URLs** - Never expire, no Discord CDN dependencies
+- ✅ **Full Control** - Easy to update via file replacement + deploy
+- ✅ **Version Control** - Git tracks all changes to screenshots
+- ✅ **Fast Delivery** - Served from same server as bot
+- ✅ **No External Dependencies** - No third-party service risks
+- ✅ **Simple Naming** - 1.png through 10.png (easy to replace)
+
+**Update Workflow:**
+```bash
+# Option 1: Replace locally then deploy
+cp new_screenshot.png /home/reece/castbot/img/tips/5.png
+./scripts/dev/dev-restart.sh "Update Season Management screenshot"
+
+# Option 2: Hot-swap on server (no deployment)
+scp new_screenshot.png bitnami@13.238.148.170:/opt/bitnami/projects/castbot/img/tips/5.png
+# Image instantly updated, no restart needed
+```
+
+**Code Reference:**
+```javascript
+// app.js:1825-1882 - generateTipsScreen()
+const baseUrl = 'https://castbotaws.reecewagner.com/img/tips';
+const screenshots = [
+  { url: `${baseUrl}/1.png`, title: '🦁 Safari System', ... },
+  { url: `${baseUrl}/2.png`, title: '📋 Dynamic Castlists', ... },
+  // ... 10 total
+];
+```
 
 ---
 
