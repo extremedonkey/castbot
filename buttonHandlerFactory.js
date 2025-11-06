@@ -213,10 +213,29 @@ export const BUTTON_REGISTRY = {
   },
   'dm_view_tips': {
     label: 'View Tips',
-    description: 'Show Media Gallery carousel with CastBot feature screenshots',
+    description: 'Show paginated tips gallery with CastBot feature screenshots',
     emoji: '💡',
     style: 'Primary',
     category: 'testing'
+  },
+  'tips_next_*': {
+    label: 'Next ▶',
+    description: 'Navigate to next screenshot in tips gallery',
+    style: 'Secondary',
+    category: 'navigation'
+  },
+  'tips_prev_*': {
+    label: '◀ Previous',
+    description: 'Navigate to previous screenshot in tips gallery',
+    style: 'Secondary',
+    category: 'navigation'
+  },
+  'dm_back_to_welcome': {
+    label: '← Back to Welcome',
+    description: 'Return to welcome screen from tips gallery',
+    emoji: '🏠',
+    style: 'Secondary',
+    category: 'navigation'
   },
   // EXPERIMENTAL: Delete after testing Components V2 Section behavior
   'castlist_test': {

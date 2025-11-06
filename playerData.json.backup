@@ -3378,7 +3378,7 @@
         "createdAt": 1762297524486,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "placements",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -3389,8 +3389,8 @@
           "migratedFrom": "virtual_TmV1dHJhbFRlc3RBQg",
           "migrationDate": 1762297524486
         },
-        "modifiedAt": 1762297621941,
-        "modifiedBy": "391415444084490240",
+        "modifiedAt": 1762340904541,
+        "modifiedBy": "system",
         "seasonId": "season_9a8360f7864d4120"
       }
     },

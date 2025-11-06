@@ -1,11 +1,26 @@
 # Streamlined Setup Experience - Unified Implementation Guide
 
 **Created:** 2025-10-23
-**Updated:** 2025-01-26 - **MAJOR ARCHITECTURE UPDATE: Reusable Wizard Pattern**
-**Status:** Ready for Implementation
+**Updated:** 2025-11-06 - **✅ TIPS PAGINATION IMPLEMENTED** (adapted from castRankingManager pattern)
+**Status:** Partial Implementation - Tips system complete, full wizard pending
 **Complexity:** MEDIUM-LOW - Reusable architecture simplifies implementation
 **Risk Level:** LOW - Proven with msg_test PoC, delivery-agnostic pattern
 **Models Combined:** Sonnet (depth), Haiku (strategy), Opus (architecture) + User Requirements + **Reusable Wizard Discovery**
+
+## ✅ Implementation Status
+
+**COMPLETED (2025-11-06):**
+- ✅ **Tips Pagination System** - One screenshot at a time with Previous/Next navigation
+  - Helper function: `generateTipsScreen(index)` in app.js:7421
+  - Button handlers: `dm_view_tips`, `tips_next_*`, `tips_prev_*` in app.js:7471-7507
+  - Button registry: Registered in buttonHandlerFactory.js:214-239
+  - Pattern: Stateless pagination via button IDs (adapted from castRankingManager.js)
+  - Benefits: Cleaner UX, better focus, reduced cognitive load
+
+**PENDING:**
+- ⏳ Full setupWizard.js module (welcome screen, timezone setup, pronoun setup)
+- ⏳ Multiple entry points (guildCreate, /setup command, menu buttons)
+- ⏳ DST-aware timezone system
 
 ---
 
@@ -349,53 +364,118 @@ Step 3 (UPDATE_MESSAGE): Same message → new screen
 - ✅ Works identically in DMs and channels
 - ✅ Perfect for feature showcase
 
-### Tips Screen (Using Media Gallery)
+### Tips Screen (Using Paginated Media Gallery) - ✅ IMPLEMENTED
+
+**Discovery**: After msg_test PoC validation, **pagination proved superior** to showing all 10 screenshots at once. Implementation adapted from `castRankingManager` navigation pattern.
+
+**Key Insight**: One screenshot at a time with Previous/Next navigation provides:
+- Better focus on each feature
+- Cleaner mobile experience
+- Reduced cognitive load
+- Professional, polished UX
+
+**Implementation Pattern**: Stateless pagination via button IDs (same as ranking system)
 
 ```javascript
-// Validated pattern from msg_test PoC
-{
-  type: 17, // Container
-  accent_color: 0x9b59b6, // Purple for tips
-  components: [
-    {
-      type: 10,
-      content: '## 💡 CastBot Features - Complete Tour\n\n**Swipe through all 10 screenshots to explore everything you can do!**\n\n📱 Mobile: Swipe left/right\n🖥️ Desktop: Click images to view'
-    },
-    { type: 14 }, // Separator
-    {
-      type: 12, // Media Gallery - CAROUSEL!
-      items: [
-        {
-          media: { url: 'https://cdn.discordapp.com/...' },
-          description: '🦁 Safari System - Create adventure challenges with maps, items, and player progression'
-        },
-        {
-          media: { url: 'https://cdn.discordapp.com/...' },
-          description: '📋 Dynamic Castlists - Organize cast members with placements, alumni, and custom formatting'
-        },
-        // ... 8 more screenshots (10 total)
-      ]
-    },
-    { type: 14 },
-    {
-      type: 10,
-      content: '> **`📸 Media Gallery Demo - MAX CAPACITY!`**\n• 10 real CastBot screenshots (Discord maximum!)\n• Native Discord carousel/swipe\n• Smooth performance at full capacity'
-    },
-    {
-      type: 1, // Action Row
+// ACTUAL IMPLEMENTATION: app.js:7421 - generateTipsScreen(index)
+// Pattern: Adapted from castRankingManager.js navigation
+
+function generateTipsScreen(index) {
+  const screenshots = [ /* 10 CastBot feature screenshots */ ];
+  const currentScreenshot = screenshots[index];
+  const totalCount = screenshots.length;
+
+  return {
+    type: InteractionResponseType.UPDATE_MESSAGE,
+    data: {
       components: [
         {
-          type: 2,
-          custom_id: 'wizard_back_to_welcome',
-          label: '← Back to Welcome',
-          style: 2,
-          emoji: { name: '🏠' }
+          type: 17, // Container
+          accent_color: 0x9b59b6, // Purple for tips
+          components: [
+            {
+              type: 10, // Text Display
+              content: `## 💡 CastBot Features Tour (${index + 1}/${totalCount})\n\n### ${currentScreenshot.title}\n\n${currentScreenshot.description}`
+            },
+            { type: 14 }, // Separator
+            {
+              type: 12, // Media Gallery - ONE screenshot at a time
+              items: [
+                {
+                  media: { url: currentScreenshot.url },
+                  description: currentScreenshot.title
+                }
+              ]
+            },
+            { type: 14 }, // Separator
+            {
+              type: 10,
+              content: `> **\`📸 Feature Showcase (${index + 1}/${totalCount})\`**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• ${totalCount} features total - discover everything CastBot can do!`
+            },
+            { type: 14 }, // Separator before navigation
+            {
+              type: 1, // Action Row - Navigation buttons
+              components: [
+                {
+                  type: 2, // Button
+                  custom_id: `tips_prev_${index}`,
+                  label: '◀ Previous',
+                  style: 2, // Secondary (grey)
+                  disabled: index === 0 // Disable at first screenshot
+                },
+                {
+                  type: 2, // Button
+                  custom_id: `tips_next_${index}`,
+                  label: 'Next ▶',
+                  style: 2, // Secondary (grey)
+                  disabled: index === totalCount - 1 // Disable at last screenshot
+                },
+                {
+                  type: 2, // Button
+                  custom_id: 'dm_back_to_welcome',
+                  label: '← Back',
+                  style: 2, // Secondary (grey)
+                  emoji: { name: '🏠' }
+                }
+              ]
+            }
+          ]
         }
       ]
     }
-  ]
+  };
+}
+
+// Button handlers (app.js:7471-7507)
+} else if (custom_id === 'dm_view_tips') {
+  return ButtonHandlerFactory.create({
+    id: 'dm_view_tips',
+    handler: async (context) => {
+      return generateTipsScreen(0); // Start at first screenshot
+    }
+  })(req, res, client);
+
+} else if (custom_id.startsWith('tips_next_') || custom_id.startsWith('tips_prev_')) {
+  return ButtonHandlerFactory.create({
+    id: custom_id,
+    handler: async (context) => {
+      // Parse index from button ID: tips_next_5 or tips_prev_5
+      const match = custom_id.match(/^tips_(next|prev)_(\d+)$/);
+      const [, direction, currentIndexStr] = match;
+      const currentIndex = parseInt(currentIndexStr);
+      const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+
+      return generateTipsScreen(newIndex); // UPDATE_MESSAGE with new screenshot
+    }
+  })(req, res, client);
 }
 ```
+
+**Registered Buttons** (buttonHandlerFactory.js:214-239):
+- `dm_view_tips` - Entry point, shows first screenshot
+- `tips_next_*` - Navigate forward (wildcard pattern for any index)
+- `tips_prev_*` - Navigate backward (wildcard pattern for any index)
+- `dm_back_to_welcome` - Return to welcome screen
 
 **10 CastBot Feature Screenshots:**
 1. 🦁 Safari System
