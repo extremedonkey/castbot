@@ -1833,6 +1833,9 @@ async function uploadTipImagesToDiscord(guild) {
     const { AttachmentBuilder } = await import('discord.js');
     const path = await import('path');
 
+    // Fetch channels to populate cache (guild.channels may not be cached after fetch)
+    await guild.channels.fetch();
+
     // Find or create tips storage channel (hidden from everyone)
     let storageChannel = guild.channels.cache.find(ch => ch.name === 'tips-storage' && ch.type === 0);
 
@@ -7685,8 +7688,18 @@ To fix this:
         handler: async (context) => {
           console.log(`💡 dm_view_tips clicked - getting Discord CDN URLs for tip images`);
 
-          // Get guild to access storage channel
-          const guild = await context.client.guilds.fetch(context.guildId);
+          // Get guild for storage channel (use guildId if in channel, or first guild if in DM)
+          let guild;
+          if (context.guildId && context.guildId !== '0') {
+            // Channel context - use the guild from interaction
+            guild = await context.client.guilds.fetch(context.guildId);
+          } else {
+            // DM context - use first available guild as storage location
+            const guilds = await context.client.guilds.fetch();
+            const firstGuildId = guilds.first().id;
+            guild = await context.client.guilds.fetch(firstGuildId);
+            console.log(`📍 DM context detected - using guild ${guild.name} for image storage`);
+          }
 
           // Get Discord CDN URLs (uploads on first access, cached thereafter)
           const discordUrls = await getTipImageUrls(guild);
@@ -7724,8 +7737,16 @@ To fix this:
             return { content: '❌ Navigation error', ephemeral: true };
           }
 
-          // Get guild to access storage channel
-          const guild = await context.client.guilds.fetch(context.guildId);
+          // Get guild for storage channel (same logic as dm_view_tips)
+          let guild;
+          if (context.guildId && context.guildId !== '0') {
+            guild = await context.client.guilds.fetch(context.guildId);
+          } else {
+            // DM context - use first available guild
+            const guilds = await context.client.guilds.fetch();
+            const firstGuildId = guilds.first().id;
+            guild = await context.client.guilds.fetch(firstGuildId);
+          }
 
           // Get Discord CDN URLs (should be cached from first access)
           const discordUrls = await getTipImageUrls(guild);
