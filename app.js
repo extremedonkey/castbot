@@ -1816,16 +1816,92 @@ const processedInteractions = new Map();
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
+ * Upload all tip images to Discord storage channel and get CDN URLs
+ * Follows Safari's uploadImageToDiscord pattern for stable, permanent URLs
+ * @param {Guild} guild - Discord guild object
+ * @returns {Array<string>} Array of 10 Discord CDN URLs for tip images
+ */
+async function uploadTipImagesToDiscord(guild) {
+  try {
+    const { AttachmentBuilder } = await import('discord.js');
+    const path = await import('path');
+
+    // Fetch channels to populate cache (guild.channels may not be cached after fetch)
+    await guild.channels.fetch();
+
+    // Find or create tips storage channel (hidden from everyone)
+    let storageChannel = guild.channels.cache.find(ch => ch.name === 'tips-storage' && ch.type === 0);
+
+    if (!storageChannel) {
+      console.log('📦 Creating tips-storage channel...');
+      storageChannel = await guild.channels.create({
+        name: 'tips-storage',
+        type: 0, // Text channel
+        topic: 'Storage for tips gallery images - do not delete',
+        permissionOverwrites: [
+          {
+            id: guild.roles.everyone.id,
+            deny: ['ViewChannel', 'SendMessages']
+          }
+        ]
+      });
+    }
+
+    // Upload all 10 images and collect Discord CDN URLs
+    const cdnUrls = [];
+    for (let i = 1; i <= 10; i++) {
+      const filename = `${i}.png`;
+      const imagePath = path.join('/home/reece/castbot/img/tips', filename);
+
+      // Create attachment and send to storage channel
+      const attachment = new AttachmentBuilder(imagePath, { name: filename });
+      const message = await storageChannel.send({
+        content: `Tip image ${i}/10`,
+        files: [attachment]
+      });
+
+      // Get Discord CDN URL from uploaded attachment
+      const cdnUrl = message.attachments.first().url;
+      cdnUrls.push(cdnUrl);
+
+      console.log(`✅ Uploaded ${filename} to Discord CDN`);
+    }
+
+    return cdnUrls;
+  } catch (error) {
+    console.error('❌ Error uploading tip images:', error);
+    throw error;
+  }
+}
+
+// Cache for Discord CDN URLs (populated on first access)
+let cachedTipImageUrls = null;
+
+/**
+ * Get Discord CDN URLs for all tip images (uploads on first call, caches for future use)
+ * @param {Guild} guild - Discord guild object
+ * @returns {Array<string>} Array of 10 Discord CDN URLs
+ */
+async function getTipImageUrls(guild) {
+  if (!cachedTipImageUrls) {
+    console.log('📤 First access - uploading tip images to Discord...');
+    cachedTipImageUrls = await uploadTipImagesToDiscord(guild);
+  }
+  return cachedTipImageUrls;
+}
+
+/**
  * Generate paginated tips screen showing one screenshot at a time
- * Uses locally-hosted images served by Express static file handler
+ * Uses Discord CDN URLs from uploaded images (Safari pattern)
  * Pattern: Similar to castRankingManager navigation (stateless pagination)
  *
  * @param {number} index - Current screenshot index (0-9)
+ * @param {Array<string>} discordCdnUrls - Array of Discord CDN URLs for all 10 images
  * @returns {Object} UPDATE_MESSAGE response with Components V2 structure
  */
-function generateTipsScreen(index) {
-  // Define all 10 CastBot feature screenshots
-  // Images stored locally in /img/tips/ and served by Express
+function generateTipsScreen(index, discordCdnUrls) {
+  // Define all 10 CastBot feature screenshots metadata
+  // Images uploaded to Discord storage channel, URLs provided as parameter
 
   const screenshots = [
     {
@@ -1882,14 +1958,7 @@ function generateTipsScreen(index) {
 
   const currentScreenshot = screenshots[index];
   const totalCount = screenshots.length;
-
-  // Generate URL to locally-hosted image (served by Express static handler)
-  // Dev: ngrok URL, Prod: static domain
-  const isDev = process.env.NODE_ENV !== 'production';
-  const baseUrl = isDev
-    ? 'https://adapted-deeply-stag.ngrok-free.app/img/tips'
-    : 'https://castbotaws.reecewagner.com/img/tips';
-  const imageUrl = `${baseUrl}/${currentScreenshot.filename}`;
+  const imageUrl = discordCdnUrls[index]; // Use Discord CDN URL from array
 
   return {
     type: InteractionResponseType.UPDATE_MESSAGE,
@@ -7614,21 +7683,39 @@ To fix this:
 
     } else if (custom_id === 'dm_view_tips') {
       // Show paginated tips gallery (start at index 0)
-      // Uses locally-hosted images served by Express static file handler
+      // Uses Discord CDN URLs from uploaded images (Safari pattern)
       return ButtonHandlerFactory.create({
         id: 'dm_view_tips',
         updateMessage: true, // UPDATE_MESSAGE for button click
         handler: async (context) => {
-          console.log(`💡 dm_view_tips clicked - showing paginated tips gallery`);
+          console.log(`💡 dm_view_tips clicked - getting Discord CDN URLs for tip images`);
 
-          // Generate first screen (images are locally hosted and served by Express)
-          return generateTipsScreen(0);
+          // Get guild for storage channel (use guildId if in channel, or first guild if in DM)
+          let guild;
+          if (context.guildId && context.guildId !== '0') {
+            // Channel context - use the guild from interaction
+            guild = await context.client.guilds.fetch(context.guildId);
+          } else {
+            // DM context - use first available guild as storage location
+            const guilds = await context.client.guilds.fetch();
+            const firstGuildId = guilds.first().id;
+            guild = await context.client.guilds.fetch(firstGuildId);
+            console.log(`📍 DM context detected - using guild ${guild.name} for image storage`);
+          }
+
+          // Get Discord CDN URLs (uploads on first access, cached thereafter)
+          const discordUrls = await getTipImageUrls(guild);
+
+          console.log(`✅ Got ${discordUrls.length} Discord CDN URLs for tip images`);
+
+          // Generate first screen with Discord CDN URLs
+          return generateTipsScreen(0, discordUrls);
         }
       })(req, res, client);
 
     } else if (custom_id.startsWith('tips_next_') || custom_id.startsWith('tips_prev_')) {
       // Handle tips pagination navigation
-      // Uses locally-hosted images served by Express static file handler
+      // Uses cached Discord CDN URLs (no need to re-upload)
       return ButtonHandlerFactory.create({
         id: custom_id,
         updateMessage: true, // UPDATE_MESSAGE for navigation
@@ -7652,8 +7739,22 @@ To fix this:
             return { content: '❌ Navigation error', ephemeral: true };
           }
 
-          // Navigate to new index (images are locally hosted and served by Express)
-          return generateTipsScreen(newIndex);
+          // Get guild for storage channel (same logic as dm_view_tips)
+          let guild;
+          if (context.guildId && context.guildId !== '0') {
+            guild = await context.client.guilds.fetch(context.guildId);
+          } else {
+            // DM context - use first available guild
+            const guilds = await context.client.guilds.fetch();
+            const firstGuildId = guilds.first().id;
+            guild = await context.client.guilds.fetch(firstGuildId);
+          }
+
+          // Get Discord CDN URLs (should be cached from first access)
+          const discordUrls = await getTipImageUrls(guild);
+
+          // Navigate to new index
+          return generateTipsScreen(newIndex, discordUrls);
         }
       })(req, res, client);
 
