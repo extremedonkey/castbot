@@ -77,7 +77,11 @@
       "WebFetch(domain:docs.bitnami.com)",
       "Bash(git remote add:*)",
       "Bash(test:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(/home/reece/castbot/RaP/.counter)",
+      "Bash(git -C /home/reece/castbot add:*)",
+      "Bash(git -C /home/reece/castbot commit -m \"Add comprehensive RaP 0980: Image Handling Technical Analysis - documents all 5 image techniques in CastBot (Discord CDN, Express static, local filesystem, data URIs, external CDN) with extensive code examples, historical evidence from Safari maps, and recommended hybrid approach for tips gallery implementation\")",
+      "Bash(git -C /home/reece/castbot push)"
     ],
     "deny": [],
     "ask": []

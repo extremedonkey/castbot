@@ -7681,82 +7681,29 @@ To fix this:
         }
       })(req, res, client);
 
-    } else if (custom_id === 'dm_view_tips') {
-      // Show paginated tips gallery (start at index 0)
-      // Uses Discord CDN URLs from uploaded images (Safari pattern)
-      return ButtonHandlerFactory.create({
-        id: 'dm_view_tips',
-        updateMessage: true, // UPDATE_MESSAGE for button click
-        handler: async (context) => {
-          console.log(`💡 dm_view_tips clicked - getting Discord CDN URLs for tip images`);
+    // DISABLED 2025-11-06: Tips gallery created storage channels in ALL guilds - embarrassing!
+    // TODO: Re-implement using single storage location or Express static serving
+    // } else if (custom_id === 'dm_view_tips') {
+    //   return ButtonHandlerFactory.create({
+    //     id: 'dm_view_tips',
+    //     handler: async (context) => {
+    //       return {
+    //         content: '💡 Tips gallery is temporarily disabled. Coming back soon!',
+    //         ephemeral: true
+    //       };
+    //     }
+    //   })(req, res, client);
 
-          // Get guild for storage channel (use guildId if in channel, or first guild if in DM)
-          let guild;
-          if (context.guildId && context.guildId !== '0') {
-            // Channel context - use the guild from interaction
-            guild = await context.client.guilds.fetch(context.guildId);
-          } else {
-            // DM context - use first available guild as storage location
-            const guilds = await context.client.guilds.fetch();
-            const firstGuildId = guilds.first().id;
-            guild = await context.client.guilds.fetch(firstGuildId);
-            console.log(`📍 DM context detected - using guild ${guild.name} for image storage`);
-          }
-
-          // Get Discord CDN URLs (uploads on first access, cached thereafter)
-          const discordUrls = await getTipImageUrls(guild);
-
-          console.log(`✅ Got ${discordUrls.length} Discord CDN URLs for tip images`);
-
-          // Generate first screen with Discord CDN URLs
-          return generateTipsScreen(0, discordUrls);
-        }
-      })(req, res, client);
-
-    } else if (custom_id.startsWith('tips_next_') || custom_id.startsWith('tips_prev_')) {
-      // Handle tips pagination navigation
-      // Uses cached Discord CDN URLs (no need to re-upload)
-      return ButtonHandlerFactory.create({
-        id: custom_id,
-        updateMessage: true, // UPDATE_MESSAGE for navigation
-        handler: async (context) => {
-          // Parse index from button ID: tips_next_5 or tips_prev_5
-          const match = custom_id.match(/^tips_(next|prev)_(\d+)$/);
-          if (!match) {
-            console.error(`❌ Invalid tips navigation button format: ${custom_id}`);
-            return { content: '❌ Invalid navigation button', ephemeral: true };
-          }
-
-          const [, direction, currentIndexStr] = match;
-          const currentIndex = parseInt(currentIndexStr);
-          const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
-
-          console.log(`📖 Tips navigation: ${direction} from ${currentIndex} to ${newIndex}`);
-
-          // Validate bounds (0-9 for 10 screenshots)
-          if (newIndex < 0 || newIndex > 9) {
-            console.error(`❌ Tips navigation out of bounds: ${newIndex}`);
-            return { content: '❌ Navigation error', ephemeral: true };
-          }
-
-          // Get guild for storage channel (same logic as dm_view_tips)
-          let guild;
-          if (context.guildId && context.guildId !== '0') {
-            guild = await context.client.guilds.fetch(context.guildId);
-          } else {
-            // DM context - use first available guild
-            const guilds = await context.client.guilds.fetch();
-            const firstGuildId = guilds.first().id;
-            guild = await context.client.guilds.fetch(firstGuildId);
-          }
-
-          // Get Discord CDN URLs (should be cached from first access)
-          const discordUrls = await getTipImageUrls(guild);
-
-          // Navigate to new index
-          return generateTipsScreen(newIndex, discordUrls);
-        }
-      })(req, res, client);
+    // } else if (custom_id.startsWith('tips_next_') || custom_id.startsWith('tips_prev_')) {
+    //   return ButtonHandlerFactory.create({
+    //     id: custom_id,
+    //     handler: async (context) => {
+    //       return {
+    //         content: '💡 Tips gallery is temporarily disabled. Coming back soon!',
+    //         ephemeral: true
+    //       };
+    //     }
+    //   })(req, res, client);
 
     } else if (custom_id === 'dm_back_to_welcome') {
       // Navigate back to welcome message from tips
