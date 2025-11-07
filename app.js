@@ -1816,11 +1816,13 @@ const processedInteractions = new Map();
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
+ * DISABLED 2025-11-06: Created channels in all guilds - see RaP/0980 for alternatives
  * Upload all tip images to Discord storage channel and get CDN URLs
  * Follows Safari's uploadImageToDiscord pattern for stable, permanent URLs
  * @param {Guild} guild - Discord guild object
  * @returns {Array<string>} Array of 10 Discord CDN URLs for tip images
  */
+/* DISABLED - DO NOT USE
 async function uploadTipImagesToDiscord(guild) {
   try {
     const { AttachmentBuilder } = await import('discord.js');
@@ -1873,15 +1875,18 @@ async function uploadTipImagesToDiscord(guild) {
     throw error;
   }
 }
+*/ // END DISABLED uploadTipImagesToDiscord
 
 // Cache for Discord CDN URLs (populated on first access)
-let cachedTipImageUrls = null;
+// let cachedTipImageUrls = null; // DISABLED
 
 /**
+ * DISABLED 2025-11-06: See uploadTipImagesToDiscord above
  * Get Discord CDN URLs for all tip images (uploads on first call, caches for future use)
  * @param {Guild} guild - Discord guild object
  * @returns {Array<string>} Array of 10 Discord CDN URLs
  */
+/* DISABLED - DO NOT USE
 async function getTipImageUrls(guild) {
   if (!cachedTipImageUrls) {
     console.log('📤 First access - uploading tip images to Discord...');
@@ -1889,8 +1894,10 @@ async function getTipImageUrls(guild) {
   }
   return cachedTipImageUrls;
 }
+*/ // END DISABLED getTipImageUrls
 
 /**
+ * DISABLED 2025-11-06: Part of tips gallery - see RaP/0980 for alternatives
  * Generate paginated tips screen showing one screenshot at a time
  * Uses Discord CDN URLs from uploaded images (Safari pattern)
  * Pattern: Similar to castRankingManager navigation (stateless pagination)
@@ -1899,6 +1906,7 @@ async function getTipImageUrls(guild) {
  * @param {Array<string>} discordCdnUrls - Array of Discord CDN URLs for all 10 images
  * @returns {Object} UPDATE_MESSAGE response with Components V2 structure
  */
+/* DISABLED - DO NOT USE
 function generateTipsScreen(index, discordCdnUrls) {
   // Define all 10 CastBot feature screenshots metadata
   // Images uploaded to Discord storage channel, URLs provided as parameter
@@ -2020,6 +2028,7 @@ function generateTipsScreen(index, discordCdnUrls) {
     }
   };
 }
+*/ // END DISABLED generateTipsScreen
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -7751,13 +7760,14 @@ To fix this:
                           style: 3,
                           emoji: { name: '👋' }
                         },
-                        {
-                          type: 2,
-                          custom_id: 'dm_view_tips',
-                          label: 'View Tips',
-                          style: 1,
-                          emoji: { name: '💡' }
-                        },
+                        // DISABLED: Tips gallery button (removed 2025-11-06)
+                        // {
+                        //   type: 2,
+                        //   custom_id: 'dm_view_tips',
+                        //   label: 'View Tips',
+                        //   style: 1,
+                        //   emoji: { name: '💡' }
+                        // },
                         {
                           type: 2,
                           label: 'Join CastBot Server',
