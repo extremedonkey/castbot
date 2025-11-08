@@ -6343,6 +6343,86 @@ To fix this:
           };
         }
       })(req, res, client);
+    } else if (custom_id === 'prod_terms_of_service') {
+      return ButtonHandlerFactory.create({
+        id: 'prod_terms_of_service',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`📜 Showing Terms of Service`);
+
+          const tosContainer = {
+            type: 17, // Container
+            accent_color: 0x3498DB, // Blue
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## 📜 CastBot Terms of Service`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 10, // Text Display
+                content: `**Last Updated**: November 2025\n\n**In Plain English:**\n\nCastBot is a free Discord bot for running online reality games (ORGs). By using it, you agree to:\n\n• **Use it responsibly** - Don't try to break it or abuse it\n• **No warranties** - CastBot is provided "as is" and might have bugs\n• **We can make changes** - Features and these terms may be updated\n• **Your responsibility** - How you use CastBot in your games is up to you\n\nThat's it! No hidden gotchas, no weird legal stuff. If you have questions or concerns, reach out on our support server.\n\n**Contact**: https://discord.gg/H7MpJEjkwT`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 1, // Action Row
+                components: [
+                  {
+                    type: 2, // Button
+                    style: 2, // Secondary
+                    custom_id: 'prod_setup',
+                    label: '← Setup'
+                  }
+                ]
+              }
+            ]
+          };
+
+          return {
+            components: [tosContainer]
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'prod_privacy_policy') {
+      return ButtonHandlerFactory.create({
+        id: 'prod_privacy_policy',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔒 Showing Privacy Policy`);
+
+          const privacyContainer = {
+            type: 17, // Container
+            accent_color: 0x3498DB, // Blue
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## 🔒 CastBot Privacy Policy`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 10, // Text Display
+                content: `**Last Updated**: November 2025\n\n**What We Collect:**\n\nCastBot stores minimal data to work:\n• **Discord IDs** (servers, users, roles, channels)\n• **Game data** (castlists, tribes, player preferences)\n• **User preferences** (pronouns, timezones, availability)\n\n**What We Don't Do:**\n• ❌ We don't sell your data\n• ❌ We don't share it with third parties\n• ❌ We don't track you outside Discord\n\n**Data Storage:**\nYour data is stored securely on our server and is only used to make CastBot work. When you remove CastBot from your server or delete your data, it's gone.\n\n**Your Rights:**\nYou can request data deletion anytime by contacting us on our support server.\n\n**Contact**: https://discord.gg/H7MpJEjkwT`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 1, // Action Row
+                components: [
+                  {
+                    type: 2, // Button
+                    style: 2, // Secondary
+                    custom_id: 'prod_setup',
+                    label: '← Setup'
+                  }
+                ]
+              }
+            ]
+          };
+
+          return {
+            components: [privacyContainer]
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'setup_castbot') {
       // Execute setup using new roleManager module
       try {

@@ -299,6 +299,22 @@ export const BUTTON_REGISTRY = {
     category: 'admin',
     parent: 'prod_setup'
   },
+  'prod_terms_of_service': {
+    label: 'Terms of Service',
+    description: 'View CastBot Terms of Service',
+    emoji: '📜',
+    style: 'Secondary',
+    category: 'legal',
+    parent: 'prod_setup'
+  },
+  'prod_privacy_policy': {
+    label: 'Privacy Policy',
+    description: 'View CastBot Privacy Policy',
+    emoji: '🔒',
+    style: 'Secondary',
+    category: 'legal',
+    parent: 'prod_setup'
+  },
 
   // === PRONOUNS & TIMEZONES MANAGEMENT ===
   'prod_manage_pronouns_timezones': {

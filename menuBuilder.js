@@ -54,6 +54,26 @@ export const MENU_REGISTRY = {
                 url: 'https://discord.gg/H7MpJEjkwT'
               }
             ]
+          },
+          { type: 14 }, // Separator
+          {
+            type: 1, // ActionRow for legal buttons
+            components: [
+              {
+                type: 2, // Button
+                custom_id: 'prod_terms_of_service',
+                label: 'Terms of Service',
+                style: 2, // Secondary (Grey)
+                emoji: { name: '📜' }
+              },
+              {
+                type: 2, // Button
+                custom_id: 'prod_privacy_policy',
+                label: 'Privacy Policy',
+                style: 2, // Secondary (Grey)
+                emoji: { name: '🔒' }
+              }
+            ]
           }
         ]
       },
