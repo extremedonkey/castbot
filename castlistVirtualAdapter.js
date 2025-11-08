@@ -59,7 +59,7 @@ export class CastlistVirtualAdapter {
             visibility: 'public'
           },
           metadata: {
-            description: `Legacy castlist: ${tribe.castlist}`,
+            description: '', // Blank for user customization
             emoji: this.getCastlistEmoji(tribe.castlist, tribe.type)
           }
         });
@@ -239,7 +239,7 @@ export class CastlistVirtualAdapter {
       createdBy: 'migration',
       metadata: {
         ...virtual.metadata,
-        description: `Upgraded from legacy castlist '${virtual.name}'`,
+        description: '', // Blank on materialization - user can add their own
         migratedFrom: virtualId,
         migrationDate: Date.now()
       }
