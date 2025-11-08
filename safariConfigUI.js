@@ -284,6 +284,7 @@ async function createCurrentSettingsDisplay(guildId, config) {
     // Add Player Menu Settings
     const enableGlobalCommands = config.enableGlobalCommands !== false;
     const inventoryVisibilityMode = config.inventoryVisibilityMode || 'always';
+    const showCustomCastlists = config.showCustomCastlists !== false; // Default true
     const inventoryModeLabels = {
         'always': 'Always Show',
         'initialized_only': 'After Initialization Only',
@@ -292,7 +293,8 @@ async function createCurrentSettingsDisplay(guildId, config) {
     };
     display += `**🕹️ Player Menu**\n`;
     display += `• Global Commands Button: ${enableGlobalCommands ? '✅ Enabled' : '❌ Disabled'}\n`;
-    display += `• Inventory Button: ${inventoryModeLabels[inventoryVisibilityMode]}\n\n`;
+    display += `• Inventory Button: ${inventoryModeLabels[inventoryVisibilityMode]}\n`;
+    display += `• Custom Castlists: ${showCustomCastlists ? '✅ Show All' : '📋 Default Only'}\n\n`;
 
     // Add Safari Log Status
     const { loadSafariContent } = await import('./safariManager.js');

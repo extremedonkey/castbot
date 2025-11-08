@@ -10835,6 +10835,7 @@ Your server is now ready for Tycoons gameplay!`;
           // Determine current settings (default to true/always - 'always' is most user-friendly for new servers)
           const currentEnabled = safariConfig.enableGlobalCommands !== false;
           const currentInventoryMode = safariConfig.inventoryVisibilityMode || 'always';
+          const currentShowCustomCastlists = safariConfig.showCustomCastlists !== false; // Default true (show all)
 
           // Create Components V2 modal with Label + String Select (following safari_store_stock pattern)
           const modal = {
@@ -10901,6 +10902,32 @@ Your server is now ready for Tycoons gameplay!`;
                       value: 'never',
                       description: 'Hide, only visible via shop interface',
                       default: currentInventoryMode === 'never'
+                    }
+                  ]
+                }
+              },
+              {
+                type: 18, // Label (Components V2)
+                label: 'Show Custom Castlists in Player Menu?',
+                description: 'Control which castlists appear in player /menu',
+                component: {
+                  type: 3, // String Select (Components V2)
+                  custom_id: 'show_custom_castlists',
+                  placeholder: 'Choose visibility setting...',
+                  min_values: 1,
+                  max_values: 1,
+                  options: [
+                    {
+                      label: 'Show All Castlists',
+                      value: 'true',
+                      description: 'Display default + all custom castlists',
+                      default: currentShowCustomCastlists === true
+                    },
+                    {
+                      label: 'Show Default Only',
+                      value: 'false',
+                      description: 'Hide custom castlists from player menu',
+                      default: currentShowCustomCastlists === false
                     }
                   ]
                 }
@@ -35664,6 +35691,7 @@ Are you sure you want to continue?`;
         const components = req.body.data.components;
         let enableGlobalCommands = false;
         let inventoryVisibilityMode = 'standard';
+        let showCustomCastlists = true; // Default true (show all)
 
         // Modal has Label components with nested string selects - extract both
         for (const component of components) {
@@ -35675,12 +35703,15 @@ Are you sure you want to continue?`;
               enableGlobalCommands = selectedValue === 'true';
             } else if (customId === 'inventory_visibility_mode') {
               inventoryVisibilityMode = selectedValue || 'standard';
+            } else if (customId === 'show_custom_castlists') {
+              showCustomCastlists = selectedValue === 'true';
             }
           }
         }
 
         console.log(`🕹️ DEBUG: enableGlobalCommands setting: ${enableGlobalCommands}`);
         console.log(`🕹️ DEBUG: inventoryVisibilityMode setting: ${inventoryVisibilityMode}`);
+        console.log(`🕹️ DEBUG: showCustomCastlists setting: ${showCustomCastlists}`);
 
         // Load and update safari configuration
         const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
@@ -35697,6 +35728,7 @@ Are you sure you want to continue?`;
         // Update the configuration
         safariData[guildId].safariConfig.enableGlobalCommands = enableGlobalCommands;
         safariData[guildId].safariConfig.inventoryVisibilityMode = inventoryVisibilityMode;
+        safariData[guildId].safariConfig.showCustomCastlists = showCustomCastlists;
         await saveSafariContent(safariData);
 
         const updatedConfig = safariData[guildId].safariConfig;

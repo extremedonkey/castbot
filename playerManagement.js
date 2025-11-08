@@ -380,16 +380,38 @@ export async function createPlayerManagementUI(options) {
     let castlistRows = [];
     let globalStoreRows = [];
     let inventoryRow = null;
-    
+
+    // Load safari configuration for castlist filtering and global stores
+    const { loadSafariContent } = await import('./safariManager.js');
+    const safariData = await loadSafariContent();
+    const safariConfig = safariData[guildId]?.safariConfig || {};
+
     if (!hideBottomButtons) {
       console.log(`🔍 Player Menu castlist check: allCastlists=${allCastlists}, size=${allCastlists?.size}, hideBottomButtons=${hideBottomButtons}`);
-      if (allCastlists && allCastlists.size > 0) {
-        console.log(`✅ Creating castlist rows for ${allCastlists.size} castlists`);
+
+      // Apply castlist visibility filter based on configuration
+      const showCustomCastlists = safariConfig.showCustomCastlists !== false; // Default true (show all)
+      let filteredCastlists = allCastlists;
+
+      if (!showCustomCastlists) {
+        // Admin wants to hide custom castlists - show only default
+        console.log(`🔍 Filtering castlists: showCustomCastlists=false, showing default only`);
+        const defaultOnly = allCastlists?.get('default');
+        filteredCastlists = defaultOnly
+          ? new Map([['default', defaultOnly]])  // Show default button
+          : new Map();  // Empty → triggers fallback button below
+      } else {
+        console.log(`🔍 No castlist filter: showCustomCastlists=${showCustomCastlists}, showing all ${allCastlists?.size || 0} castlists`);
+      }
+
+      if (filteredCastlists && filteredCastlists.size > 0) {
+        console.log(`✅ Creating castlist rows for ${filteredCastlists.size} castlists`);
         // Player mode: don't include the "+" button (includeAddButton = false)
-        castlistRows = createCastlistRows(allCastlists, false, hasStores);
+        castlistRows = createCastlistRows(filteredCastlists, false, hasStores);
         console.log(`✅ Created ${castlistRows.length} castlist row(s)`);
       } else {
         // Fallback: single default castlist button if no castlist data found
+        console.log(`⚠️ No castlists found after filtering, showing fallback button`);
         castlistRows = [{
           type: 1, // ActionRow
           components: [new ButtonBuilder()
@@ -398,11 +420,8 @@ export async function createPlayerManagementUI(options) {
             .setStyle(ButtonStyle.Primary)]
         }];
       }
-      
+
       // Add global store buttons (only if not Round 0)
-      const { loadSafariContent } = await import('./safariManager.js');
-      const safariData = await loadSafariContent();
-      const safariConfig = safariData[guildId]?.safariConfig || {};
       const currentRound = safariConfig.currentRound;
       
       // Only show global stores if currentRound exists and is not 0
