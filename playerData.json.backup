@@ -6040,7 +6040,12 @@
           "castlist_1762613355166_system"
         ]
       },
-      "1008429181840937015": {},
+      "1008429181840937015": {
+        "castlistIds": [
+          "castlist_1762612908863_system"
+        ],
+        "castlist": "S2 - Big Bang"
+      },
       "1426478110089674832": {
         "castlistIds": [
           "castlist_1760892362223_system"

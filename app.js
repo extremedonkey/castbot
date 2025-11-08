@@ -2195,13 +2195,14 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       if (canSendMessages) {
         // User can send messages - public deferred response
         res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
+        console.log('[CASTLIST] Sent deferred response');
       } else {
         // User cannot send messages - ephemeral deferred response
         res.send({
           type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
           data: { flags: InteractionResponseFlags.EPHEMERAL }
         });
-        console.log(`Sent ephemeral deferred response for user ${member?.user?.username}`);
+        console.log('[CASTLIST] Sent ephemeral deferred response');
       }
 
       // Get tribes via unified data access (handles legacy + modern castlists)
@@ -2242,6 +2243,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const navigationState = createNavigationState(orderedTribes, scenario, 0, 0, guild, { playerData, guildId });
 
       await sendCastlist2Response(req, guild, orderedTribes, castlistIdentifier, navigationState, req.body.member, req.body.channel_id, 'view', null, { playerData, guildId });
+      console.log('[CASTLIST] Sent castlist via webhook follow-up');
 
     } catch (error) {
       console.error('Error handling castlist command:', error);
@@ -4890,13 +4892,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const allTribes = await getTribesForCastlist(guildId, requestedCastlist, client);
 
         if (allTribes.length === 0) {
-          return res.send({
-            type: 4,
-            data: {
+          const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+          await DiscordRequest(endpoint, {
+            method: 'PATCH',
+            body: {
               content: `No tribes found for castlist: ${requestedCastlist}`,
               flags: 1 << 6  // Ephemeral flag
             }
           });
+          return;
         }
 
         // Import necessary functions
