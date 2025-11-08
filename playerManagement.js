@@ -401,7 +401,10 @@ export async function createPlayerManagementUI(options) {
           ? new Map([['default', defaultOnly]])  // Show default button
           : new Map();  // Empty → triggers fallback button below
       } else {
-        console.log(`🔍 No castlist filter: showCustomCastlists=${showCustomCastlists}, showing all ${allCastlists?.size || 0} castlists`);
+        // Limit to 4 custom castlists (+ default = max 5 total) to prevent Discord 40-component limit
+        const { limitAndSortCastlists } = await import('./castlistV2.js');
+        filteredCastlists = limitAndSortCastlists(allCastlists, 4);
+        console.log(`🔍 Limited castlists: showing ${filteredCastlists.size} of ${allCastlists?.size || 0} total (max 4 custom + default)`);
       }
 
       if (filteredCastlists && filteredCastlists.size > 0) {

@@ -958,6 +958,66 @@ export async function buildCastlist2ResponseData(guild, tribes, castlistId, navi
   return responseData;
 }
 
+/**
+ * Limit and sort castlists by most recently modified
+ * Prevents Discord 40-component limit crashes by capping custom castlists
+ * @param {Map} allCastlists - Map of all castlists from Virtual Adapter
+ * @param {number} maxCustomCastlists - Maximum number of custom castlists to show (default: 4)
+ * @returns {Map} Filtered and sorted Map with default + limited custom castlists
+ */
+function limitAndSortCastlists(allCastlists, maxCustomCastlists = 4) {
+  if (!allCastlists || allCastlists.size === 0) {
+    return allCastlists;
+  }
+
+  // Separate default from custom castlists
+  const defaultCastlist = allCastlists.get('default');
+  const customCastlists = [];
+
+  for (const [id, castlist] of allCastlists.entries()) {
+    if (id !== 'default') {
+      customCastlists.push({ id, ...castlist });
+    }
+  }
+
+  // Sort custom castlists by lastModified (most recent first)
+  customCastlists.sort((a, b) => {
+    const aModified = a.metadata?.lastModified;
+    const bModified = b.metadata?.lastModified;
+
+    // Both have lastModified - sort descending (newest first)
+    if (aModified && bModified) {
+      return bModified - aModified;
+    }
+
+    // Only a has lastModified - a comes first
+    if (aModified && !bModified) return -1;
+
+    // Only b has lastModified - b comes first
+    if (!aModified && bModified) return 1;
+
+    // Neither has lastModified - maintain original order (stable sort)
+    return 0;
+  });
+
+  // Limit to maxCustomCastlists
+  const limitedCustom = customCastlists.slice(0, maxCustomCastlists);
+
+  console.log(`[CASTLIST] Limited ${customCastlists.length} custom castlists to ${limitedCustom.length} (max: ${maxCustomCastlists})`);
+
+  // Rebuild Map: default first (if exists), then limited custom
+  const result = new Map();
+  if (defaultCastlist) {
+    result.set('default', defaultCastlist);
+  }
+  for (const castlist of limitedCustom) {
+    const { id, ...data } = castlist;
+    result.set(id, data);
+  }
+
+  return result;
+}
+
 export {
     calculateComponentsForTribe,
     determineDisplayScenario,
@@ -969,5 +1029,6 @@ export {
     processMemberData,
     createCastlistV2Layout,
     extractCastlistData,
-    createCastlistRows
+    createCastlistRows,
+    limitAndSortCastlists
 };

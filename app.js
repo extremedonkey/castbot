@@ -706,11 +706,15 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Extract castlist data using Virtual Adapter pattern for modern entities
   const { allCastlists } = await extractCastlistData(playerData, guildId);
 
+  // Limit to 4 custom castlists to prevent Discord 40-component limit
+  const { limitAndSortCastlists } = await import('./castlistV2.js');
+  const limitedCastlists = limitAndSortCastlists(allCastlists, 4);
+
   // Create castlist rows with metadata display (sort strategy, emoji, description)
-  const castlistRows = createCastlistRows(allCastlists, true, false);
+  const castlistRows = createCastlistRows(limitedCastlists, true, false);
   
   // Debug logging for castlist pagination
-  console.log(`Created ${castlistRows.length} castlist row(s) for ${allCastlists.size} castlist(s)`);
+  console.log(`Created ${castlistRows.length} castlist row(s) for ${limitedCastlists.size} castlist(s) (limited from ${allCastlists.size})`);
   if (castlistRows.length > 1) {
     console.log('Pagination active: castlists split across multiple rows to prevent Discord ActionRow limit');
   }

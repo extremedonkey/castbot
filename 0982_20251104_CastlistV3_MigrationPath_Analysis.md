@@ -891,15 +891,19 @@ Target:          █████████████████████
 ```
 
 **Next Steps**:
-1. **DECISION**: Store player menu configs in `safariContent.json` (Option A) - 0 hours (architectural decision)
+1. **✅ COMPLETED**: Store player menu configs in `safariContent.json` (Option A) - 0 hours (architectural decision)
    - Keep `showCustomCastlists` with existing `enableGlobalCommands` and `inventoryVisibilityMode`
    - Rationale: Consistency with existing pattern, minimal changes, single config modal
-2. Create `getTribesForCastlist()` unified function (2 hours)
-3. Migrate `/castlist` command (30 minutes)
-4. Migrate `show_castlist2` handler (45 minutes)
-5. ✅ **Complete Phase 1** - Remove feature toggle!
+2. **Limit castlist display to 4 custom castlists** (45 minutes) - Prevents Discord 40-component limit crashes
+   - Sort by `metadata.lastModified` descending (most recent first)
+   - Apply to both Production Menu and Player Menu
+   - Legacy castlists (no timestamp) sorted last in original order
+3. Create `getTribesForCastlist()` unified function (2 hours)
+4. Migrate `/castlist` command (30 minutes)
+5. Migrate `show_castlist2` handler (45 minutes)
+6. ✅ **Complete Phase 1** - Remove feature toggle!
 
-**Time to Completion**: 3.25 hours (one afternoon of focused work)
+**Time to Completion**: 4 hours (one afternoon of focused work)
 
 ---
 
@@ -1040,3 +1044,302 @@ Feature fully implemented and tested. All code changes deployed to development. 
 - ✅ Edge case handling - fallback button when no default exists
 - ✅ UI display - Safari Customization shows current setting
 - ✅ Modal functionality - Components V2 with 3 string select options
+
+---
+
+## 🚨 Castlist Display Limiting - Prevent 40-Component Crash
+
+### Problem Statement
+
+Discord's Components V2 system has a hard limit of **40 components per message**. Component counting is complex:
+- ActionRows count as components (even though invisible to users)
+- Nested components within ActionRows also count
+- Separators, TextDisplay, and Section components all count
+
+**Current Bug**: Users can crash both Production Menu and Player Menu by creating 8+ custom castlists:
+- 8 custom castlists = **41 components** (exceeds limit)
+- Result: `COMPONENT_MAX_TOTAL_COMPONENTS_EXCEEDED` error
+- User sees: "❌ Error loading menu. Please try again."
+
+**Component Math** (from production logs):
+```
+Section (1) + Separator (5) + TextDisplay (5) + ActionRow (5) = 16 top-level
++ Nested buttons and children = 41 total components at 8 custom castlists
+```
+
+### Current State
+
+**No Limiting Logic Anywhere:**
+```javascript
+extractCastlistData() → Map with ALL castlists (could be 10+)
+                    ↓
+        createCastlistRows() → Creates button for EACH castlist
+                    ↓
+        Discord 40 component limit → CRASH at 8+ custom castlists
+```
+
+**Affected Menus:**
+1. **Production Menu** (`createProductionMenuInterface`) - Admin menu with castlist buttons
+2. **Player Menu** (`createPlayerManagementUI`) - Player menu with castlist buttons
+
+### Requirements
+
+1. **Limit custom castlists to 4** in both Production and Player menus
+   - Leaves room for future growth (currently ~37 components at 4 custom)
+   - Default castlist always shown (not counted in limit)
+   - Production team can still post any castlist via Castlist Hub
+
+2. **Sort by most recently modified** (`metadata.lastModified` descending)
+   - Most recent castlists appear first
+   - Admins who just created/edited a castlist will see it immediately
+   - Implicit priority system without manual configuration
+
+3. **Handle legacy castlists gracefully** (no `lastModified` field)
+   - Sort legacy castlists last
+   - Maintain original order among legacy items (stable sort)
+   - Prevents breaking existing servers with old data
+
+### Architecture Decision
+
+**Approach: Create `limitAndSortCastlists()` utility function**
+
+**Why not modify `createCastlistRows()` directly?**
+- Already has its own sorting logic (real/virtual, then alphabetical)
+- Used in multiple places throughout codebase
+- Separation of concerns: limiting ≠ button creation
+- Easier to test and maintain as standalone function
+
+**Where to apply limiting:**
+- ✅ Production Menu (app.js:708) - before `createCastlistRows()`
+- ✅ Player Menu (playerManagement.js:403) - before `createCastlistRows()`
+- ❌ Castlist Hub - NOT limited (admins need full access to all castlists)
+
+### Implementation Design
+
+#### 1. New Utility Function
+**File:** `castlistV2.js` (add before exports)
+
+```javascript
+/**
+ * Limit and sort castlists by most recently modified
+ * Prevents Discord 40-component limit crashes by capping custom castlists
+ * @param {Map} allCastlists - Map of all castlists from Virtual Adapter
+ * @param {number} maxCustomCastlists - Maximum number of custom castlists to show (default: 4)
+ * @returns {Map} Filtered and sorted Map with default + limited custom castlists
+ */
+function limitAndSortCastlists(allCastlists, maxCustomCastlists = 4) {
+  if (!allCastlists || allCastlists.size === 0) {
+    return allCastlists;
+  }
+
+  // Separate default from custom castlists
+  const defaultCastlist = allCastlists.get('default');
+  const customCastlists = [];
+
+  for (const [id, castlist] of allCastlists.entries()) {
+    if (id !== 'default') {
+      customCastlists.push({ id, ...castlist });
+    }
+  }
+
+  // Sort custom castlists by lastModified (most recent first)
+  customCastlists.sort((a, b) => {
+    const aModified = a.metadata?.lastModified;
+    const bModified = b.metadata?.lastModified;
+
+    // Both have lastModified - sort descending (newest first)
+    if (aModified && bModified) {
+      return bModified - aModified;
+    }
+
+    // Only a has lastModified - a comes first
+    if (aModified && !bModified) return -1;
+
+    // Only b has lastModified - b comes first
+    if (!aModified && bModified) return 1;
+
+    // Neither has lastModified - maintain original order (stable sort)
+    return 0;
+  });
+
+  // Limit to maxCustomCastlists
+  const limitedCustom = customCastlists.slice(0, maxCustomCastlists);
+
+  console.log(`[CASTLIST] Limited ${customCastlists.length} custom castlists to ${limitedCustom.length} (max: ${maxCustomCastlists})`);
+
+  // Rebuild Map: default first (if exists), then limited custom
+  const result = new Map();
+  if (defaultCastlist) {
+    result.set('default', defaultCastlist);
+  }
+  for (const castlist of limitedCustom) {
+    const { id, ...data } = castlist;
+    result.set(id, data);
+  }
+
+  return result;
+}
+```
+
+#### 2. Export Addition
+**File:** `castlistV2.js` (update exports)
+
+```javascript
+export {
+  buildCastlist2ResponseData,
+  extractCastlistData,
+  createCastlistRows,
+  limitAndSortCastlists  // NEW
+};
+```
+
+#### 3. Production Menu Integration
+**File:** `app.js:708-710`
+
+**Before:**
+```javascript
+const { allCastlists } = await extractCastlistData(playerData, guildId);
+const castlistRows = createCastlistRows(allCastlists, true, false);
+```
+
+**After:**
+```javascript
+const { allCastlists } = await extractCastlistData(playerData, guildId);
+
+// Limit to 4 custom castlists to prevent Discord 40-component limit
+const { limitAndSortCastlists } = await import('./castlistV2.js');
+const limitedCastlists = limitAndSortCastlists(allCastlists, 4);
+
+const castlistRows = createCastlistRows(limitedCastlists, true, false);
+```
+
+#### 4. Player Menu Integration
+**File:** `playerManagement.js:393-422`
+
+**Current:**
+```javascript
+if (!showCustomCastlists) {
+  // Show only default
+  const defaultOnly = allCastlists?.get('default');
+  filteredCastlists = defaultOnly
+    ? new Map([['default', defaultOnly]])
+    : new Map();
+}
+// No else - showing all castlists (NO LIMITING!)
+```
+
+**Updated:**
+```javascript
+if (!showCustomCastlists) {
+  // Admin configured: show only default
+  const defaultOnly = allCastlists?.get('default');
+  filteredCastlists = defaultOnly
+    ? new Map([['default', defaultOnly]])
+    : new Map();
+} else {
+  // Limit to 4 custom castlists (+ default = max 5 total)
+  const { limitAndSortCastlists } = await import('./castlistV2.js');
+  filteredCastlists = limitAndSortCastlists(allCastlists, 4);
+}
+```
+
+### Sorting Logic Visualization
+
+```
+Input: All Castlists Map
+  ├─ default (if exists)
+  ├─ castlist_new1 (lastModified: 1762579584399)
+  ├─ castlist_new2 (lastModified: 1762579500000)
+  ├─ castlist_legacy1 (no lastModified)
+  ├─ castlist_new3 (lastModified: 1762579600000) ← newest
+  ├─ castlist_legacy2 (no lastModified)
+  └─ castlist_new4 (lastModified: 1762579550000)
+
+Step 1: Separate default from custom
+  default → Set aside
+  custom → [new1, new2, legacy1, new3, legacy2, new4]
+
+Step 2: Sort by lastModified (descending)
+  [new3 (1762579600000), new1 (1762579584399), new4 (1762579550000), new2 (1762579500000), legacy1 (null), legacy2 (null)]
+
+Step 3: Limit to 4
+  [new3, new1, new4, new2]  ← Take first 4
+
+Step 4: Rebuild Map
+  Output Map:
+    ├─ default
+    ├─ new3 (newest)
+    ├─ new1
+    ├─ new4
+    └─ new2
+```
+
+### Key Files Modified
+
+1. **castlistV2.js** - Add `limitAndSortCastlists()` function (~50 lines)
+2. **castlistV2.js** - Add function to exports (1 line)
+3. **app.js:708** - Apply limiting to Production Menu (3 lines)
+4. **playerManagement.js:403** - Apply limiting to Player Menu (5 lines)
+
+**Total Changes**: ~60 lines across 2 files
+
+### Testing Matrix
+
+| Scenario | Expected Behavior | Component Count |
+|----------|-------------------|-----------------|
+| **0-3 custom castlists** | Shows all | < 37 components ✅ |
+| **4 custom castlists** | Shows all 4 | ~37 components ✅ |
+| **5 custom castlists** | Shows 4 most recent | ~37 components ✅ |
+| **8 custom castlists** | Shows 4 most recent | ~37 components ✅ (was 41 = CRASH) |
+| **10 custom castlists** | Shows 4 most recent | ~37 components ✅ |
+| **Mix: 2 new + 3 legacy** | Shows 2 new + 2 legacy (4 total) | New prioritized ✅ |
+| **All legacy (no timestamps)** | Shows first 4 in original order | Stable sort ✅ |
+| **showCustomCastlists = false** | Shows default only (limiting bypassed) | Minimal components ✅ |
+| **Castlist Hub** | Shows ALL castlists (NOT limited) | Hub not affected ✅ |
+
+### Edge Cases Handled
+
+1. **No default castlist exists**: Limit still applies to custom, shows fallback if needed
+2. **All castlists are legacy**: Stable sort preserves original order for first 4
+3. **Exactly 4 custom castlists**: All shown (at limit, no filtering)
+4. **Player Menu with filter OFF**: Limiting still applies (separate concerns)
+5. **Production Menu**: Always limited to 4 (admins use Hub for full list)
+
+### Default Behavior
+
+- **Default castlist**: Always shown (not counted in 4-castlist limit)
+- **Max castlists shown**: 5 total (1 default + 4 custom)
+- **Sorting**: Most recently modified first (encourages good hygiene)
+- **Component count**: ~37 components (safe margin below 40 limit)
+
+### User Experience Impact
+
+**Before:**
+- Admin creates 8th custom castlist → Menu crashes
+- Error message: "❌ Error loading menu"
+- No indication of what went wrong
+- Must manually delete castlists to fix
+
+**After:**
+- Admin creates 8th custom castlist → Only 4 most recent shown
+- Menu works perfectly
+- No error, no crash
+- Full list still accessible via Castlist Hub
+
+**For Admins:**
+- **Just created a castlist?** It appears immediately (most recent)
+- **Old castlists?** Still exist, accessible via Castlist Hub for posting
+- **Want to prioritize a castlist?** Edit it (updates lastModified)
+
+### Implementation Status
+
+**STATUS:** Ready for implementation
+
+**Files to create/modify:**
+- [ ] `castlistV2.js` - Add `limitAndSortCastlists()` function
+- [ ] `castlistV2.js` - Export new function
+- [ ] `app.js:708` - Apply limiting to Production Menu
+- [ ] `playerManagement.js:403` - Apply limiting to Player Menu
+
+**Estimated time:** 45 minutes
+**Risk level:** Low (adds new code, doesn't modify existing logic)
