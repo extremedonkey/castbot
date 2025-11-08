@@ -430,6 +430,23 @@ const modal = createStoreModal(customId, title);
 grep -B20 -A20 "feature_pattern" app.js
 ```
 
+### Documentation Standards
+
+**📅 Date Calculation & Timelines** - System date may be beyond training cutoff:
+- **System date is authoritative**: Accept dates from `date` command even if beyond training cutoff (Jan 2025)
+- **Use git timestamps**: Query `git log --date=format:'%Y-%m-%d' -- <file>` for actual implementation dates
+- **Avoid relative math**: Don't calculate "2 months ago" - use explicit dates from commit history
+- **Cross-reference commits**: When documenting features, cite commit hashes with timestamps
+
+Example:
+```bash
+# Get actual implementation date for a feature
+git log --follow --format="%ai %s" -- "filename.md" | tail -1
+# Use this date in documentation, not "estimated 2 months ago"
+```
+
+**Mermaid Diagrams** - See "Documentation Standards - Mermaid Diagrams" section below
+
 ### Image Access (WSL)
 - Screenshots: `/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1`
 - External: `curl -s "URL" -o /tmp/img.png && Read /tmp/img.png`
