@@ -961,8 +961,16 @@ export async function buildCastlist2ResponseData(guild, tribes, castlistId, navi
 }
 
 /**
- * Limit and sort castlists by most recently modified
+ * Limit and sort castlists using two-tier priority system
  * Prevents Discord 40-component limit crashes by capping custom castlists
+ *
+ * Priority system:
+ * 1. Modern castlists (real entities, isVirtual=false) - sorted by modifiedAt descending
+ * 2. Legacy castlists (virtual entities, isVirtual=true) - unsorted (original order)
+ *
+ * Modern castlists get first access to limited slots, naturally phasing out legacy castlists
+ * as guilds create more modern castlists.
+ *
  * @param {Map} allCastlists - Map of all castlists from Virtual Adapter
  * @param {number} maxCustomCastlists - Maximum number of custom castlists to show (default: 4)
  * @returns {Map} Filtered and sorted Map with default + limited custom castlists
@@ -974,16 +982,24 @@ function limitAndSortCastlists(allCastlists, maxCustomCastlists = 4) {
 
   // Separate default from custom castlists
   const defaultCastlist = allCastlists.get('default');
-  const customCastlists = [];
+
+  // Separate modern (real) vs legacy (virtual) castlists
+  const modernCastlists = [];
+  const legacyCastlists = [];
 
   for (const [id, castlist] of allCastlists.entries()) {
     if (id !== 'default') {
-      customCastlists.push({ id, ...castlist });
+      if (castlist.isVirtual) {
+        legacyCastlists.push(castlist);
+      } else {
+        modernCastlists.push(castlist);
+      }
     }
   }
 
-  // Sort custom castlists by modification timestamp (most recent first)
-  customCastlists.sort((a, b) => {
+  // Sort ONLY modern castlists by modification timestamp (most recent first)
+  // Legacy castlists remain in original order (playerData.json iteration order ≈ creation order)
+  modernCastlists.sort((a, b) => {
     // Check multiple timestamp properties for robustness:
     // 1. modifiedAt (root level - primary property)
     // 2. metadata.lastModified (backup for older format)
@@ -992,30 +1008,23 @@ function limitAndSortCastlists(allCastlists, maxCustomCastlists = 4) {
     const bModified = b.modifiedAt || b.metadata?.lastModified || b.createdAt || 0;
 
     // Debug logging to trace sorting
-    if (customCastlists.length <= 10) {  // Only log for reasonable list sizes
-      console.log(`[CASTLIST SORT] Comparing: "${a.name}" (${aModified}) vs "${b.name}" (${bModified}) → ${bModified - aModified}`);
+    if (modernCastlists.length <= 10) {  // Only log for reasonable list sizes
+      console.log(`[CASTLIST SORT MODERN] "${a.name}" (${aModified}) vs "${b.name}" (${bModified}) → ${bModified - aModified}`);
     }
 
-    // Both have timestamps - sort descending (newest first)
-    if (aModified && bModified) {
-      return bModified - aModified;
-    }
-
-    // Only a has timestamp - a comes first
-    if (aModified && !bModified) return -1;
-
-    // Only b has timestamp - b comes first
-    if (!aModified && bModified) return 1;
-
-    // Neither has timestamp - maintain original order (stable sort)
-    return 0;
+    return bModified - aModified;  // Newest first
   });
 
-  // Limit to maxCustomCastlists
-  const limitedCustom = customCastlists.slice(0, maxCustomCastlists);
+  // Combine: modern first (sorted), then legacy (unsorted)
+  // Modern castlists get priority access to limited slots
+  const combined = [...modernCastlists, ...legacyCastlists];
 
-  console.log(`[CASTLIST] Limited ${customCastlists.length} custom castlists to ${limitedCustom.length} (max: ${maxCustomCastlists})`);
-  console.log(`[CASTLIST] Final order (limited): ${limitedCustom.map(c => `${c.name} (${c.modifiedAt || c.createdAt})`).join(', ')}`);
+  // Limit to maxCustomCastlists (modern castlists naturally fill slots first)
+  const limitedCustom = combined.slice(0, maxCustomCastlists);
+
+  console.log(`[CASTLIST] Separated: ${modernCastlists.length} modern (real), ${legacyCastlists.length} legacy (virtual)`);
+  console.log(`[CASTLIST] Limited ${combined.length} total castlists to ${limitedCustom.length} (max: ${maxCustomCastlists})`);
+  console.log(`[CASTLIST] Final order (limited): ${limitedCustom.map(c => `${c.name} [${c.isVirtual ? 'LEGACY' : 'MODERN'}] (${c.modifiedAt || c.createdAt || 'no-timestamp'})`).join(', ')}`);
 
   // Rebuild Map: default first (if exists), then limited custom
   const result = new Map();
