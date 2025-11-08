@@ -754,6 +754,11 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🧑‍🤝‍🧑'),
     new ButtonBuilder()
+      .setCustomId('prod_donate')
+      .setLabel('Donate')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('☕'),
+    new ButtonBuilder()
       .setCustomId('prod_manage_tribes')
       .setLabel('Tribes')
       .setStyle(ButtonStyle.Secondary)
@@ -6279,6 +6284,59 @@ To fix this:
           // ALWAYS create new ephemeral message for admin interface (never update production menu)
           managementUI.flags = (1 << 15) | InteractionResponseFlags.EPHEMERAL;
           return managementUI;
+        }
+      })(req, res, client);
+    } else if (custom_id === 'prod_donate') {
+      return ButtonHandlerFactory.create({
+        id: 'prod_donate',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`☕ Showing donation information`);
+
+          // Create donation UI following LEAN standards
+          const donateContainer = {
+            type: 17, // Container
+            accent_color: 0xf39c12, // Orange for appreciation/warmth
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## ☕ Support CastBot Development`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 10, // Text Display
+                content: `Running CastBot isn't free, and I'd appreciate any support you can offer:\n\n**Monthly Costs:**\n• **US$100** - ClaudeMax 5x Plan (AI-assisted development)\n• **US$10** - AWS Lightsail (server hosting & performance)\n• **$20** - My time and passion for building this tool\n\n**Total: ~US$130/month**\n\nEvery donation helps keep CastBot running and improving. Thank you for considering! 🙏`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 10, // Text Display
+                content: `🪙 **Donate via Ko-fi** → https://ko-fi.com/castbot`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 1, // Action Row
+                components: [
+                  {
+                    type: 2, // Button
+                    style: 5, // Link style
+                    label: '🪙 Donate (Ko‑fi)',
+                    url: 'https://ko-fi.com/castbot'
+                  },
+                  {
+                    type: 2, // Button
+                    style: 2, // Secondary
+                    custom_id: 'prod_menu_back',
+                    label: '← Menu',
+                    emoji: { name: '⬅️' }
+                  }
+                ]
+              }
+            ]
+          };
+
+          return {
+            components: [donateContainer]
+          };
         }
       })(req, res, client);
     } else if (custom_id === 'setup_castbot') {

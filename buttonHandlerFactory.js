@@ -2309,6 +2309,13 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'player_management'
   },
+  'prod_donate': {
+    label: 'Donate',
+    description: 'Support CastBot development with a donation',
+    emoji: '☕',
+    style: 'Secondary',
+    category: 'production_admin'
+  },
   'admin_player_select_update': {
     label: 'Player Select (Admin)',
     description: 'User select dropdown for admin player management',
