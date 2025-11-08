@@ -7916,7 +7916,7 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'castlist_hub_main') {
-      // Handle Castlist Hub main menu - RESTRICTED TO REECE ONLY
+      // Handle Castlist Hub main menu - Available to all production team members
       return ButtonHandlerFactory.create({
         id: 'castlist_hub_main',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -7925,19 +7925,10 @@ To fix this:
         handler: async (context) => {
           console.log(`📋 START: castlist_hub_main - user ${context.userId}`);
 
-          // Security check - only allow Reece (same as reece_stuff_menu)
-          if (context.userId !== '391415444084490240') {
-            console.log(`❌ ACCESS DENIED: castlist_hub_main - user ${context.userId} not authorized`);
-            return {
-              content: 'Access denied. CastlistV3 Hub is currently in development.',
-              ephemeral: true
-            };
-          }
-
           const { createCastlistHub } = await import('./castlistHub.js');
           const hubData = await createCastlistHub(context.guildId, { mode: 'list' });
 
-          console.log(`✅ SUCCESS: castlist_hub_main - showing hub for authorized user`);
+          console.log(`✅ SUCCESS: castlist_hub_main - showing hub`);
           return hubData;
         }
       })(req, res, client);
