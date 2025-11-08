@@ -60,12 +60,31 @@ export async function getTribesForCastlist(guildId, castlistIdentifier, client) 
   const playerData = await loadPlayerData();
   const guildTribes = playerData[guildId]?.tribes || {};
 
-  // Fetch guild (don't bulk fetch members - too slow for large guilds)
+  // Fetch guild
   console.log(`[TRIBES] Fetching guild ${guildId}...`);
   const guild = await client.guilds.fetch(guildId);
   console.log(`[TRIBES] Guild fetched: ${guild.name} (${guild.memberCount} total members)`);
 
-  // Strategy: Fetch members PER ROLE instead of bulk (much faster for castlists)
+  // CRITICAL: We MUST fetch all members first to ensure role.members collections are complete
+  // Discord.js role.members is a FILTERED VIEW of the member cache - it only shows cached members!
+  console.log(`[TRIBES] Member cache size: ${guild.members.cache.size}/${guild.memberCount}`);
+
+  // If cache is significantly incomplete (less than 80% populated), fetch all members
+  if (guild.members.cache.size < guild.memberCount * 0.8) {
+    console.log(`[TRIBES] Cache incomplete, fetching all ${guild.memberCount} members...`);
+    try {
+      const fetchStart = Date.now();
+      await guild.members.fetch({ timeout: 10000 }); // 10 second timeout
+      const fetchTime = Date.now() - fetchStart;
+      console.log(`[TRIBES] ✅ Fetched ${guild.members.cache.size} members in ${fetchTime}ms`);
+    } catch (fetchError) {
+      console.warn(`[TRIBES] ⚠️ Member fetch failed after 10s: ${fetchError.message}`);
+      console.warn(`[TRIBES] Continuing with partial cache (${guild.members.cache.size} members)`);
+    }
+  } else {
+    console.log(`[TRIBES] Cache sufficiently populated, using existing cache`);
+  }
+
   const enrichedTribes = [];
 
   for (const roleId of roleIds) {
@@ -94,22 +113,13 @@ export async function getTribesForCastlist(guildId, castlistIdentifier, client) 
       }
       console.log(`[TRIBES] Role fetched: ${role.name}`);
 
-      // Get members from role's cache FIRST (fast)
-      let members = Array.from(role.members.values());
-      console.log(`[TRIBES] Role cache has ${members.length} members`);
+      // Get members from role's cache (should be complete after bulk fetch)
+      const members = Array.from(role.members.values());
+      console.log(`[TRIBES] Role ${role.name} has ${members.length} members`);
 
-      // If cache is empty but role should have members, try fetching
-      if (members.length === 0 && role.members.size === 0) {
-        console.log(`[TRIBES] Role cache empty, attempting member fetch for role...`);
-        try {
-          // Fetch ALL guild members (this populates role.members)
-          await guild.members.fetch({ timeout: 10000 }); // 10 second timeout
-          members = Array.from(role.members.values());
-          console.log(`[TRIBES] After member fetch: ${members.length} members in role`);
-        } catch (fetchError) {
-          console.warn(`[TRIBES] Member fetch failed (${fetchError.code}), using empty member list`);
-          // Continue with empty members - better than crashing
-        }
+      // Note: If a role truly has 0 members, that's legitimate (empty role)
+      if (members.length === 0) {
+        console.log(`[TRIBES] Note: Role ${role.name} appears empty (could be legitimate)`);
       }
 
       // Build enriched tribe object (compatible with existing display engine)
