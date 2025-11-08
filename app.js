@@ -728,16 +728,14 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Create admin control buttons (reorganized for Castlists, Applications and Season Management section)
   const adminButtons = [];
 
-  // Only show CastlistV3 hub to Reece during development
-  if (userId === '391415444084490240') {
-    adminButtons.push(
-      new ButtonBuilder()
-        .setCustomId('castlist_hub_main')
-        .setLabel('Castlists')
-        .setStyle(ButtonStyle.Primary)
-        .setEmoji('📋')
-    );
-  }
+  // Castlist Hub - now available to all production team members
+  adminButtons.push(
+    new ButtonBuilder()
+      .setCustomId('castlist_hub_main')
+      .setLabel('Castlists')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('📋')
+  );
 
   // Add Season Applications (moved from Advanced Features, changed to Secondary)
   adminButtons.push(
