@@ -4875,6 +4875,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
         console.log('Processing show_castlist2 for:', requestedCastlist, 'in mode:', displayMode);
 
+        // ✅ CRITICAL: Send deferred response IMMEDIATELY for large guilds (prevents 3-second timeout)
+        res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
+        console.log('[CASTLIST] Sent deferred response');
+
         const guildId = req.body.guild_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
         const channelId = req.body.channel_id || null;
@@ -4944,20 +4948,24 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         // Pass ID for lookups, name for display
         const responseData = await buildCastlist2ResponseData(guild, tribes, requestedCastlist, navigationState, memberObj, channelId, permissionChecker, displayMode, castlistName, { playerData, guildId });
 
-        // Post castlist as NEW public message (button posts to channel)
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: responseData
+        // Post castlist via webhook follow-up (deferred response already sent)
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: responseData
         });
+        console.log('[CASTLIST] Sent castlist via webhook follow-up');
+        return; // Already sent via webhook
       } catch (error) {
         console.error('❌ [CASTLIST] Error in show_castlist2 handler:', error);
         console.error('  Castlist:', requestedCastlist);
         console.error('  Stack:', error.stack);
 
-        // Graceful error response - don't crash the bot!
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
+        // Send error via webhook follow-up
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
             flags: (1 << 6), // EPHEMERAL - error only visible to clicker
             components: [{
               type: 17, // Container
@@ -4968,6 +4976,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             }]
           }
         });
+        return; // Already sent via webhook
       }
     } else if (custom_id.startsWith('rank_')) {
       // Handle ranking button clicks - USING CAST RANKING MANAGER

@@ -6019,7 +6019,7 @@
         "castlist": "Active Castlist"
       },
       "1385242599203410032": {
-        "emoji": "💥",
+        "emoji": "🔫",
         "castlist": "S2 - Big Bang",
         "showPlayerEmojis": false,
         "color": "#206694",
@@ -6895,13 +6895,13 @@
           "visibility": "public"
         },
         "metadata": {
-          "description": "Upgraded from legacy castlist 'S2 - Big Bang'",
-          "emoji": "📋",
+          "description": "Second season under 'Couchcast' branding",
+          "emoji": "💥",
           "migratedFrom": "virtual_UzIgLSBCaWcgQmFuZw",
           "migrationDate": 1762612908863
         },
-        "modifiedAt": 1762615236934,
-        "modifiedBy": "system"
+        "modifiedAt": 1762617173084,
+        "modifiedBy": "391415444084490240"
       },
       "castlist_1762613355166_system": {
         "id": "castlist_1762613355166_system",

@@ -60,24 +60,17 @@ export async function getTribesForCastlist(guildId, castlistIdentifier, client) 
   const playerData = await loadPlayerData();
   const guildTribes = playerData[guildId]?.tribes || {};
 
-  // Fetch guild and members in bulk (performance optimization)
+  // Fetch guild (don't bulk fetch members - too slow for large guilds)
+  console.log(`[TRIBES] Fetching guild ${guildId}...`);
   const guild = await client.guilds.fetch(guildId);
+  console.log(`[TRIBES] Guild fetched: ${guild.name} (${guild.memberCount} total members)`);
 
-  // Bulk fetch with timeout handling (large guilds may timeout)
-  try {
-    await guild.members.fetch({ timeout: 30000 }); // 30 second timeout
-  } catch (error) {
-    if (error.code === 'GuildMembersTimeout') {
-      console.warn(`[TRIBES] Member fetch timeout for guild ${guildId} (large guild) - continuing with cached members`);
-      // Continue anyway - members.cache may have partial data from role fetches
-    } else {
-      throw error; // Re-throw non-timeout errors
-    }
-  }
-
+  // Strategy: Fetch members PER ROLE instead of bulk (much faster for castlists)
   const enrichedTribes = [];
 
   for (const roleId of roleIds) {
+    console.log(`[TRIBES] Processing role ${roleId}...`);
+
     // Validate role ID format
     if (!/^\d{17,19}$/.test(roleId)) {
       console.warn(`[TRIBES] Invalid role ID format: ${roleId}`);
@@ -93,31 +86,49 @@ export async function getTribesForCastlist(guildId, castlistIdentifier, client) 
 
     // Fetch Discord role
     try {
+      console.log(`[TRIBES] Fetching Discord role ${roleId}...`);
       const role = await guild.roles.fetch(roleId);
       if (!role) {
         console.warn(`[TRIBES] Role ${roleId} not found in Discord`);
         continue;
       }
+      console.log(`[TRIBES] Role fetched: ${role.name}`);
 
-      // Get members from role
-      const members = Array.from(role.members.values());
+      // Get members from role's cache FIRST (fast)
+      let members = Array.from(role.members.values());
+      console.log(`[TRIBES] Role cache has ${members.length} members`);
+
+      // If cache is empty but role should have members, try fetching
+      if (members.length === 0 && role.members.size === 0) {
+        console.log(`[TRIBES] Role cache empty, attempting member fetch for role...`);
+        try {
+          // Fetch ALL guild members (this populates role.members)
+          await guild.members.fetch({ timeout: 10000 }); // 10 second timeout
+          members = Array.from(role.members.values());
+          console.log(`[TRIBES] After member fetch: ${members.length} members in role`);
+        } catch (fetchError) {
+          console.warn(`[TRIBES] Member fetch failed (${fetchError.code}), using empty member list`);
+          // Continue with empty members - better than crashing
+        }
+      }
 
       // Build enriched tribe object (compatible with existing display engine)
       enrichedTribes.push({
         ...tribeData,           // All playerData tribe fields (emoji, color, etc.)
         roleId,                 // Discord role ID
         name: role.name,        // Discord role name (NOT displayName override)
-        members,                // Discord.js Member objects
+        members,                // Discord.js Member objects (may be empty)
         memberCount: members.length,
         castlistSettings: castlist.settings, // Link to parent castlist
         castlistId: castlist.id,             // Resolved castlist ID
         guildId                              // Guild context
       });
 
-      console.log(`[TRIBES] Enriched tribe: ${role.name} (${members.length} members)`);
+      console.log(`[TRIBES] ✅ Enriched tribe: ${role.name} (${members.length} members)`);
 
     } catch (error) {
-      console.error(`[TRIBES] Error fetching role ${roleId}:`, error.message);
+      console.error(`[TRIBES] ❌ Error fetching role ${roleId}:`, error.message);
+      console.error(`[TRIBES] Stack:`, error.stack);
       // Continue processing other tribes even if one fails
     }
   }
