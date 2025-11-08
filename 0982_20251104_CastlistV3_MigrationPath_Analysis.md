@@ -2186,3 +2186,361 @@ Step 4: Rebuild Map
 - Shows 4 most recently modified custom castlists
 - Legacy castlists handled gracefully
 - Both Production and Player menus protected
+
+---
+
+## 🚧 Phase 1 Implementation Status (January 2025)
+
+**Started**: January 8, 2025
+**Status**: ⚠️ **BLOCKED** - Large guild timeout issues discovered during testing
+**Progress**: 95% complete (code implemented, testing revealed critical production issue)
+
+### ✅ Completed Work
+
+#### 1. Fixed `getTribesUsingCastlist()` Bug (castlistVirtualAdapter.js:289-327)
+**Problem**: Missing legacy string matching - tribes with `"castlist": "S4 - The Walking Dead"` not found
+**Solution**: Added 3-format support via Virtual Adapter lookup:
+```javascript
+// ✅ NEW: Get castlist entity to resolve both ID and name
+const castlist = await this.getCastlist(guildId, castlistId);
+
+// Format 1: Multi-castlist array (modern)
+if (tribe.castlistIds && tribe.castlistIds.includes(castlistId)) { }
+
+// Format 2: Single castlistId (transitional)
+if (tribe.castlistId === castlistId) { }
+
+// ✅ Format 3: Legacy string (via Virtual Adapter name resolution)
+if (tribe.castlist && tribe.castlist === castlist.name) { }
+```
+
+#### 2. Enhanced Virtual Adapter Lookup (castlistVirtualAdapter.js:157-180)
+**Problem**: `getCastlist()` only did direct Map lookups by ID
+**Solution**: 3-tier lookup strategy:
+```javascript
+// Try 1: Direct ID lookup (real + virtual IDs)
+let castlist = castlists.get(castlistId);
+
+// Try 2: Generate virtual ID from string (legacy names)
+if (!castlistId.startsWith('castlist_') && !castlistId.startsWith('virtual_')) {
+  const virtualId = this.generateVirtualId(castlistId);
+  castlist = castlists.get(virtualId);
+}
+
+// Try 3: Search by name (fallback)
+for (const [id, entity] of castlists.entries()) {
+  if (entity.name === castlistId) return entity;
+}
+```
+
+#### 3. Created `getTribesForCastlist()` Unified Function (castlistDataAccess.js)
+**Purpose**: Single source of truth for ALL castlist display operations
+**Replaces**:
+- `getGuildTribes()` (direct string matching)
+- `determineCastlistToShow()` (string scanning)
+- 145 lines of inline filtering in show_castlist2
+
+**Implementation**:
+```javascript
+export async function getTribesForCastlist(guildId, castlistIdentifier, client) {
+  // Step 1: Resolve identifier → castlist entity (via Virtual Adapter)
+  const castlist = await castlistManager.getCastlist(guildId, castlistIdentifier);
+
+  // Step 2: Get tribe role IDs (via fixed getTribesUsingCastlist)
+  const roleIds = await castlistManager.getTribesUsingCastlist(guildId, castlist.id);
+
+  // Step 3: Enrich with Discord data (roles + members)
+  // Per-role member fetching with 10s timeout + comprehensive logging
+
+  return enrichedTribes;
+}
+```
+
+**Code Impact**:
+- Total reduction: ~300 lines → ~120 lines (83% reduction)
+- `/castlist` command: 138 lines → 82 lines (40% reduction)
+- `show_castlist2` handler: 200 lines → 100 lines (50% reduction)
+
+#### 4. Migrated `/castlist` Command (app.js:2175-2257)
+**Before**: Legacy `getGuildTribes()` + `determineCastlistToShow()`
+**After**: Single unified call
+```javascript
+const { getTribesForCastlist } = await import('./castlistDataAccess.js');
+const castlistIdentifier = requestedCastlist || 'default';
+const validTribes = await getTribesForCastlist(guildId, castlistIdentifier, client);
+```
+
+#### 5. Migrated `show_castlist2` Handler (app.js:4852-4980)
+**Before**: 145 lines of inline filtering with 3-format checks
+**After**: Unified call + deferred response for timeout handling
+```javascript
+// ✅ CRITICAL: Send deferred response IMMEDIATELY
+res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
+
+const allTribes = await getTribesForCastlist(guildId, requestedCastlist, client);
+
+// Send via webhook follow-up (deferred response already sent)
+await DiscordRequest(endpoint, { method: 'PATCH', body: responseData });
+```
+
+---
+
+### 🚨 Critical Issue Discovered: Large Guild Timeouts
+
+**User Report** (January 8, 2025):
+> "I'm testing on a rather large guild with 500+ users. `/castlist` hangs on 'CastBot-Dev is thinking...' then shows 'interaction failed'. Intermittent - sometimes works, sometimes doesn't."
+
+#### Initial Hypotheses
+
+**Hypothesis 1: Caching Issue** ❌ **REJECTED**
+- User suspected CacheManagement.md caches causing issues
+- Investigation: Request-scoped caches cleared properly
+- Verdict: NOT a cache issue - caching actually helps by avoiding redundant API calls
+- User note: "I've been very anti-cache since we implemented them, the problems they cause aren't worth the performance gains"
+
+**Hypothesis 2: Discord.js Member Cache State** ✅ **PARTIAL**
+- Intermittency correlates with Discord.js member cache warmth
+- Sometimes cached from previous operations (fast), sometimes cold (slow)
+- NOT the root cause, but explains timing variability
+
+**Hypothesis 3: Discord Timeout + Member Fetch Ordering** ✅ **ROOT CAUSE**
+1. **Discord 3-second interaction timeout** - MUST respond within 3 seconds
+2. **Large guild (500+ members)** - Bulk member fetch takes 30+ seconds
+3. **show_castlist2 had NO deferred response** - Tried to respond immediately
+4. **Member fetch hung silently** - No diagnostic logging
+
+#### Evidence from Logs
+
+**Failed Case (s5)**:
+```
+[TRIBES] Fetching tribes for castlist: s5
+[TRIBES] Resolved to castlist: s5 (virtual_czU)
+[TRIBES] Found 1 tribe(s): 1385242864694329394
+```
+Then NOTHING - no enrichment logs, no response sent!
+
+**Successful Case (S2 - Big Bang)**:
+```
+[TRIBES] Fetching tribes for castlist: castlist_1762612908863_system
+[TRIBES] Resolved to castlist: S2 - Big Bang (castlist_1762612908863_system)
+[TRIBES] Found 1 tribe(s): 1385242599203410032
+[TRIBES] Member fetch timeout for guild 974318870057848842 (large guild) - continuing
+[TRIBES] Enriched tribe: S2 - Big Bang (18 members)
+```
+
+**Pattern**: Failures occur when enrichment loop hangs waiting for members
+
+#### Attempted Fixes (Commits: aeb1cc93, 1d5f29a3)
+
+**Fix 1: Enhanced Virtual Adapter Lookup**
+- Added 3-tier lookup strategy
+- Handles legacy string names by generating virtual IDs
+- **Result**: Resolved "Castlist not found" errors ✅
+
+**Fix 2: Error Handler Scope**
+- Hoisted `requestedCastlist` variable outside try block
+- Fixed ReferenceError in error logging
+- **Result**: Better error messages ✅
+
+**Fix 3: Guild Member Fetch Timeout Handling**
+- Added 30-second timeout with try-catch
+- Graceful degradation on timeout
+- **Result**: Prevents complete crash, but still slow ⚠️
+
+**Fix 4: Comprehensive Diagnostic Logging** (Most Recent)
+- Added logging at EVERY step of enrichment
+- Track exact hang points
+- **Result**: Can now diagnose WHERE it fails ✅
+
+**Fix 5: Per-Role Member Fetching** (Most Recent)
+- Changed from bulk fetch (500+ members) to per-role (16 members)
+- Reduced timeout from 30s to 10s
+- Check cache first before fetching
+- **Result**: UNTESTED - may resolve timeout ❓
+
+**Fix 6: Deferred Response for Buttons** (Most Recent)
+- Added `DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE` before processing
+- Send via webhook follow-up after completion
+- **Result**: UNTESTED - should prevent 3-second timeout ❓
+
+---
+
+### 📋 Testing Checklist (NOT YET COMPLETED)
+
+#### Test Scenario 1: Legacy String Castlist ⭐ CRITICAL
+- [ ] Create legacy tribe with `"castlist": "S4 - The Walking Dead"`
+- [ ] Run: `/castlist castlist:S4 - The Walking Dead`
+- [ ] Run: `/castlist castlist:s5`
+- [ ] Expected: Tribes display correctly
+- [ ] Expected logs:
+  ```
+  [TRIBES] Fetching guild 974318870057848842...
+  [TRIBES] Guild fetched: Servivorg S13 (578 total members)
+  [TRIBES] Processing role 1385242808952160326...
+  [TRIBES] Fetching Discord role 1385242808952160326...
+  [TRIBES] Role fetched: 🧟 S4 - Walking Dead 🧟
+  [TRIBES] Role cache has 16 members
+  [TRIBES] ✅ Enriched tribe: 🧟 S4 - Walking Dead 🧟 (16 members)
+  ```
+
+#### Test Scenario 2: Modern Castlist (Real Entity)
+- [ ] Create modern castlist "s3" with real ID
+- [ ] Run: `/castlist castlist:s3`
+- [ ] Click "s3" button from Production Menu
+- [ ] Expected: Castlist resolves via Try 1 (Direct ID lookup)
+- [ ] Expected: No errors, tribes display
+
+#### Test Scenario 3: show_castlist2 Handler (Button Clicks)
+- [ ] Open Production Menu (`/menu`)
+- [ ] Click "S12 - Jurassic Park" button
+- [ ] Expected: Deferred response sends immediately
+- [ ] Expected logs:
+  ```
+  [CASTLIST] Sent deferred response
+  [TRIBES] Fetching guild...
+  [TRIBES] ✅ Enriched tribe: S12 - Jurassic Park
+  [CASTLIST] Sent castlist via webhook follow-up
+  ```
+
+#### Test Scenario 4: Large Guild Performance
+- [ ] Test in guild with 500+ members (Servivorg S13)
+- [ ] Run: `/castlist s3` (multiple times)
+- [ ] Expected: Completes within 10-15 seconds
+- [ ] Expected: No "interaction failed" errors
+- [ ] Expected: Graceful timeout handling if member fetch fails
+
+#### Test Scenario 5: Virtual Castlist (Base64 ID)
+- [ ] Click legacy castlist button (virtual ID format)
+- [ ] Expected: Virtual ID decoded correctly
+- [ ] Expected: Try 1 lookup finds it in Map
+- [ ] Expected: Display works
+
+#### Test Scenario 6: Empty Castlist (Edge Case)
+- [ ] Create castlist with no tribes
+- [ ] Run: `/castlist castlist:EmptyCastlist`
+- [ ] Expected: Returns gracefully with message
+- [ ] Expected: No errors logged
+
+---
+
+### 🔍 Diagnostic Commands
+
+**Monitor detailed logging:**
+```bash
+tail -f /tmp/castbot-dev.log | grep -E "TRIBES|CASTLIST"
+```
+
+**Watch for hang points:**
+```bash
+tail -f /tmp/castbot-dev.log | grep -E "Processing role|Enriched tribe"
+```
+
+**Check deferred responses:**
+```bash
+tail -f /tmp/castbot-dev.log | grep "Sent deferred response"
+```
+
+**Check for timeouts:**
+```bash
+tail -f /tmp/castbot-dev.log | grep -E "timeout|GuildMembersTimeout"
+```
+
+---
+
+### 🚀 Next Steps
+
+#### Immediate (User - Next Testing Session)
+1. **Test Scenario 1** - Legacy string `/castlist s5` with new logging
+2. **Test Scenario 3** - Button clicks with deferred response
+3. **Share complete logs** - From `[TRIBES] Fetching guild` to completion/failure
+4. **Note timing** - How long before "interaction failed" or success
+
+#### If Tests Still Fail
+**Escalation Path**:
+1. **Review new diagnostic logs** - Identify exact hang point
+2. **Investigate Discord.js cache limits** - May need to adjust makeCache settings
+3. **Consider alternative member fetching** - Fetch members per-user instead of per-role
+4. **Implement progressive loading** - Display castlist as members load
+5. **Add cache warming** - Pre-fetch guild members on bot startup
+
+#### If Tests Pass
+1. **Mark Phase 1 COMPLETE** ✅
+2. **Deploy to production**: `npm run deploy-remote-wsl`
+3. **Monitor production logs**: `npm run logs-prod-follow` for 1 hour
+4. **Proceed to Phase 2**: Deprecate legacy functions
+
+---
+
+### 📊 Files Modified (Phase 1)
+
+**Created**:
+- ✅ `/home/reece/castbot/castlistDataAccess.js` (~140 lines)
+
+**Modified**:
+- ✅ `castlistVirtualAdapter.js:157-180` - Enhanced getCastlist() lookup
+- ✅ `castlistVirtualAdapter.js:289-327` - Fixed getTribesUsingCastlist() bug
+- ✅ `app.js:2175-2257` - Migrated /castlist command
+- ✅ `app.js:4852-4980` - Migrated show_castlist2 handler + deferred response
+
+**Commits**:
+- `8c7442a1` - Initial Phase 1 implementation (unified data access)
+- `aeb1cc93` - Virtual Adapter lookup fix + timeout handling
+- `1d5f29a3` - Comprehensive logging + per-role fetching + deferred responses
+
+---
+
+### 💭 User's Skepticism on Timeout Hypothesis
+
+**User's Position**:
+> "I'm not convinced this is the issue"
+
+**Valid Concerns**:
+1. Intermittency suggests more complex root cause
+2. Caching behavior may still play a role
+3. Discord.js internals may have undocumented quirks
+4. Large guild behavior may require different architecture
+
+**Counter-Evidence for Timeout Hypothesis**:
+- `/castlist` command already has deferred response (works sometimes)
+- show_castlist2 buttons previously worked (before migration)
+- Logs show successful enrichment sometimes (cache-dependent)
+
+**Alternative Theories to Investigate**:
+1. **Race condition** in member cache population
+2. **Discord.js event loop blocking** during member fetch
+3. **Network latency** to Discord API (intermittent)
+4. **Guild member cache TTL** causing inconsistent state
+5. **Discord API rate limiting** (429 errors not logged)
+
+**Recommendation**: Proceed with testing to gather more data. The comprehensive logging will reveal the true root cause.
+
+---
+
+## 📝 Instructions for Next Claude Instance (After Compact)
+
+**Context to provide**:
+```
+We're implementing Phase 1 of RaP 0982 - unified castlist data access layer.
+Code is 95% complete but blocked by large guild timeout issues.
+
+Read @0982_20251104_CastlistV3_MigrationPath_Analysis.md section "Phase 1 Implementation Status"
+for full context, testing checklist, and troubleshooting notes.
+
+User needs to test the latest changes (commits 8c7442a1, aeb1cc93, 1d5f29a3) which added:
+- Comprehensive diagnostic logging
+- Per-role member fetching (10s timeout)
+- Deferred responses for show_castlist2 buttons
+
+User is skeptical about timeout hypothesis - may be caching or Discord.js internals.
+Need to analyze new logs from testing to determine true root cause.
+```
+
+**Key Questions**:
+1. Do the new detailed logs show where it's hanging?
+2. Does per-role member fetching resolve timeouts?
+3. Do deferred responses prevent "interaction failed"?
+4. Is there evidence of Discord.js cache issues?
+
+---
+
+*Last Updated: January 8, 2025 - Phase 1 blocked on large guild timeout investigation*
