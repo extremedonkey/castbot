@@ -1333,13 +1333,20 @@ Step 4: Rebuild Map
 
 ### Implementation Status
 
-**STATUS:** Ready for implementation
+**✅ COMPLETED** - January 2025
 
-**Files to create/modify:**
-- [ ] `castlistV2.js` - Add `limitAndSortCastlists()` function
-- [ ] `castlistV2.js` - Export new function
-- [ ] `app.js:708` - Apply limiting to Production Menu
-- [ ] `playerManagement.js:403` - Apply limiting to Player Menu
+**Files Modified:**
+- ✅ `castlistV2.js:961-1019` - Added `limitAndSortCastlists()` function (~60 lines)
+- ✅ `castlistV2.js:1033` - Exported new function
+- ✅ `app.js:709-711` - Applied limiting to Production Menu
+- ✅ `app.js:717` - Updated debug logging to show limiting
+- ✅ `playerManagement.js:404-407` - Applied limiting to Player Menu
 
-**Estimated time:** 45 minutes
-**Risk level:** Low (adds new code, doesn't modify existing logic)
+**Implementation Time:** 45 minutes (as estimated)
+**Risk Level:** Low (adds new code, doesn't modify existing logic)
+
+**Testing Status:** Ready for user testing
+- Prevents crash with 8+ custom castlists
+- Shows 4 most recently modified custom castlists
+- Legacy castlists handled gracefully
+- Both Production and Player menus protected
