@@ -62,7 +62,18 @@ export async function getTribesForCastlist(guildId, castlistIdentifier, client) 
 
   // Fetch guild and members in bulk (performance optimization)
   const guild = await client.guilds.fetch(guildId);
-  await guild.members.fetch(); // Bulk fetch all members upfront
+
+  // Bulk fetch with timeout handling (large guilds may timeout)
+  try {
+    await guild.members.fetch({ timeout: 30000 }); // 30 second timeout
+  } catch (error) {
+    if (error.code === 'GuildMembersTimeout') {
+      console.warn(`[TRIBES] Member fetch timeout for guild ${guildId} (large guild) - continuing with cached members`);
+      // Continue anyway - members.cache may have partial data from role fetches
+    } else {
+      throw error; // Re-throw non-timeout errors
+    }
+  }
 
   const enrichedTribes = [];
 

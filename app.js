@@ -4851,6 +4851,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       })(req, res, client);
     } else if (custom_id.startsWith('show_castlist2') || (req.body.data && req.body.data.custom_id && req.body.data.custom_id.startsWith('show_castlist2'))) {
       // Handle show_castlist2 - reuse existing logic but decode virtual IDs
+      let requestedCastlist = 'unknown'; // Hoist for error handler access
       try {
         const currentCustomId = req.body.data?.custom_id?.startsWith('show_castlist2') ? req.body.data.custom_id : custom_id;
 
@@ -4859,7 +4860,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const displayMode = currentCustomId.endsWith('_edit') ? 'edit' : 'view';
 
         // Extract castlist ID
-        let requestedCastlist;
         if (displayMode === 'edit') {
           // Remove the _edit suffix
           const withoutEdit = currentCustomId.slice(0, -5); // Remove '_edit'
