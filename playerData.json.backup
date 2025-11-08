@@ -3290,7 +3290,7 @@
         "createdAt": 1759638936215,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "reverse_alpha",
+          "sortStrategy": "placements",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -3301,8 +3301,8 @@
           "migratedFrom": "virtual_bGVnYWN5TGlzdA",
           "migrationDate": 1759638936215
         },
-        "modifiedAt": 1762614894979,
-        "modifiedBy": "391415444084490240",
+        "modifiedAt": 1762615435828,
+        "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
       "castlist_1759671885172_system": {
@@ -3410,7 +3410,7 @@
         "createdAt": 1762581921039,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "placements",
+          "sortStrategy": "timezone",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -3421,7 +3421,7 @@
           "migratedFrom": "virtual_R2Vua2FpVGVzdA",
           "migrationDate": 1762581921039
         },
-        "modifiedAt": 1762615288085,
+        "modifiedAt": 1762615309167,
         "modifiedBy": "system"
       },
       "castlist_1762584620535_system": {
