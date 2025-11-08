@@ -3290,7 +3290,7 @@
         "createdAt": 1759638936215,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "placements",
+          "sortStrategy": "alphabetical",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -3301,7 +3301,7 @@
           "migratedFrom": "virtual_bGVnYWN5TGlzdA",
           "migrationDate": 1759638936215
         },
-        "modifiedAt": 1762615435828,
+        "modifiedAt": 1762615449120,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -6051,6 +6051,14 @@
           "castlist_1760892362223_system"
         ],
         "castlist": "Season 1 - Buffy"
+      },
+      "1385242808952160326": {
+        "emoji": "🧟",
+        "castlist": "S4 - The Walking Dead",
+        "showPlayerEmojis": false,
+        "color": "#71368a",
+        "analyticsName": "🧟 S4 - Walking Dead 🧟",
+        "analyticsAdded": 1762615677087
       }
     },
     "timezones": {

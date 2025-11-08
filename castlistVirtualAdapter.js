@@ -145,13 +145,38 @@ export class CastlistVirtualAdapter {
   
   /**
    * Get a single castlist (real or virtual)
+   * Handles all identifier formats:
+   * - Real ID: "castlist_1762187500959_1331657596087566398"
+   * - Virtual ID: "virtual_UzIgLSBCaWcgQmFuZw"
+   * - Legacy string name: "S2 - Big Bang"
+   *
    * @param {string} guildId - The guild ID
-   * @param {string} castlistId - The castlist ID (real or virtual)
+   * @param {string} castlistId - The castlist ID, virtual ID, or legacy name
    * @returns {Object|null} The castlist entity or null
    */
   async getCastlist(guildId, castlistId) {
     const castlists = await this.getAllCastlists(guildId);
-    return castlists.get(castlistId) || null;
+
+    // Try 1: Direct ID lookup (handles real IDs and virtual IDs)
+    let castlist = castlists.get(castlistId);
+    if (castlist) return castlist;
+
+    // Try 2: Generate virtual ID from string (for legacy names)
+    // If user passes "S4 - The Walking Dead", convert to virtual ID
+    if (!castlistId.startsWith('castlist_') && !castlistId.startsWith('virtual_')) {
+      const virtualId = this.generateVirtualId(castlistId);
+      castlist = castlists.get(virtualId);
+      if (castlist) return castlist;
+    }
+
+    // Try 3: Search by name (fallback for edge cases)
+    for (const [id, entity] of castlists.entries()) {
+      if (entity.name === castlistId) {
+        return entity;
+      }
+    }
+
+    return null;
   }
   
   /**
