@@ -7055,19 +7055,10 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
                 }
             ]
         };
-        
-        // Helper function to count components recursively
-        function countComponentsRecursively(components) {
-            let count = 0;
-            for (const component of components) {
-                count++; // Count this component
-                if (component.components) {
-                    count += countComponentsRecursively(component.components);
-                }
-            }
-            return count;
-        }
-        
+
+        // Use shared countComponents from utils.js for accurate component counting
+        const { countComponents: countComponentsRecursively } = await import('./utils.js');
+
         // Helper function to check character limit
         function checkCharacterLimit(components) {
             let totalChars = 0;
@@ -7175,7 +7166,7 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
             }
             
             // Validate component count and character limit
-            const firstComponentCount = countComponentsRecursively(firstMessageComponents);
+            const firstComponentCount = countComponentsRecursively(firstMessageComponents, { enableLogging: false });
             const firstCharCount = checkCharacterLimit(firstMessageComponents);
             console.log(`📊 DEBUG: First message - ${firstComponentCount} components, ${firstCharCount} characters`);
             
@@ -7257,7 +7248,7 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
                 const isLastChunk = i === playerChunks.length - 1;
                 
                 // Validate component count and character limit
-                const chunkComponentCount = countComponentsRecursively(chunk);
+                const chunkComponentCount = countComponentsRecursively(chunk, { enableLogging: false });
                 const chunkCharCount = checkCharacterLimit(chunk);
                 console.log(`📊 DEBUG: Message ${i + 1} - ${chunkComponentCount} components, ${chunkCharCount} characters`);
                 
@@ -7291,7 +7282,7 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
                     };
                     
                     // Check if adding button would exceed limits
-                    const withButtonCount = countComponentsRecursively([...messageComponents, buttonContainer]);
+                    const withButtonCount = countComponentsRecursively([...messageComponents, buttonContainer], { enableLogging: false });
                     if (withButtonCount <= 40) {
                         messageComponents.push(buttonContainer);
                         console.log(`✅ DEBUG: Added inventory button to last message`);

@@ -835,53 +835,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
 
   const advancedFeaturesRow = new ActionRowBuilder().addComponents(advancedFeaturesButtons);
   
-  /**
-   * Validate container component limits to prevent Discord API errors
-   * @param {Array} components - Array of components to validate
-   * @returns {boolean} True if within limits, false otherwise
-   */
-  function validateContainerLimits(components) {
-    const maxComponents = 40; // Discord's Components V2 limit (was incorrectly set to 25)
-
-    // Detailed component breakdown
-    console.log(`📊 COMPONENT BREAKDOWN:`);
-    console.log(`📊 Total top-level components: ${components.length}`);
-
-    const breakdown = {};
-    components.forEach((comp, index) => {
-      const typeName = {
-        1: 'ActionRow',
-        2: 'Button',
-        9: 'Section',
-        10: 'TextDisplay',
-        14: 'Separator',
-        17: 'Container'
-      }[comp.type] || `Unknown(${comp.type})`;
-
-      breakdown[typeName] = (breakdown[typeName] || 0) + 1;
-
-      // Log details for complex components
-      if (comp.type === 1) { // ActionRow
-        const buttonCount = comp.components?.length || 0;
-        console.log(`📊   [${index}] ActionRow with ${buttonCount} buttons`);
-      } else if (comp.type === 9) { // Section
-        console.log(`📊   [${index}] Section with ${comp.components?.length || 0} children + ${comp.accessory ? '1 accessory' : 'no accessory'}`);
-      } else {
-        console.log(`📊   [${index}] ${typeName}`);
-      }
-    });
-
-    console.log(`📊 Component type summary:`, breakdown);
-
-    if (components.length > maxComponents) {
-      console.error(`❌ Container exceeds component limit: ${components.length}/${maxComponents}`);
-      console.error(`❌ Need to remove ${components.length - maxComponents} components`);
-      return false;
-    }
-
-    console.log(`✅ Component count OK: ${components.length}/${maxComponents}`);
-    return true;
-  }
+  // Component validation moved to utils.js - use countComponents() or validateComponentLimit()
   
   // Check for active season to display in header
   const activeSeason = playerData[guildId]?.activeSeason;
@@ -948,19 +902,26 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       content: `-# Made by Reece (@extremedonkey)`
     }
   ];
-  
-  // Validate component limits before creating container
-  if (!validateContainerLimits(containerComponents)) {
-    throw new Error('Container component limit exceeded - too many castlists or buttons');
-  }
-  
+
   // Create Components V2 Container for entire production menu
   const prodMenuContainer = {
     type: 17, // Container component
     accent_color: 0x3498DB, // Blue accent color
     components: containerComponents
   };
-  
+
+  // Count and validate components (must wrap container in array!)
+  const { countComponents } = await import('./utils.js');
+  const count = countComponents([prodMenuContainer], {
+    enableLogging: true,
+    verbosity: "full",
+    label: "Production Menu (viral_menu)"
+  });
+
+  if (count > 40) {
+    throw new Error(`Production Menu exceeds component limit: ${count}/40 components`);
+  }
+
   return {
     flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 flag + EPHEMERAL flag
     components: [prodMenuContainer]

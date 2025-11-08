@@ -69,42 +69,21 @@ type: 13  // WRONG - Invalid separator (use type 14)
 - Always return the full Container structure
 - ButtonHandlerFactory automatically strips flags for UPDATE_MESSAGE
 
-**🚨 COMPONENT LIMIT (40 Components Maximum):**
-
-Discord enforces a **40-component limit** per message. EVERY component counts, including:
-- ✅ Container itself (type 17)
-- ✅ Buttons inside ActionRows
-- ✅ Section accessories (Thumbnails, Buttons)
-- ✅ Label child components (modals)
-- ✅ ALL nested components recursively
-
-**ALWAYS validate component count before returning UI:**
+**🚨 COMPONENT LIMIT (40 Maximum):**
+Discord counts ALL components recursively: Container, nested buttons, Section accessories, Label children. **ALWAYS validate:**
 ```javascript
-// Option 1: Throw error if exceeds limit (recommended for error handling)
+// Validation (recommended) - throws error if >40
 const { validateComponentLimit } = await import('./utils.js');
-validateComponentLimit([containerObject], "My Menu Name");
-return { components: [containerObject] };
+validateComponentLimit([container], "Menu Name");
 
-// Option 2: Log detailed breakdown (debugging)
+// Logging (debugging) - verbosity: "full" or "summary"
 const { countComponents } = await import('./utils.js');
-countComponents([containerObject], {
-  enableLogging: true,
-  verbosity: "full",  // or "summary" for compact logs
-  label: "My Menu"
-});
+countComponents([container], { verbosity: "summary", label: "Menu" });
 
-// Option 3: Silent check (validation only)
-const count = countComponents([containerObject], { enableLogging: false });
-if (count > 40) {
-  // Remove optional components or paginate
-}
+// Silent check - returns count
+const count = countComponents([container], { enableLogging: false });
 ```
-
-**Common Mistakes:**
-- ❌ Counting only top-level components (Container contents)
-- ✅ Must wrap in array: `countComponents([container])` NOT `countComponents(container.components)`
-- ❌ Forgetting Section accessories count separately
-- ❌ Not counting Container itself
+**Common mistakes:** Counting `container.components` instead of `[container]`, forgetting accessories count separately
 
 ## 🔴 CRITICAL: Button Handler Factory - MANDATORY FOR ALL NEW BUTTONS
 

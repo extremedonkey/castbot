@@ -115,7 +115,15 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
       selectRow.toJSON() // Convert to JSON
     ]
   };
-  
+
+  // Count components for validation
+  const { countComponents } = await import('./utils.js');
+  countComponents([container], {
+    enableLogging: true,
+    verbosity: "summary",
+    label: "Custom Action Selection UI"
+  });
+
   // Return exactly like stores handler
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2
