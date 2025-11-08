@@ -1011,8 +1011,8 @@ function limitAndSortCastlists(allCastlists, maxCustomCastlists = 4) {
     result.set('default', defaultCastlist);
   }
   for (const castlist of limitedCustom) {
-    const { id, ...data } = castlist;
-    result.set(id, data);
+    // Keep the entire castlist object (including id property)
+    result.set(castlist.id, castlist);
   }
 
   return result;
