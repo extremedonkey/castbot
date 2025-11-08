@@ -10920,7 +10920,7 @@ Your server is now ready for Tycoons gameplay!`;
                     {
                       label: 'Show All Castlists',
                       value: 'true',
-                      description: 'Display default + all custom castlists',
+                      description: 'Display default + custom castlists',
                       default: currentShowCustomCastlists === true
                     },
                     {

@@ -242,24 +242,24 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
   const navButtons = new ActionRowBuilder()
     .addComponents(createBackButton('prod_menu_back'));
 
-  // Always add Delete and Swap/Merge buttons (disabled when no selection)
+  // Always add Swap/Merge and Delete buttons (disabled when no selection)
   const suffix = selectedCastlist?.id ? `_${selectedCastlist.id}` : '';
   const isDefaultCastlist = selectedCastlist?.id === 'default';
   const noSelection = !selectedCastlist;
 
   navButtons.addComponents(
     new ButtonBuilder()
-      .setCustomId(`castlist_delete${suffix}`)
-      .setLabel('Delete')
-      .setStyle(ButtonStyle.Danger)
-      .setEmoji('🗑️')
-      .setDisabled(noSelection || isDefaultCastlist), // Disable when no selection OR default
-    new ButtonBuilder()
       .setCustomId(`castlist_swap_merge${suffix}`)
       .setLabel('Swap/Merge')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🔀')
-      .setDisabled(!isDefaultCastlist) // Only enabled for default castlist
+      .setDisabled(!isDefaultCastlist), // Only enabled for default castlist
+    new ButtonBuilder()
+      .setCustomId(`castlist_delete${suffix}`)
+      .setLabel('Delete')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('🗑️')
+      .setDisabled(noSelection || isDefaultCastlist) // Disable when no selection OR default
   );
 
   container.components.push(navButtons.toJSON());

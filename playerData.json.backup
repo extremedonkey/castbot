@@ -1712,7 +1712,11 @@
         "color": "#FF7AAA",
         "analyticsName": "🪄 ar.3 🪄",
         "analyticsAdded": 1759081799205,
-        "displayName": "The AR3 Tribe"
+        "displayName": "The AR3 Tribe",
+        "castlistIds": [
+          "castlist_1762579720361_1331657596087566398"
+        ],
+        "castlist": "Cool Birds"
       },
       "1388327092634124368": {
         "emoji": null,
@@ -1728,7 +1732,11 @@
         "color": null,
         "analyticsName": "🧓 Ask 🧓",
         "analyticsAdded": 1759422827344,
-        "castlistIds": []
+        "castlistIds": [
+          "castlist_1762579473073_1331657596087566398",
+          "castlist_1762579584399_1331657596087566398"
+        ],
+        "castlist": "Cool Cats"
       },
       "1424250096698130603": {
         "emoji": "🗝️",
@@ -3314,6 +3322,60 @@
         "seasonId": "season_1deffdb1dac8496b",
         "modifiedAt": 1762187809409,
         "modifiedBy": "391415444084490240"
+      },
+      "castlist_1762579473073_1331657596087566398": {
+        "id": "castlist_1762579473073_1331657596087566398",
+        "name": "cool dogs castlist",
+        "type": "custom",
+        "createdAt": 1762579473073,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "emoji": "🐕",
+          "description": "",
+          "lastModified": 1762579473073
+        }
+      },
+      "castlist_1762579584399_1331657596087566398": {
+        "id": "castlist_1762579584399_1331657596087566398",
+        "name": "Cool Cats",
+        "type": "custom",
+        "createdAt": 1762579584399,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "emoji": "🐈",
+          "description": "Meow",
+          "lastModified": 1762579584399
+        }
+      },
+      "castlist_1762579720361_1331657596087566398": {
+        "id": "castlist_1762579720361_1331657596087566398",
+        "name": "Cool Birds",
+        "type": "custom",
+        "createdAt": 1762579720361,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "emoji": "🐦",
+          "description": "",
+          "lastModified": 1762579720361
+        }
       }
     },
     "placements": {
@@ -12339,14 +12401,14 @@
     "serverName": "Triumph Hub",
     "icon": "https://cdn.discordapp.com/icons/1080166267136262154/174fdda5d62bc8c2227e31f8111e7f05.webp",
     "ownerId": "572291395365109770",
-    "memberCount": 448,
+    "memberCount": 449,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1677602106604,
-    "lastUpdated": 1762212733615,
+    "lastUpdated": 1762576009409,
     "players": {
       "572291395365109770": {
         "age": "29"
