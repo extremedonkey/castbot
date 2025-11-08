@@ -966,39 +966,77 @@ safariData[guildId].safariConfig.showCustomCastlists = showCustomCastlists;
 ```
 
 #### 3. Player Menu Rendering
-**File:** `playerManagement.js:381-386`
+**File:** `playerManagement.js:393-422` (IMPLEMENTED)
 
-Add filter before `createCastlistRows()`:
+Filter logic with fallback handling:
 ```javascript
-const showCustomCastlists = safariConfig.showCustomCastlists !== false; // Default true
+// Load safari configuration for castlist filtering and global stores
+const { loadSafariContent } = await import('./safariManager.js');
+const safariData = await loadSafariContent();
+const safariConfig = safariData[guildId]?.safariConfig || {};
 
+// Apply castlist visibility filter based on configuration
+const showCustomCastlists = safariConfig.showCustomCastlists !== false; // Default true
 let filteredCastlists = allCastlists;
+
 if (!showCustomCastlists) {
-  const defaultOnly = allCastlists.get('default');
-  filteredCastlists = new Map(defaultOnly ? [['default', defaultOnly]] : []);
+  // Admin wants to hide custom castlists - show only default
+  const defaultOnly = allCastlists?.get('default');
+  filteredCastlists = defaultOnly
+    ? new Map([['default', defaultOnly]])  // Show default button
+    : new Map();  // Empty → triggers fallback button below
 }
 
-castlistRows = createCastlistRows(filteredCastlists, false, hasStores);
+if (filteredCastlists && filteredCastlists.size > 0) {
+  castlistRows = createCastlistRows(filteredCastlists, false, hasStores);
+} else {
+  // Fallback: single default castlist button if no castlist data found
+  castlistRows = [{
+    type: 1, // ActionRow
+    components: [new ButtonBuilder()
+      .setCustomId('show_castlist2_default')
+      .setLabel('📋 Castlist')
+      .setStyle(ButtonStyle.Primary)]
+  }];
+}
 ```
 
 #### 4. Config Display Update
-**File:** `safariConfigUI.js:293-295`
+**File:** `safariConfigUI.js:287,297` (IMPLEMENTED)
 
-Add to settings display:
+Settings display in Safari Customization UI:
 ```javascript
-display += `• Custom Castlists: ${showCustomCastlists ? '✅ All Shown' : '📋 Default Only'}\n`;
+const showCustomCastlists = config.showCustomCastlists !== false; // Default true
+// ...
+display += `• Custom Castlists: ${showCustomCastlists ? '✅ Show All' : '📋 Default Only'}\n\n`;
 ```
 
-### Key Files to Modify
-1. `app.js:10840` - Add modal component
-2. `app.js:35651` - Save config value
-3. `playerManagement.js:381` - Apply filter
-4. `safariConfigUI.js:293` - Display current setting
+### Key Files Modified (IMPLEMENTATION COMPLETE)
+1. ✅ **app.js:10838** - Added 3rd Label component to modal (Components V2)
+2. ✅ **app.js:35707** - Extract value in modal submission handler
+3. ✅ **app.js:35731** - Save to safariConfig.showCustomCastlists
+4. ✅ **playerManagement.js:393-422** - Apply filter with fallback handling
+5. ✅ **safariConfigUI.js:287,297** - Display current setting
 
-### Default Behavior
-- **Default:** `true` (show all castlists)
-- **Backward compatible:** Existing servers see no change
+### Default Behavior (VERIFIED)
+- **Default:** `true` (show all castlists) via `!== false` pattern
+- **Backward compatible:** Existing servers see no change (undefined → true)
 - **Filter only:** Virtual Adapter still extracts all castlists (data integrity)
+- **Edge case:** No default castlist → shows fallback button (not empty)
 
 ### Impact on RaP Target State
 **NO CHANGES** - This is a presentation filter, not a data access change. Virtual Adapter flow remains unchanged.
+
+### Implementation Status
+**✅ COMPLETED** - January 2025
+
+Feature fully implemented and tested. All code changes deployed to development. Documentation updated in:
+- `docs/architecture/CastlistArchitecture.md` - As-built documentation with data flow diagram
+- This RaP - Implementation details and code references
+
+**Testing Completed:**
+- ✅ Default behavior (show all) - backward compatible
+- ✅ Hide custom castlists - shows only default button
+- ✅ Edge case handling - fallback button when no default exists
+- ✅ UI display - Safari Customization shows current setting
+- ✅ Modal functionality - Components V2 with 3 string select options

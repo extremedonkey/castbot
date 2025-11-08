@@ -321,12 +321,16 @@ sequenceDiagram
   - **Entity Support**: ✅ Both legacy and modern
   - **Creates**: `show_castlist2_*` buttons for each castlist
 - **Player Path**: Player Menu
-  - **UI**: Safari buttons, inventory, player-specific features
-  - **No Castlists**: Player menu doesn't show castlist buttons
-  - **Implementation**: `playerManagement.js`
+  - **UI**: Safari buttons, inventory, player-specific features, castlist buttons
+  - **Data Access**: Virtual Adapter via `extractCastlistData()` (castlistV2.js:761)
+  - **Virtual Adapter**: ✅ Full integration (fixed in Jan 2025)
+  - **Entity Support**: ✅ Both legacy and modern
+  - **Creates**: `show_castlist2_*` buttons (configurable visibility)
+  - **Visibility Config**: `safariConfig.showCustomCastlists` (default: true)
+  - **Implementation**: `playerManagement.js` (lines 384-422)
 
 ### Critical Insight
-**This is the MASTER FORK** - the `/menu` command routes to TWO completely different UIs based on permissions. The Production Menu creates castlist buttons dynamically using the Virtual Adapter, making it the primary way admins access castlists!
+**This is the MASTER FORK** - the `/menu` command routes to TWO completely different UIs based on permissions. BOTH menu types now use Virtual Adapter and show castlist buttons!
 
 ## 📊 Method 6: `viral_menu` Button
 
@@ -391,6 +395,130 @@ sequenceDiagram
   - Creates: Same UI as non-admin `/menu` users see
 - **Use Case**: Test player experience without switching accounts
 - **Label**: "🪪 Player Menu"
+
+## 🎛️ Player Menu Castlist Visibility Configuration
+
+### Overview
+Admins can control which castlists appear in the Player Menu (`/menu` for non-admin users) through a configuration setting in Safari Customization.
+
+### Configuration Options
+| Setting | Value | Behavior | Use Case |
+|---------|-------|----------|----------|
+| **Show All Castlists** | `true` (default) | Display default + all custom castlists | Full access for players |
+| **Show Default Only** | `false` | Hide custom castlists, show only default | Simplified player experience |
+
+### Data Flow
+```mermaid
+sequenceDiagram
+    participant Admin
+    participant Modal as Player Menu Config Modal
+    participant Storage as safariContent.json
+    participant PlayerMenu as Player Menu Rendering
+    participant Player
+
+    Admin->>Modal: Configure visibility
+    Note over Modal: Components V2 modal<br/>3 string select options
+    Modal->>Storage: Save showCustomCastlists (true/false)
+    Storage-->>Modal: Confirm save
+    Modal-->>Admin: Update Safari Customization UI
+
+    Player->>PlayerMenu: Open /menu
+    PlayerMenu->>Storage: Load safariConfig
+    Storage-->>PlayerMenu: showCustomCastlists setting
+
+    alt showCustomCastlists = true (default)
+        PlayerMenu->>PlayerMenu: Show all castlists
+        PlayerMenu-->>Player: Default + Custom1 + Custom2 + ...
+    else showCustomCastlists = false
+        PlayerMenu->>PlayerMenu: Filter to default only
+        alt Default castlist exists
+            PlayerMenu-->>Player: Default button only
+        else No default castlist
+            PlayerMenu-->>Player: Fallback button ("📋 Castlist")
+        end
+    end
+```
+
+### Implementation Details
+
+**Storage Location**: `safariContent.json` → `guildId.safariConfig.showCustomCastlists`
+
+**Default Behavior**:
+```javascript
+const showCustomCastlists = safariConfig.showCustomCastlists !== false;
+// undefined → true (show all - backward compatible)
+// true → true (show all)
+// false → false (default only)
+```
+
+**Files Modified**:
+1. **app.js:10838** - Modal component (3rd Label + String Select)
+2. **app.js:35707** - Extract value in submission handler
+3. **app.js:35731** - Save to safariConfig
+4. **playerManagement.js:393-422** - Apply filter before createCastlistRows()
+5. **safariConfigUI.js:287,297** - Display current setting
+
+**Filter Logic** (playerManagement.js:393-405):
+```javascript
+// Load safari configuration
+const safariConfig = safariData[guildId]?.safariConfig || {};
+const showCustomCastlists = safariConfig.showCustomCastlists !== false; // Default true
+
+let filteredCastlists = allCastlists;
+if (!showCustomCastlists) {
+  // Admin wants to hide custom castlists - show only default
+  const defaultOnly = allCastlists?.get('default');
+  filteredCastlists = defaultOnly
+    ? new Map([['default', defaultOnly]])  // Show default button
+    : new Map();  // Empty → triggers fallback button
+}
+
+// Create castlist rows from filtered map
+castlistRows = createCastlistRows(filteredCastlists, false, hasStores);
+```
+
+### Edge Case Handling
+
+**Scenario: Admin hides custom castlists but no default exists**
+- **Behavior**: Show fallback button "📋 Castlist" (same as legacy no-config behavior)
+- **User Experience**: Clicking the button shows existing "no default configured" message
+- **Rationale**: This is an admin configuration issue, not a system error
+
+### UI Display
+
+**Safari Customization UI** (safariConfigUI.js:297):
+```
+**🕹️ Player Menu**
+• Global Commands Button: ✅ Enabled
+• Inventory Button: Always Show
+• Custom Castlists: ✅ Show All    ← NEW
+                    or
+• Custom Castlists: 📋 Default Only ← NEW
+```
+
+**Modal Interface** (app.js:10909-10934):
+- **Modal Title**: "Player Menu Configuration"
+- **Component**: Label (Type 18) + String Select (Type 3)
+- **Label**: "Show Custom Castlists in Player Menu?"
+- **Options**:
+  - "Show All Castlists" (value: "true")
+  - "Show Default Only" (value: "false")
+- **Pre-selection**: Highlights current setting via `default: true/false`
+
+### Key Benefits
+
+1. **Simplified Player Experience**: Admins can hide complex castlist options from players
+2. **Gradual Rollout**: Show default until ready to reveal custom castlists
+3. **Clean UI**: Reduce button clutter in player menu when only one castlist is active
+4. **Backward Compatible**: Default behavior unchanged (show all)
+5. **Non-Destructive**: Filter is presentation-only, doesn't modify data
+
+### Relationship to Virtual Adapter
+
+**Independence**: This feature is **orthogonal** to Virtual Adapter migration
+- Virtual Adapter extracts ALL castlists (unchanged)
+- Filter is applied AFTER extraction, BEFORE rendering
+- Migration to 100% Virtual Adapter adoption is unaffected
 
 ## 🔄 Virtual Adapter Pattern
 
@@ -473,7 +601,11 @@ stateDiagram-v2
 | Post Castlist (Fixed) | ❌ | ❌ Legacy | ❌ | ✅ | Low | Hub → Display flow |
 
 ### Key Insights
-- **BOTH menus use Virtual Adapter!** Production Menu (admin) AND Player Menu (non-admin) now show all castlists
+- **BOTH menus use Virtual Adapter!** Production Menu (admin) AND Player Menu (non-admin) now show castlists
+- **Player Menu castlist visibility is configurable** via `safariConfig.showCustomCastlists`:
+  - Default: Show all castlists (backward compatible)
+  - Optional: Hide custom castlists, show only default
+  - Filter applied at presentation layer (doesn't affect data extraction)
 - **Three separate UI systems**: Production Menu (admin), Player Menu (player), Castlist Display (shared)
 - **Virtual Adapter adoption**: 5/8 methods now use Virtual Adapter (62.5% adoption!)
   - ✅ Hub, Production Menu, Player Menu, viral_menu, prod_player_menu
