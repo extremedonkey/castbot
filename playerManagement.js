@@ -392,6 +392,7 @@ export async function createPlayerManagementUI(options) {
       // Apply castlist visibility filter based on configuration
       const showCustomCastlists = safariConfig.showCustomCastlists !== false; // Default true (show all)
       let filteredCastlists = allCastlists;
+      let castlistsPreSorted = false;  // Track if castlists were sorted by timestamp
 
       if (!showCustomCastlists) {
         // Admin wants to hide custom castlists - show only default
@@ -404,13 +405,15 @@ export async function createPlayerManagementUI(options) {
         // Limit to 4 custom castlists (+ default = max 5 total) to prevent Discord 40-component limit
         const { limitAndSortCastlists } = await import('./castlistV2.js');
         filteredCastlists = limitAndSortCastlists(allCastlists, 4);
+        castlistsPreSorted = true;  // Castlists are now sorted by timestamp (newest first)
         console.log(`🔍 Limited castlists: showing ${filteredCastlists.size} of ${allCastlists?.size || 0} total (max 4 custom + default)`);
       }
 
       if (filteredCastlists && filteredCastlists.size > 0) {
         console.log(`✅ Creating castlist rows for ${filteredCastlists.size} castlists`);
         // Player mode: don't include the "+" button (includeAddButton = false)
-        castlistRows = createCastlistRows(filteredCastlists, false, hasStores);
+        // Pass preSorted flag to preserve timestamp order from limitAndSortCastlists
+        castlistRows = createCastlistRows(filteredCastlists, false, hasStores, castlistsPreSorted);
         console.log(`✅ Created ${castlistRows.length} castlist row(s)`);
       } else {
         // Fallback: single default castlist button if no castlist data found

@@ -711,7 +711,8 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   const limitedCastlists = limitAndSortCastlists(allCastlists, 4);
 
   // Create castlist rows with metadata display (sort strategy, emoji, description)
-  const castlistRows = createCastlistRows(limitedCastlists, true, false);
+  // Pass preSorted=true to preserve timestamp-based sort order from limitAndSortCastlists
+  const castlistRows = createCastlistRows(limitedCastlists, true, false, true);
   
   // Debug logging for castlist pagination
   console.log(`Created ${castlistRows.length} castlist row(s) for ${limitedCastlists.size} castlist(s) (limited from ${allCastlists.size})`);

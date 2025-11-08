@@ -775,7 +775,7 @@ async function extractCastlistData(playerData, guildId) {
  * @param {boolean} hasStores - Whether stores exist (deprecated, ignored)
  * @returns {Array} Array of ActionRow JSON objects
  */
-function createCastlistRows(allCastlists, includeAddButton = true, hasStores = false) {
+function createCastlistRows(allCastlists, includeAddButton = true, hasStores = false, preSorted = false) {
     const castlistButtons = [];
 
     // Add default castlist button first
@@ -790,15 +790,17 @@ function createCastlistRows(allCastlists, includeAddButton = true, hasStores = f
         );
     }
 
-    // Sort castlists: real first, then virtual (legacy), excluding default
-    const sortedCastlists = [...allCastlists.values()]
-        .filter(c => c.id !== 'default')
-        .sort((a, b) => {
-            if (a.isVirtual !== b.isVirtual) {
-                return a.isVirtual ? 1 : -1; // Real first
-            }
-            return a.name.localeCompare(b.name);
-        });
+    // Get castlist array (filter out default)
+    const castlistArray = [...allCastlists.values()].filter(c => c.id !== 'default');
+
+    // Sort castlists if not pre-sorted (preserves timestamp order from limitAndSortCastlists)
+    const sortedCastlists = preSorted ? castlistArray : castlistArray.sort((a, b) => {
+        // Legacy sorting: real first, then virtual, alphabetical within each group
+        if (a.isVirtual !== b.isVirtual) {
+            return a.isVirtual ? 1 : -1; // Real first
+        }
+        return a.name.localeCompare(b.name);
+    });
 
     // Add buttons for remaining castlists with metadata
     for (const castlist of sortedCastlists) {
