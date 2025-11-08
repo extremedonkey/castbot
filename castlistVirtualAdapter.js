@@ -341,8 +341,9 @@ export class CastlistVirtualAdapter {
         continue;
       }
 
-      // ✅ Format 3: Legacy string (via Virtual Adapter name resolution)
-      if (tribe.castlist && tribe.castlist === castlist.name) {
+      // ✅ Format 3: Legacy string (match by name OR id for "default" special case)
+      // Special case: "default" castlist has id="default" but name="Active Castlist"
+      if (tribe.castlist && (tribe.castlist === castlist.name || tribe.castlist === castlist.id)) {
         usingTribes.push(roleId);
         continue;
       }
