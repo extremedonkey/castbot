@@ -1,6 +1,6 @@
 /**
  * Castlist Management Hub - Central UI for all castlist operations
- * Following Player Management UI pattern with hot-swappable interface
+ * Simplified architecture: Tribes always visible, all config actions via modals/redirects
  */
 
 import { ButtonBuilder, StringSelectMenuBuilder, ActionRowBuilder } from 'discord.js';
@@ -9,20 +9,6 @@ import { castlistManager } from './castlistManager.js';
 import { loadPlayerData } from './storage.js';
 import { createBackButton } from './src/ui/backButtonFactory.js';
 import { parseTextEmoji } from './utils/emojiUtils.js';
-
-/**
- * Button types for castlist management
- */
-export const CastlistButtonType = {
-  VIEW: 'view',
-  EDIT_INFO: 'edit_info',
-  ADD_TRIBE: 'add_tribe',
-  CUSTOMIZE: 'customize',
-  EDIT_PLAYERS: 'edit_players',
-  SWAP_MERGE: 'swap_merge',
-  ORDER: 'order',
-  PLACEMENTS: 'placements'
-};
 
 /**
  * Create the main Castlist Management Hub menu
@@ -34,7 +20,6 @@ export const CastlistButtonType = {
 export async function createCastlistHub(guildId, options = {}, client = null) {
   const {
     selectedCastlistId = null,
-    activeButton = null,
     showVirtual = true
   } = options;
   
@@ -178,48 +163,93 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       const managementButtons = createManagementButtons(
         castlist.id,
         true, // enabled
-        activeButton,
         castlist.isVirtual,
         castlist.name  // Pass castlist name for show_castlist2
       );
       container.components.push(managementButtons.buttonRow1.toJSON());
 
-      // Separator before hot-swappable area
+      // Separator before tribes section
       container.components.push({ type: 14 });
-      
-      // Hot-swappable interface based on active button
-      const hotSwapInterface = await createHotSwappableInterface(
-        guildId,
-        castlist,
-        activeButton,
-        client
-      );
-      if (hotSwapInterface) {
-        // Handle both single components and arrays (for multi-component interfaces)
-        if (Array.isArray(hotSwapInterface)) {
-          container.components.push(...hotSwapInterface);
-        } else {
-          container.components.push(hotSwapInterface);
+
+      // ALWAYS show tribes when castlist is selected
+      // Get tribe roleIds currently using this castlist
+      const tribeRoleIds = await castlistManager.getTribesUsingCastlist(guildId, castlist.id);
+
+      // Load full tribe objects from playerData
+      const tribes = [];
+      for (const roleId of tribeRoleIds) {
+        const tribeData = playerData[guildId]?.tribes?.[roleId];
+        if (tribeData) {
+          tribes.push({
+            roleId,
+            ...tribeData
+          });
         }
-      } else if (!activeButton) {
-        // Show placeholder when no button is active
-        container.components.push({
-          type: 1, // ActionRow
-          components: [{
-            type: 3, // String Select
-            custom_id: 'castlist_action_inactive',
-            placeholder: 'Click a button above to configure...',
-            min_values: 0,
-            max_values: 1,
-            disabled: true,
-            options: [{ label: 'No action selected', value: 'none' }]
-          }]
-        });
       }
+
+      // Component budget safety check
+      let maxTribeLimit = 6;
+      const estimatedTotal = 22 + tribes.length; // Base + sections
+      if (estimatedTotal > 35) {
+        console.warn(`[TRIBES] Component count high: ${estimatedTotal}/40, limiting to 5 tribes`);
+        maxTribeLimit = 5;
+      }
+
+      // Fetch guild once for all tribes
+      const guild = tribes.length > 0 ? await client.guilds.fetch(guildId) : null;
+
+      // Section for each existing tribe with Edit button accessory
+      for (const tribe of tribes) {
+        // Get role name from Discord
+        const role = guild ? await guild.roles.fetch(tribe.roleId).catch(() => null) : null;
+        const roleName = role?.name || tribe.roleId;
+
+        const tribeSection = {
+          type: 9, // Section
+          components: [{
+            type: 10, // Text Display
+            content: `${tribe.emoji || '🏕️'} **${tribe.displayName || roleName}**\n` +
+                     `-# ${tribe.color ? `Color: ${tribe.color}` : 'No custom settings'}`
+          }],
+          accessory: {
+            type: 2, // Button
+            custom_id: `tribe_edit_button|${tribe.roleId}|${castlist.id}`,
+            label: "Edit",
+            style: 2, // Secondary
+            emoji: { name: "✏️" }
+          }
+        };
+
+        console.log(`[TRIBES] Adding Section for tribe ${roleName}:`, JSON.stringify(tribeSection, null, 2));
+        container.components.push(tribeSection);
+      }
+
+      // Separator before Role Select
+      if (tribes.length > 0) {
+        container.components.push({ type: 14 });
+      }
+
+      // Role Select with pre-selection for instant toggle
+      container.components.push({
+        type: 1, // ActionRow
+        components: [{
+          type: 6, // Role Select
+          custom_id: `castlist_tribe_select_${castlist.id}`,
+          placeholder: tribes.length > 0
+            ? 'Add or remove tribes...'
+            : 'Select roles to add as tribes...',
+          min_values: 0, // CRITICAL: Allow deselecting all (enables remove)
+          max_values: maxTribeLimit, // ENFORCED: Component budget limit
+          default_values: tribes.map(tribe => ({
+            id: tribe.roleId,
+            type: "role"
+          }))
+        }]
+      });
     }
   } else {
     // No castlist selected - show disabled buttons
-    const disabledButtons = createManagementButtons(null, false, null, false, null);
+    const disabledButtons = createManagementButtons(null, false, false, null);
     container.components.push(disabledButtons.buttonRow1.toJSON());
 
     // Disabled placeholder
@@ -346,12 +376,11 @@ async function createCastlistDetailsSection(guildId, castlist) {
  * Create management buttons
  * @param {string} castlistId - The castlist ID
  * @param {boolean} enabled - Whether buttons are enabled
- * @param {string} activeButton - Which button is active
  * @param {boolean} isVirtual - Whether castlist is virtual
  * @param {string} castlistName - The castlist name (for non-virtual castlists)
  * @returns {Object} Object with buttonRow1, castlistId, and enabled state
  */
-function createManagementButtons(castlistId, enabled = true, activeButton = null, isVirtual = false, castlistName = null) {
+function createManagementButtons(castlistId, enabled = true, isVirtual = false, castlistName = null) {
   const buttonRow1 = new ActionRowBuilder();
   const suffix = castlistId ? `_${castlistId}` : '';
 
@@ -370,31 +399,25 @@ function createManagementButtons(castlistId, enabled = true, activeButton = null
     new ButtonBuilder()
       .setCustomId(postCastlistCustomId)
       .setLabel('Post Castlist')
-      .setStyle(activeButton === CastlistButtonType.VIEW ? ButtonStyle.Primary : ButtonStyle.Secondary)
+      .setStyle(ButtonStyle.Secondary)
       .setEmoji('📋')
       .setDisabled(!enabled),
     new ButtonBuilder()
       .setCustomId(`castlist_edit_info${suffix}`)
       .setLabel('Edit')
-      .setStyle(activeButton === CastlistButtonType.EDIT_INFO ? ButtonStyle.Primary : ButtonStyle.Secondary)
+      .setStyle(ButtonStyle.Secondary)
       .setEmoji('✏️')
       .setDisabled(!enabled || castlistId === 'default'), // Disable for Active Castlist (system-managed)
     new ButtonBuilder()
-      .setCustomId(`castlist_add_tribe${suffix}`)
-      .setLabel('Tribes')
-      .setStyle(activeButton === CastlistButtonType.ADD_TRIBE ? ButtonStyle.Primary : ButtonStyle.Secondary)
-      .setEmoji('🏕️')
-      .setDisabled(!enabled),
-    new ButtonBuilder()
       .setCustomId(`castlist_placements${suffix}`)
       .setLabel('Placements')
-      .setStyle(activeButton === CastlistButtonType.PLACEMENTS ? ButtonStyle.Primary : ButtonStyle.Secondary)
+      .setStyle(ButtonStyle.Secondary)
       .setEmoji('🥇')
       .setDisabled(!enabled),
     new ButtonBuilder()
       .setCustomId(`castlist_order${suffix}`)
       .setLabel('Order')
-      .setStyle(activeButton === CastlistButtonType.ORDER ? ButtonStyle.Primary : ButtonStyle.Secondary)
+      .setStyle(ButtonStyle.Secondary)
       .setEmoji('🔄')
       .setDisabled(!enabled)
   );
@@ -402,122 +425,9 @@ function createManagementButtons(castlistId, enabled = true, activeButton = null
   return { buttonRow1, castlistId, enabled };
 }
 
-/**
- * Create hot-swappable interface based on active button
- * @param {string} guildId - The guild ID
- * @param {Object} castlist - The castlist object
- * @param {string} activeButton - The active button type
- * @returns {Object|null} Hot-swap interface component
- */
-async function createHotSwappableInterface(guildId, castlist, activeButton, client) {
-  if (!activeButton) return null;
-  
-  switch (activeButton) {
-    case CastlistButtonType.VIEW:
-      // This case is no longer used since clicking "Post Castlist" directly posts
-      // Keeping for backwards compatibility but returning null
-      return null;
-    
-    case CastlistButtonType.ADD_TRIBE:
-      // Get tribe roleIds currently using this castlist
-      const tribeRoleIds = await castlistManager.getTribesUsingCastlist(guildId, castlist.id);
-
-      // Load full tribe objects from playerData
-      const { loadPlayerData } = await import('./storage.js');
-      const playerData = await loadPlayerData();
-      const tribes = [];
-      for (const roleId of tribeRoleIds) {
-        const tribeData = playerData[guildId]?.tribes?.[roleId];
-        if (tribeData) {
-          tribes.push({
-            roleId,
-            ...tribeData
-          });
-        }
-      }
-
-      // Build interface components
-      const interfaceComponents = [];
-
-      // Component budget safety check (count entire hub, not just interface)
-      let maxTribeLimit = 6;
-      const estimatedTotal = 22 + interfaceComponents.length + tribes.length; // Base + instructions + sections
-      if (estimatedTotal > 35) {
-        console.warn(`[TRIBES] Component count high: ${estimatedTotal}/40, limiting to 5 tribes`);
-        maxTribeLimit = 5; // Reduce limit if approaching budget
-      }
-
-      // Fetch guild once for all tribes
-      const guild = tribes.length > 0 ? await client.guilds.fetch(guildId) : null;
-
-      // Section for each existing tribe with Edit button accessory
-      for (const tribe of tribes) {
-        // Get role name from Discord
-        const role = guild ? await guild.roles.fetch(tribe.roleId).catch(() => null) : null;
-        const roleName = role?.name || tribe.roleId;
-
-        const tribeSection = {
-          type: 9, // Section
-          components: [{
-            type: 10, // Text Display
-            content: `${tribe.emoji || '🏕️'} **${tribe.displayName || roleName}**\n` +
-                     `-# ${tribe.color ? `Color: ${tribe.color}` : 'No custom settings'}`
-          }],
-          accessory: {
-            type: 2, // Button
-            custom_id: `tribe_edit_button|${tribe.roleId}|${castlist.id}`,
-            label: "Edit",
-            style: 2, // Secondary
-            emoji: { name: "✏️" }
-          }
-        };
-
-        console.log(`[TRIBES] Adding Section for tribe ${roleName}:`, JSON.stringify(tribeSection, null, 2));
-        interfaceComponents.push(tribeSection);
-      }
-
-      // Separator before Role Select
-      if (tribes.length > 0) {
-        interfaceComponents.push({ type: 14 }); // Separator
-      }
-
-      // Role Select with pre-selection for instant toggle
-      interfaceComponents.push({
-        type: 1, // ActionRow
-        components: [{
-          type: 6, // Role Select
-          custom_id: `castlist_tribe_select_${castlist.id}`,
-          placeholder: tribes.length > 0
-            ? 'Add or remove tribes...'
-            : 'Select roles to add as tribes...',
-          min_values: 0, // CRITICAL: Allow deselecting all (enables remove)
-          max_values: maxTribeLimit, // ENFORCED: Component budget limit
-          default_values: tribes.map(tribe => ({
-            id: tribe.roleId,
-            type: "role"
-          }))
-        }]
-      });
-
-      // Return interface components
-      return interfaceComponents;
-    
-    case CastlistButtonType.ORDER:
-      // DEPRECATED: Order button now shows modal instead of hot-swappable interface
-      // Modal handling is in castlistHandlers.js handleCastlistButton()
-      return null;
-    
-    case CastlistButtonType.SWAP_MERGE:
-      // Placeholder for Swap/Merge functionality
-      return {
-        type: 10, // Text Display
-        content: '-# 🔀 Swap/Merge functionality coming soon...\n-# This will allow you to create new castlists from selected roles'
-      };
-    
-    default:
-      return null;
-  }
-}
+// DELETED: createHotSwappableInterface() function
+// Hot-swappable pattern removed in favor of always-visible tribes
+// Tribes now appear automatically when castlist is selected (see createCastlistHub above)
 
 /**
  * Create castlist creation wizard

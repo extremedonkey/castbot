@@ -4,7 +4,7 @@
  */
 
 import { ButtonHandlerFactory } from './buttonHandlerFactory.js';
-import { createCastlistHub, CastlistButtonType } from './castlistHub.js';
+import { createCastlistHub } from './castlistHub.js';
 import { castlistManager } from './castlistManager.js';
 import { castlistVirtualAdapter } from './castlistVirtualAdapter.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
@@ -275,10 +275,9 @@ export async function handleCastlistSelect(req, res, client) {
         }
       }
 
-      // Display hub with real ID - auto-show tribes
+      // Display hub - tribes now always visible when castlist selected
       const hubData = await createCastlistHub(context.guildId, {
-        selectedCastlistId: selectedCastlistId || null,
-        activeButton: CastlistButtonType.ADD_TRIBE // Auto-show tribes on selection
+        selectedCastlistId: selectedCastlistId || null
       }, context.client);
 
       return hubData;
@@ -755,10 +754,9 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
         throw error; // Let ButtonHandlerFactory handle error display
       }
 
-      // Refresh hub with updated tribes (keeps Tribes button active)
+      // Refresh hub with updated tribes (now always visible)
       const hubData = await createCastlistHub(context.guildId, {
-        selectedCastlistId: castlistId,
-        activeButton: CastlistButtonType.ADD_TRIBE
+        selectedCastlistId: castlistId
       }, context.client);
 
       // Debug: Check component structure after removal
@@ -1021,8 +1019,7 @@ export function handleEditInfoModal(req, res, client, custom_id) {
 
       // Refresh the UI with the castlist still selected
       const hubData = await createCastlistHub(guildId, {
-        selectedCastlistId: castlistId,
-        activeButton: CastlistButtonType.ADD_TRIBE // Auto-show tribes (consistent with select)
+        selectedCastlistId: castlistId
       }, client);
 
       // Send UPDATE_MESSAGE response to keep the container open
@@ -1090,10 +1087,9 @@ export function handleOrderModal(req, res, client, custom_id) {
 
       console.log(`✅ Updated castlist ${castlistId} sort strategy to: ${newSortStrategy}`);
 
-      // Refresh the UI with tribes showing (consistent with edit_info)
+      // Refresh the UI with tribes showing (now always visible)
       const hubData = await createCastlistHub(guildId, {
-        selectedCastlistId: castlistId,
-        activeButton: CastlistButtonType.ADD_TRIBE // Auto-show tribes
+        selectedCastlistId: castlistId
       }, client);
 
       // Send UPDATE_MESSAGE response

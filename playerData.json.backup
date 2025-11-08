@@ -6040,12 +6040,7 @@
           "castlist_1762613355166_system"
         ]
       },
-      "1008429181840937015": {
-        "castlistIds": [
-          "castlist_1762612908863_system"
-        ],
-        "castlist": "S2 - Big Bang"
-      },
+      "1008429181840937015": {},
       "1426478110089674832": {
         "castlistIds": [
           "castlist_1760892362223_system"
@@ -6059,6 +6054,14 @@
         "color": "#71368a",
         "analyticsName": "🧟 S4 - Walking Dead 🧟",
         "analyticsAdded": 1762615677087
+      },
+      "1385242864694329394": {
+        "emoji": "😱",
+        "castlist": "s5",
+        "showPlayerEmojis": false,
+        "color": "#e91e63",
+        "analyticsName": "😱 S5 - Scream 😱",
+        "analyticsAdded": 1762615893371
       }
     },
     "timezones": {
@@ -6800,19 +6803,19 @@
         "createdAt": 1760168292677,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "placements",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
         },
         "metadata": {
-          "description": "Second chances. 36 player season of madness!",
+          "description": "Second chances, Jurassic Park Themed Season. 36 player season of madness!",
           "emoji": "🦖",
           "migratedFrom": "virtual_UzEyIC0gSnVyYXNzaWMgUGFyaw",
           "migrationDate": 1760168292677
         },
         "seasonId": "season_ddb0fef37a464200",
-        "modifiedAt": 1762615097807,
+        "modifiedAt": 1762616228612,
         "modifiedBy": "system"
       },
       "castlist_1760892362223_system": {
