@@ -69,6 +69,43 @@ type: 13  // WRONG - Invalid separator (use type 14)
 - Always return the full Container structure
 - ButtonHandlerFactory automatically strips flags for UPDATE_MESSAGE
 
+**🚨 COMPONENT LIMIT (40 Components Maximum):**
+
+Discord enforces a **40-component limit** per message. EVERY component counts, including:
+- ✅ Container itself (type 17)
+- ✅ Buttons inside ActionRows
+- ✅ Section accessories (Thumbnails, Buttons)
+- ✅ Label child components (modals)
+- ✅ ALL nested components recursively
+
+**ALWAYS validate component count before returning UI:**
+```javascript
+// Option 1: Throw error if exceeds limit (recommended for error handling)
+const { validateComponentLimit } = await import('./utils.js');
+validateComponentLimit([containerObject], "My Menu Name");
+return { components: [containerObject] };
+
+// Option 2: Log detailed breakdown (debugging)
+const { countComponents } = await import('./utils.js');
+countComponents([containerObject], {
+  enableLogging: true,
+  verbosity: "full",  // or "summary" for compact logs
+  label: "My Menu"
+});
+
+// Option 3: Silent check (validation only)
+const count = countComponents([containerObject], { enableLogging: false });
+if (count > 40) {
+  // Remove optional components or paginate
+}
+```
+
+**Common Mistakes:**
+- ❌ Counting only top-level components (Container contents)
+- ✅ Must wrap in array: `countComponents([container])` NOT `countComponents(container.components)`
+- ❌ Forgetting Section accessories count separately
+- ❌ Not counting Container itself
+
 ## 🔴 CRITICAL: Button Handler Factory - MANDATORY FOR ALL NEW BUTTONS
 
 **ALL new buttons MUST use ButtonHandlerFactory pattern - NO EXCEPTIONS!**
@@ -582,6 +619,7 @@ import { ButtonHandlerFactory } from './buttonHandlerFactory.js';  // Button man
 **Common Issues:**
 - **Button issues** → See CRITICAL: Button Handler Factory section above
 - **Permission errors** → Use BigInt for permission checks
+- **Too many components (>40)** → Use `countComponents()` from utils.js to debug, remove optional components
 - **Menu crashes** → Check 5-button limit per ActionRow
 - **String Select limits** → Maximum 25 options
 - **Invalid emoji format** → Use Unicode (🍎) not shortcuts (:apple:)

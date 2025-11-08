@@ -106,24 +106,29 @@ export function capitalize(str) {
  *               Role Select (6), Mentionable Select (7), Channel Select (8)
  * - Modal: Label (18)
  *
- * @param {Array} components - Array of component objects
+ * @param {Array} components - Array of component objects (e.g., [containerObject])
  * @param {Object} options - Configuration options
- * @param {boolean} options.enableLogging - If true, logs detailed component breakdown (default: true)
+ * @param {boolean} options.enableLogging - If true, logs component info (default: true)
+ * @param {string} options.verbosity - Logging verbosity: "full" (detailed breakdown), "summary" (just total) (default: "full")
  * @param {string} options.label - Custom label for log output (default: "COMPONENT BREAKDOWN")
  * @returns {number} Total component count (including all nested components and accessories)
  *
  * @example
- * // Count with detailed logging (for debugging)
- * const count = countComponents(responseData.components, { enableLogging: true });
- * console.log(`Total: ${count}/40`);
+ * // Full detailed breakdown (debugging)
+ * const count = countComponents([containerObject], { enableLogging: true, verbosity: "full" });
  *
  * @example
- * // Count without logging (for validation in production)
- * const count = countComponents(responseData.components, { enableLogging: false });
+ * // Summary only (production logging)
+ * countComponents([containerObject], { enableLogging: true, verbosity: "summary", label: "MyMenu" });
+ * // Logs: "✅ MyMenu: 35/40 components"
+ *
+ * @example
+ * // Silent validation (error handling)
+ * const count = countComponents([containerObject], { enableLogging: false });
  * if (count > 40) throw new Error('Too many components!');
  */
 export function countComponents(components, options = {}) {
-    const { enableLogging = true, label = "COMPONENT BREAKDOWN" } = options;
+    const { enableLogging = true, label = "COMPONENT BREAKDOWN", verbosity = "full" } = options;
 
     let count = 0;
 
@@ -153,7 +158,7 @@ export function countComponents(components, options = {}) {
         for (const item of items) {
             count++; // Count the item itself
 
-            if (enableLogging) {
+            if (enableLogging && verbosity === "full") {
                 const indent = '  '.repeat(depth);
                 const typeName = typeNames[item.type] || `Unknown(${item.type})`;
                 const hasAccessory = item.accessory ? ' [HAS ACCESSORY]' : '';
@@ -164,7 +169,7 @@ export function countComponents(components, options = {}) {
             if (item.accessory) {
                 count++; // Accessories count as separate components!
 
-                if (enableLogging) {
+                if (enableLogging && verbosity === "full") {
                     const indent = '  '.repeat(depth);
                     const accessoryType = typeNames[item.accessory.type] || `Unknown(${item.accessory.type})`;
                     console.log(`${indent}   └─ Accessory: ${accessoryType}`);
@@ -185,7 +190,7 @@ export function countComponents(components, options = {}) {
             if (item.component) {
                 count++;
 
-                if (enableLogging) {
+                if (enableLogging && verbosity === "full") {
                     const indent = '  '.repeat(depth);
                     const childType = typeNames[item.component.type] || `Unknown(${item.component.type})`;
                     console.log(`${indent}   └─ Child: ${childType}`);
@@ -199,7 +204,7 @@ export function countComponents(components, options = {}) {
         }
     }
 
-    if (enableLogging) {
+    if (enableLogging && verbosity === "full") {
         console.log(`📋 ${label}:`);
     }
 
@@ -207,8 +212,32 @@ export function countComponents(components, options = {}) {
 
     if (enableLogging) {
         const status = count <= 40 ? '✅' : '❌';
-        console.log(`${status} Total components: ${count}/40`);
+        if (verbosity === "summary") {
+            console.log(`${status} ${label}: ${count}/40 components`);
+        } else {
+            console.log(`${status} Total components: ${count}/40`);
+        }
     }
 
     return count;
+}
+
+/**
+ * Validate that a component tree doesn't exceed Discord's 40-component limit
+ * Throws an error if limit is exceeded, otherwise returns silently
+ *
+ * @param {Array} components - Array of component objects to validate
+ * @param {string} contextLabel - Label for error message (e.g., "Production Menu")
+ * @throws {Error} If component count exceeds 40
+ *
+ * @example
+ * // Validate before sending response
+ * validateComponentLimit([containerObject], "Season Ranking Menu");
+ * return { components: [containerObject] };
+ */
+export function validateComponentLimit(components, contextLabel = "UI") {
+    const count = countComponents(components, { enableLogging: false });
+    if (count > 40) {
+        throw new Error(`${contextLabel} exceeds Discord component limit: ${count}/40 components`);
+    }
 }

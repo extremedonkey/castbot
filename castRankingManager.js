@@ -449,9 +449,9 @@ export async function generateSeasonAppRankingUI({
     components: containerComponents
   };
 
-  // Count components for debugging
+  // Count components for debugging (must wrap in array to count Container itself!)
   const { countComponents } = await import('./utils.js');
-  countComponents(castRankingContainer.components, {
+  countComponents([castRankingContainer], {
     enableLogging: true,
     label: `Season App Ranking UI - ${seasonName}`
   });

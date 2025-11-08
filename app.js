@@ -6773,9 +6773,9 @@ To fix this:
             
           console.log(`🔍 DEBUG: Season submenu - shouldUpdate: ${shouldUpdateMessage}`);
 
-          // Count components for debugging
+          // Count components for debugging (must wrap in array to count Container itself!)
           const { countComponents } = await import('./utils.js');
-          countComponents(seasonManagementContainer.components, {
+          countComponents([seasonManagementContainer], {
             enableLogging: true,
             label: 'Season Management Menu Components'
           });

@@ -14399,5 +14399,37 @@
         }
       }
     }
+  },
+  "1412422613774368851": {
+    "tribes": {
+      "1434563860316291154": {
+        "emoji": "🍆",
+        "castlist": "default",
+        "showPlayerEmojis": false,
+        "color": "#f1c40f",
+        "analyticsName": "🍆 a brand new day ☀️ 🍆",
+        "analyticsAdded": 1762628937828
+      }
+    },
+    "players": {},
+    "timezones": {},
+    "serverName": "CastBot Regression Orange",
+    "icon": "https://cdn.discordapp.com/icons/1412422613774368851/e3c4d9107556739bad258aeb536a6f35.webp",
+    "ownerId": "391415444084490240",
+    "memberCount": 5,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1756818192667,
+    "lastUpdated": 1762630821970,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0"
   }
 }

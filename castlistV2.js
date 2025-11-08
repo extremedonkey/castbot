@@ -957,6 +957,13 @@ export async function buildCastlist2ResponseData(guild, tribes, castlistId, navi
     }
   }
 
+  // Count components for debugging (responseData.components contains Containers)
+  const { countComponents } = await import('./utils.js');
+  countComponents(responseData.components, {
+    enableLogging: true,
+    label: `/castlist - ${castlistName || castlistId}`
+  });
+
   return responseData;
 }
 
