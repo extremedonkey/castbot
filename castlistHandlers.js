@@ -923,8 +923,8 @@ export function handleEditInfoModal(req, res, client, custom_id) {
       // Refresh the UI with the castlist still selected
       const hubData = await createCastlistHub(guildId, {
         selectedCastlistId: castlistId,
-        activeButton: null // Clear active button after modal
-      });
+        activeButton: CastlistButtonType.ADD_TRIBE // Auto-show tribes (consistent with select)
+      }, client);
 
       // Send UPDATE_MESSAGE response to keep the container open
       return res.send({

@@ -563,7 +563,631 @@ async deleteCastlist(guildId, castlistId)
 - Auto-migration on edit operations
 - **⚠️ Restriction**: Hardcoded to single user ID
 
-### ❌ NOT INTEGRATED: Entry Points
+---
+
+## 🔧 Phase 1 Implementation: Complete Design
+
+### Overview
+
+Phase 1 creates `getTribesForCastlist()` as the unified data access function for ALL castlist display operations. This replaces 3 legacy patterns with a single Virtual Adapter-powered function.
+
+**Files to modify**: `castlistDataAccess.js` (NEW), `castlistVirtualAdapter.js` (bug fix), `app.js` (2 migrations)
+
+**Total effort**: 3.25 hours (2hr function + 30min /castlist + 45min show_castlist2)
+
+---
+
+### Existing System Analysis (TribeManager Integration)
+
+**Reference**: [docs/implementation/TribeManager.md](docs/implementation/TribeManager.md)
+
+**Key existing function**: `castlistManager.getTribesUsingCastlist(guildId, castlistId)`
+- **Location**: `castlistVirtualAdapter.js:289-329`
+- **Purpose**: Lightweight role ID lookup for Castlist Hub UI pre-selection
+- **Returns**: `string[]` (array of role IDs only, NO member data)
+- **Usage**: Tribe toggle detection, Role Select default_values
+
+**Architecture pattern**:
+```
+Lightweight: getTribesUsingCastlist() → roleIds[] (for UI/management)
+Heavy: getTribesForCastlist() → tribes[] with members (for display)
+```
+
+This mirrors database design: indexes (IDs) vs full scans (enrichment with joins).
+
+---
+
+### 🐛 Bug Fix Required: `getTribesUsingCastlist()` Missing Legacy Support
+
+**Problem discovered**: User's `/castlist S2 - Big Bang` failed because:
+1. Tribe has legacy format: `"castlist": "S2 - Big Bang"` (no `castlistId` field)
+2. `getTribesUsingCastlist()` only checks `castlistId` and `castlistIds` (modern formats)
+3. Missing check for legacy `tribe.castlist` string field
+
+**Current code** (`castlistVirtualAdapter.js:289-329`):
+```javascript
+async getTribesUsingCastlist(guildId, castlistId) {
+  const playerData = await loadPlayerData();
+  const tribes = playerData[guildId]?.tribes || {};
+  const usingTribes = [];
+
+  // Check only 2 formats (MISSING legacy string!)
+  for (const [roleId, tribe] of Object.entries(tribes)) {
+    if (!tribe) continue;
+
+    // Format 1: Multi-castlist array
+    if (tribe.castlistIds && Array.isArray(tribe.castlistIds)) {
+      if (tribe.castlistIds.includes(castlistId)) {
+        usingTribes.push(roleId);
+        continue;
+      }
+    }
+
+    // Format 2: Single castlistId
+    if (tribe.castlistId === castlistId) {
+      usingTribes.push(roleId);
+      continue;
+    }
+
+    // ❌ MISSING Format 3: Legacy string (tribe.castlist === "S2 - Big Bang")
+  }
+
+  return usingTribes;
+}
+```
+
+**Fix**: Add legacy string matching via Virtual Adapter lookup:
+
+```javascript
+async getTribesUsingCastlist(guildId, castlistId) {
+  const playerData = await loadPlayerData();
+  const tribes = playerData[guildId]?.tribes || {};
+  const usingTribes = [];
+
+  // ✅ NEW: Get castlist entity to resolve both ID and name
+  const castlist = await this.getCastlist(guildId, castlistId);
+  if (!castlist) {
+    console.warn(`[VIRTUAL ADAPTER] Castlist ${castlistId} not found`);
+    return [];
+  }
+
+  for (const [roleId, tribe] of Object.entries(tribes)) {
+    if (!tribe) continue;
+
+    // Format 1: Multi-castlist array (modern)
+    if (tribe.castlistIds && Array.isArray(tribe.castlistIds)) {
+      if (tribe.castlistIds.includes(castlistId)) {
+        usingTribes.push(roleId);
+        continue;
+      }
+    }
+
+    // Format 2: Single castlistId (transitional)
+    if (tribe.castlistId === castlistId) {
+      usingTribes.push(roleId);
+      continue;
+    }
+
+    // ✅ Format 3: Legacy string (via Virtual Adapter name resolution)
+    if (tribe.castlist && tribe.castlist === castlist.name) {
+      usingTribes.push(roleId);
+      continue;
+    }
+  }
+
+  return usingTribes;
+}
+```
+
+**Why this matters**: Fixes user's regression bug AND makes `getTribesForCastlist()` able to delegate to this function for 3-format support.
+
+---
+
+### Step 1.1: Create `getTribesForCastlist()` Function
+
+**Location**: Create NEW file `castlistDataAccess.js` (unified data access layer from RaP architecture)
+
+**Function signature**:
+```javascript
+/**
+ * Get tribes for a castlist with full Discord member data (HEAVY operation)
+ * Replaces: getGuildTribes(), inline filtering, determineCastlistToShow()
+ *
+ * Handles all 3 castlist identifier formats:
+ * - Legacy string: "S2 - Big Bang"
+ * - Real ID: "castlist_1762187500959_1331657596087566398"
+ * - Virtual ID: "virtual_UzIgLSBCaWcgQmFuZw"
+ *
+ * @param {string} guildId - Discord guild ID
+ * @param {string} castlistIdentifier - String name, real ID, or virtual ID
+ * @param {Object} client - Discord.js client for member fetching
+ * @returns {Promise<Array>} Fully enriched tribe objects with members
+ */
+export async function getTribesForCastlist(guildId, castlistIdentifier, client)
+```
+
+**Complete implementation**:
+
+```javascript
+// castlistDataAccess.js (NEW FILE)
+import { castlistManager } from './castlistManager.js';
+import { loadPlayerData } from './storage.js';
+
+/**
+ * Get tribes for a castlist with full Discord member data (HEAVY operation)
+ *
+ * This is the SINGLE SOURCE OF TRUTH for castlist display operations.
+ * Replaces 3 legacy patterns:
+ * - getGuildTribes() (direct string matching)
+ * - determineCastlistToShow() (string scanning)
+ * - Inline filtering (145 lines in show_castlist2 handler)
+ *
+ * Architecture:
+ * 1. Resolve identifier → castlist entity (via Virtual Adapter)
+ * 2. Get tribe role IDs (via fixed getTribesUsingCastlist with 3-format support)
+ * 3. Enrich with Discord data (roles + members)
+ *
+ * @param {string} guildId - Discord guild ID
+ * @param {string} castlistIdentifier - String name, real ID, or virtual ID
+ * @param {Object} client - Discord.js client for member fetching
+ * @returns {Promise<Array>} Fully enriched tribe objects with Discord members
+ */
+export async function getTribesForCastlist(guildId, castlistIdentifier, client) {
+  console.log(`[TRIBES] Fetching tribes for castlist: ${castlistIdentifier}`);
+
+  // ============= STEP 1: Resolve Identifier to Castlist Entity =============
+  // Virtual Adapter handles all formats: string, ID, virtual ID
+  const castlist = await castlistManager.getCastlist(guildId, castlistIdentifier);
+
+  if (!castlist) {
+    console.warn(`[TRIBES] Castlist not found: ${castlistIdentifier}`);
+    return [];
+  }
+
+  console.log(`[TRIBES] Resolved to castlist: ${castlist.name} (${castlist.id})`);
+
+  // ============= STEP 2: Get Tribe Role IDs =============
+  // Delegates to FIXED getTribesUsingCastlist() (now supports all 3 formats)
+  const roleIds = await castlistManager.getTribesUsingCastlist(guildId, castlist.id);
+
+  if (roleIds.length === 0) {
+    console.log(`[TRIBES] No tribes found for castlist ${castlist.name}`);
+    return [];
+  }
+
+  console.log(`[TRIBES] Found ${roleIds.length} tribe(s): ${roleIds.join(', ')}`);
+
+  // ============= STEP 3: Enrich with Discord Data =============
+  const playerData = await loadPlayerData();
+  const guildTribes = playerData[guildId]?.tribes || {};
+
+  // Fetch guild and members in bulk (performance optimization)
+  const guild = await client.guilds.fetch(guildId);
+  await guild.members.fetch(); // Bulk fetch all members upfront
+
+  const enrichedTribes = [];
+
+  for (const roleId of roleIds) {
+    // Validate role ID format
+    if (!/^\d{17,19}$/.test(roleId)) {
+      console.warn(`[TRIBES] Invalid role ID format: ${roleId}`);
+      continue;
+    }
+
+    // Get tribe data from playerData
+    const tribeData = guildTribes[roleId];
+    if (!tribeData) {
+      console.warn(`[TRIBES] Tribe data not found for role ${roleId}`);
+      continue;
+    }
+
+    // Fetch Discord role
+    try {
+      const role = await guild.roles.fetch(roleId);
+      if (!role) {
+        console.warn(`[TRIBES] Role ${roleId} not found in Discord`);
+        continue;
+      }
+
+      // Get members from role
+      const members = Array.from(role.members.values());
+
+      // Build enriched tribe object (compatible with existing display engine)
+      enrichedTribes.push({
+        ...tribeData,           // All playerData tribe fields (emoji, color, etc.)
+        roleId,                 // Discord role ID
+        name: role.name,        // Discord role name (NOT displayName override)
+        members,                // Discord.js Member objects
+        memberCount: members.length,
+        castlistSettings: castlist.settings, // Link to parent castlist
+        castlistId: castlist.id,             // Resolved castlist ID
+        guildId                              // Guild context
+      });
+
+      console.log(`[TRIBES] Enriched tribe: ${role.name} (${members.length} members)`);
+
+    } catch (error) {
+      console.error(`[TRIBES] Error fetching role ${roleId}:`, error.message);
+      // Continue processing other tribes even if one fails
+    }
+  }
+
+  console.log(`[TRIBES] Returning ${enrichedTribes.length} enriched tribe(s)`);
+  return enrichedTribes;
+}
+```
+
+**File location**: `/home/reece/castbot/castlistDataAccess.js`
+
+**Export**: Add to file:
+```javascript
+export { getTribesForCastlist };
+```
+
+---
+
+### Step 1.2: Migrate `/castlist` Command
+
+**File**: `app.js` (lines ~1949-2087)
+
+**Current implementation** (138 lines):
+```javascript
+// Legacy pattern
+const castlistToShow = await determineCastlistToShow(guildId, userId, requestedCastlist);
+const rawTribes = await getGuildTribes(guildId, castlistToShow);
+```
+
+**New implementation** (2 lines):
+```javascript
+// Add import at top of file
+import { getTribesForCastlist } from './castlistDataAccess.js';
+
+// In /castlist handler (replace lines 1949-2087)
+const castlistIdentifier = requestedCastlist || 'default';
+const tribes = await getTribesForCastlist(guildId, castlistIdentifier, client);
+```
+
+**Complete handler replacement**:
+```javascript
+// app.js - /castlist command handler
+if (name === 'castlist') {
+  const requestedCastlist = req.body.data.options?.find(opt => opt.name === 'castlist')?.value;
+  const guildId = req.body.guild_id;
+  const userId = req.body.member.user.id;
+
+  console.log(`Processing castlist command (routed to Components V2)`);
+  if (requestedCastlist) {
+    console.log(`Selected castlist: ${requestedCastlist}`);
+  }
+
+  // ✅ NEW: Single unified call
+  const castlistIdentifier = requestedCastlist || 'default';
+  const tribes = await getTribesForCastlist(guildId, castlistIdentifier, client);
+
+  console.log(`Loaded ${tribes.length} tribes`);
+
+  // Check for permission before deferring
+  // ... existing permission check code ...
+
+  // Build and send response (existing display engine)
+  const responseData = await buildCastlist2ResponseData(
+    guildId,
+    tribes,
+    castlistIdentifier,
+    0,      // page
+    0,      // tribeIndex
+    client,
+    'command'
+  );
+
+  return res.send({
+    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+    data: responseData
+  });
+}
+```
+
+**Benefits**:
+- ✅ Supports all 3 castlist formats (string, ID, virtual ID)
+- ✅ Can see modern castlists via Virtual Adapter
+- ✅ Consistent with menu behavior
+- ✅ 138 lines → 2 lines (98.5% code reduction)
+
+---
+
+### Step 1.3: Migrate `show_castlist2` Handler
+
+**File**: `app.js` (lines ~4682-4826)
+
+**Current implementation** (145 lines of inline filtering):
+```javascript
+// Legacy pattern - manual 3-format checking
+for (const [roleId, tribe] of Object.entries(guildTribes)) {
+  const matchesCastlist = (
+    tribe.castlist === castlistName ||
+    tribe.castlistId === castlistIdForNavigation ||
+    (tribe.castlistIds && tribe.castlistIds.includes(...))
+  );
+  if (matchesCastlist) { /* ... */ }
+}
+```
+
+**New implementation** (2 lines):
+```javascript
+// Add import at top of file (already added in Step 1.2)
+// import { getTribesForCastlist } from './castlistDataAccess.js';
+
+// In show_castlist2 handler (replace lines 4682-4826)
+const castlistIdentifier = castlistIdForNavigation || 'default';
+const tribes = await getTribesForCastlist(guildId, castlistIdentifier, client);
+```
+
+**Complete handler replacement**:
+```javascript
+// app.js - show_castlist2 button handler
+} else if (custom_id.startsWith('show_castlist2_')) {
+  const guildId = req.body.guild_id;
+
+  // Extract castlist identifier from custom_id
+  // Format: show_castlist2_default or show_castlist2_castlist_123_456
+  const castlistIdForNavigation = custom_id.replace('show_castlist2_', '');
+
+  console.log(`[CASTLIST] Showing castlist: ${castlistIdForNavigation}`);
+
+  // ✅ NEW: Single unified call
+  const tribes = await getTribesForCastlist(guildId, castlistIdForNavigation, client);
+
+  console.log(`[CASTLIST] Loaded ${tribes.length} tribes`);
+
+  // Build and send response (existing display engine)
+  const responseData = await buildCastlist2ResponseData(
+    guildId,
+    tribes,
+    castlistIdForNavigation,
+    0,      // page
+    0,      // tribeIndex
+    client,
+    'button'
+  );
+
+  return res.send({
+    type: InteractionResponseType.UPDATE_MESSAGE,
+    data: responseData
+  });
+}
+```
+
+**Benefits**:
+- ✅ Eliminates 145 lines of duplication
+- ✅ Consistent castlist matching logic
+- ✅ Automatic Virtual Adapter integration
+- ✅ Virtual ID support built-in
+
+---
+
+### Testing Matrix
+
+#### Test Scenario 1: Legacy String Castlist
+**Setup**: Tribe with `"castlist": "S2 - Big Bang"` (no `castlistId` field)
+
+**Commands to test**:
+```
+/castlist S2 - Big Bang
+```
+
+**Expected result**:
+- ✅ Tribe found via legacy string matching
+- ✅ Members displayed correctly
+- ✅ No "interaction failed" errors
+
+**Validation**:
+```bash
+# Check logs for successful resolution
+tail -f /tmp/castbot-dev.log | grep "TRIBES"
+# Expected: "[TRIBES] Resolved to castlist: S2 - Big Bang (virtual_UzIgLSBCaWcgQmFuZw)"
+```
+
+#### Test Scenario 2: Modern Castlist (Real Entity)
+**Setup**: Castlist in `castlistConfigs` with ID `castlist_1762187500959_1331657596087566398`
+
+**Commands to test**:
+```
+/castlist the BIG one
+Click castlist button from Production Menu
+```
+
+**Expected result**:
+- ✅ Castlist resolved via Virtual Adapter
+- ✅ Tribes with `castlistId` field matched
+- ✅ Display shows modern castlist metadata
+
+#### Test Scenario 3: Virtual Castlist (Base64 ID)
+**Setup**: Legacy castlist "Season 47" generates virtual ID `virtual_U2Vhc29uIDQ3`
+
+**Commands to test**:
+```
+Click "Season 47" button from Castlist Hub
+```
+
+**Expected result**:
+- ✅ Virtual ID decoded to "Season 47"
+- ✅ Legacy tribes matched by string name
+- ✅ Display works identically to real castlists
+
+#### Test Scenario 4: Multi-Castlist Array Format
+**Setup**: Tribe with `"castlistIds": ["castlist_123", "castlist_456"]`
+
+**Commands to test**:
+```
+/castlist for either castlist_123 or castlist_456
+```
+
+**Expected result**:
+- ✅ Tribe appears in BOTH castlists
+- ✅ Array.includes() matching works
+- ✅ No duplicate tribe entries
+
+#### Test Scenario 5: Large Guild (578 Members)
+**Setup**: User's production guild with 578 members
+
+**Commands to test**:
+```
+/castlist S2 - Big Bang (in Servivorg S13 guild)
+```
+
+**Expected result**:
+- ✅ Bulk member fetch completes (may take 2-5 seconds)
+- ✅ No timeout errors
+- ✅ All tribe members displayed
+
+**Note**: If timeout occurs, increase Discord API timeout:
+```javascript
+await guild.members.fetch({ timeout: 60000 }); // 60 second timeout
+```
+
+#### Test Scenario 6: No Tribes Found
+**Setup**: Castlist exists but has no tribes assigned
+
+**Commands to test**:
+```
+/castlist empty_castlist
+```
+
+**Expected result**:
+- ✅ Returns empty array gracefully
+- ✅ No errors logged
+- ✅ Display shows "No tribes configured" message
+
+---
+
+### Error Handling
+
+**Error scenarios to handle**:
+
+1. **Castlist not found**:
+```javascript
+const castlist = await castlistManager.getCastlist(guildId, castlistIdentifier);
+if (!castlist) {
+  console.warn(`[TRIBES] Castlist not found: ${castlistIdentifier}`);
+  return []; // Graceful degradation
+}
+```
+
+2. **Guild fetch failure**:
+```javascript
+try {
+  const guild = await client.guilds.fetch(guildId);
+} catch (error) {
+  console.error(`[TRIBES] Failed to fetch guild ${guildId}:`, error);
+  throw new Error(`Guild ${guildId} not found or bot not in guild`);
+}
+```
+
+3. **Role not found in Discord**:
+```javascript
+const role = await guild.roles.fetch(roleId);
+if (!role) {
+  console.warn(`[TRIBES] Role ${roleId} not found in Discord`);
+  continue; // Skip this tribe, process others
+}
+```
+
+4. **Member fetch timeout** (large guilds):
+```javascript
+try {
+  await guild.members.fetch({ timeout: 60000 }); // 60s timeout
+} catch (error) {
+  if (error.code === 'GuildMembersTimeout') {
+    console.warn(`[TRIBES] Member fetch timeout for guild ${guildId} (large guild)`);
+    // Continue anyway - members.cache may have partial data
+  } else {
+    throw error;
+  }
+}
+```
+
+---
+
+### Implementation Checklist
+
+#### ✅ Step 1.1: Create `getTribesForCastlist()` (2 hours)
+
+**File operations**:
+- [ ] Create `/home/reece/castbot/castlistDataAccess.js`
+- [ ] Copy complete implementation from RaP
+- [ ] Add exports
+- [ ] Import dependencies (castlistManager, loadPlayerData, etc.)
+
+**Testing**:
+- [ ] Test with legacy data: `/castlist S2 - Big Bang`
+- [ ] Test with modern data: `/castlist the BIG one`
+- [ ] Test with virtual entities: Click virtual castlist from Hub
+- [ ] Verify logs show correct resolution path
+
+#### ✅ Step 1.2: Migrate `/castlist` Command (30 minutes)
+
+**File operations**:
+- [ ] Add import to `app.js`: `import { getTribesForCastlist } from './castlistDataAccess.js';`
+- [ ] Replace `/castlist` handler code (lines ~1949-2087)
+- [ ] Remove unused imports: `determineCastlistToShow`, `getGuildTribes`
+
+**Testing**:
+- [ ] Test `/castlist` with no argument (default)
+- [ ] Test `/castlist S2 - Big Bang` (legacy string)
+- [ ] Test `/castlist the BIG one` (modern name)
+- [ ] Verify all display features work (pagination, navigation, etc.)
+
+#### ✅ Step 1.3: Migrate `show_castlist2` (45 minutes)
+
+**File operations**:
+- [ ] Replace `show_castlist2` handler code (lines ~4682-4826)
+- [ ] Remove 145 lines of inline filtering logic
+- [ ] Keep UPDATE_MESSAGE response type
+
+**Testing**:
+- [ ] Click castlist button from Production Menu
+- [ ] Click castlist button from Player Menu
+- [ ] Test navigation between tribes
+- [ ] Test pagination
+- [ ] Verify "back" navigation works
+
+---
+
+### Deprecation Path
+
+**After Phase 1 complete**, mark for removal:
+
+1. **`getGuildTribes()`** (storage.js) - Add `@deprecated` JSDoc
+2. **`determineCastlistToShow()`** (castlistUtils.js) - Add `@deprecated` JSDoc
+3. **Inline filtering logic** - Removed during Step 1.3
+
+**Phase 2** (future): Remove deprecated functions after 48hr production soak test
+
+---
+
+### Success Criteria
+
+**Phase 1 is complete when**:
+- ✅ All 5 test scenarios pass
+- ✅ Zero "interaction failed" errors
+- ✅ Legacy string castlists work (fixes user's bug)
+- ✅ Modern castlists visible in `/castlist` command
+- ✅ Virtual castlists work from Hub
+- ✅ Code reduction: ~300 lines → ~50 lines (83% reduction)
+- ✅ Single source of truth: `getTribesForCastlist()` used by all entry points
+
+**Production readiness checklist**:
+- [ ] Dev testing complete (all scenarios pass)
+- [ ] Error handling verified
+- [ ] Logs show correct resolution paths
+- [ ] Performance acceptable (< 5s for large guilds)
+- [ ] Deploy to production via `npm run deploy-remote-wsl`
+- [ ] Monitor production logs for 48 hours
+- [ ] User confirms legacy castlists work
+
+---
+
+## ❌ NOT INTEGRATED: Entry Points (After Phase 1, ONLY 1 REMAINS!)
 
 **1. `/castlist` Command** (app.js:1949-2087)
 ```javascript

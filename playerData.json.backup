@@ -6022,7 +6022,10 @@
         "showPlayerEmojis": false,
         "color": "#206694",
         "analyticsName": "💥 S2 - Big Bang 💥",
-        "analyticsAdded": 1762611931910
+        "analyticsAdded": 1762611931910,
+        "castlistIds": [
+          "castlist_1762612908863_system"
+        ]
       },
       "1385242743130947665": {
         "emoji": "🪲",
@@ -6030,7 +6033,22 @@
         "showPlayerEmojis": false,
         "color": "#c27c0e",
         "analyticsName": "🪲 S3 - Beatles 🪲",
-        "analyticsAdded": 1762612545975
+        "analyticsAdded": 1762612545975,
+        "castlistIds": [
+          "castlist_1762613355166_system"
+        ]
+      },
+      "1008429181840937015": {
+        "castlistIds": [
+          "castlist_1762612908863_system"
+        ],
+        "castlist": "S2 - Big Bang"
+      },
+      "1426478110089674832": {
+        "castlistIds": [
+          "castlist_1760892362223_system"
+        ],
+        "castlist": "Season 1 - Buffy"
       }
     },
     "timezones": {
@@ -6800,13 +6818,13 @@
           "visibility": "public"
         },
         "metadata": {
-          "description": "Season 1 Castlist",
+          "description": "Season 1 Castlist  - Buffy",
           "emoji": "🧛‍♀️",
           "migratedFrom": "virtual_UzE",
           "migrationDate": 1760892362223
         },
-        "modifiedAt": 1762011899525,
-        "modifiedBy": "system",
+        "modifiedAt": 1762613674325,
+        "modifiedBy": "391415444084490240",
         "seasonId": "season_d07e555bdaef42e5"
       },
       "default": {
@@ -6850,6 +6868,46 @@
         },
         "modifiedAt": 1762011344222,
         "modifiedBy": "system"
+      },
+      "castlist_1762612908863_system": {
+        "id": "castlist_1762612908863_system",
+        "name": "S2 - Big Bang",
+        "type": "system",
+        "createdAt": 1762612908863,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Upgraded from legacy castlist 'S2 - Big Bang'",
+          "emoji": "📋",
+          "migratedFrom": "virtual_UzIgLSBCaWcgQmFuZw",
+          "migrationDate": 1762612908863
+        }
+      },
+      "castlist_1762613355166_system": {
+        "id": "castlist_1762613355166_system",
+        "name": "s3",
+        "type": "system",
+        "createdAt": 1762613355166,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "The Beatles!",
+          "emoji": "📋",
+          "migratedFrom": "virtual_czM",
+          "migrationDate": 1762613355166
+        },
+        "modifiedAt": 1762613366454,
+        "modifiedBy": "391415444084490240"
       }
     },
     "placements": {
