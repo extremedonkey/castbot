@@ -2175,113 +2175,57 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     if (name === 'castlist') {
     // ROUTE TO CASTLIST2: /castlist now uses Components V2 functionality
     try {
-      console.log('Processing castlist command (routed to Components V2)');
+      console.log('Processing castlist command (routed to Components V2 - Unified Data Access)');
       const guildId = req.body.guild_id;
       const userId = req.body.member.user.id;
       const requestedCastlist = data.options?.find(opt => opt.name === 'castlist')?.value;
 
-      // Determine which castlist to show
-      const castlistToShow = await determineCastlistToShow(guildId, userId, requestedCastlist, client);
-      console.log(`Selected castlist: ${castlistToShow}`);
-
-      // Load initial tribe data
-      const rawTribes = await getGuildTribes(guildId, castlistToShow);
-      console.log('Loaded raw tribes:', JSON.stringify(rawTribes));
-
-      if (rawTribes.length === 0) {
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: 1 << 15,
-            components: [
-              { type: 10, content: '# No Tribes Found' },
-              { type: 10, content: 'No tribes have been added to the default Castlist yet. Please have Production add tribes via the `/prod_menu` > `🔥 Tribes` Button > `🛠️ Add Tribe`.' }
-            ]
-          }
-        });
-      }
+      // ✅ NEW: Single unified call via Virtual Adapter
+      const { getTribesForCastlist } = await import('./castlistDataAccess.js');
+      const castlistIdentifier = requestedCastlist || 'default';
+      console.log(`Selected castlist: ${castlistIdentifier}`);
 
       // Check permissions BEFORE sending deferred response to determine response type
       const member = req.body.member;
       const channelId = req.body.channel_id;
       const canSendMessages = await canSendMessagesInChannel(member, channelId, client);
       console.log(`Pre-deferred permission check: User ${member?.user?.username} can send messages in channel ${channelId}: ${canSendMessages}`);
-      
+
       // Send appropriate deferred response based on permissions
       if (canSendMessages) {
         // User can send messages - public deferred response
         res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
       } else {
         // User cannot send messages - ephemeral deferred response
-        res.send({ 
+        res.send({
           type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
           data: { flags: InteractionResponseFlags.EPHEMERAL }
         });
         console.log(`Sent ephemeral deferred response for user ${member?.user?.username}`);
       }
 
-      const guild = await client.guilds.fetch(guildId);
-      const fullGuild = await client.guilds.fetch(guildId, { force: true });
-      await fullGuild.roles.fetch();
+      // Get tribes via unified data access (handles legacy + modern castlists)
+      const validTribes = await getTribesForCastlist(guildId, castlistIdentifier, client);
+      console.log(`Loaded ${validTribes.length} tribes via unified data access`);
 
-      // Pre-load playerData for sorting (placements, etc.)
-      const playerData = await loadPlayerData();
-
-      // Ensure member cache is fully populated (post-restart fix)
-      console.log(`Fetching members for guild ${fullGuild.name} (${fullGuild.memberCount} total)`);
-      const members = await fullGuild.members.fetch({ force: true });
-
-      // Filter out standalone castlists (Castlist V3 tribes with roleId: null or invalid)
-      const validRawTribes = rawTribes.filter(tribe => {
-        if (!tribe.roleId || typeof tribe.roleId !== 'string' || !/^\d{17,20}$/.test(tribe.roleId)) {
-          console.warn(`🛡️ Filtering out tribe with invalid roleId: ${tribe.roleId || 'null'} (likely standalone Castlist V3)`);
-          return false;
-        }
-        return true;
-      });
-
-      // Process tribes and gather member data
-      const tribesWithMembers = await Promise.all(validRawTribes.map(async (tribe) => {
-        // Try-catch around role fetch for defensive error handling
-        let role;
-        try {
-          role = await fullGuild.roles.fetch(tribe.roleId);
-        } catch (error) {
-          console.warn(`❌ Error fetching role ${tribe.roleId}: ${error.message}`);
-          return null;
-        }
-
-        if (!role || !role.name) {
-          console.warn(`⚠️ Role ${tribe.roleId} not found or incomplete on server ${fullGuild.name} (${fullGuild.id}), skipping...`);
-          return null;
-        }
-
-        const tribeMembers = members.filter(member => member.roles.cache.has(role.id));
-        return {
-          ...tribe,
-          name: role.name || tribe.name || `Tribe ${tribe.roleId}`,  // Null-safe fallback
-          memberCount: tribeMembers.size,
-          members: Array.from(tribeMembers.values())
-        };
-      }));
-
-      // Filter out tribes with missing roles
-      const validTribes = tribesWithMembers.filter(tribe => tribe !== null);
-      
       if (validTribes.length === 0) {
         const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
         await DiscordRequest(endpoint, {
           method: 'PATCH',
           body: {
-            content: 'No valid tribes found. Some tribe roles may have been deleted. Please use the Add Tribes button to set up tribes again.',
+            content: `No tribes found for castlist: ${castlistIdentifier}. Please add tribes via Production Menu.`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
         return;
       }
 
+      // Pre-load playerData for sorting (placements, etc.)
+      const playerData = await loadPlayerData();
+      const guild = await client.guilds.fetch(guildId);
+
       // Apply user-first tribe ordering for default castlists
-      const orderedTribes = reorderTribes(validTribes, userId, "user-first", castlistToShow);
+      const orderedTribes = reorderTribes(validTribes, userId, "user-first", castlistIdentifier);
 
       // Determine display scenario based on component calculations
       const scenario = determineDisplayScenario(orderedTribes);
@@ -2295,9 +2239,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       });
 
       // Create navigation state for initial display (first tribe, first page)
-      const navigationState = createNavigationState(orderedTribes, scenario, 0, 0, fullGuild, { playerData, guildId });
+      const navigationState = createNavigationState(orderedTribes, scenario, 0, 0, guild, { playerData, guildId });
 
-      await sendCastlist2Response(req, fullGuild, orderedTribes, castlistToShow, navigationState, req.body.member, req.body.channel_id, 'view', null, { playerData, guildId });
+      await sendCastlist2Response(req, guild, orderedTribes, castlistIdentifier, navigationState, req.body.member, req.body.channel_id, 'view', null, { playerData, guildId });
 
     } catch (error) {
       console.error('Error handling castlist command:', error);
@@ -4931,167 +4875,74 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
         console.log('Processing show_castlist2 for:', requestedCastlist, 'in mode:', displayMode);
 
-        // The rest of the existing show_castlist2 logic is already in app.js
-        // Just continue with the existing flow using the decoded castlist name
         const guildId = req.body.guild_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
         const channelId = req.body.channel_id || null;
         const member = req.body.member || null;
         const guild = await client.guilds.fetch(guildId);
 
-        // REMOVED: guild.members.fetch() - causes timeout crashes for large guilds
-        // Members are fetched per-role below which is much faster
+        // ✅ NEW: Single unified call via Virtual Adapter (replaces 145 lines of inline filtering)
+        const { getTribesForCastlist } = await import('./castlistDataAccess.js');
+        const allTribes = await getTribesForCastlist(guildId, requestedCastlist, client);
 
-      // Import necessary functions that DO exist
-      const { loadPlayerData } = await import('./storage.js');
-      const { determineCastlistToShow } = await import('./utils/castlistUtils.js');
-      const { determineDisplayScenario, createNavigationState, reorderTribes } = await import('./castlistV2.js');
-      
-      // Determine which castlist to show
-      const playerData = await loadPlayerData();
-      let castlistName = await determineCastlistToShow(guildId, userId, requestedCastlist);
-
-      // If requestedCastlist is a castlistId, look up the real name for display
-      // (Keep requestedCastlist as ID for tribe matching, but use name for display)
-      let castlistEntity = null;
-      if (requestedCastlist && (requestedCastlist.startsWith('castlist_') || requestedCastlist === 'default')) {
-        castlistEntity = playerData[guildId]?.castlistConfigs?.[requestedCastlist];
-        if (castlistEntity?.name) {
-          castlistName = castlistEntity.name;
-          console.log(`Resolved castlistId '${requestedCastlist}' to name '${castlistName}' for display`);
-        }
-      }
-
-      console.log('Determined castlist to show:', castlistName);
-
-      // Resolve legacy castlist name to entity ID for navigation buttons
-      let castlistIdForNavigation = requestedCastlist;
-      console.log(`🔍 Resolution check: requestedCastlist='${requestedCastlist}', isID=${requestedCastlist.startsWith('castlist_')}, isDefault=${requestedCastlist === 'default'}`);
-
-      if (!requestedCastlist.startsWith('castlist_') && requestedCastlist !== 'default') {
-        // requestedCastlist is a legacy name - find matching entity
-        const castlistConfigs = playerData[guildId]?.castlistConfigs || {};
-        console.log(`🔍 Searching ${Object.keys(castlistConfigs).length} castlist configs for name='${requestedCastlist}'`);
-        const matchingEntity = Object.values(castlistConfigs).find(config => config.name === requestedCastlist);
-        console.log(`🔍 Found matching entity:`, matchingEntity ? `id=${matchingEntity.id}, name=${matchingEntity.name}` : 'NOT FOUND');
-        if (matchingEntity?.id) {
-          castlistIdForNavigation = matchingEntity.id;
-          console.log(`✅ Resolved legacy name '${requestedCastlist}' to entity ID '${castlistIdForNavigation}'`);
-        } else {
-          console.log(`⚠️ Could not resolve legacy name '${requestedCastlist}' - no matching entity found`);
-        }
-      } else {
-        console.log(`✅ Using requestedCastlist as-is: '${castlistIdForNavigation}' (already an ID or default)`);
-      }
-
-      // Get tribes for this castlist (using existing logic from app.js)
-      const guildTribes = playerData[guildId]?.tribes || {};
-      const allTribes = [];
-
-      // Audit tribes object for invalid keys (data corruption check)
-      const invalidKeys = Object.keys(guildTribes).filter(key => !/^\d{17,19}$/.test(key));
-      if (invalidKeys.length > 0) {
-        console.error(`❌ [CASTLIST] Found ${invalidKeys.length} invalid keys in tribes object:`, invalidKeys);
-        console.error(`❌ [CASTLIST] This indicates data corruption - these should be Discord role IDs only`);
-      }
-
-      for (const [roleId, tribe] of Object.entries(guildTribes)) {
-        // Validate role ID is a Discord snowflake (17-19 digit numeric string)
-        if (!/^\d{17,19}$/.test(roleId)) {
-          console.warn(`⚠️ [CASTLIST] Skipping invalid role ID in tribes: ${roleId} (not a Discord snowflake)`);
-          continue;  // Skip to next tribe
+        if (allTribes.length === 0) {
+          return res.send({
+            type: 4,
+            data: {
+              content: `No tribes found for castlist: ${requestedCastlist}`,
+              flags: 1 << 6  // Ephemeral flag
+            }
+          });
         }
 
-        // Check legacy 'castlist' string and current 'castlistIds' array
-        // Note: castlistId (singular) removed - only castlistIds[] supported now
-        const matchesCastlist = (
-          // Legacy string matching (for backwards compatibility)
-          tribe.castlist === castlistName ||
-          // CURRENT: Multi-castlist array matching (PRIMARY FORMAT)
-          (tribe.castlistIds && Array.isArray(tribe.castlistIds) &&
-           tribe.castlistIds.includes(castlistIdForNavigation)) ||
-          // Default castlist special cases
-          (tribe.castlist === 'default' &&
-           (castlistName === 'Active Castlist' || requestedCastlist === 'default')) ||
-          // Array support for default castlist
-          (tribe.castlistIds?.includes('default') &&
-           (castlistName === 'Active Castlist' || requestedCastlist === 'default'))
-        );
+        // Import necessary functions
+        const { loadPlayerData } = await import('./storage.js');
+        const { determineDisplayScenario, createNavigationState, reorderTribes } = await import('./castlistV2.js');
 
-        if (matchesCastlist) {
+        const playerData = await loadPlayerData();
+
+        // Reorder tribes for display
+        const tribes = reorderTribes(allTribes, requestedCastlist);
+
+        // Check permissions if in channel
+        if (channelId && member) {
           try {
-            const role = await guild.roles.fetch(roleId);
-            if (!role) continue;
-
-            // Store actual Discord.js member objects, not plain objects
-            const tribeMembers = Array.from(role.members.values());
-
-            allTribes.push({
-              ...tribe,
-              roleId,
-              name: role.name,
-              members: tribeMembers,
-              memberCount: tribeMembers.length,
-              // 🔗 PHASE 2: Attach castlist settings AND seasonId for placement lookups
-              castlistSettings: {
-                ...castlistEntity?.settings,
-                seasonId: castlistEntity?.seasonId  // CRITICAL: Enables season-based placements
-              },
-              castlistId: castlistIdForNavigation,  // Use resolved entity ID for navigation
-              guildId: guildId  // For accessing playerData placements
-            });
+            const memberObj = await guild.members.fetch(userId);
+            const channel = await client.channels.fetch(channelId);
+            const permissions = channel?.permissionsFor(memberObj);
+            if (!permissions?.has('SendMessages')) {
+              return res.send({
+                type: 4,
+                data: {
+                  content: 'You do not have permission to send messages in this channel.',
+                  flags: 1 << 6  // Ephemeral flag
+                }
+              });
+            }
           } catch (error) {
-            console.error(`Error fetching role ${roleId}:`, error);
+            console.error('Error checking channel permissions:', error);
           }
         }
-      }
-      
-      if (allTribes.length === 0) {
-        return res.send({
-          type: 4,
-          data: {
-            content: `No tribes found for castlist: ${castlistName}`,
-            flags: 1 << 6  // Ephemeral flag
-          }
-        });
-      }
-      
-      // Reorder tribes for display
-      const tribes = reorderTribes(allTribes, castlistName);
-      
-      // Check permissions if in channel
-      if (channelId && member) {
-        try {
-          const memberObj = await guild.members.fetch(userId);
-          const channel = await client.channels.fetch(channelId);
-          const permissions = channel?.permissionsFor(memberObj);
-          if (!permissions?.has('SendMessages')) {
-            return res.send({
-              type: 4,
-              data: {
-                content: 'You do not have permission to send messages in this channel.',
-                flags: 1 << 6  // Ephemeral flag
-              }
-            });
-          }
-        } catch (error) {
-          console.error('Error checking channel permissions:', error);
-        }
-      }
-      // Calculate components for all tribes
-      const scenario = determineDisplayScenario(tribes);
-      const navigationState = createNavigationState(tribes, scenario, 0, 0, guild, { playerData, guildId });
 
-      // Send castlist as a NEW message to the channel
-      const memberObj = member ? await guild.members.fetch(userId) : null;
+        // Calculate components for all tribes
+        const scenario = determineDisplayScenario(tribes);
+        const navigationState = createNavigationState(tribes, scenario, 0, 0, guild, { playerData, guildId });
 
-      // Build the response data using the new helper function
-      // Create permission checker for ephemeral flag handling
-      const permissionChecker = memberObj && channelId ?
-        async (m, c) => await canSendMessagesInChannel(m, c, client) :
-        null;
-      // Pass ID for lookups, name for display
-      const responseData = await buildCastlist2ResponseData(guild, tribes, castlistIdForNavigation, navigationState, memberObj, channelId, permissionChecker, displayMode, castlistName, { playerData, guildId });
+        // Send castlist as a NEW message to the channel
+        const memberObj = member ? await guild.members.fetch(userId) : null;
+
+        // Build the response data using the new helper function
+        // Create permission checker for ephemeral flag handling
+        const permissionChecker = memberObj && channelId ?
+          async (m, c) => await canSendMessagesInChannel(m, c, client) :
+          null;
+
+        // Get castlist name for display (Virtual Adapter already resolved this)
+        const castlistEntity = playerData[guildId]?.castlistConfigs?.[requestedCastlist];
+        const castlistName = castlistEntity?.name || requestedCastlist;
+
+        // Pass ID for lookups, name for display
+        const responseData = await buildCastlist2ResponseData(guild, tribes, requestedCastlist, navigationState, memberObj, channelId, permissionChecker, displayMode, castlistName, { playerData, guildId });
 
         // Post castlist as NEW public message (button posts to channel)
         return res.send({

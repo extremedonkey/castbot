@@ -3410,7 +3410,7 @@
         "createdAt": 1762581921039,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "placements",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -3421,8 +3421,8 @@
           "migratedFrom": "virtual_R2Vua2FpVGVzdA",
           "migrationDate": 1762581921039
         },
-        "modifiedAt": 1762582461203,
-        "modifiedBy": "391415444084490240"
+        "modifiedAt": 1762615288085,
+        "modifiedBy": "system"
       },
       "castlist_1762584620535_system": {
         "id": "castlist_1762584620535_system",
@@ -5971,12 +5971,14 @@
       },
       "1406847946758033539": {
         "emoji": "🦖",
-        "castlist": "S12 - Jurassic Park",
         "showPlayerEmojis": false,
         "color": "#9d55e0",
         "analyticsName": "🦖 S12 - Jurassic Park 🦖",
         "analyticsAdded": 1759581597773,
-        "castlistId": "castlist_1760168292677_system"
+        "castlistIds": [
+          "castlist_1760168292677_system"
+        ],
+        "castlist": "S12 - Jurassic Park"
       },
       "1385242520161620039": {
         "emoji": "1️⃣",
@@ -6876,7 +6878,7 @@
         "createdAt": 1762612908863,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "reverse_alpha",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -6886,7 +6888,9 @@
           "emoji": "📋",
           "migratedFrom": "virtual_UzIgLSBCaWcgQmFuZw",
           "migrationDate": 1762612908863
-        }
+        },
+        "modifiedAt": 1762615236934,
+        "modifiedBy": "system"
       },
       "castlist_1762613355166_system": {
         "id": "castlist_1762613355166_system",

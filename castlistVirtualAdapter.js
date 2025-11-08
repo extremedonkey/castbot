@@ -291,10 +291,18 @@ export class CastlistVirtualAdapter {
     const tribes = playerData[guildId]?.tribes || {};
     const usingTribes = [];
 
-    // Check both castlistId (new) and virtual matching (old)
+    // ✅ NEW: Get castlist entity to resolve both ID and name
+    const castlist = await this.getCastlist(guildId, castlistId);
+    if (!castlist) {
+      console.warn(`[VIRTUAL ADAPTER] Castlist ${castlistId} not found`);
+      return [];
+    }
+
+    // Check all 3 castlist formats for tribe matching
     for (const [roleId, tribe] of Object.entries(tribes)) {
       if (!tribe) continue; // Skip null/undefined tribe entries
-      // Multi-castlist format (array)
+
+      // Format 1: Multi-castlist array (modern)
       if (tribe.castlistIds && Array.isArray(tribe.castlistIds)) {
         if (tribe.castlistIds.includes(castlistId)) {
           usingTribes.push(roleId);
@@ -302,23 +310,16 @@ export class CastlistVirtualAdapter {
         }
       }
 
-      // Direct ID match (single ID format)
+      // Format 2: Single castlistId (transitional)
       if (tribe.castlistId === castlistId) {
         usingTribes.push(roleId);
         continue;
       }
 
-      // Virtual ID matching (old system)
-      if (this.isVirtualId(castlistId) && tribe.castlist) {
-        const virtualIdForTribe = this.generateVirtualId(tribe.castlist);
-        if (virtualIdForTribe === castlistId) {
-          usingTribes.push(roleId);
-        }
-      }
-
-      // Legacy string matching for default
-      if (castlistId === 'default' && tribe.castlist === 'default' && !tribe.castlistId && !tribe.castlistIds) {
+      // ✅ Format 3: Legacy string (via Virtual Adapter name resolution)
+      if (tribe.castlist && tribe.castlist === castlist.name) {
         usingTribes.push(roleId);
+        continue;
       }
     }
 
