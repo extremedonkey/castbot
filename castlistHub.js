@@ -503,70 +503,9 @@ async function createHotSwappableInterface(guildId, castlist, activeButton, clie
       return interfaceComponents;
     
     case CastlistButtonType.ORDER:
-      // Create sort strategy select
-      const currentStrategy = castlist.settings?.sortStrategy || 'alphabetical';
-      
-      return {
-        type: 1, // ActionRow
-        components: [{
-          type: 3, // String Select
-          custom_id: `castlist_sort_${castlist.id}`,
-          placeholder: 'Select sort order...',
-          min_values: 1,
-          max_values: 1,
-          options: [
-            {
-              label: 'Alphabetical (A-Z)',
-              value: 'alphabetical',
-              description: 'Sort players by name',
-              emoji: { name: '🔤' },
-              default: currentStrategy === 'alphabetical'
-            },
-            {
-              label: 'Placements',
-              value: 'placements',
-              description: 'Sort by ranking (1st, 2nd, 3rd...)',
-              emoji: { name: '🏅' },
-              default: currentStrategy === 'placements'
-            },
-            {
-              label: 'Vanity Role (Winners)',
-              value: 'vanity_role',
-              description: "Useful for Winners' castlist (assign @S1 - Winner and will list in order)",
-              emoji: { name: '🏆' },
-              default: currentStrategy === 'vanity_role'
-            },
-            {
-              label: 'Reverse Alphabetical (Z-A)',
-              value: 'reverse_alpha',
-              description: 'Sort players by name in reverse',
-              emoji: { name: '🔤' },
-              default: currentStrategy === 'reverse_alpha'
-            },
-            {
-              label: 'Age',
-              value: 'age',
-              description: 'Sort by player age',
-              emoji: { name: '🎂' },
-              default: currentStrategy === 'age'
-            },
-            {
-              label: 'Timezone',
-              value: 'timezone',
-              description: 'Sort by timezone offset',
-              emoji: { name: '🌍' },
-              default: currentStrategy === 'timezone'
-            },
-            {
-              label: 'Join Date',
-              value: 'join_date',
-              description: 'Sort by server join date',
-              emoji: { name: '📅' },
-              default: currentStrategy === 'join_date'
-            }
-          ]
-        }]
-      };
+      // DEPRECATED: Order button now shows modal instead of hot-swappable interface
+      // Modal handling is in castlistHandlers.js handleCastlistButton()
+      return null;
     
     case CastlistButtonType.SWAP_MERGE:
       // Placeholder for Swap/Merge functionality

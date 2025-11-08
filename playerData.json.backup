@@ -3296,13 +3296,13 @@
           "visibility": "public"
         },
         "metadata": {
-          "description": "The new and improved list!",
+          "description": "The really cool MVPs of CastBot",
           "emoji": "🏆",
           "migratedFrom": "virtual_bGVnYWN5TGlzdA",
           "migrationDate": 1759638936215
         },
-        "modifiedAt": 1762006373273,
-        "modifiedBy": "system",
+        "modifiedAt": 1762614894979,
+        "modifiedBy": "391415444084490240",
         "seasonId": "season_cac1b81de8914c79"
       },
       "castlist_1759671885172_system": {
@@ -6790,7 +6790,7 @@
         "createdAt": 1760168292677,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "placements",
+          "sortStrategy": "alphabetical",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -6802,7 +6802,7 @@
           "migrationDate": 1760168292677
         },
         "seasonId": "season_ddb0fef37a464200",
-        "modifiedAt": 1760168500079,
+        "modifiedAt": 1762615097807,
         "modifiedBy": "system"
       },
       "castlist_1760892362223_system": {
@@ -6812,7 +6812,7 @@
         "createdAt": 1760892362223,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "placements",
+          "sortStrategy": "vanity_role",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -6823,8 +6823,8 @@
           "migratedFrom": "virtual_UzE",
           "migrationDate": 1760892362223
         },
-        "modifiedAt": 1762613674325,
-        "modifiedBy": "391415444084490240",
+        "modifiedAt": 1762613724635,
+        "modifiedBy": "system",
         "seasonId": "season_d07e555bdaef42e5"
       },
       "default": {

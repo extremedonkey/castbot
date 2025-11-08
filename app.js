@@ -8453,10 +8453,10 @@ To fix this:
       } else {
         return result;
       }
-    } else if (custom_id.startsWith('castlist_sort_')) {
-      // Handle sort strategy selection
-      const { handleCastlistSort } = await import('./castlistHandlers.js');
-      return handleCastlistSort(req, res, client, custom_id);
+    // DEPRECATED: castlist_sort_ handler - Order button now uses modal (castlist_order_modal_)
+    // } else if (custom_id.startsWith('castlist_sort_')) {
+    //   const { handleCastlistSort } = await import('./castlistHandlers.js');
+    //   return handleCastlistSort(req, res, client, custom_id);
     } else if (custom_id.startsWith('castlist_tribe_select_')) {
       // Handle tribe role selection - instant toggle add/remove with deduplication
       const { handleCastlistTribeSelect } = await import('./castlistHandlers.js');
@@ -37905,6 +37905,10 @@ Are you sure you want to continue?`;
       // Handle castlist Edit Info modal submission
       const { handleEditInfoModal } = await import('./castlistHandlers.js');
       return handleEditInfoModal(req, res, client, custom_id);
+    } else if (custom_id.startsWith('castlist_order_modal_')) {
+      // Handle castlist Order modal submission
+      const { handleOrderModal } = await import('./castlistHandlers.js');
+      return handleOrderModal(req, res, client, custom_id);
     } else if (custom_id === 'castlist_create_new_modal') {
       // Handle NEW castlist creation modal submission
       const { handleCreateNewModal } = await import('./castlistHandlers.js');

@@ -391,7 +391,7 @@ export async function handleCastlistButton(req, res, client, custom_id) {
 
   return ButtonHandlerFactory.create({
     id: custom_id,
-    updateMessage: buttonType !== 'edit_info', // Don't update for edit_info (shows modal)
+    updateMessage: buttonType !== 'edit_info' && buttonType !== 'order', // Don't update for modals
     handler: async (context) => {
       console.log(`📋 Castlist action: ${buttonType} for ${castlistId}`);
       
@@ -537,7 +537,106 @@ export async function handleCastlistButton(req, res, client, custom_id) {
           }
         };
       }
-      
+
+      // Special handling for Order - show modal
+      if (buttonType === 'order') {
+        const castlist = await castlistManager.getCastlist(context.guildId, castlistId);
+
+        if (!castlist) {
+          return {
+            type: 4,
+            data: {
+              content: '❌ Could not find castlist',
+              flags: 64
+            }
+          };
+        }
+
+        // Get current sort strategy
+        const currentStrategy = castlist.settings?.sortStrategy || 'alphabetical';
+
+        // Create modal with sort strategy selector
+        return {
+          type: 9, // Modal
+          data: {
+            custom_id: `castlist_order_modal_${castlistId}`,
+            title: 'Castlist Sort Order',
+            components: [
+              // Instructions
+              {
+                type: 10, // Text Display
+                content: '### Choose Sort Strategy\n\nSelect how players should be ordered in this castlist:'
+              },
+              // Sort Strategy Selector (Label + String Select)
+              {
+                type: 18, // Label
+                label: 'Sort Strategy',
+                description: 'Choose the ordering method for players',
+                component: {
+                  type: 3, // String Select
+                  custom_id: 'sort_strategy',
+                  placeholder: 'Select sort order...',
+                  required: true,
+                  min_values: 1,
+                  max_values: 1,
+                  options: [
+                    {
+                      label: 'Alphabetical (A-Z)',
+                      value: 'alphabetical',
+                      description: 'Sort players by name',
+                      emoji: { name: '🔤' },
+                      default: currentStrategy === 'alphabetical'
+                    },
+                    {
+                      label: 'Placements',
+                      value: 'placements',
+                      description: 'Sort by ranking (1st, 2nd, 3rd...)',
+                      emoji: { name: '🏅' },
+                      default: currentStrategy === 'placements'
+                    },
+                    {
+                      label: 'Vanity Role (Winners)',
+                      value: 'vanity_role',
+                      description: "Useful for Winners' castlist",
+                      emoji: { name: '🏆' },
+                      default: currentStrategy === 'vanity_role'
+                    },
+                    {
+                      label: 'Reverse Alphabetical (Z-A)',
+                      value: 'reverse_alpha',
+                      description: 'Sort players by name in reverse',
+                      emoji: { name: '🔤' },
+                      default: currentStrategy === 'reverse_alpha'
+                    },
+                    {
+                      label: 'Age',
+                      value: 'age',
+                      description: 'Sort by player age',
+                      emoji: { name: '🎂' },
+                      default: currentStrategy === 'age'
+                    },
+                    {
+                      label: 'Timezone',
+                      value: 'timezone',
+                      description: 'Sort by timezone offset',
+                      emoji: { name: '🌍' },
+                      default: currentStrategy === 'timezone'
+                    },
+                    {
+                      label: 'Join Date',
+                      value: 'join_date',
+                      description: 'Sort by server join date',
+                      emoji: { name: '📅' },
+                      default: currentStrategy === 'join_date'
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        };
+      }
+
       // Regular button handling - update UI with active button
       const hubData = await createCastlistHub(context.guildId, {
         selectedCastlistId: castlistId,
@@ -943,7 +1042,80 @@ export function handleEditInfoModal(req, res, client, custom_id) {
       });
     }
   })();
-}/**
+}
+
+/**
+ * Handle Order modal submission
+ */
+export function handleOrderModal(req, res, client, custom_id) {
+  const castlistId = custom_id.replace('castlist_order_modal_', '');
+  const components = req.body.data.components;
+
+  // Don't use ButtonHandlerFactory for modal submissions - handle directly
+  return (async () => {
+    try {
+      const guildId = req.body.guild_id;
+      const userId = req.body.member?.user?.id || req.body.user?.id;
+      console.log(`📋 Updating sort strategy for castlist ${castlistId}`);
+
+      // Extract sort strategy from Components V2 modal structure (Label + component)
+      let newSortStrategy = null;
+
+      components.forEach(comp => {
+        // Skip Text Display components (type 10)
+        if (comp.type === 10) return;
+
+        // Handle Label components (type 18)
+        if (comp.type === 18 && comp.component) {
+          const innerComp = comp.component;
+
+          if (innerComp.custom_id === 'sort_strategy') {
+            // Extract selected value from String Select
+            const selectedValues = innerComp.values || [];
+            if (selectedValues.length > 0) {
+              newSortStrategy = selectedValues[0];
+            }
+          }
+        }
+      });
+
+      if (!newSortStrategy) {
+        throw new Error('No sort strategy selected');
+      }
+
+      // Update the castlist's sort strategy
+      await castlistManager.updateCastlist(guildId, castlistId, {
+        settings: { sortStrategy: newSortStrategy }
+      });
+
+      console.log(`✅ Updated castlist ${castlistId} sort strategy to: ${newSortStrategy}`);
+
+      // Refresh the UI with tribes showing (consistent with edit_info)
+      const hubData = await createCastlistHub(guildId, {
+        selectedCastlistId: castlistId,
+        activeButton: CastlistButtonType.ADD_TRIBE // Auto-show tribes
+      }, client);
+
+      // Send UPDATE_MESSAGE response
+      return res.send({
+        type: 7, // InteractionResponseType.UPDATE_MESSAGE
+        data: hubData
+      });
+
+    } catch (error) {
+      console.error('Error updating sort strategy:', error);
+      return res.send({
+        type: 4, // InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE
+        data: {
+          content: '❌ Error updating sort order',
+          flags: 64 // EPHEMERAL
+        }
+      });
+    }
+  })();
+}
+
+/**
  * Handle NEW castlist creation modal submission
  * Creates a new castlist and returns to the hub with it selected
  */
