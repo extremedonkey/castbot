@@ -1956,6 +1956,17 @@
         "color": null,
         "analyticsName": "FixLegacy",
         "analyticsAdded": 1762573421940
+      },
+      "1436597212715942058": {
+        "emoji": "😮‍💨",
+        "castlist": "GenkaiTest",
+        "showPlayerEmojis": false,
+        "color": null,
+        "analyticsName": "😮‍💨 genkaiTest 😮‍💨",
+        "analyticsAdded": 1762581901033,
+        "castlistIds": [
+          "castlist_1762581921039_system"
+        ]
       }
     },
     "timezones": {
@@ -3254,7 +3265,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1762216032815,
+        "modifiedAt": 1762580473044,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -3375,6 +3386,25 @@
           "emoji": "🐦",
           "description": "",
           "lastModified": 1762579720361
+        }
+      },
+      "castlist_1762581921039_system": {
+        "id": "castlist_1762581921039_system",
+        "name": "GenkaiTest",
+        "type": "system",
+        "createdAt": 1762581921039,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Upgraded from legacy castlist 'GenkaiTest'",
+          "emoji": "📋",
+          "migratedFrom": "virtual_R2Vua2FpVGVzdA",
+          "migrationDate": 1762581921039
         }
       }
     },

@@ -980,23 +980,27 @@ function limitAndSortCastlists(allCastlists, maxCustomCastlists = 4) {
     }
   }
 
-  // Sort custom castlists by lastModified (most recent first)
+  // Sort custom castlists by modification timestamp (most recent first)
   customCastlists.sort((a, b) => {
-    const aModified = a.metadata?.lastModified;
-    const bModified = b.metadata?.lastModified;
+    // Check multiple timestamp properties for robustness:
+    // 1. modifiedAt (root level - primary property)
+    // 2. metadata.lastModified (backup for older format)
+    // 3. createdAt (fallback - every castlist has this)
+    const aModified = a.modifiedAt || a.metadata?.lastModified || a.createdAt || 0;
+    const bModified = b.modifiedAt || b.metadata?.lastModified || b.createdAt || 0;
 
-    // Both have lastModified - sort descending (newest first)
+    // Both have timestamps - sort descending (newest first)
     if (aModified && bModified) {
       return bModified - aModified;
     }
 
-    // Only a has lastModified - a comes first
+    // Only a has timestamp - a comes first
     if (aModified && !bModified) return -1;
 
-    // Only b has lastModified - b comes first
+    // Only b has timestamp - b comes first
     if (!aModified && bModified) return 1;
 
-    // Neither has lastModified - maintain original order (stable sort)
+    // Neither has timestamp - maintain original order (stable sort)
     return 0;
   });
 

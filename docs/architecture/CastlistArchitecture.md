@@ -520,6 +520,205 @@ castlistRows = createCastlistRows(filteredCastlists, false, hasStores);
 - Filter is applied AFTER extraction, BEFORE rendering
 - Migration to 100% Virtual Adapter adoption is unaffected
 
+---
+
+## 🚨 Castlist Display Limiting (4-Castlist Cap)
+
+### Problem Statement
+
+Discord's Components V2 system enforces a hard limit of **40 components per message**. Component counting includes:
+- ActionRows (even though invisible to users)
+- Buttons, Separators, TextDisplay, and Section components
+- Nested children within ActionRows
+
+**Production Bug (Jan 2025)**: Users creating 8+ custom castlists caused menu crashes:
+- **8 custom castlists** = 41 total components (exceeds limit)
+- **Result**: `COMPONENT_MAX_TOTAL_COMPONENTS_EXCEEDED` Discord API error
+- **User Experience**: "❌ Error loading menu. Please try again."
+
+### Solution Architecture
+
+**Approach**: Limit both Production Menu and Player Menu to show maximum **4 custom castlists** (plus 1 default = 5 total castlist buttons)
+
+**Component Math**:
+- **Before**: 8 custom castlists = ~41 components (CRASH)
+- **After**: 4 custom castlists = ~37 components ✅ (safe margin below 40 limit)
+
+### Menu Generation Flow (Both Menus)
+
+```mermaid
+sequenceDiagram
+    participant Menu as Production/Player Menu
+    participant Extract as extractCastlistData()
+    participant VA as Virtual Adapter
+    participant Limit as limitAndSortCastlists()
+    participant Create as createCastlistRows()
+    participant Discord as Discord API
+
+    Menu->>Extract: Request castlist data
+    Extract->>VA: getAllCastlists(guildId)
+    VA-->>Extract: Map of ALL castlists (could be 10+)
+    Extract-->>Menu: allCastlists Map
+
+    Menu->>Limit: Apply 4-castlist limit
+    Note over Limit: 1. Separate default from custom<br/>2. Sort by modifiedAt (newest first)<br/>3. Take first 4 custom<br/>4. Rebuild Map
+    Limit-->>Menu: limitedCastlists Map (max 5 total)
+
+    Menu->>Create: Generate button rows
+    Create-->>Menu: ActionRows with castlist buttons
+
+    Menu->>Discord: Send menu with components
+    alt Components ≤ 40
+        Discord-->>Menu: ✅ Success (menu displayed)
+    else Components > 40
+        Discord-->>Menu: ❌ COMPONENT_MAX_TOTAL_COMPONENTS_EXCEEDED
+    end
+```
+
+### Sorting Algorithm
+
+**Priority Order** (implemented in `limitAndSortCastlists()` - castlistV2.js:983-1005):
+
+1. **Default castlist** - Always shown first (not counted in 4-castlist limit)
+2. **Custom castlists** - Sorted by most recently modified timestamp:
+   - Primary: `modifiedAt` (root level property)
+   - Fallback 1: `metadata.lastModified` (older format)
+   - Fallback 2: `createdAt` (always exists)
+   - Fallback 3: `0` (legacy castlists with no timestamps)
+
+**Sorting Code**:
+```javascript
+const aModified = a.modifiedAt || a.metadata?.lastModified || a.createdAt || 0;
+const bModified = b.modifiedAt || b.metadata?.lastModified || b.createdAt || 0;
+
+// Sort descending (newest first)
+if (aModified && bModified) {
+  return bModified - aModified;
+}
+```
+
+**Example:**
+```
+All Castlists (9 total):
+  ├─ default (always shown)
+  ├─ Cool Cats (modifiedAt: Jan 8, 2025 14:30) ← newest, edited today
+  ├─ Winners (modifiedAt: Jan 7, 2025 10:00)
+  ├─ Season 47 (createdAt: Jan 6, 2025)  ← no modifiedAt, use createdAt
+  ├─ Alumni (modifiedAt: Jan 5, 2025)
+  ├─ All Stars (modifiedAt: Jan 4, 2025)
+  ├─ GenkaiTest (modifiedAt: Jan 3, 2025)
+  ├─ Legacy1 (no timestamps) ← virtual entity
+  └─ Legacy2 (no timestamps) ← virtual entity
+
+After Limiting (5 shown):
+  ├─ ✅ Active Castlist (default)
+  ├─ 😺 Cool Cats (most recent)
+  ├─ 🏆 Winners
+  ├─ 📋 Season 47
+  └─ 🎓 Alumni
+
+Hidden (still accessible via Castlist Hub):
+  ├─ All Stars
+  ├─ GenkaiTest
+  ├─ Legacy1
+  └─ Legacy2
+```
+
+### Implementation Details
+
+**Function**: `limitAndSortCastlists(allCastlists, maxCustomCastlists = 4)`
+- **Location**: `castlistV2.js:968-1019`
+- **Input**: Map of ALL castlists from Virtual Adapter
+- **Output**: Filtered Map with default + max 4 custom castlists
+
+**Integration Points**:
+
+1. **Production Menu** (app.js:709-711):
+```javascript
+const { allCastlists } = await extractCastlistData(playerData, guildId);
+const { limitAndSortCastlists } = await import('./castlistV2.js');
+const limitedCastlists = limitAndSortCastlists(allCastlists, 4);
+const castlistRows = createCastlistRows(limitedCastlists, true, false);
+```
+
+2. **Player Menu** (playerManagement.js:404-407):
+```javascript
+if (!showCustomCastlists) {
+  // Show only default (visibility filter)
+  filteredCastlists = defaultOnly ? new Map([['default', defaultOnly]]) : new Map();
+} else {
+  // Limit to 4 custom castlists (crash prevention)
+  const { limitAndSortCastlists } = await import('./castlistV2.js');
+  filteredCastlists = limitAndSortCastlists(allCastlists, 4);
+}
+```
+
+### Timestamp Property Hierarchy
+
+Castlists may have timestamps in different locations (for backwards compatibility):
+
+| Property | Location | Usage | Priority |
+|----------|----------|-------|----------|
+| `modifiedAt` | Root level | Updated when castlist edited | 1st (primary) |
+| `metadata.lastModified` | Nested | Older format (deprecated) | 2nd (fallback) |
+| `createdAt` | Root level | Set when castlist created | 3rd (fallback) |
+| `undefined` | N/A | Legacy virtual entities | 4th (last) |
+
+**When is `modifiedAt` updated?**
+- Editing castlist description
+- Changing castlist settings (sort strategy, visibility, etc.)
+- Updating castlist metadata (emoji, etc.)
+- Set by Castlist Hub when user saves changes
+
+### Edge Cases Handled
+
+1. **No default castlist exists**: Shows 4 custom castlists only
+2. **All castlists are legacy (no timestamps)**: Shows first 4 in original order (stable sort)
+3. **Exactly 4 custom castlists**: All shown (at limit, no filtering)
+4. **Player Menu with visibility filter OFF**: Limiting still applies (separate concerns)
+5. **Castlist Hub**: NOT limited (admins need full access to all castlists)
+
+### User Experience
+
+**For Admins:**
+- **Just created/edited a castlist?** Appears immediately in menu (most recent)
+- **Old castlists not visible?** Still exist, accessible via Castlist Hub for posting
+- **Want to make castlist visible?** Edit it (updates `modifiedAt` timestamp)
+
+**For Players:**
+- No awareness of limiting (seamless experience)
+- See most relevant castlists (recently updated ones)
+
+### Performance Impact
+
+**Before Limiting:**
+- 8+ castlists → Discord API error → Menu fails to load
+- User sees generic error message
+
+**After Limiting:**
+- Unlimited castlists → Shows 4 most recent → Menu loads successfully
+- Component count stays ~37 (safe margin below 40 limit)
+- Sorting O(n log n) where n = number of custom castlists (typically < 20)
+
+### Related Features
+
+This limiting feature works **in conjunction** with:
+- **Player Menu Visibility Configuration** (above) - Controls default vs custom display
+- **Virtual Adapter** (below) - Provides unified castlist data access
+- **Castlist Hub** - Provides full access to all castlists (not limited)
+
+**Feature Interaction Example:**
+```
+Scenario: 8 custom castlists, showCustomCastlists = false
+
+Step 1: extractCastlistData() → 9 castlists (1 default + 8 custom)
+Step 2: Visibility filter → 1 castlist (default only)
+Step 3: Limiting NOT applied (already < 4)
+Result: Shows default button only
+```
+
+---
+
 ## 🔄 Virtual Adapter Pattern
 
 ### How Virtual Adapter Works
