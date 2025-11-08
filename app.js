@@ -6293,6 +6293,10 @@ To fix this:
         handler: async (context) => {
           console.log(`☕ Showing donation information`);
 
+          // Import CastBot emoji
+          const { formatBotEmoji } = await import('./botEmojis.js');
+          const castbotEmoji = formatBotEmoji('castbot_logo');
+
           // Create donation UI following LEAN standards
           const donateContainer = {
             type: 17, // Container
@@ -6305,7 +6309,7 @@ To fix this:
               { type: 14 }, // Separator
               {
                 type: 10, // Text Display
-                content: `Running CastBot isn't free, and I'd appreciate any support you can offer:\n\n**Monthly Costs:**\n• **US$100** - ClaudeMax 5x Plan (AI-assisted development)\n• **US$10** - AWS Lightsail (server hosting & performance)\n• **$20** - My time and passion for building this tool\n\n**Total: ~US$130/month**\n\nEvery donation helps keep CastBot running and improving. Thank you for considering! 🙏`
+                content: `Hey y'all, I develop CastBot to keep involved in the ORG community (and for a bit of fun!). I cover all the costs myself, but any support you can offer is appreciated!\n\n**Monthly Costs**\n• US$100 - ClaudeMax 5x Plan (AI-assisted development)\n• US$10 - AWS Lightsail (server hosting & performance)\n• And typically I put in 20-40 hours of my own (night) time a month 😎\n\nNo expectation or obligation, but much appreciated if you can!\nReece (${castbotEmoji} CastBot Developer)`
               },
               { type: 14 }, // Separator
               {
@@ -6318,16 +6322,16 @@ To fix this:
                 components: [
                   {
                     type: 2, // Button
-                    style: 5, // Link style
-                    label: '🪙 Donate (Ko‑fi)',
-                    url: 'https://ko-fi.com/castbot'
+                    style: 2, // Secondary
+                    custom_id: 'prod_menu_back',
+                    label: '← Menu'
+                    // NO emoji - back buttons never have emojis
                   },
                   {
                     type: 2, // Button
-                    style: 2, // Secondary
-                    custom_id: 'prod_menu_back',
-                    label: '← Menu',
-                    emoji: { name: '⬅️' }
+                    style: 5, // Link style
+                    label: '🪙 Donate (Ko‑fi)',
+                    url: 'https://ko-fi.com/castbot'
                   }
                 ]
               }

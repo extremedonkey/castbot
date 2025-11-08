@@ -93,26 +93,27 @@ return {
 
 ## 🔙 Navigation Standards
 - **Back Button Format**:
-  - **To Main Menu**: `← Menu` (arrow + "Menu", no emoji)
-  - **To Feature Menu**: `← Safari` (arrow + feature name) with feature emoji
+  - **To Main Menu**: `← Menu` (arrow + "Menu", **NO emoji**)
+  - **To Feature Menu**: `← Safari` (arrow + feature name, **NO emoji**)
   - Custom ID: `prod_menu_back` or `{feature}_back`
   - Style: Always `ButtonStyle.Secondary` (grey)
-  - Position: Bottom-left, after separator
+  - Position: **Far-left (first position in action row)**, after separator
+  - **CRITICAL**: Back buttons NEVER have emojis, regardless of destination
 
 - **Examples**:
   ```javascript
   // Back to main production menu
   new ButtonBuilder()
     .setCustomId('prod_menu_back')
-    .setLabel('← Menu')  // Arrow + Menu, no emoji
+    .setLabel('← Menu')  // Arrow + Menu, NO emoji
     .setStyle(ButtonStyle.Secondary)
 
   // Back to Safari menu (2nd level)
   new ButtonBuilder()
     .setCustomId('prod_safari_menu')
-    .setLabel('← Safari')  // Arrow + feature name
+    .setLabel('← Safari')  // Arrow + feature name, NO emoji
     .setStyle(ButtonStyle.Secondary)
-    .setEmoji('🦁')  // Feature emoji
+    // NO .setEmoji() - back buttons never have emojis!
   ```
 
 ## 🎯 Example: Analytics Menu (Optimal LEAN Design)
