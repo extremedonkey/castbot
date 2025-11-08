@@ -255,6 +255,218 @@ graph TB
 
 **Status**: 5/5 entry points using unified function (100% adoption)
 
+---
+
+### 📐 Detailed Architecture: `getTribesForCastlist()` Integration
+
+#### Sequence Diagram: `/castlist` Command with `getTribesForCastlist()`
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Command as /castlist Command
+    participant Unified as getTribesForCastlist()
+    participant Manager as castlistManager
+    participant Adapter as Virtual Adapter
+    participant Storage as storage.js
+    participant Guild as Discord Guild
+    participant Display as buildCastlist2ResponseData
+
+    User->>Command: /castlist [name]
+    Note over Command: requestedCastlist = "S2 - Big Bang"
+
+    Command->>Unified: getTribesForCastlist(guildId, identifier, client)
+
+    Note over Unified: Step 1: Resolve identifier to entity
+    Unified->>Manager: getCastlist(guildId, "S2 - Big Bang")
+    Manager->>Adapter: getCastlist(guildId, "S2 - Big Bang")
+    Adapter->>Storage: loadPlayerData()
+    Storage-->>Adapter: playerData
+
+    Note over Adapter: Check real entities first,<br/>then create virtual if needed
+    Adapter-->>Manager: castlist entity
+    Manager-->>Unified: castlist entity
+
+    Note over Unified: Step 2: Get all guild tribes
+    Unified->>Storage: loadPlayerData()
+    Storage-->>Unified: playerData
+
+    Note over Unified: Step 3: Filter tribes by all 3 formats:<br/>- tribe.castlist === name<br/>- tribe.castlistId === id<br/>- tribe.castlistIds.includes(id)
+
+    loop For each matching tribe
+        Unified->>Guild: Fetch role & members
+        Guild-->>Unified: Role data with members
+        Note over Unified: Build enriched tribe object
+    end
+
+    Unified-->>Command: tribes array (fully populated)
+
+    Command->>Display: buildCastlist2ResponseData(...)
+    Display-->>Command: Response data
+    Command-->>User: Display castlist
+
+    rect rgb(200, 255, 200)
+        Note over Command,Display: ✅ Single call to unified function<br/>✅ Handles legacy + modern<br/>✅ Auto-resolves virtual IDs
+    end
+```
+
+#### Sequence Diagram: `show_castlist2` Handler with `getTribesForCastlist()`
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Button as show_castlist2 Button
+    participant Handler as app.js Handler
+    participant Unified as getTribesForCastlist()
+    participant Manager as castlistManager
+    participant Adapter as Virtual Adapter
+    participant Storage as storage.js
+    participant Guild as Discord Guild
+    participant Display as Display Functions
+
+    User->>Button: Click castlist button
+    Button->>Handler: custom_id: show_castlist2_[identifier]
+
+    Note over Handler: Extract identifier from custom_id<br/>"show_castlist2_S2 - Big Bang"<br/>→ "S2 - Big Bang"
+
+    Handler->>Unified: getTribesForCastlist(guildId, identifier, client)
+
+    Note over Unified: Step 1: Resolve identifier
+    Unified->>Manager: getCastlist(guildId, identifier)
+    Manager->>Adapter: getCastlist(guildId, identifier)
+    Adapter->>Storage: loadPlayerData()
+    Storage-->>Adapter: playerData
+
+    alt Identifier is Virtual ID (virtual_*)
+        Note over Adapter: Decode base64<br/>virtual_UzIgLSBCaWcgQmFuZw → "S2 - Big Bang"
+        Adapter->>Adapter: Create virtual entity
+    else Identifier is Real ID
+        Note over Adapter: Load from castlistConfigs
+    else Identifier is String Name
+        Note over Adapter: Search by name
+    end
+
+    Adapter-->>Manager: castlist entity
+    Manager-->>Unified: castlist entity
+
+    Note over Unified: Step 2 & 3: Get tribes + filter
+    Unified->>Storage: loadPlayerData()
+    Unified->>Guild: Fetch roles & members
+    Guild-->>Unified: Enriched tribes
+
+    Unified-->>Handler: tribes array
+
+    Handler->>Display: determineDisplayScenario(tribes)
+    Handler->>Display: createNavigationState(...)
+    Handler->>Display: buildCastlist2ResponseData(...)
+    Display-->>Handler: Response
+    Handler-->>User: UPDATE_MESSAGE
+
+    rect rgb(200, 255, 200)
+        Note over Handler,Display: ✅ Eliminates 145 lines of inline filtering<br/>✅ Consistent with /castlist behavior<br/>✅ Virtual ID support built-in
+    end
+```
+
+#### Architecture Diagram: Complete System with `getTribesForCastlist()`
+
+```mermaid
+graph TB
+    subgraph "User Entry Points (5 total)"
+        CMD["/castlist Command"]
+        BTN["show_castlist2 Handler"]
+        HUB["Castlist Hub"]
+        PRODMENU["Production Menu"]
+        PLAYERMENU["Player Menu"]
+    end
+
+    subgraph "Unified Data Access Layer (NEW)"
+        UNIFIED["getTribesForCastlist()<br/>🌟 SINGLE SOURCE OF TRUTH<br/><br/>Input: (guildId, identifier, client)<br/>Output: tribes[] with members"]
+
+        subgraph "Internal Processing"
+            RESOLVE["1. Resolve Identifier<br/>(string/ID/virtual)"]
+            FILTER["2. Filter Tribes<br/>(3 format support)"]
+            ENRICH["3. Enrich with Discord<br/>(roles + members)"]
+        end
+    end
+
+    subgraph "Infrastructure Layer"
+        MANAGER["CastlistManager<br/>(CRUD operations)"]
+        ADAPTER["Virtual Adapter<br/>(Legacy→Modern bridge)"]
+        STORAGE["storage.js<br/>(playerData access)"]
+    end
+
+    subgraph "Data Storage"
+        LEGACY["Legacy Strings<br/>tribe.castlist"]
+        MODERN["Modern Entities<br/>castlistConfigs"]
+        VIRTUAL["Virtual Entities<br/>(runtime only)"]
+    end
+
+    subgraph "Display Layer"
+        DISPLAY["buildCastlist2ResponseData()<br/>(castlistV2.js)"]
+        SCENARIO["determineDisplayScenario()"]
+        NAVSTATE["createNavigationState()"]
+    end
+
+    subgraph "Deprecated Functions (To Remove)"
+        GGT["❌ getGuildTribes()"]
+        DCT["❌ determineCastlistToShow()"]
+        INLINE["❌ Inline filtering (145 lines)"]
+    end
+
+    %% Entry points use unified function
+    CMD --> UNIFIED
+    BTN --> UNIFIED
+    HUB --> UNIFIED
+    PRODMENU --> UNIFIED
+    PLAYERMENU --> UNIFIED
+
+    %% Unified function internal flow
+    UNIFIED --> RESOLVE
+    RESOLVE --> FILTER
+    FILTER --> ENRICH
+
+    %% Infrastructure connections
+    RESOLVE --> MANAGER
+    FILTER --> STORAGE
+    ENRICH --> STORAGE
+
+    MANAGER --> ADAPTER
+    ADAPTER --> STORAGE
+
+    %% Storage connections
+    STORAGE --> LEGACY
+    STORAGE --> MODERN
+    ADAPTER -.->|"Runtime"| VIRTUAL
+
+    %% Display flow
+    UNIFIED --> DISPLAY
+    DISPLAY --> SCENARIO
+    DISPLAY --> NAVSTATE
+
+    %% Legacy deprecation
+    GGT -.->|"Replaced by"| UNIFIED
+    DCT -.->|"Replaced by"| RESOLVE
+    INLINE -.->|"Replaced by"| FILTER
+
+    %% Styling
+    style UNIFIED fill:#ffd43b,stroke:#fab005,stroke-width:6px,color:#000
+    style CMD fill:#51cf66,stroke:#2f9e44,stroke-width:3px,color:#000
+    style BTN fill:#51cf66,stroke:#2f9e44,stroke-width:3px,color:#000
+    style HUB fill:#51cf66,stroke:#2f9e44,stroke-width:3px,color:#000
+    style PRODMENU fill:#51cf66,stroke:#2f9e44,stroke-width:3px,color:#000
+    style PLAYERMENU fill:#51cf66,stroke:#2f9e44,stroke-width:3px,color:#000
+    style ADAPTER fill:#4a5568,stroke:#2d3748,stroke-width:3px,color:#e2e8f0
+    style VIRTUAL fill:#2b6cb0,stroke:#2c5282,stroke-width:2px,stroke-dasharray: 5 5,color:#e2e8f0
+    style GGT fill:#ddd,stroke:#999,stroke-width:2px,stroke-dasharray: 5 5,color:#666
+    style DCT fill:#ddd,stroke:#999,stroke-width:2px,stroke-dasharray: 5 5,color:#666
+    style INLINE fill:#ddd,stroke:#999,stroke-width:2px,stroke-dasharray: 5 5,color:#666
+    style RESOLVE fill:#ffa94d,stroke:#fd7e14,stroke-width:2px,color:#000
+    style FILTER fill:#ffa94d,stroke:#fd7e14,stroke-width:2px,color:#000
+    style ENRICH fill:#ffa94d,stroke:#fd7e14,stroke-width:2px,color:#000
+```
+
+---
+
 `★ The Holy Grail ──────────────────────────────`
 **What `getTribesForCastlist()` Does**:
 - Single function that ALL entry points call

@@ -1958,7 +1958,10 @@
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "FixLegacy",
-        "analyticsAdded": 1762573421940
+        "analyticsAdded": 1762573421940,
+        "castlistIds": [
+          "castlist_1762584620535_system"
+        ]
       },
       "1436597212715942058": {
         "emoji": "😮‍💨",
@@ -1970,6 +1973,14 @@
         "castlistIds": [
           "castlist_1762581921039_system"
         ]
+      },
+      "1431726520430366810": {
+        "emoji": null,
+        "castlist": "ragrats",
+        "showPlayerEmojis": false,
+        "color": null,
+        "analyticsName": "ICT",
+        "analyticsAdded": 1762599724325
       }
     },
     "timezones": {
@@ -3312,8 +3323,9 @@
           "migratedFrom": "virtual_TXVsdGlC",
           "migrationDate": 1759671885172
         },
-        "modifiedAt": 1762072755883,
-        "modifiedBy": "391415444084490240"
+        "modifiedAt": 1762584680852,
+        "modifiedBy": "391415444084490240",
+        "seasonId": "season_9a8360f7864d4120"
       },
       "castlist_1762187500959_1331657596087566398": {
         "id": "castlist_1762187500959_1331657596087566398",
@@ -3329,12 +3341,12 @@
           "seasonId": "season_03859e4abc554bb5"
         },
         "metadata": {
-          "emoji": "🍆",
+          "emoji": "🐯",
           "description": "",
           "lastModified": 1762187500959
         },
         "seasonId": "season_1deffdb1dac8496b",
-        "modifiedAt": 1762187809409,
+        "modifiedAt": 1762583380717,
         "modifiedBy": "391415444084490240"
       },
       "castlist_1762579473073_1331657596087566398": {
@@ -3411,6 +3423,25 @@
         },
         "modifiedAt": 1762582461203,
         "modifiedBy": "391415444084490240"
+      },
+      "castlist_1762584620535_system": {
+        "id": "castlist_1762584620535_system",
+        "name": "saturdayLegacy",
+        "type": "system",
+        "createdAt": 1762584620535,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Upgraded from legacy castlist 'saturdayLegacy'",
+          "emoji": "📋",
+          "migratedFrom": "virtual_c2F0dXJkYXlMZWdhY3k",
+          "migrationDate": 1762584620535
+        }
       }
     },
     "placements": {
@@ -3885,14 +3916,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 574,
+    "memberCount": 578,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1762019070797,
+    "lastUpdated": 1762611581357,
     "players": {
       "235148962103951360": {
         "emojiCode": "<:Carl_bot:1380989603783249950>"
@@ -5984,6 +6015,22 @@
           "default"
         ],
         "castlist": "Active Castlist"
+      },
+      "1385242599203410032": {
+        "emoji": "💥",
+        "castlist": "S2 - Big Bang",
+        "showPlayerEmojis": false,
+        "color": "#206694",
+        "analyticsName": "💥 S2 - Big Bang 💥",
+        "analyticsAdded": 1762611931910
+      },
+      "1385242743130947665": {
+        "emoji": "🪲",
+        "castlist": "s3",
+        "showPlayerEmojis": false,
+        "color": "#c27c0e",
+        "analyticsName": "🪲 S3 - Beatles 🪲",
+        "analyticsAdded": 1762612545975
       }
     },
     "timezones": {
