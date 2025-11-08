@@ -891,9 +891,114 @@ Target:          █████████████████████
 ```
 
 **Next Steps**:
-1. Create `getTribesForCastlist()` unified function (2 hours)
-2. Migrate `/castlist` command (30 minutes)
-3. Migrate `show_castlist2` handler (45 minutes)
-4. ✅ **Complete Phase 1** - Remove feature toggle!
+1. **DECISION**: Store player menu configs in `safariContent.json` (Option A) - 0 hours (architectural decision)
+   - Keep `showCustomCastlists` with existing `enableGlobalCommands` and `inventoryVisibilityMode`
+   - Rationale: Consistency with existing pattern, minimal changes, single config modal
+2. Create `getTribesForCastlist()` unified function (2 hours)
+3. Migrate `/castlist` command (30 minutes)
+4. Migrate `show_castlist2` handler (45 minutes)
+5. ✅ **Complete Phase 1** - Remove feature toggle!
 
 **Time to Completion**: 3.25 hours (one afternoon of focused work)
+
+---
+
+## 🎛️ Player Menu - Castlist Visibility Configuration
+
+### Problem Statement
+
+Player Menu (`createPlayerManagementUI()`) currently shows ALL castlists (default + custom) after Virtual Adapter integration. Admins need ability to hide custom castlists and only show the default/active castlist to players.
+
+### Current State
+
+**Menu Generation Flow:**
+```javascript
+// playerManagement.js:350
+const { allCastlists } = await extractCastlistData(playerData, guildId);
+
+// playerManagement.js:385
+castlistRows = createCastlistRows(allCastlists, false, hasStores);
+// Creates buttons: show_castlist2_default, show_castlist2_custom1, show_castlist2_custom2, etc.
+```
+
+**Existing Player Menu Configs** (in `safariContent.json`):
+- `enableGlobalCommands` - Show/hide "Enter Command" button
+- `inventoryVisibilityMode` - When to show inventory button
+
+### Architecture Decision: Option A
+
+**Storage Location:** `safariContent.json` → `safariConfig.showCustomCastlists`
+
+**Rationale:**
+- Consistency with existing `enableGlobalCommands` pattern
+- All player menu visibility configs in one file
+- Single modal UI for all settings
+- Player menu already loads `safariContent.json` (line 396, 533)
+
+### High-Level Design
+
+#### 1. Modal Changes
+**File:** `app.js:10840` (`safari_player_menu_config` button handler)
+
+Add 3rd Label + String Select component:
+```javascript
+{
+  type: 18, // Label
+  label: 'Show Custom Castlists in Player Menu?',
+  component: {
+    type: 3, // String Select
+    custom_id: 'show_custom_castlists',
+    options: [
+      { label: 'Show All Castlists', value: 'true' },
+      { label: 'Show Default Only', value: 'false' }
+    ]
+  }
+}
+```
+
+#### 2. Modal Submission Handler
+**File:** `app.js:35651` (`safari_player_menu_config_modal` handler)
+
+Extract new value and save:
+```javascript
+const showCustomCastlists = selectedValue === 'true'; // From show_custom_castlists component
+safariData[guildId].safariConfig.showCustomCastlists = showCustomCastlists;
+```
+
+#### 3. Player Menu Rendering
+**File:** `playerManagement.js:381-386`
+
+Add filter before `createCastlistRows()`:
+```javascript
+const showCustomCastlists = safariConfig.showCustomCastlists !== false; // Default true
+
+let filteredCastlists = allCastlists;
+if (!showCustomCastlists) {
+  const defaultOnly = allCastlists.get('default');
+  filteredCastlists = new Map(defaultOnly ? [['default', defaultOnly]] : []);
+}
+
+castlistRows = createCastlistRows(filteredCastlists, false, hasStores);
+```
+
+#### 4. Config Display Update
+**File:** `safariConfigUI.js:293-295`
+
+Add to settings display:
+```javascript
+display += `• Custom Castlists: ${showCustomCastlists ? '✅ All Shown' : '📋 Default Only'}\n`;
+```
+
+### Key Files to Modify
+1. `app.js:10840` - Add modal component
+2. `app.js:35651` - Save config value
+3. `playerManagement.js:381` - Apply filter
+4. `safariConfigUI.js:293` - Display current setting
+
+### Default Behavior
+- **Default:** `true` (show all castlists)
+- **Backward compatible:** Existing servers see no change
+- **Filter only:** Virtual Adapter still extracts all castlists (data integrity)
+
+### Impact on RaP Target State
+**NO CHANGES** - This is a presentation filter, not a data access change. Virtual Adapter flow remains unchanged.

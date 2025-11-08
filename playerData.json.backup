@@ -1940,6 +1940,14 @@
         "color": "#3498db",
         "analyticsName": "🍅 neutralTestB 🍅",
         "analyticsAdded": 1762297399528
+      },
+      "1436554090732720314": {
+        "emoji": null,
+        "castlist": "saturdayLegacy",
+        "showPlayerEmojis": false,
+        "color": null,
+        "analyticsName": "FixLegacy",
+        "analyticsAdded": 1762573421940
       }
     },
     "timezones": {
