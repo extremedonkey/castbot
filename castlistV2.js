@@ -989,6 +989,11 @@ function limitAndSortCastlists(allCastlists, maxCustomCastlists = 4) {
     const aModified = a.modifiedAt || a.metadata?.lastModified || a.createdAt || 0;
     const bModified = b.modifiedAt || b.metadata?.lastModified || b.createdAt || 0;
 
+    // Debug logging to trace sorting
+    if (customCastlists.length <= 10) {  // Only log for reasonable list sizes
+      console.log(`[CASTLIST SORT] Comparing: "${a.name}" (${aModified}) vs "${b.name}" (${bModified}) → ${bModified - aModified}`);
+    }
+
     // Both have timestamps - sort descending (newest first)
     if (aModified && bModified) {
       return bModified - aModified;
@@ -1008,6 +1013,7 @@ function limitAndSortCastlists(allCastlists, maxCustomCastlists = 4) {
   const limitedCustom = customCastlists.slice(0, maxCustomCastlists);
 
   console.log(`[CASTLIST] Limited ${customCastlists.length} custom castlists to ${limitedCustom.length} (max: ${maxCustomCastlists})`);
+  console.log(`[CASTLIST] Final order (limited): ${limitedCustom.map(c => `${c.name} (${c.modifiedAt || c.createdAt})`).join(', ')}`);
 
   // Rebuild Map: default first (if exists), then limited custom
   const result = new Map();

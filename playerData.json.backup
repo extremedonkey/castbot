@@ -3401,11 +3401,13 @@
           "visibility": "public"
         },
         "metadata": {
-          "description": "Upgraded from legacy castlist 'GenkaiTest'",
+          "description": "",
           "emoji": "📋",
           "migratedFrom": "virtual_R2Vua2FpVGVzdA",
           "migrationDate": 1762581921039
-        }
+        },
+        "modifiedAt": 1762581976761,
+        "modifiedBy": "391415444084490240"
       }
     },
     "placements": {
