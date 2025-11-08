@@ -347,7 +347,7 @@ export async function createPlayerManagementUI(options) {
   }
 
   // Extract castlist data for multiple castlist support
-  const { allCastlists, castlistTribes } = extractCastlistData(playerData, guildId);
+  const { allCastlists } = await extractCastlistData(playerData, guildId);
 
   // Create Menu button row
   const menuRow = {
@@ -365,22 +365,29 @@ export async function createPlayerManagementUI(options) {
     container.components.push(menuRow);
   }
 
+  console.log(`🔍 createPlayerManagementUI mode check: mode=${mode}, PlayerManagementMode.ADMIN=${PlayerManagementMode.ADMIN}, is admin=${mode === PlayerManagementMode.ADMIN}`);
+
   if (mode === PlayerManagementMode.ADMIN) {
     // Admin mode (Player Management): No castlist buttons - focus on player management only
+    console.log(`🔍 Admin mode detected - returning early WITHOUT castlist buttons`);
     return {
       flags: (1 << 15), // IS_COMPONENTS_V2 only - ephemeral handled by caller
       components: [container]
     };
   } else {
+    console.log(`🔍 Player mode detected - creating castlist buttons`);
     // Player mode (Player Menu): Add castlist buttons outside the container (unless hidden)
     let castlistRows = [];
     let globalStoreRows = [];
     let inventoryRow = null;
     
     if (!hideBottomButtons) {
+      console.log(`🔍 Player Menu castlist check: allCastlists=${allCastlists}, size=${allCastlists?.size}, hideBottomButtons=${hideBottomButtons}`);
       if (allCastlists && allCastlists.size > 0) {
+        console.log(`✅ Creating castlist rows for ${allCastlists.size} castlists`);
         // Player mode: don't include the "+" button (includeAddButton = false)
-        castlistRows = createCastlistRows(allCastlists, castlistTribes, false, hasStores);
+        castlistRows = createCastlistRows(allCastlists, false, hasStores);
+        console.log(`✅ Created ${castlistRows.length} castlist row(s)`);
       } else {
         // Fallback: single default castlist button if no castlist data found
         castlistRows = [{

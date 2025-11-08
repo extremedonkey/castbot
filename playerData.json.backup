@@ -1626,8 +1626,7 @@
         "analyticsName": "🤖Mr CastBot",
         "analyticsAdded": 1751070525853,
         "castlistIds": [
-          "castlist_1759638936214_system",
-          "castlist_1762007922583_1331657596087566398"
+          "castlist_1759638936214_system"
         ],
         "castlist": "Castbot MVPs",
         "displayName": "Mr CastBot"
@@ -1647,11 +1646,10 @@
         "analyticsName": "🧟‍♂️ 👑 Castbot MVPs 🧟‍♂️",
         "analyticsAdded": 1754751381750,
         "castlistIds": [
-          "castlist_1759638936214_system",
-          "castlist_archive_1762212309078",
-          "castlist_archive_1762213156171"
+          "castlist_1759638936214_system"
         ],
-        "isVanity": true
+        "isVanity": true,
+        "castlist": "Castbot MVPs"
       },
       "1335645032891547670": {
         "emoji": "🤷‍♀️",
@@ -1714,10 +1712,6 @@
         "color": "#FF7AAA",
         "analyticsName": "🪄 ar.3 🪄",
         "analyticsAdded": 1759081799205,
-        "castlistIds": [
-          "castlist_1762007922583_1331657596087566398"
-        ],
-        "castlist": "winners",
         "displayName": "The AR3 Tribe"
       },
       "1388327092634124368": {
@@ -1819,10 +1813,6 @@
         "name": "Tribe 1368969402967654420",
         "emoji": "🏕️",
         "color": null,
-        "castlistIds": [
-          "castlist_archive_1762212309078",
-          "castlist_archive_1762213156171"
-        ],
         "isVanity": true
       },
       "1368969401067372625": {
@@ -1871,10 +1861,9 @@
         "emoji": "🏕️",
         "color": "#607D8B",
         "castlistIds": [
-          "castlist_1762007922583_1331657596087566398",
           "castlist_1762187500959_1331657596087566398"
         ],
-        "castlist": "winners"
+        "castlist": "the BIG one"
       },
       "1368969346600407181": {
         "castlistIds": []
@@ -1940,25 +1929,17 @@
       },
       "1435401451357732884": {
         "emoji": "💂‍♀️",
-        "castlist": "NeutralTestAB",
         "showPlayerEmojis": false,
         "color": "#e91e63",
         "analyticsName": "💂‍♀️ neutralTestA 💂‍♀️",
-        "analyticsAdded": 1762297372141,
-        "castlistIds": [
-          "castlist_1762297524486_system"
-        ]
+        "analyticsAdded": 1762297372141
       },
       "1435401499260751943": {
         "emoji": "🍅",
-        "castlist": "NeutralTestAB",
         "showPlayerEmojis": false,
         "color": "#3498db",
         "analyticsName": "🍅 neutralTestB 🍅",
-        "analyticsAdded": 1762297399528,
-        "castlistIds": [
-          "castlist_1762297524486_system"
-        ]
+        "analyticsAdded": 1762297399528
       }
     },
     "timezones": {
@@ -3304,27 +3285,6 @@
         "modifiedAt": 1762072755883,
         "modifiedBy": "391415444084490240"
       },
-      "castlist_1762007922583_1331657596087566398": {
-        "id": "castlist_1762007922583_1331657596087566398",
-        "name": "winners",
-        "type": "custom",
-        "createdAt": 1762007922583,
-        "createdBy": "391415444084490240",
-        "settings": {
-          "sortStrategy": "placements",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public",
-          "seasonId": "season_cac1b81de8914c79"
-        },
-        "metadata": {
-          "emoji": "<:castbot:1333820342275149824>",
-          "description": "Cool people inc!",
-          "lastModified": 1762007922583
-        },
-        "modifiedAt": 1762291473205,
-        "modifiedBy": "system"
-      },
       "castlist_1762187500959_1331657596087566398": {
         "id": "castlist_1762187500959_1331657596087566398",
         "name": "the BIG one",
@@ -3346,52 +3306,6 @@
         "seasonId": "season_1deffdb1dac8496b",
         "modifiedAt": 1762187809409,
         "modifiedBy": "391415444084490240"
-      },
-      "castlist_archive_1762212309078": {
-        "id": "castlist_archive_1762212309078",
-        "name": "castTESTSWAP1",
-        "type": "custom",
-        "createdAt": 1762212309078,
-        "createdBy": "391415444084490240",
-        "metadata": {
-          "description": "Archived from tribe swap on 11/4/2025",
-          "emoji": "🐁"
-        },
-        "modifiedAt": 1762296152383,
-        "modifiedBy": "391415444084490240"
-      },
-      "castlist_archive_1762213156171": {
-        "id": "castlist_archive_1762213156171",
-        "name": "plsWORK",
-        "type": "custom",
-        "createdAt": 1762213156171,
-        "createdBy": "391415444084490240",
-        "metadata": {
-          "description": "Archived from tribe swap on 11/4/2025",
-          "emoji": "📦"
-        }
-      },
-      "castlist_1762297524486_system": {
-        "id": "castlist_1762297524486_system",
-        "name": "NeutralTestAB",
-        "type": "system",
-        "createdAt": 1762297524486,
-        "createdBy": "migration",
-        "settings": {
-          "sortStrategy": "placements",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public"
-        },
-        "metadata": {
-          "description": "Upgraded from legacy castlist 'NeutralTestAB'",
-          "emoji": "🍅",
-          "migratedFrom": "virtual_TmV1dHJhbFRlc3RBQg",
-          "migrationDate": 1762297524486
-        },
-        "modifiedAt": 1762340904541,
-        "modifiedBy": "system",
-        "seasonId": "season_9a8360f7864d4120"
       }
     },
     "placements": {
@@ -7724,14 +7638,14 @@
     "serverName": "EmeraldORG: Fire Emblem Three Houses",
     "icon": "https://cdn.discordapp.com/icons/1385042963310055515/4bea7eb65723bab308c21c06332836be.webp",
     "ownerId": "676262975132139522",
-    "memberCount": 112,
+    "memberCount": 111,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1750290375307,
-    "lastUpdated": 1762174117807,
+    "lastUpdated": 1762341850668,
     "ownerInfo": {
       "username": "deadlybelle",
       "globalName": "Belle",
