@@ -257,6 +257,206 @@ graph TB
 
 ---
 
+## 🎯 ACHIEVED TARGET STATE (November 9, 2025)
+
+**🎉 MIGRATION COMPLETE!** All castlist entry points now use unified architecture with deferred responses, smart caching, and Virtual Adapter integration.
+
+### Complete System Flow: All Entry Points
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Discord
+    participant EntryPoint as Entry Point<br/>(Command/Button)
+    participant Cache as Discord.js<br/>Member Cache
+    participant Unified as getTribesForCastlist()<br/>(Unified Data Access)
+    participant VA as Virtual Adapter
+    participant Storage as playerData.json
+    participant Webhook as Discord Webhook
+
+    Note over User,Webhook: 🎯 ENTRY POINT 1: /castlist Command
+
+    User->>Discord: /castlist [name]
+    Discord->>EntryPoint: Interaction (3-second timeout starts)
+
+    Note over EntryPoint: ⚡ DEFERRED RESPONSE (Immediate)
+    EntryPoint->>Discord: DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE<br/>[CASTLIST] Sent deferred response
+    Discord->>User: Shows "CastBot is thinking..."
+
+    Note over EntryPoint,Cache: Now have 15-minute window ✅
+
+    EntryPoint->>Unified: getTribesForCastlist(guildId, identifier, client)
+
+    Note over Unified: Step 1: Resolve Identifier
+    Unified->>VA: getCastlist(guildId, identifier)
+    VA->>Storage: loadPlayerData()
+    Storage-->>VA: Legacy + Modern castlists
+    VA-->>Unified: Castlist entity (virtual or real)
+
+    Note over Unified: Step 2: Get Tribe Role IDs
+    Unified->>VA: getTribesUsingCastlist(guildId, castlistId)
+    VA->>Storage: Check all 3 formats<br/>(legacy string, ID, array)
+    Storage-->>VA: Role IDs
+    VA-->>Unified: [roleId1, roleId2, ...]
+
+    Note over Unified: Step 3: Check Member Cache
+    Unified->>Cache: Check cache size vs memberCount
+
+    alt Cache < 80% populated (COLD)
+        Note over Unified,Cache: 🔴 COLD CACHE (post-restart)
+        Unified->>Cache: guild.members.fetch()<br/>(bulk fetch 578 members)
+        Note over Cache: ~367ms for 578 members
+        Cache-->>Unified: ✅ Cache populated (578/578)
+    else Cache >= 80% (WARM)
+        Note over Unified,Cache: 🟢 WARM CACHE (instant)
+        Note over Unified: "Cache sufficiently populated"<br/>Skip fetch (0ms overhead)
+    end
+
+    Note over Unified: Step 4: Enrich Tribes
+    loop For each role
+        Unified->>Cache: role.members (from cache)
+        Cache-->>Unified: Member objects
+    end
+
+    Unified-->>EntryPoint: Enriched tribes with members
+
+    EntryPoint->>EntryPoint: Build response data
+
+    Note over EntryPoint,Webhook: 📤 WEBHOOK FOLLOW-UP
+    EntryPoint->>Webhook: PATCH /messages/@original<br/>[CASTLIST] Sent via webhook
+    Webhook->>Discord: Update message
+    Discord->>User: Display castlist ✅
+
+    Note over User,Webhook: 🎯 ENTRY POINT 2: /menu (Admin) → Castlist Buttons
+
+    User->>Discord: /menu
+    Discord->>EntryPoint: Check permissions
+
+    alt Has Admin Permissions
+        Note over EntryPoint: Route to Production Menu
+        EntryPoint->>VA: extractCastlistData(guildId)
+        VA->>Storage: getAllCastlists()
+        Storage-->>VA: Legacy + Modern castlists
+        VA-->>EntryPoint: Unified Map (virtual + real)
+
+        Note over EntryPoint: Limit to 4 custom castlists
+        EntryPoint->>EntryPoint: limitAndSortCastlists()<br/>(by modifiedAt desc)
+
+        EntryPoint->>EntryPoint: createCastlistRows()
+        Note over EntryPoint: Creates show_castlist2_* buttons
+
+        EntryPoint->>Discord: Production Menu with buttons
+        Discord->>User: Display menu ✅
+    end
+
+    User->>Discord: Click "📋 S12 - Jurassic Park"
+    Discord->>EntryPoint: show_castlist2_castlist_1760168292677_system
+
+    Note over EntryPoint: ⚡ DEFERRED RESPONSE (Immediate)
+    EntryPoint->>Discord: DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE<br/>[CASTLIST] Sent deferred response
+    Discord->>User: Shows "CastBot is thinking..."
+
+    Note over EntryPoint: Same flow as /castlist above
+    EntryPoint->>Unified: getTribesForCastlist(...)
+    Note over Unified,Cache: Smart cache check + fetch (80% threshold)
+    Unified-->>EntryPoint: Enriched tribes
+
+    EntryPoint->>Webhook: PATCH /messages/@original<br/>[CASTLIST] Sent via webhook
+    Webhook->>Discord: Update message
+    Discord->>User: Display castlist ✅
+
+    Note over User,Webhook: 🎯 ENTRY POINT 3: /menu (Player) → Castlist Buttons
+
+    User->>Discord: /menu
+    Discord->>EntryPoint: Check permissions
+
+    alt No Admin Permissions
+        Note over EntryPoint: Route to Player Menu
+        EntryPoint->>VA: extractCastlistData(guildId)
+        VA->>Storage: getAllCastlists()
+        Storage-->>VA: Legacy + Modern castlists
+        VA-->>EntryPoint: Unified Map
+
+        Note over EntryPoint: Apply visibility filter<br/>(showCustomCastlists config)
+
+        alt showCustomCastlists = false
+            EntryPoint->>EntryPoint: Filter to default only
+        else showCustomCastlists = true
+            EntryPoint->>EntryPoint: limitAndSortCastlists(4)
+        end
+
+        EntryPoint->>EntryPoint: createCastlistRows()
+        EntryPoint->>Discord: Player Menu with buttons
+        Discord->>User: Display menu ✅
+    end
+
+    Note over User: Click castlist button → Same flow as Entry Point 2
+
+    Note over User,Webhook: 🎯 ENTRY POINT 4: Castlist Hub → Post Castlist
+
+    User->>Discord: /menu → Castlist Hub
+    EntryPoint->>VA: getAllCastlists(guildId)
+    VA-->>EntryPoint: ALL castlists (not limited)
+    EntryPoint->>Discord: Hub interface
+    Discord->>User: Display hub ✅
+
+    User->>Discord: Select castlist → "Post Castlist"
+    Discord->>EntryPoint: show_castlist2_* (from hub)
+
+    Note over EntryPoint: ⚡ DEFERRED RESPONSE (Immediate)
+    Note over EntryPoint: Same flow as Entry Point 2 above
+    EntryPoint->>Unified: getTribesForCastlist(...)
+    Note over Unified,Cache: Smart cache check + fetch
+    Unified-->>EntryPoint: Enriched tribes
+    EntryPoint->>Webhook: PATCH /messages/@original
+    Discord->>User: Display castlist ✅
+```
+
+### 🏗️ Architectural Components Achieved
+
+| Component | Implementation | Status |
+|-----------|----------------|--------|
+| **Unified Data Access** | `getTribesForCastlist()` | ✅ All 4 entry points |
+| **Virtual Adapter** | `castlistVirtualAdapter` | ✅ Full integration |
+| **Deferred Responses** | `DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE` | ✅ `/castlist` + `show_castlist2` |
+| **Webhook Follow-ups** | `PATCH /messages/@original` | ✅ All responses |
+| **Smart Caching** | 80% threshold bulk fetch | ✅ Cold + warm cache |
+| **Cache Logging** | `[TRIBES]` debug output | ✅ Size, timing, hits |
+| **Error Handling** | Webhook responses | ✅ No res.send() after defer |
+| **Multi-Format Support** | Legacy string + ID + array | ✅ Virtual Adapter |
+
+### 🚀 Performance Characteristics
+
+**Cold Cache (Post-Restart)**:
+- Detection: `578/578` member cache size logged
+- Action: Bulk fetch triggered
+- Timing: ~367ms for 578 members
+- Result: All 8/8 members shown ✅
+
+**Warm Cache (Normal Operation)**:
+- Detection: `Cache sufficiently populated` logged
+- Action: Skip bulk fetch
+- Timing: 0ms overhead (instant)
+- Result: All members from role.members cache ✅
+
+**Deferred Response Safety**:
+- Timeout Window: 15 minutes (vs 3 seconds)
+- Cold Cache Safe: ✅ (367ms << 15min)
+- Warm Cache Fast: ✅ (instant response)
+
+### 🎯 Entry Point Coverage
+
+| Entry Point | Virtual Adapter | Deferred | Smart Cache | Webhook | Status |
+|-------------|----------------|----------|-------------|---------|--------|
+| `/castlist` Command | ✅ | ✅ | ✅ | ✅ | ✅ COMPLETE |
+| `/menu` (Admin) → Buttons | ✅ | ✅ | ✅ | ✅ | ✅ COMPLETE |
+| `/menu` (Player) → Buttons | ✅ | ✅ | ✅ | ✅ | ✅ COMPLETE |
+| Castlist Hub → Post | ✅ | ✅ | ✅ | ✅ | ✅ COMPLETE |
+
+**Result**: 4/4 entry points fully integrated (100% coverage) ✅
+
+---
+
 ### 📐 Detailed Architecture: `getTribesForCastlist()` Integration
 
 #### Sequence Diagram: `/castlist` Command with `getTribesForCastlist()`
