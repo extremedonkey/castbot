@@ -6067,7 +6067,19 @@
         "color": "#e91e63",
         "analyticsName": "😱 S5 - Scream 😱",
         "analyticsAdded": 1762615893371
-      }
+      },
+      "1385242917890949213": {
+        "emoji": "🩸",
+        "castlist": "S6 - Tarantino",
+        "showPlayerEmojis": false,
+        "color": "#2ecc71",
+        "analyticsName": "🩸 S6 - Tarantino 🩸",
+        "analyticsAdded": 1762624314160,
+        "castlistIds": [
+          "castlist_1762625830595_system"
+        ]
+      },
+      "1426478402998636724": {}
     },
     "timezones": {
       "1353716900365860894": {
@@ -6928,6 +6940,25 @@
         },
         "modifiedAt": 1762613366454,
         "modifiedBy": "391415444084490240"
+      },
+      "castlist_1762625830595_system": {
+        "id": "castlist_1762625830595_system",
+        "name": "S6 - Tarantino",
+        "type": "system",
+        "createdAt": 1762625830595,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "",
+          "emoji": "📋",
+          "migratedFrom": "virtual_UzYgLSBUYXJhbnRpbm8",
+          "migrationDate": 1762625830595
+        }
       }
     },
     "placements": {
