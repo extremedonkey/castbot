@@ -448,7 +448,14 @@ export async function generateSeasonAppRankingUI({
     type: 17, // Container
     components: containerComponents
   };
-  
+
+  // Count components for debugging
+  const { countComponents } = await import('./utils.js');
+  countComponents(castRankingContainer.components, {
+    enableLogging: true,
+    label: `Season App Ranking UI - ${seasonName}`
+  });
+
   return {
     flags: ephemeral ? ((1 << 15) | (1 << 6)) : (1 << 15), // IS_COMPONENTS_V2 + EPHEMERAL if personal
     components: [castRankingContainer]

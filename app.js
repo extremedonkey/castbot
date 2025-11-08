@@ -6772,8 +6772,16 @@ To fix this:
             lastMessage.components.length > 0;
             
           console.log(`🔍 DEBUG: Season submenu - shouldUpdate: ${shouldUpdateMessage}`);
+
+          // Count components for debugging
+          const { countComponents } = await import('./utils.js');
+          countComponents(seasonManagementContainer.components, {
+            enableLogging: true,
+            label: 'Season Management Menu Components'
+          });
+
           console.log(`✅ SUCCESS: season_management_menu - completed`);
-          
+
           return await sendProductionSubmenuResponse(res, channelId, [seasonManagementContainer], shouldUpdateMessage);
         }
       })(req, res, client);

@@ -1734,9 +1734,10 @@
         "analyticsAdded": 1759422827344,
         "castlistIds": [
           "castlist_1762579473073_1331657596087566398",
-          "castlist_1762579584399_1331657596087566398"
+          "castlist_1762579584399_1331657596087566398",
+          "castlist_1762627269013_1331657596087566398"
         ],
-        "castlist": "Cool Cats"
+        "castlist": "My MVP"
       },
       "1424250096698130603": {
         "emoji": "🗝️",
@@ -9456,6 +9457,26 @@
           "description": "",
           "lastModified": 1761425264687
         }
+      },
+      "default": {
+        "id": "default",
+        "name": "Active Castlist",
+        "type": "system",
+        "createdAt": 1762628838137,
+        "createdBy": "system",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
+          "emoji": "📋",
+          "isDefault": true
+        },
+        "modifiedAt": 1762628838177,
+        "modifiedBy": "system"
       }
     }
   },
@@ -14376,83 +14397,6 @@
           "description": "",
           "lastModified": 1762177698087
         }
-      }
-    }
-  },
-  "1412422613774368851": {
-    "tribes": {
-      "1434555299787837521": {
-        "emoji": null,
-        "castlist": "default",
-        "showPlayerEmojis": false,
-        "color": "#9b59b6",
-        "analyticsName": "🔮Psychic Conversion",
-        "analyticsAdded": 1762100044535,
-        "castlistIds": [
-          "default"
-        ]
-      },
-      "1434563860316291154": {
-        "emoji": null,
-        "castlist": "default",
-        "showPlayerEmojis": false,
-        "color": "#f1c40f",
-        "analyticsName": "a brand new day ☀️",
-        "analyticsAdded": 1762100084872,
-        "castlistIds": [
-          "default"
-        ]
-      },
-      "1412424780568596545": {
-        "name": "Tribe 1412424780568596545",
-        "emoji": "🏕️",
-        "color": null,
-        "castlistIds": [
-          "default"
-        ],
-        "castlist": "default"
-      }
-    },
-    "players": {},
-    "timezones": {},
-    "serverName": "CastBot Regression Orange",
-    "icon": "https://cdn.discordapp.com/icons/1412422613774368851/e3c4d9107556739bad258aeb536a6f35.webp",
-    "ownerId": "391415444084490240",
-    "memberCount": 5,
-    "description": null,
-    "vanityURLCode": null,
-    "preferredLocale": "en-US",
-    "partnered": false,
-    "verified": false,
-    "createdTimestamp": 1756818192667,
-    "lastUpdated": 1762100407779,
-    "ownerInfo": {
-      "username": "extremedonkey",
-      "globalName": "Reece",
-      "discriminator": "0",
-      "tag": "extremedonkey"
-    },
-    "analyticsVersion": "1.0",
-    "castlistConfigs": {
-      "default": {
-        "id": "default",
-        "name": "Active Castlist",
-        "type": "system",
-        "createdAt": 1762100522472,
-        "createdBy": "system",
-        "settings": {
-          "sortStrategy": "alphabetical",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public"
-        },
-        "metadata": {
-          "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
-          "emoji": "📋",
-          "isDefault": true
-        },
-        "modifiedAt": 1762100554162,
-        "modifiedBy": "system"
       }
     }
   }
