@@ -3442,6 +3442,25 @@
           "migratedFrom": "virtual_c2F0dXJkYXlMZWdhY3k",
           "migrationDate": 1762584620535
         }
+      },
+      "castlist_1762627269013_1331657596087566398": {
+        "id": "castlist_1762627269013_1331657596087566398",
+        "name": "My MVP",
+        "type": "custom",
+        "createdAt": 1762627269013,
+        "createdBy": "1086246253819613274",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public",
+          "seasonId": "season_03859e4abc554bb5"
+        },
+        "metadata": {
+          "emoji": "📋",
+          "description": "test",
+          "lastModified": 1762627269013
+        }
       }
     },
     "placements": {
@@ -6079,7 +6098,15 @@
           "castlist_1762625830595_system"
         ]
       },
-      "1426478402998636724": {}
+      "1426478402998636724": {},
+      "1385242971938750597": {
+        "emoji": "🕵️",
+        "castlist": "S7 - James Bond",
+        "showPlayerEmojis": false,
+        "color": "#607d8b",
+        "analyticsName": "🕵️ S7 - James Bond 🕵️",
+        "analyticsAdded": 1762625951215
+      }
     },
     "timezones": {
       "1353716900365860894": {
