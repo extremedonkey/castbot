@@ -6293,8 +6293,9 @@ To fix this:
         handler: async (context) => {
           console.log(`☕ Showing donation information`);
 
-          // Import CastBot emoji
+          // Import bot emojis
           const { formatBotEmoji } = await import('./botEmojis.js');
+          const reeceEmoji = formatBotEmoji('reece');
           const castbotEmoji = formatBotEmoji('castbot_logo');
 
           // Create donation UI following LEAN standards
@@ -6309,7 +6310,7 @@ To fix this:
               { type: 14 }, // Separator
               {
                 type: 10, // Text Display
-                content: `Hey y'all, I develop CastBot to keep involved in the ORG community (and for a bit of fun!). I cover all the costs myself, but any support you can offer is appreciated!\n\n**Monthly Costs**\n• US$100 - ClaudeMax 5x Plan (AI-assisted development)\n• US$10 - AWS Lightsail (server hosting & performance)\n• And typically I put in 20-40 hours of my own (night) time a month 😎\n\nNo expectation or obligation, but much appreciated if you can!\nReece (${castbotEmoji} CastBot Developer)`
+                content: `Hey y'all, I develop CastBot to keep involved in the ORG community (and for a bit of fun!). I cover all the costs myself, but any support you can offer is appreciated!\n\n**Monthly Costs**\n• US$100 - ClaudeMax 5x Plan (AI-assisted development)\n• US$10 - AWS Lightsail (server hosting & performance)\n• And typically I put in 20-40 hours of my own (night) time a month 😎\n\nNo expectations or obligation, but much appreciated if you can! No amount is too small, donate link is below :)\n\n${reeceEmoji} **Reece**\n${castbotEmoji} CastBot Developer`
               },
               { type: 14 }, // Separator
               {

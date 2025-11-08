@@ -43,8 +43,14 @@ const BOT_EMOJIS = {
   command: {
     dev: '1396095623815495700',   // CastBot-Dev command emoji
     prod: '1396098411287285942'    // CastBot production command emoji
+  },
+
+  // Reece emoji (developer avatar)
+  reece: {
+    dev: '1436850201158483968',   // CastBot-Dev Reece emoji
+    prod: '1436850226932748369'    // CastBot production Reece emoji
   }
-  
+
   // Add more bot emojis here as needed
   // emoji_name: {
   //   dev: 'dev_emoji_id',
