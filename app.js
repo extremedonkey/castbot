@@ -775,7 +775,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     new ButtonBuilder()
       .setCustomId('safari_store_manage_items')
       .setLabel('Stores')
-      .setStyle(ButtonStyle.Secondary)
+      .setStyle(ButtonStyle.Primary)
       .setEmoji('🏪'),
     new ButtonBuilder()
       .setCustomId('safari_manage_items')
@@ -801,21 +801,16 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
 
   const safariFeatureRow = new ActionRowBuilder().addComponents(safariFeatureButtons);
 
-  // Create Advanced Features row (Map Explorer + Action Editor + Analytics + Tools)
+  // Create Advanced Features row (Map Explorer + Analytics + Action Editor + Tools)
   const advancedFeaturesButtons = [
     new ButtonBuilder()
       .setCustomId('safari_map_explorer')
       .setLabel('Map Admin')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🗺️'),
-    new ButtonBuilder()
-      .setCustomId('safari_action_editor')
-      .setLabel('Actions')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⚡')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('🗺️')
   ];
 
-  // Add Analytics button only for specific user (Reece) - third in row
+  // Add Analytics button only for specific user (Reece) - second in row
   if (userId === '391415444084490240') {
     advancedFeaturesButtons.push(
       new ButtonBuilder()
@@ -825,6 +820,15 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
         .setEmoji('🧮')
     );
   }
+
+  // Add Actions button - third/second in row depending on Analytics
+  advancedFeaturesButtons.push(
+    new ButtonBuilder()
+      .setCustomId('safari_action_editor')
+      .setLabel('Actions')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('⚡')
+  );
 
   // safari_rounds_menu moved to adminButtons row (relabeled to "Challenges")
   // prod_safari_menu removed - buttons distributed to Production Menu and Map Explorer
@@ -27121,7 +27125,7 @@ Are you sure you want to continue?`;
             },
             {
               type: 10, // Text Display
-              content: `Safari Rounds is an optional feature which allows you to add a turn-based element to your Safari, which can be used to run cycles over 24 hour challenges or as part of a more elaborate Safari Design system.\n\nRounds will allow items which have yields to accrue currency, and player attacks / defence actions to be executed when Round Results are revealed.`
+              content: `Use CastBot features to add turn-based elements to your Challenges or Safari. Run challenges in multiple rounds over 24 hour cycles, combining with the Actions feature, or as part of a more elaborate Safari Design system.\n\nRounds will allow items which have yields to accrue currency, and player attacks / defence actions to be executed when Round Results are revealed.`
             },
             { type: 14 }, // Separator
             {
