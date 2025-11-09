@@ -231,6 +231,11 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       // Fetch guild once for all tribes
       const guild = tribes.length > 0 ? await client.guilds.fetch(guildId) : null;
 
+      // CRITICAL: Fetch all guild members to populate role.members
+      if (guild) {
+        await guild.members.fetch();
+      }
+
       // Import utility functions for formatting
       const { formatPlayerList } = await import('./utils/tribeDataUtils.js');
 

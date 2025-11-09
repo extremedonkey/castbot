@@ -66,7 +66,10 @@ export function formatPlayerList(members, maxLength = 38) {
   }
 
   const count = members.length;
-  let playerNames = members.map(m => m.displayName || m.user?.username || 'Unknown');
+  // Discord.js GuildMember structure: nickname > displayName > user.globalName > user.username
+  let playerNames = members.map(m =>
+    m.nickname || m.displayName || m.user?.globalName || m.user?.username || 'Unknown'
+  );
 
   // Build the initial string
   let baseString = `${count} player${count !== 1 ? 's' : ''}: `;

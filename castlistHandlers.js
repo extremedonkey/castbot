@@ -353,7 +353,7 @@ export async function handleCastlistButton(req, res, client, custom_id) {
       const hubData = await createCastlistHub(req.body.guild_id, {
         selectedCastlistId: castlistId,
         activeButton: null
-      });
+      }, client);
       return ButtonHandlerFactory.create({
         id: custom_id,
         updateMessage: true,
@@ -405,7 +405,7 @@ export async function handleCastlistButton(req, res, client, custom_id) {
       const hubData = await createCastlistHub(req.body.guild_id, {
         selectedCastlistId: castlistId,
         activeButton: null
-      });
+      }, client);
       return ButtonHandlerFactory.create({
         id: custom_id,
         updateMessage: true,
@@ -759,7 +759,7 @@ export function handleCastlistSort(req, res, client, custom_id) {
       const hubData = await createCastlistHub(context.guildId, {
         selectedCastlistId: castlistId,
         activeButton: 'order' // Keep Order button active
-      });
+      }, context.client);
       
       return hubData;
     }
@@ -1029,7 +1029,7 @@ export function handleCastlistDeleteConfirm(req, res, client, custom_id) {
         const hubData = await createCastlistHub(context.guildId, {
           selectedCastlistId: null,
           activeButton: null
-        });
+        }, context.client);
 
         return hubData;
 
@@ -1325,15 +1325,10 @@ export async function handleCreateNewModal(req, res, client) {
     const hubData = await createCastlistHub(guildId, {
       selectedCastlistId: newId,
       activeButton: 'castlist_manage' // Default to manage view
-    });
+    }, client);
 
-    // Add success message
-    if (hubData.textDisplay) {
-      const successText = `✨ **New Castlist Created!**\n\n**Name:** ${newCastlist.name}\n**Season:** ${seasonId ? `Linked to season ${seasonId}` : 'No season assigned'}\n**Emoji:** ${newCastlist.metadata.emoji}\n${newCastlist.metadata.description ? `**Description:** ${newCastlist.metadata.description}` : ''}`;
-
-      // Prepend success message to text display
-      hubData.textDisplay.content = successText + '\n\n' + hubData.textDisplay.content;
-    }
+    // Don't try to modify hubData - it's already a complete structure
+    // Just return the hub directly
 
     return res.send({
       type: 7, // UPDATE_MESSAGE
