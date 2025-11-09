@@ -2893,7 +2893,7 @@ export class ButtonHandlerFactory {
         if (config.deferred) {
           await sendDeferredResponse(res, config.ephemeral !== false, config.updateMessage);
         }
-        
+
         // 5. Execute handler logic
         const result = await config.handler(context, req, res, client);
         
@@ -2909,6 +2909,17 @@ export class ButtonHandlerFactory {
         
         // 7. Handle deferred response update
         if (config.deferred && result) {
+          // Check if this is a modal response - modals can't be sent via webhook
+          if (result.type === InteractionResponseType.MODAL) {
+            console.error(`🚨 ButtonHandlerFactory: Cannot send modal via deferred response for ${config.id}`);
+            console.error(`🚨 Solution: Remove deferred: true from handler config when returning modals`);
+            // Send error message instead
+            return updateDeferredResponse(context.token, {
+              content: '❌ Unable to display modal. Please try again.',
+              flags: (1 << 15) | (1 << 6) // IS_COMPONENTS_V2 + EPHEMERAL
+            });
+          }
+
           // Unwrap data field if handler returned full interaction response
           // Some handlers return { type: 4, data: {...} } instead of just {...}
           const webhookData = result.data || result;

@@ -126,9 +126,9 @@ export async function createEditInfoModalForNew(guildId) {
           max_values: 1,
           options: [
             {
-              label: 'Placements',
+              label: 'Alphabetical (A-Z), then Placement',
               value: 'placements',
-              description: 'Sort by ranking (1st, 2nd, 3rd...)',
+              description: 'Any eliminated players shown last',
               emoji: { name: '🏅' },
               default: true // Default option
             },
@@ -204,10 +204,14 @@ export async function createEditInfoModalForNew(guildId) {
  * Materializes virtual castlists immediately on selection
  */
 export async function handleCastlistSelect(req, res, client) {
+  // Check if this is "create_new" to avoid deferring for modals
+  const selectedValue = req.body.data?.values?.[0];
+  const isCreateNew = selectedValue === 'create_new';
+
   return ButtonHandlerFactory.create({
     id: 'castlist_select',
     updateMessage: true,
-    deferred: true, // CRITICAL: Hub creation with member fetching takes >3 seconds
+    deferred: !isCreateNew, // Don't defer for modals (create_new shows modal)
     handler: async (context) => {
       let selectedCastlistId = context.values?.[0];
       console.log(`📋 Processing castlist selection: ${selectedCastlistId}`);
@@ -539,9 +543,9 @@ export async function handleCastlistButton(req, res, client, custom_id) {
               max_values: 1,
               options: [
                 {
-                  label: 'Placements',
+                  label: 'Alphabetical (A-Z), then Placement',
                   value: 'placements',
-                  description: 'Sort by ranking (1st, 2nd, 3rd...)',
+                  description: 'Any eliminated players shown last',
                   emoji: { name: '🏅' },
                   default: castlist.settings?.sortStrategy === 'placements' || !castlist.settings?.sortStrategy
                 },
@@ -678,9 +682,9 @@ export async function handleCastlistButton(req, res, client, custom_id) {
                       default: currentStrategy === 'alphabetical'
                     },
                     {
-                      label: 'Placements',
+                      label: 'Alphabetical (A-Z), then Placement',
                       value: 'placements',
-                      description: 'Sort by ranking (1st, 2nd, 3rd...)',
+                      description: 'Any eliminated players shown last',
                       emoji: { name: '🏅' },
                       default: currentStrategy === 'placements'
                     },

@@ -4889,8 +4889,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
         const playerData = await loadPlayerData();
 
-        // Reorder tribes for display
-        const tribes = reorderTribes(allTribes, requestedCastlist);
+        // Reorder tribes for display - pass correct arguments (userId, strategy, castlistId)
+        const tribes = reorderTribes(allTribes, userId, "default", requestedCastlist);
 
         // Check permissions if in channel
         if (channelId && member) {

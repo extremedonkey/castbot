@@ -1978,11 +1978,7 @@
         "analyticsName": "🪄 ar.3 🪄",
         "analyticsAdded": 1759081799205,
         "displayName": "The AR3 Tribe",
-        "castlistIds": [
-          "default"
-        ],
-        "castlistId": "default",
-        "castlist": "default"
+        "castlistId": "default"
       },
       "1388327092634124368": {
         "emoji": null,
@@ -2001,11 +1997,8 @@
         "castlistIds": [
           "castlist_1762579473073_1331657596087566398",
           "castlist_1762579584399_1331657596087566398",
-          "castlist_1762627269013_1331657596087566398",
-          "default"
-        ],
-        "castlist": "default",
-        "castlistId": "default"
+          "castlist_1762627269013_1331657596087566398"
+        ]
       },
       "1424250096698130603": {
         "emoji": "🗝️",
@@ -3329,7 +3322,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1762700753261,
+        "modifiedAt": 1762701184589,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
