@@ -262,17 +262,25 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
 
         // Get members with this role (if available from cache)
         const members = role ? Array.from(role.members.values()) : [];
-        // If we skipped member fetch, show count from tribe data instead of names
-        const playerListText = skipMemberFetch && tribe.memberCount !== undefined
-          ? `${tribe.memberCount || 0} players`
-          : formatPlayerList(members, 38);
+
+        // IMPORTANT: When skipMemberFetch is true, role.members only has CACHED members
+        // This is often just 1 person (you) even if the tribe has 12+ members!
+        // Better to show no count than wrong count
+        let playerListText;
+        if (skipMemberFetch) {
+          // Don't show member info in fast mode - it's incorrect
+          playerListText = '';
+        } else {
+          // Full fetch mode - show accurate member list
+          playerListText = formatPlayerList(members, 38);
+        }
 
         const tribeSection = {
           type: 9, // Section
           components: [{
             type: 10, // Text Display
-            content: `${tribe.emoji || '🏕️'} **${tribe.displayName || roleName}**\n` +
-                     `-# ${playerListText}`
+            content: `${tribe.emoji || '🏕️'} **${tribe.displayName || roleName}**` +
+                     (playerListText ? `\n-# ${playerListText}` : '')
           }]
         };
 

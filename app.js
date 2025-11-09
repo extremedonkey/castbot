@@ -8014,7 +8014,7 @@ To fix this:
           const { createCastlistHub } = await import('./castlistHub.js');
           const hubData = await createCastlistHub(context.guildId, {
             mode: 'list',
-            skipMemberFetch: true  // Fast mode for initial hub display
+            skipMemberFetch: false  // Fetch members for accurate initial display
           });
 
           console.log(`✅ SUCCESS: castlist_hub_main - showing hub`);
