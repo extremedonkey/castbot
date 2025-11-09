@@ -332,9 +332,10 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
   );
 
   container.components.push(navButtons.toJSON());
-  
+
+  // Return just the components - ButtonHandlerFactory will handle flags appropriately
+  // UPDATE_MESSAGE cannot have flags, CHANNEL_MESSAGE_WITH_SOURCE needs them
   return {
-    flags: (1 << 15), // IS_COMPONENTS_V2
     components: [container]
   };
 }

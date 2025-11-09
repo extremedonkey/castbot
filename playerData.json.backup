@@ -3536,6 +3536,25 @@
           "description": "Archived from tribe swap on 11/9/2025",
           "emoji": "📦"
         }
+      },
+      "castlist_1762685819551_1331657596087566398": {
+        "id": "castlist_1762685819551_1331657596087566398",
+        "name": "myNewTestCastlist",
+        "type": "custom",
+        "createdAt": 1762685819551,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "placements",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public",
+          "seasonId": "season_83d410d017c64375"
+        },
+        "metadata": {
+          "emoji": "🏇",
+          "description": "Woot!",
+          "lastModified": 1762685819551
+        }
       }
     },
     "placements": {
