@@ -754,15 +754,16 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🧑‍🤝‍🧑'),
     new ButtonBuilder()
+      .setCustomId('safari_rounds_menu')
+      .setLabel('Challenges')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🏃‍♀️'),
+    new ButtonBuilder()
       .setCustomId('prod_donate')
       .setLabel('Donate')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('☕'),
-    new ButtonBuilder()
-      .setCustomId('prod_manage_tribes')
-      .setLabel('Tribes')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🔥')
+      .setEmoji('☕')
+    // prod_manage_tribes moved to Tools Menu (prod_setup) - see menuBuilder.js
   );
   
   // Live Analytics button moved to Reece Stuff submenu
@@ -800,16 +801,21 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
 
   const safariFeatureRow = new ActionRowBuilder().addComponents(safariFeatureButtons);
 
-  // Create Advanced Features row (Safari + Analytics + Rounds + Tools)
+  // Create Advanced Features row (Map Explorer + Action Editor + Analytics + Tools)
   const advancedFeaturesButtons = [
     new ButtonBuilder()
-      .setCustomId('prod_safari_menu')
-      .setLabel('Safari')
-      .setStyle(ButtonStyle.Success)
-      .setEmoji('🦁')
+      .setCustomId('safari_map_explorer')
+      .setLabel('Map Admin')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🗺️'),
+    new ButtonBuilder()
+      .setCustomId('safari_action_editor')
+      .setLabel('Actions')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('⚡')
   ];
 
-  // Add Analytics button only for specific user (Reece) - second in row
+  // Add Analytics button only for specific user (Reece) - third in row
   if (userId === '391415444084490240') {
     advancedFeaturesButtons.push(
       new ButtonBuilder()
@@ -820,16 +826,10 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     );
   }
 
-  // Add Rounds button - third in row (or second if Analytics not shown)
-  advancedFeaturesButtons.push(
-    new ButtonBuilder()
-      .setCustomId('safari_rounds_menu')
-      .setLabel('Rounds')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⏳')
-  );
+  // safari_rounds_menu moved to adminButtons row (relabeled to "Challenges")
+  // prod_safari_menu removed - buttons distributed to Production Menu and Map Explorer
 
-  // Add Tools button (renamed from Initial Setup, contains Setup/Availability/Help) - fourth in row (or third if Analytics not shown)
+  // Add Tools button (renamed from Initial Setup, contains Setup/Availability/Help) - third/fourth in row depending on Analytics
   advancedFeaturesButtons.push(
     new ButtonBuilder()
       .setCustomId('prod_setup')
@@ -1151,118 +1151,120 @@ async function createReeceStuffMenu(guildId, channelId = null) {
 /**
  * Create Safari submenu interface for dynamic content management
  */
-async function createSafariMenu(guildId, userId, member) {
-  // Get the inventory name and current round for this guild
-  let inventoryName = 'Inventory'; // Default
-  let inventoryEmoji = '🧰'; // Default emoji
-  let currentRound = 1; // Default round
-  let totalRounds = 3; // Default total rounds
-  
-  try {
-    const { loadSafariContent } = await import('./safariManager.js');
-    const safariContent = await loadSafariContent();
-    const guildConfig = safariContent[guildId]?.safariConfig;
-    if (guildConfig?.inventoryName) {
-      inventoryName = guildConfig.inventoryName;
-    }
-    if (guildConfig?.inventoryEmoji) {
-      inventoryEmoji = guildConfig.inventoryEmoji;
-    }
-    // Get current round for dynamic button label
-    if (guildConfig?.currentRound) {
-      currentRound = guildConfig.currentRound;
-    }
-    // Get total rounds
-    if (guildConfig?.totalRounds) {
-      totalRounds = guildConfig.totalRounds;
-    }
-  } catch (error) {
-    console.error('Error loading safari config:', error);
-  }
-  
-  // Use custom inventory name for everyone
-  const inventoryLabel = `My ${inventoryName}`;
-  
-  // Create dynamic round results button labels
-  let roundResultsLabel;
-  if (currentRound >= 1 && currentRound <= totalRounds) {
-    roundResultsLabel = `Round ${currentRound} Results`;
-  } else if (currentRound > totalRounds) {
-    roundResultsLabel = 'Reset Game';
-  } else {
-    roundResultsLabel = 'Results'; // Fallback
-  }
-  
-  // Advanced Safari Configuration section buttons (Map-related features)
-  const mapAdminButtons = [
-    new ButtonBuilder()
-      .setCustomId('safari_map_explorer')
-      .setLabel('🗺️ Map Admin')
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId('safari_location_editor')
-      .setLabel('Location Editor')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📍'),
-    new ButtonBuilder()
-      .setCustomId('safari_action_editor')
-      .setLabel('Action Editor')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⚡'),
-    new ButtonBuilder()
-      .setCustomId('safari_progress')
-      .setLabel('Safari Progress')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🚀')
-  ];
-
-  // TODO: Flag for deletion - Check if safari_manage_safari_buttons handler is still needed
-  // TODO: Flag for deletion - Check if safari_navigate handlers and dependencies can be removed
-
-  const mapAdminRow = new ActionRowBuilder().addComponents(mapAdminButtons);
-  
-  // Create back button
-  const backButton = [
-    new ButtonBuilder()
-      .setCustomId('prod_menu_back')
-      .setLabel('⬅ Menu')
-      .setStyle(ButtonStyle.Secondary)
-  ];
-  
-  const backRow = new ActionRowBuilder().addComponents(backButton);
-  
-  // Build container components with section headers
-  const containerComponents = [
-    {
-      type: 10, // Text Display component
-      content: `## 🦁 Safari | Idol Hunts, Challenges & More\n\nAdvanced map configuration, custom actions, and location management.`
-    },
-    {
-      type: 14 // Separator
-    },
-    {
-      type: 10, // Text Display component
-      content: `> **\`🦁 Advanced Safari Configuration\`**`
-    },
-    mapAdminRow.toJSON(),
-    {
-      type: 14 // Separator
-    },
-    backRow.toJSON() // Back navigation
-  ];
-  
-  // Create Components V2 Container
-  const safariMenuContainer = {
-    type: 17, // Container component
-    accent_color: 0xf39c12, // Orange accent color for safari theme
-    components: containerComponents
-  };
-  
-  return {
-    flags: (1 << 15), // IS_COMPONENTS_V2 flag
-    components: [safariMenuContainer]
-  };
-}
+// TODO: MARKED FOR DELETION - createSafariMenu function removed (2025-02-11)
+// Safari features distributed to Production Menu and Map Explorer
+// async function createSafariMenu(guildId, userId, member) {
+//   // Get the inventory name and current round for this guild
+//   let inventoryName = 'Inventory'; // Default
+//   let inventoryEmoji = '🧰'; // Default emoji
+//   let currentRound = 1; // Default round
+//   let totalRounds = 3; // Default total rounds
+//
+//   try {
+//     const { loadSafariContent } = await import('./safariManager.js');
+//     const safariContent = await loadSafariContent();
+//     const guildConfig = safariContent[guildId]?.safariConfig;
+//     if (guildConfig?.inventoryName) {
+//       inventoryName = guildConfig.inventoryName;
+//     }
+//     if (guildConfig?.inventoryEmoji) {
+//       inventoryEmoji = guildConfig.inventoryEmoji;
+//     }
+//     // Get current round for dynamic button label
+//     if (guildConfig?.currentRound) {
+//       currentRound = guildConfig.currentRound;
+//     }
+//     // Get total rounds
+//     if (guildConfig?.totalRounds) {
+//       totalRounds = guildConfig.totalRounds;
+//     }
+//   } catch (error) {
+//     console.error('Error loading safari config:', error);
+//   }
+//
+//   // Use custom inventory name for everyone
+//   const inventoryLabel = `My ${inventoryName}`;
+//
+//   // Create dynamic round results button labels
+//   let roundResultsLabel;
+//   if (currentRound >= 1 && currentRound <= totalRounds) {
+//     roundResultsLabel = `Round ${currentRound} Results`;
+//   } else if (currentRound > totalRounds) {
+//     roundResultsLabel = 'Reset Game';
+//   } else {
+//     roundResultsLabel = 'Results'; // Fallback
+//   }
+//
+//   // Advanced Safari Configuration section buttons (Map-related features)
+//   const mapAdminButtons = [
+//     new ButtonBuilder()
+//       .setCustomId('safari_map_explorer')
+//       .setLabel('🗺️ Map Admin')
+//       .setStyle(ButtonStyle.Secondary),
+//     new ButtonBuilder()
+//       .setCustomId('safari_location_editor')
+//       .setLabel('Location Editor')
+//       .setStyle(ButtonStyle.Secondary)
+//       .setEmoji('📍'),
+//     new ButtonBuilder()
+//       .setCustomId('safari_action_editor')
+//       .setLabel('Action Editor')
+//       .setStyle(ButtonStyle.Secondary)
+//       .setEmoji('⚡'),
+//     new ButtonBuilder()
+//       .setCustomId('safari_progress')
+//       .setLabel('Safari Progress')
+//       .setStyle(ButtonStyle.Secondary)
+//       .setEmoji('🚀')
+//   ];
+//
+//   // TODO: Flag for deletion - Check if safari_manage_safari_buttons handler is still needed
+//   // TODO: Flag for deletion - Check if safari_navigate handlers and dependencies can be removed
+//
+//   const mapAdminRow = new ActionRowBuilder().addComponents(mapAdminButtons);
+//
+//   // Create back button
+//   const backButton = [
+//     new ButtonBuilder()
+//       .setCustomId('prod_menu_back')
+//       .setLabel('⬅ Menu')
+//       .setStyle(ButtonStyle.Secondary)
+//   ];
+//
+//   const backRow = new ActionRowBuilder().addComponents(backButton);
+//
+//   // Build container components with section headers
+//   const containerComponents = [
+//     {
+//       type: 10, // Text Display component
+//       content: `## 🦁 Safari | Idol Hunts, Challenges & More\n\nAdvanced map configuration, custom actions, and location management.`
+//     },
+//     {
+//       type: 14 // Separator
+//     },
+//     {
+//       type: 10, // Text Display component
+//       content: `> **\`🦁 Advanced Safari Configuration\`**`
+//     },
+//     mapAdminRow.toJSON(),
+//     {
+//       type: 14 // Separator
+//     },
+//     backRow.toJSON() // Back navigation
+//   ];
+//
+//   // Create Components V2 Container
+//   const safariMenuContainer = {
+//     type: 17, // Container component
+//     accent_color: 0xf39c12, // Orange accent color for safari theme
+//     components: containerComponents
+//   };
+//
+//   return {
+//     flags: (1 << 15), // IS_COMPONENTS_V2 flag
+//     components: [safariMenuContainer]
+//   };
+// }
 
 
 // Viral growth buttons are now integrated into navigation buttons in castlistV2.js
@@ -8658,47 +8660,52 @@ To fix this:
           };
         }
       })(req, res, client);
-    } else if (custom_id === 'prod_safari_menu') {
-      // Handle Safari submenu - dynamic content management (MIGRATED TO FACTORY)
-      const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(req.body.channel_id);
-      
-      return ButtonHandlerFactory.create({
-        id: 'prod_safari_menu',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        updateMessage: shouldUpdateMessage,
-        handler: async (context) => {
-          console.log('🦁 DEBUG: Creating Safari submenu');
-          MenuBuilder.trackLegacyMenu('prod_safari_menu', 'Safari game management menu');
-          
-          // Create Safari submenu
-          const safariMenuData = await createSafariMenu(context.guildId, context.userId, context.member);
-          
-          return {
-            ...safariMenuData,
-            ephemeral: true
-          };
-        }
-      })(req, res, client);
-    } else if (custom_id === 'safari_menu') {
-      // Handle Safari menu button (back button from various Safari submenus)
-      return ButtonHandlerFactory.create({
-        id: 'safari_menu',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        updateMessage: true,
-        handler: async (context) => {
-          console.log('🦁 DEBUG: Returning to Safari menu');
-          
-          // Create Safari submenu
-          const safariMenuData = await createSafariMenu(context.guildId, context.userId, context.member);
-          
-          return {
-            ...safariMenuData,
-            ephemeral: true
-          };
-        }
-      })(req, res, client);
+    // TODO: MARKED FOR DELETION - prod_safari_menu removed (2025-02-11)
+    // Safari features distributed to Production Menu (Map Admin, Actions) and Map Explorer (Location Editor, Safari Progress)
+    // } else if (custom_id === 'prod_safari_menu') {
+    //   // Handle Safari submenu - dynamic content management (MIGRATED TO FACTORY)
+    //   const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(req.body.channel_id);
+    //
+    //   return ButtonHandlerFactory.create({
+    //     id: 'prod_safari_menu',
+    //     requiresPermission: PermissionFlagsBits.ManageRoles,
+    //     permissionName: 'Manage Roles',
+    //     updateMessage: shouldUpdateMessage,
+    //     handler: async (context) => {
+    //       console.log('🦁 DEBUG: Creating Safari submenu');
+    //       MenuBuilder.trackLegacyMenu('prod_safari_menu', 'Safari game management menu');
+    //
+    //       // Create Safari submenu
+    //       const safariMenuData = await createSafariMenu(context.guildId, context.userId, context.member);
+    //
+    //       return {
+    //         ...safariMenuData,
+    //         ephemeral: true
+    //       };
+    //     }
+    //   })(req, res, client);
+
+    // TODO: MARKED FOR DELETION - safari_menu back button removed (2025-02-11)
+    // Safari submenus now use prod_menu_back to return to Production Menu
+    // } else if (custom_id === 'safari_menu') {
+    //   // Handle Safari menu button (back button from various Safari submenus)
+    //   return ButtonHandlerFactory.create({
+    //     id: 'safari_menu',
+    //     requiresPermission: PermissionFlagsBits.ManageRoles,
+    //     permissionName: 'Manage Roles',
+    //     updateMessage: true,
+    //     handler: async (context) => {
+    //       console.log('🦁 DEBUG: Returning to Safari menu');
+    //
+    //       // Create Safari submenu
+    //       const safariMenuData = await createSafariMenu(context.guildId, context.userId, context.member);
+    //
+    //       return {
+    //         ...safariMenuData,
+    //         ephemeral: true
+    //       };
+    //     }
+    //   })(req, res, client);
     } else if (custom_id === 'reece_stuff_menu') {
       // Handle Reece Stuff submenu - special admin features (MIGRATED TO FACTORY)
       return ButtonHandlerFactory.create({
@@ -23761,18 +23768,36 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
 
           // Second row: Admin functions with Player Locations moved here
           const mapButtonRow2 = new ActionRowBuilder().addComponents([blacklistButton, playerLocationsButton, pausedPlayersButton]);
-          
+
+          // Third row: Location Editor and Safari Progress (moved from Safari Menu)
+          const locationEditorButton = new ButtonBuilder()
+            .setCustomId('safari_location_editor')
+            .setLabel('Location Editor')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('📍')
+            .setDisabled(!hasActiveMap);
+
+          const safariProgressButton = new ButtonBuilder()
+            .setCustomId('safari_progress')
+            .setLabel('Safari Progress')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🚀')
+            .setDisabled(!hasActiveMap);
+
+          const mapButtonRow3 = new ActionRowBuilder().addComponents([locationEditorButton, safariProgressButton]);
+
           // Create back button
           const backButton = new ButtonBuilder()
             .setCustomId('prod_menu_back')
             .setLabel('← Menu')
             .setStyle(ButtonStyle.Secondary);
-          
+
           const backRow = new ActionRowBuilder().addComponents([backButton]);
-          
+
           // Add action row components to container
           containerComponents.push(mapButtonRow1.toJSON());
           containerComponents.push(mapButtonRow2.toJSON());
+          containerComponents.push(mapButtonRow3.toJSON());
           containerComponents.push({
             type: 14 // Separator
           });
