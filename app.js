@@ -5409,6 +5409,16 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const playerData = await loadPlayerData();
           const application = playerData[context.guildId]?.applications?.[channelId];
 
+          console.log(`🔍 DEBUG: Looking for application ${channelId}`);
+          console.log(`🔍 DEBUG: Application found: ${!!application}`);
+          if (application) {
+            console.log(`🔍 DEBUG: Applicant: ${application.displayName || application.username}`);
+          } else {
+            const allChannelIds = Object.keys(playerData[context.guildId]?.applications || {});
+            console.log(`🔍 DEBUG: Available channel IDs: ${allChannelIds.join(', ')}`);
+            console.log(`🔍 DEBUG: This application was already deleted - showing recovery UI`);
+          }
+
           if (!application) {
             // Application was already deleted - navigate to next available application
             const { getApplicationsForSeason } = await import('./storage.js');
