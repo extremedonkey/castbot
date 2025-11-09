@@ -30586,9 +30586,23 @@ Are you sure you want to continue?`;
         // Fetch guild and rebuild tribes list (same as show_castlist2 handler)
         const guild = await client.guilds.fetch(guildId);
 
-        // 🔧 CRITICAL FIX: Fetch guild members to populate cache before accessing role.members
-        // Without this, role.members.values() triggers automatic fetch that can timeout
-        await guild.members.fetch();
+        // 🔧 SMART CACHING: Only fetch if cache is incomplete (CastlistArchitecture.md pattern)
+        // Check if member cache is sufficiently populated (80% threshold)
+        const cacheRatio = guild.members.cache.size / guild.memberCount;
+        if (cacheRatio < 0.8) {
+          console.log(`[PLACEMENT] Cache incomplete (${guild.members.cache.size}/${guild.memberCount}), fetching members...`);
+          try {
+            const fetchStart = Date.now();
+            await guild.members.fetch({ timeout: 10000 }); // 10 second timeout
+            const fetchTime = Date.now() - fetchStart;
+            console.log(`[PLACEMENT] ✅ Fetched ${guild.members.cache.size} members in ${fetchTime}ms`);
+          } catch (fetchError) {
+            console.warn(`[PLACEMENT] ⚠️ Member fetch failed after 10s: ${fetchError.message}`);
+            console.warn(`[PLACEMENT] Continuing with partial cache (${guild.members.cache.size} members)`);
+          }
+        } else {
+          console.log(`[PLACEMENT] Cache sufficiently populated (${guild.members.cache.size}/${guild.memberCount}), skipping fetch`);
+        }
 
         // Load castlist configuration
         const castlistEntity = playerData[guildId]?.castlistConfigs?.[castlistId];
@@ -30710,11 +30724,13 @@ Are you sure you want to continue?`;
           const { sanitizeErrorMessage } = await import('./utils.js');
           const errorMessage = sanitizeErrorMessage(error);
 
+          // 🔧 CRITICAL: When editing via webhook PATCH, NEVER include flags
+          // The message already has IS_COMPONENTS_V2 flag set, Discord rejects flag modifications
           await DiscordRequest(endpoint, {
             method: 'PATCH',
             body: {
-              content: `❌ Error saving placement: ${errorMessage}`,
-              flags: InteractionResponseFlags.EPHEMERAL
+              content: `❌ Error saving placement: ${errorMessage}`
+              // ❌ REMOVED: flags (can't modify flags on existing message)
             }
           });
         } else {
