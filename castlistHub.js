@@ -232,8 +232,15 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       const guild = tribes.length > 0 ? await client.guilds.fetch(guildId) : null;
 
       // CRITICAL: Fetch all guild members to populate role.members
+      // Use timeout and handle errors gracefully
       if (guild) {
-        await guild.members.fetch();
+        try {
+          await guild.members.fetch({ timeout: 30000 }); // 30 second timeout
+          console.log(`[TRIBES] Successfully fetched ${guild.members.cache.size} members`);
+        } catch (fetchError) {
+          console.warn(`[TRIBES] Member fetch failed: ${fetchError.message}`);
+          console.warn(`[TRIBES] Continuing with cached members (${guild.members.cache.size} available)`);
+        }
       }
 
       // Import utility functions for formatting
@@ -255,15 +262,22 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
             type: 10, // Text Display
             content: `${tribe.emoji || '🏕️'} **${tribe.displayName || roleName}**\n` +
                      `-# ${playerListText}`
-          }],
-          accessory: {
+          }]
+        };
+
+        // Only add accessory if all required fields are available
+        if (tribe.roleId && castlist.id) {
+          tribeSection.accessory = {
             type: 2, // Button
             custom_id: `tribe_edit_button|${tribe.roleId}|${castlist.id}`,
             label: "Edit",
             style: 2, // Secondary
-            emoji: { name: "✏️" }
-          }
-        };
+            emoji: { name: "✏️" },
+            disabled: false // Explicitly set disabled state
+          };
+        } else {
+          console.warn(`[TRIBES] Skipping accessory button - missing roleId or castlistId`);
+        }
 
         console.log(`[TRIBES] Adding Section for tribe ${roleName}:`, JSON.stringify(tribeSection, null, 2));
         container.components.push(tribeSection);
