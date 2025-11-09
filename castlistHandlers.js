@@ -524,62 +524,105 @@ export async function handleCastlistButton(req, res, client, custom_id) {
 
         // Always show Sort Strategy and Season selector
         modalComponents.push(
-
-              // Sort Strategy (Label + String Select) - MOVED TO SECOND POSITION
-              {
-                type: 18, // Label
-                label: 'Castlist Sorting Method',
-                description: 'How should players be ordered in the castlist?',
-                component: {
-                  type: 3, // String Select
-                  custom_id: 'sort_strategy',
-                  placeholder: 'Select sort order...',
-                  required: false,
-                  min_values: 1,
-                  max_values: 1,
-                  options: [
-                    {
-                      label: 'Placements',
-                      value: 'placements',
-                      description: 'Sort by ranking (1st, 2nd, 3rd...)',
-                      emoji: { name: '🏅' },
-                      default: castlist.settings?.sortStrategy === 'placements' || !castlist.settings?.sortStrategy
-                    },
-                    {
-                      label: 'Alphabetical (A-Z), no placements',
-                      value: 'alphabetical',
-                      description: 'Sort players by name',
-                      emoji: { name: '🔤' },
-                      default: castlist.settings?.sortStrategy === 'alphabetical'
-                    },
-                    {
-                      label: 'Placements, then Alphabetical (A-Z)',
-                      value: 'placements_alpha',
-                      description: 'Placements first, then alphabetical',
-                      emoji: { name: '📊' },
-                      default: castlist.settings?.sortStrategy === 'placements_alpha'
-                    }
-                  ]
+          // Sort Strategy (Label + String Select)
+          {
+            type: 18, // Label
+            label: 'Castlist Sorting Method',
+            description: 'How should players be ordered in the castlist?',
+            component: {
+              type: 3, // String Select
+              custom_id: 'sort_strategy',
+              placeholder: 'Select sort order...',
+              required: false,
+              min_values: 1,
+              max_values: 1,
+              options: [
+                {
+                  label: 'Placements',
+                  value: 'placements',
+                  description: 'Sort by ranking (1st, 2nd, 3rd...)',
+                  emoji: { name: '🏅' },
+                  default: castlist.settings?.sortStrategy === 'placements' || !castlist.settings?.sortStrategy
+                },
+                {
+                  label: 'Alphabetical (A-Z), no placements',
+                  value: 'alphabetical',
+                  description: 'Sort players by name',
+                  emoji: { name: '🔤' },
+                  default: castlist.settings?.sortStrategy === 'alphabetical'
+                },
+                {
+                  label: 'Placements, then Alphabetical (A-Z)',
+                  value: 'placements_alpha',
+                  description: 'Placements first, then alphabetical',
+                  emoji: { name: '📊' },
+                  default: castlist.settings?.sortStrategy === 'placements_alpha'
                 }
-              },
+              ]
+            }
+          },
 
-              // Season selector (Label + String Select) - MOVED TO THIRD
-              {
-                type: 18, // Label
-                label: 'Associated Season',
-                description: 'What season is this Castlist for?',
-                component: {
-                  type: 3, // String Select
-                  custom_id: 'season_id',
-                  placeholder: 'Choose a season...',
-                  required: false,
-                  min_values: 0, // Allow deselecting all
-                  max_values: 1,
-                  options: seasonOptions
-                }
-              },
+          // Season selector (Label + String Select)
+          {
+            type: 18, // Label
+            label: 'Associated Season',
+            description: 'What season is this Castlist for?',
+            component: {
+              type: 3, // String Select
+              custom_id: 'season_id',
+              placeholder: 'Choose a season...',
+              required: false,
+              min_values: 0, // Allow deselecting all
+              max_values: 1,
+              options: seasonOptions
+            }
+          }
+        );
 
-            ]
+        // Only show emoji and description fields for non-default castlists
+        if (!isDefaultCastlist) {
+          modalComponents.push(
+            // Castlist Emoji field (Label + Text Input)
+            {
+              type: 18, // Label
+              label: 'Castlist Emoji',
+              description: 'Normal or discord emoji in the form <:castbot:1333820342275149824>',
+              component: {
+                type: 4, // Text Input
+                custom_id: 'castlist_emoji',
+                style: 1, // Short
+                required: false,
+                value: castlist.metadata?.emoji || '',
+                placeholder: 'Enter an emoji (e.g., 📋 or <:custom:123>)',
+                max_length: 60
+              }
+            },
+
+            // Description field (Label + Text Input)
+            {
+              type: 18, // Label
+              label: 'Description',
+              description: 'Optional description for this castlist',
+              component: {
+                type: 4, // Text Input
+                custom_id: 'castlist_description',
+                style: 2, // Paragraph
+                required: false,
+                value: castlist.metadata?.description || '',
+                placeholder: 'Describe this castlist...',
+                max_length: 200
+              }
+            }
+          );
+        }
+
+        // Create modal for editing castlist info with Components V2
+        return {
+          type: 9, // Modal
+          data: {
+            custom_id: `castlist_edit_info_modal_${castlistId}`,
+            title: isDefaultCastlist ? 'Manage Default Castlist' : 'Manage Castlist Info',
+            components: modalComponents
           }
         };
       }
@@ -1037,6 +1080,12 @@ export function handleEditInfoModal(req, res, client, custom_id) {
             fields.emoji = innerComp.value?.trim() || '📋';
           } else if (innerComp.custom_id === 'castlist_description') {
             fields.description = innerComp.value?.trim() || '';
+          } else if (innerComp.custom_id === 'sort_strategy') {
+            // Extract sort strategy selection (String Select)
+            const selectedValues = innerComp.values || [];
+            if (selectedValues.length > 0) {
+              fields.sortStrategy = selectedValues[0];
+            }
           } else if (innerComp.custom_id === 'season_id') {
             // Extract season selection (String Select)
             const selectedValues = innerComp.values || [];
@@ -1060,6 +1109,13 @@ export function handleEditInfoModal(req, res, client, custom_id) {
         },
         modifiedBy: userId
       };
+
+      // Add sort strategy to settings if provided
+      if (fields.sortStrategy) {
+        updates.settings = {
+          sortStrategy: fields.sortStrategy
+        };
+      }
 
       // Handle season association
       if (fields.seasonId === 'none') {
@@ -1235,6 +1291,9 @@ export async function handleCreateNewModal(req, res, client) {
     const selectedSeasonId = values.season_id?.[0] || null;
     const seasonId = selectedSeasonId === 'none' ? null : selectedSeasonId;
 
+    // Extract sort strategy selection (default to placements if not specified)
+    const sortStrategy = values.sort_strategy?.[0] || 'placements';
+
     // Create the new castlist (V3 structure)
     const newCastlist = {
       id: newId,
@@ -1243,7 +1302,7 @@ export async function handleCreateNewModal(req, res, client) {
       createdAt: Date.now(),
       createdBy: userId,
       settings: {
-        sortStrategy: 'alphabetical', // Default sort
+        sortStrategy: sortStrategy,
         showRankings: false,
         maxDisplay: 25,
         visibility: 'public',
