@@ -548,7 +548,7 @@
         "createdAt": 1762659174803,
         "createdBy": "391415444084490240",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "placements",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public",
@@ -558,7 +558,9 @@
           "emoji": "🐻‍❄️",
           "description": "",
           "lastModified": 1762659174803
-        }
+        },
+        "modifiedAt": 1762661147795,
+        "modifiedBy": "system"
       }
     },
     "placements": {
@@ -611,7 +613,7 @@
         "700145159618166856": {
           "placement": 5,
           "updatedBy": "391415444084490240",
-          "updatedAt": "2025-11-09T04:02:29.392Z"
+          "updatedAt": "2025-11-09T04:13:56.680Z"
         },
         "422644471512170508": {
           "placement": 20,

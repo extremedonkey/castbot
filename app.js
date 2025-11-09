@@ -8301,7 +8301,7 @@ To fix this:
                 // 🔗 PHASE 2: Attach castlist settings AND seasonId for placement lookups
                 castlistSettings: {
                   ...castlistEntity?.settings,
-                  seasonId: castlistEntity?.seasonId
+                  seasonId: castlistEntity?.settings?.seasonId  // FIX: seasonId is in settings, not top-level
                 },
                 castlistId: requestedCastlistId,
                 guildId: guildId
@@ -29963,7 +29963,7 @@ Are you sure you want to continue?`;
             // 🔧 FIX: Attach castlist settings for placement namespace resolution
             castlistSettings: {
               ...castlistEntity?.settings,
-              seasonId: castlistEntity?.seasonId
+              seasonId: castlistEntity?.settings?.seasonId  // FIX: seasonId is in settings, not top-level
             },
             castlistId: castlistId,  // For consistency
             guildId: guildId
@@ -30596,7 +30596,7 @@ Are you sure you want to continue?`;
                 memberCount: tribeMembers.length,
                 castlistSettings: {
                   ...castlistEntity?.settings,
-                  seasonId: castlistEntity?.seasonId
+                  seasonId: castlistEntity?.settings?.seasonId  // FIX: seasonId is in settings, not top-level
                 },
                 castlistId: castlistId,  // FIX: Use castlistId not castlistName
                 guildId: guildId
