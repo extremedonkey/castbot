@@ -6401,7 +6401,27 @@ To fix this:
               { type: 14 }, // Separator
               {
                 type: 10, // Text Display
-                content: `**Last Updated**: November 2025\n\n**What We Collect:**\n\nCastBot stores minimal data to work:\n• **Discord IDs** (servers, users, roles, channels)\n• **Game data** (castlists, tribes, player preferences)\n• **User preferences** (pronouns, timezones, availability)\n\n**What We Don't Do:**\n• ❌ We don't sell your data\n• ❌ We don't share it with third parties\n• ❌ We don't track you outside Discord\n\n**Data Storage:**\nYour data is stored securely on our server and is only used to make CastBot work. When you remove CastBot from your server or delete your data, it's gone.\n\n**Your Rights:**\nYou can request data deletion anytime by contacting us on our support server.\n\n**Contact**: https://discord.gg/H7MpJEjkwT`
+                content: `**Last Updated**: November 2025\n**Effective Date**: November 2025\n\n## What We Collect\n\n**Server & User Identifiers:**\n• Discord Server IDs, User IDs, Role IDs, Channel IDs\n• Used for: Role assignments, castlist management, server configuration\n\n**Game Data:**\n• Castlists, tribes, season information, player placements\n• Used for: Displaying game rosters and managing ORG seasons\n\n**User Preferences:**\n• Pronouns, timezones, availability times, vanity role selections\n• Used for: Personalized player profiles and scheduling\n\n**Message Content (Application Channels Only):**\n• Messages typed in private application channels\n• Used for: Season application responses\n• Scope: ONLY in channels created via "Apply" button\n• Never collected: Messages in regular server channels, DMs, or non-application contexts`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 10, // Text Display
+                content: `## Data Retention\n\n**Active Data (Retained While Bot is Active):**\n• Server configurations: Retained while bot is in server\n• Player preferences: Retained while user is in server\n• Game data: Retained while season is active or archived\n\n**Application Responses:**\n• Retained: During application period + 90 days after season starts\n• Auto-deleted: When season ends or application is withdrawn\n• Manual deletion: Available on request anytime\n\n**Deleted Automatically When:**\n• Bot is removed from server (all server data deleted)\n• User leaves server (user-specific data removed)\n• Season application period closes (90 days after season start)\n• Admin requests data deletion via support server`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 10, // Text Display
+                content: `## How We Use Your Data\n\n**Purpose Limitation:**\nYour data is ONLY used for bot functionality. We do not:\n• ❌ Sell or monetize your data\n• ❌ Share with third parties (except as required by law)\n• ❌ Use for advertising or marketing\n• ❌ Train AI/ML models\n• ❌ Track you outside Discord\n• ❌ Read messages in non-application channels\n\n**Message Content Specifics:**\n• Collected: Only in private application channels you create by clicking "Apply"\n• Used for: Capturing application responses for host review\n• Accessed by: Only server admins with manage permissions\n• Not monitored: Regular server conversations, DMs, or non-application channels`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 10, // Text Display
+                content: `## Your Rights\n\n**Access & Portability:**\n• Request a copy of your data anytime\n• Data provided in JSON format within 7 days\n\n**Deletion:**\n• Request deletion via support server: https://discord.gg/H7MpJEjkwT\n• Data deleted within 48 hours\n• Cannot be recovered after deletion\n\n**Opt-Out:**\n• Application messages: Don't click "Apply" button\n• Other features: Remove bot from server or leave server\n\n**Data Security:**\n• Stored on AWS Lightsail (encrypted at rest)\n• Access restricted to bot operations only\n• Regular security updates and monitoring\n• No unauthorized third-party access`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 10, // Text Display
+                content: `## Third-Party Services\n\n**Discord API:**\nCastBot uses Discord's official API to function. Discord's Privacy Policy applies: https://discord.com/privacy\n\n**AWS Lightsail:**\nData is stored on AWS servers (US region). AWS Privacy Policy: https://aws.amazon.com/privacy\n\n**No Other Third Parties:**\nWe do not share your data with any other services, analytics platforms, or external parties.\n\n## Updates to This Policy\n\nWe may update this policy to reflect feature changes. Updates will:\n• Be posted in-bot (this menu)\n• Include updated "Last Updated" date\n• Take effect immediately upon posting\n\n## Contact & Data Requests\n\n**Support Server**: https://discord.gg/H7MpJEjkwT\n**For**: Data access, deletion requests, privacy questions, concerns\n**Response Time**: Within 48 hours for deletion, 7 days for data export`
               },
               { type: 14 }, // Separator
               {
