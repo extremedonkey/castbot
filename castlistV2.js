@@ -283,9 +283,17 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
         const tribeIndex = navigationState?.currentTribeIndex ?? 0;
         const tribePage = navigationState?.currentTribePage ?? 0;
 
+        // 🔧 CRITICAL FIX: Strip guild ID suffix from castlistId to stay under Discord's 100-char limit
+        // castlistId format: "castlist_1762659174802_1127596863885934652" (43 chars)
+        // We only need: "castlist_1762659174802" (22 chars) - saves 21 chars!
+        // Guild ID is available in req.body.guild_id, so we can reconstruct the full ID when parsing
+        const castlistIdShort = castlistId.includes('_') && castlistId.split('_').length >= 3
+            ? castlistId.split('_').slice(0, 2).join('_')  // "castlist_TIMESTAMP"
+            : castlistId;  // Fallback for non-standard IDs
+
         accessory = {
             type: 2, // Button
-            custom_id: `edit_placement_${member.user.id}_${seasonContext}_${castlistId}_${tribeIndex}_${tribePage}_${displayMode}`,
+            custom_id: `edit_placement_${member.user.id}_${seasonContext}_${castlistIdShort}_${tribeIndex}_${tribePage}_${displayMode}`,
             label: getOrdinalLabel(placement),
             style: 2, // Secondary
             emoji: { name: "✏️" }

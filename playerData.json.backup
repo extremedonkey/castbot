@@ -578,7 +578,7 @@
         "createdAt": 1762662177543,
         "createdBy": "system",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "placements",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -588,7 +588,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1762662177581,
+        "modifiedAt": 1762662578835,
         "modifiedBy": "system"
       }
     },

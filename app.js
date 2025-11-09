@@ -8573,12 +8573,22 @@ To fix this:
       const playerId = parts[2];
 
       // Handle both formats
+      let castlistIdShort;  // For modal custom_id (short version to stay under 100 chars)
       if (parts[castlistIdStartIdx] === 'default') {
         castlistId = 'default';
+        castlistIdShort = 'default';
         seasonContext = parts.slice(3, castlistIdStartIdx).join('_') || 'global';
       } else {
         seasonContext = parts.slice(3, castlistIdStartIdx).join('_') || 'global';
-        castlistId = parts.slice(castlistIdStartIdx, parts.length - 3).join('_');
+        castlistIdShort = parts.slice(castlistIdStartIdx, parts.length - 3).join('_');
+
+        // 🔧 CRITICAL FIX: Reconstruct full castlistId by appending guild ID
+        // Button custom_id uses shortened format (castlist_TIMESTAMP) to stay under 100-char limit
+        // Full format needed for lookups: castlist_TIMESTAMP_GUILDID
+        const guildId = req.body.guild_id;
+        castlistId = castlistIdShort.includes('_') && castlistIdShort.split('_').length === 2
+            ? `${castlistIdShort}_${guildId}`  // Reconstruct: "castlist_TIMESTAMP_GUILDID"
+            : castlistIdShort;  // Already full format (backward compatibility)
       }
 
       return ButtonHandlerFactory.create({
@@ -8602,7 +8612,8 @@ To fix this:
           return {
             type: InteractionResponseType.MODAL,
             data: {
-              custom_id: `save_placement_${playerId}_${seasonContext}_${castlistId}_${tribeIndex}_${tribePage}_${displayMode}`,
+              // Use shortened castlistId to stay under Discord's 100-char custom_id limit
+              custom_id: `save_placement_${playerId}_${seasonContext}_${castlistIdShort}_${tribeIndex}_${tribePage}_${displayMode}`,
               title: "Edit Season Placement",
               components: [
                 {
@@ -30492,9 +30503,17 @@ Are you sure you want to continue?`;
 
         const playerId = parts[2];
         const seasonContext = parts.slice(3, castlistIdStartIdx).join('_') || 'global';
-        const castlistId = parts.slice(castlistIdStartIdx, parts.length - 3).join('_');
+        const castlistIdShort = parts.slice(castlistIdStartIdx, parts.length - 3).join('_');
 
         const guildId = req.body.guild_id;
+
+        // 🔧 CRITICAL FIX: Reconstruct full castlistId by appending guild ID
+        // Modal custom_id uses shortened format (castlist_TIMESTAMP) to stay under 100-char limit
+        // Full format needed for lookups: castlist_TIMESTAMP_GUILDID
+        const castlistId = castlistIdShort.includes('_') && castlistIdShort.split('_').length === 2
+            ? `${castlistIdShort}_${guildId}`  // Reconstruct: "castlist_TIMESTAMP_GUILDID"
+            : castlistIdShort;  // Already full format (backward compatibility)
+
         const channelId = req.body.channel_id;
         const member = req.body.member;
         const userId = member?.user?.id;
