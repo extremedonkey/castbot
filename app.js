@@ -5492,7 +5492,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           const applicantName = application.displayName || application.username || 'Unknown Applicant';
           const applicantUserId = application.userId;
-          const configId = application.configId; // Extract configId from application data
           
           // Step 1: Try to delete the channel (silently handle if it doesn't exist)
           let channelDeletedMessage = '';
@@ -5562,9 +5561,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
           
           // Step 4: Navigate to next application or show "no applications" message
-          const allApplications = await getAllApplicationsFromData(guildId);
-          console.log(`📊 ${allApplications.length} applications remaining after deletion`);
-          
+          const { getApplicationsForSeason } = await import('./storage.js');
+          const allApplications = await getApplicationsForSeason(guildId, configId);
+          console.log(`📊 ${allApplications.length} applications remaining in season ${configId} after deletion`);
+
           if (allApplications.length === 0) {
             // No applications left - show the default message
             console.log(`✅ SUCCESS: delete_application_confirm - no applications remaining`);
@@ -5621,17 +5621,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             playerData
           });
 
-          // Add deletion success message at the top of the container
-          const container = rankingResponse.components[0];
-          container.components.unshift(
-            {
-              type: 10, // Text Display
-              content: `✅ **Application deleted:** ${applicantName}\n${channelDeletedMessage}`
-            },
-            { type: 14 } // Separator
-          );
-
-          console.log(`✅ SUCCESS: delete_application_confirm - deleted and navigated to ${newApp.displayName}`);
+          console.log(`✅ SUCCESS: delete_application_confirm - deleted ${applicantName} and navigated to ${newApp.displayName}`);
           return rankingResponse;
         }
       })(req, res, client);
@@ -5653,11 +5643,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const parts = context.customId.split('_');
           const channelId = parts[3];
           const appIndex = parseInt(parts[4]);
-          const configId = parts[5] || 'legacy';
+          const configId = parts.slice(5).join('_'); // Rejoin configId parts
 
-          // Load application data
+          // Load application data for this season only
           const playerData = await loadPlayerData();
-          const allApplications = await getAllApplicationsFromData(guildId);
+          const { getApplicationsForSeason } = await import('./storage.js');
+          const allApplications = await getApplicationsForSeason(guildId, configId);
           const currentApp = allApplications[appIndex];
 
           if (!currentApp) {
