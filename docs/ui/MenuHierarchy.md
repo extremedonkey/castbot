@@ -2,9 +2,9 @@
 
 **Purpose**: Visual reference for the complete menu structure and navigation flow in CastBot.
 
-**Last Updated**: 2025-01-19
+**Last Updated**: 2025-02-11
 
-**Status**: 🚧 **Undergoing Restructure** - Safari features being reorganized under Production Menu
+**Status**: ✅ **Recently Restructured** - Safari menu removed, features distributed to Production Menu and Map Explorer
 
 ---
 
@@ -18,23 +18,24 @@
 │  YES ─→ 📋 Production Menu [EPHEMERAL]
 │  │      │
 │  │      ├─ ✏️ Castlists, Applications and Season Management
-│  │      │  ├─ 📋 Castlists
-│  │      │  ├─ 📝 Season Applications [Secondary]
+│  │      │  ├─ 📋 Castlist Manager
+│  │      │  ├─ 📝 Apps [Secondary]
 │  │      │  ├─ 🧑‍🤝‍🧑 Players
-│  │      │  └─ 🔥 Tribes
+│  │      │  ├─ 🏃‍♀️ Challenges (formerly Rounds)
+│  │      │  └─ ☕ Donate
 │  │      │
 │  │      ├─ 🦁 Idol Hunts, Challenges and Safari
 │  │      │  ├─ 🏪 Stores
 │  │      │  ├─ 📦 Items
-│  │      │  ├─ 🛡️ Player Admin
-│  │      │  ├─ ⏳ Rounds
-│  │      │  └─ 💰 Currency
+│  │      │  ├─ 🧭 Player Admin
+│  │      │  ├─ 💰 Currency
+│  │      │  └─ ⚙️ Settings
 │  │      │
 │  │      ├─ 🚀 Advanced Features
-│  │      │  ├─ 🪛 Tools → 🪛 Tools Menu (Setup, Pronouns & Timezones, Availability)
+│  │      │  ├─ 🗺️ Map Admin → 🗺️ Map Explorer Menu
+│  │      │  ├─ ⚡ Actions (Custom Action Editor)
 │  │      │  ├─ 🧮 Analytics [Reece Only]
-│  │      │  ├─ 🦁 Safari
-│  │      │  └─ 🪪 Player Menu [Preview]
+│  │      │  └─ 🪛 Tools → 🪛 Tools Menu
 │  │      │
 │  │      └─ ← Menu [Back]
 │  │
@@ -71,8 +72,12 @@
 │  │
 │  ├─ 🪛 Run Setup
 │  ├─ 💜 Pronouns & Timezones → 💜 Pronouns & Timezones Menu
+│  ├─ 🔥 Tribes (Legacy)
 │  ├─ 🕐 Availability → 🕐 Availability Menu
-│  └─ ❓ Need Help? [Link]
+│  ├─ ❓ Need Help? [Link]
+│  ├─ 📜 Terms of Service
+│  ├─ 🔒 Privacy Policy
+│  └─ ← Menu [Back to Production Menu]
 │
 │
 ├─ 💜 Pronouns & Timezones Menu [EPHEMERAL]
@@ -99,14 +104,21 @@
 │  └─ ← Tools [Back to Tools Menu]
 │
 │
-├─ 🦁 Safari Menu [EPHEMERAL]
+├─ 🗺️ Map Explorer Menu [EPHEMERAL]
 │  │
-│  ├─ 🦁 Advanced Safari Configuration
-│  │  ├─ 🗺️ Map Admin
+│  ├─ 🗺️ Map Management
+│  │  ├─ Create / Update Map
+│  │  ├─ Delete Map
+│  │  └─ Refresh Anchors
+│  │
+│  ├─ 🧭 Map Administration
+│  │  ├─ Blacklisted Coords
+│  │  ├─ Player Locations
+│  │  └─ Paused Players
+│  │
+│  ├─ 🛠️ Map Configuration (moved from Safari Menu)
 │  │  ├─ 📍 Location Editor
-│  │  ├─ ⚡ Action Editor
-│  │  ├─ 🚀 Safari Progress
-│  │  └─ ⚙️ Settings
+│  │  └─ 🚀 Safari Progress
 │  │
 │  └─ ← Menu [Back to Production Menu]
 │
@@ -156,13 +168,14 @@
 - **Features**: Profile editing, vanity roles, global stores
 - **Accent Color**: Blue (0x3498DB)
 
-### Safari Menu
+### Map Explorer Menu
 - **Access**: Admin only
 - **Visibility**: Ephemeral
-- **Location**: `app.js` - `createSafariMenuInterface()`
-- **Purpose**: Advanced map and custom action configuration
-- **Accent Color**: Orange (0xf39c12)
+- **Location**: `app.js` - `safari_map_explorer` handler (line ~23580)
+- **Purpose**: Map creation, administration, and configuration
+- **Accent Color**: Teal (0x00AE86)
 - **Back Navigation**: Returns to Production Menu
+- **Features**: Create/update maps, blacklist management, player locations, location editor, safari progress
 
 ### Analytics Menu
 - **Access**: Reece only (user ID: 391415444084490240)
@@ -248,6 +261,33 @@ const backButton = new ButtonBuilder()
 ---
 
 ## Recent Changes
+
+### 2025-02-11: Major Menu Restructure - Safari Menu Removal
+**Rationale**: Flatten menu hierarchy and reduce clicks for common Safari operations. Safari menu added unnecessary nesting - most features are accessed frequently enough to warrant top-level placement.
+
+**Changes**:
+1. **Removed Safari Menu entirely** - Commented out `prod_safari_menu` button and `createSafariMenu()` function
+2. **Promoted buttons to Production Menu**:
+   - `safari_map_explorer` → Advanced Features row (relabeled "Map Admin")
+   - `safari_action_editor` → Advanced Features row (relabeled "Actions")
+3. **Moved buttons to Map Explorer**:
+   - `safari_location_editor` → New third row in Map Explorer (with map filter)
+   - `safari_progress` → New third row in Map Explorer (right of Location Editor)
+4. **Renamed & Repositioned**:
+   - `safari_rounds_menu` → "Challenges" 🏃‍♀️ (moved from Advanced Features to admin row, right of Players)
+5. **Tribes moved to Tools Menu**:
+   - `prod_manage_tribes` → Tools Menu (relabeled "Tribes (Legacy)")
+6. **All back buttons verified** - Safari submenus use `prod_menu_back`, internal navigation preserved
+
+**New Menu Flow**:
+```
+Production Menu → Map Admin → Map Explorer (with Location Editor + Safari Progress)
+Production Menu → Actions → Custom Action Editor
+Production Menu → Challenges → Rounds Menu
+Production Menu → Tools → Tribes (Legacy)
+```
+
+**Impact**: Reduced navigation depth from 3 clicks (Menu → Safari → Feature) to 2 clicks (Menu → Feature) for Map Admin and Actions.
 
 ### 2025-02-11: Tools Menu Reorganization
 **Rationale**: Consolidate setup-related features (initial setup, pronouns/timezones, availability) under a single Tools menu to reduce Production Menu clutter and create logical grouping.
