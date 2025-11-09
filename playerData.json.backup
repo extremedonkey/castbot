@@ -1890,10 +1890,6 @@
         "color": "#FFFFFF",
         "analyticsName": "🤖Mr CastBot",
         "analyticsAdded": 1751070525853,
-        "castlistIds": [
-          "castlist_1759638936214_system"
-        ],
-        "castlist": "Castbot MVPs",
         "displayName": "Mr CastBot"
       },
       "1391142520787832904": {
@@ -1913,10 +1909,11 @@
         "castlistIds": [
           "castlist_1759638936214_system",
           "castlist_1762579720361_1331657596087566398",
-          "castlist_archive_1762682582653"
+          "castlist_archive_1762682582653",
+          "default"
         ],
         "isVanity": true,
-        "castlist": "CastBotVivor OG Tribes",
+        "castlist": "default",
         "castlistId": "castlist_archive_1762682582653"
       },
       "1335645032891547670": {
@@ -2012,14 +2009,10 @@
       },
       "1424250096698130603": {
         "emoji": "🗝️",
-        "castlist": "legacyList",
         "showPlayerEmojis": false,
         "color": "#a84300",
         "analyticsName": "🗝️ legacyList 🗝️",
-        "analyticsAdded": 1759638200118,
-        "castlistIds": [
-          "castlist_1759638936214_system"
-        ]
+        "analyticsAdded": 1759638200118
       },
       "1424348388027007016": {
         "emoji": "💩",
@@ -2149,13 +2142,7 @@
         ],
         "castlist": "the BIG one"
       },
-      "1368969346600407181": {
-        "castlistIds": [
-          "default"
-        ],
-        "castlistId": "default",
-        "castlist": "default"
-      },
+      "1368969346600407181": {},
       "1434914674788401212": {
         "emoji": null,
         "showPlayerEmojis": false,
@@ -3342,7 +3329,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1762699747449,
+        "modifiedAt": 1762700509098,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -11208,13 +11195,6 @@
         "name": "Tribe 1415062472007749765",
         "emoji": "🏕️",
         "type": "default"
-      },
-      "1368969399251501126": {
-        "emoji": "🪄",
-        "showPlayerEmojis": false,
-        "color": null,
-        "analyticsName": "🪄 ar.3 🪄",
-        "analyticsAdded": 1759081799205
       },
       "1388327092634124368": {
         "emoji": null,

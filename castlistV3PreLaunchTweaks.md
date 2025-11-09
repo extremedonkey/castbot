@@ -10,7 +10,25 @@
    - Fix: Return proper modal structure with type 9 response
    - File: `/home/reece/castbot/castlistHandlers.js` lines 30-199
 
-2. **ButtonHandlerFactory Deferred Response Issue**
+2. **Tribe Removal Interaction Failed**
+   - Error: Intermittent "interaction failed" when removing tribes (e.g., "legacyList")
+   - Cause: Operation takes too long (>3 seconds) without deferred response
+   - Fix: Add `deferred: true` to `handleCastlistTribeSelect` if not already present
+   - File: `/home/reece/castbot/castlistHandlers.js` line 776
+
+3. **Post Castlist Navigation Bug**
+   - Issue: First tribe (ar.3) shows twice when navigating with next/prev buttons
+   - Pattern: Post Castlist → AR3 → Next → AR3 (wrong, should be Ask) → Next/Back → Works correctly
+   - Likely pagination issue in `show_castlist2_default` handler
+   - File: `/home/reece/castbot/app.js` - search for castlist2_nav_next_tribe
+
+4. **Sort Strategy Label Not Updated**
+   - MISSING: "Placements" should be "Alphabetical (A-Z), then Placement"
+   - Description should be: "Any eliminated players shown last"
+   - File: `/home/reece/castbot/castlistHandlers.js` lines 129-133
+   - Also check Edit modal around line 540-547
+
+5. **ButtonHandlerFactory Deferred Response Issue**
    - ✅ FIXED: Added support for DEFERRED_UPDATE_MESSAGE when updateMessage: true
    - File: `/home/reece/castbot/buttonHandlerFactory.js` lines 2776-2894
 
