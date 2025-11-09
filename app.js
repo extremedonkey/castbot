@@ -5410,15 +5410,56 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const application = playerData[context.guildId]?.applications?.[channelId];
 
           if (!application) {
-            return {
-              components: [{
-                type: 17, // Container
+            // Application was already deleted - navigate to next available application
+            const { getApplicationsForSeason } = await import('./storage.js');
+            const allApplications = await getApplicationsForSeason(context.guildId, configId);
+
+            if (allApplications.length === 0) {
+              return {
                 components: [{
-                  type: 10, // Text Display
-                  content: '❌ Application not found.'
+                  type: 17, // Container
+                  components: [{
+                    type: 10, // Text Display
+                    content: '✅ No applications remaining in this season.'
+                  }]
                 }]
-              }]
-            };
+              };
+            }
+
+            // Navigate to first available application
+            const { generateSeasonAppRankingUI } = await import('./castRankingManager.js');
+            const { client } = context;
+            const guild = await client.guilds.fetch(context.guildId);
+            const newApp = allApplications[0];
+
+            let applicantMember;
+            try {
+              applicantMember = await guild.members.fetch(newApp.userId);
+            } catch (error) {
+              applicantMember = {
+                displayName: newApp.displayName,
+                user: { username: newApp.username },
+                displayAvatarURL: () => newApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${newApp.userId % 5}.png`,
+                id: newApp.userId,
+                guild: null
+              };
+            }
+
+            const seasonConfig = playerData[context.guildId]?.applicationConfigs?.[configId];
+            const seasonName = seasonConfig?.seasonName || 'Unknown Season';
+
+            return generateSeasonAppRankingUI({
+              guildId: context.guildId,
+              userId: context.userId,
+              configId,
+              allApplications,
+              currentApp: newApp,
+              appIndex: 0,
+              applicantMember,
+              guild,
+              seasonName,
+              playerData
+            });
           }
 
           const applicantName = application.displayName || application.username || 'Unknown Applicant';
