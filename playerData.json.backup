@@ -2101,7 +2101,7 @@
         "buttonText": "Test out CastBot Apps!",
         "explanatoryText": "asdsa",
         "channelFormat": "📝%name%-app",
-        "stage": "awaiting_selections",
+        "stage": "active",
         "seasonId": "season_03859e4abc554bb5",
         "seasonName": "ReeceVivor S15!",
         "questions": [
@@ -2187,8 +2187,8 @@
         "buttonStyle": "Primary",
         "productionRole": null,
         "createdBy": "391415444084490240",
-        "createdAt": 1760194498087,
-        "lastUpdated": 1760194498087,
+        "createdAt": 1762655601452,
+        "lastUpdated": 1762655601452,
         "welcomeDescription": "In season_question_edit_config_*, please add a next Text Input called \"Image URL\", optional, with the placeholder text of \"Enter the url of an image hosted on discord (https://cdn.discor..) to include.\"\nUnder the question configuration, save the URL of the image the user provided (e.g. imageURL).\nIn app_continue_*, when the container loads, if a question has a non-empty imageURL, create a ComponentsV2.md Media Gallery (type = 12) component directly below the questionText and attempt to load the imageURL in the component.",
         "welcomeTitle": "Welcome!"
       },
@@ -2294,186 +2294,6 @@
     },
     "analyticsVersion": "1.0",
     "applications": {
-      "13989237782597430091": {
-        "userId": "1086246253819613274",
-        "channelId": "1398923778297430099",
-        "username": "radicaldinosaurtest",
-        "displayName": "radicaldinosaur",
-        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
-        "channelName": "📝radicaldinosaur-app",
-        "createdAt": "2025-07-27T07:03:40.314Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "playerNotes": "asdasd",
-        "rankings": {
-          "391415444084490240": 1
-        },
-        "castingStatus": "reject"
-      },
-      "1398923778297437099": {
-        "userId": "1086246253819613274",
-        "channelId": "1398923778297430099",
-        "username": "radicaldinosaurtest",
-        "displayName": "radicaldinosaur",
-        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
-        "channelName": "📝radicaldinosaur-app",
-        "createdAt": "2025-07-27T07:03:40.314Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "playerNotes": "asdasd",
-        "rankings": {
-          "391415444084490240": 1
-        },
-        "castingStatus": "reject"
-      },
-      "1398923778297430091": {
-        "userId": "1086246253819613274",
-        "channelId": "1398923778297430099",
-        "username": "radicaldinosaurtest",
-        "displayName": "radicaldinosaur",
-        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
-        "channelName": "📝radicaldinosaur-app",
-        "createdAt": "2025-07-27T07:03:40.314Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "playerNotes": "asdasd",
-        "rankings": {
-          "391415444084490240": 1
-        },
-        "castingStatus": "reject"
-      },
-      "1398923712597430091": {
-        "userId": "1086246253819613274",
-        "channelId": "1398923778297430099",
-        "username": "radicaldinosaurtest",
-        "displayName": "radicaldinosaur",
-        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
-        "channelName": "📝radicaldinosaur-app",
-        "createdAt": "2025-07-27T07:03:40.314Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "playerNotes": "asdasd",
-        "rankings": {
-          "391415444084490240": 1
-        },
-        "castingStatus": "reject"
-      },
-      "1398923778297447099": {
-        "userId": "1086246253819613274",
-        "channelId": "1398923778297430099",
-        "username": "radicaldinosaurtest",
-        "displayName": "radicaldinosaur",
-        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
-        "channelName": "📝radicaldinosaur-app",
-        "createdAt": "2025-07-27T07:03:40.314Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "playerNotes": "asdasd",
-        "rankings": {
-          "391415444084490240": 1
-        },
-        "castingStatus": "reject"
-      },
-      "1398923778295430091": {
-        "userId": "1086246253819613274",
-        "channelId": "1398923778297430099",
-        "username": "radicaldinosaurtest",
-        "displayName": "radicaldinosaur",
-        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
-        "channelName": "📝radicaldinosaur-app",
-        "createdAt": "2025-07-27T07:03:40.314Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "playerNotes": "asdasd",
-        "rankings": {
-          "391415444084490240": 1
-        },
-        "castingStatus": "reject"
-      },
-      "1398923778297430299": {
-        "userId": "1086246253819613274",
-        "channelId": "1398923778297430099",
-        "username": "radicaldinosaurtest",
-        "displayName": "radicaldinosaur",
-        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
-        "channelName": "📝radicaldinosaur-app",
-        "createdAt": "2025-07-27T07:03:40.314Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "playerNotes": "asdasd",
-        "rankings": {
-          "391415444084490240": 1
-        },
-        "castingStatus": "reject"
-      },
-      "1398923778297630099": {
-        "userId": "1086246253819613274",
-        "channelId": "1398923778297430099",
-        "username": "radicaldinosaurtest",
-        "displayName": "radicaldinosaur",
-        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
-        "channelName": "📝radicaldinosaur-app",
-        "createdAt": "2025-07-27T07:03:40.314Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "playerNotes": "asdasd",
-        "rankings": {
-          "391415444084490240": 1
-        },
-        "castingStatus": "reject"
-      },
-      "1398923722597430091": {
-        "userId": "1086246253819613274",
-        "channelId": "1398923778297430099",
-        "username": "radicaldinosaurtest",
-        "displayName": "radicaldinosaur",
-        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
-        "channelName": "📝radicaldinosaur-app",
-        "createdAt": "2025-07-27T07:03:40.314Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "playerNotes": "asdasd",
-        "rankings": {
-          "391415444084490240": 1
-        },
-        "castingStatus": "reject"
-      },
-      "1398923778297448099": {
-        "userId": "1086246253819613274",
-        "channelId": "1398923778297430099",
-        "username": "radicaldinosaurtest",
-        "displayName": "radicaldinosaur",
-        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
-        "channelName": "📝radicaldinosaur-app",
-        "createdAt": "2025-07-27T07:03:40.314Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "playerNotes": "asdasd",
-        "rankings": {
-          "391415444084490240": 1
-        },
-        "castingStatus": "reject"
-      },
-      "1398923778245430091": {
-        "userId": "1086246253819613274",
-        "channelId": "1398923778297430099",
-        "username": "radicaldinosaurtest",
-        "displayName": "radicaldinosaur",
-        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
-        "channelName": "📝radicaldinosaur-app",
-        "createdAt": "2025-07-27T07:03:40.314Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "playerNotes": "asdasd",
-        "rankings": {
-          "391415444084490240": 1
-        },
-        "castingStatus": "reject"
-      },
-      "139892377829330299": {
-        "userId": "1086246253819613274",
-        "channelId": "1398923778297430099",
-        "username": "radicaldinosaurtest",
-        "displayName": "radicaldinosaur",
-        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
-        "channelName": "📝radicaldinosaur-app",
-        "createdAt": "2025-07-27T07:03:40.314Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "playerNotes": "asdasd",
-        "rankings": {
-          "391415444084490240": 1
-        },
-        "castingStatus": "reject"
-      },
       "1398919977020555284_0_config_1751549410029": {
         "rankings": {
           "391415444084490240": 5
@@ -2483,17 +2303,6 @@
         "rankings": {
           "391415444084490240": 2
         }
-      },
-      "1426598104852992094": {
-        "userId": "391415444084490240",
-        "channelId": "1426598104852992094",
-        "username": "extremedonkey",
-        "displayName": "ReeceBot",
-        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
-        "channelName": "📝reecebot-app",
-        "createdAt": "2025-10-11T15:51:35.153Z",
-        "configId": "config_1760196737532_391415444084490240",
-        "currentQuestion": 1
       },
       "1426602985223360593": {
         "userId": "391415444084490240",
@@ -2516,15 +2325,30 @@
         "configId": "config_1760196737532_391415444084490240",
         "currentQuestion": 1
       },
-      "1426606186131882178": {
+      "1436906608952086710": {
         "userId": "391415444084490240",
-        "channelId": "1426606186131882178",
+        "channelId": "1436906608952086710",
         "username": "extremedonkey",
         "displayName": "ReeceBot",
         "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
         "channelName": "📝reecebot-app",
-        "createdAt": "2025-10-11T16:23:42.422Z",
-        "configId": "config_1760196737532_391415444084490240"
+        "createdAt": "2025-11-09T02:33:53.404Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "rankings": {
+          "391415444084490240": 3
+        },
+        "castingStatus": "tentative",
+        "playerNotes": "a superfun DUDE!"
+      },
+      "1436909414052397108": {
+        "userId": "1086246253819613274",
+        "channelId": "1436909414052397108",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-11-09T02:45:02.606Z",
+        "configId": "config_1751549410029_391415444084490240"
       }
     },
     "rankings": {

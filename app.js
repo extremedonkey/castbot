@@ -5458,10 +5458,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Handle confirmed application deletion
       return ButtonHandlerFactory.create({
         id: 'delete_application_confirm',
-        updateMessage: true, // Update message with next application
+        updateMessage: true, // Update existing confirmation dialog with ranking UI
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
-        deferred: true, // This might take time with channel deletion
+        // NOTE: No deferred flag - operation completes quickly (<1s) and we want UPDATE_MESSAGE not webhook
         handler: async (context) => {
           console.log(`💥 START: delete_application_confirm - user ${context.userId}`);
           
