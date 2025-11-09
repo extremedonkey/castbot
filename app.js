@@ -5396,27 +5396,33 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         permissionName: 'Manage Roles',
         handler: async (context) => {
           console.log(`🗑️ START: delete_application_mode - user ${context.userId}`);
-          
-          // Parse button ID: delete_application_mode_[channelId]_[appIndex]
+
+          // Parse button ID: delete_application_mode_[channelId]_[appIndex]_[configId]
           const parts = context.customId.split('_');
           const channelId = parts[3];
           const appIndex = parseInt(parts[4]);
-          
-          console.log(`🗑️ Delete mode for channel ${channelId}, app index ${appIndex}`);
-          
+          const configId = parts.slice(5).join('_'); // Rejoin configId parts
+
+          console.log(`🗑️ Delete mode for channel ${channelId}, app index ${appIndex}, config ${configId}`);
+
           // Load application data to get applicant info
           const playerData = await loadPlayerData();
           const application = playerData[context.guildId]?.applications?.[channelId];
-          
+
           if (!application) {
             return {
-              content: '❌ Application not found.',
-              ephemeral: true
+              components: [{
+                type: 17, // Container
+                components: [{
+                  type: 10, // Text Display
+                  content: '❌ Application not found.'
+                }]
+              }]
             };
           }
-          
+
           const applicantName = application.displayName || application.username || 'Unknown Applicant';
-          
+
           // Create confirmation UI using Entity Framework pattern
           const components = [{
             type: 17, // Container
@@ -5434,24 +5440,23 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                     type: 2, // Button
                     style: 4, // Danger
                     label: 'Yes, Delete Application',
-                    custom_id: `delete_application_confirm_${channelId}_${appIndex}`,
+                    custom_id: `delete_application_confirm_${channelId}_${appIndex}_${configId}`,
                     emoji: { name: '⚠️' }
                   },
                   {
                     type: 2, // Button
                     style: 2, // Secondary
                     label: 'Cancel',
-                    custom_id: `cancel_delete_application_${channelId}_${appIndex}`,
+                    custom_id: `cancel_delete_application_${channelId}_${appIndex}_${configId}`,
                     emoji: { name: '❌' }
                   }
                 ]
               }
             ]
           }];
-          
+
           console.log(`✅ SUCCESS: delete_application_mode - confirmation shown`);
           return {
-            flags: (1 << 15), // IS_COMPONENTS_V2
             components
           };
         }
