@@ -941,7 +941,11 @@ export async function buildCastlist2ResponseData(guild, tribes, castlistId, navi
   console.log(`Preparing castlist2 response: Tribe ${currentTribeIndex + 1}/${tribes.length}, Page ${currentTribePage + 1}/${pageInfo.totalPages}, Scenario: ${scenario}`);
 
   // Check permissions and apply ephemeral flag if user cannot send messages
-  if (member && channelId && permissionChecker) {
+  // UX TWEAK: Also apply ephemeral if forceEphemeral option is set (for placements edit mode)
+  if (options.forceEphemeral) {
+    responseData.flags = (responseData.flags || 0) | InteractionResponseFlags.EPHEMERAL;
+    console.log(`Applied ephemeral flag - forceEphemeral requested (edit mode)`);
+  } else if (member && channelId && permissionChecker) {
     const canSendMessages = await permissionChecker(member, channelId);
     console.log(`Permission check: User ${member.user?.username} can send messages in channel ${channelId}: ${canSendMessages}`);
 

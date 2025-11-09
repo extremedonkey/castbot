@@ -385,7 +385,8 @@ export async function handleCastlistButton(req, res, client, custom_id) {
     req.body.data.custom_id = `show_castlist2_${targetId}_edit`;
 
     // Signal to app.js to handle as show_castlist2
-    return { redirectToShowCastlist: true };
+    // UX TWEAK: Create new ephemeral message instead of updating castlist hub
+    return { redirectToShowCastlist: true, createNewMessage: true };
   }
 
   return ButtonHandlerFactory.create({

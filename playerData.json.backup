@@ -445,6 +445,10 @@
       "1143197876378419231": {
         "emoji": "🤖",
         "castlist": "default"
+      },
+      "1198707088889745569": {
+        "castlistIds": [],
+        "castlist": null
       }
     },
     "timezones": {
@@ -514,7 +518,47 @@
       "discriminator": "0",
       "tag": "extremedonkey"
     },
-    "analyticsVersion": "1.0"
+    "analyticsVersion": "1.0",
+    "applicationConfigs": {
+      "config_1762659148974_391415444084490240": {
+        "buttonText": "Apply to Lostvivor S1",
+        "explanatoryText": "Join Lostvivor S1!",
+        "completionDescription": "Thank you for completing your application! A host will review it soon.",
+        "completionImage": null,
+        "channelFormat": "📝%name%-app",
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "draft",
+        "createdAt": 1762659148974,
+        "lastUpdated": 1762659148974,
+        "seasonId": "season_b11e9917a01a4955",
+        "seasonName": "Lostvivor S1",
+        "questions": []
+      }
+    },
+    "castlistConfigs": {
+      "castlist_1762659174802_1127596863885934652": {
+        "id": "castlist_1762659174802_1127596863885934652",
+        "name": "LOSTvivor S1",
+        "type": "custom",
+        "createdAt": 1762659174803,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public",
+          "seasonId": "season_b11e9917a01a4955"
+        },
+        "metadata": {
+          "emoji": "🐻‍❄️",
+          "description": "",
+          "lastModified": 1762659174803
+        }
+      }
+    }
   },
   "1308581797915005029": {
     "serverName": "SERVIVORG S10 - DRIVE IN MADNESS",
@@ -2187,8 +2231,8 @@
         "buttonStyle": "Primary",
         "productionRole": null,
         "createdBy": "391415444084490240",
-        "createdAt": 1762655601452,
-        "lastUpdated": 1762655601452,
+        "createdAt": 1762657498770,
+        "lastUpdated": 1762657498770,
         "welcomeDescription": "In season_question_edit_config_*, please add a next Text Input called \"Image URL\", optional, with the placeholder text of \"Enter the url of an image hosted on discord (https://cdn.discor..) to include.\"\nUnder the question configuration, save the URL of the image the user provided (e.g. imageURL).\nIn app_continue_*, when the container loads, if a question has a non-empty imageURL, create a ComponentsV2.md Media Gallery (type = 12) component directly below the questionText and attempt to load the imageURL in the component.",
         "welcomeTitle": "Welcome!"
       },
@@ -2325,29 +2369,14 @@
         "configId": "config_1760196737532_391415444084490240",
         "currentQuestion": 1
       },
-      "1436906608952086710": {
+      "1436914591459315895": {
         "userId": "391415444084490240",
-        "channelId": "1436906608952086710",
+        "channelId": "1436914591459315895",
         "username": "extremedonkey",
         "displayName": "ReeceBot",
         "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
         "channelName": "📝reecebot-app",
-        "createdAt": "2025-11-09T02:33:53.404Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "rankings": {
-          "391415444084490240": 3
-        },
-        "castingStatus": "tentative",
-        "playerNotes": "a superfun DUDE!"
-      },
-      "1436909414052397108": {
-        "userId": "1086246253819613274",
-        "channelId": "1436909414052397108",
-        "username": "radicaldinosaurtest",
-        "displayName": "radicaldinosaur",
-        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
-        "channelName": "📝radicaldinosaur-app",
-        "createdAt": "2025-11-09T02:45:02.606Z",
+        "createdAt": "2025-11-09T03:05:36.135Z",
         "configId": "config_1751549410029_391415444084490240"
       }
     },
@@ -3746,14 +3775,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 578,
+    "memberCount": 577,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1762611581357,
+    "lastUpdated": 1762657432976,
     "players": {
       "235148962103951360": {
         "emojiCode": "<:Carl_bot:1380989603783249950>"

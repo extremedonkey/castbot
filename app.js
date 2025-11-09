@@ -8169,9 +8169,19 @@ To fix this:
       // Check if we should redirect to show_castlist2 handler
       if (result && result.redirectToShowCastlist) {
         // Send deferred response immediately (castlist building takes >3 seconds)
-        await res.send({
-          type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
-        });
+        // UX TWEAK: For placements (edit mode), create new ephemeral message to keep hub visible
+        if (result.createNewMessage) {
+          await res.send({
+            type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        } else {
+          await res.send({
+            type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
+          });
+        }
 
         // The handler has updated req.body.data.custom_id, so handle it as show_castlist2
         // Extract castlist ID from the modified custom_id
@@ -8377,7 +8387,8 @@ To fix this:
 
         // Send castlist response with display mode
         // 🔧 FIX: Pass ID for button encoding, name for display
-        await sendCastlist2Response(req, guild, tribes, requestedCastlistId, navigationState, member, channelId, displayMode, castlistName, { playerData, guildId });
+        // UX TWEAK: Pass createNewMessage flag to force ephemeral for placements edit mode
+        await sendCastlist2Response(req, guild, tribes, requestedCastlistId, navigationState, member, channelId, displayMode, castlistName, { playerData, guildId, forceEphemeral: result.createNewMessage });
         return;
       } else {
         return result;
