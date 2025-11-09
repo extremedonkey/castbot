@@ -1910,11 +1910,11 @@
           "castlist_1759638936214_system",
           "castlist_1762579720361_1331657596087566398",
           "castlist_archive_1762682582653",
-          "default"
+          "castlist_archive_1762702460277"
         ],
         "isVanity": true,
-        "castlist": "default",
-        "castlistId": "castlist_archive_1762682582653"
+        "castlist": "Swap 2",
+        "castlistId": "castlist_archive_1762702460277"
       },
       "1335645032891547670": {
         "emoji": "🤷‍♀️",
@@ -1950,7 +1950,11 @@
         "color": null,
         "analyticsName": "Nyauu / +3 +/ GMT5 22",
         "analyticsAdded": 1757442465942,
-        "castlistIds": []
+        "castlistIds": [
+          "default"
+        ],
+        "castlistId": "default",
+        "castlist": "default"
       },
       "1368969395795398716": {
         "name": "Tribe 1368969395795398716",
@@ -1969,7 +1973,11 @@
         "name": "Tribe 1415062472007749765",
         "emoji": "🏕️",
         "type": "default",
-        "castlistIds": []
+        "castlistIds": [
+          "default"
+        ],
+        "castlistId": "default",
+        "castlist": "default"
       },
       "1368969399251501126": {
         "emoji": "<:castbot:1333820342275149824>",
@@ -1977,8 +1985,7 @@
         "color": "#FF7AAA",
         "analyticsName": "🪄 ar.3 🪄",
         "analyticsAdded": 1759081799205,
-        "displayName": "The AR3 Tribe",
-        "castlistId": "default"
+        "displayName": "The AR3 Tribe"
       },
       "1388327092634124368": {
         "emoji": null,
@@ -3322,7 +3329,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1762701184589,
+        "modifiedAt": 1762701971411,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -3553,6 +3560,18 @@
           "emoji": "📋",
           "description": "Woot!",
           "lastModified": 1762686341708
+        }
+      },
+      "castlist_archive_1762702460277": {
+        "id": "castlist_archive_1762702460277",
+        "name": "Swap 2",
+        "type": "custom",
+        "createdAt": 1762702460277,
+        "createdBy": "391415444084490240",
+        "seasonId": "season_cac1b81de8914c79",
+        "metadata": {
+          "description": "Archived from tribe swap on 11/9/2025",
+          "emoji": "📦"
         }
       }
     },

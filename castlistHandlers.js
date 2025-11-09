@@ -318,8 +318,10 @@ export async function handleCastlistSelect(req, res, client) {
       }
 
       // Display hub - tribes now always visible when castlist selected
+      // Skip member fetch for fast switching between castlists
       const hubData = await createCastlistHub(context.guildId, {
-        selectedCastlistId: selectedCastlistId || null
+        selectedCastlistId: selectedCastlistId || null,
+        skipMemberFetch: true  // Fast mode - don't wait for member data
       }, context.client);
 
       return hubData;
@@ -863,8 +865,10 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
       }
 
       // Refresh hub with updated tribes (now always visible)
+      // Skip member fetch for fast tribe add/remove operations
       const hubData = await createCastlistHub(context.guildId, {
-        selectedCastlistId: castlistId
+        selectedCastlistId: castlistId,
+        skipMemberFetch: true  // Fast mode - tribe changes don't need member data
       }, context.client);
 
       // Debug: Check component structure after removal

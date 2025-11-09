@@ -20,7 +20,8 @@ import { parseTextEmoji } from './utils/emojiUtils.js';
 export async function createCastlistHub(guildId, options = {}, client = null) {
   const {
     selectedCastlistId = null,
-    showVirtual = true
+    showVirtual = true,
+    skipMemberFetch = false  // Skip expensive member fetch for fast operations
   } = options;
   
   // Load player data for season lookups
@@ -228,16 +229,18 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       // Fetch guild once for all tribes
       const guild = tribes.length > 0 ? await client.guilds.fetch(guildId) : null;
 
-      // CRITICAL: Fetch all guild members to populate role.members
-      // Use timeout and handle errors gracefully
-      if (guild) {
+      // OPTIONAL: Fetch guild members for player name display
+      // Skip for fast operations like switching castlists or removing tribes
+      if (guild && !skipMemberFetch) {
         try {
-          await guild.members.fetch({ timeout: 30000 }); // 30 second timeout
+          await guild.members.fetch({ timeout: 5000 }); // Reduced to 5 second timeout
           console.log(`[TRIBES] Successfully fetched ${guild.members.cache.size} members`);
         } catch (fetchError) {
-          console.warn(`[TRIBES] Member fetch failed: ${fetchError.message}`);
-          console.warn(`[TRIBES] Continuing with cached members (${guild.members.cache.size} available)`);
+          console.warn(`[TRIBES] Member fetch failed (continuing with cache): ${fetchError.message}`);
+          // Continue with cached data - don't block the operation
         }
+      } else if (skipMemberFetch) {
+        console.log(`[TRIBES] Skipping member fetch for fast operation (using ${guild?.members.cache.size || 0} cached)`);
       }
 
       // Import utility functions for formatting
@@ -257,9 +260,12 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
         const role = guild ? await guild.roles.fetch(tribe.roleId).catch(() => null) : null;
         const roleName = role?.name || tribe.roleId;
 
-        // Get members with this role
+        // Get members with this role (if available from cache)
         const members = role ? Array.from(role.members.values()) : [];
-        const playerListText = formatPlayerList(members, 38);
+        // If we skipped member fetch, show count from tribe data instead of names
+        const playerListText = skipMemberFetch && tribe.memberCount !== undefined
+          ? `${tribe.memberCount || 0} players`
+          : formatPlayerList(members, 38);
 
         const tribeSection = {
           type: 9, // Section

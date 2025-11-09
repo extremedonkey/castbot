@@ -50,7 +50,10 @@ export function populateTribeData(existingData = {}, role, castlistId, castlistN
     emoji: existingData.emoji || '🏕️',
 
     // Default showPlayerEmojis to true
-    showPlayerEmojis: existingData.showPlayerEmojis ?? true
+    showPlayerEmojis: existingData.showPlayerEmojis ?? true,
+
+    // Store member count if available (for fast UI updates)
+    memberCount: role.members?.size ?? existingData.memberCount ?? 0
   };
 }
 
