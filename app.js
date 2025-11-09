@@ -5479,9 +5479,18 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
           // Load application data
           const playerData = await loadPlayerData();
-          const application = playerData[guildId]?.applications?.[channelId];
 
-          // Get applicant info - might not exist if channel was manually deleted
+          // Find application(s) by channelId - applications are keyed by application ID, not channel ID
+          const applications = playerData[guildId]?.applications || {};
+          const matchingEntries = Object.entries(applications).filter(([_, app]) => app.channelId === channelId);
+
+          console.log(`💥 Found ${matchingEntries.length} application(s) with channelId ${channelId}`);
+          if (matchingEntries.length > 1) {
+            console.log(`⚠️ WARNING: Multiple applications found for same channel (duplicates will all be deleted)`);
+          }
+
+          // Get applicant info from first matching application
+          const application = matchingEntries[0]?.[1];
           const applicantName = application?.displayName || application?.username || `Channel ${channelId}`;
           const applicantUserId = application?.userId;
 
@@ -5514,16 +5523,26 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           // Step 2: Clean application data while preserving player data
           try {
-            // Remove from applications
-            if (playerData[guildId]?.applications?.[channelId]) {
-              delete playerData[guildId].applications[channelId];
-              console.log(`🗑️ Removed application data for channel ${channelId}`);
+            // Remove ALL applications with matching channelId (handles duplicates)
+            let deletedCount = 0;
+            for (const [appId, app] of matchingEntries) {
+              if (playerData[guildId]?.applications?.[appId]) {
+                delete playerData[guildId].applications[appId];
+                deletedCount++;
+                console.log(`🗑️ Removed application data for appId ${appId} (channel ${channelId})`);
+              }
             }
-            
+
+            if (deletedCount === 0) {
+              console.log(`⚠️ No application data found to delete for channel ${channelId}`);
+            } else if (deletedCount > 1) {
+              console.log(`🧹 Cleaned up ${deletedCount} duplicate applications for channel ${channelId}`);
+            }
+
             // Rankings are automatically removed with application deletion (NEW SYSTEM)
-            
+
             // NOTE: We preserve playerData[guildId].players[applicantUserId] and timezones as requested
-            
+
             await savePlayerData(playerData);
             console.log(`✅ Application data cleaned for ${applicantName}`);
             
