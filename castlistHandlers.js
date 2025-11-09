@@ -207,6 +207,7 @@ export async function handleCastlistSelect(req, res, client) {
   return ButtonHandlerFactory.create({
     id: 'castlist_select',
     updateMessage: true,
+    deferred: true, // CRITICAL: Hub creation with member fetching takes >3 seconds
     handler: async (context) => {
       let selectedCastlistId = context.values?.[0];
       console.log(`📋 Processing castlist selection: ${selectedCastlistId}`);

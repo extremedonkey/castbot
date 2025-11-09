@@ -2771,8 +2771,18 @@ export function sendResponse(res, data, updateMessage = false) {
  * Send deferred response for long-running operations
  * @param {Object} res - Express response object
  * @param {boolean} ephemeral - Whether response should be ephemeral
+ * @param {boolean} updateMessage - Whether to update existing message (vs create new)
  */
-export async function sendDeferredResponse(res, ephemeral = true) {
+export async function sendDeferredResponse(res, ephemeral = true, updateMessage = false) {
+  // For button/select interactions that update existing messages, use DEFERRED_UPDATE_MESSAGE
+  if (updateMessage) {
+    return res.send({
+      type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE,
+      data: {} // No data needed for deferred update
+    });
+  }
+
+  // For new messages (slash commands), use DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
   return res.send({
     type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
     data: {
@@ -2881,7 +2891,7 @@ export class ButtonHandlerFactory {
         
         // 4. Handle deferred response
         if (config.deferred) {
-          await sendDeferredResponse(res, config.ephemeral !== false);
+          await sendDeferredResponse(res, config.ephemeral !== false, config.updateMessage);
         }
         
         // 5. Execute handler logic
