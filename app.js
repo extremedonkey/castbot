@@ -5471,11 +5471,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const { guildId, userId, client } = context;
           const guild = await client.guilds.fetch(guildId);
           const member = await guild.members.fetch(userId);
-          
-          // Parse button ID: delete_application_confirm_[channelId]_[appIndex]
+
+          // Parse button ID: delete_application_confirm_[channelId]_[appIndex]_[configId]
           const parts = context.customId.split('_');
           const channelId = parts[3];
           const appIndex = parseInt(parts[4]);
+          const configId = parts.slice(5).join('_'); // Rejoin configId parts
           
           console.log(`💥 Confirming deletion for channel ${channelId}, app index ${appIndex}`);
           
