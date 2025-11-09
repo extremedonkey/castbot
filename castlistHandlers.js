@@ -9,6 +9,7 @@ import { castlistManager } from './castlistManager.js';
 import { castlistVirtualAdapter } from './castlistVirtualAdapter.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { PermissionFlagsBits, InteractionResponseType } from 'discord.js';
+import { populateTribeData } from './utils/tribeDataUtils.js';
 
 // Interaction deduplication for rapid role select changes
 const recentInteractions = new Map();
@@ -111,7 +112,43 @@ export async function createEditInfoModalForNew(guildId) {
         }
       },
 
-      // Season selector (Label + String Select)
+      // Sort Strategy (Label + String Select) - MOVED TO SECOND POSITION
+      {
+        type: 18, // Label
+        label: 'Castlist Sorting Method',
+        description: 'How should players be ordered in the castlist?',
+        component: {
+          type: 3, // String Select
+          custom_id: 'sort_strategy',
+          placeholder: 'Select sort order...',
+          required: false,
+          min_values: 1,
+          max_values: 1,
+          options: [
+            {
+              label: 'Placements',
+              value: 'placements',
+              description: 'Sort by ranking (1st, 2nd, 3rd...)',
+              emoji: { name: '🏅' },
+              default: true // Default option
+            },
+            {
+              label: 'Alphabetical (A-Z), no placements',
+              value: 'alphabetical',
+              description: 'Sort players by name',
+              emoji: { name: '🔤' }
+            },
+            {
+              label: 'Placements, then Alphabetical (A-Z)',
+              value: 'placements_alpha',
+              description: 'Placements first, then alphabetical',
+              emoji: { name: '📊' }
+            }
+          ]
+        }
+      },
+
+      // Season selector (Label + String Select) - MOVED TO THIRD POSITION
       {
         type: 18, // Label
         label: 'Associated Season',
@@ -486,7 +523,45 @@ export async function handleCastlistButton(req, res, client, custom_id) {
                 }
               },
 
-              // Season selector (Label + String Select) - MOVED TO SECOND
+              // Sort Strategy (Label + String Select) - MOVED TO SECOND POSITION
+              {
+                type: 18, // Label
+                label: 'Castlist Sorting Method',
+                description: 'How should players be ordered in the castlist?',
+                component: {
+                  type: 3, // String Select
+                  custom_id: 'sort_strategy',
+                  placeholder: 'Select sort order...',
+                  required: false,
+                  min_values: 1,
+                  max_values: 1,
+                  options: [
+                    {
+                      label: 'Placements',
+                      value: 'placements',
+                      description: 'Sort by ranking (1st, 2nd, 3rd...)',
+                      emoji: { name: '🏅' },
+                      default: castlist.settings?.sortStrategy === 'placements' || !castlist.settings?.sortStrategy
+                    },
+                    {
+                      label: 'Alphabetical (A-Z), no placements',
+                      value: 'alphabetical',
+                      description: 'Sort players by name',
+                      emoji: { name: '🔤' },
+                      default: castlist.settings?.sortStrategy === 'alphabetical'
+                    },
+                    {
+                      label: 'Placements, then Alphabetical (A-Z)',
+                      value: 'placements_alpha',
+                      description: 'Placements first, then alphabetical',
+                      emoji: { name: '📊' },
+                      default: castlist.settings?.sortStrategy === 'placements_alpha'
+                    }
+                  ]
+                }
+              },
+
+              // Season selector (Label + String Select) - MOVED TO THIRD
               {
                 type: 18, // Label
                 label: 'Associated Season',
@@ -733,12 +808,24 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
 
             // Create tribe if it doesn't exist
             if (!playerData[context.guildId].tribes[op.roleId]) {
-              playerData[context.guildId].tribes[op.roleId] = {
-                castlistIds: [],
-                castlist: null // Will be set by linkTribeToCastlist
-              };
+              // Fetch Discord role to get color and name
+              const guild = await context.client.guilds.fetch(context.guildId);
+              const role = await guild.roles.fetch(op.roleId);
+
+              // Get castlist name for tribe data
+              const castlist = await castlistManager.getCastlist(context.guildId, castlistId);
+              const castlistName = castlist?.name || 'default';
+
+              // Use populateTribeData to set all required fields
+              playerData[context.guildId].tribes[op.roleId] = populateTribeData(
+                {}, // No existing data
+                role,
+                castlistId,
+                castlistName
+              );
+
               await savePlayerData(playerData);
-              console.log(`[CASTLIST] Created new tribe for role ${op.roleId}`);
+              console.log(`[CASTLIST] Created new tribe for role ${op.roleId} with full data`);
             }
 
             // Link tribe to castlist

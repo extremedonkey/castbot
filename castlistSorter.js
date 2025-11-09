@@ -39,17 +39,21 @@ export function sortCastlistMembers(members, tribeData, options = {}) {
     case 'placements':
       return sortByPlacements(members, tribeData, options);
 
+    case 'placements_alpha':
+      return sortByPlacementsThenAlpha(members, tribeData, options);
+
     case 'reverse_alpha':
       return sortAlphabetical(members, true);
 
     case 'vanity_role':
       return sortByVanityRole(members, tribeData, options);
 
-    // Future sorting strategies can be added here
-    // case 'by_age':
-    //   return sortByAge(members, tribeData, options);
-    // case 'by_timezone':
-    //   return sortByTimezone(members, tribeData, options);
+    // Legacy/deprecated strategies (kept for backwards compatibility)
+    case 'age':
+    case 'timezone':
+    case 'join_date':
+      console.warn(`[SORTER] Strategy '${sortingStrategy}' is deprecated, falling back to alphabetical`);
+      return sortAlphabetical(members);
 
     case 'alphabetical':
     default:
@@ -141,6 +145,93 @@ function sortByPlacements(members, tribeData, options = {}) {
 
   // Return unranked members first (active players), then ranked (eliminated players)
   return [...unranked, ...ranked];
+}
+
+/**
+ * Sort members by placements first, then alphabetically within each group
+ * This combines placement sorting with alphabetical secondary sorting
+ * @param {Array} members - Array of member objects
+ * @param {Object} tribeData - Tribe data with castlistSettings
+ * @param {Object} options - Options containing pre-loaded playerData and guildId
+ * @returns {Array} Sorted array with placement prefixes added where applicable
+ */
+function sortByPlacementsThenAlpha(members, tribeData, options = {}) {
+  const { playerData, guildId } = options;
+
+  // Fallback to alphabetical if no data available
+  if (!playerData || !guildId) {
+    console.warn('[SORTER] No playerData or guildId provided, falling back to alphabetical');
+    return sortAlphabetical(members);
+  }
+
+  // Determine placement namespace based on castlist's season
+  const seasonId = tribeData.castlistSettings?.seasonId;
+  const placementNamespace = seasonId
+    ? playerData[guildId]?.placements?.[seasonId]      // Season-specific placements
+    : playerData[guildId]?.placements?.global;          // Global fallback (No Season)
+
+  if (!placementNamespace) {
+    console.warn(`[SORTER] No placement data for ${seasonId ? `season ${seasonId}` : 'global'}, falling back to alphabetical`);
+    return sortAlphabetical(members);
+  }
+
+  const ranked = [];
+  const unranked = [];
+
+  // Separate members into ranked and unranked groups
+  members.forEach(member => {
+    const userId = member.user?.id || member.id;
+    const placementData = placementNamespace[userId];
+
+    if (placementData?.placement) {
+      // Add placement data and ordinal prefix
+      member.placement = placementData.placement;
+
+      // Generate ordinal string (1st, 2nd, 3rd, etc.)
+      const num = placementData.placement;
+      let ordinal;
+
+      if (num >= 11 && num <= 13) {
+        ordinal = `${num}th`;
+      } else {
+        switch (num % 10) {
+          case 1: ordinal = `${num}st`; break;
+          case 2: ordinal = `${num}nd`; break;
+          case 3: ordinal = `${num}rd`; break;
+          default: ordinal = `${num}th`;
+        }
+      }
+
+      member.displayPrefix = `\`${ordinal}\` `;
+      ranked.push(member);
+    } else {
+      unranked.push(member);
+    }
+  });
+
+  // Sort BOTH groups by placement AND alphabetical
+  // Ranked: Sort by placement first, then alphabetically for ties
+  ranked.sort((a, b) => {
+    const placementDiff = a.placement - b.placement;
+    if (placementDiff !== 0) return placementDiff;
+
+    // If same placement, sort alphabetically
+    const nameA = a.displayName || a.nickname || a.user?.username || a.username || '';
+    const nameB = b.displayName || b.nickname || b.user?.username || b.username || '';
+    return nameA.localeCompare(nameB);
+  });
+
+  // Sort unranked members alphabetically
+  unranked.sort((a, b) => {
+    const nameA = a.displayName || a.nickname || a.user?.username || a.username || '';
+    const nameB = b.displayName || b.nickname || b.user?.username || b.username || '';
+    return nameA.localeCompare(nameB);
+  });
+
+  console.log(`[SORTER] Sorted ${ranked.length} with placements, ${unranked.length} alphabetically`);
+
+  // Return ranked members first, then unranked
+  return [...ranked, ...unranked];
 }
 
 /**

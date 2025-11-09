@@ -522,6 +522,13 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'castlist'
   },
+  'tribe_edit_button_*': {
+    label: 'Edit Tribe',
+    description: 'Edit tribe settings and metadata',
+    emoji: '✏️',
+    style: 'Secondary',
+    category: 'castlist'
+  },
   'castlist_create_season': {
     label: 'From Season',
     description: 'Create castlist from season applications',

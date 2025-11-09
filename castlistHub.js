@@ -168,6 +168,39 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       );
       container.components.push(managementButtons.buttonRow1.toJSON());
 
+      // Separator before info section
+      container.components.push({ type: 14 });
+
+      // Add info text showing sort method and season
+      const { getSortStrategyName } = await import('./utils/tribeDataUtils.js');
+      const sortStrategyName = getSortStrategyName(castlist.settings?.sortStrategy || 'placements');
+
+      // Get season information
+      let seasonText = 'No Season';
+      if (castlist.seasonId) {
+        const season = Object.values(playerData[guildId]?.applicationConfigs || {})
+          .find(config => config.seasonId === castlist.seasonId);
+
+        if (season) {
+          const { getSeasonStageEmoji } = await import('./seasonSelector.js');
+          const stageEmoji = getSeasonStageEmoji(season.stage || 'planning');
+          seasonText = `${stageEmoji} ${season.seasonName}`;
+        } else {
+          seasonText = '⚠️ Deleted season';
+        }
+      }
+
+      // Add info section
+      container.components.push({
+        type: 9, // Section
+        components: [{
+          type: 10, // Text Display
+          content: `### 🏕️ Tribes on Castlist\n` +
+                   `-# • Tribes sorted by **${sortStrategyName}**\n` +
+                   `-# • Castlist is associated with **${seasonText}**`
+        }]
+      });
+
       // Separator before tribes section
       container.components.push({ type: 14 });
 
@@ -198,18 +231,25 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       // Fetch guild once for all tribes
       const guild = tribes.length > 0 ? await client.guilds.fetch(guildId) : null;
 
+      // Import utility functions for formatting
+      const { formatPlayerList } = await import('./utils/tribeDataUtils.js');
+
       // Section for each existing tribe with Edit button accessory
       for (const tribe of tribes) {
         // Get role name from Discord
         const role = guild ? await guild.roles.fetch(tribe.roleId).catch(() => null) : null;
         const roleName = role?.name || tribe.roleId;
 
+        // Get members with this role
+        const members = role ? Array.from(role.members.values()) : [];
+        const playerListText = formatPlayerList(members, 38);
+
         const tribeSection = {
           type: 9, // Section
           components: [{
             type: 10, // Text Display
             content: `${tribe.emoji || '🏕️'} **${tribe.displayName || roleName}**\n` +
-                     `-# ${tribe.color ? `Color: ${tribe.color}` : 'No custom settings'}`
+                     `-# ${playerListText}`
           }],
           accessory: {
             type: 2, // Button
@@ -272,18 +312,12 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
   const navButtons = new ActionRowBuilder()
     .addComponents(createBackButton('prod_menu_back'));
 
-  // Always add Swap/Merge and Delete buttons (disabled when no selection)
+  // Add Delete button (disabled when no selection or when default)
   const suffix = selectedCastlist?.id ? `_${selectedCastlist.id}` : '';
   const isDefaultCastlist = selectedCastlist?.id === 'default';
   const noSelection = !selectedCastlist;
 
   navButtons.addComponents(
-    new ButtonBuilder()
-      .setCustomId(`castlist_swap_merge${suffix}`)
-      .setLabel('Swap/Merge')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🔀')
-      .setDisabled(!isDefaultCastlist), // Only enabled for default castlist
     new ButtonBuilder()
       .setCustomId(`castlist_delete${suffix}`)
       .setLabel('Delete')
@@ -395,6 +429,8 @@ function createManagementButtons(castlistId, enabled = true, isVirtual = false, 
     postCastlistCustomId = `show_castlist2_${targetId}`;
   }
 
+  const isDefaultCastlist = castlistId === 'default';
+
   buttonRow1.addComponents(
     new ButtonBuilder()
       .setCustomId(postCastlistCustomId)
@@ -407,7 +443,7 @@ function createManagementButtons(castlistId, enabled = true, isVirtual = false, 
       .setLabel('Edit')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('✏️')
-      .setDisabled(!enabled || castlistId === 'default'), // Disable for Active Castlist (system-managed)
+      .setDisabled(!enabled), // Now enabled for default castlist too
     new ButtonBuilder()
       .setCustomId(`castlist_placements${suffix}`)
       .setLabel('Placements')
@@ -415,11 +451,11 @@ function createManagementButtons(castlistId, enabled = true, isVirtual = false, 
       .setEmoji('🥇')
       .setDisabled(!enabled),
     new ButtonBuilder()
-      .setCustomId(`castlist_order${suffix}`)
-      .setLabel('Order')
+      .setCustomId(`castlist_swap_merge${suffix}`)
+      .setLabel('Swap/Merge')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🔄')
-      .setDisabled(!enabled)
+      .setEmoji('🔀')
+      .setDisabled(!enabled || !isDefaultCastlist) // Only enabled for default castlist
   );
 
   return { buttonRow1, castlistId, enabled };

@@ -8045,18 +8045,18 @@ To fix this:
             type: 9, // MODAL
             data: {
               custom_id: 'tribe_swap_merge_modal',
-              title: 'Tribe Swap/Merge',
+              title: 'Tribe Swap/Merge (Experimental)',
               components: [
                 // 1. Role Select for new tribes
                 {
                   type: 18, // Label
                   label: 'New Tribe Roles',
-                  description: 'Select 2+ roles that will become your new tribes',
+                  description: 'Select roles that will become your new tribes',
                   component: {
                     type: 6, // Role Select
                     custom_id: 'new_tribe_roles',
                     placeholder: 'Choose new tribe roles...',
-                    min_values: 2,
+                    min_values: 1, // Changed from 2 to 1
                     max_values: 10
                   }
                 },
@@ -8064,7 +8064,7 @@ To fix this:
                 {
                   type: 18, // Label
                   label: 'Archive Castlist Name',
-                  description: 'Name for archived tribes (e.g., "OG Tribes", "Pre-Merge")',
+                  description: 'Name for the archived castlist containing old tribes',
                   component: {
                     type: 4, // Text Input
                     custom_id: 'archive_name',
@@ -8078,7 +8078,7 @@ To fix this:
                 {
                   type: 18, // Label
                   label: 'Create Vanity Roles?',
-                  description: 'Keep old tribe roles visible on new castlist',
+                  description: 'Experimental: Keep old tribe roles as vanity badges',
                   component: {
                     type: 3, // String Select
                     custom_id: 'vanity_roles',
@@ -8489,27 +8489,13 @@ To fix this:
                 },
                 {
                   type: 18, // Label
-                  label: 'Display Name',
-                  description: 'Override role name in castlist',
-                  component: {
-                    type: 4, // Text Input
-                    custom_id: 'tribe_display_name',
-                    style: 1, // Short
-                    placeholder: 'Custom tribe name',
-                    value: tribeData.displayName || '',
-                    required: false,
-                    max_length: 50
-                  }
-                },
-                {
-                  type: 18, // Label
                   label: 'Accent Color',
-                  description: 'Hex color code for tribe styling',
+                  description: 'Hex color code for tribe styling (with or without #)',
                   component: {
                     type: 4, // Text Input
                     custom_id: 'tribe_color',
                     style: 1, // Short
-                    placeholder: '#FF5733',
+                    placeholder: '#FF5733 or FF5733',
                     value: tribeData.color || '',
                     required: false,
                     max_length: 7
@@ -8517,16 +8503,16 @@ To fix this:
                 },
                 {
                   type: 18, // Label
-                  label: 'Analytics Name',
-                  description: 'Name for tracking and reports',
+                  label: 'Show Player Emojis',
+                  description: 'Show emojis next to player names? (yes/no)',
                   component: {
                     type: 4, // Text Input
-                    custom_id: 'tribe_analytics_name',
+                    custom_id: 'show_player_emojis',
                     style: 1, // Short
-                    placeholder: 'Analytics identifier',
-                    value: tribeData.analyticsName || '',
+                    placeholder: 'yes or no',
+                    value: tribeData.showPlayerEmojis !== false ? 'yes' : 'no',
                     required: false,
-                    max_length: 30
+                    max_length: 3
                   }
                 }
               ]
@@ -32245,15 +32231,13 @@ Are you sure you want to continue?`;
         };
 
         const emojiInput = getFieldValue('tribe_emoji');
-        const displayName = getFieldValue('tribe_display_name');
         const colorInput = getFieldValue('tribe_color');
-        const analyticsName = getFieldValue('tribe_analytics_name');
+        const showPlayerEmojisInput = getFieldValue('show_player_emojis');
 
         console.log(`[CASTLIST] Extracted modal values:`, {
           emoji: emojiInput,
-          displayName,
           color: colorInput,
-          analyticsName
+          showPlayerEmojis: showPlayerEmojisInput
         });
 
         const playerData = await loadPlayerData();
@@ -32279,13 +32263,12 @@ Are you sure you want to continue?`;
           }
         }
 
-        // Validate hex color
+        // Validate hex color using utility function (supports with or without #)
+        const { validateHexColor } = await import('./utils/tribeDataUtils.js');
         let processedColor = null;
         if (colorInput && colorInput.trim()) {
-          const colorTrimmed = colorInput.trim();
-          if (/^#[0-9A-Fa-f]{6}$/.test(colorTrimmed)) {
-            processedColor = colorTrimmed.toUpperCase();
-          } else {
+          processedColor = validateHexColor(colorInput.trim());
+          if (!processedColor) {
             console.warn(`[CASTLIST] Invalid color format: ${colorInput}`);
           }
         }
@@ -32327,11 +32310,13 @@ Are you sure you want to continue?`;
           }
         }
 
-        if (displayName !== undefined) {
-          if (displayName.trim()) {
-            tribe.displayName = displayName.trim();
-          } else {
-            delete tribe.displayName;
+        // Process show_player_emojis input (yes/no -> boolean)
+        if (showPlayerEmojisInput !== undefined && showPlayerEmojisInput.trim()) {
+          const input = showPlayerEmojisInput.trim().toLowerCase();
+          if (input === 'yes' || input === 'y' || input === 'true') {
+            tribe.showPlayerEmojis = true;
+          } else if (input === 'no' || input === 'n' || input === 'false') {
+            tribe.showPlayerEmojis = false;
           }
         }
 
@@ -32343,20 +32328,20 @@ Are you sure you want to continue?`;
           }
         }
 
-        if (analyticsName !== undefined) {
-          if (analyticsName.trim()) {
-            tribe.analyticsName = analyticsName.trim();
-          } else {
-            delete tribe.analyticsName;
-          }
-        }
-
-        await savePlayerData(playerData);
-
-        // Get role name for success message
+        // Always update analyticsName from current Discord role name
         const guild = await client.guilds.fetch(guildId);
         const role = guild.roles.cache.get(roleId);
         const roleName = role?.name || 'tribe';
+
+        // Set analyticsName to current role name
+        tribe.analyticsName = roleName;
+
+        // Ensure analyticsAdded timestamp exists
+        if (!tribe.analyticsAdded) {
+          tribe.analyticsAdded = Date.now();
+        }
+
+        await savePlayerData(playerData);
 
         // Return updated hub
         const { createCastlistHub } = await import('./castlistHub.js');

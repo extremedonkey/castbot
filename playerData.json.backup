@@ -459,7 +459,8 @@
         "castlistIds": [
           "castlist_1762659174802_1127596863885934652"
         ],
-        "castlist": "LOSTvivor S1"
+        "castlist": "LOSTvivor S1",
+        "displayName": "BUM POO TRIBE"
       }
     },
     "timezones": {
@@ -568,8 +569,8 @@
           "description": "",
           "lastModified": 1762659174803
         },
-        "modifiedAt": 1762662723941,
-        "modifiedBy": "391415444084490240",
+        "modifiedAt": 1762665030439,
+        "modifiedBy": "system",
         "seasonId": "season_b11e9917a01a4955"
       },
       "default": {
@@ -720,12 +721,52 @@
         "700145159618166856": {
           "placement": 5,
           "updatedBy": "391415444084490240",
-          "updatedAt": "2025-11-09T04:49:35.453Z"
+          "updatedAt": "2025-11-09T04:49:53.135Z"
         },
         "422644471512170508": {
           "placement": 20,
           "updatedBy": "391415444084490240",
-          "updatedAt": "2025-11-09T04:49:43.341Z"
+          "updatedAt": "2025-11-09T04:57:00.979Z"
+        },
+        "692193262957756417": {
+          "placement": 8,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-09T04:57:12.406Z"
+        },
+        "987862850338963506": {
+          "placement": 4,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-09T04:57:21.089Z"
+        },
+        "1003727413047480340": {
+          "placement": 17,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-09T04:57:44.836Z"
+        },
+        "206564376692523010": {
+          "placement": 19,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-09T04:57:52.888Z"
+        },
+        "475402113443168256": {
+          "placement": 11,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-09T04:57:59.652Z"
+        },
+        "765705051162804264": {
+          "placement": 6,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-09T04:58:33.680Z"
+        },
+        "883720052224954368": {
+          "placement": 1,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-09T04:58:41.676Z"
+        },
+        "233762709932474370": {
+          "placement": 14,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-09T04:58:47.235Z"
         }
       }
     }
@@ -959,7 +1000,8 @@
           "buttonUses": {}
         },
         "vanityRoles": [
-          "1368969348399632546"
+          "1368969348399632546",
+          "1333822411912642630"
         ]
       },
       "455951495272202240": {
@@ -981,7 +1023,8 @@
           "storeHistory": []
         },
         "vanityRoles": [
-          "1368969348399632546"
+          "1368969348399632546",
+          "1333822411912642630"
         ]
       },
       "572291395365109770": {
@@ -1039,7 +1082,8 @@
           "lastInteraction": 1762293439850
         },
         "vanityRoles": [
-          "1368969349976821815"
+          "1368969349976821815",
+          "1333822411912642630"
         ]
       },
       "391415444084490240": {
@@ -1171,7 +1215,8 @@
         "emojiCode": "<:Patrick:1396856834236747977>",
         "age": "20",
         "vanityRoles": [
-          "1368969348399632546"
+          "1368969348399632546",
+          "1333822411912642630"
         ]
       },
       "705936744595587112": {
@@ -1183,7 +1228,8 @@
         "vanityRoles": [
           "1368969393819746336",
           "1401201426436456468",
-          "1368969349976821815"
+          "1368969349976821815",
+          "1333822411912642630"
         ],
         "safari": {
           "currency": 852,
@@ -1226,7 +1272,8 @@
           "storeHistory": []
         },
         "vanityRoles": [
-          "1368969348399632546"
+          "1368969348399632546",
+          "1333822411912642630"
         ]
       },
       "538540453973327873": {
@@ -1278,7 +1325,8 @@
           "isPaused": false
         },
         "vanityRoles": [
-          "1368969349976821815"
+          "1368969349976821815",
+          "1333822411912642630"
         ]
       },
       "443545183997657120": {
@@ -1408,7 +1456,8 @@
         },
         "age": "37",
         "vanityRoles": [
-          "1368969349976821815"
+          "1368969349976821815",
+          "1333822411912642630"
         ]
       },
       "480712959824363520": {
@@ -1468,7 +1517,8 @@
         },
         "emojiCode": "<:DieselFuryy:1396856824904552609>",
         "vanityRoles": [
-          "1368969349976821815"
+          "1368969349976821815",
+          "1333822411912642630"
         ]
       },
       "235148962103951360": {
@@ -1765,7 +1815,8 @@
           }
         },
         "vanityRoles": [
-          "1368969348399632546"
+          "1368969348399632546",
+          "1333822411912642630"
         ]
       },
       "719547106318352496": {
@@ -1854,16 +1905,19 @@
         "castlistIds": []
       },
       "1333822411912642630": {
-        "emoji": "🍆",
+        "emoji": "🎖️",
         "showPlayerEmojis": false,
         "color": "#2ECC71",
         "analyticsName": "🧟‍♂️ 👑 Castbot MVPs 🧟‍♂️",
         "analyticsAdded": 1754751381750,
         "castlistIds": [
-          "castlist_1759638936214_system"
+          "castlist_1759638936214_system",
+          "castlist_1762579720361_1331657596087566398",
+          "castlist_archive_1762682582653"
         ],
         "isVanity": true,
-        "castlist": "Castbot MVPs"
+        "castlist": "CastBotVivor OG Tribes",
+        "castlistId": "castlist_archive_1762682582653"
       },
       "1335645032891547670": {
         "emoji": "🤷‍♀️",
@@ -1928,9 +1982,10 @@
         "analyticsAdded": 1759081799205,
         "displayName": "The AR3 Tribe",
         "castlistIds": [
-          "castlist_1762579720361_1331657596087566398"
+          "default"
         ],
-        "castlist": "Cool Birds"
+        "castlistId": "default",
+        "castlist": "default"
       },
       "1388327092634124368": {
         "emoji": null,
@@ -1949,9 +2004,11 @@
         "castlistIds": [
           "castlist_1762579473073_1331657596087566398",
           "castlist_1762579584399_1331657596087566398",
-          "castlist_1762627269013_1331657596087566398"
+          "castlist_1762627269013_1331657596087566398",
+          "default"
         ],
-        "castlist": "My MVP"
+        "castlist": "default",
+        "castlistId": "default"
       },
       "1424250096698130603": {
         "emoji": "🗝️",
@@ -2093,7 +2150,11 @@
         "castlist": "the BIG one"
       },
       "1368969346600407181": {
-        "castlistIds": []
+        "castlistIds": [
+          "default"
+        ],
+        "castlistId": "default",
+        "castlist": "default"
       },
       "1434914674788401212": {
         "emoji": null,
@@ -2128,22 +2189,14 @@
         "isVanity": true
       },
       "1368969353323745405": {
-        "castlistIds": [
-          "default"
-        ],
         "emoji": null,
         "displayName": null,
-        "color": null,
-        "castlist": "default"
+        "color": null
       },
       "1368969355064381543": {
-        "castlistIds": [
-          "default"
-        ],
         "emoji": null,
         "displayName": null,
-        "color": null,
-        "castlist": "default"
+        "color": null
       },
       "1434057043370705007": {
         "emoji": null,
@@ -3289,7 +3342,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1762580473044,
+        "modifiedAt": 1762681847453,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -3470,6 +3523,18 @@
           "emoji": "📋",
           "description": "test",
           "lastModified": 1762627269013
+        }
+      },
+      "castlist_archive_1762682582653": {
+        "id": "castlist_archive_1762682582653",
+        "name": "CastBotVivor OG Tribes",
+        "type": "custom",
+        "createdAt": 1762682582653,
+        "createdBy": "391415444084490240",
+        "seasonId": "season_cac1b81de8914c79",
+        "metadata": {
+          "description": "Archived from tribe swap on 11/9/2025",
+          "emoji": "📦"
         }
       }
     },
@@ -6010,10 +6075,10 @@
         "castlist": "S12 - Jurassic Park"
       },
       "1385242520161620039": {
-        "emoji": "1️⃣",
+        "emoji": "🧛",
         "castlist": "S1",
         "showPlayerEmojis": false,
-        "color": "#e74c3c",
+        "color": "#E74C3C",
         "analyticsName": "1️⃣ S1 - Buffy 1️⃣",
         "analyticsAdded": 1759854390066,
         "castlistIds": [
@@ -6073,14 +6138,13 @@
         "castlistIds": [
           "castlist_1762612908863_system"
         ],
-        "castlist": "S2 - Big Bang"
+        "castlist": "S2 - Big Bang",
+        "emoji": "🔥",
+        "displayName": "The Cool Tribe",
+        "analyticsName": "theCoolTribe",
+        "color": "#FFFFFF"
       },
-      "1426478110089674832": {
-        "castlistIds": [
-          "castlist_1760892362223_system"
-        ],
-        "castlist": "Season 1 - Buffy"
-      },
+      "1426478110089674832": {},
       "1385242808952160326": {
         "emoji": "🧟",
         "castlist": "S4 - The Walking Dead",
@@ -6116,6 +6180,43 @@
         "color": "#607d8b",
         "analyticsName": "🕵️ S7 - James Bond 🕵️",
         "analyticsAdded": 1762625951215
+      },
+      "1385243029643989092": {
+        "emoji": "🚓",
+        "castlist": "S8 - GTA",
+        "showPlayerEmojis": false,
+        "color": "#3498db",
+        "analyticsName": "🚓 S8 - GTA 🚓",
+        "analyticsAdded": 1762675043477
+      },
+      "1323402779271889059": {
+        "emoji": "👮",
+        "castlist": "S9 - Brooklyn 99",
+        "showPlayerEmojis": false,
+        "color": "#1abc9c",
+        "analyticsName": "👮 S9 - Brooklyn 99 👮",
+        "analyticsAdded": 1762675357036
+      },
+      "1385243081447837887": {
+        "castlistIds": [
+          "castlist_1762675587960_974318870057848842"
+        ],
+        "castlist": "S10 - Drive In",
+        "displayName": "OverRideenS10",
+        "analyticsName": "analyticsOverridden",
+        "emoji": "🎞️"
+      },
+      "1426478529213763594": {
+        "emoji": "🏈",
+        "color": "#FFFFFF"
+      },
+      "1426479840357388298": {},
+      "1385243139769372703": {},
+      "1426480942746177698": {
+        "castlistIds": [
+          "castlist_1762675587960_974318870057848842"
+        ],
+        "castlist": "S10 - Drive In"
       }
     },
     "timezones": {
@@ -6446,6 +6547,23 @@
         "lastUpdated": 1762009432081,
         "seasonId": "season_d07e555bdaef42e5",
         "seasonName": "Season 1 - Buffy",
+        "questions": []
+      },
+      "config_1762675464683_391415444084490240": {
+        "buttonText": "Apply to Season 10 - Drive In",
+        "explanatoryText": "Join Season 10 - Drive In!",
+        "completionDescription": "Thank you for completing your application! A host will review it soon.",
+        "completionImage": null,
+        "channelFormat": "📝%name%-app",
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "draft",
+        "createdAt": 1762675464683,
+        "lastUpdated": 1762675464683,
+        "seasonId": "season_3fa254c4eda94dbd",
+        "seasonName": "Season 10 - Drive In",
         "questions": []
       }
     },
@@ -6911,8 +7029,8 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1762008856006,
-        "modifiedBy": "391415444084490240",
+        "modifiedAt": 1762680108392,
+        "modifiedBy": "system",
         "seasonId": "season_fc058f8886fc4fdc"
       },
       "castlist_1762009143029_system": {
@@ -6996,6 +7114,27 @@
           "migratedFrom": "virtual_UzYgLSBUYXJhbnRpbm8",
           "migrationDate": 1762625830595
         }
+      },
+      "castlist_1762675587960_974318870057848842": {
+        "id": "castlist_1762675587960_974318870057848842",
+        "name": "S10 - Drive In",
+        "type": "custom",
+        "createdAt": 1762675587960,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "timezone",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public",
+          "seasonId": "season_3fa254c4eda94dbd"
+        },
+        "metadata": {
+          "emoji": "🎥",
+          "description": "Massive monster double-org season.",
+          "lastModified": 1762675587960
+        },
+        "modifiedAt": 1762679178987,
+        "modifiedBy": "system"
       }
     },
     "placements": {
