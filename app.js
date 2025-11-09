@@ -5409,70 +5409,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const playerData = await loadPlayerData();
           const application = playerData[context.guildId]?.applications?.[channelId];
 
-          console.log(`🔍 DEBUG: Looking for application ${channelId}`);
-          console.log(`🔍 DEBUG: Application found: ${!!application}`);
-          if (application) {
-            console.log(`🔍 DEBUG: Applicant: ${application.displayName || application.username}`);
-          } else {
-            const allChannelIds = Object.keys(playerData[context.guildId]?.applications || {});
-            console.log(`🔍 DEBUG: Available channel IDs: ${allChannelIds.join(', ')}`);
-            console.log(`🔍 DEBUG: This application was already deleted - showing recovery UI`);
-          }
+          // Get applicant name - use stored data if available, otherwise use generic name
+          // This handles the case where channel was manually deleted but data still exists
+          const applicantName = application?.displayName || application?.username || `Channel ${channelId}`;
 
-          if (!application) {
-            // Application was already deleted - navigate to next available application
-            const { getApplicationsForSeason } = await import('./storage.js');
-            const allApplications = await getApplicationsForSeason(context.guildId, configId);
-
-            if (allApplications.length === 0) {
-              return {
-                components: [{
-                  type: 17, // Container
-                  components: [{
-                    type: 10, // Text Display
-                    content: '✅ No applications remaining in this season.'
-                  }]
-                }]
-              };
-            }
-
-            // Navigate to first available application
-            const { generateSeasonAppRankingUI } = await import('./castRankingManager.js');
-            const { client } = context;
-            const guild = await client.guilds.fetch(context.guildId);
-            const newApp = allApplications[0];
-
-            let applicantMember;
-            try {
-              applicantMember = await guild.members.fetch(newApp.userId);
-            } catch (error) {
-              applicantMember = {
-                displayName: newApp.displayName,
-                user: { username: newApp.username },
-                displayAvatarURL: () => newApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${newApp.userId % 5}.png`,
-                id: newApp.userId,
-                guild: null
-              };
-            }
-
-            const seasonConfig = playerData[context.guildId]?.applicationConfigs?.[configId];
-            const seasonName = seasonConfig?.seasonName || 'Unknown Season';
-
-            return generateSeasonAppRankingUI({
-              guildId: context.guildId,
-              userId: context.userId,
-              configId,
-              allApplications,
-              currentApp: newApp,
-              appIndex: 0,
-              applicantMember,
-              guild,
-              seasonName,
-              playerData
-            });
-          }
-
-          const applicantName = application.displayName || application.username || 'Unknown Applicant';
+          console.log(`🗑️ Delete confirmation for: ${applicantName} (Channel exists: ${!!application})`);
 
           // Create confirmation UI using Entity Framework pattern
           const components = [{
@@ -5535,20 +5476,16 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const configId = parts.slice(5).join('_'); // Rejoin configId parts
           
           console.log(`💥 Confirming deletion for channel ${channelId}, app index ${appIndex}`);
-          
+
           // Load application data
           const playerData = await loadPlayerData();
           const application = playerData[guildId]?.applications?.[channelId];
-          
-          if (!application) {
-            return {
-              content: '❌ Application not found.',
-              ephemeral: true
-            };
-          }
-          
-          const applicantName = application.displayName || application.username || 'Unknown Applicant';
-          const applicantUserId = application.userId;
+
+          // Get applicant info - might not exist if channel was manually deleted
+          const applicantName = application?.displayName || application?.username || `Channel ${channelId}`;
+          const applicantUserId = application?.userId;
+
+          console.log(`💥 Application data exists: ${!!application}`);
           
           // Step 1: Try to delete the channel (silently handle if it doesn't exist)
           let channelDeletedMessage = '';
