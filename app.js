@@ -8038,6 +8038,29 @@ To fix this:
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
+          // Extract castlistId from custom_id
+          const castlistId = custom_id.replace('castlist_swap_merge_', '');
+          console.log(`🔀 Swap/Merge requested for castlist: ${castlistId}`);
+
+          // VALIDATION: Only allow swap/merge on default castlist
+          if (castlistId !== 'default') {
+            console.log(`🔀 Swap/Merge denied - not default castlist`);
+            return {
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+              components: [{
+                type: 17, // Container
+                components: [{
+                  type: 10, // Text Display
+                  content: `## ❌ Swap/Merge Restricted\n\n` +
+                           `You can only conduct a Tribe Swap/Merge using the **Active Castlist** (default).\n\n` +
+                           `Please change to the Active Castlist and try again. You will then be able to select ` +
+                           `the tribe roles for the new phase of the game, and a castlist will be created for ` +
+                           `the past phase of the game.`
+                }]
+              }]
+            };
+          }
+
           console.log(`🔀 Opening Tribe Swap/Merge modal for default castlist`);
 
           // Return modal with Components V2 Label components
@@ -8051,25 +8074,25 @@ To fix this:
                 {
                   type: 18, // Label
                   label: 'New Tribe Roles',
-                  description: 'Select roles that will become your new tribes',
+                  description: 'Select the role(s) your players will swap or merge into.',
                   component: {
                     type: 6, // Role Select
                     custom_id: 'new_tribe_roles',
                     placeholder: 'Choose new tribe roles...',
-                    min_values: 1, // Changed from 2 to 1
+                    min_values: 1, // Allow single tribe for merges
                     max_values: 10
                   }
                 },
-                // 2. Archive Castlist Name
+                // 2. Last Phase Castlist Name (renamed from Archive)
                 {
                   type: 18, // Label
-                  label: 'Archive Castlist Name',
-                  description: 'Name for the archived castlist containing old tribes',
+                  label: 'Last Phase Castlist Name',
+                  description: 'Archive castlist will be made for the last phase; suggest to keep old tribe roles on players.',
                   component: {
                     type: 4, // Text Input
                     custom_id: 'archive_name',
                     style: 1, // Short
-                    placeholder: 'Pre-Swap Tribes',
+                    placeholder: 'e.g., OG Tribes, Swap 1 Tribes',
                     max_length: 50,
                     required: true
                   }
@@ -8078,21 +8101,21 @@ To fix this:
                 {
                   type: 18, // Label
                   label: 'Create Vanity Roles?',
-                  description: 'Experimental: Keep old tribe roles as vanity badges',
+                  description: 'Shows past tribes under player\'s name on Castlist',
                   component: {
                     type: 3, // String Select
                     custom_id: 'vanity_roles',
                     options: [
                       {
-                        label: 'Yes - Keep old tribes visible',
+                        label: 'Yes - show past tribes on castlists',
                         value: 'yes',
-                        description: 'Players show both old and new tribes',
+                        description: 'Assigns a vanity role in Castbot',
                         emoji: { name: '✅' }
                       },
                       {
-                        label: 'No - Hide old tribes',
+                        label: 'No - don\'t show past tribes',
                         value: 'no',
-                        description: 'Only new tribes visible',
+                        description: 'Won\'t show past tribes on new castlist',
                         emoji: { name: '❌' }
                       }
                     ]
@@ -8101,8 +8124,8 @@ To fix this:
                 // 4. Auto-Randomize
                 {
                   type: 18, // Label
-                  label: 'CastBot Auto-Randomization',
-                  description: 'Experimental: Let CastBot randomly assign players',
+                  label: 'Have Castbot Randomize Swap?',
+                  description: 'EXPERIMENTAL - CastBot will randomise swap and automatically assign new tribe roles',
                   component: {
                     type: 3, // String Select
                     custom_id: 'auto_randomize',
@@ -8110,7 +8133,7 @@ To fix this:
                       {
                         label: 'Yes - Automate via CastBot',
                         value: 'yes',
-                        description: 'Dramatic 15-second reveal sequence',
+                        description: 'CastBot will conduct live swap in the channel you are in right now',
                         emoji: { name: '🎭' }
                       },
                       {
@@ -8499,20 +8522,6 @@ To fix this:
                     value: tribeData.color || '',
                     required: false,
                     max_length: 7
-                  }
-                },
-                {
-                  type: 18, // Label
-                  label: 'Show Player Emojis',
-                  description: 'Show emojis next to player names? (yes/no)',
-                  component: {
-                    type: 4, // Text Input
-                    custom_id: 'show_player_emojis',
-                    style: 1, // Short
-                    placeholder: 'yes or no',
-                    value: tribeData.showPlayerEmojis !== false ? 'yes' : 'no',
-                    required: false,
-                    max_length: 3
                   }
                 }
               ]

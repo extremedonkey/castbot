@@ -1887,7 +1887,7 @@
       "1333822520737927281": {
         "emoji": "<:castbot:1333820342275149824>",
         "showPlayerEmojis": false,
-        "color": "#3498DB",
+        "color": "#FFFFFF",
         "analyticsName": "🤖Mr CastBot",
         "analyticsAdded": 1751070525853,
         "castlistIds": [
@@ -3342,7 +3342,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1762685796281,
+        "modifiedAt": 1762699192722,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -3353,7 +3353,7 @@
         "createdAt": 1759638936215,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "placements_alpha",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -3364,8 +3364,8 @@
           "migratedFrom": "virtual_bGVnYWN5TGlzdA",
           "migrationDate": 1759638936215
         },
-        "modifiedAt": 1762615449120,
-        "modifiedBy": "system",
+        "modifiedAt": 1762699186081,
+        "modifiedBy": "391415444084490240",
         "seasonId": "season_cac1b81de8914c79"
       },
       "castlist_1759671885172_system": {
