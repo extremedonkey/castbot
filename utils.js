@@ -241,3 +241,39 @@ export function validateComponentLimit(components, contextLabel = "UI") {
         throw new Error(`${contextLabel} exceeds Discord component limit: ${count}/40 components`);
     }
 }
+
+/**
+ * Sanitize error messages for display in Discord
+ * - Truncates to maxLength (default 500 chars)
+ * - Removes HTML tags (e.g., Cloudflare error pages)
+ * - Provides fallback message if result is empty
+ *
+ * @param {Error|string} error - Error object or error message string
+ * @param {number} maxLength - Maximum length before truncation (default 500)
+ * @returns {string} Sanitized error message safe for Discord display
+ *
+ * @example
+ * // Handle Cloudflare HTML error pages
+ * catch (error) {
+ *   const safeMessage = sanitizeErrorMessage(error);
+ *   return { content: `Error: ${safeMessage}` };
+ * }
+ */
+export function sanitizeErrorMessage(error, maxLength = 500) {
+    let message = typeof error === 'string' ? error : (error?.message || 'Unknown error');
+
+    // Truncate long messages (e.g., HTML error pages >10KB)
+    if (message.length > maxLength) {
+        message = message.substring(0, maxLength - 3) + '...';
+    }
+
+    // Remove HTML tags (e.g., Cloudflare error pages)
+    message = message.replace(/<[^>]*>/g, '').trim();
+
+    // Fallback if message is empty after sanitization
+    if (!message || message.length === 0) {
+        message = 'Server error (Discord infrastructure issue)';
+    }
+
+    return message;
+}

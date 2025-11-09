@@ -2218,10 +2218,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     } catch (error) {
       console.error('Error handling castlist command:', error);
       const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+
+      // Sanitize error message (prevent Cloudflare HTML pages from breaking display)
+      const { sanitizeErrorMessage } = await import('./utils.js');
+      const errorMessage = sanitizeErrorMessage(error);
+
       await DiscordRequest(endpoint, {
         method: 'PATCH',
         body: {
-          content: `Error displaying castlist: ${error.message}`,
+          content: `Error displaying castlist: ${errorMessage}`,
           flags: InteractionResponseFlags.EPHEMERAL
         }
       });
@@ -2323,10 +2328,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
   } catch (error) {
     console.error('Error handling castlist2 command:', error);
     const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+
+    // Sanitize error message (prevent Cloudflare HTML pages from breaking display)
+    const { sanitizeErrorMessage } = await import('./utils.js');
+    const errorMessage = sanitizeErrorMessage(error);
+
     await DiscordRequest(endpoint, {
       method: 'PATCH',
       body: {
-        content: `Error displaying Components V2 castlist: ${error.message}`,
+        content: `Error displaying Components V2 castlist: ${errorMessage}`,
         flags: InteractionResponseFlags.EPHEMERAL
       }
     });
@@ -30021,6 +30031,11 @@ Are you sure you want to continue?`;
       } catch (error) {
         console.error('Error handling castlist2 navigation:', error);
         const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+
+        // Sanitize error message (Cloudflare HTML pages can be >10KB)
+        const { sanitizeErrorMessage } = await import('./utils.js');
+        const errorMessage = sanitizeErrorMessage(error);
+
         await DiscordRequest(endpoint, {
           method: 'PATCH',
           body: {
@@ -30028,7 +30043,7 @@ Are you sure you want to continue?`;
             components: [
               {
                 type: 10, // Text Display
-                content: `# Error\nError navigating castlist: ${error.message}`
+                content: `# Error\nError navigating castlist: ${errorMessage}`
               }
             ]
           }

@@ -436,15 +436,24 @@
     "tribes": {
       "1127614270306263080": {
         "emoji": "🤓",
-        "castlist": "default"
+        "castlist": "default",
+        "castlistIds": [
+          "default"
+        ]
       },
       "1129714392699768912": {
         "emoji": "👩‍🦰",
-        "castlist": "default"
+        "castlist": "default",
+        "castlistIds": [
+          "default"
+        ]
       },
       "1143197876378419231": {
         "emoji": "🤖",
-        "castlist": "default"
+        "castlist": "default",
+        "castlistIds": [
+          "default"
+        ]
       },
       "1198707088889745569": {
         "castlistIds": [
@@ -561,6 +570,26 @@
         },
         "modifiedAt": 1762661147795,
         "modifiedBy": "system"
+      },
+      "default": {
+        "id": "default",
+        "name": "Active Castlist",
+        "type": "system",
+        "createdAt": 1762662177543,
+        "createdBy": "system",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
+          "emoji": "📋",
+          "isDefault": true
+        },
+        "modifiedAt": 1762662177581,
+        "modifiedBy": "system"
       }
     },
     "placements": {
@@ -586,9 +615,9 @@
           "updatedAt": "2025-11-09T04:01:20.463Z"
         },
         "883720052224954368": {
-          "placement": 1,
+          "placement": 44,
           "updatedBy": "391415444084490240",
-          "updatedAt": "2025-11-09T04:01:26.276Z"
+          "updatedAt": "2025-11-09T04:14:27.118Z"
         },
         "233762709932474370": {
           "placement": 14,
