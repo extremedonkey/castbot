@@ -568,8 +568,9 @@
           "description": "",
           "lastModified": 1762659174803
         },
-        "modifiedAt": 1762661147795,
-        "modifiedBy": "system"
+        "modifiedAt": 1762662723941,
+        "modifiedBy": "391415444084490240",
+        "seasonId": "season_b11e9917a01a4955"
       },
       "default": {
         "id": "default",
@@ -678,6 +679,23 @@
           "placement": 2,
           "updatedBy": "391415444084490240",
           "updatedAt": "2025-11-09T04:03:14.491Z"
+        }
+      },
+      "season_b11e9917a01a4955": {
+        "420459241313271808": {
+          "placement": 10,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-09T04:38:51.235Z"
+        },
+        "556315115947950081": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-09T04:39:01.337Z"
+        },
+        "372442773799829506": {
+          "placement": 12,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-09T04:39:09.951Z"
         }
       }
     }

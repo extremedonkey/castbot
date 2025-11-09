@@ -30580,6 +30580,10 @@ Are you sure you want to continue?`;
         // Fetch guild and rebuild tribes list (same as show_castlist2 handler)
         const guild = await client.guilds.fetch(guildId);
 
+        // 🔧 CRITICAL FIX: Fetch guild members to populate cache before accessing role.members
+        // Without this, role.members.values() triggers automatic fetch that can timeout
+        await guild.members.fetch();
+
         // Load castlist configuration
         const castlistEntity = playerData[guildId]?.castlistConfigs?.[castlistId];
         if (!castlistEntity) {
