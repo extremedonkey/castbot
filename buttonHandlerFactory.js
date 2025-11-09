@@ -431,7 +431,7 @@ export const BUTTON_REGISTRY = {
 
   // === CASTLIST HUB ===
   'castlist_hub_main': {
-    label: 'Castlist Hub',
+    label: 'Castlist Manager',
     description: 'Open the Castlist Management Hub',
     emoji: '📋',
     style: 'Primary',

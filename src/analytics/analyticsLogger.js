@@ -29,9 +29,9 @@ const BUTTON_LABEL_MAP = {
   'season_app_creation': 'App Creation',
   'season_app_ranking': '🏆 Cast Ranking',
   'ranking_view_all_scores': 'View All Scores',
-  
+
   // Castlist display
-  'show_castlist2_default': 'Show Default Castlist',
+  'show_castlist2_default': 'Post Castlist',
   'show_castlist2': 'Show Castlist',
   
   // Menu buttons

@@ -732,7 +732,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   adminButtons.push(
     new ButtonBuilder()
       .setCustomId('castlist_hub_main')
-      .setLabel('Castlists')
+      .setLabel('Castlist Manager')
       .setStyle(ButtonStyle.Primary)
       .setEmoji('📋')
   );
