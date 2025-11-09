@@ -1779,10 +1779,7 @@
         "showPlayerEmojis": false,
         "color": "#3498db",
         "analyticsName": "🅱️ The Multi-TribeB 🅱️",
-        "analyticsAdded": 1759671585440,
-        "castlistIds": [
-          "castlist_1759671885172_system"
-        ]
+        "analyticsAdded": 1759671585440
       },
       "1368969397418590338": {
         "emoji": null,
@@ -3320,11 +3317,11 @@
         },
         "metadata": {
           "description": "The multi-B castlist!",
-          "emoji": "🅱️",
+          "emoji": "🏆",
           "migratedFrom": "virtual_TXVsdGlC",
           "migrationDate": 1759671885172
         },
-        "modifiedAt": 1762650591181,
+        "modifiedAt": 1762650609066,
         "modifiedBy": "391415444084490240",
         "seasonId": "season_9a8360f7864d4120"
       },

@@ -27121,7 +27121,7 @@ Are you sure you want to continue?`;
           const containerComponents = [
             {
               type: 10, // Text Display
-              content: `## ⏳ Safari Rounds`
+              content: `## 🏃‍♀️ Challenges`
             },
             {
               type: 10, // Text Display

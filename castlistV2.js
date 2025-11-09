@@ -808,15 +808,10 @@ function createCastlistRows(allCastlists, includeAddButton = true, hasStores = f
         const emojiRaw = castlist.metadata?.emoji || '📋';
         const { emoji } = parseTextEmoji(emojiRaw, '📋');
 
-        // Determine sort strategy emoji for button label
-        const sortStrategyEmoji = castlist.settings?.sortStrategy === 'placements' ? '🥇 ' :
-                                castlist.settings?.sortStrategy === 'vanity_role' ? '🎭 ' :
-                                '';
-
-        // Build button label with sort strategy indicator
+        // Build button label
         const label = castlist.isVirtual
             ? `${castlist.name} [Legacy]`
-            : `${sortStrategyEmoji}${castlist.name}`;
+            : castlist.name;
 
         castlistButtons.push(
             new ButtonBuilder()
