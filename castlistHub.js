@@ -367,6 +367,20 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
 
   container.components.push(navButtons.toJSON());
 
+  // Debug: Log the final structure to identify the issue
+  console.log(`[DEBUG] Final container has ${container.components.length} components`);
+  container.components.forEach((comp, index) => {
+    if (comp.type === 9) { // Section
+      console.log(`[DEBUG] Component ${index} is Section:`, {
+        hasAccessory: !!comp.accessory,
+        accessoryType: comp.accessory?.type,
+        accessoryCustomId: comp.accessory?.custom_id,
+        accessoryLabel: comp.accessory?.label,
+        content: comp.components?.[0]?.content?.substring(0, 50) + '...'
+      });
+    }
+  });
+
   // Return just the components - ButtonHandlerFactory will handle flags appropriately
   // UPDATE_MESSAGE cannot have flags, CHANNEL_MESSAGE_WITH_SOURCE needs them
   return {

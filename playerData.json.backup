@@ -3555,6 +3555,25 @@
           "description": "Woot!",
           "lastModified": 1762685819551
         }
+      },
+      "castlist_1762686341708_1331657596087566398": {
+        "id": "castlist_1762686341708_1331657596087566398",
+        "name": "myNewTestCastlist",
+        "type": "custom",
+        "createdAt": 1762686341708,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "placements_alpha",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public",
+          "seasonId": "season_83d410d017c64375"
+        },
+        "metadata": {
+          "emoji": "📋",
+          "description": "Woot!",
+          "lastModified": 1762686341708
+        }
       }
     },
     "placements": {
