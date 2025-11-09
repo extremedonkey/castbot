@@ -246,6 +246,14 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       // Import utility functions for formatting
       const { formatPlayerList } = await import('./utils/tribeDataUtils.js');
 
+      // Handle zero-tribe state
+      if (tribes.length === 0) {
+        container.components.push({
+          type: 10, // Text Display
+          content: `-# *No tribes assigned to this castlist yet. Use the role selector below to add tribes.*`
+        });
+      }
+
       // Section for each existing tribe with Edit button accessory
       for (const tribe of tribes) {
         // Get role name from Discord
@@ -266,26 +274,29 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
         };
 
         // Only add accessory if all required fields are available and non-empty
-        const hasValidRoleId = tribe.roleId && tribe.roleId !== '';
-        const hasValidCastlistId = castlist.id && castlist.id !== '';
+        const hasValidRoleId = tribe.roleId && typeof tribe.roleId === 'string' && tribe.roleId.length > 0;
+        const hasValidCastlistId = castlist.id && typeof castlist.id === 'string' && castlist.id.length > 0;
 
         if (hasValidRoleId && hasValidCastlistId) {
-          tribeSection.accessory = {
+          // Create button with all required fields explicitly
+          const buttonAccessory = {
             type: 2, // Button
             custom_id: `tribe_edit_button|${tribe.roleId}|${castlist.id}`,
             label: "Edit",
-            style: 2, // Secondary
-            emoji: { name: "✏️" },
-            disabled: false // Explicitly set disabled state
+            style: 2, // Secondary style
+            emoji: { name: "✏️" }
+            // Note: disabled field is optional, removing it
           };
-        } else {
-          console.warn(`[TRIBES] Skipping accessory button - roleId: "${tribe.roleId}", castlistId: "${castlist.id}"`);
-        }
 
-        // Final validation: ensure no partial accessories
-        if (tribeSection.accessory && (!tribeSection.accessory.type || !tribeSection.accessory.custom_id)) {
-          console.warn(`[TRIBES] Removing invalid accessory for tribe ${roleName}`);
-          delete tribeSection.accessory;
+          // Validate button has all required fields
+          if (buttonAccessory.type && buttonAccessory.custom_id && buttonAccessory.label && buttonAccessory.style) {
+            tribeSection.accessory = buttonAccessory;
+            console.log(`[TRIBES] Added accessory for ${roleName}`);
+          } else {
+            console.warn(`[TRIBES] Invalid button structure for ${roleName}:`, buttonAccessory);
+          }
+        } else {
+          console.warn(`[TRIBES] Skipping accessory - roleId: "${tribe.roleId}" (${typeof tribe.roleId}), castlistId: "${castlist.id}" (${typeof castlist.id})`);
         }
 
         console.log(`[TRIBES] Adding Section for tribe ${roleName}:`, JSON.stringify(tribeSection, null, 2));
