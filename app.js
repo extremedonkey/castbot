@@ -5541,9 +5541,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             const serverName = guild.name;
             const isProduction = process.env.NODE_ENV === 'production';
             const logChannelId = isProduction ? '1385059476243218552' : '1386998800215969904';
-            
-            const logMessage = `🗑️ **Application Deleted**\n**Applicant:** ${applicantName} (${applicantUserId})\n**Channel:** #${application.channelName || channelId}\n**Deleted by:** ${deleterName} (${userId})\n**Server:** ${serverName}\n**Time:** <t:${Math.floor(Date.now() / 1000)}:F>`;
-            
+
+            const channelDisplayName = application?.channelName || `Channel ${channelId}`;
+            const userIdDisplay = applicantUserId || 'Unknown';
+            const logMessage = `🗑️ **Application Deleted**\n**Applicant:** ${applicantName}${applicantUserId ? ` (${applicantUserId})` : ''}\n**Channel:** #${channelDisplayName}\n**Deleted by:** ${deleterName} (${userId})\n**Server:** ${serverName}\n**Time:** <t:${Math.floor(Date.now() / 1000)}:F>`;
+
             const logChannel = await client.channels.fetch(logChannelId);
             if (logChannel) {
               await logChannel.send(logMessage);
