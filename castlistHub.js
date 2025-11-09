@@ -190,8 +190,8 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
         }
       }
 
-      // Add info section
-      container.components.push({
+      // Add info section - EXPLICITLY no accessory to avoid Discord validation errors
+      const infoSection = {
         type: 9, // Section
         components: [{
           type: 10, // Text Display
@@ -199,7 +199,13 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
                    `-# • Tribes sorted by **${sortStrategyName}**\n` +
                    `-# • Castlist is associated with **${seasonText}**`
         }]
-      });
+        // NO accessory field - Discord throws error if empty/partial accessory is present
+      };
+
+      // Ensure no accidental accessory field
+      delete infoSection.accessory;
+
+      container.components.push(infoSection);
 
       // Separator before tribes section
       container.components.push({ type: 14 });
@@ -299,8 +305,23 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
           console.warn(`[TRIBES] Skipping accessory - roleId: "${tribe.roleId}" (${typeof tribe.roleId}), castlistId: "${castlist.id}" (${typeof castlist.id})`);
         }
 
+        // Final safety check - ensure accessory is complete or absent
+        if (tribeSection.accessory) {
+          const acc = tribeSection.accessory;
+          if (!acc.type || !acc.custom_id || !acc.label || !acc.style) {
+            console.warn(`[TRIBES] Removing incomplete accessory for ${roleName}:`, acc);
+            delete tribeSection.accessory;
+          }
+        }
+
         console.log(`[TRIBES] Adding Section for tribe ${roleName}:`, JSON.stringify(tribeSection, null, 2));
-        container.components.push(tribeSection);
+
+        // Validate Section structure before adding
+        if (tribeSection.type === 9 && tribeSection.components && tribeSection.components.length === 1) {
+          container.components.push(tribeSection);
+        } else {
+          console.error(`[TRIBES] Invalid Section structure for tribe ${roleName}, skipping`);
+        }
       }
 
       // Separator before Role Select
