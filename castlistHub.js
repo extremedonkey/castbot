@@ -265,8 +265,11 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
           }]
         };
 
-        // Only add accessory if all required fields are available
-        if (tribe.roleId && castlist.id) {
+        // Only add accessory if all required fields are available and non-empty
+        const hasValidRoleId = tribe.roleId && tribe.roleId !== '';
+        const hasValidCastlistId = castlist.id && castlist.id !== '';
+
+        if (hasValidRoleId && hasValidCastlistId) {
           tribeSection.accessory = {
             type: 2, // Button
             custom_id: `tribe_edit_button|${tribe.roleId}|${castlist.id}`,
@@ -276,7 +279,13 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
             disabled: false // Explicitly set disabled state
           };
         } else {
-          console.warn(`[TRIBES] Skipping accessory button - missing roleId or castlistId`);
+          console.warn(`[TRIBES] Skipping accessory button - roleId: "${tribe.roleId}", castlistId: "${castlist.id}"`);
+        }
+
+        // Final validation: ensure no partial accessories
+        if (tribeSection.accessory && (!tribeSection.accessory.type || !tribeSection.accessory.custom_id)) {
+          console.warn(`[TRIBES] Removing invalid accessory for tribe ${roleName}`);
+          delete tribeSection.accessory;
         }
 
         console.log(`[TRIBES] Adding Section for tribe ${roleName}:`, JSON.stringify(tribeSection, null, 2));
