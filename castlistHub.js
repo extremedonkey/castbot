@@ -190,22 +190,13 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
         }
       }
 
-      // Add info section - EXPLICITLY no accessory to avoid Discord validation errors
-      const infoSection = {
-        type: 9, // Section
-        components: [{
-          type: 10, // Text Display
-          content: `### 🏕️ Tribes on Castlist\n` +
-                   `-# • Tribes sorted by **${sortStrategyName}**\n` +
-                   `-# • Castlist is associated with **${seasonText}**`
-        }]
-        // NO accessory field - Discord throws error if empty/partial accessory is present
-      };
-
-      // Ensure no accidental accessory field
-      delete infoSection.accessory;
-
-      container.components.push(infoSection);
+      // Add info text - Using Text Display instead of Section to avoid accessory issues
+      container.components.push({
+        type: 10, // Text Display (not Section)
+        content: `### 🏕️ Tribes on Castlist\n` +
+                 `-# • Tribes sorted by **${sortStrategyName}**\n` +
+                 `-# • Castlist is associated with **${seasonText}**`
+      });
 
       // Separator before tribes section
       container.components.push({ type: 14 });
