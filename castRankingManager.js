@@ -417,10 +417,10 @@ export async function generateSeasonAppRankingUI({
   // Add player notes section
   const existingNotes = playerData[guildId]?.applications?.[currentApp.channelId]?.playerNotes;
   const notesText = existingNotes || 'Record casting notes, connections or potential issues...';
-  
+
   containerComponents.push(
     {
-      type: 14 // Separator  
+      type: 14 // Separator
     },
     {
       type: 10, // Text Display component
@@ -438,6 +438,12 @@ export async function generateSeasonAppRankingUI({
           .setCustomId(`personal_ranker_${currentApp.channelId}_${appIndex}_${configId}`)
           .setLabel('🤸 Personal Ranker')
           .setStyle(ButtonStyle.Secondary)
+          .toJSON(),
+        new ButtonBuilder()
+          .setCustomId(`delete_application_mode_${currentApp.channelId}_${appIndex}_${configId}`)
+          .setLabel('Delete App')
+          .setStyle(ButtonStyle.Danger)
+          .setEmoji('🗑️')
           .toJSON()
       ]
     }

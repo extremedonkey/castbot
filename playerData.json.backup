@@ -1779,7 +1779,11 @@
         "showPlayerEmojis": false,
         "color": "#3498db",
         "analyticsName": "🅱️ The Multi-TribeB 🅱️",
-        "analyticsAdded": 1759671585440
+        "analyticsAdded": 1759671585440,
+        "castlistIds": [
+          "castlist_1759671885172_system"
+        ],
+        "castlist": "MultiBB"
       },
       "1368969397418590338": {
         "emoji": null,

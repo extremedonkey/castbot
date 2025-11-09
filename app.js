@@ -5391,6 +5391,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Handle delete application button clicks - show confirmation using Entity Framework pattern
       return ButtonHandlerFactory.create({
         id: 'delete_application_mode',
+        updateMessage: true, // Replace existing message with confirmation
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
@@ -5460,10 +5461,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Handle confirmed application deletion
       return ButtonHandlerFactory.create({
         id: 'delete_application_confirm',
+        updateMessage: true, // Update message with next application
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         deferred: true, // This might take time with channel deletion
-        ephemeral: false, // Cast Ranking interface should NOT be ephemeral
         handler: async (context) => {
           console.log(`💥 START: delete_application_confirm - user ${context.userId}`);
           
@@ -5583,177 +5584,55 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           const newApp = allApplications[newIndex];
           console.log(`🧭 Navigating to application ${newIndex + 1} of ${allApplications.length}: ${newApp.displayName}`);
-          
-          // Regenerate Cast Ranking interface for the new application
-          // (Same logic as in season_app_ranking handler)
+
+          // Regenerate Cast Ranking interface using castRankingManager
+          const { generateSeasonAppRankingUI } = await import('./castRankingManager.js');
+
+          // Fetch applicant member
           let applicantMember;
           try {
             applicantMember = await guild.members.fetch(newApp.userId);
           } catch (error) {
+            // If member left server, create fallback object
             applicantMember = {
               displayName: newApp.displayName,
               user: { username: newApp.username },
-              displayAvatarURL: (options = {}) => {
-                const size = options.size || 128;
-                const baseUrl = newApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${newApp.userId % 5}.png`;
-                // For Discord CDN URLs, ensure they have proper extension and size
-                if (baseUrl.includes('cdn.discordapp.com')) {
-                  return baseUrl.replace(/\?size=\d+/, '').replace(/\.(webp|png|jpg|jpeg)$/, `.png?size=${size}`);
-                }
-                return baseUrl;
-              }
+              displayAvatarURL: () => newApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${newApp.userId % 5}.png`,
+              id: newApp.userId,
+              guild: null // Indicates member has left
             };
           }
-          
-          // Create ranking interface components (similar to existing ranking interface)
-          const rankings = playerData[guildId]?.applications?.[newApp.channelId]?.rankings || {};
-          const userScore = rankings[userId];
-          const scores = Object.values(rankings).filter(r => r !== undefined);
-          const avgScore = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : 'N/A';
-          const voteCount = scores.length;
-          
-          const castingStatus = playerData[guildId]?.applications?.[newApp.channelId]?.castingStatus;
-          const statusIcon = castingStatus === 'cast' ? '✅' : castingStatus === 'tentative' ? '❓' : castingStatus === 'reject' ? '🗑️' : '⚪';
-          const statusLabel = castingStatus === 'cast' ? 'Cast' : castingStatus === 'tentative' ? 'Tentative' : castingStatus === 'reject' ? 'Don\'t Cast' : 'Undecided';
-          
-          const headerContent = `> **Applicant ${newIndex + 1} of ${allApplications.length}**
-**Name:** ${newApp.displayName || newApp.username}
-**Average Score:** ${avgScore}/5.0 (${voteCount} vote${voteCount !== 1 ? 's' : ''})
-**Your Score:** ${userScore ? userScore : 'Not rated'}
-**Casting Status:** ${statusIcon} ${statusLabel}
-**App:** <#${newApp.channelId}>
 
-✅ **Application deleted:** ${applicantName}
-${channelDeletedMessage}`;
-          
-          const containerComponents = [
-            {
-              type: 10, // Text Display component
-              content: `## Cast Ranking | ${guild.name}`
-            },
-            {
-              type: 14 // Separator
-            },
-            {
-              type: 10, // Text Display
-              content: headerContent
-            }
-          ];
-          
-          // Add Media Gallery for avatar
-          if (applicantMember.displayAvatarURL || applicantMember.avatarURL) {
-            try {
-              const avatarUrl = applicantMember.displayAvatarURL 
-                ? applicantMember.displayAvatarURL({ size: 512, dynamic: true })
-                : applicantMember.avatarURL({ size: 512, dynamic: true });
-              
-              // Validate URL before adding to media gallery
-              if (avatarUrl && avatarUrl.trim()) {
-                containerComponents.push({
-                  type: 12, // Media Gallery
-                  items: [{
-                    media: { url: avatarUrl.trim() },
-                    description: `${newApp.displayName || newApp.username} - Application Photo`,
-                    spoiler: false
-                  }]
-                });
-              }
-            } catch (error) {
-              console.log('Could not add avatar to media gallery:', error);
-            }
-          }
-          
-          // Add ranking buttons (1-5)
-          const rankingButtons = [];
-          for (let i = 1; i <= 5; i++) {
-            rankingButtons.push({
-              type: 2, // Button
-              style: userScore === i ? 3 : 2, // Success if user's score, Secondary otherwise
-              label: i.toString(),
-              custom_id: `rank_${i}_${newApp.channelId}_${newIndex}_${configId || 'legacy'}`,
-              disabled: userScore === i
-            });
-          }
-          
-          containerComponents.push(
-            { type: 14 }, // Separator
+          // Get season name from config
+          const seasonConfig = playerData[guildId]?.applicationConfigs?.[configId];
+          const seasonName = seasonConfig?.seasonName || 'Unknown Season';
+
+          // Generate ranking UI using shared module
+          const rankingResponse = await generateSeasonAppRankingUI({
+            guildId,
+            userId,
+            configId,
+            allApplications,
+            currentApp: newApp,
+            appIndex: newIndex,
+            applicantMember,
+            guild,
+            seasonName,
+            playerData
+          });
+
+          // Add deletion success message at the top of the container
+          const container = rankingResponse.components[0];
+          container.components.unshift(
             {
               type: 10, // Text Display
-              content: `> **Rate this applicant (1-5)**`
+              content: `✅ **Application deleted:** ${applicantName}\n${channelDeletedMessage}`
             },
-            {
-              type: 1, // Action Row
-              components: rankingButtons
-            }
+            { type: 14 } // Separator
           );
-          
-          containerComponents.push(
-            { type: 14 }, // Separator
-            createCastingButtons(newApp.channelId, newIndex, playerData, guildId, configId).toJSON() // Casting buttons
-          );
-          
-          // Add navigation buttons
-          const navButtons = [
-            {
-              type: 2, // Button
-              style: 2, // Secondary
-              label: '◀ Previous',
-              custom_id: `ranking_prev_${newIndex}`,
-              disabled: newIndex === 0
-            },
-            {
-              type: 2, // Button
-              style: 2, // Secondary
-              label: 'Next ▶',
-              custom_id: `ranking_next_${newIndex}`,
-              disabled: newIndex === allApplications.length - 1
-            },
-            {
-              type: 2, // Button
-              style: 2, // Secondary
-              label: '📊 View All Scores',
-              custom_id: `ranking_view_all_scores_${configId || 'legacy'}`
-            }
-          ];
-          
-          containerComponents.push(
-            { type: 14 }, // Separator
-            {
-              type: 1, // Action Row
-              components: navButtons
-            }
-          );
-          
-          // Add voting breakdown if votes exist
-          if (scores.length > 0) {
-            const votingBreakdown = await createVotingBreakdown(newApp.channelId, playerData, guildId, guild);
-            if (votingBreakdown) {
-              containerComponents.push(
-                { type: 14 }, // Separator
-                votingBreakdown
-              );
-            }
-          }
-          
-          // Add player notes section
-          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(newApp.channelId, newIndex, playerData, guildId, configId);
-          containerComponents.push(
-            { type: 14 }, // Separator
-            playerNotesDisplay,
-            playerNotesButtonRow
-          );
-          
-          const castRankingContainer = {
-            type: 17, // Container
-            accent_color: 0x9B59B6, // Purple
-            components: containerComponents
-          };
-          
+
           console.log(`✅ SUCCESS: delete_application_confirm - deleted and navigated to ${newApp.displayName}`);
-          return {
-            flags: (1 << 15), // IS_COMPONENTS_V2
-            components: [castRankingContainer]
-          };
+          return rankingResponse;
         }
       })(req, res, client);
       
@@ -5761,22 +5640,76 @@ ${channelDeletedMessage}`;
       // Handle cancel deletion - return to normal ranking interface
       return ButtonHandlerFactory.create({
         id: 'cancel_delete_application',
+        updateMessage: true, // Return to ranking interface
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
           console.log(`❌ CANCEL: cancel_delete_application - user ${context.userId}`);
-          
-          // Parse button ID: cancel_delete_application_[channelId]_[appIndex]
+
+          const { guildId, userId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
+
+          // Parse button ID: cancel_delete_application_[channelId]_[appIndex]_[configId]
           const parts = context.customId.split('_');
           const channelId = parts[3];
           const appIndex = parseInt(parts[4]);
-          
-          // Just reload the normal ranking interface for this application
-          // (Redirect to ranking navigation to regenerate interface)
-          return {
-            content: '❌ Deletion cancelled.',
-            ephemeral: true
-          };
+          const configId = parts[5] || 'legacy';
+
+          // Load application data
+          const playerData = await loadPlayerData();
+          const allApplications = await getAllApplicationsFromData(guildId);
+          const currentApp = allApplications[appIndex];
+
+          if (!currentApp) {
+            return {
+              components: [{
+                type: 17, // Container
+                components: [{
+                  type: 10, // Text Display
+                  content: '❌ Application not found.'
+                }]
+              }]
+            };
+          }
+
+          // Regenerate Cast Ranking interface using castRankingManager
+          const { generateSeasonAppRankingUI } = await import('./castRankingManager.js');
+
+          // Fetch applicant member
+          let applicantMember;
+          try {
+            applicantMember = await guild.members.fetch(currentApp.userId);
+          } catch (error) {
+            // If member left server, create fallback object
+            applicantMember = {
+              displayName: currentApp.displayName,
+              user: { username: currentApp.username },
+              displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`,
+              id: currentApp.userId,
+              guild: null
+            };
+          }
+
+          // Get season name from config
+          const seasonConfig = playerData[guildId]?.applicationConfigs?.[configId];
+          const seasonName = seasonConfig?.seasonName || 'Unknown Season';
+
+          // Generate ranking UI
+          const rankingResponse = await generateSeasonAppRankingUI({
+            guildId,
+            userId,
+            configId,
+            allApplications,
+            currentApp,
+            appIndex,
+            applicantMember,
+            guild,
+            seasonName,
+            playerData
+          });
+
+          console.log(`✅ SUCCESS: cancel_delete_application - returned to ${currentApp.displayName}`);
+          return rankingResponse;
         }
       })(req, res, client);
       
