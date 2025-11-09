@@ -786,7 +786,7 @@ function createCastlistRows(allCastlists, includeAddButton = true, hasStores = f
                 .setCustomId('show_castlist2_default')
                 .setLabel('Post Castlist')
                 .setStyle(ButtonStyle.Primary)
-                .setEmoji('✅')
+                .setEmoji('📃')
         );
     }
 

@@ -422,7 +422,7 @@ export async function createPlayerManagementUI(options) {
           type: 1, // ActionRow
           components: [new ButtonBuilder()
             .setCustomId('show_castlist2_default')
-            .setLabel('📋 Post Castlist')
+            .setLabel('📃 Post Castlist')
             .setStyle(ButtonStyle.Primary)]
         }];
       }
