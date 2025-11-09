@@ -8588,28 +8588,82 @@ To fix this:
           console.log(`[PLACEMENT EDIT] Loading placement for player ${playerId} from namespace: ${seasonContext} (value: ${placement || 'none'})`);
           console.log(`[PLACEMENT EDIT] Context: castlist=${castlistId}, tribe=${tribeIndex}, page=${tribePage}, mode=${displayMode}`);
 
+          // 🎯 UX ENHANCEMENT: Fetch player context for modal display
+          let playerContextLabel = null;
+          try {
+            const member = await context.guild.members.fetch(playerId);
+            const displayName = member.displayName || member.user.username;
+
+            // Format namespace display
+            const namespaceDisplay = seasonContext === 'global'
+              ? 'Global (All Seasons)'
+              : seasonContext.replace('season_', 'Season ').replace(/_/g, ' ');
+
+            // Format current placement (with ordinal if exists)
+            const currentPlacementText = placement
+              ? ` • Currently: ${placement}${getOrdinalSuffix(placement)}`
+              : ' • Currently: In game';
+
+            // 🧪 EXPERIMENTAL: Standalone Label without component (Option 4)
+            // This pattern is undocumented but works in production (verified in castlist_order modal)
+            // FALLBACK: If Discord rejects this, switch to Option 1 (Text Display - see commented code below)
+            playerContextLabel = {
+              type: 18, // Label
+              label: "Editing Player",
+              description: `${displayName} • ${namespaceDisplay}${currentPlacementText}`
+              // NO component property - pure informational header
+            };
+
+            // 💾 FALLBACK CODE (Option 1: Text Display - documented pattern):
+            // If standalone Label breaks in future Discord updates, uncomment this:
+            // playerContextLabel = {
+            //   type: 10, // Text Display
+            //   content: `### Editing Player\n**${displayName}** • ${namespaceDisplay}${currentPlacementText}`
+            // };
+
+            console.log(`[PLACEMENT EDIT] Added player context: ${displayName} (${namespaceDisplay})`);
+          } catch (error) {
+            console.warn(`[PLACEMENT EDIT] Could not fetch member context for ${playerId}:`, error.message);
+            // If member fetch fails, continue without context label
+          }
+
+          // Helper function for ordinal suffix (1st, 2nd, 3rd, etc.)
+          function getOrdinalSuffix(num) {
+            const j = num % 10;
+            const k = num % 100;
+            if (j === 1 && k !== 11) return 'st';
+            if (j === 2 && k !== 12) return 'nd';
+            if (j === 3 && k !== 13) return 'rd';
+            return 'th';
+          }
+
+          // Build components array with optional player context
+          const modalComponents = [];
+          if (playerContextLabel) {
+            modalComponents.push(playerContextLabel);
+          }
+          modalComponents.push({
+            type: 18, // Label (Components V2)
+            label: "Placement (1-99)",
+            description: "Enter whole number only (1 = Winner, 2 = Runner-up, etc.). Leave blank if still in game.",
+            component: {
+              type: 4, // Text Input
+              custom_id: "placement",
+              value: placement ? placement.toString() : "",
+              placeholder: "e.g., 1, 2, 24",
+              max_length: 2,
+              required: false,
+              style: 1 // Short
+            }
+          });
+
           // Return modal structure with FULL navigation context preserved
           return {
             type: InteractionResponseType.MODAL,
             data: {
               custom_id: `save_placement_${playerId}_${seasonContext}_${castlistId}_${tribeIndex}_${tribePage}_${displayMode}`,
               title: "Edit Season Placement",
-              components: [
-                {
-                  type: 18, // Label (Components V2)
-                  label: "Placement (1-99)",
-                  description: "Enter whole number only (1 = Winner, 2 = Runner-up, etc.). Leave blank if still in game.",
-                  component: {
-                    type: 4, // Text Input
-                    custom_id: "placement",
-                    value: placement ? placement.toString() : "",
-                    placeholder: "e.g., 1, 2, 24",
-                    max_length: 2,
-                    required: false,
-                    style: 1 // Short
-                  }
-                }
-              ]
+              components: modalComponents
             }
           };
         }
