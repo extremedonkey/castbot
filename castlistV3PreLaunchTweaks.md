@@ -2,31 +2,27 @@
 
 ## Implementation Status: November 9, 2024
 
-### ⚠️ CRITICAL ISSUES TO FIX IMMEDIATELY
+### ✅ CRITICAL ISSUES FIXED (November 9, 2024)
 
-1. **Create New Castlist Modal Broken**
-   - Error: "Value of field \"type\" must be one of (1, 9, 10, 12, 13, 14, 17)"
-   - Cause: `createEditInfoModalForNew()` is returning Label components (type 18) in a message response
-   - Fix: Return proper modal structure with type 9 response
-   - File: `/home/reece/castbot/castlistHandlers.js` lines 30-199
+1. **Create New Castlist Modal** ✅ FIXED
+   - Problem: Modal returned with deferred response (can't send modals via webhook)
+   - Solution: Conditionally defer based on selection type - don't defer for "create_new"
+   - Files: `/home/reece/castbot/castlistHandlers.js` line 214, `/home/reece/castbot/buttonHandlerFactory.js` lines 2913-2920
 
-2. **Tribe Removal Interaction Failed**
-   - Error: Intermittent "interaction failed" when removing tribes (e.g., "legacyList")
-   - Cause: Operation takes too long (>3 seconds) without deferred response
-   - Fix: Add `deferred: true` to `handleCastlistTribeSelect` if not already present
-   - File: `/home/reece/castbot/castlistHandlers.js` line 776
+2. **Tribe Add/Remove Timeout** ✅ FIXED
+   - Problem: Operations exceeded 3-second Discord timeout
+   - Solution: Added `deferred: true` to `handleCastlistTribeSelect`
+   - File: `/home/reece/castbot/castlistHandlers.js` line 777
 
-3. **Post Castlist Navigation Bug**
-   - Issue: First tribe (ar.3) shows twice when navigating with next/prev buttons
-   - Pattern: Post Castlist → AR3 → Next → AR3 (wrong, should be Ask) → Next/Back → Works correctly
-   - Likely pagination issue in `show_castlist2_default` handler
-   - File: `/home/reece/castbot/app.js` - search for castlist2_nav_next_tribe
+3. **Post Castlist Navigation** ✅ FIXED
+   - Problem: Wrong tribe order - `reorderTribes()` called with incorrect arguments
+   - Solution: Fixed arguments to `reorderTribes(allTribes, userId, "default", requestedCastlist)`
+   - File: `/home/reece/castbot/app.js` line 4893
 
-4. **Sort Strategy Label Not Updated**
-   - MISSING: "Placements" should be "Alphabetical (A-Z), then Placement"
-   - Description should be: "Any eliminated players shown last"
-   - File: `/home/reece/castbot/castlistHandlers.js` lines 129-133
-   - Also check Edit modal around line 540-547
+4. **Sort Strategy Label** ✅ FIXED
+   - Updated all 3 occurrences: "Placements" → "Alphabetical (A-Z), then Placement"
+   - Updated description: "Any eliminated players shown last"
+   - File: `/home/reece/castbot/castlistHandlers.js` lines 129, 542, 681
 
 5. **ButtonHandlerFactory Deferred Response Issue**
    - ✅ FIXED: Added support for DEFERRED_UPDATE_MESSAGE when updateMessage: true
