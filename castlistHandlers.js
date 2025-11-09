@@ -500,28 +500,30 @@ export async function handleCastlistButton(req, res, client, custom_id) {
           console.log(`[CASTLIST] No seasons found, showing only "No Season" option`);
         }
 
-        // Create modal for editing castlist info with Components V2
-        return {
-          type: 9, // Modal
-          data: {
-            custom_id: `castlist_edit_info_modal_${castlistId}`,
-            title: 'Manage Castlist Info',
-            components: [
-              // Name field (Label + Text Input)
-              {
-                type: 18, // Label
-                label: 'Castlist Name',
-                component: {
-                  type: 4, // Text Input
-                  custom_id: 'castlist_name',
-                  style: 1, // Short
-                  required: true,
-                  value: castlist.name || '',
-                  placeholder: 'Enter castlist name',
-                  min_length: 1,
-                  max_length: 100
-                }
-              },
+        // Build modal components based on whether it's default castlist
+        const isDefaultCastlist = castlistId === 'default';
+        const modalComponents = [];
+
+        // Only show name field for non-default castlists
+        if (!isDefaultCastlist) {
+          modalComponents.push({
+            type: 18, // Label
+            label: 'Castlist Name',
+            component: {
+              type: 4, // Text Input
+              custom_id: 'castlist_name',
+              style: 1, // Short
+              required: true,
+              value: castlist.name || '',
+              placeholder: 'Enter castlist name',
+              min_length: 1,
+              max_length: 100
+            }
+          });
+        }
+
+        // Always show Sort Strategy and Season selector
+        modalComponents.push(
 
               // Sort Strategy (Label + String Select) - MOVED TO SECOND POSITION
               {
@@ -577,37 +579,6 @@ export async function handleCastlistButton(req, res, client, custom_id) {
                 }
               },
 
-              // Castlist Emoji field (Label + Text Input)
-              {
-                type: 18, // Label
-                label: 'Castlist Emoji',
-                description: 'Normal or discord emoji in the form <:castbot:1333820342275149824>',
-                component: {
-                  type: 4, // Text Input
-                  custom_id: 'castlist_emoji',
-                  style: 1, // Short
-                  required: false,
-                  value: castlist.metadata?.emoji || '',
-                  placeholder: 'Enter an emoji (e.g., 📋 or <:custom:123>)',
-                  max_length: 60
-                }
-              },
-
-              // Description field (Label + Text Input)
-              {
-                type: 18, // Label
-                label: 'Description',
-                description: 'Optional description for this castlist',
-                component: {
-                  type: 4, // Text Input
-                  custom_id: 'castlist_description',
-                  style: 2, // Paragraph
-                  required: false,
-                  value: castlist.metadata?.description || '',
-                  placeholder: 'Describe this castlist...',
-                  max_length: 200
-                }
-              }
             ]
           }
         };

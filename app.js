@@ -8101,8 +8101,8 @@ To fix this:
                 // 4. Auto-Randomize
                 {
                   type: 18, // Label
-                  label: 'Have CastBot Randomize Swap?',
-                  description: 'Automatic random assignment with dramatic reveal',
+                  label: 'CastBot Auto-Randomization',
+                  description: 'Experimental: Let CastBot randomly assign players',
                   component: {
                     type: 3, // String Select
                     custom_id: 'auto_randomize',
@@ -8114,9 +8114,9 @@ To fix this:
                         emoji: { name: '🎭' }
                       },
                       {
-                        label: 'No - Swap Manually',
+                        label: 'No - Manual Assignment',
                         value: 'no',
-                        description: 'Manually assign roles after creation',
+                        description: 'You assign roles after creation',
                         emoji: { name: '✋' }
                       }
                     ]
