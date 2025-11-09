@@ -30572,6 +30572,12 @@ Are you sure you want to continue?`;
         const { clearRequestCache } = await import('./storage.js');
         clearRequestCache();
 
+        // 🔧 CRITICAL: Send deferred response IMMEDIATELY before slow operations
+        // Fetching guild members can take 2-5 seconds, exceeding Discord's 3-second limit
+        await res.send({
+          type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
+        });
+
         console.log(`🔄 Refreshing castlist with updated placement`);
 
         // 🔧 FIX: Rebuild castlist using FULL navigation context (Safari pattern)
@@ -30684,23 +30690,42 @@ Are you sure you want to continue?`;
           { playerData, guildId }  // Pass playerData for sorting
         );
 
-        // Send UPDATE_MESSAGE to refresh the UI (matches Safari modal pattern)
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: castlistResponse
+        // Edit original message via webhook (after deferred response)
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: castlistResponse
         });
+
+        console.log(`✅ Placement modal: Successfully refreshed castlist UI`);
 
       } catch (error) {
         console.error('❌ Error in save_placement modal handler:', error);
         console.error('Stack trace:', error.stack);
-        // Send error as ephemeral message
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `❌ Error saving placement: ${error.message}`,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
+
+        // If we already sent deferred response, edit via webhook
+        // Otherwise send error directly
+        if (res.headersSent) {
+          const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+          const { sanitizeErrorMessage } = await import('./utils.js');
+          const errorMessage = sanitizeErrorMessage(error);
+
+          await DiscordRequest(endpoint, {
+            method: 'PATCH',
+            body: {
+              content: `❌ Error saving placement: ${errorMessage}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        } else {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `❌ Error saving placement: ${error.message}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
       }
 
     } else if (custom_id.startsWith('condition_currency_modal_')) {
