@@ -325,6 +325,99 @@ Each component was "trying to help" but made things worse.
 - [ ] Document the ID format clearly
 - [ ] Consider adding ID format validation
 
+## 🚨 NEW DISCOVERY: Season Namespace Bug (Nov 10, 2025)
+
+**Status**: ✅ FIXED
+
+### The Problem
+
+Placements were being saved to `global` namespace even when castlist had a `seasonId`:
+
+```javascript
+// Castlist entity has:
+"seasonId": "season_d429753b4ad9414d"  // ← At TOP level
+
+// But code was looking for:
+seasonId: castlistEntity?.settings?.seasonId  // ❌ WRONG - undefined!
+
+// Result:
+seasonContext = 'global'  // Falls back to global
+```
+
+### Root Cause
+
+**Three locations** in `app.js` had incorrect property access:
+- Line 8340: `show_castlist2` handler
+- Line 29985: Unknown handler
+- Line 30653: `save_placement_` handler
+
+All had the same wrong pattern:
+```javascript
+castlistSettings: {
+  ...castlistEntity?.settings,
+  seasonId: castlistEntity?.settings?.seasonId  // ❌ seasonId NOT in settings
+}
+```
+
+### The Confusion
+
+Per CastlistV3-DataStructures.md, entity structure is:
+```javascript
+{
+  "id": "castlist_archive_1762682582653",
+  "seasonId": "season_d429753b4ad9414d",  // ← TOP LEVEL
+  "settings": {
+    "sortStrategy": "placements"  // ← seasonId NOT here
+  }
+}
+```
+
+### The Fix
+
+Changed all 3 locations to:
+```javascript
+seasonId: castlistEntity?.seasonId  // ✅ Get from top level
+```
+
+**Files Changed**:
+- `app.js` (3 locations)
+
+**Testing**:
+- [ ] Create season with application config
+- [ ] Create castlist linked to that season
+- [ ] Edit placement - should save to `season_{id}` namespace
+- [ ] Verify placement displays correctly
+- [ ] Check global namespace is NOT polluted
+
+### Logs Showing the Bug
+
+```
+🔍 [PLACEMENT DEBUG] seasonId from castlistSettings: undefined
+[PLACEMENT UI] Loading placements from namespace: global (12 placements found)
+✅ Saved placement 63 to global for player 696456309762949141
+```
+
+**Expected after fix**:
+```
+🔍 [PLACEMENT DEBUG] seasonId from castlistSettings: season_d429753b4ad9414d
+[PLACEMENT UI] Loading placements from namespace: season_d429753b4ad9414d
+✅ Saved placement 63 to season_d429753b4ad9414d for player 696456309762949141
+```
+
+### Impact
+
+**Before Fix**:
+- All placements saved to `global` regardless of season
+- Season-specific placement tracking impossible
+- Placements from different seasons mixed together
+
+**After Fix**:
+- Placements correctly namespaced by season
+- `global` used only for cross-season castlists
+- Per-season placement isolation working as designed
+
+---
+
 ## 🔮 Future Prevention
 
 1. **Add ID format validation**: Check that castlist IDs match expected pattern
@@ -332,7 +425,9 @@ Each component was "trying to help" but made things worse.
 3. **Improve error messages**: Include the actual ID that failed
 4. **Add button length validation**: Check before sending to Discord
 5. **Create ID format documentation**: Clear spec for all ID types
+6. **Add seasonId access tests**: Prevent future wrong-nesting bugs
+7. **Document entity structure clearly**: Make top-level vs nested properties obvious
 
 ---
 
-*"In the kingdom of edge cases, the triple-bug cascade is king."*
+*"In the kingdom of edge cases, the triple-bug cascade is king. And seasons are the crown jewels."*

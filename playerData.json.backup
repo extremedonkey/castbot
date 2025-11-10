@@ -3538,11 +3538,16 @@
         "type": "custom",
         "createdAt": 1762682582653,
         "createdBy": "391415444084490240",
-        "seasonId": "season_cac1b81de8914c79",
+        "seasonId": "season_d429753b4ad9414d",
         "metadata": {
           "description": "Archived from tribe swap on 11/9/2025",
-          "emoji": "📦"
-        }
+          "emoji": "🔄️"
+        },
+        "settings": {
+          "sortStrategy": "placements"
+        },
+        "modifiedAt": 1762732207010,
+        "modifiedBy": "391415444084490240"
       },
       "castlist_1762685819551_1331657596087566398": {
         "id": "castlist_1762685819551_1331657596087566398",
@@ -3641,6 +3646,16 @@
           "placement": 1,
           "updatedBy": "391415444084490240",
           "updatedAt": "2025-11-04T12:54:47.232Z"
+        },
+        "233762709932474370": {
+          "placement": 1,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-10T00:02:19.695Z"
+        },
+        "630470402900230146": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-10T00:02:31.340Z"
         }
       },
       "season_cac1b81de8914c79": {
