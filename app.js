@@ -8259,8 +8259,22 @@ To fix this:
         const guild = await client.guilds.fetch(guildId);
         const member = req.body.member ? await guild.members.fetch(userId) : null;
 
-        // Fetch all guild members to ensure role.members works
-        await guild.members.fetch();
+        // 🔧 FIX: Smart member caching (same pattern as save_placement handler)
+        const cacheRatio = guild.members.cache.size / guild.memberCount;
+        if (cacheRatio < 0.8) {
+          console.log(`[CASTLIST NAV] Cache incomplete (${guild.members.cache.size}/${guild.memberCount}), fetching members...`);
+          try {
+            const fetchStart = Date.now();
+            await guild.members.fetch({ timeout: 10000 }); // 10 second timeout
+            const fetchTime = Date.now() - fetchStart;
+            console.log(`[CASTLIST NAV] ✅ Fetched ${guild.members.cache.size} members in ${fetchTime}ms`);
+          } catch (fetchError) {
+            console.warn(`[CASTLIST NAV] ⚠️ Member fetch failed after 10s: ${fetchError.message}`);
+            console.warn(`[CASTLIST NAV] Continuing with partial cache (${guild.members.cache.size} members)`);
+          }
+        } else {
+          console.log(`[CASTLIST NAV] Cache sufficiently populated (${guild.members.cache.size}/${guild.memberCount}), skipping fetch`);
+        }
 
         // Import necessary functions
         const { loadPlayerData } = await import('./storage.js');
@@ -8580,13 +8594,9 @@ To fix this:
         seasonContext = parts.slice(3, castlistIdStartIdx).join('_') || 'global';
         castlistIdShort = parts.slice(castlistIdStartIdx, parts.length - 3).join('_');
 
-        // 🔧 CRITICAL FIX: Reconstruct full castlistId by appending guild ID
-        // Button custom_id uses shortened format (castlist_TIMESTAMP) to stay under 100-char limit
-        // Full format needed for lookups: castlist_TIMESTAMP_GUILDID
-        const guildId = req.body.guild_id;
-        castlistId = castlistIdShort.includes('_') && castlistIdShort.split('_').length === 2
-            ? `${castlistIdShort}_${guildId}`  // Reconstruct: "castlist_TIMESTAMP_GUILDID"
-            : castlistIdShort;  // Already full format (backward compatibility)
+        // 🔧 FIX: Use parsed castlistId as-is (includes type suffix like _system, _legacy)
+        // DO NOT append guildId - entity IDs are castlist_{timestamp}_{type}, not castlist_{timestamp}_{guildId}
+        castlistId = castlistIdShort;
       }
 
       return ButtonHandlerFactory.create({

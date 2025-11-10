@@ -2558,6 +2558,23 @@
         "seasonId": "season_d429753b4ad9414d",
         "seasonName": "Season 20 - the OG Test Season",
         "questions": []
+      },
+      "config_1762792175795_391415444084490240": {
+        "buttonText": "Apply to Cleanvivor",
+        "explanatoryText": "Join Cleanvivor!",
+        "completionDescription": "Thank you for completing your application! A host will review it soon.",
+        "completionImage": null,
+        "channelFormat": "📝%name%-app",
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "draft",
+        "createdAt": 1762792175795,
+        "lastUpdated": 1762792175795,
+        "seasonId": "season_ab9fe786206f428e",
+        "seasonName": "Cleanvivor",
+        "questions": []
       }
     },
     "ownerInfo": {
@@ -3371,9 +3388,9 @@
           "migratedFrom": "virtual_bGVnYWN5TGlzdA",
           "migrationDate": 1759638936215
         },
-        "modifiedAt": 1762699186081,
+        "modifiedAt": 1762792192887,
         "modifiedBy": "391415444084490240",
-        "seasonId": "season_cac1b81de8914c79"
+        "seasonId": "season_ab9fe786206f428e"
       },
       "castlist_1759671885172_system": {
         "id": "castlist_1759671885172_system",
@@ -3656,6 +3673,11 @@
           "placement": 2,
           "updatedBy": "391415444084490240",
           "updatedAt": "2025-11-10T00:02:31.340Z"
+        },
+        "696456309762949141": {
+          "placement": 63,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-10T00:09:31.241Z"
         }
       },
       "season_cac1b81de8914c79": {
