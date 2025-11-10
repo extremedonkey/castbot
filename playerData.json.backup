@@ -1903,8 +1903,8 @@
       "1333822411912642630": {
         "emoji": "🎖️",
         "showPlayerEmojis": false,
-        "color": "#2ECC71",
-        "analyticsName": "🧟‍♂️ 👑 Castbot MVPs 🧟‍♂️",
+        "color": "#FFFFFF",
+        "analyticsName": "👑 Castbot MVPs",
         "analyticsAdded": 1754751381750,
         "castlistIds": [
           "castlist_1759638936214_system",
@@ -1960,7 +1960,10 @@
         "name": "Tribe 1368969395795398716",
         "emoji": "🏕️",
         "type": "default",
-        "castlistIds": []
+        "castlistIds": [
+          "castlist_archive_1762682582653"
+        ],
+        "castlist": "CastBotVivor OG Tribes"
       },
       "1368969393819746336": {
         "name": "Tribe 1368969393819746336",
@@ -2538,6 +2541,23 @@
             "createdAt": 1762183379430
           }
         ]
+      },
+      "config_1762732148472_391415444084490240": {
+        "buttonText": "Apply to Season 20 - the OG Test Season",
+        "explanatoryText": "It's a bad season",
+        "completionDescription": "Thank you for completing your application! A host will review it soon.",
+        "completionImage": null,
+        "channelFormat": "📝%name%-app",
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "draft",
+        "createdAt": 1762732148472,
+        "lastUpdated": 1762732148472,
+        "seasonId": "season_d429753b4ad9414d",
+        "seasonName": "Season 20 - the OG Test Season",
+        "questions": []
       }
     },
     "ownerInfo": {
@@ -4047,14 +4067,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 577,
+    "memberCount": 579,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1762657432976,
+    "lastUpdated": 1762731315373,
     "players": {
       "235148962103951360": {
         "emojiCode": "<:Carl_bot:1380989603783249950>"

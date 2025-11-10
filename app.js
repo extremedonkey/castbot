@@ -30505,12 +30505,10 @@ Are you sure you want to continue?`;
 
         const guildId = req.body.guild_id;
 
-        // 🔧 CRITICAL FIX: Reconstruct full castlistId by appending guild ID
-        // Modal custom_id uses shortened format (castlist_TIMESTAMP) to stay under 100-char limit
-        // Full format needed for lookups: castlist_TIMESTAMP_GUILDID
-        const castlistId = castlistIdShort.includes('_') && castlistIdShort.split('_').length === 2
-            ? `${castlistIdShort}_${guildId}`  // Reconstruct: "castlist_TIMESTAMP_GUILDID"
-            : castlistIdShort;  // Already full format (backward compatibility)
+        // 🔧 FIX: Use parsed castlistId directly - entity IDs have format castlist_{timestamp}_{type}
+        // DO NOT append guildId - that creates invalid IDs like castlist_123_974318870057848842
+        // Correct format: castlist_1760892362223_system (type suffix, not guild ID)
+        const castlistId = castlistIdShort;  // Use as-is from button parsing
 
         const channelId = req.body.channel_id;
         const member = req.body.member;
@@ -30727,8 +30725,15 @@ Are you sure you want to continue?`;
           await DiscordRequest(endpoint, {
             method: 'PATCH',
             body: {
-              content: `❌ Error saving placement: ${errorMessage}`
-              // ❌ REMOVED: flags (can't modify flags on existing message)
+              // Use Components V2 structure for error message
+              components: [{
+                type: 17,  // Container
+                components: [{
+                  type: 10,  // Text Display
+                  content: `❌ Error refreshing castlist: ${errorMessage}`
+                }]
+              }]
+              // NOTE: Cannot modify flags on existing message via PATCH
             }
           });
         } else {
