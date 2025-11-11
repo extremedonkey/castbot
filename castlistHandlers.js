@@ -133,6 +133,12 @@ export async function createEditInfoModalForNew(guildId) {
               default: true // Default option
             },
             {
+              label: 'Vanity Role (Winners)',
+              value: 'vanity_role',
+              description: "Useful for Winners' castlist",
+              emoji: { name: '🏆' }
+            },
+            {
               label: 'Alphabetical (A-Z), no placements',
               value: 'alphabetical',
               description: 'Sort players by name',
@@ -550,6 +556,13 @@ export async function handleCastlistButton(req, res, client, custom_id) {
                   description: 'Any eliminated players shown last',
                   emoji: { name: '🏅' },
                   default: castlist.settings?.sortStrategy === 'placements' || !castlist.settings?.sortStrategy
+                },
+                {
+                  label: 'Vanity Role (Winners)',
+                  value: 'vanity_role',
+                  description: "Useful for Winners' castlist",
+                  emoji: { name: '🏆' },
+                  default: castlist.settings?.sortStrategy === 'vanity_role'
                 },
                 {
                   label: 'Alphabetical (A-Z), no placements',

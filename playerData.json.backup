@@ -28,317 +28,6 @@
     },
     "timezones": {}
   },
-  "1297188286191767603": {
-    "serverName": "EpochORG S7: Rumrunners",
-    "icon": "https://cdn.discordapp.com/icons/1297188286191767603/82ee1b34273d340c02179b0ae8567e8a.webp",
-    "ownerId": "696456309762949141",
-    "memberCount": 79,
-    "description": null,
-    "vanityURLCode": null,
-    "preferredLocale": "en-US",
-    "partnered": false,
-    "verified": false,
-    "createdTimestamp": 1729344188021,
-    "lastUpdated": 1759258331129,
-    "players": {
-      "391415444084490240": {
-        "age": "36",
-        "emojiCode": null
-      },
-      "676262975132139522": {
-        "emojiCode": null,
-        "age": "21"
-      },
-      "1088078919409881098": {
-        "emojiCode": "<:1088078919409881098:1331592200458600499>",
-        "age": "21"
-      },
-      "287002306078310400": {
-        "emojiCode": "<:287002306078310400:1331592203516121121>",
-        "age": "27"
-      },
-      "208197633846542336": {
-        "emojiCode": "<:208197633846542336:1331592205822857216>",
-        "age": "21"
-      },
-      "1147751688481026110": {
-        "emojiCode": "<:1147751688481026110:1330211914050965616>",
-        "age": "23"
-      },
-      "696456309762949141": {
-        "emojiCode": "<:696456309762949141:1333357906367614977>",
-        "age": "99"
-      },
-      "197562770068078592": {
-        "emojiCode": null,
-        "age": "100"
-      },
-      "443545183997657120": {
-        "emojiCode": null
-      },
-      "909852958525636660": {
-        "emojiCode": "<:909852958525636660:1333357921840533566>"
-      },
-      "386463066600112128": {
-        "emojiCode": "<:386463066600112128:1333357924315037756>",
-        "age": "55"
-      },
-      "689155539028148232": {
-        "emojiCode": "<:689155539028148232:1333357925892362271>",
-        "age": "10"
-      },
-      "1125936782698086461": {
-        "emojiCode": null
-      },
-      "723629872173416579": {
-        "emojiCode": null
-      },
-      "504494339116761088": {
-        "emojiCode": "<:504494339116761088:1330120066595033211>"
-      },
-      "499595256270946326": {
-        "age": "10",
-        "emojiCode": "<:499595256270946326:1333386167282040862>"
-      },
-      "784284227373367346": {
-        "emojiCode": "<:784284227373367346:1335634894684160127>"
-      },
-      "741788327572668486": {
-        "emojiCode": null
-      },
-      "1319912453248647170": {
-        "emojiCode": null
-      },
-      "235148962103951360": {
-        "emojiCode": "<:235148962103951360:1335634815143383061>"
-      },
-      "1086246253819613274": {
-        "age": "19"
-      },
-      "349895876845633546": {
-        "emojiCode": null
-      },
-      "347887248982671371": {
-        "emojiCode": "<:347887248982671371:1337762174172663808>"
-      },
-      "130194954562699264": {
-        "emojiCode": "<:130194954562699264:1337762213250863180>"
-      },
-      "1064656591862894732": {
-        "emojiCode": null
-      },
-      "331217504653279242": {
-        "emojiCode": null
-      },
-      "977455730300956683": {
-        "emojiCode": null
-      },
-      "1037731441771020358": {
-        "emojiCode": null
-      },
-      "650409567028641802": {
-        "emojiCode": null
-      },
-      "621198992386293783": {
-        "emojiCode": null
-      },
-      "762931741715070996": {
-        "emojiCode": "<:762931741715070996:1337762364145012847>"
-      },
-      "711433088198115328": {
-        "emojiCode": "<:711433088198115328:1337762366342955120>"
-      },
-      "725745811283116032": {
-        "emojiCode": null
-      },
-      "209773824357564416": {
-        "emojiCode": null
-      },
-      "105719056325181440": {
-        "emojiCode": null
-      },
-      "351074790368477184": {
-        "emojiCode": null
-      },
-      "802619353065455656": {
-        "emojiCode": null
-      },
-      "847294676948221982": {
-        "emojiCode": null
-      },
-      "765705051162804264": {
-        "emojiCode": null
-      },
-      "644748993288601600": {
-        "emojiCode": "<:644748993288601600:1337762613026750584>"
-      },
-      "642919782219513880": {
-        "emojiCode": "<:642919782219513880:1337762615421833261>"
-      },
-      "1192911250724757597": {
-        "emojiCode": null
-      },
-      "1011791456492597308": {
-        "emojiCode": "<a:1011791456492597308:1337762623378427996>"
-      },
-      "654839660953993247": {
-        "emojiCode": "<:654839660953993247:1337762625953468477>"
-      },
-      "572291395365109770": {
-        "emojiCode": "<:572291395365109770:1337762628176449558>"
-      },
-      "361004472568250371": {
-        "emojiCode": null
-      },
-      "942858850850205717": {
-        "emojiCode": "<a:942858850850205717:1337762991029882932>"
-      },
-      "636588274122620928": {
-        "emojiCode": null
-      },
-      "444637942988668938": {
-        "emojiCode": null
-      },
-      "704354759527628840": {
-        "emojiCode": null
-      },
-      "684530139694104618": {
-        "emojiCode": null
-      }
-    },
-    "tribes": {
-      "1297206459301367914": {
-        "emoji": null,
-        "castlist": "production"
-      },
-      "1297199733718384744": {
-        "emoji": null,
-        "castlist": "carl"
-      },
-      "1297209767814631447": {
-        "emoji": "😅",
-        "castlist": "carl"
-      },
-      "1297188286305013834": {
-        "emoji": null,
-        "castlist": "immune"
-      }
-    },
-    "timezones": {
-      "1320094346288300124": {
-        "offset": -5,
-        "timezoneId": "ET",
-        "dstObserved": true,
-        "standardName": "EST (UTC-5)"
-      },
-      "1320094564731850803": {
-        "offset": -6,
-        "timezoneId": "CT",
-        "dstObserved": true,
-        "standardName": "CST (UTC-6)"
-      },
-      "1330207937330679938": {
-        "offset": 13,
-        "timezoneId": "NZST",
-        "dstObserved": true,
-        "standardName": "NZST (UTC+12)"
-      },
-      "1335635318027845754": {
-        "offset": 2,
-        "timezoneId": "CET",
-        "dstObserved": true,
-        "standardName": "CET (UTC+1)"
-      },
-      "1335635320045043785": {
-        "offset": 5.5,
-        "timezoneId": "IST",
-        "dstObserved": false,
-        "standardName": "IST (UTC+5.5)"
-      },
-      "1320094634646704350": {
-        "offset": -3,
-        "timezoneId": "AT",
-        "dstObserved": true,
-        "standardName": "AST (UTC-4)"
-      },
-      "1320094467486908507": {
-        "offset": -8,
-        "timezoneId": "PT",
-        "dstObserved": true,
-        "standardName": "PST (UTC-8)"
-      },
-      "1335635312508145728": {
-        "offset": -7,
-        "timezoneId": "MT"
-      },
-      "1328044184673714248": {
-        "offset": 0,
-        "timezoneId": "GMT",
-        "dstObserved": true,
-        "standardName": "GMT (UTC+0)"
-      },
-      "1330207345619374131": {
-        "offset": 8,
-        "timezoneId": "GMT8",
-        "dstObserved": false,
-        "standardName": "GMT+8 (UTC+8)"
-      },
-      "1328044491860607118": {
-        "offset": 10,
-        "timezoneId": "AEST",
-        "dstObserved": true,
-        "standardName": "AEST (UTC+10)"
-      },
-      "1431904586062495794": {
-        "offset": -3.5,
-        "dstObserved": true,
-        "standardName": "NST (UTC-3:30)",
-        "timezoneId": "NT"
-      },
-      "1431904591611433001": {
-        "offset": 2,
-        "dstObserved": true,
-        "standardName": "EET (UTC+2)",
-        "timezoneId": "EET"
-      },
-      "1431904593599795200": {
-        "offset": 2,
-        "dstObserved": false,
-        "standardName": "SAST (UTC+2)",
-        "timezoneId": "SAST"
-      },
-      "1431904597546504304": {
-        "offset": 7,
-        "dstObserved": false,
-        "standardName": "ICT (UTC+7)",
-        "timezoneId": "ICT"
-      },
-      "1431904603489833151": {
-        "offset": 9,
-        "dstObserved": false,
-        "standardName": "JST (UTC+9)",
-        "timezoneId": "JST"
-      }
-    },
-    "pronounRoleIDs": [
-      "1317667003015626795",
-      "1317667163854868552",
-      "1321780294482923530",
-      "1297199989646299208",
-      "1297199987498946673",
-      "1297199988375293972",
-      "1319920908680433664",
-      "1297199988954370068",
-      "1330184045216141415"
-    ],
-    "ownerInfo": {
-      "username": "mpschettig",
-      "globalName": "Tylenol Boy",
-      "discriminator": "0",
-      "tag": "mpschettig"
-    },
-    "analyticsVersion": "1.0"
-  },
   "1127596863885934652": {
     "serverName": "LOSTVivor",
     "players": {
@@ -3377,7 +3066,7 @@
         "createdAt": 1759638936215,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "placements_alpha",
+          "sortStrategy": "placements",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -3388,7 +3077,7 @@
           "migratedFrom": "virtual_bGVnYWN5TGlzdA",
           "migrationDate": 1759638936215
         },
-        "modifiedAt": 1762792192887,
+        "modifiedAt": 1762793300036,
         "modifiedBy": "391415444084490240",
         "seasonId": "season_ab9fe786206f428e"
       },
@@ -3854,6 +3543,23 @@
           "updatedBy": "391415444084490240",
           "updatedAt": "2025-10-19T12:03:37.486Z"
         }
+      },
+      "season_ab9fe786206f428e": {
+        "676262975132139522": {
+          "placement": 1,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-10T16:32:06.456Z"
+        },
+        "208197633846542336": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-10T16:47:54.837Z"
+        },
+        "572291395365109770": {
+          "placement": 3,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-10T16:48:03.793Z"
+        }
       }
     }
   },
@@ -4104,14 +3810,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 579,
+    "memberCount": 578,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1762731315373,
+    "lastUpdated": 1762792620193,
     "players": {
       "235148962103951360": {
         "emojiCode": "<:Carl_bot:1380989603783249950>"
@@ -9466,14 +9172,14 @@
     "serverName": "CastBot Regression Green",
     "icon": "https://cdn.discordapp.com/icons/1400479796219215959/a3130de1fcf31537b8d156c015d17b42.webp",
     "ownerId": "391415444084490240",
-    "memberCount": 3,
+    "memberCount": 4,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1753970803075,
-    "lastUpdated": 1759258334900,
+    "lastUpdated": 1762792627779,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -14671,5 +14377,78 @@
       "tag": "extremedonkey"
     },
     "analyticsVersion": "1.0"
+  },
+  "1297188286191767603": {
+    "tribes": {
+      "1297188286338695172": {
+        "castlistIds": [
+          "castlist_1762820921276_1297188286191767603"
+        ],
+        "castlist": "Prod Rankings",
+        "color": "#9b59b6",
+        "analyticsName": "Production",
+        "analyticsAdded": 1762820929347,
+        "emoji": "🏕️",
+        "showPlayerEmojis": true,
+        "memberCount": 1
+      }
+    },
+    "applicationConfigs": {},
+    "placements": {
+      "global": {
+        "391415444084490240": {
+          "placement": 1,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-11T00:29:06.861Z"
+        },
+        "386463066600112128": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-11T00:29:34.325Z"
+        },
+        "443545183997657120": {
+          "placement": 3,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-11T00:29:43.342Z"
+        },
+        "696456309762949141": {
+          "placement": 4,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-11T00:29:48.859Z"
+        },
+        "538540453973327873": {
+          "placement": 5,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-11T00:29:54.592Z"
+        },
+        "909852958525636660": {
+          "placement": 6,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-11T00:30:00.522Z"
+        }
+      }
+    },
+    "players": {},
+    "timezones": {},
+    "castlistConfigs": {
+      "castlist_1762820921276_1297188286191767603": {
+        "id": "castlist_1762820921276_1297188286191767603",
+        "name": "Prod Rankings",
+        "type": "custom",
+        "createdAt": 1762820921276,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "placements",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "emoji": "📋",
+          "description": "",
+          "lastModified": 1762820921276
+        }
+      }
+    }
   }
 }
