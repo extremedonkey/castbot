@@ -25,7 +25,9 @@ export class CastlistManager {
     }
     
     // Generate ID
-    const id = `castlist_${Date.now()}_${config.createdBy || 'system'}`;
+    // 🔧 FIX: Use type suffix (from config.type or default 'custom'), not createdBy user ID
+    // Entity ID format is castlist_{timestamp}_{type} where type = system|legacy|custom
+    const id = `castlist_${Date.now()}_${config.type || 'custom'}`;
     
     // Create castlist entity
     const castlist = {

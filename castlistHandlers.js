@@ -1308,7 +1308,9 @@ export async function handleCreateNewModal(req, res, client) {
     }
 
     // Generate unique ID for new castlist
-    const newId = `castlist_${Date.now()}_${guildId}`;
+    // 🔧 FIX: Use type suffix (custom) instead of guildId to match entity format castlist_{timestamp}_{type}
+    // This keeps IDs short (29 chars) so placement buttons stay under 100-char Discord limit
+    const newId = `castlist_${Date.now()}_custom`;
 
     // Extract season selection (might be empty array if "No Season" was deselected)
     const selectedSeasonId = values.season_id?.[0] || null;
