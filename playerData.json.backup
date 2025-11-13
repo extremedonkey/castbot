@@ -14438,7 +14438,7 @@
         "createdAt": 1762820921276,
         "createdBy": "391415444084490240",
         "settings": {
-          "sortStrategy": "placements",
+          "sortStrategy": "placements_alpha",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -14447,7 +14447,9 @@
           "emoji": "📋",
           "description": "",
           "lastModified": 1762820921276
-        }
+        },
+        "modifiedAt": 1762821030860,
+        "modifiedBy": "391415444084490240"
       }
     }
   }
