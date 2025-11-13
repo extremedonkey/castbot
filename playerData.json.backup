@@ -3738,8 +3738,19 @@
     "players": {},
     "tribes": {
       "1241383870260056095": {
-        "emoji": null,
-        "castlist": "default"
+        "emoji": null
+      },
+      "1241380706643611742": {
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "default",
+        "color": "#f1c40f",
+        "analyticsName": "Season 4: Ancient Egypt",
+        "analyticsAdded": 1763050588989,
+        "emoji": "🏕️",
+        "showPlayerEmojis": true,
+        "memberCount": 1
       }
     },
     "timezones": {},
@@ -3750,7 +3761,48 @@
       "discriminator": "0",
       "tag": "mpschettig"
     },
-    "analyticsVersion": "1.0"
+    "analyticsVersion": "1.0",
+    "applicationConfigs": {
+      "config_1763050412770_391415444084490240": {
+        "buttonText": "Apply to Season 4 - Ancient Egypt",
+        "explanatoryText": "Join Season 4 - Ancient Egypt!",
+        "completionDescription": "Thank you for completing your application! A host will review it soon.",
+        "completionImage": null,
+        "channelFormat": "📝%name%-app",
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "draft",
+        "createdAt": 1763050412770,
+        "lastUpdated": 1763050412770,
+        "seasonId": "season_33a54106f63a468e",
+        "seasonName": "Season 4 - Ancient Egypt",
+        "questions": []
+      }
+    },
+    "castlistConfigs": {
+      "default": {
+        "id": "default",
+        "name": "Active Castlist",
+        "type": "system",
+        "createdAt": 1763050571045,
+        "createdBy": "system",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
+          "emoji": "📋",
+          "isDefault": true
+        },
+        "modifiedAt": 1763050732112,
+        "modifiedBy": "system"
+      }
+    }
   },
   "1365865567227219968": {
     "serverName": "CastBOTBREAK",
@@ -12586,14 +12638,14 @@
     "serverName": "Triumph Hub",
     "icon": "https://cdn.discordapp.com/icons/1080166267136262154/174fdda5d62bc8c2227e31f8111e7f05.webp",
     "ownerId": "572291395365109770",
-    "memberCount": 449,
+    "memberCount": 450,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1677602106604,
-    "lastUpdated": 1762576009409,
+    "lastUpdated": 1763004133299,
     "players": {
       "572291395365109770": {
         "age": "29"

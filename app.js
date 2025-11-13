@@ -30495,7 +30495,8 @@ Are you sure you want to continue?`;
         const tribePage = parseInt(parts[parts.length - 2]);
         const tribeIndex = parseInt(parts[parts.length - 3]);
 
-        // Find the castlist by looking for "castlist_" pattern
+        // Find the castlist by looking for "castlist" pattern OR handle special IDs like "default"
+        // Button format: edit_placement_{userId}_{seasonContext}_{castlistId}_{tribeIdx}_{tribePage}_{mode}
         let castlistIdStartIdx = -1;
         for (let i = parts.length - 4; i >= 3; i--) {
           if (parts[i] === 'castlist') {
@@ -30504,9 +30505,11 @@ Are you sure you want to continue?`;
           }
         }
 
+        // If no "castlist" found, assume single-part castlistId at fixed position
+        // (for special IDs like "default", "active", etc.)
         if (castlistIdStartIdx === -1) {
-          console.error(`❌ Could not find 'castlist' in modal ID: ${custom_id}`);
-          throw new Error('Invalid modal ID format - missing castlist identifier');
+          castlistIdStartIdx = parts.length - 4; // Position before tribeIdx/tribePage/mode
+          console.log(`🔍 [PLACEMENT] No 'castlist' keyword found, assuming single-part ID at index ${castlistIdStartIdx}`);
         }
 
         const playerId = parts[2];
