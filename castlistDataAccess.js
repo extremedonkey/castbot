@@ -129,7 +129,12 @@ export async function getTribesForCastlist(guildId, castlistIdentifier, client) 
         name: role.name,        // Discord role name (NOT displayName override)
         members,                // Discord.js Member objects (may be empty)
         memberCount: members.length,
-        castlistSettings: castlist.settings, // Link to parent castlist
+        // 🔧 FIX: Include root-level seasonId override (same pattern as edit mode handlers)
+        // seasonId is at TOP LEVEL of castlist entity, not in settings
+        castlistSettings: {
+          ...castlist.settings,
+          seasonId: castlist.seasonId  // Override with root-level seasonId for placement namespace resolution
+        },
         castlistId: castlist.id,             // Resolved castlist ID
         guildId                              // Guild context
       });

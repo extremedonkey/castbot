@@ -3789,18 +3789,46 @@
         "createdAt": 1763050571045,
         "createdBy": "system",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "placements",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
         },
         "metadata": {
-          "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
-          "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1763050732112,
-        "modifiedBy": "system"
+        "modifiedAt": 1763051188752,
+        "modifiedBy": "system",
+        "seasonId": "season_33a54106f63a468e"
+      }
+    },
+    "placements": {
+      "season_33a54106f63a468e": {
+        "847294676948221982": {
+          "placement": 3,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-13T16:23:06.143Z"
+        },
+        "233762709932474370": {
+          "placement": 17,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-13T16:23:55.769Z"
+        },
+        "598597777663983646": {
+          "placement": 5,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-13T16:24:07.168Z"
+        },
+        "209773824357564416": {
+          "placement": 12,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-13T16:24:30.122Z"
+        },
+        "802619353065455656": {
+          "placement": 9,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-13T16:24:46.637Z"
+        }
       }
     }
   },
