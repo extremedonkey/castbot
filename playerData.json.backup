@@ -6042,12 +6042,15 @@
         "analyticsAdded": 1762615893371
       },
       "1385242917890949213": {
-        "emoji": "🤵",
+        "emoji": "😎",
         "castlist": "S6 - Tarantino",
         "showPlayerEmojis": false,
-        "color": "#2ecc71",
-        "analyticsName": "🤵 S6 - Tarantino 🤵",
-        "analyticsAdded": 1763189142779
+        "color": "#2ECC71",
+        "analyticsName": "S6 - Tarantino",
+        "analyticsAdded": 1763189142779,
+        "castlistIds": [
+          "castlist_1762625830595_system"
+        ]
       },
       "1426478402998636724": {},
       "1385242971938750597": {
@@ -6952,17 +6955,15 @@
         "createdAt": 1762008832918,
         "createdBy": "system",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "placements",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
         },
         "metadata": {
-          "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
-          "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1763182520981,
+        "modifiedAt": 1763215222804,
         "modifiedBy": "system",
         "seasonId": "season_fc058f8886fc4fdc"
       },
@@ -7036,7 +7037,7 @@
         "createdAt": 1762625830595,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "placements",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -7046,7 +7047,9 @@
           "emoji": "📋",
           "migratedFrom": "virtual_UzYgLSBUYXJhbnRpbm8",
           "migrationDate": 1762625830595
-        }
+        },
+        "modifiedAt": 1763189865743,
+        "modifiedBy": "391415444084490240"
       },
       "castlist_1762675587960_974318870057848842": {
         "id": "castlist_1762675587960_974318870057848842",
@@ -7286,9 +7289,9 @@
           "updatedAt": "2025-11-09T10:44:45.896Z"
         },
         "148960534572695553": {
-          "placement": 99,
+          "placement": 66,
           "updatedBy": "391415444084490240",
-          "updatedAt": "2025-11-15T06:47:03.064Z"
+          "updatedAt": "2025-11-15T06:54:04.823Z"
         },
         "398982067204915210": {
           "placement": 4,
