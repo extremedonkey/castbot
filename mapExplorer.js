@@ -2075,16 +2075,16 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
   // Third row buttons array
   const row3Buttons = [locationEditorButton, safariProgressButton];
 
-  // Add Prod Shared Map button only in ephemeral view (to right of Safari Progress)
+  // Add Shared Map button only in ephemeral view (to right of Safari Progress)
   if (isEphemeral) {
-    const prodSharedMapButton = new ButtonBuilder()
-      .setCustomId('safari_prod_shared_map')
-      .setLabel('Prod Shared Map')
+    const sharedMapButton = new ButtonBuilder()
+      .setCustomId('safari_shared_map')
+      .setLabel('Shared Map')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🗺️')
       .setDisabled(!hasActiveMap);
 
-    row3Buttons.push(prodSharedMapButton);
+    row3Buttons.push(sharedMapButton);
   }
 
   const mapButtonRow3 = new ActionRowBuilder().addComponents(row3Buttons);

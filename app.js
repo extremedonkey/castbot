@@ -24072,10 +24072,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
       })(req, res, client);
 
-    } else if (custom_id === 'safari_prod_shared_map') {
-      // Handle Prod Shared Map - creates NEW public (non-ephemeral) message (MIGRATED TO FACTORY)
+    } else if (custom_id === 'safari_shared_map') {
+      // Handle Shared Map - creates NEW public (non-ephemeral) message (MIGRATED TO FACTORY)
       return ButtonHandlerFactory.create({
-        id: 'safari_prod_shared_map',
+        id: 'safari_shared_map',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         // NO updateMessage: Creates NEW message instead of updating
