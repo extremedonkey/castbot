@@ -2657,6 +2657,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           flags: InteractionResponseFlags.EPHEMERAL
         }
       });
+      console.log('[MENU] ✅ Sent deferred response (admin, ephemeral)');
     } else {
       // Regular user - show player menu (ephemeral)
       await res.send({
@@ -2665,13 +2666,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           flags: InteractionResponseFlags.EPHEMERAL
         }
       });
+      console.log('[MENU] ✅ Sent deferred response (user, ephemeral)');
     }
-    
+
     const guildId = req.body.guild_id;
     const guild = await client.guilds.fetch(guildId);
+    console.log(`[MENU] ⏱️ Guild fetched: ${guild.name}`);
     
     // Get all tribes to find unique castlists
     const playerData = await loadPlayerData();
+    const playerDataSize = JSON.stringify(playerData).length;
+    console.log(`[MENU] ⏱️ PlayerData loaded (${playerDataSize} bytes, ${Object.keys(playerData).length} guilds)`);
     const allCastlists = new Set();
     const castlistTribes = {}; // Track tribes per castlist to get emojis
     
@@ -2698,18 +2703,21 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Admin user - use createProductionMenuInterface function
       const userId = req.body.member?.user?.id;
       const menuResponse = await createProductionMenuInterface(guild, playerData, guildId, userId);
-      
+      console.log('[MENU] 📋 Production menu interface created');
+
       const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+      console.log('[MENU] 📤 Sending menu via webhook PATCH to @original');
       await DiscordRequest(endpoint, {
         method: 'PATCH',
         body: menuResponse
       });
-      
+      console.log('[MENU] ✅ Menu sent successfully via webhook');
+
     } else {
       // Regular user - use new player management UI
       const userId = member.user.id;
       const targetMember = await guild.members.fetch(userId);
-      
+
       // Create player management UI
       const managementUI = await createPlayerManagementUI({
         mode: PlayerManagementMode.PLAYER,
@@ -2723,12 +2731,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         title: 'CastBot | Player Menu',
         client
       });
-      
+      console.log('[MENU] 📋 Player management UI created');
+
       const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+      console.log('[MENU] 📤 Sending player menu via webhook PATCH to @original');
       await DiscordRequest(endpoint, {
         method: 'PATCH',
         body: managementUI
       });
+      console.log('[MENU] ✅ Player menu sent successfully via webhook');
     }
     
   } catch (error) {
