@@ -617,6 +617,9 @@ import { ButtonHandlerFactory } from './buttonHandlerFactory.js';  // Button man
 - Quick causes: UPDATE_MESSAGE flags, malformed emojis, Container structure
 - Full guide: [docs/troubleshooting/ComponentsV2Issues.md](docs/troubleshooting/ComponentsV2Issues.md)
 
+**Slash command timeouts (3-second rule):**
+- Send deferred response IMMEDIATELY before any heavy processing (see `/castlist` pattern at app.js:2467, `/menu` pattern at app.js:2647)
+
 **Common Issues:**
 - **Button issues** → See CRITICAL: Button Handler Factory section above
 - **Permission errors** → Use BigInt for permission checks
