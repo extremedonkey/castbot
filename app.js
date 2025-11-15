@@ -885,25 +885,11 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       ],
       accessory: {
         type: 2, // Button
-        custom_id: 'dm_view_tips',
+        custom_id: 'dm_view_tips', // 🧪 TEMPORARILY HIJACKED for Path A test
         label: 'View Tips',
         style: 1, // Primary (blue)
         emoji: { name: '💡' }
       }
-    },
-    // 🧪 TEST BUTTON: Path A - Express Static File Serving
-    {
-      type: 1, // Action Row
-      components: [{
-        type: 2, // Button
-        custom_id: 'test_express_image',
-        label: '🧪 Test Express Images',
-        style: 3, // Success (green) for test
-        emoji: { name: '🖼️' }
-      }]
-    },
-    {
-      type: 14 // Separator
     },
     {
       type: 10, // Text Display component
@@ -7957,15 +7943,16 @@ To fix this:
         }
       })(req, res, client);
 
-    // 🧪 TEST 2025-11-15: Path A - Express Static File Serving with Media Gallery
-    } else if (custom_id === 'test_express_image') {
+    // 🧪 TEMPORARY: Path A test - Testing Express static file serving with Media Gallery
+    // Original dm_view_tips code commented out below (restore after test)
+    } else if (custom_id === 'dm_view_tips') {
       return ButtonHandlerFactory.create({
-        id: 'test_express_image',
+        id: 'dm_view_tips',
         ephemeral: true,
         handler: async (context) => {
           const ngrokUrl = 'https://adapted-deeply-stag.ngrok-free.app/img/tips/1.png';
 
-          console.log(`🧪 TEST: Displaying Express-served image via Media Gallery`);
+          console.log(`🧪 PATH A TEST: Displaying Express-served image via Media Gallery`);
           console.log(`   URL: ${ngrokUrl}`);
 
           return {
@@ -7982,31 +7969,31 @@ To fix this:
                 type: 12, // Media Gallery
                 items: [{
                   media: { url: ngrokUrl },
-                  description: 'Test Express Static Image'
+                  description: 'Test Express Static Image - Safari System Screenshot'
                 }]
               }, {
                 type: 14 // Separator
               }, {
                 type: 10,
-                content: `✅ **If image displays:** Path A SUCCESS - implement full tips gallery\n❌ **If broken icon:** Check browser console, try Path C (Data URI)`
+                content: `✅ **If image displays:** Path A SUCCESS - implement full tips gallery with Express URLs\n❌ **If broken icon:** Check browser console, try Path C (Data URI)\n\n**Why this matters:** If this works, you can update tips by just replacing files in \`/img/tips/\` and restarting!`
               }]
             }]
           };
         }
       })(req, res, client);
 
-    // ✅ RE-ENABLED 2025-11-15: Tips gallery now uses webhook followup with attachment:// protocol
+    /* 🧪 ORIGINAL CODE (restore after Path A test):
     } else if (custom_id === 'dm_view_tips') {
       return ButtonHandlerFactory.create({
         id: 'dm_view_tips',
-        deferred: true,  // Uses DEFERRED response pattern
+        deferred: true,
         handler: async (context) => {
           console.log('🎯 Loading tips gallery - reading all 10 images from filesystem...');
-          // Pass full interaction object and client for webhook access
-          const interaction = req.body;  // Full Discord interaction object
+          const interaction = req.body;
           return await generateInitialTipsScreen(interaction, context.client);
         }
       })(req, res, client);
+    */
 
     } else if (custom_id.startsWith('tips_next_') || custom_id.startsWith('tips_prev_')) {
       return ButtonHandlerFactory.create({
