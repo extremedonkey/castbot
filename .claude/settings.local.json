@@ -90,7 +90,8 @@
       "Bash(powershell.exe -Command \"Get-Date -Format ''yyyy-MM-dd HH:mm:ss''\")",
       "Bash(date:*)",
       "Bash(stat:*)",
-      "Bash(ls -la:*)"
+      "Bash(ls -la:*)",
+      "Bash(git mv:*)"
     ],
     "deny": [],
     "ask": []

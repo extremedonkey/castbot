@@ -626,7 +626,7 @@ The Castlist Hub provides access to **placement editing** via the "Tribes & Plac
 - **Response Type**: `UPDATE_MESSAGE` (type 7) - NOT deferred!
 - **Why**: Updates the message containing the button that opened the modal
 - **Performance**: Must complete <3s (smart caching ensures this)
-- See [Placements.md](../implementation/Placements.md#critical-patterns--architectural-changes) for full implementation details
+- See [Placements.md](../features/Placements.md#critical-patterns--architectural-changes) for full implementation details
 
 **Data Flow (Placement Save)**:
 ```mermaid
@@ -653,7 +653,7 @@ sequenceDiagram
 - Code handles undefined entity gracefully with fallback name: `'Active Castlist'`
 - See [Virtual Adapter Pattern](#virtual-adapter-pattern) section below
 
-**Related Documentation**: [Placements.md](../implementation/Placements.md)
+**Related Documentation**: [Placements.md](../features/Placements.md)
 
 ## 📊 Method 4: Post Castlist Button (Fixed)
 
@@ -1218,7 +1218,7 @@ const seasonId = castlistEntity?.seasonId || undefined;
 **Why This Matters**:
 - Most code paths assume `castlistConfigs[id]` exists
 - Default castlist breaks this assumption when virtual
-- **Placement editing** specifically needs this pattern (see [Placements.md](../implementation/Placements.md#critical-patterns--architectural-changes))
+- **Placement editing** specifically needs this pattern (see [Placements.md](../features/Placements.md#critical-patterns--architectural-changes))
 - **Must gracefully handle `undefined` entity** with fallback values
 
 **Common Mistake**:
