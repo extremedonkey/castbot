@@ -29960,50 +29960,26 @@ Are you sure you want to continue?`;
         });
         
         const guildId = req.body.guild_id;
-
-        // 🔧 FIX: Load castlist entity BEFORE building tribes (needed for castlistSettings)
-        const playerData = await loadPlayerData();
-        const castlistEntity = playerData[guildId]?.castlistConfigs?.[castlistId];
-
-        // Load and process tribe data (reuse castlist2 logic)
-        const rawTribes = await getGuildTribes(guildId, castlistId);  // FIX: Use castlistId
         const guild = await client.guilds.fetch(guildId);
 
-        // Use cached data where possible for better performance
-        const roles = guild.roles.cache.size > 0 ? guild.roles.cache : await guild.roles.fetch();
+        // ✅ NEW: Use unified data access (eliminates 39 lines of duplicate code)
+        const { getTribesForCastlist } = await import('./castlistDataAccess.js');
+        const validTribes = await getTribesForCastlist(guildId, castlistId, client);
 
-        // Force member refresh if cache appears stale (post-restart fix)
-        let members = guild.members.cache;
-        if (guild.members.cache.size === 0) {
-          console.log('Member cache empty (likely post-restart), forcing refresh...');
-          members = await guild.members.fetch();
-        } else if (guild.members.cache.size < guild.memberCount * 0.8) {
-          console.log(`Member cache appears incomplete (${guild.members.cache.size}/${guild.memberCount}), forcing refresh...`);
-          members = await guild.members.fetch();
+        if (validTribes.length === 0) {
+          // No tribes found - update message to show error
+          await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`, {
+            method: 'PATCH',
+            body: {
+              content: `No tribes found for castlist: ${castlistId}`,
+              components: []
+            }
+          });
+          return;
         }
 
-        // Process tribes and gather member data
-        const tribesWithMembers = await Promise.all(rawTribes.map(async (tribe) => {
-          const role = roles.get(tribe.roleId);
-          if (!role) return null;
-
-          const tribeMembers = members.filter(member => member.roles.cache.has(role.id));
-          return {
-            ...tribe,
-            name: role.name,
-            memberCount: tribeMembers.size,
-            members: Array.from(tribeMembers.values()),
-            // 🔧 FIX: Attach castlist settings for placement namespace resolution
-            castlistSettings: {
-              ...castlistEntity?.settings,
-              seasonId: castlistEntity?.seasonId  // FIX: seasonId is at TOP LEVEL of entity, not in settings
-            },
-            castlistId: castlistId,  // For consistency
-            guildId: guildId
-          };
-        }));
-
-        const validTribes = tribesWithMembers.filter(tribe => tribe !== null);
+        // Pre-load playerData for sorting context
+        const playerData = await loadPlayerData();
         const orderedTribes = reorderTribes(validTribes, req.body.member.user.id, "user-first", castlistId);  // FIX: Use castlistId
         const scenario = determineDisplayScenario(orderedTribes);
         
