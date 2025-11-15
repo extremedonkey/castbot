@@ -8060,16 +8060,16 @@ To fix this:
                   label: '← Back',
                   style: 2 // Secondary (grey), NO emoji
                 }, {
-                  type: 2, // Button - Previous second
+                  type: 2, // Button - Previous second (blue)
                   custom_id: `tips_prev_${index}`,
                   label: '◀ Previous',
-                  style: 2, // Secondary (grey)
+                  style: 1, // Primary (blue) - action button
                   disabled: true  // Disabled on first image
                 }, {
-                  type: 2, // Button - Next third (far right)
+                  type: 2, // Button - Next third (blue)
                   custom_id: `tips_next_${index}`,
                   label: 'Next ▶',
-                  style: 2, // Secondary (grey)
+                  style: 1, // Primary (blue) - action button
                   disabled: false
                 }]
               }]
@@ -8160,22 +8160,22 @@ To fix this:
               }, {
                 type: 1, // Action Row - Navigation buttons
                 components: [{
-                  type: 2, // Button
-                  custom_id: `tips_prev_${newIndex}`,
-                  label: '◀ Previous',
-                  style: 2,
-                  disabled: newIndex === 0 // Disable on first image
-                }, {
-                  type: 2, // Button
-                  custom_id: `tips_next_${newIndex}`,
-                  label: 'Next ▶',
-                  style: 2,
-                  disabled: newIndex === 9 // Disable on last image
-                }, {
-                  type: 2, // Button
+                  type: 2, // Button - BACK FIRST (far left)
                   custom_id: 'viral_menu',
                   label: '← Back',
-                  style: 2
+                  style: 2 // Secondary (grey), NO emoji
+                }, {
+                  type: 2, // Button - Previous second (blue)
+                  custom_id: `tips_prev_${newIndex}`,
+                  label: '◀ Previous',
+                  style: 1, // Primary (blue) - action button
+                  disabled: newIndex === 0 // Disable on first image
+                }, {
+                  type: 2, // Button - Next third (blue)
+                  custom_id: `tips_next_${newIndex}`,
+                  label: 'Next ▶',
+                  style: 1, // Primary (blue) - action button
+                  disabled: newIndex === 9 // Disable on last image
                 }]
               }]
             }]
