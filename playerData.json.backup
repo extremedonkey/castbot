@@ -6467,6 +6467,23 @@
         "seasonId": "season_e4ce0a7202f74e33",
         "seasonName": "Season 11",
         "questions": []
+      },
+      "config_1763188936586_391415444084490240": {
+        "buttonText": "Apply to Season 6 - Tarantino",
+        "explanatoryText": "Join Season 6 - Tarantino!",
+        "completionDescription": "Thank you for completing your application! A host will review it soon.",
+        "completionImage": null,
+        "channelFormat": "📝%name%-app",
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "draft",
+        "createdAt": 1763188936586,
+        "lastUpdated": 1763188936586,
+        "seasonId": "season_e344af4d378b4b08",
+        "seasonName": "Season 6 - Tarantino",
+        "questions": []
       }
     },
     "applications": {
