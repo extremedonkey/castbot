@@ -7980,39 +7980,51 @@ To fix this:
         }
       })(req, res, client);
 
-    // 🧪 TEMPORARY: Path A test - Testing Express static file serving with Media Gallery
+    // 🧪 TEMPORARY: Path C test - Data URI (base64) encoding
+    // Path A (Express static) FAILED - Discord won't display external URLs in Media Gallery
     // Original dm_view_tips code commented out below (restore after test)
     } else if (custom_id === 'dm_view_tips') {
       return ButtonHandlerFactory.create({
         id: 'dm_view_tips',
         ephemeral: true,
+        deferred: true, // Allow time to read file and encode base64
         handler: async (context) => {
-          const ngrokUrl = 'https://adapted-deeply-stag.ngrok-free.app/img/tips/1.png';
+          const fs = await import('fs/promises');
+          const path = await import('path');
 
-          console.log(`🧪 PATH A TEST: Displaying Express-served image via Media Gallery`);
-          console.log(`   URL: ${ngrokUrl}`);
+          console.log(`🧪 PATH C TEST: Data URI (base64) encoding`);
+
+          // Read image file
+          const imagePath = path.join('/home/reece/castbot/img/tips/1.png');
+          const imageBuffer = await fs.readFile(imagePath);
+          const base64 = imageBuffer.toString('base64');
+          const dataUri = `data:image/png;base64,${base64}`;
+
+          console.log(`   📊 Image size: ${imageBuffer.length} bytes`);
+          console.log(`   📊 Base64 size: ${base64.length} chars`);
+          console.log(`   📊 Data URI size: ${dataUri.length} chars`);
 
           return {
             flags: (1 << 15), // IS_COMPONENTS_V2
             components: [{
               type: 17, // Container
-              accent_color: 0x00ff00, // Green (test mode)
+              accent_color: 0xffaa00, // Orange (Path C test)
               components: [{
                 type: 10, // Text Display
-                content: `## 🧪 Path A Test: Express Static File Serving\n\n**Testing URL:** \`${ngrokUrl}\`\n\nIf you see an image below (not broken icon), **Path A works!**`
+                content: `## 🧪 Path C Test: Data URI (base64)\n\n**Path A Result:** ❌ FAILED - Discord won't display Express URLs\n**Now testing:** Embedded base64 data\n\n**Image:** ${imageBuffer.length} bytes → ${dataUri.length} char data URI\n\nIf you see an image below, **Path C works!**`
               }, {
                 type: 14 // Separator
               }, {
                 type: 12, // Media Gallery
                 items: [{
-                  media: { url: ngrokUrl },
-                  description: 'Test Express Static Image - Safari System Screenshot'
+                  media: { url: dataUri },
+                  description: 'Test Data URI Image - Safari System Screenshot'
                 }]
               }, {
                 type: 14 // Separator
               }, {
                 type: 10,
-                content: `✅ **If image displays:** Path A SUCCESS - implement full tips gallery with Express URLs\n❌ **If broken icon:** Check browser console, try Path C (Data URI)\n\n**Why this matters:** If this works, you can update tips by just replacing files in \`/img/tips/\` and restarting!`
+                content: `✅ **If image displays:** Path C SUCCESS!\n   → Implement pagination (load images on demand)\n   → Easy updates (reads files at runtime)\n\n❌ **If broken icon:** Path C FAILED\n   → Move to Path B (Hybrid Upload - guaranteed)\n\n**Why this matters:** Data URI = no external dependencies, always reads fresh files!`
               }]
             }]
           };
