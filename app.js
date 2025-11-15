@@ -30019,9 +30019,9 @@ Are you sure you want to continue?`;
         // Create new navigation state
         const navigationState = createNavigationState(orderedTribes, scenario, newTribeIndex, newTribePage, guild, { playerData, guildId });
 
-        // Use castlistId for display name (Virtual Adapter already resolved it)
-        // TODO: Return resolved entity from getTribesForCastlist() to get proper display name
-        const castlistName = castlistId;
+        // Get castlist name for display (same pattern as show_castlist2 handler)
+        const castlistEntity = playerData[guildId]?.castlistConfigs?.[castlistId];
+        const castlistName = castlistEntity?.name || castlistId;
 
         // Send updated response (preserve displayMode for edit mode navigation)
         await sendCastlist2Response(req, guild, orderedTribes, castlistId, navigationState, req.body.member, req.body.channel_id, displayMode, castlistName, { playerData, guildId });
