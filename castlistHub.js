@@ -46,11 +46,8 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
     type: 10, // Text Display
     content: `## 📋 Castlist Manager`
   });
-  
-  // Separator
-  container.components.push({ type: 14 });
-  
-  // Castlist dropdown select
+
+  // Castlist dropdown select (separator removed to save component budget)
   const selectMenu = new StringSelectMenuBuilder()
     .setCustomId('castlist_select')
     .setPlaceholder('Select a castlist to manage...')
@@ -170,10 +167,7 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       );
       container.components.push(managementButtons.buttonRow1.toJSON());
 
-      // Separator before info section
-      container.components.push({ type: 14 });
-
-      // Add info text showing sort method and season
+      // Add info text showing sort method and season (separator removed to save component budget)
       const { getSortStrategyName } = await import('./utils/tribeDataUtils.js');
       const sortStrategyName = getSortStrategyName(castlist.settings?.sortStrategy || 'placements');
 
@@ -200,10 +194,7 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
                  `-# • Castlist is associated with **${seasonText}**`
       });
 
-      // Separator before tribes section
-      container.components.push({ type: 14 });
-
-      // ALWAYS show tribes when castlist is selected
+      // ALWAYS show tribes when castlist is selected (separator removed to save component budget)
       // Get tribe roleIds currently using this castlist
       const tribeRoleIds = await castlistManager.getTribesUsingCastlist(guildId, castlist.id);
 
@@ -220,16 +211,17 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       }
 
       // Component budget safety check
-      // Actual count with 6 tribes = 38/40 components (confirmed via comprehensive counter)
-      // Each tribe adds ~5 components (Section + accessory Button + TextDisplay + Separator + nested content)
-      // Base UI = ~8 components, leaving room for only 6-7 tribes maximum
-      let maxTribeLimit = 6;
+      // Removed 4 separators (38 → 34 components), allowing 2 more tribes (6 → 8)
+      // Each tribe adds ~3 components (Section + accessory Button + TextDisplay)
+      // Base UI (after separator removal) = ~10 components
+      // Max tribes: (40 - 10) / 3 = ~10 tribes, conservatively set to 8
+      let maxTribeLimit = 8;
 
       // Dynamic reduction if approaching limit (with current tribes already displayed)
-      const estimatedTotal = 8 + (tribes.length * 5); // Base + (tribes × 5 components each)
-      if (estimatedTotal > 35) {
+      const estimatedTotal = 10 + (tribes.length * 3); // Base + (tribes × 3 components each)
+      if (estimatedTotal > 38) {
         // Recalculate to stay under 40
-        maxTribeLimit = Math.floor((40 - 8) / 5); // = 6 tribes maximum
+        maxTribeLimit = Math.floor((40 - 10) / 3); // = 10 tribes theoretical, 8 conservative
         console.warn(`[TRIBES] High component count (${estimatedTotal} estimated), limiting to ${maxTribeLimit} tribes max`);
       }
 
@@ -336,12 +328,7 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
         }
       }
 
-      // Separator before Role Select
-      if (tribes.length > 0) {
-        container.components.push({ type: 14 });
-      }
-
-      // Role Select with pre-selection for instant toggle
+      // Role Select with pre-selection for instant toggle (separator removed to save component budget)
       container.components.push({
         type: 1, // ActionRow
         components: [{
