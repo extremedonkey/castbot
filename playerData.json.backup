@@ -14536,7 +14536,7 @@
         "castlistIds": [
           "default"
         ],
-        "castlist": "Active Castlist",
+        "castlist": "default",
         "color": "#000000",
         "analyticsName": "CastBot-Dev (Dynamic Castlist)",
         "analyticsAdded": 1763217037182,
