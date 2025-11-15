@@ -129,10 +129,11 @@ import {
 import { createEntityManagementUI } from './entityManagementUI.js';
 import { getBotEmoji, formatBotEmoji } from './botEmojis.js';
 import { createCastlistMenu } from './castlistMenu.js';
-import { 
+import {
   deleteMapGrid,
-  createMapExplorerMenu 
+  createMapExplorerMenu
 } from './mapExplorer.js';
+import { shouldLog } from './src/utils/logConfig.js';
 
 // Helper function to refresh question management UI
 /**
@@ -2009,7 +2010,6 @@ function generateTipsScreen(index, discordCdnUrls) {
 
 app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async function (req, res) {
     // Verbose logging controlled by DEBUG_VERBOSE environment variable
-    const { shouldLog } = await import('./src/utils/logConfig.js');
     if (shouldLog('VERBOSE')) {
         console.log("Got headers:", JSON.stringify(req.headers, null, 2));
         console.log("Got body:", req.body);

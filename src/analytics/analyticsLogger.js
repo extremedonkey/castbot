@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { shouldLog } from '../utils/logConfig.js';
 
 const ANALYTICS_LOG_FILE = './logs/user-analytics.log';
 
@@ -385,8 +386,6 @@ function formatActionDetails(actionType, details) {
  */
 async function postToDiscordLogs(logEntry, userId, action, details, components, guildId = null, safariContent = null) {
   try {
-    const { shouldLog } = await import('../../src/utils/logConfig.js');
-
     if (shouldLog('VERBOSE')) {
       console.log(`📊 DEBUG: postToDiscordLogs ENTRY - action: ${action}, userId: ${userId}, guildId: ${guildId}`);
     }

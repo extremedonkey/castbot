@@ -14510,15 +14510,39 @@
   "1400065575090389045": {
     "tribes": {
       "1432353406034382868": {
-        "emoji": "🛸",
-        "castlist": "default",
+        "emoji": "🪵",
         "showPlayerEmojis": false,
         "color": null,
-        "analyticsName": "🛸 ET 🛸",
-        "analyticsAdded": 1763216684205,
+        "analyticsName": "🪵 ET 🪵",
+        "analyticsAdded": 1763216951208,
         "castlistIds": [
           "default"
-        ]
+        ],
+        "castlist": "default"
+      },
+      "1432353517258936370": {
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "default",
+        "color": "#000000",
+        "analyticsName": "blaESTbla",
+        "analyticsAdded": 1763217037162,
+        "emoji": "🏕️",
+        "showPlayerEmojis": true,
+        "memberCount": 0
+      },
+      "1400065656472207395": {
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "Active Castlist",
+        "color": "#000000",
+        "analyticsName": "CastBot-Dev (Dynamic Castlist)",
+        "analyticsAdded": 1763217037182,
+        "emoji": "🏕️",
+        "showPlayerEmojis": true,
+        "memberCount": 1
       }
     },
     "players": {},
@@ -14528,11 +14552,11 @@
         "id": "default",
         "name": "Active Castlist",
         "type": "system",
-        "createdAt": 1763216719219,
+        "createdAt": 1763216979892,
         "createdBy": "system",
         "settings": {
-          "sortStrategy": "alphabetical",
-          "showRankings": false,
+          "sortStrategy": "placements",
+          "showRankings": true,
           "maxDisplay": 25,
           "visibility": "public"
         },
@@ -14541,8 +14565,22 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1763216719230,
+        "modifiedAt": 1763217010491,
         "modifiedBy": "system"
+      }
+    },
+    "placements": {
+      "global": {
+        "391415444084490240": {
+          "placement": 1,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-15T14:29:49.618Z"
+        },
+        "1328366050848411658": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-15T14:29:56.922Z"
+        }
       }
     }
   }
