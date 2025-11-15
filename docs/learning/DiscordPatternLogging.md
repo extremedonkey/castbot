@@ -4,6 +4,30 @@
 
 ---
 
+## 📊 Visual Pattern Overview
+
+### **The 5 Core Discord Interaction Patterns**
+
+```mermaid
+flowchart LR
+    A[User Action] --> B{Processing Time?}
+    B -->|< 1 second| C[⚡ IMMEDIATE]
+    B -->|> 1 second| D[🔄 DEFERRED]
+    B -->|Need Input| E[📝 MODAL]
+
+    C --> F[Direct Response]
+    D --> G[Thinking...] --> H[🔗 Webhook Follow-up]
+    E --> I[Show Form] --> J[User Submits] --> C
+
+    style C fill:#90EE90
+    style D fill:#87CEEB
+    style E fill:#FFB6C1
+    style G fill:#FFE4B5
+    style H fill:#DDA0DD
+```
+
+---
+
 ## 🎯 Quick Start: What You'll See in Logs Now
 
 ### **Before** (Hard to learn from):
@@ -72,6 +96,30 @@ Processing unified menu command [🎯 SLASH]
 
 ### **Example 1: Slash Command with Heavy Processing**
 
+```mermaid
+sequenceDiagram
+    participant User
+    participant Discord
+    participant Bot
+    participant Database
+
+    User->>Discord: Types /menu
+    Discord->>Bot: POST /interactions<br/>[🎯 SLASH]<br/>(3-second timer starts)
+
+    Note over Bot: Within 100ms!
+    Bot->>Discord: DEFERRED_NEW<br/>[🔄 DEFERRED-NEW]<br/>[🔒 EPHEMERAL]
+    Discord->>User: "Bot is thinking..."<br/>(Timer STOPS ✅)
+
+    Note over Bot,Database: Now have 15 minutes
+    Bot->>Database: Load playerData<br/>(450KB, takes ~500ms)
+    Database-->>Bot: Data returned
+    Bot->>Bot: Build menu<br/>(40 components, ~800ms)
+
+    Bot->>Discord: PATCH /webhooks/.../messages/@original<br/>[🔗 WEBHOOK-PATCH]<br/>[🔒 EPHEMERAL]
+    Discord->>User: Final menu appears!<br/>(Only visible to you)
+```
+
+**Logs you'll see:**
 ```
 Received command: menu [🎯 SLASH]
 [MENU] ✅ Sent deferred response [🔄 DEFERRED-NEW] [🔒 EPHEMERAL]
@@ -95,6 +143,25 @@ Received command: menu [🎯 SLASH]
 
 ### **Example 2: Button Click (Instant Update)**
 
+```mermaid
+sequenceDiagram
+    participant User
+    participant Discord
+    participant Bot
+
+    User->>Discord: Clicks "Menu" button
+    Discord->>Bot: POST /interactions<br/>[🔘 BUTTON]<br/>(3-second timer starts)
+
+    Note over Bot: Quick processing!<br/>(< 1 second)
+    Bot->>Bot: Load menu state<br/>(from cache, ~50ms)
+    Bot->>Bot: Update UI<br/>(~100ms)
+
+    Note over Bot: Within 3 seconds ✅
+    Bot->>Discord: UPDATE_MESSAGE<br/>[⚡ IMMEDIATE-UPDATE]<br/>[🔒 EPHEMERAL]<br/>[✨ FACTORY]
+    Discord->>User: Menu updates instantly!<br/>(Same message, no flicker)
+```
+
+**Logs you'll see:**
 ```
 Processing MESSAGE_COMPONENT: viral_menu [🔘 BUTTON]
 🔍 ButtonHandlerFactory sending response [⚡ IMMEDIATE-UPDATE] [🔒 EPHEMERAL] [✨ FACTORY]
@@ -112,13 +179,39 @@ Processing MESSAGE_COMPONENT: viral_menu [🔘 BUTTON]
 
 ### **Example 3: Modal Form**
 
+```mermaid
+sequenceDiagram
+    participant User
+    participant Discord
+    participant Bot
+    participant Database
+
+    User->>Discord: Clicks "Edit Location" button
+    Discord->>Bot: POST /interactions<br/>[🔘 BUTTON]<br/>(3-second timer starts)
+
+    Note over Bot: Within 3 seconds!
+    Bot->>Discord: MODAL<br/>[📝 MODAL]<br/>[🔒 EPHEMERAL]
+    Discord->>User: Form pops up!<br/>(Timer STOPS ✅)
+
+    Note over User: User fills out form
+    User->>Discord: Clicks "Submit"
+    Discord->>Bot: POST /interactions<br/>[📝 SUBMIT]<br/>(NEW 3-second timer)
+
+    Bot->>Database: Save location data
+    Database-->>Bot: Success
+
+    Note over Bot: Within 3 seconds ✅
+    Bot->>Discord: UPDATE_MESSAGE<br/>[⚡ IMMEDIATE-UPDATE]<br/>[🔒 EPHEMERAL]
+    Discord->>User: "✅ Location saved!"
+```
+
+**Logs you'll see:**
 ```
 Processing MESSAGE_COMPONENT: safari_location_edit [🔘 BUTTON]
 Showing modal: safari_location_edit [📝 MODAL] [🔒 EPHEMERAL]
-```
 
-**Then after user submits:**
-```
+[User fills out form and clicks Submit]
+
 Processing MODAL_SUBMIT: safari_location_edit [📝 SUBMIT]
 ✅ Saved location data
 Sending response [⚡ IMMEDIATE-UPDATE] [🔒 EPHEMERAL]
@@ -140,28 +233,70 @@ Sending response [⚡ IMMEDIATE-UPDATE] [🔒 EPHEMERAL]
 
 Webhooks are **follow-up messages** after you've already responded to an interaction.
 
+### **Complete Webhook Flow Diagram**
+
+```mermaid
+graph TD
+    A[User Action] --> B{Response Type?}
+
+    B -->|IMMEDIATE| C[Send Response<br/>Within 3 Seconds]
+    C --> D[Done ✅]
+
+    B -->|DEFERRED| E[Send Deferred ACK<br/>Within 3 Seconds]
+    E --> F[User sees<br/>'Bot is thinking...']
+    F --> G[15-Minute<br/>Window Starts]
+
+    G --> H{What Next?}
+    H -->|Update Original| I[🔗 WEBHOOK-PATCH<br/>/messages/@original]
+    H -->|Send New Message| J[🔗 WEBHOOK-POST<br/>New follow-up]
+    H -->|Multiple Updates| K[Multiple PATCH/POST<br/>calls allowed]
+
+    I --> L[Original message<br/>updates in place]
+    J --> M[New message<br/>appears below]
+    K --> N[Complex flows<br/>with multiple steps]
+
+    style E fill:#87CEEB
+    style I fill:#DDA0DD
+    style J fill:#DDA0DD
+    style K fill:#DDA0DD
+    style G fill:#FFE4B5
+```
+
 ### **When Do You Use Webhooks?**
 
-**Scenario 1: Deferred Response Flow**
-```
-User clicks /menu
-    ↓
-Bot: "I'm thinking..." [🔄 DEFERRED-NEW]
-    ↓ (15-minute window starts)
-Bot: *loads data, builds menu*
-    ↓
-Bot: *sends final menu* [🔗 WEBHOOK-PATCH]
+**Scenario 1: Deferred Response Flow (Most Common)**
+```mermaid
+sequenceDiagram
+    participant User
+    participant Discord
+    participant Bot
+
+    User->>Discord: /menu command
+    Discord->>Bot: POST /interactions<br/>(3-second timer)
+    Bot->>Discord: DEFERRED_NEW<br/>[🔄 DEFERRED-NEW]
+    Discord->>User: "Thinking..." ⏳
+
+    Note over Bot: 15-minute window!<br/>Can take time
+    Bot->>Bot: Heavy processing...
+
+    Bot->>Discord: PATCH /webhooks/.../messages/@original<br/>[🔗 WEBHOOK-PATCH]
+    Discord->>User: Final menu! 📋
 ```
 
-**Scenario 2: Additional Follow-up**
-```
-User clicks button
-    ↓
-Bot: "Processing..." [⚡ IMMEDIATE-NEW]
-    ↓
-Bot: *does work*
-    ↓
-Bot: "Here's more info!" [🔗 WEBHOOK-POST]
+**Scenario 2: Additional Follow-up Messages**
+```mermaid
+sequenceDiagram
+    participant User
+    participant Discord
+    participant Bot
+
+    User->>Discord: Clicks button
+    Bot->>Discord: IMMEDIATE_UPDATE<br/>[⚡ IMMEDIATE-UPDATE]
+    Discord->>User: "Processing..." 🔄
+
+    Note over Bot: Later, within 15 min
+    Bot->>Discord: POST /webhooks/{token}<br/>[🔗 WEBHOOK-POST]
+    Discord->>User: "Done! Here's more info" ✅<br/>(New message below)
 ```
 
 ### **Why Use Webhooks?**
@@ -271,6 +406,24 @@ const componentTag = getComponentTag(38, 40);
 ## 📊 Common Patterns You'll See
 
 ### **Pattern: Slash Command (Fast)**
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Discord
+    participant Bot
+
+    User->>Discord: /simple_command
+    Discord->>Bot: POST /interactions<br/>(3-second timer)
+
+    Note over Bot: Quick processing<br/>(< 1 second)
+    Bot->>Bot: Simple logic
+
+    Bot->>Discord: CHANNEL_MESSAGE_WITH_SOURCE<br/>[⚡ IMMEDIATE-NEW]<br/>[🔒 EPHEMERAL]
+    Discord->>User: Response appears! ✅
+```
+
+**Logs:**
 ```
 Received command: simple_command [🎯 SLASH]
 Sending response [⚡ IMMEDIATE-NEW] [🔒 EPHEMERAL]
@@ -280,6 +433,29 @@ Sending response [⚡ IMMEDIATE-NEW] [🔒 EPHEMERAL]
 ---
 
 ### **Pattern: Slash Command (Slow)**
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Discord
+    participant Bot
+    participant DB
+
+    User->>Discord: /menu
+    Discord->>Bot: POST /interactions<br/>(3-second timer)
+
+    Bot->>Discord: DEFERRED_NEW<br/>[🔄 DEFERRED-NEW]
+    Discord->>User: "Thinking..." ⏳
+
+    Bot->>DB: Load data (slow)
+    DB-->>Bot: 450KB data
+    Bot->>Bot: Build menu (slow)
+
+    Bot->>Discord: PATCH /webhooks/.../messages/@original<br/>[🔗 WEBHOOK-PATCH]
+    Discord->>User: Menu appears! 📋
+```
+
+**Logs:**
 ```
 Received command: menu [🎯 SLASH]
 Sent deferred [🔄 DEFERRED-NEW] [🔒 EPHEMERAL]
@@ -291,6 +467,24 @@ Sending via webhook [🔗 WEBHOOK-PATCH] [🔒 EPHEMERAL]
 ---
 
 ### **Pattern: Button Update**
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Discord
+    participant Bot
+
+    User->>Discord: Clicks button
+    Discord->>Bot: POST /interactions<br/>(3-second timer)
+
+    Note over Bot: Quick update<br/>(< 500ms)
+    Bot->>Bot: Update state
+
+    Bot->>Discord: UPDATE_MESSAGE<br/>[⚡ IMMEDIATE-UPDATE]<br/>[✨ FACTORY]
+    Discord->>User: Message updates! ✅<br/>(No flicker)
+```
+
+**Logs:**
 ```
 Processing MESSAGE_COMPONENT: button_id [🔘 BUTTON]
 Sending response [⚡ IMMEDIATE-UPDATE] [🔒 EPHEMERAL] [✨ FACTORY]
@@ -300,6 +494,30 @@ Sending response [⚡ IMMEDIATE-UPDATE] [🔒 EPHEMERAL] [✨ FACTORY]
 ---
 
 ### **Pattern: Modal Form**
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Discord
+    participant Bot
+
+    User->>Discord: Clicks "Edit" button
+    Discord->>Bot: POST /interactions
+
+    Bot->>Discord: MODAL<br/>[📝 MODAL]
+    Discord->>User: Form pops up! 📝
+
+    User->>User: Fills out form
+    User->>Discord: Clicks "Submit"
+    Discord->>Bot: POST /interactions<br/>[📝 SUBMIT]
+
+    Bot->>Bot: Validate & save
+
+    Bot->>Discord: UPDATE_MESSAGE<br/>[⚡ IMMEDIATE-UPDATE]
+    Discord->>User: "Saved!" ✅
+```
+
+**Logs:**
 ```
 Showing modal [📝 MODAL] [🔒 EPHEMERAL]
 [User fills form]
@@ -344,6 +562,41 @@ When something fails:
 3. Check for `[🔗 WEBHOOK-*]` - Did webhook follow-up fail?
 
 **Goal**: Use logs to diagnose Discord timeout issues
+
+---
+
+## 🎓 Decision Tree: Which Pattern Should I Use?
+
+```mermaid
+flowchart TD
+    Start[User Interaction] --> Q1{What type?}
+
+    Q1 -->|Slash Command| Q2{Processing time?}
+    Q1 -->|Button Click| Q3{Update message?}
+    Q1 -->|Need User Input| Modal[Show MODAL<br/>[📝 MODAL]]
+
+    Q2 -->|< 1 second| Fast[IMMEDIATE-NEW<br/>[⚡ IMMEDIATE-NEW]]
+    Q2 -->|> 1 second| Slow[DEFERRED-NEW<br/>[🔄 DEFERRED-NEW]<br/>then WEBHOOK-PATCH<br/>[🔗 WEBHOOK-PATCH]]
+
+    Q3 -->|Yes, fast update| Update[IMMEDIATE-UPDATE<br/>[⚡ IMMEDIATE-UPDATE]]
+    Q3 -->|Yes, slow update| DeferUpdate[DEFERRED-UPDATE<br/>[🔄 DEFERRED-UPDATE]<br/>then WEBHOOK-PATCH]
+    Q3 -->|No, new message| NewMsg[IMMEDIATE-NEW<br/>[⚡ IMMEDIATE-NEW]]
+
+    Modal --> ModalSubmit[User submits]
+    ModalSubmit --> Update
+
+    style Fast fill:#90EE90
+    style Slow fill:#87CEEB
+    style Update fill:#90EE90
+    style DeferUpdate fill:#87CEEB
+    style Modal fill:#FFB6C1
+```
+
+**Quick Rules:**
+1. **Button click updating same message?** → `[⚡ IMMEDIATE-UPDATE]` (most common!)
+2. **Slash command < 1 second?** → `[⚡ IMMEDIATE-NEW]`
+3. **Slash command > 1 second?** → `[🔄 DEFERRED-NEW]` → `[🔗 WEBHOOK-PATCH]`
+4. **Need user input?** → `[📝 MODAL]` → (user submits) → `[⚡ IMMEDIATE-UPDATE]`
 
 ---
 
