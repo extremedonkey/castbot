@@ -880,15 +880,15 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       components: [
         {
           type: 10, // Text Display
-          content: `> **🚀 Major new CastBot version!** Use Castlist Manager to create Alumni and Winners lists!`
+          content: `> **🚀 Major New Castlist features!** Alumni lists, swaps and more!`
         }
       ],
       accessory: {
         type: 2, // Button
         custom_id: 'dm_view_tips', // 🧪 TEMPORARILY HIJACKED for Path A test
-        label: 'View Tips',
-        style: 1, // Primary (blue)
-        emoji: { name: '💡' }
+        label: 'New Features',
+        style: 2, // Secondary (grey)
+        emoji: { name: '✨' }
       }
     },
     {

@@ -212,11 +212,11 @@ export const BUTTON_REGISTRY = {
     category: 'testing'
   },
   'dm_view_tips': {
-    label: 'View Tips',
-    description: 'Show paginated tips gallery with CastBot feature screenshots',
-    emoji: '💡',
-    style: 'Primary',
-    category: 'testing'
+    label: 'New Features',
+    description: 'View new Castlist Manager features (Alumni lists, swaps, etc)',
+    emoji: '✨',
+    style: 'Secondary',
+    category: 'features'
   },
   'tips_next_*': {
     label: 'Next ▶',
