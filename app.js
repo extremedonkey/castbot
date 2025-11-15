@@ -2088,8 +2088,12 @@ async function generateInitialTipsScreen(interaction, client) {
     try {
       console.log('📤 Creating webhook followup message with 10 attached files...');
 
-      // Get webhook from interaction token
-      const webhook = await client.fetchWebhook(interaction.application_id, interaction.token);
+      // Use WebhookClient for interaction followup (doesn't require bot permissions)
+      const { WebhookClient } = await import('discord.js');
+      const webhook = new WebhookClient({
+        id: interaction.application_id,
+        token: interaction.token
+      });
 
       // Create followup message with ALL files attached
       await webhook.send({
