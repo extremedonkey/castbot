@@ -492,6 +492,148 @@ placements: {
 
 **Migration Path**: `placements.global` → `placements[seasonId]` when per-season placements are implemented.
 
+### 🌍 Timezone & DST Integration
+
+**IMPORTANT**: Castlist player time display integrates with the global Timezone/DST Management System.
+
+#### How Timezone Display Works
+
+**Data Flow:**
+```
+Player in castlist
+  ↓
+getTimezoneRole(playerId) → finds timezone role assigned to player
+  ↓
+Check: tzData.timezoneId exists?
+  ├─ YES → loadDSTState() → getDSTOffset(timezoneId) → currentOffset
+  └─ NO  → use tzData.offset (legacy static offset)
+  ↓
+Calculate time with offset
+  ↓
+Display formatted time in castlist
+```
+
+**Integration Points:**
+- **castlistV2.js:417-432** - DST-aware time calculation (castlist display)
+- **castlistV2.js:637-646** - DST-aware time calculation (alternative path)
+- **playerManagement.js:59-88** - Player menu time display
+
+#### Storage Layers
+
+**Layer 1: Global DST State** (`dstState.json`):
+```json
+{
+  "PT": {
+    "displayName": "Pacific Time",
+    "roleFormat": "PST / PDT",
+    "standardOffset": -8,
+    "dstOffset": -7,
+    "currentOffset": -7,    // ← Updated by admin DST toggle
+    "isDST": true,          // ← Current DST status
+    "standardAbbrev": "PST",
+    "dstAbbrev": "PDT",
+    "dstObserved": true
+  }
+}
+```
+
+**Layer 2: Server Configuration** (`playerData[guildId].timezones`):
+```json
+{
+  "timezones": {
+    "1234567890": {          // Discord role ID
+      "offset": -8,          // Backwards compat (legacy)
+      "timezoneId": "PT",    // Links to dstState.json (NEW)
+      "dstObserved": true,
+      "standardName": "PST (UTC-8)"
+    }
+  }
+}
+```
+
+**Layer 3: Player Assignment** (`playerData[guildId].players[playerId]`):
+```json
+{
+  "players": {
+    "391415444084490240": {
+      "timezoneRole": "1234567890"  // Links to timezones[roleId]
+    }
+  }
+}
+```
+
+#### Feature Toggle Pattern
+
+**New DST System** (dynamic offset from global state):
+```javascript
+if (tzData.timezoneId) {
+  // Read current offset from dstState.json
+  const offset = getDSTOffset(tzData.timezoneId);
+  // offset changes when admin toggles DST (no player action needed)
+}
+```
+
+**Legacy System** (static offset):
+```javascript
+else {
+  // Read fixed offset from playerData
+  const offset = tzData.offset;
+  // offset never changes unless role updated
+}
+```
+
+#### Why This Matters for Castlists
+
+**Before DST Integration:**
+- Player has "PST (UTC-8)" role → always shows UTC-8 time
+- DST changes → time display WRONG until player manually switches to "PDT (UTC-7)" role
+- Causes confusion in castlist times during spring/fall
+
+**After DST Integration:**
+- Player has "PST / PDT" role → links to `timezoneId: "PT"`
+- Winter: `dstState.PT.currentOffset = -8` → shows correct time
+- Summer: Admin toggles DST → `dstState.PT.currentOffset = -7` → shows correct time
+- Player never needs to change roles, castlist times always accurate
+
+#### Backwards Compatibility
+
+**Migration is Non-Destructive:**
+- Existing roles with only `offset` field → continue working (legacy path)
+- New roles with `timezoneId` field → use DST-aware path
+- Both can coexist in same guild
+- Conversion happens during Setup (`roleManager.js:696-782`)
+
+**Fallback Pattern:**
+```javascript
+if (tzData.timezoneId) {
+  offset = getDSTOffset(tzData.timezoneId);
+
+  // Safety: fallback to stored offset if DST state missing
+  if (offset === null) {
+    console.log(`⚠️ No DST state for ${tzData.timezoneId}, using stored offset`);
+    offset = tzData.offset;
+  }
+}
+```
+
+#### Related Documentation
+
+**Comprehensive Guide:**
+- [TimezoneDSTManagement.md](TimezoneDSTManagement.md) - Complete DST system architecture
+  - 16 global timezones supported
+  - Admin DST toggle interface (`/menu` → Reece's Tools → DST Manager)
+  - Automatic timezone conversion during Setup
+  - Role consolidation (merges duplicate timezone roles)
+
+**Data Files:**
+- `dstState.json` (195 lines) - Global timezone definitions
+- `storage.js:406-429` - DST state management functions
+
+**Key Functions:**
+- `getDSTOffset(timezoneId)` - Returns current offset for timezone
+- `loadDSTState()` - Loads global DST state from file
+- `convertExistingTimezones()` - Upgrades legacy roles to DST-aware
+
 ## 🔄 System Integration Points
 
 ### 1. Legacy Access Methods (What Users Use)
@@ -730,16 +872,30 @@ Tribes can theoretically belong to multiple castlists:
 - [SeasonLifecycle.md](../concepts/SeasonLifecycle.md) - Active season system and lifecycle
 - [SeasonAppBuilder.md](SeasonAppBuilder.md) - Season application configuration
 
+**Timezone Documentation:**
+- [TimezoneDSTManagement.md](TimezoneDSTManagement.md) - Complete Timezone/DST system (16 global timezones, admin toggle, role consolidation)
+- [dstState.json](../../dstState.json) - Global timezone definitions (195 lines)
+
 **Implementation Guides:**
 - [castlistManager.js](../../castlistManager.js) - Entity CRUD operations
 - [castlistVirtualAdapter.js](../../castlistVirtualAdapter.js) - Virtual entity bridge
 - [castlistHandlers.js](../../castlistHandlers.js) - Button/modal handlers (season selector implementation)
+- [castlistV2.js](../../castlistV2.js:417-432) - DST-aware time calculation
+- [storage.js](../../storage.js:406-429) - DST state management functions
 
 ---
 
 ## 📋 Document Change Log
 
-**November 15, 2025** - Major consolidation and enhancement:
+**November 15, 2025 (Second Update)** - Timezone/DST Integration:
+- ✅ **Added Timezone & DST Integration section** documenting how castlists use global DST system
+- ✅ **Documented 3-layer timezone architecture**: Global DST state → Server config → Player assignment
+- ✅ **Explained feature toggle pattern**: New DST system (dynamic) vs Legacy (static offset)
+- ✅ **Added backwards compatibility details**: Non-destructive migration, fallback patterns
+- ✅ **Cross-referenced TimezoneDSTManagement.md** for comprehensive DST system documentation
+- ✅ **Integration points documented**: castlistV2.js:417-432, playerManagement.js:59-88
+
+**November 15, 2025 (First Update)** - Major consolidation and enhancement:
 - ✅ **Consolidated 4 WIP design docs** into single source of truth:
   - Merged Season ID vs Config ID distinction (from 000-editCastlistSeasonModalSelector.md)
   - Merged Virtual Castlist Upgrade Flow (from 000-editCastlistSeason.md)
