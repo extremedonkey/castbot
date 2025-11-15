@@ -837,7 +837,6 @@ function createCastlistRows(allCastlists, includeAddButton = true, hasStores = f
     for (const castlist of sortedCastlists) {
         // Parse emoji (supports Unicode and Discord custom emoji format)
         const emojiRaw = castlist.metadata?.emoji || '📋';
-        console.log(`[CASTLIST EMOJI DEBUG] ${castlist.name} (${castlist.id}): emojiRaw="${emojiRaw}", metadata=`, JSON.stringify(castlist.metadata));
         const { emoji } = parseTextEmoji(emojiRaw, '📋');
 
         // Build button label

@@ -100,7 +100,6 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
 
     // Parse emoji (supports Unicode and Discord custom emoji format)
     const emojiRaw = castlist.metadata?.emoji || '📋';
-    console.log(`[HUB EMOJI DEBUG] ${castlist.name} (${castlist.id}): emojiRaw="${emojiRaw}", metadata=`, JSON.stringify(castlist.metadata));
     const { emoji } = parseTextEmoji(emojiRaw, '📋');
     const label = castlist.isVirtual ? `${castlist.name} [Legacy]` : castlist.name;
 
