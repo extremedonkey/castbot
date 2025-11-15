@@ -220,18 +220,16 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       }
 
       // Component budget safety check
-      // Each tribe Section with accessory = 2 components (Section + Button accessory)
-      // Base UI (header, selects, separators, buttons) ≈ 11-13 components
-      // Role Select = 1 component
-      // Safe limit: 40 - 14 (base + buffer) = 26 components available / 2 per tribe = 13 tribes max
-      // Conservative limit accounting for edge cases: 20 tribes
-      let maxTribeLimit = 20;
+      // Actual count with 6 tribes = 38/40 components (confirmed via comprehensive counter)
+      // Each tribe adds ~5 components (Section + accessory Button + TextDisplay + Separator + nested content)
+      // Base UI = ~8 components, leaving room for only 6-7 tribes maximum
+      let maxTribeLimit = 6;
 
       // Dynamic reduction if approaching limit (with current tribes already displayed)
-      const estimatedTotal = 14 + (tribes.length * 2); // Base + (tribes × 2 components each)
+      const estimatedTotal = 8 + (tribes.length * 5); // Base + (tribes × 5 components each)
       if (estimatedTotal > 35) {
         // Recalculate to stay under 40
-        maxTribeLimit = Math.floor((40 - 14) / 2); // = 13 tribes maximum
+        maxTribeLimit = Math.floor((40 - 8) / 5); // = 6 tribes maximum
         console.warn(`[TRIBES] High component count (${estimatedTotal} estimated), limiting to ${maxTribeLimit} tribes max`);
       }
 
@@ -406,7 +404,7 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
   const componentCount = countComponents([container], {
     enableLogging: true,
     label: `Castlist Hub${selectedCastlistId ? ` - ${selectedCastlistId}` : ''}`,
-    verbosity: "summary" // Use "full" for detailed breakdown
+    verbosity: "full" // Show detailed component breakdown like /castlist
   });
 
   // Return just the components - ButtonHandlerFactory will handle flags appropriately
