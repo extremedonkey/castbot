@@ -510,13 +510,17 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
       }
       try {
         await postToSafariLog(guildId, userId, action, details, safariContent);
-        console.log(`📊 DEBUG: postToSafariLog completed successfully`);
+        if (shouldLog('VERBOSE')) {
+          console.log(`📊 DEBUG: postToSafariLog completed successfully`);
+        }
       } catch (safariLogError) {
         console.error(`📊 ERROR: postToSafariLog failed:`, safariLogError);
         console.error(`📊 ERROR: Stack trace:`, safariLogError.stack);
       }
     } else {
-      console.log(`📊 DEBUG: Safari Log conditions not met - skipping Safari Log posting`);
+      if (shouldLog('VERBOSE')) {
+        console.log(`📊 DEBUG: Safari Log conditions not met - skipping Safari Log posting`);
+      }
     }
 
     // Rate limiting check (simple implementation)

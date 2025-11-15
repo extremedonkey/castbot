@@ -35,6 +35,13 @@ export function sortCastlistMembers(members, tribeData, options = {}) {
                        || (tribeData.type === 'alumni_placements' ? 'placements' : null)
                        || 'alphabetical';
 
+  console.log(`[SORTER] 🔍 Strategy: ${sortingStrategy}, castlistSettings:`, JSON.stringify({
+    exists: !!tribeData.castlistSettings,
+    sortStrategy: tribeData.castlistSettings?.sortStrategy,
+    seasonId: tribeData.castlistSettings?.seasonId,
+    tribeType: tribeData.type
+  }));
+
   switch (sortingStrategy) {
     case 'placements':
       return sortByPlacements(members, tribeData, options);

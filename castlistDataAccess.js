@@ -140,6 +140,11 @@ export async function getTribesForCastlist(guildId, castlistIdentifier, client) 
       });
 
       console.log(`[TRIBES] ✅ Enriched tribe: ${role.name} (${members.length} members)`);
+      console.log(`[TRIBES] 🔍 DEBUG castlistSettings:`, JSON.stringify({
+        sortStrategy: castlist.settings?.sortStrategy,
+        seasonId: castlist.seasonId,
+        attachedSeasonId: enrichedTribes[enrichedTribes.length - 1].castlistSettings.seasonId
+      }));
 
     } catch (error) {
       console.error(`[TRIBES] ❌ Error fetching role ${roleId}:`, error.message);
