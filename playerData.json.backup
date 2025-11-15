@@ -3890,14 +3890,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 578,
+    "memberCount": 577,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1762792620193,
+    "lastUpdated": 1763133057131,
     "players": {
       "235148962103951360": {
         "emojiCode": "<:Carl_bot:1380989603783249950>"
@@ -6091,7 +6091,12 @@
         "color": "#FFFFFF"
       },
       "1426479840357388298": {},
-      "1385243139769372703": {},
+      "1385243139769372703": {
+        "castlistIds": [
+          "castlist_1763133237547_custom"
+        ],
+        "castlist": "Season 11"
+      },
       "1426480942746177698": {
         "castlistIds": [
           "castlist_1762675587960_974318870057848842"
@@ -6444,6 +6449,23 @@
         "lastUpdated": 1762675464683,
         "seasonId": "season_3fa254c4eda94dbd",
         "seasonName": "Season 10 - Drive In",
+        "questions": []
+      },
+      "config_1763133491890_391415444084490240": {
+        "buttonText": "Apply to Season 11",
+        "explanatoryText": "Join Season 11!",
+        "completionDescription": "Thank you for completing your application! A host will review it soon.",
+        "completionImage": null,
+        "channelFormat": "📝%name%-app",
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "draft",
+        "createdAt": 1763133491890,
+        "lastUpdated": 1763133491890,
+        "seasonId": "season_e4ce0a7202f74e33",
+        "seasonName": "Season 11",
         "questions": []
       }
     },
@@ -7015,6 +7037,27 @@
         },
         "modifiedAt": 1762679178987,
         "modifiedBy": "system"
+      },
+      "castlist_1763133237547_custom": {
+        "id": "castlist_1763133237547_custom",
+        "name": "Season 11",
+        "type": "custom",
+        "createdAt": 1763133237547,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "placements",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "emoji": "📋",
+          "description": "",
+          "lastModified": 1763133237547
+        },
+        "seasonId": "season_e4ce0a7202f74e33",
+        "modifiedAt": 1763133571021,
+        "modifiedBy": "391415444084490240"
       }
     },
     "placements": {
@@ -7227,6 +7270,18 @@
           "placement": 14,
           "updatedBy": "391415444084490240",
           "updatedAt": "2025-11-01T15:44:42.125Z"
+        }
+      },
+      "season_e4ce0a7202f74e33": {
+        "386463066600112128": {
+          "placement": 23,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-14T15:26:11.607Z"
+        },
+        "768184354802761798": {
+          "placement": 4,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-14T15:26:34.208Z"
         }
       }
     }
@@ -12666,14 +12721,14 @@
     "serverName": "Triumph Hub",
     "icon": "https://cdn.discordapp.com/icons/1080166267136262154/174fdda5d62bc8c2227e31f8111e7f05.webp",
     "ownerId": "572291395365109770",
-    "memberCount": 450,
+    "memberCount": 449,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1677602106604,
-    "lastUpdated": 1763004133299,
+    "lastUpdated": 1763051910256,
     "players": {
       "572291395365109770": {
         "age": "29"
