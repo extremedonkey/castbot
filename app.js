@@ -3868,7 +3868,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'admin_integrated_vanity',
         'player_integrated_pronouns',
         'player_integrated_timezone',
-        'player_integrated_age'
+        'player_integrated_age',
+        // Tips gallery navigation
+        'tips_next',
+        'tips_prev'
       ];
       
       for (const pattern of dynamicPatterns) {
