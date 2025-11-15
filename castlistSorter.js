@@ -93,7 +93,7 @@ function sortByPlacements(members, tribeData, options = {}) {
     : playerData[guildId]?.placements?.global;          // Global fallback (No Season)
 
   if (!placementNamespace) {
-    console.warn(`[SORTER] No placement data for ${seasonId ? `season ${seasonId}` : 'global'}, falling back to alphabetical`);
+    console.log(`[SORTER] No placement data for ${seasonId ? `season ${seasonId}` : 'global'}, falling back to alphabetical`);
     return sortAlphabetical(members);
   }
 
@@ -178,7 +178,7 @@ function sortByPlacementsThenAlpha(members, tribeData, options = {}) {
     : playerData[guildId]?.placements?.global;          // Global fallback (No Season)
 
   if (!placementNamespace) {
-    console.warn(`[SORTER] No placement data for ${seasonId ? `season ${seasonId}` : 'global'}, falling back to alphabetical`);
+    console.log(`[SORTER] No placement data for ${seasonId ? `season ${seasonId}` : 'global'}, falling back to alphabetical`);
     return sortAlphabetical(members);
   }
 

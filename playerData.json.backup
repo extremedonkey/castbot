@@ -1598,11 +1598,10 @@
         "castlistIds": [
           "castlist_1759638936214_system",
           "castlist_1762579720361_1331657596087566398",
-          "castlist_archive_1762682582653",
           "castlist_archive_1762702460277"
         ],
         "isVanity": true,
-        "castlist": "Swap 2",
+        "castlist": "Castbot MVPs",
         "castlistId": "castlist_archive_1762702460277"
       },
       "1335645032891547670": {
@@ -11436,14 +11435,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 578,
+    "memberCount": 577,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1763229061891,
+    "lastUpdated": 1763240559608,
     "ownerInfo": {
       "username": "serviver",
       "globalName": "Serviver",

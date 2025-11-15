@@ -42,9 +42,9 @@
     {
       "id": 1,
       "filename": "1.png",
-      "title": "🦁 Safari System",
-      "description": "Create adventure challenges with maps, items, and player progression",
-      "showcase": "📸 Feature Showcase (1/10)\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
+      "title": "🏆 Winners' Castlist",
+      "description": "Create a Custom Castlist ordered by Season",
+      "showcase": "✨ CastBot New Features (1/10)\nCastBot version 3.0\n\n🏆 Winners' Castlist\nCreate a Custom Castlist ordered by Season\n\n🧩 How to setup (1/10)\n• Create a Winner role as well as a role for each season\n• Create a new Castlist and choose Sorting Method 'Vanity Role', set Season to 'No Season' and add the \"Winner\" role you created to as a Tribe on the castlist. Ensure each player has that winner role assigned.\n• From `/menu` > Players > Select each winner > click Vanity Role > select Vanity Role for their Season",
       "urls": {
         "dev": "https://cdn.discordapp.com/attachments/.../tip_1.png",
         "prod": "https://cdn.discordapp.com/attachments/.../tip_1.png"
