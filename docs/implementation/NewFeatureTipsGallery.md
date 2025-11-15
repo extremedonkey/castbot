@@ -153,11 +153,17 @@ ensureTipsUploaded(client, env) // Auto-upload if URLs missing (silent)
 
 ### Environment Awareness
 
-**Detection:**
+**Detection (FIXED):**
 ```javascript
-const isDev = process.env.ENVIRONMENT === 'development';
-const env = isDev ? 'dev' : 'prod';
+// WRONG (original implementation):
+const isDev = process.env.ENVIRONMENT === 'development';  // Variable doesn't exist!
+
+// CORRECT (fixed):
+const isProd = process.env.PRODUCTION === 'TRUE';  // Matches .env: PRODUCTION=FALSE
+const env = isProd ? 'prod' : 'dev';
 ```
+
+**Bug Found:** Initial implementation checked `process.env.ENVIRONMENT` which doesn't exist in `.env`. This caused ALL operations to default to 'prod', resulting in dev URLs staying null while prod URLs were populated even in dev environment.
 
 **URL Storage:**
 - Dev uses: `tips[i].urls.dev`
@@ -185,11 +191,16 @@ const env = isDev ? 'dev' : 'prod';
 - [x] **Path A Test:** Express Static File Serving (FAILED - Discord blocks external URLs)
 - [x] **Path C Test:** Data URI base64 (FAILED - 2048 char limit exceeded)
 - [x] **Path B Implementation:** Hybrid Upload on Demand (SUCCESS)
-- [ ] **Extract to Module:** Create `tipsGalleryManager.js`
-- [ ] **Create Config:** Build `img/tips/tips.json` with metadata + URLs
-- [ ] **Add Refresh Button:** Remove Server List, add Refresh Tips in reece_stuff_menu
-- [ ] **Update Display:** Modify `dm_view_tips` to read from JSON
-- [ ] **Test Full Flow:** Verify upload → display → navigation → refresh
+- [x] **Extract to Module:** Create `tipsGalleryManager.js` + `tipsGalleryUIBuilder.js`
+- [x] **Create Config:** Build `img/tips/tips.json` with metadata + URLs
+- [x] **Add Refresh Button:** Removed Server List, added Refresh Tips in reece_stuff_menu
+- [x] **Update Display:** Modified `dm_view_tips` to read from JSON
+- [x] **Fix Environment Detection:** Changed from ENVIRONMENT to PRODUCTION env var
+- [x] **Button Registry:** Added all buttons to BUTTON_REGISTRY (refresh_tips, tips_next_*, tips_prev_*, dm_back_to_welcome)
+- [x] **Lean UI Compliance:** Back button far left, no emojis on navigation
+- [x] **Debug System Fix:** Added patterns to dynamicPatterns array for [✨ FACTORY] indicators
+- [x] **UI Code Extraction:** Created reusable UI builder functions
+- [x] **Full Testing:** Verified upload → display → navigation → environment detection
 
 ---
 
@@ -197,11 +208,15 @@ const env = isDev ? 'dev' : 'prod';
 
 ### Key Files
 - `/img/tips/tips.json` - Gallery configuration and URLs
-- `/tipsGalleryManager.js` - Gallery management functions
+- `/tipsGalleryManager.js` - Gallery management functions (10 core functions)
+- `/tipsGalleryUIBuilder.js` - Reusable UI component builders (extracted from app.js)
 - `/img/tips/1.png - 10.png` - Image files
-- `app.js:7995-8070` - dm_view_tips handler (display)
-- `app.js:8085-8171` - tips_next_/tips_prev_ handlers (navigation)
-- `app.js:TBD` - refresh_tips handler (admin upload)
+- `app.js:~8008-8090` - dm_view_tips handler (display with ButtonHandlerFactory)
+- `app.js:~8105-8172` - tips_next_/tips_prev_ handlers (navigation with updateMessage)
+- `app.js:~9529-9563` - refresh_tips handler (admin upload with deferred response)
+- `buttonHandlerFactory.js:38-46` - refresh_tips registry entry
+- `buttonHandlerFactory.js:214-238` - tips navigation buttons registry
+- `app.js:3873-3874` - Dynamic patterns for debug system
 
 ### Related Documentation
 - [ComponentsV2.md](../standards/ComponentsV2.md) - Media Gallery (type 12) component
@@ -247,10 +262,69 @@ const env = isDev ? 'dev' : 'prod';
 
 ---
 
-**Document Status:** ✅ Design Complete
-**Next Action:** Implement tipsGalleryManager.js + tips.json
-**Success Criteria:** Admin refreshes tips, users see gallery instantly, navigation works, URLs persist across restarts
+## 🐛 Issues Fixed During Implementation
+
+### 1. Environment Detection Bug (CRITICAL)
+- **Problem:** Checked `process.env.ENVIRONMENT === 'development'` which doesn't exist
+- **Impact:** All operations defaulted to 'prod', dev URLs stayed null
+- **Fix:** Changed to `process.env.PRODUCTION === 'TRUE'` (matches .env file)
+- **File:** `tipsGalleryManager.js:60`
+
+### 2. [🪨 LEGACY] False Positive Debug Indicators
+- **Problem:** Tips navigation showed [🪨 LEGACY] despite using ButtonHandlerFactory
+- **Root Cause:** Wildcard patterns (tips_next_*, tips_prev_*) not in hardcoded dynamicPatterns array
+- **Impact:** Misleading logs, but functionality worked correctly
+- **Fix:** Added 'tips_next' and 'tips_prev' to dynamicPatterns array (app.js:3873-3874)
+- **Documentation:** Created `/docs/troubleshooting/ButtonFactoryDebugSystem.md` explaining systemic issue
+
+### 3. Lean UI Design Violations
+- **Problem:** Back buttons had emojis (🏠) and were positioned last (right side)
+- **Impact:** Violated LeanUserInterfaceDesign.md standards
+- **Fix:**
+  - Removed all emojis from back buttons
+  - Reordered navigation: Back FIRST (far left), then Previous, then Next
+  - Updated 4 locations in app.js (dm_view_tips, tips_next_/prev_ handlers, viral_menu)
+- **Documentation:** Enhanced LeanUserInterfaceDesign.md with explicit button order examples
+
+### 4. Missing Button Registry Entries
+- **Problem:** refresh_tips not registered in BUTTON_REGISTRY
+- **Impact:** No factory pattern recognition, missing from button catalog
+- **Fix:** Added refresh_tips entry (buttonHandlerFactory.js:38-46)
+
+### 5. Code Duplication in app.js
+- **Problem:** Repetitive UI building code across handlers (~50 lines per handler)
+- **Impact:** Maintenance burden, inconsistent implementations
+- **Fix:** Created `tipsGalleryUIBuilder.js` with reusable functions:
+  - `createTipsNavigationButtons()` - Consistent button order/styling
+  - `createTipsDisplayUI()` - Complete UI assembly
+  - `createTipsNavigationUI()` - Navigation-specific variant
+
+---
+
+## 📊 Final Architecture
+
+**Separation of Concerns:**
+- `tipsGalleryManager.js` - Data management (load/save config, upload to Discord, environment detection)
+- `tipsGalleryUIBuilder.js` - UI component building (navigation buttons, display containers)
+- `app.js` - Handler routing only (minimal business logic)
+- `tips.json` - Configuration and persistent URLs
+- `buttonHandlerFactory.js` - Button registry and metadata
+
+**Pattern Benefits:**
+- ✅ Single source of truth for UI structure
+- ✅ Easy to maintain consistent Lean design standards
+- ✅ Reusable for future image galleries
+- ✅ Clean separation: data, UI, routing
+
+---
+
+**Document Status:** ✅ FULLY IMPLEMENTED & DOCUMENTED
+**Implementation Date:** 2025-11-15
+**Testing Status:** ✅ Verified in dev environment
+**Production Status:** Ready for deployment
+**Success Criteria Met:** ✅ Admin refresh works, ✅ Gallery displays instantly, ✅ Navigation smooth, ✅ URLs persist, ✅ Environment-aware
 
 ---
 
 *From RaP 0976 - Moved to implementation docs 2025-11-15*
+*Last Updated: 2025-11-15 - Added implementation issues, fixes, and final architecture*

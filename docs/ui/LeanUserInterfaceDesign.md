@@ -97,8 +97,25 @@ return {
   - **To Feature Menu**: `← Safari` (arrow + feature name, **NO emoji**)
   - Custom ID: `prod_menu_back` or `{feature}_back`
   - Style: Always `ButtonStyle.Secondary` (grey)
-  - Position: **Far-left (first position in action row)**, after separator
+  - Position: **Far-left (FIRST position in action row)**, after separator
   - **CRITICAL**: Back buttons NEVER have emojis, regardless of destination
+
+- **Button Order in Navigation Rows**:
+  ```javascript
+  // ✅ CORRECT: Back button FIRST (far left)
+  components: [
+    backButton,      // 1st position (far left)
+    prevButton,      // 2nd position
+    nextButton       // 3rd position (far right)
+  ]
+
+  // ❌ WRONG: Back button at end
+  components: [
+    prevButton,
+    nextButton,
+    backButton      // NEVER put back button last!
+  ]
+  ```
 
 - **Examples**:
   ```javascript
@@ -114,6 +131,33 @@ return {
     .setLabel('← Safari')  // Arrow + feature name, NO emoji
     .setStyle(ButtonStyle.Secondary)
     // NO .setEmoji() - back buttons never have emojis!
+
+  // Tips gallery navigation (complete example)
+  {
+    type: 1, // Action Row
+    components: [
+      {
+        type: 2, // Button - BACK FIRST (far left)
+        custom_id: 'dm_back_to_welcome',
+        label: '← Back',
+        style: 2  // NO emoji!
+      },
+      {
+        type: 2, // Button - Previous second
+        custom_id: `tips_prev_${index}`,
+        label: '◀ Previous',
+        style: 2,
+        disabled: index === 0
+      },
+      {
+        type: 2, // Button - Next third
+        custom_id: `tips_next_${index}`,
+        label: 'Next ▶',
+        style: 2,
+        disabled: index === totalCount - 1
+      }
+    ]
+  }
   ```
 
 ## 🎯 Example: Analytics Menu (Optimal LEAN Design)

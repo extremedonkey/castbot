@@ -8066,22 +8066,22 @@ To fix this:
               }, {
                 type: 1, // Action Row - Navigation buttons
                 components: [{
-                  type: 2, // Button
+                  type: 2, // Button - BACK FIRST (far left)
+                  custom_id: 'viral_menu',
+                  label: '← Back',
+                  style: 2 // Secondary (grey), NO emoji
+                }, {
+                  type: 2, // Button - Previous second
                   custom_id: `tips_prev_${index}`,
                   label: '◀ Previous',
                   style: 2, // Secondary (grey)
                   disabled: true  // Disabled on first image
                 }, {
-                  type: 2, // Button
+                  type: 2, // Button - Next third (far right)
                   custom_id: `tips_next_${index}`,
                   label: 'Next ▶',
                   style: 2, // Secondary (grey)
                   disabled: false
-                }, {
-                  type: 2, // Button
-                  custom_id: 'viral_menu',
-                  label: '← Back',
-                  style: 2 // Secondary (grey)
                 }]
               }]
             }]
