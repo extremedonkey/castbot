@@ -32,6 +32,7 @@ import {
   Options
 } from 'discord.js';
 import { capitalize, DiscordRequest } from './utils.js';  // Add DiscordRequest to imports
+import { discordLogTags } from './src/utils/discordLogTags.js';  // Educational logging tags
 import { 
   loadPlayerData, 
   updatePlayer, 
@@ -2642,8 +2643,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 // REMOVED: prod_menu command handler - merged into unified /menu command with admin detection
 } else if (name === 'menu') {
   try {
-    const { discordLogTags: tags } = await import('./src/utils/discordLogTags.js');
-    console.log(`Processing unified menu command ${tags.source.SLASH}`);
+    console.log(`Processing unified menu command ${discordLogTags.source.SLASH}`);
 
     // Send deferred response IMMEDIATELY (matches /castlist pattern)
     await res.send({
@@ -2652,7 +2652,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         flags: InteractionResponseFlags.EPHEMERAL
       }
     });
-    console.log(`[MENU] ✅ Sent deferred response ${tags.response.DEFERRED_NEW} ${tags.visibility.EPHEMERAL}`);
+    console.log(`[MENU] ✅ Sent deferred response ${discordLogTags.response.DEFERRED_NEW} ${discordLogTags.visibility.EPHEMERAL}`);
 
     // THEN check permissions and load data
     const member = req.body.member;
@@ -2696,7 +2696,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       console.log('[MENU] 📋 Production menu interface created');
 
       const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-      console.log(`[MENU] 📤 Sending menu via webhook ${tags.response.WEBHOOK_PATCH} ${tags.visibility.EPHEMERAL}`);
+      console.log(`[MENU] 📤 Sending menu via webhook ${discordLogTags.response.WEBHOOK_PATCH} ${discordLogTags.visibility.EPHEMERAL}`);
       await DiscordRequest(endpoint, {
         method: 'PATCH',
         body: menuResponse
@@ -2724,7 +2724,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       console.log('[MENU] 📋 Player management UI created');
 
       const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-      console.log(`[MENU] 📤 Sending player menu via webhook ${tags.response.WEBHOOK_PATCH} ${tags.visibility.EPHEMERAL}`);
+      console.log(`[MENU] 📤 Sending player menu via webhook ${discordLogTags.response.WEBHOOK_PATCH} ${discordLogTags.visibility.EPHEMERAL}`);
       await DiscordRequest(endpoint, {
         method: 'PATCH',
         body: managementUI

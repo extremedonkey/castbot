@@ -11142,9 +11142,10 @@
       },
       "1385242808952160326": {
         "castlistIds": [
-          "castlist_1763229618970_custom"
+          "castlist_1763229618970_custom",
+          "castlist_1763230594118_custom"
         ],
-        "castlist": "S4 - TWD",
+        "castlist": "Mega Season Castlist!",
         "color": "#FFFFFF",
         "analyticsName": "S4 - Walking Dead",
         "analyticsAdded": 1763230172332,
