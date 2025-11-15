@@ -53,8 +53,8 @@ export class CastlistVirtualAdapter {
           createdAt: Date.now(),
           createdBy: 'legacy_system',
           settings: {
-            sortStrategy: tribe.type === 'alumni_placements' ? 'placements' : 'alphabetical',
-            showRankings: tribe.type === 'alumni_placements',
+            sortStrategy: 'placements',
+            showRankings: true,
             maxDisplay: 25,
             visibility: 'public'
           },
@@ -130,8 +130,8 @@ export class CastlistVirtualAdapter {
       createdAt: 0, // Beginning of time
       createdBy: 'system',
       settings: {
-        sortStrategy: 'alphabetical',
-        showRankings: false,
+        sortStrategy: 'placements',
+        showRankings: true,
         maxDisplay: 25,
         visibility: 'public'
       },
