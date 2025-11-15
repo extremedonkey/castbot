@@ -23,16 +23,16 @@ export function createTipsNavigationButtons(index, totalTips, backButtonId = 'vi
     label: '← Back',
     style: 2 // Secondary (grey), NO emoji per LeanUserInterfaceDesign.md
   }, {
-    type: 2, // Button - Previous second
+    type: 2, // Button - Previous second (blue)
     custom_id: `tips_prev_${index}`,
     label: '◀ Previous',
-    style: 2, // Secondary (grey)
+    style: 1, // Primary (blue) - action button
     disabled: index === 0  // Disabled on first tip
   }, {
-    type: 2, // Button - Next third (far right)
+    type: 2, // Button - Next third (blue)
     custom_id: `tips_next_${index}`,
     label: 'Next ▶',
-    style: 2, // Secondary (grey)
+    style: 1, // Primary (blue) - action button
     disabled: index === totalTips - 1  // Disabled on last tip
   }];
 }
