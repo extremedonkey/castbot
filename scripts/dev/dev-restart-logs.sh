@@ -6,18 +6,19 @@
 # Usage:
 #   ./dev-restart-logs.sh [commit-message] [custom-discord-message]
 #   ./dev-restart-logs.sh -f [commit-message]  # Full verbose logs
+#   ./dev-restart-logs.sh -v [commit-message]  # Full verbose logs (alias)
 #
 # Flags:
-#   -f    Full verbose logging (DEBUG_VERBOSE=true) - shows all debug dumps
-#         Without -f: STANDARD logging (feature logs only, good for Claude Code)
+#   -f, -v    Full verbose logging (DEBUG_VERBOSE=true) - shows all debug dumps
+#             Without flags: STANDARD logging (feature logs only, good for Claude Code)
 
 echo "=== CastBot Dev Restart + Logs ==="
 
-# Check for verbose flag
+# Check for verbose flag (-f or -v)
 VERBOSE_MODE=false
-if [[ "$1" == "-f" ]]; then
+if [[ "$1" == "-f" ]] || [[ "$1" == "-v" ]]; then
     VERBOSE_MODE=true
-    shift  # Remove -f from arguments
+    shift  # Remove flag from arguments
     echo "🔬 VERBOSE MODE: Full debug logging enabled"
 fi
 
