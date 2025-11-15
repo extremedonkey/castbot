@@ -316,6 +316,25 @@ export const BUTTON_REGISTRY = {
     parent: 'prod_setup'
   },
 
+  // === TRIBES (LEGACY) ===
+  'prod_manage_tribes': {
+    label: 'Tribes (Legacy)',
+    description: 'Redirect to new Castlist Manager location',
+    emoji: '🔥',
+    style: 'Secondary',
+    category: 'admin',
+    parent: 'prod_setup'
+  },
+  'prod_manage_tribes_legacy_debug': {
+    label: 'Tribes (Legacy Debug)',
+    description: 'Access legacy tribes menu for testing (Reece only)',
+    emoji: '🔥',
+    style: 'Secondary',
+    category: 'admin',
+    parent: 'prod_manage_tribes',
+    restrictedUser: '391415444084490240'
+  },
+
   // === PRONOUNS & TIMEZONES MANAGEMENT ===
   'prod_manage_pronouns_timezones': {
     label: 'Pronouns & Timezones',

@@ -6980,82 +6980,119 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'prod_manage_tribes') {
-      // Show tribe management menu
-      MenuBuilder.trackLegacyMenu('prod_manage_tribes', 'Tribes management submenu');
-      try {
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        const channelId = req.body.channel_id;
-        
-        const tribeRow = new ActionRowBuilder()
-          .addComponents(
-            new ButtonBuilder()
-              .setCustomId('prod_view_tribes')
-              .setLabel('View Tribes')
-              .setStyle(ButtonStyle.Primary)
-              .setEmoji('🔥'),
-            new ButtonBuilder()
-              .setCustomId('prod_add_tribe')
-              .setLabel('Add Tribe')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('🛠️'),
-            new ButtonBuilder()
-              .setCustomId('prod_clear_tribe')
-              .setLabel('Clear Tribe')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('🧹'),
-            new ButtonBuilder()
-              .setCustomId('prod_create_emojis')
-              .setLabel('Add/Remove Emojis')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('😀')
+      // Redirect to new Castlist Manager location with debug access for Reece
+      return ButtonHandlerFactory.create({
+        id: 'prod_manage_tribes_redirect',
+        updateMessage: true,  // Button click - updates existing message
+        handler: async (context) => {
+          const { userId } = context;
+          const isReece = userId === '391415444084490240';
+
+          // Build container components
+          const components = [
+            {
+              type: 10, // Text Display
+              content: "## 🆕 There's a new place to Manage Castlists!\n\nYou can now find this in:\n`/menu` > 📋 Castlist Manager"
+            }
+          ];
+
+          // Only for Reece: Add separator + debug button
+          if (isReece) {
+            components.push({ type: 14 }); // Separator
+            components.push({
+              type: 1, // Action Row
+              components: [{
+                type: 2, // Button
+                custom_id: 'prod_manage_tribes_legacy_debug',
+                label: 'Tribes (Legacy Debug)',
+                emoji: { name: '🔥' },
+                style: 2 // Secondary (grey)
+              }]
+            });
+          }
+
+          return {
+            components: [{
+              type: 17, // Container
+              accent_color: 0x3498DB, // Blue (info message)
+              components: components
+            }]
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'prod_manage_tribes_legacy_debug') {
+      // Legacy tribes menu - debug access for Reece only
+      return ButtonHandlerFactory.create({
+        id: 'prod_manage_tribes_legacy_debug',
+        updateMessage: true,
+        handler: async (context) => {
+          MenuBuilder.trackLegacyMenu('prod_manage_tribes_legacy_debug', 'Legacy tribes management submenu (debug)');
+
+          const { guildId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
+
+          const tribeRow = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('prod_view_tribes')
+                .setLabel('View Tribes')
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('🔥'),
+              new ButtonBuilder()
+                .setCustomId('prod_add_tribe')
+                .setLabel('Add Tribe')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('🛠️'),
+              new ButtonBuilder()
+                .setCustomId('prod_clear_tribe')
+                .setLabel('Clear Tribe')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('🧹'),
+              new ButtonBuilder()
+                .setCustomId('prod_create_emojis')
+                .setLabel('Add/Remove Emojis')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('😀')
+            );
+
+          // Create Components V2 Container
+          const tribesComponents = [
+            {
+              type: 10, // Text Display component
+              content: `## Tribe Management | ${guild.name}`
+            },
+            {
+              type: 14 // Separator
+            },
+            {
+              type: 10, // Text Display component
+              content: `> **⚠️ Warning:** Spectators will be able to view your tribe names if you add them before marooning using \`/castlist\`. It is recommended not adding any tribes until players have been assigned the tribe role, after marooning.`
+            },
+            {
+              type: 10, // Text Display component
+              content: `> **Select an action to manage your tribes:**`
+            },
+            tribeRow.toJSON()
+          ];
+
+          // Always add Back to Main Menu button
+          const backRow = createBackToMainMenuButton();
+          tribesComponents.push(
+            { type: 14 }, // Separator
+            backRow.toJSON()
           );
 
-        // Create Components V2 Container
-        const tribesComponents = [
-          {
-            type: 10, // Text Display component
-            content: `## Tribe Management | ${guild.name}`
-          },
-          {
-            type: 14 // Separator
-          },
-          {
-            type: 10, // Text Display component
-            content: `> **⚠️ Warning:** Spectators will be able to view your tribe names if you add them before marooning using \`/castlist\`. It is recommended not adding any tribes until players have been assigned the tribe role, after marooning.`
-          },
-          {
-            type: 10, // Text Display component
-            content: `> **Select an action to manage your tribes:**`
-          },
-          tribeRow.toJSON()
-        ];
-        
-        // Always add Back to Main Menu button
-        const backRow = createBackToMainMenuButton();
-        tribesComponents.push(
-          { type: 14 }, // Separator
-          backRow.toJSON()
-        );
-        
-        const tribesContainer = {
-          type: 17, // Container component
-          accent_color: 0xE67E22, // Orange accent color for tribes
-          components: tribesComponents
-        };
+          const tribesContainer = {
+            type: 17, // Container component
+            accent_color: 0xE67E22, // Orange accent color for tribes
+            components: tribesComponents
+          };
 
-        return await sendProductionSubmenuResponse(res, channelId, [tribesContainer]);
-        
-      } catch (error) {
-        console.error('Error handling prod_manage_tribes button:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error loading tribe management interface.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+          return {
+            components: [tribesContainer]
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'season_management_menu') {
       return ButtonHandlerFactory.create({
         id: 'season_management_menu',
