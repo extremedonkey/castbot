@@ -6992,7 +6992,7 @@ To fix this:
           const components = [
             {
               type: 10, // Text Display
-              content: "## 📃 Tribes Management Has Moved!\n\nThe Tribes feature has been consolidated into the new **Castlist Manager** for easier access and better organization.\n\nYou can now find all castlist and tribe management features in:\n`/menu` > 📋 Castlist Manager\n\nThis brings all your casting tools together in one place!"
+              content: "## 📃 Castlist Creation Has Moved!\n\nCastlists have now been upgraded with the new **Castlist Manager** for easier access, better organization, and new features such as Season Placement Castlists, and executing Swaps via CastBot!\n\nYou can now find all castlist and tribe management features in:\n`/menu` > 📋 Castlist Manager"
             },
             { type: 14 } // Separator before navigation
           ];
