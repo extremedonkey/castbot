@@ -24434,6 +24434,7 @@ Are you sure you want to continue?`;
         permissionName: 'Manage Roles',
         updateMessage: true,
         ephemeral: true,
+        deferred: true,  // Enable deferred response - fetches Discord members (network-bound, can exceed 3s timeout)
         handler: async (context) => {
           console.log(`👥 START: map_player_locations - user ${context.userId}`);
           
@@ -29331,6 +29332,7 @@ Are you sure you want to continue?`;
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         updateMessage: true, // Update instead of creating new message
+        deferred: true,  // Enable deferred response - fetches Discord members (network-bound, can exceed 3s timeout)
         handler: async (context) => {
           console.log(`⏸️ START: safari_paused_players - user ${context.userId}`);
           
