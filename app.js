@@ -24079,20 +24079,14 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         // NO updateMessage: Creates NEW message instead of updating
-        // NO ephemeral config: We explicitly set it in response
+        ephemeral: false,  // CRITICAL: Must be in config for deferred responses (line 2920 checks config.ephemeral)
         deferred: true,  // Enable deferred response for overlay generation
         handler: async (context) => {
           console.log(`🗺️ DEBUG: Creating PUBLIC Shared Map for guild ${context.guildId}`);
 
           // Use extracted function to build response (isEphemeral: false for public)
           const { buildMapExplorerResponse } = await import('./mapExplorer.js');
-          const response = await buildMapExplorerResponse(context.guildId, context.userId, context.client, false);
-
-          // Explicitly set ephemeral: false to override deferred response inheritance
-          return {
-            ...response,
-            ephemeral: false
-          };
+          return await buildMapExplorerResponse(context.guildId, context.userId, context.client, false);
         }
       })(req, res, client);
 
