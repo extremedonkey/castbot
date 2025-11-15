@@ -2643,31 +2643,20 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 } else if (name === 'menu') {
   try {
     console.log('Processing unified menu command');
-    
+
+    // Send deferred response IMMEDIATELY (matches /castlist pattern)
+    await res.send({
+      type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
+    });
+    console.log('[MENU] ✅ Sent deferred response (ephemeral)');
+
+    // THEN check permissions and load data
     const member = req.body.member;
     const isAdmin = hasAdminPermissions(member);
-    
-    console.log(`Menu access: Admin=${isAdmin}, User=${member?.user?.username || 'unknown'}`);
-    
-    if (isAdmin) {
-      // Admin user - show production menu (ephemeral)
-      await res.send({
-        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-          flags: InteractionResponseFlags.EPHEMERAL
-        }
-      });
-      console.log('[MENU] ✅ Sent deferred response (admin, ephemeral)');
-    } else {
-      // Regular user - show player menu (ephemeral)
-      await res.send({
-        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-          flags: InteractionResponseFlags.EPHEMERAL
-        }
-      });
-      console.log('[MENU] ✅ Sent deferred response (user, ephemeral)');
-    }
+    console.log(`[MENU] Menu access: Admin=${isAdmin}, User=${member?.user?.username || 'unknown'}`);
 
     const guildId = req.body.guild_id;
     const guild = await client.guilds.fetch(guildId);
