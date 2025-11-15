@@ -32,7 +32,11 @@ import { loadPlayerData } from './storage.js';
  * @returns {Promise<Array>} Fully enriched tribe objects with members
  */
 export async function getTribesForCastlist(guildId, castlistIdentifier, client) {
-  console.log(`[TRIBES] Fetching tribes for castlist: ${castlistIdentifier}`);
+  const isVerbose = process.env.DEBUG_VERBOSE === 'true';
+
+  if (isVerbose) {
+    console.log(`[TRIBES] Fetching tribes for castlist: ${castlistIdentifier}`);
+  }
 
   // ============= STEP 1: Resolve Identifier to Castlist Entity =============
   // Virtual Adapter handles all formats: string, ID, virtual ID
@@ -43,7 +47,9 @@ export async function getTribesForCastlist(guildId, castlistIdentifier, client) 
     return [];
   }
 
-  console.log(`[TRIBES] Resolved to castlist: ${castlist.name} (${castlist.id})`);
+  if (isVerbose) {
+    console.log(`[TRIBES] Resolved to castlist: ${castlist.name} (${castlist.id})`);
+  }
 
   // ============= STEP 2: Get Tribe Role IDs =============
   // Delegates to FIXED getTribesUsingCastlist() (now supports all 3 formats)
@@ -54,41 +60,59 @@ export async function getTribesForCastlist(guildId, castlistIdentifier, client) 
     return [];
   }
 
-  console.log(`[TRIBES] Found ${roleIds.length} tribe(s): ${roleIds.join(', ')}`);
+  if (isVerbose) {
+    console.log(`[TRIBES] Found ${roleIds.length} tribe(s): ${roleIds.join(', ')}`);
+  }
 
   // ============= STEP 3: Enrich with Discord Data =============
   const playerData = await loadPlayerData();
   const guildTribes = playerData[guildId]?.tribes || {};
 
   // Fetch guild
-  console.log(`[TRIBES] Fetching guild ${guildId}...`);
+  if (isVerbose) {
+    console.log(`[TRIBES] Fetching guild ${guildId}...`);
+  }
   const guild = await client.guilds.fetch(guildId);
-  console.log(`[TRIBES] Guild fetched: ${guild.name} (${guild.memberCount} total members)`);
+  if (isVerbose) {
+    console.log(`[TRIBES] Guild fetched: ${guild.name} (${guild.memberCount} total members)`);
+  }
 
   // CRITICAL: We MUST fetch all members first to ensure role.members collections are complete
   // Discord.js role.members is a FILTERED VIEW of the member cache - it only shows cached members!
-  console.log(`[TRIBES] Member cache size: ${guild.members.cache.size}/${guild.memberCount}`);
+  if (isVerbose) {
+    console.log(`[TRIBES] Member cache size: ${guild.members.cache.size}/${guild.memberCount}`);
+  }
 
   // If cache is significantly incomplete (less than 80% populated), fetch all members
   if (guild.members.cache.size < guild.memberCount * 0.8) {
-    console.log(`[TRIBES] Cache incomplete, fetching all ${guild.memberCount} members...`);
+    if (isVerbose) {
+      console.log(`[TRIBES] Cache incomplete, fetching all ${guild.memberCount} members...`);
+    }
     try {
       const fetchStart = Date.now();
       await guild.members.fetch({ timeout: 10000 }); // 10 second timeout
       const fetchTime = Date.now() - fetchStart;
-      console.log(`[TRIBES] ✅ Fetched ${guild.members.cache.size} members in ${fetchTime}ms`);
+      if (isVerbose) {
+        console.log(`[TRIBES] ✅ Fetched ${guild.members.cache.size} members in ${fetchTime}ms`);
+      }
     } catch (fetchError) {
       console.warn(`[TRIBES] ⚠️ Member fetch failed after 10s: ${fetchError.message}`);
-      console.warn(`[TRIBES] Continuing with partial cache (${guild.members.cache.size} members)`);
+      if (isVerbose) {
+        console.warn(`[TRIBES] Continuing with partial cache (${guild.members.cache.size} members)`);
+      }
     }
   } else {
-    console.log(`[TRIBES] Cache sufficiently populated, using existing cache`);
+    if (isVerbose) {
+      console.log(`[TRIBES] Cache sufficiently populated, using existing cache`);
+    }
   }
 
   const enrichedTribes = [];
 
   for (const roleId of roleIds) {
-    console.log(`[TRIBES] Processing role ${roleId}...`);
+    if (isVerbose) {
+      console.log(`[TRIBES] Processing role ${roleId}...`);
+    }
 
     // Validate role ID format
     if (!/^\d{17,19}$/.test(roleId)) {
@@ -105,20 +129,26 @@ export async function getTribesForCastlist(guildId, castlistIdentifier, client) 
 
     // Fetch Discord role
     try {
-      console.log(`[TRIBES] Fetching Discord role ${roleId}...`);
+      if (isVerbose) {
+        console.log(`[TRIBES] Fetching Discord role ${roleId}...`);
+      }
       const role = await guild.roles.fetch(roleId);
       if (!role) {
         console.warn(`[TRIBES] Role ${roleId} not found in Discord`);
         continue;
       }
-      console.log(`[TRIBES] Role fetched: ${role.name}`);
+      if (isVerbose) {
+        console.log(`[TRIBES] Role fetched: ${role.name}`);
+      }
 
       // Get members from role's cache (should be complete after bulk fetch)
       const members = Array.from(role.members.values());
-      console.log(`[TRIBES] Role ${role.name} has ${members.length} members`);
+      if (isVerbose) {
+        console.log(`[TRIBES] Role ${role.name} has ${members.length} members`);
+      }
 
       // Note: If a role truly has 0 members, that's legitimate (empty role)
-      if (members.length === 0) {
+      if (members.length === 0 && isVerbose) {
         console.log(`[TRIBES] Note: Role ${role.name} appears empty (could be legitimate)`);
       }
 
@@ -139,12 +169,15 @@ export async function getTribesForCastlist(guildId, castlistIdentifier, client) 
         guildId                              // Guild context
       });
 
-      console.log(`[TRIBES] ✅ Enriched tribe: ${role.name} (${members.length} members)`);
-      console.log(`[TRIBES] 🔍 DEBUG castlistSettings:`, JSON.stringify({
-        sortStrategy: castlist.settings?.sortStrategy,
-        seasonId: castlist.seasonId,
-        attachedSeasonId: enrichedTribes[enrichedTribes.length - 1].castlistSettings.seasonId
-      }));
+      // Only show enrichment details in VERBOSE mode
+      if (isVerbose) {
+        console.log(`[TRIBES] ✅ Enriched tribe: ${role.name} (${members.length} members)`);
+        console.log(`[TRIBES] 🔍 DEBUG castlistSettings:`, JSON.stringify({
+          sortStrategy: castlist.settings?.sortStrategy,
+          seasonId: castlist.seasonId,
+          attachedSeasonId: enrichedTribes[enrichedTribes.length - 1].castlistSettings.seasonId
+        }));
+      }
 
     } catch (error) {
       console.error(`[TRIBES] ❌ Error fetching role ${roleId}:`, error.message);
@@ -153,7 +186,15 @@ export async function getTribesForCastlist(guildId, castlistIdentifier, client) 
     }
   }
 
-  console.log(`[TRIBES] Returning ${enrichedTribes.length} enriched tribe(s)`);
+  // STANDARD mode: Single-line summary
+  // VERBOSE mode: Already logged details above
+  if (!isVerbose) {
+    const tribeNames = enrichedTribes.map(t => `${t.name} (${t.memberCount})`).join(', ');
+    console.log(`[TRIBES] Loaded ${enrichedTribes.length} tribes: ${tribeNames}`);
+  } else {
+    console.log(`[TRIBES] Returning ${enrichedTribes.length} enriched tribe(s)`);
+  }
+
   return enrichedTribes;
 }
 

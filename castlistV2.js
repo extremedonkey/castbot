@@ -706,10 +706,14 @@ function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []
 
     // DEBUG: Count actual components
     const componentCount = countComponents(finalComponents);
-    console.log(`🔍 ACTUAL COMPONENT COUNT: ${componentCount} components`);
-    console.log(`   Tribe components: ${components.length}`);
-    console.log(`   Navigation rows: ${navigationRows.length}`);
-    console.log(`   Manage profile row: 1`);
+
+    // Only show detailed breakdown in VERBOSE mode
+    if (process.env.DEBUG_VERBOSE === 'true') {
+        console.log(`🔍 ACTUAL COMPONENT COUNT: ${componentCount} components`);
+        console.log(`   Tribe components: ${components.length}`);
+        console.log(`   Navigation rows: ${navigationRows.length}`);
+        console.log(`   Manage profile row: 1`);
+    }
     
     // DEBUG: JSON dump removed to avoid spam
     
