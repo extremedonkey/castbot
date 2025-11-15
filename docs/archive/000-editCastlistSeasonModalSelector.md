@@ -1,4 +1,21 @@
-# Edit Castlist Season Modal Selector - Design Document
+# 🗄️ ARCHIVED - Edit Castlist Season Modal Selector - Design Document
+
+**⚠️ THIS DOCUMENT HAS BEEN ARCHIVED AND CONSOLIDATED**
+
+**Archived Date:** November 15, 2025
+**Reason:** Consolidated into [docs/features/CastlistV3-DataStructures.md](docs/features/CastlistV3-DataStructures.md)
+**Consolidated Sections:**
+- ✅ Season ID vs Config ID distinction (lines 395-465) → Section "🔑 Season ID vs Config ID - CRITICAL DISTINCTION"
+- ✅ Lookup patterns → "Lookup Pattern" subsection in Season Model
+- ✅ Implementation evidence → Code examples in Season Model section
+
+**Implementation Status:** ✅ **FULLY IMPLEMENTED** in castlistHandlers.js (handleEditInfoModal function, lines 1112-1121)
+
+**⚠️ DO NOT USE THIS DOCUMENT** - Refer to the consolidated source of truth and actual code implementation instead.
+
+---
+
+# Original Document (Archived)
 
 **Created:** 2025-10-03
 **Purpose:** Add season association functionality to castlist Edit Info modal using Label-wrapped String Select (Components V2)

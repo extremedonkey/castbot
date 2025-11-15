@@ -1,4 +1,21 @@
-# Edit Castlist Season - Key Context & Data Structures
+# 🗄️ ARCHIVED - Edit Castlist Season - Key Context & Data Structures
+
+**⚠️ THIS DOCUMENT HAS BEEN ARCHIVED AND CONSOLIDATED**
+
+**Archived Date:** November 15, 2025
+**Reason:** Consolidated into [docs/features/CastlistV3-DataStructures.md](docs/features/CastlistV3-DataStructures.md)
+**Consolidated Sections:**
+- ✅ Placement Namespaces (Global vs Per-Season) → Section "Placement Namespaces"
+- ✅ Virtual Castlist Upgrade Flow → Section "Virtual Castlist Upgrade Flow (Materialization Deep-Dive)"
+- ✅ Key Architectural Insights → Enhanced "Critical Implementation Notes"
+- ✅ Dual Storage patterns → "Critical Implementation Notes #1"
+- ✅ Multi-Castlist Support → "Critical Implementation Notes #3"
+
+**⚠️ DO NOT USE THIS DOCUMENT** - Refer to the consolidated source of truth instead.
+
+---
+
+# Original Document (Archived)
 
 **Created:** 2025-10-02
 **Purpose:** Capture critical insights from deep-dive session on season/castlist/tribe/placement architecture
