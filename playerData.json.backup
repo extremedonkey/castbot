@@ -6042,15 +6042,12 @@
         "analyticsAdded": 1762615893371
       },
       "1385242917890949213": {
-        "emoji": "🩸",
+        "emoji": "🤵",
         "castlist": "S6 - Tarantino",
         "showPlayerEmojis": false,
         "color": "#2ecc71",
-        "analyticsName": "🩸 S6 - Tarantino 🩸",
-        "analyticsAdded": 1762624314160,
-        "castlistIds": [
-          "castlist_1762625830595_system"
-        ]
+        "analyticsName": "🤵 S6 - Tarantino 🤵",
+        "analyticsAdded": 1763189142779
       },
       "1426478402998636724": {},
       "1385242971938750597": {
@@ -6483,6 +6480,23 @@
         "lastUpdated": 1763188936586,
         "seasonId": "season_e344af4d378b4b08",
         "seasonName": "Season 6 - Tarantino",
+        "questions": []
+      },
+      "config_1763188992405_391415444084490240": {
+        "buttonText": "Apply to Season 9 - Brooklyn 99",
+        "explanatoryText": "Join Season 9 - Brooklyn 99!",
+        "completionDescription": "Thank you for completing your application! A host will review it soon.",
+        "completionImage": null,
+        "channelFormat": "📝%name%-app",
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "draft",
+        "createdAt": 1763188992405,
+        "lastUpdated": 1763188992405,
+        "seasonId": "season_7e2d688e376348d2",
+        "seasonName": "Season 9 - Brooklyn 99",
         "questions": []
       }
     },
