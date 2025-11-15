@@ -2088,16 +2088,22 @@ async function generateInitialTipsScreen(interaction, client) {
     try {
       console.log('📤 Creating webhook followup message with 10 attached files...');
 
-      // Use WebhookClient for interaction followup (doesn't require bot permissions)
-      const { WebhookClient } = await import('discord.js');
-      const webhook = new WebhookClient({
-        id: interaction.application_id,
-        token: interaction.token
-      });
+      // Use Discord REST API for interaction followup (proper pattern for deferred responses)
+      const FormData = (await import('form-data')).default;
+      const fetch = (await import('node-fetch')).default;
 
-      // Create followup message with ALL files attached
-      await webhook.send({
-        files: attachments,  // All 10 AttachmentBuilder objects
+      const form = new FormData();
+
+      // Attach all 10 image files
+      for (let i = 0; i < attachments.length; i++) {
+        const attachment = attachments[i];
+        const filePath = path.join(basePath, `${i + 1}.png`);
+        const fileBuffer = await fs.readFile(filePath);
+        form.append(`files[${i}]`, fileBuffer, { filename: `${i + 1}.png` });
+      }
+
+      // Add payload JSON (components + flags)
+      const payload = {
         flags: (1 << 6),  // EPHEMERAL flag (64)
         components: [
           {
@@ -2153,9 +2159,28 @@ async function generateInitialTipsScreen(interaction, client) {
             ]
           }
         ]
+      };
+
+      form.append('payload_json', JSON.stringify(payload));
+
+      // Send POST request to Discord interaction webhook endpoint
+      const webhookUrl = `https://discord.com/api/v10/webhooks/${interaction.application_id}/${interaction.token}`;
+      console.log(`📡 Sending to: ${webhookUrl.substring(0, 80)}...`);
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        body: form,
+        headers: form.getHeaders()
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
       console.log('✅ Webhook followup message sent successfully with all files!');
+      console.log(`   Message ID: ${result.id}`);
     } catch (error) {
       console.error('❌ Failed to send webhook followup:', error.message);
       console.error(error);
