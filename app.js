@@ -891,6 +891,20 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
         emoji: { name: '💡' }
       }
     },
+    // 🧪 TEST BUTTON: Path A - Express Static File Serving
+    {
+      type: 1, // Action Row
+      components: [{
+        type: 2, // Button
+        custom_id: 'test_express_image',
+        label: '🧪 Test Express Images',
+        style: 3, // Success (green) for test
+        emoji: { name: '🖼️' }
+      }]
+    },
+    {
+      type: 14 // Separator
+    },
     {
       type: 10, // Text Display component
       content: `> **\`📍 Post Castlists\`**`
@@ -7939,6 +7953,44 @@ To fix this:
                 }
               ]
             }
+          };
+        }
+      })(req, res, client);
+
+    // 🧪 TEST 2025-11-15: Path A - Express Static File Serving with Media Gallery
+    } else if (custom_id === 'test_express_image') {
+      return ButtonHandlerFactory.create({
+        id: 'test_express_image',
+        ephemeral: true,
+        handler: async (context) => {
+          const ngrokUrl = 'https://adapted-deeply-stag.ngrok-free.app/img/tips/1.png';
+
+          console.log(`🧪 TEST: Displaying Express-served image via Media Gallery`);
+          console.log(`   URL: ${ngrokUrl}`);
+
+          return {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [{
+              type: 17, // Container
+              accent_color: 0x00ff00, // Green (test mode)
+              components: [{
+                type: 10, // Text Display
+                content: `## 🧪 Path A Test: Express Static File Serving\n\n**Testing URL:** \`${ngrokUrl}\`\n\nIf you see an image below (not broken icon), **Path A works!**`
+              }, {
+                type: 14 // Separator
+              }, {
+                type: 12, // Media Gallery
+                items: [{
+                  media: { url: ngrokUrl },
+                  description: 'Test Express Static Image'
+                }]
+              }, {
+                type: 14 // Separator
+              }, {
+                type: 10,
+                content: `✅ **If image displays:** Path A SUCCESS - implement full tips gallery\n❌ **If broken icon:** Check browser console, try Path C (Data URI)`
+              }]
+            }]
           };
         }
       })(req, res, client);
