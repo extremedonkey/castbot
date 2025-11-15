@@ -385,7 +385,10 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
         content: combinedHeaderContent
     };
 
-    console.log('🔍 DEBUG: tribeHeader structure:', JSON.stringify(tribeHeader, null, 2));
+    // Only show structure dumps in VERBOSE mode
+    if (process.env.DEBUG_VERBOSE === 'true') {
+        console.log('🔍 DEBUG: tribeHeader structure:', JSON.stringify(tribeHeader, null, 2));
+    }
 
     const playerCards = [];
     
@@ -417,10 +420,8 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
                     await loadDSTState();
                     offset = getDSTOffset(tzData.timezoneId);
 
-                    // Only log DST lookups in verbose mode
-                    const isVerbose = process.env.DEBUG_VERBOSE === 'true' ||
-                                     (process.env.DEBUG_VERBOSE !== 'false' && process.env.PRODUCTION !== 'TRUE');
-                    if (isVerbose) {
+                    // Only log DST lookups in VERBOSE mode (not STANDARD)
+                    if (process.env.DEBUG_VERBOSE === 'true') {
                         console.log(`🌍 [castlist] DST lookup for ${tzData.timezoneId}: offset=${offset}, stored=${tzData.offset}`);
                     }
 
@@ -521,9 +522,12 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
             ...playerCards
         ]
     };
-    
-    console.log('🔍 DEBUG: Final container components[0]:', JSON.stringify(containerResult.components[0], null, 2));
-    
+
+    // Only show structure dumps in VERBOSE mode
+    if (process.env.DEBUG_VERBOSE === 'true') {
+        console.log('🔍 DEBUG: Final container components[0]:', JSON.stringify(containerResult.components[0], null, 2));
+    }
+
     return containerResult;
 }
 
@@ -713,9 +717,11 @@ function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []
         console.error(`❌ COMPONENT LIMIT EXCEEDED: ${componentCount}/40 components`);
     }
 
-    // Add super detailed debugging
-    console.log('🔍 FINAL MESSAGE STRUCTURE:');
-    console.log('finalComponents[0]:', JSON.stringify(finalComponents[0], null, 2));
+    // Add super detailed debugging - only in VERBOSE mode
+    if (process.env.DEBUG_VERBOSE === 'true') {
+        console.log('🔍 FINAL MESSAGE STRUCTURE:');
+        console.log('finalComponents[0]:', JSON.stringify(finalComponents[0], null, 2));
+    }
     
     return {
         flags: 1 << 15, // IS_COMPONENTS_V2 flag
@@ -763,9 +769,8 @@ function countComponents(components) {
         }
     }
 
-    // Only show detailed breakdown in verbose mode (check env directly since this is sync)
-    const isVerbose = process.env.DEBUG_VERBOSE === 'true' ||
-                     (process.env.DEBUG_VERBOSE !== 'false' && process.env.PRODUCTION !== 'TRUE');
+    // Only show detailed breakdown in VERBOSE mode (not STANDARD)
+    const isVerbose = process.env.DEBUG_VERBOSE === 'true';
 
     if (isVerbose) {
         console.log('📋 DETAILED COMPONENT BREAKDOWN:');
@@ -1035,11 +1040,8 @@ function limitAndSortCastlists(allCastlists, maxCustomCastlists = 4) {
     const aModified = a.modifiedAt || a.metadata?.lastModified || a.createdAt || 0;
     const bModified = b.modifiedAt || b.metadata?.lastModified || b.createdAt || 0;
 
-    // Debug logging to trace sorting (only in verbose mode)
-    const isVerbose = process.env.DEBUG_VERBOSE === 'true' ||
-                     (process.env.DEBUG_VERBOSE !== 'false' && process.env.PRODUCTION !== 'TRUE');
-
-    if (isVerbose && modernCastlists.length <= 10) {  // Only log for reasonable list sizes
+    // Debug logging to trace sorting (only in VERBOSE mode, not STANDARD)
+    if (process.env.DEBUG_VERBOSE === 'true' && modernCastlists.length <= 10) {
       console.log(`[CASTLIST SORT MODERN] "${a.name}" (${aModified}) vs "${b.name}" (${bModified}) → ${bModified - aModified}`);
     }
 

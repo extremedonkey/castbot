@@ -12528,6 +12528,14 @@
         "color": "#ffff00",
         "analyticsName": "⁉️ Ask ⁉️",
         "analyticsAdded": 1763180590846
+      },
+      "1431679092125728943": {
+        "emoji": "⌚",
+        "castlist": "default",
+        "showPlayerEmojis": false,
+        "color": null,
+        "analyticsName": "⌚ EET / EEST ⌚",
+        "analyticsAdded": 1763181171294
       }
     },
     "timezones": {
