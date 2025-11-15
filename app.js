@@ -876,8 +876,20 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       type: 14 // Separator after title
     },
     {
-      type: 10, // Text Display component - Feature announcement ticker
-      content: `> **🚀 Major new CastBot version!** Use Castlist Manager to create Alumni and Winners lists!`
+      type: 9, // Section with accessory - Feature announcement ticker
+      components: [
+        {
+          type: 10, // Text Display
+          content: `> **🚀 Major new CastBot version!** Use Castlist Manager to create Alumni and Winners lists!`
+        }
+      ],
+      accessory: {
+        type: 2, // Button
+        custom_id: 'dm_view_tips',
+        label: 'View Tips',
+        style: 1, // Primary (blue)
+        emoji: { name: '💡' }
+      }
     },
     {
       type: 10, // Text Display component
@@ -2009,6 +2021,153 @@ function generateTipsScreen(index, discordCdnUrls) {
   };
 }
 */ // END DISABLED generateTipsScreen
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// NEW IMPLEMENTATION: Using Express Static File Serving
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/**
+ * Generate paginated tips screen using local static file serving
+ * NO UPLOAD to Discord - uses Express static middleware (app.js:1809)
+ * Pattern: Stateless pagination via button IDs (same as castRankingManager)
+ *
+ * @param {number} index - Current screenshot index (0-9)
+ * @returns {Object} UPDATE_MESSAGE response with Components V2 structure
+ */
+function generateTipsScreen(index) {
+  // Base URL for static files (Express serves /img directory)
+  const isDev = process.env.NODE_ENV !== 'production';
+  const baseUrl = isDev
+    ? 'https://adapted-deeply-stag.ngrok-free.app/img/tips'
+    : 'https://castbotaws.reecewagner.com/img/tips';
+
+  // Define all 10 CastBot feature screenshots metadata
+  const screenshots = [
+    {
+      filename: '1.png',
+      url: `${baseUrl}/1.png`,
+      title: '🦁 Safari System',
+      description: 'Create adventure challenges with maps, items, and player progression'
+    },
+    {
+      filename: '2.png',
+      url: `${baseUrl}/2.png`,
+      title: '📋 Dynamic Castlists',
+      description: 'Organize cast members with placements, alumni, and custom formatting'
+    },
+    {
+      filename: '3.png',
+      url: `${baseUrl}/3.png`,
+      title: '📊 Production Menu',
+      description: 'Comprehensive admin interface for managing all CastBot features'
+    },
+    {
+      filename: '4.png',
+      url: `${baseUrl}/4.png`,
+      title: '🏆 Cast Rankings',
+      description: 'Let players anonymously vote on applicants with visual ranking interface'
+    },
+    {
+      filename: '5.png',
+      url: `${baseUrl}/5.png`,
+      title: '🎬 Season Management',
+      description: 'Configure applications, questions, and production workflows'
+    },
+    {
+      filename: '6.png',
+      url: `${baseUrl}/6.png`,
+      title: '📱 Mobile View',
+      description: 'CastBot works seamlessly on mobile devices with responsive design'
+    },
+    {
+      filename: '7.png',
+      url: `${baseUrl}/7.png`,
+      title: '🎮 Player Menu',
+      description: 'Access your profile, seasons, and interactive features from one place'
+    },
+    {
+      filename: '8.png',
+      url: `${baseUrl}/8.png`,
+      title: '🗺️ Safari Map Explorer',
+      description: 'Interactive map system with fog of war and location tracking'
+    },
+    {
+      filename: '9.png',
+      url: `${baseUrl}/9.png`,
+      title: '📝 Application Builder',
+      description: 'Create custom season applications with multiple question types'
+    },
+    {
+      filename: '10.png',
+      url: `${baseUrl}/10.png`,
+      title: '⚙️ Settings & Configuration',
+      description: 'Fine-tune CastBot behavior for your server needs'
+    }
+  ];
+
+  const currentScreenshot = screenshots[index];
+  const totalCount = screenshots.length;
+
+  return {
+    type: InteractionResponseType.UPDATE_MESSAGE,
+    data: {
+      components: [
+        {
+          type: 17, // Container
+          accent_color: 0x9b59b6, // Purple for tips/features
+          components: [
+            {
+              type: 10, // Text Display
+              content: `## 💡 CastBot Features Tour (${index + 1}/${totalCount})\n\n### ${currentScreenshot.title}\n\n${currentScreenshot.description}`
+            },
+            { type: 14 }, // Separator
+            {
+              type: 12, // Media Gallery - ONE screenshot at a time
+              items: [
+                {
+                  media: { url: currentScreenshot.url },
+                  description: currentScreenshot.title
+                }
+              ]
+            },
+            { type: 14 }, // Separator
+            {
+              type: 10,
+              content: `> **\`📸 Feature Showcase (${index + 1}/${totalCount})\`**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• ${totalCount} features total - discover everything CastBot can do!`
+            },
+            { type: 14 }, // Separator before navigation
+            {
+              type: 1, // Action Row - Navigation buttons
+              components: [
+                {
+                  type: 2, // Button
+                  custom_id: `tips_prev_${index}`,
+                  label: '◀ Previous',
+                  style: 2, // Secondary (grey)
+                  disabled: index === 0
+                },
+                {
+                  type: 2, // Button
+                  custom_id: `tips_next_${index}`,
+                  label: 'Next ▶',
+                  style: 2, // Secondary (grey)
+                  disabled: index === totalCount - 1
+                },
+                {
+                  type: 2, // Button
+                  custom_id: 'dm_back_to_welcome',
+                  label: '← Back',
+                  style: 2, // Secondary (grey)
+                  emoji: { name: '🏠' }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  };
+}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -7651,29 +7810,43 @@ To fix this:
         }
       })(req, res, client);
 
-    // DISABLED 2025-11-06: Tips gallery created storage channels in ALL guilds - embarrassing!
-    // TODO: Re-implement using single storage location or Express static serving
-    // } else if (custom_id === 'dm_view_tips') {
-    //   return ButtonHandlerFactory.create({
-    //     id: 'dm_view_tips',
-    //     handler: async (context) => {
-    //       return {
-    //         content: '💡 Tips gallery is temporarily disabled. Coming back soon!',
-    //         ephemeral: true
-    //       };
-    //     }
-    //   })(req, res, client);
+    // ✅ RE-ENABLED 2025-11-15: Tips gallery now uses Express static file serving (no storage channels!)
+    } else if (custom_id === 'dm_view_tips') {
+      return ButtonHandlerFactory.create({
+        id: 'dm_view_tips',
+        handler: async (context) => {
+          return generateTipsScreen(0); // Start at first screenshot
+        }
+      })(req, res, client);
 
-    // } else if (custom_id.startsWith('tips_next_') || custom_id.startsWith('tips_prev_')) {
-    //   return ButtonHandlerFactory.create({
-    //     id: custom_id,
-    //     handler: async (context) => {
-    //       return {
-    //         content: '💡 Tips gallery is temporarily disabled. Coming back soon!',
-    //         ephemeral: true
-    //       };
-    //     }
-    //   })(req, res, client);
+    } else if (custom_id.startsWith('tips_next_') || custom_id.startsWith('tips_prev_')) {
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        handler: async (context) => {
+          // Parse index from button ID: tips_next_5 or tips_prev_5
+          const match = custom_id.match(/^tips_(next|prev)_(\d+)$/);
+          if (!match) {
+            return {
+              content: '❌ Invalid tips navigation button.',
+              ephemeral: true
+            };
+          }
+
+          const [, direction, currentIndexStr] = match;
+          const currentIndex = parseInt(currentIndexStr);
+          const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+
+          // Validate bounds (0-9 for 10 screenshots)
+          if (newIndex < 0 || newIndex > 9) {
+            return {
+              content: '❌ Cannot navigate beyond tips gallery bounds.',
+              ephemeral: true
+            };
+          }
+
+          return generateTipsScreen(newIndex); // UPDATE_MESSAGE with new screenshot
+        }
+      })(req, res, client);
 
     } else if (custom_id === 'dm_back_to_welcome') {
       // Navigate back to welcome message from tips

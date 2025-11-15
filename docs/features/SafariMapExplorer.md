@@ -411,7 +411,7 @@ async function moveToCoordinate(guildId, userId, coordinate) {
   - Created proof-of-concept tiles: map_a1.png, map_e5.png, map_a5.png, map_e1.png
 
 #### File Storage & Organization
-- **Map Storage:** `img/{guildId}/map_{gridSize}x{gridSize}_{timestamp}.png`
+- **Map Storage:** `{guildId}/map_{gridSize}x{gridSize}_{timestamp}.png`
 - **Custom Images:** Downloads and processes user-provided Discord CDN URLs
 - **Directory Structure:** Guild-specific folders for organized map storage
 - **Tile Storage:** Future capability for `img/{guildId}/tiles/` individual cell images
