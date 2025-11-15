@@ -9,6 +9,7 @@ import { castlistManager } from './castlistManager.js';
 import { loadPlayerData } from './storage.js';
 import { createBackButton } from './src/ui/backButtonFactory.js';
 import { parseTextEmoji } from './utils/emojiUtils.js';
+import { countComponents } from './utils.js';
 
 /**
  * Create the main Castlist Management Hub menu
@@ -219,11 +220,19 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       }
 
       // Component budget safety check
-      let maxTribeLimit = 6;
-      const estimatedTotal = 22 + tribes.length; // Base + sections
+      // Each tribe Section with accessory = 2 components (Section + Button accessory)
+      // Base UI (header, selects, separators, buttons) ≈ 11-13 components
+      // Role Select = 1 component
+      // Safe limit: 40 - 14 (base + buffer) = 26 components available / 2 per tribe = 13 tribes max
+      // Conservative limit accounting for edge cases: 20 tribes
+      let maxTribeLimit = 20;
+
+      // Dynamic reduction if approaching limit (with current tribes already displayed)
+      const estimatedTotal = 14 + (tribes.length * 2); // Base + (tribes × 2 components each)
       if (estimatedTotal > 35) {
-        console.warn(`[TRIBES] Component count high: ${estimatedTotal}/40, limiting to 5 tribes`);
-        maxTribeLimit = 5;
+        // Recalculate to stay under 40
+        maxTribeLimit = Math.floor((40 - 14) / 2); // = 13 tribes maximum
+        console.warn(`[TRIBES] High component count (${estimatedTotal} estimated), limiting to ${maxTribeLimit} tribes max`);
       }
 
       // Fetch guild once for all tribes
@@ -393,18 +402,11 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
 
   container.components.push(navButtons.toJSON());
 
-  // Debug: Log the final structure to identify the issue
-  console.log(`[DEBUG] Final container has ${container.components.length} components`);
-  container.components.forEach((comp, index) => {
-    if (comp.type === 9) { // Section
-      console.log(`[DEBUG] Component ${index} is Section:`, {
-        hasAccessory: !!comp.accessory,
-        accessoryType: comp.accessory?.type,
-        accessoryCustomId: comp.accessory?.custom_id,
-        accessoryLabel: comp.accessory?.label,
-        content: comp.components?.[0]?.content?.substring(0, 50) + '...'
-      });
-    }
+  // Count components using comprehensive counter (counts accessories, nested components, etc.)
+  const componentCount = countComponents([container], {
+    enableLogging: true,
+    label: `Castlist Hub${selectedCastlistId ? ` - ${selectedCastlistId}` : ''}`,
+    verbosity: "summary" // Use "full" for detailed breakdown
   });
 
   // Return just the components - ButtonHandlerFactory will handle flags appropriately

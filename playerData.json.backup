@@ -11118,24 +11118,26 @@
     "tribes": {
       "1385242520161620039": {
         "emoji": "🧛",
-        "castlist": "default",
+        "castlist": "Mega Season Castlist!",
         "showPlayerEmojis": false,
         "color": "#e74c3c",
         "analyticsName": "🧛 S1 - Buffy 🧛",
         "analyticsAdded": 1763228868021,
         "castlistIds": [
-          "default"
+          "default",
+          "castlist_1763230594118_custom"
         ]
       },
       "1385242743130947665": {
         "emoji": "🪲",
-        "castlist": "S3 - Beatles",
+        "castlist": "Mega Season Castlist!",
         "showPlayerEmojis": false,
         "color": "#c27c0e",
         "analyticsName": "🪲 S3 - Beatles 🪲",
         "analyticsAdded": 1763229414882,
         "castlistIds": [
-          "castlist_1763229475043_system"
+          "castlist_1763229475043_system",
+          "castlist_1763230594118_custom"
         ]
       },
       "1385242808952160326": {
@@ -11149,6 +11151,42 @@
         "emoji": "🧟‍♀️",
         "showPlayerEmojis": true,
         "memberCount": 11
+      },
+      "1385243081447837887": {
+        "color": "#f1c40f",
+        "analyticsName": "S10 - Drive In",
+        "analyticsAdded": 1763230720690,
+        "emoji": "🏕️",
+        "showPlayerEmojis": true,
+        "memberCount": 10,
+        "castlistIds": [
+          "castlist_1763230594118_custom"
+        ],
+        "castlist": "Mega Season Castlist!"
+      },
+      "1385243139769372703": {
+        "color": "#546e7a",
+        "analyticsName": "S11 - Stephen King",
+        "analyticsAdded": 1763230968378,
+        "emoji": "🏕️",
+        "showPlayerEmojis": true,
+        "memberCount": 20,
+        "castlistIds": [
+          "castlist_1763230594118_custom"
+        ],
+        "castlist": "Mega Season Castlist!"
+      },
+      "1406847946758033539": {
+        "color": "#9d55e0",
+        "analyticsName": "S12 - Jurassic Park",
+        "analyticsAdded": 1763230968397,
+        "emoji": "🏕️",
+        "showPlayerEmojis": true,
+        "memberCount": 36,
+        "castlistIds": [
+          "castlist_1763230594118_custom"
+        ],
+        "castlist": "Mega Season Castlist!"
       }
     },
     "players": {
@@ -11313,6 +11351,24 @@
           "emoji": "🧟",
           "description": "",
           "lastModified": 1763229618970
+        }
+      },
+      "castlist_1763230594118_custom": {
+        "id": "castlist_1763230594118_custom",
+        "name": "Mega Season Castlist!",
+        "type": "custom",
+        "createdAt": 1763230594118,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "placements",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "emoji": "🌌",
+          "description": "All seasons v All seasons!",
+          "lastModified": 1763230594118
         }
       }
     },
