@@ -56,15 +56,15 @@ Processing unified menu command [🎯 SLASH]
 
 ### **🔄 Response Types** (How Discord API flow works)
 
-| **Tag** | **Meaning** | **3-Second Rule** | **When to Use** |
-|---------|------------|-------------------|----------------|
-| `[⚡ IMMEDIATE-NEW]` | Creates new message instantly | ❌ Must respond <3s | Quick slash commands |
-| `[⚡ IMMEDIATE-UPDATE]` | Updates existing message instantly | ❌ Must respond <3s | Button clicks (most common) |
-| `[🔄 DEFERRED-NEW]` | "Thinking..." then webhook | ✅ Buys 15 minutes | Heavy slash commands |
-| `[🔄 DEFERRED-UPDATE]` | Silent ACK then webhook | ✅ Buys 15 minutes | Heavy button processing |
-| `[📝 MODAL]` | Shows a form | ❌ Must respond <3s | Collect user input |
-| `[🔗 WEBHOOK-PATCH]` | Updates @original via webhook | N/A (follow-up) | After deferred response |
-| `[🔗 WEBHOOK-POST]` | Sends new message via webhook | N/A (follow-up) | Additional follow-up |
+| **Tag** | **Meaning** | **3-Second Rule** | **When to Use** | **Traditional Pattern** |
+|---------|------------|-------------------|----------------|------------------------|
+| `[⚡ IMMEDIATE-NEW]` | Creates new message instantly | ❌ Must respond <3s | Quick slash commands | **Request-Response** (Synchronous) |
+| `[⚡ IMMEDIATE-UPDATE]` | Updates existing message instantly | ❌ Must respond <3s | Button clicks (most common) | **Request-Response** (Synchronous) |
+| `[🔄 DEFERRED-NEW]` | "Thinking..." then webhook | ✅ Buys 15 minutes | Heavy slash commands | **Request-Acknowledge-Reply** (Async) |
+| `[🔄 DEFERRED-UPDATE]` | Silent ACK then webhook | ✅ Buys 15 minutes | Heavy button processing | **Request-Acknowledge-Reply** (Async) |
+| `[📝 MODAL]` | Shows a form | ❌ Must respond <3s | Collect user input | **Two-Phase Commit** (Interactive) |
+| `[🔗 WEBHOOK-PATCH]` | Updates @original via webhook | N/A (follow-up) | After deferred response | **Callback Pattern** (Async continuation) |
+| `[🔗 WEBHOOK-POST]` | Sends new message via webhook | N/A (follow-up) | Additional follow-up | **Event Notification** (Pub-Sub style) |
 
 ### **🔒 Visibility** (Who can see the message)
 
@@ -597,6 +597,94 @@ flowchart TD
 2. **Slash command < 1 second?** → `[⚡ IMMEDIATE-NEW]`
 3. **Slash command > 1 second?** → `[🔄 DEFERRED-NEW]` → `[🔗 WEBHOOK-PATCH]`
 4. **Need user input?** → `[📝 MODAL]` → (user submits) → `[⚡ IMMEDIATE-UPDATE]`
+
+---
+
+## 📚 Traditional Software Patterns Explained
+
+Understanding how Discord patterns map to traditional software architecture:
+
+### **Request-Response (Synchronous)**
+```
+User → Request → Server processes → Response → User
+[⚡ IMMEDIATE-*] patterns
+```
+**Traditional examples:**
+- HTTP GET/POST requests
+- Function calls with immediate return
+- RPC (Remote Procedure Call)
+
+**Discord usage:** Button clicks, fast slash commands
+
+---
+
+### **Request-Acknowledge-Reply (Asynchronous)**
+```
+User → Request → Server ACK → User sees "processing..."
+      → Server processes (background) → Reply → User
+[🔄 DEFERRED-*] + [🔗 WEBHOOK-PATCH] patterns
+```
+**Traditional examples:**
+- Message queues (RabbitMQ, Kafka)
+- Long-polling HTTP
+- Job queues (Sidekiq, Celery)
+
+**Discord usage:** Heavy slash commands (/menu, /castlist)
+
+---
+
+### **Two-Phase Commit (Interactive)**
+```
+Phase 1: User → Request → Server shows form → User
+Phase 2: User fills form → Submit → Server validates → Response
+[📝 MODAL] → [📝 SUBMIT] → [⚡ IMMEDIATE-UPDATE]
+```
+**Traditional examples:**
+- Database transactions (prepare → commit)
+- Wizard-style UIs
+- Form validation flows
+
+**Discord usage:** Modals (edit location, create item, etc.)
+
+---
+
+### **Callback Pattern (Async Continuation)**
+```
+Initial response → Long operation → Callback with result
+[🔄 DEFERRED-*] → processing → [🔗 WEBHOOK-PATCH]
+```
+**Traditional examples:**
+- JavaScript Promises/async-await
+- Node.js callbacks
+- Event listeners
+
+**Discord usage:** Webhook follow-ups after deferred response
+
+---
+
+### **Event Notification (Pub-Sub Style)**
+```
+Action → Event published → Subscribers notified
+[🔗 WEBHOOK-POST] for additional messages
+```
+**Traditional examples:**
+- Pub-Sub systems (Redis, Google Pub/Sub)
+- Event-driven architecture
+- Observer pattern
+
+**Discord usage:** Sending additional follow-up messages
+
+---
+
+### **Pattern Comparison Table**
+
+| **Discord Pattern** | **Traditional Pattern** | **Blocking?** | **Timeout** | **Use Case** |
+|---------------------|------------------------|---------------|-------------|--------------|
+| IMMEDIATE | Request-Response | ✅ Yes | 3 seconds | Quick operations |
+| DEFERRED + WEBHOOK | Request-Acknowledge-Reply | ❌ No | 15 minutes | Heavy processing |
+| MODAL → SUBMIT | Two-Phase Commit | ✅ Yes (per phase) | 3s each phase | User input needed |
+| WEBHOOK-PATCH | Callback | ❌ No | 15 minutes | Update original message |
+| WEBHOOK-POST | Event Notification | ❌ No | 15 minutes | Send new messages |
 
 ---
 
