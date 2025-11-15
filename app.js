@@ -2113,6 +2113,7 @@ async function generateInitialTipsScreen(interaction, client) {
 
       // Add payload JSON (components + flags + attachments array)
       const payload = {
+        content: "💡 **CastBot Features Tour**",  // Fallback content (Discord requires SOMETHING)
         flags: (1 << 6),  // EPHEMERAL flag (64)
         attachments: attachmentDescriptors,  // CRITICAL: Describes which files are attached
         components: [
@@ -2172,6 +2173,15 @@ async function generateInitialTipsScreen(interaction, client) {
       };
 
       form.append('payload_json', JSON.stringify(payload));
+
+      // Debug: Log what we're sending
+      console.log('📋 Payload structure:', JSON.stringify({
+        hasContent: !!payload.content,
+        hasComponents: !!payload.components,
+        hasAttachments: !!payload.attachments,
+        attachmentCount: attachmentDescriptors.length,
+        componentCount: payload.components?.length || 0
+      }));
 
       // Send POST request to Discord interaction webhook endpoint
       const webhookUrl = `https://discord.com/api/v10/webhooks/${interaction.application_id}/${interaction.token}`;
