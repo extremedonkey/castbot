@@ -11126,9 +11126,24 @@
         "castlistIds": [
           "default"
         ]
+      },
+      "1385242743130947665": {
+        "emoji": "🪲",
+        "castlist": "S3 - Beatles",
+        "showPlayerEmojis": false,
+        "color": "#c27c0e",
+        "analyticsName": "🪲 S3 - Beatles 🪲",
+        "analyticsAdded": 1763229414882,
+        "castlistIds": [
+          "castlist_1763229475043_system"
+        ]
       }
     },
-    "players": {},
+    "players": {
+      "391415444084490240": {
+        "age": "36"
+      }
+    },
     "timezones": {
       "1353716900365860894": {
         "offset": -8,
@@ -11245,8 +11260,30 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1763228980695,
+        "modifiedAt": 1763229585048,
         "modifiedBy": "system"
+      },
+      "castlist_1763229475043_system": {
+        "id": "castlist_1763229475043_system",
+        "name": "S3 - Beatles",
+        "type": "system",
+        "createdAt": 1763229475043,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "placements_alpha",
+          "showRankings": true,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "",
+          "emoji": "🪲",
+          "migratedFrom": "virtual_UzMgLSBCZWF0bGVz",
+          "migrationDate": 1763229475043
+        },
+        "seasonId": "season_04d9a4d28d8549bf",
+        "modifiedAt": 1763229579752,
+        "modifiedBy": "391415444084490240"
       }
     },
     "placements": {
@@ -11265,6 +11302,23 @@
           "placement": 7,
           "updatedBy": "391415444084490240",
           "updatedAt": "2025-11-15T17:50:18.805Z"
+        }
+      },
+      "season_04d9a4d28d8549bf": {
+        "421037548371181581": {
+          "placement": 17,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-15T17:58:35.558Z"
+        },
+        "1020132984235491339": {
+          "placement": 20,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-15T17:58:49.671Z"
+        },
+        "756383872379256933": {
+          "placement": 99,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-15T17:59:12.829Z"
         }
       }
     },
@@ -11295,6 +11349,25 @@
       "1353716896402505800",
       "979090097465086072",
       "1353716899057504338"
-    ]
+    ],
+    "applicationConfigs": {
+      "config_1763229461656_391415444084490240": {
+        "buttonText": "Apply to Season 3 - Beatles",
+        "explanatoryText": "Join Season 3 - Beatles!",
+        "completionDescription": "Thank you for completing your application! A host will review it soon.",
+        "completionImage": null,
+        "channelFormat": "📝%name%-app",
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "draft",
+        "createdAt": 1763229461656,
+        "lastUpdated": 1763229461656,
+        "seasonId": "season_04d9a4d28d8549bf",
+        "seasonName": "Season 3 - Beatles",
+        "questions": []
+      }
+    }
   }
 }
