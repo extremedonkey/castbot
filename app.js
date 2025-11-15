@@ -2642,7 +2642,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 // REMOVED: prod_menu command handler - merged into unified /menu command with admin detection
 } else if (name === 'menu') {
   try {
-    console.log('Processing unified menu command');
+    const { discordLogTags: tags } = await import('./src/utils/discordLogTags.js');
+    console.log(`Processing unified menu command ${tags.source.SLASH}`);
 
     // Send deferred response IMMEDIATELY (matches /castlist pattern)
     await res.send({
@@ -2651,7 +2652,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         flags: InteractionResponseFlags.EPHEMERAL
       }
     });
-    console.log('[MENU] ✅ Sent deferred response (ephemeral)');
+    console.log(`[MENU] ✅ Sent deferred response ${tags.response.DEFERRED_NEW} ${tags.visibility.EPHEMERAL}`);
 
     // THEN check permissions and load data
     const member = req.body.member;
@@ -2695,7 +2696,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       console.log('[MENU] 📋 Production menu interface created');
 
       const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-      console.log('[MENU] 📤 Sending menu via webhook PATCH to @original');
+      console.log(`[MENU] 📤 Sending menu via webhook ${tags.response.WEBHOOK_PATCH} ${tags.visibility.EPHEMERAL}`);
       await DiscordRequest(endpoint, {
         method: 'PATCH',
         body: menuResponse
@@ -2723,7 +2724,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       console.log('[MENU] 📋 Player management UI created');
 
       const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-      console.log('[MENU] 📤 Sending player menu via webhook PATCH to @original');
+      console.log(`[MENU] 📤 Sending player menu via webhook ${tags.response.WEBHOOK_PATCH} ${tags.visibility.EPHEMERAL}`);
       await DiscordRequest(endpoint, {
         method: 'PATCH',
         body: managementUI
