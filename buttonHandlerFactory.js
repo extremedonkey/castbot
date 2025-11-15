@@ -849,7 +849,7 @@ export const BUTTON_REGISTRY = {
   'player_enter_command_global': {
     label: 'Enter Command',
     description: 'Enter a text command from anywhere (global)',
-    emoji: '⌨️',
+    emoji: '🕹️',
     style: 'Secondary',
     category: 'safari_player'
   },
