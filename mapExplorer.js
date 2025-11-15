@@ -2130,4 +2130,5 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
 
 // Export functions
 // createMapGrid removed - legacy hardcoded map functionality replaced by createMapGridWithCustomImage
-export { deleteMapGrid, createMapExplorerMenu, updateMapImage, createMapGridWithCustomImage, loadSafariContent, saveSafariContent, buildMapExplorerResponse };
+// buildMapExplorerResponse is exported directly with the function declaration above
+export { deleteMapGrid, createMapExplorerMenu, updateMapImage, createMapGridWithCustomImage, loadSafariContent, saveSafariContent };
