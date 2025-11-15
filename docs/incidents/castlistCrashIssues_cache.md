@@ -1071,7 +1071,7 @@ Always trace execution to find actual bottleneck.
 
 ### Related Documentation
 
-- [docs/architecture/CacheManagement.md](docs/architecture/CacheManagement.md) - CastBot cache inventory
+- [docs/features/CacheManagement.md](docs/features/CacheManagement.md) - CastBot cache inventory
 - [0982_20251104_CastlistV3_MigrationPath_Analysis.md](0982_20251104_CastlistV3_MigrationPath_Analysis.md) - Phase 1 implementation
 - [docs/troubleshooting/ComponentsV2Issues.md](docs/troubleshooting/ComponentsV2Issues.md) - Interaction timeout debugging
 

@@ -607,7 +607,7 @@ Even with cache limits removed:
 - [Discord Interaction API](../docs/standards/DiscordInteractionAPI.md)
 - [Discord Webhook Resource](../docs/standards/DiscordWebhookResource.md)
 - [ButtonHandlerFactory](../docs/enablers/ButtonHandlerFactory.md)
-- [Cache Management Guide](../docs/architecture/CacheManagement.md)
+- [Cache Management Guide](../docs/features/CacheManagement.md)
 - Discord Developer Docs: [Interactions - Receiving and Responding](https://discord.com/developers/docs/interactions/receiving-and-responding)
 
 ---

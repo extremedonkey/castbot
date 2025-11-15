@@ -273,7 +273,7 @@ flowchart TD
 
 - [Infrastructure Architecture](../infrastructure/InfrastructureArchitecture.md)
 - [Analytics System](../infrastructure/Analytics.md)
-- [Cache Management Guide](../architecture/CacheManagement.md)
+- [Cache Management Guide](../features/CacheManagement.md)
 - [Production Monitoring](../infrastructure/ProductionMonitoring.md)
 
 ---

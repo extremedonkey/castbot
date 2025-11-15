@@ -346,6 +346,7 @@ Bot not responding?
 - **CHANGE SEASON BUTTON** → Production Menu header accessory
 
 **Core Systems:**
+- **📋 CASTLIST ARCHITECTURE** (PARENT DOC) → [docs/features/CastlistArchitecture.md](docs/features/CastlistArchitecture.md) - Complete castlist system reference
 - **🦁 SAFARI SYSTEM** → [docs/features/Safari.md](docs/features/Safari.md)
 - **📋 SEASON APPLICATIONS** → [docs/features/SeasonAppBuilder.md](docs/features/SeasonAppBuilder.md)
 - **🏆 CAST RANKING** → [docs/features/CastRanking.md](docs/features/CastRanking.md)

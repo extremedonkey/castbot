@@ -526,7 +526,7 @@ The monitor validates these implemented optimizations:
 
 - [Infrastructure Architecture](InfrastructureArchitecture.md)
 - [Performance Debugging Guide](../troubleshooting/PerformanceDebugging.md)
-- [Cache Management Guide](../architecture/CacheManagement.md)
+- [Cache Management Guide](../features/CacheManagement.md)
 - [Analytics System](Analytics.md)
 
 ## 📋 Monitoring Checklist
