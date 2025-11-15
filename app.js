@@ -876,6 +876,10 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       type: 14 // Separator after title
     },
     {
+      type: 10, // Text Display component - Feature announcement ticker
+      content: `> **🚀 Major new CastBot version!** Use Castlist Manager to create Alumni and Winners lists!`
+    },
+    {
       type: 10, // Text Display component
       content: `> **\`📍 Post Castlists\`**`
     },
