@@ -2023,93 +2023,148 @@ function generateTipsScreen(index, discordCdnUrls) {
 */ // END DISABLED generateTipsScreen
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// NEW IMPLEMENTATION: Using Express Static File Serving
+// NEW IMPLEMENTATION: Using attachment:// Protocol with Local Files
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
- * Generate paginated tips screen using local static file serving
- * NO UPLOAD to Discord - uses Express static middleware (app.js:1809)
- * Pattern: Stateless pagination via button IDs (same as castRankingManager)
+ * Generate initial tips screen with ALL images pre-attached
+ * Uses attachment:// protocol - loads all 10 images from filesystem once
+ * Navigation then references attachments without re-uploading
  *
- * @param {number} index - Current screenshot index (0-9)
- * @returns {Object} UPDATE_MESSAGE response with Components V2 structure
+ * @returns {Object} CHANNEL_MESSAGE_WITH_SOURCE with all files attached
  */
-function generateTipsScreen(index) {
-  // Base URL for static files (Express serves /img directory)
-  const isDev = process.env.NODE_ENV !== 'production';
-  const baseUrl = isDev
-    ? 'https://adapted-deeply-stag.ngrok-free.app/img/tips'
-    : 'https://castbotaws.reecewagner.com/img/tips';
+async function generateInitialTipsScreen() {
+  const path = await import('path');
+  const fs = await import('fs/promises');
 
-  // Define all 10 CastBot feature screenshots metadata
+  // Screenshot metadata (order matches filenames 1-10)
   const screenshots = [
-    {
-      filename: '1.png',
-      url: `${baseUrl}/1.png`,
-      title: '🦁 Safari System',
-      description: 'Create adventure challenges with maps, items, and player progression'
-    },
-    {
-      filename: '2.png',
-      url: `${baseUrl}/2.png`,
-      title: '📋 Dynamic Castlists',
-      description: 'Organize cast members with placements, alumni, and custom formatting'
-    },
-    {
-      filename: '3.png',
-      url: `${baseUrl}/3.png`,
-      title: '📊 Production Menu',
-      description: 'Comprehensive admin interface for managing all CastBot features'
-    },
-    {
-      filename: '4.png',
-      url: `${baseUrl}/4.png`,
-      title: '🏆 Cast Rankings',
-      description: 'Let players anonymously vote on applicants with visual ranking interface'
-    },
-    {
-      filename: '5.png',
-      url: `${baseUrl}/5.png`,
-      title: '🎬 Season Management',
-      description: 'Configure applications, questions, and production workflows'
-    },
-    {
-      filename: '6.png',
-      url: `${baseUrl}/6.png`,
-      title: '📱 Mobile View',
-      description: 'CastBot works seamlessly on mobile devices with responsive design'
-    },
-    {
-      filename: '7.png',
-      url: `${baseUrl}/7.png`,
-      title: '🎮 Player Menu',
-      description: 'Access your profile, seasons, and interactive features from one place'
-    },
-    {
-      filename: '8.png',
-      url: `${baseUrl}/8.png`,
-      title: '🗺️ Safari Map Explorer',
-      description: 'Interactive map system with fog of war and location tracking'
-    },
-    {
-      filename: '9.png',
-      url: `${baseUrl}/9.png`,
-      title: '📝 Application Builder',
-      description: 'Create custom season applications with multiple question types'
-    },
-    {
-      filename: '10.png',
-      url: `${baseUrl}/10.png`,
-      title: '⚙️ Settings & Configuration',
-      description: 'Fine-tune CastBot behavior for your server needs'
-    }
+    { title: '🦁 Safari System', description: 'Create adventure challenges with maps, items, and player progression' },
+    { title: '📋 Dynamic Castlists', description: 'Organize cast members with placements, alumni, and custom formatting' },
+    { title: '📊 Production Menu', description: 'Comprehensive admin interface for managing all CastBot features' },
+    { title: '🏆 Cast Rankings', description: 'Let players anonymously vote on applicants with visual ranking interface' },
+    { title: '🎬 Season Management', description: 'Configure applications, questions, and production workflows' },
+    { title: '📱 Mobile View', description: 'CastBot works seamlessly on mobile devices with responsive design' },
+    { title: '🎮 Player Menu', description: 'Access your profile, seasons, and interactive features from one place' },
+    { title: '🗺️ Safari Map Explorer', description: 'Interactive map system with fog of war and location tracking' },
+    { title: '📝 Application Builder', description: 'Create custom season applications with multiple question types' },
+    { title: '⚙️ Settings & Configuration', description: 'Fine-tune CastBot behavior for your server needs' }
   ];
 
+  // Load ALL 10 images from local filesystem
+  const attachments = [];
+  const basePath = path.join('/home/reece/castbot/img/tips');
+
+  for (let i = 1; i <= 10; i++) {
+    const filePath = path.join(basePath, `${i}.png`);
+
+    try {
+      const fileBuffer = await fs.readFile(filePath);
+      attachments.push({
+        attachment: fileBuffer,
+        name: `${i}.png`  // This is the name we'll reference with attachment://
+      });
+      console.log(`✅ Loaded tip image ${i}.png (${fileBuffer.length} bytes)`);
+    } catch (error) {
+      console.error(`❌ Failed to load ${i}.png:`, error.message);
+      throw new Error(`Failed to load tip image ${i}: ${error.message}`);
+    }
+  }
+
+  const index = 0; // Start at first screenshot
   const currentScreenshot = screenshots[index];
   const totalCount = screenshots.length;
 
   return {
-    type: InteractionResponseType.UPDATE_MESSAGE,
+    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, // Type 4 - NEW message
+    data: {
+      files: attachments,  // ALL 10 images attached to this message
+      ephemeral: true,
+      components: [
+        {
+          type: 17, // Container
+          accent_color: 0x9b59b6, // Purple for tips/features
+          components: [
+            {
+              type: 10, // Text Display
+              content: `## 💡 CastBot Features Tour (${index + 1}/${totalCount})\n\n### ${currentScreenshot.title}\n\n${currentScreenshot.description}`
+            },
+            { type: 14 }, // Separator
+            {
+              type: 12, // Media Gallery - Show FIRST screenshot
+              items: [
+                {
+                  media: { url: 'attachment://1.png' },  // Reference pre-attached file
+                  description: currentScreenshot.title
+                }
+              ]
+            },
+            { type: 14 }, // Separator
+            {
+              type: 10,
+              content: `> **\`📸 Feature Showcase (${index + 1}/${totalCount})\`**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• ${totalCount} features total - discover everything CastBot can do!`
+            },
+            { type: 14 }, // Separator before navigation
+            {
+              type: 1, // Action Row - Navigation buttons
+              components: [
+                {
+                  type: 2, // Button
+                  custom_id: `tips_prev_${index}`,
+                  label: '◀ Previous',
+                  style: 2, // Secondary (grey)
+                  disabled: true  // Disabled on first image
+                },
+                {
+                  type: 2, // Button
+                  custom_id: `tips_next_${index}`,
+                  label: 'Next ▶',
+                  style: 2, // Secondary (grey)
+                  disabled: false
+                },
+                {
+                  type: 2, // Button
+                  custom_id: 'dm_back_to_welcome',
+                  label: '← Back',
+                  style: 2, // Secondary (grey)
+                  emoji: { name: '🏠' }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  };
+}
+
+/**
+ * Generate navigation update (UPDATE_MESSAGE)
+ * References one of the 10 pre-attached images via attachment:// protocol
+ *
+ * @param {number} index - Screenshot index (0-9)
+ * @returns {Object} UPDATE_MESSAGE response (edits existing message)
+ */
+function generateTipsScreenNavigation(index) {
+  const screenshots = [
+    { title: '🦁 Safari System', description: 'Create adventure challenges with maps, items, and player progression' },
+    { title: '📋 Dynamic Castlists', description: 'Organize cast members with placements, alumni, and custom formatting' },
+    { title: '📊 Production Menu', description: 'Comprehensive admin interface for managing all CastBot features' },
+    { title: '🏆 Cast Rankings', description: 'Let players anonymously vote on applicants with visual ranking interface' },
+    { title: '🎬 Season Management', description: 'Configure applications, questions, and production workflows' },
+    { title: '📱 Mobile View', description: 'CastBot works seamlessly on mobile devices with responsive design' },
+    { title: '🎮 Player Menu', description: 'Access your profile, seasons, and interactive features from one place' },
+    { title: '🗺️ Safari Map Explorer', description: 'Interactive map system with fog of war and location tracking' },
+    { title: '📝 Application Builder', description: 'Create custom season applications with multiple question types' },
+    { title: '⚙️ Settings & Configuration', description: 'Fine-tune CastBot behavior for your server needs' }
+  ];
+
+  const currentScreenshot = screenshots[index];
+  const totalCount = screenshots.length;
+  const imageNumber = index + 1; // attachment://1.png through attachment://10.png
+
+  return {
+    type: InteractionResponseType.UPDATE_MESSAGE, // Type 7 - Edit existing message
     data: {
       components: [
         {
@@ -2122,10 +2177,10 @@ function generateTipsScreen(index) {
             },
             { type: 14 }, // Separator
             {
-              type: 12, // Media Gallery - ONE screenshot at a time
+              type: 12, // Media Gallery - Reference different attached file
               items: [
                 {
-                  media: { url: currentScreenshot.url },
+                  media: { url: `attachment://${imageNumber}.png` },  // attachment://1.png to attachment://10.png
                   description: currentScreenshot.title
                 }
               ]
@@ -7810,12 +7865,13 @@ To fix this:
         }
       })(req, res, client);
 
-    // ✅ RE-ENABLED 2025-11-15: Tips gallery now uses Express static file serving (no storage channels!)
+    // ✅ RE-ENABLED 2025-11-15: Tips gallery now uses attachment:// protocol with local filesystem
     } else if (custom_id === 'dm_view_tips') {
       return ButtonHandlerFactory.create({
         id: 'dm_view_tips',
         handler: async (context) => {
-          return generateTipsScreen(0); // Start at first screenshot
+          console.log('🎯 Loading tips gallery - reading all 10 images from filesystem...');
+          return await generateInitialTipsScreen(); // Loads all 10 images, returns CHANNEL_MESSAGE_WITH_SOURCE
         }
       })(req, res, client);
 
@@ -7844,7 +7900,8 @@ To fix this:
             };
           }
 
-          return generateTipsScreen(newIndex); // UPDATE_MESSAGE with new screenshot
+          console.log(`🧭 Navigating tips gallery: ${currentIndex} → ${newIndex} (using attachment://${newIndex + 1}.png)`);
+          return generateTipsScreenNavigation(newIndex); // UPDATE_MESSAGE referencing pre-attached file
         }
       })(req, res, client);
 
