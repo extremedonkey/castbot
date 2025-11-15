@@ -12,7 +12,6 @@ import { loadSafariContent, saveSafariContent, getCustomTerms } from './safariMa
 import { EDIT_CONFIGS } from './editFramework.js';
 import { SAFARI_LIMITS } from './config/safariLimits.js';
 import { parseTextEmoji } from './utils/emojiUtils.js';
-import { getBotEmoji } from './botEmojis.js';
 
 /**
  * Create item selection UI for map locations
@@ -481,7 +480,7 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
             style: 2, // Secondary (grey)
             label: 'Enter Command',
             custom_id: `player_enter_command_${entityId}`,
-            emoji: getBotEmoji('command', guildId)
+            emoji: { name: '🕹️' }
         });
 
         // Add whisper button for admins

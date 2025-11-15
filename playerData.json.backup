@@ -11129,7 +11129,104 @@
       }
     },
     "players": {},
-    "timezones": {},
+    "timezones": {
+      "1353716900365860894": {
+        "offset": -8,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)",
+        "timezoneId": "PT"
+      },
+      "1353716901724815471": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)",
+        "timezoneId": "MT"
+      },
+      "1353716903205408808": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)",
+        "timezoneId": "CT"
+      },
+      "1353716904547717171": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)",
+        "timezoneId": "ET"
+      },
+      "1431941439951994901": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)",
+        "timezoneId": "AT"
+      },
+      "1401192833825771571": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)",
+        "timezoneId": "NT"
+      },
+      "1353716907026550798": {
+        "offset": 0,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)",
+        "timezoneId": "GMT"
+      },
+      "1353716908431638630": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)",
+        "timezoneId": "CET"
+      },
+      "1431941441994752164": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "EET (UTC+2)",
+        "timezoneId": "EET"
+      },
+      "1401207600363737098": {
+        "offset": 2,
+        "dstObserved": false,
+        "standardName": "SAST (UTC+2)",
+        "timezoneId": "SAST"
+      },
+      "1401207657800536174": {
+        "offset": 5.5,
+        "dstObserved": false,
+        "standardName": "IST (UTC+5.5)",
+        "timezoneId": "IST"
+      },
+      "1431941443961753720": {
+        "offset": 7,
+        "dstObserved": false,
+        "standardName": "ICT (UTC+7)",
+        "timezoneId": "ICT"
+      },
+      "1353716909861765150": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": "GMT+8 (UTC+8)",
+        "timezoneId": "GMT8"
+      },
+      "1431941445664637031": {
+        "offset": 9,
+        "dstObserved": false,
+        "standardName": "JST (UTC+9)",
+        "timezoneId": "JST"
+      },
+      "1401192838774915122": {
+        "offset": 10,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)",
+        "timezoneId": "AEST"
+      },
+      "1431941447975829514": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)",
+        "timezoneId": "NZST"
+      }
+    },
     "castlistConfigs": {
       "default": {
         "id": "default",
@@ -11163,8 +11260,41 @@
           "placement": 3,
           "updatedBy": "391415444084490240",
           "updatedAt": "2025-11-15T17:50:12.112Z"
+        },
+        "761034006682271765": {
+          "placement": 7,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-15T17:50:18.805Z"
         }
       }
-    }
+    },
+    "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
+    "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
+    "ownerId": "468655730975703041",
+    "memberCount": 578,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1652366120591,
+    "lastUpdated": 1763229061891,
+    "ownerInfo": {
+      "username": "serviver",
+      "globalName": "Serviver",
+      "discriminator": "0",
+      "tag": "serviver"
+    },
+    "analyticsVersion": "1.0",
+    "pronounRoleIDs": [
+      "1081386366828552312",
+      "975536776968044564",
+      "975536782391246878",
+      "1353716895131631626",
+      "1401192818243928084",
+      "1353716896402505800",
+      "979090097465086072",
+      "1353716899057504338"
+    ]
   }
 }

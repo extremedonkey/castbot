@@ -127,7 +127,7 @@ import {
   updateDeferredResponse
 } from './buttonHandlerFactory.js';
 import { createEntityManagementUI } from './entityManagementUI.js';
-import { getBotEmoji, formatBotEmoji } from './botEmojis.js';
+import { formatBotEmoji } from './botEmojis.js';
 import { createCastlistMenu } from './castlistMenu.js';
 import {
   deleteMapGrid,
@@ -24789,11 +24789,11 @@ Are you sure you want to continue?`;
             const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
             const locationName = coordData?.baseContent?.title || `Location ${coord}`;
             
-            // Create Enter Command button with bot emoji
+            // Create Enter Command button with joystick emoji
             const enterCommandButton = new ButtonBuilder()
               .setCustomId(`player_enter_command_${coord}`)
               .setLabel('Enter Command')
-              .setEmoji(getBotEmoji('command', context.guildId))
+              .setEmoji('🕹️')
               .setStyle(2); // Secondary
             
             // Create Navigate button
