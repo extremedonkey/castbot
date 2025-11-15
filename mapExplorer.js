@@ -877,7 +877,7 @@ async function createMapExplorerMenu(guildId) {
     
     const blacklistButton = new ButtonBuilder()
       .setCustomId('map_admin_blacklist')
-      .setLabel('Blacklisted Coords')
+      .setLabel('Blacklist')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🚫');
     
@@ -1579,9 +1579,10 @@ export async function getBlacklistedCoordinates(guildId) {
  *
  * @param {Array} sortedItems - Reverse blacklist items sorted by priority (lastModified desc → alphabetical)
  * @param {Map} itemColorMap - Map of itemId -> color object with emoji and name
- * @returns {string} Formatted legend text with color coding
+ * @param {Array} blacklistedCoords - Array of blacklisted coordinate strings
+ * @returns {string} Formatted legend text with color coding and warnings
  */
-export function generateMultiColorLegend(sortedItems, itemColorMap) {
+export function generateMultiColorLegend(sortedItems, itemColorMap, blacklistedCoords) {
   const legendLines = ['**Legend:**', '🟥 Red overlay = Blacklisted (impossible to pass)'];
 
   // Add color lines for first 4 items (unique colors)
@@ -1597,12 +1598,27 @@ export function generateMultiColorLegend(sortedItems, itemColorMap) {
 
   legendLines.push('⬜ No overlay = Normal access');
 
-  // Add reverse blacklist items section
+  // Add reverse blacklist items section with warnings for non-blacklisted coords
   legendLines.push('', '**Reverse Blacklist Items:**');
+  let hasNonBlacklistedCoords = false;
+
   sortedItems.forEach(item => {
-    const coords = (item.coordinates || []).join(', ');
-    legendLines.push(`• ${item.emoji} ${item.name}: ${coords}`);
+    const coords = item.coordinates || [];
+    const formattedCoords = coords.map(coord => {
+      if (!blacklistedCoords.includes(coord)) {
+        hasNonBlacklistedCoords = true;
+        return `${coord}¹`;  // Add superscript warning
+      }
+      return coord;
+    }).join(', ');
+
+    legendLines.push(`• ${item.emoji} ${item.name}: ${formattedCoords}`);
   });
+
+  // Add warning footnote if any non-blacklisted coords were found
+  if (hasNonBlacklistedCoords) {
+    legendLines.push('', '¹ You need to add these coordinates to the Blacklist, or players will be able to access it even without the item!');
+  }
 
   return legendLines.join('\n');
 }

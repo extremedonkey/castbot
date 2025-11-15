@@ -710,20 +710,20 @@ export async function handleMapAdminBlacklist(context) {
       title: 'Manage Blacklisted Coordinates',
       components: [
         {
-          type: 1, // Action Row
-          components: [
-            {
-              type: 4, // Text Input
-              custom_id: 'blacklisted_coords',
-              label: 'Blacklisted Coordinates',
-              style: 2, // Paragraph
-              placeholder: 'Enter comma-separated coordinates (e.g., A1, B3, C5)',
-              value: blacklistedCoords.join(', '),
-              required: false,
-              min_length: 0,
-              max_length: 1000
-            }
-          ]
+          type: 18, // Label (modern modal component)
+          label: 'Blacklisted Coordinates',
+          description: "Players can't navigate to blacklisted coordinates - block sections until merge or unlock with items",
+          component: {
+            type: 4, // Text Input
+            custom_id: 'blacklisted_coords',
+            style: 2, // Paragraph
+            placeholder: 'Enter comma-separated coordinates (e.g., A1, B3, C5)',
+            value: blacklistedCoords.join(', '),
+            required: false,
+            min_length: 0,
+            max_length: 1000
+            // Note: 'label' field not allowed when inside Label component
+          }
         }
       ]
     }
@@ -738,9 +738,9 @@ export async function handleMapAdminBlacklist(context) {
  */
 export async function handleMapAdminBlacklistModal(context, req) {
   console.log(`🚫 START: map_admin_blacklist_modal - user ${context.userId}`);
-  
-  // Get the input value
-  const blacklistedCoordsInput = req.body.data.components[0].components[0].value || '';
+
+  // Get the input value from Label component structure
+  const blacklistedCoordsInput = req.body.data.components[0].component.value || '';
   
   // Parse coordinates - split by comma and clean up
   const coordinatesList = blacklistedCoordsInput

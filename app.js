@@ -24160,9 +24160,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                 itemColorMap.set(item.id, color);
               });
 
-              // Generate multi-color legend
-              const { generateMultiColorLegend } = await import('./mapExplorer.js');
-              legendContent = generateMultiColorLegend(sortedItems, itemColorMap);
+              // Get blacklisted coordinates for warning detection
+              const { getBlacklistedCoordinates, generateMultiColorLegend } = await import('./mapExplorer.js');
+              const blacklistedCoords = await getBlacklistedCoordinates(context.guildId);
+
+              // Generate multi-color legend with warnings for non-blacklisted coords
+              legendContent = generateMultiColorLegend(sortedItems, itemColorMap, blacklistedCoords);
             } else {
               // No reverse blacklist items - show basic legend
               legendContent = `**Legend:**
