@@ -14509,13 +14509,16 @@
   },
   "1400065575090389045": {
     "tribes": {
-      "1400065656472207395": {
-        "emoji": "🔥",
+      "1432353406034382868": {
+        "emoji": "🛸",
         "castlist": "default",
         "showPlayerEmojis": false,
         "color": null,
-        "analyticsName": "🔥 CastBot-Dev (Dynamic Castlist) 🔥",
-        "analyticsAdded": 1763215987787
+        "analyticsName": "🛸 ET 🛸",
+        "analyticsAdded": 1763216684205,
+        "castlistIds": [
+          "default"
+        ]
       }
     },
     "players": {},
@@ -14525,7 +14528,7 @@
         "id": "default",
         "name": "Active Castlist",
         "type": "system",
-        "createdAt": 1763216015350,
+        "createdAt": 1763216719219,
         "createdBy": "system",
         "settings": {
           "sortStrategy": "alphabetical",
@@ -14538,7 +14541,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1763216015363,
+        "modifiedAt": 1763216719230,
         "modifiedBy": "system"
       }
     }

@@ -127,8 +127,8 @@ export class CastlistManager {
         createdAt: Date.now(),
         createdBy: 'system',
         settings: {
-          sortStrategy: 'alphabetical',
-          showRankings: false,
+          sortStrategy: 'placements',
+          showRankings: true,
           maxDisplay: 25,
           visibility: 'public'
         },
