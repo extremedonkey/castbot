@@ -1585,10 +1585,9 @@ export function generateMultiColorLegend(sortedItems, itemColorMap) {
   const legendLines = ['**Legend:**', '🟥 Red overlay = Blacklisted (impossible to pass)'];
 
   // Add color lines for first 4 items (unique colors)
-  const colorEmojis = ['🟩', '🟧', '🟨', '🟪'];
   sortedItems.slice(0, 4).forEach((item, index) => {
-    const emoji = colorEmojis[index];
-    legendLines.push(`${emoji} ${emoji} overlay = ${item.emoji} ${item.name}`);
+    const color = itemColorMap.get(item.id);
+    legendLines.push(`${color.emoji} ${color.name} overlay = ${item.emoji} ${item.name}`);
   });
 
   // Add brown overflow line if 5+ items
@@ -1785,7 +1784,7 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridSi
             width: Math.floor(cellWidth),
             height: Math.floor(cellHeight),
             channels: 4,
-            background: color
+            background: { r: color.r, g: color.g, b: color.b, alpha: color.alpha }  // Extract only color values for Sharp
           }
         }).png().toBuffer();
 
