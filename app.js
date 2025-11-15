@@ -17141,37 +17141,52 @@ Your server is now ready for Tycoons gameplay!`;
         handler: async (context) => {
           const actionId = custom_id.replace('safari_finish_button_', '');
           console.log(`🔍 START: safari_finish_button_${actionId} - user ${context.userId}`);
-          
+
           // Load Safari data to get action details and find the coordinate
           const { loadSafariContent } = await import('./safariManager.js');
           const allSafariContent = await loadSafariContent();
           const guildData = allSafariContent[context.guildId] || {};
           const action = guildData.buttons?.[actionId];
-          
+
           if (!action) {
             return {
               content: '❌ Action not found.',
               ephemeral: true
             };
           }
-          
+
           // Get the first coordinate assigned to this action (if any)
           const coordinate = action.coordinates?.[0];
-          
-          if (!coordinate) {
-            // Orphan action - show Safari menu directly
-            console.log(`🌍 DEBUG: Orphan action ${actionId} - showing Safari menu`);
+          const activeMapId = guildData.maps?.active;
 
-            const safariMenuData = await createSafariMenu(context.guildId, context.userId, context.member);
+          // Check if we're in a Safari channel (coordinate's channel)
+          let inSafariChannel = false;
+          if (coordinate && activeMapId) {
+            const coordinateChannelId = guildData.maps?.[activeMapId]?.coordinates?.[coordinate]?.channelId;
+            inSafariChannel = coordinateChannelId && coordinateChannelId === context.channelId;
+            console.log(`📍 DEBUG: Coordinate ${coordinate}, channel match: ${inSafariChannel} (current: ${context.channelId}, expected: ${coordinateChannelId})`);
+          }
 
+          if (!coordinate || !inSafariChannel) {
+            // Orphan action OR not in safari channel - show global action editor
+            const reason = !coordinate ? 'orphan action (no coordinates)' : 'not in Safari channel';
+            console.log(`🌍 DEBUG: ${reason} for ${actionId} - showing safari_action_editor`);
+
+            const { createCustomActionSelectionUI } = await import('./customActionUI.js');
+            const ui = await createCustomActionSelectionUI({
+              guildId: context.guildId
+              // No coordinate or mapId - triggers global mode
+            });
+
+            console.log(`✅ SUCCESS: safari_finish_button_${actionId} - returned to global action editor`);
             return {
-              ...safariMenuData,
+              ...ui,
               ephemeral: true
             };
           }
-          
+
           console.log(`✅ SUCCESS: safari_finish_button_${actionId} - navigating back to location ${coordinate}`);
-          
+
           // Show the Map Location Manager for this coordinate
           const { createEntityManagementUI } = await import('./entityManagementUI.js');
           const ui = await createEntityManagementUI({
@@ -17180,7 +17195,7 @@ Your server is now ready for Tycoons gameplay!`;
             selectedId: coordinate,
             mode: 'edit'
           });
-          
+
           return {
             ...ui,
             ephemeral: true
