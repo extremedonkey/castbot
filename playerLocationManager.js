@@ -263,24 +263,26 @@ export function formatPlayerLocationDisplay(players, options = {}) {
  * @returns {Object} Components V2 formatted map display
  */
 export async function createPlayerLocationMap(guildId, client = null, options = {}) {
-    const { 
-        showBlacklisted = true, 
-        blacklistSymbol = 'X' 
+    const {
+        showBlacklisted = true,
+        blacklistSymbol = 'X',
+        playerLocations = null  // Optional pre-fetched player locations to avoid duplicate API calls
     } = options;
-    
+
     const safariData = await loadSafariContent();
     const activeMapId = safariData[guildId]?.maps?.active;
-    
+
     if (!activeMapId) {
         return {
             type: 10, // Text Display
             content: '⚠️ No active map found'
         };
     }
-    
+
     const mapData = safariData[guildId].maps[activeMapId];
     const gridSize = mapData.gridSize || 7;
-    const allLocations = await getAllPlayerLocations(guildId, true, client);
+    // Use pre-fetched locations if provided, otherwise fetch (for backward compatibility)
+    const allLocations = playerLocations || await getAllPlayerLocations(guildId, true, client);
     
     // Get blacklisted coordinates if needed
     let blacklistedCoords = [];

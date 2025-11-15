@@ -24439,15 +24439,18 @@ Are you sure you want to continue?`;
           console.log(`👥 START: map_player_locations - user ${context.userId}`);
           
           const { getAllPlayerLocations, formatPlayerLocationDisplay, createPlayerLocationMap } = await import('./playerLocationManager.js');
-          
+
           // Get all player locations with Discord client to fetch real-time display names
           const playerLocations = await getAllPlayerLocations(context.guildId, true, client);
-          
+
           // Convert Map to array for display
           const playersArray = Array.from(playerLocations.values());
-          
-          // Create visual map display
-          const mapDisplay = await createPlayerLocationMap(context.guildId, client, { showBlacklisted: true });
+
+          // Create visual map display - pass pre-fetched playerLocations to avoid duplicate API call
+          const mapDisplay = await createPlayerLocationMap(context.guildId, client, {
+            showBlacklisted: true,
+            playerLocations  // Reuse already-fetched data (eliminates 2+ minute duplicate fetch)
+          });
           
           // Format detailed player list
           const detailedList = formatPlayerLocationDisplay(playersArray, {
@@ -24511,15 +24514,20 @@ Are you sure you want to continue?`;
         permissionName: 'Manage Roles',
         updateMessage: true,
         ephemeral: true,
+        deferred: true,  // Enable deferred response - fetches Discord members (network-bound)
         handler: async (context) => {
           console.log(`🔄 REFRESH: map_player_locations - user ${context.userId}`);
           
           // Reuse the same handler logic as map_player_locations
           const { getAllPlayerLocations, formatPlayerLocationDisplay, createPlayerLocationMap } = await import('./playerLocationManager.js');
-          
+
           const playerLocations = await getAllPlayerLocations(context.guildId, true, client);
           const playersArray = Array.from(playerLocations.values());
-          const mapDisplay = await createPlayerLocationMap(context.guildId, client, { showBlacklisted: true });
+          // Pass pre-fetched playerLocations to avoid duplicate API call
+          const mapDisplay = await createPlayerLocationMap(context.guildId, client, {
+            showBlacklisted: true,
+            playerLocations  // Reuse already-fetched data
+          });
           const detailedList = formatPlayerLocationDisplay(playersArray, {
             showStamina: true,
             showLastMove: true,
