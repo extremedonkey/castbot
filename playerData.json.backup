@@ -3890,14 +3890,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 577,
+    "memberCount": 578,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1763133057131,
+    "lastUpdated": 1763179486011,
     "players": {
       "235148962103951360": {
         "emojiCode": "<:Carl_bot:1380989603783249950>"
@@ -12520,6 +12520,14 @@
           "default"
         ],
         "castlist": "Active Castlist"
+      },
+      "1431927291562168373": {
+        "emoji": "⁉️",
+        "castlist": "AskTribe",
+        "showPlayerEmojis": false,
+        "color": "#ffff00",
+        "analyticsName": "⁉️ Ask ⁉️",
+        "analyticsAdded": 1763180590846
       }
     },
     "timezones": {
@@ -12691,8 +12699,17 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1761468582864,
+        "modifiedAt": 1763180193188,
         "modifiedBy": "system"
+      }
+    },
+    "placements": {
+      "global": {
+        "391415444084490240": {
+          "placement": 66,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-11-15T04:16:51.212Z"
+        }
       }
     }
   },
@@ -12726,14 +12743,14 @@
     "serverName": "Triumph Hub",
     "icon": "https://cdn.discordapp.com/icons/1080166267136262154/174fdda5d62bc8c2227e31f8111e7f05.webp",
     "ownerId": "572291395365109770",
-    "memberCount": 449,
+    "memberCount": 450,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1677602106604,
-    "lastUpdated": 1763051910256,
+    "lastUpdated": 1763179486504,
     "players": {
       "572291395365109770": {
         "age": "29"

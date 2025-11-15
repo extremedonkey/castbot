@@ -385,30 +385,46 @@ function formatActionDetails(actionType, details) {
  */
 async function postToDiscordLogs(logEntry, userId, action, details, components, guildId = null, safariContent = null) {
   try {
-    console.log(`📊 DEBUG: postToDiscordLogs ENTRY - action: ${action}, userId: ${userId}, guildId: ${guildId}`);
-    
+    const { shouldLog } = await import('../../src/utils/logConfig.js');
+
+    if (shouldLog('VERBOSE')) {
+      console.log(`📊 DEBUG: postToDiscordLogs ENTRY - action: ${action}, userId: ${userId}, guildId: ${guildId}`);
+    }
+
     // Skip if Discord client not available
     if (!discordClient) {
-      console.log(`📊 DEBUG: postToDiscordLogs EARLY RETURN - Discord client not available`);
+      if (shouldLog('VERBOSE')) {
+        console.log(`📊 DEBUG: postToDiscordLogs EARLY RETURN - Discord client not available`);
+      }
       return;
     }
-    console.log(`📊 DEBUG: postToDiscordLogs - Discord client OK`);
+    if (shouldLog('VERBOSE')) {
+      console.log(`📊 DEBUG: postToDiscordLogs - Discord client OK`);
+    }
 
     // Load environment config
     const { loadEnvironmentConfig } = await import('../../storage.js');
     const envConfig = await loadEnvironmentConfig();
-    console.log(`📊 DEBUG: postToDiscordLogs - envConfig loaded`);
-    
+    if (shouldLog('VERBOSE')) {
+      console.log(`📊 DEBUG: postToDiscordLogs - envConfig loaded`);
+    }
+
     const loggingConfig = envConfig.liveDiscordLogging;
     // Don't log the entire config (it might have old queue data)
-    console.log(`📊 DEBUG: postToDiscordLogs - Logging enabled:`, loggingConfig.enabled);
-    
+    if (shouldLog('VERBOSE')) {
+      console.log(`📊 DEBUG: postToDiscordLogs - Logging enabled:`, loggingConfig.enabled);
+    }
+
     // Check if logging is enabled
     if (!loggingConfig.enabled) {
-      console.log(`📊 DEBUG: postToDiscordLogs EARLY RETURN - Logging not enabled`);
+      if (shouldLog('VERBOSE')) {
+        console.log(`📊 DEBUG: postToDiscordLogs EARLY RETURN - Logging not enabled`);
+      }
       return;
     }
-    console.log(`📊 DEBUG: postToDiscordLogs - Logging enabled OK`);
+    if (shouldLog('VERBOSE')) {
+      console.log(`📊 DEBUG: postToDiscordLogs - Logging enabled OK`);
+    }
     
     // Check user exclusion (environment-specific)
     const isProduction = process.env.PRODUCTION === 'TRUE';
@@ -426,25 +442,39 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
     }
 
     if (excludedUsers.includes(userId)) {
-      console.log(`📊 DEBUG: postToDiscordLogs EARLY RETURN - User ${userId} is excluded in ${isProduction ? 'production' : 'development'}`);
+      if (shouldLog('VERBOSE')) {
+        console.log(`📊 DEBUG: postToDiscordLogs EARLY RETURN - User ${userId} is excluded in ${isProduction ? 'production' : 'development'}`);
+      }
       return;
     }
-    console.log(`📊 DEBUG: postToDiscordLogs - User not excluded (${isProduction ? 'production' : 'development'} mode), continuing...`);
+    if (shouldLog('VERBOSE')) {
+      console.log(`📊 DEBUG: postToDiscordLogs - User not excluded (${isProduction ? 'production' : 'development'} mode), continuing...`);
+    }
     
     // Get target channel if not cached
-    console.log(`📊 DEBUG: postToDiscordLogs - Checking target channel cache`);
+    if (shouldLog('VERBOSE')) {
+      console.log(`📊 DEBUG: postToDiscordLogs - Checking target channel cache`);
+    }
     if (!targetChannel) {
-      console.log(`📊 DEBUG: postToDiscordLogs - Target channel not cached, fetching...`);
+      if (shouldLog('VERBOSE')) {
+        console.log(`📊 DEBUG: postToDiscordLogs - Target channel not cached, fetching...`);
+      }
       try {
         const { getLoggingChannelId } = await import('../../storage.js');
         const targetChannelId = await getLoggingChannelId();
-        console.log(`📊 DEBUG: postToDiscordLogs - Got target channel ID: ${targetChannelId}`);
-        
+        if (shouldLog('VERBOSE')) {
+          console.log(`📊 DEBUG: postToDiscordLogs - Got target channel ID: ${targetChannelId}`);
+        }
+
         const targetGuild = await discordClient.guilds.fetch(loggingConfig.targetGuildId);
-        console.log(`📊 DEBUG: postToDiscordLogs - Fetched target guild: ${targetGuild.name}`);
-        
+        if (shouldLog('VERBOSE')) {
+          console.log(`📊 DEBUG: postToDiscordLogs - Fetched target guild: ${targetGuild.name}`);
+        }
+
         targetChannel = await targetGuild.channels.fetch(targetChannelId);
-        console.log(`📊 DEBUG: postToDiscordLogs - Fetched target channel: ${targetChannel?.name}`);
+        if (shouldLog('VERBOSE')) {
+          console.log(`📊 DEBUG: postToDiscordLogs - Fetched target channel: ${targetChannel?.name}`);
+        }
         
         if (!targetChannel) {
           console.error('Discord Logging: Target channel not found');
@@ -455,19 +485,29 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
         return;
       }
     } else {
-      console.log(`📊 DEBUG: postToDiscordLogs - Using cached target channel: ${targetChannel.name}`);
+      if (shouldLog('VERBOSE')) {
+        console.log(`📊 DEBUG: postToDiscordLogs - Using cached target channel: ${targetChannel.name}`);
+      }
     }
-    
+
     // Format the log entry for Discord
-    console.log(`📊 DEBUG: postToDiscordLogs - Formatting log entry`);
+    if (shouldLog('VERBOSE')) {
+      console.log(`📊 DEBUG: postToDiscordLogs - Formatting log entry`);
+    }
     const formattedMessage = `* ${formatAnalyticsLine(logEntry)}`;
-    console.log(`📊 DEBUG: postToDiscordLogs - Formatted message: ${formattedMessage.substring(0, 100)}...`);
+    if (shouldLog('VERBOSE')) {
+      console.log(`📊 DEBUG: postToDiscordLogs - Formatted message: ${formattedMessage.substring(0, 100)}...`);
+    }
     
     // IMPORTANT: Check Safari Log conditions BEFORE rate limiting
     // This ensures Safari logs are posted even when analytics is rate limited
-    console.log(`📊 DEBUG: Checking Safari Log conditions - safariContent: ${!!safariContent}, guildId: ${!!guildId}, action starts with SAFARI_: ${action.startsWith('SAFARI_')}, action: ${action}`);
+    if (shouldLog('VERBOSE')) {
+      console.log(`📊 DEBUG: Checking Safari Log conditions - safariContent: ${!!safariContent}, guildId: ${!!guildId}, action starts with SAFARI_: ${action.startsWith('SAFARI_')}, action: ${action}`);
+    }
     if (safariContent && guildId && action.startsWith('SAFARI_')) {
-      console.log(`📊 DEBUG: All Safari Log conditions met, calling postToSafariLog`);
+      if (shouldLog('VERBOSE')) {
+        console.log(`📊 DEBUG: All Safari Log conditions met, calling postToSafariLog`);
+      }
       try {
         await postToSafariLog(guildId, userId, action, details, safariContent);
         console.log(`📊 DEBUG: postToSafariLog completed successfully`);
@@ -480,10 +520,14 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
     }
 
     // Rate limiting check (simple implementation)
-    console.log(`📊 DEBUG: postToDiscordLogs - Checking rate limits`);
+    if (shouldLog('VERBOSE')) {
+      console.log(`📊 DEBUG: postToDiscordLogs - Checking rate limits`);
+    }
     const now = Date.now();
     if (now - runtimeState.lastMessageTime < 1200) { // 1.2 seconds between messages
-      console.log(`📊 DEBUG: postToDiscordLogs - Rate limited, adding to queue`);
+      if (shouldLog('VERBOSE')) {
+        console.log(`📊 DEBUG: postToDiscordLogs - Rate limited, adding to queue`);
+      }
       // Add to queue for later processing
       runtimeState.rateLimitQueue.push({
         message: formattedMessage,
@@ -494,22 +538,30 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
       if (runtimeState.rateLimitQueue.length > 50) {
         runtimeState.rateLimitQueue.shift(); // Remove oldest
       }
-      
+
       return;
     }
-    console.log(`📊 DEBUG: postToDiscordLogs - Rate limit OK, proceeding to send`);
-    
+    if (shouldLog('VERBOSE')) {
+      console.log(`📊 DEBUG: postToDiscordLogs - Rate limit OK, proceeding to send`);
+    }
+
     // Update last message time
     runtimeState.lastMessageTime = now;
-    
+
     // Send message to Discord
-    console.log(`📊 DEBUG: postToDiscordLogs - Sending message to Discord`);
+    if (shouldLog('VERBOSE')) {
+      console.log(`📊 DEBUG: postToDiscordLogs - Sending message to Discord`);
+    }
     await targetChannel.send(formattedMessage);
-    console.log(`📊 DEBUG: postToDiscordLogs - Message sent successfully`);
-    
+    if (shouldLog('VERBOSE')) {
+      console.log(`📊 DEBUG: postToDiscordLogs - Message sent successfully`);
+    }
+
     // Start queue processing if needed (singleton ensures only one processor runs)
     if (runtimeState.rateLimitQueue.length > 0) {
-      console.log(`📊 DEBUG: postToDiscordLogs - Requesting queue processing for ${runtimeState.rateLimitQueue.length} messages`);
+      if (shouldLog('VERBOSE')) {
+        console.log(`📊 DEBUG: postToDiscordLogs - Requesting queue processing for ${runtimeState.rateLimitQueue.length} messages`);
+      }
       setTimeout(async () => {
         await queueProcessor.startProcessing();
       }, 1200);

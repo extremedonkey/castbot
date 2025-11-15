@@ -417,7 +417,12 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
                     await loadDSTState();
                     offset = getDSTOffset(tzData.timezoneId);
 
-                    console.log(`🌍 [castlist] DST lookup for ${tzData.timezoneId}: offset=${offset}, stored=${tzData.offset}`);
+                    // Only log DST lookups in verbose mode
+                    const isVerbose = process.env.DEBUG_VERBOSE === 'true' ||
+                                     (process.env.DEBUG_VERBOSE !== 'false' && process.env.PRODUCTION !== 'TRUE');
+                    if (isVerbose) {
+                        console.log(`🌍 [castlist] DST lookup for ${tzData.timezoneId}: offset=${offset}, stored=${tzData.offset}`);
+                    }
 
                     // Fallback to stored offset if DST state not found
                     if (offset === null) {
@@ -732,31 +737,40 @@ function countComponents(components) {
         17: 'Container'
     };
     
-    function countRecursive(items, depth = 0) {
+    function countRecursive(items, depth = 0, verbose = false) {
         if (!Array.isArray(items)) return;
-        
+
         for (const item of items) {
             count++; // Count the item itself
-            const indent = '  '.repeat(depth);
-            const typeName = typeNames[item.type] || `Unknown(${item.type})`;
-            const hasAccessory = item.accessory ? ' [HAS ACCESSORY]' : '';
-            console.log(`${indent}${count}. ${typeName}${hasAccessory}`);
-            
-            // Show accessory details if present
-            if (item.accessory && depth < 3) {
-                const accessoryType = typeNames[item.accessory.type] || `Unknown(${item.accessory.type})`;
-                console.log(`${indent}   └─ Accessory: ${accessoryType}`);
+
+            if (verbose) {
+                const indent = '  '.repeat(depth);
+                const typeName = typeNames[item.type] || `Unknown(${item.type})`;
+                const hasAccessory = item.accessory ? ' [HAS ACCESSORY]' : '';
+                console.log(`${indent}${count}. ${typeName}${hasAccessory}`);
+
+                // Show accessory details if present
+                if (item.accessory && depth < 3) {
+                    const accessoryType = typeNames[item.accessory.type] || `Unknown(${item.accessory.type})`;
+                    console.log(`${indent}   └─ Accessory: ${accessoryType}`);
+                }
             }
-            
+
             // Recursively count nested components
             if (item.components) {
-                countRecursive(item.components, depth + 1);
+                countRecursive(item.components, depth + 1, verbose);
             }
         }
     }
-    
-    console.log('📋 DETAILED COMPONENT BREAKDOWN:');
-    countRecursive(components);
+
+    // Only show detailed breakdown in verbose mode (check env directly since this is sync)
+    const isVerbose = process.env.DEBUG_VERBOSE === 'true' ||
+                     (process.env.DEBUG_VERBOSE !== 'false' && process.env.PRODUCTION !== 'TRUE');
+
+    if (isVerbose) {
+        console.log('📋 DETAILED COMPONENT BREAKDOWN:');
+    }
+    countRecursive(components, 0, isVerbose);
     return count;
 }
 
@@ -1021,8 +1035,11 @@ function limitAndSortCastlists(allCastlists, maxCustomCastlists = 4) {
     const aModified = a.modifiedAt || a.metadata?.lastModified || a.createdAt || 0;
     const bModified = b.modifiedAt || b.metadata?.lastModified || b.createdAt || 0;
 
-    // Debug logging to trace sorting
-    if (modernCastlists.length <= 10) {  // Only log for reasonable list sizes
+    // Debug logging to trace sorting (only in verbose mode)
+    const isVerbose = process.env.DEBUG_VERBOSE === 'true' ||
+                     (process.env.DEBUG_VERBOSE !== 'false' && process.env.PRODUCTION !== 'TRUE');
+
+    if (isVerbose && modernCastlists.length <= 10) {  // Only log for reasonable list sizes
       console.log(`[CASTLIST SORT MODERN] "${a.name}" (${aModified}) vs "${b.name}" (${bModified}) → ${bModified - aModified}`);
     }
 

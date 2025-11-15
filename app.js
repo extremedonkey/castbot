@@ -2008,8 +2008,12 @@ function generateTipsScreen(index, discordCdnUrls) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async function (req, res) {
-    console.log("Got headers:", JSON.stringify(req.headers, null, 2));
-    console.log("Got body:", req.body);
+    // Verbose logging controlled by DEBUG_VERBOSE environment variable
+    const { shouldLog } = await import('./src/utils/logConfig.js');
+    if (shouldLog('VERBOSE')) {
+        console.log("Got headers:", JSON.stringify(req.headers, null, 2));
+        console.log("Got body:", req.body);
+    }
     
     // Clear request-scoped caches at the start of each interaction
     const { clearRequestCache } = await import('./storage.js');
@@ -30581,12 +30585,6 @@ Are you sure you want to continue?`;
         const { clearRequestCache } = await import('./storage.js');
         clearRequestCache();
 
-        // 🔧 CRITICAL: Send deferred response IMMEDIATELY before slow operations
-        // Fetching guild members can take 2-5 seconds, exceeding Discord's 3-second limit
-        await res.send({
-          type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
-        });
-
         console.log(`🔄 Refreshing castlist with updated placement`);
 
         // 🔧 FIX: Rebuild castlist using FULL navigation context (Safari pattern)
@@ -30614,10 +30612,9 @@ Are you sure you want to continue?`;
         }
 
         // Load castlist configuration
+        // NOTE: castlistEntity may be undefined for virtual castlists (like default before materialization)
         const castlistEntity = playerData[guildId]?.castlistConfigs?.[castlistId];
-        if (!castlistEntity) {
-          throw new Error(`Castlist "${castlistId}" not found`);
-        }
+        const castlistName = castlistEntity?.name || (castlistId === 'default' ? 'Active Castlist' : castlistId);
 
         // Build tribes array matching the original display
         const allTribes = [];
@@ -30709,55 +30706,39 @@ Are you sure you want to continue?`;
           channelId,
           null,
           displayMode,
-          castlistEntity?.name || castlistId,  // Display name
+          castlistName,  // Display name (handles virtual castlists)
           { playerData, guildId }  // Pass playerData for sorting
         );
 
-        // Edit original message via webhook (after deferred response)
-        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-        await DiscordRequest(endpoint, {
-          method: 'PATCH',
-          body: castlistResponse
+        // Return UPDATE_MESSAGE to refresh the castlist with updated placement
+        // Modal submit interaction updates the message that contained the button that opened the modal
+        console.log(`✅ Placement modal: Sending UPDATE_MESSAGE with refreshed castlist UI`);
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: castlistResponse
         });
-
-        console.log(`✅ Placement modal: Successfully refreshed castlist UI`);
 
       } catch (error) {
         console.error('❌ Error in save_placement modal handler:', error);
         console.error('Stack trace:', error.stack);
 
-        // If we already sent deferred response, edit via webhook
-        // Otherwise send error directly
-        if (res.headersSent) {
-          const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-          const { sanitizeErrorMessage } = await import('./utils.js');
-          const errorMessage = sanitizeErrorMessage(error);
+        // Return UPDATE_MESSAGE with error content
+        // This updates the castlist message to show the error
+        const { sanitizeErrorMessage } = await import('./utils.js');
+        const errorMessage = sanitizeErrorMessage(error);
 
-          // 🔧 CRITICAL: When editing via webhook PATCH, NEVER include flags
-          // The message already has IS_COMPONENTS_V2 flag set, Discord rejects flag modifications
-          await DiscordRequest(endpoint, {
-            method: 'PATCH',
-            body: {
-              // Use Components V2 structure for error message
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            components: [{
+              type: 17,  // Container
               components: [{
-                type: 17,  // Container
-                components: [{
-                  type: 10,  // Text Display
-                  content: `❌ Error refreshing castlist: ${errorMessage}`
-                }]
+                type: 10,  // Text Display
+                content: `❌ Error saving placement: ${errorMessage}`
               }]
-              // NOTE: Cannot modify flags on existing message via PATCH
-            }
-          });
-        } else {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: `❌ Error saving placement: ${error.message}`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+            }]
+          }
+        });
       }
 
     } else if (custom_id.startsWith('condition_currency_modal_')) {
