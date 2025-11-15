@@ -2095,16 +2095,26 @@ async function generateInitialTipsScreen(interaction, client) {
       const form = new FormData();
 
       // Attach all 10 image files
+      const attachmentDescriptors = [];
       for (let i = 0; i < attachments.length; i++) {
-        const attachment = attachments[i];
         const filePath = path.join(basePath, `${i + 1}.png`);
         const fileBuffer = await fs.readFile(filePath);
-        form.append(`files[${i}]`, fileBuffer, { filename: `${i + 1}.png` });
+        const filename = `${i + 1}.png`;
+
+        // Add file to form
+        form.append(`files[${i}]`, fileBuffer, { filename });
+
+        // Track attachment descriptor for payload
+        attachmentDescriptors.push({
+          id: i,
+          filename: filename
+        });
       }
 
-      // Add payload JSON (components + flags)
+      // Add payload JSON (components + flags + attachments array)
       const payload = {
         flags: (1 << 6),  // EPHEMERAL flag (64)
+        attachments: attachmentDescriptors,  // CRITICAL: Describes which files are attached
         components: [
           {
             type: 17, // Container
