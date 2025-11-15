@@ -1993,6 +1993,12 @@ function generateTipsScreen(index, discordCdnUrls) {
               components: [
                 {
                   type: 2, // Button
+                  custom_id: 'dm_back_to_welcome',
+                  label: '← Back',
+                  style: 2 // Secondary (grey)
+                },
+                {
+                  type: 2, // Button
                   custom_id: `tips_prev_${index}`,
                   label: '◀ Previous',
                   style: 2, // Secondary (grey)
@@ -2004,13 +2010,6 @@ function generateTipsScreen(index, discordCdnUrls) {
                   label: 'Next ▶',
                   style: 2, // Secondary (grey)
                   disabled: index === totalCount - 1
-                },
-                {
-                  type: 2, // Button
-                  custom_id: 'dm_back_to_welcome',
-                  label: '← Back',
-                  style: 2, // Secondary (grey)
-                  emoji: { name: '🏠' }
                 }
               ]
             }
@@ -2274,6 +2273,12 @@ function generateTipsScreenNavigation(index) {
               components: [
                 {
                   type: 2, // Button
+                  custom_id: 'dm_back_to_welcome',
+                  label: '← Back',
+                  style: 2 // Secondary (grey)
+                },
+                {
+                  type: 2, // Button
                   custom_id: `tips_prev_${index}`,
                   label: '◀ Previous',
                   style: 2, // Secondary (grey)
@@ -2285,13 +2290,6 @@ function generateTipsScreenNavigation(index) {
                   label: 'Next ▶',
                   style: 2, // Secondary (grey)
                   disabled: index === totalCount - 1
-                },
-                {
-                  type: 2, // Button
-                  custom_id: 'dm_back_to_welcome',
-                  label: '← Back',
-                  style: 2, // Secondary (grey)
-                  emoji: { name: '🏠' }
                 }
               ]
             }

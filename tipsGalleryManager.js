@@ -57,8 +57,8 @@ export async function saveTipsConfig(config) {
  * @returns {string} 'dev' or 'prod'
  */
 export function getCurrentEnvironment() {
-  const isDev = process.env.ENVIRONMENT === 'development';
-  return isDev ? 'dev' : 'prod';
+  const isProd = process.env.PRODUCTION === 'TRUE';
+  return isProd ? 'prod' : 'dev';
 }
 
 /**

@@ -35,14 +35,14 @@ export const BUTTON_REGISTRY = {
   },
   
   // Analytics Row 1
-  'prod_analytics_dump': {
-    label: 'Server List',
-    description: 'Analytics dump of all servers',
-    emoji: '📊',
+  'refresh_tips': {
+    label: 'Refresh Tips',
+    description: 'Upload all tips images to Discord CDN for current environment',
+    emoji: '💡',
     style: 'Secondary',
     parent: 'reece_stuff_menu',
     restrictedUser: '391415444084490240',
-    category: 'analytics'
+    category: 'admin'
   },
   'prod_live_analytics': {
     label: 'Print Logs',
@@ -233,7 +233,6 @@ export const BUTTON_REGISTRY = {
   'dm_back_to_welcome': {
     label: '← Back to Welcome',
     description: 'Return to welcome screen from tips gallery',
-    emoji: '🏠',
     style: 'Secondary',
     category: 'navigation'
   },
