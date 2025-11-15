@@ -1,0 +1,117 @@
+{
+  "version": "1.0",
+  "lastUpdated": null,
+  "channel": "1439277270400503870",
+  "tips": [
+    {
+      "id": 1,
+      "filename": "1.png",
+      "title": "🦁 Safari System",
+      "description": "Create adventure challenges with maps, items, and player progression",
+      "showcase": "📸 Feature Showcase (1/10)\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
+      "urls": {
+        "dev": null,
+        "prod": null
+      }
+    },
+    {
+      "id": 2,
+      "filename": "2.png",
+      "title": "📋 Dynamic Castlists",
+      "description": "Organize cast members with placements, alumni, and custom formatting",
+      "showcase": "📸 Feature Showcase (2/10)\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
+      "urls": {
+        "dev": null,
+        "prod": null
+      }
+    },
+    {
+      "id": 3,
+      "filename": "3.png",
+      "title": "📊 Production Menu",
+      "description": "Comprehensive admin interface for managing all CastBot features",
+      "showcase": "📸 Feature Showcase (3/10)\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
+      "urls": {
+        "dev": null,
+        "prod": null
+      }
+    },
+    {
+      "id": 4,
+      "filename": "4.png",
+      "title": "🏆 Cast Rankings",
+      "description": "Let players anonymously vote on applicants with visual ranking interface",
+      "showcase": "📸 Feature Showcase (4/10)\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
+      "urls": {
+        "dev": null,
+        "prod": null
+      }
+    },
+    {
+      "id": 5,
+      "filename": "5.png",
+      "title": "🎬 Season Management",
+      "description": "Configure applications, questions, and production workflows",
+      "showcase": "📸 Feature Showcase (5/10)\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
+      "urls": {
+        "dev": null,
+        "prod": null
+      }
+    },
+    {
+      "id": 6,
+      "filename": "6.png",
+      "title": "📱 Mobile View",
+      "description": "CastBot works seamlessly on mobile devices with responsive design",
+      "showcase": "📸 Feature Showcase (6/10)\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
+      "urls": {
+        "dev": null,
+        "prod": null
+      }
+    },
+    {
+      "id": 7,
+      "filename": "7.png",
+      "title": "🎮 Player Menu",
+      "description": "Access your profile, seasons, and interactive features from one place",
+      "showcase": "📸 Feature Showcase (7/10)\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
+      "urls": {
+        "dev": null,
+        "prod": null
+      }
+    },
+    {
+      "id": 8,
+      "filename": "8.png",
+      "title": "🗺️ Safari Map Explorer",
+      "description": "Interactive map system with fog of war and location tracking",
+      "showcase": "📸 Feature Showcase (8/10)\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
+      "urls": {
+        "dev": null,
+        "prod": null
+      }
+    },
+    {
+      "id": 9,
+      "filename": "9.png",
+      "title": "📝 Application Builder",
+      "description": "Create custom season applications with multiple question types",
+      "showcase": "📸 Feature Showcase (9/10)\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
+      "urls": {
+        "dev": null,
+        "prod": null
+      }
+    },
+    {
+      "id": 10,
+      "filename": "10.png",
+      "title": "⚙️ Settings & Configuration",
+      "description": "Fine-tune CastBot behavior for your server needs",
+      "showcase": "📸 Feature Showcase (10/10)\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
+      "urls": {
+        "dev": null,
+        "prod": null
+      }
+    }
+  ]
+}

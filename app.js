@@ -997,10 +997,10 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🌈'),
     new ButtonBuilder()
-      .setCustomId('prod_analytics_dump')
-      .setLabel('Server List')
+      .setCustomId('refresh_tips')
+      .setLabel('Refresh Tips')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🧵'),
+      .setEmoji('💡'),
     new ButtonBuilder()
       .setCustomId('prod_live_analytics')
       .setLabel('Print Logs')
@@ -7992,32 +7992,42 @@ To fix this:
         }
       })(req, res, client);
 
-    // ✅ Path B: Hybrid Upload on Demand (GUARANTEED SOLUTION)
-    // Path A FAILED: Discord won't display external URLs
-    // Path C FAILED: Data URI exceeds 2048 char limit (93,758 chars for 70KB image)
-    // Path B: Upload to Discord CDN on demand, cache URLs, easy file updates
+    // ✅ NEW: Image Gallery System - Persistent URLs via tips.json
+    // Reads from tips.json, auto-uploads if URLs missing for current environment
     } else if (custom_id === 'dm_view_tips') {
       return ButtonHandlerFactory.create({
         id: 'dm_view_tips',
         ephemeral: true,
-        deferred: true, // Allow time for Discord CDN uploads (first time ~5-10s)
+        deferred: true, // Allow time for auto-upload if URLs missing
         handler: async (context) => {
-          console.log(`🎯 PATH B: Hybrid Upload on Demand - Loading tips gallery`);
+          console.log(`💡 Loading tips gallery`);
 
-          // Upload/get cached Discord CDN URLs
-          const { uploadTipsIfChanged, TIP_SCREENSHOTS } = await import('./tipsGalleryUploader.js');
+          // Load tips configuration and ensure URLs exist
+          const {
+            loadTipsConfig,
+            getCurrentEnvironment,
+            getTipUrls,
+            getTipMetadata,
+            getTipCount,
+            ensureTipsUploaded
+          } = await import('./tipsGalleryManager.js');
 
-          const cdnUrls = await uploadTipsIfChanged(
-            context.client,
-            '1331657596087566398', // Dev guild ID
-            '1439277270400503870'   // Tips channel ID
-          );
+          let config = await loadTipsConfig();
+          const env = getCurrentEnvironment();
 
-          console.log(`✅ Got ${cdnUrls.length} Discord CDN URLs`);
+          // Auto-upload if URLs missing (silent background operation)
+          await ensureTipsUploaded(context.client, env);
+
+          // Reload config after potential upload
+          config = await loadTipsConfig();
+          const cdnUrls = getTipUrls(config, env);
+          const totalTips = getTipCount(config);
+
+          console.log(`✅ Got ${cdnUrls.length} Discord CDN URLs for ${env}`);
 
           // Display first tip image
           const index = 0;
-          const currentTip = TIP_SCREENSHOTS[index];
+          const currentTip = getTipMetadata(config, index);
 
           return {
             flags: (1 << 15), // IS_COMPONENTS_V2
@@ -8026,11 +8036,11 @@ To fix this:
               accent_color: 0x9b59b6, // Purple (tips gallery)
               components: [{
                 type: 10, // Text Display
-                content: `## 💡 CastBot Features Tour (${index + 1}/${cdnUrls.length})\n\n### ${currentTip.title}\n\n${currentTip.description}`
+                content: `## 💡 CastBot Features Tour (${index + 1}/${totalTips})\n\n### ${currentTip.title}\n\n${currentTip.description}`
               }, {
                 type: 14 // Separator
               }, {
-                type: 12, // Media Gallery - Discord CDN URL (PROVEN PATTERN!)
+                type: 12, // Media Gallery - Discord CDN URL from tips.json
                 items: [{
                   media: { url: cdnUrls[index] },
                   description: currentTip.title
@@ -8039,7 +8049,7 @@ To fix this:
                 type: 14 // Separator
               }, {
                 type: 10,
-                content: `> **\`📸 Feature Showcase (${index + 1}/${cdnUrls.length})\`**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• ${cdnUrls.length} features total - discover everything CastBot can do!`
+                content: `> ${currentTip.showcase}`
               }, {
                 type: 14 // Separator
               }, {
@@ -8110,15 +8120,20 @@ To fix this:
 
           console.log(`🧭 Navigating tips gallery: ${currentIndex} → ${newIndex}`);
 
-          // Get Discord CDN URLs (fast - uses cached messages from Tips channel)
-          const { uploadTipsIfChanged, TIP_SCREENSHOTS } = await import('./tipsGalleryUploader.js');
-          const cdnUrls = await uploadTipsIfChanged(
-            context.client,
-            '1331657596087566398', // Dev guild ID
-            '1439277270400503870'   // Tips channel ID
-          );
+          // Load tips configuration (fast - just reads JSON file)
+          const {
+            loadTipsConfig,
+            getCurrentEnvironment,
+            getTipUrls,
+            getTipMetadata,
+            getTipCount
+          } = await import('./tipsGalleryManager.js');
 
-          const currentTip = TIP_SCREENSHOTS[newIndex];
+          const config = await loadTipsConfig();
+          const env = getCurrentEnvironment();
+          const cdnUrls = getTipUrls(config, env);
+          const totalTips = getTipCount(config);
+          const currentTip = getTipMetadata(config, newIndex);
 
           return {
             flags: (1 << 15), // IS_COMPONENTS_V2
@@ -8127,11 +8142,11 @@ To fix this:
               accent_color: 0x9b59b6, // Purple
               components: [{
                 type: 10, // Text Display
-                content: `## 💡 CastBot Features Tour (${newIndex + 1}/${cdnUrls.length})\n\n### ${currentTip.title}\n\n${currentTip.description}`
+                content: `## 💡 CastBot Features Tour (${newIndex + 1}/${totalTips})\n\n### ${currentTip.title}\n\n${currentTip.description}`
               }, {
                 type: 14 // Separator
               }, {
-                type: 12, // Media Gallery - Discord CDN URL
+                type: 12, // Media Gallery - Discord CDN URL from tips.json
                 items: [{
                   media: { url: cdnUrls[newIndex] },
                   description: currentTip.title
@@ -8140,7 +8155,7 @@ To fix this:
                 type: 14 // Separator
               }, {
                 type: 10,
-                content: `> **\`📸 Feature Showcase (${newIndex + 1}/${cdnUrls.length})\`**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• ${cdnUrls.length} features total - discover everything CastBot can do!`
+                content: `> ${currentTip.showcase}`
               }, {
                 type: 14 // Separator
               }, {
@@ -9526,85 +9541,38 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id === 'prod_analytics_dump') {
-      // Special analytics dump button (MIGRATED TO FACTORY - DEFERRED PATTERN)
+    } else if (custom_id === 'refresh_tips') {
+      // Refresh Tips Gallery - Upload all tip images to Discord CDN
       return ButtonHandlerFactory.create({
-        id: 'prod_analytics_dump',
+        id: 'refresh_tips',
         deferred: true,
         ephemeral: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
         handler: async (context) => {
-          console.log(`🔍 START: prod_analytics_dump - user ${context.userId}`);
-          
-          // Security check - only allow specific Discord ID
-          if (context.userId !== '391415444084490240') {
-            console.log(`❌ ACCESS DENIED: prod_analytics_dump - user ${context.userId} not authorized`);
-            return {
-              content: '❌ Access denied. This feature is restricted.'
-            };
-          }
+          console.log(`💡 Refreshing tips gallery for user ${context.userId}`);
 
-          console.log('✅ DEBUG: User authorized, importing analytics function...');
-          // Import and run analytics function
-          const { analyzePlayerData } = await import('./src/analytics/analytics.js');
-          console.log('✅ DEBUG: Analytics function imported successfully');
-          
-          // Capture analytics output
-          let analyticsOutput = '';
-          const originalLog = console.log;
-          console.log = (...args) => {
-            analyticsOutput += args.join(' ') + '\n';
-          };
-          
-          try {
-            console.log('✅ DEBUG: Running analytics function...');
-            await analyzePlayerData();
-            console.log('✅ DEBUG: Analytics function completed');
-          } finally {
-            console.log = originalLog; // Restore original console.log
-            console.log('✅ DEBUG: Console restored, analytics output length:', analyticsOutput.length);
-          }
-          
-          // Format the output for Discord
-          const formattedOutput = analyticsOutput
-            .replace(/\x1b\[[0-9;]*m/g, '') // Remove ANSI color codes
-            .trim();
-          
-          // Split into chunks if too long (Discord has 2000 char limit)
-          const chunks = [];
-          const maxLength = 1900; // Leave room for formatting
-          
-          if (formattedOutput.length <= maxLength) {
-            chunks.push(formattedOutput);
-          } else {
-            let remaining = formattedOutput;
-            while (remaining.length > 0) {
-              let chunk = remaining.substring(0, maxLength);
-              // Try to break at a newline
-              const lastNewline = chunk.lastIndexOf('\n');
-              if (lastNewline > maxLength * 0.8) {
-                chunk = chunk.substring(0, lastNewline);
-              }
-              chunks.push(chunk);
-              remaining = remaining.substring(chunk.length);
-            }
-          }
-          
-          console.log('✅ DEBUG: Sending response with', chunks.length, 'chunks');
-          
-          // Send additional chunks as follow-ups if needed (using webhook with valid token)
-          for (let i = 1; i < chunks.length; i++) {
-            await DiscordRequest(`webhooks/${process.env.APP_ID}/${context.token}`, {
-              method: 'POST',
-              body: {
-                content: `\`\`\`\n${chunks[i]}\n\`\`\``
-              }
-            });
-          }
-          
-          // Return first chunk for deferred update
-          console.log(`✅ SUCCESS: prod_analytics_dump - completed with ${chunks.length} chunks`);
+          // Get current environment
+          const { refreshTips, getCurrentEnvironment } = await import('./tipsGalleryManager.js');
+          const env = getCurrentEnvironment();
+
+          console.log(`🌍 Current environment: ${env}`);
+
+          // Upload all tips to Discord CDN
+          const uploadCount = await refreshTips(context.client, env);
+
+          console.log(`✅ Refreshed ${uploadCount} tips for ${env}`);
+
           return {
-            content: `## 📊 CastBot Analytics Report\n\n\`\`\`\n${chunks[0]}\n\`\`\``
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [{
+              type: 17, // Container
+              accent_color: 0x27ae60, // Green (success)
+              components: [{
+                type: 10, // Text Display
+                content: `## 💡 Tips Gallery Refreshed!\n\n✅ Uploaded ${uploadCount} tip images to Discord CDN\n🌍 Environment: **${env.toUpperCase()}**\n\nUsers will now see the latest images when clicking "View Tips"!`
+              }]
+            }]
           };
         }
       })(req, res, client);
