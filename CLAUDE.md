@@ -157,9 +157,30 @@ Add to `buttonHandlerFactory.js` BUTTON_REGISTRY:
 tail -f /tmp/castbot-dev.log | grep "my_button"
 
 # Expected: [✨ FACTORY] my_button
-# If you see: [🪨 LEGACY] → You created legacy code, fix immediately!
+# If you see: [🪨 LEGACY] → Check if it's a false positive first!
 # If you see: [⚱️ UNREGISTERED] → Add to BUTTON_REGISTRY
 ```
+
+**🚨 CRITICAL: [🪨 LEGACY] False Positives for Wildcard Patterns**
+
+If your button uses a wildcard pattern (e.g., `my_button_*`) and shows `[🪨 LEGACY]` but the next log line shows:
+```
+🔍 ButtonHandlerFactory sending response for my_button_123, updateMessage: true
+```
+
+**This is a FALSE POSITIVE** - your button IS using factory pattern correctly!
+
+**Fix:** Add the base pattern to the `dynamicPatterns` array in `app.js` (search for "dynamicPatterns" around line 3771):
+```javascript
+const dynamicPatterns = [
+  // ... existing patterns ...
+  'my_button',  // Add your pattern here
+];
+```
+
+**Why this happens:** The debug system uses a hardcoded pattern list for wildcard matching. When you add a new wildcard button to BUTTON_REGISTRY, you must ALSO add the base pattern to this list.
+
+**See:** [docs/troubleshooting/ButtonFactoryDebugSystem.md](docs/troubleshooting/ButtonFactoryDebugSystem.md) for full explanation and proposed auto-discovery solution.
 
 **Why Factory is Mandatory:**
 - **80% code reduction** (50 lines → 10 lines per handler)
