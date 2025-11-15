@@ -7992,51 +7992,77 @@ To fix this:
         }
       })(req, res, client);
 
-    // 🧪 TEMPORARY: Path C test - Data URI (base64) encoding
-    // Path A (Express static) FAILED - Discord won't display external URLs in Media Gallery
-    // Original dm_view_tips code commented out below (restore after test)
+    // ✅ Path B: Hybrid Upload on Demand (GUARANTEED SOLUTION)
+    // Path A FAILED: Discord won't display external URLs
+    // Path C FAILED: Data URI exceeds 2048 char limit (93,758 chars for 70KB image)
+    // Path B: Upload to Discord CDN on demand, cache URLs, easy file updates
     } else if (custom_id === 'dm_view_tips') {
       return ButtonHandlerFactory.create({
         id: 'dm_view_tips',
         ephemeral: true,
-        deferred: true, // Allow time to read file and encode base64
+        deferred: true, // Allow time for Discord CDN uploads (first time ~5-10s)
         handler: async (context) => {
-          const fs = await import('fs/promises');
-          const path = await import('path');
+          console.log(`🎯 PATH B: Hybrid Upload on Demand - Loading tips gallery`);
 
-          console.log(`🧪 PATH C TEST: Data URI (base64) encoding`);
+          // Upload/get cached Discord CDN URLs
+          const { uploadTipsIfChanged, TIP_SCREENSHOTS } = await import('./tipsGalleryUploader.js');
 
-          // Read image file
-          const imagePath = path.join('/home/reece/castbot/img/tips/1.png');
-          const imageBuffer = await fs.readFile(imagePath);
-          const base64 = imageBuffer.toString('base64');
-          const dataUri = `data:image/png;base64,${base64}`;
+          const cdnUrls = await uploadTipsIfChanged(
+            context.client,
+            '1331657596087566398', // Dev guild ID
+            '1439277270400503870'   // Tips channel ID
+          );
 
-          console.log(`   📊 Image size: ${imageBuffer.length} bytes`);
-          console.log(`   📊 Base64 size: ${base64.length} chars`);
-          console.log(`   📊 Data URI size: ${dataUri.length} chars`);
+          console.log(`✅ Got ${cdnUrls.length} Discord CDN URLs`);
+
+          // Display first tip image
+          const index = 0;
+          const currentTip = TIP_SCREENSHOTS[index];
 
           return {
             flags: (1 << 15), // IS_COMPONENTS_V2
             components: [{
               type: 17, // Container
-              accent_color: 0xffaa00, // Orange (Path C test)
+              accent_color: 0x9b59b6, // Purple (tips gallery)
               components: [{
                 type: 10, // Text Display
-                content: `## 🧪 Path C Test: Data URI (base64)\n\n**Path A Result:** ❌ FAILED - Discord won't display Express URLs\n**Now testing:** Embedded base64 data\n\n**Image:** ${imageBuffer.length} bytes → ${dataUri.length} char data URI\n\nIf you see an image below, **Path C works!**`
+                content: `## 💡 CastBot Features Tour (${index + 1}/${cdnUrls.length})\n\n### ${currentTip.title}\n\n${currentTip.description}`
               }, {
                 type: 14 // Separator
               }, {
-                type: 12, // Media Gallery
+                type: 12, // Media Gallery - Discord CDN URL (PROVEN PATTERN!)
                 items: [{
-                  media: { url: dataUri },
-                  description: 'Test Data URI Image - Safari System Screenshot'
+                  media: { url: cdnUrls[index] },
+                  description: currentTip.title
                 }]
               }, {
                 type: 14 // Separator
               }, {
                 type: 10,
-                content: `✅ **If image displays:** Path C SUCCESS!\n   → Implement pagination (load images on demand)\n   → Easy updates (reads files at runtime)\n\n❌ **If broken icon:** Path C FAILED\n   → Move to Path B (Hybrid Upload - guaranteed)\n\n**Why this matters:** Data URI = no external dependencies, always reads fresh files!`
+                content: `> **\`📸 Feature Showcase (${index + 1}/${cdnUrls.length})\`**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• ${cdnUrls.length} features total - discover everything CastBot can do!`
+              }, {
+                type: 14 // Separator
+              }, {
+                type: 1, // Action Row - Navigation buttons
+                components: [{
+                  type: 2, // Button
+                  custom_id: `tips_prev_${index}`,
+                  label: '◀ Previous',
+                  style: 2, // Secondary (grey)
+                  disabled: true  // Disabled on first image
+                }, {
+                  type: 2, // Button
+                  custom_id: `tips_next_${index}`,
+                  label: 'Next ▶',
+                  style: 2, // Secondary (grey)
+                  disabled: false
+                }, {
+                  type: 2, // Button
+                  custom_id: 'viral_menu',
+                  label: '← Back',
+                  style: 2, // Secondary (grey)
+                  emoji: { name: '🏠' }
+                }]
               }]
             }]
           };
@@ -8059,13 +8085,14 @@ To fix this:
     } else if (custom_id.startsWith('tips_next_') || custom_id.startsWith('tips_prev_')) {
       return ButtonHandlerFactory.create({
         id: custom_id,
+        updateMessage: true, // UPDATE_MESSAGE (button response pattern)
         handler: async (context) => {
           // Parse index from button ID: tips_next_5 or tips_prev_5
           const match = custom_id.match(/^tips_(next|prev)_(\d+)$/);
           if (!match) {
             return {
               content: '❌ Invalid tips navigation button.',
-              ephemeral: true
+              flags: (1 << 6) // EPHEMERAL
             };
           }
 
@@ -8077,12 +8104,69 @@ To fix this:
           if (newIndex < 0 || newIndex > 9) {
             return {
               content: '❌ Cannot navigate beyond tips gallery bounds.',
-              ephemeral: true
+              flags: (1 << 6) // EPHEMERAL
             };
           }
 
-          console.log(`🧭 Navigating tips gallery: ${currentIndex} → ${newIndex} (using attachment://${newIndex + 1}.png)`);
-          return generateTipsScreenNavigation(newIndex); // UPDATE_MESSAGE referencing pre-attached file
+          console.log(`🧭 Navigating tips gallery: ${currentIndex} → ${newIndex}`);
+
+          // Get Discord CDN URLs (fast - uses cached messages from Tips channel)
+          const { uploadTipsIfChanged, TIP_SCREENSHOTS } = await import('./tipsGalleryUploader.js');
+          const cdnUrls = await uploadTipsIfChanged(
+            context.client,
+            '1331657596087566398', // Dev guild ID
+            '1439277270400503870'   // Tips channel ID
+          );
+
+          const currentTip = TIP_SCREENSHOTS[newIndex];
+
+          return {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [{
+              type: 17, // Container
+              accent_color: 0x9b59b6, // Purple
+              components: [{
+                type: 10, // Text Display
+                content: `## 💡 CastBot Features Tour (${newIndex + 1}/${cdnUrls.length})\n\n### ${currentTip.title}\n\n${currentTip.description}`
+              }, {
+                type: 14 // Separator
+              }, {
+                type: 12, // Media Gallery - Discord CDN URL
+                items: [{
+                  media: { url: cdnUrls[newIndex] },
+                  description: currentTip.title
+                }]
+              }, {
+                type: 14 // Separator
+              }, {
+                type: 10,
+                content: `> **\`📸 Feature Showcase (${newIndex + 1}/${cdnUrls.length})\`**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• ${cdnUrls.length} features total - discover everything CastBot can do!`
+              }, {
+                type: 14 // Separator
+              }, {
+                type: 1, // Action Row - Navigation buttons
+                components: [{
+                  type: 2, // Button
+                  custom_id: `tips_prev_${newIndex}`,
+                  label: '◀ Previous',
+                  style: 2,
+                  disabled: newIndex === 0 // Disable on first image
+                }, {
+                  type: 2, // Button
+                  custom_id: `tips_next_${newIndex}`,
+                  label: 'Next ▶',
+                  style: 2,
+                  disabled: newIndex === 9 // Disable on last image
+                }, {
+                  type: 2, // Button
+                  custom_id: 'viral_menu',
+                  label: '← Back',
+                  style: 2,
+                  emoji: { name: '🏠' }
+                }]
+              }]
+            }]
+          };
         }
       })(req, res, client);
 

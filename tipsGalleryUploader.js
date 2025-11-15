@@ -36,7 +36,85 @@ export const TIP_SCREENSHOTS = [
 let cachedTipUrls = null;
 
 /**
- * Upload all tip images to Discord storage channel and cache URLs
+ * Upload tip images to Discord storage channel ONLY if changed (hybrid approach)
+ * Compares file timestamps vs existing Discord messages to avoid unnecessary uploads
+ * @param {Client} client - Discord.js client
+ * @param {string} devGuildId - Your development guild ID
+ * @param {string} tipsChannelId - Tips storage channel ID (1439277270400503870)
+ * @returns {Promise<string[]>} Array of Discord CDN URLs (indexed 0-9)
+ */
+export async function uploadTipsIfChanged(client, devGuildId, tipsChannelId) {
+  try {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const { fileURLToPath } = await import('url');
+
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+
+    console.log('🔄 Checking if tip images need uploading...');
+
+    // Get dev guild and tips channel
+    const guild = await client.guilds.fetch(devGuildId);
+    const tipsChannel = await guild.channels.fetch(tipsChannelId);
+
+    // Fetch existing messages (last 15 to be safe)
+    const messages = await tipsChannel.messages.fetch({ limit: 15 });
+    console.log(`📋 Found ${messages.size} existing messages in Tips channel`);
+
+    // Check each of 10 tip images
+    const basePath = path.join(__dirname, 'img/tips');
+    const cdnUrls = [];
+
+    for (let i = 1; i <= 10; i++) {
+      const filePath = path.join(basePath, `${i}.png`);
+      const fileStats = await fs.stat(filePath);
+      const fileTimestamp = fileStats.mtimeMs;
+
+      // Find existing message for this image (look for "Tip i/10" in content)
+      const existingMsg = messages.find(m => m.content.includes(`Tip ${i}/10`));
+
+      if (!existingMsg || existingMsg.createdTimestamp < fileTimestamp) {
+        console.log(`📤 Uploading ${i}.png (file modified or missing)...`);
+
+        // Upload new image using proven Safari pattern
+        const { AttachmentBuilder } = await import('discord.js');
+        const attachment = new AttachmentBuilder(filePath, { name: `tip_${i}.png` });
+
+        const uploadMsg = await tipsChannel.send({
+          content: `Tip ${i}/10 - ${TIP_SCREENSHOTS[i-1].title}`,
+          files: [attachment]
+        });
+
+        const cdnUrl = uploadMsg.attachments.first().url;
+        cdnUrls.push(cdnUrl);
+
+        console.log(`   ✅ Uploaded: ${cdnUrl.substring(0, 80)}...`);
+
+        // Delete old message if exists
+        if (existingMsg) {
+          await existingMsg.delete();
+          console.log(`   🗑️ Deleted old message`);
+        }
+      } else {
+        // Use cached CDN URL from existing message
+        const cachedUrl = existingMsg.attachments.first().url;
+        cdnUrls.push(cachedUrl);
+        console.log(`✅ Using cached ${i}.png from Discord CDN`);
+      }
+    }
+
+    console.log(`🎉 All ${cdnUrls.length} tip images ready (Discord CDN URLs)`);
+    return cdnUrls;
+
+  } catch (error) {
+    console.error('❌ Failed to upload/check tip images:', error);
+    throw error;
+  }
+}
+
+/**
+ * LEGACY: Upload all tip images to Discord storage channel and cache URLs
  * @param {Client} client - Discord.js client
  * @param {string} devGuildId - Your development guild ID (where storage channel will be created)
  * @returns {Promise<string[]>} Array of Discord CDN URLs (indexed 0-9)
