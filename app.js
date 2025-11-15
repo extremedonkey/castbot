@@ -6992,24 +6992,36 @@ To fix this:
           const components = [
             {
               type: 10, // Text Display
-              content: "## 🆕 There's a new place to Manage Castlists!\n\nYou can now find this in:\n`/menu` > 📋 Castlist Manager"
+              content: "## 📃 Tribes Management Has Moved!\n\nThe Tribes feature has been consolidated into the new **Castlist Manager** for easier access and better organization.\n\nYou can now find all castlist and tribe management features in:\n`/menu` > 📋 Castlist Manager\n\nThis brings all your casting tools together in one place!"
+            },
+            { type: 14 } // Separator before navigation
+          ];
+
+          // Build navigation row - Back button (always) + Debug button (Reece only)
+          const navigationButtons = [
+            {
+              type: 2, // Button
+              custom_id: 'prod_menu_back',
+              label: '← Menu',
+              style: 2 // Secondary (grey) - NO emoji per LEAN standards
             }
           ];
 
-          // Only for Reece: Add separator + debug button
+          // Only for Reece: Add debug button to navigation row
           if (isReece) {
-            components.push({ type: 14 }); // Separator
-            components.push({
-              type: 1, // Action Row
-              components: [{
-                type: 2, // Button
-                custom_id: 'prod_manage_tribes_legacy_debug',
-                label: 'Tribes (Legacy Debug)',
-                emoji: { name: '🔥' },
-                style: 2 // Secondary (grey)
-              }]
+            navigationButtons.push({
+              type: 2, // Button
+              custom_id: 'prod_manage_tribes_legacy_debug',
+              label: 'Tribes (Legacy Debug)',
+              emoji: { name: '🔥' },
+              style: 2 // Secondary (grey)
             });
           }
+
+          components.push({
+            type: 1, // Action Row
+            components: navigationButtons
+          });
 
           return {
             components: [{
