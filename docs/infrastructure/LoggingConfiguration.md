@@ -97,6 +97,38 @@ if (shouldLog('STANDARD')) {
 console.error('❌ Error:', error);
 ```
 
+### 🚨 CRITICAL: Static Imports Required (Performance)
+
+**⚠️ NEVER use dynamic imports for `shouldLog()` on hot paths!**
+
+```javascript
+// ❌ WRONG - Adds 20-100ms latency PER REQUEST
+async function handler(req, res) {
+  const { shouldLog } = await import('./src/utils/logConfig.js');  // SLOW!
+  if (shouldLog('VERBOSE')) { ... }
+}
+
+// ✅ CORRECT - Zero overhead (loaded once at startup)
+import { shouldLog } from './src/utils/logConfig.js';  // Top of file
+
+async function handler(req, res) {
+  if (shouldLog('VERBOSE')) { ... }  // Fast!
+}
+```
+
+**Why dynamic imports are catastrophic:**
+- Dynamic `import()` executes full module loading pipeline on EVERY call
+- Module resolution → file system read → parsing → evaluation = 20-100ms
+- On hot paths (button handlers, `/interactions` route), this compounds to 40-200ms+ per interaction
+- Causes Discord's 3-second timeout to be exceeded under load
+
+**Real incident (Nov 15, 2025):**
+- Dynamic imports added to `app.js:2013` and `analyticsLogger.js:389`
+- **Impact**: ALL button clicks taking >= 3 seconds, widespread "interaction failed" errors
+- **Fix**: Converted to static imports → instant performance restoration
+
+**Rule**: Use static imports for ANY code on the request path (executed > 100 times/day).
+
 ### Log Levels Explained
 
 | **Level** | **Includes** | **Use Case** | **Claude Code Compatible?** |

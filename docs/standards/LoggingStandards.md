@@ -4,6 +4,12 @@
 
 CastBot uses environment-aware logging to provide detailed debugging in development while maintaining performance in production.
 
+**Related Documentation:**
+- **[LoggingConfiguration.md](../infrastructure/LoggingConfiguration.md)** - Control log verbosity levels (MINIMAL/STANDARD/VERBOSE)
+- **[ButtonInteractionLogging.md](ButtonInteractionLogging.md)** - Button-specific logging patterns
+
+**Quick Tip:** For day-to-day log control (hiding verbose output), see [LoggingConfiguration.md](../infrastructure/LoggingConfiguration.md). This document covers the logging architecture and implementation patterns.
+
 ## Logging Utilities
 
 ### Core Logger (`logger.js`)
@@ -485,6 +491,7 @@ When working on CastBot logging:
 5. **FOLLOW migration pattern** for existing logs
 6. **TEST thoroughly** in development before production
 7. **UPDATE this document** if adding new patterns
+8. **🚨 CRITICAL: ALWAYS use static imports for `shouldLog()`** - Dynamic imports add 20-100ms latency per request (see LoggingConfiguration.md for incident details)
 
 For production troubleshooting:
 1. Check Discord #logs-dev or production analytics channel for interaction logs
