@@ -24124,30 +24124,53 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               ]
             });
 
-            // Add legend for overlay colors
-            let legendContent = `**Legend:**
-🟥 Red overlay = Blacklisted (restricted access)
-🟩 Green overlay = Reverse blacklist unlock available
-⬜ No overlay = Normal access`;
+            // Generate multi-color legend with per-item color coding
+            console.log(`🔍 DEBUG Map Explorer: Generating multi-color legend for guild ${context.guildId}`);
 
-            console.log(`🔍 DEBUG Map Explorer: About to call formatReverseBlacklistLegend for guild ${context.guildId}`);
+            let legendContent = '';
 
-            // Add reverse blacklist items legend
-            const { formatReverseBlacklistLegend } = await import('./playerLocationManager.js');
-            const reverseBlacklistLegend = await formatReverseBlacklistLegend(context.guildId);
+            // Get reverse blacklist items with metadata
+            const { getReverseBlacklistItemSummary } = await import('./playerLocationManager.js');
+            const reverseBlacklistItems = await getReverseBlacklistItemSummary(context.guildId);
 
-            console.log(`🔍 DEBUG Map Explorer: formatReverseBlacklistLegend returned:`, reverseBlacklistLegend);
-            console.log(`🔍 DEBUG Map Explorer: reverseBlacklistLegend is truthy?`, !!reverseBlacklistLegend);
-            console.log(`🔍 DEBUG Map Explorer: reverseBlacklistLegend length:`, reverseBlacklistLegend?.length);
+            if (reverseBlacklistItems.length > 0) {
+              // Define color palette (same as in generateBlacklistOverlay)
+              const COLOR_PALETTE = [
+                { r: 0, g: 255, b: 0, alpha: 0.4, emoji: '🟩', name: 'Green' },
+                { r: 255, g: 165, b: 0, alpha: 0.4, emoji: '🟧', name: 'Orange' },
+                { r: 255, g: 255, b: 0, alpha: 0.4, emoji: '🟨', name: 'Yellow' },
+                { r: 128, g: 0, b: 128, alpha: 0.4, emoji: '🟪', name: 'Purple' },
+              ];
+              const OVERFLOW_COLOR = { r: 139, g: 69, b: 19, alpha: 0.4, emoji: '🟫', name: 'Brown' };
 
-            if (reverseBlacklistLegend) {
-              console.log(`🔍 DEBUG Map Explorer: Adding reverse blacklist legend to content`);
-              legendContent += `\n\n${reverseBlacklistLegend}`;
+              // Sort items by priority (lastModified desc → alphabetical)
+              const sortedItems = reverseBlacklistItems.sort((a, b) => {
+                const timestampA = a.metadata?.lastModified || 0;
+                const timestampB = b.metadata?.lastModified || 0;
+                if (timestampA !== timestampB) {
+                  return timestampB - timestampA;
+                }
+                return a.name.localeCompare(b.name);
+              });
+
+              // Assign colors to items
+              const itemColorMap = new Map();
+              sortedItems.forEach((item, index) => {
+                const color = index < 4 ? COLOR_PALETTE[index] : OVERFLOW_COLOR;
+                itemColorMap.set(item.id, color);
+              });
+
+              // Generate multi-color legend
+              const { generateMultiColorLegend } = await import('./mapExplorer.js');
+              legendContent = generateMultiColorLegend(sortedItems, itemColorMap);
             } else {
-              console.log(`🔍 DEBUG Map Explorer: NOT adding reverse blacklist legend (falsy value)`);
+              // No reverse blacklist items - show basic legend
+              legendContent = `**Legend:**
+🟥 Red overlay = Blacklisted (restricted access)
+⬜ No overlay = Normal access`;
             }
 
-            console.log(`🔍 DEBUG Map Explorer: Final legendContent:\n${legendContent}`);
+            console.log(`🔍 DEBUG Map Explorer: Generated legend with ${reverseBlacklistItems.length} items`);
 
             containerComponents.push({
               type: 10,  // Text Display

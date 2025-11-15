@@ -1575,7 +1575,41 @@ export async function getBlacklistedCoordinates(guildId) {
 }
 
 /**
- * Generate a map image with blacklist overlays
+ * Generate dynamic multi-color legend for reverse blacklist items
+ *
+ * @param {Array} sortedItems - Reverse blacklist items sorted by priority (lastModified desc → alphabetical)
+ * @param {Map} itemColorMap - Map of itemId -> color object with emoji and name
+ * @returns {string} Formatted legend text with color coding
+ */
+export function generateMultiColorLegend(sortedItems, itemColorMap) {
+  const legendLines = ['**Legend:**', '🟥 Red overlay = Blacklisted (impossible to pass)'];
+
+  // Add color lines for first 4 items (unique colors)
+  const colorEmojis = ['🟩', '🟧', '🟨', '🟪'];
+  sortedItems.slice(0, 4).forEach((item, index) => {
+    const emoji = colorEmojis[index];
+    legendLines.push(`${emoji} ${emoji} overlay = ${item.emoji} ${item.name}`);
+  });
+
+  // Add brown overflow line if 5+ items
+  if (sortedItems.length >= 5) {
+    legendLines.push('🟫 Brown overlay = Reverse blacklist unlock (various items)');
+  }
+
+  legendLines.push('⬜ No overlay = Normal access');
+
+  // Add reverse blacklist items section
+  legendLines.push('', '**Reverse Blacklist Items:**');
+  sortedItems.forEach(item => {
+    const coords = (item.coordinates || []).join(', ');
+    legendLines.push(`• ${item.emoji} ${item.name}: ${coords}`);
+  });
+
+  return legendLines.join('\n');
+}
+
+/**
+ * Generate a map image with blacklist overlays (multi-color enhancement)
  *
  * @param {string} guildId - Guild ID
  * @param {string} originalImageUrl - Discord CDN URL of original clean map
@@ -1659,13 +1693,52 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridSi
     const blacklistedCoords = await getBlacklistedCoordinates(guildId);
     console.log(`🚫 Found ${blacklistedCoords.length} blacklisted cells: ${blacklistedCoords.join(', ')}`);
 
-    // Step 4: Get reverse blacklist items
+    // Step 4: Get reverse blacklist items WITH metadata
     const { getReverseBlacklistItemSummary } = await import('./playerLocationManager.js');
     const reverseBlacklistItems = await getReverseBlacklistItemSummary(guildId);
-    const reverseBlacklistCoords = new Set(
-      reverseBlacklistItems.flatMap(item => item.coordinates)
-    );
-    console.log(`🔓 Found ${reverseBlacklistCoords.size} reverse blacklist unlock coordinates`);
+
+    // Step 4a: Define color palette for multi-color enhancement
+    const COLOR_PALETTE = [
+      { r: 0, g: 255, b: 0, alpha: 0.4, emoji: '🟩', name: 'Green' },    // 1st item
+      { r: 255, g: 165, b: 0, alpha: 0.4, emoji: '🟧', name: 'Orange' }, // 2nd item
+      { r: 255, g: 255, b: 0, alpha: 0.4, emoji: '🟨', name: 'Yellow' }, // 3rd item
+      { r: 128, g: 0, b: 128, alpha: 0.4, emoji: '🟪', name: 'Purple' }, // 4th item
+    ];
+    const OVERFLOW_COLOR = { r: 139, g: 69, b: 19, alpha: 0.4, emoji: '🟫', name: 'Brown' };
+
+    // Step 4b: Sort items by priority (lastModified desc → alphabetical)
+    const sortedItems = reverseBlacklistItems.sort((a, b) => {
+      const timestampA = a.metadata?.lastModified || 0;
+      const timestampB = b.metadata?.lastModified || 0;
+
+      if (timestampA !== timestampB) {
+        return timestampB - timestampA;  // Most recent first
+      }
+
+      return a.name.localeCompare(b.name);  // Alphabetical fallback
+    });
+
+    console.log(`🔓 Found ${sortedItems.length} reverse blacklist items (sorted by priority)`);
+
+    // Step 4c: Assign colors to items based on priority
+    const itemColorMap = new Map();
+    sortedItems.forEach((item, index) => {
+      const color = index < 4 ? COLOR_PALETTE[index] : OVERFLOW_COLOR;
+      itemColorMap.set(item.id, color);
+      console.log(`  ${index + 1}. ${item.emoji} ${item.name} → ${color.emoji} ${color.name}`);
+    });
+
+    // Step 4d: Resolve overlapping coordinates (highest priority wins)
+    const coordToItemMap = new Map();  // coord -> item
+    for (const item of sortedItems) {
+      for (const coord of item.coordinates || []) {
+        if (!coordToItemMap.has(coord)) {
+          coordToItemMap.set(coord, item);
+        }
+      }
+    }
+
+    console.log(`🎨 Resolved ${coordToItemMap.size} unique coordinate overlays`);
 
     // Step 5: Create overlay rectangles
     const overlays = [];
@@ -1680,7 +1753,7 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridSi
       };
     };
 
-    // Red overlay for blacklisted cells
+    // Red overlay for blacklisted cells (drawn first, underneath colored overlays)
     for (const coord of blacklistedCoords) {
       const pos = coordToPosition(coord);
 
@@ -1701,23 +1774,23 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridSi
       });
     }
 
-    // Green overlay for reverse blacklist unlocks (on top of red)
-    for (const coord of reverseBlacklistCoords) {
+    // Colored overlays for reverse blacklist unlocks (drawn on top of red)
+    for (const [coord, item] of coordToItemMap) {
       if (blacklistedCoords.includes(coord)) {
         const pos = coordToPosition(coord);
+        const color = itemColorMap.get(item.id);
 
-        // Create green semi-transparent rectangle
-        const greenOverlay = await sharp({
+        const coloredOverlay = await sharp({
           create: {
             width: Math.floor(cellWidth),
             height: Math.floor(cellHeight),
             channels: 4,
-            background: { r: 0, g: 255, b: 0, alpha: 0.4 }  // 40% green
+            background: color
           }
         }).png().toBuffer();
 
         overlays.push({
-          input: greenOverlay,
+          input: coloredOverlay,
           top: pos.top,
           left: pos.left
         });

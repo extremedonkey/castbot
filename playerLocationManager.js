@@ -398,9 +398,11 @@ async function getReverseBlacklistItemSummary(guildId) {
     return Object.entries(items)
         .filter(([id, item]) => item.reverseBlacklist?.length > 0)
         .map(([id, item]) => ({
+            id,  // Item ID for color assignment
             name: item.name,
             emoji: item.emoji || '📦',
-            coordinates: item.reverseBlacklist
+            coordinates: item.reverseBlacklist,
+            metadata: item.metadata || {}  // Include metadata with lastModified timestamp
         }));
 }
 
