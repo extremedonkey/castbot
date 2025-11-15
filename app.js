@@ -2027,15 +2027,22 @@ function generateTipsScreen(index, discordCdnUrls) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
- * Generate initial tips screen with ALL images pre-attached
- * Uses attachment:// protocol - loads all 10 images from filesystem once
- * Navigation then references attachments without re-uploading
+ * Generate initial tips screen using WEBHOOK FOLLOWUP with files
+ * CRITICAL: Interaction responses CANNOT attach files - must use webhook API!
  *
- * @returns {Object} CHANNEL_MESSAGE_WITH_SOURCE with all files attached
+ * Pattern:
+ * 1. Return DEFERRED response to acknowledge interaction
+ * 2. Use webhook.createMessage() with files attached
+ * 3. Navigation uses webhook.editMessage() to switch attachment:// references
+ *
+ * @param {Object} interaction - Discord interaction object
+ * @param {Object} client - Discord client
+ * @returns {Object} DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE response
  */
-async function generateInitialTipsScreen() {
+async function generateInitialTipsScreen(interaction, client) {
   const path = await import('path');
   const fs = await import('fs/promises');
+  const { AttachmentBuilder } = await import('discord.js');
 
   // Screenshot metadata (order matches filenames 1-10)
   const screenshots = [
@@ -2051,7 +2058,7 @@ async function generateInitialTipsScreen() {
     { title: '⚙️ Settings & Configuration', description: 'Fine-tune CastBot behavior for your server needs' }
   ];
 
-  // Load ALL 10 images from local filesystem
+  // Load ALL 10 images from local filesystem using AttachmentBuilder
   const attachments = [];
   const basePath = path.join('/home/reece/castbot/img/tips');
 
@@ -2059,12 +2066,13 @@ async function generateInitialTipsScreen() {
     const filePath = path.join(basePath, `${i}.png`);
 
     try {
-      const fileBuffer = await fs.readFile(filePath);
-      attachments.push({
-        attachment: fileBuffer,
-        name: `${i}.png`  // This is the name we'll reference with attachment://
-      });
-      console.log(`✅ Loaded tip image ${i}.png (${fileBuffer.length} bytes)`);
+      // Use AttachmentBuilder for proper Discord.js file handling
+      const attachment = new AttachmentBuilder(filePath, { name: `${i}.png` });
+      attachments.push(attachment);
+
+      // Log file size for debugging
+      const stats = await fs.stat(filePath);
+      console.log(`✅ Loaded tip image ${i}.png (${stats.size} bytes)`);
     } catch (error) {
       console.error(`❌ Failed to load ${i}.png:`, error.message);
       throw new Error(`Failed to load tip image ${i}: ${error.message}`);
@@ -2075,65 +2083,86 @@ async function generateInitialTipsScreen() {
   const currentScreenshot = screenshots[index];
   const totalCount = screenshots.length;
 
+  // Create webhook followup message with files (async - doesn't block response)
+  setTimeout(async () => {
+    try {
+      console.log('📤 Creating webhook followup message with 10 attached files...');
+
+      // Get webhook from interaction token
+      const webhook = await client.fetchWebhook(interaction.application_id, interaction.token);
+
+      // Create followup message with ALL files attached
+      await webhook.send({
+        files: attachments,  // All 10 AttachmentBuilder objects
+        flags: (1 << 6),  // EPHEMERAL flag (64)
+        components: [
+          {
+            type: 17, // Container
+            accent_color: 0x9b59b6, // Purple for tips/features
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## 💡 CastBot Features Tour (${index + 1}/${totalCount})\n\n### ${currentScreenshot.title}\n\n${currentScreenshot.description}`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 12, // Media Gallery - Reference FIRST attached file
+                items: [
+                  {
+                    media: { url: 'attachment://1.png' },  // Reference pre-attached file
+                    description: currentScreenshot.title
+                  }
+                ]
+              },
+              { type: 14 }, // Separator
+              {
+                type: 10,
+                content: `> **\`📸 Feature Showcase (${index + 1}/${totalCount})\`**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• ${totalCount} features total - discover everything CastBot can do!`
+              },
+              { type: 14 }, // Separator before navigation
+              {
+                type: 1, // Action Row - Navigation buttons
+                components: [
+                  {
+                    type: 2, // Button
+                    custom_id: `tips_prev_${index}`,
+                    label: '◀ Previous',
+                    style: 2, // Secondary (grey)
+                    disabled: true  // Disabled on first image
+                  },
+                  {
+                    type: 2, // Button
+                    custom_id: `tips_next_${index}`,
+                    label: 'Next ▶',
+                    style: 2, // Secondary (grey)
+                    disabled: false
+                  },
+                  {
+                    type: 2, // Button
+                    custom_id: 'dm_back_to_welcome',
+                    label: '← Back',
+                    style: 2, // Secondary (grey)
+                    emoji: { name: '🏠' }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      });
+
+      console.log('✅ Webhook followup message sent successfully with all files!');
+    } catch (error) {
+      console.error('❌ Failed to send webhook followup:', error.message);
+      console.error(error);
+    }
+  }, 0);
+
+  // Return immediate deferred response (tells Discord we're processing)
   return {
-    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, // Type 4 - NEW message
+    type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE, // Type 5
     data: {
-      files: attachments,  // ALL 10 images attached to this message
-      ephemeral: true,
-      components: [
-        {
-          type: 17, // Container
-          accent_color: 0x9b59b6, // Purple for tips/features
-          components: [
-            {
-              type: 10, // Text Display
-              content: `## 💡 CastBot Features Tour (${index + 1}/${totalCount})\n\n### ${currentScreenshot.title}\n\n${currentScreenshot.description}`
-            },
-            { type: 14 }, // Separator
-            {
-              type: 12, // Media Gallery - Show FIRST screenshot
-              items: [
-                {
-                  media: { url: 'attachment://1.png' },  // Reference pre-attached file
-                  description: currentScreenshot.title
-                }
-              ]
-            },
-            { type: 14 }, // Separator
-            {
-              type: 10,
-              content: `> **\`📸 Feature Showcase (${index + 1}/${totalCount})\`**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• ${totalCount} features total - discover everything CastBot can do!`
-            },
-            { type: 14 }, // Separator before navigation
-            {
-              type: 1, // Action Row - Navigation buttons
-              components: [
-                {
-                  type: 2, // Button
-                  custom_id: `tips_prev_${index}`,
-                  label: '◀ Previous',
-                  style: 2, // Secondary (grey)
-                  disabled: true  // Disabled on first image
-                },
-                {
-                  type: 2, // Button
-                  custom_id: `tips_next_${index}`,
-                  label: 'Next ▶',
-                  style: 2, // Secondary (grey)
-                  disabled: false
-                },
-                {
-                  type: 2, // Button
-                  custom_id: 'dm_back_to_welcome',
-                  label: '← Back',
-                  style: 2, // Secondary (grey)
-                  emoji: { name: '🏠' }
-                }
-              ]
-            }
-          ]
-        }
-      ]
+      flags: (1 << 6)  // EPHEMERAL flag
     }
   };
 }
@@ -7865,13 +7894,16 @@ To fix this:
         }
       })(req, res, client);
 
-    // ✅ RE-ENABLED 2025-11-15: Tips gallery now uses attachment:// protocol with local filesystem
+    // ✅ RE-ENABLED 2025-11-15: Tips gallery now uses webhook followup with attachment:// protocol
     } else if (custom_id === 'dm_view_tips') {
       return ButtonHandlerFactory.create({
         id: 'dm_view_tips',
+        deferred: true,  // Uses DEFERRED response pattern
         handler: async (context) => {
           console.log('🎯 Loading tips gallery - reading all 10 images from filesystem...');
-          return await generateInitialTipsScreen(); // Loads all 10 images, returns CHANNEL_MESSAGE_WITH_SOURCE
+          // Pass full interaction object and client for webhook access
+          const interaction = req.body;  // Full Discord interaction object
+          return await generateInitialTipsScreen(interaction, context.client);
         }
       })(req, res, client);
 
