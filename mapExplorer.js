@@ -2057,7 +2057,7 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
   // Second row: Admin functions with Player Locations moved here
   const mapButtonRow2 = new ActionRowBuilder().addComponents([blacklistButton, playerLocationsButton, pausedPlayersButton]);
 
-  // Third row: Location Editor, Safari Progress, and Prod Shared Map (ephemeral only)
+  // Third row: Location Editor, Safari Progress, and Shared Map (always show)
   const locationEditorButton = new ButtonBuilder()
     .setCustomId('safari_location_editor')
     .setLabel('Location Editor')
@@ -2072,22 +2072,19 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     .setEmoji('🚀')
     .setDisabled(!hasActiveMap);
 
-  // Third row buttons array
-  const row3Buttons = [locationEditorButton, safariProgressButton];
+  // Shared Map button (always show - allows sharing from any context)
+  const sharedMapButton = new ButtonBuilder()
+    .setCustomId('safari_shared_map')
+    .setLabel('Shared Map')
+    .setStyle(ButtonStyle.Secondary)
+    .setEmoji('🗺️')
+    .setDisabled(!hasActiveMap);
 
-  // Add Shared Map button only in ephemeral view (to right of Safari Progress)
-  if (isEphemeral) {
-    const sharedMapButton = new ButtonBuilder()
-      .setCustomId('safari_shared_map')
-      .setLabel('Shared Map')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🗺️')
-      .setDisabled(!hasActiveMap);
-
-    row3Buttons.push(sharedMapButton);
-  }
-
-  const mapButtonRow3 = new ActionRowBuilder().addComponents(row3Buttons);
+  const mapButtonRow3 = new ActionRowBuilder().addComponents([
+    locationEditorButton,
+    safariProgressButton,
+    sharedMapButton
+  ]);
 
   // Create back button (only for ephemeral messages)
   if (isEphemeral) {
