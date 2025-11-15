@@ -11137,6 +11137,18 @@
         "castlistIds": [
           "castlist_1763229475043_system"
         ]
+      },
+      "1385242808952160326": {
+        "castlistIds": [
+          "castlist_1763229618970_custom"
+        ],
+        "castlist": "S4 - TWD",
+        "color": "#000000",
+        "analyticsName": "S4 - Walking Dead",
+        "analyticsAdded": 1763230172332,
+        "emoji": "🧟‍♀️",
+        "showPlayerEmojis": true,
+        "memberCount": 11
       }
     },
     "players": {
@@ -11284,6 +11296,24 @@
         "seasonId": "season_04d9a4d28d8549bf",
         "modifiedAt": 1763229579752,
         "modifiedBy": "391415444084490240"
+      },
+      "castlist_1763229618970_custom": {
+        "id": "castlist_1763229618970_custom",
+        "name": "S4 - TWD",
+        "type": "custom",
+        "createdAt": 1763229618970,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "placements",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "emoji": "🧟",
+          "description": "",
+          "lastModified": 1763229618970
+        }
       }
     },
     "placements": {

@@ -18,6 +18,7 @@ export class CastlistVirtualAdapter {
     // 1. Load REAL castlist entities (new system)
     const realCastlists = playerData[guildId]?.castlistConfigs || {};
     for (const [id, castlist] of Object.entries(realCastlists)) {
+      console.log(`[VIRTUAL ADAPTER] Loading real castlist ${castlist.name} (${id}): emoji="${castlist.metadata?.emoji}"`);
       castlists.set(id, { ...castlist, isVirtual: false });
     }
 
