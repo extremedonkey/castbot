@@ -4,22 +4,32 @@
 
 ## Quick Start
 
-### Toggle Logging Levels
+### Three Logging Levels
 
-Edit `.env` and set:
-
+**STANDARD mode (default, recommended)** - Best for daily dev + Claude Code debugging:
 ```bash
-# Verbose mode (all debug logs)
-DEBUG_VERBOSE=true
+# In .env, leave DEBUG_VERBOSE commented out:
+# DEBUG_VERBOSE (not set)
 
-# Minimal mode (errors + critical actions only)
-DEBUG_VERBOSE=false
-
-# Standard mode (auto-detect: verbose in dev, minimal in prod)
-# DEBUG_VERBOSE=<not set>
+# Or use dev-restart-logs.sh (defaults to STANDARD):
+./scripts/dev/dev-restart-logs.sh "commit message"
 ```
 
-**No restart required** - changes take effect on next request!
+**VERBOSE mode** - Full debug dumps (rarely needed):
+```bash
+# Temporary for one run:
+./scripts/dev/dev-restart-logs.sh -f "commit message"
+
+# Or set in .env:
+DEBUG_VERBOSE=true
+```
+
+**MINIMAL mode** - Errors only (production):
+```bash
+# In .env:
+DEBUG_VERBOSE=false
+# Or automatically enabled when PRODUCTION=TRUE
+```
 
 ## Log Reduction Summary
 
@@ -87,13 +97,53 @@ if (shouldLog('STANDARD')) {
 console.error('❌ Error:', error);
 ```
 
-### Log Levels
+### Log Levels Explained
 
-| **Level** | **Includes** | **Use Case** |
-|-----------|--------------|--------------|
-| **MINIMAL** | Errors + critical actions | Production (default) |
-| **STANDARD** | + Outcomes + identifiers | Development (default) |
-| **VERBOSE** | + Debug chains + payloads | Troubleshooting |
+| **Level** | **Includes** | **Use Case** | **Claude Code Compatible?** |
+|-----------|--------------|--------------|----------------------------|
+| **MINIMAL** | Errors only | Production | ❌ No - missing feature logs |
+| **STANDARD** ⭐ | + Feature logs (`[SORTER]`, `[TRIBES]`, `[CASTLIST]`) | Development (default) | ✅ **Yes - recommended!** |
+| **VERBOSE** | + Debug dumps (payloads, component trees, DST) | Deep troubleshooting | ✅ Yes, but excessive |
+
+**Why STANDARD is best for Claude Code:**
+- Includes `[SORTER]` logs → Claude can diagnose sorting issues
+- Includes `[TRIBES]` logs → Claude can trace data fetching
+- Includes `[CASTLIST]` logs → Claude can debug navigation
+- **Hides verbose dumps** → Saves 80% of log volume while keeping diagnostic value
+
+### What Logs at Each Level?
+
+**MINIMAL** (errors only - ~10 lines):
+```
+✅ Loaded playerData.json (450658 bytes, 30 guilds)
+❌ Error: Component limit exceeded
+```
+
+**STANDARD** ⭐ (feature logs - ~150 lines):
+```
+✅ Loaded playerData.json (450658 bytes, 30 guilds)
+Processing castlist command (routed to Components V2)
+[TRIBES] Fetching tribes for castlist: Season 11
+[TRIBES] ✅ Enriched tribe: S11 - Stephen King (20 members)
+[SORTER] Using placement namespace: season_e4ce0a7202f74e33
+[SORTER] Sorted 17 unranked (active), 3 ranked (eliminated)
+Tribe S11 - Stephen King: 20 players across 3 pages
+✅ Total components: 36/40
+[CASTLIST] Sent castlist via webhook follow-up
+```
+
+**VERBOSE** (all debug dumps - ~600 lines):
+```
+Got headers: { "host": "adapted-deeply-stag.ngrok-free.app", ... } (120 lines)
+Got body: { app_permissions: '9007199254740991', ... } (30 lines)
+📊 DEBUG: postToDiscordLogs ENTRY - action: BUTTON_CLICK
+📊 DEBUG: postToDiscordLogs - Discord client OK
+📊 DEBUG: postToDiscordLogs - envConfig loaded
+... (15 more analytics debug lines)
+🌍 [castlist] DST lookup for ET: offset=-5, stored=-4 (7x per page)
+📋 DETAILED COMPONENT BREAKDOWN: (35 lines component tree)
+🔍 FINAL MESSAGE STRUCTURE: (full JSON dump - 150 lines)
+```
 
 ### Modified Files
 

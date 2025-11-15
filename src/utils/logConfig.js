@@ -22,9 +22,9 @@
  */
 
 const LOG_LEVELS = {
-  MINIMAL: 1,   // Errors + critical actions only
-  STANDARD: 2,  // + Outcomes + key identifiers (default dev)
-  VERBOSE: 3    // + Debug chains + payloads + component trees
+  MINIMAL: 1,   // Errors only (production default)
+  STANDARD: 2,  // + Feature logs ([SORTER], [TRIBES], [CASTLIST]) - Claude Code needs this!
+  VERBOSE: 3    // + Debug dumps (payloads, component trees, DST lookups) - rarely needed
 };
 
 /**
@@ -46,6 +46,8 @@ function getLogLevel() {
   // Auto-detect based on environment
   const isProduction = process.env.PRODUCTION === 'TRUE';
 
+  // STANDARD is default for dev (includes feature logs for Claude Code debugging)
+  // MINIMAL for production (errors only)
   return isProduction ? LOG_LEVELS.MINIMAL : LOG_LEVELS.STANDARD;
 }
 

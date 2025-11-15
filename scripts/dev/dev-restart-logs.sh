@@ -2,10 +2,24 @@
 
 # CastBot Development Restart Script with Live Logs
 # Combines restart and log tailing in one command
-# 
-# Usage: ./dev-restart-logs.sh [commit-message] [custom-discord-message]
+#
+# Usage:
+#   ./dev-restart-logs.sh [commit-message] [custom-discord-message]
+#   ./dev-restart-logs.sh -f [commit-message]  # Full verbose logs
+#
+# Flags:
+#   -f    Full verbose logging (DEBUG_VERBOSE=true) - shows all debug dumps
+#         Without -f: STANDARD logging (feature logs only, good for Claude Code)
 
 echo "=== CastBot Dev Restart + Logs ==="
+
+# Check for verbose flag
+VERBOSE_MODE=false
+if [[ "$1" == "-f" ]]; then
+    VERBOSE_MODE=true
+    shift  # Remove -f from arguments
+    echo "🔬 VERBOSE MODE: Full debug logging enabled"
+fi
 
 # Configuration
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
@@ -77,7 +91,13 @@ fi
 
 # Start the app with node (matching dev-start.sh approach)
 echo "🚀 Starting CastBot with node..."
-nohup node app.js > "$LOG_FILE" 2>&1 &
+if [ "$VERBOSE_MODE" = true ]; then
+    echo "   📊 Logging level: VERBOSE (full debug dumps)"
+    DEBUG_VERBOSE=true nohup node app.js > "$LOG_FILE" 2>&1 &
+else
+    echo "   📊 Logging level: STANDARD (feature logs for Claude Code)"
+    nohup node app.js > "$LOG_FILE" 2>&1 &
+fi
 NEW_PID=$!
 echo "$NEW_PID" > "$PID_FILE"
 
