@@ -2145,6 +2145,12 @@ async function generateInitialTipsScreen(interaction, client) {
                 components: [
                   {
                     type: 2, // Button
+                    custom_id: 'dm_back_to_welcome',
+                    label: '← Back',
+                    style: 2 // Secondary (grey)
+                  },
+                  {
+                    type: 2, // Button
                     custom_id: `tips_prev_${index}`,
                     label: '◀ Previous',
                     style: 2, // Secondary (grey)
@@ -2156,13 +2162,6 @@ async function generateInitialTipsScreen(interaction, client) {
                     label: 'Next ▶',
                     style: 2, // Secondary (grey)
                     disabled: false
-                  },
-                  {
-                    type: 2, // Button
-                    custom_id: 'dm_back_to_welcome',
-                    label: '← Back',
-                    style: 2, // Secondary (grey)
-                    emoji: { name: '🏠' }
                   }
                 ]
               }
@@ -8068,8 +8067,7 @@ To fix this:
                   type: 2, // Button
                   custom_id: 'viral_menu',
                   label: '← Back',
-                  style: 2, // Secondary (grey)
-                  emoji: { name: '🏠' }
+                  style: 2 // Secondary (grey)
                 }]
               }]
             }]
@@ -8174,8 +8172,7 @@ To fix this:
                   type: 2, // Button
                   custom_id: 'viral_menu',
                   label: '← Back',
-                  style: 2,
-                  emoji: { name: '🏠' }
+                  style: 2
                 }]
               }]
             }]
