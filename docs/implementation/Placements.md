@@ -9,15 +9,87 @@
 ## 📋 Table of Contents
 
 1. [Overview](#overview)
-2. [Architecture & Integration](#architecture--integration)
-3. [Data Structure](#data-structure)
-4. [User Flow](#user-flow)
-5. [Implementation Details](#implementation-details)
-6. [Button ID Patterns](#button-id-patterns)
-7. [Season-Based Namespacing](#season-based-namespacing)
-8. [Ordinal Display Logic](#ordinal-display-logic)
-9. [Code Locations](#code-locations)
-10. [Troubleshooting](#troubleshooting)
+2. [Critical Patterns & Architectural Changes](#critical-patterns--architectural-changes)
+3. [Architecture & Integration](#architecture--integration)
+4. [Data Structure](#data-structure)
+5. [User Flow](#user-flow)
+6. [Implementation Details](#implementation-details)
+7. [Button ID Patterns](#button-id-patterns)
+8. [Season-Based Namespacing](#season-based-namespacing)
+9. [Ordinal Display Logic](#ordinal-display-logic)
+10. [Code Locations](#code-locations)
+11. [Troubleshooting](#troubleshooting)
+
+---
+
+## Critical Patterns & Architectural Changes
+
+### ⚠️ CRITICAL: Modal Submission Response Pattern (Fixed November 2025)
+
+**Problem**: Original implementation used `DEFERRED_UPDATE_MESSAGE` (type 6) + webhook PATCH pattern for modal submissions, causing "Something went wrong" errors.
+
+**Root Cause**:
+- `DEFERRED_UPDATE_MESSAGE` is for button/select clicks, NOT modal submissions
+- Modal submit interactions don't have a message to "update" - they're responses to a form
+- The webhook token from modal submit can't update `@original` (no original message exists for this interaction)
+- See [DiscordInteractionAPI.md](../standards/DiscordInteractionAPI.md) for interaction type specifications
+
+**Correct Pattern**:
+```javascript
+// ✅ CORRECT: Modal submission response (app.js:30716-30719)
+return res.send({
+  type: InteractionResponseType.UPDATE_MESSAGE,  // Type 7, not 6!
+  data: castlistResponse  // Updates the message with the button that opened the modal
+});
+```
+
+**Why This Works**:
+- Modal submissions CAN use `UPDATE_MESSAGE` to update the message containing the button that opened the modal
+- This is a direct response (not deferred), so must complete within 3 seconds
+- Smart caching ([CastlistArchitecture.md](../architecture/CastlistArchitecture.md)) ensures operations complete quickly:
+  - Cache warm (>80%): 0ms overhead
+  - Cache cold (<80%): ~367ms for 578 members (well under 3s limit)
+
+**Previous (Incorrect) Pattern**:
+```javascript
+// ❌ WRONG: Deferred response + webhook (doesn't work for modals)
+await res.send({
+  type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE  // Type 6 - wrong!
+});
+// ... do work ...
+await DiscordRequest(`webhooks/.../messages/@original`, { method: 'PATCH' });  // Fails!
+```
+
+**Fix Applied**: November 15, 2025 (commit 025a668d)
+- Removed deferred response pattern
+- Changed to direct `UPDATE_MESSAGE` response
+- Simplified error handling (no `res.headersSent` check needed)
+
+### 🔑 Virtual Castlist Entity Handling (November 2025)
+
+**Problem**: "default" castlist is a **virtual entity** that may not exist in `castlistConfigs` until materialized.
+
+**Pattern**:
+```javascript
+// ✅ CORRECT: Handle undefined castlistEntity (app.js:30616-30617)
+const castlistEntity = playerData[guildId]?.castlistConfigs?.[castlistId];
+const castlistName = castlistEntity?.name || (castlistId === 'default' ? 'Active Castlist' : castlistId);
+```
+
+**Why This Matters**:
+- Default castlist exists as tribes with `castlist: 'default'` field
+- It only gets a `castlistConfigs` entity when edited via Castlist Hub
+- Code must gracefully handle `undefined` entity with fallback names
+- See [CastlistArchitecture.md - Virtual Adapter Pattern](../architecture/CastlistArchitecture.md#virtual-adapter-pattern)
+
+**Common Mistake**:
+```javascript
+// ❌ WRONG: Throws error for virtual castlists
+const castlistEntity = playerData[guildId]?.castlistConfigs?.[castlistId];
+if (!castlistEntity) {
+  throw new Error(`Castlist "${castlistId}" not found`);  // Breaks for default!
+}
+```
 
 ---
 
@@ -1123,18 +1195,20 @@ They/Them, He/Him
 
 ### Primary Implementation Files
 
-| File | Lines | Function | Purpose |
-|------|-------|----------|---------|
-| **app.js** | 8516-8566 | `edit_placement_` handler | Shows modal when edit button clicked |
-| **app.js** | 30440-30520 | `save_placement_` handler | Saves modal data to playerData.json |
-| **castlistV2.js** | 192-292 | `createPlayerCard()` | Creates player section with edit button or thumbnail |
-| **castlistV2.js** | 258-276 | `getOrdinalLabel()` | Converts integer to ordinal string ("14th") |
-| **castlistV2.js** | 278-292 | Button creation logic | Builds edit_placement_ custom_id |
-| **castlistV2.js** | ~700-720 | Placement loading | Pre-loads all placements for namespace |
-| **castlistSorter.js** | 80-145 | `sortByPlacements()` | Alumni placement sorting (active first, then ranked) |
-| **castlistHub.js** | ~320 | "Tribes & Placements" button | Triggers edit mode |
-| **castlistHandlers.js** | TBD | `castlist_placements_` handler | Activates edit mode display |
-| **storage.js** | N/A | `loadPlayerData()`, `savePlayerData()` | Data persistence |
+| File | Lines | Function | Purpose | Notes |
+|------|-------|----------|---------|-------|
+| **app.js** | 8516-8566 | `edit_placement_` handler | Shows modal when edit button clicked | ButtonHandlerFactory pattern |
+| **app.js** | 30485-30742 | `save_placement_` handler | Saves modal data to playerData.json | ✅ Updated Nov 2025: Direct UPDATE_MESSAGE |
+| **app.js** | 30614-30617 | Virtual castlist handling | Handles undefined castlistEntity | ✅ Added Nov 2025 |
+| **app.js** | 30716-30719 | UPDATE_MESSAGE response | Direct modal response (type 7) | ✅ Fixed Nov 2025: Was webhook PATCH |
+| **castlistV2.js** | 192-292 | `createPlayerCard()` | Creates player section with edit button or thumbnail | Components V2 Section |
+| **castlistV2.js** | 258-276 | `getOrdinalLabel()` | Converts integer to ordinal string ("14th") | Handles 11th/12th/13th edge case |
+| **castlistV2.js** | 278-292 | Button creation logic | Builds edit_placement_ custom_id | Encodes full navigation state |
+| **castlistV2.js** | ~700-720 | Placement loading | Pre-loads all placements for namespace | Loads once per tribe for performance |
+| **castlistSorter.js** | 80-145 | `sortByPlacements()` | Alumni placement sorting (active first, then ranked) | Uses namespace for data access |
+| **castlistHub.js** | ~320 | "Tribes & Placements" button | Triggers edit mode | `show_castlist2_{id}_edit` pattern |
+| **castlistHandlers.js** | TBD | `castlist_placements_` handler | Activates edit mode display | Permission check + mode switch |
+| **storage.js** | N/A | `loadPlayerData()`, `savePlayerData()` | Data persistence | **CRITICAL**: Always `await`! |
 
 ### Data Storage
 
@@ -1173,6 +1247,35 @@ BUTTON_REGISTRY = {
 ## Troubleshooting
 
 ### Common Issues
+
+#### Issue 0: "Something went wrong" Error on Modal Submit (CRITICAL - Fixed Nov 2025)
+
+**Symptoms**:
+- User enters placement value in modal and clicks Submit
+- Discord shows "Something went wrong. Try again." error message
+- Logs show placement saved successfully (`✅ Saved placement X to global for player...`)
+- Logs show `⏰ DEBUG: Webhook interaction failed ... likely expired or invalid token`
+
+**Root Cause**: Using wrong interaction response type for modal submissions
+
+**Technical Details**:
+- Original code used `DEFERRED_UPDATE_MESSAGE` (type 6) + webhook PATCH pattern
+- `DEFERRED_UPDATE_MESSAGE` is ONLY for button/select clicks, NOT modal submissions
+- Modal submit tokens can't update `@original` message (no original message exists for modal interaction)
+- See [Critical Patterns](#critical-patterns--architectural-changes) section for full explanation
+
+**Fix**:
+```javascript
+// ✅ CORRECT: Direct UPDATE_MESSAGE response
+return res.send({
+  type: InteractionResponseType.UPDATE_MESSAGE,  // Type 7
+  data: castlistResponse
+});
+```
+
+**Status**: ✅ **FIXED** in commit 025a668d (November 15, 2025)
+
+**Prevention**: Always use `UPDATE_MESSAGE` (type 7) for modal submissions that need to update the original message. Never use `DEFERRED_UPDATE_MESSAGE` or webhook PATCH for modals.
 
 #### Issue 1: Button Shows "Set Place" but Placement Exists
 
@@ -1492,9 +1595,17 @@ castlist_placements_{castlistId}
 
 ---
 
-**Last Updated**: January 2025
+**Created**: January 2025
+**Last Updated**: November 15, 2025 (Modal submission fix + Virtual castlist handling)
 **Author**: Reece (extremedonkey)
+
+**Change Log**:
+- **Nov 15, 2025**: Fixed modal submission pattern (DEFERRED_UPDATE_MESSAGE → UPDATE_MESSAGE), Added virtual castlist entity handling
+- **Jan 2025**: Initial comprehensive documentation
+
 **Related Documentation**:
+- [CastlistArchitecture.md](../architecture/CastlistArchitecture.md) - Complete castlist system overview, smart caching patterns
+- [DiscordInteractionAPI.md](../standards/DiscordInteractionAPI.md) - Interaction types and response patterns
+- [ComponentsV2Issues.md](../troubleshooting/ComponentsV2Issues.md) - Modal response troubleshooting
 - [CastlistV3-FeatureStatus.md](../features/CastlistV3-FeatureStatus.md) - Original Placement Editor specification
-- [CastlistArchitecture.md](../architecture/CastlistArchitecture.md) - Complete castlist system overview
 - [ComponentsV2.md](../standards/ComponentsV2.md) - Discord UI component reference

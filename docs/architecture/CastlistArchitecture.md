@@ -602,6 +602,59 @@ sequenceDiagram
 - **Auto-Migration**: ✅ On edit operations
 - **Access Control**: ⚠️ Restricted to specific user ID
 
+### Edit Mode & Placements Integration
+
+The Castlist Hub provides access to **placement editing** via the "Tribes & Placements" button (🔥 emoji):
+
+**Flow**:
+1. User selects castlist from dropdown
+2. Clicks "Tribes & Placements" button
+3. Triggers `show_castlist2_{castlistId}_edit` custom_id
+4. Displays castlist in **edit mode** (displayMode = 'edit')
+5. Player avatars replaced with placement edit buttons
+6. Clicking edit button shows modal for placement entry
+7. Modal submission uses `UPDATE_MESSAGE` to refresh display
+
+**Display Modes**:
+- **View Mode** (default): Shows player avatars as Section accessories (type 11 Thumbnail)
+- **Edit Mode**: Shows placement buttons as Section accessories (type 2 Button)
+  - Button label: Ordinal (e.g., "14th") or "Set Place" if no placement
+  - Button emoji: ✏️
+
+**Modal Submission Pattern**:
+- **Interaction Type**: `MODAL_SUBMIT` (type 5)
+- **Response Type**: `UPDATE_MESSAGE` (type 7) - NOT deferred!
+- **Why**: Updates the message containing the button that opened the modal
+- **Performance**: Must complete <3s (smart caching ensures this)
+- See [Placements.md](../implementation/Placements.md#critical-patterns--architectural-changes) for full implementation details
+
+**Data Flow (Placement Save)**:
+```mermaid
+sequenceDiagram
+    participant Admin
+    participant EditBtn as Edit Placement Button
+    participant Modal as Placement Modal
+    participant Handler as save_placement_ Handler
+    participant Storage as playerData.json
+    participant Display as Castlist Display
+
+    Admin->>EditBtn: Click "14th" or "Set Place"
+    EditBtn->>Modal: Show modal (pre-filled)
+    Admin->>Modal: Enter/edit placement
+    Modal->>Handler: Submit (MODAL_SUBMIT interaction)
+    Handler->>Storage: Save to placements[namespace][playerId]
+    Handler->>Display: UPDATE_MESSAGE (type 7)
+    Display-->>Admin: Refreshed castlist with updated placement
+```
+
+**Virtual Castlist Handling**:
+- Edit mode works with both real entities and virtual castlists
+- "default" castlist may not have `castlistConfigs` entity (virtual until materialized)
+- Code handles undefined entity gracefully with fallback name: `'Active Castlist'`
+- See [Virtual Adapter Pattern](#virtual-adapter-pattern) section below
+
+**Related Documentation**: [Placements.md](../implementation/Placements.md)
+
 ## 📊 Method 4: Post Castlist Button (Fixed)
 
 ### Data Flow
@@ -1140,6 +1193,48 @@ stateDiagram-v2
     note right of Real: Permanent entity\nFull metadata support
     note left of KeepLegacy: Both fields maintained:\n- castlist: "name"\n- castlistId: "id"
 ```
+
+### Special Case: "default" Castlist
+
+The **"default" castlist** is a special virtual entity that requires careful handling:
+
+**Characteristics**:
+- **ID**: Always `'default'` (not a generated ID)
+- **Name**: `'Active Castlist'` (fallback if not materialized)
+- **Virtual State**: May NOT exist in `castlistConfigs` until first edit
+- **Tribe Marking**: Tribes have `castlist: 'default'` or `castlistId: 'default'`
+
+**Critical Pattern for Code**:
+```javascript
+// ✅ CORRECT: Handle undefined entity
+const castlistEntity = playerData[guildId]?.castlistConfigs?.[castlistId];
+const castlistName = castlistEntity?.name || (castlistId === 'default' ? 'Active Castlist' : castlistId);
+
+// Use castlistEntity?.settings with fallbacks
+const sortStrategy = castlistEntity?.settings?.sortStrategy || 'alphabetical';
+const seasonId = castlistEntity?.seasonId || undefined;
+```
+
+**Why This Matters**:
+- Most code paths assume `castlistConfigs[id]` exists
+- Default castlist breaks this assumption when virtual
+- **Placement editing** specifically needs this pattern (see [Placements.md](../implementation/Placements.md#critical-patterns--architectural-changes))
+- **Must gracefully handle `undefined` entity** with fallback values
+
+**Common Mistake**:
+```javascript
+// ❌ WRONG: Throws error for virtual default
+const castlistEntity = playerData[guildId]?.castlistConfigs?.[castlistId];
+if (!castlistEntity) {
+  throw new Error(`Castlist "${castlistId}" not found`);  // Breaks for default!
+}
+```
+
+**When Does Default Materialize?**
+- When edited via Castlist Hub
+- When settings are modified (sortStrategy, visibility, etc.)
+- When seasonId is assigned
+- After materialization, `castlistConfigs.default` contains real entity
 
 ## 🔍 Comparison Matrix
 
