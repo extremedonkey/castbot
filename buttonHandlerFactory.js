@@ -931,6 +931,14 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari'
   },
+  'safari_prod_shared_map': {
+    label: 'Prod Shared Map',
+    description: 'Share map publicly in channel (non-ephemeral map view)',
+    emoji: '🗺️',
+    style: 'Secondary',
+    category: 'safari',
+    parent: 'safari_progress'
+  },
   'map_update': {
     label: 'Update Map',
     description: 'Update the existing map image with a new one',

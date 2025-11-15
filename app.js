@@ -24064,255 +24064,32 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         ephemeral: true,
         deferred: true,  // Enable deferred response for overlay generation
         handler: async (context) => {
-          console.log(`🗺️ DEBUG: Opening Map Explorer interface for guild ${context.guildId}`);
+          console.log(`🗺️ DEBUG: Opening ephemeral Map Explorer interface for guild ${context.guildId}`);
 
-          // Load safari content to check for existing maps
-          const { loadSafariContent } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
-          const guildMaps = safariData[context.guildId]?.maps || {};
-          const activeMapId = guildMaps.active;
-          const hasActiveMap = activeMapId && guildMaps[activeMapId];
-
-          // Create header text based on map status
-          let headerText;
-          if (hasActiveMap) {
-            const activeMap = guildMaps[activeMapId];
-            headerText = `# 🗺️ Map Explorer\n\n**Active Map:** ${activeMap.name || 'Adventure Map'}\n**Grid Size:** ${activeMap.gridSize}x${activeMap.gridSize}\n**Status:** Active ✅`;
-          } else {
-            headerText = `# 🗺️ Map Explorer\n\n**No active map found**\nCreate a new map to begin exploration!`;
-          }
-
-          // Build container components starting with text display
-          const containerComponents = [
-            {
-              type: 10, // Text Display
-              content: headerText
-            },
-            {
-              type: 14 // Separator
-            }
-          ];
-
-          // Add Media Gallery with overlay if there's an active map with Discord CDN URL
-          if (hasActiveMap && guildMaps[activeMapId].discordImageUrl) {
-            console.log(`🖼️ DEBUG: Generating blacklist overlay for map from Discord CDN: ${guildMaps[activeMapId].discordImageUrl}`);
-
-            // Generate overlay image with blacklist indicators
-            let imageUrl = guildMaps[activeMapId].discordImageUrl;
-            try {
-              const { generateBlacklistOverlay } = await import('./mapExplorer.js');
-              imageUrl = await generateBlacklistOverlay(
-                context.guildId,
-                guildMaps[activeMapId].discordImageUrl,  // Original clean map
-                guildMaps[activeMapId].gridSize,
-                context.client
-              );
-              console.log(`✅ Using overlaid image: ${imageUrl}`);
-            } catch (error) {
-              console.error(`❌ Error generating overlay, using original: ${error.message}`);
-              // Fallback to original image
-            }
-
-            containerComponents.push({
-              type: 12, // Media Gallery
-              items: [
-                {
-                  media: {
-                    url: imageUrl
-                  }
-                }
-              ]
-            });
-
-            // Generate multi-color legend with per-item color coding
-            console.log(`🔍 DEBUG Map Explorer: Generating multi-color legend for guild ${context.guildId}`);
-
-            let legendContent = '';
-
-            // Get reverse blacklist items with metadata
-            const { getReverseBlacklistItemSummary } = await import('./playerLocationManager.js');
-            const reverseBlacklistItems = await getReverseBlacklistItemSummary(context.guildId);
-
-            if (reverseBlacklistItems.length > 0) {
-              // Define color palette (same as in generateBlacklistOverlay)
-              const COLOR_PALETTE = [
-                { r: 0, g: 255, b: 0, alpha: 0.4, emoji: '🟩', name: 'Green' },
-                { r: 255, g: 165, b: 0, alpha: 0.4, emoji: '🟧', name: 'Orange' },
-                { r: 255, g: 255, b: 0, alpha: 0.4, emoji: '🟨', name: 'Yellow' },
-                { r: 128, g: 0, b: 128, alpha: 0.4, emoji: '🟪', name: 'Purple' },
-              ];
-              const OVERFLOW_COLOR = { r: 139, g: 69, b: 19, alpha: 0.4, emoji: '🟫', name: 'Brown' };
-
-              // Sort items by priority (lastModified desc → alphabetical)
-              const sortedItems = reverseBlacklistItems.sort((a, b) => {
-                const timestampA = a.metadata?.lastModified || 0;
-                const timestampB = b.metadata?.lastModified || 0;
-                if (timestampA !== timestampB) {
-                  return timestampB - timestampA;
-                }
-                return a.name.localeCompare(b.name);
-              });
-
-              // Assign colors to items
-              const itemColorMap = new Map();
-              sortedItems.forEach((item, index) => {
-                const color = index < 4 ? COLOR_PALETTE[index] : OVERFLOW_COLOR;
-                itemColorMap.set(item.id, color);
-              });
-
-              // Get blacklisted coordinates for warning detection
-              const { getBlacklistedCoordinates, generateMultiColorLegend } = await import('./mapExplorer.js');
-              const blacklistedCoords = await getBlacklistedCoordinates(context.guildId);
-
-              // Generate multi-color legend with warnings for non-blacklisted coords
-              legendContent = generateMultiColorLegend(sortedItems, itemColorMap, blacklistedCoords);
-            } else {
-              // No reverse blacklist items - show basic legend
-              legendContent = `**Legend:**
-🟥 Red overlay = Blacklisted (restricted access)
-⬜ No overlay = Normal access`;
-            }
-
-            console.log(`🔍 DEBUG Map Explorer: Generated legend with ${reverseBlacklistItems.length} items`);
-
-            containerComponents.push({
-              type: 10,  // Text Display
-              content: legendContent
-            });
-
-            containerComponents.push({
-              type: 14 // Separator
-            });
-          } else if (hasActiveMap && guildMaps[activeMapId].imageFile) {
-            // Fallback for maps without Discord CDN URL
-            console.log(`🖼️ DEBUG: Map exists but no Discord CDN URL: ${guildMaps[activeMapId].imageFile}`);
-            containerComponents.push({
-              type: 10, // Text Display
-              content: `📍 **Map Image:** \`${guildMaps[activeMapId].imageFile.split('/').pop()}\``
-            });
-            containerComponents.push({
-              type: 14 // Separator
-            });
-          }
-          
-          // Create map management buttons
-          // Create / Update Map button (always active)
-          const createUpdateButton = new ButtonBuilder()
-            .setCustomId('map_update')
-            .setLabel('Create / Update Map')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('🗺️');
-          
-          const deleteButton = new ButtonBuilder()
-            .setCustomId('map_delete')
-            .setLabel('Delete Map')
-            .setStyle(ButtonStyle.Danger)
-            .setEmoji('🗑️');
-          
-          const playerLocationsButton = new ButtonBuilder()
-            .setCustomId('map_player_locations')
-            .setLabel('Player Locations')
-            .setStyle(ButtonStyle.Secondary) // Grey style
-            .setEmoji('👥');
-          
-          // Legacy create button - MARKED FOR REMOVAL (map_update has replaced this)
-          // const legacyCreateButton = new ButtonBuilder()
-          //   .setCustomId('map_create')
-          //   .setLabel('Create Map (Legacy)')
-          //   .setStyle(ButtonStyle.Secondary)
-          //   .setEmoji('🏗️');
-          
-          // Set states based on whether map exists
-          if (hasActiveMap) {
-            deleteButton.setDisabled(false);
-            playerLocationsButton.setDisabled(false);
-          } else {
-            deleteButton.setDisabled(true);
-            playerLocationsButton.setDisabled(true);
-          }
-          
-          // Create blacklist button
-          const blacklistButton = new ButtonBuilder()
-            .setCustomId('map_admin_blacklist')
-            .setLabel('Blacklisted Coords')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('🚫')
-            .setDisabled(!hasActiveMap); // Only enable if there's an active map
-
-          // Create refresh anchors button
-          const refreshAnchorsButton = new ButtonBuilder()
-            .setCustomId('map_admin_refresh_anchors')
-            .setLabel('Refresh Anchors')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('🔄')
-            .setDisabled(!hasActiveMap); // Only enable if there's an active map
-
-          // Create paused players button
-          const { getPausedPlayers } = await import('./pausedPlayersManager.js');
-          const pausedCount = hasActiveMap ? (await getPausedPlayers(context.guildId)).length : 0;
-          const pausedPlayersButton = new ButtonBuilder()
-            .setCustomId('safari_paused_players')
-            .setLabel(pausedCount > 0 ? `Paused Players (${pausedCount})` : 'Paused Players')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('⏸️')
-            .setDisabled(!hasActiveMap); // Only enable if there's an active map
-
-          // First row: Main map management buttons + Refresh Anchors
-          const mapButtonRow1 = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, refreshAnchorsButton]);
-
-          // Second row: Admin functions with Player Locations moved here
-          const mapButtonRow2 = new ActionRowBuilder().addComponents([blacklistButton, playerLocationsButton, pausedPlayersButton]);
-
-          // Third row: Location Editor and Safari Progress (moved from Safari Menu)
-          const locationEditorButton = new ButtonBuilder()
-            .setCustomId('safari_location_editor')
-            .setLabel('Location Editor')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('📍')
-            .setDisabled(!hasActiveMap);
-
-          const safariProgressButton = new ButtonBuilder()
-            .setCustomId('safari_progress')
-            .setLabel('Safari Progress')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('🚀')
-            .setDisabled(!hasActiveMap);
-
-          const mapButtonRow3 = new ActionRowBuilder().addComponents([locationEditorButton, safariProgressButton]);
-
-          // Create back button
-          const backButton = new ButtonBuilder()
-            .setCustomId('prod_menu_back')
-            .setLabel('← Menu')
-            .setStyle(ButtonStyle.Secondary);
-
-          const backRow = new ActionRowBuilder().addComponents([backButton]);
-
-          // Add action row components to container
-          containerComponents.push(mapButtonRow1.toJSON());
-          containerComponents.push(mapButtonRow2.toJSON());
-          containerComponents.push(mapButtonRow3.toJSON());
-          containerComponents.push({
-            type: 14 // Separator
-          });
-          containerComponents.push(backRow.toJSON());
-          
-          // Create container using Components V2 format
-          const mapExplorerContainer = {
-            type: 17, // Container component
-            accent_color: 0x00AE86, // Teal accent for map theme
-            components: containerComponents
-          };
-          
-          console.log(`🔍 DEBUG: Using ${shouldUpdateMessage ? 'UPDATE_MESSAGE' : 'CHANNEL_MESSAGE_WITH_SOURCE'} response type`);
-          
-          return {
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag (ephemeral handled by factory)
-            components: [mapExplorerContainer]
-          };
+          // Use extracted function to build response (ephemeral by default)
+          const { buildMapExplorerResponse } = await import('./mapExplorer.js');
+          return await buildMapExplorerResponse(context.guildId, context.userId, context.client, true);
         }
       })(req, res, client);
-      
+
+    } else if (custom_id === 'safari_prod_shared_map') {
+      // Handle Prod Shared Map - creates NEW public (non-ephemeral) message (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'safari_prod_shared_map',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        // NO updateMessage: Creates NEW message instead of updating
+        // NO ephemeral: Defaults to public message
+        deferred: true,  // Enable deferred response for overlay generation
+        handler: async (context) => {
+          console.log(`🗺️ DEBUG: Creating PUBLIC Shared Map for guild ${context.guildId}`);
+
+          // Use extracted function to build response (isEphemeral: false for public)
+          const { buildMapExplorerResponse } = await import('./mapExplorer.js');
+          return await buildMapExplorerResponse(context.guildId, context.userId, context.client, false);
+        }
+      })(req, res, client);
+
     // MAP_CREATE HANDLER REMOVED - Use map_update instead which supports both create and update
     // } else if (custom_id === 'map_create') {
     //   // Handle Map Creation

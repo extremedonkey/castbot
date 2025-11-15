@@ -1856,6 +1856,278 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridSi
   }
 }
 
+/**
+ * Build Map Explorer response data structure (extracted for reusability)
+ * @param {string} guildId - Guild ID
+ * @param {string} userId - User ID
+ * @param {Object} client - Discord client
+ * @param {boolean} isEphemeral - Whether response should be ephemeral (default: true)
+ * @returns {Promise<Object>} Response data structure with flags and components
+ */
+export async function buildMapExplorerResponse(guildId, userId, client, isEphemeral = true) {
+  console.log(`🗺️ DEBUG: Building Map Explorer response for guild ${guildId}, ephemeral: ${isEphemeral}`);
+
+  // Import ButtonBuilder for button creation
+  const { ButtonBuilder, ButtonStyle, ActionRowBuilder } = await import('discord.js');
+
+  // Load safari content to check for existing maps
+  const { loadSafariContent } = await import('./safariManager.js');
+  const safariData = await loadSafariContent();
+  const guildMaps = safariData[guildId]?.maps || {};
+  const activeMapId = guildMaps.active;
+  const hasActiveMap = activeMapId && guildMaps[activeMapId];
+
+  // Create header text based on map status
+  let headerText;
+  if (hasActiveMap) {
+    const activeMap = guildMaps[activeMapId];
+    headerText = `# 🗺️ Map Explorer\n\n**Active Map:** ${activeMap.name || 'Adventure Map'}\n**Grid Size:** ${activeMap.gridSize}x${activeMap.gridSize}\n**Status:** Active ✅`;
+  } else {
+    headerText = `# 🗺️ Map Explorer\n\n**No active map found**\nCreate a new map to begin exploration!`;
+  }
+
+  // Build container components starting with text display
+  const containerComponents = [
+    {
+      type: 10, // Text Display
+      content: headerText
+    },
+    {
+      type: 14 // Separator
+    }
+  ];
+
+  // Add Media Gallery with overlay if there's an active map with Discord CDN URL
+  if (hasActiveMap && guildMaps[activeMapId].discordImageUrl) {
+    console.log(`🖼️ DEBUG: Generating blacklist overlay for map from Discord CDN: ${guildMaps[activeMapId].discordImageUrl}`);
+
+    // Generate overlay image with blacklist indicators
+    let imageUrl = guildMaps[activeMapId].discordImageUrl;
+    try {
+      imageUrl = await generateBlacklistOverlay(
+        guildId,
+        guildMaps[activeMapId].discordImageUrl,  // Original clean map
+        guildMaps[activeMapId].gridSize,
+        client
+      );
+      console.log(`✅ Using overlaid image: ${imageUrl}`);
+    } catch (error) {
+      console.error(`❌ Error generating overlay, using original: ${error.message}`);
+      // Fallback to original image
+    }
+
+    containerComponents.push({
+      type: 12, // Media Gallery
+      items: [
+        {
+          media: {
+            url: imageUrl
+          }
+        }
+      ]
+    });
+
+    // Generate multi-color legend with per-item color coding
+    console.log(`🔍 DEBUG Map Explorer: Generating multi-color legend for guild ${guildId}`);
+
+    let legendContent = '';
+
+    // Get reverse blacklist items with metadata
+    const { getReverseBlacklistItemSummary } = await import('./playerLocationManager.js');
+    const reverseBlacklistItems = await getReverseBlacklistItemSummary(guildId);
+
+    if (reverseBlacklistItems.length > 0) {
+      // Define color palette (same as in generateBlacklistOverlay)
+      const COLOR_PALETTE = [
+        { r: 0, g: 255, b: 0, alpha: 0.4, emoji: '🟩', name: 'Green' },
+        { r: 255, g: 165, b: 0, alpha: 0.4, emoji: '🟧', name: 'Orange' },
+        { r: 255, g: 255, b: 0, alpha: 0.4, emoji: '🟨', name: 'Yellow' },
+        { r: 128, g: 0, b: 128, alpha: 0.4, emoji: '🟪', name: 'Purple' },
+      ];
+      const OVERFLOW_COLOR = { r: 139, g: 69, b: 19, alpha: 0.4, emoji: '🟫', name: 'Brown' };
+
+      // Sort items by priority (lastModified desc → alphabetical)
+      const sortedItems = reverseBlacklistItems.sort((a, b) => {
+        const timestampA = a.metadata?.lastModified || 0;
+        const timestampB = b.metadata?.lastModified || 0;
+        if (timestampA !== timestampB) {
+          return timestampB - timestampA;
+        }
+        return a.name.localeCompare(b.name);
+      });
+
+      // Assign colors to items
+      const itemColorMap = new Map();
+      sortedItems.forEach((item, index) => {
+        const color = index < 4 ? COLOR_PALETTE[index] : OVERFLOW_COLOR;
+        itemColorMap.set(item.id, color);
+      });
+
+      // Get blacklisted coordinates for warning detection
+      const blacklistedCoords = await getBlacklistedCoordinates(guildId);
+
+      // Generate multi-color legend with warnings for non-blacklisted coords
+      legendContent = generateMultiColorLegend(sortedItems, itemColorMap, blacklistedCoords);
+    } else {
+      // No reverse blacklist items - show basic legend
+      legendContent = `**Legend:**
+🟥 Red overlay = Blacklisted (restricted access)
+⬜ No overlay = Normal access`;
+    }
+
+    console.log(`🔍 DEBUG Map Explorer: Generated legend with ${reverseBlacklistItems.length} items`);
+
+    containerComponents.push({
+      type: 10,  // Text Display
+      content: legendContent
+    });
+
+    containerComponents.push({
+      type: 14 // Separator
+    });
+  } else if (hasActiveMap && guildMaps[activeMapId].imageFile) {
+    // Fallback for maps without Discord CDN URL
+    console.log(`🖼️ DEBUG: Map exists but no Discord CDN URL: ${guildMaps[activeMapId].imageFile}`);
+    containerComponents.push({
+      type: 10, // Text Display
+      content: `📍 **Map Image:** \`${guildMaps[activeMapId].imageFile.split('/').pop()}\``
+    });
+    containerComponents.push({
+      type: 14 // Separator
+    });
+  }
+
+  // Create map management buttons
+  const createUpdateButton = new ButtonBuilder()
+    .setCustomId('map_update')
+    .setLabel('Create / Update Map')
+    .setStyle(ButtonStyle.Primary)
+    .setEmoji('🗺️');
+
+  const deleteButton = new ButtonBuilder()
+    .setCustomId('map_delete')
+    .setLabel('Delete Map')
+    .setStyle(ButtonStyle.Danger)
+    .setEmoji('🗑️');
+
+  const playerLocationsButton = new ButtonBuilder()
+    .setCustomId('map_player_locations')
+    .setLabel('Player Locations')
+    .setStyle(ButtonStyle.Secondary)
+    .setEmoji('👥');
+
+  // Set states based on whether map exists
+  if (hasActiveMap) {
+    deleteButton.setDisabled(false);
+    playerLocationsButton.setDisabled(false);
+  } else {
+    deleteButton.setDisabled(true);
+    playerLocationsButton.setDisabled(true);
+  }
+
+  // Create blacklist button
+  const blacklistButton = new ButtonBuilder()
+    .setCustomId('map_admin_blacklist')
+    .setLabel('Blacklist')  // Changed from 'Blacklisted Coords'
+    .setStyle(ButtonStyle.Secondary)
+    .setEmoji('🚫')
+    .setDisabled(!hasActiveMap);
+
+  // Create refresh anchors button
+  const refreshAnchorsButton = new ButtonBuilder()
+    .setCustomId('map_admin_refresh_anchors')
+    .setLabel('Refresh Anchors')
+    .setStyle(ButtonStyle.Secondary)
+    .setEmoji('🔄')
+    .setDisabled(!hasActiveMap);
+
+  // Create paused players button
+  const { getPausedPlayers } = await import('./pausedPlayersManager.js');
+  const pausedCount = hasActiveMap ? (await getPausedPlayers(guildId)).length : 0;
+  const pausedPlayersButton = new ButtonBuilder()
+    .setCustomId('safari_paused_players')
+    .setLabel(pausedCount > 0 ? `Paused Players (${pausedCount})` : 'Paused Players')
+    .setStyle(ButtonStyle.Secondary)
+    .setEmoji('⏸️')
+    .setDisabled(!hasActiveMap);
+
+  // First row: Main map management buttons + Refresh Anchors
+  const mapButtonRow1 = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, refreshAnchorsButton]);
+
+  // Second row: Admin functions with Player Locations moved here
+  const mapButtonRow2 = new ActionRowBuilder().addComponents([blacklistButton, playerLocationsButton, pausedPlayersButton]);
+
+  // Third row: Location Editor, Safari Progress, and Prod Shared Map (ephemeral only)
+  const locationEditorButton = new ButtonBuilder()
+    .setCustomId('safari_location_editor')
+    .setLabel('Location Editor')
+    .setStyle(ButtonStyle.Secondary)
+    .setEmoji('📍')
+    .setDisabled(!hasActiveMap);
+
+  const safariProgressButton = new ButtonBuilder()
+    .setCustomId('safari_progress')
+    .setLabel('Safari Progress')
+    .setStyle(ButtonStyle.Secondary)
+    .setEmoji('🚀')
+    .setDisabled(!hasActiveMap);
+
+  // Third row buttons array
+  const row3Buttons = [locationEditorButton, safariProgressButton];
+
+  // Add Prod Shared Map button only in ephemeral view (to right of Safari Progress)
+  if (isEphemeral) {
+    const prodSharedMapButton = new ButtonBuilder()
+      .setCustomId('safari_prod_shared_map')
+      .setLabel('Prod Shared Map')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🗺️')
+      .setDisabled(!hasActiveMap);
+
+    row3Buttons.push(prodSharedMapButton);
+  }
+
+  const mapButtonRow3 = new ActionRowBuilder().addComponents(row3Buttons);
+
+  // Create back button (only for ephemeral messages)
+  if (isEphemeral) {
+    const backButton = new ButtonBuilder()
+      .setCustomId('prod_menu_back')
+      .setLabel('← Menu')
+      .setStyle(ButtonStyle.Secondary);
+
+    const backRow = new ActionRowBuilder().addComponents([backButton]);
+
+    // Add action row components to container
+    containerComponents.push(mapButtonRow1.toJSON());
+    containerComponents.push(mapButtonRow2.toJSON());
+    containerComponents.push(mapButtonRow3.toJSON());
+    containerComponents.push({
+      type: 14 // Separator
+    });
+    containerComponents.push(backRow.toJSON());
+  } else {
+    // For non-ephemeral (shared) maps, no back button
+    containerComponents.push(mapButtonRow1.toJSON());
+    containerComponents.push(mapButtonRow2.toJSON());
+    containerComponents.push(mapButtonRow3.toJSON());
+  }
+
+  // Create container using Components V2 format
+  const mapExplorerContainer = {
+    type: 17, // Container component
+    accent_color: 0x00AE86, // Teal accent for map theme
+    components: containerComponents
+  };
+
+  console.log(`🔍 DEBUG: Built Map Explorer response, ephemeral: ${isEphemeral}`);
+
+  return {
+    flags: (1 << 15), // IS_COMPONENTS_V2 flag
+    components: [mapExplorerContainer]
+  };
+}
+
 // Export functions
 // createMapGrid removed - legacy hardcoded map functionality replaced by createMapGridWithCustomImage
-export { deleteMapGrid, createMapExplorerMenu, updateMapImage, createMapGridWithCustomImage, loadSafariContent, saveSafariContent };
+export { deleteMapGrid, createMapExplorerMenu, updateMapImage, createMapGridWithCustomImage, loadSafariContent, saveSafariContent, buildMapExplorerResponse };
