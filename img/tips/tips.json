@@ -19,7 +19,7 @@
       "filename": "2.png",
       "title": "📋 Dynamic Castlists",
       "description": "Organize cast members with placements, alumni, and custom formatting",
-      "showcase": "# ✨ CastBot New Features (2/10)\n-# v3.0\n\n**📋 Dynamic Castlists**\nOrganize cast members with placements, alumni, and custom formatting\n\n**🧩 How to setup**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
+      "showcase": "# ✨ CastBot New Features (2/10)\n-# v3.0\n\n**📋 Dynamic Castlists**\nOrganize cast members with placements, alumni, and custom formatting\n\n**🧩 How to setup**\n• Create a Discord role for your alumni (e.g., \"Season 1 Alumni\")\n• Go to `/menu` > Production Menu > Castlist Hub > Create New Castlist\n• Name it (e.g., \"S1 Cast\"), add your alumni role as a tribe\n• Click \"Tribes & Placements\" to edit player rankings (1st, 2nd, 14th, etc.)\n• Players automatically sort by placement - perfect for Hall of Fame displays!",
       "urls": {
         "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1439399870711463987/tip_2.png?ex=691a6117&is=69190f97&hm=f974e9ef92c1d36d9eab708e8b55b6e5f7a0ee3eff6d7d89430dbd45e58d06dc&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292739689648138/tip_2.png?ex=6919fd51&is=6918abd1&hm=0d62570cab38285f02397287bed6f2f5030998b391058eea85c8b44e12532df6&"
