@@ -8036,8 +8036,8 @@ To fix this:
               type: 17, // Container
               accent_color: 0x9b59b6, // Purple (tips gallery)
               components: [{
-                type: 10, // Text Display
-                content: `## 💡 CastBot Features Tour (${index + 1}/${totalTips})\n\n### ${currentTip.title}\n\n${currentTip.description}`
+                type: 10, // Text Display - Showcase content (contains heading, title, description, and instructions)
+                content: currentTip.showcase
               }, {
                 type: 14 // Separator
               }, {
@@ -8046,11 +8046,6 @@ To fix this:
                   media: { url: cdnUrls[index] },
                   description: currentTip.title
                 }]
-              }, {
-                type: 14 // Separator
-              }, {
-                type: 10,
-                content: `> ${currentTip.showcase}`
               }, {
                 type: 14 // Separator
               }, {
@@ -8141,8 +8136,8 @@ To fix this:
               type: 17, // Container
               accent_color: 0x9b59b6, // Purple
               components: [{
-                type: 10, // Text Display
-                content: `## 💡 CastBot Features Tour (${newIndex + 1}/${totalTips})\n\n### ${currentTip.title}\n\n${currentTip.description}`
+                type: 10, // Text Display - Showcase content (contains heading, title, description, and instructions)
+                content: currentTip.showcase
               }, {
                 type: 14 // Separator
               }, {
@@ -8151,11 +8146,6 @@ To fix this:
                   media: { url: cdnUrls[newIndex] },
                   description: currentTip.title
                 }]
-              }, {
-                type: 14 // Separator
-              }, {
-                type: 10,
-                content: `> ${currentTip.showcase}`
               }, {
                 type: 14 // Separator
               }, {

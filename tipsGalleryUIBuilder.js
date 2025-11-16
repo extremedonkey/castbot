@@ -55,8 +55,8 @@ export function createTipsDisplayUI(index, totalTips, tipMetadata, cdnUrl, backB
       type: 17, // Container
       accent_color: 0x9b59b6, // Purple (tips gallery)
       components: [{
-        type: 10, // Text Display - Header
-        content: `## 💡 CastBot Features Tour (${index + 1}/${totalTips})\n\n### ${tipMetadata.title}\n\n${tipMetadata.description}`
+        type: 10, // Text Display - Showcase content (contains heading, title, description, and instructions)
+        content: tipMetadata.showcase
       }, {
         type: 14 // Separator
       }, {
@@ -65,11 +65,6 @@ export function createTipsDisplayUI(index, totalTips, tipMetadata, cdnUrl, backB
           media: { url: cdnUrl },
           description: tipMetadata.title
         }]
-      }, {
-        type: 14 // Separator
-      }, {
-        type: 10, // Text Display - Showcase text
-        content: `> ${tipMetadata.showcase}`
       }, {
         type: 14 // Separator
       }, {
