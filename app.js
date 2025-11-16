@@ -3861,7 +3861,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'player_integrated_age',
         // Tips gallery navigation
         'tips_next',
-        'tips_prev'
+        'tips_prev',
+        'edit_tip'  // Admin tips editor
       ];
       
       for (const pattern of dynamicPatterns) {
@@ -8001,7 +8002,8 @@ To fix this:
         ephemeral: true,
         deferred: true, // Allow time for auto-upload if URLs missing
         handler: async (context) => {
-          console.log(`💡 Loading tips gallery`);
+          const { userId } = context;
+          console.log(`💡 Loading tips gallery for user ${userId}`);
 
           // Load tips configuration and ensure URLs exist
           const {
@@ -8026,51 +8028,13 @@ To fix this:
 
           console.log(`✅ Got ${cdnUrls.length} Discord CDN URLs for ${env}`);
 
-          // Display first tip image
+          // Display first tip image (with admin edit button if applicable)
           const index = 0;
           const currentTip = getTipMetadata(config, index);
 
-          return {
-            flags: (1 << 15), // IS_COMPONENTS_V2
-            components: [{
-              type: 17, // Container
-              accent_color: 0x9b59b6, // Purple (tips gallery)
-              components: [{
-                type: 10, // Text Display - Showcase content (contains heading, title, description, and instructions)
-                content: currentTip.showcase
-              }, {
-                type: 14 // Separator
-              }, {
-                type: 12, // Media Gallery - Discord CDN URL from tips.json
-                items: [{
-                  media: { url: cdnUrls[index] },
-                  description: currentTip.title
-                }]
-              }, {
-                type: 14 // Separator
-              }, {
-                type: 1, // Action Row - Navigation buttons
-                components: [{
-                  type: 2, // Button - BACK FIRST (far left)
-                  custom_id: 'viral_menu',
-                  label: '← Back',
-                  style: 2 // Secondary (grey), NO emoji
-                }, {
-                  type: 2, // Button - Previous second (blue)
-                  custom_id: `tips_prev_${index}`,
-                  label: '◀ Previous',
-                  style: 1, // Primary (blue) - action button
-                  disabled: true  // Disabled on first image
-                }, {
-                  type: 2, // Button - Next third (blue)
-                  custom_id: `tips_next_${index}`,
-                  label: 'Next ▶',
-                  style: 1, // Primary (blue) - action button
-                  disabled: false
-                }]
-              }]
-            }]
-          };
+          // Use UI builder with userId for admin edit button
+          const { createTipsDisplayUI } = await import('./tipsGalleryUIBuilder.js');
+          return createTipsDisplayUI(index, totalTips, currentTip, cdnUrls[index], 'viral_menu', userId);
         }
       })(req, res, client);
 
@@ -8092,6 +8056,7 @@ To fix this:
         id: custom_id,
         updateMessage: true, // UPDATE_MESSAGE (button response pattern)
         handler: async (context) => {
+          const { userId } = context;
           // Parse index from button ID: tips_next_5 or tips_prev_5
           const match = custom_id.match(/^tips_(next|prev)_(\d+)$/);
           if (!match) {
@@ -8130,46 +8095,103 @@ To fix this:
           const totalTips = getTipCount(config);
           const currentTip = getTipMetadata(config, newIndex);
 
+          // Use UI builder with userId for admin edit button
+          const { createTipsNavigationUI } = await import('./tipsGalleryUIBuilder.js');
+          return createTipsNavigationUI(newIndex, totalTips, currentTip, cdnUrls[newIndex], 'viral_menu', userId);
+        }
+      })(req, res, client);
+
+    // ✏️ Admin Tips Editor - Edit button handler
+    } else if (custom_id.startsWith('edit_tip_')) {
+      return ButtonHandlerFactory.create({
+        id: 'edit_tip',
+        handler: async (context) => {
+          const { userId } = context;
+
+          // Permission check (safety layer - UI also hides button)
+          if (userId !== '391415444084490240') {
+            return {
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ This feature is admin-only',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            };
+          }
+
+          // Parse tip index from custom_id
+          const tipIndex = parseInt(custom_id.replace('edit_tip_', ''));
+
+          // Load current tip data
+          const { loadTipsConfig } = await import('./tipsGalleryManager.js');
+          const config = await loadTipsConfig();
+          const currentTip = config.tips[tipIndex];
+
+          if (!currentTip) {
+            return {
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: `❌ Tip ${tipIndex + 1} not found`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            };
+          }
+
+          console.log(`✏️ Admin ${userId} editing tip ${tipIndex + 1}`);
+
+          // Create modal with pre-filled values
+          const modal = {
+            custom_id: `save_tip_${tipIndex}`,
+            title: `Edit Tip ${tipIndex + 1}/10`,
+            components: [
+              {
+                type: 18,  // Label
+                label: "Title",
+                description: "Feature name with emoji (max 100 chars)",
+                component: {
+                  type: 4,  // Text Input
+                  custom_id: "title",
+                  value: currentTip.title,
+                  placeholder: "🏆 Winners' Castlist",
+                  max_length: 100,
+                  required: true,
+                  style: 1  // Short (single line)
+                }
+              },
+              {
+                type: 18,  // Label
+                label: "Description",
+                description: "One-line summary (max 150 chars)",
+                component: {
+                  type: 4,  // Text Input
+                  custom_id: "description",
+                  value: currentTip.description,
+                  placeholder: "Create a Custom Castlist ordered by Season",
+                  max_length: 150,
+                  required: true,
+                  style: 1  // Short
+                }
+              },
+              {
+                type: 18,  // Label
+                label: "Showcase Content",
+                description: "Full markdown content with heading, description, and setup instructions",
+                component: {
+                  type: 4,  // Text Input
+                  custom_id: "showcase",
+                  value: currentTip.showcase,
+                  placeholder: "# ✨ CastBot New Features (X/10)\\n-# v3.0\\n\\n...",
+                  max_length: 4000,  // Discord limit
+                  required: true,
+                  style: 2  // Paragraph (multi-line)
+                }
+              }
+            ]
+          };
+
           return {
-            flags: (1 << 15), // IS_COMPONENTS_V2
-            components: [{
-              type: 17, // Container
-              accent_color: 0x9b59b6, // Purple
-              components: [{
-                type: 10, // Text Display - Showcase content (contains heading, title, description, and instructions)
-                content: currentTip.showcase
-              }, {
-                type: 14 // Separator
-              }, {
-                type: 12, // Media Gallery - Discord CDN URL from tips.json
-                items: [{
-                  media: { url: cdnUrls[newIndex] },
-                  description: currentTip.title
-                }]
-              }, {
-                type: 14 // Separator
-              }, {
-                type: 1, // Action Row - Navigation buttons
-                components: [{
-                  type: 2, // Button - BACK FIRST (far left)
-                  custom_id: 'viral_menu',
-                  label: '← Back',
-                  style: 2 // Secondary (grey), NO emoji
-                }, {
-                  type: 2, // Button - Previous second (blue)
-                  custom_id: `tips_prev_${newIndex}`,
-                  label: '◀ Previous',
-                  style: 1, // Primary (blue) - action button
-                  disabled: newIndex === 0 // Disable on first image
-                }, {
-                  type: 2, // Button - Next third (blue)
-                  custom_id: `tips_next_${newIndex}`,
-                  label: 'Next ▶',
-                  style: 1, // Primary (blue) - action button
-                  disabled: newIndex === 9 // Disable on last image
-                }]
-              }]
-            }]
+            type: InteractionResponseType.MODAL,
+            data: modal
           };
         }
       })(req, res, client);
@@ -31001,6 +31023,86 @@ Are you sure you want to continue?`;
           }
         });
       }
+
+    // ✏️ Admin Tips Editor - Save modal handler
+    } else if (custom_id.startsWith('save_tip_')) {
+      // Permission check
+      const userId = req.body.member?.user?.id || req.body.user?.id;
+      if (userId !== '391415444084490240') {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ This feature is admin-only',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+
+      // Parse tip index
+      const tipIndex = parseInt(custom_id.replace('save_tip_', ''));
+
+      // Extract values from modal (Label components type 18)
+      const title = components[0].component.value?.trim();
+      const description = components[1].component.value?.trim();
+      const showcase = components[2].component.value?.trim();
+
+      // Validate required fields
+      if (!title || !description || !showcase) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ All fields are required',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+
+      // Load, update, and save tips config
+      const { loadTipsConfig, saveTipsConfig } = await import('./tipsGalleryManager.js');
+      const config = await loadTipsConfig();
+
+      if (!config.tips[tipIndex]) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Tip ${tipIndex + 1} not found`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+
+      // Update tip data (preserve URLs and metadata)
+      config.tips[tipIndex].title = title;
+      config.tips[tipIndex].description = description;
+      config.tips[tipIndex].showcase = showcase;
+      config.lastUpdated = new Date().toISOString();
+
+      // Save to file
+      await saveTipsConfig(config);
+
+      console.log(`✅ Updated tip ${tipIndex + 1} by admin ${userId}`);
+
+      // Refresh display with updated tip
+      const { createTipsDisplayUI } = await import('./tipsGalleryUIBuilder.js');
+      const { getTipMetadata, getTipUrls } = await import('./tipsGalleryManager.js');
+
+      const tipMetadata = getTipMetadata(config, tipIndex);
+      const env = process.env.PRODUCTION === 'TRUE' ? 'prod' : 'dev';
+      const cdnUrls = getTipUrls(config, env);
+
+      const refreshedUI = createTipsDisplayUI(
+        tipIndex,
+        config.tips.length,
+        tipMetadata,
+        cdnUrls[tipIndex],
+        'viral_menu',
+        userId  // Pass userId for edit button rendering
+      );
+
+      return res.send({
+        type: InteractionResponseType.UPDATE_MESSAGE,  // Type 7 - Direct update
+        data: refreshedUI
+      });
 
     } else if (custom_id.startsWith('condition_currency_modal_')) {
       // Handle currency amount modal submission

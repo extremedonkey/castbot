@@ -230,6 +230,14 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'navigation'
   },
+  'edit_tip_*': {
+    label: 'Edit',
+    description: 'Edit tips gallery content (admin only)',
+    emoji: '✏️',
+    style: 'Success',
+    category: 'tips_management',
+    parent: 'dm_view_tips'
+  },
   'dm_back_to_welcome': {
     label: '← Back to Welcome',
     description: 'Return to welcome screen from tips gallery',

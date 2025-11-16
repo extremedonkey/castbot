@@ -10,14 +10,16 @@
 /**
  * Create navigation buttons for tips gallery
  * Follows Lean UI design: Back button FIRST (far left), then Previous, then Next
+ * Admin users (391415444084490240) see an additional green Edit button
  *
  * @param {number} index - Current tip index (0-based)
  * @param {number} totalTips - Total number of tips
  * @param {string} backButtonId - Custom ID for back button ('viral_menu' or 'dm_back_to_welcome')
+ * @param {string} userId - Discord user ID (for admin check)
  * @returns {object[]} Array of button components in correct order
  */
-export function createTipsNavigationButtons(index, totalTips, backButtonId = 'viral_menu') {
-  return [{
+export function createTipsNavigationButtons(index, totalTips, backButtonId = 'viral_menu', userId = null) {
+  const buttons = [{
     type: 2, // Button - BACK FIRST (far left)
     custom_id: backButtonId,
     label: '← Back',
@@ -35,6 +37,19 @@ export function createTipsNavigationButtons(index, totalTips, backButtonId = 'vi
     style: 1, // Primary (blue) - action button
     disabled: index === totalTips - 1  // Disabled on last tip
   }];
+
+  // Admin-only Edit button (to the right of Next button)
+  if (userId === '391415444084490240') {
+    buttons.push({
+      type: 2,
+      custom_id: `edit_tip_${index}`,
+      label: 'Edit',
+      style: 3,  // Success (green)
+      emoji: { name: '✏️' }
+    });
+  }
+
+  return buttons;
 }
 
 /**
@@ -46,9 +61,10 @@ export function createTipsNavigationButtons(index, totalTips, backButtonId = 'vi
  * @param {object} tipMetadata - {id, title, description, showcase}
  * @param {string} cdnUrl - Discord CDN URL for tip image
  * @param {string} backButtonId - Custom ID for back button
+ * @param {string} userId - Discord user ID (for admin edit button)
  * @returns {object} Complete UI response object with Container
  */
-export function createTipsDisplayUI(index, totalTips, tipMetadata, cdnUrl, backButtonId = 'viral_menu') {
+export function createTipsDisplayUI(index, totalTips, tipMetadata, cdnUrl, backButtonId = 'viral_menu', userId = null) {
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2
     components: [{
@@ -69,7 +85,7 @@ export function createTipsDisplayUI(index, totalTips, tipMetadata, cdnUrl, backB
         type: 14 // Separator
       }, {
         type: 1, // Action Row - Navigation buttons
-        components: createTipsNavigationButtons(index, totalTips, backButtonId)
+        components: createTipsNavigationButtons(index, totalTips, backButtonId, userId)
       }]
     }]
   };
@@ -84,9 +100,10 @@ export function createTipsDisplayUI(index, totalTips, tipMetadata, cdnUrl, backB
  * @param {object} tipMetadata - {id, title, description, showcase}
  * @param {string} cdnUrl - Discord CDN URL for tip image
  * @param {string} backButtonId - Custom ID for back button
+ * @param {string} userId - Discord user ID (for admin edit button)
  * @returns {object} UI response for UPDATE_MESSAGE
  */
-export function createTipsNavigationUI(newIndex, totalTips, tipMetadata, cdnUrl, backButtonId = 'dm_back_to_welcome') {
+export function createTipsNavigationUI(newIndex, totalTips, tipMetadata, cdnUrl, backButtonId = 'dm_back_to_welcome', userId = null) {
   // Navigation handlers typically use dm_back_to_welcome, not viral_menu
-  return createTipsDisplayUI(newIndex, totalTips, tipMetadata, cdnUrl, backButtonId);
+  return createTipsDisplayUI(newIndex, totalTips, tipMetadata, cdnUrl, backButtonId, userId);
 }
