@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "lastUpdated": "2025-11-15T23:41:25.008Z",
+  "lastUpdated": "2025-11-16T12:16:39.218Z",
   "channel": "1439277270400503870",
   "tips": [
     {
@@ -8,7 +8,7 @@
       "filename": "1.png",
       "title": "🏆 Winners' Castlist",
       "description": "Create a Custom Castlist ordered by Season",
-      "showcase": "# ✨ CastBot New Features (1/10)\n-# v3.0\n\n**🏆 Winners' Castlist**\nCreate a Custom Castlist ordered by Season\n\n**🧩 How to setup**\n• Create a Winner role as well as a role for each season\n• Create a new Castlist and choose Sorting Method 'Vanity Role', set Season to 'No Season' and add the \"Winner\" role you created to as a Tribe on the castlist. Ensure each player has that winner role assigned.\n• From `/menu` > Players > Select each winner > click Vanity Role > select Vanity Role for their Season",
+      "showcase": "# ✨ CastBot New Features (1/10)\n-# v3.0\n\n**🏆 Winners' Castlist**\nCreate a Custom Castlist ordered by Season!\n\n**🧩 How to setup**\n• Create a Winner role as well as a role for each season\n• Create a new Castlist and choose Sorting Method 'Vanity Role', set Season to 'No Season' and add the \"Winner\" role you created to as a Tribe on the castlist. Ensure each player has that winner role assigned.\n• From `/menu` > Players > Select each winner > click Vanity Role > select Vanity Role for their Season",
       "urls": {
         "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1439399863845523588/tip_1.png?ex=691a6116&is=69190f96&hm=f50a45b0b4a5c800995abce32dfeb30c8466bb5f8ba5c43232717a8b08214c42&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292733205512364/tip_1.png?ex=6919fd50&is=6918abd0&hm=2039632f2a6af78193b3706a2196498d5687e0f12c2fb6e8406750ca0efdefcb&"

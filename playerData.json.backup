@@ -755,7 +755,7 @@
               "regenConfig": "hourly"
             }
           },
-          "isPaused": true,
+          "isPaused": false,
           "currency": 788,
           "inventory": {
             "nurturer_361363": 1,
