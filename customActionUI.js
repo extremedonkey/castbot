@@ -198,11 +198,8 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
     nameDisplay = `**Name**\n${nameDisplay}`;
   }
 
-  // Build the response container
-  const container = {
-    type: 17, // Container
-    accent_color: 0x5865f2,
-    components: [
+  // Build the response components
+  const containerComponents = [
         // Header
         {
           type: 10,
@@ -370,18 +367,26 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
             }
           ]
         }
-      ]
-    }
+  ];
+
+  // Build the container
+  const container = {
+    type: 17, // Container
+    accent_color: 0x5865f2,
+    components: containerComponents
   };
 
-  // Validate component count before returning
-  const { countComponents, validateComponentLimit } = await import('./utils.js');
-  const componentCount = countComponents([container], { enableLogging: false });
-  console.log(`📊 DEBUG: Custom Action Editor UI has ${componentCount}/40 components`);
+  // Validate component count with detailed logging
+  const { countComponents } = await import('./utils.js');
+  const componentCount = countComponents([container], {
+    enableLogging: true,
+    verbosity: "full",
+    label: "Custom Action Editor"
+  });
 
+  // Check if we're over the limit
   if (componentCount > 40) {
-    console.error(`⚠️ Component limit exceeded in Custom Action Editor: ${componentCount}/40`);
-    // Return simplified UI
+    console.error(`⚠️ Component limit exceeded: ${componentCount}/40 - returning simplified UI`);
     return {
       flags: (1 << 15), // IS_COMPONENTS_V2
       components: [{
@@ -390,7 +395,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
         components: [
           {
             type: 10,
-            content: `## ⚠️ Editor Too Complex\n\nThis action has too many components to display in the editor.\n\nPlease reduce the number of actions or conditions.`
+            content: `## ⚠️ Editor Too Complex\n\nThis action has too many components to display.\nPlease reduce the number of actions or conditions.`
           },
           { type: 14 }, // Separator
           {
