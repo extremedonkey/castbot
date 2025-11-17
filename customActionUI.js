@@ -200,25 +200,21 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
 
   // Build the response components
   const containerComponents = [
-        // Header - restored to original
+        // Header - ADD BUTTON NAME
         {
           type: 10,
-          content: `## ⚡ Custom Action Editor`
+          content: `## ⚡ Custom Action Editor - ${action.name || 'New Action'}`
         },
-        // Action Info Section - restored to Section with accessory
+        // REPLACE Section with ActionRow - NO nested text display
         {
-          type: 9, // Section
+          type: 1, // ActionRow
           components: [{
-            type: 10, // Text Display
-            content: action.description ? `${nameDisplay}\n*${action.description}*` : nameDisplay
-          }],
-          accessory: {
             type: 2, // Button
             custom_id: `entity_custom_action_edit_info_${actionId}`,
             label: 'Action Info',
             style: 2, // Secondary
             emoji: { name: '📝' }
-          }
+          }]
         },
 
         // Trigger Configuration Section - restored to Section
@@ -271,8 +267,6 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           }
         },
 
-        { type: 14 }, // Separator
-
         // Split actions into TRUE and FALSE arrays
         ...(() => {
           const allActions = action.actions || [];
@@ -290,8 +284,6 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           // Display TRUE actions
           components.push(...getActionListComponents(trueActions, actionId, guildItems, guildButtons, 'true', allActions));
           
-          // Divider between TRUE and FALSE sections
-          components.push({ type: 14 }); // Separator
 
           // FALSE Actions Section - merge "No false conditions" into header
           if (falseActions.length === 0) {
@@ -332,25 +324,10 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           return components;
         })(),
 
-        // Action buttons - restored all three buttons
+        // Action buttons - ONLY Delete button
         {
           type: 1, // Action Row
           components: [
-            {
-              type: 2,
-              custom_id: `safari_finish_button_${actionId}`,
-              label: "← Location Manager",
-              style: 2, // Secondary (grey)
-              emoji: { name: "📍" }
-            },
-            {
-              type: 2,
-              custom_id: `custom_action_test_${actionId}`,
-              label: "Force Trigger Action",
-              style: 2, // Secondary (grey)
-              emoji: { name: "⚡" },
-              disabled: !action.actions?.length
-            },
             {
               type: 2,
               custom_id: `custom_action_delete_${actionId}`,
