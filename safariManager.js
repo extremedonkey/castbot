@@ -16,6 +16,7 @@ import {
 import { DiscordRequest } from './utils.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { initializeGuildSafariData } from './safariInitialization.js';
+import { detectBundles, formatActionsWithBundleIndicators } from './safariActionBundler.js';
 import { 
     initializeEntityPoints,
     getEntityPoints,
@@ -1075,8 +1076,12 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
         }
     }
     
-    // Give the item - pass null so addItemToInventory will handle loading and saving playerData
-    const success = await addItemToInventory(guildId, userId, config.itemId, config.quantity, null);
+    // Give the item - pass channel information for proper location tracking
+    const locationContext = {
+        channelName: interaction?.channelName || interaction?.channel?.name || 'Unknown',
+        source: 'custom_action'
+    };
+    const success = await addItemToInventory(guildId, userId, config.itemId, config.quantity, locationContext);
     
     if (!success) {
         return {
@@ -1779,32 +1784,58 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
             }
         }
         
-        // Handle multiple display_text actions with follow-up messages
-        const displayResponses = responses.filter(r => r.components || r.content);
-        const otherResponses = responses.filter(r => !r.components && !r.content);
-        
-        console.log(`📊 DEBUG: Found ${displayResponses.length} display responses, ${otherResponses.length} other responses`);
-        
-        // Return the first display_text response as main response
-        const mainResponse = displayResponses[0] || {
+        // NEW BUNDLING LOGIC: Combine all responses into a single message
+        console.log(`📊 DEBUG: Processing ${responses.length} responses for bundling`);
+
+        // Build a single bundled response containing all results
+        const bundledComponents = [];
+        let hasContent = false;
+
+        // Process each response and extract its components
+        for (let i = 0; i < responses.length; i++) {
+            const response = responses[i];
+
+            if (response.components?.[0]?.components) {
+                // Extract components from Container
+                const containerComponents = response.components[0].components;
+
+                // Add each component to our bundled response
+                for (const component of containerComponents) {
+                    bundledComponents.push(component);
+                    hasContent = true;
+                }
+
+                // Add separator between different responses (except after the last one)
+                if (i < responses.length - 1 && containerComponents.length > 0) {
+                    bundledComponents.push({ type: 14 }); // Separator
+                }
+            } else if (response.content) {
+                // Handle plain text responses
+                bundledComponents.push({
+                    type: 10, // Text Display
+                    content: response.content
+                });
+                hasContent = true;
+
+                if (i < responses.length - 1) {
+                    bundledComponents.push({ type: 14 }); // Separator
+                }
+            }
+        }
+
+        // Build the final bundled response
+        const mainResponse = hasContent ? {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+            components: [{
+                type: 17, // Container
+                components: bundledComponents
+            }]
+        } : {
             content: '✅ Button action completed successfully!',
             flags: InteractionResponseFlags.EPHEMERAL
         };
-        
-        // Send additional display_text actions as follow-up messages
-        if (displayResponses.length > 1) {
-            console.log(`📤 DEBUG: Sending ${displayResponses.length - 1} follow-up messages`);
-            // Extract token from interaction object (handles different interaction formats)
-            const token = interaction?.token || interaction?.data?.token || interaction?.body?.token;
-            if (token) {
-                // Schedule follow-up messages (don't await to avoid blocking main response)
-                sendFollowUpMessages(token, displayResponses.slice(1));
-            } else {
-                console.warn('⚠️ No interaction token available for follow-up messages');
-            }
-        }
-        
-        console.log(`✅ DEBUG: Button actions executed successfully, returning response`);
+
+        console.log(`✅ DEBUG: Button actions bundled into single response with ${bundledComponents.length} components`);
 
         // Check if any calculate_results actions were executed and update anchor messages
         const calculateResultsActions = sortedActions.filter(action => action.type === 'calculate_results');
@@ -2191,11 +2222,26 @@ async function addItemToInventory(guildId, userId, itemId, quantity = 1, existin
             const { logItemPickup } = await import('./safariLogger.js');
             const itemDef = safariData[guildId]?.items?.[itemId];
             
-            // Get player location - check if they're on a map
-            const activeMapId = safariData[guildId]?.maps?.active;
+            // Get location - prefer channel-based location over player's map position
             let location = 'Unknown';
-            if (activeMapId && playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId]) {
-                location = playerData[guildId].players[userId].safari.mapProgress[activeMapId].currentLocation || 'Unknown';
+
+            // First, try to extract location from channel name (e.g., "d7-buttonbundletest" -> "D7")
+            const channelName = existingPlayerData?.channelName;
+            if (channelName && typeof channelName === 'string') {
+                const locationMatch = channelName.match(/^([a-z]\d+)/i);
+                if (locationMatch) {
+                    location = locationMatch[1].toUpperCase();
+                    console.log(`📍 DEBUG: Extracted location ${location} from channel name: ${channelName}`);
+                }
+            }
+
+            // Fallback to player's current map location if channel-based location not available
+            if (location === 'Unknown') {
+                const activeMapId = safariData[guildId]?.maps?.active;
+                if (activeMapId && playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId]) {
+                    location = playerData[guildId].players[userId].safari.mapProgress[activeMapId].currentLocation || 'Unknown';
+                    console.log(`📍 DEBUG: Using player's map location: ${location}`);
+                }
             }
             
             // Get user info from Discord if available (caller can pass via existingPlayerData.username)
