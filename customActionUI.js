@@ -198,12 +198,11 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
     nameDisplay = `**Name**\n${nameDisplay}`;
   }
 
-  return {
-    flags: (1 << 15), // IS_COMPONENTS_V2
-    components: [{
-      type: 17, // Container
-      accent_color: 0x5865f2,
-      components: [
+  // Build the response container
+  const container = {
+    type: 17, // Container
+    accent_color: 0x5865f2,
+    components: [
         // Header
         {
           type: 10,
@@ -372,7 +371,47 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           ]
         }
       ]
-    }]
+    }
+  };
+
+  // Validate component count before returning
+  const { countComponents, validateComponentLimit } = await import('./utils.js');
+  const componentCount = countComponents([container], { enableLogging: false });
+  console.log(`📊 DEBUG: Custom Action Editor UI has ${componentCount}/40 components`);
+
+  if (componentCount > 40) {
+    console.error(`⚠️ Component limit exceeded in Custom Action Editor: ${componentCount}/40`);
+    // Return simplified UI
+    return {
+      flags: (1 << 15), // IS_COMPONENTS_V2
+      components: [{
+        type: 17, // Container
+        accent_color: 0x5865f2,
+        components: [
+          {
+            type: 10,
+            content: `## ⚠️ Editor Too Complex\n\nThis action has too many components to display in the editor.\n\nPlease reduce the number of actions or conditions.`
+          },
+          { type: 14 }, // Separator
+          {
+            type: 1, // Action Row
+            components: [{
+              type: 2,
+              custom_id: `safari_finish_button_${actionId}`,
+              label: "← Back to Location Manager",
+              style: 2,
+              emoji: { name: "📍" }
+            }]
+          }
+        ]
+      }]
+    };
+  }
+
+  // Return the full UI
+  return {
+    flags: (1 << 15), // IS_COMPONENTS_V2
+    components: [container]
   };
 }
 

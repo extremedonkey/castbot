@@ -13,7 +13,7 @@ import {
     InteractionResponseType,
     InteractionResponseFlags
 } from 'discord-interactions';
-import { DiscordRequest } from './utils.js';
+import { DiscordRequest, countComponents, validateComponentLimit } from './utils.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { initializeGuildSafariData } from './safariInitialization.js';
 import { detectBundles, formatActionsWithBundleIndicators } from './safariActionBundler.js';
@@ -1045,13 +1045,20 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
             // For once_per_player, claimedBy should be an array
             const claimedArray = Array.isArray(claimedBy) ? claimedBy : [];
             if (claimedArray.includes(userId)) {
+                // Get item details for better error message
+                const safariData = await loadSafariContent();
+                const item = safariData[guildId]?.items?.[config.itemId];
+                const itemName = item?.name || config.itemId;
+                const itemEmoji = item?.emoji || '🎁';
+                const quantity = config.quantity || 1;
+
                 return {
                     flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
                     components: [{
                         type: 17, // Container
                         components: [{
                             type: 10, // Text Display
-                            content: '❌ You have already claimed this item!'
+                            content: `❌ You have already claimed **${itemEmoji} ${quantity}x ${itemName}**`
                         }]
                     }]
                 };
@@ -1062,13 +1069,20 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
             // For once_globally, only block if claimedBy is a valid user ID (string)
             // Arrays (empty or not) and null/undefined should allow claiming
             if (typeof claimedBy === 'string' && claimedBy !== '') {
+                // Get item details for better error message
+                const safariData = await loadSafariContent();
+                const item = safariData[guildId]?.items?.[config.itemId];
+                const itemName = item?.name || config.itemId;
+                const itemEmoji = item?.emoji || '🎁';
+                const quantity = config.quantity || 1;
+
                 return {
                     flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
                     components: [{
                         type: 17, // Container
                         components: [{
                             type: 10, // Text Display
-                            content: '❌ This item has already been claimed!'
+                            content: `❌ **${itemEmoji} ${quantity}x ${itemName}** has already been claimed globally!`
                         }]
                     }]
                 };
@@ -1790,6 +1804,19 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
         // Build a single bundled response containing all results
         const bundledComponents = [];
         let hasContent = false;
+        let accentColor = null;
+
+        // First pass: Look for accent color from display_text actions
+        for (let i = 0; i < sortedActions.length; i++) {
+            const action = sortedActions[i];
+            if ((action.type === 'display_text' || action.type === ACTION_TYPES.DISPLAY_TEXT) && action.config?.color) {
+                // Parse color from hex string (e.g., "ff0000" or "#ff0000")
+                const colorStr = action.config.color.replace('#', '');
+                accentColor = parseInt(colorStr, 16);
+                console.log(`🎨 DEBUG: Found accent color from display_text: ${action.config.color} -> ${accentColor}`);
+                break; // Use the first display_text color found
+            }
+        }
 
         // Process each response and extract its components
         for (let i = 0; i < responses.length; i++) {
@@ -1823,17 +1850,50 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
             }
         }
 
-        // Build the final bundled response
-        const mainResponse = hasContent ? {
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
-            components: [{
-                type: 17, // Container
-                components: bundledComponents
-            }]
-        } : {
-            content: '✅ Button action completed successfully!',
-            flags: InteractionResponseFlags.EPHEMERAL
+        // Build the final bundled response with optional accent color
+        const container = {
+            type: 17, // Container
+            components: bundledComponents
         };
+
+        // Add accent color if found
+        if (accentColor !== null) {
+            container.accent_color = accentColor;
+        }
+
+        let mainResponse;
+
+        if (hasContent) {
+            // Validate component count before sending
+            const componentCount = countComponents([container], { enableLogging: false });
+            console.log(`📊 DEBUG: Bundled response has ${componentCount}/40 total components`);
+
+            if (componentCount > 40) {
+                console.error(`⚠️ Component limit exceeded: ${componentCount}/40 - falling back to simplified response`);
+                // Fallback: Show only the most important message
+                mainResponse = {
+                    flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+                    components: [{
+                        type: 17, // Container
+                        accent_color: accentColor,
+                        components: [{
+                            type: 10, // Text Display
+                            content: '⚠️ Response too complex to display fully. Action completed successfully!'
+                        }]
+                    }]
+                };
+            } else {
+                mainResponse = {
+                    flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+                    components: [container]
+                };
+            }
+        } else {
+            mainResponse = {
+                content: '✅ Button action completed successfully!',
+                flags: InteractionResponseFlags.EPHEMERAL
+            };
+        }
 
         console.log(`✅ DEBUG: Button actions bundled into single response with ${bundledComponents.length} components`);
 
