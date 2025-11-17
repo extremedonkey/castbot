@@ -200,76 +200,79 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
 
   // Build the response components
   const containerComponents = [
-        // Header - append button name directly
+        // Header - restored to original
         {
           type: 10,
-          content: `## ⚡ Custom Action Editor: ${action.name || 'New Action'}`
+          content: `## ⚡ Custom Action Editor`
         },
-        // Action Info Section - Change to ActionRow
+        // Action Info Section - restored to Section with accessory
         {
-          type: 1, // ActionRow
+          type: 9, // Section
           components: [{
+            type: 10, // Text Display
+            content: action.description ? `${nameDisplay}\n*${action.description}*` : nameDisplay
+          }],
+          accessory: {
             type: 2, // Button
             custom_id: `entity_custom_action_edit_info_${actionId}`,
             label: 'Action Info',
             style: 2, // Secondary
             emoji: { name: '📝' }
-          }]
+          }
         },
-        { type: 14 }, // Separator
-        
-        // Trigger Configuration Section - Change to ActionRow
+
+        // Trigger Configuration Section - restored to Section
         {
-          type: 10,
-          content: `**Trigger Type:** ${getTriggerTypeLabel(triggerType)}`
-        },
-        {
-          type: 1, // ActionRow
+          type: 9, // Section
           components: [{
+            type: 10,
+            content: `**Trigger Type**\n${getTriggerTypeLabel(triggerType)}`
+          }],
+          accessory: {
             type: 2, // Button
             custom_id: `entity_action_trigger_${actionId}`,
             label: "Manage",
             style: 2,
             emoji: { name: "🚀" }
-          }]
+          }
         },
 
-        // Conditions Section - Change to ActionRow
+        // Conditions Section - restored to Section
         {
-          type: 10,
-          content: `**Conditions (${conditionCount} set):** ${conditionsDisplay}`
-        },
-        {
-          type: 1, // ActionRow
+          type: 9, // Section
           components: [{
+            type: 10,
+            content: `**Conditions (${conditionCount} set)**\n${conditionsDisplay}`
+          }],
+          accessory: {
             type: 2,
             custom_id: `condition_manager_${actionId}_0`, // Start at page 0
             label: "Manage",
             style: 2,
             emoji: { name: "🧩" }
-          }]
+          }
         },
 
-        // Coordinates Section - Change to ActionRow
+        // Coordinates Section - restored to Section
         {
-          type: 10,
-          content: triggerType === 'button'
-            ? `**Assigned Locations (Adds button to coordinate anchor):** ${formatCoordinateList(action.coordinates)}`
-            : `**Assigned Locations:** ${formatCoordinateList(action.coordinates)}`
-        },
-        {
-          type: 1, // ActionRow
+          type: 9, // Section
           components: [{
+            type: 10,
+            content: triggerType === 'button'
+              ? `**Assigned Locations (Adds button to coordinate anchor)**\n${formatCoordinateList(action.coordinates)}`
+              : `**Assigned Locations**\n${formatCoordinateList(action.coordinates)}`
+          }],
+          accessory: {
             type: 2,
             custom_id: `entity_action_coords_${actionId}`,
             label: "Manage",
             style: 2,
             emoji: { name: "📍" }
-          }]
+          }
         },
 
         { type: 14 }, // Separator
-        
+
         // Split actions into TRUE and FALSE arrays
         ...(() => {
           const allActions = action.actions || [];
@@ -329,10 +332,25 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           return components;
         })(),
 
-        // Action buttons - Only Delete Action (removed Location Manager and Force Trigger)
+        // Action buttons - restored all three buttons
         {
           type: 1, // Action Row
           components: [
+            {
+              type: 2,
+              custom_id: `safari_finish_button_${actionId}`,
+              label: "← Location Manager",
+              style: 2, // Secondary (grey)
+              emoji: { name: "📍" }
+            },
+            {
+              type: 2,
+              custom_id: `custom_action_test_${actionId}`,
+              label: "Force Trigger Action",
+              style: 2, // Secondary (grey)
+              emoji: { name: "⚡" },
+              disabled: !action.actions?.length
+            },
             {
               type: 2,
               custom_id: `custom_action_delete_${actionId}`,
@@ -567,13 +585,10 @@ function getActionListComponents(actions, actionId, guildItems = {}, guildButton
     // Find the actual index in the full actions array for proper removal
     const actualIndex = allActions ? allActions.findIndex(a => a === action) : index;
 
-    // Get the action type label for display
-    const actionTypeLabel = getActionTypeLabel(action);
-
-    // Text Display showing just the action type
+    // Text Display with full action summary (restored)
     components.push({
       type: 10, // Text Display
-      content: `**${index + 1}. ${actionTypeLabel}**`
+      content: getActionSummary(action, index + 1, guildItems, guildButtons)
     });
 
     // Action Row with Up and Edit buttons
