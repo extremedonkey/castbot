@@ -4871,93 +4871,41 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const guildId = parts[1];
       const buttonId = parts.slice(2, -1).join('_');
 
-      // Import safari manager to check for calculate_results actions
-      const { getCustomButton } = await import('./safariManager.js');
+      // ALWAYS use deferred response for Safari Custom Actions to prevent webhook failures
+      // This gives us 15 minutes to process instead of 3 seconds
+      console.log(`🚀 DEBUG: Safari Custom Action ${buttonId} - ALWAYS using deferred response to prevent webhook timeout`);
 
-      let hasCalculateResults = false;
-      try {
-        const button = await getCustomButton(guildId, buttonId);
+      // Always use deferred pattern for ALL Safari Custom Actions
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        deferred: true, // ALWAYS defer Safari buttons to prevent webhook timeout
+        handler: async (context) => {
+          console.log(`🔍 START (DEFERRED): ${custom_id} - user ${context.userId}`);
+          console.log(`🦁 DEBUG: Safari button interaction - Guild: ${guildId}, Button: ${buttonId}, User: ${context.userId}`);
 
-        if (!button) {
-          console.log(`⚠️ DEBUG: Button ${buttonId} not found for deferred check in guild ${guildId}`);
-        } else {
-          // Check if any action is calculate_results type
-          hasCalculateResults = button.actions?.some(action => action.type === 'calculate_results') || false;
-          if (hasCalculateResults) {
-            console.log(`🌾 DEBUG: Detected calculate_results action in button ${buttonId} - using deferred response`);
-          }
+          // Import safari manager and execute actions
+          const { executeButtonActions } = await import('./safariManager.js');
+
+          // Create proper interaction object with token for follow-up messages
+          const interactionData = {
+            token: context.token,
+            applicationId: context.applicationId,
+            client: context.client,
+            member: context.member, // Pass the full member object for role checks
+            channelName: context.channelName, // Pass channel name for logging - CRITICAL for location fix
+            user: context.member?.user || { id: context.userId }, // Pass user information with at minimum the userId
+            channel: { name: context.channelName } // Pass channel information for logging
+          };
+
+          const result = await executeButtonActions(guildId, buttonId, context.userId, interactionData, client);
+
+          console.log(`✅ SUCCESS (DEFERRED): ${custom_id} - completed`);
+          return {
+            ...result,
+            ephemeral: true // Make all Safari custom action responses ephemeral
+          };
         }
-      } catch (error) {
-        console.error(`❌ ERROR: Failed to check button for calculate_results actions: ${error.message}`);
-        // Default to non-deferred to avoid breaking the interaction
-        hasCalculateResults = false;
-      }
-
-      if (hasCalculateResults) {
-        // Use deferred response pattern for calculate_results actions
-        return ButtonHandlerFactory.create({
-          id: custom_id,
-          deferred: true, // Enable deferred response to prevent timeout
-          handler: async (context) => {
-            console.log(`🔍 START (DEFERRED): ${custom_id} - user ${context.userId}`);
-            console.log(`🌾 DEFERRED: Custom Action with calculate_results detected - using deferred pattern`);
-
-            // Import safari manager and execute actions
-            const { executeButtonActions } = await import('./safariManager.js');
-
-            // Create proper interaction object with token for follow-up messages
-            const interactionData = {
-              token: context.token,
-              applicationId: context.applicationId,
-              client: context.client,
-              member: context.member, // Pass the full member object for role checks
-              channelName: context.channelName, // Pass channel name for logging
-              user: context.member?.user || { id: context.userId }, // Pass user information with at minimum the userId
-              channel: { name: context.channelName } // Pass channel information for logging
-            };
-
-            const result = await executeButtonActions(guildId, buttonId, context.userId, interactionData, client);
-
-            console.log(`✅ SUCCESS (DEFERRED): ${custom_id} - completed`);
-            return {
-              ...result,
-              ephemeral: false // Calculate results should be visible to all players
-            };
-          }
-        })(req, res, client);
-      } else {
-        // Use synchronous pattern for non-calculate_results actions
-        return ButtonHandlerFactory.create({
-          id: custom_id,
-          handler: async (context) => {
-            console.log(`🔍 START: ${custom_id} - user ${context.userId}`);
-
-            console.log(`🦁 DEBUG: Safari button interaction - Guild: ${guildId}, Button: ${buttonId}, User: ${context.userId}`);
-
-            // Import safari manager and execute actions
-            const { executeButtonActions } = await import('./safariManager.js');
-
-            // Create proper interaction object with token for follow-up messages
-            const interactionData = {
-              token: context.token,
-              applicationId: context.applicationId,
-              client: context.client,
-              member: context.member, // Pass the full member object for role checks
-              channelName: context.channelName, // Pass channel name for logging
-              user: context.member?.user || { id: context.userId }, // Pass user information with at minimum the userId
-              channel: { name: context.channelName } // Pass channel information for logging
-            };
-
-            const result = await executeButtonActions(guildId, buttonId, context.userId, interactionData, client);
-
-            console.log(`✅ SUCCESS: ${custom_id} - completed`);
-            return {
-              ...result,
-              ephemeral: true // Make all custom action responses ephemeral
-            };
-          }
-        })(req, res, client);
-      }
+      })(req, res, client);
     }
     
     // === SAFARI PROGRESS HANDLERS ===
