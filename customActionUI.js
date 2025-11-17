@@ -200,78 +200,74 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
 
   // Build the response components
   const containerComponents = [
-        // Header
+        // Header - append button name directly
         {
           type: 10,
-          content: `## ⚡ Custom Action Editor`
+          content: `## ⚡ Custom Action Editor: ${action.name || 'New Action'}`
         },
-        // Action Info Section with Accessory Button
+        // Action Info Section - Change to ActionRow
         {
-          type: 9, // Section
+          type: 1, // ActionRow
           components: [{
-            type: 10, // Text Display
-            content: action.description ? `${nameDisplay}\n*${action.description}*` : nameDisplay
-          }],
-          accessory: {
             type: 2, // Button
             custom_id: `entity_custom_action_edit_info_${actionId}`,
             label: 'Action Info',
             style: 2, // Secondary
             emoji: { name: '📝' }
-          }
+          }]
         },
         { type: 14 }, // Separator
         
-        // Trigger Configuration Section
+        // Trigger Configuration Section - Change to ActionRow
         {
-          type: 9, // Section
+          type: 10,
+          content: `**Trigger Type:** ${getTriggerTypeLabel(triggerType)}`
+        },
+        {
+          type: 1, // ActionRow
           components: [{
-            type: 10,
-            content: `**Trigger Type**\n${getTriggerTypeLabel(triggerType)}`
-          }],
-          accessory: {
             type: 2, // Button
             custom_id: `entity_action_trigger_${actionId}`,
             label: "Manage",
             style: 2,
             emoji: { name: "🚀" }
-          }
+          }]
         },
-        
-        // Conditions Section
+
+        // Conditions Section - Change to ActionRow
         {
-          type: 9, // Section
+          type: 10,
+          content: `**Conditions (${conditionCount} set):** ${conditionsDisplay}`
+        },
+        {
+          type: 1, // ActionRow
           components: [{
-            type: 10,
-            content: `**Conditions (${conditionCount} set)**\n${conditionsDisplay}`
-          }],
-          accessory: {
             type: 2,
             custom_id: `condition_manager_${actionId}_0`, // Start at page 0
             label: "Manage",
             style: 2,
             emoji: { name: "🧩" }
-          }
+          }]
         },
-        
-        // Coordinates Section
+
+        // Coordinates Section - Change to ActionRow
         {
-          type: 9, // Section
+          type: 10,
+          content: triggerType === 'button'
+            ? `**Assigned Locations (Adds button to coordinate anchor):** ${formatCoordinateList(action.coordinates)}`
+            : `**Assigned Locations:** ${formatCoordinateList(action.coordinates)}`
+        },
+        {
+          type: 1, // ActionRow
           components: [{
-            type: 10,
-            content: triggerType === 'button'
-              ? `**Assigned Locations (Adds button to coordinate anchor)**\n${formatCoordinateList(action.coordinates)}`
-              : `**Assigned Locations**\n${formatCoordinateList(action.coordinates)}`
-          }],
-          accessory: {
             type: 2,
             custom_id: `entity_action_coords_${actionId}`,
             label: "Manage",
             style: 2,
             emoji: { name: "📍" }
-          }
+          }]
         },
-        
+
         { type: 14 }, // Separator
         
         // Split actions into TRUE and FALSE arrays
@@ -293,26 +289,23 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           
           // Divider between TRUE and FALSE sections
           components.push({ type: 14 }); // Separator
-          
-          // FALSE Actions Section
-          components.push({
-            type: 10,
-            content: `### ❌ Actions executed if Conditions Not Met (${falseActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})`
-          });
-          
-          // Display FALSE actions or placeholder message
+
+          // FALSE Actions Section - merge "No false conditions" into header
           if (falseActions.length === 0) {
             components.push({
               type: 10,
-              content: '*No false conditions configured - display generic error message*'
+              content: `### ❌ Actions executed if Conditions Not Met (0/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\n*No false conditions configured - display generic error message*`
             });
           } else {
+            components.push({
+              type: 10,
+              content: `### ❌ Actions executed if Conditions Not Met (${falseActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})`
+            });
             components.push(...getActionListComponents(falseActions, actionId, guildItems, guildButtons, 'false', allActions));
           }
           
-          // Add Action Select Menu (if not at max)
+          // Add Action Select Menu (if not at max) - REMOVED separator
           if (allActions.length < SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON) {
-            components.push({ type: 14 }); // Separator before select menu
             components.push({
               type: 1, // Action Row
               components: [{
@@ -332,32 +325,14 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
               }]
             });
           }
-          
+
           return components;
         })(),
 
-        // Divider above action buttons
-        { type: 14 },
-
-        // Action buttons
+        // Action buttons - Only Delete Action (removed Location Manager and Force Trigger)
         {
           type: 1, // Action Row
           components: [
-            {
-              type: 2,
-              custom_id: `safari_finish_button_${actionId}`,
-              label: "← Location Manager",
-              style: 2, // Secondary (grey)
-              emoji: { name: "📍" }
-            },
-            {
-              type: 2,
-              custom_id: `custom_action_test_${actionId}`,
-              label: "Force Trigger Action",
-              style: 2, // Secondary (grey)
-              emoji: { name: "⚡" },
-              disabled: !action.actions?.length
-            },
             {
               type: 2,
               custom_id: `custom_action_delete_${actionId}`,
@@ -592,10 +567,13 @@ function getActionListComponents(actions, actionId, guildItems = {}, guildButton
     // Find the actual index in the full actions array for proper removal
     const actualIndex = allActions ? allActions.findIndex(a => a === action) : index;
 
-    // Text Display (standalone)
+    // Get the action type label for display
+    const actionTypeLabel = getActionTypeLabel(action);
+
+    // Text Display showing just the action type
     components.push({
       type: 10, // Text Display
-      content: getActionSummary(action, index + 1, guildItems, guildButtons)
+      content: `**${index + 1}. ${actionTypeLabel}**`
     });
 
     // Action Row with Up and Edit buttons
@@ -622,6 +600,37 @@ function getActionListComponents(actions, actionId, guildItems = {}, guildButton
   });
 
   return components;
+}
+
+/**
+ * Get simplified action type label for component-optimized display
+ */
+function getActionTypeLabel(action) {
+  switch (action.type) {
+    case 'display_text':
+      return 'Display Text';
+    case 'give_item':
+      return 'Give Item';
+    case 'give_currency':
+      return 'Give Currency';
+    case 'update_currency':
+      return 'Update Currency';
+    case 'give_role':
+      return 'Give Role';
+    case 'remove_role':
+      return 'Remove Role';
+    case 'follow_up_button':
+    case 'follow_up':
+      return 'Follow-up Action';
+    case 'create_button':
+      return 'Create Button';
+    case 'calculate_results':
+      return 'Calculate Results';
+    case 'calculate_attack':
+      return 'Calculate Attack';
+    default:
+      return action.type ? action.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Unknown Action';
+  }
 }
 
 function getActionSummary(action, number, guildItems = {}, guildButtons = {}) {
