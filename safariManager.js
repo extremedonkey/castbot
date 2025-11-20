@@ -1213,38 +1213,40 @@ async function executeFollowUpButton(config, guildId, interaction) {
             }]
         };
     }
-    
+
+    // NEW: Detect if target is modal-triggered
+    const isModalTriggered = followUpButton.trigger?.type === 'modal';
+    console.log(`🎭 Follow-up target ${followUpButton.id} is modal-triggered: ${isModalTriggered}`);
+
+    // Create appropriate custom_id based on trigger type
+    const customId = isModalTriggered
+        ? `modal_launcher_${guildId}_${followUpButton.id}_${Date.now()}`
+        : generateCustomId(guildId, followUpButton.id);
+
     // Create the follow-up button
     const button = new ButtonBuilder()
-        .setCustomId(generateCustomId(guildId, followUpButton.id))
+        .setCustomId(customId)
         .setLabel(followUpButton.label)
         .setStyle(BUTTON_STYLES[followUpButton.style] || ButtonStyle.Secondary);
-    
+
     if (followUpButton.emoji) {
         button.setEmoji(followUpButton.emoji);
     }
-    
+
     const actionRow = new ActionRowBuilder().addComponents(button);
-    
-    const components = [{
-        type: 10, // Text Display
-        content: `**Next Step Available:**\nClick the button below to continue.`
-    }];
-    
-    // Add separator
-    components.push({
-        type: 14 // Separator
-    });
-    
-    // Add action row
+
+    // Build components WITHOUT "Next Step Available" text (per user request)
+    const components = [];
+
+    // Only add button, no extra text or separators
     components.push(actionRow.toJSON());
-    
+
     const container = {
         type: 17, // Container
         accent_color: 0x3498db,
         components: components
     };
-    
+
     return {
         flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
         components: [container]

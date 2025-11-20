@@ -4785,7 +4785,58 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
       })(req, res, client);
     }
-    
+
+    // Handle modal launcher buttons for modal-triggered Custom Actions (riddle mechanics)
+    if (custom_id.startsWith('modal_launcher_')) {
+      // Parse the custom_id: modal_launcher_{guildId}_{actionId}_{timestamp}
+      const parts = custom_id.split('_');
+      const guildId = parts[2];
+      const actionId = parts.slice(3, -1).join('_'); // Handle action IDs with underscores
+
+      console.log(`🎭 Modal launcher clicked for action: ${actionId} in guild ${guildId}`);
+
+      // Get the Custom Action to access its configuration
+      const { getCustomButton } = await import('./safariManager.js');
+      const customAction = await getCustomButton(guildId, actionId);
+
+      if (!customAction) {
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            content: '❌ Custom action not found.',
+            components: [],
+            flags: (1 << 15) | (1 << 6) // Components V2 + Ephemeral
+          }
+        });
+      }
+
+      // Build modal using Player Command pattern
+      const modal = {
+        title: customAction.label || 'Enter Answer',
+        custom_id: `modal_answer_${guildId}_${actionId}_${Date.now()}`,
+        components: [{
+          type: 1, // Action Row
+          components: [{
+            type: 4, // Text Input
+            custom_id: 'answer_input',
+            label: customAction.description || 'Your Answer:',
+            style: 1, // Short
+            required: true,
+            min_length: 1,
+            max_length: 100,
+            placeholder: 'Type your answer here...'
+          }]
+        }]
+      };
+
+      // Return MODAL response (type 9)
+      console.log(`🎯 Showing modal for ${actionId} with title: ${modal.title}`);
+      return res.send({
+        type: InteractionResponseType.MODAL,
+        data: modal
+      });
+    }
+
     // Handle safari dynamic buttons (format: safari_guildId_buttonId_timestamp)
     if (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4 &&
         !custom_id.startsWith('safari_add_action_') &&
@@ -36871,6 +36922,103 @@ Are you sure you want to continue?`;
           method: 'PATCH',
           body: {
             content: '❌ Error processing command.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('modal_answer_')) {
+      // Handle modal answer submission for riddle/puzzle Custom Actions
+      // Format: modal_answer_{guildId}_{actionId}_{timestamp}
+      const parts = custom_id.split('_');
+      const guildId = parts[2];
+      const actionId = parts.slice(3, -1).join('_'); // Handle action IDs with underscores
+
+      // Extract the user's answer
+      const userAnswer = components[0].components[0].value;
+      console.log(`🎯 Modal answer received: "${userAnswer}" for action ${actionId} in guild ${guildId}`);
+
+      // Send deferred response immediately to prevent timeout
+      res.send({
+        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+        data: { flags: InteractionResponseFlags.EPHEMERAL }
+      });
+
+      try {
+        const { getCustomButton, executeButtonActions } = await import('./safariManager.js');
+        const customAction = await getCustomButton(guildId, actionId);
+
+        if (!customAction) {
+          return await DiscordRequest(`webhooks/${req.body.application_id}/${req.body.token}/messages/@original`, {
+            method: 'PATCH',
+            body: {
+              content: '❌ Custom action not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Check if answer matches any phrase (case-insensitive)
+        const phrases = customAction.trigger?.phrases || [];
+        const isCorrect = phrases.some(phrase =>
+          phrase.toLowerCase().trim() === userAnswer.toLowerCase().trim()
+        );
+
+        if (isCorrect) {
+          console.log(`✅ Correct answer for ${actionId}`);
+
+          // Build interaction context for executeButtonActions
+          const interactionData = {
+            member: req.body.member,
+            channel_id: req.body.channel_id,
+            guild_id: guildId,
+            token: req.body.token,
+            applicationId: req.body.application_id,
+            channelName: `#${req.body.channel?.name || 'unknown'}`
+          };
+
+          // Execute the action's configured actions
+          const result = await executeButtonActions(
+            guildId,
+            actionId,
+            req.body.member.user.id,
+            interactionData,
+            client
+          );
+
+          // Send the result as follow-up
+          if (result && result.components) {
+            await DiscordRequest(`webhooks/${req.body.application_id}/${req.body.token}/messages/@original`, {
+              method: 'PATCH',
+              body: result
+            });
+          } else {
+            // If no result, send success message
+            await DiscordRequest(`webhooks/${req.body.application_id}/${req.body.token}/messages/@original`, {
+              method: 'PATCH',
+              body: {
+                content: '✅ Action completed successfully!',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+        } else {
+          console.log(`❌ Incorrect answer for ${actionId}: "${userAnswer}"`);
+
+          // Send generic incorrect message (no lockout, allow retry)
+          await DiscordRequest(`webhooks/${req.body.application_id}/${req.body.token}/messages/@original`, {
+            method: 'PATCH',
+            body: {
+              content: '❌ That\'s not correct. Try again!',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error processing modal answer:', error);
+        await DiscordRequest(`webhooks/${req.body.application_id}/${req.body.token}/messages/@original`, {
+          method: 'PATCH',
+          body: {
+            content: '❌ An error occurred processing your answer.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
