@@ -625,7 +625,10 @@ function getActionTypeLabel(action) {
   }
 }
 
-function getActionSummary(action, number, guildItems = {}, guildButtons = {}) {
+function getActionSummary(action, number, guildItems = {}, guildButtons = {}, isBundled = false, isLastInBundle = false) {
+  // Add tree characters for bundled actions
+  const prefix = isBundled ? (isLastInBundle ? '└── ' : '├── ') : '';
+
   switch (action.type) {
     case 'display_text':
       // Handle new format (config.title/content) and legacy format (text)
@@ -642,11 +645,11 @@ function getActionSummary(action, number, guildItems = {}, guildButtons = {}) {
       } else {
         displayText = 'No text configured';
       }
-      
+
       // Truncate if too long
       const truncated = displayText.substring(0, 50);
       const ellipsis = displayText.length > 50 ? '...' : '';
-      return `**\`${number}. Display Text\`** ${truncated}${ellipsis}`;
+      return `**\`${number}. ${prefix}Display Text\`** ${truncated}${ellipsis}`;
       
     case 'give_item':
       const itemId = action.config?.itemId || action.itemId;
