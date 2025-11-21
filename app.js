@@ -39070,13 +39070,13 @@ const dropConfigState = new Map();
  * Show configuration UI for give_item action
  */
 async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) {
-  // Get or create state for this configuration
+  // Get or create state for this configuration with sensible defaults
   const stateKey = `${guildId}_${buttonId}_${itemId}_${actionIndex}`;
   const state = dropConfigState.get(stateKey) || {
-    limit: null,   // null means no selection made yet
-    style: null,
-    quantity: null,
-    executeOn: 'true' // Default to true
+    limit: 'once_per_player',   // Default to once per player (most common)
+    style: '2',                 // Default to Secondary/Grey
+    quantity: 1,                // Default to 1 item
+    executeOn: 'true'           // Default to true
   };
 
   // Check if there are existing claims to enable/disable reset button

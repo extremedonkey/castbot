@@ -784,9 +784,9 @@
           "1368969349976821815"
         ],
         "safari": {
-          "currency": 795,
+          "currency": 1000,
           "history": [],
-          "lastInteraction": 1763398201516,
+          "lastInteraction": 1763734405109,
           "achievements": [],
           "inventory": {
             "nurturer_361363": {
@@ -801,6 +801,10 @@
             },
             "button_bundle_coconu_417818": {
               "quantity": 9,
+              "numAttacksAvailable": 0
+            },
+            "bait_530852": {
+              "quantity": 1,
               "numAttacksAvailable": 0
             }
           },
@@ -3710,14 +3714,14 @@
     "serverName": "EpochORG S5: Incan Empire",
     "icon": "https://cdn.discordapp.com/icons/1240325979214188615/156095a9edb1de2f24dfac78d2904a04.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 61,
+    "memberCount": 62,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1715787157587,
-    "lastUpdated": 1761652123867,
+    "lastUpdated": 1763734077040,
     "players": {},
     "tribes": {
       "1241383870260056095": {
