@@ -1090,12 +1090,9 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
         }
     }
     
-    // Give the item - pass channel information for proper location tracking
-    const locationContext = {
-        channelName: interaction?.channelName || interaction?.channel?.name || 'Unknown',
-        source: 'custom_action'
-    };
-    const success = await addItemToInventory(guildId, userId, config.itemId, config.quantity, locationContext);
+    // Give the item - pass null for existingPlayerData so it saves
+    // NOTE: locationContext was causing a bug where items weren't saved (passed as wrong parameter)
+    const success = await addItemToInventory(guildId, userId, config.itemId, config.quantity, null);
     
     if (!success) {
         return {
@@ -2919,10 +2916,9 @@ async function buyItem(guildId, storeId, itemId, userId) {
             };
         }
         
-        await addItemToInventory(guildId, userId, itemId, 1, {
-            ...purchaseContext,
-            source: `Purchase from ${store.name}`
-        });
+        // Fix: Pass null for existingPlayerData so the item is saved
+        // NOTE: purchaseContext was being wrongly passed as existingPlayerData
+        await addItemToInventory(guildId, userId, itemId, 1, null);
         
         // Log store purchase
         try {
