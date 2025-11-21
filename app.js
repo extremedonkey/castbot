@@ -16204,9 +16204,14 @@ Your server is now ready for Tycoons gameplay!`;
           const limitType = context.values[0];
           console.log(`🎯 LIMIT: safari_item_limit - ${limitType} for ${buttonId}[${actionIndex}]`);
           
-          // Store in temporary state
+          // Store in temporary state (preserve existing defaults if present)
           const stateKey = `${context.guildId}_${buttonId}_${itemId}_${actionIndex}`;
-          const state = dropConfigState.get(stateKey) || { limit: null, style: null, quantity: null };
+          const state = dropConfigState.get(stateKey) || {
+            limit: 'once_per_player',
+            style: '2',
+            quantity: 1,
+            executeOn: 'true'
+          };
           state.limit = limitType;
           dropConfigState.set(stateKey, state);
           
@@ -16257,9 +16262,14 @@ Your server is now ready for Tycoons gameplay!`;
           const style = context.values[0];
           console.log(`🎨 STYLE: safari_item_style - style ${style} for ${buttonId}[${actionIndex}]`);
           
-          // Store in temporary state
+          // Store in temporary state (preserve existing defaults if present)
           const stateKey = `${context.guildId}_${buttonId}_${itemId}_${actionIndex}`;
-          const state = dropConfigState.get(stateKey) || { limit: null, style: null, quantity: null };
+          const state = dropConfigState.get(stateKey) || {
+            limit: 'once_per_player',
+            style: '2',
+            quantity: 1,
+            executeOn: 'true'
+          };
           state.style = style;
           dropConfigState.set(stateKey, state);
           
@@ -16310,9 +16320,14 @@ Your server is now ready for Tycoons gameplay!`;
           const quantity = parseInt(context.values[0]);
           console.log(`📦 QUANTITY: safari_item_quantity - ${quantity} for ${buttonId}[${actionIndex}]`);
           
-          // Store in temporary state
+          // Store in temporary state (preserve existing defaults if present)
           const stateKey = `${context.guildId}_${buttonId}_${itemId}_${actionIndex}`;
-          const state = dropConfigState.get(stateKey) || { limit: null, style: null, quantity: null };
+          const state = dropConfigState.get(stateKey) || {
+            limit: 'once_per_player',
+            style: '2',
+            quantity: 1,
+            executeOn: 'true'
+          };
           state.quantity = quantity;
           dropConfigState.set(stateKey, state);
           
@@ -16440,9 +16455,14 @@ Your server is now ready for Tycoons gameplay!`;
             button.actions = [];
           }
           
-          // Get state from temporary storage
+          // Get state from temporary storage (use defaults if not found)
           const stateKey = `${context.guildId}_${buttonId}_${itemId}_${actionIndex}`;
-          const state = dropConfigState.get(stateKey) || { limit: null, style: null, quantity: null };
+          const state = dropConfigState.get(stateKey) || {
+            limit: 'once_per_player',
+            style: '2',
+            quantity: 1,
+            executeOn: 'true'
+          };
           
           // Handle quantity 0 - don't add the action
           if (state.quantity === 0) {
@@ -39072,12 +39092,19 @@ const dropConfigState = new Map();
 async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) {
   // Get or create state for this configuration with sensible defaults
   const stateKey = `${guildId}_${buttonId}_${itemId}_${actionIndex}`;
-  const state = dropConfigState.get(stateKey) || {
-    limit: 'once_per_player',   // Default to once per player (most common)
-    style: '2',                 // Default to Secondary/Grey
-    quantity: 1,                // Default to 1 item
-    executeOn: 'true'           // Default to true
-  };
+  let state = dropConfigState.get(stateKey);
+
+  // If no state exists, create with defaults and save it immediately
+  if (!state) {
+    state = {
+      limit: 'once_per_player',   // Default to once per player (most common)
+      style: '2',                 // Default to Secondary/Grey
+      quantity: 1,                // Default to 1 item
+      executeOn: 'true'           // Default to true
+    };
+    // CRITICAL: Save the default state so it's available when user clicks Save
+    dropConfigState.set(stateKey, state);
+  }
 
   // Check if there are existing claims to enable/disable reset button
   let claimsExist = false;
