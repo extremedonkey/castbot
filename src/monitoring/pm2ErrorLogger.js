@@ -148,7 +148,6 @@ export class PM2ErrorLogger {
                 line.includes('ERROR') ||
                 line.includes('FATAL') ||
                 line.includes('CRITICAL') ||
-                line.includes('❌') ||
                 line.includes('failed') ||
                 line.includes('Failed') ||
                 line.includes('Error:') ||
@@ -197,7 +196,7 @@ export class PM2ErrorLogger {
       }
 
       // Get critical output lines
-      const outCommand = `ssh -i "${SSH_KEY_PATH}" -o StrictHostKeyChecking=no ${SSH_TARGET} "grep -E 'ERROR|FATAL|❌|Failed' ${config.out} 2>/dev/null | tail -n 30 || echo 'No critical logs'"`;
+      const outCommand = `ssh -i "${SSH_KEY_PATH}" -o StrictHostKeyChecking=no ${SSH_TARGET} "grep -E 'ERROR|FATAL|Failed' ${config.out} 2>/dev/null | tail -n 30 || echo 'No critical logs'"`;
       const outResult = execSync(outCommand, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
 
       const criticalLines = outResult.split('\n')
