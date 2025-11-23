@@ -8714,7 +8714,7 @@ To fix this:
                 {
                   type: 18, // Label
                   label: 'Odd Player Number Behaviour',
-                  description: 'What to do if players don\'t divide evenly',
+                  description: 'What to do if players don\'t divide evenly (doesn\'t apply for merge)',
                   component: {
                     type: 3, // String Select
                     custom_id: 'odd_player_behaviour',
@@ -32183,7 +32183,7 @@ Are you sure you want to continue?`;
           });
         }
 
-        if (newTribeRoleIds.length < 2) {
+        if (newTribeRoleIds.length < 1) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -32192,7 +32192,7 @@ Are you sure you want to continue?`;
                 type: 17,
                 components: [{
                   type: 10,
-                  content: '❌ Please select at least 2 new tribe roles'
+                  content: '❌ Please select at least 1 new tribe role'
                 }]
               }]
             }
@@ -32331,7 +32331,7 @@ Are you sure you want to continue?`;
               accent_color: 0xFF6B6B,
               components: [{
                 type: 10,
-                content: '# 🎭 TRIBE SWAP CEREMONY 🎭\n\n*The moment you\'ve all been waiting for...*'
+                content: '# 🎭 Drop your buffs!\n\n*The moment you\'ve all been waiting for...*'
               }]
             }]
           });
@@ -32341,49 +32341,55 @@ Are you sure you want to continue?`;
           // Helper: Format remaining players list with truncation
           const formatRemainingPlayers = (remainingPlayers) => {
             if (remainingPlayers.length === 0) {
-              return '# All players have been swapped! 🎉';
+              return '-# All players have been swapped! 🎉';
             }
 
-            // Group remaining players by their original tribe
+            // Group remaining players by their original tribe (with role ID)
             const playersByTribe = {};
 
             for (const player of remainingPlayers) {
               const displayName = player.displayName || player.user.username;
 
               // Find player's original tribe
-              let tribeName = 'Unknown';
+              let tribeKey = 'Unknown';
+              let tribeRoleId = null;
               for (const oldTribe of currentDefaultTribes) {
                 const oldRole = guild.roles.cache.get(oldTribe.roleId);
                 if (oldRole && oldRole.members.has(player.id)) {
-                  tribeName = oldRole.name;
+                  tribeKey = oldTribe.roleId;
+                  tribeRoleId = oldTribe.roleId;
                   break;
                 }
               }
 
-              if (!playersByTribe[tribeName]) {
-                playersByTribe[tribeName] = [];
+              if (!playersByTribe[tribeKey]) {
+                playersByTribe[tribeKey] = {
+                  roleId: tribeRoleId,
+                  players: []
+                };
               }
-              playersByTribe[tribeName].push(displayName);
+              playersByTribe[tribeKey].players.push(displayName);
             }
 
-            // Format the output
-            let content = '# Players remaining to be swapped:\n';
+            // Format the output with small font and role mentions
+            let content = '-# Players remaining to be swapped:\n';
             const tribeParts = [];
 
-            for (const [tribeName, players] of Object.entries(playersByTribe)) {
-              const playerList = players.join(', ');
-              tribeParts.push(`**${tribeName}**: ${playerList}`);
+            for (const [tribeKey, tribeData] of Object.entries(playersByTribe)) {
+              const playerList = tribeData.players.join(', ');
+              const roleMention = tribeData.roleId ? `<@&${tribeData.roleId}>` : 'Unknown';
+              tribeParts.push(`-# ${roleMention}: ${playerList}`);
             }
 
-            let fullContent = content + tribeParts.join(' | ');
+            let fullContent = content + tribeParts.join('\n');
 
             // Truncate at 1800 characters if needed
             if (fullContent.length > 1800) {
               // Find the last complete player name before 1800 chars
               const truncated = fullContent.substring(0, 1797); // Leave room for "..."
               const lastComma = truncated.lastIndexOf(',');
-              const lastPipe = truncated.lastIndexOf('|');
-              const cutPoint = Math.max(lastComma, lastPipe);
+              const lastNewline = truncated.lastIndexOf('\n');
+              const cutPoint = Math.max(lastComma, lastNewline);
 
               if (cutPoint > 0) {
                 fullContent = truncated.substring(0, cutPoint) + '...';
@@ -32420,8 +32426,9 @@ Are you sure you want to continue?`;
 
             console.log(`🔀 [TRIBE SWAP] ${playerCount}/${playersToAssign.length}: ${displayName} swapped from ${oldTribeName} → ${tribeRole.name}`);
 
-            // Calculate remaining players for this reveal
-            const remainingPlayers = playersToAssign.slice(playerCount);
+            // Calculate remaining players for this reveal (include unassigned for dramatic effect)
+            const remainingToReveal = playersToAssign.slice(playerCount);
+            const remainingPlayers = [...remainingToReveal, ...unassignedPlayers];
             const remainingPlayersText = formatRemainingPlayers(remainingPlayers);
 
             // Enhanced dramatic reveal with progress, dividers, and remaining players
@@ -32432,22 +32439,24 @@ Are you sure you want to continue?`;
                 accent_color: tribeRole.color || 0x5865F2,
                 components: [
                   {
-                    type: 10, // Text Display - progress indicator
-                    content: `# Swap Progress: Player ${playerCount} of ${playersToAssign.length}`
+                    type: 10, // Text Display - progress indicator (small font, includes unassigned in total)
+                    content: `-# Swap Progress: Player ${playerCount} of ${shuffled.length}`
                   },
                   {
                     type: 14, // Separator
                     divider: true
                   },
                   {
-                    type: 10, // Text Display - formal swap message (plain text, no role mentions)
-                    content: `${displayName} swaps from **${oldTribeName}** into **${tribeRole.name}**`
+                    type: 10, // Text Display - formal swap message (with role/user mentions)
+                    content: oldTribeRoleId
+                      ? `<@${player.id}> swaps from <@&${oldTribeRoleId}> into <@&${tribeRoleId}>`
+                      : `<@${player.id}> joins <@&${tribeRoleId}>`
                   },
                   {
-                    type: 9, // Section - dramatic reveal
+                    type: 9, // Section - dramatic reveal (with blockquote formatting)
                     components: [{
                       type: 10,
-                      content: `# ${tribeRole.name.toUpperCase()}\n\n## ${displayName}!`
+                      content: `> # ${tribeRole.name.toUpperCase()}\n\n## ${displayName}!`
                     }],
                     accessory: {
                       type: 11, // Thumbnail
@@ -32485,13 +32494,17 @@ Are you sure you want to continue?`;
           // Handle unassigned players
           if (unassignedPlayers.length > 0) {
             console.log(`🔀 [TRIBE SWAP] ${unassignedPlayers.length} players require manual assignment`);
+
+            // Format player mentions for dramatic message
+            const playerMentions = unassignedPlayers.map(p => `<@${p.id}>`).join(', ');
+
             await sendMessage({
               flags: (1 << 15),
               components: [{
                 type: 17,
                 components: [{
                   type: 10,
-                  content: `# ⏸️ Manual Assignment Required\n\n${unassignedPlayers.length} player(s) awaiting tribe assignment:\n${unassignedPlayers.map(p => `- ${p.displayName || p.user.username}`).join('\n')}`
+                  content: `:interrobang: One player remains to be swapped\n\n${playerMentions} was not swapped into a tribe as there are uneven numbers. What will Production do about this?!`
                 }]
               }]
             });

@@ -405,6 +405,159 @@ function getGuildTribes(guildId, castlistName) {
 - [RaP/0978](../../RaP/0978_20251115_CastlistArchitecture_AuditReport.md) - Architecture audit
 - [DataArchitecture.md](DataArchitecture.md) - Legacy data structures
 
+## Castlist Ordering Logic
+
+### Overview
+The castlist system employs two distinct ordering mechanisms that operate at different levels:
+1. **Tribe Ordering** - Which tribes appear first in the castlist
+2. **Player Sorting** - How players are ordered within each tribe
+
+### Tribe Ordering (User-First Logic)
+
+When displaying the default castlist, CastBot applies "user-first" ordering to improve UX:
+
+```mermaid
+graph LR
+    subgraph "Before User-First"
+        T1[Alpha Tribe]
+        T2[Bravo Tribe]
+        T3[Charlie Tribe]
+        T4[Delta Tribe]
+    end
+
+    subgraph "After User-First (User in Charlie)"
+        UT1[Charlie Tribe - Your Tribe]
+        OT1[Alpha Tribe]
+        OT2[Bravo Tribe]
+        OT3[Delta Tribe]
+    end
+
+    T1 --> OT1
+    T2 --> OT2
+    T3 --> UT1
+    T4 --> OT3
+
+    style UT1 fill:#4ade80,stroke:#22c55e,stroke-width:3px
+```
+
+#### Implementation Details
+
+**Location**: `castlistV2.js:136-176` (`reorderTribes()` function)
+
+**When Applied**:
+- **Default castlist only** (`castlistId === 'default'`)
+- **User must be authenticated** (has valid userId)
+- Applied consistently in both initial display (app.js:5227) and navigation handlers
+
+**Algorithm**:
+1. Identify tribes containing the viewing user
+2. Sort user's tribes alphabetically
+3. Sort remaining tribes alphabetically
+4. Concatenate: `[...userTribes, ...otherTribes]`
+
+**Special Cases**:
+- **Production team members** (not in any tribe): See all tribes in alphabetical order
+- **Multiple tribes**: User's tribes appear first, sorted alphabetically among themselves
+- **Custom castlists**: No user-first ordering applied (straight alphabetical or creation order)
+
+### Player Sorting Within Tribes
+
+Once tribes are ordered, players within each tribe are sorted based on the castlist's sort strategy:
+
+**Location**: `castlistSorter.js` (entire file)
+
+**Available Strategies**:
+| Strategy | Description | Implementation |
+|----------|-------------|----------------|
+| `alphabetical` | A-Z by display name | Default for all castlists |
+| `placements` | Alumni ranking (1st, 2nd, 3rd...) | Active players first, then eliminated by placement |
+| `reverse_alpha` | Z-A by display name | Simple reverse sort |
+| `vanity_role` | By vanity roles (S1, S2...) | Season roles → Alpha → Numeric → Emoji → No role |
+| `placements_alpha` | Placements + alphabetical ties | Combines placement and alphabetical sorting |
+
+**Strategy Selection**:
+```javascript
+// castlistSorter.js:34-36
+const sortingStrategy = tribeData.castlistSettings?.sortStrategy
+                     || (tribeData.type === 'alumni_placements' ? 'placements' : null)
+                     || 'alphabetical';
+```
+
+### Pagination Logic
+
+When tribes exceed 8 players, pagination is applied:
+
+**Trigger**: Any tribe with 9+ players triggers multi-page scenario
+**Distribution**: Players distributed evenly across pages (higher count on first page for odd numbers)
+**Max per page**: 8 players (with separators)
+
+```mermaid
+graph TB
+    subgraph "Single Tribe with 18 Players"
+        P1[Page 1: 6 players]
+        P2[Page 2: 6 players]
+        P3[Page 3: 6 players]
+    end
+
+    subgraph "Navigation Buttons"
+        B1[◀ Last Page]
+        B2[📋 Menu]
+        B3[Next Page ▶]
+    end
+
+    P1 --> B3
+    B3 --> P2
+    P2 --> B1
+    P2 --> B3
+    B3 --> P3
+    P3 --> B1
+```
+
+**Button Label Logic** (castlistV2.js:554-583):
+- Shows "Next/Last Page" when navigating within a multi-page tribe
+- Shows "Next/Last Tribe" when navigating between tribes
+- Buttons disabled at boundaries (first page of first tribe, last page of last tribe)
+
+### Navigation State Preservation
+
+**Button ID Format**: `castlist2_nav_{action}_{tribeIndex}_{tribePage}_{castlistId}_{displayMode}`
+
+Example: `castlist2_nav_next_tribe_0_0_default_view`
+
+**Parsed Components**:
+- `action`: next_tribe, last_tribe, next_page, last_page
+- `currentTribeIndex`: 0-based index in tribes array
+- `currentTribePage`: 0-based page within tribe
+- `castlistId`: Entity ID or legacy name
+- `displayMode`: view or edit
+
+### Known Issues & Edge Cases
+
+1. **Historical Issue (Fixed November 2024)**: Initial display and navigation used different ordering
+   - **Symptom**: First "next" click appeared to do nothing
+   - **Cause**: Initial display didn't apply user-first, navigation did
+   - **Fix**: Applied consistent ordering strategy (app.js:5227)
+
+2. **Custom Castlist Detection**: Previously, using `/castlist` when user was in a non-default castlist would show that castlist instead
+   - **Status**: Feature removed for consistency
+   - **Current**: `/castlist` always shows default castlist
+
+3. **Virtual Adapter Ordering**: Legacy castlists (isVirtual=true) appear after modern castlists
+   - **Impact**: Gradual migration as servers create modern castlists
+   - **See**: Virtual Adapter Pattern section
+
+### Configuration & Future Enhancements
+
+**Planned**: Make user-first ordering configurable per guild
+- Add toggle in Castlist Hub settings
+- Store preference in `guildSettings.castlistUserFirst`
+- Default: true for backwards compatibility
+
+**Considered**: Remember user's last viewed tribe/page
+- Store in session or user preferences
+- Resume position on next view
+- Challenge: Bot restarts clear memory
+
 ## Future Considerations
 
 ### Complete Virtual Adapter Migration
