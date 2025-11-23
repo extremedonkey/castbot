@@ -755,7 +755,7 @@ export async function createGlobalItemsUI(guildId, client = null, isPublic = fal
         custom_id: 'safari_show_advantages_public',
         label: 'Show Advantages (Public!)',
         style: 4, // Danger (red)
-        emoji: '⚠️'
+        emoji: { name: '⚠️' }
       }
     ]
   });
