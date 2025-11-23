@@ -784,7 +784,7 @@
           "1368969349976821815"
         ],
         "safari": {
-          "currency": 1000,
+          "currency": 985,
           "history": [],
           "lastInteraction": 1763734405109,
           "achievements": [],
@@ -804,6 +804,10 @@
               "numAttacksAvailable": 0
             },
             "bait_530852": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "vulnary_530325": {
               "quantity": 1,
               "numAttacksAvailable": 0
             }
@@ -846,6 +850,12 @@
               "storeId": "the_hatchery_637531",
               "price": 15,
               "timestamp": 1761656575055
+            },
+            {
+              "itemId": "vulnary_530325",
+              "storeId": "belle_s_fireemblem_s_326813",
+              "price": 15,
+              "timestamp": 1763734606786
             }
           ],
           "mapProgress": {
