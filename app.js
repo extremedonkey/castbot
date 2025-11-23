@@ -5222,8 +5222,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
         const playerData = await loadPlayerData();
 
-        // Reorder tribes for display - pass correct arguments (userId, strategy, castlistId)
-        const tribes = reorderTribes(allTribes, userId, "default", requestedCastlist);
+        // Reorder tribes for display - apply user-first for default castlist
+        // This fixes the pagination bug where initial display used different ordering than navigation
+        const orderingStrategy = requestedCastlist === 'default' ? 'user-first' : 'default';
+        const tribes = reorderTribes(allTribes, userId, orderingStrategy, requestedCastlist);
 
         // Check permissions if in channel
         if (channelId && member) {
