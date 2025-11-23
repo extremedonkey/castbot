@@ -571,9 +571,11 @@ export function getAdjacentRow(currentRow, direction) {
  * Create Global Items view - shows only once_globally give_item actions
  * @param {string} guildId - Discord guild ID
  * @param {Object} client - Discord client for user lookup
+ * @param {boolean} isPublic - Whether to create public (non-ephemeral) response
+ * @param {boolean} isUpdateMessage - Whether this is for UPDATE_MESSAGE (no flags)
  * @returns {Object} Discord Components V2 response
  */
-export async function createGlobalItemsUI(guildId, client = null, isPublic = false) {
+export async function createGlobalItemsUI(guildId, client = null, isPublic = false, isUpdateMessage = false) {
   console.log(`🎁 Creating Global Items UI for guild ${guildId}`);
 
   // Load data
@@ -758,7 +760,7 @@ export async function createGlobalItemsUI(guildId, client = null, isPublic = fal
     ]
   });
 
-  // Return with appropriate flags based on isPublic parameter
+  // Return with appropriate flags based on context
   const response = {
     components: [{
       type: 17, // Container
@@ -766,12 +768,17 @@ export async function createGlobalItemsUI(guildId, client = null, isPublic = fal
     }]
   };
 
-  // Add flags - always include Components V2, optionally add ephemeral
-  if (isPublic) {
-    response.flags = (1 << 15); // Components V2 only (public)
-  } else {
-    response.flags = (1 << 15) | InteractionResponseFlags.EPHEMERAL; // Components V2 + Ephemeral
+  // CRITICAL: UPDATE_MESSAGE responses CANNOT have flags
+  // The ButtonHandlerFactory strips them, but we shouldn't add them in the first place
+  if (!isUpdateMessage) {
+    // Only add flags for NEW messages (not UPDATE_MESSAGE)
+    if (isPublic) {
+      response.flags = (1 << 15); // Components V2 only (public)
+    } else {
+      response.flags = (1 << 15) | InteractionResponseFlags.EPHEMERAL; // Components V2 + Ephemeral
+    }
   }
+  // For UPDATE_MESSAGE: No flags at all - inherits ephemeral state from parent
 
   return response;
 }

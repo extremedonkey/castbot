@@ -5092,8 +5092,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           try {
             const { createGlobalItemsUI } = await import('./safariProgress.js');
-            const globalItemsUI = await createGlobalItemsUI(context.guildId, client);
-            
+            // Pass isPublic=false (ephemeral), isUpdateMessage=true (updating existing message)
+            const globalItemsUI = await createGlobalItemsUI(context.guildId, client, false, true);
+
             console.log(`✅ SUCCESS: safari_progress_global_items - displayed global items`);
             return globalItemsUI;
           } catch (error) {
@@ -5148,8 +5149,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
           try {
             const { createGlobalItemsUI } = await import('./safariProgress.js');
-            // Pass isPublic=true to create non-ephemeral response
-            const publicAdvantagesUI = await createGlobalItemsUI(context.guildId, client, true);
+            // Pass isPublic=true (public), isUpdateMessage=false (creating NEW message)
+            const publicAdvantagesUI = await createGlobalItemsUI(context.guildId, client, true, false);
 
             console.log(`✅ SUCCESS: safari_show_advantages_public - displayed public advantages`);
             return publicAdvantagesUI;
