@@ -5132,6 +5132,36 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         }
       })(req, res, client);
+    }
+
+    // Handle safari show advantages public - creates NEW public message
+    if (custom_id === 'safari_show_advantages_public') {
+      return ButtonHandlerFactory.create({
+        id: 'safari_show_advantages_public',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        // NO updateMessage: Creates NEW message instead of updating
+        ephemeral: false, // CRITICAL: Must be false for public message
+        handler: async (context) => {
+          console.log(`🔍 START: safari_show_advantages_public - user ${context.userId}`);
+          console.log(`📢 Creating PUBLIC Advantages display for guild ${context.guildId}`);
+
+          try {
+            const { createGlobalItemsUI } = await import('./safariProgress.js');
+            // Pass isPublic=true to create non-ephemeral response
+            const publicAdvantagesUI = await createGlobalItemsUI(context.guildId, client, true);
+
+            console.log(`✅ SUCCESS: safari_show_advantages_public - displayed public advantages`);
+            return publicAdvantagesUI;
+          } catch (error) {
+            console.error(`❌ ERROR: safari_show_advantages_public - ${error.message}`);
+            return {
+              content: '❌ Error displaying public advantages.',
+              ephemeral: true
+            };
+          }
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('show_castlist2') || (req.body.data && req.body.data.custom_id && req.body.data.custom_id.startsWith('show_castlist2'))) {
       // Handle show_castlist2 - reuse existing logic but decode virtual IDs
       let requestedCastlist = 'unknown'; // Hoist for error handler access

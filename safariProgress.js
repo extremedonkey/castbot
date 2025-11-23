@@ -516,11 +516,11 @@ function createNavigationButtons(currentRow, activeMapId, coordinates) {
     });
   }
   
-  // Global Items button (far right)
+  // Advantages button (far right)
   buttons.push({
     type: 2, // Button
     custom_id: 'safari_progress_global_items',
-    label: 'Global Items',
+    label: 'Advantages',
     style: 2, // Secondary (grey)
     emoji: { name: '🎁' }
   });
@@ -573,7 +573,7 @@ export function getAdjacentRow(currentRow, direction) {
  * @param {Object} client - Discord client for user lookup
  * @returns {Object} Discord Components V2 response
  */
-export async function createGlobalItemsUI(guildId, client = null) {
+export async function createGlobalItemsUI(guildId, client = null, isPublic = false) {
   console.log(`🎁 Creating Global Items UI for guild ${guildId}`);
 
   // Load data
@@ -630,7 +630,7 @@ export async function createGlobalItemsUI(guildId, client = null) {
   console.log(`🔍 DEBUG: Found map with ${Object.keys(coordinates).length} coordinates, ${Object.keys(buttons).length} buttons`);
   
   // Build content - only coordinates with once_globally give_item actions
-  let content = `# 🎁 Global Items Overview\n\n`;
+  let content = `# 🎁 Advantages Overview\n\n`;
   let hasContent = false;
   let characterCount = content.length;
   
@@ -738,22 +738,40 @@ export async function createGlobalItemsUI(guildId, client = null) {
   // Add separator before navigation
   components.push({ type: 14 }); // Separator
   
-  // Add back button
+  // Add back button and show public button
   components.push({
     type: 1, // Action Row
-    components: [{
-      type: 2, // Button
-      custom_id: 'safari_progress_back_to_rows',
-      label: '← Back to Rows',
-      style: 2 // Secondary
-    }]
+    components: [
+      {
+        type: 2, // Button
+        custom_id: 'safari_progress_back_to_rows',
+        label: '← Back to Rows',
+        style: 2 // Secondary
+      },
+      {
+        type: 2, // Button
+        custom_id: 'safari_show_advantages_public',
+        label: 'Show Advantages (Public!)',
+        style: 4, // Danger (red)
+        emoji: '⚠️'
+      }
+    ]
   });
-  
-  return {
+
+  // Return with appropriate flags based on isPublic parameter
+  const response = {
     components: [{
       type: 17, // Container
       components: components
-    }],
-    flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+    }]
   };
+
+  // Add flags - always include Components V2, optionally add ephemeral
+  if (isPublic) {
+    response.flags = (1 << 15); // Components V2 only (public)
+  } else {
+    response.flags = (1 << 15) | InteractionResponseFlags.EPHEMERAL; // Components V2 + Ephemeral
+  }
+
+  return response;
 }

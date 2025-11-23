@@ -92,7 +92,8 @@
       "Bash(stat:*)",
       "Bash(ls -la:*)",
       "Bash(git mv:*)",
-      "Bash(tr:*)"
+      "Bash(tr:*)",
+      "Bash(mv:*)"
     ],
     "deny": [],
     "ask": []

@@ -11433,14 +11433,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 577,
+    "memberCount": 575,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1763655422419,
+    "lastUpdated": 1763866442197,
     "ownerInfo": {
       "username": "serviver",
       "globalName": "Serviver",
@@ -11475,6 +11475,157 @@
         "seasonId": "season_04d9a4d28d8549bf",
         "seasonName": "Season 3 - Beatles",
         "questions": []
+      }
+    }
+  },
+  "1418593741773738075": {
+    "serverName": "EpochORG S11: Polynesian Expansion",
+    "icon": "https://cdn.discordapp.com/icons/1418593741773738075/69ff9ffd8d4658662290bbe7be797b56.webp",
+    "ownerId": "696456309762949141",
+    "memberCount": 167,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1758289504236,
+    "lastUpdated": 1763868642333,
+    "ownerInfo": {
+      "username": "mpschettig",
+      "globalName": "Tylenol Boy",
+      "discriminator": "0",
+      "tag": "mpschettig"
+    },
+    "analyticsVersion": "1.0",
+    "players": {
+      "696456309762949141": {
+        "vanityRoles": [
+          "1418593741895237786"
+        ]
+      },
+      "391415444084490240": {
+        "vanityRoles": [
+          "1418593741895237786"
+        ]
+      },
+      "909852958525636660": {
+        "vanityRoles": [
+          "1418593741895237786"
+        ]
+      },
+      "209773824357564416": {
+        "vanityRoles": [
+          "1418593741895237786"
+        ]
+      },
+      "1064656591862894732": {
+        "vanityRoles": [
+          "1418593741895237786"
+        ]
+      },
+      "538540453973327873": {
+        "vanityRoles": [
+          "1418593741895237786"
+        ]
+      },
+      "444637942988668938": {
+        "vanityRoles": [
+          "1418593741895237786"
+        ]
+      },
+      "719547106318352496": {
+        "vanityRoles": [
+          "1418593741895237786"
+        ]
+      },
+      "454453967309504512": {
+        "vanityRoles": [
+          "1418593741895237786"
+        ]
+      },
+      "689155539028148232": {
+        "vanityRoles": [
+          "1418593741895237786"
+        ]
+      },
+      "572291395365109770": {
+        "vanityRoles": [
+          "1418593741895237786"
+        ]
+      }
+    },
+    "tribes": {
+      "1418593741895237786": {
+        "castlistIds": [
+          "castlist_archive_1763868907816"
+        ],
+        "castlist": "OG Prod Tribe Castlist",
+        "color": "#ffc5d3",
+        "analyticsName": "Production",
+        "analyticsAdded": 1763868694335,
+        "emoji": "🏕️",
+        "showPlayerEmojis": true,
+        "memberCount": 1,
+        "castlistId": "castlist_archive_1763868907816",
+        "isVanity": true
+      },
+      "1441994384857108662": {
+        "castlistIds": [
+          "default"
+        ],
+        "emoji": null,
+        "displayName": null,
+        "color": "#e91e63",
+        "castlistId": "default",
+        "castlist": "default"
+      },
+      "1441994429484372000": {
+        "castlistIds": [
+          "default"
+        ],
+        "emoji": null,
+        "displayName": null,
+        "color": "#9b59b6",
+        "castlistId": "default",
+        "castlist": "default"
+      }
+    },
+    "timezones": {},
+    "pronounRoleIDs": [],
+    "firstInstalled": 1763868642334,
+    "installationMethod": "command",
+    "castlistConfigs": {
+      "default": {
+        "id": "default",
+        "name": "Active Castlist",
+        "type": "system",
+        "createdAt": 1763868686795,
+        "createdBy": "system",
+        "settings": {
+          "sortStrategy": "placements",
+          "showRankings": true,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
+          "emoji": "📋",
+          "isDefault": true
+        },
+        "modifiedAt": 1763868686805,
+        "modifiedBy": "system"
+      },
+      "castlist_archive_1763868907816": {
+        "id": "castlist_archive_1763868907816",
+        "name": "OG Prod Tribe Castlist",
+        "type": "custom",
+        "createdAt": 1763868907816,
+        "createdBy": "391415444084490240",
+        "seasonId": null,
+        "metadata": {
+          "description": "Archived from tribe swap on 11/23/2025",
+          "emoji": "📦"
+        }
       }
     }
   }

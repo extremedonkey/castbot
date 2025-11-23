@@ -1323,10 +1323,18 @@ export const BUTTON_REGISTRY = {
     type: 'select_menu'
   },
   'safari_progress_global_items': {
-    label: 'Global Items',
+    label: 'Advantages',
     description: 'View all once_globally give_item actions across the map',
     emoji: '🎁',
     style: 'Secondary',
+    category: 'safari',
+    requiresPermission: 'ManageRoles'
+  },
+  'safari_show_advantages_public': {
+    label: 'Show Advantages (Public!)',
+    description: 'Display advantages overview publicly for all players to see',
+    emoji: '⚠️',
+    style: 'Danger',
     category: 'safari',
     requiresPermission: 'ManageRoles'
   },
