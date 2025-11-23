@@ -4916,6 +4916,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         custom_id !== 'safari_confirm_reset_game' && 
         custom_id !== 'safari_paused_players' &&
         custom_id !== 'safari_pause_players_select' &&
+        custom_id !== 'safari_show_advantages_public' &&
         !custom_id.startsWith('safari_post_channel_')) {
       // Check if this Custom Action contains calculate_results actions that need deferred handling
       const parts = custom_id.split('_');
