@@ -32336,6 +32336,63 @@ Are you sure you want to continue?`;
 
           await delay(15000);
 
+          // Helper: Format remaining players list with truncation
+          const formatRemainingPlayers = (remainingPlayers) => {
+            if (remainingPlayers.length === 0) {
+              return '# All players have been swapped! 🎉';
+            }
+
+            // Group remaining players by their original tribe
+            const playersByTribe = {};
+
+            for (const player of remainingPlayers) {
+              const displayName = player.displayName || player.user.username;
+
+              // Find player's original tribe
+              let tribeName = 'Unknown';
+              for (const oldTribe of currentDefaultTribes) {
+                const oldRole = guild.roles.cache.get(oldTribe.roleId);
+                if (oldRole && oldRole.members.has(player.id)) {
+                  tribeName = oldRole.name;
+                  break;
+                }
+              }
+
+              if (!playersByTribe[tribeName]) {
+                playersByTribe[tribeName] = [];
+              }
+              playersByTribe[tribeName].push(displayName);
+            }
+
+            // Format the output
+            let content = '# Players remaining to be swapped:\n';
+            const tribeParts = [];
+
+            for (const [tribeName, players] of Object.entries(playersByTribe)) {
+              const playerList = players.join(', ');
+              tribeParts.push(`**${tribeName}**: ${playerList}`);
+            }
+
+            let fullContent = content + tribeParts.join(' | ');
+
+            // Truncate at 1800 characters if needed
+            if (fullContent.length > 1800) {
+              // Find the last complete player name before 1800 chars
+              const truncated = fullContent.substring(0, 1797); // Leave room for "..."
+              const lastComma = truncated.lastIndexOf(',');
+              const lastPipe = truncated.lastIndexOf('|');
+              const cutPoint = Math.max(lastComma, lastPipe);
+
+              if (cutPoint > 0) {
+                fullContent = truncated.substring(0, cutPoint) + '...';
+              } else {
+                fullContent = truncated + '...';
+              }
+            }
+
+            return fullContent;
+          };
+
           // Round-robin reveal
           let currentTribeIndex = 0;
           let playerCount = 0;
@@ -32361,7 +32418,11 @@ Are you sure you want to continue?`;
 
             console.log(`🔀 [TRIBE SWAP] ${playerCount}/${playersToAssign.length}: ${displayName} swapped from ${oldTribeName} → ${tribeRole.name}`);
 
-            // Dramatic reveal with formal swap text above
+            // Calculate remaining players for this reveal
+            const remainingPlayers = playersToAssign.slice(playerCount);
+            const remainingPlayersText = formatRemainingPlayers(remainingPlayers);
+
+            // Enhanced dramatic reveal with progress, dividers, and remaining players
             await sendMessage({
               flags: (1 << 15),
               components: [{
@@ -32369,10 +32430,16 @@ Are you sure you want to continue?`;
                 accent_color: tribeRole.color || 0x5865F2,
                 components: [
                   {
-                    type: 10, // Text Display - formal swap message
-                    content: oldTribeRoleId
-                      ? `${displayName} swaps from <@&${oldTribeRoleId}> into <@&${tribeRoleId}>`
-                      : `${displayName} joins <@&${tribeRoleId}>`
+                    type: 10, // Text Display - progress indicator
+                    content: `# Swap Progress: Player ${playerCount} of ${playersToAssign.length}`
+                  },
+                  {
+                    type: 14, // Separator
+                    divider: true
+                  },
+                  {
+                    type: 10, // Text Display - formal swap message (plain text, no role mentions)
+                    content: `${displayName} swaps from **${oldTribeName}** into **${tribeRole.name}**`
                   },
                   {
                     type: 9, // Section - dramatic reveal
@@ -32384,6 +32451,14 @@ Are you sure you want to continue?`;
                       type: 11, // Thumbnail
                       media: { url: avatarUrl }
                     }
+                  },
+                  {
+                    type: 14, // Separator
+                    divider: true
+                  },
+                  {
+                    type: 10, // Text Display - remaining players
+                    content: remainingPlayersText
                   }
                 ]
               }]
