@@ -225,6 +225,24 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
         console.warn(`[TRIBES] High component count (${estimatedTotal} estimated), limiting to ${maxTribeLimit} tribes max`);
       }
 
+      // Role Select with pre-selection for instant toggle (moved before tribe sections for better UX)
+      container.components.push({
+        type: 1, // ActionRow
+        components: [{
+          type: 6, // Role Select
+          custom_id: `castlist_tribe_select_${castlist.id}`,
+          placeholder: tribes.length > 0
+            ? 'Add or remove tribes...'
+            : 'Select roles to add as tribes...',
+          min_values: 0, // CRITICAL: Allow deselecting all (enables remove)
+          max_values: maxTribeLimit, // ENFORCED: Component budget limit
+          default_values: tribes.map(tribe => ({
+            id: tribe.roleId,
+            type: "role"
+          }))
+        }]
+      });
+
       // Fetch guild once for all tribes
       const guild = tribes.length > 0 ? await client.guilds.fetch(guildId) : null;
 
@@ -249,7 +267,7 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       if (tribes.length === 0) {
         container.components.push({
           type: 10, // Text Display
-          content: `-# *No tribes assigned to this castlist yet. Use the role selector below to add tribes.*`
+          content: `-# *No tribes assigned to this castlist yet. Use the role selector above to add tribes.*`
         });
       }
 
@@ -327,24 +345,6 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
           console.error(`[TRIBES] Invalid Section structure for tribe ${roleName}, skipping`);
         }
       }
-
-      // Role Select with pre-selection for instant toggle (separator removed to save component budget)
-      container.components.push({
-        type: 1, // ActionRow
-        components: [{
-          type: 6, // Role Select
-          custom_id: `castlist_tribe_select_${castlist.id}`,
-          placeholder: tribes.length > 0
-            ? 'Add or remove tribes...'
-            : 'Select roles to add as tribes...',
-          min_values: 0, // CRITICAL: Allow deselecting all (enables remove)
-          max_values: maxTribeLimit, // ENFORCED: Component budget limit
-          default_values: tribes.map(tribe => ({
-            id: tribe.roleId,
-            type: "role"
-          }))
-        }]
-      });
     }
   } else {
     // No castlist selected - show disabled buttons
