@@ -1640,7 +1640,11 @@
         "color": null,
         "analyticsName": "🤷‍♀️ Any 🤷‍♀️",
         "analyticsAdded": 1756021096260,
-        "castlistIds": []
+        "castlistIds": [
+          "default"
+        ],
+        "castlistId": "default",
+        "castlist": "default"
       },
       "1409191262279700622": {
         "emoji": "🐻‍❄️",
@@ -1678,7 +1682,12 @@
       "1368969395795398716": {
         "name": "Tribe 1368969395795398716",
         "emoji": "🏕️",
-        "type": "default"
+        "type": "default",
+        "castlistIds": [
+          "default"
+        ],
+        "castlistId": "default",
+        "castlist": "default"
       },
       "1368969393819746336": {
         "name": "Tribe 1368969393819746336",
@@ -1704,7 +1713,12 @@
         "color": "#FF7AAA",
         "analyticsName": "🪄 ar.3 🪄",
         "analyticsAdded": 1759081799205,
-        "displayName": "The AR3 Tribe"
+        "displayName": "The AR3 Tribe",
+        "castlistIds": [
+          "castlist_archive_1763880747782"
+        ],
+        "castlistId": "castlist_archive_1763880747782",
+        "castlist": "Swap 4"
       },
       "1388327092634124368": {
         "emoji": null,
@@ -1724,10 +1738,10 @@
           "castlist_1762579473073_1331657596087566398",
           "castlist_1762579584399_1331657596087566398",
           "castlist_1762627269013_1331657596087566398",
-          "default"
+          "castlist_archive_1763880444771"
         ],
-        "castlistId": "default",
-        "castlist": "default"
+        "castlistId": "castlist_archive_1763880444771",
+        "castlist": "Swap 3 Premerge"
       },
       "1424250096698130603": {
         "emoji": "🗝️",
@@ -1821,7 +1835,11 @@
         "name": "Tribe 1431726505569943633",
         "emoji": "🏕️",
         "color": null,
-        "castlistIds": []
+        "castlistIds": [
+          "castlist_archive_1763880747782"
+        ],
+        "castlistId": "castlist_archive_1763880747782",
+        "castlist": "Swap 4"
       },
       "1431726526789058682": {
         "name": "Tribe 1431726526789058682",
@@ -1866,10 +1884,10 @@
       },
       "1368969346600407181": {
         "castlistIds": [
-          "default"
+          "castlist_archive_1763880444771"
         ],
-        "castlistId": "default",
-        "castlist": "default"
+        "castlistId": "castlist_archive_1763880444771",
+        "castlist": "Swap 3 Premerge"
       },
       "1434914674788401212": {
         "emoji": null,
@@ -1980,6 +1998,26 @@
         "emoji": null,
         "displayName": null,
         "color": null
+      },
+      "1368969351700418580": {
+        "castlistIds": [
+          "castlist_archive_1763880863396"
+        ],
+        "emoji": null,
+        "displayName": null,
+        "color": null,
+        "castlistId": "castlist_archive_1763880863396",
+        "castlist": "Swap 5"
+      },
+      "1368969359615201392": {
+        "castlistIds": [
+          "castlist_archive_1763880863396"
+        ],
+        "emoji": null,
+        "displayName": null,
+        "color": null,
+        "castlistId": "castlist_archive_1763880863396",
+        "castlist": "Swap 5"
       }
     },
     "timezones": {
@@ -3090,7 +3128,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1763877706109,
+        "modifiedAt": 1763880923087,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -3357,6 +3395,42 @@
         "name": "Swap 2",
         "type": "custom",
         "createdAt": 1763878240003,
+        "createdBy": "391415444084490240",
+        "seasonId": "season_cac1b81de8914c79",
+        "metadata": {
+          "description": "Archived from tribe swap on 11/23/2025",
+          "emoji": "📦"
+        }
+      },
+      "castlist_archive_1763880444771": {
+        "id": "castlist_archive_1763880444771",
+        "name": "Swap 3 Premerge",
+        "type": "custom",
+        "createdAt": 1763880444771,
+        "createdBy": "391415444084490240",
+        "seasonId": "season_cac1b81de8914c79",
+        "metadata": {
+          "description": "Archived from tribe swap on 11/23/2025",
+          "emoji": "📦"
+        }
+      },
+      "castlist_archive_1763880747782": {
+        "id": "castlist_archive_1763880747782",
+        "name": "Swap 4",
+        "type": "custom",
+        "createdAt": 1763880747782,
+        "createdBy": "391415444084490240",
+        "seasonId": "season_cac1b81de8914c79",
+        "metadata": {
+          "description": "Archived from tribe swap on 11/23/2025",
+          "emoji": "📦"
+        }
+      },
+      "castlist_archive_1763880863396": {
+        "id": "castlist_archive_1763880863396",
+        "name": "Swap 5",
+        "type": "custom",
+        "createdAt": 1763880863396,
         "createdBy": "391415444084490240",
         "seasonId": "season_cac1b81de8914c79",
         "metadata": {

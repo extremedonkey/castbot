@@ -32431,6 +32431,12 @@ Are you sure you want to continue?`;
             const remainingPlayers = [...remainingToReveal, ...unassignedPlayers];
             const remainingPlayersText = formatRemainingPlayers(remainingPlayers);
 
+            // Determine next reveal timing message
+            const isLastReveal = playerCount === playersToAssign.length;
+            const nextRevealText = isLastReveal
+              ? '-# Swap/merge summary in 15 seconds'
+              : '-# Next player in... 15 seconds';
+
             // Enhanced dramatic reveal with progress, dividers, and remaining players
             await sendMessage({
               flags: (1 << 15),
@@ -32470,6 +32476,10 @@ Are you sure you want to continue?`;
                   {
                     type: 10, // Text Display - remaining players
                     content: remainingPlayersText
+                  },
+                  {
+                    type: 10, // Text Display - next reveal countdown
+                    content: nextRevealText
                   }
                 ]
               }]
