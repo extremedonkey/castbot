@@ -171,6 +171,7 @@ interval: (parseInt(process.env.STAMINA_REGEN_MINUTES || '3')) * 60000,
 
 ## Testing Checklist
 
+### Consumable Items
 - [ ] Create item with stamina boost via entity editor
 - [ ] Verify stamina boost appears in item display
 - [ ] Purchase item from store
@@ -181,6 +182,125 @@ interval: (parseInt(process.env.STAMINA_REGEN_MINUTES || '3')) * 60000,
 - [ ] Verify regeneration only occurs when below max
 - [ ] Test with multiple stamina items
 - [ ] Verify error handling for invalid items
+
+### Permanent Items (As-Built: November 2024)
+- [ ] Create non-consumable item with stamina boost
+- [ ] Verify NO "Use" button appears (stays in inventory)
+- [ ] Test charge regeneration after cooldown
+- [ ] Verify each charge regenerates independently
+- [ ] Test with multiple permanent items stacking
+
+---
+
+## 🐎 Permanent Stamina Items (AS-BUILT: November 2024)
+
+### Overview
+Permanent stamina items (like horses) provide lasting stamina capacity increases that are not consumed on use. Players can build a collection of permanent equipment to increase their exploration capabilities.
+
+### Implementation Status: ✅ LIVE IN PRODUCTION
+- **Merged from**: RaP 0965_20251124_PermanentStaminaItems_Analysis.md
+- **Implementation Date**: November 24, 2024
+- **Status**: Fully implemented with Phase 2 (individual charge tracking)
+
+### How Permanent Items Work
+
+#### Item Configuration
+```json
+{
+  "horse_511965": {
+    "name": "Horse",
+    "emoji": "🐎",
+    "description": "Grants +1 permanent stamina capacity",
+    "staminaBoost": 1,
+    "consumable": "No",  // KEY: Not consumable
+    "basePrice": 100
+  }
+}
+```
+
+#### Player Experience
+
+**Without permanent items**: Standard regeneration
+- 1 stamina regenerates after 720 minutes (12 hours)
+
+**With Horse (+1)**: Enhanced capacity
+- 2 total stamina (1 base + 1 from horse)
+- Each stamina charge regenerates independently
+- Use 1 stamina → only that charge enters 12-hour cooldown
+- Other charge remains available
+
+**With Super Horse (+3)**: Major progression
+- 4 total stamina (1 base + 3 from super horse)
+- Each of 4 charges has independent cooldown
+- Strategic value: Can use stamina throughout the day
+
+### The Super Horse Example
+
+Illustrating why individual charge tracking matters:
+
+```
+Player has Super Horse (+3) = 4 total stamina
+
+Hour 0:   4/4 stamina (all charges ready)
+Hour 1:   Uses 1 → 3/4 (only charge #1 on cooldown)
+Hour 6:   Uses 1 → 2/4 (only charge #2 on cooldown)
+Hour 13:  Charge #1 regenerates → 3/4 ✨
+Hour 18:  Charge #2 regenerates → 4/4 ✨
+
+Total stamina over 24 hours: 7+ moves (vs 4 with old system)
+```
+
+### Technical Implementation
+
+#### Phase 2: Individual Charge System (IMPLEMENTED)
+```javascript
+// Data structure with charges array
+"stamina": {
+  "current": 2,
+  "max": 2,
+  "charges": [null, null]  // null = available, timestamp = on cooldown
+}
+```
+
+#### Key Functions (pointsManager.js)
+- `calculatePermanentStaminaBoost()`: Sums all non-consumable stamina items
+- `calculateRegenerationWithCharges()`: Handles individual charge regeneration
+- `usePoints()`: Marks specific charges as used with timestamps
+
+### Backward Compatibility
+- Players WITHOUT permanent items use unchanged legacy code
+- Charges array only created when permanent items detected
+- Zero regression risk for existing players
+
+### Configuration Considerations
+
+#### Stacking
+- Multiple permanent items stack additively
+- Horse (+1) + Boots (+1) = +2 total boost
+
+#### Categories (Future Enhancement)
+- Could limit to one "mount" type item
+- Equipment items could stack separately
+
+#### Progression Examples
+- **Basic**: Horse (+1) - Early game
+- **Advanced**: Fast Horse (+2) - Mid game
+- **Elite**: Pegasus (+3) - End game
+
+### Testing Verification
+```bash
+# Look for these log entries:
+🐎 Found permanent stamina item: Horse (+1)
+🐎 Total permanent stamina boost for player_X: +1
+🐎 Initializing charge system with 2 total charges
+🐎⚡ Charge 1 regenerated for player_X
+🐎⚡ Charge 2 regenerated for player_X
+```
+
+### Production Deployment
+- **Soft launched**: November 24, 2024
+- **Safe deployment**: Players without items unaffected
+- **Full release**: After 48-hour testing period
 
 ## Related Documentation
 

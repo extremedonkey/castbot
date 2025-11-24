@@ -788,9 +788,9 @@
           "1415062472007749765"
         ],
         "safari": {
-          "currency": 985,
+          "currency": 25,
           "history": [],
-          "lastInteraction": 1763734405109,
+          "lastInteraction": 1763999101549,
           "achievements": [],
           "inventory": {
             "nurturer_361363": {
@@ -800,133 +800,67 @@
             "territory_forager_404120": 1,
             "nest_guardian_461600": 1,
             "raider_499497": {
-              "quantity": 49,
-              "numAttacksAvailable": 36
-            },
-            "button_bundle_coconu_417818": {
-              "quantity": 9,
-              "numAttacksAvailable": 0
-            },
-            "bait_530852": {
               "quantity": 1,
-              "numAttacksAvailable": 0
+              "numAttacksAvailable": 1
             },
-            "vulnary_530325": {
-              "quantity": 1,
-              "numAttacksAvailable": 0
-            },
-            "tide_forged_obsidian_773156": {
+            "horse_511965": {
               "quantity": 1,
               "numAttacksAvailable": 0
             }
           },
           "cooldowns": {},
           "buttonUses": {},
-          "storeHistory": [
-            {
-              "itemId": "raider_499497",
-              "storeId": "the_hatchery_637531",
-              "price": 15,
-              "timestamp": 1761656252680
-            },
-            {
-              "itemId": "raider_499497",
-              "storeId": "the_hatchery_637531",
-              "price": 15,
-              "timestamp": 1761656256604
-            },
-            {
-              "itemId": "raider_499497",
-              "storeId": "the_hatchery_637531",
-              "price": 15,
-              "timestamp": 1761656259595
-            },
-            {
-              "itemId": "raider_499497",
-              "storeId": "the_hatchery_637531",
-              "price": 15,
-              "timestamp": 1761656265781
-            },
-            {
-              "itemId": "raider_499497",
-              "storeId": "the_hatchery_637531",
-              "price": 15,
-              "timestamp": 1761656570814
-            },
-            {
-              "itemId": "raider_499497",
-              "storeId": "the_hatchery_637531",
-              "price": 15,
-              "timestamp": 1761656575055
-            },
-            {
-              "itemId": "vulnary_530325",
-              "storeId": "belle_s_fireemblem_s_326813",
-              "price": 15,
-              "timestamp": 1763734606786
-            }
-          ],
+          "storeHistory": [],
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "A1",
+              "currentLocation": "B3",
               "exploredCoordinates": [
                 "C2",
-                "C1",
-                "F2",
-                "E2",
+                "A1",
                 "B1",
-                "A1"
+                "B2",
+                "B3"
               ],
               "itemsFound": [],
               "movementHistory": [
                 {
                   "from": null,
                   "to": "C2",
-                  "timestamp": "2025-10-20T17:41:06.454Z"
+                  "timestamp": "2025-11-24T15:45:01.550Z"
                 },
                 {
                   "from": "C2",
                   "to": "C2",
-                  "timestamp": "2025-10-20T17:41:06.489Z"
+                  "timestamp": "2025-11-24T15:45:01.599Z"
                 },
                 {
                   "from": "C2",
-                  "to": "C1",
-                  "timestamp": "2025-10-26T10:14:30.888Z"
+                  "to": "A1",
+                  "timestamp": "2025-11-24T15:45:50.389Z"
                 },
                 {
-                  "from": "C1",
-                  "to": "F2",
-                  "timestamp": "2025-10-26T10:20:27.221Z"
-                },
-                {
-                  "from": "F2",
-                  "to": "E2",
-                  "timestamp": "2025-10-26T10:20:58.633Z"
-                },
-                {
-                  "from": "E2",
+                  "from": "A1",
                   "to": "B1",
-                  "timestamp": "2025-10-26T10:26:03.834Z"
+                  "timestamp": "2025-11-24T15:46:19.765Z"
                 },
                 {
                   "from": "B1",
-                  "to": "E2",
-                  "timestamp": "2025-10-26T10:26:30.577Z"
+                  "to": "B2",
+                  "timestamp": "2025-11-24T15:49:05.019Z"
                 },
                 {
-                  "from": "E2",
-                  "to": "A1",
-                  "timestamp": "2025-11-24T15:12:38.851Z"
+                  "from": "B2",
+                  "to": "B3",
+                  "timestamp": "2025-11-24T15:51:00.226Z"
                 }
               ]
             }
           },
           "points": {
             "stamina": {
-              "current": 99,
-              "maximum": 99,
-              "lastRegeneration": "2025-10-20T17:41:06.454Z",
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2025-11-24T15:45:01.549Z",
               "regenConfig": "hourly"
             }
           }
@@ -3896,14 +3830,14 @@
     "serverName": "EpochORG S5: Incan Empire",
     "icon": "https://cdn.discordapp.com/icons/1240325979214188615/156095a9edb1de2f24dfac78d2904a04.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 62,
+    "memberCount": 63,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1715787157587,
-    "lastUpdated": 1763734077040,
+    "lastUpdated": 1763998725005,
     "players": {},
     "tribes": {
       "1241383870260056095": {
@@ -4784,14 +4718,14 @@
     "serverName": "EmeraldORG: Fire Emblem Three Houses",
     "icon": "https://cdn.discordapp.com/icons/1385042963310055515/4bea7eb65723bab308c21c06332836be.webp",
     "ownerId": "676262975132139522",
-    "memberCount": 112,
+    "memberCount": 111,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1750290375307,
-    "lastUpdated": 1762574947243,
+    "lastUpdated": 1763998727486,
     "ownerInfo": {
       "username": "deadlybelle",
       "globalName": "Belle",
@@ -6367,14 +6301,14 @@
     "serverName": "EpochORG S4: Ancient Egypt",
     "icon": "https://cdn.discordapp.com/icons/1209015985798127696/fab803057622fa548002ca6920f860ac.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 77,
+    "memberCount": 78,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1708322273445,
-    "lastUpdated": 1763389129893,
+    "lastUpdated": 1763998724642,
     "ownerInfo": {
       "username": "mpschettig",
       "globalName": "Tylenol Boy",
