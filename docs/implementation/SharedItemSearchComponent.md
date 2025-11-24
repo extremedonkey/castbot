@@ -129,3 +129,66 @@ export function createItemSelectComponent({
 - Shared component would reduce to ~50 lines per integration
 - Must maintain backward compatibility during migration
 - Consider special cases (multi-select, excluded items)
+
+## Production Bug Fixed (Nov 2024): Custom ID Length Overflow
+
+### The Problem
+Player Admin item search was hitting Discord's 100-character custom_id limit:
+```
+safari_item_qty_modal_1418593741773738075_tide_forged_obsidian_773156_496027721843867668_player_admin
+                                                                                                ^^^^^^^^^^^^^
+                                                                                             101 characters (FAILED!)
+```
+
+### Root Cause
+The `_player_admin` suffix was added to track context for modal submission handler, but turned out to be **completely redundant**:
+- The suffix was only used for parsing logic (not navigation)
+- Context was already preserved in the SELECT MENU custom_id (not the modal!)
+- Modal submission just shows an ephemeral message (doesn't navigate anywhere)
+
+### The Fix
+**Removed `_player_admin` suffix entirely** (13-character savings):
+```javascript
+// Before (app.js:28742)
+.setCustomId(`safari_item_qty_modal_${context.guildId}_${itemId}_${targetUserId}_player_admin`)
+
+// After
+.setCustomId(`safari_item_qty_modal_${context.guildId}_${itemId}_${targetUserId}`)
+```
+
+**Simplified parsing logic** (app.js:33549-33553):
+```javascript
+// Before: 9 lines of complex conditional parsing
+const isPlayerAdminContext = parts[parts.length - 1] === 'admin' && parts[parts.length - 2] === 'player';
+const userId = isPlayerAdminContext ? parts[parts.length - 3] : parts[parts.length - 1];
+const itemId = isPlayerAdminContext
+  ? parts.slice(1, -3).join('_')
+  : parts.slice(1, -1).join('_');
+
+// After: 3 lines of direct parsing
+const userId = parts[parts.length - 1];
+const itemId = parts.slice(1, -1).join('_');
+```
+
+### Key Insight: Context Lives in Select Menus, Not Modals
+
+**The Search Pattern**:
+1. Select menu encodes context in its custom_id (`player_item_select_{userId}` vs `safari_item_qty_user_select_{guildId}_{itemId}`)
+2. Search modal carries the same context identifier
+3. Search results return to the SAME select menu (via UPDATE_MESSAGE)
+4. Item selection → Select menu handler determines "what next" based on its own identity
+5. Modal submission → Just updates data + shows ephemeral confirmation (NO NAVIGATION!)
+
+**Therefore**: Modal custom_id doesn't need context tracking at all!
+
+### Impact
+- ✅ Fixed 100% failure rate for long item IDs accessed via player admin search
+- ✅ Reduced max custom_id length from 101 → 88 characters (13-char buffer)
+- ✅ Simplified code (9 lines removed, easier to maintain)
+- ✅ No breaking changes (both code paths work identically)
+
+### Lessons for Future Search Implementations
+1. **Don't encode context in modals** - Use the select menu custom_id instead
+2. **Keep custom_ids under 85 chars** - Leave 15-char buffer for safety
+3. **Use session storage for complex state** - When custom_id approaches 85+ chars
+4. **Modal submissions rarely need navigation context** - They typically just update data

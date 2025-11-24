@@ -814,6 +814,10 @@
             "vulnary_530325": {
               "quantity": 1,
               "numAttacksAvailable": 0
+            },
+            "tide_forged_obsidian_773156": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
             }
           },
           "cooldowns": {},
@@ -959,6 +963,10 @@
             "raider_499497": {
               "quantity": 1,
               "numAttacksAvailable": 1
+            },
+            "dupe13_213549": {
+              "quantity": 11,
+              "numAttacksAvailable": 11
             }
           },
           "cooldowns": {},
@@ -1641,10 +1649,10 @@
         "analyticsName": "🤷‍♀️ Any 🤷‍♀️",
         "analyticsAdded": 1756021096260,
         "castlistIds": [
-          "default"
+          "castlist_archive_1763881183636"
         ],
-        "castlistId": "default",
-        "castlist": "default"
+        "castlistId": "castlist_archive_1763881183636",
+        "castlist": "Swap 6"
       },
       "1409191262279700622": {
         "emoji": "🐻‍❄️",
@@ -1684,10 +1692,10 @@
         "emoji": "🏕️",
         "type": "default",
         "castlistIds": [
-          "default"
+          "castlist_archive_1763881183636"
         ],
-        "castlistId": "default",
-        "castlist": "default"
+        "castlistId": "castlist_archive_1763881183636",
+        "castlist": "Swap 6"
       },
       "1368969393819746336": {
         "name": "Tribe 1368969393819746336",
@@ -2018,6 +2026,16 @@
         "color": null,
         "castlistId": "castlist_archive_1763880863396",
         "castlist": "Swap 5"
+      },
+      "1442045400746823741": {
+        "castlistIds": [
+          "default"
+        ],
+        "emoji": null,
+        "displayName": null,
+        "color": "#e91e63",
+        "castlistId": "default",
+        "castlist": "default"
       }
     },
     "timezones": {
@@ -3431,6 +3449,18 @@
         "name": "Swap 5",
         "type": "custom",
         "createdAt": 1763880863396,
+        "createdBy": "391415444084490240",
+        "seasonId": "season_cac1b81de8914c79",
+        "metadata": {
+          "description": "Archived from tribe swap on 11/23/2025",
+          "emoji": "📦"
+        }
+      },
+      "castlist_archive_1763881183636": {
+        "id": "castlist_archive_1763881183636",
+        "name": "Swap 6",
+        "type": "custom",
+        "createdAt": 1763881183636,
         "createdBy": "391415444084490240",
         "seasonId": "season_cac1b81de8914c79",
         "metadata": {
@@ -9267,14 +9297,14 @@
     "serverName": "Triumph Hub",
     "icon": "https://cdn.discordapp.com/icons/1080166267136262154/174fdda5d62bc8c2227e31f8111e7f05.webp",
     "ownerId": "572291395365109770",
-    "memberCount": 446,
+    "memberCount": 442,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1677602106604,
-    "lastUpdated": 1763874626990,
+    "lastUpdated": 1763947716383,
     "players": {
       "572291395365109770": {
         "age": "29"
@@ -11569,14 +11599,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 575,
+    "memberCount": 574,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1763866442197,
+    "lastUpdated": 1763947715886,
     "ownerInfo": {
       "username": "serviver",
       "globalName": "Serviver",
