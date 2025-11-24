@@ -868,13 +868,14 @@
           ],
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "E2",
+              "currentLocation": "A1",
               "exploredCoordinates": [
                 "C2",
                 "C1",
                 "F2",
                 "E2",
-                "B1"
+                "B1",
+                "A1"
               ],
               "itemsFound": [],
               "movementHistory": [
@@ -912,6 +913,11 @@
                   "from": "B1",
                   "to": "E2",
                   "timestamp": "2025-10-26T10:26:30.577Z"
+                },
+                {
+                  "from": "E2",
+                  "to": "A1",
+                  "timestamp": "2025-11-24T15:12:38.851Z"
                 }
               ]
             }
