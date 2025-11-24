@@ -28739,7 +28739,7 @@ Are you sure you want to continue?`;
           }
 
           const modal = new ModalBuilder()
-            .setCustomId(`safari_item_qty_modal_${context.guildId}_${itemId}_${targetUserId}_player_admin`)
+            .setCustomId(`safari_item_qty_modal_${context.guildId}_${itemId}_${targetUserId}`)
             .setTitle(modalTitle);
 
           const quantityInput = new TextInputBuilder()
@@ -33546,16 +33546,11 @@ Are you sure you want to continue?`;
         const member = req.body.member;
         const guildId = req.body.guild_id;
         
-        // Extract IDs from custom_id: safari_item_qty_modal_${guildId}_${itemId}_${userId}[_player_admin]
+        // Extract IDs from custom_id: safari_item_qty_modal_${guildId}_${itemId}_${userId}
         const parts = custom_id.replace('safari_item_qty_modal_', '').split('_');
         const modalGuildId = parts[0];
-
-        // Check for player_admin context suffix
-        const isPlayerAdminContext = parts[parts.length - 1] === 'admin' && parts[parts.length - 2] === 'player';
-        const userId = isPlayerAdminContext ? parts[parts.length - 3] : parts[parts.length - 1];
-        const itemId = isPlayerAdminContext
-          ? parts.slice(1, -3).join('_') // Everything between guildId and userId_player_admin
-          : parts.slice(1, -1).join('_'); // Everything between guildId and userId
+        const userId = parts[parts.length - 1];
+        const itemId = parts.slice(1, -1).join('_'); // Everything between guildId and userId
         
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage player items.')) return;
