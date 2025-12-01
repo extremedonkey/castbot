@@ -205,14 +205,14 @@
     ],
     "icon": "https://cdn.discordapp.com/icons/1127596863885934652/21246f7f1ab8a24074a5bdb6ae3b6ba2.webp",
     "ownerId": "391415444084490240",
-    "memberCount": 83,
+    "memberCount": 81,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1688910442087,
-    "lastUpdated": 1761652120626,
+    "lastUpdated": 1764600711447,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -806,6 +806,10 @@
             "horse_511965": {
               "quantity": 1,
               "numAttacksAvailable": 0
+            },
+            "dupe13_213549": {
+              "quantity": 2,
+              "numAttacksAvailable": 2
             }
           },
           "cooldowns": {},
@@ -813,13 +817,17 @@
           "storeHistory": [],
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "B3",
+              "currentLocation": "F3",
               "exploredCoordinates": [
                 "C2",
                 "A1",
                 "B1",
                 "B2",
-                "B3"
+                "B3",
+                "D2",
+                "E2",
+                "E3",
+                "F3"
               ],
               "itemsFound": [],
               "movementHistory": [
@@ -852,6 +860,31 @@
                   "from": "B2",
                   "to": "B3",
                   "timestamp": "2025-11-24T15:51:00.226Z"
+                },
+                {
+                  "from": "B3",
+                  "to": "C2",
+                  "timestamp": "2025-11-24T15:51:27.570Z"
+                },
+                {
+                  "from": "C2",
+                  "to": "D2",
+                  "timestamp": "2025-12-01T14:53:52.395Z"
+                },
+                {
+                  "from": "D2",
+                  "to": "E2",
+                  "timestamp": "2025-12-01T14:54:03.989Z"
+                },
+                {
+                  "from": "E2",
+                  "to": "E3",
+                  "timestamp": "2025-12-01T14:57:16.465Z"
+                },
+                {
+                  "from": "E3",
+                  "to": "F3",
+                  "timestamp": "2025-12-01T14:57:29.814Z"
                 }
               ]
             }
@@ -2396,45 +2429,6 @@
       }
     },
     "reactionMappings": {
-      "1431763225971654777": {
-        "mapping": {
-          "🤍": "1335645034380525708",
-          "🤎": "1335645032891547670",
-          "1️⃣": "1368969399251501126",
-          "💛": "1335645031226277959",
-          "❤️": "1335645022774886490",
-          "🩷": "1335645024154812669",
-          "🩵": "1335645029674254347",
-          "💚": "1335645027497545811",
-          "💜": "1335645026168082532",
-          "isPronoun": true
-        },
-        "createdAt": 1761429361151,
-        "lastAccessed": 1761429361151
-      },
-      "1432363222937112667": {
-        "mapping": {
-          "1️⃣": "1431726526789058682",
-          "2️⃣": "1431726505569943633",
-          "3️⃣": "1431726511932575975",
-          "4️⃣": "1431726501602132139",
-          "5️⃣": "1431726513988042852",
-          "6️⃣": "1391142510859915358",
-          "7️⃣": "1391142522428067842",
-          "8️⃣": "1431726522649280532",
-          "9️⃣": "1431726520430366810",
-          "🔟": "1431726518358380547",
-          "🇦": "1431726524641447936",
-          "🇧": "1391142502429495328",
-          "🇨": "1391142517944357025",
-          "🇩": "1409024736490422364",
-          "🇪": "1391142497484275712",
-          "🇫": "1431726516210766007",
-          "isTimezone": true
-        },
-        "createdAt": 1761572415472,
-        "lastAccessed": 1761572415472
-      },
       "1434393146200031363": {
         "mapping": {
           "1️⃣": "1431726526789058682",
@@ -3800,44 +3794,20 @@
       "tag": "mpschettig"
     },
     "analyticsVersion": "1.0",
-    "reactionMappings": {
-      "1432379233216233686": {
-        "mapping": {
-          "1️⃣": "1432378958376341565",
-          "2️⃣": "1432378938537017425",
-          "3️⃣": "1432378944530944220",
-          "4️⃣": "1432378935059943534",
-          "5️⃣": "1432378946250473545",
-          "6️⃣": "1432378936662167553",
-          "7️⃣": "1432378942144118846",
-          "8️⃣": "1432378954223714405",
-          "9️⃣": "1432378952101658797",
-          "🔟": "1432378950184599644",
-          "🇦": "1432378956581175468",
-          "🇧": "1432378932929364062",
-          "🇨": "1432378940441231373",
-          "🇩": "1432378960229957905",
-          "🇪": "1432378931025022986",
-          "🇫": "1432378948091904155",
-          "isTimezone": true
-        },
-        "createdAt": 1761576232722,
-        "lastAccessed": 1761576232722
-      }
-    }
+    "reactionMappings": {}
   },
   "1240325979214188615": {
     "serverName": "EpochORG S5: Incan Empire",
     "icon": "https://cdn.discordapp.com/icons/1240325979214188615/156095a9edb1de2f24dfac78d2904a04.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 63,
+    "memberCount": 62,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1715787157587,
-    "lastUpdated": 1763998725005,
+    "lastUpdated": 1764600712923,
     "players": {},
     "tribes": {
       "1241383870260056095": {
@@ -9237,14 +9207,14 @@
     "serverName": "Triumph Hub",
     "icon": "https://cdn.discordapp.com/icons/1080166267136262154/174fdda5d62bc8c2227e31f8111e7f05.webp",
     "ownerId": "572291395365109770",
-    "memberCount": 442,
+    "memberCount": 439,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1677602106604,
-    "lastUpdated": 1763947716383,
+    "lastUpdated": 1764600711074,
     "players": {
       "572291395365109770": {
         "age": "29"
@@ -11539,14 +11509,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 574,
+    "memberCount": 576,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1763947715886,
+    "lastUpdated": 1764600710634,
     "ownerInfo": {
       "username": "serviver",
       "globalName": "Serviver",
