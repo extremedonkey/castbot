@@ -182,6 +182,15 @@ async function calculateRegenerationWithCharges(pointData, config, guildId, enti
 
     // Phase 2: Individual charge regeneration
     if (newData.charges) {
+        // Safety: Ensure charges array has correct length (fixes migration bugs)
+        if (newData.charges.length < effectiveMax) {
+            console.log(`🐎 Extending charges array from ${newData.charges.length} to ${effectiveMax}`);
+            while (newData.charges.length < effectiveMax) {
+                newData.charges.push(null);  // Add missing charges as available
+            }
+            hasChanged = true;
+        }
+
         let availableCharges = 0;
         let regeneratedAny = false;
 
