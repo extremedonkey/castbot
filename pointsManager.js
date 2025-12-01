@@ -198,10 +198,17 @@ async function calculateRegenerationWithCharges(pointData, config, guildId, enti
             }
         }
 
-        if (regeneratedAny || newData.current !== availableCharges) {
+        // Only INCREASE current when charges regenerate - never decrease (preserves consumable bonuses)
+        // usePoints() handles decreasing current when stamina is used
+        if (availableCharges > newData.current) {
             newData.current = availableCharges;
             newData.max = effectiveMax;
             newData.lastRegeneration = now;
+            hasChanged = true;
+            console.log(`🐎⚡ Charges regenerated: ${newData.current} available`);
+        } else if (newData.max !== effectiveMax) {
+            // Still update max if it changed (e.g., player got new permanent item)
+            newData.max = effectiveMax;
             hasChanged = true;
         }
     } else {
