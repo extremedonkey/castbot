@@ -806,6 +806,10 @@
             "horse_511965": {
               "quantity": 1,
               "numAttacksAvailable": 0
+            },
+            "dupe13_213549": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
             }
           },
           "cooldowns": {},
@@ -823,7 +827,8 @@
                 "D2",
                 "E2",
                 "E3",
-                "F3"
+                "F3",
+                "E1"
               ],
               "itemsFound": [],
               "movementHistory": [
@@ -886,6 +891,16 @@
                   "from": "F3",
                   "to": "E2",
                   "timestamp": "2025-12-01T15:04:44.198Z"
+                },
+                {
+                  "from": "E2",
+                  "to": "E1",
+                  "timestamp": "2025-12-01T15:05:00.382Z"
+                },
+                {
+                  "from": "E1",
+                  "to": "E2",
+                  "timestamp": "2025-12-01T15:12:43.818Z"
                 }
               ]
             }
