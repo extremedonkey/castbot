@@ -4887,13 +4887,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_followup_execute_on_') &&
         !custom_id.startsWith('safari_followup_save_') &&
         !custom_id.startsWith('safari_item_limit_') &&
-        !custom_id.startsWith('safari_item_style_') &&
         !custom_id.startsWith('safari_item_quantity_') &&
         !custom_id.startsWith('safari_item_save_') &&
         !custom_id.startsWith('safari_item_reset_') &&
         !custom_id.startsWith('safari_currency_amount_') &&
         !custom_id.startsWith('safari_currency_limit_') &&
-        !custom_id.startsWith('safari_currency_style_') &&
         !custom_id.startsWith('safari_currency_save_') &&
         !custom_id.startsWith('safari_currency_reset_') &&
         !custom_id.startsWith('safari_currency_execute_on_') &&
@@ -16253,64 +16251,8 @@ Your server is now ready for Tycoons gameplay!`;
           return await showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('safari_item_style_')) {
-      // Handle item drop button style change
-      return ButtonHandlerFactory.create({
-        id: 'safari_item_style',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        updateMessage: true,
-        handler: async (context) => {
-          // Parse the custom_id: safari_item_style_buttonId_itemId_actionIndex
-          const fullString = context.customId.replace('safari_item_style_', '');
-          const lastUnderscoreIndex = fullString.lastIndexOf('_');
-          const actionIndex = parseInt(fullString.substring(lastUnderscoreIndex + 1));
-          const beforeActionIndex = fullString.substring(0, lastUnderscoreIndex);
-          
-          // Find itemId by checking which part exists in items
-          const { loadSafariContent } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
-          const items = safariData[context.guildId]?.items || {};
-          
-          let buttonId, itemId, item;
-          
-          // Try different split points to find valid itemId
-          const parts = beforeActionIndex.split('_');
-          for (let i = 1; i < parts.length; i++) {
-            const possibleItemId = parts.slice(i).join('_');
-            if (items[possibleItemId]) {
-              itemId = possibleItemId;
-              buttonId = parts.slice(0, i).join('_');
-              item = items[possibleItemId];
-              break;
-            }
-          }
-          
-          if (!item) {
-            return {
-              content: '❌ Item not found.',
-              ephemeral: true
-            };
-          }
-          
-          const style = context.values[0];
-          console.log(`🎨 STYLE: safari_item_style - style ${style} for ${buttonId}[${actionIndex}]`);
-          
-          // Store in temporary state (preserve existing defaults if present)
-          const stateKey = `${context.guildId}_${buttonId}_${itemId}_${actionIndex}`;
-          const state = dropConfigState.get(stateKey) || {
-            limit: 'once_per_player',
-            style: '2',
-            quantity: 1,
-            executeOn: 'true'
-          };
-          state.style = style;
-          dropConfigState.set(stateKey, state);
-          
-          // Return updated configuration UI
-          return await showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
-        }
-      })(req, res, client);
+    // NOTE: safari_item_style_* handler removed - button style is set at parent Custom Action level
+    // via custom_action_button_style_* handler. Sub-actions don't have their own buttons.
     } else if (custom_id.startsWith('safari_item_quantity_')) {
       // Handle item quantity change
       return ButtonHandlerFactory.create({
@@ -16527,12 +16469,9 @@ Your server is now ready for Tycoons gameplay!`;
             },
             executeOn: state.executeOn || 'true'  // Default to 'true' for backwards compatibility
           };
-          
-          // Also save button style if not default
-          if (state.style && state.style !== '2') {
-            button.style = parseInt(state.style);
-          }
-          
+
+          // NOTE: Button style is set at parent Custom Action level, not per sub-action
+
           // Add or update the action
           if (actionIndex < button.actions.length) {
             // Edit mode: Replace existing action
@@ -16654,37 +16593,8 @@ Your server is now ready for Tycoons gameplay!`;
           return await showGiveCurrencyConfig(context.guildId, buttonId, actionIndex, customTerms);
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('safari_currency_style_')) {
-      // Handle currency button style change
-      return ButtonHandlerFactory.create({
-        id: 'safari_currency_style',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        updateMessage: true,
-        handler: async (context) => {
-          // More robust parsing to handle button IDs with underscores
-          const fullString = context.customId.replace('safari_currency_style_', '');
-          const lastUnderscoreIndex = fullString.lastIndexOf('_');
-          const actionIndex = parseInt(fullString.substring(lastUnderscoreIndex + 1));
-          const buttonId = fullString.substring(0, lastUnderscoreIndex);
-          const style = context.values[0];
-          
-          console.log(`🎨 STYLE: safari_currency_style - style ${style} for ${buttonId}[${actionIndex}]`);
-          
-          // Store in temporary state
-          const stateKey = `${context.guildId}_${buttonId}_currency_${actionIndex}`;
-          const state = dropConfigState.get(stateKey) || { limit: null, style: null, amount: null, executeOn: 'true' };
-          state.style = style;
-          dropConfigState.set(stateKey, state);
-          
-          // Update temporary state
-          const { getCustomTerms } = await import('./safariManager.js');
-          const customTerms = await getCustomTerms(context.guildId);
-          
-          // Return updated configuration UI
-          return await showGiveCurrencyConfig(context.guildId, buttonId, actionIndex, customTerms);
-        }
-      })(req, res, client);
+    // NOTE: safari_currency_style_* handler removed - button style is set at parent Custom Action level
+    // via custom_action_button_style_* handler. Sub-actions don't have their own buttons.
     } else if (custom_id.startsWith('safari_currency_reset_') && custom_id !== 'safari_currency_reset_confirm') {
       // Handle reset claims for give_currency (not the confirm button for resetting all currency)
       return ButtonHandlerFactory.create({
@@ -16792,12 +16702,9 @@ Your server is now ready for Tycoons gameplay!`;
             },
             executeOn: state.executeOn || 'true'  // Default to 'true' for backwards compatibility
           };
-          
-          // Also save button style if not default
-          if (state.style && state.style !== '2') {
-            button.style = parseInt(state.style);
-          }
-          
+
+          // NOTE: Button style is set at parent Custom Action level, not per sub-action
+
           // Add or update the action
           if (actionIndex < button.actions.length) {
             // Edit mode: Replace existing action
@@ -39306,23 +39213,9 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
             ]
           }]
         },
-        
-        // Button Style Select
-        {
-          type: 1, // Action Row
-          components: [{
-            type: 3, // String Select
-            custom_id: `safari_item_style_${buttonId}_${itemId}_${actionIndex}`,
-            placeholder: 'Select button style...',
-            options: [
-              { label: 'Primary (Blue)', value: '1', emoji: { name: '🔵' }, default: state.style === '1' },
-              { label: 'Secondary (Grey)', value: '2', emoji: { name: '⚪' }, default: state.style === '2' },
-              { label: 'Success (Green)', value: '3', emoji: { name: '🟢' }, default: state.style === '3' },
-              { label: 'Danger (Red)', value: '4', emoji: { name: '🔴' }, default: state.style === '4' }
-            ]
-          }]
-        },
-        
+
+        // NOTE: Button style is set at parent Custom Action level via Trigger Type menu
+
         // Execute On Condition Select
         {
           type: 1, // Action Row
@@ -39486,23 +39379,9 @@ async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerm
             ]
           }]
         },
-        
-        // Button Style Select
-        {
-          type: 1, // Action Row
-          components: [{
-            type: 3, // String Select
-            custom_id: `safari_currency_style_${buttonId}_${actionIndex}`,
-            placeholder: 'Select button style...',
-            options: [
-              { label: 'Primary (Blue)', value: '1', emoji: { name: '🔵' }, default: state.style === '1' },
-              { label: 'Secondary (Grey)', value: '2', emoji: { name: '⚪' }, default: state.style === '2' },
-              { label: 'Success (Green)', value: '3', emoji: { name: '🟢' }, default: state.style === '3' },
-              { label: 'Danger (Red)', value: '4', emoji: { name: '🔴' }, default: state.style === '4' }
-            ]
-          }]
-        },
-        
+
+        // NOTE: Button style is set at parent Custom Action level via Trigger Type menu
+
         // Execute On Condition Select
         {
           type: 1, // Action Row

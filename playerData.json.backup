@@ -6287,14 +6287,14 @@
     "serverName": "EpochORG S4: Ancient Egypt",
     "icon": "https://cdn.discordapp.com/icons/1209015985798127696/fab803057622fa548002ca6920f860ac.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 78,
+    "memberCount": 79,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1708322273445,
-    "lastUpdated": 1763998724642,
+    "lastUpdated": 1765004995762,
     "ownerInfo": {
       "username": "mpschettig",
       "globalName": "Tylenol Boy",
@@ -9223,14 +9223,14 @@
     "serverName": "Triumph Hub",
     "icon": "https://cdn.discordapp.com/icons/1080166267136262154/174fdda5d62bc8c2227e31f8111e7f05.webp",
     "ownerId": "572291395365109770",
-    "memberCount": 439,
+    "memberCount": 440,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1677602106604,
-    "lastUpdated": 1764600711074,
+    "lastUpdated": 1765004994426,
     "players": {
       "572291395365109770": {
         "age": "29"

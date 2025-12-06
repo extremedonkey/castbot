@@ -1260,14 +1260,7 @@ export const BUTTON_REGISTRY = {
   },
 
   // Safari Currency Configuration (Custom Actions)
-  'safari_currency_style_*': {
-    label: 'Currency Style',
-    description: 'Configure currency button style for custom actions',
-    emoji: '🎨',
-    style: 'Secondary',
-    category: 'safari_management',
-    type: 'select_menu'
-  },
+  // NOTE: safari_currency_style_* removed - button style is set at parent Custom Action level
   'safari_currency_save_*': {
     label: 'Save Currency',
     description: 'Save currency action configuration',
