@@ -19,18 +19,18 @@ export const MENU_REGISTRY = {
         components: [
           {
             type: 10, // Text Display
-            content: 'Click the button below to set up CastBot. This will add Pronoun and Timezone roles to your server, and set up CastBot to use those roles, allowing prod and players to set their own pronouns, timezones and age for the castlists.\n\n💡 This setup can be run multiple times safely. If you already have pronoun roles in your server, CastBot will detect them and use them.'
+            content: 'Access the Setup Wizard for first-time setup, or manage existing pronoun/timezone roles and other server configuration.\n\n💡 The Setup Wizard guides new servers through initial CastBot configuration.'
           },
           { type: 14 }, // Separator
           {
-            type: 1, // ActionRow
+            type: 1, // ActionRow - Main tools (Setup Wizard moved here from legal row)
             components: [
               {
-                type: 2, // Button
-                custom_id: 'setup_castbot',
-                label: 'Run Setup',
-                style: 1, // Primary (Blue)
-                emoji: { name: '🪛' }
+                type: 2, // Button - Setup Wizard (reuses discordMessenger.createWelcomeComponents)
+                custom_id: 'prod_setup_wizard',
+                label: 'Setup Wizard',
+                style: 1, // Primary (Blue) - prominent action
+                emoji: { name: '🧙' }
               },
               {
                 type: 2, // Button
@@ -64,15 +64,8 @@ export const MENU_REGISTRY = {
           },
           { type: 14 }, // Separator
           {
-            type: 1, // ActionRow for legal/help buttons
+            type: 1, // ActionRow for legal buttons
             components: [
-              {
-                type: 2, // Button - Setup Wizard (reuses discordMessenger.createWelcomeComponents)
-                custom_id: 'prod_setup_wizard',
-                label: 'Setup Wizard',
-                style: 1, // Primary (Blue) - prominent action
-                emoji: { name: '🧙' }
-              },
               {
                 type: 2, // Button
                 custom_id: 'prod_terms_of_service',

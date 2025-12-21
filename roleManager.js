@@ -1815,7 +1815,7 @@ function generateSetupResponseV2(results) {
         fullMessage = fullMessage.substring(0, CHAR_LIMIT - 150) + '\n\n---\n\n⚠️ **Response truncated** - Message exceeded 4000 character limit. Full details logged to console.';
     }
 
-    // Create Components V2 Container with TextDisplay
+    // Create Components V2 Container with TextDisplay, Separator, and Main Menu button
     return {
         type: 17, // Container component
         accent_color: 0x7ED321, // Green accent color
@@ -1823,6 +1823,18 @@ function generateSetupResponseV2(results) {
             {
                 type: 10, // TextDisplay component
                 content: fullMessage
+            },
+            { type: 14 }, // Separator before navigation
+            {
+                type: 1, // ActionRow
+                components: [
+                    {
+                        type: 2, // Button - Main Menu (LEAN standard: back arrow, no emoji)
+                        custom_id: 'viral_menu',
+                        label: '← Main Menu',
+                        style: 2 // Secondary (grey)
+                    }
+                ]
             }
         ]
     };

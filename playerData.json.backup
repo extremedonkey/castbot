@@ -11124,7 +11124,17 @@
       "discriminator": "0",
       "tag": "extremedonkey"
     },
-    "analyticsVersion": "1.0"
+    "analyticsVersion": "1.0",
+    "pronounRoleIDs": [
+      "1452136625814634723",
+      "1452136627953598526",
+      "1452136629736308826",
+      "1452136631678275624",
+      "1452136633553125463",
+      "1452136636736602238",
+      "1452136639773020160",
+      "1452136641350209650"
+    ]
   },
   "974318870057848842": {
     "tribes": {
@@ -11448,14 +11458,14 @@
     "serverName": "Servivorg S14 - FINAL FANTASY",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/189c3570ea34b3fbf3ee7b4d5989d32e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 575,
+    "memberCount": 576,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1766282561902,
+    "lastUpdated": 1766285829193,
     "ownerInfo": {
       "username": "serviver",
       "globalName": "Serviver",

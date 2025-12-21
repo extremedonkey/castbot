@@ -350,25 +350,17 @@ class DiscordMessenger {
         custom_id: 'setup_castbot',
         label: 'Run Setup',
         style: 1, // Primary (blue)
-        emoji: { name: '🔧' }
+        emoji: { name: '🪛' }
       });
 
       // Castlist Manager - disabled if no pronouns/timezones
       actionButtons.push({
         type: 2, // Button
-        custom_id: 'castlist_hub_main',
+        custom_id: 'castlist_hub_main_new',  // NEW: Creates new ephemeral message instead of replacing
         label: 'Castlist Manager',
         style: 2, // Secondary (grey)
         emoji: { name: '📋' },
         disabled: !hasSetup
-      });
-
-      // Main Menu - back arrow, no emoji (LEAN standard)
-      actionButtons.push({
-        type: 2, // Button
-        custom_id: 'viral_menu',
-        label: '← Main Menu',
-        style: 2 // Secondary (grey)
       });
     }
 
@@ -384,11 +376,21 @@ class DiscordMessenger {
     // Support server link - always available
     actionButtons.push({
       type: 2, // Link Button
-      label: 'Castbot Help Server',
+      label: 'CastBot Help Server',
       style: 5, // Link style
       url: 'https://discord.gg/H7MpJEjkwT',
       emoji: { name: '💬' }
     });
+
+    // Main Menu - back arrow, no emoji (LEAN standard) - LAST position in channel context
+    if (!isDM) {
+      actionButtons.push({
+        type: 2, // Button
+        custom_id: 'viral_menu',
+        label: '← Main Menu',
+        style: 2 // Secondary (grey)
+      });
+    }
 
     // DM content uses the original demo message
     const dmContent = {
@@ -400,7 +402,7 @@ class DiscordMessenger {
     // Channel (Setup Wizard) content - new instructional copy
     const channelContent = {
       title: '## 🧙🏽 CastBot Setup Wizard\n\nWelcome to CastBot - your one stop shop for managing your Cast Experience! Manage your Season Applications, create Castlists, create Idol Hunts & Safaris, and much more!',
-      instructions: '> **`How to get started`**\n\n**1. Click the 🔧 Run Setup button below**: CastBot uses Discord Roles for player Pronouns and Timezones. Setup will automatically create pronoun and timezone roles in your server, and add them to CastBot. Don\'t worry if you already have some - CastBot will detect and add them to Castbot.\n\n**2. Create your first Castlist**: Once you\'ve ran setup, click Castlist Manager and create your first castlist. CastBot also uses roles to manage castlists - during a season you\'ll simply add your tribe roles to CastBot and it will do the rest! We recommend testing this out with your production team role before your season starts to get used to it.',
+      instructions: '> **`How to get started`**\n\n**1. Click the 🪛 Run Setup button below**\nCastBot uses Discord Roles for player Pronouns and Timezones. Setup will automatically create pronoun and timezone roles in your server, and add them to CastBot. Don\'t worry if you already have some - CastBot will detect and add them to CastBot.\n\n**2. Create your first Castlist**\nOnce you\'ve ran setup, click Castlist Manager and create your first castlist. CastBot also uses roles to manage castlists - during a season you\'ll simply add your tribe roles to CastBot and it will do the rest! We recommend testing this out with your production team role before your season starts to get used to it.',
       footer: 'To get back to CastBot, type `/menu` from any channel in your server! Once your season is up and running, use `/castlist` to summon the active castlist showing players. You can get back to this menu from /menu → Tools'
     };
 

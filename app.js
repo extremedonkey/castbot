@@ -8640,6 +8640,31 @@ To fix this:
           return hubData;
         }
       })(req, res, client);
+    } else if (custom_id === 'castlist_hub_main_new') {
+      // Handle Castlist Hub from Setup Wizard - Creates NEW ephemeral message instead of replacing
+      return ButtonHandlerFactory.create({
+        id: 'castlist_hub_main_new',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        // NO updateMessage - creates new ephemeral message
+        handler: async (context) => {
+          console.log(`📋 START: castlist_hub_main_new - user ${context.userId} (NEW ephemeral from Setup Wizard)`);
+
+          const { createCastlistHub } = await import('./castlistHub.js');
+          const hubData = await createCastlistHub(context.guildId, {
+            mode: 'list',
+            skipMemberFetch: false  // Fetch members for accurate initial display
+          });
+
+          console.log(`✅ SUCCESS: castlist_hub_main_new - showing hub as NEW ephemeral message`);
+
+          // Return as ephemeral response (not updateMessage)
+          return {
+            ...hubData,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'castlist_select') {
       // Handle all castlist selections through the standard handler
       // 'create_new' selection triggers modal directly, others update hub view

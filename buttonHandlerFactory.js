@@ -471,6 +471,14 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'castlist'
   },
+  'castlist_hub_main_new': {
+    label: 'Castlist Manager',
+    description: 'Open the Castlist Management Hub as NEW ephemeral message (from Setup Wizard)',
+    emoji: '📋',
+    style: 'Secondary',
+    parent: 'prod_setup_wizard',
+    category: 'castlist'
+  },
   'castlist_select': {
     label: 'Select Castlist',
     description: 'Select a castlist to view or manage',
