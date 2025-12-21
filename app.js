@@ -705,6 +705,31 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Track legacy menu usage
   MenuBuilder.trackLegacyMenu('createProductionMenuInterface', 'Main production menu');
 
+  // Check if server has completed initial setup (at least 1 pronoun AND 1 timezone)
+  // If not, show Setup Wizard instead of Production Menu
+  const hasPronouns = playerData[guildId]?.pronounRoleIDs?.length > 0;
+  const hasTimezones = playerData[guildId]?.timezones && Object.keys(playerData[guildId].timezones).length > 0;
+  const hasSetup = hasPronouns && hasTimezones;
+
+  if (!hasSetup) {
+    console.log(`🧙 First-run detected: pronouns=${hasPronouns}, timezones=${hasTimezones} - showing Setup Wizard instead of Production Menu`);
+
+    // Import Discord Messenger service for reusable components
+    const { default: DiscordMessenger } = await import('./discordMessenger.js');
+
+    // Return Setup Wizard components with hasSetup status
+    const wizardComponents = DiscordMessenger.createWelcomeComponents({
+      context: 'channel',
+      hasSetup
+    });
+
+    // Return in same format as Production Menu expects
+    return {
+      flags: (1 << 15), // IS_COMPONENTS_V2
+      components: wizardComponents
+    };
+  }
+
   // Extract castlist data using Virtual Adapter pattern for modern entities
   const { allCastlists } = await extractCastlistData(playerData, guildId);
 
@@ -721,12 +746,11 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   if (castlistRows.length > 1) {
     console.log('Pagination active: castlists split across multiple rows to prevent Discord ActionRow limit');
   }
-  
-  // Check if pronouns/timezones exist for conditional buttons
-  const hasPronouns = playerData[guildId]?.pronounRoleIDs?.length > 0;
-  const hasTimezones = playerData[guildId]?.timezones && Object.keys(playerData[guildId].timezones).length > 0;
-  const hasRoles = hasPronouns || hasTimezones;
-  
+
+  // Note: hasPronouns AND hasTimezones are true at this point (we return Setup Wizard early if not)
+  // hasRoles kept for backward compatibility but will always be true here
+  const hasRoles = true;
+
   // Create admin control buttons (reorganized for Castlists, Applications and Season Management section)
   const adminButtons = [];
 
@@ -7998,11 +8022,22 @@ To fix this:
         handler: async (context) => {
           console.log(`🧙 Setup Wizard requested by user ${context.userId}`);
 
+          // Check if server has completed setup (at least 1 pronoun AND 1 timezone)
+          const playerData = await loadPlayerData();
+          const hasPronouns = playerData[context.guildId]?.pronounRoleIDs?.length > 0;
+          const hasTimezones = playerData[context.guildId]?.timezones && Object.keys(playerData[context.guildId].timezones).length > 0;
+          const hasSetup = hasPronouns && hasTimezones;
+
+          console.log(`🧙 Setup status: pronouns=${hasPronouns}, timezones=${hasTimezones}, hasSetup=${hasSetup}`);
+
           // Import Discord Messenger service for reusable components
           const { default: DiscordMessenger } = await import('./discordMessenger.js');
 
-          // Get components in 'channel' context (no DM-specific buttons)
-          const welcomeComponents = DiscordMessenger.createWelcomeComponents({ context: 'channel' });
+          // Get components in 'channel' context with setup status
+          const welcomeComponents = DiscordMessenger.createWelcomeComponents({
+            context: 'channel',
+            hasSetup
+          });
 
           console.log(`✅ Setup Wizard: Returning ephemeral response with ${welcomeComponents.length} container(s)`);
 

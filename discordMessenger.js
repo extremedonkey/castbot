@@ -332,70 +332,104 @@ class DiscordMessenger {
    *
    * @param {Object} options - Configuration options
    * @param {string} options.context - 'dm' or 'channel' - affects button visibility and messaging
+   * @param {boolean} options.hasSetup - Whether server has at least 1 pronoun AND 1 timezone (enables Castlist Manager)
    * @returns {Array} Components V2 container array for Discord
    */
-  static createWelcomeComponents(options = { context: 'dm' }) {
+  static createWelcomeComponents(options = { context: 'dm', hasSetup: false }) {
     const isDM = options.context === 'dm';
+    const hasSetup = options.hasSetup || false;
 
     // Build action row components based on context
     const actionButtons = [];
 
-    // DM-specific interactive button (only useful in DMs where UPDATE_MESSAGE can be demonstrated)
-    if (isDM) {
+    // Channel-only buttons for Setup Wizard
+    if (!isDM) {
+      // Run Setup button - always available in channel context
       actionButtons.push({
         type: 2, // Button
-        custom_id: 'dm_poc_button',
-        label: 'Try Interactive Button',
-        style: 3, // Success (green)
-        emoji: { name: '👋' }
+        custom_id: 'setup_castbot',
+        label: 'Run Setup',
+        style: 1, // Primary (blue)
+        emoji: { name: '🔧' }
+      });
+
+      // Castlist Manager - disabled if no pronouns/timezones
+      actionButtons.push({
+        type: 2, // Button
+        custom_id: 'castlist_hub_main',
+        label: 'Castlist Manager',
+        style: 2, // Secondary (grey)
+        emoji: { name: '📋' },
+        disabled: !hasSetup
+      });
+
+      // Main Menu - back arrow, no emoji (LEAN standard)
+      actionButtons.push({
+        type: 2, // Button
+        custom_id: 'viral_menu',
+        label: '← Main Menu',
+        style: 2 // Secondary (grey)
       });
     }
 
-    // View Tips - available in both contexts
+    // Castbot Features (View Tips) - available in both contexts
     actionButtons.push({
       type: 2, // Button
       custom_id: 'dm_view_tips',
-      label: 'View Tips',
-      style: 1, // Primary (blue)
-      emoji: { name: '💡' }
+      label: 'Castbot Features',
+      style: 2, // Secondary (grey)
+      emoji: { name: '✨' }
     });
 
     // Support server link - always available
     actionButtons.push({
       type: 2, // Link Button
-      label: 'Join CastBot Server',
+      label: 'Castbot Help Server',
       style: 5, // Link style
       url: 'https://discord.gg/H7MpJEjkwT',
       emoji: { name: '💬' }
     });
 
+    // DM content uses the original demo message
+    const dmContent = {
+      title: '## 🎭 Welcome to CastBot!\n\nThank you for trying the DM demo! CastBot helps you run online reality game seasons with powerful features:',
+      features: '> **`💚 Key Features`**\n• 🎬 Season management & applications\n• 🏆 Cast rankings & voting systems\n• 🦁 Safari adventure challenges\n• 📋 Dynamic castlist displays\n• ⏰ Timezone & pronoun roles',
+      help: '> **`💬 Need Help?`**\nJoin our support server for:\n• ✅ Feature tutorials & guides\n• 🔧 Technical support\n• 🎯 New feature announcements\n• 👥 Community discussions'
+    };
+
+    // Channel (Setup Wizard) content - new instructional copy
+    const channelContent = {
+      title: '## 🧙🏽 CastBot Setup Wizard\n\nWelcome to CastBot - your one stop shop for managing your Cast Experience! Manage your Season Applications, create Castlists, create Idol Hunts & Safaris, and much more!',
+      instructions: '> **`How to get started`**\n\n**1. Click the 🔧 Run Setup button below**: CastBot uses Discord Roles for player Pronouns and Timezones. Setup will automatically create pronoun and timezone roles in your server, and add them to CastBot. Don\'t worry if you already have some - CastBot will detect and add them to Castbot.\n\n**2. Create your first Castlist**: Once you\'ve ran setup, click Castlist Manager and create your first castlist. CastBot also uses roles to manage castlists - during a season you\'ll simply add your tribe roles to CastBot and it will do the rest! We recommend testing this out with your production team role before your season starts to get used to it.',
+      footer: 'To get back to CastBot, type `/menu` from any channel in your server! Once your season is up and running, use `/castlist` to summon the active castlist showing players. You can get back to this menu from /menu → Tools'
+    };
+
+    // Build components based on context
+    const components = isDM
+      ? [
+          { type: 10, content: dmContent.title },
+          { type: 14 },
+          { type: 10, content: dmContent.features },
+          { type: 14 },
+          { type: 10, content: dmContent.help },
+          { type: 14 },
+          { type: 1, components: actionButtons }
+        ]
+      : [
+          { type: 10, content: channelContent.title },
+          { type: 14 },
+          { type: 10, content: channelContent.instructions },
+          { type: 14 },
+          { type: 10, content: channelContent.footer },
+          { type: 14 },
+          { type: 1, components: actionButtons }
+        ];
+
     return [
       {
         type: 17, // Container
         accent_color: 0x3498DB, // Blue - standard CastBot color
-        components: [
-          {
-            type: 10, // Text Display
-            content: isDM
-              ? '## 🎭 Welcome to CastBot!\n\nThank you for trying the DM demo! CastBot helps you run online reality game seasons with powerful features:'
-              : '## 🎭 CastBot Setup Wizard\n\nWelcome! CastBot helps you run online reality game seasons with powerful features:'
-          },
-          { type: 14 }, // Separator
-          {
-            type: 10,
-            content: '> **`💚 Key Features`**\n• 🎬 Season management & applications\n• 🏆 Cast rankings & voting systems\n• 🦁 Safari adventure challenges\n• 📋 Dynamic castlist displays\n• ⏰ Timezone & pronoun roles'
-          },
-          { type: 14 }, // Separator
-          {
-            type: 10,
-            content: '> **`💬 Need Help?`**\nJoin our support server for:\n• ✅ Feature tutorials & guides\n• 🔧 Technical support\n• 🎯 New feature announcements\n• 👥 Community discussions'
-          },
-          { type: 14 }, // Separator before buttons
-          {
-            type: 1, // Action Row
-            components: actionButtons
-          }
-        ]
+        components
       }
     ];
   }
