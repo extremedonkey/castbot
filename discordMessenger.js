@@ -382,15 +382,8 @@ class DiscordMessenger {
       emoji: { name: '💬' }
     });
 
-    // Main Menu - back arrow, no emoji (LEAN standard) - LAST position in channel context
-    if (!isDM) {
-      actionButtons.push({
-        type: 2, // Button
-        custom_id: 'viral_menu',
-        label: '← Main Menu',
-        style: 2 // Secondary (grey)
-      });
-    }
+    // Note: Main Menu button removed from Setup Wizard - it's now on the subsequent screens
+    // (setup_castbot completion, castlist_hub, etc.) to avoid redundancy
 
     // DM content uses the original demo message
     const dmContent = {

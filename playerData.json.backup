@@ -10936,7 +10936,17 @@
       "discriminator": "0",
       "tag": "extremedonkey"
     },
-    "analyticsVersion": "1.0"
+    "analyticsVersion": "1.0",
+    "pronounRoleIDs": [
+      "1452138592414728265",
+      "1452138596059451514",
+      "1452138598068650100",
+      "1452138599918207118",
+      "1452138602032140349",
+      "1452138603881955342",
+      "1452138605828116666",
+      "1452138607589724350"
+    ]
   },
   "1297188286191767603": {
     "tribes": {
@@ -11030,111 +11040,6 @@
       "tag": "mpschettig"
     },
     "analyticsVersion": "1.0"
-  },
-  "1400065575090389045": {
-    "tribes": {
-      "1432353406034382868": {
-        "emoji": "🪵",
-        "showPlayerEmojis": false,
-        "color": null,
-        "analyticsName": "🪵 ET 🪵",
-        "analyticsAdded": 1763216951208,
-        "castlistIds": [
-          "default"
-        ],
-        "castlist": "default"
-      },
-      "1432353517258936370": {
-        "castlistIds": [
-          "default"
-        ],
-        "castlist": "default",
-        "color": "#000000",
-        "analyticsName": "blaESTbla",
-        "analyticsAdded": 1763217037162,
-        "emoji": "🏕️",
-        "showPlayerEmojis": true,
-        "memberCount": 0
-      },
-      "1400065656472207395": {
-        "castlistIds": [
-          "default"
-        ],
-        "castlist": "default",
-        "color": "#000000",
-        "analyticsName": "CastBot-Dev (Dynamic Castlist)",
-        "analyticsAdded": 1763217037182,
-        "emoji": "🏕️",
-        "showPlayerEmojis": true,
-        "memberCount": 1
-      }
-    },
-    "players": {},
-    "timezones": {},
-    "castlistConfigs": {
-      "default": {
-        "id": "default",
-        "name": "Active Castlist",
-        "type": "system",
-        "createdAt": 1763216979892,
-        "createdBy": "system",
-        "settings": {
-          "sortStrategy": "placements",
-          "showRankings": true,
-          "maxDisplay": 25,
-          "visibility": "public"
-        },
-        "metadata": {
-          "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
-          "emoji": "📋",
-          "isDefault": true
-        },
-        "modifiedAt": 1763217010491,
-        "modifiedBy": "system"
-      }
-    },
-    "placements": {
-      "global": {
-        "391415444084490240": {
-          "placement": 1,
-          "updatedBy": "391415444084490240",
-          "updatedAt": "2025-11-15T14:29:49.618Z"
-        },
-        "1328366050848411658": {
-          "placement": 2,
-          "updatedBy": "391415444084490240",
-          "updatedAt": "2025-11-15T14:29:56.922Z"
-        }
-      }
-    },
-    "serverName": "CastBot Regression Pink",
-    "icon": "https://cdn.discordapp.com/icons/1400065575090389045/bd1ee1bc1ff3abca14f2d2ba9455716f.webp",
-    "ownerId": "391415444084490240",
-    "memberCount": 2,
-    "description": null,
-    "vanityURLCode": null,
-    "preferredLocale": "en-US",
-    "partnered": false,
-    "verified": false,
-    "createdTimestamp": 1753872045062,
-    "lastUpdated": 1763217497304,
-    "ownerInfo": {
-      "username": "extremedonkey",
-      "globalName": "Reece",
-      "discriminator": "0",
-      "tag": "extremedonkey"
-    },
-    "analyticsVersion": "1.0",
-    "pronounRoleIDs": [
-      "1452136625814634723",
-      "1452136627953598526",
-      "1452136629736308826",
-      "1452136631678275624",
-      "1452136633553125463",
-      "1452136636736602238",
-      "1452136639773020160",
-      "1452136641350209650"
-    ]
   },
   "974318870057848842": {
     "tribes": {
@@ -11653,5 +11558,117 @@
         }
       }
     }
+  },
+  "1400065575090389045": {
+    "players": {},
+    "tribes": {},
+    "timezones": {
+      "1452136644152004649": {
+        "offset": -8,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)",
+        "timezoneId": "PT"
+      },
+      "1452136645737582772": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)",
+        "timezoneId": "MT"
+      },
+      "1452136647561842828": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)",
+        "timezoneId": "CT"
+      },
+      "1452136649420181656": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)",
+        "timezoneId": "ET"
+      },
+      "1452136652041617464": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)",
+        "timezoneId": "AT"
+      },
+      "1452136653845037099": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)",
+        "timezoneId": "NT"
+      },
+      "1452136655602454538": {
+        "offset": 0,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)",
+        "timezoneId": "GMT"
+      },
+      "1452136657741545564": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)",
+        "timezoneId": "CET"
+      },
+      "1452136659679313931": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "EET (UTC+2)",
+        "timezoneId": "EET"
+      },
+      "1452136661608566784": {
+        "offset": 2,
+        "dstObserved": false,
+        "standardName": "SAST (UTC+2)",
+        "timezoneId": "SAST"
+      },
+      "1452136663181692991": {
+        "offset": 5.5,
+        "dstObserved": false,
+        "standardName": "IST (UTC+5.5)",
+        "timezoneId": "IST"
+      },
+      "1452136664863346690": {
+        "offset": 7,
+        "dstObserved": false,
+        "standardName": "ICT (UTC+7)",
+        "timezoneId": "ICT"
+      },
+      "1452136667077939252": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": "GMT+8 (UTC+8)",
+        "timezoneId": "GMT8"
+      },
+      "1452136668994998325": {
+        "offset": 9,
+        "dstObserved": false,
+        "standardName": "JST (UTC+9)",
+        "timezoneId": "JST"
+      },
+      "1452136671075242025": {
+        "offset": 10,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)",
+        "timezoneId": "AEST"
+      },
+      "1452136673201885327": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)",
+        "timezoneId": "NZST"
+      }
+    },
+    "pronounRoleIDs": [
+      "1452136625814634723",
+      "1452136627953598526",
+      "1452136629736308826",
+      "1452136631678275624",
+      "1452136633553125463",
+      "1452136636736602238",
+      "1452136639773020160",
+      "1452136641350209650"
+    ]
   }
 }
