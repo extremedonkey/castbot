@@ -64,8 +64,15 @@ export const MENU_REGISTRY = {
           },
           { type: 14 }, // Separator
           {
-            type: 1, // ActionRow for legal buttons
+            type: 1, // ActionRow for legal/help buttons
             components: [
+              {
+                type: 2, // Button - Setup Wizard (reuses discordMessenger.createWelcomeComponents)
+                custom_id: 'prod_setup_wizard',
+                label: 'Setup Wizard',
+                style: 1, // Primary (Blue) - prominent action
+                emoji: { name: '🧙' }
+              },
               {
                 type: 2, // Button
                 custom_id: 'prod_terms_of_service',

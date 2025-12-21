@@ -327,6 +327,80 @@ class DiscordMessenger {
   }
   
   /**
+   * Create welcome/setup wizard UI components
+   * Reusable across DM delivery (msg_test) and ephemeral channel responses (setup_wizard)
+   *
+   * @param {Object} options - Configuration options
+   * @param {string} options.context - 'dm' or 'channel' - affects button visibility and messaging
+   * @returns {Array} Components V2 container array for Discord
+   */
+  static createWelcomeComponents(options = { context: 'dm' }) {
+    const isDM = options.context === 'dm';
+
+    // Build action row components based on context
+    const actionButtons = [];
+
+    // DM-specific interactive button (only useful in DMs where UPDATE_MESSAGE can be demonstrated)
+    if (isDM) {
+      actionButtons.push({
+        type: 2, // Button
+        custom_id: 'dm_poc_button',
+        label: 'Try Interactive Button',
+        style: 3, // Success (green)
+        emoji: { name: '👋' }
+      });
+    }
+
+    // View Tips - available in both contexts
+    actionButtons.push({
+      type: 2, // Button
+      custom_id: 'dm_view_tips',
+      label: 'View Tips',
+      style: 1, // Primary (blue)
+      emoji: { name: '💡' }
+    });
+
+    // Support server link - always available
+    actionButtons.push({
+      type: 2, // Link Button
+      label: 'Join CastBot Server',
+      style: 5, // Link style
+      url: 'https://discord.gg/H7MpJEjkwT',
+      emoji: { name: '💬' }
+    });
+
+    return [
+      {
+        type: 17, // Container
+        accent_color: 0x3498DB, // Blue - standard CastBot color
+        components: [
+          {
+            type: 10, // Text Display
+            content: isDM
+              ? '## 🎭 Welcome to CastBot!\n\nThank you for trying the DM demo! CastBot helps you run online reality game seasons with powerful features:'
+              : '## 🎭 CastBot Setup Wizard\n\nWelcome! CastBot helps you run online reality game seasons with powerful features:'
+          },
+          { type: 14 }, // Separator
+          {
+            type: 10,
+            content: '> **`💚 Key Features`**\n• 🎬 Season management & applications\n• 🏆 Cast rankings & voting systems\n• 🦁 Safari adventure challenges\n• 📋 Dynamic castlist displays\n• ⏰ Timezone & pronoun roles'
+          },
+          { type: 14 }, // Separator
+          {
+            type: 10,
+            content: '> **`💬 Need Help?`**\nJoin our support server for:\n• ✅ Feature tutorials & guides\n• 🔧 Technical support\n• 🎯 New feature announcements\n• 👥 Community discussions'
+          },
+          { type: 14 }, // Separator before buttons
+          {
+            type: 1, // Action Row
+            components: actionButtons
+          }
+        ]
+      }
+    ];
+  }
+
+  /**
    * Send a test message (used by Msg Test button)
    * @param {Client} client - Discord.js client
    * @param {string} userId - Discord user ID
@@ -341,59 +415,11 @@ class DiscordMessenger {
       const dmChannel = await user.createDM();
       console.log(`📬 DM Channel ID: ${dmChannel.id}`);
 
-      // Step 2: Prepare Components V2 welcome message with CastBot branding
+      // Step 2: Prepare Components V2 welcome message using reusable components
       // CRITICAL: Must include flags field with IS_COMPONENTS_V2 flag!
       const v2Message = {
         flags: 1 << 15, // IS_COMPONENTS_V2 (32768) - REQUIRED for Container type 17!
-        components: [
-          {
-            type: 17, // Container
-            accent_color: 0x3498DB, // Blue - standard CastBot color
-            components: [
-              {
-                type: 10, // Text Display
-                content: '## 🎭 Welcome to CastBot!\n\nThank you for trying the DM demo! CastBot helps you run online reality game seasons with powerful features:'
-              },
-              { type: 14 }, // Separator
-              {
-                type: 10,
-                content: '> **`💚 Key Features`**\n• 🎬 Season management & applications\n• 🏆 Cast rankings & voting systems\n• 🦁 Safari adventure challenges\n• 📋 Dynamic castlist displays\n• ⏰ Timezone & pronoun roles'
-              },
-              { type: 14 }, // Separator
-              {
-                type: 10,
-                content: '> **`💬 Need Help?`**\nJoin our support server for:\n• ✅ Feature tutorials & guides\n• 🔧 Technical support\n• 🎯 New feature announcements\n• 👥 Community discussions'
-              },
-              { type: 14 }, // Separator before buttons
-              {
-                type: 1, // Action Row
-                components: [
-                  {
-                    type: 2, // Button
-                    custom_id: 'dm_poc_button',
-                    label: 'Try Interactive Button',
-                    style: 3, // Success (green)
-                    emoji: { name: '👋' }
-                  },
-                  {
-                    type: 2, // Button
-                    custom_id: 'dm_view_tips',
-                    label: 'View Tips',
-                    style: 1, // Primary (blue)
-                    emoji: { name: '💡' }
-                  },
-                  {
-                    type: 2, // Link Button
-                    label: 'Join CastBot Server',
-                    style: 5, // Link style
-                    url: 'https://discord.gg/H7MpJEjkwT',
-                    emoji: { name: '💬' }
-                  }
-                ]
-              }
-            ]
-          }
-        ]
+        components: this.createWelcomeComponents({ context: 'dm' })
       };
 
       // Step 3: Send via Discord REST API

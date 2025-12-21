@@ -7991,6 +7991,30 @@ To fix this:
         }
       })(req, res, client);
 
+    } else if (custom_id === 'prod_setup_wizard') {
+      // Setup Wizard - ephemeral channel response (shares UI with msg_test DM delivery)
+      return ButtonHandlerFactory.create({
+        id: 'prod_setup_wizard',
+        handler: async (context) => {
+          console.log(`🧙 Setup Wizard requested by user ${context.userId}`);
+
+          // Import Discord Messenger service for reusable components
+          const { default: DiscordMessenger } = await import('./discordMessenger.js');
+
+          // Get components in 'channel' context (no DM-specific buttons)
+          const welcomeComponents = DiscordMessenger.createWelcomeComponents({ context: 'channel' });
+
+          console.log(`✅ Setup Wizard: Returning ephemeral response with ${welcomeComponents.length} container(s)`);
+
+          // Return ephemeral response with Components V2 structure
+          return {
+            flags: (1 << 15), // IS_COMPONENTS_V2 - ButtonHandlerFactory adds EPHEMERAL automatically
+            components: welcomeComponents,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'dm_poc_button') {
       // PoC: Button click in DM demonstrating UPDATE_MESSAGE with Components V2
       return ButtonHandlerFactory.create({

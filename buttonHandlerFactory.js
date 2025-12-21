@@ -204,6 +204,14 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
+  'prod_setup_wizard': {
+    label: 'Setup Wizard',
+    description: 'Show CastBot features and setup help (ephemeral) - shares UI with msg_test DM delivery',
+    emoji: '🧙',
+    style: 'Primary',
+    parent: 'prod_setup',
+    category: 'admin'
+  },
   'dm_poc_button': {
     label: 'Click Me!',
     description: 'PoC button inside DM demonstrating UPDATE_MESSAGE with Components V2',
