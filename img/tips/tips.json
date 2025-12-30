@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "lastUpdated": "2025-12-30T04:08:47.655Z",
+  "lastUpdated": "2025-12-30T04:30:14.888Z",
   "channel": "1439277270400503870",
   "tips": [
     {
@@ -10,7 +10,7 @@
       "description": "Create a Custom Castlist ordered by Season",
       "showcase": "# ✨ CastBot New Features (1/10)\n-# v3.0\n\n**🏆 Winners' Castlist**\nCreate a Custom Castlist of all of your winners, nicely ordered by the season they won.\n\n**🧩 How to setup**\n• If it doesn't already exist, create a Winner Role in your ORG Server and assign it to past winners\n• Create a new castlist from `/menu` > Castlist Manager > ✨ Create New Castlist\n•  Choose Castlist Sorting Method as Vanity Role (Winners) and give the castlist a name like 'Winners'\n• Under 'Tribes on Castlist' add your Winner Role\n• You (or specs) can then post it from `/menu` (see the buttons up the top next to 'Post Castlist') or from within Castlist Manager\n• To make the winners appear in nice season-chronology-order, go into `/menu` > Players and assign each player a vanity role of the season they won. Castbot will then order alphabetically-then-numerically, so a player who won S1 will appear above a player who won S9.\n\n**🎟️ Tips**\n• If a player has won multiple seasons, they'll only appear once, ordered by the first alpha-numerically ordered vanity role of the season they won.",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455402391804317857/tip_1.png?ex=6954989a&is=6953471a&hm=7d8855a3d6db7f73e1f537a95fad0be962b9c8112e6cef24921953a2cf70b060&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455417519279046717/tip_1.png?ex=6954a6b0&is=69535530&hm=443c03a8a3981991f6c4b157c1e6e1668682482620cd6ef6b843be6d728ef06a&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292733205512364/tip_1.png?ex=6919fd50&is=6918abd0&hm=2039632f2a6af78193b3706a2196498d5687e0f12c2fb6e8406750ca0efdefcb&"
       }
     },
@@ -19,9 +19,9 @@
       "filename": "2.png",
       "title": "🎓 Alumni Placements",
       "description": "Show who placed when in your seasons!",
-      "showcase": "# ✨ CastBot New Features (2/10)\n-# v3.0\n\n**🎓 Alumni Placements**\nShow who placed where in your past seasons!\n\n**🧩 How to setup**\n• If they don't already exist, create a Discord role for your alumni (e.g., \"Season 1 Alumni\") and assign it to each alumni\n• Create a new castlist from `/menu` > Castlist Manager > ✨ Create New Castlist\n• Under 'Associated Season', select the season. If you haven't used Castbot for your Season Apps, you can quickly create this from `/menu` > Apps and then return. This lets you set placements per-season.\n• Under 'Tribes on Castlist' add the Season Role that your players are assigned to\n• Click the Placements button and then click 'Set Place', this will ensure they are displayed in order of placement.\n\n🎟️ Tips\n• Players without a placement will appear first in the castlist - this is since it assumes the season is ongoing. If there is some reason for not assigning a player a placement, you can give them a dummy low ranking (e.g. 99) to put them at the bottom of the castlist.",
+      "showcase": "# ✨ CastBot New Features (2/10)\n-# v3.0\n\n**🎓 Alumni Placements**\nShow who placed where in your past seasons!\n\n**🧩 How to setup**\n• If they don't already exist, create a Discord role for your alumni (e.g., \"Season 1 Alumni\") and assign it to each alumni\n• Create a new castlist from `/menu` > Castlist Manager > ✨ Create New Castlist\n• Under 'Associated Season', select the season. If you haven't used Castbot for your Season Apps, you can quickly create this from `/menu` > Apps and then return. This lets you set placements per-season.\n• Under 'Tribes on Castlist' add the Season Role that your players are assigned to\n• Click the Placements button and then click 'Set Place', this will ensure they are displayed in order of placement.\n\n**🎟️ Tips**\n• Players without a placement will appear first in the castlist - this is since it assumes the season is ongoing. If there is some reason for not assigning a player a placement, you can give them a dummy low ranking (e.g. 99) to put them at the bottom of the castlist.",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455402396896198657/tip_2.png?ex=6954989b&is=6953471b&hm=ea84db2bdc336081db0bc031ccc6c1eb140a2ec17e764bdaf4b4082751f363ce&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455417523569954899/tip_2.png?ex=6954a6b1&is=69535531&hm=37ac08f9b52b41b337fd3f042f5ecc29a6c7230627adc2ff2b6882cafa9a0fa3&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292739689648138/tip_2.png?ex=6919fd51&is=6918abd1&hm=0d62570cab38285f02397287bed6f2f5030998b391058eea85c8b44e12532df6&"
       }
     },
@@ -32,7 +32,7 @@
       "description": "Comprehensive admin interface for managing all CastBot features",
       "showcase": "# ✨ CastBot New Features (3/10)\n-# v3.0\n\n**🏘️Castlist Manager**\nNew central location to easily create and update many castlists!\n\n**🧩 How to setup**\n• Access from `/menu` > Castlist Manager",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455402402357182546/tip_3.png?ex=6954989c&is=6953471c&hm=86897289813f45dbf7f5338a5feec48958f13ff5ae16ff928156338aecf1eef2&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455417526531002450/tip_3.png?ex=6954a6b2&is=69535532&hm=003787ee27a78df81a3011ab4f11de33ea45a219117e6e834b5c4046f74f066c&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292744194592880/tip_3.png?ex=6919fd52&is=6918abd2&hm=670cdd85f7942551987c66767b207279eb355d332f81a845b1e1936217fd3ab9&"
       }
     },
@@ -43,7 +43,7 @@
       "description": "Automate swaps / merges and keep the old castlists handy!",
       "showcase": "# ✨ CastBot New Features (4/10)\n-# v3.0\n\n**🔃 Swap and Merge**\nLet players anonymously vote on applicants with visual ranking interface\n\n**🧩 How to setup**\n• In `/menu` > Castlist Manager > ✅ Active Castlist, click the Swap / Merge button and follow the prompts\n⚠️ Warning: Experimental feature, test it with prod first and use at your own risk!",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455402405133942838/tip_4.png?ex=6954989d&is=6953471d&hm=025dbdb2b86c91315c1e1a715cbd5b29d6c672675396711218fec04480271001&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455417530582700194/tip_4.png?ex=6954a6b3&is=69535533&hm=92e5853e823ed58d1b2c948ea2ce71acfd13d956a0a938696c55f1181f96be03&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292749420560416/tip_4.png?ex=6919fd54&is=6918abd4&hm=b637ad71d35dee2135e217649557b20177f652f0cf663178a421a93266d470ba&"
       }
     },
@@ -54,7 +54,7 @@
       "description": "Configure applications, questions, and production workflows",
       "showcase": "# ✨ CastBot New Features (5/10)\n-# v3.0\n\n**🎬 🌟 New, Cleaner Prod User Interface**\nStreamlined new interface based on the latest Discord designs!\n\n**🧩 How to setup**\n• Type `/menu`!",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455402409009615106/tip_5.png?ex=6954989e&is=6953471e&hm=9dc2bf4ccdd4fb6e9bf393fcecbf2958395293b0bb5e9aa22430f35a84f1cd10&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455417533606789307/tip_5.png?ex=6954a6b4&is=69535534&hm=28cd4c894b14e93ffb12ccd2d0bde076672fa39416f58377397a8061b07d49fd&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292754755584223/tip_5.png?ex=6919fd55&is=6918abd5&hm=6681a1ffafa0ec62c29dd379aa590ba87fbefca036b53bc06916c67a9a6580cd&"
       }
     },
@@ -65,7 +65,7 @@
       "description": "Run simple Idol Hunts, Stores or a Currency System!",
       "showcase": "# ✨ CastBot New Features (6/10)\n-# v3.0\n\n**🔀 Decoupled Idol Hunts**\nRun simple Idol Hunts, Stores or a Currency System!\n\n**🧩 How to setup**\n• Go to `/menu`, Stores / Items / Currency for a simple system\n• More complex Idol Hunts can be built with the ✨ Actions feature, and even more complex ones (Safaris) in  🗺️Map Explorer",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455402412834816030/tip_6.png?ex=6954989f&is=6953471f&hm=992330d5a44a26cacbca4d0cfc620497caa0899ff30e76779d7b73722b0eec46&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455417536517640254/tip_6.png?ex=6954a6b5&is=69535535&hm=39ce56dc8aba758d45f0d4abebdd0597cca0530e0753eae119690248006077a7&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292763634929755/tip_6.png?ex=6919fd57&is=6918abd7&hm=c7aecf21fa4cf4d86047affe0454c11fa4c98cccff2e75f2712ff022777eeffe&"
       }
     },
@@ -76,7 +76,7 @@
       "description": "New users are now prompted to setup roles",
       "showcase": "# ✨ CastBot New Features (7/10)\n-# v3.0\n\n**⚙️Automated Setup**\nNew users are now prompted to setup roles\n\n**🧩 How to setup**\n• Simply type `/menu` - CastBot will guide you through setting up standard pronoun and timezone roles!",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455402418098409584/tip_7.png?ex=695498a0&is=69534720&hm=2f75254c2abbc695f7da5c454083ce153d63b641aa18490fa43781c5df45d535&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455417540070080644/tip_7.png?ex=6954a6b5&is=69535535&hm=4eed769887f05931f6f428e7366b265684eecc61bfb23199cb8e49f443d0ad83&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292771684061267/tip_7.png?ex=6919fd59&is=6918abd9&hm=bd4d00ff6c4550fe5e7b1bac2e37a6b4710aa1d14946aa8dbb95051075151eb8&"
       }
     },
@@ -87,7 +87,7 @@
       "description": "Create and manage simple challenges from CastBot!",
       "showcase": "# ✨ CastBot New Features (8/10)\n-# v3.0\n\n**🏃‍♀️ Challenges**\nCreate and manage simple challenges from CastBot!\n\n**🧩 How to setup**\n• Go to `/menu` > Challenges\nNote: feature is still under development, for now it can be used for a simple harvesting-currency-attack-rounds based system (reach out to Reece if interested in how to use)",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455402428898873374/tip_8.png?ex=695498a3&is=69534723&hm=bdb44a51f88344212fa36153e019070e327401a5720064e822e9ff8cf42a7085&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455417543895416922/tip_8.png?ex=6954a6b6&is=69535536&hm=dbd15ef4ad289c1678d19d276161289d6d40408557c3158c1bedbaa78ce7dafc&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292780261150770/tip_8.png?ex=6919fd5b&is=6918abdb&hm=65cbb308fcd68f5b7bf9c465c3fdab3a225bdf3b68acc88018b64cd852092e4b&"
       }
     },
@@ -98,7 +98,7 @@
       "description": "Create custom season applications with multiple question types",
       "showcase": "# ✨ CastBot New Features (9/10)\n-# v3.0\n\n**📝 Application Builder**\nCreate custom season applications with multiple question types\n\n**🧩 How to setup**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455402435118895400/tip_9.png?ex=695498a4&is=69534724&hm=df84f4d55fbfd5cb904a694a065fd99e9cead752ba5c923e6cc0552231ab8be9&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455417547125035058/tip_9.png?ex=6954a6b7&is=69535537&hm=4227e6dba2934dd63ab1b86aec713cb4dfa237fc02adf574e4f8332ebda5ae8a&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292784338272266/tip_9.png?ex=6919fd5c&is=6918abdc&hm=7e43446b5ba7e356ab1c56c89eeddac7c5b2df42a29fd154cbb2e24a9323b003&"
       }
     },
@@ -109,7 +109,7 @@
       "description": "Fine-tune CastBot behavior for your server needs",
       "showcase": "# ✨ CastBot New Features (10/10)\n-# v3.0\n\n**⚙️ Configurable Idol Hunt & Safari Settings**\nFine-tune CastBot behavior for your server needs\n\n**🧩 How to setup**\n• Type 'menu` and click ⚙️ Settings to customize Player Menus, Currency / Item display names (season themed), Safari Stamina and more!",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455402441158955189/tip_10.png?ex=695498a6&is=69534726&hm=0581cec3ca047ed48b904d7cd133b06965dc76302847f17e99632d6917151472&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1455417551348568075/tip_10.png?ex=6954a6b8&is=69535538&hm=649000baaa0cdde87b75cc4675d0cff387d7968eeafd59cd2092ba20f5477308&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292787701846216/tip_10.png?ex=6919fd5d&is=6918abdd&hm=a537002715c322d920bc5e8ac318547ec1b2002a560a9f128c1ca16151b8cc88&"
       }
     }

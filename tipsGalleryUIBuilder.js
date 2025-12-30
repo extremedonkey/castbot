@@ -36,9 +36,15 @@ export function createTipsNavigationButtons(index, totalTips, backButtonId = 'vi
     label: 'Next ▶',
     style: 1, // Primary (blue) - action button
     disabled: index === totalTips - 1  // Disabled on last tip
+  }, {
+    type: 2, // Button - Share fourth (blue)
+    custom_id: `share_tip_${index}`,
+    label: 'Share',
+    style: 1, // Primary (blue)
+    emoji: { name: '🔁' }
   }];
 
-  // Admin-only Edit button (to the right of Next button)
+  // Admin-only Edit button (to the right of Share button)
   if (userId === '391415444084490240') {
     buttons.push({
       type: 2,
@@ -106,4 +112,66 @@ export function createTipsDisplayUI(index, totalTips, tipMetadata, cdnUrl, backB
 export function createTipsNavigationUI(newIndex, totalTips, tipMetadata, cdnUrl, backButtonId = 'dm_back_to_welcome', userId = null) {
   // Navigation handlers typically use dm_back_to_welcome, not viral_menu
   return createTipsDisplayUI(newIndex, totalTips, tipMetadata, cdnUrl, backButtonId, userId);
+}
+
+/**
+ * Create navigation buttons for SHARED (non-ephemeral) tips gallery
+ * Only includes Previous and Next buttons - no Back, Share, or Edit
+ *
+ * @param {number} index - Current tip index (0-based)
+ * @param {number} totalTips - Total number of tips
+ * @returns {object[]} Array of button components (Prev + Next only)
+ */
+export function createSharedTipsNavigationButtons(index, totalTips) {
+  return [{
+    type: 2, // Button - Previous (blue)
+    custom_id: `tips_shared_prev_${index}`,
+    label: '◀ Previous',
+    style: 1, // Primary (blue)
+    disabled: index === 0  // Disabled on first tip
+  }, {
+    type: 2, // Button - Next (blue)
+    custom_id: `tips_shared_next_${index}`,
+    label: 'Next ▶',
+    style: 1, // Primary (blue)
+    disabled: index === totalTips - 1  // Disabled on last tip
+  }];
+}
+
+/**
+ * Create complete SHARED tips display UI (non-ephemeral, public)
+ * No Back button, no Share button, no Edit button
+ * Components V2 format - NOT ephemeral (no flags needed for new message)
+ *
+ * @param {number} index - Current tip index (0-based)
+ * @param {number} totalTips - Total number of tips
+ * @param {object} tipMetadata - {id, title, description, showcase}
+ * @param {string} cdnUrl - Discord CDN URL for tip image
+ * @returns {object} Complete UI response object with Container
+ */
+export function createSharedTipsDisplayUI(index, totalTips, tipMetadata, cdnUrl) {
+  return {
+    flags: (1 << 15), // IS_COMPONENTS_V2
+    components: [{
+      type: 17, // Container
+      accent_color: 0x9b59b6, // Purple (tips gallery)
+      components: [{
+        type: 10, // Text Display - Showcase content
+        content: tipMetadata.showcase
+      }, {
+        type: 14 // Separator
+      }, {
+        type: 12, // Media Gallery - Discord CDN URL
+        items: [{
+          media: { url: cdnUrl },
+          description: tipMetadata.title
+        }]
+      }, {
+        type: 14 // Separator
+      }, {
+        type: 1, // Action Row - Navigation buttons (Prev/Next only)
+        components: createSharedTipsNavigationButtons(index, totalTips)
+      }]
+    }]
+  };
 }

@@ -3886,7 +3886,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         // Tips gallery navigation
         'tips_next',
         'tips_prev',
-        'edit_tip'  // Admin tips editor
+        'edit_tip',  // Admin tips editor
+        'share_tip',  // Share tip to channel (non-ephemeral)
+        'tips_shared_next',  // Shared tips navigation
+        'tips_shared_prev'   // Shared tips navigation
       ];
       
       for (const pattern of dynamicPatterns) {
@@ -8283,6 +8286,93 @@ To fix this:
             type: InteractionResponseType.MODAL,
             data: modal
           };
+        }
+      })(req, res, client);
+
+    // 🔁 Share Tip - Posts non-ephemeral tip to channel
+    } else if (custom_id.startsWith('share_tip_')) {
+      return ButtonHandlerFactory.create({
+        id: 'share_tip',
+        handler: async (context) => {
+          // Parse tip index from button ID: share_tip_5
+          const tipIndex = parseInt(custom_id.replace('share_tip_', ''));
+
+          console.log(`🔁 Sharing tip ${tipIndex + 1} to channel`);
+
+          // Load tips configuration
+          const {
+            loadTipsConfig,
+            getCurrentEnvironment,
+            getTipUrls,
+            getTipMetadata,
+            getTipCount
+          } = await import('./tipsGalleryManager.js');
+
+          const config = await loadTipsConfig();
+          const env = getCurrentEnvironment();
+          const cdnUrls = getTipUrls(config, env);
+          const totalTips = getTipCount(config);
+          const currentTip = getTipMetadata(config, tipIndex);
+
+          // Use shared UI builder (no Back, no Share, no Edit buttons)
+          const { createSharedTipsDisplayUI } = await import('./tipsGalleryUIBuilder.js');
+          const ui = createSharedTipsDisplayUI(tipIndex, totalTips, currentTip, cdnUrls[tipIndex]);
+
+          // Return as NEW message (CHANNEL_MESSAGE_WITH_SOURCE), NOT ephemeral
+          return {
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: ui
+          };
+        }
+      })(req, res, client);
+
+    // 🔁 Shared Tips Navigation - For non-ephemeral shared tips
+    } else if (custom_id.startsWith('tips_shared_next_') || custom_id.startsWith('tips_shared_prev_')) {
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        updateMessage: true, // UPDATE_MESSAGE (edits the shared message)
+        handler: async (context) => {
+          // Parse index from button ID: tips_shared_next_5 or tips_shared_prev_5
+          const match = custom_id.match(/^tips_shared_(next|prev)_(\d+)$/);
+          if (!match) {
+            return {
+              content: '❌ Invalid shared tips navigation button.',
+              flags: (1 << 6) // EPHEMERAL
+            };
+          }
+
+          const [, direction, currentIndexStr] = match;
+          const currentIndex = parseInt(currentIndexStr);
+          const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+
+          // Validate bounds (0-9 for 10 screenshots)
+          if (newIndex < 0 || newIndex > 9) {
+            return {
+              content: '❌ Cannot navigate beyond tips gallery bounds.',
+              flags: (1 << 6) // EPHEMERAL
+            };
+          }
+
+          console.log(`🔁 Navigating shared tips: ${currentIndex} → ${newIndex}`);
+
+          // Load tips configuration
+          const {
+            loadTipsConfig,
+            getCurrentEnvironment,
+            getTipUrls,
+            getTipMetadata,
+            getTipCount
+          } = await import('./tipsGalleryManager.js');
+
+          const config = await loadTipsConfig();
+          const env = getCurrentEnvironment();
+          const cdnUrls = getTipUrls(config, env);
+          const totalTips = getTipCount(config);
+          const currentTip = getTipMetadata(config, newIndex);
+
+          // Use shared UI builder (no Back, no Share, no Edit buttons)
+          const { createSharedTipsDisplayUI } = await import('./tipsGalleryUIBuilder.js');
+          return createSharedTipsDisplayUI(newIndex, totalTips, currentTip, cdnUrls[newIndex]);
         }
       })(req, res, client);
 

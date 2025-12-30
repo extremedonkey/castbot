@@ -246,6 +246,26 @@ export const BUTTON_REGISTRY = {
     category: 'tips_management',
     parent: 'dm_view_tips'
   },
+  'share_tip_*': {
+    label: 'Share',
+    description: 'Share tip to channel as non-ephemeral message',
+    emoji: '🔁',
+    style: 'Primary',
+    category: 'tips_management',
+    parent: 'dm_view_tips'
+  },
+  'tips_shared_prev_*': {
+    label: '◀ Previous',
+    description: 'Navigate to previous tip in shared (non-ephemeral) gallery',
+    style: 'Primary',
+    category: 'navigation'
+  },
+  'tips_shared_next_*': {
+    label: 'Next ▶',
+    description: 'Navigate to next tip in shared (non-ephemeral) gallery',
+    style: 'Primary',
+    category: 'navigation'
+  },
   'dm_back_to_welcome': {
     label: '← Back to Welcome',
     description: 'Return to welcome screen from tips gallery',
