@@ -10,6 +10,7 @@ node_modules/
 # Data files
 playerData.json
 safariContent.json
+img/tips/tips.json
 
 # System files
 desktop.ini

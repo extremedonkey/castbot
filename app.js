@@ -8215,10 +8215,11 @@ To fix this:
           // Parse tip index from custom_id
           const tipIndex = parseInt(custom_id.replace('edit_tip_', ''));
 
-          // Load current tip data
-          const { loadTipsConfig } = await import('./tipsGalleryManager.js');
+          // Load current tip data and environment
+          const { loadTipsConfig, getCurrentEnvironment } = await import('./tipsGalleryManager.js');
           const config = await loadTipsConfig();
           const currentTip = config.tips[tipIndex];
+          const env = getCurrentEnvironment();
 
           if (!currentTip) {
             return {
@@ -8230,7 +8231,10 @@ To fix this:
             };
           }
 
-          console.log(`✏️ Admin ${userId} editing tip ${tipIndex + 1}`);
+          // Get current URL for this environment
+          const currentUrl = currentTip.urls?.[env] || '';
+
+          console.log(`✏️ Admin ${userId} editing tip ${tipIndex + 1} (${env})`);
 
           // Create modal with pre-filled values
           const modal = {
@@ -8277,6 +8281,20 @@ To fix this:
                   max_length: 4000,  // Discord limit
                   required: true,
                   style: 2  // Paragraph (multi-line)
+                }
+              },
+              {
+                type: 18,  // Label
+                label: `Image URL (${env})`,
+                description: "Discord CDN URL - leave empty to keep existing",
+                component: {
+                  type: 4,  // Text Input
+                  custom_id: "image_url",
+                  value: currentUrl,
+                  placeholder: "https://cdn.discordapp.com/attachments/...",
+                  max_length: 500,
+                  required: false,  // Empty = keep existing
+                  style: 1  // Short (single line)
                 }
               }
             ]
@@ -31179,6 +31197,7 @@ Are you sure you want to continue?`;
       const title = components[0].component.value?.trim();
       const description = components[1].component.value?.trim();
       const showcase = components[2].component.value?.trim();
+      const imageUrl = components[3]?.component?.value?.trim() || '';
 
       // Validate required fields
       if (!title || !description || !showcase) {
@@ -31191,9 +31210,21 @@ Are you sure you want to continue?`;
         });
       }
 
+      // Validate image URL if provided
+      if (imageUrl && !imageUrl.startsWith('https://cdn.discordapp.com/')) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Image URL must be a Discord CDN URL (https://cdn.discordapp.com/...)',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+
       // Load, update, and save tips config
-      const { loadTipsConfig, saveTipsConfig } = await import('./tipsGalleryManager.js');
+      const { loadTipsConfig, saveTipsConfig, getCurrentEnvironment } = await import('./tipsGalleryManager.js');
       const config = await loadTipsConfig();
+      const env = getCurrentEnvironment();
 
       if (!config.tips[tipIndex]) {
         return res.send({
@@ -31209,6 +31240,16 @@ Are you sure you want to continue?`;
       config.tips[tipIndex].title = title;
       config.tips[tipIndex].description = description;
       config.tips[tipIndex].showcase = showcase;
+
+      // Update image URL for current environment if provided (empty = keep existing)
+      if (imageUrl) {
+        if (!config.tips[tipIndex].urls) {
+          config.tips[tipIndex].urls = {};
+        }
+        config.tips[tipIndex].urls[env] = imageUrl;
+        console.log(`🖼️ Updated ${env} URL for tip ${tipIndex + 1}`);
+      }
+
       config.lastUpdated = new Date().toISOString();
 
       // Save to file
@@ -31221,8 +31262,7 @@ Are you sure you want to continue?`;
       const { getTipMetadata, getTipUrls } = await import('./tipsGalleryManager.js');
 
       const tipMetadata = getTipMetadata(config, tipIndex);
-      const env = process.env.PRODUCTION === 'TRUE' ? 'prod' : 'dev';
-      const cdnUrls = getTipUrls(config, env);
+      const cdnUrls = getTipUrls(config, env);  // env already defined above
 
       const refreshedUI = createTipsDisplayUI(
         tipIndex,
