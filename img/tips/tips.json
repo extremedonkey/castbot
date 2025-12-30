@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "lastUpdated": "2025-11-16T12:16:39.218Z",
+  "lastUpdated": "2025-12-21T03:35:57.251Z",
   "channel": "1439277270400503870",
   "tips": [
     {
@@ -10,7 +10,7 @@
       "description": "Create a Custom Castlist ordered by Season",
       "showcase": "# ✨ CastBot New Features (1/10)\n-# v3.0\n\n**🏆 Winners' Castlist**\nCreate a Custom Castlist ordered by Season!\n\n**🧩 How to setup**\n• Create a Winner role as well as a role for each season\n• Create a new Castlist and choose Sorting Method 'Vanity Role', set Season to 'No Season' and add the \"Winner\" role you created to as a Tribe on the castlist. Ensure each player has that winner role assigned.\n• From `/menu` > Players > Select each winner > click Vanity Role > select Vanity Role for their Season",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1439399863845523588/tip_1.png?ex=691a6116&is=69190f96&hm=f50a45b0b4a5c800995abce32dfeb30c8466bb5f8ba5c43232717a8b08214c42&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1452142471403536475/tip_1.png?ex=6948bc90&is=69476b10&hm=9fd34474fc50609b8b2879b57d22078f2c0c041d7ab1c437cfb90fb83298245b&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292733205512364/tip_1.png?ex=6919fd50&is=6918abd0&hm=2039632f2a6af78193b3706a2196498d5687e0f12c2fb6e8406750ca0efdefcb&"
       }
     },
@@ -21,7 +21,7 @@
       "description": "Organize cast members with placements, alumni, and custom formatting",
       "showcase": "# ✨ CastBot New Features (2/10)\n-# v3.0\n\n**📋 Dynamic Castlists**\nOrganize cast members with placements, alumni, and custom formatting\n\n**🧩 How to setup**\n• Create a Discord role for your alumni (e.g., \"Season 1 Alumni\")\n• Go to `/menu` > Production Menu > Castlist Hub > Create New Castlist\n• Name it (e.g., \"S1 Cast\"), add your alumni role as a tribe\n• Click \"Tribes & Placements\" to edit player rankings (1st, 2nd, 14th, etc.)\n• Players automatically sort by placement - perfect for Hall of Fame displays!",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1439399870711463987/tip_2.png?ex=691a6117&is=69190f97&hm=f974e9ef92c1d36d9eab708e8b55b6e5f7a0ee3eff6d7d89430dbd45e58d06dc&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1452142478659686523/tip_2.png?ex=6948bc92&is=69476b12&hm=f25fbec083457d9dac1379caee2675bfe76e867329e023209ac1851743bbda50&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292739689648138/tip_2.png?ex=6919fd51&is=6918abd1&hm=0d62570cab38285f02397287bed6f2f5030998b391058eea85c8b44e12532df6&"
       }
     },
@@ -32,7 +32,7 @@
       "description": "Comprehensive admin interface for managing all CastBot features",
       "showcase": "# ✨ CastBot New Features (3/10)\n-# v3.0\n\n**📊 Production Menu**\nComprehensive admin interface for managing all CastBot features\n\n**🧩 How to setup**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1439399874310312039/tip_3.png?ex=691a6118&is=69190f98&hm=0244b5c4fc596b266a9b0eba6d084454c6024c303067dacc96b6c5c98e547eaf&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1452142482409263244/tip_3.png?ex=6948bc93&is=69476b13&hm=50394f5b2cf4f32fa1bed91718f6433f3f1c99d118a2dba3f569fa73b439f91b&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292744194592880/tip_3.png?ex=6919fd52&is=6918abd2&hm=670cdd85f7942551987c66767b207279eb355d332f81a845b1e1936217fd3ab9&"
       }
     },
@@ -43,7 +43,7 @@
       "description": "Let players anonymously vote on applicants with visual ranking interface",
       "showcase": "# ✨ CastBot New Features (4/10)\n-# v3.0\n\n**🏆 Cast Rankings**\nLet players anonymously vote on applicants with visual ranking interface\n\n**🧩 How to setup**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1439399877145526483/tip_4.png?ex=691a6119&is=69190f99&hm=773c4f7e6aa05bf2b373d2749ab67a066fc2374e3b5399558992f77afd02387f&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1452142485932343387/tip_4.png?ex=6948bc94&is=69476b14&hm=5333451a9ff1c7dcf391925a58c96a456fe108c51d3fa0270fd04bbdf7d4449a&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292749420560416/tip_4.png?ex=6919fd54&is=6918abd4&hm=b637ad71d35dee2135e217649557b20177f652f0cf663178a421a93266d470ba&"
       }
     },
@@ -54,7 +54,7 @@
       "description": "Configure applications, questions, and production workflows",
       "showcase": "# ✨ CastBot New Features (5/10)\n-# v3.0\n\n**🎬 Season Management**\nConfigure applications, questions, and production workflows\n\n**🧩 How to setup**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1439399880396247181/tip_5.png?ex=691a611a&is=69190f9a&hm=cfd3cab585b541a4f56b7338a07819cdf3deab2f562f5819f88fb20e2a48d26b&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1452142489363288094/tip_5.png?ex=6948bc94&is=69476b14&hm=9b0f44d8d04a242d45c2e98d40f01c41f57dcc247d06a789e58e6edb9cdf168c&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292754755584223/tip_5.png?ex=6919fd55&is=6918abd5&hm=6681a1ffafa0ec62c29dd379aa590ba87fbefca036b53bc06916c67a9a6580cd&"
       }
     },
@@ -65,7 +65,7 @@
       "description": "CastBot works seamlessly on mobile devices with responsive design",
       "showcase": "# ✨ CastBot New Features (6/10)\n-# v3.0\n\n**📱 Mobile View**\nCastBot works seamlessly on mobile devices with responsive design\n\n**🧩 How to setup**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1439399886662664252/tip_6.png?ex=691a611b&is=69190f9b&hm=5ed797338e3fa739de129f7264199a72e2476c769a88d3c8e59162b038dd8b6e&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1452142496363708457/tip_6.png?ex=6948bc96&is=69476b16&hm=1bf4e09646d352e9410d2a8079a5c58cff779b8c65c2ac297138fe380f9c2a22&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292763634929755/tip_6.png?ex=6919fd57&is=6918abd7&hm=c7aecf21fa4cf4d86047affe0454c11fa4c98cccff2e75f2712ff022777eeffe&"
       }
     },
@@ -76,7 +76,7 @@
       "description": "Access your profile, seasons, and interactive features from one place",
       "showcase": "# ✨ CastBot New Features (7/10)\n-# v3.0\n\n**🎮 Player Menu**\nAccess your profile, seasons, and interactive features from one place\n\n**🧩 How to setup**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1439399892941410446/tip_7.png?ex=691a611d&is=69190f9d&hm=d6ca653f6df56e6f5c7c01ebdd8ffe0e47a7a847d97137a8a8be060ace2ace5b&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1452142501594136706/tip_7.png?ex=6948bc97&is=69476b17&hm=160252be7660bcc37c96c637424de052eeaff7fcfb0fd95e2bc593893dc313f5&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292771684061267/tip_7.png?ex=6919fd59&is=6918abd9&hm=bd4d00ff6c4550fe5e7b1bac2e37a6b4710aa1d14946aa8dbb95051075151eb8&"
       }
     },
@@ -87,7 +87,7 @@
       "description": "Interactive map system with fog of war and location tracking",
       "showcase": "# ✨ CastBot New Features (8/10)\n-# v3.0\n\n**🗺️ Safari Map Explorer**\nInteractive map system with fog of war and location tracking\n\n**🧩 How to setup**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1439399905083916358/tip_8.png?ex=691a6120&is=69190fa0&hm=043dbececc8f092e6b2e9fba6d467ced51e1ff4a10014a68a3e702f5ab716cb2&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1452142507038343393/tip_8.png?ex=6948bc99&is=69476b19&hm=6d9c214b0e88cefabcf18a184ab8161077269c1fb45b053fb00a32b5850694ac&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292780261150770/tip_8.png?ex=6919fd5b&is=6918abdb&hm=65cbb308fcd68f5b7bf9c465c3fdab3a225bdf3b68acc88018b64cd852092e4b&"
       }
     },
@@ -98,7 +98,7 @@
       "description": "Create custom season applications with multiple question types",
       "showcase": "# ✨ CastBot New Features (9/10)\n-# v3.0\n\n**📝 Application Builder**\nCreate custom season applications with multiple question types\n\n**🧩 How to setup**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1439399909777473647/tip_9.png?ex=691a6121&is=69190fa1&hm=5e3d8b13354b51f591a3eb1b738da39e507e4b6bdd7de247a13ae29c3efc0261&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1452142512851386489/tip_9.png?ex=6948bc9a&is=69476b1a&hm=fa37c980eabc93cfa80182547eae28911860bca68058aadee183d1fda572ed04&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292784338272266/tip_9.png?ex=6919fd5c&is=6918abdc&hm=7e43446b5ba7e356ab1c56c89eeddac7c5b2df42a29fd154cbb2e24a9323b003&"
       }
     },
@@ -109,7 +109,7 @@
       "description": "Fine-tune CastBot behavior for your server needs",
       "showcase": "# ✨ CastBot New Features (10/10)\n-# v3.0\n\n**⚙️ Settings & Configuration**\nFine-tune CastBot behavior for your server needs\n\n**🧩 How to setup**\n• Use Previous/Next to explore all CastBot features\n• Each screenshot shows a key feature in action\n• 10 features total - discover everything CastBot can do!",
       "urls": {
-        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1439399913937965207/tip_10.png?ex=691a6122&is=69190fa2&hm=b6f8f478a213598a3dd99dc91dba9a09bc869bb17dfc1480bbcadb45f93d21b5&",
+        "dev": "https://cdn.discordapp.com/attachments/1439277270400503870/1452142518320889930/tip_10.png?ex=6948bc9b&is=69476b1b&hm=4cf877944f4acf6a2eeb1fd5f1f5293c41ff0f9c425ac2ce228ad9a6267f42fc&",
         "prod": "https://cdn.discordapp.com/attachments/1439277270400503870/1439292787701846216/tip_10.png?ex=6919fd5d&is=6918abdd&hm=a537002715c322d920bc5e8ac318547ec1b2002a560a9f128c1ca16151b8cc88&"
       }
     }

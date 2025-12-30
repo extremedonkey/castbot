@@ -1,0 +1,167 @@
+{{/* ============================================== */}}
+{{/* Region role IDs → region chat channels */}}
+{{$regionChannels := dict
+ "1455368706610827426" "1448540341878657024"
+ "1455368838953832530" "1448540757123399791"
+ "1455368920159621343" "1448551404724817920"
+ "1455368992502972507" "1448551487939678371"
+ "1455369088284233789" "1455368546208055408"
+ "1455367689915863120" "1455367633263264020"
+
+}}
+{{/* Spectator log channel ID */}}
+{{$spectatorChannel := 1449146565271748850}}
+{{/* Shorthand name → User ID mapping */}}
+{{/* ADMINS */}}
+{{$playerIDs := dict
+ "reece" 391415444084490240
+ "belle" 676262975132139522
+ "bec" 703974323098222603
+ "adrian" 224237085450698752
+ "smiles" 434543059494109185
+ "stripe" 84040775406518276
+ "p1" 100000000000000001
+ "p2" 100000000000000002
+ "p3" 100000000000000003
+ "p4" 100000000000000004
+ "p5" 100000000000000005
+ "p6" 100000000000000006
+ "p7" 100000000000000007
+ "p8" 100000000000000008
+ "p9" 100000000000000009
+ "p10" 100000000000000010
+ "p11" 100000000000000011
+ "p12" 100000000000000012
+ "p13" 100000000000000013
+ "p14" 100000000000000014
+ "p15" 100000000000000015
+ "p16" 100000000000000016
+ "p17" 100000000000000017
+ "p18" 100000000000000018
+ "p19" 100000000000000019
+ "p20" 100000000000000020
+ "p21" 100000000000000021
+ "p22" 100000000000000022
+ "p23" 100000000000000023
+ "p24" 100000000000000024
+}}
+{{/* USER ID → private channel mapping */}}
+{{/* ADMINS */}}
+{{$userChannels := dict
+ 391415444084490240 1455368876928925947
+ 676262975132139522 1455368906800759058
+ 703974323098222603 1455368906800759058
+ 224237085450698752 1455368906800759058
+ 434543059494109185 1455368876928925947
+ 84040775406518276 1455368906800759058
+ 100000000000000001 1455379845147005089
+ 100000000000000002 1455379873865531565
+ 100000000000000003 1455379896443469904
+ 100000000000000004 1455379921882058763
+ 100000000000000005 1455379955470045194
+ 100000000000000006 1455379981088850034
+ 100000000000000007 1455380042619289610
+ 100000000000000008 1455380064135807056
+ 100000000000000009 1455380086428537052
+ 100000000000000010 1455380118880129150
+ 100000000000000011 1455380149972504616
+ 100000000000000012 1455380333460459520
+ 100000000000000013 1455380363043147888
+ 100000000000000014 1455380395284500611
+ 100000000000000015 1455380420118974484
+ 100000000000000016 1455380451030990982
+ 100000000000000017 1455380472724066516
+ 100000000000000018 1455380497013145620
+ 100000000000000019 1455380520564293770
+ 100000000000000020 1455380547231678506
+ 100000000000000021 1455380575472058563
+ 100000000000000022 1455380603900919869
+ 100000000000000023 1455380785732518009
+ 100000000000000024 1455380810503815218
+}}
+{{/* ============================================== */}}
+{{/* Parse arguments */}}
+{{$args := parseArgs 2 "Usage: `!whisper targetName message`"
+ (carg "string" "Target player shorthand name")
+ (carg "string" "Message")
+}}
+{{$targetName := lower ($args.Get 0)}}
+{{$msg := $args.Get 1}}
+{{/* ============================================== */}}
+{{/* Look up target by name */}}
+{{$targetID := index $playerIDs $targetName}}
+{{if not $targetID}}
+ {{$valid := cslice}}
+ {{range $k, $_ := $playerIDs}} {{$valid = $valid.Append $k}} {{end}}
+ {{sendMessage nil (print " Unknown player `" $targetName "`. Valid names: " (joinStr ", " $valid))}}
+ {{return}}
+{{end}}
+{{$targetMember := getMember $targetID}}
+{{if not $targetMember}}
+ {{sendMessage nil " Could not find that player."}}
+ {{return}}
+{{end}}
+{{/* ============================================== */}}
+{{/* Determine shared region role */}}
+{{$sharedRegion := ""}}
+{{range .Member.Roles}}
+ {{$roleID := .}}
+ {{if in $targetMember.Roles $roleID}}
+ {{if index $regionChannels (str $roleID)}}
+ {{$sharedRegion = (str $roleID)}}
+ {{end}}
+ {{end}}
+{{end}}
+{{if eq $sharedRegion ""}}
+ {{sendMessage nil (print " You and " $targetName " are not in the same area. You can only whisper to players in your area.")}}
+ {{return}}
+{{end}}
+{{/* ============================================== */}}
+{{/* Get target private channel */}}
+{{$targetChannel := index $userChannels $targetID}}
+{{if not $targetChannel}}
+ {{sendMessage nil " Error."}}
+ {{return}}
+{{end}}
+{{/* ============================================== */}}
+{{/* Get sender shorthand name */}}
+{{$senderID := .User.ID}}
+{{$senderName := ""}}
+{{range $name, $id := $playerIDs}}
+ {{if eq $id $senderID}}
+ {{$senderName = $name}}
+ {{end}}
+{{end}}
+{{if eq $senderName ""}}
+ {{$senderName = "Unknown"}}
+{{end}}
+{{/* ============================================== */}}
+{{/* Capitalize names */}}
+{{$targetDisplay := print (upper (slice $targetName 0 1)) (lower (slice $targetName 1))}}
+{{$senderDisplay := print (upper (slice $senderName 0 1)) (lower (slice $senderName 1))}}
+{{/* ============================================== */}}
+{{/* Send whisper to target private channel */}}
+{{sendMessage $targetChannel (print "**Whisper from " $senderDisplay "**\n>>> " $msg)}}
+{{/* Announce to region chat */}}
+{{$announceChannel := index $regionChannels $sharedRegion}}
+{{if $announceChannel}}
+ {{sendMessage $announceChannel (print "**" $senderDisplay "** whispered to **" $targetDisplay "**.")}}
+{{end}}
+{{/* ============================================== */}}
+{{/* NEW: Get the readable region name for spectators */}}
+{{$locationName := "Unknown Location"}}
+{{with (getRole $sharedRegion)}}
+ {{$locationName = .Name}}
+{{end}}
+{{/* ============================================== */}}
+{{/* Send full whisper content to Spectator channel */}}
+{{if $spectatorChannel}}
+ {{sendMessage $spectatorChannel (print
+ "**" $senderDisplay "** → **"
+ $targetDisplay "** "
+ "(" $locationName ")\n"
+ ">>> " $msg
+ )}}
+{{end}}
+{{/* Confirm to sender */}}
+{{sendMessage nil (print "✅ Whisper sent to " $targetDisplay ".")}} 
