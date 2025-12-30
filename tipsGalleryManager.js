@@ -22,7 +22,35 @@ const TIPS_JSON_PATH = path.join(__dirname, 'img/tips/tips.json');
 const TIPS_IMAGE_DIR = path.join(__dirname, 'img/tips');
 
 /**
+ * Create default tips configuration when tips.json doesn't exist
+ * @returns {Object} Default tips configuration
+ */
+function createDefaultTipsConfig() {
+  const defaultTips = [];
+  for (let i = 1; i <= 10; i++) {
+    defaultTips.push({
+      id: i,
+      filename: `${i}.png`,
+      title: `Tip ${i}`,
+      description: `Description for tip ${i}`,
+      showcase: `# ✨ CastBot New Features (${i}/10)\n-# v3.0\n\n**Tip ${i}**\nDescription goes here.`,
+      urls: {
+        dev: '',
+        prod: ''
+      }
+    });
+  }
+  return {
+    version: '1.0',
+    lastUpdated: new Date().toISOString(),
+    channel: '1439277270400503870',  // Default tips channel
+    tips: defaultTips
+  };
+}
+
+/**
  * Load tips configuration from tips.json
+ * Auto-creates default config if file doesn't exist (gitignored, environment-local)
  * @returns {Promise<Object>} Tips configuration object
  */
 export async function loadTipsConfig() {
@@ -30,6 +58,13 @@ export async function loadTipsConfig() {
     const data = await fs.readFile(TIPS_JSON_PATH, 'utf8');
     return JSON.parse(data);
   } catch (error) {
+    if (error.code === 'ENOENT') {
+      // File doesn't exist - create default config
+      console.log('📝 tips.json not found - creating default configuration');
+      const defaultConfig = createDefaultTipsConfig();
+      await saveTipsConfig(defaultConfig);
+      return defaultConfig;
+    }
     console.error('❌ Failed to load tips.json:', error.message);
     throw new Error(`Cannot load tips configuration: ${error.message}`);
   }
