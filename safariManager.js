@@ -1136,7 +1136,7 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
         if (result.hadEnough) {
             message = `🧨 You lose **${quantity}x** of ${itemEmoji} **${itemName}**!`;
         } else {
-            message = `🧨 An attempt was made to remove **${quantity}x** of ${itemEmoji} **${itemName}**, but you only had **${result.hadQuantity}x** available. Final total: **${result.finalQuantity}x**.`;
+            message = `🧨 An attempt was made to remove **${quantity}x** of ${itemEmoji} **${itemName}**, but you only had **${result.hadQuantity}x** available.\nYou now have **${result.finalQuantity}x** of ${itemEmoji} **${itemName}**.`;
         }
     } else {
         // Unknown operation - should never happen but handle gracefully

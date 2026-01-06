@@ -11671,7 +11671,12 @@
           "history": [],
           "lastInteraction": 1767691857294,
           "achievements": [],
-          "inventory": {},
+          "inventory": {
+            "moi_item_439110": {
+              "quantity": 3,
+              "numAttacksAvailable": 0
+            }
+          },
           "cooldowns": {},
           "buttonUses": {},
           "storeHistory": [],
