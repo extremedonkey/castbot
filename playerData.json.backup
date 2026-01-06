@@ -11672,8 +11672,8 @@
           "lastInteraction": 1767691857294,
           "achievements": [],
           "inventory": {
-            "moi_item_439110": {
-              "quantity": 3,
+            "super_item_830267": {
+              "quantity": 1,
               "numAttacksAvailable": 0
             }
           },

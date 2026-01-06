@@ -4,7 +4,22 @@
 
 Safari Custom Actions are dynamic, configurable actions that can be triggered by players through buttons or text commands. They support complex workflows including text displays, currency/item drops, follow-up actions, and conditional logic.
 
-## Recent Updates (January 2025)
+## Recent Updates (January 2026)
+
+### Give / Remove Item Action
+The `give_item` action now supports both **giving** and **removing** items via an `operation` field:
+- **Give Item** (default): Adds items to player inventory
+- **Remove Item**: Removes items from player inventory (for crafting, penalties, quest mechanics)
+- **Backwards Compatible**: Existing actions default to "give" operation
+- **Smart Messages**: Different feedback based on whether player had enough items
+
+### UI Label Updates
+- "Give Item" → "Give / Remove Item" in action type selector
+- "Give Currency" → "Give / Remove Currency" in action type selector
+
+---
+
+## Previous Updates (January 2025)
 
 ### String Select Interface
 Custom Actions now use a string select dropdown for adding action types, replacing the previous button grid approach:
@@ -35,24 +50,28 @@ Shows formatted text with optional images and styling.
 - Accent Color (optional)
 - Image URL (optional)
 
-### 2. Give Item (New!)
-Awards items to players with configurable usage limits.
+### 2. Give / Remove Item
+Awards or removes items from players with configurable usage limits.
 
 **Configuration:**
 - Item selection from available items
-- Quantity
+- Quantity (always positive)
+- **Operation** (new):
+  - `give` - Adds items to inventory (default)
+  - `remove` - Removes items from inventory
 - Usage limit:
   - Unlimited
   - Once per player
   - Once globally (first come, first served)
 
-**Example:**
+**Give Example:**
 ```javascript
 {
   type: 'give_item',
   config: {
     itemId: 'iron_sword_123',
     quantity: 1,
+    operation: 'give',  // Default - can be omitted
     limit: {
       type: 'once_per_player',
       claimedBy: ['userId1', 'userId2']
@@ -60,6 +79,34 @@ Awards items to players with configurable usage limits.
   }
 }
 ```
+
+**Remove Example:**
+```javascript
+{
+  type: 'give_item',
+  config: {
+    itemId: 'health_potion_456',
+    quantity: 2,
+    operation: 'remove',  // Takes items from player
+    limit: {
+      type: 'unlimited'  // Can keep attempting removal
+    }
+  }
+}
+```
+
+**Player Messages:**
+| Scenario | Message |
+|----------|---------|
+| Give success | 🎁 You receive **3x** of 🧪 **Health Potion**! |
+| Remove (had enough) | 🧨 You lose **2x** of 🧪 **Health Potion**! |
+| Remove (partial) | 🧨 An attempt was made to remove **5x** of 🧪 **Health Potion**, but you only had **2x** available.<br>You now have **0x** of 🧪 **Health Potion**. |
+
+**Use Cases:**
+- **Crafting**: Remove base materials, give crafted item
+- **Penalties**: Troll smashes your health potion
+- **Quest mechanics**: Consume quest items on completion
+- **Conditional logic**: Check if player has item, then remove it
 
 ### 3. Give Currency (Enhanced!)
 Awards currency with new usage limit options.
@@ -215,6 +262,7 @@ Stored in `safariContent.json`:
             "config": {
               "itemId": "gold_coin",
               "quantity": 5,
+              "operation": "give",
               "limit": {
                 "type": "once_per_player",
                 "claimedBy": []
