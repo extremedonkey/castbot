@@ -10037,7 +10037,7 @@ Your server is now ready for Tycoons gameplay!`;
       return ButtonHandlerFactory.create({
         id: 'prod_server_usage_stats',
         deferred: true,
-        updateMessage: true, // Update existing message when used as Refresh button
+        updateMessage: false, // Post new message for visual growth tracking
         ephemeral: false, // Results should be visible
         handler: async (context) => {
           console.log(`🔍 START: prod_server_usage_stats - user ${context.userId}`);
