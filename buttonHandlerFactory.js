@@ -2921,6 +2921,48 @@ export async function updateDeferredResponse(token, data) {
 }
 
 /**
+ * Create a follow-up message via webhook (posts NEW message)
+ * @param {string} token - Interaction token
+ * @param {Object} data - Response data
+ */
+export async function createFollowupMessage(token, data) {
+  const endpoint = `webhooks/${process.env.APP_ID}/${token}`;
+
+  const isComponentsV2 = data.components?.[0]?.type === 17;
+  const contentPreview = data.content ? `"${data.content.substring(0, 50)}..."` : 'no content';
+  console.log(`🆕 createFollowupMessage: ${isComponentsV2 ? 'Components V2' : 'Standard'} follow-up, ${contentPreview}`);
+
+  // Transform Components V2 container structure for webhook POST
+  const webhookData = {
+    ...data
+  };
+
+  // Remove legacy fields for Components V2
+  if (data.components && data.components.length > 0 && data.components[0].type === 17) {
+    delete webhookData.content;
+    delete webhookData.embeds;
+    delete webhookData.attachments;
+    delete webhookData.allowed_mentions;
+    delete webhookData.tts;
+  }
+
+  // Set flags (ephemeral, Components V2)
+  let flags = data.flags || 0;
+  if (data.components && data.components.length > 0 && data.components[0].type === 17) {
+    flags |= (1 << 15); // IS_COMPONENTS_V2
+  }
+  if (data.ephemeral) {
+    flags |= InteractionResponseFlags.EPHEMERAL;
+  }
+  webhookData.flags = flags;
+
+  return DiscordRequest(endpoint, {
+    method: 'POST',
+    body: webhookData
+  });
+}
+
+/**
  * Button Handler Factory
  * 
  * Creates standardized button handlers with automatic:
@@ -2994,7 +3036,15 @@ export class ButtonHandlerFactory {
           // Unwrap data field if handler returned full interaction response
           // Some handlers return { type: 4, data: {...} } instead of just {...}
           const webhookData = result.data || result;
-          return updateDeferredResponse(context.token, webhookData);
+
+          // Choose between updating existing message or creating new follow-up
+          if (config.updateMessage === false) {
+            // Create NEW follow-up message (for visual history tracking)
+            return createFollowupMessage(context.token, webhookData);
+          } else {
+            // Update existing message (default behavior)
+            return updateDeferredResponse(context.token, webhookData);
+          }
         }
         
       } catch (error) {
