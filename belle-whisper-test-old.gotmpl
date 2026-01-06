@@ -11,8 +11,6 @@
 }}
 {{/* Spectator log channel ID */}}
 {{$spectatorChannel := 1449146565271748850}}
-{{/* Whisper limit per user */}}
-{{$whisperLimit := 3}}
 {{/* Shorthand name → User ID mapping */}}
 {{/* ADMINS */}}
 {{$playerIDs := dict
@@ -22,7 +20,6 @@
  "adrian" 224237085450698752
  "smiles" 434543059494109185
  "stripe" 84040775406518276
- "dino" 1086246253819613274
  "p1" 100000000000000001
  "p2" 100000000000000002
  "p3" 100000000000000003
@@ -57,7 +54,6 @@
  224237085450698752 1455368906800759058
  434543059494109185 1455368876928925947
  84040775406518276 1455368906800759058
- 1086246253819613274 1455368906800759058
  100000000000000001 1455379845147005089
  100000000000000002 1455379873865531565
  100000000000000003 1455379896443469904
@@ -140,24 +136,6 @@
  {{$senderName = "Unknown"}}
 {{end}}
 {{/* ============================================== */}}
-{{/* Whisper count using a single DB object */}}
-{{$dbKey := "whisper_counts"}}
-{{$counts := sdict}}
-{{$entry := dbGet .Guild.ID $dbKey}}
-{{if $entry}}
- {{$counts = sdict $entry.Value}}
-{{end}}
-
-{{$userCount := 0}}
-{{with index $counts (str $senderID)}}
- {{$userCount = .}}
-{{end}}
-
-{{if ge $userCount $whisperLimit}}
- {{sendMessage nil (print "❌ You've reached your whisper limit (" $whisperLimit "). Wait for a reset.")}}
- {{return}}
-{{end}}
-{{/* ============================================== */}}
 {{/* Capitalize names */}}
 {{$targetDisplay := print (upper (slice $targetName 0 1)) (lower (slice $targetName 1))}}
 {{$senderDisplay := print (upper (slice $senderName 0 1)) (lower (slice $senderName 1))}}
@@ -186,8 +164,4 @@
  )}}
 {{end}}
 {{/* Confirm to sender */}}
-{{sendMessage nil (print "✅ Whisper sent to " $targetDisplay ". " (sub $whisperLimit (add $userCount 1)) " whispers remaining.")}}
-
-{{/* Increment count after successful whisper */}}
-{{$counts.Set (str $senderID) (add $userCount 1)}}
-{{dbSet .Guild.ID $dbKey $counts}} 
+{{sendMessage nil (print "✅ Whisper sent to " $targetDisplay ".")}} 
