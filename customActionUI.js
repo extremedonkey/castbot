@@ -602,7 +602,8 @@ function getActionTypeLabel(action) {
     case 'display_text':
       return 'Display Text';
     case 'give_item':
-      return 'Give Item';
+      // Check operation to show "Give Item" or "Remove Item"
+      return action.config?.operation === 'remove' ? 'Remove Item' : 'Give Item';
     case 'give_currency':
       return 'Give Currency';
     case 'update_currency':
@@ -657,7 +658,8 @@ function getActionSummary(action, number, guildItems = {}, guildButtons = {}, is
       const itemName = item?.name || itemId || 'Unknown Item';
       const quantity = action.config?.quantity || action.quantity || 1;
       const limitText = action.config?.limit?.type ? ` (${action.config.limit.type.replace(/_/g, ' ')})` : '';
-      return `**\`${number}. Give Item\`** ${itemName} x${quantity}${limitText}`;
+      const operationLabel = action.config?.operation === 'remove' ? 'Remove Item' : 'Give Item';
+      return `**\`${number}. ${operationLabel}\`** ${itemName} x${quantity}${limitText}`;
     case 'give_currency':
       const amount = action.config?.amount || action.amount || 0;
       const currencyLimitText = action.config?.limit?.type ? ` (${action.config.limit.type.replace(/_/g, ' ')})` : '';

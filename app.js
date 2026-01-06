@@ -17544,6 +17544,7 @@ Your server is now ready for Tycoons gameplay!`;
               limit: action.config?.limit?.type || null,
               style: action.config?.style || null,
               quantity: action.config?.quantity || action.quantity || 1,
+              operation: action.config?.operation || 'give',  // CRITICAL: Load existing operation
               executeOn: action.executeOn || 'true'
             });
             
