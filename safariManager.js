@@ -1020,12 +1020,23 @@ async function executeGiveCurrency(config, userId, guildId, interaction, buttonI
  * Execute give item action
  */
 async function executeGiveItem(config, userId, guildId, interaction, buttonId = null, actionIndex = null) {
-    console.log(`🎁 DEBUG: Executing give item: ${config.itemId} x${config.quantity} for user ${userId}`);
-    
+    // Determine operation type - defaults to 'give' for backwards compatibility
+    const operation = config.operation || 'give';
+    const quantity = config.quantity || 1;
+    const operationEmoji = operation === 'give' ? '🎁' : '🧨';
+
+    console.log(`${operationEmoji} DEBUG: Executing give_item (operation: ${operation}): ${config.itemId} x${quantity} for user ${userId}`);
+
+    // Get item details early for use in messages
+    const safariDataForItem = await loadSafariContent();
+    const item = safariDataForItem[guildId]?.items?.[config.itemId];
+    const itemName = item?.name || config.itemId;
+    const itemEmoji = item?.emoji || '📦';
+
     // Check usage limits using live data from safariContent
     if (config.limit && config.limit.type !== 'unlimited') {
         const safariData = await loadSafariContent();
-        
+
         // Get live claim data from the actual button action
         let liveClaimedBy = null;
         if (buttonId && actionIndex !== null) {
@@ -1037,88 +1048,123 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
                 }
             }
         }
-        
+
         // Fallback to config if live data not available
         const claimedBy = liveClaimedBy !== null ? liveClaimedBy : config.limit.claimedBy;
-        
+
         if (config.limit.type === 'once_per_player') {
             // For once_per_player, claimedBy should be an array
             const claimedArray = Array.isArray(claimedBy) ? claimedBy : [];
             if (claimedArray.includes(userId)) {
-                // Get item details for better error message
-                const safariData = await loadSafariContent();
-                const item = safariData[guildId]?.items?.[config.itemId];
-                const itemName = item?.name || config.itemId;
-                const itemEmoji = item?.emoji || '🎁';
-                const quantity = config.quantity || 1;
-
+                const actionVerb = operation === 'give' ? 'received' : 'had removed';
                 return {
                     flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
                     components: [{
                         type: 17, // Container
                         components: [{
                             type: 10, // Text Display
-                            content: `❌ You have already claimed **${itemEmoji} ${quantity}x ${itemName}**`
+                            content: `❌ You have already ${actionVerb} **${itemEmoji} ${quantity}x ${itemName}**`
                         }]
                     }]
                 };
             }
         }
-        
+
         if (config.limit.type === 'once_globally') {
             // For once_globally, only block if claimedBy is a valid user ID (string)
             // Arrays (empty or not) and null/undefined should allow claiming
             if (typeof claimedBy === 'string' && claimedBy !== '') {
-                // Get item details for better error message
-                const safariData = await loadSafariContent();
-                const item = safariData[guildId]?.items?.[config.itemId];
-                const itemName = item?.name || config.itemId;
-                const itemEmoji = item?.emoji || '🎁';
-                const quantity = config.quantity || 1;
-
+                const actionVerb = operation === 'give' ? 'been given' : 'been removed';
                 return {
                     flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
                     components: [{
                         type: 17, // Container
                         components: [{
                             type: 10, // Text Display
-                            content: `❌ **${itemEmoji} ${quantity}x ${itemName}** has already been claimed globally!`
+                            content: `❌ **${itemEmoji} ${quantity}x ${itemName}** has already ${actionVerb} globally!`
                         }]
                     }]
                 };
             }
         }
     }
-    
-    // Give the item - pass null for existingPlayerData so it saves
-    // NOTE: locationContext was causing a bug where items weren't saved (passed as wrong parameter)
-    const success = await addItemToInventory(guildId, userId, config.itemId, config.quantity, null);
-    
-    if (!success) {
-        return {
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
-            components: [{
-                type: 17, // Container
+
+    // Execute the operation based on type
+    let operationResult;
+    let message;
+
+    if (operation === 'give') {
+        // GIVE operation - add item to inventory
+        const success = await addItemToInventory(guildId, userId, config.itemId, quantity, null);
+
+        if (!success) {
+            return {
+                flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
                 components: [{
-                    type: 10, // Text Display
-                    content: '❌ Failed to add item to inventory. Item may not exist.'
+                    type: 17, // Container
+                    components: [{
+                        type: 10, // Text Display
+                        content: '❌ Failed to add item to inventory. Item may not exist.'
+                    }]
+                }]
+            };
+        }
+
+        operationResult = { success: true };
+        message = `🎁 You receive **${quantity}x** of ${itemEmoji} **${itemName}**!`;
+
+    } else if (operation === 'remove') {
+        // REMOVE operation - remove item from inventory
+        const result = await removeItemFromInventory(guildId, userId, config.itemId, quantity, null);
+
+        if (!result.success) {
+            return {
+                flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+                components: [{
+                    type: 17, // Container
+                    components: [{
+                        type: 10, // Text Display
+                        content: '❌ Failed to remove item from inventory.'
+                    }]
+                }]
+            };
+        }
+
+        operationResult = result;
+
+        // Build message based on whether player had enough items
+        if (result.hadEnough) {
+            message = `🧨 You lose **${quantity}x** of ${itemEmoji} **${itemName}**!`;
+        } else {
+            message = `🧨 An attempt was made to remove **${quantity}x** of ${itemEmoji} **${itemName}**, but you only had **${result.hadQuantity}x** available. Final total: **${result.finalQuantity}x**.`;
+        }
+    } else {
+        // Unknown operation - should never happen but handle gracefully
+        console.error(`Unknown operation type: ${operation}`);
+        return {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+                type: 17,
+                components: [{
+                    type: 10,
+                    content: `❌ Unknown operation type: ${operation}`
                 }]
             }]
         };
     }
-    
+
     // Update claim tracking persistently - use specific button and action if provided
     if (config.limit && config.limit.type !== 'unlimited') {
         const safariData = await loadSafariContent();
-        
+
         if (buttonId && actionIndex !== null) {
             // Direct update to specific action
             const button = safariData[guildId]?.buttons?.[buttonId];
             if (button && button.actions && button.actions[actionIndex]) {
                 const action = button.actions[actionIndex];
                 if (action.type === 'give_item') {
-                    console.log(`🎁 BEFORE CLAIM: ${config.limit.type}, claimedBy:`, action.config.limit.claimedBy);
-                    
+                    console.log(`${operationEmoji} BEFORE CLAIM: ${config.limit.type}, claimedBy:`, action.config.limit.claimedBy);
+
                     if (config.limit.type === 'once_per_player') {
                         if (!action.config.limit.claimedBy) {
                             action.config.limit.claimedBy = [];
@@ -1129,9 +1175,9 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
                     } else if (config.limit.type === 'once_globally') {
                         action.config.limit.claimedBy = userId;
                     }
-                    
-                    console.log(`🎁 AFTER CLAIM: ${config.limit.type}, claimedBy:`, action.config.limit.claimedBy);
-                    
+
+                    console.log(`${operationEmoji} AFTER CLAIM: ${config.limit.type}, claimedBy:`, action.config.limit.claimedBy);
+
                     await saveSafariContent(safariData);
                     console.log(`✅ Updated claim tracking for give_item action ${buttonId}[${actionIndex}]`);
                 }
@@ -1144,12 +1190,13 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
                 if (button.actions) {
                     for (let i = 0; i < button.actions.length; i++) {
                         const action = button.actions[i];
-                        // Match by type, itemId and quantity to find the right action
-                        if (action.type === 'give_item' && 
+                        // Match by type, itemId, quantity and operation to find the right action
+                        if (action.type === 'give_item' &&
                             action.config?.itemId === config.itemId &&
                             action.config?.quantity === config.quantity &&
+                            (action.config?.operation || 'give') === operation &&
                             action.config?.limit?.type === config.limit.type) {
-                            
+
                             if (config.limit.type === 'once_per_player') {
                                 if (!action.config.limit.claimedBy) {
                                     action.config.limit.claimedBy = [];
@@ -1160,7 +1207,7 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
                             } else if (config.limit.type === 'once_globally') {
                                 action.config.limit.claimedBy = userId;
                             }
-                            
+
                             await saveSafariContent(safariData);
                             console.log(`✅ Updated claim tracking for give_item action (legacy fallback)`);
                             break;
@@ -1170,14 +1217,6 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
             }
         }
     }
-    
-    // Get item details
-    const safariData = await loadSafariContent();
-    const item = safariData[guildId]?.items?.[config.itemId];
-    const itemName = item?.name || config.itemId;
-    const itemEmoji = item?.emoji || '🎁';
-    
-    const message = `${itemEmoji} You received **${config.quantity}x ${itemName}**!`;
 
     return {
         flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
@@ -2333,6 +2372,118 @@ async function addItemToInventory(guildId, userId, itemId, quantity = 1, existin
     } catch (error) {
         console.error('Error adding item to inventory:', error);
         throw error;
+    }
+}
+
+/**
+ * Remove items from a player's inventory
+ * @param {string} guildId - The guild ID
+ * @param {string} userId - The user ID
+ * @param {string} itemId - The item to remove
+ * @param {number} quantity - How many to remove (default 1)
+ * @param {object} existingPlayerData - Optional existing player data to avoid re-loading
+ * @returns {object} Result with hadEnough, hadQuantity, removedQuantity, finalQuantity
+ */
+async function removeItemFromInventory(guildId, userId, itemId, quantity = 1, existingPlayerData = null) {
+    try {
+        const playerData = existingPlayerData || await loadPlayerData();
+
+        // Use universal safari initialization
+        initializePlayerSafari(playerData, guildId, userId);
+
+        // DEFENSIVE: Ensure inventory exists
+        if (!playerData[guildId].players[userId].safari.inventory) {
+            playerData[guildId].players[userId].safari.inventory = {};
+        }
+
+        const inventory = playerData[guildId].players[userId].safari.inventory;
+        const currentItem = inventory[itemId];
+
+        // Get current quantity using universal accessor
+        const currentQuantity = getItemQuantity(currentItem);
+
+        console.log(`🧨 DEBUG: removeItemFromInventory - item: ${itemId}, current: ${currentQuantity}, requested: ${quantity}`);
+
+        // Calculate how much we can actually remove
+        const actualRemoved = Math.min(quantity, currentQuantity);
+        const finalQuantity = Math.max(0, currentQuantity - quantity);
+
+        // Update or delete inventory item
+        if (finalQuantity === 0) {
+            // Remove item entirely when quantity reaches 0
+            delete inventory[itemId];
+            console.log(`🧨 DEBUG: Removed ${itemId} from inventory entirely (had ${currentQuantity})`);
+        } else {
+            // Update to new quantity (preserve attack availability if present)
+            const currentAttacks = getItemAttackAvailability(currentItem);
+            const newAttacks = Math.max(0, currentAttacks - actualRemoved);
+            setItemQuantity(inventory, itemId, finalQuantity, newAttacks);
+            console.log(`🧨 DEBUG: Updated ${itemId} quantity from ${currentQuantity} to ${finalQuantity}`);
+        }
+
+        // Save if not using existing player data
+        if (!existingPlayerData) {
+            await savePlayerData(playerData);
+            console.log(`✅ DEBUG: PlayerData saved after item removal`);
+        }
+
+        // Log item removal to Safari Log
+        try {
+            const safariData = await loadSafariContent();
+            const { logItemRemoval } = await import('./safariLogger.js');
+            const itemDef = safariData[guildId]?.items?.[itemId];
+
+            // Get location from player data or channel
+            let location = 'Unknown';
+            const activeMapId = safariData[guildId]?.maps?.active;
+            if (activeMapId && playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId]) {
+                location = playerData[guildId].players[userId].safari.mapProgress[activeMapId].currentLocation || 'Unknown';
+            }
+
+            const username = existingPlayerData?.username || 'Unknown';
+            const displayName = existingPlayerData?.displayName || username;
+
+            // Only log if logItemRemoval exists (it might not be implemented yet)
+            if (typeof logItemRemoval === 'function') {
+                await logItemRemoval({
+                    guildId,
+                    userId,
+                    username,
+                    displayName,
+                    location,
+                    itemId,
+                    itemName: itemDef?.name || itemId,
+                    itemEmoji: itemDef?.emoji || '📦',
+                    requestedQuantity: quantity,
+                    actualRemoved,
+                    hadQuantity: currentQuantity,
+                    finalQuantity,
+                    source: existingPlayerData?.source || 'manual',
+                    channelName: existingPlayerData?.channelName || null
+                });
+            }
+        } catch (logError) {
+            console.error('Safari Log Error (item removal):', logError);
+            // Don't fail the item removal if logging fails
+        }
+
+        return {
+            success: true,
+            hadEnough: currentQuantity >= quantity,
+            hadQuantity: currentQuantity,
+            removedQuantity: actualRemoved,
+            finalQuantity: finalQuantity
+        };
+    } catch (error) {
+        console.error('Error removing item from inventory:', error);
+        return {
+            success: false,
+            hadEnough: false,
+            hadQuantity: 0,
+            removedQuantity: 0,
+            finalQuantity: 0,
+            error: error.message
+        };
     }
 }
 
@@ -8065,6 +8216,7 @@ export {
     createItem,
     getPlayerInventory,
     addItemToInventory,
+    removeItemFromInventory,
     checkCondition,
     getCurrencyAndInventoryDisplay,
     createStoreDisplay,

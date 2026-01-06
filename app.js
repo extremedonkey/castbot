@@ -4914,6 +4914,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_followup_execute_on_') &&
         !custom_id.startsWith('safari_followup_save_') &&
         !custom_id.startsWith('safari_item_limit_') &&
+        !custom_id.startsWith('safari_item_operation_') &&
         !custom_id.startsWith('safari_item_quantity_') &&
         !custom_id.startsWith('safari_item_save_') &&
         !custom_id.startsWith('safari_item_reset_') &&
@@ -16445,6 +16446,65 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
     // NOTE: safari_item_style_* handler removed - button style is set at parent Custom Action level
     // via custom_action_button_style_* handler. Sub-actions don't have their own buttons.
+    } else if (custom_id.startsWith('safari_item_operation_')) {
+      // Handle item operation type change (give vs remove)
+      return ButtonHandlerFactory.create({
+        id: 'safari_item_operation',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          // Parse the custom_id: safari_item_operation_buttonId_itemId_actionIndex
+          const fullString = context.customId.replace('safari_item_operation_', '');
+          const lastUnderscoreIndex = fullString.lastIndexOf('_');
+          const actionIndex = parseInt(fullString.substring(lastUnderscoreIndex + 1));
+          const beforeActionIndex = fullString.substring(0, lastUnderscoreIndex);
+
+          // Find itemId by checking which part exists in items
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const items = safariData[context.guildId]?.items || {};
+
+          let buttonId, itemId, item;
+
+          // Try different split points to find valid itemId
+          const parts = beforeActionIndex.split('_');
+          for (let i = 1; i < parts.length; i++) {
+            const possibleItemId = parts.slice(i).join('_');
+            if (items[possibleItemId]) {
+              itemId = possibleItemId;
+              buttonId = parts.slice(0, i).join('_');
+              item = items[possibleItemId];
+              break;
+            }
+          }
+
+          if (!item) {
+            return {
+              content: '❌ Item not found.',
+              ephemeral: true
+            };
+          }
+
+          const operationType = context.values[0]; // 'give' or 'remove'
+          console.log(`🎯 OPERATION: safari_item_operation - ${operationType} for ${buttonId}[${actionIndex}]`);
+
+          // Store in temporary state (preserve existing defaults if present)
+          const stateKey = `${context.guildId}_${buttonId}_${itemId}_${actionIndex}`;
+          const state = dropConfigState.get(stateKey) || {
+            limit: 'once_per_player',
+            style: '2',
+            quantity: 1,
+            operation: 'give',
+            executeOn: 'true'
+          };
+          state.operation = operationType;
+          dropConfigState.set(stateKey, state);
+
+          // Return updated configuration UI
+          return await showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_item_quantity_')) {
       // Handle item quantity change
       return ButtonHandlerFactory.create({
@@ -16607,7 +16667,8 @@ Your server is now ready for Tycoons gameplay!`;
             }
           }
           
-          console.log(`✅ SAVE: safari_item_save - saving give_item for ${buttonId}`);
+          // Log will be updated after we get state
+          // console.log(`✅ SAVE: safari_item_save - saving give_item for ${buttonId}`);
           
           const button = safariData[context.guildId]?.buttons?.[buttonId];
           
@@ -16629,6 +16690,7 @@ Your server is now ready for Tycoons gameplay!`;
             limit: 'once_per_player',
             style: '2',
             quantity: 1,
+            operation: 'give',
             executeOn: 'true'
           };
           
@@ -16654,6 +16716,7 @@ Your server is now ready for Tycoons gameplay!`;
             config: {
               itemId: itemId,
               quantity: state.quantity || 1,  // Default to 1 if not set
+              operation: state.operation || 'give',  // Default to 'give' for backwards compatibility
               limit: {
                 type: state.limit || 'unlimited',  // Default to unlimited
                 claimedBy: (state.limit || 'unlimited') === 'unlimited' ? undefined : []
@@ -16697,7 +16760,7 @@ Your server is now ready for Tycoons gameplay!`;
             console.error('Error queueing anchor updates:', error);
           }
           
-          console.log(`✅ Added give_item action to button ${buttonId}`);
+          console.log(`✅ Added give_item action (operation: ${state.operation || 'give'}) to button ${buttonId}`);
           
           // Clean up state
           dropConfigState.delete(stateKey);
@@ -39205,8 +39268,8 @@ function getActionTypeName(actionType) {
   const actionTypeNames = {
     'display_text': 'Text Display Action',
     'update_currency': 'Update Currency Action',
-    'give_currency': 'Give Currency Action',
-    'give_item': 'Give Item Action',
+    'give_currency': 'Give / Remove Currency Action',
+    'give_item': 'Give / Remove Item Action',
     'follow_up_button': 'Follow-up Action',
     'conditional': 'Conditional Action',
     'random_outcome': 'Random Outcome Action'
@@ -39348,6 +39411,7 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
       limit: 'once_per_player',   // Default to once per player (most common)
       style: '2',                 // Default to Secondary/Grey
       quantity: 1,                // Default to 1 item
+      operation: 'give',          // Default to give (not remove)
       executeOn: 'true'           // Default to true
     };
     // CRITICAL: Save the default state so it's available when user clicks Save
@@ -39391,7 +39455,7 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
       components: [
         {
           type: 10, // Text Display
-          content: `# Configure ${item.emoji || '📦'} ${item.name} Drop\n\nSet how this item will be given when the action is triggered.`
+          content: `# Configure ${item.emoji || '📦'} ${item.name} Action\n\nSet how this item will be given or removed when the action is triggered.`
         },
         { type: 14 }, // Separator
         
@@ -39423,6 +39487,32 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
                 description: 'Only one player can claim',
                 emoji: { name: '🌍' },
                 default: state.limit === 'once_globally'
+              }
+            ]
+          }]
+        },
+
+        // Operation Type Select (Give vs Remove)
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_item_operation_${buttonId}_${itemId}_${actionIndex}`,
+            placeholder: 'Select operation type...',
+            options: [
+              {
+                label: 'Give Item',
+                value: 'give',
+                description: 'Adds the item to the player\'s inventory',
+                emoji: { name: '🎁' },
+                default: state.operation !== 'remove'  // Default to give
+              },
+              {
+                label: 'Remove Item',
+                value: 'remove',
+                description: 'Removes the item from the player\'s inventory, if it exists',
+                emoji: { name: '🧨' },
+                default: state.operation === 'remove'
               }
             ]
           }]

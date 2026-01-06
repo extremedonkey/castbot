@@ -309,8 +309,8 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
                 placeholder: 'Select action type to add...',
                 options: [
                   { label: 'Display Text', value: 'display_text', emoji: { name: '📄' } },
-                  { label: 'Give Currency', value: 'give_currency', emoji: { name: '🪙' } },
-                  { label: 'Give Item', value: 'give_item', emoji: { name: '🎁' } },
+                  { label: 'Give / Remove Currency', value: 'give_currency', emoji: { name: '🪙' } },
+                  { label: 'Give / Remove Item', value: 'give_item', emoji: { name: '🎁' } },
                   { label: 'Give Role', value: 'give_role', emoji: { name: '👑' } },
                   { label: 'Remove Role', value: 'remove_role', emoji: { name: '🚫' } },
                   { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' } },
