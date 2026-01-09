@@ -141,9 +141,10 @@ export async function createPlayerDisplaySection(player, playerData, guildId) {
  * Only shows if the guild has attributes configured
  * @param {string} guildId - Discord guild ID
  * @param {string} playerId - Player's Discord user ID
+ * @param {string} [label] - Optional label override (defaults to "Your Stats", use player name for admin view)
  * @returns {Object|null} Text display component or null if no attributes
  */
-export async function createAttributeDisplaySection(guildId, playerId) {
+export async function createAttributeDisplaySection(guildId, playerId, label = 'Your Stats') {
   try {
     // Check if guild has any attributes configured
     const definitions = await getAttributeDefinitions(guildId);
@@ -215,7 +216,7 @@ export async function createAttributeDisplaySection(guildId, playerId) {
 
     return {
       type: 10, // Text Display
-      content: `> **\`📊 Your Stats\`**\n${attrLines.join('\n')}`
+      content: `> **\`📊 ${label}\`**\n${attrLines.join('\n')}`
     };
   } catch (error) {
     console.error('Error creating attribute display:', error);
@@ -373,15 +374,16 @@ export async function createPlayerManagementUI(options) {
     }
 
     // Add attribute display section (only shows if guild has attributes configured)
-    // Only show in PLAYER mode (not admin mode)
-    if (mode === PlayerManagementMode.PLAYER) {
-      const attributeSection = await createAttributeDisplaySection(guildId, targetMember.id);
-      if (attributeSection) {
-        container.components.push({
-          type: 14 // Separator
-        });
-        container.components.push(attributeSection);
-      }
+    // Use "Your Stats" for player mode, player name for admin mode
+    const statsLabel = mode === PlayerManagementMode.ADMIN
+      ? `${targetMember.displayName || targetMember.user?.username || 'Player'}'s Stats`
+      : 'Your Stats';
+    const attributeSection = await createAttributeDisplaySection(guildId, targetMember.id, statsLabel);
+    if (attributeSection) {
+      container.components.push({
+        type: 14 // Separator
+      });
+      container.components.push(attributeSection);
     }
 
     // Add separator before buttons
