@@ -146,6 +146,11 @@ export async function createPlayerDisplaySection(player, playerData, guildId) {
  */
 export async function createAttributeDisplaySection(guildId, playerId, label = 'Your Stats') {
   try {
+    // Clear safari cache before reading attributes to ensure fresh data
+    // This prevents showing stale values after admin modifications
+    const { clearSafariCache } = await import('./safariManager.js');
+    clearSafariCache();
+
     // Check if guild has any attributes configured
     const definitions = await getAttributeDefinitions(guildId);
     const definitionEntries = Object.entries(definitions);
