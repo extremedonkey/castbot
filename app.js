@@ -20241,7 +20241,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
-    } else if (custom_id.startsWith('admin_set_pronouns_') || custom_id.startsWith('admin_set_timezone_') || custom_id.startsWith('admin_set_age_') || custom_id.startsWith('admin_manage_vanity_')) {
+    } else if (custom_id.startsWith('admin_set_pronouns_') || custom_id.startsWith('admin_set_timezone_') || custom_id.startsWith('admin_set_age_') || custom_id.startsWith('admin_manage_vanity_') || custom_id.startsWith('admin_set_attributes_')) {
       // 🔘 Convert to ButtonHandlerFactory
       return ButtonHandlerFactory.create({
         id: custom_id,
@@ -20279,6 +20279,84 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       return res.send({
         type: InteractionResponseType.MODAL,
         data: modal.toJSON()
+      });
+
+    } else if (custom_id.startsWith('admin_integrated_attributes_')) {
+      // Handle attribute selection - opens modal to set value
+      const targetPlayerId = custom_id.split('_')[3];
+      const selectedAttrId = req.body.data.values?.[0];
+
+      if (!selectedAttrId || selectedAttrId === 'none') {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ No attribute selected',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+
+      const guildId = req.body.guild_id;
+      const { getAttributeDefinitions, getPlayerAttribute } = await import('./safariManager.js');
+      const attributes = await getAttributeDefinitions(guildId);
+      const attr = attributes[selectedAttrId];
+
+      if (!attr) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Attribute not found',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+
+      // Get current value for placeholder
+      let currentValue = attr.defaultMax || attr.defaultValue || 0;
+      try {
+        const playerAttr = await getPlayerAttribute(guildId, targetPlayerId, selectedAttrId);
+        currentValue = playerAttr.current ?? currentValue;
+      } catch (e) {
+        // Use default
+      }
+
+      // Open modal to set attribute value
+      const isResource = attr.category === 'resource';
+
+      return res.send({
+        type: InteractionResponseType.MODAL,
+        data: {
+          custom_id: `modal_admin_set_attr_${targetPlayerId}_${selectedAttrId}`,
+          title: `Set ${attr.emoji} ${attr.name}`,
+          components: [
+            {
+              type: 1, // ActionRow
+              components: [{
+                type: 4, // Text Input
+                custom_id: 'attr_value',
+                label: isResource ? 'Current Value' : 'Value',
+                style: 1, // Short
+                placeholder: `Current: ${currentValue}`,
+                min_length: 1,
+                max_length: 10,
+                required: true
+              }]
+            },
+            ...(isResource ? [{
+              type: 1,
+              components: [{
+                type: 4,
+                custom_id: 'attr_max',
+                label: 'Max Value (optional)',
+                style: 1,
+                placeholder: `Current max: ${attr.defaultMax || 100}`,
+                min_length: 0,
+                max_length: 10,
+                required: false
+              }]
+            }] : [])
+          ]
+        }
       });
 
     } else if (custom_id.startsWith('admin_integrated_age') || custom_id.startsWith('player_integrated_age') ||
@@ -31659,6 +31737,95 @@ Are you sure you want to continue?`;
                 }
               ]
             }]
+          }
+        });
+      }
+
+    } else if (custom_id.startsWith('modal_admin_set_attr_')) {
+      // Handle admin attribute modification modal
+      // Format: modal_admin_set_attr_{playerId}_{attrId}
+      const parts = custom_id.split('_');
+      const playerId = parts[4];
+      const attrId = parts.slice(5).join('_'); // Handle attribute IDs with underscores
+      const guildId = req.body.guild_id;
+
+      // Extract form values
+      const getFieldValue = (fieldId) => {
+        for (const row of components) {
+          for (const comp of row.components) {
+            if (comp.custom_id === fieldId) {
+              return comp.value;
+            }
+          }
+        }
+        return null;
+      };
+
+      const newValue = parseInt(getFieldValue('attr_value'));
+      const newMax = getFieldValue('attr_max') ? parseInt(getFieldValue('attr_max')) : null;
+
+      if (isNaN(newValue)) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Invalid value - please enter a number',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+
+      try {
+        const { setPlayerAttribute, getAttributeDefinitions } = await import('./safariManager.js');
+        const attributes = await getAttributeDefinitions(guildId);
+        const attr = attributes[attrId];
+
+        if (!attr) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Attribute not found',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Set the player's attribute value
+        const result = await setPlayerAttribute(guildId, playerId, attrId, newValue, newMax);
+
+        console.log(`📊 Admin set ${attr.name} for player ${playerId}: ${newValue}${newMax ? `/${newMax}` : ''}`);
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+              type: 17,
+              accent_color: 0x27ae60, // Green
+              components: [
+                { type: 10, content: '## ✅ Attribute Updated' },
+                { type: 14 },
+                { type: 10, content: `**${attr.emoji} ${attr.name}** for <@${playerId}> has been set to:\n\n• Current: **${result.current}**${attr.category === 'resource' ? `\n• Max: **${result.max}**` : ''}` },
+                { type: 14 },
+                {
+                  type: 1,
+                  components: [{
+                    type: 2,
+                    custom_id: 'prod_player_admin',
+                    label: '← Back to Player Admin',
+                    style: 2
+                  }]
+                }
+              ]
+            }]
+          }
+        });
+      } catch (error) {
+        console.error(`❌ Failed to set attribute: ${error.message}`);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Failed to set attribute: ${error.message}`,
+            flags: InteractionResponseFlags.EPHEMERAL
           }
         });
       }

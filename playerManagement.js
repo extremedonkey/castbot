@@ -276,6 +276,18 @@ export function createManagementButtons(targetUserId, mode, enabled = true, acti
     });
   }
 
+  // Add attributes button for admin mode (5th button - at max for ActionRow)
+  if (mode === PlayerManagementMode.ADMIN) {
+    components.push({
+      type: 2, // Button
+      style: activeButton === 'attributes' ? ButtonStyle.Primary : ButtonStyle.Secondary,
+      label: 'Stats',
+      custom_id: `admin_set_attributes${suffix}${userIdPart}`,
+      emoji: { name: '📊' },
+      disabled: !enabled
+    });
+  }
+
   return {
     type: 1, // ActionRow
     components
@@ -1167,6 +1179,52 @@ async function createHotSwappableSelect(activeButton, targetMember, playerData, 
           min_values: 0,
           max_values: 25, // Discord limit
           default_values: currentVanityRoles.map(id => ({ id, type: 'role' }))
+        }]
+      };
+    }
+
+    case 'attributes': {
+      if (mode !== PlayerManagementMode.ADMIN) return null;
+
+      // Get guild's attribute definitions
+      const attributes = await getAttributeDefinitions(guildId);
+      const attrEntries = Object.entries(attributes);
+
+      if (attrEntries.length === 0) {
+        return {
+          type: 1, // ActionRow
+          components: [{
+            type: 3, // String Select
+            custom_id: `admin_integrated_attributes_${targetMember.id}`,
+            placeholder: 'No attributes configured - use Tools → Attributes',
+            min_values: 0,
+            max_values: 1,
+            disabled: true,
+            options: [{ label: 'No attributes', value: 'none', description: 'Configure attributes in Tools menu' }]
+          }]
+        };
+      }
+
+      // Build attribute options
+      const attrOptions = attrEntries.slice(0, 25).map(([id, attr]) => {
+        const isResource = attr.category === 'resource';
+        return {
+          label: attr.name,
+          value: id,
+          description: `${isResource ? 'Resource' : 'Stat'} - Click to modify`,
+          emoji: { name: attr.emoji || '📊' }
+        };
+      });
+
+      return {
+        type: 1, // ActionRow
+        components: [{
+          type: 3, // String Select
+          custom_id: `admin_integrated_attributes_${targetMember.id}`,
+          placeholder: 'Select attribute to modify',
+          min_values: 1,
+          max_values: 1,
+          options: attrOptions
         }]
       };
     }

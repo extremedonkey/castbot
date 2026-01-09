@@ -408,6 +408,22 @@ export const BUTTON_REGISTRY = {
     category: 'attributes',
     parent: 'attr_manage_existing'
   },
+  'admin_set_attributes_*': {
+    label: 'Stats',
+    description: 'Modify player attributes in Player Admin',
+    emoji: '📊',
+    style: 'Secondary',
+    category: 'attributes',
+    parent: 'prod_player_admin'
+  },
+  'admin_integrated_attributes_*': {
+    label: 'Attribute Select',
+    description: 'Select which attribute to modify for a player',
+    emoji: '📊',
+    style: 'Secondary',
+    category: 'attributes',
+    parent: 'admin_set_attributes_*'
+  },
 
   // === TRIBES (LEGACY) ===
   'prod_manage_tribes': {
