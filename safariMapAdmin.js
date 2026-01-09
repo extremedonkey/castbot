@@ -245,8 +245,16 @@ async function createPlayerViewUI(guildId, userId) {
       },
       {
         type: 2, // Button
+        custom_id: `safari_set_attributes_${userId}`,
+        label: 'Stats',
+        style: 2, // Secondary
+        emoji: { name: '📊' },
+        disabled: !isInitialized // Disable if player not initialized in Safari
+      },
+      {
+        type: 2, // Button
         custom_id: `map_admin_view_raw_${userId}`,
-        label: 'View Raw Data',
+        label: 'Raw',
         style: 2, // Secondary
         emoji: { name: '📄' }
       }

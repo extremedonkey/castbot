@@ -1049,6 +1049,87 @@ Everything fits in existing `safariContent.json` structure:
 
 ---
 
+## Appendix F: Implementation Notes (Phase 0-3)
+
+### F.1 Architecture Discovery: Two Player Admin Interfaces
+
+**CRITICAL LEARNING**: CastBot has **TWO different Player Admin interfaces**:
+
+| Interface | Button ID | File | Used For |
+|-----------|-----------|------|----------|
+| **Player Management** | `admin_set_*` buttons | `playerManagement.js` | Pronouns, Timezone, Age, Vanity Roles |
+| **Safari Player Admin** | `safari_map_admin` | `safariMapAdmin.js` | Currency, Items, Map, Stamina, **Attributes** |
+
+The Safari "Player Admin" button in Production Menu → Safari says "Player Admin" but uses `custom_id: 'safari_map_admin'` and `createMapAdminUI()` - **NOT** `createPlayerManagementUI()`.
+
+**For future Claude instances**: When adding features to "Player Admin", check which interface context you're in!
+
+### F.2 Files Modified/Created
+
+| File | Changes |
+|------|---------|
+| `config/attributeDefaults.js` | **NEW** - Preset definitions (Mana, HP, Strength, etc.) |
+| `safariManager.js:438,470` | Added `attributeDefinitions: {}` to guild data structure |
+| `safariManager.js:8202-8411` | Added CRUD functions: `getAttributeDefinitions`, `createAttributeDefinition`, etc. |
+| `menuBuilder.js:68-75` | Added "📊 Attributes" button to Tools Menu (Row 2) |
+| `playerManagement.js:17-19` | Added imports for attribute functions |
+| `playerManagement.js:139-224` | NEW `createAttributeDisplaySection()` function |
+| `playerManagement.js:279-289` | Added "Stats" button to admin management buttons (legacy Player Management) |
+| `playerManagement.js:363-373` | Integrated attribute display into Player Menu |
+| `playerManagement.js:1186-1230` | Added `case 'attributes'` to `createHotSwappableSelect` |
+| `safariMapAdmin.js:246-253` | Added "Stats" button to Safari Player Admin Row 2 |
+| `app.js:6762-7082` | Attribute Management UI handlers |
+| `app.js:20244` | Added `admin_set_attributes_` to handler pattern |
+| `app.js:20284-20360` | Handler for `admin_integrated_attributes_` (old Player Management context) |
+| `app.js:29363-29551` | Safari-specific handlers: `safari_set_attributes_`, `safari_attr_select`, `map_admin_return_to_player_` |
+| `app.js:31744-32017` | Modal handlers for both Safari and admin contexts |
+| `buttonHandlerFactory.js:354-450` | Button registry entries for all attribute buttons |
+
+### F.3 Button ID Patterns
+
+| Context | Button Pattern | Handler Location |
+|---------|----------------|------------------|
+| Tools Menu | `attribute_management` | `app.js:6762` |
+| Attribute CRUD | `attr_add_custom`, `attr_enable_preset`, `attr_edit_select`, `attr_delete_*` | `app.js:6860-7207` |
+| Safari Player Admin | `safari_set_attributes_{userId}` | `app.js:29363` |
+| Safari Attribute Select | `safari_attr_select` | `app.js:29455` |
+| Safari Modal | `modal_safari_set_attr_{userId}_{attrId}` | `app.js:31934` |
+| Legacy Player Management | `admin_set_attributes_{userId}` | `app.js:20244` → `handlePlayerButtonClick` |
+| Legacy Modal | `modal_admin_set_attr_{userId}_{attrId}` | `app.js:32019` |
+
+### F.4 Test Paths
+
+**Admin Configure Attributes**:
+```
+/menu → Production Menu → 🪛 Tools → 📊 Attributes
+  ├── ➕ Add Attribute (modal) → Create custom
+  ├── ⚡ Enable Preset (select) → Enable Mana/HP/etc
+  └── ✏️ Edit/Delete → Manage existing
+```
+
+**Admin Set Player Attributes (Safari)**:
+```
+/menu → Production Menu → Safari → 🧭 Player Admin
+  → Select player → 📊 Stats button
+  → Select attribute → Modal → Enter value
+```
+
+**Player View Attributes**:
+```
+/menu (as player) → Player Menu
+  → "📊 Your Stats" section shows all server attributes
+```
+
+### F.5 Remaining Work
+
+- **Phase 4**: Custom Action integration - Add "Modify Attribute" action type
+  - Allows Safari buttons to add/subtract/set player attributes
+  - Enables game mechanics like "costs 5 Mana to use ability"
+  - Location: Custom Action editor → Action Types dropdown
+
+---
+
 *Analysis completed: 2026-01-09*
 *Updated with Appendices A-E: 2026-01-09*
+*Updated with Appendix F (Implementation Notes): 2026-01-09*
 *Author: Claude Opus 4.5 (assisted analysis)*

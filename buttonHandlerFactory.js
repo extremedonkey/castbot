@@ -424,6 +424,30 @@ export const BUTTON_REGISTRY = {
     category: 'attributes',
     parent: 'admin_set_attributes_*'
   },
+  'safari_set_attributes_*': {
+    label: 'Stats',
+    description: 'Modify player attributes from Safari Player Admin',
+    emoji: '📊',
+    style: 'Secondary',
+    category: 'attributes',
+    parent: 'safari_map_admin'
+  },
+  'safari_attr_select': {
+    label: 'Attribute Select',
+    description: 'Select menu for choosing attribute in Safari context',
+    emoji: '📊',
+    style: 'Secondary',
+    category: 'attributes',
+    parent: 'safari_set_attributes_*'
+  },
+  'map_admin_return_to_player_*': {
+    label: 'Back to Player',
+    description: 'Return to Safari Player Admin player view',
+    emoji: '←',
+    style: 'Secondary',
+    category: 'navigation',
+    parent: 'safari_map_admin'
+  },
 
   // === TRIBES (LEGACY) ===
   'prod_manage_tribes': {

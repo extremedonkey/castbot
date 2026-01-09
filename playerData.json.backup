@@ -661,14 +661,14 @@
     "serverName": "CastBot",
     "icon": "https://cdn.discordapp.com/icons/1331657596087566398/e2bd30d98992c902b50e047bf284ef64.webp",
     "ownerId": "391415444084490240",
-    "memberCount": 34,
+    "memberCount": 35,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1737562311909,
-    "lastUpdated": 1767709588788,
+    "lastUpdated": 1767959984071,
     "players": {
       "233762709932474370": {
         "emojiCode": "<:Geo:1396856830281388144>",
@@ -1596,6 +1596,47 @@
           "cooldowns": {},
           "buttonUses": {},
           "storeHistory": []
+        }
+      },
+      "1163851781114167366": {
+        "safari": {
+          "currency": 25,
+          "history": [],
+          "lastInteraction": 1767961267878,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "C2",
+              "exploredCoordinates": [
+                "C2"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "C2",
+                  "timestamp": "2026-01-09T12:21:07.879Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2026-01-09T12:21:07.879Z",
+              "regenConfig": "hourly"
+            }
+          }
         }
       }
     },
@@ -3603,14 +3644,14 @@
     "serverName": "EpochORG S6: Buccaneers",
     "icon": "https://cdn.discordapp.com/icons/1266913708123361303/c6692f2c83b69e4de2cce0c5806380ac.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 66,
+    "memberCount": 65,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1722126166135,
-    "lastUpdated": 1767689875216,
+    "lastUpdated": 1767959982981,
     "players": {},
     "tribes": {
       "1267501924639571988": {
@@ -3728,7 +3769,7 @@
     ],
     "ownerInfo": {
       "username": "mpschettig",
-      "globalName": "Tylenol Boy",
+      "globalName": "Mike",
       "discriminator": "0",
       "tag": "mpschettig"
     },
@@ -3739,14 +3780,14 @@
     "serverName": "EpochORG S5: Incan Empire",
     "icon": "https://cdn.discordapp.com/icons/1240325979214188615/156095a9edb1de2f24dfac78d2904a04.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 63,
+    "memberCount": 62,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1715787157587,
-    "lastUpdated": 1767709587239,
+    "lastUpdated": 1767959982629,
     "players": {},
     "tribes": {
       "1241383870260056095": {
@@ -3769,7 +3810,7 @@
     "pronounRoleIDs": [],
     "ownerInfo": {
       "username": "mpschettig",
-      "globalName": "Tylenol Boy",
+      "globalName": "Mike",
       "discriminator": "0",
       "tag": "mpschettig"
     },
@@ -6217,17 +6258,17 @@
     "serverName": "EpochORG S4: Ancient Egypt",
     "icon": "https://cdn.discordapp.com/icons/1209015985798127696/fab803057622fa548002ca6920f860ac.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 77,
+    "memberCount": 76,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1708322273445,
-    "lastUpdated": 1767709586846,
+    "lastUpdated": 1767959982230,
     "ownerInfo": {
       "username": "mpschettig",
-      "globalName": "Tylenol Boy",
+      "globalName": "Mike",
       "discriminator": "0",
       "tag": "mpschettig"
     },
@@ -9153,14 +9194,14 @@
     "serverName": "Triumph Hub",
     "icon": "https://cdn.discordapp.com/icons/1080166267136262154/174fdda5d62bc8c2227e31f8111e7f05.webp",
     "ownerId": "572291395365109770",
-    "memberCount": 439,
+    "memberCount": 438,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1677602106604,
-    "lastUpdated": 1767689872987,
+    "lastUpdated": 1767959980843,
     "players": {
       "572291395365109770": {
         "age": "29"
@@ -11129,17 +11170,17 @@
     "serverName": "EpochORG S7: Rumrunners",
     "icon": "https://cdn.discordapp.com/icons/1297188286191767603/82ee1b34273d340c02179b0ae8567e8a.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 72,
+    "memberCount": 71,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1729344188021,
-    "lastUpdated": 1767689875652,
+    "lastUpdated": 1767959983341,
     "ownerInfo": {
       "username": "mpschettig",
-      "globalName": "Tylenol Boy",
+      "globalName": "Mike",
       "discriminator": "0",
       "tag": "mpschettig"
     },
@@ -11467,14 +11508,14 @@
     "serverName": "Servivorg S14 - FINAL FANTASY",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/189c3570ea34b3fbf3ee7b4d5989d32e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 575,
+    "memberCount": 576,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1767709584885,
+    "lastUpdated": 1767959980470,
     "ownerInfo": {
       "username": "serviver",
       "globalName": "Serviver",
