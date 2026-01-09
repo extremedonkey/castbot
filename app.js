@@ -7080,6 +7080,231 @@ To fix this:
           }
         }
       })(req, res, client);
+    } else if (custom_id === 'attr_manage_existing') {
+      // Show list of existing attributes for edit/delete
+      return ButtonHandlerFactory.create({
+        id: 'attr_manage_existing',
+        updateMessage: true,
+        handler: async (context) => {
+          const { guildId } = context;
+          const { getAttributeDefinitions } = await import('./safariManager.js');
+          const attributes = await getAttributeDefinitions(guildId);
+
+          const attrEntries = Object.entries(attributes);
+          if (attrEntries.length === 0) {
+            return {
+              components: [{
+                type: 17,
+                accent_color: 0x9b59b6,
+                components: [
+                  { type: 10, content: '## ✏️ Edit/Delete Attributes' },
+                  { type: 14 },
+                  { type: 10, content: '*No attributes to edit.*\n\nCreate some attributes first!' },
+                  { type: 14 },
+                  {
+                    type: 1,
+                    components: [{
+                      type: 2,
+                      custom_id: 'attribute_management',
+                      label: '← Back',
+                      style: 2
+                    }]
+                  }
+                ]
+              }]
+            };
+          }
+
+          // Build select options for attributes
+          const attrOptions = attrEntries.slice(0, 25).map(([id, attr]) => ({
+            label: attr.name,
+            value: id,
+            description: `${attr.category === 'resource' ? 'Resource' : 'Stat'} - ${attr.isPreset ? 'Preset' : 'Custom'}`,
+            emoji: { name: attr.emoji }
+          }));
+
+          return {
+            components: [{
+              type: 17,
+              accent_color: 0x9b59b6,
+              components: [
+                { type: 10, content: '## ✏️ Edit/Delete Attributes' },
+                { type: 14 },
+                { type: 10, content: 'Select an attribute to edit or delete:' },
+                {
+                  type: 1,
+                  components: [{
+                    type: 3, // String Select
+                    custom_id: 'attr_edit_select',
+                    placeholder: 'Choose an attribute...',
+                    options: attrOptions
+                  }]
+                },
+                { type: 14 },
+                {
+                  type: 1,
+                  components: [{
+                    type: 2,
+                    custom_id: 'attribute_management',
+                    label: '← Back',
+                    style: 2
+                  }]
+                }
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'attr_edit_select') {
+      // Show edit/delete options for selected attribute
+      return ButtonHandlerFactory.create({
+        id: 'attr_edit_select',
+        updateMessage: true,
+        handler: async (context) => {
+          const { guildId } = context;
+          const selectedAttrId = req.body.data.values?.[0];
+
+          if (!selectedAttrId) {
+            return { content: '❌ No attribute selected' };
+          }
+
+          const { getAttributeDefinitions } = await import('./safariManager.js');
+          const attributes = await getAttributeDefinitions(guildId);
+          const attr = attributes[selectedAttrId];
+
+          if (!attr) {
+            return { content: '❌ Attribute not found' };
+          }
+
+          // Build attribute details
+          const typeLabel = attr.category === 'resource' ? 'Resource' : 'Stat';
+          const regenInfo = attr.regeneration?.type !== 'none'
+            ? `\n• Regeneration: ${attr.regeneration?.intervalMinutes} minutes`
+            : '\n• Regeneration: None';
+          const sourceLabel = attr.isPreset ? '(Preset)' : '(Custom)';
+
+          return {
+            components: [{
+              type: 17,
+              accent_color: 0x9b59b6,
+              components: [
+                { type: 10, content: `## ${attr.emoji} ${attr.name} ${sourceLabel}` },
+                { type: 14 },
+                { type: 10, content: `**Type:** ${typeLabel}\n**Default Value:** ${attr.defaultMax || attr.defaultValue}${regenInfo}\n\n${attr.description || ''}` },
+                { type: 14 },
+                {
+                  type: 1,
+                  components: [
+                    {
+                      type: 2,
+                      custom_id: `attr_delete_${selectedAttrId}`,
+                      label: 'Delete Attribute',
+                      style: 4, // Danger (Red)
+                      emoji: { name: '🗑️' }
+                    },
+                    {
+                      type: 2,
+                      custom_id: 'attr_manage_existing',
+                      label: '← Back to List',
+                      style: 2
+                    }
+                  ]
+                }
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('attr_delete_')) {
+      // Delete attribute confirmation and execution
+      return ButtonHandlerFactory.create({
+        id: 'attr_delete',
+        updateMessage: true,
+        handler: async (context) => {
+          const { guildId } = context;
+          const attrId = custom_id.replace('attr_delete_', '');
+
+          const { deleteAttributeDefinition, getAttributeDefinitions } = await import('./safariManager.js');
+
+          // Get attribute info before deletion for confirmation message
+          const attributes = await getAttributeDefinitions(guildId);
+          const attr = attributes[attrId];
+
+          if (!attr) {
+            return {
+              components: [{
+                type: 17,
+                accent_color: 0xe74c3c,
+                components: [
+                  { type: 10, content: '## ❌ Not Found' },
+                  { type: 14 },
+                  { type: 10, content: 'Attribute not found or already deleted.' },
+                  { type: 14 },
+                  {
+                    type: 1,
+                    components: [{
+                      type: 2,
+                      custom_id: 'attribute_management',
+                      label: '← Back',
+                      style: 2
+                    }]
+                  }
+                ]
+              }]
+            };
+          }
+
+          try {
+            await deleteAttributeDefinition(guildId, attrId);
+            console.log(`📊 Deleted attribute '${attr.name}' from guild ${guildId}`);
+
+            return {
+              components: [{
+                type: 17,
+                accent_color: 0x27ae60, // Green
+                components: [
+                  { type: 10, content: '## ✅ Attribute Deleted' },
+                  { type: 14 },
+                  { type: 10, content: `**${attr.emoji} ${attr.name}** has been removed from your server.` },
+                  { type: 14 },
+                  {
+                    type: 1,
+                    components: [{
+                      type: 2,
+                      custom_id: 'attribute_management',
+                      label: '← Back to Attributes',
+                      style: 2
+                    }]
+                  }
+                ]
+              }]
+            };
+          } catch (error) {
+            console.error(`❌ Failed to delete attribute: ${error.message}`);
+            return {
+              components: [{
+                type: 17,
+                accent_color: 0xe74c3c,
+                components: [
+                  { type: 10, content: '## ❌ Delete Failed' },
+                  { type: 14 },
+                  { type: 10, content: `Error: ${error.message}` },
+                  { type: 14 },
+                  {
+                    type: 1,
+                    components: [{
+                      type: 2,
+                      custom_id: 'attribute_management',
+                      label: '← Back',
+                      style: 2
+                    }]
+                  }
+                ]
+              }]
+            };
+          }
+        }
+      })(req, res, client);
     } else if (custom_id === 'setup_castbot') {
       // Execute setup using new roleManager module
       try {

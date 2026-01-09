@@ -392,6 +392,22 @@ export const BUTTON_REGISTRY = {
     category: 'attributes',
     parent: 'attribute_management'
   },
+  'attr_edit_select': {
+    label: 'Attribute Select',
+    description: 'Select menu for choosing attribute to edit/delete',
+    emoji: '📋',
+    style: 'Secondary',
+    category: 'attributes',
+    parent: 'attr_manage_existing'
+  },
+  'attr_delete_*': {
+    label: 'Delete Attribute',
+    description: 'Delete a specific attribute (wildcard pattern)',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'attributes',
+    parent: 'attr_manage_existing'
+  },
 
   // === TRIBES (LEGACY) ===
   'prod_manage_tribes': {
