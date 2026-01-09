@@ -31810,8 +31810,8 @@ Are you sure you want to continue?`;
                   type: 1,
                   components: [{
                     type: 2,
-                    custom_id: 'prod_player_admin',
-                    label: '← Back to Player Admin',
+                    custom_id: 'admin_manage_player',
+                    label: '← Back to Player Management',
                     style: 2
                   }]
                 }
