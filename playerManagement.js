@@ -14,8 +14,9 @@ import {
 } from 'discord-interactions';
 import { createPlayerCard, extractCastlistData, createCastlistRows } from './castlistV2.js';
 import { getPlayer, updatePlayer, getGuildPronouns, getGuildTimezones, loadPlayerData } from './storage.js';
-import { hasStoresInGuild, getEligiblePlayersFixed, getCustomTerms } from './safariManager.js';
+import { hasStoresInGuild, getEligiblePlayersFixed, getCustomTerms, getPlayerAttributes, getAttributeDefinitions } from './safariManager.js';
 import { createBackButton } from './src/ui/backButtonFactory.js';
+import { getTimeUntilRegeneration } from './pointsManager.js';
 
 /**
  * Player management modes
@@ -133,6 +134,93 @@ export async function createPlayerDisplaySection(player, playerData, guildId) {
       }
     }
   };
+}
+
+/**
+ * Creates an attribute display section showing player's attributes
+ * Only shows if the guild has attributes configured
+ * @param {string} guildId - Discord guild ID
+ * @param {string} playerId - Player's Discord user ID
+ * @returns {Object|null} Text display component or null if no attributes
+ */
+export async function createAttributeDisplaySection(guildId, playerId) {
+  try {
+    // Check if guild has any attributes configured
+    const definitions = await getAttributeDefinitions(guildId);
+    const definitionEntries = Object.entries(definitions);
+
+    if (definitionEntries.length === 0) {
+      return null; // No attributes configured for this server
+    }
+
+    // Get player's attribute values
+    const attributes = await getPlayerAttributes(guildId, playerId);
+    const attributeEntries = Object.entries(attributes);
+
+    if (attributeEntries.length === 0) {
+      return null;
+    }
+
+    // Sort by display order
+    attributeEntries.sort((a, b) => {
+      const orderA = a[1].display?.order || 100;
+      const orderB = b[1].display?.order || 100;
+      return orderA - orderB;
+    });
+
+    // Build attribute lines
+    const attrLines = [];
+    for (const [attrId, attr] of attributeEntries) {
+      const emoji = attr.emoji || '📊';
+      const name = attr.name;
+      const value = attr.value;
+
+      if (attr.category === 'resource') {
+        // Resource type - show current/max with optional bar
+        const current = value.current ?? attr.defaultCurrent ?? 0;
+        const max = value.max ?? attr.defaultMax ?? current;
+        const percentage = max > 0 ? Math.floor((current / max) * 100) : 0;
+
+        // Create simple bar
+        const filledBlocks = Math.floor(percentage / 10);
+        const emptyBlocks = 10 - filledBlocks;
+        const bar = '█'.repeat(filledBlocks) + '░'.repeat(emptyBlocks);
+
+        let line = `${emoji} **${name}**: ${bar} ${current}/${max}`;
+
+        // Add regen time if not at max
+        if (current < max && attr.regeneration?.type !== 'none') {
+          try {
+            const entityId = `player_${playerId}`;
+            const regenTime = await getTimeUntilRegeneration(guildId, entityId, attrId);
+            if (regenTime && regenTime !== 'Full') {
+              line += ` *(${regenTime})*`;
+            }
+          } catch (e) {
+            // Ignore regen time errors
+          }
+        }
+
+        attrLines.push(line);
+      } else {
+        // Stat type - show single value
+        const statValue = value.current ?? value ?? attr.defaultValue ?? 0;
+        attrLines.push(`${emoji} **${name}**: ${statValue}`);
+      }
+    }
+
+    if (attrLines.length === 0) {
+      return null;
+    }
+
+    return {
+      type: 10, // Text Display
+      content: `> **\`📊 Your Stats\`**\n${attrLines.join('\n')}`
+    };
+  } catch (error) {
+    console.error('Error creating attribute display:', error);
+    return null;
+  }
 }
 
 /**
@@ -270,6 +358,18 @@ export async function createPlayerManagementUI(options) {
     const playerSection = await createPlayerDisplaySection(targetMember, playerData, guildId);
     if (playerSection) {
       container.components.push(playerSection);
+    }
+
+    // Add attribute display section (only shows if guild has attributes configured)
+    // Only show in PLAYER mode (not admin mode)
+    if (mode === PlayerManagementMode.PLAYER) {
+      const attributeSection = await createAttributeDisplaySection(guildId, targetMember.id);
+      if (attributeSection) {
+        container.components.push({
+          type: 14 // Separator
+        });
+        container.components.push(attributeSection);
+      }
     }
 
     // Add separator before buttons
