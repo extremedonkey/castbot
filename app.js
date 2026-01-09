@@ -18208,6 +18208,12 @@ Your server is now ready for Tycoons gameplay!`;
             const { showCalculateAttackConfig } = await import('./customActionUI.js');
             return await showCalculateAttackConfig(context.guildId, actionId, actionIndex);
 
+          } else if (action.type === 'modify_attribute') {
+            // Show modify attribute configuration entity
+            console.log(`✅ SUCCESS: safari_edit_action - showing modify_attribute config for ${actionId}[${actionIndex}]`);
+            const { showModifyAttributeConfig } = await import('./customActionUI.js');
+            return await showModifyAttributeConfig(context.guildId, actionId, actionIndex);
+
           } else if (action.type === 'give_role' || action.type === 'remove_role') {
             // Show role configuration UI inline
             console.log(`✅ SUCCESS: safari_edit_action - showing role config for ${actionId}[${actionIndex}]`);
