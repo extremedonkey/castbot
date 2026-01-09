@@ -351,6 +351,48 @@ export const BUTTON_REGISTRY = {
     parent: 'prod_setup'
   },
 
+  // === ATTRIBUTE SYSTEM ===
+  'attribute_management': {
+    label: 'Attributes',
+    description: 'Manage custom attributes like HP, Mana, Strength for Safari',
+    emoji: '📊',
+    style: 'Secondary',
+    category: 'attributes',
+    parent: 'prod_setup'
+  },
+  'attr_add_custom': {
+    label: 'Add Attribute',
+    description: 'Create a new custom attribute',
+    emoji: '➕',
+    style: 'Primary',
+    category: 'attributes',
+    parent: 'attribute_management'
+  },
+  'attr_enable_preset': {
+    label: 'Enable Preset',
+    description: 'Enable a built-in attribute preset like Mana or HP',
+    emoji: '⚡',
+    style: 'Secondary',
+    category: 'attributes',
+    parent: 'attribute_management'
+  },
+  'attr_preset_select': {
+    label: 'Preset Select',
+    description: 'Select menu for choosing attribute presets',
+    emoji: '📋',
+    style: 'Secondary',
+    category: 'attributes',
+    parent: 'attribute_management'
+  },
+  'attr_manage_existing': {
+    label: 'Edit/Delete',
+    description: 'Edit or delete existing attributes',
+    emoji: '✏️',
+    style: 'Secondary',
+    category: 'attributes',
+    parent: 'attribute_management'
+  },
+
   // === TRIBES (LEGACY) ===
   'prod_manage_tribes': {
     label: 'Tribes (Legacy)',

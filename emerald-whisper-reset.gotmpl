@@ -1,0 +1,10 @@
+{{/* ============================================== */}}
+{{/* Reset for all whisper counts */}}
+
+{{/* DB key used in the whisper command */}}
+{{$dbKey := "whisper_counts"}}
+
+{{/* Delete the DB entry */}}
+{{dbDel .Guild.ID $dbKey}}
+
+{{sendMessage nil "✅ All whisper counts have been reset."}}

@@ -435,6 +435,7 @@ async function ensureGuildSafariData(guildId, safariData) {
             applications: {},
             stores: {},
             items: {},
+            attributeDefinitions: {},  // Custom attribute types for this server
             safariConfig: {
                 currencyName: "coins",
                 inventoryName: "Inventory",
@@ -466,6 +467,7 @@ async function ensureGuildSafariData(guildId, safariData) {
             applications: {},
             stores: {},
             items: {},
+            attributeDefinitions: {},  // Custom attribute types for this server
             safariConfig: {
                 currencyName: "coins",
                 inventoryName: "Inventory",
@@ -8197,6 +8199,217 @@ export async function getStaminaConfig(guildId) {
     return config;
 }
 
+// ============ ATTRIBUTE MANAGEMENT FUNCTIONS ============
+
+/**
+ * Get all attribute definitions for a guild
+ * @param {string} guildId - Discord guild ID
+ * @returns {Promise<Object>} Attribute definitions keyed by attributeId
+ */
+async function getAttributeDefinitions(guildId) {
+    const safariData = await loadSafariContent();
+    return safariData[guildId]?.attributeDefinitions || {};
+}
+
+/**
+ * Create a new attribute definition for a guild
+ * @param {string} guildId - Discord guild ID
+ * @param {Object} attributeConfig - Attribute configuration
+ * @returns {Promise<Object>} The created attribute definition
+ */
+async function createAttributeDefinition(guildId, attributeConfig) {
+    const { ATTRIBUTE_LIMITS, createCustomAttribute } = await import('./config/attributeDefaults.js');
+
+    const safariData = await loadSafariContent();
+
+    // Ensure guild data exists
+    if (!safariData[guildId]) {
+        safariData[guildId] = {};
+    }
+    if (!safariData[guildId].attributeDefinitions) {
+        safariData[guildId].attributeDefinitions = {};
+    }
+
+    // Check limits
+    const existingCount = Object.keys(safariData[guildId].attributeDefinitions).length;
+    if (existingCount >= ATTRIBUTE_LIMITS.MAX_ATTRIBUTES_PER_GUILD) {
+        throw new Error(`Maximum attributes reached (${ATTRIBUTE_LIMITS.MAX_ATTRIBUTES_PER_GUILD})`);
+    }
+
+    // Generate ID from name if not provided
+    const attributeId = attributeConfig.id ||
+        attributeConfig.name.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 20);
+
+    // Check for duplicate
+    if (safariData[guildId].attributeDefinitions[attributeId]) {
+        throw new Error(`Attribute '${attributeId}' already exists`);
+    }
+
+    // Create the attribute with defaults applied
+    const attribute = createCustomAttribute({
+        ...attributeConfig,
+        id: attributeId
+    });
+
+    safariData[guildId].attributeDefinitions[attributeId] = attribute;
+    await saveSafariContent(safariData);
+
+    console.log(`📊 Created attribute '${attribute.name}' (${attributeId}) for guild ${guildId}`);
+    return attribute;
+}
+
+/**
+ * Update an existing attribute definition
+ * @param {string} guildId - Discord guild ID
+ * @param {string} attributeId - Attribute identifier
+ * @param {Object} updates - Fields to update
+ * @returns {Promise<Object>} Updated attribute definition
+ */
+async function updateAttributeDefinition(guildId, attributeId, updates) {
+    const safariData = await loadSafariContent();
+
+    if (!safariData[guildId]?.attributeDefinitions?.[attributeId]) {
+        throw new Error(`Attribute '${attributeId}' not found`);
+    }
+
+    const attribute = safariData[guildId].attributeDefinitions[attributeId];
+
+    // Apply updates (but preserve id and isCustom)
+    const updatedAttribute = {
+        ...attribute,
+        ...updates,
+        id: attributeId,
+        isCustom: attribute.isCustom,
+        updatedAt: Date.now()
+    };
+
+    safariData[guildId].attributeDefinitions[attributeId] = updatedAttribute;
+    await saveSafariContent(safariData);
+
+    console.log(`📊 Updated attribute '${attributeId}' for guild ${guildId}`);
+    return updatedAttribute;
+}
+
+/**
+ * Delete an attribute definition
+ * @param {string} guildId - Discord guild ID
+ * @param {string} attributeId - Attribute identifier
+ * @returns {Promise<boolean>} True if deleted
+ */
+async function deleteAttributeDefinition(guildId, attributeId) {
+    const safariData = await loadSafariContent();
+
+    if (!safariData[guildId]?.attributeDefinitions?.[attributeId]) {
+        throw new Error(`Attribute '${attributeId}' not found`);
+    }
+
+    delete safariData[guildId].attributeDefinitions[attributeId];
+    await saveSafariContent(safariData);
+
+    console.log(`📊 Deleted attribute '${attributeId}' from guild ${guildId}`);
+    return true;
+}
+
+/**
+ * Enable a preset attribute for a guild
+ * @param {string} guildId - Discord guild ID
+ * @param {string} presetId - Preset identifier (e.g., 'mana', 'hp')
+ * @returns {Promise<Object>} The enabled attribute
+ */
+async function enableAttributePreset(guildId, presetId) {
+    const { getPreset } = await import('./config/attributeDefaults.js');
+
+    const preset = getPreset(presetId);
+    if (!preset) {
+        throw new Error(`Preset '${presetId}' not found`);
+    }
+
+    const safariData = await loadSafariContent();
+
+    if (!safariData[guildId]) {
+        safariData[guildId] = {};
+    }
+    if (!safariData[guildId].attributeDefinitions) {
+        safariData[guildId].attributeDefinitions = {};
+    }
+
+    // Copy preset to guild (so they can customize it)
+    safariData[guildId].attributeDefinitions[presetId] = {
+        ...preset,
+        enabledAt: Date.now(),
+        isPreset: true
+    };
+
+    await saveSafariContent(safariData);
+
+    console.log(`📊 Enabled preset attribute '${preset.name}' for guild ${guildId}`);
+    return safariData[guildId].attributeDefinitions[presetId];
+}
+
+/**
+ * Get a player's attribute value
+ * @param {string} guildId - Discord guild ID
+ * @param {string} playerId - Player's Discord user ID
+ * @param {string} attributeId - Attribute identifier
+ * @returns {Promise<Object>} Attribute value with current, max, etc.
+ */
+async function getPlayerAttribute(guildId, playerId, attributeId) {
+    const entityId = `player_${playerId}`;
+    const { getEntityPoints } = await import('./pointsManager.js');
+    return await getEntityPoints(guildId, entityId, attributeId);
+}
+
+/**
+ * Set a player's attribute value (admin function)
+ * @param {string} guildId - Discord guild ID
+ * @param {string} playerId - Player's Discord user ID
+ * @param {string} attributeId - Attribute identifier
+ * @param {number} current - Current value to set
+ * @param {number} max - Optional max value to set
+ * @returns {Promise<Object>} Updated attribute value
+ */
+async function setPlayerAttribute(guildId, playerId, attributeId, current, max = null) {
+    const entityId = `player_${playerId}`;
+    const { setEntityPoints } = await import('./pointsManager.js');
+    return await setEntityPoints(guildId, entityId, attributeId, current, max);
+}
+
+/**
+ * Get all attribute values for a player
+ * @param {string} guildId - Discord guild ID
+ * @param {string} playerId - Player's Discord user ID
+ * @returns {Promise<Object>} All attribute values keyed by attributeId
+ */
+async function getPlayerAttributes(guildId, playerId) {
+    const definitions = await getAttributeDefinitions(guildId);
+    const entityId = `player_${playerId}`;
+    const { getEntityPoints } = await import('./pointsManager.js');
+
+    const attributes = {};
+    for (const [attrId, definition] of Object.entries(definitions)) {
+        if (definition.display?.showInMenu !== false) {
+            try {
+                const value = await getEntityPoints(guildId, entityId, attrId);
+                attributes[attrId] = {
+                    ...definition,
+                    value
+                };
+            } catch (error) {
+                // Attribute not initialized for player yet, use defaults
+                attributes[attrId] = {
+                    ...definition,
+                    value: {
+                        current: definition.defaultCurrent || definition.defaultValue || 0,
+                        max: definition.defaultMax || definition.defaultValue || 0
+                    }
+                };
+            }
+        }
+    }
+
+    return attributes;
+}
+
 export {
     createCustomButton,
     getCustomButton,
@@ -8312,7 +8525,16 @@ export {
     formatIncomeBreakdown,
     formatCombatResults,
     getPlayerEmoji,
-    sortPlayersForResults
+    sortPlayersForResults,
+    // Attribute System Functions
+    getAttributeDefinitions,
+    createAttributeDefinition,
+    updateAttributeDefinition,
+    deleteAttributeDefinition,
+    enableAttributePreset,
+    getPlayerAttribute,
+    setPlayerAttribute,
+    getPlayerAttributes
 };
 
 /**

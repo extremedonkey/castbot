@@ -11,77 +11,45 @@
 }}
 {{/* Spectator log channel ID */}}
 {{$spectatorChannel := 1449146565271748850}}
-{{/* Whisper limit per user */}}
+{{/* Default whisper limit (used if player not in registry) */}}
 {{$whisperLimit := 3}}
-{{/* Shorthand name → User ID mapping */}}
+{{/* ============================================== */}}
+{{/* PLAYER REGISTRY - Single source of truth for all player data */}}
+{{/* Format: "name" (sdict "id" discordUserID "limit" whispersPerDay "channel" privateChannelID) */}}
+{{/* To update a player: change their line below. To substitute: update id and channel. */}}
 {{/* ADMINS */}}
-{{$playerIDs := dict
- "reece" 391415444084490240
- "belle" 676262975132139522
- "bec" 703974323098222603
- "adrian" 224237085450698752
- "smiles" 434543059494109185
- "stripe" 84040775406518276
- "dino" 1086246253819613274
- "p1" 100000000000000001
- "p2" 100000000000000002
- "p3" 100000000000000003
- "p4" 100000000000000004
- "p5" 100000000000000005
- "p6" 100000000000000006
- "p7" 100000000000000007
- "p8" 100000000000000008
- "p9" 100000000000000009
- "p10" 100000000000000010
- "p11" 100000000000000011
- "p12" 100000000000000012
- "p13" 100000000000000013
- "p14" 100000000000000014
- "p15" 100000000000000015
- "p16" 100000000000000016
- "p17" 100000000000000017
- "p18" 100000000000000018
- "p19" 100000000000000019
- "p20" 100000000000000020
- "p21" 100000000000000021
- "p22" 100000000000000022
- "p23" 100000000000000023
- "p24" 100000000000000024
-}}
-{{/* USER ID → private channel mapping */}}
-{{/* ADMINS */}}
-{{$userChannels := dict
- 391415444084490240 1455368876928925947
- 676262975132139522 1455368906800759058
- 703974323098222603 1455368906800759058
- 224237085450698752 1455368906800759058
- 434543059494109185 1455368876928925947
- 84040775406518276 1455368906800759058
- 1086246253819613274 1455368906800759058
- 100000000000000001 1455379845147005089
- 100000000000000002 1455379873865531565
- 100000000000000003 1455379896443469904
- 100000000000000004 1455379921882058763
- 100000000000000005 1455379955470045194
- 100000000000000006 1455379981088850034
- 100000000000000007 1455380042619289610
- 100000000000000008 1455380064135807056
- 100000000000000009 1455380086428537052
- 100000000000000010 1455380118880129150
- 100000000000000011 1455380149972504616
- 100000000000000012 1455380333460459520
- 100000000000000013 1455380363043147888
- 100000000000000014 1455380395284500611
- 100000000000000015 1455380420118974484
- 100000000000000016 1455380451030990982
- 100000000000000017 1455380472724066516
- 100000000000000018 1455380497013145620
- 100000000000000019 1455380520564293770
- 100000000000000020 1455380547231678506
- 100000000000000021 1455380575472058563
- 100000000000000022 1455380603900919869
- 100000000000000023 1455380785732518009
- 100000000000000024 1455380810503815218
+{{$players := dict
+ "reece" (sdict "id" 391415444084490240 "limit" 4 "channel" 1455368876928925947)
+ "belle" (sdict "id" 676262975132139522 "limit" 6 "channel" 1455368906800759058)
+ "bec" (sdict "id" 703974323098222603 "limit" 3 "channel" 1455368906800759058)
+ "adrian" (sdict "id" 224237085450698752 "limit" 3 "channel" 1455368906800759058)
+ "smiles" (sdict "id" 434543059494109185 "limit" 3 "channel" 1455368876928925947)
+ "stripe" (sdict "id" 84040775406518276 "limit" 3 "channel" 1455368906800759058)
+ "dino" (sdict "id" 1086246253819613274 "limit" 5 "channel" 1455368906800759058)
+ "beavis" (sdict "id" 242017916826943489 "limit" 3 "channel" 1455379845147005089)
+ "butthead" (sdict "id" 883720052224954368 "limit" 3 "channel" 1455379873865531565)
+ "leech" (sdict "id" 794991430257868810 "limit" 3 "channel" 1455379896443469904)
+ "william" (sdict "id" 579449386812047366 "limit" 3 "channel" 1455379921882058763)
+ "claus" (sdict "id" 478386446835646483 "limit" 3 "channel" 1455379955470045194)
+ "tea" (sdict "id" 607045822374215682 "limit" 3 "channel" 1455379981088850034)
+ "nicko" (sdict "id" 279758197009547274 "limit" 3 "channel" 1455380042619289610)
+ "vic" (sdict "id" 649346742000680991 "limit" 3 "channel" 1455380064135807056)
+ "alex" (sdict "id" 202627838451384320 "limit" 3 "channel" 1455380086428537052)
+ "typo" (sdict "id" 149555318370598915 "limit" 3 "channel" 1455380118880129150)
+ "sarah" (sdict "id" 209773824357564416 "limit" 3 "channel" 1455380149972504616)
+ "paige" (sdict "id" 1388959151857602731 "limit" 3 "channel" 1455380333460459520)
+ "esme" (sdict "id" 745788374165749889 "limit" 3 "channel" 1455380363043147888)
+ "ryann" (sdict "id" 683102296380276766 "limit" 3 "channel" 1455380395284500611)
+ "danny" (sdict "id" 179379717202378752 "limit" 3 "channel" 1455380420118974484)
+ "morgane" (sdict "id" 977455730300956683 "limit" 3 "channel" 1455380451030990982)
+ "garrett" (sdict "id" 199671652223680522 "limit" 3 "channel" 1455380472724066516)
+ "zach" (sdict "id" 224371680825442304 "limit" 3 "channel" 1455380497013145620)
+ "sara" (sdict "id" 630235663026880512 "limit" 3 "channel" 1455380520564293770)
+ "astra" (sdict "id" 563213866369024001 "limit" 3 "channel" 1455380547231678506)
+ "catpaige" (sdict "id" 430900105256763403 "limit" 3 "channel" 1455380575472058563)
+ "pelicanzach" (sdict "id" 351178582132785173 "limit" 3 "channel" 1455380603900919869)
+ "jason" (sdict "id" 691850627189309492 "limit" 3 "channel" 1455380785732518009)
+ "shawn" (sdict "id" 1220822709013844020 "limit" 3 "channel" 1455380810503815218)
 }}
 {{/* ============================================== */}}
 {{/* Parse arguments */}}
@@ -93,13 +61,14 @@
 {{$msg := $args.Get 1}}
 {{/* ============================================== */}}
 {{/* Look up target by name */}}
-{{$targetID := index $playerIDs $targetName}}
-{{if not $targetID}}
+{{$targetEntry := index $players $targetName}}
+{{if not $targetEntry}}
  {{$valid := cslice}}
- {{range $k, $_ := $playerIDs}} {{$valid = $valid.Append $k}} {{end}}
+ {{range $k, $_ := $players}} {{$valid = $valid.Append $k}} {{end}}
  {{sendMessage nil (print " Unknown player `" $targetName "`. Valid names: " (joinStr ", " $valid))}}
  {{return}}
 {{end}}
+{{$targetID := index $targetEntry "id"}}
 {{$targetMember := getMember $targetID}}
 {{if not $targetMember}}
  {{sendMessage nil " Could not find that player."}}
@@ -122,22 +91,30 @@
 {{end}}
 {{/* ============================================== */}}
 {{/* Get target private channel */}}
-{{$targetChannel := index $userChannels $targetID}}
+{{$targetChannel := index $targetEntry "channel"}}
 {{if not $targetChannel}}
  {{sendMessage nil " Error."}}
  {{return}}
 {{end}}
 {{/* ============================================== */}}
-{{/* Get sender shorthand name */}}
+{{/* Get sender shorthand name and their data */}}
 {{$senderID := .User.ID}}
 {{$senderName := ""}}
-{{range $name, $id := $playerIDs}}
- {{if eq $id $senderID}}
+{{$senderEntry := sdict}}
+{{range $name, $data := $players}}
+ {{if eq (index $data "id") $senderID}}
  {{$senderName = $name}}
+ {{$senderEntry = $data}}
  {{end}}
 {{end}}
 {{if eq $senderName ""}}
  {{$senderName = "Unknown"}}
+{{end}}
+{{/* ============================================== */}}
+{{/* Get this player's whisper limit */}}
+{{$limit := $whisperLimit}}
+{{with index $senderEntry "limit"}}
+ {{$limit = .}}
 {{end}}
 {{/* ============================================== */}}
 {{/* Whisper count using a single DB object */}}
@@ -153,8 +130,8 @@
  {{$userCount = .}}
 {{end}}
 
-{{if ge $userCount $whisperLimit}}
- {{sendMessage nil (print "❌ You've reached your whisper limit (" $whisperLimit "). Wait for a reset.")}}
+{{if ge $userCount $limit}}
+ {{sendMessage nil (print "❌ You've reached your whisper limit (" $limit "). Wait for a reset.")}}
  {{return}}
 {{end}}
 {{/* ============================================== */}}
@@ -186,7 +163,7 @@
  )}}
 {{end}}
 {{/* Confirm to sender */}}
-{{sendMessage nil (print "✅ Whisper sent to " $targetDisplay ". " (sub $whisperLimit (add $userCount 1)) " whispers remaining.")}}
+{{sendMessage nil (print "✅ Whisper sent to " $targetDisplay ". " (sub $limit (add $userCount 1)) " whispers remaining.")}}
 
 {{/* Increment count after successful whisper */}}
 {{$counts.Set (str $senderID) (add $userCount 1)}}

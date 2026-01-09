@@ -6759,6 +6759,327 @@ To fix this:
           };
         }
       })(req, res, client);
+    } else if (custom_id === 'attribute_management') {
+      // Attribute Management Menu - displays server's custom attributes
+      return ButtonHandlerFactory.create({
+        id: 'attribute_management',
+        updateMessage: true,
+        handler: async (context) => {
+          const { guildId } = context;
+          console.log(`📊 Opening Attribute Management for guild ${guildId}`);
+
+          // Get attribute definitions for this server
+          const { getAttributeDefinitions } = await import('./safariManager.js');
+          const { getAllPresets } = await import('./config/attributeDefaults.js');
+          const attributes = await getAttributeDefinitions(guildId);
+          const presets = getAllPresets();
+          const attributeCount = Object.keys(attributes).length;
+
+          // Build attribute list display
+          let attributeListContent = '';
+          if (attributeCount === 0) {
+            attributeListContent = '*No attributes configured yet.*\n\nClick **Add Attribute** to create your first custom attribute, or **Enable Preset** to quickly enable built-in attributes like Mana or HP.';
+          } else {
+            const attrLines = Object.entries(attributes).map(([id, attr]) => {
+              const emoji = attr.emoji || '📊';
+              const type = attr.category === 'resource' ? 'Resource' : 'Stat';
+              const regenInfo = attr.regeneration?.type !== 'none'
+                ? ` (${attr.regeneration?.intervalMinutes || '?'}min regen)`
+                : '';
+              return `${emoji} **${attr.name}** - ${type}${regenInfo}`;
+            });
+            attributeListContent = attrLines.join('\n');
+          }
+
+          // Build available presets (not yet enabled)
+          const enabledPresetIds = Object.keys(attributes).filter(id => presets[id]);
+          const availablePresets = Object.entries(presets)
+            .filter(([id]) => !enabledPresetIds.includes(id))
+            .slice(0, 4); // Limit to 4 for select menu
+
+          const attributeContainer = {
+            type: 17, // Container
+            accent_color: 0x9b59b6, // Purple for attributes
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## 📊 Attribute Management`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 10, // Text Display
+                content: `> **\`📋 Server Attributes (${attributeCount})\`**\n\n${attributeListContent}`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 1, // ActionRow
+                components: [
+                  {
+                    type: 2, // Button
+                    custom_id: 'attr_add_custom',
+                    label: 'Add Attribute',
+                    style: 1, // Primary
+                    emoji: { name: '➕' }
+                  },
+                  ...(availablePresets.length > 0 ? [{
+                    type: 2, // Button
+                    custom_id: 'attr_enable_preset',
+                    label: 'Enable Preset',
+                    style: 2, // Secondary
+                    emoji: { name: '⚡' }
+                  }] : []),
+                  ...(attributeCount > 0 ? [{
+                    type: 2, // Button
+                    custom_id: 'attr_manage_existing',
+                    label: 'Edit/Delete',
+                    style: 2, // Secondary
+                    emoji: { name: '✏️' }
+                  }] : [])
+                ]
+              },
+              { type: 14 }, // Separator
+              {
+                type: 1, // ActionRow - Navigation
+                components: [
+                  {
+                    type: 2, // Button
+                    custom_id: 'prod_setup',
+                    label: '← Tools',
+                    style: 2 // Secondary
+                  }
+                ]
+              }
+            ]
+          };
+
+          return {
+            components: [attributeContainer]
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'attr_add_custom') {
+      // Open modal to create new custom attribute
+      return res.send({
+        type: InteractionResponseType.MODAL,
+        data: {
+          custom_id: 'modal_attr_create',
+          title: '📊 Create Custom Attribute',
+          components: [
+            {
+              type: 1, // ActionRow
+              components: [{
+                type: 4, // Text Input
+                custom_id: 'attr_name',
+                label: 'Attribute Name',
+                style: 1, // Short
+                placeholder: 'e.g., Mana, Luck, Energy',
+                min_length: 1,
+                max_length: 30,
+                required: true
+              }]
+            },
+            {
+              type: 1,
+              components: [{
+                type: 4,
+                custom_id: 'attr_emoji',
+                label: 'Emoji',
+                style: 1,
+                placeholder: 'e.g., 🔮, 🍀, ⚡',
+                min_length: 1,
+                max_length: 10,
+                required: true
+              }]
+            },
+            {
+              type: 1,
+              components: [{
+                type: 4,
+                custom_id: 'attr_type',
+                label: 'Type (resource or stat)',
+                style: 1,
+                placeholder: 'resource (has max, regens) or stat (single value)',
+                min_length: 4,
+                max_length: 8,
+                required: true
+              }]
+            },
+            {
+              type: 1,
+              components: [{
+                type: 4,
+                custom_id: 'attr_max_value',
+                label: 'Default Max/Value',
+                style: 1,
+                placeholder: 'e.g., 100',
+                min_length: 1,
+                max_length: 6,
+                required: true
+              }]
+            },
+            {
+              type: 1,
+              components: [{
+                type: 4,
+                custom_id: 'attr_regen_minutes',
+                label: 'Regeneration (minutes, 0 for none)',
+                style: 1,
+                placeholder: 'e.g., 60 (for resource types)',
+                min_length: 1,
+                max_length: 5,
+                required: false
+              }]
+            }
+          ]
+        }
+      });
+    } else if (custom_id === 'attr_enable_preset') {
+      // Show preset selection
+      return ButtonHandlerFactory.create({
+        id: 'attr_enable_preset',
+        updateMessage: true,
+        handler: async (context) => {
+          const { guildId } = context;
+          const { getAttributeDefinitions } = await import('./safariManager.js');
+          const { getAllPresets } = await import('./config/attributeDefaults.js');
+
+          const attributes = await getAttributeDefinitions(guildId);
+          const presets = getAllPresets();
+
+          // Filter to presets not yet enabled
+          const availablePresets = Object.entries(presets)
+            .filter(([id]) => !attributes[id]);
+
+          if (availablePresets.length === 0) {
+            return {
+              components: [{
+                type: 17,
+                accent_color: 0x9b59b6,
+                components: [
+                  { type: 10, content: '## 📊 Enable Preset Attribute' },
+                  { type: 14 },
+                  { type: 10, content: '✅ All preset attributes are already enabled!' },
+                  { type: 14 },
+                  {
+                    type: 1,
+                    components: [{
+                      type: 2,
+                      custom_id: 'attribute_management',
+                      label: '← Back',
+                      style: 2
+                    }]
+                  }
+                ]
+              }]
+            };
+          }
+
+          // Build preset options for select menu
+          const presetOptions = availablePresets.slice(0, 25).map(([id, preset]) => ({
+            label: preset.name,
+            value: id,
+            description: preset.description?.substring(0, 50) || `${preset.category} attribute`,
+            emoji: { name: preset.emoji }
+          }));
+
+          return {
+            components: [{
+              type: 17,
+              accent_color: 0x9b59b6,
+              components: [
+                { type: 10, content: '## ⚡ Enable Preset Attribute' },
+                { type: 14 },
+                { type: 10, content: 'Select a preset to enable for your server:' },
+                {
+                  type: 1,
+                  components: [{
+                    type: 3, // String Select
+                    custom_id: 'attr_preset_select',
+                    placeholder: 'Choose a preset...',
+                    options: presetOptions
+                  }]
+                },
+                { type: 14 },
+                {
+                  type: 1,
+                  components: [{
+                    type: 2,
+                    custom_id: 'attribute_management',
+                    label: '← Back',
+                    style: 2
+                  }]
+                }
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'attr_preset_select') {
+      // Handle preset selection
+      return ButtonHandlerFactory.create({
+        id: 'attr_preset_select',
+        updateMessage: true,
+        handler: async (context) => {
+          const { guildId } = context;
+          const selectedPreset = req.body.data.values?.[0];
+
+          if (!selectedPreset) {
+            return { content: '❌ No preset selected' };
+          }
+
+          const { enableAttributePreset } = await import('./safariManager.js');
+
+          try {
+            const enabled = await enableAttributePreset(guildId, selectedPreset);
+            console.log(`📊 Enabled preset '${enabled.name}' for guild ${guildId}`);
+
+            return {
+              components: [{
+                type: 17,
+                accent_color: 0x27ae60, // Green for success
+                components: [
+                  { type: 10, content: `## ✅ Preset Enabled` },
+                  { type: 14 },
+                  { type: 10, content: `**${enabled.emoji} ${enabled.name}** has been enabled for your server!\n\n${enabled.description || ''}` },
+                  { type: 14 },
+                  {
+                    type: 1,
+                    components: [{
+                      type: 2,
+                      custom_id: 'attribute_management',
+                      label: '← Back to Attributes',
+                      style: 2
+                    }]
+                  }
+                ]
+              }]
+            };
+          } catch (error) {
+            console.error(`❌ Failed to enable preset: ${error.message}`);
+            return {
+              components: [{
+                type: 17,
+                accent_color: 0xe74c3c, // Red for error
+                components: [
+                  { type: 10, content: `## ❌ Error` },
+                  { type: 14 },
+                  { type: 10, content: `Failed to enable preset: ${error.message}` },
+                  { type: 14 },
+                  {
+                    type: 1,
+                    components: [{
+                      type: 2,
+                      custom_id: 'attribute_management',
+                      label: '← Back',
+                      style: 2
+                    }]
+                  }
+                ]
+              }]
+            };
+          }
+        }
+      })(req, res, client);
     } else if (custom_id === 'setup_castbot') {
       // Execute setup using new roleManager module
       try {
@@ -30984,6 +31305,138 @@ Are you sure you want to continue?`;
         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
         data: result
       });
+
+    } else if (custom_id === 'modal_attr_create') {
+      // Handle attribute creation modal
+      const guildId = req.body.guild_id;
+      const userId = req.body.member?.user?.id;
+
+      // Extract form values
+      const getFieldValue = (fieldId) => {
+        for (const row of components) {
+          for (const comp of row.components) {
+            if (comp.custom_id === fieldId) {
+              return comp.value;
+            }
+          }
+        }
+        return null;
+      };
+
+      const attrName = getFieldValue('attr_name');
+      const attrEmoji = getFieldValue('attr_emoji');
+      const attrType = getFieldValue('attr_type')?.toLowerCase();
+      const attrMaxValue = parseInt(getFieldValue('attr_max_value')) || 100;
+      const attrRegenMinutes = parseInt(getFieldValue('attr_regen_minutes')) || 0;
+
+      console.log(`📊 Creating attribute: ${attrName} (${attrType}) for guild ${guildId}`);
+
+      // Validate type
+      if (attrType !== 'resource' && attrType !== 'stat') {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+              type: 17,
+              accent_color: 0xe74c3c,
+              components: [
+                { type: 10, content: '## ❌ Invalid Type' },
+                { type: 14 },
+                { type: 10, content: 'Type must be **resource** or **stat**.\n\n• **Resource**: Has max value, can regenerate (like HP, Mana)\n• **Stat**: Single value, no regeneration (like Strength, Luck)' },
+                { type: 14 },
+                {
+                  type: 1,
+                  components: [{
+                    type: 2,
+                    custom_id: 'attribute_management',
+                    label: '← Try Again',
+                    style: 2
+                  }]
+                }
+              ]
+            }]
+          }
+        });
+      }
+
+      try {
+        const { createAttributeDefinition } = await import('./safariManager.js');
+        const { ATTRIBUTE_CATEGORIES, REGENERATION_TYPES } = await import('./config/attributeDefaults.js');
+
+        const attributeConfig = {
+          name: attrName,
+          emoji: attrEmoji,
+          category: attrType === 'resource' ? ATTRIBUTE_CATEGORIES.RESOURCE : ATTRIBUTE_CATEGORIES.STAT
+        };
+
+        if (attrType === 'resource') {
+          attributeConfig.defaultMax = attrMaxValue;
+          attributeConfig.defaultCurrent = attrMaxValue;
+          attributeConfig.regeneration = {
+            type: attrRegenMinutes > 0 ? REGENERATION_TYPES.FULL_RESET : REGENERATION_TYPES.NONE,
+            intervalMinutes: attrRegenMinutes || 60,
+            amount: 'max'
+          };
+        } else {
+          attributeConfig.defaultValue = attrMaxValue;
+        }
+
+        const created = await createAttributeDefinition(guildId, attributeConfig);
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+              type: 17,
+              accent_color: 0x27ae60, // Green
+              components: [
+                { type: 10, content: '## ✅ Attribute Created!' },
+                { type: 14 },
+                { type: 10, content: `**${created.emoji} ${created.name}** has been created!\n\n• Type: ${created.category === 'resource' ? 'Resource' : 'Stat'}\n• Default Value: ${created.defaultMax || created.defaultValue}${created.regeneration?.type !== 'none' ? `\n• Regeneration: ${created.regeneration?.intervalMinutes} minutes` : ''}` },
+                { type: 14 },
+                {
+                  type: 1,
+                  components: [{
+                    type: 2,
+                    custom_id: 'attribute_management',
+                    label: '← Back to Attributes',
+                    style: 2
+                  }]
+                }
+              ]
+            }]
+          }
+        });
+      } catch (error) {
+        console.error(`❌ Failed to create attribute: ${error.message}`);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+              type: 17,
+              accent_color: 0xe74c3c,
+              components: [
+                { type: 10, content: '## ❌ Creation Failed' },
+                { type: 14 },
+                { type: 10, content: `Error: ${error.message}` },
+                { type: 14 },
+                {
+                  type: 1,
+                  components: [{
+                    type: 2,
+                    custom_id: 'attribute_management',
+                    label: '← Try Again',
+                    style: 2
+                  }]
+                }
+              ]
+            }]
+          }
+        });
+      }
 
     } else if (custom_id.startsWith('save_placement_')) {
       // Handle placement save from modal submission

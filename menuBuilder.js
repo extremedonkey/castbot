@@ -64,8 +64,15 @@ export const MENU_REGISTRY = {
           },
           { type: 14 }, // Separator
           {
-            type: 1, // ActionRow for legal buttons
+            type: 1, // ActionRow for attributes + legal buttons
             components: [
+              {
+                type: 2, // Button - Attributes Management
+                custom_id: 'attribute_management',
+                label: 'Attributes',
+                style: 2, // Secondary (Grey)
+                emoji: { name: '📊' }
+              },
               {
                 type: 2, // Button
                 custom_id: 'prod_terms_of_service',
