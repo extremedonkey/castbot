@@ -1839,7 +1839,9 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                 case ACTION_TYPES.MODIFY_ATTRIBUTE:
                     try {
                         console.log(`📊 DEBUG: Executing modify_attribute action for guild ${guildId}`);
-                        result = await executeModifyAttribute(action.config, guildId, userId, interaction);
+                        // Find the original action index in the unsorted button.actions array for claim tracking
+                        const attrActionIndex = button.actions.findIndex(a => a === action);
+                        result = await executeModifyAttribute(action.config, guildId, userId, interaction, buttonId, attrActionIndex);
                         if (result) responses.push(result);
                     } catch (error) {
                         console.error('Error executing modify_attribute action:', error);
@@ -2963,8 +2965,9 @@ async function executeModifyPoints(config, guildId, userId, interaction) {
 /**
  * Execute modify attribute action - add/subtract/set player attributes
  * Uses the attribute definitions system for custom attributes
+ * Supports usage limits (once_per_player, once_globally, unlimited) like give_item
  */
-async function executeModifyAttribute(config, guildId, userId, interaction) {
+async function executeModifyAttribute(config, guildId, userId, interaction, buttonId = null, actionIndex = null) {
     try {
         const attributeId = config.attributeId;
         const operation = config.operation || 'add';
@@ -2991,13 +2994,59 @@ async function executeModifyAttribute(config, guildId, userId, interaction) {
             return null;
         }
 
+        // Check usage limits (like give_item/give_currency)
+        if (config.limit && config.limit.type !== 'unlimited') {
+            // Get live claimedBy from safariData for accurate tracking
+            let liveClaimedBy = null;
+            if (buttonId !== null && actionIndex !== null) {
+                const button = safariData[guildId]?.buttons?.[buttonId];
+                const action = button?.actions?.[actionIndex];
+                if (action?.config?.limit?.claimedBy !== undefined) {
+                    liveClaimedBy = action.config.limit.claimedBy;
+                }
+            }
+            const claimedBy = liveClaimedBy !== null ? liveClaimedBy : config.limit.claimedBy;
+
+            if (config.limit.type === 'once_per_player') {
+                const claimedArray = Array.isArray(claimedBy) ? claimedBy : [];
+                if (claimedArray.includes(userId)) {
+                    return {
+                        flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+                        components: [{
+                            type: 17,
+                            accent_color: 0xE74C3C,
+                            components: [{
+                                type: 10,
+                                content: `❌ You've already used this ${attributeDef.name} action.`
+                            }]
+                        }]
+                    };
+                }
+            }
+
+            if (config.limit.type === 'once_globally') {
+                if (typeof claimedBy === 'string' && claimedBy !== '') {
+                    return {
+                        flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+                        components: [{
+                            type: 17,
+                            accent_color: 0xE74C3C,
+                            components: [{
+                                type: 10,
+                                content: `❌ This ${attributeDef.name} action has already been claimed by <@${claimedBy}>.`
+                            }]
+                        }]
+                    };
+                }
+            }
+        }
+
         const entityId = `player_${userId}`;
         console.log(`📊 DEBUG: Executing modify_attribute - ${attributeId} ${operation} ${amount} for ${entityId}`);
 
         // Get current attribute values
         const currentPoints = await getEntityPoints(guildId, entityId, attributeId);
         let newCurrent = currentPoints.current;
-        let success = true;
         let message = '';
 
         switch (operation) {
@@ -3012,12 +3061,12 @@ async function executeModifyAttribute(config, guildId, userId, interaction) {
                 break;
 
             case 'subtract':
-                // Check if player has enough
+                // Subtract from current, floor at 0 (always succeeds, reduces to 0 if not enough)
+                newCurrent = Math.max(currentPoints.current - amount, 0);
                 if (currentPoints.current < amount) {
-                    success = false;
-                    message = `❌ Not enough ${attributeDef.name}! You have ${currentPoints.current}, need ${amount}.`;
+                    // Player didn't have enough, show what happened
+                    message = `${attributeDef.emoji || '📊'} **-${currentPoints.current} ${attributeDef.name}** (${currentPoints.current} → 0) *(tried to use ${amount})*`;
                 } else {
-                    newCurrent = Math.max(currentPoints.current - amount, 0);
                     message = `${attributeDef.emoji || '📊'} **-${amount} ${attributeDef.name}** (${currentPoints.current} → ${newCurrent})`;
                 }
                 break;
@@ -3037,10 +3086,30 @@ async function executeModifyAttribute(config, guildId, userId, interaction) {
                 return null;
         }
 
-        if (success) {
-            // Apply the change
-            await setEntityPoints(guildId, entityId, attributeId, newCurrent, currentPoints.max);
-            console.log(`📊 SUCCESS: Modified ${attributeId} for ${entityId}: ${currentPoints.current} → ${newCurrent}`);
+        // Apply the change
+        await setEntityPoints(guildId, entityId, attributeId, newCurrent, currentPoints.max);
+        console.log(`📊 SUCCESS: Modified ${attributeId} for ${entityId}: ${currentPoints.current} → ${newCurrent}`);
+
+        // Update claim tracking if limits are configured
+        if (config.limit && config.limit.type !== 'unlimited' && buttonId !== null && actionIndex !== null) {
+            const button = safariData[guildId]?.buttons?.[buttonId];
+            if (button && button.actions && button.actions[actionIndex]) {
+                const action = button.actions[actionIndex];
+                if (action.type === 'modify_attribute') {
+                    if (config.limit.type === 'once_per_player') {
+                        if (!action.config.limit.claimedBy) {
+                            action.config.limit.claimedBy = [];
+                        }
+                        if (!action.config.limit.claimedBy.includes(userId)) {
+                            action.config.limit.claimedBy.push(userId);
+                        }
+                    } else if (config.limit.type === 'once_globally') {
+                        action.config.limit.claimedBy = userId;
+                    }
+                    await saveSafariContent(safariData);
+                    console.log(`✅ Updated claim tracking for modify_attribute action ${buttonId}[${actionIndex}]`);
+                }
+            }
         }
 
         // Return feedback if requested
@@ -3049,7 +3118,7 @@ async function executeModifyAttribute(config, guildId, userId, interaction) {
                 flags: (1 << 15), // IS_COMPONENTS_V2
                 components: [{
                     type: 17, // Container
-                    accent_color: success ? 0x2ECC71 : 0xE74C3C, // Green for success, red for fail
+                    accent_color: 0x2ECC71, // Green for success
                     components: [
                         {
                             type: 10, // Text Display
@@ -3058,12 +3127,6 @@ async function executeModifyAttribute(config, guildId, userId, interaction) {
                     ]
                 }]
             };
-        }
-
-        // If not enough points and no feedback, the action should fail silently
-        // but we might want to prevent subsequent actions from executing
-        if (!success) {
-            return null;
         }
 
         return null; // Silent success

@@ -4937,6 +4937,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_modify_attr_display_') &&
         !custom_id.startsWith('safari_modify_attr_execute_on_') &&
         !custom_id.startsWith('safari_modify_attr_amount_') &&
+        !custom_id.startsWith('safari_modify_attr_limit_') &&
         !custom_id.startsWith('safari_all_server_items_') &&
         !custom_id.startsWith('safari_progress_') &&
         !custom_id.startsWith('safari_inv_page_') &&  // Exclude inventory pagination buttons
@@ -19070,6 +19071,65 @@ Your server is now ready for Tycoons gameplay!`;
           const updatedConfig = await showModifyAttributeConfig(context.guildId, buttonId, actionIndex);
 
           console.log(`✅ SUCCESS: safari_modify_attr_execute_on - updated to ${executeOnValue}`);
+          return updatedConfig;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('safari_modify_attr_limit_')) {
+      // Handle modify attribute - usage limit selection
+      return ButtonHandlerFactory.create({
+        id: 'safari_modify_attr_limit',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: safari_modify_attr_limit - user ${context.userId}`);
+
+          // Parse buttonId and actionIndex from custom_id
+          const parts = context.customId.replace('safari_modify_attr_limit_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          const limitValue = context.values[0];
+
+          console.log(`📊 LIMIT: safari_modify_attr_limit - setting to ${limitValue} for ${buttonId}[${actionIndex}]`);
+
+          // Load and update safari data
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+
+          if (!button || !button.actions?.[actionIndex]) {
+            return {
+              content: '❌ Action not found.',
+              ephemeral: true
+            };
+          }
+
+          // Ensure config exists
+          if (!button.actions[actionIndex].config) {
+            button.actions[actionIndex].config = {};
+          }
+
+          // Update the limit configuration
+          if (limitValue === 'unlimited') {
+            // Remove limit config if unlimited
+            delete button.actions[actionIndex].config.limit;
+          } else {
+            // Set limit with type and empty claimedBy
+            button.actions[actionIndex].config.limit = {
+              type: limitValue,
+              claimedBy: limitValue === 'once_per_player' ? [] : null
+            };
+          }
+
+          // Save updated data
+          await saveSafariContent(safariData);
+
+          // Return updated configuration UI
+          const { showModifyAttributeConfig } = await import('./customActionUI.js');
+          const updatedConfig = await showModifyAttributeConfig(context.guildId, buttonId, actionIndex);
+
+          console.log(`✅ SUCCESS: safari_modify_attr_limit - updated to ${limitValue}`);
           return updatedConfig;
         }
       })(req, res, client);

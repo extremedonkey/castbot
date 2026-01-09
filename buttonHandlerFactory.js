@@ -2261,6 +2261,14 @@ export const BUTTON_REGISTRY = {
     category: 'safari_custom_actions',
     type: 'select_menu'
   },
+  'safari_modify_attr_limit': {
+    label: 'Usage Limit',
+    description: 'Set how many times this attribute action can be used (unlimited, once per player, once globally)',
+    emoji: '♾️',
+    style: 'Primary',
+    category: 'safari_custom_actions',
+    type: 'select_menu'
+  },
   'safari_modify_attr_amount': {
     label: 'Set Amount',
     description: 'Open modal to set the amount for attribute modification',

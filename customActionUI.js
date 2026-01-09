@@ -2275,6 +2275,7 @@ export async function showModifyAttributeConfig(guildId, buttonId, actionIndex) 
   const currentOperation = action?.config?.operation || 'add';
   const currentAmount = action?.config?.amount || 0;
   const currentDisplayMode = action?.config?.displayMode || 'silent';
+  const currentLimit = action?.config?.limit?.type || 'unlimited';
 
   // Check if we have any attributes defined
   const attributeCount = Object.keys(attributeDefinitions).length;
@@ -2435,6 +2436,45 @@ export async function showModifyAttributeConfig(guildId, buttonId, actionIndex) 
                 description: 'Tell player their attribute changed',
                 emoji: { name: '💬' },
                 default: currentDisplayMode === 'feedback'
+              }
+            ]
+          }]
+        },
+
+        { type: 14 }, // Separator
+
+        // Usage Limit section
+        {
+          type: 10,
+          content: '### Usage Limit\nHow many times can this action be used?'
+        },
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_modify_attr_limit_${buttonId}_${actionIndex}`,
+            placeholder: 'Select usage limit...',
+            options: [
+              {
+                label: 'Unlimited',
+                value: 'unlimited',
+                description: 'Players can use this repeatedly',
+                emoji: { name: '♾️' },
+                default: currentLimit === 'unlimited'
+              },
+              {
+                label: 'Once per Player',
+                value: 'once_per_player',
+                description: 'Each player can use this once',
+                emoji: { name: '👤' },
+                default: currentLimit === 'once_per_player'
+              },
+              {
+                label: 'Once Globally',
+                value: 'once_globally',
+                description: 'First player to use claims it for everyone',
+                emoji: { name: '🌍' },
+                default: currentLimit === 'once_globally'
               }
             ]
           }]
