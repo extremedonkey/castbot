@@ -2514,7 +2514,7 @@ export async function showModifyAttributeConfig(guildId, buttonId, actionIndex) 
 
         { type: 14 }, // Separator
 
-        // Back and Delete Action buttons
+        // Back, Reset Claims (if limit set), and Delete Action buttons
         {
           type: 1, // Action Row
           components: [
@@ -2525,6 +2525,14 @@ export async function showModifyAttributeConfig(guildId, buttonId, actionIndex) 
               style: 2, // Secondary
               emoji: { name: '⚡' }
             },
+            // Only show Reset Claims if a limit is configured
+            ...(currentLimit !== 'unlimited' ? [{
+              type: 2, // Button
+              custom_id: `safari_modify_attr_reset_${buttonId}_${actionIndex}`,
+              label: 'Reset Claims',
+              style: 2, // Secondary
+              emoji: { name: '🔄' }
+            }] : []),
             {
               type: 2, // Button
               custom_id: `safari_remove_action_${buttonId}_${actionIndex}`,

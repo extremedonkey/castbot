@@ -4938,6 +4938,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_modify_attr_execute_on_') &&
         !custom_id.startsWith('safari_modify_attr_amount_') &&
         !custom_id.startsWith('safari_modify_attr_limit_') &&
+        !custom_id.startsWith('safari_modify_attr_reset_') &&
         !custom_id.startsWith('safari_all_server_items_') &&
         !custom_id.startsWith('safari_progress_') &&
         !custom_id.startsWith('safari_inv_page_') &&  // Exclude inventory pagination buttons
@@ -19130,6 +19131,58 @@ Your server is now ready for Tycoons gameplay!`;
           const updatedConfig = await showModifyAttributeConfig(context.guildId, buttonId, actionIndex);
 
           console.log(`✅ SUCCESS: safari_modify_attr_limit - updated to ${limitValue}`);
+          return updatedConfig;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('safari_modify_attr_reset_')) {
+      // Handle modify attribute - reset claims
+      return ButtonHandlerFactory.create({
+        id: 'safari_modify_attr_reset',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔄 RESET: safari_modify_attr_reset - user ${context.userId}`);
+
+          // Parse buttonId and actionIndex from custom_id
+          const parts = context.customId.replace('safari_modify_attr_reset_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+
+          console.log(`🔄 RESET: safari_modify_attr_reset - resetting claims for ${buttonId}[${actionIndex}]`);
+
+          // Load and update safari data
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+
+          if (!button || !button.actions?.[actionIndex]) {
+            return {
+              content: '❌ Action not found.',
+              ephemeral: true
+            };
+          }
+
+          const action = button.actions[actionIndex];
+
+          // Reset the claimedBy based on limit type
+          if (action.config?.limit) {
+            if (action.config.limit.type === 'once_per_player') {
+              action.config.limit.claimedBy = [];
+            } else if (action.config.limit.type === 'once_globally') {
+              action.config.limit.claimedBy = null;
+            }
+          }
+
+          // Save updated data
+          await saveSafariContent(safariData);
+          console.log(`✅ Claims reset for modify_attribute action ${actionIndex}`);
+
+          // Return updated configuration UI
+          const { showModifyAttributeConfig } = await import('./customActionUI.js');
+          const updatedConfig = await showModifyAttributeConfig(context.guildId, buttonId, actionIndex);
+
           return updatedConfig;
         }
       })(req, res, client);

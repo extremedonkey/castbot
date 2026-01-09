@@ -788,9 +788,9 @@
           "1415062472007749765"
         ],
         "safari": {
-          "currency": 26,
+          "currency": 226,
           "history": [],
-          "lastInteraction": 1765007215487,
+          "lastInteraction": 1767965390411,
           "achievements": [],
           "inventory": {
             "nurturer_361363": {
@@ -1625,6 +1625,11 @@
                   "from": null,
                   "to": "C2",
                   "timestamp": "2026-01-09T12:21:07.879Z"
+                },
+                {
+                  "from": "C2",
+                  "to": "C2",
+                  "timestamp": "2026-01-09T12:21:07.938Z"
                 }
               ]
             }

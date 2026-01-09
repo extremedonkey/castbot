@@ -2276,6 +2276,13 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari_custom_actions'
   },
+  'safari_modify_attr_reset': {
+    label: 'Reset Claims',
+    description: 'Reset all claims for this attribute action, allowing players to use it again',
+    emoji: '🔄',
+    style: 'Secondary',
+    category: 'safari_custom_actions'
+  },
 
   // === CONDITIONAL LOGIC SYSTEM ===
   // Condition Manager buttons

@@ -3033,7 +3033,7 @@ async function executeModifyAttribute(config, guildId, userId, interaction, butt
                             accent_color: 0xE74C3C,
                             components: [{
                                 type: 10,
-                                content: `❌ This ${attributeDef.name} action has already been claimed by <@${claimedBy}>.`
+                                content: `❌ This ${attributeDef.name} action has already been claimed.`
                             }]
                         }]
                     };
