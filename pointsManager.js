@@ -167,7 +167,26 @@ export async function getEntityPoints(guildId, entityId, pointType) {
             permanentBoost: permanentBoost  // Add permanent boost to config
         };
     } else {
-        config = safariData[guildId]?.pointsConfig?.definitions?.[pointType] || getDefaultPointsConfig()[pointType];
+        // For custom attributes, check attributeDefinitions first
+        const attrDef = safariData[guildId]?.attributeDefinitions?.[pointType];
+        if (attrDef) {
+            // Build a config object compatible with regeneration system
+            config = {
+                displayName: attrDef.name || pointType,
+                emoji: attrDef.emoji || '📊',
+                defaultMax: attrDef.defaultMax ?? attrDef.defaultValue ?? 100,
+                defaultMin: 0,
+                regeneration: attrDef.regeneration?.type !== 'none' ? {
+                    type: attrDef.regeneration?.type || 'full_reset',
+                    interval: (attrDef.regeneration?.intervalMinutes || 60) * 60000,
+                    amount: attrDef.regeneration?.amount || 'max'
+                } : { type: 'none', interval: 0, amount: 0 },
+                permanentBoost: 0
+            };
+        } else {
+            // Fallback to legacy pointsConfig
+            config = safariData[guildId]?.pointsConfig?.definitions?.[pointType] || getDefaultPointsConfig()[pointType];
+        }
     }
 
     // Apply regeneration based on elapsed time
