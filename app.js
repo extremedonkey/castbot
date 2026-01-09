@@ -19070,50 +19070,62 @@ Your server is now ready for Tycoons gameplay!`;
 
     } else if (custom_id.startsWith('safari_modify_attr_amount_')) {
       // Handle modify attribute - amount button (opens modal)
-      return ButtonHandlerFactory.create({
-        id: 'safari_modify_attr_amount',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        modal: true, // This will return a modal instead of a message
-        handler: async (context) => {
-          console.log(`🔍 START: safari_modify_attr_amount - user ${context.userId}`);
+      // NOTE: Modals require direct res.send() - ButtonHandlerFactory can't handle them properly
+      const guildId = req.body.guild_id;
+      const userId = req.body.member?.user?.id;
 
-          // Parse buttonId and actionIndex from custom_id
-          const parts = context.customId.replace('safari_modify_attr_amount_', '').split('_');
-          const actionIndex = parseInt(parts[parts.length - 1]);
-          const buttonId = parts.slice(0, -1).join('_');
+      // Check permissions
+      const memberPermissions = BigInt(req.body.member?.permissions || 0);
+      if (!(memberPermissions & PermissionFlagsBits.ManageRoles)) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ You need Manage Roles permission to use this.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
 
-          // Load current amount
-          const { loadSafariContent } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
-          const button = safariData[context.guildId]?.buttons?.[buttonId];
-          const currentAmount = button?.actions?.[actionIndex]?.config?.amount || 0;
+      console.log(`🔍 START: safari_modify_attr_amount - user ${userId}`);
 
-          console.log(`📊 AMOUNT: safari_modify_attr_amount - opening modal for ${buttonId}[${actionIndex}], current: ${currentAmount}`);
+      // Parse buttonId and actionIndex from custom_id
+      const parts = custom_id.replace('safari_modify_attr_amount_', '').split('_');
+      const actionIndex = parseInt(parts[parts.length - 1]);
+      const buttonId = parts.slice(0, -1).join('_');
 
-          // Create modal for amount input
-          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
+      // Load current amount
+      const { loadSafariContent } = await import('./safariManager.js');
+      const safariData = await loadSafariContent();
+      const button = safariData[guildId]?.buttons?.[buttonId];
+      const currentAmount = button?.actions?.[actionIndex]?.config?.amount || 0;
 
-          const modal = new ModalBuilder()
-            .setCustomId(`modal_modify_attr_amount_${buttonId}_${actionIndex}`)
-            .setTitle('Set Attribute Amount');
+      console.log(`📊 AMOUNT: safari_modify_attr_amount - opening modal for ${buttonId}[${actionIndex}], current: ${currentAmount}`);
 
-          const amountInput = new TextInputBuilder()
-            .setCustomId('attr_amount')
-            .setLabel('Amount')
-            .setPlaceholder('Enter a positive number (e.g., 5, 10, 100)')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-            .setMaxLength(10)
-            .setValue(currentAmount.toString());
-
-          modal.addComponents(
-            new ActionRowBuilder().addComponents(amountInput)
-          );
-
-          return modal;
+      // Send modal response directly
+      return res.send({
+        type: InteractionResponseType.MODAL,
+        data: {
+          custom_id: `modal_modify_attr_amount_${buttonId}_${actionIndex}`,
+          title: 'Set Attribute Amount',
+          components: [
+            {
+              type: 1, // Action Row
+              components: [
+                {
+                  type: 4, // Text Input
+                  custom_id: 'attr_amount',
+                  label: 'Amount',
+                  style: 1, // Short
+                  placeholder: 'Enter a positive number (e.g., 5, 10, 100)',
+                  required: true,
+                  max_length: 10,
+                  value: currentAmount.toString()
+                }
+              ]
+            }
+          ]
         }
-      })(req, res, client);
+      });
 
     } else if (custom_id.startsWith('safari_drop_type_')) {
       // Handle drop type selection
