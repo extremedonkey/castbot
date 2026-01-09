@@ -171,15 +171,18 @@ export async function getEntityPoints(guildId, entityId, pointType) {
         const attrDef = safariData[guildId]?.attributeDefinitions?.[pointType];
         if (attrDef) {
             // Build a config object compatible with regeneration system
+            // IMPORTANT: Only enable regeneration if it's explicitly defined AND not 'none'
+            // Stats (category: 'stat') don't have regeneration, so attrDef.regeneration is undefined
+            const hasRegeneration = attrDef.regeneration && attrDef.regeneration.type && attrDef.regeneration.type !== 'none';
             config = {
                 displayName: attrDef.name || pointType,
                 emoji: attrDef.emoji || '📊',
                 defaultMax: attrDef.defaultMax ?? attrDef.defaultValue ?? 100,
                 defaultMin: 0,
-                regeneration: attrDef.regeneration?.type !== 'none' ? {
-                    type: attrDef.regeneration?.type || 'full_reset',
-                    interval: (attrDef.regeneration?.intervalMinutes || 60) * 60000,
-                    amount: attrDef.regeneration?.amount || 'max'
+                regeneration: hasRegeneration ? {
+                    type: attrDef.regeneration.type,
+                    interval: (attrDef.regeneration.intervalMinutes || 60) * 60000,
+                    amount: attrDef.regeneration.amount || 'max'
                 } : { type: 'none', interval: 0, amount: 0 },
                 permanentBoost: 0
             };
