@@ -71,13 +71,35 @@ export async function initializeEntityPoints(guildId, entityId, pointTypes = ['s
 
                 console.log(`⚡ Initialized ${entityId} stamina: ${staminaConfig.startingStamina}/${staminaConfig.maxStamina} (regen: ${staminaConfig.regenerationMinutes}min)`);
             } else {
-                // Other point types use default config
+                // Other point types - check attributeDefinitions first, then fallback to pointsConfig
+                const attributeDefs = safariData[guildId]?.attributeDefinitions || {};
                 const pointsConfig = safariData[guildId]?.pointsConfig?.definitions || getDefaultPointsConfig();
-                const config = pointsConfig[pointType];
+
+                // Try attribute definitions first (for custom attributes like mana, hp, etc.)
+                const attrConfig = attributeDefs[pointType];
+                const legacyConfig = pointsConfig[pointType];
+
+                let defaultCurrent, defaultMax;
+
+                if (attrConfig) {
+                    // Use attribute system config
+                    defaultCurrent = attrConfig.defaultCurrent ?? attrConfig.defaultMax ?? attrConfig.defaultValue ?? 100;
+                    defaultMax = attrConfig.defaultMax ?? attrConfig.defaultValue ?? 100;
+                    console.log(`📊 Initializing ${entityId} ${pointType} from attributeDefinitions: ${defaultCurrent}/${defaultMax}`);
+                } else if (legacyConfig) {
+                    // Use legacy points config
+                    defaultCurrent = legacyConfig.defaultMax ?? 100;
+                    defaultMax = legacyConfig.defaultMax ?? 100;
+                } else {
+                    // Fallback defaults
+                    console.warn(`⚠️ No config found for point type '${pointType}', using defaults`);
+                    defaultCurrent = 100;
+                    defaultMax = 100;
+                }
 
                 safariData[guildId].entityPoints[entityId][pointType] = {
-                    current: config.defaultMax,
-                    max: config.defaultMax,
+                    current: defaultCurrent,
+                    max: defaultMax,
                     lastRegeneration: Date.now(),
                     lastUse: Date.now()
                 };

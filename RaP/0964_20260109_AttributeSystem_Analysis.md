@@ -1057,45 +1057,55 @@ Everything fits in existing `safariContent.json` structure:
 
 | Interface | Button ID | File | Used For |
 |-----------|-----------|------|----------|
-| **Player Management** | `admin_set_*` buttons | `playerManagement.js` | Pronouns, Timezone, Age, Vanity Roles |
-| **Safari Player Admin** | `safari_map_admin` | `safariMapAdmin.js` | Currency, Items, Map, Stamina, **Attributes** |
+| **Player Management** | `admin_set_*` buttons | `playerManagement.js` | Pronouns, Timezone, Age, Vanity Roles, **Stats** |
+| **Safari Player Admin** | `safari_map_admin` | `safariMapAdmin.js` | Currency, Items, Map, Stamina |
 
 The Safari "Player Admin" button in Production Menu → Safari says "Player Admin" but uses `custom_id: 'safari_map_admin'` and `createMapAdminUI()` - **NOT** `createPlayerManagementUI()`.
 
+**Decision**: Stats/Attribute editing was implemented in **Player Management** only (not Safari Player Admin) since the plan is to eventually merge Safari Map Admin into Player Management.
+
 **For future Claude instances**: When adding features to "Player Admin", check which interface context you're in!
 
-### F.2 Files Modified/Created
+### F.2 Critical Bug Fix: Points Manager Integration
+
+When `setEntityPoints()` initializes a new point type, it looks for configuration in:
+1. `safariData[guildId].attributeDefinitions[pointType]` (NEW - for custom attributes)
+2. `safariData[guildId].pointsConfig.definitions[pointType]` (legacy fallback)
+3. Default values (100/100)
+
+**The bug**: The original code only checked `pointsConfig.definitions`, not `attributeDefinitions`, causing "Cannot read properties of undefined (reading 'defaultMax')" errors when initializing custom attributes like Mana.
+
+**The fix** (`pointsManager.js:73-105`): Check `attributeDefinitions` first for custom attribute configs.
+
+### F.3 Files Modified/Created
 
 | File | Changes |
 |------|---------|
 | `config/attributeDefaults.js` | **NEW** - Preset definitions (Mana, HP, Strength, etc.) |
 | `safariManager.js:438,470` | Added `attributeDefinitions: {}` to guild data structure |
 | `safariManager.js:8202-8411` | Added CRUD functions: `getAttributeDefinitions`, `createAttributeDefinition`, etc. |
+| `pointsManager.js:73-105` | **CRITICAL** - Fixed to read from `attributeDefinitions` for custom point types |
 | `menuBuilder.js:68-75` | Added "📊 Attributes" button to Tools Menu (Row 2) |
 | `playerManagement.js:17-19` | Added imports for attribute functions |
 | `playerManagement.js:139-224` | NEW `createAttributeDisplaySection()` function |
-| `playerManagement.js:279-289` | Added "Stats" button to admin management buttons (legacy Player Management) |
+| `playerManagement.js:279-289` | Added "Stats" button to admin management buttons |
 | `playerManagement.js:363-373` | Integrated attribute display into Player Menu |
 | `playerManagement.js:1186-1230` | Added `case 'attributes'` to `createHotSwappableSelect` |
-| `safariMapAdmin.js:246-253` | Added "Stats" button to Safari Player Admin Row 2 |
 | `app.js:6762-7082` | Attribute Management UI handlers |
 | `app.js:20244` | Added `admin_set_attributes_` to handler pattern |
-| `app.js:20284-20360` | Handler for `admin_integrated_attributes_` (old Player Management context) |
-| `app.js:29363-29551` | Safari-specific handlers: `safari_set_attributes_`, `safari_attr_select`, `map_admin_return_to_player_` |
-| `app.js:31744-32017` | Modal handlers for both Safari and admin contexts |
-| `buttonHandlerFactory.js:354-450` | Button registry entries for all attribute buttons |
+| `app.js:20284-20360` | Handler for `admin_integrated_attributes_` modal opening |
+| `app.js:31744+` | Modal handler `modal_admin_set_attr_` |
+| `buttonHandlerFactory.js:354-426` | Button registry entries for attribute buttons |
 
-### F.3 Button ID Patterns
+### F.4 Button ID Patterns
 
 | Context | Button Pattern | Handler Location |
 |---------|----------------|------------------|
 | Tools Menu | `attribute_management` | `app.js:6762` |
 | Attribute CRUD | `attr_add_custom`, `attr_enable_preset`, `attr_edit_select`, `attr_delete_*` | `app.js:6860-7207` |
-| Safari Player Admin | `safari_set_attributes_{userId}` | `app.js:29363` |
-| Safari Attribute Select | `safari_attr_select` | `app.js:29455` |
-| Safari Modal | `modal_safari_set_attr_{userId}_{attrId}` | `app.js:31934` |
-| Legacy Player Management | `admin_set_attributes_{userId}` | `app.js:20244` → `handlePlayerButtonClick` |
-| Legacy Modal | `modal_admin_set_attr_{userId}_{attrId}` | `app.js:32019` |
+| Player Management | `admin_set_attributes_{userId}` | `app.js:20244` → `handlePlayerButtonClick` |
+| Attribute Select | `admin_integrated_attributes_{userId}` | `app.js:20284` |
+| Modal | `modal_admin_set_attr_{userId}_{attrId}` | `app.js:31744` |
 
 ### F.4 Test Paths
 
