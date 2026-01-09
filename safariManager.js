@@ -8592,6 +8592,7 @@ async function getPlayerAttributes(guildId, playerId) {
                 };
             } catch (error) {
                 // Attribute not initialized for player yet, use defaults
+                console.error(`⚠️ Error reading attribute ${attrId} for player ${playerId}:`, error.message);
                 attributes[attrId] = {
                     ...definition,
                     value: {
