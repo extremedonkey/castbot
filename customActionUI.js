@@ -313,6 +313,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
                   { label: 'Give / Remove Item', value: 'give_item', emoji: { name: '🎁' } },
                   { label: 'Give Role', value: 'give_role', emoji: { name: '👑' } },
                   { label: 'Remove Role', value: 'remove_role', emoji: { name: '🚫' } },
+                  { label: 'Modify Attribute', value: 'modify_attribute', emoji: { name: '📊' } },
                   { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' } },
                   { label: 'Calculate Results', value: 'calculate_results', emoji: { name: '🌾' } },
                   { label: 'Calculate Attack', value: 'calculate_attack', emoji: { name: '⚔️' } }
@@ -621,6 +622,8 @@ function getActionTypeLabel(action) {
       return 'Calculate Results';
     case 'calculate_attack':
       return 'Calculate Attack';
+    case 'modify_attribute':
+      return 'Modify Attribute';
     default:
       return action.type ? action.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Unknown Action';
   }
@@ -701,6 +704,13 @@ function getActionSummary(action, number, guildItems = {}, guildButtons = {}, is
       const attackScopeText = playerScope === 'executing_player' ? 'Executing Player' : 'All Players';
       const displayModeText = displayMode === 'display_text' ? 'Display Results' : 'Silent';
       return `**\`${number}. Calculate Attack\`** ${attackScopeText} | ${displayModeText}`;
+    case 'modify_attribute':
+      // Show attribute name and operation
+      const attrId = action?.config?.attributeId || 'Unknown';
+      const attrOperation = action?.config?.operation || 'add';
+      const attrAmount = action?.config?.amount || 0;
+      const attrOpSymbol = attrOperation === 'add' ? '+' : (attrOperation === 'subtract' ? '-' : '=');
+      return `**\`${number}. Modify Attribute\`** ${attrId} ${attrOpSymbol}${Math.abs(attrAmount)}`;
     default:
       return `**${number}. ${action.type || 'Unknown Action'}**`;
   }
@@ -2193,6 +2203,255 @@ export async function showCalculateAttackConfig(guildId, buttonId, actionIndex) 
           components: [{
             type: 3, // String Select
             custom_id: `safari_calculate_attack_execute_on_${buttonId}_${actionIndex}`,
+            placeholder: 'Select when to execute...',
+            options: [
+              {
+                label: 'Execute if all conditions are TRUE',
+                value: 'true',
+                description: 'Only execute when conditions are met',
+                emoji: { name: '✅' },
+                default: (action?.executeOn || 'true') === 'true'
+              },
+              {
+                label: 'Execute if all conditions are FALSE',
+                value: 'false',
+                description: 'Only execute when conditions are NOT met',
+                emoji: { name: '❌' },
+                default: (action?.executeOn || 'true') === 'false'
+              }
+            ]
+          }]
+        },
+
+        { type: 14 }, // Separator
+
+        // Back and Delete Action buttons
+        {
+          type: 1, // Action Row
+          components: [
+            {
+              type: 2, // Button
+              custom_id: `custom_action_editor_${buttonId}`,
+              label: '← Back',
+              style: 2, // Secondary
+              emoji: { name: '⚡' }
+            },
+            {
+              type: 2, // Button
+              custom_id: `safari_remove_action_${buttonId}_${actionIndex}`,
+              label: 'Delete Action',
+              style: 4, // Danger (red)
+              emoji: { name: '🗑️' }
+            }
+          ]
+        }
+      ]
+    }],
+    flags: (1 << 15), // IS_COMPONENTS_V2
+    ephemeral: true
+  };
+}
+
+/**
+ * Show configuration UI for modify_attribute action
+ * Allows selecting an attribute and operation (add/subtract/set)
+ */
+export async function showModifyAttributeConfig(guildId, buttonId, actionIndex) {
+  // Load safari data to get existing action information and attribute definitions
+  const safariData = await loadSafariContent();
+  const button = safariData[guildId]?.buttons?.[buttonId];
+  const attributeDefinitions = safariData[guildId]?.attributeDefinitions || {};
+
+  let action = null;
+  let isEdit = false;
+
+  if (button && button.actions && button.actions[actionIndex]) {
+    action = button.actions[actionIndex];
+    isEdit = true;
+  }
+
+  // Get current settings
+  const currentAttributeId = action?.config?.attributeId || '';
+  const currentOperation = action?.config?.operation || 'add';
+  const currentAmount = action?.config?.amount || 0;
+  const currentDisplayMode = action?.config?.displayMode || 'silent';
+
+  // Check if we have any attributes defined
+  const attributeCount = Object.keys(attributeDefinitions).length;
+
+  if (attributeCount === 0) {
+    return {
+      components: [{
+        type: 17, // Container
+        accent_color: 0xE74C3C, // Red for error
+        components: [
+          {
+            type: 10, // Text Display
+            content: `## ⚠️ No Attributes Defined\n\nYou need to create attributes before you can use the Modify Attribute action.\n\n**How to create attributes:**\n1. Go to Production Menu → Tools\n2. Click "📊 Attributes"\n3. Enable a preset or create custom attributes`
+          },
+          { type: 14 },
+          {
+            type: 1, // Action Row
+            components: [{
+              type: 2, // Button
+              custom_id: `custom_action_editor_${buttonId}`,
+              label: '← Back',
+              style: 2, // Secondary
+              emoji: { name: '⚡' }
+            }]
+          }
+        ]
+      }],
+      flags: (1 << 15), // IS_COMPONENTS_V2
+      ephemeral: true
+    };
+  }
+
+  // Build attribute options for dropdown
+  const attributeOptions = Object.entries(attributeDefinitions).slice(0, 25).map(([attrId, attr]) => ({
+    label: attr.name || attrId,
+    value: attrId,
+    description: attr.category === 'resource' ? 'Resource (current/max)' : 'Stat (single value)',
+    emoji: { name: attr.emoji || '📊' },
+    default: currentAttributeId === attrId
+  }));
+
+  // Build the configuration UI
+  return {
+    components: [{
+      type: 17, // Container
+      accent_color: 0x9B59B6, // Purple accent for modify attribute
+      components: [
+        {
+          type: 10, // Text Display
+          content: `## 📊 Modify Attribute Configuration`
+        },
+
+        { type: 14 }, // Separator
+
+        {
+          type: 10,
+          content: "Modify a player's attribute when this action executes. Use this to:\n• Cost mana to use an ability\n• Grant HP from a healing item\n• Increase strength as a reward"
+        },
+
+        { type: 14 }, // Separator
+
+        // Attribute Selection
+        {
+          type: 10,
+          content: '### Attribute\nWhich attribute should be modified?'
+        },
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_modify_attr_select_${buttonId}_${actionIndex}`,
+            placeholder: 'Select attribute...',
+            options: attributeOptions
+          }]
+        },
+
+        { type: 14 }, // Separator
+
+        // Operation Selection
+        {
+          type: 10,
+          content: '### Operation\nHow should the attribute be modified?'
+        },
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_modify_attr_operation_${buttonId}_${actionIndex}`,
+            placeholder: 'Select operation...',
+            options: [
+              {
+                label: 'Add to Attribute',
+                value: 'add',
+                description: 'Increase current value by amount',
+                emoji: { name: '➕' },
+                default: currentOperation === 'add'
+              },
+              {
+                label: 'Subtract from Attribute',
+                value: 'subtract',
+                description: 'Decrease current value by amount (costs)',
+                emoji: { name: '➖' },
+                default: currentOperation === 'subtract'
+              },
+              {
+                label: 'Set Attribute',
+                value: 'set',
+                description: 'Set to exact value',
+                emoji: { name: '🎯' },
+                default: currentOperation === 'set'
+              }
+            ]
+          }]
+        },
+
+        { type: 14 }, // Separator
+
+        // Amount Button (opens modal)
+        {
+          type: 10,
+          content: `### Amount\nCurrent: **${currentAmount}**`
+        },
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 2, // Button
+            custom_id: `safari_modify_attr_amount_${buttonId}_${actionIndex}`,
+            label: 'Set Amount',
+            style: 1, // Primary
+            emoji: { name: '✏️' }
+          }]
+        },
+
+        { type: 14 }, // Separator
+
+        // Display Mode Selection
+        {
+          type: 10,
+          content: '### Display Mode\nShould feedback be shown to the player?'
+        },
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_modify_attr_display_${buttonId}_${actionIndex}`,
+            placeholder: 'Select display mode...',
+            options: [
+              {
+                label: 'Silent - No feedback',
+                value: 'silent',
+                description: 'Modify attribute without message',
+                emoji: { name: '🔇' },
+                default: currentDisplayMode === 'silent'
+              },
+              {
+                label: 'Show Feedback',
+                value: 'feedback',
+                description: 'Tell player their attribute changed',
+                emoji: { name: '💬' },
+                default: currentDisplayMode === 'feedback'
+              }
+            ]
+          }]
+        },
+
+        { type: 14 }, // Separator
+
+        // Execution Condition section
+        {
+          type: 10,
+          content: '### Execution Condition\nWhen should this action be triggered?'
+        },
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_modify_attr_execute_on_${buttonId}_${actionIndex}`,
             placeholder: 'Select when to execute...',
             options: [
               {

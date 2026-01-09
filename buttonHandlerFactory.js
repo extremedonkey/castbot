@@ -2228,6 +2228,47 @@ export const BUTTON_REGISTRY = {
     type: 'select_menu'
   },
 
+  // Modify Attribute Action config selects
+  'safari_modify_attr_select': {
+    label: 'Attribute Selection',
+    description: 'Select which attribute to modify in this action',
+    emoji: '📊',
+    style: 'Primary',
+    category: 'safari_custom_actions',
+    type: 'select_menu'
+  },
+  'safari_modify_attr_operation': {
+    label: 'Attribute Operation',
+    description: 'Select how to modify the attribute (add, subtract, or set)',
+    emoji: '➕',
+    style: 'Primary',
+    category: 'safari_custom_actions',
+    type: 'select_menu'
+  },
+  'safari_modify_attr_display': {
+    label: 'Attribute Display Mode',
+    description: 'Select whether to show feedback when attribute changes',
+    emoji: '💬',
+    style: 'Primary',
+    category: 'safari_custom_actions',
+    type: 'select_menu'
+  },
+  'safari_modify_attr_execute_on': {
+    label: 'Attribute Execution Condition',
+    description: 'Select when modify attribute action should execute (conditions true/false)',
+    emoji: '✅',
+    style: 'Primary',
+    category: 'safari_custom_actions',
+    type: 'select_menu'
+  },
+  'safari_modify_attr_amount': {
+    label: 'Set Amount',
+    description: 'Open modal to set the amount for attribute modification',
+    emoji: '✏️',
+    style: 'Primary',
+    category: 'safari_custom_actions'
+  },
+
   // === CONDITIONAL LOGIC SYSTEM ===
   // Condition Manager buttons
   'condition_manager_*': {

@@ -4932,6 +4932,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_calculate_attack_scope_') &&
         !custom_id.startsWith('safari_calculate_attack_display_') &&
         !custom_id.startsWith('safari_calculate_attack_execute_on_') &&
+        !custom_id.startsWith('safari_modify_attr_select_') &&
+        !custom_id.startsWith('safari_modify_attr_operation_') &&
+        !custom_id.startsWith('safari_modify_attr_display_') &&
+        !custom_id.startsWith('safari_modify_attr_execute_on_') &&
+        !custom_id.startsWith('safari_modify_attr_amount_') &&
         !custom_id.startsWith('safari_all_server_items_') &&
         !custom_id.startsWith('safari_progress_') &&
         !custom_id.startsWith('safari_inv_page_') &&  // Exclude inventory pagination buttons
@@ -16211,7 +16216,51 @@ Your server is now ready for Tycoons gameplay!`;
             const { showCalculateAttackConfig } = await import('./customActionUI.js');
             return await showCalculateAttackConfig(context.guildId, buttonId, actionIndex);
 
-          // For update_currency, delegate to safari_add_action handler  
+          // For modify_attribute, show new entity interface
+          } else if (actionType === 'modify_attribute') {
+            // Load safari content to create the action
+            const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+            const currentButton = safariData[context.guildId]?.buttons?.[buttonId];
+
+            if (!currentButton) {
+              return {
+                content: '❌ Button not found.',
+                ephemeral: true
+              };
+            }
+
+            const actionIndex = currentButton?.actions?.length || 0;
+
+            // Create the action immediately with default values (eager save pattern)
+            if (!currentButton.actions) {
+              currentButton.actions = [];
+            }
+
+            // Only create if it doesn't already exist
+            if (!currentButton.actions[actionIndex]) {
+              currentButton.actions[actionIndex] = {
+                type: 'modify_attribute',
+                order: actionIndex,
+                config: {
+                  attributeId: '',
+                  operation: 'add',
+                  amount: 0,
+                  displayMode: 'silent'
+                },
+                executeOn: 'true'
+              };
+
+              // Save immediately
+              await saveSafariContent(safariData);
+              console.log(`💾 SAVED: safari_action_type_select - created modify_attribute action with defaults for ${buttonId}[${actionIndex}]`);
+            }
+
+            console.log(`✅ SUCCESS: safari_action_type_select - showing modify_attribute entity for ${buttonId}[${actionIndex}]`);
+            const { showModifyAttributeConfig } = await import('./customActionUI.js');
+            return await showModifyAttributeConfig(context.guildId, buttonId, actionIndex);
+
+          // For update_currency, delegate to safari_add_action handler
           } else if (actionType === 'update_currency') {
             // Simulate the safari_add_action custom_id and call its handler
             const simulatedCustomId = `safari_add_action_${buttonId}_${actionType}`;
@@ -18819,6 +18868,253 @@ Your server is now ready for Tycoons gameplay!`;
           };
         }
       })(req, res, client);
+
+    // ============================================================
+    // MODIFY ATTRIBUTE CONFIG HANDLERS
+    // ============================================================
+
+    } else if (custom_id.startsWith('safari_modify_attr_select_')) {
+      // Handle modify attribute - attribute selection
+      return ButtonHandlerFactory.create({
+        id: 'safari_modify_attr_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: safari_modify_attr_select - user ${context.userId}`);
+
+          // Parse buttonId and actionIndex from custom_id
+          const parts = context.customId.replace('safari_modify_attr_select_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          const attributeId = context.values[0];
+
+          console.log(`📊 ATTR: safari_modify_attr_select - setting attributeId to ${attributeId} for ${buttonId}[${actionIndex}]`);
+
+          // Load and update safari data
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+
+          if (!button || !button.actions?.[actionIndex]) {
+            return {
+              content: '❌ Action not found.',
+              ephemeral: true
+            };
+          }
+
+          // Ensure config exists
+          if (!button.actions[actionIndex].config) {
+            button.actions[actionIndex].config = {};
+          }
+
+          // Update the attribute ID
+          button.actions[actionIndex].config.attributeId = attributeId;
+
+          // Save updated data
+          await saveSafariContent(safariData);
+
+          // Return updated configuration UI
+          const { showModifyAttributeConfig } = await import('./customActionUI.js');
+          const updatedConfig = await showModifyAttributeConfig(context.guildId, buttonId, actionIndex);
+
+          console.log(`✅ SUCCESS: safari_modify_attr_select - updated to ${attributeId}`);
+          return updatedConfig;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('safari_modify_attr_operation_')) {
+      // Handle modify attribute - operation selection
+      return ButtonHandlerFactory.create({
+        id: 'safari_modify_attr_operation',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: safari_modify_attr_operation - user ${context.userId}`);
+
+          // Parse buttonId and actionIndex from custom_id
+          const parts = context.customId.replace('safari_modify_attr_operation_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          const operationValue = context.values[0];
+
+          console.log(`📊 OPERATION: safari_modify_attr_operation - setting to ${operationValue} for ${buttonId}[${actionIndex}]`);
+
+          // Load and update safari data
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+
+          if (!button || !button.actions?.[actionIndex]) {
+            return {
+              content: '❌ Action not found.',
+              ephemeral: true
+            };
+          }
+
+          // Ensure config exists
+          if (!button.actions[actionIndex].config) {
+            button.actions[actionIndex].config = {};
+          }
+
+          // Update the operation
+          button.actions[actionIndex].config.operation = operationValue;
+
+          // Save updated data
+          await saveSafariContent(safariData);
+
+          // Return updated configuration UI
+          const { showModifyAttributeConfig } = await import('./customActionUI.js');
+          const updatedConfig = await showModifyAttributeConfig(context.guildId, buttonId, actionIndex);
+
+          console.log(`✅ SUCCESS: safari_modify_attr_operation - updated to ${operationValue}`);
+          return updatedConfig;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('safari_modify_attr_display_')) {
+      // Handle modify attribute - display mode selection
+      return ButtonHandlerFactory.create({
+        id: 'safari_modify_attr_display',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: safari_modify_attr_display - user ${context.userId}`);
+
+          // Parse buttonId and actionIndex from custom_id
+          const parts = context.customId.replace('safari_modify_attr_display_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          const displayModeValue = context.values[0];
+
+          console.log(`📊 DISPLAY: safari_modify_attr_display - setting to ${displayModeValue} for ${buttonId}[${actionIndex}]`);
+
+          // Load and update safari data
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+
+          if (!button || !button.actions?.[actionIndex]) {
+            return {
+              content: '❌ Action not found.',
+              ephemeral: true
+            };
+          }
+
+          // Ensure config exists
+          if (!button.actions[actionIndex].config) {
+            button.actions[actionIndex].config = {};
+          }
+
+          // Update the display mode
+          button.actions[actionIndex].config.displayMode = displayModeValue;
+
+          // Save updated data
+          await saveSafariContent(safariData);
+
+          // Return updated configuration UI
+          const { showModifyAttributeConfig } = await import('./customActionUI.js');
+          const updatedConfig = await showModifyAttributeConfig(context.guildId, buttonId, actionIndex);
+
+          console.log(`✅ SUCCESS: safari_modify_attr_display - updated to ${displayModeValue}`);
+          return updatedConfig;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('safari_modify_attr_execute_on_')) {
+      // Handle modify attribute - execute on condition changes
+      return ButtonHandlerFactory.create({
+        id: 'safari_modify_attr_execute_on',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: safari_modify_attr_execute_on - user ${context.userId}`);
+
+          // Parse buttonId and actionIndex from custom_id
+          const parts = context.customId.replace('safari_modify_attr_execute_on_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          const executeOnValue = context.values[0];
+
+          console.log(`📊 EXEC: safari_modify_attr_execute_on - setting to ${executeOnValue} for ${buttonId}[${actionIndex}]`);
+
+          // Load and update safari data
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+
+          if (!button || !button.actions?.[actionIndex]) {
+            return {
+              content: '❌ Action not found.',
+              ephemeral: true
+            };
+          }
+
+          // Update the executeOn field
+          button.actions[actionIndex].executeOn = executeOnValue;
+
+          // Save updated data
+          await saveSafariContent(safariData);
+
+          // Return updated configuration UI
+          const { showModifyAttributeConfig } = await import('./customActionUI.js');
+          const updatedConfig = await showModifyAttributeConfig(context.guildId, buttonId, actionIndex);
+
+          console.log(`✅ SUCCESS: safari_modify_attr_execute_on - updated to ${executeOnValue}`);
+          return updatedConfig;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('safari_modify_attr_amount_')) {
+      // Handle modify attribute - amount button (opens modal)
+      return ButtonHandlerFactory.create({
+        id: 'safari_modify_attr_amount',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        modal: true, // This will return a modal instead of a message
+        handler: async (context) => {
+          console.log(`🔍 START: safari_modify_attr_amount - user ${context.userId}`);
+
+          // Parse buttonId and actionIndex from custom_id
+          const parts = context.customId.replace('safari_modify_attr_amount_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+
+          // Load current amount
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+          const currentAmount = button?.actions?.[actionIndex]?.config?.amount || 0;
+
+          console.log(`📊 AMOUNT: safari_modify_attr_amount - opening modal for ${buttonId}[${actionIndex}], current: ${currentAmount}`);
+
+          // Create modal for amount input
+          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
+
+          const modal = new ModalBuilder()
+            .setCustomId(`modal_modify_attr_amount_${buttonId}_${actionIndex}`)
+            .setTitle('Set Attribute Amount');
+
+          const amountInput = new TextInputBuilder()
+            .setCustomId('attr_amount')
+            .setLabel('Amount')
+            .setPlaceholder('Enter a positive number (e.g., 5, 10, 100)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(10)
+            .setValue(currentAmount.toString());
+
+          modal.addComponents(
+            new ActionRowBuilder().addComponents(amountInput)
+          );
+
+          return modal;
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('safari_drop_type_')) {
       // Handle drop type selection
       return ButtonHandlerFactory.create({
@@ -31825,6 +32121,85 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: `❌ Failed to set attribute: ${error.message}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+
+    } else if (custom_id.startsWith('modal_modify_attr_amount_')) {
+      // Handle modify attribute amount modal (Custom Action config)
+      // Format: modal_modify_attr_amount_{buttonId}_{actionIndex}
+      const parts = custom_id.replace('modal_modify_attr_amount_', '').split('_');
+      const actionIndex = parseInt(parts[parts.length - 1]);
+      const buttonId = parts.slice(0, -1).join('_');
+      const guildId = req.body.guild_id;
+
+      // Extract form values
+      const getFieldValue = (fieldId) => {
+        for (const row of components) {
+          for (const comp of row.components) {
+            if (comp.custom_id === fieldId) {
+              return comp.value;
+            }
+          }
+        }
+        return null;
+      };
+
+      const newAmount = parseInt(getFieldValue('attr_amount'));
+
+      if (isNaN(newAmount) || newAmount < 0) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Invalid amount - please enter a positive number',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+
+      try {
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const button = safariData[guildId]?.buttons?.[buttonId];
+
+        if (!button || !button.actions?.[actionIndex]) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Action not found',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Ensure config exists
+        if (!button.actions[actionIndex].config) {
+          button.actions[actionIndex].config = {};
+        }
+
+        // Update the amount
+        button.actions[actionIndex].config.amount = newAmount;
+
+        // Save updated data
+        await saveSafariContent(safariData);
+
+        console.log(`📊 Updated modify_attribute amount for ${buttonId}[${actionIndex}]: ${newAmount}`);
+
+        // Return updated configuration UI
+        const { showModifyAttributeConfig } = await import('./customActionUI.js');
+        const updatedConfig = await showModifyAttributeConfig(guildId, buttonId, actionIndex);
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: updatedConfig
+        });
+      } catch (error) {
+        console.error(`❌ Failed to update amount: ${error.message}`);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Failed to update amount: ${error.message}`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

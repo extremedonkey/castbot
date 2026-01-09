@@ -292,7 +292,9 @@ const ACTION_TYPES = {
     CHECK_POINTS: 'check_points',        // NEW: Check if entity has enough points
     MODIFY_POINTS: 'modify_points',      // NEW: Add/subtract points
     MOVE_PLAYER: 'move_player',          // NEW: Move player on map
-    APPLY_REGENERATION: 'apply_regeneration' // NEW: Force regeneration check
+    APPLY_REGENERATION: 'apply_regeneration', // NEW: Force regeneration check
+    // Attribute System Actions
+    MODIFY_ATTRIBUTE: 'modify_attribute' // NEW: Add/subtract/set player attributes
 };
 
 // Condition types for conditional actions
@@ -1833,11 +1835,22 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                     }
                     break;
 
+                case 'modify_attribute':
+                case ACTION_TYPES.MODIFY_ATTRIBUTE:
+                    try {
+                        console.log(`📊 DEBUG: Executing modify_attribute action for guild ${guildId}`);
+                        result = await executeModifyAttribute(action.config, guildId, userId, interaction);
+                        if (result) responses.push(result);
+                    } catch (error) {
+                        console.error('Error executing modify_attribute action:', error);
+                    }
+                    break;
+
                 default:
                     console.log(`⚠️ Unknown action type: ${action.type}`);
             }
         }
-        
+
         // NEW BUNDLING LOGIC: Combine all responses into a single message
         console.log(`📊 DEBUG: Processing ${responses.length} responses for bundling`);
 
@@ -2944,6 +2957,126 @@ async function executeModifyPoints(config, guildId, userId, interaction) {
             content: '❌ Error modifying points.',
             flags: InteractionResponseFlags.EPHEMERAL
         };
+    }
+}
+
+/**
+ * Execute modify attribute action - add/subtract/set player attributes
+ * Uses the attribute definitions system for custom attributes
+ */
+async function executeModifyAttribute(config, guildId, userId, interaction) {
+    try {
+        const attributeId = config.attributeId;
+        const operation = config.operation || 'add';
+        const amount = parseInt(config.amount) || 0;
+        const displayMode = config.displayMode || 'silent';
+
+        if (!attributeId) {
+            console.error('executeModifyAttribute: No attribute ID specified');
+            return null; // Silent fail for unconfigured action
+        }
+
+        // Load safari data to get attribute definition
+        const safariData = await loadSafariContent();
+        const attributeDef = safariData[guildId]?.attributeDefinitions?.[attributeId];
+
+        if (!attributeDef) {
+            console.error(`executeModifyAttribute: Attribute ${attributeId} not found for guild ${guildId}`);
+            if (displayMode === 'feedback') {
+                return {
+                    content: `❌ Attribute "${attributeId}" not found.`,
+                    flags: InteractionResponseFlags.EPHEMERAL
+                };
+            }
+            return null;
+        }
+
+        const entityId = `player_${userId}`;
+        console.log(`📊 DEBUG: Executing modify_attribute - ${attributeId} ${operation} ${amount} for ${entityId}`);
+
+        // Get current attribute values
+        const currentPoints = await getEntityPoints(guildId, entityId, attributeId);
+        let newCurrent = currentPoints.current;
+        let success = true;
+        let message = '';
+
+        switch (operation) {
+            case 'add':
+                // Add to current, cap at max for resources
+                if (attributeDef.category === 'resource') {
+                    newCurrent = Math.min(currentPoints.current + amount, currentPoints.max);
+                } else {
+                    newCurrent = currentPoints.current + amount;
+                }
+                message = `${attributeDef.emoji || '📊'} **+${amount} ${attributeDef.name}** (${currentPoints.current} → ${newCurrent})`;
+                break;
+
+            case 'subtract':
+                // Check if player has enough
+                if (currentPoints.current < amount) {
+                    success = false;
+                    message = `❌ Not enough ${attributeDef.name}! You have ${currentPoints.current}, need ${amount}.`;
+                } else {
+                    newCurrent = Math.max(currentPoints.current - amount, 0);
+                    message = `${attributeDef.emoji || '📊'} **-${amount} ${attributeDef.name}** (${currentPoints.current} → ${newCurrent})`;
+                }
+                break;
+
+            case 'set':
+                // Set to exact value, cap at max for resources
+                if (attributeDef.category === 'resource') {
+                    newCurrent = Math.min(amount, currentPoints.max);
+                } else {
+                    newCurrent = amount;
+                }
+                message = `${attributeDef.emoji || '📊'} **${attributeDef.name}** set to ${newCurrent}`;
+                break;
+
+            default:
+                console.error(`executeModifyAttribute: Unknown operation ${operation}`);
+                return null;
+        }
+
+        if (success) {
+            // Apply the change
+            await setEntityPoints(guildId, entityId, attributeId, newCurrent, currentPoints.max);
+            console.log(`📊 SUCCESS: Modified ${attributeId} for ${entityId}: ${currentPoints.current} → ${newCurrent}`);
+        }
+
+        // Return feedback if requested
+        if (displayMode === 'feedback') {
+            return {
+                flags: (1 << 15), // IS_COMPONENTS_V2
+                components: [{
+                    type: 17, // Container
+                    accent_color: success ? 0x2ECC71 : 0xE74C3C, // Green for success, red for fail
+                    components: [
+                        {
+                            type: 10, // Text Display
+                            content: message
+                        }
+                    ]
+                }]
+            };
+        }
+
+        // If not enough points and no feedback, the action should fail silently
+        // but we might want to prevent subsequent actions from executing
+        if (!success) {
+            return null;
+        }
+
+        return null; // Silent success
+
+    } catch (error) {
+        console.error('Error modifying attribute:', error);
+        if (config.displayMode === 'feedback') {
+            return {
+                content: '❌ Error modifying attribute.',
+                flags: InteractionResponseFlags.EPHEMERAL
+            };
+        }
+        return null;
     }
 }
 
@@ -8458,6 +8591,7 @@ export {
     // Points System exports
     executeCheckPoints,
     executeModifyPoints,
+    executeModifyAttribute,
     executeMovePlayer,
     initializeEntityPoints,
     getEntityPoints,

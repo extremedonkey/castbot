@@ -1130,16 +1130,42 @@ When `setEntityPoints()` initializes a new point type, it looks for configuratio
   → "📊 Your Stats" section shows all server attributes
 ```
 
-### F.5 Remaining Work
+### F.5 Phase 4: Custom Action Integration (COMPLETED)
 
-- **Phase 4**: Custom Action integration - Add "Modify Attribute" action type
-  - Allows Safari buttons to add/subtract/set player attributes
-  - Enables game mechanics like "costs 5 Mana to use ability"
-  - Location: Custom Action editor → Action Types dropdown
+**Implementation**: `modify_attribute` action type added to Safari Custom Actions
+
+**Files Changed**:
+- `safariManager.js`: Added `MODIFY_ATTRIBUTE` to ACTION_TYPES, created `executeModifyAttribute()` function, added case to `executeButtonActions` switch
+- `customActionUI.js`: Added dropdown option, label/summary helpers, created `showModifyAttributeConfig()` function
+- `app.js`: Added `safari_action_type_select_` handler for `modify_attribute`, config select handlers (`safari_modify_attr_select_`, `safari_modify_attr_operation_`, etc.), modal handler (`modal_modify_attr_amount_`)
+- `buttonHandlerFactory.js`: Added registry entries for new handlers
+
+**Configuration Options**:
+- **Attribute**: Select from server's defined attributes
+- **Operation**: Add (increase), Subtract (decrease with cost check), Set (exact value)
+- **Amount**: Configurable via modal
+- **Display Mode**: Silent or show feedback to player
+- **Execute On**: When conditions are true or false
+
+**Test Path**:
+```
+Safari → Custom Actions → Edit action → Add action type dropdown
+  → "📊 Modify Attribute" → Configure:
+    - Select attribute (e.g., Mana)
+    - Select operation (e.g., Subtract)
+    - Set amount (e.g., 5)
+    - Display mode (e.g., Show Feedback)
+```
+
+**Use Cases Enabled**:
+- "Costs 5 Mana to use this ability" → Subtract operation with feedback
+- "Healing potion grants +20 HP" → Add operation
+- "Reset stamina to full" → Set operation to max value
 
 ---
 
 *Analysis completed: 2026-01-09*
 *Updated with Appendices A-E: 2026-01-09*
 *Updated with Appendix F (Implementation Notes): 2026-01-09*
+*Updated with Phase 4 Implementation: 2026-01-09*
 *Author: Claude Opus 4.5 (assisted analysis)*
