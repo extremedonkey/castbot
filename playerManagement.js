@@ -174,12 +174,20 @@ export async function createAttributeDisplaySection(guildId, playerId, label = '
       return orderA - orderB;
     });
 
+    // Phase 5: Import calculateAttributeModifiers for item bonus display
+    const { calculateAttributeModifiers } = await import('./pointsManager.js');
+    const entityId = `player_${playerId}`;
+
     // Build attribute lines
     const attrLines = [];
     for (const [attrId, attr] of attributeEntries) {
       const emoji = attr.emoji || '📊';
       const name = attr.name;
       const value = attr.value;
+
+      // Phase 5: Get item modifiers for this attribute
+      const itemModifiers = await calculateAttributeModifiers(guildId, entityId, attrId);
+      const hasItemBonus = itemModifiers.add > 0 || itemModifiers.addMax > 0;
 
       if (attr.category === 'resource') {
         // Resource type - show current/max with optional bar
@@ -194,10 +202,13 @@ export async function createAttributeDisplaySection(guildId, playerId, label = '
 
         let line = `${emoji} **${name}**: ${bar} ${current}/${max}`;
 
-        // Add regen time if not at max
-        if (current < max && attr.regeneration?.type !== 'none') {
+        // Phase 5: Show item bonus for max capacity
+        if (itemModifiers.addMax > 0) {
+          line += ` *(+${itemModifiers.addMax} max from items)*`;
+        }
+        // Add regen time if not at max (only if no item bonus shown)
+        else if (current < max && attr.regeneration?.type !== 'none') {
           try {
-            const entityId = `player_${playerId}`;
             const regenTime = await getTimeUntilRegeneration(guildId, entityId, attrId);
             if (regenTime && regenTime !== 'Full') {
               line += ` *(${regenTime})*`;
@@ -209,9 +220,18 @@ export async function createAttributeDisplaySection(guildId, playerId, label = '
 
         attrLines.push(line);
       } else {
-        // Stat type - show single value
-        const statValue = value.current ?? value ?? attr.defaultValue ?? 0;
-        attrLines.push(`${emoji} **${name}**: ${statValue}`);
+        // Stat type - show single value with item bonuses
+        const baseValue = value.current ?? value ?? attr.defaultValue ?? 0;
+        const totalValue = baseValue + itemModifiers.add;
+
+        let line = `${emoji} **${name}**: ${totalValue}`;
+
+        // Phase 5: Show item bonus breakdown
+        if (itemModifiers.add > 0) {
+          line += ` *(+${itemModifiers.add} from items)*`;
+        }
+
+        attrLines.push(line);
       }
     }
 

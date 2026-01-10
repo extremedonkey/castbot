@@ -1164,8 +1164,604 @@ Safari → Custom Actions → Edit action → Add action type dropdown
 
 ---
 
+## Appendix G: Phase 5 Implementation Plan - Item Attribute Modifiers
+
+### G.1 Overview
+
+**Goal**: Allow items to grant attribute bonuses (e.g., "Iron Sword: +5 Strength", "Magic Ring: +10 Mana Max")
+
+**Status**: NOT IMPLEMENTED
+**Estimated Effort**: 8-10 hours
+**Dependencies**: Phases 0-4 completed ✅
+
+### G.2 Current State Analysis
+
+**Existing Item Attribute Fields** (from `editFramework.js:69-108`):
+```javascript
+{
+  name: "Iron Sword",
+  emoji: "⚔️",
+  basePrice: 100,
+  staminaBoost: 1,        // ← Special-cased for stamina only
+  consumable: "No",
+  attackValue: 10,        // ← Proto-attributes (unused?)
+  defenseValue: 5,        // ← Proto-attributes (unused?)
+  // NO generic attributeModifiers array yet
+}
+```
+
+**Existing Stamina Boost Pattern** (from `pointsManager.js:15-39`):
+```javascript
+async function calculatePermanentStaminaBoost(guildId, entityId) {
+    // Only works for players
+    if (!entityId.startsWith('player_')) return 0;
+
+    // Scans inventory for non-consumable items
+    for (const [itemId, qty] of Object.entries(inventory)) {
+        const item = items[itemId];
+        if (item?.consumable === 'No' && item?.staminaBoost > 0) {
+            totalBoost += item.staminaBoost;
+        }
+    }
+    return totalBoost;
+}
+```
+
+**Key Insight**: The pattern exists but is hardcoded for stamina. Need to generalize to ANY attribute.
+
+### G.3 Proposed Data Structure
+
+**Item Schema Extension**:
+```json
+{
+  "iron_sword_12345": {
+    "name": "Iron Sword",
+    "emoji": "⚔️",
+    "basePrice": 100,
+    "consumable": "No",
+    "staminaBoost": 0,
+    "attributeModifiers": [
+      { "attributeId": "strength", "value": 5, "operation": "add" },
+      { "attributeId": "mana", "value": 10, "operation": "addMax" }
+    ],
+    "attributeRequirements": [
+      { "attributeId": "strength", "minimum": 8, "message": "Requires 8 STR" }
+    ]
+  }
+}
+```
+
+**Modifier Operations**:
+| Operation | Effect | Example |
+|-----------|--------|---------|
+| `add` | Adds to current/value | +5 Strength (permanent stat boost) |
+| `addMax` | Increases max capacity | +10 Max Mana (larger pool) |
+| `multiply` | Percentage modifier | 1.5x Mana regen rate (future) |
+
+### G.4 Implementation Checklist (File-Specific)
+
+```
+Phase 5.1: Core Infrastructure (2-3 hours)
+├─ [ ] pointsManager.js:15-39 - Create `calculateAttributeModifiers(guildId, entityId, attributeId)`
+│       → Returns { add: number, addMax: number } for all item bonuses
+├─ [ ] pointsManager.js:148-200 - Integrate into `getEntityPoints()`
+│       → Apply addMax to returned max value
+│       → Keep `calculatePermanentStaminaBoost()` for backward compat
+├─ [ ] pointsManager.js - Export new function
+└─ [ ] Test: Stamina boost still works, new function returns correct values
+
+Phase 5.2: Item Edit UI (3-4 hours)
+├─ [ ] entityManagementUI.js:553-560 - Add 'stats' field group to getFieldGroups()
+│       → stats: { label: 'Stats', emoji: '📊', fields: ['attributeModifiers'], useCustomUI: true }
+├─ [ ] entityManagementUI.js:361-379 - Add attributeModifiers display in getEntityDetails()
+│       → Show: "**📊 Attribute Bonuses**: +5 STR, +10 Max Mana"
+├─ [ ] app.js:23252+ - Add case for 'stats' field group in entity_field_group_ handler
+│       → Route to custom UI (like map_cell 'stores' handler pattern)
+├─ [ ] app.js - NEW: Add handlers for item_attr_add_{itemId}, item_attr_select_{itemId}
+├─ [ ] app.js - NEW: Add handlers for item_attr_edit_{itemId}_{attrId}, item_attr_remove_{itemId}_{attrId}
+├─ [ ] app.js - NEW: Add modal handler modal_item_attr_{itemId}_{attrId}
+├─ [ ] buttonHandlerFactory.js - Register new button IDs
+└─ [ ] Test: Admin can add +5 Strength to Iron Sword, see it in item details
+
+Phase 5.3: Player Display Integration (2-3 hours)
+├─ [ ] playerManagement.js:139-224 - Update `createAttributeDisplaySection()`
+│       → Import calculateAttributeModifiers from pointsManager.js
+│       → For each attribute, get modifiers and add to display
+│       → Show: "💪 Strength: 20 *(+5 from items)*"
+├─ [ ] playerManagement.js - Build item name aggregation for bonus display
+│       → Track which items contribute to each attribute
+│       → Show: "💪 Strength: 20 *(+3 Iron Sword, +2 Power Ring)*"
+└─ [ ] Test: Player sees stat bonuses from equipped items in /menu
+
+Phase 5.4: Attribute Requirements (Optional - 2 hours)
+├─ [ ] editFramework.js:69-108 - Add attributeRequirements to ITEM schema
+├─ [ ] safariManager.js - Add requirement check in item use/give logic
+├─ [ ] entityManagementUI.js - Show requirements in item detail view
+├─ [ ] app.js - Add UI for configuring requirements (similar to modifiers)
+└─ [ ] Test: Can't use "Dragon Sword" without 20 STR
+```
+
+**Files Summary**:
+| File | Changes |
+|------|---------|
+| `pointsManager.js` | New `calculateAttributeModifiers()`, integrate into `getEntityPoints()` |
+| `entityManagementUI.js` | Add 'stats' field group, display modifiers in item details |
+| `playerManagement.js` | Show item bonuses in Player Menu stats section |
+| `app.js` | New handlers for item attribute modifier CRUD |
+| `buttonHandlerFactory.js` | Register new button IDs |
+| `editFramework.js` | (Optional Phase 5.4) Add attributeRequirements to schema |
+
+### G.5 Code Changes
+
+**File: `pointsManager.js`** - New generic function:
+```javascript
+/**
+ * Calculate total attribute modifiers from player's non-consumable items
+ * @param {string} guildId - Guild ID
+ * @param {string} entityId - Entity ID (player_123)
+ * @param {string} attributeId - Attribute to calculate (strength, mana, etc.)
+ * @returns {Object} { add: number, addMax: number }
+ */
+async function calculateAttributeModifiers(guildId, entityId, attributeId) {
+    if (!entityId.startsWith('player_')) return { add: 0, addMax: 0 };
+
+    const playerId = entityId.replace('player_', '');
+    const playerData = await loadPlayerData();
+    const safariData = await loadSafariContent();
+
+    const inventory = playerData[guildId]?.players?.[playerId]?.safari?.inventory || {};
+    const items = safariData[guildId]?.items || {};
+
+    let result = { add: 0, addMax: 0 };
+
+    for (const [itemId, qty] of Object.entries(inventory)) {
+        const item = items[itemId];
+        if (item?.consumable === 'No' && item?.attributeModifiers) {
+            for (const modifier of item.attributeModifiers) {
+                if (modifier.attributeId === attributeId) {
+                    const operation = modifier.operation || 'add';
+                    result[operation] = (result[operation] || 0) + modifier.value;
+                }
+            }
+        }
+    }
+
+    // Backward compatibility: staminaBoost → stamina add modifier
+    if (attributeId === 'stamina') {
+        const staminaBoost = await calculatePermanentStaminaBoost(guildId, entityId);
+        result.addMax += staminaBoost;
+    }
+
+    return result;
+}
+```
+
+**File: `editFramework.js`** - Add to ITEM properties:
+```javascript
+attributeModifiers: {
+    type: 'attribute_modifiers',  // New custom field type
+    label: 'Attribute Bonuses',
+    description: 'Stat bonuses granted by this item',
+    maxModifiers: 5
+}
+```
+
+**File: `playerManagement.js`** - Update display:
+```javascript
+// In createAttributeDisplaySection()
+const modifiers = await calculateAttributeModifiers(guildId, entityId, attrId);
+const baseValue = currentPoints.current;
+const totalValue = baseValue + modifiers.add;
+const displayMax = currentPoints.max + modifiers.addMax;
+
+// Build display with bonus indicator
+let statLine = `${emoji} **${attrDef.name}**: ${totalValue}`;
+if (modifiers.add > 0 || modifiers.addMax > 0) {
+    const bonusParts = [];
+    if (modifiers.add > 0) bonusParts.push(`+${modifiers.add}`);
+    if (modifiers.addMax > 0) bonusParts.push(`+${modifiers.addMax} max`);
+    statLine += ` *(${bonusParts.join(', ')} from items)*`;
+}
+```
+
+### G.6 UI Integration: Fitting Into Existing Item System
+
+#### G.6.1 Current Item Field Groups (`entityManagementUI.js:553-560`)
+
+```javascript
+// EXISTING field groups for items:
+case 'item':
+    return {
+        info: { label: 'Item Info', emoji: '📝', fields: ['name', 'description'] },
+        financials: { label: 'Financials', emoji: '💰', fields: ['basePrice', 'goodOutcomeValue', 'badOutcomeValue'] },
+        battle: { label: 'Battle', emoji: '⚔️', fields: ['attackValue', 'defenseValue'] },
+        properties: { label: 'Persistence', emoji: '🍏', fields: ['consumable', 'defaultItem'] },
+        stamina: { label: 'Movement', emoji: '⚡', fields: ['staminaBoost', 'reverseBlacklist', 'consumable'] }
+    };
+```
+
+#### G.6.2 Proposed Change: Add "Stats" Field Group
+
+```javascript
+// UPDATED field groups (add new 'stats' group):
+case 'item':
+    return {
+        info: { label: 'Item Info', emoji: '📝', fields: ['name', 'description'] },
+        financials: { label: 'Financials', emoji: '💰', fields: ['basePrice', 'goodOutcomeValue', 'badOutcomeValue'] },
+        battle: { label: 'Battle', emoji: '⚔️', fields: ['attackValue', 'defenseValue'] },
+        properties: { label: 'Persistence', emoji: '🍏', fields: ['consumable', 'defaultItem'] },
+        stamina: { label: 'Movement', emoji: '⚡', fields: ['staminaBoost', 'reverseBlacklist', 'consumable'] },
+        stats: { label: 'Stats', emoji: '📊', fields: ['attributeModifiers'], useCustomUI: true }  // ← NEW
+    };
+```
+
+**Note**: `useCustomUI: true` flag indicates this field group uses multi-step UI (like Custom Actions) instead of a simple modal.
+
+#### G.6.3 UI Flow: Item Edit Screen with Stats Button
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  ⚔️ Iron Sword                                  [accent: blue]  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  **Base Price**: 100 🪙                                         │
+│  **Consumable**: No                                             │
+│  **Stamina Boost**: 0                                           │
+│  **📊 Attribute Bonuses**: +5 STR, +10 Max Mana    ← NEW LINE   │
+│                                                                  │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                  │
+│  [📝 Item Info] [💰 Financials] [⚔️ Battle]                     │
+│  [🍏 Persistence] [⚡ Movement] [📊 Stats]        ← NEW BUTTON  │
+│                                                                  │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                  │
+│  [← Menu] [Player Qty]                                          │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### G.6.4 UI Flow: Stats Field Group Selected (Components V2 Compliant)
+
+When user clicks [📊 Stats], show attribute management UI.
+
+**⚠️ CRITICAL: Components V2 Constraints (from ComponentsV2Issues.md):**
+- Buttons MUST be inside ActionRows (no inline buttons with text)
+- ActionRows: max 5 buttons OR 1 select menu
+- Sections: ONLY ONE child component (despite docs claiming 1-3)
+- Total components: max 40 (count recursively)
+
+**Design Pattern**: Use Select Menus for managing existing modifiers (like Custom Actions pattern)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  ⚔️ Iron Sword | 📊 Stats                       [accent: blue]  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ## 📊 Attribute Bonuses                                        │
+│                                                                  │
+│  Configure stat bonuses granted by this item.                   │
+│  (Non-consumable items only)                                    │
+│                                                                  │
+│  **Current Bonuses:**                                           │
+│  • 💪 Strength: +5                                              │
+│  • 🔮 Mana: +10 max                                             │
+│                                                                  │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │  ▼ Manage existing bonus...                                 ││
+│  │  ────────────────────────────────────────────────────────── ││
+│  │  💪 Strength (+5) - Edit or Remove                          ││
+│  │  🔮 Mana (+10 max) - Edit or Remove                         ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  [➕ Add Bonus]                                                  │
+│                                                                  │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                  │
+│  [📝 Info] [💰 Finance] [⚔️ Battle] [🍏 Persist] [⚡ Move] [📊 Stats]│
+│                                                                  │
+│  [← Menu]                                                        │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Component Count (Stats UI):**
+```
+Container (type 17)                           = 1
+├─ Text Display (header + current bonuses)    = 1
+├─ Separator                                  = 1
+├─ ActionRow (select menu)                    = 1
+│   └─ String Select (manage existing)        = 1
+├─ ActionRow (add button)                     = 1
+│   └─ Button (Add Bonus)                     = 1
+├─ Separator                                  = 1
+├─ ActionRow (field groups - 6 buttons)       = 1
+│   └─ Buttons x6                             = 6
+└─ ActionRow (navigation)                     = 1
+    └─ Button (← Menu)                        = 1
+                                        ─────────
+                                  TOTAL = 16 components ✅
+```
+
+**Note**: 6 field group buttons in one ActionRow exceeds 5-button limit!
+**Fix**: Split into 2 ActionRows (3 buttons each)
+
+**Revised Component Count:**
+```
+Container (type 17)                           = 1
+├─ Text Display (header + current bonuses)    = 1
+├─ Separator                                  = 1
+├─ ActionRow (select menu)                    = 1
+│   └─ String Select (manage existing)        = 1
+├─ ActionRow (add button)                     = 1
+│   └─ Button (Add Bonus)                     = 1
+├─ Separator                                  = 1
+├─ ActionRow 1 (field groups: Info, Finance, Battle) = 1
+│   └─ Buttons x3                             = 3
+├─ ActionRow 2 (field groups: Persist, Move, Stats)  = 1
+│   └─ Buttons x3                             = 3
+└─ ActionRow (navigation)                     = 1
+    └─ Button (← Menu)                        = 1
+                                        ─────────
+                                  TOTAL = 18 components ✅ (well under 40)
+```
+
+#### G.6.5 UI Flow: Select Attribute to Add (Components V2)
+
+When user clicks [➕ Add Bonus], show attribute selector:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  ⚔️ Iron Sword | Add Attribute Bonus            [accent: green] │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ## ➕ Add Attribute Bonus                                       │
+│                                                                  │
+│  Select an attribute to add a bonus for:                        │
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │  ▼ Select Attribute...                                      ││
+│  │  ────────────────────────────────────────────────────────── ││
+│  │  💪 Strength           (Not configured)                     ││
+│  │  🔮 Mana               (Not configured)                     ││
+│  │  ❤️ HP                 (Not configured)                     ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  [← Back to Stats]                                               │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Component Count:**
+```
+Container                                     = 1
+├─ Text Display (instructions)                = 1
+├─ ActionRow (select)                         = 1
+│   └─ String Select                          = 1
+└─ ActionRow (back button)                    = 1
+    └─ Button                                 = 1
+                                        ─────────
+                                  TOTAL = 6 components ✅
+```
+
+**Note**: Stamina excluded from select - hint shown in Stats UI to use Movement tab.
+
+#### G.6.6 UI Flow: Configure Bonus Value (Modal)
+
+After selecting attribute, open modal. **Modals use different component rules!**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Configure Strength Bonus                                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  **Bonus Amount** (Label component - type 18)                   │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │  5                                                          ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  **Bonus Type** (Label component - type 18)                     │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │  ▼ Add to Value                                             ││
+│  │  ● Add to Value - Increases stat value                      ││
+│  │  ○ Add to Max - Increases maximum capacity                  ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Modal Structure (uses Label components per ComponentsV2.md Sept 2025 update):**
+```javascript
+{
+  type: InteractionResponseType.MODAL,
+  data: {
+    custom_id: `modal_item_attr_${itemId}_${attrId}`,
+    title: `Configure ${attrName} Bonus`,
+    components: [
+      {
+        type: 18, // Label (NEW modal wrapper)
+        label: 'Bonus Amount',
+        description: 'Enter positive number (e.g., 5 = +5 to stat)',
+        component: {
+          type: 4, // Text Input
+          custom_id: 'bonus_value',
+          style: 1, // Short
+          placeholder: '5',
+          required: true,
+          max_length: 4
+        }
+      },
+      {
+        type: 18, // Label
+        label: 'Bonus Type',
+        component: {
+          type: 3, // String Select (now allowed in modals!)
+          custom_id: 'bonus_operation',
+          options: [
+            { label: 'Add to Value', value: 'add', description: 'Increases stat value', default: true },
+            { label: 'Add to Max', value: 'addMax', description: 'Increases maximum capacity' }
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+#### G.6.7 Button/Select ID Patterns (Components V2 Compliant)
+
+**Design uses Select Menus instead of inline Edit/Remove buttons** (per ComponentsV2 constraints)
+
+| Action | ID Pattern | Type | Handler |
+|--------|------------|------|---------|
+| Select Stats field group | `entity_field_group_item_{itemId}_stats` | Button | Existing `app.js:23252` |
+| Manage existing bonus | `item_attr_manage_{itemId}` | String Select | NEW handler |
+| Add new bonus | `item_attr_add_{itemId}` | Button | NEW handler |
+| Select attribute to add | `item_attr_select_{itemId}` | String Select | NEW handler → opens modal |
+| Configure bonus modal | `modal_item_attr_{itemId}_{attrId}` | Modal | NEW modal handler |
+| Back to stats | `item_attr_back_{itemId}` | Button | Returns to stats UI |
+
+**Select Menu Option Values for "Manage Existing":**
+```javascript
+// String Select options for managing existing bonuses
+options: [
+  { label: '💪 Strength (+5)', value: 'edit_strength', description: 'Edit or remove this bonus' },
+  { label: '🔮 Mana (+10 max)', value: 'edit_mana', description: 'Edit or remove this bonus' },
+  { label: '🗑️ Remove All Bonuses', value: 'remove_all', description: 'Clear all attribute bonuses' }
+]
+```
+
+**After Select → Show Edit/Remove UI:**
+When user selects an attribute from "Manage existing", show confirmation:
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  💪 Strength Bonus: +5                                          │
+│                                                                  │
+│  [✏️ Edit Value]  [🗑️ Remove]  [← Back]                          │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Component Count for Edit/Remove confirmation: 7 components ✅**
+
+#### G.6.8 Item Detail Display Update (`entityManagementUI.js:361-379`)
+
+```javascript
+// EXISTING item display code:
+if (entity.staminaBoost !== undefined && entity.staminaBoost !== null && entity.staminaBoost !== 0) {
+    lines.push(`**Stamina Boost**: ${entity.staminaBoost}`);
+}
+
+// ADD NEW attribute modifiers display:
+if (entity.attributeModifiers && entity.attributeModifiers.length > 0) {
+    const attrDefs = safariData[guildId]?.attributeDefinitions || {};
+    const modifierStrings = entity.attributeModifiers.map(mod => {
+        const def = attrDefs[mod.attributeId];
+        const emoji = def?.emoji || '📊';
+        const name = def?.name || mod.attributeId;
+        const opLabel = mod.operation === 'addMax' ? ' max' : '';
+        return `${emoji}+${mod.value}${opLabel} ${name}`;
+    });
+    lines.push(`**📊 Attribute Bonuses**: ${modifierStrings.join(', ')}`);
+}
+```
+
+### G.7 Player Stats Display with Item Bonuses
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  ## 📊 Your Stats                                               │
+│                                                                  │
+│  ❤️ HP: ████████░░ 80/100                                       │
+│  🔮 Mana: ██████████ 50/60  *(+10 max from Magic Ring)*         │
+│  ⚡ Stamina: ██ 2/2  *(+1 max from Horse)*                      │
+│  💪 Strength: 20  *(+5 from Iron Sword)*                        │
+│  🏃 Dexterity: 12                                               │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### G.8 Risk Assessment
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| Breaking staminaBoost | Low | High | Keep backward compat, migrate gradually |
+| Performance (many items) | Medium | Low | Cache attribute totals per request |
+| Complex UI | Medium | Medium | Start with simple add-only, expand later |
+| Modifier stacking abuse | Low | Low | Cap modifier totals per attribute |
+| **40 component limit** | Medium | High | **Validate with `countComponents()` before deploy** |
+| ActionRow 5-button limit | Low | High | Split field groups into 2 rows (3+3) |
+
+### G.8.1 Component Count Verification (MANDATORY)
+
+**⚠️ CRITICAL: Verify component counts BEFORE deploying any UI changes!**
+
+```javascript
+// Add to ALL new UI handlers:
+const { countComponents, validateComponentLimit } = await import('./utils.js');
+
+// Option 1: Throw error if over limit
+validateComponentLimit([container], "Item Stats UI");
+
+// Option 2: Log count for debugging
+countComponents([container], { verbosity: "summary", label: "Item Stats" });
+// Output: "📊 Item Stats: 18 components (Container: 1, TextDisplay: 1, Separator: 2, ...)"
+```
+
+**Expected Component Counts for Phase 5:**
+| UI Screen | Expected Count | Max Allowed |
+|-----------|----------------|-------------|
+| Item Edit (default) | ~15 | 40 |
+| Item Edit (Stats selected) | ~18 | 40 |
+| Add Attribute (select) | ~6 | 40 |
+| Edit/Remove confirmation | ~7 | 40 |
+| Player Menu Stats section | +3-5 per UI | Verify total stays under 40 |
+
+### G.9 Future Extensions (Post-Phase 5)
+
+1. **Consumable Attribute Items**: Potions that restore HP/Mana
+2. **Equipment Slots**: Only one "weapon", one "armor" contributes bonuses
+3. **Set Bonuses**: "Wearing 3 Dragon items gives +10 to all stats"
+4. **Attribute Requirements**: "Requires 15 STR to equip"
+5. **Multiplier Modifiers**: "1.5x Mana regeneration"
+
+---
+
+## Appendix H: Implementation Priority & Next Steps
+
+### H.1 Recommended Order
+
+Based on user feedback and system dependencies:
+
+| Priority | Phase | Status | Notes |
+|----------|-------|--------|-------|
+| ✅ | Phase 0-1: Foundation | COMPLETE | Custom attributes exist |
+| ✅ | Phase 2: Player Views | COMPLETE | Stats in Player Menu |
+| ✅ | Phase 3: Admin Sets | COMPLETE | Stats button in Player Admin |
+| ✅ | Phase 4: Custom Actions | COMPLETE | modify_attribute action |
+| 🔜 | **Phase 5: Item Modifiers** | NEXT | This appendix |
+| ⏸️ | Phase 6: Future Enemies | DEFERRED | After Phase 5 |
+
+### H.2 Recommended First Implementation
+
+**Start Simple**: Begin with Phase 5.1 (core infrastructure) and Phase 5.2 (basic UI). This proves the pattern works with minimal risk.
+
+**Test Item**: Create a "Test Ring" with `+5 Mana` modifier to validate end-to-end.
+
+### H.3 User Confirmation Needed
+
+Before proceeding, please confirm:
+1. ✅ Proceed with Phase 5.1 (core infrastructure)?
+2. ❓ Include attribute requirements (Phase 5.4) now or defer?
+3. ❓ Support only `add` operation or also `addMax`?
+4. ❓ Show item bonuses inline in stats ("+5 from Ring") or just totals?
+
+---
+
 *Analysis completed: 2026-01-09*
 *Updated with Appendices A-E: 2026-01-09*
 *Updated with Appendix F (Implementation Notes): 2026-01-09*
 *Updated with Phase 4 Implementation: 2026-01-09*
+*Updated with Appendix G-H (Item Attribute Modifiers Plan): 2026-01-10*
 *Author: Claude Opus 4.5 (assisted analysis)*

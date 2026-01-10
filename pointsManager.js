@@ -38,6 +38,81 @@ async function calculatePermanentStaminaBoost(guildId, entityId) {
     return totalBoost;
 }
 
+/**
+ * Calculate attribute modifiers from player's non-consumable items
+ * Phase 5: Generic function that works for ANY attribute (not just stamina)
+ *
+ * @param {string} guildId - Guild ID
+ * @param {string} entityId - Entity ID (player_123)
+ * @param {string} attributeId - Attribute to calculate (strength, mana, hp, etc.)
+ * @returns {Object} { add: number, addMax: number, sources: [{itemName, itemId, value, operation}] }
+ */
+export async function calculateAttributeModifiers(guildId, entityId, attributeId) {
+    // Only players have inventory
+    if (!entityId.startsWith('player_')) {
+        return { add: 0, addMax: 0, sources: [] };
+    }
+
+    const playerId = entityId.replace('player_', '');
+    const playerData = await loadPlayerData();
+    const safariData = await loadSafariContent();
+
+    const inventory = playerData[guildId]?.players?.[playerId]?.safari?.inventory || {};
+    const items = safariData[guildId]?.items || {};
+
+    let result = { add: 0, addMax: 0, sources: [] };
+
+    // Scan inventory for non-consumable items with attributeModifiers
+    for (const [itemId, qty] of Object.entries(inventory)) {
+        const item = items[itemId];
+
+        // Skip if no item, consumable, or no modifiers
+        if (!item || item.consumable === 'Yes' || !item.attributeModifiers) {
+            continue;
+        }
+
+        // Check each modifier on this item
+        for (const modifier of item.attributeModifiers) {
+            if (modifier.attributeId === attributeId) {
+                const operation = modifier.operation || 'add';
+                const value = modifier.value || 0;
+
+                // Accumulate the modifier
+                if (operation === 'add') {
+                    result.add += value;
+                } else if (operation === 'addMax') {
+                    result.addMax += value;
+                }
+
+                // Track source for display
+                result.sources.push({
+                    itemName: item.name || itemId,
+                    itemId: itemId,
+                    value: value,
+                    operation: operation
+                });
+
+                console.log(`📊 Item modifier: ${item.name} gives +${value} ${operation} to ${attributeId}`);
+            }
+        }
+    }
+
+    // Backward compatibility: staminaBoost field → stamina addMax
+    if (attributeId === 'stamina') {
+        const staminaBoost = await calculatePermanentStaminaBoost(guildId, entityId);
+        if (staminaBoost > 0) {
+            result.addMax += staminaBoost;
+            // Note: Sources already tracked by calculatePermanentStaminaBoost logging
+        }
+    }
+
+    if (result.add > 0 || result.addMax > 0) {
+        console.log(`📊 Total ${attributeId} modifiers for ${entityId}: +${result.add} add, +${result.addMax} max (from ${result.sources.length} items)`);
+    }
+
+    return result;
+}
+
 // Initialize points for a new entity
 export async function initializeEntityPoints(guildId, entityId, pointTypes = ['stamina']) {
     const safariData = await loadSafariContent();
@@ -169,6 +244,12 @@ export async function getEntityPoints(guildId, entityId, pointType) {
     } else {
         // For custom attributes, check attributeDefinitions first
         const attrDef = safariData[guildId]?.attributeDefinitions?.[pointType];
+
+        // Phase 5: Calculate item modifiers for non-stamina attributes
+        // This provides addMax bonuses from items (e.g., Ring of +10 Max Mana)
+        const itemModifiers = await calculateAttributeModifiers(guildId, entityId, pointType);
+        const attributeBoost = itemModifiers.addMax; // Only addMax affects stored max, 'add' is display-only
+
         if (attrDef) {
             // Build a config object compatible with regeneration system
             // IMPORTANT: Only enable regeneration if it's explicitly defined AND not 'none'
@@ -184,11 +265,15 @@ export async function getEntityPoints(guildId, entityId, pointType) {
                     interval: (attrDef.regeneration.intervalMinutes || 60) * 60000,
                     amount: attrDef.regeneration.amount || 'max'
                 } : { type: 'none', interval: 0, amount: 0 },
-                permanentBoost: 0
+                permanentBoost: attributeBoost  // Phase 5: Item modifiers affect max
             };
         } else {
             // Fallback to legacy pointsConfig
             config = safariData[guildId]?.pointsConfig?.definitions?.[pointType] || getDefaultPointsConfig()[pointType];
+            // Still apply item modifiers even for legacy config
+            if (config && attributeBoost > 0) {
+                config.permanentBoost = attributeBoost;
+            }
         }
     }
 

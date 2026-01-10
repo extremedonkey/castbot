@@ -1812,6 +1812,43 @@ export const BUTTON_REGISTRY = {
     category: 'entity_management'
   },
 
+  // === PHASE 5: ITEM ATTRIBUTE MODIFIERS ===
+  'item_attr_add': {
+    label: 'Add Bonus',
+    description: 'Add attribute bonus to an item',
+    emoji: '➕',
+    style: 'Success',
+    category: 'item_attributes'
+  },
+  'item_attr_select': {
+    label: 'Select Attribute',
+    description: 'Select which attribute to add bonus for',
+    emoji: '📊',
+    style: 'Secondary',
+    category: 'item_attributes'
+  },
+  'item_attr_manage': {
+    label: 'Manage Bonus',
+    description: 'Manage existing attribute bonuses on item',
+    emoji: '⚙️',
+    style: 'Secondary',
+    category: 'item_attributes'
+  },
+  'item_attr_edit': {
+    label: 'Edit Bonus',
+    description: 'Edit existing attribute bonus value',
+    emoji: '✏️',
+    style: 'Primary',
+    category: 'item_attributes'
+  },
+  'item_attr_remove': {
+    label: 'Remove Bonus',
+    description: 'Remove attribute bonus from item',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'item_attributes'
+  },
+
   // === APPLICATION MANAGEMENT SYSTEM ===
   'season_management_menu': {
     label: 'Apps',

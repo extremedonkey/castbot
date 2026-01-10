@@ -376,6 +376,14 @@ function createEntityDisplay(entity, entityType, safariConfig) {
             if (entity.reverseBlacklist && entity.reverseBlacklist.length > 0) {
                 lines.push(`**Reverse Blacklist**: ${entity.reverseBlacklist.join(', ')}`);
             }
+            // Phase 5: Display attribute modifiers (stats bonuses from items)
+            if (entity.attributeModifiers && entity.attributeModifiers.length > 0) {
+                const modifierStrings = entity.attributeModifiers.map(mod => {
+                    const opLabel = mod.operation === 'addMax' ? 'max ' : '';
+                    return `+${mod.value} ${opLabel}${mod.attributeId}`;
+                });
+                lines.push(`**📊 Stat Bonuses**: ${modifierStrings.join(', ')}`);
+            }
             break;
             
         case 'store':
@@ -556,7 +564,8 @@ export function getFieldGroups(entityType) {
                 financials: { label: 'Financials', emoji: '💰', fields: ['basePrice', 'goodOutcomeValue', 'badOutcomeValue'] },
                 battle: { label: 'Battle', emoji: '⚔️', fields: ['attackValue', 'defenseValue'] },
                 properties: { label: 'Persistence', emoji: '🍏', fields: ['consumable', 'defaultItem'] },
-                stamina: { label: 'Movement', emoji: '⚡', fields: ['staminaBoost', 'reverseBlacklist', 'consumable'] }
+                stamina: { label: 'Movement', emoji: '⚡', fields: ['staminaBoost', 'reverseBlacklist', 'consumable'] },
+                stats: { label: 'Stats', emoji: '📊', fields: ['attributeModifiers'], useCustomUI: true }
             };
         case 'store':
             return {

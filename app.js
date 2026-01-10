@@ -23540,6 +23540,139 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + ephemeral
               components: customActionUI.components
             };
+          } else if (entityType === 'item' && fieldGroup === 'stats') {
+            // Phase 5: Stats field group - custom UI for attribute modifiers
+            const { loadSafariContent } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+            const item = safariData[context.guildId]?.items?.[entityId];
+            const attributeDefs = safariData[context.guildId]?.attributeDefinitions || {};
+
+            if (!item) {
+              return {
+                components: [{ type: 17, components: [{ type: 10, content: '❌ Item not found.' }] }]
+              };
+            }
+
+            const modifiers = item.attributeModifiers || [];
+
+            // Build content showing current bonuses
+            let contentLines = [
+              `## 📊 Attribute Bonuses`,
+              ``,
+              `Configure stat bonuses granted by **${item.emoji || ''} ${item.name}**.`,
+              `*(Non-consumable items only - bonuses persist while in inventory)*`
+            ];
+
+            if (modifiers.length > 0) {
+              contentLines.push('', '**Current Bonuses:**');
+              modifiers.forEach(mod => {
+                const attrDef = attributeDefs[mod.attributeId];
+                const emoji = attrDef?.emoji || '📊';
+                const name = attrDef?.name || mod.attributeId;
+                const opLabel = mod.operation === 'addMax' ? ' max' : '';
+                contentLines.push(`• ${emoji} **${name}**: +${mod.value}${opLabel}`);
+              });
+            } else {
+              contentLines.push('', '*No attribute bonuses configured.*');
+            }
+
+            // Build components - Container structure
+            const containerComponents = [
+              { type: 10, content: contentLines.join('\n') },
+              { type: 14 }  // Separator
+            ];
+
+            // Add "Manage existing" select if there are modifiers
+            if (modifiers.length > 0) {
+              const manageOptions = modifiers.map((mod, index) => {
+                const attrDef = attributeDefs[mod.attributeId];
+                const emoji = attrDef?.emoji || '📊';
+                const name = attrDef?.name || mod.attributeId;
+                const opLabel = mod.operation === 'addMax' ? ' max' : '';
+                return {
+                  label: `${emoji} ${name} (+${mod.value}${opLabel})`,
+                  value: `edit_${index}`,
+                  description: 'Edit or remove this bonus'
+                };
+              });
+              manageOptions.push({
+                label: '🗑️ Remove All Bonuses',
+                value: 'remove_all',
+                description: 'Clear all attribute bonuses from this item'
+              });
+
+              containerComponents.push({
+                type: 1,  // ActionRow
+                components: [{
+                  type: 3,  // String Select
+                  custom_id: `item_attr_manage_${entityId}`,
+                  placeholder: 'Manage existing bonus...',
+                  options: manageOptions
+                }]
+              });
+            }
+
+            // Add bonus button
+            containerComponents.push({
+              type: 1,  // ActionRow
+              components: [{
+                type: 2,  // Button
+                custom_id: `item_attr_add_${entityId}`,
+                label: 'Add Bonus',
+                style: 3,  // Success (green)
+                emoji: { name: '➕' }
+              }]
+            });
+
+            containerComponents.push({ type: 14 });  // Separator
+
+            // Field group buttons (split into 2 rows for 5-button limit)
+            const { getFieldGroups } = await import('./entityManagementUI.js');
+            const fieldGroups = getFieldGroups('item');
+            const groupEntries = Object.entries(fieldGroups);
+            const row1Groups = groupEntries.slice(0, 3);
+            const row2Groups = groupEntries.slice(3);
+
+            containerComponents.push({
+              type: 1,  // ActionRow
+              components: row1Groups.map(([groupId, group]) => ({
+                type: 2,  // Button
+                custom_id: `entity_field_group_item_${entityId}_${groupId}`,
+                label: group.label,
+                style: groupId === 'stats' ? 1 : 2,  // Primary if active
+                emoji: { name: group.emoji }
+              }))
+            });
+
+            containerComponents.push({
+              type: 1,  // ActionRow
+              components: row2Groups.map(([groupId, group]) => ({
+                type: 2,  // Button
+                custom_id: `entity_field_group_item_${entityId}_${groupId}`,
+                label: group.label,
+                style: groupId === 'stats' ? 1 : 2,  // Primary if active
+                emoji: { name: group.emoji }
+              }))
+            });
+
+            // Back button
+            containerComponents.push({
+              type: 1,  // ActionRow
+              components: [{
+                type: 2,  // Button
+                custom_id: 'prod_menu_back',
+                label: '← Menu',
+                style: 2  // Secondary
+              }]
+            });
+
+            return {
+              components: [{
+                type: 17,  // Container
+                accent_color: 0x5865f2,
+                components: containerComponents
+              }]
+            };
           } else {
             // Open modal directly for field group editing
             try {
@@ -23571,7 +23704,290 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         }
       })(req, res, client);
-      
+
+    // ============================================================================
+    // Phase 5: Item Attribute Modifiers - Add/Manage/Edit handlers
+    // ============================================================================
+
+    } else if (custom_id.startsWith('item_attr_add_')) {
+      // Add attribute bonus button - show attribute selector
+      return ButtonHandlerFactory.create({
+        id: 'item_attr_add',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const itemId = context.customId.replace('item_attr_add_', '');
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const attributeDefs = safariData[context.guildId]?.attributeDefinitions || {};
+          const item = safariData[context.guildId]?.items?.[itemId];
+          const existingModifiers = item?.attributeModifiers || [];
+
+          // Get available attributes (exclude ones already configured)
+          const configuredAttrIds = existingModifiers.map(m => m.attributeId);
+          const availableAttrs = Object.entries(attributeDefs)
+            .filter(([attrId]) => !configuredAttrIds.includes(attrId))
+            .map(([attrId, def]) => ({
+              label: `${def.emoji || '📊'} ${def.name || attrId}`,
+              value: attrId,
+              description: def.category === 'stat' ? 'Stat attribute' : 'Resource attribute'
+            }));
+
+          if (availableAttrs.length === 0) {
+            return {
+              components: [{
+                type: 17,
+                components: [
+                  { type: 10, content: '❌ **No attributes available**\n\nAll server attributes are already configured on this item, or no attributes have been created.\n\nGo to **Tools → Attributes** to create attributes.' },
+                  { type: 14 },
+                  { type: 1, components: [{ type: 2, custom_id: `entity_field_group_item_${itemId}_stats`, label: '← Back to Stats', style: 2 }] }
+                ]
+              }]
+            };
+          }
+
+          return {
+            components: [{
+              type: 17,
+              accent_color: 0x57f287,  // Green
+              components: [
+                { type: 10, content: `## ➕ Add Attribute Bonus\n\nSelect an attribute to add a bonus for **${item?.name || 'this item'}**:` },
+                { type: 14 },
+                {
+                  type: 1,
+                  components: [{
+                    type: 3,
+                    custom_id: `item_attr_select_${itemId}`,
+                    placeholder: 'Select attribute...',
+                    options: availableAttrs.slice(0, 25)  // Max 25 options
+                  }]
+                },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, custom_id: `entity_field_group_item_${itemId}_stats`, label: '← Back to Stats', style: 2 }] }
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('item_attr_select_')) {
+      // Attribute selected - open modal to configure value
+      return ButtonHandlerFactory.create({
+        id: 'item_attr_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        modal: true,
+        handler: async (context) => {
+          const itemId = context.customId.replace('item_attr_select_', '');
+          const attrId = context.values[0];
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const attributeDefs = safariData[context.guildId]?.attributeDefinitions || {};
+          const attrDef = attributeDefs[attrId] || {};
+
+          // Return modal for configuring the bonus
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: `modal_item_attr_${itemId}_${attrId}`,
+              title: `Configure ${attrDef.name || attrId} Bonus`,
+              components: [
+                {
+                  type: 1,
+                  components: [{
+                    type: 4,
+                    custom_id: 'bonus_value',
+                    label: 'Bonus Amount',
+                    style: 1,
+                    placeholder: '5',
+                    required: true,
+                    max_length: 4
+                  }]
+                },
+                {
+                  type: 1,
+                  components: [{
+                    type: 4,
+                    custom_id: 'bonus_operation',
+                    label: 'Operation (add or addMax)',
+                    style: 1,
+                    placeholder: 'add',
+                    value: 'add',
+                    required: true,
+                    max_length: 10
+                  }]
+                }
+              ]
+            }
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('item_attr_manage_')) {
+      // Manage existing modifier - show edit/remove options
+      return ButtonHandlerFactory.create({
+        id: 'item_attr_manage',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const itemId = context.customId.replace('item_attr_manage_', '');
+          const selectedValue = context.values[0];
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const item = safariData[context.guildId]?.items?.[itemId];
+          const attributeDefs = safariData[context.guildId]?.attributeDefinitions || {};
+
+          if (!item) {
+            return { components: [{ type: 17, components: [{ type: 10, content: '❌ Item not found.' }] }] };
+          }
+
+          if (selectedValue === 'remove_all') {
+            // Clear all modifiers
+            item.attributeModifiers = [];
+            await saveSafariContent(safariData);
+
+            return {
+              components: [{
+                type: 17,
+                components: [
+                  { type: 10, content: `✅ **All attribute bonuses removed from ${item.name}.**` },
+                  { type: 14 },
+                  { type: 1, components: [{ type: 2, custom_id: `entity_field_group_item_${itemId}_stats`, label: '← Back to Stats', style: 1 }] }
+                ]
+              }]
+            };
+          }
+
+          // Parse edit_INDEX
+          const modifierIndex = parseInt(selectedValue.replace('edit_', ''));
+          const modifier = item.attributeModifiers?.[modifierIndex];
+
+          if (!modifier) {
+            return { components: [{ type: 17, components: [{ type: 10, content: '❌ Modifier not found.' }] }] };
+          }
+
+          const attrDef = attributeDefs[modifier.attributeId] || {};
+          const emoji = attrDef.emoji || '📊';
+          const name = attrDef.name || modifier.attributeId;
+          const opLabel = modifier.operation === 'addMax' ? ' max' : '';
+
+          return {
+            components: [{
+              type: 17,
+              accent_color: 0x5865f2,
+              components: [
+                { type: 10, content: `## ${emoji} ${name} Bonus\n\n**Current Value:** +${modifier.value}${opLabel}\n\nWhat would you like to do?` },
+                { type: 14 },
+                {
+                  type: 1,
+                  components: [
+                    { type: 2, custom_id: `item_attr_edit_${itemId}_${modifierIndex}`, label: 'Edit Value', style: 1, emoji: { name: '✏️' } },
+                    { type: 2, custom_id: `item_attr_remove_${itemId}_${modifierIndex}`, label: 'Remove', style: 4, emoji: { name: '🗑️' } },
+                    { type: 2, custom_id: `entity_field_group_item_${itemId}_stats`, label: '← Back', style: 2 }
+                  ]
+                }
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('item_attr_edit_')) {
+      // Edit existing modifier - open modal
+      return ButtonHandlerFactory.create({
+        id: 'item_attr_edit',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        modal: true,
+        handler: async (context) => {
+          const parts = context.customId.replace('item_attr_edit_', '').split('_');
+          const modifierIndex = parseInt(parts.pop());
+          const itemId = parts.join('_');
+
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const item = safariData[context.guildId]?.items?.[itemId];
+          const modifier = item?.attributeModifiers?.[modifierIndex];
+          const attributeDefs = safariData[context.guildId]?.attributeDefinitions || {};
+          const attrDef = attributeDefs[modifier?.attributeId] || {};
+
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: `modal_item_attr_edit_${itemId}_${modifierIndex}`,
+              title: `Edit ${attrDef.name || modifier?.attributeId || 'Attribute'} Bonus`,
+              components: [
+                {
+                  type: 1,
+                  components: [{
+                    type: 4,
+                    custom_id: 'bonus_value',
+                    label: 'New Bonus Amount',
+                    style: 1,
+                    value: String(modifier?.value || ''),
+                    required: true,
+                    max_length: 4
+                  }]
+                },
+                {
+                  type: 1,
+                  components: [{
+                    type: 4,
+                    custom_id: 'bonus_operation',
+                    label: 'Operation (add or addMax)',
+                    style: 1,
+                    value: modifier?.operation || 'add',
+                    required: true,
+                    max_length: 10
+                  }]
+                }
+              ]
+            }
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('item_attr_remove_')) {
+      // Remove modifier
+      return ButtonHandlerFactory.create({
+        id: 'item_attr_remove',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = context.customId.replace('item_attr_remove_', '').split('_');
+          const modifierIndex = parseInt(parts.pop());
+          const itemId = parts.join('_');
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const item = safariData[context.guildId]?.items?.[itemId];
+
+          if (!item || !item.attributeModifiers) {
+            return { components: [{ type: 17, components: [{ type: 10, content: '❌ Item or modifier not found.' }] }] };
+          }
+
+          const removed = item.attributeModifiers.splice(modifierIndex, 1)[0];
+          await saveSafariContent(safariData);
+
+          const attributeDefs = safariData[context.guildId]?.attributeDefinitions || {};
+          const attrDef = attributeDefs[removed?.attributeId] || {};
+
+          return {
+            components: [{
+              type: 17,
+              components: [
+                { type: 10, content: `✅ **Removed ${attrDef.emoji || '📊'} ${attrDef.name || removed?.attributeId} bonus from ${item.name}.**` },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, custom_id: `entity_field_group_item_${itemId}_stats`, label: '← Back to Stats', style: 1 }] }
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('entity_custom_action_list_') || custom_id === 'entity_custom_action_list_global') {
       // Handle custom action selection from dropdown (coordinate-specific or global)
       return ButtonHandlerFactory.create({
@@ -32035,6 +32451,187 @@ Are you sure you want to continue?`;
         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
         data: result
       });
+
+    } else if (custom_id.startsWith('modal_item_attr_edit_')) {
+      // Phase 5: Edit existing item attribute modifier
+      const guildId = req.body.guild_id;
+      const parts = custom_id.replace('modal_item_attr_edit_', '').split('_');
+      const modifierIndex = parseInt(parts.pop());
+      const itemId = parts.join('_');
+
+      // Extract form values
+      const bonusValue = parseInt(components[0].components[0].value);
+      let bonusOperation = components[1].components[0].value?.toLowerCase().trim();
+
+      // Validate operation
+      if (bonusOperation !== 'add' && bonusOperation !== 'addmax') {
+        bonusOperation = 'add';
+      }
+      if (bonusOperation === 'addmax') bonusOperation = 'addMax';
+
+      if (isNaN(bonusValue) || bonusValue < 0) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+              type: 17,
+              components: [
+                { type: 10, content: '❌ **Invalid bonus value.** Please enter a positive number.' },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, custom_id: `entity_field_group_item_${itemId}_stats`, label: '← Back to Stats', style: 2 }] }
+              ]
+            }]
+          }
+        });
+      }
+
+      try {
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const item = safariData[guildId]?.items?.[itemId];
+
+        if (!item || !item.attributeModifiers?.[modifierIndex]) {
+          throw new Error('Item or modifier not found');
+        }
+
+        // Update the modifier
+        item.attributeModifiers[modifierIndex].value = bonusValue;
+        item.attributeModifiers[modifierIndex].operation = bonusOperation;
+        await saveSafariContent(safariData);
+
+        const attributeDefs = safariData[guildId]?.attributeDefinitions || {};
+        const modifier = item.attributeModifiers[modifierIndex];
+        const attrDef = attributeDefs[modifier.attributeId] || {};
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+              type: 17,
+              accent_color: 0x57f287,
+              components: [
+                { type: 10, content: `✅ **Updated ${attrDef.emoji || '📊'} ${attrDef.name || modifier.attributeId} bonus on ${item.name}**\n\nNew value: +${bonusValue}${bonusOperation === 'addMax' ? ' max' : ''}` },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, custom_id: `entity_field_group_item_${itemId}_stats`, label: '← Back to Stats', style: 1 }] }
+              ]
+            }]
+          }
+        });
+      } catch (error) {
+        console.error('Error editing item attribute modifier:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+              type: 17,
+              components: [
+                { type: 10, content: `❌ **Error updating modifier:** ${error.message}` },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, custom_id: `entity_field_group_item_${itemId}_stats`, label: '← Back to Stats', style: 2 }] }
+              ]
+            }]
+          }
+        });
+      }
+
+    } else if (custom_id.startsWith('modal_item_attr_')) {
+      // Phase 5: Add new item attribute modifier
+      const guildId = req.body.guild_id;
+      // Parse: modal_item_attr_{itemId}_{attrId}
+      const withoutPrefix = custom_id.replace('modal_item_attr_', '');
+      const lastUnderscore = withoutPrefix.lastIndexOf('_');
+      const itemId = withoutPrefix.substring(0, lastUnderscore);
+      const attrId = withoutPrefix.substring(lastUnderscore + 1);
+
+      // Extract form values
+      const bonusValue = parseInt(components[0].components[0].value);
+      let bonusOperation = components[1].components[0].value?.toLowerCase().trim();
+
+      // Validate operation
+      if (bonusOperation !== 'add' && bonusOperation !== 'addmax') {
+        bonusOperation = 'add';
+      }
+      if (bonusOperation === 'addmax') bonusOperation = 'addMax';
+
+      if (isNaN(bonusValue) || bonusValue < 0) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+              type: 17,
+              components: [
+                { type: 10, content: '❌ **Invalid bonus value.** Please enter a positive number.' },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, custom_id: `entity_field_group_item_${itemId}_stats`, label: '← Back to Stats', style: 2 }] }
+              ]
+            }]
+          }
+        });
+      }
+
+      try {
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const item = safariData[guildId]?.items?.[itemId];
+        const attributeDefs = safariData[guildId]?.attributeDefinitions || {};
+        const attrDef = attributeDefs[attrId] || {};
+
+        if (!item) {
+          throw new Error('Item not found');
+        }
+
+        // Initialize modifiers array if needed
+        if (!item.attributeModifiers) {
+          item.attributeModifiers = [];
+        }
+
+        // Add the new modifier
+        item.attributeModifiers.push({
+          attributeId: attrId,
+          value: bonusValue,
+          operation: bonusOperation
+        });
+
+        await saveSafariContent(safariData);
+
+        console.log(`📊 Added attribute modifier to item ${itemId}: +${bonusValue} ${bonusOperation} ${attrId}`);
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+              type: 17,
+              accent_color: 0x57f287,
+              components: [
+                { type: 10, content: `✅ **Added ${attrDef.emoji || '📊'} ${attrDef.name || attrId} bonus to ${item.name}**\n\nBonus: +${bonusValue}${bonusOperation === 'addMax' ? ' max' : ''}` },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, custom_id: `entity_field_group_item_${itemId}_stats`, label: '← Back to Stats', style: 1 }] }
+              ]
+            }]
+          }
+        });
+      } catch (error) {
+        console.error('Error adding item attribute modifier:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+              type: 17,
+              components: [
+                { type: 10, content: `❌ **Error adding modifier:** ${error.message}` },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, custom_id: `entity_field_group_item_${itemId}_stats`, label: '← Back to Stats', style: 2 }] }
+              ]
+            }]
+          }
+        });
+      }
 
     } else if (custom_id === 'modal_attr_create') {
       // Handle attribute creation modal
