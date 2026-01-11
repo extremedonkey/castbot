@@ -663,7 +663,30 @@ export async function createPlayerManagementUI(options) {
             
             // Create inventory row components
             const inventoryComponents = [];
-            
+
+            // Check for crafting actions FIRST and add Crafting button if any exist
+            try {
+              const { loadSafariContent } = await import('./safariManager.js');
+              const safariDataForCrafting = await loadSafariContent();
+              const allButtons = safariDataForCrafting[guildId]?.buttons || {};
+              const craftingActions = Object.values(allButtons).filter(action => {
+                const visibility = action.menuVisibility || 'none';
+                return visibility === 'crafting_menu' && action.trigger?.type === 'button';
+              });
+
+              if (craftingActions.length > 0) {
+                console.log(`🛠️ Crafting Actions: ${craftingActions.length} actions - adding Crafting button (FIRST)`);
+                const craftingButton = new ButtonBuilder()
+                  .setCustomId(`safari_crafting_menu_${guildId}_${userId}`)
+                  .setLabel('Crafting')
+                  .setStyle(ButtonStyle.Primary)
+                  .setEmoji('🛠️');
+                inventoryComponents.push(craftingButton);
+              }
+            } catch (error) {
+              console.error('Error checking crafting actions:', error);
+            }
+
             // Only create map-specific buttons if player has a map location
             if (hasMapLocation) {
               const navigateButton = new ButtonBuilder()
@@ -719,23 +742,6 @@ export async function createPlayerManagementUI(options) {
                   .setEmoji('🕹️');
 
                 inventoryComponents.push(globalCommandButton);
-              }
-
-              // Check for crafting actions and add Crafting button if any exist
-              const allButtons = safariData[guildId]?.buttons || {};
-              const craftingActions = Object.values(allButtons).filter(action => {
-                const visibility = action.menuVisibility || 'none';
-                return visibility === 'crafting_menu' && action.trigger?.type === 'button';
-              });
-
-              if (craftingActions.length > 0) {
-                console.log(`🛠️ Crafting Actions: ${craftingActions.length} actions - adding Crafting button`);
-                const craftingButton = new ButtonBuilder()
-                  .setCustomId(`safari_crafting_menu_${guildId}_${userId}`)
-                  .setLabel('Crafting')
-                  .setStyle(ButtonStyle.Primary)
-                  .setEmoji('🛠️');
-                inventoryComponents.push(craftingButton);
               }
             } catch (error) {
               console.error('Error checking global commands configuration:', error);
