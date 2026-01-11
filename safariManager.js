@@ -4009,42 +4009,6 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null, curr
 
         const responseComponents = [container];
 
-        // === CRAFTING BUTTON (if crafting actions exist) ===
-        try {
-            const allButtons = safariData[guildId]?.buttons || {};
-            console.log(`🛠️ DEBUG: Checking ${Object.keys(allButtons).length} actions for crafting visibility`);
-
-            // Check for crafting actions (menuVisibility === 'crafting_menu')
-            const craftingActions = Object.values(allButtons).filter(action => {
-                const visibility = action.menuVisibility || 'none';
-                const isCrafting = visibility === 'crafting_menu' && action.trigger?.type === 'button';
-                if (action.menuVisibility) {
-                    console.log(`🛠️ DEBUG: Action "${action.name}" menuVisibility=${action.menuVisibility}, trigger=${action.trigger?.type}, isCrafting=${isCrafting}`);
-                }
-                return isCrafting;
-            });
-
-            console.log(`🛠️ DEBUG: Found ${craftingActions.length} crafting actions`);
-
-            if (craftingActions.length > 0) {
-                console.log(`🛠️ Found ${craftingActions.length} crafting actions - adding Crafting button to inventory`);
-
-                const craftingRow = {
-                    type: 1, // ActionRow
-                    components: [{
-                        type: 2, // Button
-                        custom_id: `safari_crafting_menu_${guildId}_${userId}`,
-                        label: 'Crafting',
-                        style: 1, // Primary (blue)
-                        emoji: { name: '🛠️' }
-                    }]
-                };
-                responseComponents.push(craftingRow);
-            }
-        } catch (craftingError) {
-            console.error(`❌ Error checking crafting actions: ${craftingError.message}`);
-        }
-
         // Add pagination buttons if there are multiple pages
         if (totalPages > 1) {
             const navButtons = [];
@@ -4294,8 +4258,8 @@ async function createCraftingMenuUI(guildId, userId) {
             type: 1, // ActionRow
             components: [{
                 type: 2, // Button
-                custom_id: `safari_inventory_${guildId}_${userId}_0`,
-                label: '← Inventory',
+                custom_id: `prod_player_menu`,
+                label: '← Menu',
                 style: 2 // Secondary (grey)
             }]
         });

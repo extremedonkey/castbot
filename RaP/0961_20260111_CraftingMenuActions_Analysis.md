@@ -14,7 +14,7 @@
 > 2. Show in Player Menu (existing)
 > 3. Show in crafting menu (new)
 >
-> CRAFTING FEATURE - IF the server has at least one Action set to 'Show in crafting menu' THEN show a 🛠️ 'Crafting' button in Player Inventory, prioritised ahead of playerMenu Custom Actions.
+> CRAFTING FEATURE - IF the server has at least one Action set to 'Show in crafting menu' THEN show a 🛠️ 'Crafting' button in **Player Menu**, prioritised ahead of playerMenu Custom Actions.
 > On click, show a new menu with all crafting actions.
 
 ---
