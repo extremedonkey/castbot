@@ -861,9 +861,12 @@ export async function createPlayerManagementUI(options) {
       }
     }
 
-    // Final component count validation (same pattern as castlist)
-    const finalCount = countComponents(finalComponents, { enableLogging: false });
-    console.log(`✅ Player Menu total components: ${finalCount}/40`);
+    // Final component count validation with detailed logging (same pattern as Production Menu)
+    const finalCount = countComponents(finalComponents, {
+      enableLogging: true,
+      verbosity: "full",
+      label: "Player Menu"
+    });
 
     if (finalCount > 40) {
       console.error(`🚨 CRITICAL: Player Menu exceeded component limit: ${finalCount}/40`);
