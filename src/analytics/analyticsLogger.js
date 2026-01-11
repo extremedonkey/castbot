@@ -958,18 +958,28 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
       console.log(`🔍 Safari Log Debug: Guild fetched successfully: ${guild.name}`);
       
       safariLogChannel = await guild.channels.fetch(logSettings.logChannelId);
-      
+
       if (!safariLogChannel) {
         console.error(`Safari Log: Channel ${logSettings.logChannelId} not found for guild ${guildId}`);
         return;
       }
-      
+
       console.log(`🔍 Safari Log Debug: Channel fetched successfully: ${safariLogChannel.name}`);
     } catch (error) {
       console.error(`Safari Log: Error fetching channel for guild ${guildId}:`, error);
       return;
     }
-    
+
+    // Get user display name (use display name instead of mention)
+    let userDisplayName = userId; // Fallback to userId
+    try {
+      const guild = await discordClient.guilds.fetch(guildId);
+      const member = await guild.members.fetch(userId);
+      userDisplayName = member.displayName || member.user.username || userId;
+    } catch (error) {
+      console.log(`🔍 Safari Log Debug: Could not fetch member display name, using userId`);
+    }
+
     // Get channel name for enhanced location display
     const channelDisplay = safariContent.channelName ? ` (#${safariContent.channelName})` : '';
     
@@ -1069,13 +1079,13 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
         }
         
         if (safariContent.actionType === 'player_command') {
-          logMessage = `${emoji} **PLAYER COMMAND** | [${timestamp}] | <@${userId}> at **${safariContent.location}**${channelDisplay}\n> Command: "${safariContent.actionId}"${actionDetails}`;
+          logMessage = `${emoji} **PLAYER COMMAND** | [${timestamp}] | **${userDisplayName}** at **${safariContent.location}**${channelDisplay}\n> Command: "${safariContent.actionId}"${actionDetails}`;
         } else {
           // Enhanced button display with emoji and label
-          const buttonDisplay = buttonEmoji && buttonLabel 
+          const buttonDisplay = buttonEmoji && buttonLabel
             ? `${buttonEmoji} ${buttonLabel} (${safariContent.actionId})`
             : buttonLabel || safariContent.actionId;
-          logMessage = `${emoji} **CUSTOM ACTION** | [${timestamp}] | <@${userId}> at **${safariContent.location}**${channelDisplay}\n> Button: ${buttonDisplay}${actionDetails}`;
+          logMessage = `${emoji} **CUSTOM ACTION** | [${timestamp}] | **${userDisplayName}** at **${safariContent.location}**${channelDisplay}\n> Button: ${buttonDisplay}${actionDetails}`;
         }
         break;
         
