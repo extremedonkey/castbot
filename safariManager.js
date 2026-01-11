@@ -4168,11 +4168,13 @@ async function createCraftingMenuUI(guildId, userId) {
         const safariData = await loadSafariContent();
         const allButtons = safariData[guildId]?.buttons || {};
 
-        // Get crafting actions
-        const craftingActions = Object.values(allButtons).filter(action => {
-            const visibility = action.menuVisibility || 'none';
-            return visibility === 'crafting_menu' && action.trigger?.type === 'button';
-        });
+        // Get crafting actions - use entries to preserve the action ID (key)
+        const craftingActions = Object.entries(allButtons)
+            .filter(([actionId, action]) => {
+                const visibility = action.menuVisibility || 'none';
+                return visibility === 'crafting_menu' && action.trigger?.type === 'button';
+            })
+            .map(([actionId, action]) => ({ ...action, actionId })); // Add actionId to the object
 
         console.log(`🛠️ Found ${craftingActions.length} crafting actions`);
 
@@ -4225,7 +4227,7 @@ async function createCraftingMenuUI(guildId, userId) {
                     components: rowActions.map(action => {
                         const button = {
                             type: 2, // Button
-                            custom_id: `safari_${guildId}_${action.id}`,
+                            custom_id: `safari_${guildId}_${action.actionId}`,
                             label: (action.inventoryConfig?.buttonLabel || action.trigger?.button?.label || action.name || 'Craft').slice(0, 80),
                             style: getButtonStyleNumber(action.inventoryConfig?.buttonStyle || action.trigger?.button?.style || 'Secondary')
                         };
