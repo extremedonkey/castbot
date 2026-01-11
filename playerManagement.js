@@ -807,10 +807,13 @@ export async function createPlayerManagementUI(options) {
 
         // Filter actions that have player_menu visibility enabled and button trigger
         // Support both new menuVisibility field and legacy showInInventory for backward compatibility
-        const menuActions = Object.values(allButtons).filter(action => {
-          const visibility = action.menuVisibility || (action.showInInventory ? 'player_menu' : 'none');
-          return visibility === 'player_menu' && action.trigger?.type === 'button';
-        });
+        // Use entries to preserve the action ID (key)
+        const menuActions = Object.entries(allButtons)
+          .filter(([actionId, action]) => {
+            const visibility = action.menuVisibility || (action.showInInventory ? 'player_menu' : 'none');
+            return visibility === 'player_menu' && action.trigger?.type === 'button';
+          })
+          .map(([actionId, action]) => ({ ...action, actionId }));
 
         console.log(`🧰 Player Menu Actions: ${menuActions.length} actions enabled for menu`);
 
@@ -854,7 +857,7 @@ export async function createPlayerManagementUI(options) {
                   components: rowActions.map(action => {
                     const button = {
                       type: 2, // Button
-                      custom_id: `safari_${guildId}_${action.id}`,
+                      custom_id: `safari_${guildId}_${action.actionId}`,
                       label: (action.inventoryConfig?.buttonLabel || action.trigger?.button?.label || action.name || 'Action').slice(0, 80),
                       style: getButtonStyleNumber(action.inventoryConfig?.buttonStyle || action.trigger?.button?.style || 'Secondary')
                     };
