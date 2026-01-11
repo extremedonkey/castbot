@@ -790,13 +790,13 @@ export async function createPlayerManagementUI(options) {
         console.log(`🧰 Player Menu Actions: ${menuActions.length} actions enabled for menu`);
 
         if (menuActions.length > 0) {
-          // Calculate component budget
+          // Calculate component budget using recursive counting (same as castlist)
           const currentCount = countComponents(finalComponents, { enableLogging: false });
           const DISCORD_LIMIT = 40;
           const SAFETY_BUFFER = 2;
           const remainingBudget = DISCORD_LIMIT - SAFETY_BUFFER - currentCount;
 
-          console.log(`📊 Menu Actions budget: ${currentCount} used, ${remainingBudget} remaining`);
+          console.log(`📊 Player Menu budget BEFORE actions: ${currentCount}/40 used, ${remainingBudget} remaining for actions`);
 
           // Need at least 2 components (actionRow + 1 button)
           if (remainingBudget >= 2) {
@@ -859,6 +859,14 @@ export async function createPlayerManagementUI(options) {
       } catch (error) {
         console.error(`❌ Error loading menu actions: ${error.message}`);
       }
+    }
+
+    // Final component count validation (same pattern as castlist)
+    const finalCount = countComponents(finalComponents, { enableLogging: false });
+    console.log(`✅ Player Menu total components: ${finalCount}/40`);
+
+    if (finalCount > 40) {
+      console.error(`🚨 CRITICAL: Player Menu exceeded component limit: ${finalCount}/40`);
     }
 
     return {
