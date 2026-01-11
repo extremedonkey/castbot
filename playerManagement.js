@@ -720,6 +720,23 @@ export async function createPlayerManagementUI(options) {
 
                 inventoryComponents.push(globalCommandButton);
               }
+
+              // Check for crafting actions and add Crafting button if any exist
+              const allButtons = safariData[guildId]?.buttons || {};
+              const craftingActions = Object.values(allButtons).filter(action => {
+                const visibility = action.menuVisibility || 'none';
+                return visibility === 'crafting_menu' && action.trigger?.type === 'button';
+              });
+
+              if (craftingActions.length > 0) {
+                console.log(`🛠️ Crafting Actions: ${craftingActions.length} actions - adding Crafting button`);
+                const craftingButton = new ButtonBuilder()
+                  .setCustomId(`safari_crafting_menu_${guildId}_${userId}`)
+                  .setLabel('Crafting')
+                  .setStyle(ButtonStyle.Primary)
+                  .setEmoji('🛠️');
+                inventoryComponents.push(craftingButton);
+              }
             } catch (error) {
               console.error('Error checking global commands configuration:', error);
               // Don't add the button if there's an error loading config
@@ -774,36 +791,13 @@ export async function createPlayerManagementUI(options) {
       }
     }
 
-    // === CUSTOM ACTIONS SECTION (Crafting + Player Menu Actions) ===
+    // === CUSTOM ACTIONS SECTION (Player Menu Actions) ===
     // Only show for player mode (not admin mode) and not in application context
+    // Note: Crafting button is now part of the Safari row (with Navigate/Location/Inventory)
     if (mode === PlayerManagementMode.PLAYER && !hideBottomButtons) {
       try {
         const safariData = await loadSafariContent();
         const allButtons = safariData[guildId]?.buttons || {};
-
-        // Check for crafting actions (menuVisibility === 'crafting_menu')
-        const craftingActions = Object.values(allButtons).filter(action => {
-          const visibility = action.menuVisibility || 'none';
-          return visibility === 'crafting_menu' && action.trigger?.type === 'button';
-        });
-
-        console.log(`🛠️ Crafting Actions: ${craftingActions.length} actions enabled for crafting menu`);
-
-        // Add Crafting button if crafting actions exist (FIRST, before player menu actions)
-        if (craftingActions.length > 0) {
-          const craftingRow = {
-            type: 1, // ActionRow
-            components: [{
-              type: 2, // Button
-              custom_id: `safari_crafting_menu_${guildId}_${userId}`,
-              label: 'Crafting',
-              style: 1, // Primary (blue)
-              emoji: { name: '🛠️' }
-            }]
-          };
-          finalComponents.push(craftingRow);
-          console.log(`🛠️ Added Crafting button to Player Menu`);
-        }
 
         // Filter actions that have player_menu visibility enabled and button trigger
         // Support both new menuVisibility field and legacy showInInventory for backward compatibility

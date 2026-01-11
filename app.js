@@ -4901,6 +4901,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_remove_action_') &&
         !custom_id.startsWith('safari_edit_action_') &&
         !custom_id.startsWith('safari_config_') &&
+        !custom_id.startsWith('safari_crafting_menu_') &&
         custom_id !== 'safari_player_menu_config' &&
         !custom_id.startsWith('safari_move_') &&
         !custom_id.startsWith('safari_drop_style_') &&
