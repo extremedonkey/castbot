@@ -4012,12 +4012,19 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null, curr
         // === CRAFTING BUTTON (if crafting actions exist) ===
         try {
             const allButtons = safariData[guildId]?.buttons || {};
+            console.log(`🛠️ DEBUG: Checking ${Object.keys(allButtons).length} actions for crafting visibility`);
 
             // Check for crafting actions (menuVisibility === 'crafting_menu')
             const craftingActions = Object.values(allButtons).filter(action => {
                 const visibility = action.menuVisibility || 'none';
-                return visibility === 'crafting_menu' && action.trigger?.type === 'button';
+                const isCrafting = visibility === 'crafting_menu' && action.trigger?.type === 'button';
+                if (action.menuVisibility) {
+                    console.log(`🛠️ DEBUG: Action "${action.name}" menuVisibility=${action.menuVisibility}, trigger=${action.trigger?.type}, isCrafting=${isCrafting}`);
+                }
+                return isCrafting;
             });
+
+            console.log(`🛠️ DEBUG: Found ${craftingActions.length} crafting actions`);
 
             if (craftingActions.length > 0) {
                 console.log(`🛠️ Found ${craftingActions.length} crafting actions - adding Crafting button to inventory`);
