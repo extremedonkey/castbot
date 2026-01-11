@@ -4006,9 +4006,38 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null, curr
             accent_color: 0x57f287, // Green accent for "My Nest"
             components: components
         };
-        
+
         const responseComponents = [container];
-        
+
+        // === CRAFTING BUTTON (if crafting actions exist) ===
+        try {
+            const allButtons = safariData[guildId]?.buttons || {};
+
+            // Check for crafting actions (menuVisibility === 'crafting_menu')
+            const craftingActions = Object.values(allButtons).filter(action => {
+                const visibility = action.menuVisibility || 'none';
+                return visibility === 'crafting_menu' && action.trigger?.type === 'button';
+            });
+
+            if (craftingActions.length > 0) {
+                console.log(`🛠️ Found ${craftingActions.length} crafting actions - adding Crafting button to inventory`);
+
+                const craftingRow = {
+                    type: 1, // ActionRow
+                    components: [{
+                        type: 2, // Button
+                        custom_id: `safari_crafting_menu_${guildId}_${userId}`,
+                        label: 'Crafting',
+                        style: 1, // Primary (blue)
+                        emoji: { name: '🛠️' }
+                    }]
+                };
+                responseComponents.push(craftingRow);
+            }
+        } catch (craftingError) {
+            console.error(`❌ Error checking crafting actions: ${craftingError.message}`);
+        }
+
         // Add pagination buttons if there are multiple pages
         if (totalPages > 1) {
             const navButtons = [];
@@ -4151,6 +4180,147 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null, curr
                 flags: InteractionResponseFlags.EPHEMERAL
             };
         }
+    }
+}
+
+/**
+ * Create the Crafting Menu UI
+ * Shows all Custom Actions configured with menuVisibility: 'crafting_menu'
+ * @param {string} guildId - Guild ID
+ * @param {string} userId - User ID viewing the menu
+ * @returns {Object} Discord response with Crafting Menu UI
+ */
+async function createCraftingMenuUI(guildId, userId) {
+    try {
+        console.log(`🛠️ Creating Crafting Menu for user ${userId} in guild ${guildId}`);
+
+        const safariData = await loadSafariContent();
+        const allButtons = safariData[guildId]?.buttons || {};
+
+        // Get crafting actions
+        const craftingActions = Object.values(allButtons).filter(action => {
+            const visibility = action.menuVisibility || 'none';
+            return visibility === 'crafting_menu' && action.trigger?.type === 'button';
+        });
+
+        console.log(`🛠️ Found ${craftingActions.length} crafting actions`);
+
+        const components = [];
+
+        // Header
+        components.push({
+            type: 10, // Text Display
+            content: `## 🛠️ Crafting`
+        });
+
+        components.push({ type: 14 }); // Separator
+
+        if (craftingActions.length === 0) {
+            // No crafting actions message
+            components.push({
+                type: 10,
+                content: `*No crafting recipes available.*`
+            });
+        } else {
+            // Section header
+            components.push({
+                type: 10,
+                content: `> **\`⚒️ Recipes\`**`
+            });
+
+            // Sort by sortOrder then name
+            const sortedActions = craftingActions.sort((a, b) => {
+                const orderA = a.inventoryConfig?.sortOrder ?? 999;
+                const orderB = b.inventoryConfig?.sortOrder ?? 999;
+                if (orderA !== orderB) return orderA - orderB;
+                return (a.name || '').localeCompare(b.name || '');
+            });
+
+            // Helper function for button styles
+            const getButtonStyleNumber = (style) => {
+                const styleMap = { 'Primary': 1, 'Secondary': 2, 'Success': 3, 'Danger': 4 };
+                return styleMap[style] || (typeof style === 'number' ? style : 2);
+            };
+
+            // Create action buttons in rows of 5 (Discord limit)
+            // Cap at 15 actions (3 rows) to leave room for navigation
+            const maxActions = Math.min(sortedActions.length, 15);
+            const displayActions = sortedActions.slice(0, maxActions);
+
+            for (let i = 0; i < displayActions.length; i += 5) {
+                const rowActions = displayActions.slice(i, i + 5);
+                const actionRow = {
+                    type: 1, // ActionRow
+                    components: rowActions.map(action => {
+                        const button = {
+                            type: 2, // Button
+                            custom_id: `safari_${guildId}_${action.id}`,
+                            label: (action.inventoryConfig?.buttonLabel || action.trigger?.button?.label || action.name || 'Craft').slice(0, 80),
+                            style: getButtonStyleNumber(action.inventoryConfig?.buttonStyle || action.trigger?.button?.style || 'Secondary')
+                        };
+
+                        // Add emoji if defined
+                        const emoji = action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji;
+                        if (emoji) {
+                            button.emoji = typeof emoji === 'string' ? { name: emoji } : emoji;
+                        }
+
+                        return button;
+                    })
+                };
+                components.push(actionRow);
+            }
+
+            if (sortedActions.length > maxActions) {
+                components.push({
+                    type: 10,
+                    content: `*+${sortedActions.length - maxActions} more recipes (limit reached)*`
+                });
+            }
+        }
+
+        // Separator before navigation
+        components.push({ type: 14 });
+
+        // Back button to inventory
+        components.push({
+            type: 1, // ActionRow
+            components: [{
+                type: 2, // Button
+                custom_id: `safari_inventory_${guildId}_${userId}_0`,
+                label: '← Inventory',
+                style: 2 // Secondary (grey)
+            }]
+        });
+
+        // Create container
+        const container = {
+            type: 17, // Container
+            accent_color: 0xE67E22, // Orange accent for crafting
+            components
+        };
+
+        // Validate component count
+        const totalComponents = countComponents([container], { enableLogging: false });
+        console.log(`🛠️ Crafting Menu component count: ${totalComponents}/40`);
+
+        return {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + Ephemeral
+            components: [container]
+        };
+
+    } catch (error) {
+        console.error(`❌ Error creating Crafting Menu: ${error.message}`);
+        return {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+                type: 17,
+                components: [{
+                    type: 10,
+                    content: `❌ Error loading Crafting menu. Please try again.`
+                }]
+            }]
+        };
     }
 }
 
@@ -8659,6 +8829,7 @@ export {
     validateActionLimit,
     // Player Inventory exports
     createPlayerInventoryDisplay,
+    createCraftingMenuUI,
     hasStoresInGuild,
     getStoreBrowseButtons,
     getEmojiTwemojiUrl,

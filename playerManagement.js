@@ -781,11 +781,12 @@ export async function createPlayerManagementUI(options) {
         const safariData = await loadSafariContent();
         const allButtons = safariData[guildId]?.buttons || {};
 
-        // Filter actions that have showInInventory enabled and button trigger
-        const menuActions = Object.values(allButtons).filter(action =>
-          action.showInInventory &&
-          action.trigger?.type === 'button'
-        );
+        // Filter actions that have player_menu visibility enabled and button trigger
+        // Support both new menuVisibility field and legacy showInInventory for backward compatibility
+        const menuActions = Object.values(allButtons).filter(action => {
+          const visibility = action.menuVisibility || (action.showInInventory ? 'player_menu' : 'none');
+          return visibility === 'player_menu' && action.trigger?.type === 'button';
+        });
 
         console.log(`🧰 Player Menu Actions: ${menuActions.length} actions enabled for menu`);
 

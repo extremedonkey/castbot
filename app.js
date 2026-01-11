@@ -3800,7 +3800,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'entity_action_trigger',
         'entity_action_conditions',
         'entity_action_coords',
-        'toggle_inventory',
+        'menu_visibility_select',
+        'safari_crafting_menu',
         'safari_add_action',
         'safari_action_type_select',
         'safari_finish_button',
@@ -24825,16 +24826,17 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
       })(req, res, client);
 
-    } else if (custom_id.startsWith('toggle_inventory_')) {
-      // Handle inventory visibility toggle for Custom Actions
+    } else if (custom_id.startsWith('menu_visibility_select_')) {
+      // Handle menu visibility String Select for Custom Actions
       return ButtonHandlerFactory.create({
-        id: 'toggle_inventory',
+        id: 'menu_visibility_select',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         updateMessage: true,
         handler: async (context) => {
-          const actionId = context.customId.replace('toggle_inventory_', '');
-          console.log(`🧰 START: toggle_inventory - user ${context.userId} toggling action ${actionId}`);
+          const actionId = context.customId.replace('menu_visibility_select_', '');
+          const selectedValue = req.body.data.values?.[0] || 'none';
+          console.log(`📋 START: menu_visibility_select - user ${context.userId} setting action ${actionId} to ${selectedValue}`);
 
           const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
           const safariData = await loadSafariContent();
@@ -24848,16 +24850,21 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             };
           }
 
-          // Toggle the showInInventory flag
-          const newValue = !action.showInInventory;
-          action.showInInventory = newValue;
+          // Set the menuVisibility field
+          action.menuVisibility = selectedValue;
+          // Also clear legacy field to avoid confusion
+          delete action.showInInventory;
           await saveSafariContent(safariData);
 
-          // Count total inventory actions for warning
+          // Count actions per menu type for warnings
           const allButtons = safariData[context.guildId]?.buttons || {};
-          const inventoryActionCount = Object.values(allButtons).filter(a => a.showInInventory).length;
+          const playerMenuCount = Object.values(allButtons).filter(a => {
+            const vis = a.menuVisibility || (a.showInInventory ? 'player_menu' : 'none');
+            return vis === 'player_menu';
+          }).length;
+          const craftingMenuCount = Object.values(allButtons).filter(a => a.menuVisibility === 'crafting_menu').length;
 
-          console.log(`✅ SUCCESS: toggle_inventory - action ${actionId} showInInventory=${newValue} (${inventoryActionCount} total inventory actions)`);
+          console.log(`✅ SUCCESS: menu_visibility_select - action ${actionId} menuVisibility=${selectedValue} (${playerMenuCount} player menu, ${craftingMenuCount} crafting)`);
 
           // Refresh the coordinate management UI
           const { createCoordinateManagementUI } = await import('./customActionUI.js');
@@ -24866,18 +24873,38 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             actionId
           });
 
-          // Add warning if many inventory actions enabled
-          if (inventoryActionCount >= 10 && newValue) {
-            // Inject warning into the UI components
+          // Add warning if many actions enabled for a menu
+          const warningCount = selectedValue === 'player_menu' ? playerMenuCount : craftingMenuCount;
+          if (warningCount >= 10 && selectedValue !== 'none') {
+            const menuName = selectedValue === 'player_menu' ? 'Player Menu' : 'Crafting';
             const container = ui.components[0];
             if (container?.components) {
               container.components.splice(2, 0, {
                 type: 10,
-                content: `⚠️ **Warning:** ${inventoryActionCount} actions enabled for Player Menu. Some actions may not appear due to Discord's 40-component limit.`
+                content: `⚠️ **Warning:** ${warningCount} actions enabled for ${menuName}. Some actions may not appear due to Discord's 40-component limit.`
               });
             }
           }
 
+          return ui;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('safari_crafting_menu_')) {
+      // Handle Crafting Menu button from Player Inventory
+      return ButtonHandlerFactory.create({
+        id: 'safari_crafting_menu',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = context.customId.split('_');
+          const guildId = parts[3];
+          const userId = parts[4];
+          console.log(`🛠️ START: safari_crafting_menu - user ${context.userId} opening crafting menu`);
+
+          const { createCraftingMenuUI } = await import('./safariManager.js');
+          const ui = await createCraftingMenuUI(guildId, userId);
+
+          console.log(`✅ SUCCESS: safari_crafting_menu - showing crafting menu`);
           return ui;
         }
       })(req, res, client);

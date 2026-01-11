@@ -1138,7 +1138,12 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
   }
 
   const coordinates = action.coordinates || [];
-  const showInInventory = action.showInInventory || false;
+
+  // Migrate legacy showInInventory to menuVisibility if needed
+  let menuVisibility = action.menuVisibility;
+  if (menuVisibility === undefined) {
+    menuVisibility = action.showInInventory ? 'player_menu' : 'none';
+  }
 
   const components = [
     {
@@ -1148,22 +1153,51 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
     { type: 14 }
   ];
 
-  // Player Menu visibility toggle
+  // Menu visibility description based on current selection
+  const visibilityDescriptions = {
+    'none': '🚫 **Hidden** - Only available at map locations',
+    'player_menu': '📋 **Player Menu** - Quick access from /menu → My Profile',
+    'crafting_menu': '🛠️ **Crafting** - Appears in Crafting menu from Inventory'
+  };
+
   components.push({
-    type: 9, // Section
+    type: 10,
+    content: `### 📋 Menu Visibility\n${visibilityDescriptions[menuVisibility] || visibilityDescriptions['none']}`
+  });
+
+  // Menu visibility String Select
+  components.push({
+    type: 1, // ActionRow
     components: [{
-      type: 10,
-      content: showInInventory
-        ? `**Player Menu:** ✅ Visible\n*Players can trigger this action from /menu*`
-        : `**Player Menu:** ❌ Hidden\n*Action only available at assigned locations*`
-    }],
-    accessory: {
-      type: 2,
-      custom_id: `toggle_inventory_${actionId}`,
-      label: showInInventory ? "Hide" : "Show",
-      style: showInInventory ? 4 : 3, // Danger (red) to hide, Success (green) to show
-      emoji: { name: "📋" }
-    }
+      type: 3, // String Select
+      custom_id: `menu_visibility_select_${actionId}`,
+      placeholder: 'Select where this action appears...',
+      min_values: 1,
+      max_values: 1,
+      options: [
+        {
+          label: 'Hidden',
+          value: 'none',
+          description: 'Only available at map locations',
+          emoji: { name: '🚫' },
+          default: menuVisibility === 'none'
+        },
+        {
+          label: 'Player Menu',
+          value: 'player_menu',
+          description: 'Quick access from /menu → My Profile',
+          emoji: { name: '📋' },
+          default: menuVisibility === 'player_menu'
+        },
+        {
+          label: 'Crafting',
+          value: 'crafting_menu',
+          description: 'Appears in Crafting menu from Inventory',
+          emoji: { name: '🛠️' },
+          default: menuVisibility === 'crafting_menu'
+        }
+      ]
+    }]
   });
 
   components.push({ type: 14 });

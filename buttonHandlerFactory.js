@@ -2154,12 +2154,18 @@ export const BUTTON_REGISTRY = {
     category: 'safari_management',
     requiresModal: true
   },
-  'toggle_inventory_*': {
-    label: 'Toggle Player Menu Visibility',
-    description: 'Show or hide action in player /menu',
+  'menu_visibility_select_*': {
+    label: 'Menu Visibility',
+    description: 'Select where action appears (Hidden/Player Menu/Crafting)',
     emoji: '📋',
-    style: 'Success',
     category: 'safari_management'
+  },
+  'safari_crafting_menu_*': {
+    label: 'Crafting',
+    description: 'Open crafting menu showing crafting actions',
+    emoji: '🛠️',
+    style: 'Primary',
+    category: 'safari_player'
   },
   'configure_modal_trigger_*': {
     label: 'Configure Phrases',
