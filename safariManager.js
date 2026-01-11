@@ -4003,10 +4003,18 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null, curr
         // === CUSTOM ACTIONS SECTION (Inventory Actions) ===
         // Get actions that have showInInventory enabled
         const allButtons = safariData[guildId]?.buttons || {};
-        const inventoryActions = Object.values(allButtons).filter(action =>
-            action.showInInventory &&
-            action.trigger?.type === 'button'  // Only button-triggered actions work in inventory
-        );
+        console.log(`🧰 Inventory Actions check: ${Object.keys(allButtons).length} total buttons in guild`);
+
+        const inventoryActions = Object.values(allButtons).filter(action => {
+            const hasShowInInventory = action.showInInventory;
+            const hasButtonTrigger = action.trigger?.type === 'button';
+            if (hasShowInInventory) {
+                console.log(`🧰 Action "${action.name || action.id}": showInInventory=${hasShowInInventory}, trigger.type=${action.trigger?.type}, passes=${hasShowInInventory && hasButtonTrigger}`);
+            }
+            return hasShowInInventory && hasButtonTrigger;
+        });
+
+        console.log(`🧰 Found ${inventoryActions.length} inventory actions to display`);
 
         if (inventoryActions.length > 0) {
             // Calculate component budget using proper recursive counting
