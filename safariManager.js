@@ -4209,10 +4209,16 @@ async function createCraftingMenuUI(guildId, userId) {
                 return (a.name || '').localeCompare(b.name || '');
             });
 
-            // Helper function for button styles
+            // Helper function for button styles - include common aliases
             const getButtonStyleNumber = (style) => {
-                const styleMap = { 'Primary': 1, 'Secondary': 2, 'Success': 3, 'Danger': 4 };
-                return styleMap[style] || (typeof style === 'number' ? style : 2);
+                const styleMap = {
+                    'Primary': 1, 'Blue': 1, 'primary': 1,
+                    'Secondary': 2, 'Grey': 2, 'Gray': 2, 'secondary': 2,
+                    'Success': 3, 'Green': 3, 'success': 3,
+                    'Danger': 4, 'Red': 4, 'danger': 4,
+                    1: 1, 2: 2, 3: 3, 4: 4
+                };
+                return styleMap[style] || 2; // Default to Secondary
             };
 
             // Create action buttons in rows of 5 (Discord limit)
@@ -4234,6 +4240,7 @@ async function createCraftingMenuUI(guildId, userId) {
 
                         // Add emoji if defined
                         const emoji = action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji;
+                        console.log(`🛠️ DEBUG Crafting button "${action.name}": style=${action.trigger?.button?.style}, emoji=${JSON.stringify(emoji)}`);
                         if (emoji) {
                             button.emoji = typeof emoji === 'string' ? { name: emoji } : emoji;
                         }
