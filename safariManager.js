@@ -4238,11 +4238,26 @@ async function createCraftingMenuUI(guildId, userId) {
                             style: getButtonStyleNumber(action.inventoryConfig?.buttonStyle || action.trigger?.button?.style || 'Secondary')
                         };
 
-                        // Add emoji if defined
-                        const emoji = action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji;
-                        console.log(`🛠️ DEBUG Crafting button "${action.name}": style=${action.trigger?.button?.style}, emoji=${JSON.stringify(emoji)}`);
-                        if (emoji) {
-                            button.emoji = typeof emoji === 'string' ? { name: emoji } : emoji;
+                        // Add emoji if defined - parse Discord emoji string format if needed
+                        const rawEmoji = action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji;
+                        if (rawEmoji) {
+                            if (typeof rawEmoji === 'string') {
+                                // Check if it's a Discord custom emoji format: <:name:id> or <a:name:id>
+                                const customEmojiMatch = rawEmoji.match(/^<(a)?:(\w+):(\d+)>$/);
+                                if (customEmojiMatch) {
+                                    button.emoji = {
+                                        name: customEmojiMatch[2],
+                                        id: customEmojiMatch[3],
+                                        animated: !!customEmojiMatch[1]
+                                    };
+                                } else {
+                                    // Standard unicode emoji
+                                    button.emoji = { name: rawEmoji };
+                                }
+                            } else {
+                                // Already an object
+                                button.emoji = rawEmoji;
+                            }
                         }
 
                         return button;
