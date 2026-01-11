@@ -14,7 +14,8 @@ import {
 } from 'discord-interactions';
 import { createPlayerCard, extractCastlistData, createCastlistRows } from './castlistV2.js';
 import { getPlayer, updatePlayer, getGuildPronouns, getGuildTimezones, loadPlayerData } from './storage.js';
-import { hasStoresInGuild, getEligiblePlayersFixed, getCustomTerms, getPlayerAttributes, getAttributeDefinitions } from './safariManager.js';
+import { hasStoresInGuild, getEligiblePlayersFixed, getCustomTerms, getPlayerAttributes, getAttributeDefinitions, loadSafariContent } from './safariManager.js';
+import { countComponents } from './utils.js';
 import { createBackButton } from './src/ui/backButtonFactory.js';
 import { getTimeUntilRegeneration } from './pointsManager.js';
 
@@ -772,7 +773,94 @@ export async function createPlayerManagementUI(options) {
         finalComponents.push(inventoryRow);
       }
     }
-    
+
+    // === CUSTOM ACTIONS SECTION (Player Menu Actions) ===
+    // Only show for player mode (not admin mode) and not in application context
+    if (mode === PlayerManagementMode.PLAYER && !hideBottomButtons) {
+      try {
+        const safariData = await loadSafariContent();
+        const allButtons = safariData[guildId]?.buttons || {};
+
+        // Filter actions that have showInInventory enabled and button trigger
+        const menuActions = Object.values(allButtons).filter(action =>
+          action.showInInventory &&
+          action.trigger?.type === 'button'
+        );
+
+        console.log(`🧰 Player Menu Actions: ${menuActions.length} actions enabled for menu`);
+
+        if (menuActions.length > 0) {
+          // Calculate component budget
+          const currentCount = countComponents(finalComponents, { enableLogging: false });
+          const DISCORD_LIMIT = 40;
+          const SAFETY_BUFFER = 2;
+          const remainingBudget = DISCORD_LIMIT - SAFETY_BUFFER - currentCount;
+
+          console.log(`📊 Menu Actions budget: ${currentCount} used, ${remainingBudget} remaining`);
+
+          // Need at least 2 components (actionRow + 1 button)
+          if (remainingBudget >= 2) {
+            // Calculate max actions we can fit (each row = 1 + up to 5 buttons = 6 components)
+            const maxRows = Math.floor(remainingBudget / 6);
+            const maxActions = Math.min(maxRows * 5, menuActions.length, 10); // Cap at 10
+
+            if (maxActions > 0) {
+              // Sort actions by sortOrder then name
+              const sortedActions = menuActions
+                .slice(0, maxActions)
+                .sort((a, b) => {
+                  const orderA = a.inventoryConfig?.sortOrder ?? 999;
+                  const orderB = b.inventoryConfig?.sortOrder ?? 999;
+                  if (orderA !== orderB) return orderA - orderB;
+                  return (a.name || '').localeCompare(b.name || '');
+                });
+
+              // Helper function for button styles
+              const getButtonStyleNumber = (style) => {
+                const styleMap = { 'Primary': 1, 'Secondary': 2, 'Success': 3, 'Danger': 4 };
+                return styleMap[style] || (typeof style === 'number' ? style : 2);
+              };
+
+              // Create action buttons in rows of 5
+              for (let i = 0; i < sortedActions.length; i += 5) {
+                const rowActions = sortedActions.slice(i, i + 5);
+                const actionRow = {
+                  type: 1, // ActionRow
+                  components: rowActions.map(action => {
+                    const button = {
+                      type: 2, // Button
+                      custom_id: `safari_${guildId}_${action.id}`,
+                      label: (action.inventoryConfig?.buttonLabel || action.trigger?.button?.label || action.name || 'Action').slice(0, 80),
+                      style: getButtonStyleNumber(action.inventoryConfig?.buttonStyle || action.trigger?.button?.style || 'Secondary')
+                    };
+
+                    // Add emoji if defined
+                    const emoji = action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji;
+                    if (emoji) {
+                      button.emoji = typeof emoji === 'string' ? { name: emoji } : emoji;
+                    }
+
+                    return button;
+                  })
+                };
+                finalComponents.push(actionRow);
+              }
+
+              console.log(`✅ Added ${sortedActions.length} menu action buttons to player menu`);
+
+              if (menuActions.length > maxActions) {
+                console.log(`⚠️ Truncated menu actions: showing ${maxActions}/${menuActions.length} (component limit)`);
+              }
+            }
+          } else {
+            console.log(`⚠️ No budget for menu actions (${remainingBudget} remaining, need 2+)`);
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Error loading menu actions: ${error.message}`);
+      }
+    }
+
     return {
       flags: (1 << 15), // IS_COMPONENTS_V2 only - ephemeral handled by caller
       components: finalComponents

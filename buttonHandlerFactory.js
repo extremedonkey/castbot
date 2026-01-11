@@ -2155,9 +2155,9 @@ export const BUTTON_REGISTRY = {
     requiresModal: true
   },
   'toggle_inventory_*': {
-    label: 'Toggle Inventory Visibility',
-    description: 'Show or hide action in player inventory',
-    emoji: '🧰',
+    label: 'Toggle Player Menu Visibility',
+    description: 'Show or hide action in player /menu',
+    emoji: '📋',
     style: 'Success',
     category: 'safari_management'
   },

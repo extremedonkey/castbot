@@ -1148,21 +1148,21 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
     { type: 14 }
   ];
 
-  // Inventory visibility toggle (NEW)
+  // Player Menu visibility toggle
   components.push({
     type: 9, // Section
     components: [{
       type: 10,
       content: showInInventory
-        ? `**Player Inventory:** ✅ Visible\n*Players can trigger this action from their inventory*`
-        : `**Player Inventory:** ❌ Hidden\n*Action only available at assigned locations*`
+        ? `**Player Menu:** ✅ Visible\n*Players can trigger this action from /menu*`
+        : `**Player Menu:** ❌ Hidden\n*Action only available at assigned locations*`
     }],
     accessory: {
       type: 2,
       custom_id: `toggle_inventory_${actionId}`,
       label: showInInventory ? "Hide" : "Show",
       style: showInInventory ? 4 : 3, // Danger (red) to hide, Success (green) to show
-      emoji: { name: "🧰" }
+      emoji: { name: "📋" }
     }
   });
 

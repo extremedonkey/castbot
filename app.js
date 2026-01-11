@@ -4955,7 +4955,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Check if this Custom Action contains calculate_results actions that need deferred handling
       const parts = custom_id.split('_');
       const guildId = parts[1];
-      const buttonId = parts.slice(2, -1).join('_');
+      // Use slice(2) to get all remaining parts - don't drop the last segment
+      const buttonId = parts.slice(2).join('_');
 
       // ALWAYS use deferred response for Safari Custom Actions to prevent webhook failures
       // This gives us 15 minutes to process instead of 3 seconds
@@ -24872,7 +24873,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             if (container?.components) {
               container.components.splice(2, 0, {
                 type: 10,
-                content: `⚠️ **Warning:** ${inventoryActionCount} actions enabled for inventory. Players with many items may not see all actions due to Discord's 40-component limit.`
+                content: `⚠️ **Warning:** ${inventoryActionCount} actions enabled for Player Menu. Some actions may not appear due to Discord's 40-component limit.`
               });
             }
           }
