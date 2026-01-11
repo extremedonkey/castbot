@@ -377,6 +377,7 @@ Bot not responding?
 **Safari Subsystems:**
 - **CUSTOM ACTIONS** → [docs/features/SafariCustomActions.md](docs/features/SafariCustomActions.md) - Dynamic, configurable action system (triggers, drops, workflows)
 - **PLAYER COMMANDS** → [docs/features/PlayerCommands.md](docs/features/PlayerCommands.md) - Text-based Custom Action invocation system
+- **PLAYER MENU ACTIONS** → [docs/features/PlayerMenuActions.md](docs/features/PlayerMenuActions.md) - Custom Actions accessible from player /menu
 - **MAP EXPLORER** → [docs/features/SafariMapExplorer.md](docs/features/SafariMapExplorer.md)
 - **MAP SYSTEM** → [docs/features/SafariMapSystem.md](docs/features/SafariMapSystem.md) - User/admin guide
 - **MAP TECHNICAL** → [docs/features/SafariMapTechnical.md](docs/features/SafariMapTechnical.md) - Developer reference
