@@ -872,13 +872,16 @@ export async function createPlayerManagementUI(options) {
                     const rawEmoji = action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji;
                     if (rawEmoji) {
                       if (typeof rawEmoji === 'string') {
-                        // Check if it's a Discord custom emoji format: <:name:id> or <a:name:id>
-                        const customEmojiMatch = rawEmoji.match(/^<(a)?:(\w+):(\d+)>$/);
-                        if (customEmojiMatch) {
+                        // Parse Discord custom emoji format
+                        const staticMatch = rawEmoji.match(/<:(\w+):(\d+)>/);
+                        const animatedMatch = rawEmoji.match(/<a:(\w+):(\d+)>/);
+                        const match = staticMatch || animatedMatch;
+
+                        if (match) {
                           button.emoji = {
-                            name: customEmojiMatch[2],
-                            id: customEmojiMatch[3],
-                            animated: !!customEmojiMatch[1]
+                            name: match[1],
+                            id: match[2],
+                            animated: !!animatedMatch
                           };
                         } else {
                           // Standard unicode emoji
