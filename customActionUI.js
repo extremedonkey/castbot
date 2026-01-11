@@ -1132,27 +1132,49 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
   const allSafariContent = await loadSafariContent();
   const guildData = allSafariContent[guildId] || {};
   const action = guildData.buttons?.[actionId];
-  
+
   if (!action) {
     throw new Error('Action not found');
   }
-  
+
   const coordinates = action.coordinates || [];
+  const showInInventory = action.showInInventory || false;
+
   const components = [
     {
       type: 10,
-      content: `## 📍 Coordinate Management\n\n**Action:** ${action.name || 'Unnamed Action'}\n\nManage which map locations can trigger this action:`
+      content: `## 📍 Action Visibility\n\n**Action:** ${action.name || 'Unnamed Action'}\n\nControl where this action appears:`
     },
     { type: 14 }
   ];
-  
-  // Display current coordinates
+
+  // Inventory visibility toggle (NEW)
+  components.push({
+    type: 9, // Section
+    components: [{
+      type: 10,
+      content: showInInventory
+        ? `**Player Inventory:** ✅ Visible\n*Players can trigger this action from their inventory*`
+        : `**Player Inventory:** ❌ Hidden\n*Action only available at assigned locations*`
+    }],
+    accessory: {
+      type: 2,
+      custom_id: `toggle_inventory_${actionId}`,
+      label: showInInventory ? "Hide" : "Show",
+      style: showInInventory ? 4 : 3, // Danger (red) to hide, Success (green) to show
+      emoji: { name: "🧰" }
+    }
+  });
+
+  components.push({ type: 14 });
+
+  // Display current coordinates (Map Locations section)
   if (coordinates.length > 0) {
     components.push({
       type: 10,
-      content: `### Currently Assigned (${coordinates.length}):`
+      content: `### 📍 Map Locations (${coordinates.length})`
     });
-    
+
     coordinates.forEach((coord, index) => {
       components.push({
         type: 9, // Section
@@ -1172,10 +1194,10 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
   } else {
     components.push({
       type: 10,
-      content: `*No coordinates assigned yet*`
+      content: `### 📍 Map Locations\n*No coordinates assigned yet*`
     });
   }
-  
+
   // Add coordinate input with back button
   components.push({ type: 14, spacing: 1 });
   components.push({
@@ -1197,7 +1219,7 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
       }
     ]
   });
-  
+
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2
     components: [{

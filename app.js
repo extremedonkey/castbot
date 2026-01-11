@@ -3800,6 +3800,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'entity_action_trigger',
         'entity_action_conditions',
         'entity_action_coords',
+        'toggle_inventory',
         'safari_add_action',
         'safari_action_type_select',
         'safari_finish_button',
@@ -24822,7 +24823,64 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           return ui;
         }
       })(req, res, client);
-      
+
+    } else if (custom_id.startsWith('toggle_inventory_')) {
+      // Handle inventory visibility toggle for Custom Actions
+      return ButtonHandlerFactory.create({
+        id: 'toggle_inventory',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const actionId = context.customId.replace('toggle_inventory_', '');
+          console.log(`🧰 START: toggle_inventory - user ${context.userId} toggling action ${actionId}`);
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+
+          // Get the action
+          const action = safariData[context.guildId]?.buttons?.[actionId];
+          if (!action) {
+            return {
+              content: '❌ Action not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            };
+          }
+
+          // Toggle the showInInventory flag
+          const newValue = !action.showInInventory;
+          action.showInInventory = newValue;
+          await saveSafariContent(safariData);
+
+          // Count total inventory actions for warning
+          const allButtons = safariData[context.guildId]?.buttons || {};
+          const inventoryActionCount = Object.values(allButtons).filter(a => a.showInInventory).length;
+
+          console.log(`✅ SUCCESS: toggle_inventory - action ${actionId} showInInventory=${newValue} (${inventoryActionCount} total inventory actions)`);
+
+          // Refresh the coordinate management UI
+          const { createCoordinateManagementUI } = await import('./customActionUI.js');
+          const ui = await createCoordinateManagementUI({
+            guildId: context.guildId,
+            actionId
+          });
+
+          // Add warning if many inventory actions enabled
+          if (inventoryActionCount >= 10 && newValue) {
+            // Inject warning into the UI components
+            const container = ui.components[0];
+            if (container?.components) {
+              container.components.splice(2, 0, {
+                type: 10,
+                content: `⚠️ **Warning:** ${inventoryActionCount} actions enabled for inventory. Players with many items may not see all actions due to Discord's 40-component limit.`
+              });
+            }
+          }
+
+          return ui;
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('custom_action_editor_')) {
       // Handle back button from coordinate management to action editor
       return ButtonHandlerFactory.create({

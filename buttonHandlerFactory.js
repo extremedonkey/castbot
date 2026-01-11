@@ -2154,6 +2154,13 @@ export const BUTTON_REGISTRY = {
     category: 'safari_management',
     requiresModal: true
   },
+  'toggle_inventory_*': {
+    label: 'Toggle Inventory Visibility',
+    description: 'Show or hide action in player inventory',
+    emoji: '🧰',
+    style: 'Success',
+    category: 'safari_management'
+  },
   'configure_modal_trigger_*': {
     label: 'Configure Phrases',
     description: 'Set command phrases for modal trigger',
