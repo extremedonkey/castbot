@@ -167,22 +167,46 @@ See [Attribute System](../../RaP/0964_20260109_AttributeSystem_Analysis.md) for 
 
 Conditions determine whether actions execute. Multiple conditions can be combined with AND/OR logic.
 
-| Type | Description | Example |
-|------|-------------|---------|
-| **Currency** | Check player's currency | Currency ≥ 100 |
-| **Item** | Check if player has/doesn't have item | Has Gold Key |
-| **Role** | Check if player has/doesn't have Discord role | Has @VIP role |
-| **Attribute** | Check player attribute value | Mana ≥ 20, HP < 50% |
+| Type | Icon | Description | Example |
+|------|------|-------------|---------|
+| **Currency** | 🪙 | Check player's currency | Currency ≥ 100 |
+| **Item** | 📦 | Check if player has/doesn't have item | Has Gold Key |
+| **Role** | 👑 | Check if player has/doesn't have Discord role | Has @VIP role |
+| **Attribute** | 📊 | Check single attribute value | Mana ≥ 20, HP < 50% |
+| **Compare Attributes** | ⚔️ | Compare two attributes | Strength > Dexterity |
+| **Multi-Attribute** | 📈 | Check multiple attributes | All stats ≥ 10 |
 
-### Attribute Conditions (NEW)
+### Attribute Conditions
 
 Check player attributes with flexible comparison options:
 
 - **Resource attributes** (HP, Mana, Stamina): Compare current, max, or percentage
 - **Stat attributes** (Strength, Dexterity): Compare value
 - **Operators**: ≥, ≤, =, >, <
+- **Item Bonuses**: Optionally include equipment modifiers
 
 **Example**: "If Mana current ≥ 20" → displays as `📊 mana ≥ 20`
+
+### Compare Attributes (⚔️)
+
+Compare two attributes against each other:
+
+- Compare any two attributes (same or different types)
+- Supports resource targets (current/max/percent) for each
+- Optional item bonus inclusion
+
+**Example**: "If Strength > Dexterity" → displays as `⚔️ strength ≥ dexterity`
+
+### Multi-Attribute Check (📈)
+
+Check multiple attributes with aggregation modes:
+
+- **All**: Every attribute must pass (e.g., "All stats ≥ 10")
+- **Any**: At least one must pass (e.g., "Any stat ≥ 20")
+- **Sum**: Total of all values (e.g., "Sum of stats ≥ 50")
+- **Average**: Average of all values (e.g., "Average stat ≥ 15")
+
+Shortcuts: `all_stats`, `all_resources`, `all`
 
 See [Attribute Conditions](./AttributeConditions.md) for full documentation.
 
