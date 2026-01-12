@@ -321,7 +321,9 @@ const CONDITION_TYPES = {
     POINTS_GTE: 'points_gte',           // Points >= value for specified type
     POINTS_LTE: 'points_lte',           // Points <= value for specified type
     CAN_MOVE: 'can_move',               // Player has stamina to move
-    AT_LOCATION: 'at_location'          // Player is at specific coordinate
+    AT_LOCATION: 'at_location',         // Player is at specific coordinate
+    // Attribute System Conditions
+    ATTRIBUTE_CHECK: 'attribute_check'  // Check any attribute (current/max/percent) with comparison operators
 };
 
 /**
@@ -8838,6 +8840,8 @@ export {
     executeModifyPoints,
     executeModifyAttribute,
     executeMovePlayer,
+    // Attribute System exports
+    getAttributeDefinitions,
     initializeEntityPoints,
     getEntityPoints,
     hasEnoughPoints,
@@ -9001,7 +9005,73 @@ async function evaluateSingleCondition(condition, player, context) {
             const member = context.member;
             const hasRole = member?.roles?.includes(condition.roleId);
             return condition.operator === 'has' ? hasRole : !hasRole;
-            
+
+        case 'attribute_check': {
+            // Get config from condition
+            const config = condition.config || {};
+            const { attributeId, comparison = 'gte', target = 'current', value = 0 } = config;
+
+            if (!attributeId) {
+                console.error('attribute_check condition missing attributeId');
+                return false;
+            }
+
+            // Get guild ID from context
+            const guildId = context.guildId;
+            if (!guildId) {
+                console.error('attribute_check condition missing guildId in context');
+                return false;
+            }
+
+            // Get attribute definition to determine category
+            const attrDefs = await getAttributeDefinitions(guildId);
+            const attrDef = attrDefs[attributeId];
+            if (!attrDef) {
+                console.warn(`attribute_check: attribute '${attributeId}' not found in guild ${guildId}`);
+                return false;
+            }
+
+            // Get player's attribute value
+            const userId = context.userId || player?.id;
+            if (!userId) {
+                console.error('attribute_check condition could not determine userId');
+                return false;
+            }
+            const entityId = `player_${userId}`;
+            const points = await getEntityPoints(guildId, entityId, attributeId);
+
+            // Determine what to compare based on target
+            let compareValue;
+            if (attrDef.category === 'resource') {
+                switch (target) {
+                    case 'current':
+                        compareValue = points.current;
+                        break;
+                    case 'max':
+                        compareValue = points.max;
+                        break;
+                    case 'percent':
+                        compareValue = points.max > 0 ? (points.current / points.max) * 100 : 0;
+                        break;
+                    default:
+                        compareValue = points.current;
+                }
+            } else {
+                // Stat attribute - just use the value (stored as current)
+                compareValue = points.current || points.value || 0;
+            }
+
+            // Apply comparison operator
+            switch (comparison) {
+                case 'gte': return compareValue >= value;
+                case 'lte': return compareValue <= value;
+                case 'eq': return compareValue === value;
+                case 'gt': return compareValue > value;
+                case 'lt': return compareValue < value;
+                default: return compareValue >= value;
+            }
+        }
+
         default:
             console.error(`Unknown condition type: ${condition.type}`);
             return false;
@@ -9026,6 +9096,15 @@ function getConditionSummary(condition) {
             return `${condition.operator === 'has' ? 'Has' : 'Does not have'} item ${condition.itemId}`;
         case 'role':
             return `${condition.operator === 'has' ? 'Has' : 'Does not have'} role ${condition.roleId}`;
+        case 'attribute_check': {
+            const config = condition.config || {};
+            const { attributeId = '?', comparison = 'gte', target = 'current', value = 0 } = config;
+            const compSymbols = { gte: '≥', lte: '≤', eq: '=', gt: '>', lt: '<' };
+            const compSymbol = compSymbols[comparison] || '≥';
+            const targetLabel = target === 'percent' ? '%' : (target === 'max' ? ' max' : '');
+            const valueDisplay = target === 'percent' ? `${value}%` : value;
+            return `${attributeId}${targetLabel} ${compSymbol} ${valueDisplay}`;
+        }
         default:
             return 'Unknown condition';
     }

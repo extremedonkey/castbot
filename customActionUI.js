@@ -829,6 +829,16 @@ async function formatConditionsDisplay(conditions, guildItems = {}) {
         // Format role as Discord role mention
         summary = `${condition.operator === 'has' ? 'Has' : 'Does not have'} <@&${condition.roleId}>`;
         break;
+      case 'attribute_check': {
+        const config = condition.config || {};
+        const { attributeId = '?', comparison = 'gte', target = 'current', value = 0 } = config;
+        const compSymbols = { gte: '≥', lte: '≤', eq: '=', gt: '>', lt: '<' };
+        const compSymbol = compSymbols[comparison] || '≥';
+        const targetLabel = target === 'percent' ? '%' : (target === 'max' ? ' max' : '');
+        const valueDisplay = target === 'percent' ? `${value}%` : value;
+        summary = `📊 ${attributeId}${targetLabel} ${compSymbol} ${valueDisplay}`;
+        break;
+      }
       default:
         summary = getConditionSummary ? getConditionSummary(condition) : 'Unknown condition';
     }
@@ -1475,7 +1485,17 @@ function getConditionSummary(condition, items = {}) {
       return condition.operator === 'has'
         ? `Has role: ${roleName}`
         : `Does not have: ${roleName}`;
-        
+
+    case 'attribute_check': {
+      const config = condition.config || {};
+      const { attributeId = '?', comparison = 'gte', target = 'current', value = 0 } = config;
+      const compSymbols = { gte: '≥', lte: '≤', eq: '=', gt: '>', lt: '<' };
+      const compSymbol = compSymbols[comparison] || '≥';
+      const targetLabel = target === 'percent' ? '%' : (target === 'max' ? ' max' : '');
+      const valueDisplay = target === 'percent' ? `${value}%` : value;
+      return `📊 ${attributeId}${targetLabel} ${compSymbol} ${valueDisplay}`;
+    }
+
     default:
       return `Unknown condition type: ${condition.type}`;
   }
@@ -1534,6 +1554,13 @@ export async function showConditionEditor({ res, actionId, conditionIndex, guild
             description: "User has/doesn't have role",
             emoji: { name: '👑' },
             default: condition.type === 'role'
+          },
+          {
+            label: 'Attribute',
+            value: 'attribute_check',
+            description: "Check player attribute (HP, Mana, Strength, etc.)",
+            emoji: { name: '📊' },
+            default: condition.type === 'attribute_check'
           }
         ]
       }]
@@ -1554,6 +1581,9 @@ export async function showConditionEditor({ res, actionId, conditionIndex, guild
         break;
       case 'role':
         components.push(...createRoleConditionUI(condition, actionId, conditionIndex, currentPage));
+        break;
+      case 'attribute_check':
+        components.push(...await createAttributeConditionUI(condition, actionId, conditionIndex, currentPage, guildId));
         break;
     }
   }
@@ -1793,6 +1823,161 @@ function createRoleConditionUI(condition, actionId, conditionIndex, currentPage)
     }
   ];
   
+  return components;
+}
+
+/**
+ * Create attribute condition UI components
+ * Allows checking any custom attribute (HP, Mana, Strength, etc.)
+ */
+async function createAttributeConditionUI(condition, actionId, conditionIndex, currentPage, guildId) {
+  const { getAttributeDefinitions } = await import('./safariManager.js');
+  const attrDefs = await getAttributeDefinitions(guildId);
+
+  // Get current config or defaults
+  const config = condition.config || {};
+  const { attributeId, comparison = 'gte', target = 'current', value = 0 } = config;
+
+  // Get selected attribute definition if one is selected
+  const selectedAttr = attributeId ? attrDefs[attributeId] : null;
+  const isResource = selectedAttr?.category === 'resource';
+
+  const components = [
+    {
+      type: 10,
+      content: '### 📊 Attribute Check\nWhen player\'s attribute...'
+    }
+  ];
+
+  // Attribute selector dropdown
+  const attrOptions = Object.entries(attrDefs).map(([id, def]) => ({
+    label: def.name || id,
+    value: id,
+    description: def.category === 'resource' ? 'Resource (has current/max)' : 'Stat (single value)',
+    emoji: def.emoji ? { name: def.emoji } : { name: '📊' },
+    default: attributeId === id
+  }));
+
+  if (attrOptions.length === 0) {
+    components.push({
+      type: 10,
+      content: '⚠️ **No attributes defined!**\nGo to Tools → Attributes to create attributes first.'
+    });
+    return components;
+  }
+
+  components.push({
+    type: 1, // ActionRow
+    components: [{
+      type: 3, // String Select
+      custom_id: `condition_attr_select_${actionId}_${conditionIndex}_${currentPage}`,
+      placeholder: 'Select Attribute...',
+      options: attrOptions.slice(0, 25) // Max 25 options
+    }]
+  });
+
+  // Only show rest of UI if attribute is selected
+  if (attributeId && selectedAttr) {
+    // For resource attributes: show target selector (current/max/percent)
+    if (isResource) {
+      components.push({
+        type: 10,
+        content: '**Compare:**'
+      });
+
+      components.push({
+        type: 1,
+        components: [
+          {
+            type: 2,
+            custom_id: `condition_attr_target_${actionId}_${conditionIndex}_${currentPage}_current`,
+            label: 'Current',
+            style: target === 'current' ? 1 : 2,
+            emoji: { name: '📉' }
+          },
+          {
+            type: 2,
+            custom_id: `condition_attr_target_${actionId}_${conditionIndex}_${currentPage}_max`,
+            label: 'Maximum',
+            style: target === 'max' ? 1 : 2,
+            emoji: { name: '📈' }
+          },
+          {
+            type: 2,
+            custom_id: `condition_attr_target_${actionId}_${conditionIndex}_${currentPage}_percent`,
+            label: 'Percentage',
+            style: target === 'percent' ? 1 : 2,
+            emoji: { name: '💯' }
+          }
+        ]
+      });
+    }
+
+    // Comparison operator buttons
+    components.push({
+      type: 10,
+      content: '**Operator:**'
+    });
+
+    components.push({
+      type: 1,
+      components: [
+        {
+          type: 2,
+          custom_id: `condition_attr_comp_${actionId}_${conditionIndex}_${currentPage}_gte`,
+          label: '≥',
+          style: comparison === 'gte' ? 1 : 2
+        },
+        {
+          type: 2,
+          custom_id: `condition_attr_comp_${actionId}_${conditionIndex}_${currentPage}_lte`,
+          label: '≤',
+          style: comparison === 'lte' ? 1 : 2
+        },
+        {
+          type: 2,
+          custom_id: `condition_attr_comp_${actionId}_${conditionIndex}_${currentPage}_eq`,
+          label: '=',
+          style: comparison === 'eq' ? 1 : 2
+        },
+        {
+          type: 2,
+          custom_id: `condition_attr_comp_${actionId}_${conditionIndex}_${currentPage}_gt`,
+          label: '>',
+          style: comparison === 'gt' ? 1 : 2
+        },
+        {
+          type: 2,
+          custom_id: `condition_attr_comp_${actionId}_${conditionIndex}_${currentPage}_lt`,
+          label: '<',
+          style: comparison === 'lt' ? 1 : 2
+        }
+      ]
+    });
+
+    // Current value display and set button
+    const compSymbols = { gte: '≥', lte: '≤', eq: '=', gt: '>', lt: '<' };
+    const targetLabels = { current: 'current', max: 'max', percent: '%', value: '' };
+    const displayTarget = isResource ? targetLabels[target] : 'value';
+    const valueDisplay = target === 'percent' ? `${value}%` : value;
+
+    components.push({
+      type: 10,
+      content: `**Current:** ${selectedAttr.emoji || '📊'} ${selectedAttr.name} ${displayTarget} ${compSymbols[comparison] || '≥'} **${valueDisplay}**`
+    });
+
+    components.push({
+      type: 1,
+      components: [{
+        type: 2,
+        custom_id: `condition_attr_value_${actionId}_${conditionIndex}_${currentPage}`,
+        label: target === 'percent' ? 'Set Percentage' : 'Set Value',
+        style: 1, // Primary
+        emoji: { name: '🔢' }
+      }]
+    });
+  }
+
   return components;
 }
 

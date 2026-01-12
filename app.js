@@ -3866,6 +3866,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'condition_not_has',
         'condition_item_select',
         'condition_role_select',
+        // Attribute condition patterns
+        'condition_attr_select',
+        'condition_attr_target',
+        'condition_attr_comp',
+        'condition_attr_value',
         'map_add_item_drop',
         'map_item_search',
         'map_item_drop_select',
@@ -22895,8 +22900,22 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               delete condition.itemId;
               condition.roleId = null;
               break;
+            case 'attribute_check':
+              // Initialize config object for attribute conditions
+              condition.config = {
+                attributeId: null,
+                comparison: 'gte',
+                target: 'current',
+                value: 0
+              };
+              // Clean up fields used by other condition types
+              delete condition.operator;
+              delete condition.value;
+              delete condition.itemId;
+              delete condition.roleId;
+              break;
           }
-          
+
           // Save changes
           await saveSafariContent(allSafariContent);
           
@@ -24675,7 +24694,182 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           return;
         }
       })(req, res, client);
-      
+
+    // ========== ATTRIBUTE CONDITION HANDLERS ==========
+
+    } else if (custom_id.startsWith('condition_attr_select_')) {
+      // Handle attribute selection for attribute_check condition
+      return ButtonHandlerFactory.create({
+        id: 'condition_attr_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: condition_attr_select - user ${context.userId}`);
+
+          // Parse custom_id: condition_attr_select_actionId_conditionIndex_currentPage
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); // condition
+          customIdParts.shift(); // attr
+          customIdParts.shift(); // select
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+
+          const selectedAttributeId = context.values[0];
+
+          // Load and update condition
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+
+          if (!condition) {
+            throw new Error('Condition not found');
+          }
+
+          // Initialize config if needed
+          if (!condition.config) {
+            condition.config = { comparison: 'gte', target: 'current', value: 0 };
+          }
+          condition.config.attributeId = selectedAttributeId;
+
+          await saveSafariContent(allSafariContent);
+          console.log(`✅ SUCCESS: condition_attr_select - selected ${selectedAttributeId}`);
+
+          // Refresh UI
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage });
+          return;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('condition_attr_target_')) {
+      // Handle target selection (current/max/percent)
+      return ButtonHandlerFactory.create({
+        id: 'condition_attr_target',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: condition_attr_target - user ${context.userId}`);
+
+          // Parse custom_id: condition_attr_target_actionId_conditionIndex_currentPage_TARGET
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); // condition
+          customIdParts.shift(); // attr
+          customIdParts.shift(); // target
+          const targetType = customIdParts.pop(); // current, max, or percent
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+
+          // Load and update condition
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+
+          if (!condition?.config) {
+            throw new Error('Condition config not found');
+          }
+
+          condition.config.target = targetType;
+          await saveSafariContent(allSafariContent);
+          console.log(`✅ SUCCESS: condition_attr_target - set to ${targetType}`);
+
+          // Refresh UI
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage });
+          return;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('condition_attr_comp_')) {
+      // Handle comparison operator selection (gte/lte/eq/gt/lt)
+      return ButtonHandlerFactory.create({
+        id: 'condition_attr_comp',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: condition_attr_comp - user ${context.userId}`);
+
+          // Parse custom_id: condition_attr_comp_actionId_conditionIndex_currentPage_OPERATOR
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); // condition
+          customIdParts.shift(); // attr
+          customIdParts.shift(); // comp
+          const compOperator = customIdParts.pop(); // gte, lte, eq, gt, lt
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+
+          // Load and update condition
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+
+          if (!condition?.config) {
+            throw new Error('Condition config not found');
+          }
+
+          condition.config.comparison = compOperator;
+          await saveSafariContent(allSafariContent);
+          console.log(`✅ SUCCESS: condition_attr_comp - set to ${compOperator}`);
+
+          // Refresh UI
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage });
+          return;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('condition_attr_value_')) {
+      // Open modal for value input
+      return ButtonHandlerFactory.create({
+        id: 'condition_attr_value',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: condition_attr_value - opening modal`);
+
+          // Parse custom_id: condition_attr_value_actionId_conditionIndex_currentPage
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); // condition
+          customIdParts.shift(); // attr
+          customIdParts.shift(); // value
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+
+          // Get current condition to show current value
+          const { loadSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          const currentValue = condition?.config?.value || 0;
+          const isPercent = condition?.config?.target === 'percent';
+
+          const modal = new ModalBuilder()
+            .setCustomId(`modal_condition_attr_value_${actionId}_${conditionIndex}_${currentPage}`)
+            .setTitle(isPercent ? 'Set Percentage Value' : 'Set Attribute Value');
+
+          const valueInput = new TextInputBuilder()
+            .setCustomId('attr_value')
+            .setLabel(isPercent ? 'Percentage (0-100)' : 'Value')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(10)
+            .setValue(String(currentValue))
+            .setPlaceholder(isPercent ? 'e.g. 50' : 'e.g. 20');
+
+          modal.addComponents(new ActionRowBuilder().addComponents(valueInput));
+
+          return res.send({
+            type: InteractionResponseType.APPLICATION_MODAL,
+            data: modal.toJSON()
+          });
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('condition_item_select_')) {
       // Handle item selection for condition
       const selectedItemId = data.values[0];
@@ -33438,14 +33632,77 @@ Are you sure you want to continue?`;
           }
         });
       }
-      
+
+    } else if (custom_id.startsWith('modal_condition_attr_value_')) {
+      // Handle attribute condition value modal submission
+      try {
+        // Parse custom_id: modal_condition_attr_value_actionId_conditionIndex_currentPage
+        const customIdParts = custom_id.split('_');
+        customIdParts.shift(); // modal
+        customIdParts.shift(); // condition
+        customIdParts.shift(); // attr
+        customIdParts.shift(); // value
+        const currentPage = parseInt(customIdParts.pop() || '0');
+        const conditionIndex = parseInt(customIdParts.pop() || '0');
+        const actionId = customIdParts.join('_');
+
+        const valueStr = components[0].components[0].value;
+        const value = parseFloat(valueStr);
+
+        if (isNaN(value) || value < 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Please enter a valid positive number.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Load and update condition
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const allSafariContent = await loadSafariContent();
+        const condition = allSafariContent[req.body.guild_id]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+
+        if (!condition?.config) {
+          throw new Error('Condition config not found');
+        }
+
+        // For percentage, cap at 100
+        const isPercent = condition.config.target === 'percent';
+        condition.config.value = isPercent ? Math.min(value, 100) : value;
+
+        await saveSafariContent(allSafariContent);
+        console.log(`✅ SUCCESS: modal_condition_attr_value - set value to ${condition.config.value}`);
+
+        // Refresh condition editor
+        const { showConditionEditor } = await import('./customActionUI.js');
+        await showConditionEditor({
+          res,
+          actionId,
+          conditionIndex,
+          guildId: req.body.guild_id,
+          currentPage
+        });
+
+      } catch (error) {
+        console.error('Error in modal_condition_attr_value handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ An error occurred. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+
     } else if (custom_id === 'safari_button_modal') {
       // Handle Safari button creation modal submission
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
         const userId = member.user.id;
-        
+
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to create custom buttons.')) return;
 

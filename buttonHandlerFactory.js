@@ -2468,7 +2468,36 @@ export const BUTTON_REGISTRY = {
     category: 'conditional_logic',
     type: 'role_select'
   },
-  
+  'condition_attr_select_*': {
+    label: 'Select Attribute',
+    description: 'Select attribute to check',
+    emoji: '📊',
+    style: 'Secondary',
+    category: 'conditional_logic',
+    type: 'select_menu'
+  },
+  'condition_attr_target_*': {
+    label: 'Target',
+    description: 'Select what to compare (current/max/percent)',
+    emoji: '🎯',
+    style: 'Secondary',
+    category: 'conditional_logic'
+  },
+  'condition_attr_comp_*': {
+    label: 'Comparison',
+    description: 'Select comparison operator',
+    emoji: '⚖️',
+    style: 'Secondary',
+    category: 'conditional_logic'
+  },
+  'condition_attr_value_*': {
+    label: 'Set Value',
+    description: 'Set threshold value for condition',
+    emoji: '🔢',
+    style: 'Primary',
+    category: 'conditional_logic'
+  },
+
   // === SAFARI SOCIAL FEATURES ===
   'safari_whisper': {
     label: 'Whisper',
