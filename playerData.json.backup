@@ -794,8 +794,8 @@
           "achievements": [],
           "inventory": {
             "nurturer_361363": {
-              "quantity": 2,
-              "numAttacksAvailable": 2
+              "quantity": 3,
+              "numAttacksAvailable": 3
             },
             "territory_forager_404120": 1,
             "nest_guardian_461600": 1,
