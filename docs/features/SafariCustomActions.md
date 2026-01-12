@@ -149,6 +149,45 @@ Executes different actions based on conditions.
 - Success actions
 - Failure actions
 
+### 6. Modify Attribute
+Modifies player attributes (HP, Mana, Strength, etc.).
+
+**Configuration:**
+- Attribute to modify
+- Operation: Add, Subtract, or Set
+- Amount
+- Display mode (silent or feedback)
+- Usage limits
+
+See [Attribute System](../../RaP/0964_20260109_AttributeSystem_Analysis.md) for details.
+
+---
+
+## Condition Types
+
+Conditions determine whether actions execute. Multiple conditions can be combined with AND/OR logic.
+
+| Type | Description | Example |
+|------|-------------|---------|
+| **Currency** | Check player's currency | Currency ≥ 100 |
+| **Item** | Check if player has/doesn't have item | Has Gold Key |
+| **Role** | Check if player has/doesn't have Discord role | Has @VIP role |
+| **Attribute** | Check player attribute value | Mana ≥ 20, HP < 50% |
+
+### Attribute Conditions (NEW)
+
+Check player attributes with flexible comparison options:
+
+- **Resource attributes** (HP, Mana, Stamina): Compare current, max, or percentage
+- **Stat attributes** (Strength, Dexterity): Compare value
+- **Operators**: ≥, ≤, =, >, <
+
+**Example**: "If Mana current ≥ 20" → displays as `📊 mana ≥ 20`
+
+See [Attribute Conditions](./AttributeConditions.md) for full documentation.
+
+---
+
 ## Creating Custom Actions
 
 ### Step 1: Access Custom Actions
