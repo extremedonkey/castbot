@@ -4962,8 +4962,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Check if this Custom Action contains calculate_results actions that need deferred handling
       const parts = custom_id.split('_');
       const guildId = parts[1];
-      // Use slice(2) to get all remaining parts - don't drop the last segment
-      const buttonId = parts.slice(2).join('_');
+      // Use slice(2, -1) to get buttonId parts, dropping the timestamp added by generateCustomId
+      // Format: safari_guildId_buttonId_timestamp
+      const buttonId = parts.slice(2, -1).join('_');
 
       // ALWAYS use deferred response for Safari Custom Actions to prevent webhook failures
       // This gives us 15 minutes to process instead of 3 seconds
