@@ -8840,8 +8840,6 @@ export {
     executeModifyPoints,
     executeModifyAttribute,
     executeMovePlayer,
-    // Attribute System exports
-    getAttributeDefinitions,
     initializeEntityPoints,
     getEntityPoints,
     hasEnoughPoints,
