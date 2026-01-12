@@ -24863,10 +24863,11 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
 
           modal.addComponents(new ActionRowBuilder().addComponents(valueInput));
 
-          return res.send({
-            type: InteractionResponseType.APPLICATION_MODAL,
+          console.log(`✅ SUCCESS: condition_attr_value - showing modal`);
+          return {
+            type: InteractionResponseType.MODAL,
             data: modal.toJSON()
-          });
+          };
         }
       })(req, res, client);
 
