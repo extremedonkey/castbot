@@ -323,7 +323,9 @@ const CONDITION_TYPES = {
     CAN_MOVE: 'can_move',               // Player has stamina to move
     AT_LOCATION: 'at_location',         // Player is at specific coordinate
     // Attribute System Conditions
-    ATTRIBUTE_CHECK: 'attribute_check'  // Check any attribute (current/max/percent) with comparison operators
+    ATTRIBUTE_CHECK: 'attribute_check',  // Check any attribute (current/max/percent) with comparison operators
+    ATTRIBUTE_COMPARE: 'attribute_compare',  // Compare two attributes (e.g., Strength > Dexterity)
+    MULTI_ATTRIBUTE_CHECK: 'multi_attribute_check'  // Check multiple attributes (all/any/sum/average)
 };
 
 /**
@@ -8789,6 +8791,146 @@ async function getPlayerAttributes(guildId, playerId) {
     return attributes;
 }
 
+// ============ ATTRIBUTE TRIGGER FUNCTIONS ============
+
+/**
+ * Get all attribute triggers for a guild
+ * @param {string} guildId - Discord guild ID
+ * @returns {Promise<Array>} Array of attribute trigger objects
+ */
+async function getAttributeTriggers(guildId) {
+    const safariData = await loadSafariContent();
+    return safariData[guildId]?.attributeTriggers || [];
+}
+
+/**
+ * Create a new attribute trigger
+ * @param {string} guildId - Discord guild ID
+ * @param {Object} triggerConfig - Trigger configuration
+ * @returns {Promise<Object>} The created trigger
+ */
+async function createAttributeTrigger(guildId, triggerConfig) {
+    const safariData = await loadSafariContent();
+
+    if (!safariData[guildId]) {
+        safariData[guildId] = {};
+    }
+    if (!safariData[guildId].attributeTriggers) {
+        safariData[guildId].attributeTriggers = [];
+    }
+
+    // Check limit (max 20 triggers per guild)
+    if (safariData[guildId].attributeTriggers.length >= 20) {
+        throw new Error('Maximum triggers reached (20)');
+    }
+
+    // Generate unique ID
+    const triggerId = `trigger_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+    const trigger = {
+        id: triggerId,
+        name: triggerConfig.name || 'Unnamed Trigger',
+        enabled: true,
+        config: {
+            attributeId: triggerConfig.attributeId,
+            event: triggerConfig.event || 'crosses_below',
+            threshold: triggerConfig.threshold || 0,
+            thresholdType: triggerConfig.thresholdType || 'absolute'
+        },
+        actions: triggerConfig.actions || [],
+        createdAt: Date.now()
+    };
+
+    safariData[guildId].attributeTriggers.push(trigger);
+    await saveSafariContent(safariData);
+
+    console.log(`🎯 Created attribute trigger '${trigger.name}' for guild ${guildId}`);
+    return trigger;
+}
+
+/**
+ * Update an existing attribute trigger
+ * @param {string} guildId - Discord guild ID
+ * @param {string} triggerId - Trigger identifier
+ * @param {Object} updates - Fields to update
+ * @returns {Promise<Object>} Updated trigger
+ */
+async function updateAttributeTrigger(guildId, triggerId, updates) {
+    const safariData = await loadSafariContent();
+
+    const triggers = safariData[guildId]?.attributeTriggers || [];
+    const triggerIndex = triggers.findIndex(t => t.id === triggerId);
+
+    if (triggerIndex === -1) {
+        throw new Error(`Trigger '${triggerId}' not found`);
+    }
+
+    // Apply updates
+    const updatedTrigger = {
+        ...triggers[triggerIndex],
+        ...updates,
+        id: triggerId, // Preserve ID
+        updatedAt: Date.now()
+    };
+
+    safariData[guildId].attributeTriggers[triggerIndex] = updatedTrigger;
+    await saveSafariContent(safariData);
+
+    console.log(`🎯 Updated attribute trigger '${triggerId}' for guild ${guildId}`);
+    return updatedTrigger;
+}
+
+/**
+ * Delete an attribute trigger
+ * @param {string} guildId - Discord guild ID
+ * @param {string} triggerId - Trigger identifier
+ * @returns {Promise<boolean>} True if deleted
+ */
+async function deleteAttributeTrigger(guildId, triggerId) {
+    const safariData = await loadSafariContent();
+
+    const triggers = safariData[guildId]?.attributeTriggers || [];
+    const triggerIndex = triggers.findIndex(t => t.id === triggerId);
+
+    if (triggerIndex === -1) {
+        throw new Error(`Trigger '${triggerId}' not found`);
+    }
+
+    safariData[guildId].attributeTriggers.splice(triggerIndex, 1);
+    await saveSafariContent(safariData);
+
+    console.log(`🎯 Deleted attribute trigger '${triggerId}' from guild ${guildId}`);
+    return true;
+}
+
+/**
+ * Get a single attribute trigger by ID
+ * @param {string} guildId - Discord guild ID
+ * @param {string} triggerId - Trigger identifier
+ * @returns {Promise<Object|null>} The trigger or null
+ */
+async function getAttributeTrigger(guildId, triggerId) {
+    const triggers = await getAttributeTriggers(guildId);
+    return triggers.find(t => t.id === triggerId) || null;
+}
+
+/**
+ * Toggle a trigger's enabled state
+ * @param {string} guildId - Discord guild ID
+ * @param {string} triggerId - Trigger identifier
+ * @returns {Promise<Object>} Updated trigger
+ */
+async function toggleAttributeTrigger(guildId, triggerId) {
+    const trigger = await getAttributeTrigger(guildId, triggerId);
+    if (!trigger) {
+        throw new Error(`Trigger '${triggerId}' not found`);
+    }
+
+    return await updateAttributeTrigger(guildId, triggerId, {
+        enabled: !trigger.enabled
+    });
+}
+
 export {
     createCustomButton,
     getCustomButton,
@@ -8915,7 +9057,14 @@ export {
     enableAttributePreset,
     getPlayerAttribute,
     setPlayerAttribute,
-    getPlayerAttributes
+    getPlayerAttributes,
+    // Attribute Trigger Functions
+    getAttributeTriggers,
+    getAttributeTrigger,
+    createAttributeTrigger,
+    updateAttributeTrigger,
+    deleteAttributeTrigger,
+    toggleAttributeTrigger
 };
 
 /**
@@ -9007,7 +9156,7 @@ async function evaluateSingleCondition(condition, player, context) {
         case 'attribute_check': {
             // Get config from condition
             const config = condition.config || {};
-            const { attributeId, comparison = 'gte', target = 'current', value = 0 } = config;
+            const { attributeId, comparison = 'gte', target = 'current', value = 0, includeItemBonuses = false } = config;
 
             if (!attributeId) {
                 console.error('attribute_check condition missing attributeId');
@@ -9038,25 +9187,36 @@ async function evaluateSingleCondition(condition, player, context) {
             const entityId = `player_${userId}`;
             const points = await getEntityPoints(guildId, entityId, attributeId);
 
+            // Get item bonuses if requested
+            let itemAdd = 0, itemAddMax = 0;
+            if (includeItemBonuses) {
+                const { calculateAttributeModifiers } = await import('./pointsManager.js');
+                const modifiers = await calculateAttributeModifiers(guildId, entityId, attributeId);
+                itemAdd = modifiers.add || 0;
+                itemAddMax = modifiers.addMax || 0;
+            }
+
             // Determine what to compare based on target
             let compareValue;
             if (attrDef.category === 'resource') {
+                const effectiveMax = points.max + itemAddMax;
+                const effectiveCurrent = points.current + itemAdd;
                 switch (target) {
                     case 'current':
-                        compareValue = points.current;
+                        compareValue = effectiveCurrent;
                         break;
                     case 'max':
-                        compareValue = points.max;
+                        compareValue = effectiveMax;
                         break;
                     case 'percent':
-                        compareValue = points.max > 0 ? (points.current / points.max) * 100 : 0;
+                        compareValue = effectiveMax > 0 ? (effectiveCurrent / effectiveMax) * 100 : 0;
                         break;
                     default:
-                        compareValue = points.current;
+                        compareValue = effectiveCurrent;
                 }
             } else {
-                // Stat attribute - just use the value (stored as current)
-                compareValue = points.current || points.value || 0;
+                // Stat attribute - just use the value (stored as current) plus item bonus
+                compareValue = (points.current || points.value || 0) + itemAdd;
             }
 
             // Apply comparison operator
@@ -9067,6 +9227,174 @@ async function evaluateSingleCondition(condition, player, context) {
                 case 'gt': return compareValue > value;
                 case 'lt': return compareValue < value;
                 default: return compareValue >= value;
+            }
+        }
+
+        case 'attribute_compare': {
+            // Compare two attributes: leftAttribute COMPARISON rightAttribute
+            const config = condition.config || {};
+            const { leftAttributeId, leftTarget = 'current', comparison = 'gte', rightAttributeId, rightTarget = 'current', includeItemBonuses = false } = config;
+
+            if (!leftAttributeId || !rightAttributeId) {
+                console.error('attribute_compare condition missing attributeId(s)');
+                return false;
+            }
+
+            const guildId = context.guildId;
+            if (!guildId) {
+                console.error('attribute_compare condition missing guildId in context');
+                return false;
+            }
+
+            const attrDefs = await getAttributeDefinitions(guildId);
+            const leftAttrDef = attrDefs[leftAttributeId];
+            const rightAttrDef = attrDefs[rightAttributeId];
+
+            if (!leftAttrDef || !rightAttrDef) {
+                console.warn(`attribute_compare: attribute not found`);
+                return false;
+            }
+
+            const userId = context.userId || player?.id;
+            if (!userId) return false;
+            const entityId = `player_${userId}`;
+
+            // Helper to get attribute value with optional item bonuses
+            const getAttrValue = async (attrId, attrDef, target) => {
+                const points = await getEntityPoints(guildId, entityId, attrId);
+                let itemAdd = 0, itemAddMax = 0;
+                if (includeItemBonuses) {
+                    const { calculateAttributeModifiers } = await import('./pointsManager.js');
+                    const mods = await calculateAttributeModifiers(guildId, entityId, attrId);
+                    itemAdd = mods.add || 0;
+                    itemAddMax = mods.addMax || 0;
+                }
+
+                if (attrDef.category === 'resource') {
+                    const effectiveMax = points.max + itemAddMax;
+                    const effectiveCurrent = points.current + itemAdd;
+                    switch (target) {
+                        case 'current': return effectiveCurrent;
+                        case 'max': return effectiveMax;
+                        case 'percent': return effectiveMax > 0 ? (effectiveCurrent / effectiveMax) * 100 : 0;
+                        default: return effectiveCurrent;
+                    }
+                } else {
+                    return (points.current || points.value || 0) + itemAdd;
+                }
+            };
+
+            const leftValue = await getAttrValue(leftAttributeId, leftAttrDef, leftTarget);
+            const rightValue = await getAttrValue(rightAttributeId, rightAttrDef, rightTarget);
+
+            console.log(`📊 attribute_compare: ${leftAttributeId}(${leftValue}) ${comparison} ${rightAttributeId}(${rightValue})`);
+
+            switch (comparison) {
+                case 'gte': return leftValue >= rightValue;
+                case 'lte': return leftValue <= rightValue;
+                case 'eq': return leftValue === rightValue;
+                case 'gt': return leftValue > rightValue;
+                case 'lt': return leftValue < rightValue;
+                default: return leftValue >= rightValue;
+            }
+        }
+
+        case 'multi_attribute_check': {
+            // Check multiple attributes with modes: all, any, sum, average
+            const config = condition.config || {};
+            const { mode = 'all', attributes = [], comparison = 'gte', value = 0, includeItemBonuses = false } = config;
+
+            const guildId = context.guildId;
+            if (!guildId) {
+                console.error('multi_attribute_check condition missing guildId');
+                return false;
+            }
+
+            const userId = context.userId || player?.id;
+            if (!userId) return false;
+            const entityId = `player_${userId}`;
+
+            const attrDefs = await getAttributeDefinitions(guildId);
+
+            // Resolve special attribute shortcuts
+            let attrIds = [...attributes];
+            if (attributes.includes('all_stats')) {
+                attrIds = Object.entries(attrDefs)
+                    .filter(([_, def]) => def.category === 'stat')
+                    .map(([id, _]) => id);
+            } else if (attributes.includes('all_resources')) {
+                attrIds = Object.entries(attrDefs)
+                    .filter(([_, def]) => def.category === 'resource')
+                    .map(([id, _]) => id);
+            } else if (attributes.includes('all')) {
+                attrIds = Object.keys(attrDefs);
+            }
+
+            if (attrIds.length === 0) {
+                console.warn('multi_attribute_check: no attributes to check');
+                return false;
+            }
+
+            // Get values for all selected attributes
+            const values = [];
+            for (const attrId of attrIds) {
+                const attrDef = attrDefs[attrId];
+                if (!attrDef) continue;
+
+                const points = await getEntityPoints(guildId, entityId, attrId);
+                let attrValue = attrDef.category === 'resource' ? points.current : (points.current || points.value || 0);
+
+                if (includeItemBonuses) {
+                    const { calculateAttributeModifiers } = await import('./pointsManager.js');
+                    const mods = await calculateAttributeModifiers(guildId, entityId, attrId);
+                    attrValue += mods.add || 0;
+                }
+
+                values.push({ attrId, value: attrValue });
+            }
+
+            // Apply the comparison operator helper
+            const compare = (v, threshold) => {
+                switch (comparison) {
+                    case 'gte': return v >= threshold;
+                    case 'lte': return v <= threshold;
+                    case 'eq': return v === threshold;
+                    case 'gt': return v > threshold;
+                    case 'lt': return v < threshold;
+                    default: return v >= threshold;
+                }
+            };
+
+            // Apply the mode
+            switch (mode) {
+                case 'all':
+                    // Every attribute must pass the comparison
+                    const allPass = values.every(v => compare(v.value, value));
+                    console.log(`📊 multi_attribute_check (all): ${values.map(v => `${v.attrId}=${v.value}`).join(', ')} ${comparison} ${value} = ${allPass}`);
+                    return allPass;
+
+                case 'any':
+                    // At least one attribute must pass
+                    const anyPass = values.some(v => compare(v.value, value));
+                    console.log(`📊 multi_attribute_check (any): ${values.map(v => `${v.attrId}=${v.value}`).join(', ')} ${comparison} ${value} = ${anyPass}`);
+                    return anyPass;
+
+                case 'sum':
+                    // Sum of all attribute values must pass
+                    const sum = values.reduce((acc, v) => acc + v.value, 0);
+                    const sumPass = compare(sum, value);
+                    console.log(`📊 multi_attribute_check (sum): ${sum} ${comparison} ${value} = ${sumPass}`);
+                    return sumPass;
+
+                case 'average':
+                    // Average of all attribute values must pass
+                    const avg = values.length > 0 ? values.reduce((acc, v) => acc + v.value, 0) / values.length : 0;
+                    const avgPass = compare(avg, value);
+                    console.log(`📊 multi_attribute_check (average): ${avg.toFixed(2)} ${comparison} ${value} = ${avgPass}`);
+                    return avgPass;
+
+                default:
+                    return false;
             }
         }
 
@@ -9096,12 +9424,34 @@ function getConditionSummary(condition) {
             return `${condition.operator === 'has' ? 'Has' : 'Does not have'} role ${condition.roleId}`;
         case 'attribute_check': {
             const config = condition.config || {};
-            const { attributeId = '?', comparison = 'gte', target = 'current', value = 0 } = config;
+            const { attributeId = '?', comparison = 'gte', target = 'current', value = 0, includeItemBonuses = false } = config;
             const compSymbols = { gte: '≥', lte: '≤', eq: '=', gt: '>', lt: '<' };
             const compSymbol = compSymbols[comparison] || '≥';
             const targetLabel = target === 'percent' ? '%' : (target === 'max' ? ' max' : '');
             const valueDisplay = target === 'percent' ? `${value}%` : value;
-            return `${attributeId}${targetLabel} ${compSymbol} ${valueDisplay}`;
+            const itemBonus = includeItemBonuses ? ' (+items)' : '';
+            return `${attributeId}${targetLabel} ${compSymbol} ${valueDisplay}${itemBonus}`;
+        }
+        case 'attribute_compare': {
+            const config = condition.config || {};
+            const { leftAttributeId = '?', leftTarget = 'current', comparison = 'gte', rightAttributeId = '?', rightTarget = 'current', includeItemBonuses = false } = config;
+            const compSymbols = { gte: '≥', lte: '≤', eq: '=', gt: '>', lt: '<' };
+            const compSymbol = compSymbols[comparison] || '≥';
+            const leftLabel = leftTarget === 'max' ? ` max` : (leftTarget === 'percent' ? '%' : '');
+            const rightLabel = rightTarget === 'max' ? ` max` : (rightTarget === 'percent' ? '%' : '');
+            const itemBonus = includeItemBonuses ? ' (+items)' : '';
+            return `${leftAttributeId}${leftLabel} ${compSymbol} ${rightAttributeId}${rightLabel}${itemBonus}`;
+        }
+        case 'multi_attribute_check': {
+            const config = condition.config || {};
+            const { mode = 'all', attributes = [], comparison = 'gte', value = 0, includeItemBonuses = false } = config;
+            const compSymbols = { gte: '≥', lte: '≤', eq: '=', gt: '>', lt: '<' };
+            const compSymbol = compSymbols[comparison] || '≥';
+            const modeLabels = { all: 'All', any: 'Any', sum: 'Sum', average: 'Avg' };
+            const modeLabel = modeLabels[mode] || 'All';
+            const attrList = attributes.length > 2 ? `${attributes.length} attrs` : attributes.join(', ');
+            const itemBonus = includeItemBonuses ? ' (+items)' : '';
+            return `${modeLabel}(${attrList}) ${compSymbol} ${value}${itemBonus}`;
         }
         default:
             return 'Unknown condition';

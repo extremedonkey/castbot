@@ -493,15 +493,20 @@ export async function getTimeUntilRegeneration(guildId, entityId, pointType) {
 // Admin function to set points directly
 export async function setEntityPoints(guildId, entityId, pointType, current, max = null, allowOverMax = false) {
     const safariData = await loadSafariContent();
-    
+
     // Ensure structure exists
     if (!safariData[guildId]?.entityPoints?.[entityId]?.[pointType]) {
         await initializeEntityPoints(guildId, entityId, [pointType]);
     }
-    
+
     const points = safariData[guildId].entityPoints[entityId][pointType];
+
+    // Store previous values for trigger detection
+    const previousCurrent = points.current;
+    const previousMax = points.max;
+
     points.current = Math.max(0, current); // Never go below 0
-    
+
     if (max !== null) {
         points.max = Math.max(1, max); // Max must be at least 1
         // Only cap at max if not allowing over-max
@@ -509,13 +514,156 @@ export async function setEntityPoints(guildId, entityId, pointType, current, max
             points.current = Math.min(points.current, points.max);
         }
     }
-    
+
     points.lastRegeneration = Date.now();
-    
+
     safariData[guildId].entityPoints[entityId][pointType] = points;
     await saveSafariContent(safariData);
-    
+
+    // Check and fire attribute change triggers (async, non-blocking)
+    checkAttributeTriggers(guildId, entityId, pointType, previousCurrent, previousMax, points.current, points.max).catch(err => {
+        console.error('Error checking attribute triggers:', err);
+    });
+
     return points;
+}
+
+/**
+ * Check and fire attribute change triggers after a point value changes
+ * @param {string} guildId - Guild ID
+ * @param {string} entityId - Entity ID (player_123)
+ * @param {string} attributeId - Attribute that changed
+ * @param {number} prevCurrent - Previous current value
+ * @param {number} prevMax - Previous max value
+ * @param {number} newCurrent - New current value
+ * @param {number} newMax - New max value
+ */
+async function checkAttributeTriggers(guildId, entityId, attributeId, prevCurrent, prevMax, newCurrent, newMax) {
+    const safariData = await loadSafariContent();
+    const triggers = safariData[guildId]?.attributeTriggers || [];
+
+    if (triggers.length === 0) return;
+
+    // Calculate previous and new percentages
+    const prevPercent = prevMax > 0 ? (prevCurrent / prevMax) * 100 : 0;
+    const newPercent = newMax > 0 ? (newCurrent / newMax) * 100 : 0;
+
+    // Find triggers for this attribute
+    const matchingTriggers = triggers.filter(t =>
+        t.config?.attributeId === attributeId &&
+        t.enabled !== false
+    );
+
+    for (const trigger of matchingTriggers) {
+        const { event, threshold, thresholdType = 'absolute' } = trigger.config || {};
+
+        // Calculate threshold value based on type
+        let thresholdValue = threshold || 0;
+        let prevValue = prevCurrent;
+        let newValue = newCurrent;
+
+        if (thresholdType === 'percent') {
+            prevValue = prevPercent;
+            newValue = newPercent;
+        }
+
+        // Check if trigger condition is met
+        let shouldFire = false;
+
+        switch (event) {
+            case 'crosses_below':
+                // Was above threshold, now at or below
+                shouldFire = prevValue > thresholdValue && newValue <= thresholdValue;
+                break;
+            case 'crosses_above':
+                // Was at or below threshold, now above
+                shouldFire = prevValue <= thresholdValue && newValue > thresholdValue;
+                break;
+            case 'reaches_zero':
+                // Value reaches exactly 0
+                shouldFire = prevCurrent !== 0 && newCurrent === 0;
+                break;
+            case 'reaches_max':
+                // Value reaches max
+                shouldFire = prevCurrent < prevMax && newCurrent >= newMax;
+                break;
+            case 'any_change':
+                // Any modification to this attribute
+                shouldFire = prevCurrent !== newCurrent || prevMax !== newMax;
+                break;
+        }
+
+        if (shouldFire) {
+            console.log(`🎯 Attribute trigger fired: ${trigger.id} (${event}) for ${attributeId} on ${entityId}`);
+            console.log(`   Previous: ${prevCurrent}/${prevMax} (${prevPercent.toFixed(1)}%)`);
+            console.log(`   New: ${newCurrent}/${newMax} (${newPercent.toFixed(1)}%)`);
+
+            // Execute trigger actions
+            try {
+                await executeAttributeTrigger(guildId, entityId, trigger, {
+                    attributeId,
+                    prevCurrent,
+                    prevMax,
+                    newCurrent,
+                    newMax,
+                    prevPercent,
+                    newPercent
+                });
+            } catch (err) {
+                console.error(`Error executing attribute trigger ${trigger.id}:`, err);
+            }
+        }
+    }
+}
+
+/**
+ * Execute actions for a fired attribute trigger
+ * @param {string} guildId - Guild ID
+ * @param {string} entityId - Entity ID
+ * @param {Object} trigger - The trigger that fired
+ * @param {Object} context - Context with attribute values
+ */
+async function executeAttributeTrigger(guildId, entityId, trigger, context) {
+    const { executeButtonActions } = await import('./safariManager.js');
+
+    // Build context for action execution
+    const userId = entityId.startsWith('player_') ? entityId.replace('player_', '') : null;
+    if (!userId) return;
+
+    const executionContext = {
+        guildId,
+        userId,
+        entityId,
+        triggerEvent: trigger.config?.event,
+        attributeId: context.attributeId,
+        attributeContext: context
+    };
+
+    // Execute the trigger's actions
+    if (trigger.actions && trigger.actions.length > 0) {
+        console.log(`   Executing ${trigger.actions.length} action(s) for trigger ${trigger.id}`);
+
+        // Create a minimal "button" object for executeButtonActions
+        const triggerButton = {
+            id: `trigger_${trigger.id}`,
+            name: trigger.name || 'Attribute Trigger',
+            actions: trigger.actions,
+            conditions: [] // Triggers don't have additional conditions
+        };
+
+        // Note: This is a fire-and-forget execution
+        // We can't send Discord responses from here since there's no interaction
+        // Actions should be things like modifying other attributes, giving items, etc.
+        // Display text actions will be logged but won't show to user
+
+        await executeButtonActions(
+            guildId,
+            triggerButton,
+            { id: userId },
+            executionContext,
+            true // conditionsResult is always true for triggers
+        );
+    }
 }
 
 // Add bonus points that can exceed max (for consumable items)

@@ -1488,12 +1488,36 @@ function getConditionSummary(condition, items = {}) {
 
     case 'attribute_check': {
       const config = condition.config || {};
-      const { attributeId = '?', comparison = 'gte', target = 'current', value = 0 } = config;
+      const { attributeId = '?', comparison = 'gte', target = 'current', value = 0, includeItemBonuses = false } = config;
       const compSymbols = { gte: '≥', lte: '≤', eq: '=', gt: '>', lt: '<' };
       const compSymbol = compSymbols[comparison] || '≥';
       const targetLabel = target === 'percent' ? '%' : (target === 'max' ? ' max' : '');
       const valueDisplay = target === 'percent' ? `${value}%` : value;
-      return `📊 ${attributeId}${targetLabel} ${compSymbol} ${valueDisplay}`;
+      const itemBonus = includeItemBonuses ? ' (+items)' : '';
+      return `📊 ${attributeId}${targetLabel} ${compSymbol} ${valueDisplay}${itemBonus}`;
+    }
+
+    case 'attribute_compare': {
+      const config = condition.config || {};
+      const { leftAttributeId = '?', leftTarget = 'current', comparison = 'gte', rightAttributeId = '?', rightTarget = 'current', includeItemBonuses = false } = config;
+      const compSymbols = { gte: '≥', lte: '≤', eq: '=', gt: '>', lt: '<' };
+      const compSymbol = compSymbols[comparison] || '≥';
+      const leftLabel = leftTarget === 'max' ? ' max' : (leftTarget === 'percent' ? '%' : '');
+      const rightLabel = rightTarget === 'max' ? ' max' : (rightTarget === 'percent' ? '%' : '');
+      const itemBonus = includeItemBonuses ? ' (+items)' : '';
+      return `⚔️ ${leftAttributeId}${leftLabel} ${compSymbol} ${rightAttributeId}${rightLabel}${itemBonus}`;
+    }
+
+    case 'multi_attribute_check': {
+      const config = condition.config || {};
+      const { mode = 'all', attributes = [], comparison = 'gte', value = 0, includeItemBonuses = false } = config;
+      const compSymbols = { gte: '≥', lte: '≤', eq: '=', gt: '>', lt: '<' };
+      const compSymbol = compSymbols[comparison] || '≥';
+      const modeLabels = { all: 'All', any: 'Any', sum: 'Sum', average: 'Avg' };
+      const modeLabel = modeLabels[mode] || 'All';
+      const attrDisplay = attributes.length > 2 ? `${attributes.length} attrs` : (attributes.length > 0 ? attributes.join(', ') : '?');
+      const itemBonus = includeItemBonuses ? ' (+items)' : '';
+      return `📈 ${modeLabel}(${attrDisplay}) ${compSymbol} ${value}${itemBonus}`;
     }
 
     default:
@@ -1561,6 +1585,20 @@ export async function showConditionEditor({ res, actionId, conditionIndex, guild
             description: "Check player attribute (HP, Mana, Strength, etc.)",
             emoji: { name: '📊' },
             default: condition.type === 'attribute_check'
+          },
+          {
+            label: 'Compare Attributes',
+            value: 'attribute_compare',
+            description: "Compare two attributes (e.g., Strength > Dexterity)",
+            emoji: { name: '⚔️' },
+            default: condition.type === 'attribute_compare'
+          },
+          {
+            label: 'Multi-Attribute',
+            value: 'multi_attribute_check',
+            description: "Check multiple attributes (all/any >= value, total >= value)",
+            emoji: { name: '📈' },
+            default: condition.type === 'multi_attribute_check'
           }
         ]
       }]
@@ -1584,6 +1622,12 @@ export async function showConditionEditor({ res, actionId, conditionIndex, guild
         break;
       case 'attribute_check':
         components.push(...await createAttributeConditionUI(condition, actionId, conditionIndex, currentPage, guildId));
+        break;
+      case 'attribute_compare':
+        components.push(...await createAttributeCompareUI(condition, actionId, conditionIndex, currentPage, guildId));
+        break;
+      case 'multi_attribute_check':
+        components.push(...await createMultiAttributeCheckUI(condition, actionId, conditionIndex, currentPage, guildId));
         break;
     }
   }
@@ -1976,7 +2020,348 @@ async function createAttributeConditionUI(condition, actionId, conditionIndex, c
         emoji: { name: '🔢' }
       }]
     });
+
+    // Include item bonuses toggle
+    const includeItemBonuses = config.includeItemBonuses || false;
+    components.push({
+      type: 1,
+      components: [{
+        type: 2,
+        custom_id: `condition_attr_itembonuses_${actionId}_${conditionIndex}_${currentPage}`,
+        label: includeItemBonuses ? 'Item Bonuses: ON' : 'Item Bonuses: OFF',
+        style: includeItemBonuses ? 3 : 2, // Green if on, grey if off
+        emoji: { name: includeItemBonuses ? '✅' : '📦' }
+      }]
+    });
   }
+
+  return components;
+}
+
+/**
+ * Create attribute compare condition UI components
+ * Allows comparing two attributes (e.g., Strength > Dexterity)
+ */
+async function createAttributeCompareUI(condition, actionId, conditionIndex, currentPage, guildId) {
+  const { getAttributeDefinitions } = await import('./safariManager.js');
+  const attrDefs = await getAttributeDefinitions(guildId);
+
+  const config = condition.config || {};
+  const { leftAttributeId, leftTarget = 'current', comparison = 'gte', rightAttributeId, rightTarget = 'current', includeItemBonuses = false } = config;
+
+  const leftAttr = leftAttributeId ? attrDefs[leftAttributeId] : null;
+  const rightAttr = rightAttributeId ? attrDefs[rightAttributeId] : null;
+  const isLeftResource = leftAttr?.category === 'resource';
+  const isRightResource = rightAttr?.category === 'resource';
+
+  const components = [
+    {
+      type: 10,
+      content: '### ⚔️ Compare Attributes\nCompare two attributes against each other'
+    }
+  ];
+
+  // Build attribute options
+  const attrOptions = Object.entries(attrDefs).map(([id, def]) => ({
+    label: def.name || id,
+    value: id,
+    description: def.category === 'resource' ? 'Resource' : 'Stat',
+    emoji: def.emoji ? { name: def.emoji } : { name: '📊' }
+  }));
+
+  if (attrOptions.length < 2) {
+    components.push({
+      type: 10,
+      content: '⚠️ **Need at least 2 attributes!**\nGo to Tools → Attributes to create more attributes.'
+    });
+    return components;
+  }
+
+  // Left attribute selector
+  const leftOptions = attrOptions.map(opt => ({
+    ...opt,
+    default: leftAttributeId === opt.value
+  }));
+
+  components.push({
+    type: 10,
+    content: '**Left Attribute:**'
+  });
+
+  components.push({
+    type: 1,
+    components: [{
+      type: 3,
+      custom_id: `condition_attrcomp_left_${actionId}_${conditionIndex}_${currentPage}`,
+      placeholder: 'Select first attribute...',
+      options: leftOptions.slice(0, 25)
+    }]
+  });
+
+  // If left attribute selected and is resource, show target selector
+  if (leftAttr && isLeftResource) {
+    components.push({
+      type: 1,
+      components: [
+        {
+          type: 2,
+          custom_id: `condition_attrcomp_lefttarget_${actionId}_${conditionIndex}_${currentPage}_current`,
+          label: 'Current',
+          style: leftTarget === 'current' ? 1 : 2,
+          emoji: { name: '📉' }
+        },
+        {
+          type: 2,
+          custom_id: `condition_attrcomp_lefttarget_${actionId}_${conditionIndex}_${currentPage}_max`,
+          label: 'Max',
+          style: leftTarget === 'max' ? 1 : 2,
+          emoji: { name: '📈' }
+        },
+        {
+          type: 2,
+          custom_id: `condition_attrcomp_lefttarget_${actionId}_${conditionIndex}_${currentPage}_percent`,
+          label: '%',
+          style: leftTarget === 'percent' ? 1 : 2,
+          emoji: { name: '💯' }
+        }
+      ]
+    });
+  }
+
+  // Comparison operator
+  if (leftAttributeId) {
+    components.push({
+      type: 10,
+      content: '**Comparison:**'
+    });
+
+    components.push({
+      type: 1,
+      components: [
+        { type: 2, custom_id: `condition_attrcomp_comp_${actionId}_${conditionIndex}_${currentPage}_gte`, label: '≥', style: comparison === 'gte' ? 1 : 2 },
+        { type: 2, custom_id: `condition_attrcomp_comp_${actionId}_${conditionIndex}_${currentPage}_lte`, label: '≤', style: comparison === 'lte' ? 1 : 2 },
+        { type: 2, custom_id: `condition_attrcomp_comp_${actionId}_${conditionIndex}_${currentPage}_eq`, label: '=', style: comparison === 'eq' ? 1 : 2 },
+        { type: 2, custom_id: `condition_attrcomp_comp_${actionId}_${conditionIndex}_${currentPage}_gt`, label: '>', style: comparison === 'gt' ? 1 : 2 },
+        { type: 2, custom_id: `condition_attrcomp_comp_${actionId}_${conditionIndex}_${currentPage}_lt`, label: '<', style: comparison === 'lt' ? 1 : 2 }
+      ]
+    });
+
+    // Right attribute selector
+    const rightOptions = attrOptions.map(opt => ({
+      ...opt,
+      default: rightAttributeId === opt.value
+    }));
+
+    components.push({
+      type: 10,
+      content: '**Right Attribute:**'
+    });
+
+    components.push({
+      type: 1,
+      components: [{
+        type: 3,
+        custom_id: `condition_attrcomp_right_${actionId}_${conditionIndex}_${currentPage}`,
+        placeholder: 'Select second attribute...',
+        options: rightOptions.slice(0, 25)
+      }]
+    });
+
+    // If right attribute selected and is resource, show target selector
+    if (rightAttr && isRightResource) {
+      components.push({
+        type: 1,
+        components: [
+          {
+            type: 2,
+            custom_id: `condition_attrcomp_righttarget_${actionId}_${conditionIndex}_${currentPage}_current`,
+            label: 'Current',
+            style: rightTarget === 'current' ? 1 : 2,
+            emoji: { name: '📉' }
+          },
+          {
+            type: 2,
+            custom_id: `condition_attrcomp_righttarget_${actionId}_${conditionIndex}_${currentPage}_max`,
+            label: 'Max',
+            style: rightTarget === 'max' ? 1 : 2,
+            emoji: { name: '📈' }
+          },
+          {
+            type: 2,
+            custom_id: `condition_attrcomp_righttarget_${actionId}_${conditionIndex}_${currentPage}_percent`,
+            label: '%',
+            style: rightTarget === 'percent' ? 1 : 2,
+            emoji: { name: '💯' }
+          }
+        ]
+      });
+    }
+
+    // Preview
+    if (leftAttr && rightAttr) {
+      const compSymbols = { gte: '≥', lte: '≤', eq: '=', gt: '>', lt: '<' };
+      const leftLabel = isLeftResource && leftTarget !== 'current' ? ` ${leftTarget}` : '';
+      const rightLabel = isRightResource && rightTarget !== 'current' ? ` ${rightTarget}` : '';
+      components.push({
+        type: 10,
+        content: `**Preview:** ${leftAttr.emoji || '📊'} ${leftAttr.name}${leftLabel} ${compSymbols[comparison]} ${rightAttr.emoji || '📊'} ${rightAttr.name}${rightLabel}`
+      });
+    }
+
+    // Include item bonuses toggle
+    components.push({
+      type: 1,
+      components: [{
+        type: 2,
+        custom_id: `condition_attrcomp_itembonuses_${actionId}_${conditionIndex}_${currentPage}`,
+        label: includeItemBonuses ? 'Item Bonuses: ON' : 'Item Bonuses: OFF',
+        style: includeItemBonuses ? 3 : 2,
+        emoji: { name: includeItemBonuses ? '✅' : '📦' }
+      }]
+    });
+  }
+
+  return components;
+}
+
+/**
+ * Create multi-attribute check condition UI components
+ * Allows checking multiple attributes (all/any >= value, sum >= value, average >= value)
+ */
+async function createMultiAttributeCheckUI(condition, actionId, conditionIndex, currentPage, guildId) {
+  const { getAttributeDefinitions } = await import('./safariManager.js');
+  const attrDefs = await getAttributeDefinitions(guildId);
+
+  const config = condition.config || {};
+  const { mode = 'all', attributes = [], comparison = 'gte', value = 0, includeItemBonuses = false } = config;
+
+  const components = [
+    {
+      type: 10,
+      content: '### 📈 Multi-Attribute Check\nCheck multiple attributes at once'
+    }
+  ];
+
+  // Build attribute options (include shortcuts)
+  const attrOptions = [
+    { label: '🎯 All Stats', value: 'all_stats', description: 'All stat-type attributes' },
+    { label: '⚡ All Resources', value: 'all_resources', description: 'All resource-type attributes (HP, Mana, etc.)' },
+    { label: '🌐 All Attributes', value: 'all', description: 'Every defined attribute' }
+  ];
+
+  // Add individual attributes
+  Object.entries(attrDefs).forEach(([id, def]) => {
+    attrOptions.push({
+      label: def.name || id,
+      value: id,
+      description: def.category === 'resource' ? 'Resource' : 'Stat',
+      emoji: def.emoji ? { name: def.emoji } : { name: '📊' },
+      default: attributes.includes(id)
+    });
+  });
+
+  if (Object.keys(attrDefs).length === 0) {
+    components.push({
+      type: 10,
+      content: '⚠️ **No attributes defined!**\nGo to Tools → Attributes to create attributes first.'
+    });
+    return components;
+  }
+
+  // Mode selector
+  components.push({
+    type: 10,
+    content: '**Mode:**'
+  });
+
+  components.push({
+    type: 1,
+    components: [
+      { type: 2, custom_id: `condition_multiattr_mode_${actionId}_${conditionIndex}_${currentPage}_all`, label: 'All', style: mode === 'all' ? 1 : 2, emoji: { name: '✅' } },
+      { type: 2, custom_id: `condition_multiattr_mode_${actionId}_${conditionIndex}_${currentPage}_any`, label: 'Any', style: mode === 'any' ? 1 : 2, emoji: { name: '1️⃣' } },
+      { type: 2, custom_id: `condition_multiattr_mode_${actionId}_${conditionIndex}_${currentPage}_sum`, label: 'Sum', style: mode === 'sum' ? 1 : 2, emoji: { name: '➕' } },
+      { type: 2, custom_id: `condition_multiattr_mode_${actionId}_${conditionIndex}_${currentPage}_average`, label: 'Average', style: mode === 'average' ? 1 : 2, emoji: { name: '📊' } }
+    ]
+  });
+
+  // Attribute selector (multi-select)
+  components.push({
+    type: 10,
+    content: '**Attributes to Check:**'
+  });
+
+  // Mark selected attributes
+  const selectOptions = attrOptions.map(opt => ({
+    ...opt,
+    default: attributes.includes(opt.value)
+  }));
+
+  components.push({
+    type: 1,
+    components: [{
+      type: 3,
+      custom_id: `condition_multiattr_attrs_${actionId}_${conditionIndex}_${currentPage}`,
+      placeholder: 'Select attributes...',
+      options: selectOptions.slice(0, 25),
+      min_values: 1,
+      max_values: Math.min(selectOptions.length, 25)
+    }]
+  });
+
+  // Comparison operator
+  components.push({
+    type: 10,
+    content: '**Comparison:**'
+  });
+
+  components.push({
+    type: 1,
+    components: [
+      { type: 2, custom_id: `condition_multiattr_comp_${actionId}_${conditionIndex}_${currentPage}_gte`, label: '≥', style: comparison === 'gte' ? 1 : 2 },
+      { type: 2, custom_id: `condition_multiattr_comp_${actionId}_${conditionIndex}_${currentPage}_lte`, label: '≤', style: comparison === 'lte' ? 1 : 2 },
+      { type: 2, custom_id: `condition_multiattr_comp_${actionId}_${conditionIndex}_${currentPage}_eq`, label: '=', style: comparison === 'eq' ? 1 : 2 },
+      { type: 2, custom_id: `condition_multiattr_comp_${actionId}_${conditionIndex}_${currentPage}_gt`, label: '>', style: comparison === 'gt' ? 1 : 2 },
+      { type: 2, custom_id: `condition_multiattr_comp_${actionId}_${conditionIndex}_${currentPage}_lt`, label: '<', style: comparison === 'lt' ? 1 : 2 }
+    ]
+  });
+
+  // Value display and setter
+  const compSymbols = { gte: '≥', lte: '≤', eq: '=', gt: '>', lt: '<' };
+  const modeLabels = { all: 'All', any: 'Any', sum: 'Sum', average: 'Avg' };
+  const attrDisplay = attributes.length > 0
+    ? (attributes.includes('all_stats') ? 'All Stats' :
+       attributes.includes('all_resources') ? 'All Resources' :
+       attributes.includes('all') ? 'All Attributes' :
+       attributes.length > 2 ? `${attributes.length} attributes` : attributes.join(', '))
+    : 'none selected';
+
+  components.push({
+    type: 10,
+    content: `**Current:** ${modeLabels[mode]}(${attrDisplay}) ${compSymbols[comparison]} **${value}**`
+  });
+
+  components.push({
+    type: 1,
+    components: [{
+      type: 2,
+      custom_id: `condition_multiattr_value_${actionId}_${conditionIndex}_${currentPage}`,
+      label: 'Set Value',
+      style: 1,
+      emoji: { name: '🔢' }
+    }]
+  });
+
+  // Include item bonuses toggle
+  components.push({
+    type: 1,
+    components: [{
+      type: 2,
+      custom_id: `condition_multiattr_itembonuses_${actionId}_${conditionIndex}_${currentPage}`,
+      label: includeItemBonuses ? 'Item Bonuses: ON' : 'Item Bonuses: OFF',
+      style: includeItemBonuses ? 3 : 2,
+      emoji: { name: includeItemBonuses ? '✅' : '📦' }
+    }]
+  });
 
   return components;
 }

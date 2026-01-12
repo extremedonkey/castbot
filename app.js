@@ -3871,6 +3871,20 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'condition_attr_target',
         'condition_attr_comp',
         'condition_attr_value',
+        'condition_attr_itembonuses',
+        // Attribute compare condition patterns
+        'condition_attrcomp_left',
+        'condition_attrcomp_lefttarget',
+        'condition_attrcomp_comp',
+        'condition_attrcomp_right',
+        'condition_attrcomp_righttarget',
+        'condition_attrcomp_itembonuses',
+        // Multi-attribute condition patterns
+        'condition_multiattr_mode',
+        'condition_multiattr_attrs',
+        'condition_multiattr_comp',
+        'condition_multiattr_value',
+        'condition_multiattr_itembonuses',
         'map_add_item_drop',
         'map_item_search',
         'map_item_drop_select',
@@ -22907,9 +22921,39 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                 attributeId: null,
                 comparison: 'gte',
                 target: 'current',
-                value: 0
+                value: 0,
+                includeItemBonuses: false
               };
               // Clean up fields used by other condition types
+              delete condition.operator;
+              delete condition.value;
+              delete condition.itemId;
+              delete condition.roleId;
+              break;
+            case 'attribute_compare':
+              // Initialize config for comparing two attributes
+              condition.config = {
+                leftAttributeId: null,
+                leftTarget: 'current',
+                comparison: 'gte',
+                rightAttributeId: null,
+                rightTarget: 'current',
+                includeItemBonuses: false
+              };
+              delete condition.operator;
+              delete condition.value;
+              delete condition.itemId;
+              delete condition.roleId;
+              break;
+            case 'multi_attribute_check':
+              // Initialize config for multi-attribute checks
+              condition.config = {
+                mode: 'all',
+                attributes: [],
+                comparison: 'gte',
+                value: 0,
+                includeItemBonuses: false
+              };
               delete condition.operator;
               delete condition.value;
               delete condition.itemId;
@@ -24869,6 +24913,359 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             type: InteractionResponseType.MODAL,
             data: modal.toJSON()
           };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('condition_attr_itembonuses_')) {
+      // Toggle include item bonuses for attribute_check
+      return ButtonHandlerFactory.create({
+        id: 'condition_attr_itembonuses',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); customIdParts.shift(); customIdParts.shift(); // condition_attr_itembonuses
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          if (!condition?.config) throw new Error('Condition config not found');
+
+          condition.config.includeItemBonuses = !condition.config.includeItemBonuses;
+          await saveSafariContent(allSafariContent);
+
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage });
+          return;
+        }
+      })(req, res, client);
+
+    // ========== ATTRIBUTE COMPARE CONDITION HANDLERS ==========
+
+    } else if (custom_id.startsWith('condition_attrcomp_left_')) {
+      // Handle left attribute selection for attribute_compare
+      return ButtonHandlerFactory.create({
+        id: 'condition_attrcomp_left',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); customIdParts.shift(); customIdParts.shift(); // condition_attrcomp_left
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+          const selectedAttributeId = context.values[0];
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          if (!condition) throw new Error('Condition not found');
+          if (!condition.config) condition.config = { comparison: 'gte', leftTarget: 'current', rightTarget: 'current' };
+          condition.config.leftAttributeId = selectedAttributeId;
+
+          await saveSafariContent(allSafariContent);
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage });
+          return;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('condition_attrcomp_lefttarget_')) {
+      // Handle left target selection (current/max/percent)
+      return ButtonHandlerFactory.create({
+        id: 'condition_attrcomp_lefttarget',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); customIdParts.shift(); customIdParts.shift(); // condition_attrcomp_lefttarget
+          const targetType = customIdParts.pop();
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          if (!condition?.config) throw new Error('Condition config not found');
+          condition.config.leftTarget = targetType;
+
+          await saveSafariContent(allSafariContent);
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage });
+          return;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('condition_attrcomp_comp_')) {
+      // Handle comparison operator selection
+      return ButtonHandlerFactory.create({
+        id: 'condition_attrcomp_comp',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); customIdParts.shift(); customIdParts.shift(); // condition_attrcomp_comp
+          const compOperator = customIdParts.pop();
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          if (!condition?.config) throw new Error('Condition config not found');
+          condition.config.comparison = compOperator;
+
+          await saveSafariContent(allSafariContent);
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage });
+          return;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('condition_attrcomp_right_')) {
+      // Handle right attribute selection
+      return ButtonHandlerFactory.create({
+        id: 'condition_attrcomp_right',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); customIdParts.shift(); customIdParts.shift(); // condition_attrcomp_right
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+          const selectedAttributeId = context.values[0];
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          if (!condition?.config) throw new Error('Condition config not found');
+          condition.config.rightAttributeId = selectedAttributeId;
+
+          await saveSafariContent(allSafariContent);
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage });
+          return;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('condition_attrcomp_righttarget_')) {
+      // Handle right target selection (current/max/percent)
+      return ButtonHandlerFactory.create({
+        id: 'condition_attrcomp_righttarget',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); customIdParts.shift(); customIdParts.shift(); // condition_attrcomp_righttarget
+          const targetType = customIdParts.pop();
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          if (!condition?.config) throw new Error('Condition config not found');
+          condition.config.rightTarget = targetType;
+
+          await saveSafariContent(allSafariContent);
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage });
+          return;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('condition_attrcomp_itembonuses_')) {
+      // Toggle include item bonuses for attribute_compare
+      return ButtonHandlerFactory.create({
+        id: 'condition_attrcomp_itembonuses',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); customIdParts.shift(); customIdParts.shift(); // condition_attrcomp_itembonuses
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          if (!condition?.config) throw new Error('Condition config not found');
+
+          condition.config.includeItemBonuses = !condition.config.includeItemBonuses;
+          await saveSafariContent(allSafariContent);
+
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage });
+          return;
+        }
+      })(req, res, client);
+
+    // ========== MULTI-ATTRIBUTE CONDITION HANDLERS ==========
+
+    } else if (custom_id.startsWith('condition_multiattr_mode_')) {
+      // Handle mode selection (all/any/sum/average)
+      return ButtonHandlerFactory.create({
+        id: 'condition_multiattr_mode',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); customIdParts.shift(); customIdParts.shift(); // condition_multiattr_mode
+          const modeValue = customIdParts.pop();
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          if (!condition?.config) throw new Error('Condition config not found');
+          condition.config.mode = modeValue;
+
+          await saveSafariContent(allSafariContent);
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage });
+          return;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('condition_multiattr_attrs_')) {
+      // Handle attribute selection (multi-select)
+      return ButtonHandlerFactory.create({
+        id: 'condition_multiattr_attrs',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); customIdParts.shift(); customIdParts.shift(); // condition_multiattr_attrs
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+          const selectedAttributes = context.values; // Array of selected values
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          if (!condition?.config) throw new Error('Condition config not found');
+          condition.config.attributes = selectedAttributes;
+
+          await saveSafariContent(allSafariContent);
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage });
+          return;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('condition_multiattr_comp_')) {
+      // Handle comparison operator selection
+      return ButtonHandlerFactory.create({
+        id: 'condition_multiattr_comp',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); customIdParts.shift(); customIdParts.shift(); // condition_multiattr_comp
+          const compOperator = customIdParts.pop();
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          if (!condition?.config) throw new Error('Condition config not found');
+          condition.config.comparison = compOperator;
+
+          await saveSafariContent(allSafariContent);
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage });
+          return;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('condition_multiattr_value_')) {
+      // Open modal for value input
+      return ButtonHandlerFactory.create({
+        id: 'condition_multiattr_value',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); customIdParts.shift(); customIdParts.shift(); // condition_multiattr_value
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+
+          const { loadSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          const currentValue = condition?.config?.value || 0;
+
+          const modal = new ModalBuilder()
+            .setCustomId(`modal_condition_multiattr_value_${actionId}_${conditionIndex}_${currentPage}`)
+            .setTitle('Set Multi-Attribute Threshold');
+
+          const valueInput = new TextInputBuilder()
+            .setCustomId('multiattr_value')
+            .setLabel('Threshold Value')
+            .setStyle(1) // Short
+            .setRequired(true)
+            .setMaxLength(10)
+            .setValue(String(currentValue))
+            .setPlaceholder('e.g. 50 for sum, 10 for all/any');
+
+          modal.addComponents(new ActionRowBuilder().addComponents(valueInput));
+
+          return {
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('condition_multiattr_itembonuses_')) {
+      // Toggle include item bonuses for multi_attribute_check
+      return ButtonHandlerFactory.create({
+        id: 'condition_multiattr_itembonuses',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); customIdParts.shift(); customIdParts.shift(); // condition_multiattr_itembonuses
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          if (!condition?.config) throw new Error('Condition config not found');
+
+          condition.config.includeItemBonuses = !condition.config.includeItemBonuses;
+          await saveSafariContent(allSafariContent);
+
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage });
+          return;
         }
       })(req, res, client);
 
@@ -33689,6 +34086,67 @@ Are you sure you want to continue?`;
 
       } catch (error) {
         console.error('Error in modal_condition_attr_value handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ An error occurred. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+
+    } else if (custom_id.startsWith('modal_condition_multiattr_value_')) {
+      // Handle multi-attribute condition value modal submission
+      try {
+        // Parse custom_id: modal_condition_multiattr_value_actionId_conditionIndex_currentPage
+        const customIdParts = custom_id.split('_');
+        customIdParts.shift(); // modal
+        customIdParts.shift(); // condition
+        customIdParts.shift(); // multiattr
+        customIdParts.shift(); // value
+        const currentPage = parseInt(customIdParts.pop() || '0');
+        const conditionIndex = parseInt(customIdParts.pop() || '0');
+        const actionId = customIdParts.join('_');
+
+        const valueStr = components[0].components[0].value;
+        const value = parseFloat(valueStr);
+
+        if (isNaN(value) || value < 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Please enter a valid positive number.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Load and update condition
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const allSafariContent = await loadSafariContent();
+        const condition = allSafariContent[req.body.guild_id]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+
+        if (!condition?.config) {
+          throw new Error('Condition config not found');
+        }
+
+        condition.config.value = value;
+
+        await saveSafariContent(allSafariContent);
+        console.log(`✅ SUCCESS: modal_condition_multiattr_value - set value to ${condition.config.value}`);
+
+        // Refresh condition editor
+        const { showConditionEditor } = await import('./customActionUI.js');
+        await showConditionEditor({
+          res,
+          actionId,
+          conditionIndex,
+          guildId: req.body.guild_id,
+          currentPage
+        });
+
+      } catch (error) {
+        console.error('Error in modal_condition_multiattr_value handler:', error);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {

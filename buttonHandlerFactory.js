@@ -2497,6 +2497,97 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'conditional_logic'
   },
+  'condition_attr_itembonuses_*': {
+    label: 'Item Bonuses Toggle',
+    description: 'Toggle inclusion of item equipment bonuses',
+    emoji: '📦',
+    style: 'Secondary',
+    category: 'conditional_logic'
+  },
+
+  // === ATTRIBUTE COMPARE CONDITION BUTTONS ===
+  'condition_attrcomp_left_*': {
+    label: 'Left Attribute',
+    description: 'Select first attribute to compare',
+    emoji: '⚔️',
+    style: 'Secondary',
+    category: 'conditional_logic',
+    type: 'select_menu'
+  },
+  'condition_attrcomp_lefttarget_*': {
+    label: 'Left Target',
+    description: 'Select what to compare for left attribute',
+    emoji: '📉',
+    style: 'Secondary',
+    category: 'conditional_logic'
+  },
+  'condition_attrcomp_comp_*': {
+    label: 'Comparison',
+    description: 'Select comparison operator',
+    emoji: '⚖️',
+    style: 'Secondary',
+    category: 'conditional_logic'
+  },
+  'condition_attrcomp_right_*': {
+    label: 'Right Attribute',
+    description: 'Select second attribute to compare',
+    emoji: '⚔️',
+    style: 'Secondary',
+    category: 'conditional_logic',
+    type: 'select_menu'
+  },
+  'condition_attrcomp_righttarget_*': {
+    label: 'Right Target',
+    description: 'Select what to compare for right attribute',
+    emoji: '📈',
+    style: 'Secondary',
+    category: 'conditional_logic'
+  },
+  'condition_attrcomp_itembonuses_*': {
+    label: 'Item Bonuses Toggle',
+    description: 'Toggle inclusion of item equipment bonuses',
+    emoji: '📦',
+    style: 'Secondary',
+    category: 'conditional_logic'
+  },
+
+  // === MULTI-ATTRIBUTE CONDITION BUTTONS ===
+  'condition_multiattr_mode_*': {
+    label: 'Mode',
+    description: 'Select check mode (all/any/sum/average)',
+    emoji: '📈',
+    style: 'Secondary',
+    category: 'conditional_logic'
+  },
+  'condition_multiattr_attrs_*': {
+    label: 'Select Attributes',
+    description: 'Select which attributes to check',
+    emoji: '📊',
+    style: 'Secondary',
+    category: 'conditional_logic',
+    type: 'select_menu'
+  },
+  'condition_multiattr_comp_*': {
+    label: 'Comparison',
+    description: 'Select comparison operator',
+    emoji: '⚖️',
+    style: 'Secondary',
+    category: 'conditional_logic'
+  },
+  'condition_multiattr_value_*': {
+    label: 'Set Value',
+    description: 'Set threshold value for multi-attribute check',
+    emoji: '🔢',
+    style: 'Primary',
+    category: 'conditional_logic'
+  },
+  'condition_multiattr_itembonuses_*': {
+    label: 'Item Bonuses Toggle',
+    description: 'Toggle inclusion of item equipment bonuses',
+    emoji: '📦',
+    style: 'Secondary',
+    category: 'conditional_logic'
+  },
 
   // === SAFARI SOCIAL FEATURES ===
   'safari_whisper': {
