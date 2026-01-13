@@ -109,15 +109,22 @@ async function ensureStorageFile() {
     }
 }
 
-export async function loadPlayerData(guildId) {
+export async function loadPlayerData(guildId, { forceFresh = false } = {}) {
     const cacheKey = `playerData_${guildId || 'all'}`;
-    
-    // Check cache first
+
+    // Force fresh read from disk - clear all caches first
+    // This is critical for condition evaluation to avoid race conditions
+    if (forceFresh) {
+        console.log('🔄 DEBUG: forceFresh=true, clearing cache for fresh disk read');
+        requestCache.clear();
+    }
+
+    // Check cache first (unless forceFresh cleared it)
     if (requestCache.has(cacheKey)) {
         cacheHits++;
         return requestCache.get(cacheKey);
     }
-    
+
     cacheMisses++;
     const data = await ensureStorageFile();
     

@@ -1519,7 +1519,9 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
             conditionsResult = false;
             console.log(`🎯 Modal input mismatch - forcing conditions to fail for button ${buttonId}`);
         } else if (button.conditions && button.conditions.length > 0) {
-            const playerData = await loadPlayerData();
+            // Use forceFresh to ensure we read latest data from disk
+            // This prevents race conditions when buttons are clicked rapidly
+            const playerData = await loadPlayerData(null, { forceFresh: true });
             conditionsResult = await evaluateConditions(button.conditions, {
                 playerData,
                 guildId,
