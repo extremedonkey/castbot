@@ -4976,13 +4976,21 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Check if this Custom Action contains calculate_results actions that need deferred handling
       const parts = custom_id.split('_');
       const guildId = parts[1];
-      // Use slice(2, -1) to get buttonId parts, dropping the timestamp added by generateCustomId
-      // Format: safari_guildId_buttonId_timestamp
-      const buttonId = parts.slice(2, -1).join('_');
+
+      // Button ID resolution: Try multiple approaches because custom_id format varies
+      // - Player Menu Actions / Crafting Menu: safari_guildId_buttonId (NO timestamp)
+      // - Location buttons with generateCustomId: safari_guildId_buttonId_timestamp
+      // The buttonId itself may contain underscores AND timestamps (e.g., ifrit_1768144591278)
+
+      // First try: full ID (everything after guildId) - for buttons without generateCustomId timestamp
+      const fullButtonId = parts.slice(2).join('_');
+      // Second try: drop last segment as timestamp - for buttons with generateCustomId timestamp
+      const buttonIdWithoutTimestamp = parts.slice(2, -1).join('_');
 
       // ALWAYS use deferred response for Safari Custom Actions to prevent webhook failures
       // This gives us 15 minutes to process instead of 3 seconds
-      console.log(`🚀 DEBUG: Safari Custom Action ${buttonId} - ALWAYS using deferred response to prevent webhook timeout`);
+      console.log(`🚀 DEBUG: Safari Custom Action - ALWAYS using deferred response to prevent webhook timeout`);
+      console.log(`🔍 DEBUG: Will try buttonId: "${fullButtonId}" first, then "${buttonIdWithoutTimestamp}" if not found`);
 
       // Always use deferred pattern for ALL Safari Custom Actions
       return ButtonHandlerFactory.create({
@@ -4990,10 +4998,29 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         deferred: true, // ALWAYS defer Safari buttons to prevent webhook timeout
         handler: async (context) => {
           console.log(`🔍 START (DEFERRED): ${custom_id} - user ${context.userId}`);
-          console.log(`🦁 DEBUG: Safari button interaction - Guild: ${guildId}, Button: ${buttonId}, User: ${context.userId}`);
 
-          // Import safari manager and execute actions
-          const { executeButtonActions } = await import('./safariManager.js');
+          // Import safari manager
+          const { executeButtonActions, getCustomButton } = await import('./safariManager.js');
+
+          // Try to resolve the correct buttonId
+          let resolvedButtonId = fullButtonId;
+
+          // Check if fullButtonId exists
+          const fullButton = await getCustomButton(guildId, fullButtonId);
+          if (!fullButton) {
+            // Try without timestamp
+            const buttonWithoutTimestamp = await getCustomButton(guildId, buttonIdWithoutTimestamp);
+            if (buttonWithoutTimestamp) {
+              resolvedButtonId = buttonIdWithoutTimestamp;
+              console.log(`🔍 DEBUG: Button found with timestamp dropped: ${resolvedButtonId}`);
+            } else {
+              console.log(`🔍 DEBUG: Button not found with either ID approach`);
+            }
+          } else {
+            console.log(`🔍 DEBUG: Button found with full ID: ${resolvedButtonId}`);
+          }
+
+          console.log(`🦁 DEBUG: Safari button interaction - Guild: ${guildId}, Button: ${resolvedButtonId}, User: ${context.userId}`);
 
           // Create proper interaction object with token for follow-up messages
           const interactionData = {
@@ -5006,7 +5033,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             channel: { name: context.channelName } // Pass channel information for logging
           };
 
-          const result = await executeButtonActions(guildId, buttonId, context.userId, interactionData, client);
+          const result = await executeButtonActions(guildId, resolvedButtonId, context.userId, interactionData, client);
 
           console.log(`✅ SUCCESS (DEFERRED): ${custom_id} - completed`);
           return {
