@@ -865,11 +865,13 @@ export async function createPlayerManagementUI(options) {
                       type: 2, // Button
                       custom_id: `safari_${guildId}_${action.actionId}`,
                       label: (action.inventoryConfig?.buttonLabel || action.trigger?.button?.label || action.name || 'Action').slice(0, 80),
-                      style: getButtonStyleNumber(action.inventoryConfig?.buttonStyle || action.trigger?.button?.style || 'Secondary')
+                      // Fall back through: inventoryConfig -> trigger.button -> direct button property -> default
+                      style: getButtonStyleNumber(action.inventoryConfig?.buttonStyle || action.trigger?.button?.style || action.style || 'Secondary')
                     };
 
                     // Add emoji if defined - parse Discord emoji string format if needed
-                    const rawEmoji = action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji;
+                    // Fall back through: inventoryConfig -> trigger.button -> direct button property
+                    const rawEmoji = action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji || action.emoji;
                     if (rawEmoji) {
                       if (typeof rawEmoji === 'string') {
                         // Parse Discord custom emoji format
