@@ -137,6 +137,19 @@ if (totalActions === 0) {
 | `app.js` | Add handlers for `clone_action` selection, `entity_clone_source_list_*`, `clone_action_modal_*` |
 | `buttonHandlerFactory.js` | Register new button patterns in `BUTTON_REGISTRY` |
 
+## Implementation Notes
+
+### Anchor Message Updates
+When cloning from a map location, the system calls `afterAddCoordinate()` from `anchorMessageIntegration.js` to queue an anchor message update. This ensures the cloned button appears immediately in the location's anchor message.
+
+### Array Safety
+The clone handler uses `Array.isArray()` checks before calling `.map()` or `.filter()` on `actions` and `conditions` arrays, since these may be undefined or non-array values in legacy data.
+
+### Button ID Resolution
+Cloned buttons use the standard Safari button resolution pattern:
+1. Try full button ID with timestamp
+2. Fallback to button ID without timestamp (matches cloned action IDs)
+
 ## Related Documentation
 
 - [SafariCustomActions.md](SafariCustomActions.md) - Custom Action system overview
