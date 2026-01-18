@@ -68,6 +68,11 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
   const sortedActions = [...assignedActions, ...unassignedActions]
     .slice(0, totalActions > 10 ? 22 : 24); // Leave room for Create New and Search if needed
   
+  // Debug log for global view
+  if (!coordinate && !mapId) {
+    console.log(`📋 Building global action list (${sortedActions.length} actions)`);
+  }
+
   for (const { actionId, action } of sortedActions) {
     // Create meaningful description showing action type and status
     let description;
@@ -80,22 +85,39 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
       if (action.coordinates && action.coordinates.length > 0) {
         description += ` • Locations: ${action.coordinates.slice(0, 3).join(', ')}${action.coordinates.length > 3 ? '...' : ''}`;
       }
+      // Add menu visibility info
+      const visibility = action.menuVisibility || (action.showInInventory ? 'player_menu' : 'none');
+      if (visibility === 'player_menu') {
+        description += ' • 📋 Menu';
+      } else if (visibility === 'crafting_menu') {
+        description += ' • 🛠️ Crafting';
+      }
     }
-    
+
     // Add action count info
     const actionCount = action.actions?.length || 0;
     if (actionCount > 0) {
       description += ` • ${actionCount} action${actionCount !== 1 ? 's' : ''}`;
     }
-    
+
     const option = {
       label: (action.name || action.label || 'Unnamed Action').substring(0, 100),
       value: actionId,
       description: description.substring(0, 100) // Discord limit
       // Removed default value - don't auto-select assigned actions for better UX
     };
-    
+
     selectMenu.addOptions(option);
+  }
+
+  // Debug: Log sample options in global view
+  if (!coordinate && !mapId && sortedActions.length > 0) {
+    const sampleActions = sortedActions.slice(0, 3);
+    sampleActions.forEach(({ actionId, action }) => {
+      const coords = action.coordinates?.length || 0;
+      const vis = action.menuVisibility || (action.showInInventory ? 'player_menu' : 'none');
+      console.log(`  📝 ${action.name}: coords=${coords}, vis=${vis}`);
+    });
   }
   
   const selectRow = new ActionRowBuilder().addComponents(selectMenu);
