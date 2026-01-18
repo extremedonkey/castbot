@@ -2031,6 +2031,14 @@ export const BUTTON_REGISTRY = {
     category: 'safari_management',
     type: 'select_menu'
   },
+  'entity_clone_source_list_*': {
+    label: 'Clone Source List',
+    description: 'Select an action to clone/duplicate',
+    emoji: '🔄',
+    style: 'Primary',
+    category: 'safari_management',
+    type: 'select_menu'
+  },
   'entity_custom_action_create': {
     label: 'Create New Action',
     description: 'Create a new custom action',

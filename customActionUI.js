@@ -37,7 +37,7 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
     value: "create_new",
     description: "Design a new interactive action"
   });
-  
+
   // Add search option if many actions
   const totalActions = Object.keys(allActions).length;
   if (totalActions > 10) {
@@ -47,14 +47,23 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
       description: "Search through all custom actions"
     });
   }
-  
+
+  // Add clone option if there are actions to clone (position after Search)
+  if (totalActions > 0) {
+    selectMenu.addOptions({
+      label: "🔄 Clone Action",
+      value: "clone_action",
+      description: "Duplicate an existing action"
+    });
+  }
+
   // Add existing actions in prioritized order
   const allActionEntries = Object.entries(allActions).map(([actionId, action]) => ({ actionId, action }));
-  
+
   // Step 1: Get actions assigned to this coordinate (if coordinate-specific view)
-  const assignedActions = coordinate && mapId ? 
+  const assignedActions = coordinate && mapId ?
     allActionEntries.filter(({ actionId }) => assignedActionIds.includes(actionId)) : [];
-  
+
   // Step 2: Get unassigned actions, sorted by reverse creation order (newest first)
   const unassignedActions = allActionEntries
     .filter(({ actionId }) => !assignedActionIds.includes(actionId))
@@ -63,10 +72,14 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
       const bLastModified = b.action.metadata?.lastModified || 0;
       return bLastModified - aLastModified; // Descending order (newest first)
     });
-  
+
   // Step 3: Combine in required order: assigned actions first, then unassigned
+  // Option count: Create(1) + Search(if>10) + Clone(if>0) + actions
+  // Max 24 options total, so action slots = 24 - fixedOptions
+  const fixedOptions = 1 + (totalActions > 10 ? 1 : 0) + (totalActions > 0 ? 1 : 0);
+  const maxActionSlots = 24 - fixedOptions;
   const sortedActions = [...assignedActions, ...unassignedActions]
-    .slice(0, totalActions > 10 ? 22 : 24); // Leave room for Create New and Search if needed
+    .slice(0, maxActionSlots);
   
   // Debug log for global view
   if (!coordinate && !mapId) {
@@ -149,6 +162,130 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
   // Return exactly like stores handler
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2
+    components: [container]
+  };
+}
+
+/**
+ * Create the clone source selection UI - shows only existing actions for cloning
+ * @param {Object} params
+ * @param {string} params.guildId - Guild ID
+ * @param {string} [params.coordinate] - Map coordinate (optional) - where the clone will be assigned
+ * @param {string} [params.mapId] - Map ID (optional)
+ * @returns {Object} Discord Components V2 UI
+ */
+export async function createCloneSourceSelectionUI({ guildId, coordinate = null, mapId = null }) {
+  const { StringSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
+
+  const allSafariContent = await loadSafariContent();
+  const guildData = allSafariContent[guildId] || {};
+  const allActions = guildData.buttons || {};
+  const totalActions = Object.keys(allActions).length;
+
+  if (totalActions === 0) {
+    // No actions to clone - shouldn't happen but handle gracefully
+    return {
+      flags: (1 << 15),
+      components: [{
+        type: 17,
+        accent_color: 0xe74c3c,
+        components: [{
+          type: 10,
+          content: `## ❌ No Actions to Clone\n\nCreate an action first before cloning.`
+        }]
+      }]
+    };
+  }
+
+  // Build select menu for source selection
+  const customId = coordinate && mapId
+    ? `entity_clone_source_list_${coordinate}_${mapId}`
+    : 'entity_clone_source_list_global';
+
+  const selectMenu = new StringSelectMenuBuilder()
+    .setCustomId(customId)
+    .setPlaceholder("Select action to clone...")
+    .setMinValues(1)
+    .setMaxValues(1);
+
+  // Add back option first
+  selectMenu.addOptions({
+    label: "🔙 Back to all",
+    value: "back_to_all",
+    description: "Return to main action list"
+  });
+
+  // Add all actions sorted by lastModified (newest first)
+  const sortedActions = Object.entries(allActions)
+    .map(([actionId, action]) => ({ actionId, action }))
+    .sort((a, b) => {
+      const aLastModified = a.action.metadata?.lastModified || 0;
+      const bLastModified = b.action.metadata?.lastModified || 0;
+      return bLastModified - aLastModified;
+    })
+    .slice(0, 23); // Leave room for Back option (24 max)
+
+  for (const { actionId, action } of sortedActions) {
+    // Build description showing what will be cloned
+    let description = '';
+
+    // Show action count
+    const actionCount = action.actions?.length || 0;
+    if (actionCount > 0) {
+      description += `${actionCount} action${actionCount !== 1 ? 's' : ''}`;
+    }
+
+    // Show condition count
+    const conditionCount = action.conditions?.length || 0;
+    if (conditionCount > 0) {
+      description += description ? ' • ' : '';
+      description += `${conditionCount} condition${conditionCount !== 1 ? 's' : ''}`;
+    }
+
+    // Show current locations
+    const coordCount = action.coordinates?.length || 0;
+    if (coordCount > 0) {
+      description += description ? ' • ' : '';
+      description += `📍 ${action.coordinates.slice(0, 2).join(', ')}${coordCount > 2 ? '...' : ''}`;
+    }
+
+    if (!description) {
+      description = 'Empty action';
+    }
+
+    selectMenu.addOptions({
+      label: (action.name || action.label || 'Unnamed Action').substring(0, 100),
+      value: actionId,
+      description: description.substring(0, 100)
+    });
+  }
+
+  const selectRow = new ActionRowBuilder().addComponents(selectMenu);
+
+  const container = {
+    type: 17,
+    accent_color: 0x9b59b6, // Purple for clone
+    components: [
+      {
+        type: 10,
+        content: coordinate && mapId
+          ? `## 🔄 Clone Action to ${coordinate}\n\nSelect the action you want to duplicate. The clone will be assigned to ${coordinate}.`
+          : `## 🔄 Clone Action\n\nSelect the action you want to duplicate. The clone will not be assigned to any location.`
+      },
+      { type: 14 },
+      selectRow.toJSON()
+    ]
+  };
+
+  const { countComponents } = await import('./utils.js');
+  countComponents([container], {
+    enableLogging: true,
+    verbosity: "summary",
+    label: "Clone Source Selection UI"
+  });
+
+  return {
+    flags: (1 << 15),
     components: [container]
   };
 }

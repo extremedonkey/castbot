@@ -3796,6 +3796,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'season_delete_cancel',
         'safari_move',
         'entity_custom_action_list',
+        'entity_clone_source_list',
         'entity_custom_action_edit_info',
         'entity_action_trigger',
         'entity_action_conditions',
@@ -24190,6 +24191,17 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               type: InteractionResponseType.MODAL,
               data: modal.toJSON()
             };
+          } else if (selectedValue === 'clone_action') {
+            // Show clone source selection UI
+            const { createCloneSourceSelectionUI } = await import('./customActionUI.js');
+            const ui = await createCloneSourceSelectionUI({
+              guildId: context.guildId,
+              coordinate,
+              mapId
+            });
+
+            console.log(`✅ SUCCESS: entity_custom_action_list - showing clone source selection`);
+            return ui;
           } else {
             // Edit existing action
             const { createCustomActionEditorUI } = await import('./customActionUI.js');
@@ -24204,7 +24216,110 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         }
       })(req, res, client);
-      
+
+    } else if (custom_id.startsWith('entity_clone_source_list_') || custom_id === 'entity_clone_source_list_global') {
+      // Handle clone source selection from dropdown
+      return ButtonHandlerFactory.create({
+        id: 'entity_clone_source_list',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔄 START: entity_clone_source_list - user ${context.userId}`);
+
+          const selectedValue = context.values[0];
+
+          // Parse coordinate and mapId if present
+          let coordinate = null;
+          let mapId = null;
+          if (context.customId !== 'entity_clone_source_list_global') {
+            // Parse: entity_clone_source_list_{coordinate}_{mapId}
+            const parts = context.customId.replace('entity_clone_source_list_', '').split('_');
+            coordinate = parts[0];
+            mapId = parts[1];
+          }
+
+          if (selectedValue === 'back_to_all') {
+            // Return to main action list
+            const { createCustomActionSelectionUI } = await import('./customActionUI.js');
+            const ui = await createCustomActionSelectionUI({
+              guildId: context.guildId,
+              coordinate,
+              mapId
+            });
+
+            console.log(`✅ SUCCESS: entity_clone_source_list - returning to main list`);
+            return ui;
+          }
+
+          // User selected an action to clone - show clone modal
+          const { loadSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const sourceAction = allSafariContent[context.guildId]?.buttons?.[selectedValue];
+
+          if (!sourceAction) {
+            return {
+              content: '❌ Source action not found.',
+              ephemeral: true
+            };
+          }
+
+          // Build modal with pre-filled values from source action
+          const modalCustomId = coordinate
+            ? `clone_action_modal_${selectedValue}_${coordinate}`
+            : `clone_action_modal_${selectedValue}_global`;
+
+          const modal = new ModalBuilder()
+            .setCustomId(modalCustomId)
+            .setTitle('Clone Action');
+
+          // Pre-fill name with "(Copy)" suffix
+          const nameInput = new TextInputBuilder()
+            .setCustomId('clone_name')
+            .setLabel('Action Name')
+            .setPlaceholder('Enter name for the cloned action')
+            .setStyle(TextInputStyle.Short)
+            .setValue(`${sourceAction.name || 'Unnamed'} (Copy)`.substring(0, 80))
+            .setRequired(true)
+            .setMaxLength(80);
+
+          // Pre-fill emoji from source
+          const sourceEmoji = typeof sourceAction.emoji === 'string'
+            ? sourceAction.emoji
+            : (sourceAction.emoji?.name || sourceAction.trigger?.button?.emoji || '');
+          const emojiInput = new TextInputBuilder()
+            .setCustomId('clone_emoji')
+            .setLabel('Action Emoji (Optional)')
+            .setPlaceholder('e.g., 🗺️')
+            .setStyle(TextInputStyle.Short)
+            .setValue(sourceEmoji)
+            .setRequired(false)
+            .setMaxLength(100);
+
+          // Pre-fill description from source
+          const descInput = new TextInputBuilder()
+            .setCustomId('clone_description')
+            .setLabel('Action Description')
+            .setPlaceholder('Description for the cloned action')
+            .setStyle(TextInputStyle.Paragraph)
+            .setValue(sourceAction.description || '')
+            .setRequired(false)
+            .setMaxLength(4000);
+
+          modal.addComponents(
+            new ActionRowBuilder().addComponents(nameInput),
+            new ActionRowBuilder().addComponents(emojiInput),
+            new ActionRowBuilder().addComponents(descInput)
+          );
+
+          console.log(`✅ SUCCESS: entity_clone_source_list - showing clone modal for ${selectedValue}`);
+          return {
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          };
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('entity_custom_action_edit_') && !custom_id.includes('_info_')) {
       // Handle back to action editor button
       return ButtonHandlerFactory.create({
@@ -39371,6 +39486,170 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error creating custom action.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('clone_action_modal_')) {
+      // Handle clone action modal submission
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+
+        console.log(`🔄 DEBUG: Clone action modal submit - User: ${userId}`);
+
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+
+        // Parse custom_id: clone_action_modal_{sourceActionId}_{coordinate} or clone_action_modal_{sourceActionId}_global
+        const withoutPrefix = custom_id.replace('clone_action_modal_', '');
+        const lastUnderscoreIndex = withoutPrefix.lastIndexOf('_');
+        const sourceActionId = withoutPrefix.substring(0, lastUnderscoreIndex);
+        const coordinateOrGlobal = withoutPrefix.substring(lastUnderscoreIndex + 1);
+        const coordinate = coordinateOrGlobal === 'global' ? null : coordinateOrGlobal;
+
+        console.log(`🔄 DEBUG: Cloning from ${sourceActionId}, target coordinate: ${coordinate || 'global'}`);
+
+        // Parse modal fields
+        const cloneName = components[0].components[0].value?.trim();
+        const cloneEmojiInput = components[1].components[0].value?.trim() || null;
+        const cloneDesc = components[2].components[0].value?.trim() || null;
+
+        if (!cloneName) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Action name is required.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Validate emoji if provided
+        let cloneEmoji = null;
+        if (cloneEmojiInput) {
+          const { createSafeEmoji } = await import('./safariButtonHelper.js');
+          const validatedEmoji = await createSafeEmoji(cloneEmojiInput);
+          if (validatedEmoji) {
+            cloneEmoji = cloneEmojiInput;
+            console.log(`✅ Validated emoji input: "${cloneEmojiInput}"`);
+          } else {
+            console.warn(`⚠️ Invalid emoji input: "${cloneEmojiInput}", will be ignored`);
+          }
+        }
+
+        // Load source action
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const allSafariContent = await loadSafariContent();
+        const sourceAction = allSafariContent[guildId]?.buttons?.[sourceActionId];
+
+        if (!sourceAction) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Source action not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Deep clone helper function
+        const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
+
+        // Clone actions with claimedBy arrays reset
+        const clonedActions = sourceAction.actions ? deepClone(sourceAction.actions).map(action => {
+          // Reset claimedBy arrays in limit configs
+          if (action.config?.limit?.claimedBy) {
+            action.config.limit.claimedBy = [];
+          }
+          return action;
+        }) : [];
+
+        // Clone conditions, removing AT_LOCATION conditions (legacy/location-specific)
+        const clonedConditions = sourceAction.conditions
+          ? deepClone(sourceAction.conditions).filter(cond => cond.type !== 'AT_LOCATION')
+          : [];
+
+        // Clone trigger
+        const clonedTrigger = sourceAction.trigger ? deepClone(sourceAction.trigger) : { type: 'button' };
+
+        // Generate new unique ID
+        const timestamp = Date.now();
+        const newActionId = `${cloneName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')}_${timestamp}`;
+
+        // Build the cloned action
+        const clonedAction = {
+          id: newActionId,
+          name: cloneName,
+          label: cloneName,
+          description: cloneDesc || '',
+          emoji: cloneEmoji,
+          style: sourceAction.style || 1,
+          actions: clonedActions,
+          conditions: clonedConditions,
+          trigger: clonedTrigger,
+          coordinates: coordinate ? [coordinate] : [],
+          menuVisibility: 'none', // Reset to hidden
+          metadata: {
+            createdBy: userId,
+            createdAt: timestamp,
+            lastModified: timestamp,
+            usageCount: 0,
+            clonedFrom: sourceActionId // Track clone source
+          }
+        };
+
+        // Save the cloned action
+        if (!allSafariContent[guildId]) {
+          allSafariContent[guildId] = { buttons: {} };
+        }
+        if (!allSafariContent[guildId].buttons) {
+          allSafariContent[guildId].buttons = {};
+        }
+        allSafariContent[guildId].buttons[newActionId] = clonedAction;
+
+        // If coordinate provided, also add to map coordinate buttons array
+        if (coordinate && allSafariContent[guildId].maps) {
+          // Find the map that has this coordinate
+          for (const [mapId, map] of Object.entries(allSafariContent[guildId].maps)) {
+            if (map.coordinates && map.coordinates[coordinate]) {
+              if (!map.coordinates[coordinate].buttons) {
+                map.coordinates[coordinate].buttons = [];
+              }
+              if (!map.coordinates[coordinate].buttons.includes(newActionId)) {
+                map.coordinates[coordinate].buttons.push(newActionId);
+              }
+              console.log(`🔄 DEBUG: Added cloned action to ${coordinate} in map ${mapId}`);
+              break;
+            }
+          }
+        }
+
+        await saveSafariContent(allSafariContent);
+
+        console.log(`✅ DEBUG: Created cloned action ${newActionId} from ${sourceActionId}`);
+
+        // Show Custom Action Editor for the new cloned action
+        const { createCustomActionEditorUI } = await import('./customActionUI.js');
+        const ui = await createCustomActionEditorUI({
+          guildId,
+          actionId: newActionId,
+          coordinate
+        });
+
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            ...ui,
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+          }
+        });
+
+      } catch (error) {
+        console.error('Error in clone_action_modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Error cloning action: ${error.message}`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
