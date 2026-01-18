@@ -39556,7 +39556,7 @@ Are you sure you want to continue?`;
         const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
 
         // Clone actions with claimedBy arrays reset
-        const clonedActions = sourceAction.actions ? deepClone(sourceAction.actions).map(action => {
+        const clonedActions = Array.isArray(sourceAction.actions) ? deepClone(sourceAction.actions).map(action => {
           // Reset claimedBy arrays in limit configs
           if (action.config?.limit?.claimedBy) {
             action.config.limit.claimedBy = [];
@@ -39565,7 +39565,7 @@ Are you sure you want to continue?`;
         }) : [];
 
         // Clone conditions, removing AT_LOCATION conditions (legacy/location-specific)
-        const clonedConditions = sourceAction.conditions
+        const clonedConditions = Array.isArray(sourceAction.conditions)
           ? deepClone(sourceAction.conditions).filter(cond => cond.type !== 'AT_LOCATION')
           : [];
 
