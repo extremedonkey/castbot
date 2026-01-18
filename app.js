@@ -39628,6 +39628,17 @@ Are you sure you want to continue?`;
 
         console.log(`✅ DEBUG: Created cloned action ${newActionId} from ${sourceActionId}`);
 
+        // Queue anchor message update if coordinate was provided
+        if (coordinate) {
+          try {
+            const { afterAddCoordinate } = await import('./anchorMessageIntegration.js');
+            await afterAddCoordinate(guildId, newActionId, coordinate);
+            console.log(`📍 DEBUG: clone_action_modal - queued anchor update for ${coordinate}`);
+          } catch (error) {
+            console.error('Error queueing anchor update:', error);
+          }
+        }
+
         // Show Custom Action Editor for the new cloned action
         const { createCustomActionEditorUI } = await import('./customActionUI.js');
         const ui = await createCustomActionEditorUI({
