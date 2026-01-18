@@ -11513,14 +11513,14 @@
     "serverName": "Servivorg S14 - FINAL FANTASY",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/189c3570ea34b3fbf3ee7b4d5989d32e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 575,
+    "memberCount": 573,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1768235293198,
+    "lastUpdated": 1768730025646,
     "ownerInfo": {
       "username": "serviver",
       "globalName": "Serviver",
@@ -11720,6 +11720,10 @@
           "inventory": {
             "super_item_830267": {
               "quantity": 2,
+              "numAttacksAvailable": 0
+            },
+            "moi_item_439110": {
+              "quantity": 1,
               "numAttacksAvailable": 0
             }
           },
