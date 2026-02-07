@@ -108,6 +108,35 @@ consumable: {
 - **At Max**: No regeneration needed
 - **Above Max**: No regeneration occurs - stamina stays at bonus level until used
 
+### Consumable Items Do NOT Reset Regen Timer
+
+**Critical design decision** (February 2026): Using a consumable stamina item does **not** restart the regeneration cooldown. This means:
+
+- Consumable items are purely additive — they give bonus stamina without any penalty
+- The regen timer continues counting from the last time the player actually **moved** (used a natural charge)
+- Moving on bonus stamina (when all charges are on cooldown) also does not reset the regen timer
+
+**Why this matters with long cooldowns (e.g. 24 hours):**
+If a player's regen is 5 minutes away and they use a consumable, they still get their natural regen in 5 minutes. Without this design, using a consumable would restart the 24-hour timer — severely punishing the player.
+
+**Implementation details** (`pointsManager.js`):
+- `addBonusPoints()` modifies `current` only — does not touch `lastUse`, `lastRegeneration`, or `charges`
+- `usePoints()` only updates `lastUse` when an actual charge is consumed (`chargesUsed > 0`), not when spending bonus stamina
+- `getTimeUntilRegeneration()` uses individual charge timestamps for Phase 2 players, not `lastUse`
+
+### Phase 1 vs Phase 2 Regeneration
+
+**Phase 1** (players without permanent stamina items):
+- Uses a single `lastUse` timestamp
+- Regen check: `Date.now() - lastUse >= interval` AND `current < max`
+- When timer fires: stamina resets to `effectiveMax` (full reset)
+
+**Phase 2** (players with permanent stamina items like Horse):
+- Each stamina charge has its own independent cooldown timer
+- Data: `charges: [null, 1770491700356]` — `null` = available, timestamp = on cooldown
+- Each charge regenerates when `Date.now() - chargeTimestamp >= interval`
+- Timer display shows time until the **earliest** charge regenerates
+
 ### Example Scenarios
 
 **Scenario 1: Basic Use**
@@ -115,6 +144,7 @@ consumable: {
 - Uses Energy Potion (+2 stamina)
 - Result: 2/1 stamina
 - Can now move twice before needing to rest
+- Regen timer **unchanged** — continues counting from last move
 
 **Scenario 2: Stacking**
 - Player has 1/1 stamina
@@ -125,8 +155,15 @@ consumable: {
 **Scenario 3: Regeneration**
 - Player has 2/1 stamina (over max)
 - Uses 2 stamina for movement → 0/1 stamina
-- After 3 minutes (or configured time), regenerates to 1/1
+- After configured time, regenerates to 1/1
 - Does NOT regenerate back to 2/1
+
+**Scenario 4: Consumable + Regen Timer (Phase 2 with Horse)**
+- Player has 0/2 stamina, both charges on cooldown, charge 1 regens in 5 min
+- Uses Energy Potion (+1) → 1/2 stamina, regen timer **still shows 5 min**
+- Moves using bonus stamina → 0/2, regen timer **still ~5 min** (no charge consumed)
+- 5 min later: charge 1 regenerates → 1/2 stamina
+- Later: charge 2 regenerates independently → 2/2 stamina
 
 ## Configuration
 

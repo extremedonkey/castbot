@@ -169,7 +169,27 @@ function getDefaultPointsConfig() {
 - Allows partial recovery
 - Good for HP systems
 
-### 3. Future Regeneration Types
+### 3. Individual Charge System (Phase 2 - LIVE)
+
+Activated automatically when a player has permanent stamina items (e.g. Horse). Each stamina point has its own independent cooldown timer.
+
+```javascript
+// Data structure
+"stamina": {
+  "current": 1,
+  "max": 2,
+  "charges": [null, 1770491700356]  // null = available, timestamp = on cooldown
+}
+```
+
+- Each charge regenerates independently: `Date.now() - chargeTimestamp >= interval`
+- Timer display shows time until the **earliest** charge regenerates
+- Charges only increase `current`, never decrease it (preserves consumable bonus stamina)
+- `usePoints()` marks individual charges with timestamps when consumed
+
+**Key behaviour**: Only actual charge consumption resets that charge's timer. Consumable items (`addBonusPoints()`) add to `current` without touching charge timers or `lastUse`, so bonus stamina never disrupts natural regeneration.
+
+### 4. Future Regeneration Types
 - **Percentage-based**: Recover % of max
 - **Conditional**: Only regenerate under certain conditions
 - **Scheduled**: Reset at specific server times
