@@ -414,8 +414,8 @@ export async function usePoints(guildId, entityId, pointType, amount) {
     const now = Date.now();
 
     // Phase 2: Track individual charges if available
+    let chargesUsed = 0;
     if (points.charges) {
-        let chargesUsed = 0;
         for (let i = 0; i < points.charges.length && chargesUsed < amount; i++) {
             if (!points.charges[i]) {  // Charge is available
                 points.charges[i] = now;  // Mark charge as used with timestamp
@@ -427,7 +427,10 @@ export async function usePoints(guildId, entityId, pointType, amount) {
 
     // Deduct points and update last use time
     points.current -= amount;
-    points.lastUse = now;  // Keep for backward compatibility
+    // Only update lastUse if an actual charge was consumed (not bonus stamina from consumables)
+    if (!points.charges || chargesUsed > 0) {
+        points.lastUse = now;
+    }
 
     safariData[guildId].entityPoints[entityId][pointType] = points;
     await saveSafariContent(safariData);
@@ -471,7 +474,20 @@ export async function getTimeUntilRegeneration(guildId, entityId, pointType) {
     const now = Date.now();
     let nextRegenTime;
 
-    if (config.regeneration.type === 'full_reset') {
+    // Phase 2: Use earliest charge timestamp (most accurate for individual cooldowns)
+    if (pointData.charges) {
+        let earliestChargeTime = Infinity;
+        for (const charge of pointData.charges) {
+            if (charge && charge < earliestChargeTime) {
+                earliestChargeTime = charge;
+            }
+        }
+        if (earliestChargeTime !== Infinity) {
+            nextRegenTime = earliestChargeTime + config.regeneration.interval;
+        } else {
+            return "Ready!";
+        }
+    } else if (config.regeneration.type === 'full_reset') {
         nextRegenTime = pointData.lastUse + config.regeneration.interval;
     } else {
         nextRegenTime = pointData.lastRegeneration + config.regeneration.interval;

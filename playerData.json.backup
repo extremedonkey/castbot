@@ -661,14 +661,14 @@
     "serverName": "CastBot",
     "icon": "https://cdn.discordapp.com/icons/1331657596087566398/e2bd30d98992c902b50e047bf284ef64.webp",
     "ownerId": "391415444084490240",
-    "memberCount": 35,
+    "memberCount": 39,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1737562311909,
-    "lastUpdated": 1767959984071,
+    "lastUpdated": 1770491514711,
     "players": {
       "233762709932474370": {
         "emojiCode": "<:Geo:1396856830281388144>",
@@ -817,7 +817,7 @@
           "storeHistory": [],
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "E2",
+              "currentLocation": "G1",
               "exploredCoordinates": [
                 "C2",
                 "A1",
@@ -828,7 +828,10 @@
                 "E2",
                 "E3",
                 "F3",
-                "E1"
+                "E1",
+                "F2",
+                "G2",
+                "G1"
               ],
               "itemsFound": [],
               "movementHistory": [
@@ -901,6 +904,21 @@
                   "from": "E1",
                   "to": "E2",
                   "timestamp": "2025-12-01T15:12:43.818Z"
+                },
+                {
+                  "from": "E2",
+                  "to": "F2",
+                  "timestamp": "2026-02-07T19:14:51.184Z"
+                },
+                {
+                  "from": "F2",
+                  "to": "G2",
+                  "timestamp": "2026-02-07T19:15:00.373Z"
+                },
+                {
+                  "from": "G2",
+                  "to": "G1",
+                  "timestamp": "2026-02-07T19:18:43.638Z"
                 }
               ]
             }
@@ -3649,14 +3667,14 @@
     "serverName": "EpochORG S6: Buccaneers",
     "icon": "https://cdn.discordapp.com/icons/1266913708123361303/c6692f2c83b69e4de2cce0c5806380ac.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 65,
+    "memberCount": 64,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1722126166135,
-    "lastUpdated": 1767959982981,
+    "lastUpdated": 1770491513525,
     "players": {},
     "tribes": {
       "1267501924639571988": {
@@ -3785,14 +3803,14 @@
     "serverName": "EpochORG S5: Incan Empire",
     "icon": "https://cdn.discordapp.com/icons/1240325979214188615/156095a9edb1de2f24dfac78d2904a04.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 62,
+    "memberCount": 59,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1715787157587,
-    "lastUpdated": 1767959982629,
+    "lastUpdated": 1770491513059,
     "players": {},
     "tribes": {
       "1241383870260056095": {
@@ -4673,14 +4691,14 @@
     "serverName": "EmeraldORG: Fire Emblem Three Houses",
     "icon": "https://cdn.discordapp.com/icons/1385042963310055515/4bea7eb65723bab308c21c06332836be.webp",
     "ownerId": "676262975132139522",
-    "memberCount": 101,
+    "memberCount": 98,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1750290375307,
-    "lastUpdated": 1768324732627,
+    "lastUpdated": 1770491516146,
     "ownerInfo": {
       "username": "deadlybelle",
       "globalName": "Belle",
@@ -6263,14 +6281,14 @@
     "serverName": "EpochORG S4: Ancient Egypt",
     "icon": "https://cdn.discordapp.com/icons/1209015985798127696/fab803057622fa548002ca6920f860ac.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 75,
+    "memberCount": 76,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1708322273445,
-    "lastUpdated": 1768018930046,
+    "lastUpdated": 1770491512706,
     "ownerInfo": {
       "username": "mpschettig",
       "globalName": "Mike",
@@ -9199,14 +9217,14 @@
     "serverName": "Triumph Hub",
     "icon": "https://cdn.discordapp.com/icons/1080166267136262154/174fdda5d62bc8c2227e31f8111e7f05.webp",
     "ownerId": "572291395365109770",
-    "memberCount": 438,
+    "memberCount": 437,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1677602106604,
-    "lastUpdated": 1767959980843,
+    "lastUpdated": 1770491511129,
     "players": {
       "572291395365109770": {
         "age": "29"
@@ -11175,14 +11193,14 @@
     "serverName": "EpochORG S7: Rumrunners",
     "icon": "https://cdn.discordapp.com/icons/1297188286191767603/82ee1b34273d340c02179b0ae8567e8a.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 70,
+    "memberCount": 69,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1729344188021,
-    "lastUpdated": 1768238097979,
+    "lastUpdated": 1770491513930,
     "ownerInfo": {
       "username": "mpschettig",
       "globalName": "Mike",
@@ -11513,14 +11531,14 @@
     "serverName": "Servivorg S14 - FINAL FANTASY",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/189c3570ea34b3fbf3ee7b4d5989d32e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 573,
+    "memberCount": 570,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1768730025646,
+    "lastUpdated": 1770491510710,
     "ownerInfo": {
       "username": "serviver",
       "globalName": "Serviver",
