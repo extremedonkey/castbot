@@ -678,12 +678,9 @@ export async function addBonusPoints(guildId, entityId, pointType, amount) {
     
     const points = safariData[guildId].entityPoints[entityId][pointType];
     
-    // Add bonus points (can exceed max)
+    // Add bonus points (can exceed max) - does NOT reset regen timer
+    // so consumable items don't punish players by restarting their cooldown
     points.current = Math.max(0, points.current + amount);
-    
-    // Reset use timer when stamina is added
-    points.lastUse = Date.now();
-    points.lastRegeneration = Date.now();
     
     safariData[guildId].entityPoints[entityId][pointType] = points;
     await saveSafariContent(safariData);
