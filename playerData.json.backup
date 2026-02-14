@@ -9364,11 +9364,27 @@
       },
       "1472088830596222986": {
         "mapping": {
-          "🎯": "1472088826284347499",
+          "🎯": "1472092361843544216",
           "isBan": true
         },
         "createdAt": 1771043730252,
         "lastAccessed": 1771043730252
+      },
+      "1472089551962112192": {
+        "mapping": {
+          "🎯": "1472092361843544216",
+          "isBan": true
+        },
+        "createdAt": 1771043901622,
+        "lastAccessed": 1771043901622
+      },
+      "1472090410196406429": {
+        "mapping": {
+          "🎯": "1472092361843544216",
+          "isBan": true
+        },
+        "createdAt": 1771044105701,
+        "lastAccessed": 1771044105701
       }
     },
     "banRoleIds": {
@@ -9376,7 +9392,13 @@
         "type": "ban",
         "roleName": "React for Bans",
         "createdAt": 1771043728729,
-        "lastUpdated": 1771043900144
+        "lastUpdated": 1771044104351
+      },
+      "1472092361843544216": {
+        "type": "ban",
+        "roleName": "React for Bans",
+        "createdAt": 1771044571911,
+        "lastUpdated": 1771044571911
       }
     }
   },
