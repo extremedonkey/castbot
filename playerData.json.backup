@@ -817,7 +817,7 @@
           "storeHistory": [],
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "F2",
+              "currentLocation": "G1",
               "exploredCoordinates": [
                 "C2",
                 "A1",
@@ -929,6 +929,11 @@
                   "from": "G2",
                   "to": "F2",
                   "timestamp": "2026-02-07T19:29:52.914Z"
+                },
+                {
+                  "from": "F2",
+                  "to": "G1",
+                  "timestamp": "2026-02-07T19:45:58.979Z"
                 }
               ]
             }
