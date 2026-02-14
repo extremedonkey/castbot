@@ -24392,13 +24392,13 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             .setCustomId(modalCustomId)
             .setTitle('Clone Action');
 
-          // Pre-fill name with "(Copy)" suffix
+          // Pre-fill name with source action name
           const nameInput = new TextInputBuilder()
             .setCustomId('clone_name')
             .setLabel('Action Name')
             .setPlaceholder('Enter name for the cloned action')
             .setStyle(TextInputStyle.Short)
-            .setValue(`${sourceAction.name || 'Unnamed'} (Copy)`.substring(0, 80))
+            .setValue(`${sourceAction.name || 'Unnamed'}`.substring(0, 80))
             .setRequired(true)
             .setMaxLength(80);
 

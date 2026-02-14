@@ -9269,14 +9269,14 @@
     "serverName": "Zeldavivor",
     "icon": "https://cdn.discordapp.com/icons/1195996661185511434/294b3ca83eb4fefc2a1ac43aeea70cb3.webp",
     "ownerId": "391415444084490240",
-    "memberCount": 33,
+    "memberCount": 34,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1705218224570,
-    "lastUpdated": 1771044792957,
+    "lastUpdated": 1771045267665,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -9377,14 +9377,6 @@
         },
         "createdAt": 1771044570889,
         "lastAccessed": 1771044570889
-      },
-      "1472094057525153859": {
-        "mapping": {
-          "🎯": "1472094454348251217",
-          "isBan": true
-        },
-        "createdAt": 1771044975311,
-        "lastAccessed": 1771044975311
       }
     },
     "banRoleIds": {
