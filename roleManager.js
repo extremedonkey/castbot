@@ -953,6 +953,17 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
 
     console.log(`📊 Found ${allTimezoneRoles.size} total timezone roles (${Object.keys(currentTimezones).length} registered + ${allTimezoneRoles.size - Object.keys(currentTimezones).length} unregistered)`);
 
+    // Step 1.5: Fetch ALL guild members ONCE (expensive operation - do NOT repeat in loops)
+    let membersFetched = false;
+    try {
+        await guild.members.fetch({ time: 30_000 }); // 30s timeout (default is 120s)
+        membersFetched = true;
+        console.log(`✅ Guild members fetched (${guild.members.cache.size} members cached)`);
+    } catch (error) {
+        console.warn(`⚠️ Could not fetch all guild members: ${error.message} - using cached members (${guild.members.cache.size} cached)`);
+        // Continue with whatever is in cache - consolidation will work with partial data
+    }
+
     // Step 2: Group roles by timezoneId (from all sources)
     const rolesByTimezoneId = {};
     for (const [roleId, roleInfo] of allTimezoneRoles) {
@@ -1008,8 +1019,7 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
                     continue;
                 }
 
-                // Fetch all members with this role
-                await guild.members.fetch(); // Ensure member cache is populated
+                // Count members with this role (using cache populated in Step 1.5)
                 const members = guild.members.cache.filter(m => m.roles.cache.has(roleId));
 
                 roleData.push({
@@ -1109,8 +1119,9 @@ async function consolidateTimezoneRoles(guild, currentTimezones) {
             results.memberChanges.push(...memberChanges);
 
             // Verify losers now have 0 members before deleting
+            // Note: We trust the migration above succeeded rather than re-fetching all members
+            // The role.remove() calls above update the local cache automatically
             for (const loser of losers) {
-                await guild.members.fetch(); // Refresh cache
                 const remainingMembers = guild.members.cache.filter(m => m.roles.cache.has(loser.roleId));
 
                 if (remainingMembers.size > 0) {
