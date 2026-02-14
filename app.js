@@ -42233,6 +42233,27 @@ client.on('messageReactionAdd', async (reaction, user) => {
       // Remove the user's reaction to indicate failure
       await reaction.users.remove(user.id);
       
+      // For ban mappings with missing role, post a channel message
+      if (roleMapping.isBan && permCheck.reason.includes('Role not found (may have been deleted)')) {
+        try {
+          const channelId = reaction.message.channel.id;
+          await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              content: `⚠️ **${guild.name}** — ${user.tag} clicked the React for Ban emoji, but the ban role is missing. Please ask the Production Team to re-run the React for Bans feature to resolve this.`
+            })
+          });
+        } catch (notifyError) {
+          console.error('Failed to post missing ban role notification:', notifyError.message);
+        }
+        console.error(`Ban role missing in ${guild.name}: ${permCheck.reason}`);
+        return;
+      }
+
       // Only send DM for actual errors, not for deleted roles (silent handling)
       if (!permCheck.reason.includes('Role not found (may have been deleted)')) {
         try {
@@ -42242,7 +42263,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
           console.log('Could not DM user about role assignment failure');
         }
       }
-      
+
       // Also log the error
       console.error(`Role assignment failed in ${guild.name}: ${permCheck.reason}`);
       return;
@@ -42293,7 +42314,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              content: `🔨 **${user.tag}** was banned by React for Bans honeypot.`
+              content: `🔨 **${guild.name}** — ${user.tag} was banned by CastBot's 🎯 React for Bans honeypot.`
             })
           });
         } catch (notifyError) {
