@@ -28,7 +28,7 @@ import { ButtonBuilder, ButtonStyle } from 'discord.js';
  *   │  ├─ Season Applications Menu
  *   │  ├─ Player Management Menu
  *   │  ├─ Tribe Management Menu
- *   │  ├─ Pronouns & Timezones Menu
+ *   │  ├─ Reaction Roles Menu
  *   │  ├─ Currency Menu
  *   │  ├─ Rounds Menu
  *   │  ├─ Stores Menu

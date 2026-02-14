@@ -1864,7 +1864,7 @@ async function buildPronounsViewMenu(guildId, client) {
     // Build pronoun list content
     let pronounContent = '';
     if (!pronounRoleIDs?.length) {
-        pronounContent = 'No pronoun roles configured.\n\nUse **Edit Pronouns** from the main Pronouns & Timezones menu to add roles.';
+        pronounContent = 'No pronoun roles configured.\n\nUse **Edit Pronouns** from the main Reaction Roles menu to add roles.';
     } else {
         for (const roleId of pronounRoleIDs) {
             const role = guild.roles.cache.get(roleId);
@@ -1916,7 +1916,7 @@ async function buildTimezonesViewMenu(guildId, client) {
     // Build timezone list content
     let timezoneContent = '';
     if (!Object.keys(timezones).length) {
-        timezoneContent = 'No timezone roles configured.\n\nUse **Edit Timezones** or **Add Timezone** from the main Pronouns & Timezones menu to configure roles.';
+        timezoneContent = 'No timezone roles configured.\n\nUse **Edit Timezones** or **Add Timezone** from the main Reaction Roles menu to configure roles.';
     } else {
         for (const [roleId, timezoneData] of Object.entries(timezones)) {
             const role = guild.roles.cache.get(roleId);
