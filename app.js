@@ -20416,7 +20416,7 @@ Your server is now ready for Tycoons gameplay!`;
                 components: [
                   {
                     type: 10,
-                    content: `## 🎯 React for ᗷᗩᑎᔕ\n\nThe following should not be used by real people — this is intended to be clicked by ᗷOTᔕ who may spam to gain trusted access to the server. Clicking this will automatically ᗷᗩᑎ you from the server.`
+                    content: `## 🎯 React for ᗷᗩᑎꓢ\n\nThe following should not be used by real people — this is intended to be clicked by ᗷOTꓢ who may spam to gain trusted access to the server. Clicking this will automatically ᗷᗩᑎ you from the server.`
                   },
                   { type: 14 },
                   {
@@ -42260,10 +42260,23 @@ client.on('messageReactionAdd', async (reaction, user) => {
           return;
         }
 
+        // Verify bot can ban this user (bot's highest role must be above target's highest role)
+        const botMember = await guild.members.fetch(client.user.id);
+        if (!botMember.permissions.has(PermissionFlagsBits.BanMembers)) {
+          console.error(`❌ Bot lacks BanMembers permission in ${guild.name}`);
+          await reaction.users.remove(user.id);
+          return;
+        }
+        if (member.roles.highest.position >= botMember.roles.highest.position) {
+          console.error(`❌ Cannot ban ${user.tag} — their highest role (${member.roles.highest.name}, pos ${member.roles.highest.position}) is >= bot's highest role (${botMember.roles.highest.name}, pos ${botMember.roles.highest.position})`);
+          await reaction.users.remove(user.id);
+          return;
+        }
+
         // Remove reaction first (visual feedback)
         await reaction.users.remove(user.id);
 
-        // Execute ban (no message deletion per user preference)
+        // Execute ban
         await guild.members.ban(user.id, {
           reason: `CastBot React for Bans honeypot — user reacted to ban trap message`
         });

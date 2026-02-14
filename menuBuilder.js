@@ -37,7 +37,7 @@ export const MENU_REGISTRY = {
                 custom_id: 'prod_manage_pronouns_timezones',
                 label: 'Reaction Roles',
                 style: 2, // Secondary (Grey)
-                emoji: { name: '🎯' }
+                emoji: { name: '💜' }
               },
               {
                 type: 2, // Button
