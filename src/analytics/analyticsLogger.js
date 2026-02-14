@@ -11,7 +11,7 @@ const serverNameCache = new Map();
 const BUTTON_LABEL_MAP = {
   // Production menu buttons
   'prod_setup': '🪛 Setup',
-  'prod_manage_pronouns_timezones': '💜 Manage Pronouns/Timezones',
+  'prod_manage_pronouns_timezones': '🎯 Reaction Roles',
   'prod_manage_tribes': '🔥 Manage Tribes',
   'admin_manage_player': '🧑‍🤝‍🧑 Manage Players',
   'season_management_menu': '📝 Apps',

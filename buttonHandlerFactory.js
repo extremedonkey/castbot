@@ -444,11 +444,11 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240'
   },
 
-  // === PRONOUNS & TIMEZONES MANAGEMENT ===
+  // === REACTION ROLES MANAGEMENT ===
   'prod_manage_pronouns_timezones': {
-    label: 'Pronouns & Timezones',
-    description: 'Manage server pronoun and timezone roles',
-    emoji: '💜',
+    label: 'Reaction Roles',
+    description: 'Manage server reaction roles (pronouns, timezones, ban traps)',
+    emoji: '🎯',
     style: 'Secondary',
     category: 'production_admin',
     parent: 'prod_setup'
@@ -458,7 +458,7 @@ export const BUTTON_REGISTRY = {
     description: 'Display all configured timezone roles with UTC offsets',
     emoji: '🌍',
     style: 'Primary',
-    category: 'pronouns_timezones',
+    category: 'reaction_roles',
     parent: 'prod_manage_pronouns_timezones'
   },
   'prod_edit_timezones': {
@@ -466,7 +466,7 @@ export const BUTTON_REGISTRY = {
     description: 'Add/remove timezone roles without setting UTC offsets',
     emoji: '⏲️',
     style: 'Secondary',
-    category: 'pronouns_timezones',
+    category: 'reaction_roles',
     parent: 'prod_manage_pronouns_timezones'
   },
   'prod_add_timezone': {
@@ -474,7 +474,7 @@ export const BUTTON_REGISTRY = {
     description: 'Add timezone role with UTC offset configuration',
     emoji: '🗺️',
     style: 'Secondary',
-    category: 'pronouns_timezones',
+    category: 'reaction_roles',
     parent: 'prod_manage_pronouns_timezones'
   },
   'prod_view_pronouns': {
@@ -482,7 +482,7 @@ export const BUTTON_REGISTRY = {
     description: 'Display all configured pronoun roles',
     emoji: '💜',
     style: 'Primary',
-    category: 'pronouns_timezones',
+    category: 'reaction_roles',
     parent: 'prod_manage_pronouns_timezones'
   },
   'prod_edit_pronouns': {
@@ -490,7 +490,15 @@ export const BUTTON_REGISTRY = {
     description: 'Add/remove pronoun roles for server',
     emoji: '💙',
     style: 'Secondary',
-    category: 'pronouns_timezones',
+    category: 'reaction_roles',
+    parent: 'prod_manage_pronouns_timezones'
+  },
+  'prod_ban_react': {
+    label: 'Post React for Ban',
+    description: 'Post a honeypot reaction message that auto-bans bots who react',
+    emoji: '🎯',
+    style: 'Danger',
+    category: 'reaction_roles',
     parent: 'prod_manage_pronouns_timezones'
   },
 

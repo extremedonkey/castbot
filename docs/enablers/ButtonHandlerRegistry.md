@@ -19,7 +19,8 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | Custom ID | Label | Location | Handler Function | Status |
 |-----------|-------|----------|------------------|--------|
 | `setup_castbot` | 🪛 Run Setup | app.js:TBD | Direct handler | ✅ Active |
-| `prod_manage_pronouns_timezones` | 💜 Pronouns & Timezones | app.js:~6328 | ButtonHandlerFactory | ✅ Active |
+| `prod_manage_pronouns_timezones` | 🎯 Reaction Roles | app.js:~6328 | ButtonHandlerFactory | ✅ Active |
+| `prod_ban_react` | 🎯 Post React for Ban | app.js | ButtonHandlerFactory | ✅ Active |
 | `prod_availability` | 🕐 Availability | app.js:~6425 | ButtonHandlerFactory | ✅ Active |
 
 ### **Reece Stuff Submenu Buttons**

@@ -145,7 +145,7 @@ MenuBuilder.trackLegacyMenu('menu_location', 'Menu description');
 
 ### Phase 3: Gradual Migration
 Priority order based on complexity and usage:
-1. Simple submenus (setup, tribes, pronouns)
+1. Simple submenus (setup, tribes, reaction roles)
 2. Complex menus (safari, seasons)
 3. Dynamic menus (main menu, castlists)
 
@@ -162,7 +162,7 @@ Current menus requiring migration (tracked via MenuBuilder.trackLegacyMenu):
 |------|----------|--------|----------|
 | Main Production Menu | `createProductionMenuInterface` | ⚱️ Legacy | High |
 | Tribes Management | `prod_manage_tribes` | ⚱️ Legacy | High |
-| Pronouns & Timezones | `prod_manage_pronouns_timezones` | ⚱️ Legacy | Medium |
+| Reaction Roles | `prod_manage_pronouns_timezones` | ⚱️ Legacy | Medium |
 | Availability | `prod_availability` | ⚱️ Legacy | Low |
 | Season Management | `season_management_menu` | ⚱️ Legacy | Medium |
 | Safari Menu | `prod_safari_menu` | ⚱️ Legacy | High |

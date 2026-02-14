@@ -71,7 +71,7 @@
 ├─ 🪛 Tools Menu [EPHEMERAL]
 │  │
 │  ├─ 🪛 Run Setup
-│  ├─ 💜 Pronouns & Timezones → 💜 Pronouns & Timezones Menu
+│  ├─ 🎯 Reaction Roles → 🎯 Reaction Roles Menu
 │  ├─ 🔥 Tribes (Legacy)
 │  ├─ 🕐 Availability → 🕐 Availability Menu
 │  ├─ ❓ Need Help? [Link]
@@ -80,7 +80,7 @@
 │  └─ ← Menu [Back to Production Menu]
 │
 │
-├─ 💜 Pronouns & Timezones Menu [EPHEMERAL]
+├─ 🎯 Reaction Roles Menu [EPHEMERAL]
 │  │
 │  ├─ 🌍 Timezone Management
 │  │  ├─ 🌍 View Timezones
@@ -192,11 +192,11 @@
 - **Accent Color**: Blue (0x3498DB)
 - **Back Navigation**: Returns to Production Menu
 
-### Pronouns & Timezones Menu
+### Reaction Roles Menu
 - **Access**: Admin only
 - **Visibility**: Ephemeral
 - **Location**: `app.js` - `prod_manage_pronouns_timezones` handler
-- **Purpose**: Manage server pronoun and timezone roles
+- **Purpose**: Manage server reaction roles including pronouns, timezones, and ban traps
 - **Accent Color**: Purple (0x9B59B6)
 - **Back Navigation**: Returns to Tools Menu
 
@@ -249,8 +249,8 @@ const backButton = new ButtonBuilder()
 
 ### Tools & Setup
 - **Production Menu**: Tools (button that opens Tools Menu)
-- **Tools Menu**: Run Setup, Pronouns & Timezones, Availability, Need Help?
-- **Submenus**: Pronouns & Timezones Menu, Availability Menu
+- **Tools Menu**: Run Setup, Reaction Roles, Availability, Need Help?
+- **Submenus**: Reaction Roles Menu, Availability Menu
 - **Back Target**: Tools Menu → Production Menu
 
 ### Analytics & Admin

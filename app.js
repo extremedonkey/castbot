@@ -112,7 +112,9 @@ import {
   buildPronounsViewMenu,
   buildTimezonesViewMenu,
   buildTimezoneEditMenu,
-  buildTribesViewMenu
+  buildTribesViewMenu,
+  ensureBanRole,
+  updateReactionMappingsForRole
 } from './roleManager.js';
 import { 
   createPlayerInventoryDisplay,
@@ -7469,12 +7471,12 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'prod_manage_pronouns_timezones') {
-      // Show pronouns/timezones management menu
+      // Show reaction roles management menu
       return ButtonHandlerFactory.create({
         id: 'prod_manage_pronouns_timezones',
         updateMessage: true,  // Update the production menu message (button click)
         handler: async (context) => {
-          MenuBuilder.trackLegacyMenu('prod_manage_pronouns_timezones', 'Pronouns & Timezones submenu');
+          MenuBuilder.trackLegacyMenu('prod_manage_pronouns_timezones', 'Reaction Roles submenu');
 
           const { guildId, channelId, client } = context;
           const guild = await client.guilds.fetch(guildId);
@@ -7522,6 +7524,15 @@ To fix this:
                 .setEmoji('👍')
             );
 
+          const otherRow = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('prod_ban_react')
+                .setLabel('Post React for Ban')
+                .setStyle(ButtonStyle.Danger)
+                .setEmoji('🎯')
+            );
+
           // Create Components V2 Container with LEAN design
           const backRow = new ActionRowBuilder()
             .addComponents(
@@ -7529,13 +7540,12 @@ To fix this:
                 .setCustomId('prod_setup')
                 .setLabel('← Tools')
                 .setStyle(ButtonStyle.Secondary)
-                .setEmoji('🪛')
             );
 
-          const pronounsTimezoneComponents = [
+          const reactionRolesComponents = [
             {
               type: 10, // Text Display component
-              content: `## 💜 Pronouns & Timezones | Role Management\n\nUse Custom Timezone to add timezones not supported by CastBot, customise Pronouns, or display Reaction Panels. Only use this if you know what you are doing - run CastBot Setup if you just want to set up standard pronouns and timezone roles!`
+              content: `## 🎯 Reaction Roles | Role Management\n\nManage reaction-based role assignment. Post reaction panels for Timezones, Pronouns, or deploy Ban traps to catch spam bots.`
             },
             {
               type: 14 // Separator
@@ -7554,21 +7564,27 @@ To fix this:
             },
             managementRow2.toJSON(),
             {
+              type: 14 // Separator
+            },
+            {
+              type: 10, // Text Display component
+              content: `> **\`🎯 Other\`**`
+            },
+            otherRow.toJSON(),
+            {
               type: 14 // Separator before navigation
             },
             backRow.toJSON()
           ];
 
-          const pronounsTimezoneContainer = {
+          const reactionRolesContainer = {
             type: 17, // Container component
-            accent_color: 0x9B59B6, // Purple accent color for pronouns/timezones
-            components: pronounsTimezoneComponents
+            accent_color: 0x9B59B6, // Purple accent color
+            components: reactionRolesComponents
           };
 
-          // ButtonHandlerFactory automatically uses UPDATE_MESSAGE for button clicks
-          // No need to check - it will update the message containing this button
           return {
-            components: [pronounsTimezoneContainer]
+            components: [reactionRolesContainer]
           };
         }
       })(req, res, client);
@@ -20356,6 +20372,109 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id === 'prod_ban_react') {
+      // Post React for Ban honeypot message
+      return ButtonHandlerFactory.create({
+        id: 'prod_ban_react',
+        requiresPermission: PermissionFlagsBits.BanMembers,
+        permissionName: 'Ban Members',
+        handler: async (context) => {
+          const { guildId, channelId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
+
+          // Verify bot has BanMembers permission
+          const botMember = await guild.members.fetch(client.user.id);
+          if (!botMember.permissions.has(PermissionFlagsBits.BanMembers)) {
+            return {
+              content: '❌ **CastBot needs the Ban Members permission** to use React for Bans.\n\nPlease update CastBot\'s role permissions and try again.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            };
+          }
+
+          // Idempotently ensure ban role exists and get its ID
+          const { roleId: banRoleId, created } = await ensureBanRole(guild, guildId);
+          console.log(`🎯 Ban role ${created ? 'created' : 'found'}: ${banRoleId}`);
+
+          // Check if role ID changed from what existing mappings use — update them
+          const playerData = await loadPlayerData();
+          const existingBanRoles = playerData[guildId]?.banRoleIds || {};
+          const allBanRoleIds = Object.keys(existingBanRoles);
+          if (allBanRoleIds.length > 1) {
+            for (const oldId of allBanRoleIds) {
+              if (oldId !== banRoleId) {
+                await updateReactionMappingsForRole(guildId, oldId, banRoleId, 'isBan', client);
+              }
+            }
+          }
+
+          // Post public ban trap message asynchronously after response is sent
+          setTimeout(async () => {
+            try {
+              const banContainer = {
+                type: 17,
+                accent_color: 0xe74c3c, // Bright red — danger
+                components: [
+                  {
+                    type: 10,
+                    content: `## 🎯 React for ᗷᗩᑎᔕ\n\nThe following should not be used by real people — this is intended to be clicked by ᗷOTᔕ who may spam to gain trusted access to the server. Clicking this will automatically ᗷᗩᑎ you from the server.`
+                  },
+                  { type: 14 },
+                  {
+                    type: 10,
+                    content: `🎯 — ᗷᗩᑎ`
+                  }
+                ]
+              };
+
+              const postResponse = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  components: [banContainer],
+                  flags: (1 << 15) // IS_COMPONENTS_V2
+                })
+              });
+              const postedMessage = await postResponse.json();
+
+              if (!postedMessage.id) {
+                console.error('❌ Failed to post ban trap message:', postedMessage);
+                return;
+              }
+
+              const messageId = postedMessage.id;
+              console.log(`🎯 Ban trap message posted: ${messageId}`);
+
+              // Add the 🎯 reaction
+              await fetch(
+                `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}/reactions/${encodeURIComponent('🎯')}/@me`,
+                {
+                  method: 'PUT',
+                  headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
+                }
+              );
+
+              // Store role-emoji mapping with isBan flag
+              const roleMapping = { '🎯': banRoleId, isBan: true };
+              await saveReactionMapping(guildId, messageId, roleMapping);
+              if (!client.roleReactions) client.roleReactions = new Map();
+              client.roleReactions.set(messageId, roleMapping);
+
+              console.log(`✅ Ban trap reaction setup complete for message ${messageId}`);
+            } catch (error) {
+              console.error('❌ Error posting ban trap message:', error);
+            }
+          }, 500);
+
+          // Return ephemeral confirmation (ButtonHandlerFactory sends this)
+          return {
+            content: '✅ React for Ban message posted below.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_view_timezones') {
       // Display all timezone roles with LEAN design
       return ButtonHandlerFactory.create({
@@ -20421,7 +20540,7 @@ Your server is now ready for Tycoons gameplay!`;
             .addComponents(
               new ButtonBuilder()
                 .setCustomId('prod_manage_pronouns_timezones')
-                .setLabel('← Pronouns & Timezones')
+                .setLabel('← Reaction Roles')
                 .setStyle(ButtonStyle.Secondary)
             );
 
@@ -22353,7 +22472,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             .addComponents(
               new ButtonBuilder()
                 .setCustomId('prod_manage_pronouns_timezones')
-                .setLabel('← Pronouns & Timezones')
+                .setLabel('← Reaction Roles')
                 .setStyle(ButtonStyle.Secondary)
             );
 
@@ -41899,35 +42018,8 @@ app.listen(PORT, () => {
 });
 
 // Log in to Discord with your client's token
-// Add reaction event handlers for role assignment
-
-client.on('messageReactionRemove', async (reaction, user) => {
-  // Ignore bot reactions
-  if (user.bot) return;
-
-  try {
-    // Check if this is a pronoun role reaction
-    if (client.roleReactions && client.roleReactions.has(reaction.message.id)) {
-      const roleMapping = client.roleReactions.get(reaction.message.id);
-      const roleId = roleMapping[reaction.emoji.name];
-      
-      if (roleId) {
-        const guild = reaction.message.guild;
-        const member = await guild.members.fetch(user.id);
-        
-        if (member.roles.cache.has(roleId)) {
-          await member.roles.remove(roleId);
-          const role = await guild.roles.fetch(roleId);
-          console.log(`Removed pronoun role ${role.name} from ${user.username}`);
-        }
-      }
-    }
-
-    // Timezone roles don't need remove handler since they're exclusive
-  } catch (error) {
-    console.error('Error handling reaction role removal:', error);
-  }
-});
+// Legacy duplicate messageReactionRemove handler removed (was at line 41904) —
+// comprehensive handler exists at messageReactionRemove listener below
 
 client.login(process.env.DISCORD_TOKEN);
 
@@ -42157,20 +42249,53 @@ client.on('messageReactionAdd', async (reaction, user) => {
     }
 
     try {
-      // Check if this is a timezone role - if so, remove other timezone roles first
-      // roleMapping is already retrieved above
-      const isTimezoneRole = roleMapping.isTimezone;
-      
-      if (isTimezoneRole) {
+      if (roleMapping.isBan) {
+        // BAN TRAP — auto-ban the user who reacted
+        console.log(`🎯 BAN TRAP: User ${user.tag} (${user.id}) triggered React for Bans in ${guild.name}`);
+
+        // Skip users with admin/mod permissions (protection against accidental self-ban)
+        if (member.permissions.has(PermissionFlagsBits.ManageRoles) || member.permissions.has(PermissionFlagsBits.Administrator)) {
+          console.log(`🛡️ Skipping ban for ${user.tag} — has admin/mod permissions`);
+          await reaction.users.remove(user.id);
+          return;
+        }
+
+        // Remove reaction first (visual feedback)
+        await reaction.users.remove(user.id);
+
+        // Execute ban (no message deletion per user preference)
+        await guild.members.ban(user.id, {
+          reason: `CastBot React for Bans honeypot — user reacted to ban trap message`
+        });
+
+        console.log(`🔨 BANNED: ${user.tag} (${user.id}) from ${guild.name} via React for Bans`);
+
+        // Post public notification in the channel
+        try {
+          const channelId = reaction.message.channel.id;
+          await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              content: `🔨 **${user.tag}** was banned by React for Bans honeypot.`
+            })
+          });
+        } catch (notifyError) {
+          console.error('Failed to post ban notification:', notifyError.message);
+        }
+      } else if (roleMapping.isTimezone) {
         // Remove all other timezone roles first
         const timezones = await getGuildTimezones(guild.id);
         const timezoneRoleIds = Object.keys(timezones);
         const currentTimezoneRoles = member.roles.cache.filter(r => timezoneRoleIds.includes(r.id));
-        
+
         if (currentTimezoneRoles.size > 0) {
           await member.roles.remove(currentTimezoneRoles.map(r => r.id));
         }
-        
+
         await member.roles.add(roleId);
         console.log(`Set timezone role ${roleId} for user ${user.tag}`);
       } else {
@@ -42179,8 +42304,8 @@ client.on('messageReactionAdd', async (reaction, user) => {
         console.log(`Added pronoun role ${roleId} to user ${user.tag}`);
       }
     } catch (error) {
-      console.error('Error adding role:', error);
-      await reaction.users.remove(user.id);
+      console.error('Error in role/ban action:', error);
+      try { await reaction.users.remove(user.id); } catch (e) { /* user may already be banned */ }
     }
   } catch (error) {
     console.error('Error in messageReactionAdd:', error);
@@ -42266,6 +42391,9 @@ client.on('messageReactionRemove', async (reaction, user) => {
       if (!client.roleReactions) client.roleReactions = new Map();
       client.roleReactions.set(reaction.message.id, roleMapping);
     }
+
+    // Don't process reaction removal for ban traps (user is already banned)
+    if (roleMapping.isBan) return;
 
     const roleId = roleMapping[reaction.emoji.name];
     if (!roleId) return;

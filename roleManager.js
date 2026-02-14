@@ -1880,7 +1880,7 @@ async function buildPronounsViewMenu(guildId, client) {
         .addComponents(
             new ButtonBuilder()
                 .setCustomId('prod_manage_pronouns_timezones')
-                .setLabel('← Pronouns & Timezones')
+                .setLabel('← Reaction Roles')
                 .setStyle(ButtonStyle.Secondary)
         );
 
@@ -1934,7 +1934,7 @@ async function buildTimezonesViewMenu(guildId, client) {
         .addComponents(
             new ButtonBuilder()
                 .setCustomId('prod_manage_pronouns_timezones')
-                .setLabel('← Pronouns & Timezones')
+                .setLabel('← Reaction Roles')
                 .setStyle(ButtonStyle.Secondary)
         );
 
@@ -1989,7 +1989,7 @@ async function buildTimezoneEditMenu(guildId) {
         .addComponents(
             new ButtonBuilder()
                 .setCustomId('prod_manage_pronouns_timezones')
-                .setLabel('← Pronouns & Timezones')
+                .setLabel('← Reaction Roles')
                 .setStyle(ButtonStyle.Secondary)
         );
 
@@ -2656,6 +2656,96 @@ async function buildTribesViewMenu(guildId, client) {
     };
 }
 
+/**
+ * Idempotently ensure a "React for Bans" role exists in the guild.
+ * Finds existing role by name, creates if missing, stores in playerData.banRoleIds.
+ * @param {Object} guild - Discord guild object
+ * @param {string} guildId - Guild ID
+ * @returns {Object} { roleId, created } - The ban role ID and whether it was newly created
+ */
+async function ensureBanRole(guild, guildId) {
+    const playerData = await loadPlayerData();
+    if (!playerData[guildId]) {
+        playerData[guildId] = { players: {}, tribes: {}, timezones: {}, pronounRoleIDs: [] };
+    }
+    const existingBanRoles = playerData[guildId].banRoleIds || {};
+
+    // Search Discord for existing "React for Bans" role
+    const discordRole = guild.roles.cache.find(r => r.name === 'React for Bans');
+    let roleId;
+    let created = false;
+
+    if (discordRole) {
+        roleId = discordRole.id;
+        existingBanRoles[roleId] = {
+            type: 'ban',
+            roleName: 'React for Bans',
+            createdAt: existingBanRoles[roleId]?.createdAt || Date.now(),
+            lastUpdated: Date.now()
+        };
+        console.log(`✅ Found existing "React for Bans" role: ${roleId}`);
+    } else {
+        const newRole = await guild.roles.create({
+            name: 'React for Bans',
+            color: 0xe74c3c,
+            reason: 'CastBot React for Bans honeypot',
+            permissions: []
+        });
+        roleId = newRole.id;
+        created = true;
+        existingBanRoles[roleId] = {
+            type: 'ban',
+            roleName: 'React for Bans',
+            createdAt: Date.now(),
+            lastUpdated: Date.now()
+        };
+        console.log(`🆕 Created "React for Bans" role: ${roleId}`);
+    }
+
+    playerData[guildId].banRoleIds = existingBanRoles;
+    await savePlayerData(playerData);
+
+    return { roleId, created };
+}
+
+/**
+ * Update all existing reaction mappings when a role ID changes.
+ * Reusable for ban, timezone, or pronoun role ID updates.
+ * @param {string} guildId - Guild ID
+ * @param {string} oldRoleId - Previous role ID
+ * @param {string} newRoleId - New role ID
+ * @param {string} flagKey - Mapping flag to filter by ('isBan', 'isTimezone', 'isPronoun')
+ * @param {Object} client - Discord client (to update in-memory cache)
+ * @returns {number} Number of mappings updated
+ */
+async function updateReactionMappingsForRole(guildId, oldRoleId, newRoleId, flagKey, client) {
+    const playerData = await loadPlayerData();
+    const mappings = playerData[guildId]?.reactionMappings || {};
+    let updated = 0;
+
+    for (const [messageId, mappingData] of Object.entries(mappings)) {
+        if (mappingData.mapping?.[flagKey]) {
+            for (const [emoji, roleId] of Object.entries(mappingData.mapping)) {
+                if (roleId === oldRoleId) {
+                    mappingData.mapping[emoji] = newRoleId;
+                    updated++;
+                }
+            }
+            // Update in-memory cache too
+            if (client?.roleReactions?.has(messageId)) {
+                client.roleReactions.set(messageId, mappingData.mapping);
+            }
+        }
+    }
+
+    if (updated > 0) {
+        await savePlayerData(playerData);
+        console.log(`🔄 Updated ${updated} ${flagKey} reaction mappings: ${oldRoleId} → ${newRoleId}`);
+    }
+
+    return updated;
+}
+
 export {
     STANDARD_PRONOUN_ROLES,
     STANDARD_TIMEZONE_ROLES,
@@ -2677,5 +2767,7 @@ export {
     buildPronounsViewMenu,
     buildTimezonesViewMenu,
     buildTimezoneEditMenu,
-    buildTribesViewMenu
+    buildTribesViewMenu,
+    ensureBanRole,
+    updateReactionMappingsForRole
 };

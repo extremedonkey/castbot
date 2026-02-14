@@ -1,6 +1,6 @@
 # Reaction Role System
 
-**Location**: `app.js` (lines 35908-36172 for event handlers)
+**Location**: `app.js` (lines 42155-42455 for event handlers)
 **Event Handlers**: `messageReactionAdd`, `messageReactionRemove`, `messageDelete`
 **Storage**: `playerData.json` per-guild persistent storage
 **Status**: Active across all servers with CastBot
@@ -32,7 +32,7 @@ Users can select their timezone by reacting to timezone messages:
 - Automatically converts to local time for event coordination
 - Created via Production Menu → Utilities → Timezone Roles
 
-**Timezone Role Logic** (app.js:36038-36052):
+**Timezone Role Logic**:
 ```javascript
 if (isTimezoneRole) {
   // Remove all other timezone roles first
@@ -66,6 +66,25 @@ playerData[guildId].availabilityMessages[messageId] = {
   channelId: channelId
 };
 ```
+
+### 4. Ban Trap (React for Bans)
+
+A honeypot mechanism designed to auto-ban bots that react to messages in order to gain roles.
+
+- Uses `isBan: true` flag in the role mapping to identify ban trap messages
+- When a user reacts to a ban trap message, the bot automatically bans them from the server
+- **Admin protection**: Users with `ManageRoles` or `Administrator` permissions are skipped and not banned
+- Posts a public notification in the channel when a ban occurs, identifying the banned user
+- Ban mappings are excluded from the 30-day reaction mapping cleanup to ensure they remain active indefinitely
+- Created via Production Menu → Tools → Reaction Roles → Post React for Ban
+
+**Ban Flow**:
+1. Admin creates a ban trap message via Production Menu
+2. Bot posts a message with a reaction (appears to grant a role)
+3. Bot/spam account reacts to the message
+4. Bot checks for `isBan: true` flag on the mapping
+5. Bot verifies the reacting user does not have `ManageRoles` or `Administrator`
+6. Bot bans the user and posts a public notification in the channel
 
 ## Architecture
 
@@ -110,7 +129,7 @@ client.on('ready', async () => {
 
 ## Event Handlers
 
-### messageReactionAdd (app.js:35908-36065)
+### messageReactionAdd (app.js:42155-42340)
 
 Triggered when a user adds a reaction to any message in a server where CastBot is installed.
 
@@ -160,7 +179,7 @@ Triggered when a user adds a reaction to any message in a server where CastBot i
    - Add the new role
    - Log success
 
-### messageReactionRemove (app.js:36067-36172)
+### messageReactionRemove (app.js:42340-42455)
 
 Triggered when a user removes a reaction from a message.
 
@@ -172,7 +191,7 @@ Triggered when a user removes a reaction from a message.
 5. Permission checks
 6. Remove role from user
 
-### messageDelete (app.js:36174-36195)
+### messageDelete (app.js:42455+)
 
 Cleans up reaction mappings when messages are deleted:
 
@@ -297,6 +316,21 @@ for (const [messageId, mappingData] of Object.entries(mappings)) {
 }
 ```
 
+### Ban Role Tracking
+
+Ban trap roles are tracked separately for management purposes:
+
+```javascript
+playerData[guildId].banRoleIds = {
+  'roleId': {
+    type: 'ban',
+    roleName: 'React for Bans',
+    createdAt: timestamp,
+    lastUpdated: timestamp
+  }
+}
+```
+
 ## Related Features
 
 ### Commands That Create Reaction Messages
@@ -315,9 +349,14 @@ for (const [messageId, mappingData] of Object.entries(mappings)) {
    - Personal timezone selection for player menu
    - Same logic as react_timezones
 
-4. **`prod_timezone_react`** (app.js:16865):
+4. **`prod_timezone_react`** (app.js:19791):
    - Production menu version of timezone selection
    - Includes persistent storage
+
+5. **`prod_ban_react`**:
+   - Production menu version of ban trap creation
+   - Posts a honeypot message that auto-bans reacting users
+   - Created via Production Menu → Tools → Reaction Roles → Post React for Ban
 
 ## Known Issues
 
@@ -349,7 +388,14 @@ console.log(`🔍 DEBUG: Role reaction added - ...`);
 - ✅ Better performance
 - ✅ More useful debugging output
 
-### 2. No Rate Limiting
+### 2. FIXED: Duplicate Legacy messageReactionRemove Handler
+
+**Issue**: A duplicate `messageReactionRemove` handler existed at a legacy location (previously around line 41904), in addition to the primary handler. This caused reactions to be processed twice on removal.
+
+**Solution Implemented** (2026-02-14):
+The duplicate legacy `messageReactionRemove` handler was removed. Only the primary handler at app.js:42340 remains.
+
+### 3. No Rate Limiting
 
 **Issue**: Rapid reaction spam could potentially cause rate limit issues.
 
@@ -411,6 +457,10 @@ client.roleReactions = Map {
     '1️⃣': 'timezoneRoleId1',
     '2️⃣': 'timezoneRoleId2',
     isTimezone: true
+  },
+  'messageId3' => {
+    '🎯': 'banRoleId',
+    isBan: true
   }
 }
 
@@ -456,5 +506,5 @@ playerData[guildId].availabilityMessages = {
 
 ---
 
-**Last Updated**: 2025-10-23
+**Last Updated**: 2026-02-14
 **Component Status**: ✅ Active (with verbose logging)

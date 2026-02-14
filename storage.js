@@ -644,7 +644,7 @@ export async function cleanupOldReactionMappings(guildId) {
   let cleanedCount = 0;
   
   for (const [messageId, mappingData] of Object.entries(data[guildId].reactionMappings)) {
-    if (mappingData.createdAt < thirtyDaysAgo) {
+    if (mappingData.createdAt < thirtyDaysAgo && !mappingData.mapping?.isBan) {
       delete data[guildId].reactionMappings[messageId];
       cleanedCount++;
     }

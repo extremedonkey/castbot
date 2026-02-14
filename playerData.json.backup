@@ -661,14 +661,14 @@
     "serverName": "CastBot",
     "icon": "https://cdn.discordapp.com/icons/1331657596087566398/e2bd30d98992c902b50e047bf284ef64.webp",
     "ownerId": "391415444084490240",
-    "memberCount": 39,
+    "memberCount": 40,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1737562311909,
-    "lastUpdated": 1770491514711,
+    "lastUpdated": 1771041602357,
     "players": {
       "233762709932474370": {
         "emojiCode": "<:Geo:1396856830281388144>",
@@ -3818,14 +3818,14 @@
     "serverName": "EpochORG S5: Incan Empire",
     "icon": "https://cdn.discordapp.com/icons/1240325979214188615/156095a9edb1de2f24dfac78d2904a04.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 59,
+    "memberCount": 60,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1715787157587,
-    "lastUpdated": 1770491513059,
+    "lastUpdated": 1771041600567,
     "players": {},
     "tribes": {
       "1241383870260056095": {
@@ -6296,14 +6296,14 @@
     "serverName": "EpochORG S4: Ancient Egypt",
     "icon": "https://cdn.discordapp.com/icons/1209015985798127696/fab803057622fa548002ca6920f860ac.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 76,
+    "memberCount": 75,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1708322273445,
-    "lastUpdated": 1770491512706,
+    "lastUpdated": 1771041600152,
     "ownerInfo": {
       "username": "mpschettig",
       "globalName": "Mike",
@@ -9125,7 +9125,104 @@
       }
     },
     "players": {},
-    "timezones": {},
+    "timezones": {
+      "1472076367322546352": {
+        "offset": -8,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)",
+        "timezoneId": "PT"
+      },
+      "1472076368484372602": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)",
+        "timezoneId": "MT"
+      },
+      "1472076370288054344": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)",
+        "timezoneId": "CT"
+      },
+      "1472076371529433200": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)",
+        "timezoneId": "ET"
+      },
+      "1472076372854706186": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)",
+        "timezoneId": "AT"
+      },
+      "1472076373886632028": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)",
+        "timezoneId": "NT"
+      },
+      "1472076375606169601": {
+        "offset": 0,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)",
+        "timezoneId": "GMT"
+      },
+      "1472076378441515010": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)",
+        "timezoneId": "CET"
+      },
+      "1472076379742015565": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "EET (UTC+2)",
+        "timezoneId": "EET"
+      },
+      "1472076381486841940": {
+        "offset": 2,
+        "dstObserved": false,
+        "standardName": "SAST (UTC+2)",
+        "timezoneId": "SAST"
+      },
+      "1472076382925488199": {
+        "offset": 5.5,
+        "dstObserved": false,
+        "standardName": "IST (UTC+5.5)",
+        "timezoneId": "IST"
+      },
+      "1472076384196104252": {
+        "offset": 7,
+        "dstObserved": false,
+        "standardName": "ICT (UTC+7)",
+        "timezoneId": "ICT"
+      },
+      "1472076385794392216": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": "GMT+8 (UTC+8)",
+        "timezoneId": "GMT8"
+      },
+      "1472076387211939891": {
+        "offset": 9,
+        "dstObserved": false,
+        "standardName": "JST (UTC+9)",
+        "timezoneId": "JST"
+      },
+      "1472076388461711543": {
+        "offset": 10,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)",
+        "timezoneId": "AEST"
+      },
+      "1472076389653156131": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)",
+        "timezoneId": "NZST"
+      }
+    },
     "castlistConfigs": {
       "castlist_1760890159342_system": {
         "id": "castlist_1760890159342_system",
@@ -9199,6 +9296,56 @@
           "updatedBy": "391415444084490240",
           "updatedAt": "2025-10-19T16:09:37.234Z"
         }
+      }
+    },
+    "pronounRoleIDs": [
+      "1472071858382700555",
+      "1381279521776603197",
+      "1381279524976726247",
+      "1381279528042758286",
+      "1381279526469763183",
+      "1381279529431207959",
+      "1381279531335290943",
+      "1381279532933320824"
+    ],
+    "reactionMappings": {
+      "1472082977163837484": {
+        "mapping": {
+          "1️⃣": "1472076388461711543",
+          "2️⃣": "1472076372854706186",
+          "3️⃣": "1472076378441515010",
+          "4️⃣": "1472076370288054344",
+          "5️⃣": "1472076379742015565",
+          "6️⃣": "1472076371529433200",
+          "7️⃣": "1472076375606169601",
+          "8️⃣": "1472076385794392216",
+          "9️⃣": "1472076384196104252",
+          "🔟": "1472076382925488199",
+          "🇦": "1472076387211939891",
+          "🇧": "1472076368484372602",
+          "🇨": "1472076373886632028",
+          "🇩": "1472076389653156131",
+          "🇪": "1472076367322546352",
+          "🇫": "1472076381486841940",
+          "isTimezone": true
+        },
+        "createdAt": 1771042343474,
+        "lastAccessed": 1771042343474
+      },
+      "1472084244388909150": {
+        "mapping": {
+          "🤍": "1381279532933320824",
+          "🤎": "1381279531335290943",
+          "💛": "1381279529431207959",
+          "❤️": "1381279521776603197",
+          "🩷": "1472071858382700555",
+          "🩵": "1381279528042758286",
+          "💚": "1381279526469763183",
+          "💜": "1381279524976726247",
+          "isPronoun": true
+        },
+        "createdAt": 1771042640280,
+        "lastAccessed": 1771042640280
       }
     }
   },
@@ -11208,14 +11355,14 @@
     "serverName": "EpochORG S7: Rumrunners",
     "icon": "https://cdn.discordapp.com/icons/1297188286191767603/82ee1b34273d340c02179b0ae8567e8a.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 69,
+    "memberCount": 68,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1729344188021,
-    "lastUpdated": 1770491513930,
+    "lastUpdated": 1771041601478,
     "ownerInfo": {
       "username": "mpschettig",
       "globalName": "Mike",
@@ -11546,14 +11693,14 @@
     "serverName": "Servivorg S14 - FINAL FANTASY",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/189c3570ea34b3fbf3ee7b4d5989d32e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 570,
+    "memberCount": 568,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1770491510710,
+    "lastUpdated": 1771041600645,
     "ownerInfo": {
       "username": "serviver",
       "globalName": "Serviver",

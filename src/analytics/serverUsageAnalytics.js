@@ -362,8 +362,8 @@ function detectFeatureUsage(entries) {
       features.castRanking++;
     }
     
-    // 💜 React for Roles - prod_timezone_react and prod_pronoun_react buttons
-    if (customId.includes('prod_timezone_react') || customId.includes('prod_pronoun_react')) {
+    // 🎯 React for Roles - prod_timezone_react, prod_pronoun_react, and prod_ban_react buttons
+    if (customId.includes('prod_timezone_react') || customId.includes('prod_pronoun_react') || customId.includes('prod_ban_react')) {
       features.reactForRoles++;
     }
     
