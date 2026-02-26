@@ -17,6 +17,7 @@ import { DiscordRequest, countComponents, validateComponentLimit } from './utils
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { initializeGuildSafariData } from './safariInitialization.js';
 import { detectBundles, formatActionsWithBundleIndicators } from './safariActionBundler.js';
+import { parseTextEmoji } from './utils/emojiUtils.js';
 import { 
     initializeEntityPoints,
     getEntityPoints,
@@ -2748,6 +2749,190 @@ async function createStoreDisplay(guildId, storeId, userId) {
             flags: InteractionResponseFlags.EPHEMERAL
         };
     }
+}
+
+/**
+ * Create paginated Global Store browse display
+ * Reuses inventory pagination button pattern (safari_inv_page)
+ * @param {string} guildId - Discord guild ID
+ * @param {string} storeId - Store ID to browse
+ * @param {string} userId - Discord user ID (for balance display)
+ * @param {number} currentPage - Current page (0-indexed)
+ * @returns {Object} Components V2 response { components: [container] }
+ */
+async function createStoreBrowseDisplay(guildId, storeId, userId, currentPage = 0) {
+    const ITEMS_PER_PAGE = 7;
+
+    const safariData = await loadSafariContent();
+    const store = safariData[guildId]?.stores?.[storeId];
+    const allItems = safariData[guildId]?.items || {};
+
+    if (!store) {
+        return {
+            components: [{
+                type: 17,
+                components: [{ type: 10, content: '> Store not found.' }]
+            }]
+        };
+    }
+
+    const customTerms = await getCustomTerms(guildId);
+    const playerData = await loadPlayerData();
+    const player = playerData[guildId]?.players?.[userId];
+    const playerCurrency = player?.safari?.currency || 0;
+
+    // Pagination calculations
+    const storeItems = store.items || [];
+    const totalPages = Math.max(1, Math.ceil(storeItems.length / ITEMS_PER_PAGE));
+    currentPage = Math.max(0, Math.min(currentPage, totalPages - 1));
+    const startIndex = currentPage * ITEMS_PER_PAGE;
+    const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, storeItems.length);
+    const pageItems = storeItems.slice(startIndex, endIndex);
+
+    const containerComponents = [];
+
+    // Header
+    const pageInfo = totalPages > 1 ? ` (Page ${currentPage + 1}/${totalPages})` : '';
+    containerComponents.push({
+        type: 10,
+        content: `## ${store.emoji || '🏪'} ${store.name}${pageInfo}\n\n**${store.settings?.storeownerText || 'Welcome to the store!'}**\n\n${store.description || ''}\n\n> ${customTerms.currencyEmoji} **Your Balance:** ${playerCurrency} ${customTerms.currencyName}`
+    });
+
+    containerComponents.push({ type: 14 }); // Separator
+
+    // Item sections for current page
+    for (let i = 0; i < pageItems.length; i++) {
+        const storeItem = pageItems[i];
+        const itemId = storeItem.itemId || storeItem;
+        const item = allItems[itemId];
+        const price = storeItem.price || item?.basePrice || 0;
+
+        if (item) {
+            const itemStock = storeItem.stock;
+            const itemContent = generateItemContent(item, customTerms, null, price, itemStock);
+            const isSoldOut = itemStock === 0;
+
+            containerComponents.push({
+                type: 9, // Section
+                components: [{
+                    type: 10,
+                    content: itemContent
+                }],
+                accessory: {
+                    type: 2, // Button
+                    custom_id: `safari_store_buy_${guildId}_${storeId}_${itemId}`,
+                    label: `Buy ${item.name}`.slice(0, 80),
+                    style: isSoldOut ? 2 : 1,
+                    disabled: isSoldOut,
+                    emoji: item.emoji ? (parseTextEmoji(item.emoji)?.emoji || { name: '🛒' }) : { name: '🛒' }
+                }
+            });
+
+            // Separator between items (not after last)
+            if (i < pageItems.length - 1) {
+                containerComponents.push({ type: 14 });
+            }
+        }
+    }
+
+    // Empty store
+    if (pageItems.length === 0) {
+        containerComponents.push({
+            type: 10,
+            content: '*This store has no items in stock.*'
+        });
+    }
+
+    // Navigation separator
+    containerComponents.push({ type: 14 });
+
+    // Pagination buttons (reused from inventory pattern)
+    if (totalPages > 1) {
+        const navButtons = [];
+
+        if (totalPages <= 5) {
+            for (let page = 0; page < totalPages; page++) {
+                navButtons.push({
+                    type: 2,
+                    custom_id: `safari_store_page_${storeId}_${page}`,
+                    label: `${page + 1}`,
+                    style: page === currentPage ? 1 : 2,
+                    disabled: page === currentPage
+                });
+            }
+        } else {
+            // Smart pagination: [«] [prev] [current] [next] [»]
+            if (currentPage > 1) {
+                navButtons.push({
+                    type: 2,
+                    custom_id: `safari_store_page_${storeId}_0`,
+                    label: '«',
+                    style: 2
+                });
+            }
+            if (currentPage > 0) {
+                navButtons.push({
+                    type: 2,
+                    custom_id: `safari_store_page_${storeId}_${currentPage - 1}`,
+                    label: `${currentPage}`,
+                    style: 2
+                });
+            }
+            navButtons.push({
+                type: 2,
+                custom_id: `safari_store_page_${storeId}_${currentPage}`,
+                label: `${currentPage + 1}`,
+                style: 1,
+                disabled: true
+            });
+            if (currentPage < totalPages - 1) {
+                navButtons.push({
+                    type: 2,
+                    custom_id: `safari_store_page_${storeId}_${currentPage + 1}`,
+                    label: `${currentPage + 2}`,
+                    style: 2
+                });
+            }
+            if (currentPage < totalPages - 2) {
+                navButtons.push({
+                    type: 2,
+                    custom_id: `safari_store_page_${storeId}_${totalPages - 1}`,
+                    label: '»',
+                    style: 2
+                });
+            }
+        }
+
+        if (navButtons.length > 0) {
+            containerComponents.push({
+                type: 1,
+                components: navButtons.slice(0, 5)
+            });
+        }
+    }
+
+    // Back button
+    const backButton = new ButtonBuilder()
+        .setCustomId('safari_player_inventory')
+        .setLabel(customTerms.inventoryName)
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji(customTerms.inventoryEmoji || '🧰');
+
+    containerComponents.push(new ActionRowBuilder().addComponents(backButton).toJSON());
+
+    const container = {
+        type: 17,
+        accent_color: store.settings?.accentColor || 0x3498db,
+        components: containerComponents
+    };
+
+    validateComponentLimit([container], `Store Browse: ${store.name}`);
+
+    console.log(`🏪 Store browse: ${store.name} - page ${currentPage + 1}/${totalPages}, ${pageItems.length} items`);
+
+    return {
+        components: [container]
+    };
 }
 
 /**
@@ -8958,6 +9143,7 @@ export {
     checkCondition,
     getCurrencyAndInventoryDisplay,
     createStoreDisplay,
+    createStoreBrowseDisplay,
     buyItem,
     executeConditionalAction,
     executeStoreDisplay,

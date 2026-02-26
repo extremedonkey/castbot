@@ -886,6 +886,22 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari_stores'
   },
+  'safari_store_browse_*': {
+    label: 'Browse Store',
+    description: 'Browse a global store with paginated items for sale',
+    emoji: '🏪',
+    style: 'Primary',
+    category: 'safari_stores',
+    parent: 'safari_player_inventory'
+  },
+  'safari_store_page_*': {
+    label: 'Store Page',
+    description: 'Navigate between pages of store items',
+    emoji: '📄',
+    style: 'Secondary',
+    category: 'safari_stores',
+    parent: 'safari_store_browse'
+  },
   'safari_use_item': {
     label: 'Use Item',
     description: 'Use a consumable item from inventory',

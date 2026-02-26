@@ -3811,6 +3811,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'safari_remove_action',
         'safari_all_server_items',
         'safari_store_items_select_back',
+        'safari_store_browse',
+        'safari_store_page',
         'safari_attack_player',
         'custom_action_add_condition',
         'custom_action_remove_condition',
@@ -4138,146 +4140,34 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     
     // Handle store browse buttons (format: safari_store_browse_guildId_storeId)
     if (custom_id.startsWith('safari_store_browse_')) {
-      try {
-        const guildId = req.body.guild_id;
-        const userId = req.body.member?.user?.id || req.body.user?.id;
-        
-        // Parse storeId from custom_id: safari_store_browse_guildId_storeId
-        const parts = custom_id.split('_');
-        if (parts.length < 5) {
-          throw new Error('Invalid store browse custom_id format');
+      return ButtonHandlerFactory.create({
+        id: 'safari_store_browse',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = context.customId.split('_');
+          const storeId = parts.slice(4).join('_'); // Handles underscores in storeId
+          const { createStoreBrowseDisplay } = await import('./safariManager.js');
+          return await createStoreBrowseDisplay(context.guildId, storeId, context.userId);
         }
-        const storeId = parts.slice(4).join('_'); // Rejoin in case storeId has underscores
-        
-        // Import Safari manager functions
-        const { loadSafariContent, getCustomTerms, generateItemContent } = await import('./safariManager.js');
-        const { getPlayer, loadPlayerData } = await import('./storage.js');
-        const safariData = await loadSafariContent();
-        const store = safariData[guildId]?.stores?.[storeId];
-        const allItems = safariData[guildId]?.items || {};
-        
-        if (!store) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Store not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Get custom terms and player's currency for display
-        const customTerms = await getCustomTerms(guildId);
-        const playerData = await loadPlayerData();
-        // Access player data directly from the loaded structure
-        const player = playerData[guildId]?.players?.[userId];
-        const playerCurrency = player?.safari?.currency || 0;
-        
-        // Build store display with Container -> Section pattern
-        // Create simplified Components V2 structure to avoid nesting issues
-        const containerComponents = [];
-        
-        // Header section - swapped description and storeownerText positions
-        containerComponents.push({
-          type: 10, // Text Display
-          content: `## ${store.emoji || '🏪'} ${store.name}\n\n**${store.settings?.storeownerText || 'Welcome to the store!'}**\n\n${store.description || ''}\n\n> ${customTerms.currencyEmoji} **Your Balance:** ${playerCurrency} ${customTerms.currencyName}`
-        });
-        
-        containerComponents.push({ type: 14 }); // Separator
-        
-        // Create one section per item - simplified structure
-        const storeItems = store.items || [];
-        for (let i = 0; i < Math.min(storeItems.length, 8); i++) { // Limit to 8 items to stay safe
-          const storeItem = storeItems[i];
-          const itemId = storeItem.itemId || storeItem;
-          const item = allItems[itemId];
-          const price = storeItem.price || item?.basePrice || 0;
-          
-          if (item) {
-            // Get stock for this item (undefined means unlimited)
-            const itemStock = storeItem.stock;
-            
-            // Generate detailed item content using shared function with stock info
-            const itemContent = generateItemContent(item, customTerms, null, price, itemStock);
-            
-            // Check if item is sold out (stock === 0)
-            const isSoldOut = itemStock === 0;
-            
-            const itemSection = {
-              type: 9, // Section component
-              components: [{
-                type: 10, // Text Display
-                content: itemContent
-              }],
-              accessory: {
-                type: 2, // Button accessory
-                custom_id: `safari_store_buy_${guildId}_${storeId}_${itemId}`,
-                label: `Buy ${item.name}`.slice(0, 80),
-                style: isSoldOut ? 2 : 1, // Secondary (grey/disabled look) if sold out, Primary otherwise
-                disabled: isSoldOut, // Disable button if sold out
-                emoji: item.emoji ? (parseTextEmoji(item.emoji)?.emoji || { name: '🛒' }) : { name: '🛒' }
-              }
-            };
-            
-            containerComponents.push(itemSection);
-            
-            // Add separator between items (but not after the last item)
-            if (i < Math.min(storeItems.length, 8) - 1) {
-              containerComponents.push({ type: 14 }); // Separator
-            }
-          }
-        }
-        
-        if (storeItems.length > 8) {
-          containerComponents.push({
-            type: 10,
-            content: `*... and ${storeItems.length - 8} more items. Store pagination coming soon!*`
-          });
-        }
-        
-        // Add separator and navigation button
-        containerComponents.push({ type: 14 }); // Separator
-        
-        // Create navigation button to return to inventory
-        const backButton = new ButtonBuilder()
-          .setCustomId('safari_player_inventory')
-          .setLabel(customTerms.inventoryName)
-          .setStyle(ButtonStyle.Primary)
-          .setEmoji(customTerms.inventoryEmoji || '🧰'); // Use custom inventory emoji
-        
-        const backRow = new ActionRowBuilder().addComponents(backButton);
-        containerComponents.push(backRow.toJSON());
-        
-        const container = {
-          type: 17, // Container
-          accent_color: store.settings?.accentColor || 0x3498db,
-          components: containerComponents
-        };
-        
-        const response = {
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + Ephemeral
-            components: [container]
-          }
-        };
-        
-        // Log concise store browse summary
-        console.log(`🏪 Store browsed: ${member?.user?.global_name || member?.user?.username || userId} → ${store.name} (${storeItems.length} items, ${containerComponents.length} components)`);
-        return res.send(response);
-        
-      } catch (error) {
-        console.error('Error in safari_store_browse handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error loading store display.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     }
-    
+
+    // Handle store page navigation (format: safari_store_page_{storeId}_{page})
+    if (custom_id.startsWith('safari_store_page_')) {
+      return ButtonHandlerFactory.create({
+        id: 'safari_store_page',
+        updateMessage: true,
+        handler: async (context) => {
+          const withoutPrefix = context.customId.replace('safari_store_page_', '');
+          const segments = withoutPrefix.split('_');
+          const page = parseInt(segments.pop()); // Last segment = page number
+          const storeId = segments.join('_'); // Rest = storeId (may have underscores)
+          const { createStoreBrowseDisplay } = await import('./safariManager.js');
+          return await createStoreBrowseDisplay(context.guildId, storeId, context.userId, page);
+        }
+      })(req, res, client);
+    }
+
     // Handle store purchase buttons (format: safari_store_buy_guildId_storeId_itemId)
     if (custom_id.startsWith('safari_store_buy_')) {
       try {

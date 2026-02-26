@@ -59,7 +59,6 @@ export const EDIT_CONFIGS = {
     content: {
       type: 'items',
       label: 'Store Items',
-      maxItems: SAFARI_LIMITS.MAX_ITEMS_PER_STORE,
       itemLabel: 'item',
       itemLabelPlural: 'items'
     },
