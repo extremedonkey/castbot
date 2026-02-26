@@ -412,7 +412,7 @@ export class EditInterfaceBuilder {
    * Get store item summary
    */
   getStoreItemSummary(storeItem) {
-    return `🛍️ ${storeItem.itemId || 'Unknown Item'} - ${storeItem.price || 0} coins`;
+    return `🛍️ ${storeItem.itemId || 'Unknown Item'}`;
   }
 
   /**

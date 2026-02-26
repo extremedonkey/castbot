@@ -793,7 +793,7 @@ export async function createStoreItemManagementUI(options) {
         const itemId = storeItem.itemId || storeItem;
         const item = allItems[itemId];
         if (item) {
-            const price = storeItem.price || item.basePrice || 0;
+            const price = item.basePrice || 0;
             // Get stock value - undefined/null/-1 means unlimited
             const stock = storeItem.stock;
             let stockDisplay;

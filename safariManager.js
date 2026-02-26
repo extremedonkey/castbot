@@ -2694,15 +2694,15 @@ async function createStoreDisplay(guildId, storeId, userId) {
                 components: [
                     {
                         type: 10, // Text Display
-                        content: `## ${item.emoji} ${item.name}\n${item.description || 'No description'}\n\n**Price:** ${storeItem.price || item.basePrice} ${customTerms.currencyName}`
+                        content: `## ${item.emoji} ${item.name}\n${item.description || 'No description'}\n\n**Price:** ${item.basePrice || 0} ${customTerms.currencyName}`
                     }
                 ]
             };
             
             // Add buy button if user can afford it
             const userCurrency = await getCurrency(guildId, userId);
-            const price = storeItem.price || item.basePrice;
-            
+            const price = item.basePrice || 0;
+
             const buyButton = new ButtonBuilder()
                 .setCustomId(`safari_buy_${guildId}_${storeId}_${item.id}_${Date.now()}`)
                 .setLabel(`Buy (${price} ${customTerms.currencyName})`)
@@ -2805,7 +2805,7 @@ async function createStoreBrowseDisplay(guildId, storeId, userId, currentPage = 
         const storeItem = pageItems[i];
         const itemId = storeItem.itemId || storeItem;
         const item = allItems[itemId];
-        const price = storeItem.price || item?.basePrice || 0;
+        const price = item?.basePrice || 0;
 
         if (item) {
             const itemStock = storeItem.stock;
@@ -3416,7 +3416,7 @@ async function buyItem(guildId, storeId, itemId, userId) {
             };
         }
         
-        const price = storeItem.price || item.basePrice;
+        const price = item.basePrice || 0;
         const userCurrency = await getCurrency(guildId, userId);
         
         // Check if user can afford it

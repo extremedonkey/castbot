@@ -4232,8 +4232,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           });
         }
         
-        const price = storeItem.price || item.basePrice || 0;
-        
+        const price = item.basePrice || 0;
+
         // Check if item is sold out (for old buttons where stock may have changed)
         const { hasStock, decrementStock } = await import('./safariManager.js');
         const hasStockAvailable = await hasStock(guildId, storeId, itemId);
@@ -27609,8 +27609,8 @@ Are you sure you want to continue?`;
               const itemId = storeItem.itemId || storeItem;
               const item = allItems[itemId];
               if (item) {
-                const price = storeItem.price || item.basePrice || 0;
-                
+                const price = item.basePrice || 0;
+
                 // Get stock display
                 let stockDisplay;
                 if (storeItem.stock === undefined || storeItem.stock === null || storeItem.stock === -1) {
