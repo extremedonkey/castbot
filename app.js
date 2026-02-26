@@ -4139,15 +4139,19 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     }
     
     // Handle store browse buttons (format: safari_store_browse_guildId_storeId)
+    // Uses ephemeral (not updateMessage) because this button lives on BOTH:
+    //   - Player menu (ephemeral) and posted channel messages (public)
+    // updateMessage on a public message without IS_COMPONENTS_V2 flag = "interaction failed"
     if (custom_id.startsWith('safari_store_browse_')) {
       return ButtonHandlerFactory.create({
         id: 'safari_store_browse',
-        updateMessage: true,
         handler: async (context) => {
           const parts = context.customId.split('_');
           const storeId = parts.slice(4).join('_'); // Handles underscores in storeId
           const { createStoreBrowseDisplay } = await import('./safariManager.js');
-          return await createStoreBrowseDisplay(context.guildId, storeId, context.userId);
+          const result = await createStoreBrowseDisplay(context.guildId, storeId, context.userId);
+          result.flags = (1 << 15) | InteractionResponseFlags.EPHEMERAL;
+          return result;
         }
       })(req, res, client);
     }
@@ -14742,24 +14746,39 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        // Create store button to post to channel
-        const storeButton = {
-          type: 1, // Action Row
-          components: [{
-            type: 2, // Button
-            custom_id: `safari_store_browse_${guildId}_${storeId}`,
-            label: `Browse ${store.name}`,
-            style: 1,
-            emoji: store.emoji ? (parseTextEmoji(store.emoji)?.emoji || { name: '🏪' }) : { name: '🏪' }
-          }]
+        // Build store card to post to channel (Components V2)
+        const { getCustomTerms } = await import('./safariManager.js');
+        const customTerms = await getCustomTerms(guildId);
+        const itemCount = (store.items || []).length;
+        const storeCard = {
+          type: 17, // Container
+          accent_color: store.settings?.accentColor || 0x3498db,
+          components: [
+            {
+              type: 10, // Text Display
+              content: `## ${store.emoji || '🏪'} ${store.name}\n\n${store.description || `*${store.settings?.storeownerText || 'Welcome to the store!'}*`}\n\n> ${customTerms.currencyEmoji} **${itemCount}** items available`
+            },
+            { type: 14 }, // Separator
+            {
+              type: 1, // Action Row
+              components: [{
+                type: 2, // Button
+                custom_id: `safari_store_browse_${guildId}_${storeId}`,
+                label: `Browse ${store.name}`.slice(0, 80),
+                style: 1,
+                emoji: store.emoji ? (parseTextEmoji(store.emoji)?.emoji || { name: '🏪' }) : { name: '🏪' }
+              }]
+            }
+          ]
         };
-        
-        // Post button to selected channel using Discord.js client
+
+        // Post store card to selected channel
         try {
           const channel = client?.channels?.cache?.get(selectedChannelId);
           if (channel) {
             await channel.send({
-              components: [storeButton]
+              flags: (1 << 15), // IS_COMPONENTS_V2
+              components: [storeCard]
             });
             
             return res.send({
