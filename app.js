@@ -14756,7 +14756,7 @@ Your server is now ready for Tycoons gameplay!`;
           components: [
             {
               type: 10, // Text Display
-              content: `## ${store.emoji || '🏪'} ${store.name}\n\n${store.description || `*${store.settings?.storeownerText || 'Welcome to the store!'}*`}\n\n> ${customTerms.currencyEmoji} **${itemCount}** items available`
+              content: `## ${store.emoji || '🏪'} ${store.name}\n\n${store.description || `*${store.settings?.storeownerText || 'Welcome to the store!'}*`}\n\n> 📦 **${itemCount}** items available`
             },
             { type: 14 }, // Separator
             {

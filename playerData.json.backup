@@ -788,7 +788,7 @@
           "1415062472007749765"
         ],
         "safari": {
-          "currency": 426,
+          "currency": 316,
           "history": [],
           "lastInteraction": 1767965774841,
           "achievements": [],
@@ -826,6 +826,10 @@
             "dupe20_213549": {
               "quantity": 1,
               "numAttacksAvailable": 0
+            },
+            "anthony_s_toga_428836": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
             }
           },
           "cooldowns": {},
@@ -854,6 +858,12 @@
               "storeId": "my_store_myer_100606",
               "price": 0,
               "timestamp": 1772115594822
+            },
+            {
+              "itemId": "anthony_s_toga_428836",
+              "storeId": "my_store_myer_100606",
+              "price": 110,
+              "timestamp": 1772116170680
             }
           ],
           "mapProgress": {
@@ -4747,14 +4757,14 @@
     "serverName": "EmeraldORG: Fire Emblem Three Houses",
     "icon": "https://cdn.discordapp.com/icons/1385042963310055515/4bea7eb65723bab308c21c06332836be.webp",
     "ownerId": "676262975132139522",
-    "memberCount": 96,
+    "memberCount": 97,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1750290375307,
-    "lastUpdated": 1772113655143,
+    "lastUpdated": 1772116445969,
     "ownerInfo": {
       "username": "deadlybelle",
       "globalName": "Belle",
