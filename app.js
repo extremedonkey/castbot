@@ -14772,42 +14772,39 @@ Your server is now ready for Tycoons gameplay!`;
           ]
         };
 
-        // Post store card to selected channel
+        // Post store card to selected channel via REST API (Components V2 requires raw API, not Discord.js)
         try {
-          const channel = client?.channels?.cache?.get(selectedChannelId);
-          if (channel) {
-            await channel.send({
+          await DiscordRequest(`channels/${selectedChannelId}/messages`, {
+            method: 'POST',
+            body: {
               flags: (1 << 15), // IS_COMPONENTS_V2
               components: [storeCard]
-            });
-            
-            return res.send({
-              type: InteractionResponseType.UPDATE_MESSAGE,
-              data: {
-                flags: (1 << 15), // IS_COMPONENTS_V2
+            }
+          });
+
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+              components: [{
+                type: 17, // Container
+                accent_color: 0x00ff00, // Green
                 components: [{
-                  type: 17, // Container
-                  accent_color: 0x00ff00, // Green
+                  type: 10, // Text Display
+                  content: `## ✅ Store Button Posted!\n\n**${store.emoji || '🏪'} ${store.name}** has been posted to <#${selectedChannelId}>.`
+                }, {
+                  type: 14 // Separator
+                }, {
+                  type: 1, // Action Row
                   components: [{
-                    type: 10, // Text Display
-                    content: `## ✅ Store Button Posted!\n\n**${store.emoji || '🏪'} ${store.name}** has been posted to <#${selectedChannelId}>.`
-                  }, {
-                    type: 14 // Separator
-                  }, {
-                    type: 1, // Action Row
-                    components: [{
-                      type: 2, // Button
-                      custom_id: 'safari_store_manage_items',
-                      label: '⬅ Back to Store Management',
-                      style: 2
-                    }]
+                    type: 2, // Button
+                    custom_id: 'safari_store_manage_items',
+                    label: '← Store Management',
+                    style: 2
                   }]
                 }]
-              }
-            });
-          } else {
-            throw new Error('Channel not found');
-          }
+              }]
+            }
+          });
         } catch (postError) {
           console.error('Error posting store button to channel:', postError);
           return res.send({

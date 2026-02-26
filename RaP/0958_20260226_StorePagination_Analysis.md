@@ -210,27 +210,48 @@ Container(1) + Header(1) + Sep(1)                           =  3
 
 1. **7 items per page** — fits 40-component limit with full nav + back button
 2. **Reuse inventory pagination button logic** — same smart «/prev/current/next/» pattern
-3. **Convert browse to ButtonHandlerFactory** with `updateMessage: true` — updates menu in-place
-4. **Leave buy handler as-is** — shared across all store types, different scope
-5. **Extract display to `createStoreBrowseDisplay()`** in safariManager.js — testable, reusable
-6. **Remove MAX_ITEMS_PER_STORE** — no longer needed with pagination
+3. **Browse uses `ephemeral` (NOT `updateMessage`)** — because the browse button lives on BOTH ephemeral menus AND public posted messages. Using `updateMessage: true` on a public message without IS_COMPONENTS_V2 flag causes "This interaction failed"
+4. **Page navigation uses `updateMessage: true`** — always within the user's own ephemeral store display
+5. **Leave buy handler as-is** — shared across all store types, different scope
+6. **Extract display to `createStoreBrowseDisplay()`** in safariManager.js — testable, reusable
+7. **Remove MAX_ITEMS_PER_STORE** — no longer needed with pagination
+8. **Posted store channel card** — upgraded from bare ActionRow button to Components V2 Container with store name, description, item count, accent color
+
+### Critical Discovery: updateMessage vs ephemeral for Shared Buttons
+
+When a button exists on BOTH ephemeral and public messages, you CANNOT use `updateMessage: true`:
+- On ephemeral message: works fine, updates the user's message
+- On public channel message: tries to UPDATE the public message → fails because original lacks IS_COMPONENTS_V2 flag, and would replace the shared button for everyone
+
+**Solution**: Use no `updateMessage` flag (creates new ephemeral message via CHANNEL_MESSAGE_WITH_SOURCE). Page navigation within the resulting ephemeral CAN use `updateMessage: true` safely.
+
+### As-Built Implementation
+
+**Files modified**:
+- `safariManager.js` — `createStoreBrowseDisplay()` function (after `createStoreDisplay()`)
+- `app.js` — `safari_store_browse_` (Factory, ephemeral), `safari_store_page_` (Factory, updateMessage), posted store card UI
+- `buttonHandlerFactory.js` — `safari_store_browse_*`, `safari_store_page_*` registered
+- `config/safariLimits.js` — `MAX_ITEMS_PER_STORE` removed
+- `editFramework.js` — `maxItems` removed from store content config
 
 ### Future Unification Path
 
 ```mermaid
 graph TD
     A["Current: 3 divergent implementations"] --> B["Phase 1: Global Store Pagination<br/>(this work)"]
-    B --> C["Phase 2: Unify buy handlers<br/>safari_buy_* → safari_store_buy_*"]
-    C --> D["Phase 3: Posted Stores use<br/>createStoreBrowseDisplay()"]
+    B --> B2["Phase 1b: Posted Stores now use<br/>createStoreBrowseDisplay() via browse button"]
+    B2 --> C["Phase 2: Unify buy handlers<br/>safari_buy_* → safari_store_buy_*"]
+    C --> D["Phase 3: Deprecate createStoreDisplay()<br/>(only used by Custom Actions)"]
     D --> E["Phase 4: Map Stores option<br/>to use rich display"]
 
     style B fill:#51cf66,color:#fff
+    style B2 fill:#51cf66,color:#fff
     style C fill:#ffa94d,color:#fff
     style D fill:#ffa94d,color:#fff
     style E fill:#74c0fc,color:#fff
 ```
 
-The `createStoreBrowseDisplay()` function is designed to be reusable. Posted Stores and Map Stores can adopt it later with minimal changes (different entry button IDs, different back navigation targets).
+Posted Stores now use `createStoreBrowseDisplay()` via the shared `safari_store_browse_` handler. The only remaining consumer of the old `createStoreDisplay()` is the Custom Actions `executeStoreDisplay` function.
 
 ### Tech Debt Identified
 
