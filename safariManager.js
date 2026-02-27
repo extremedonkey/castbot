@@ -2760,7 +2760,7 @@ async function createStoreDisplay(guildId, storeId, userId) {
  * @param {number} currentPage - Current page (0-indexed)
  * @returns {Object} Components V2 response { components: [container] }
  */
-async function createStoreBrowseDisplay(guildId, storeId, userId, currentPage = 0) {
+async function createStoreBrowseDisplay(guildId, storeId, userId, currentPage = 0, options = {}) {
     const ITEMS_PER_PAGE = 7;
 
     const safariData = await loadSafariContent();
@@ -2911,14 +2911,21 @@ async function createStoreBrowseDisplay(guildId, storeId, userId, currentPage = 
         }
     }
 
-    // Back button
-    const backButton = new ButtonBuilder()
-        .setCustomId('safari_player_inventory')
-        .setLabel(customTerms.inventoryName)
-        .setStyle(ButtonStyle.Primary)
-        .setEmoji(customTerms.inventoryEmoji || '🧰');
-
-    containerComponents.push(new ActionRowBuilder().addComponents(backButton).toJSON());
+    // Back button (configurable — null = no back button)
+    if (options.backButton !== null) {
+        const backConfig = options.backButton || {
+            customId: 'safari_player_inventory',
+            label: customTerms.inventoryName,
+            emoji: customTerms.inventoryEmoji || '🧰',
+            style: ButtonStyle.Primary
+        };
+        const backButton = new ButtonBuilder()
+            .setCustomId(backConfig.customId)
+            .setLabel(backConfig.label)
+            .setStyle(backConfig.style || ButtonStyle.Secondary);
+        if (backConfig.emoji) backButton.setEmoji(backConfig.emoji);
+        containerComponents.push(new ActionRowBuilder().addComponents(backButton).toJSON());
+    }
 
     const container = {
         type: 17,

@@ -27547,147 +27547,38 @@ Are you sure you want to continue?`;
       })(req, res, client);
       
     } else if (custom_id.startsWith('map_coord_store_')) {
-      // Handle store button click from anchor message
+      // Handle store button click from anchor message — uses shared paginated store display
       return ButtonHandlerFactory.create({
         id: 'map_coord_store',
-        ephemeral: true,
         handler: async (context) => {
           // Parse: map_coord_store_{coord}_{storeId}
           const parts = context.customId.replace('map_coord_store_', '').split('_');
           const coord = parts[0];
           const storeId = parts.slice(1).join('_');
-          
-          console.log(`🏪 START: map_coord_store - coord ${coord}, store ${storeId}`);
-          
+
           // Check if user is in the correct channel
-          const { loadSafariContent } = await import('./safariManager.js');
+          const { loadSafariContent, createStoreBrowseDisplay } = await import('./safariManager.js');
           const safariData = await loadSafariContent();
           const activeMapId = safariData[context.guildId]?.maps?.active;
           const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
-          
-          if (!coordData || coordData.channelId !== context.channelId) {
-            console.log(`❌ User ${context.userId} tried to access store from wrong channel`);
-            return {
-              content: '❌ You can only access this store from its location!',
-              ephemeral: true
-            };
-          }
-          
-          // Verify store exists
-          const store = safariData[context.guildId]?.stores?.[storeId];
-          if (!store) {
-            return {
-              content: '❌ Store not found.',
-              ephemeral: true
-            };
-          }
-          
-          console.log(`✅ SUCCESS: map_coord_store - showing store ${storeId} at ${coord}`);
-          
-          // Import Safari manager functions to display store content
-          const { getCustomTerms, generateItemContent } = await import('./safariManager.js');
-          
-          const storeItems = store.items || [];
-          const allItems = safariData[context.guildId]?.items || {};
-          const config = safariData[context.guildId]?.safariConfig || {};
-          const currencyEmoji = config.currencyEmoji || '🪙';
-          const currencyName = config.currencyName || 'coins';
-          
-          // Load current player data to show balance
-          const playerData = await loadPlayerData();
-          const playerSafariData = playerData[context.guildId]?.players?.[context.userId]?.safari || {};
-          const currentBalance = playerSafariData.currency || 0;
-          
-          // Build the store content
-          const customTerms = getCustomTerms(config, safariData[context.guildId]?.safariConfig);
-          let itemContent = '';
-          
-          if (storeItems.length === 0) {
-            itemContent = '*This store has no items in stock.*';
-          } else {
-            storeItems.forEach((storeItem, index) => {
-              const itemId = storeItem.itemId || storeItem;
-              const item = allItems[itemId];
-              if (item) {
-                const price = item.basePrice || 0;
 
-                // Get stock display
-                let stockDisplay;
-                if (storeItem.stock === undefined || storeItem.stock === null || storeItem.stock === -1) {
-                  stockDisplay = 'Unlimited';
-                } else if (storeItem.stock === 0) {
-                  stockDisplay = '0';  // Will show "0 Available"
-                } else {
-                  stockDisplay = storeItem.stock.toString();
-                }
-                
-                itemContent += `**${index + 1}. ${item.emoji || '📦'} ${item.name}**\n`;
-                itemContent += `${currencyEmoji} ${price} ${currencyName}\n`;
-                itemContent += `📦 ${stockDisplay === 'Unlimited' ? 'Unlimited' : `${stockDisplay} Available`}\n`;
-                if (item.description) {
-                  itemContent += `\n   *${item.description}*\n`;
-                }
-                itemContent += '\n';
-              }
-            });
+          if (!coordData || coordData.channelId !== context.channelId) {
+            return {
+              components: [{
+                type: 17,
+                components: [{ type: 10, content: '> You can only access this store from its location!' }]
+              }],
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+            };
           }
-          
-          // Create buy buttons
-          const buyButtons = [];
-          storeItems.slice(0, 10).forEach((storeItem) => {
-            const itemId = storeItem.itemId || storeItem;
-            const item = allItems[itemId];
-            if (item) {
-              // Check if item is sold out
-              const isSoldOut = storeItem.stock === 0;
-              
-              buyButtons.push({
-                type: 2,
-                custom_id: `safari_store_buy_${context.guildId}_${storeId}_${itemId}`,
-                label: `Buy ${item.name}`,
-                style: isSoldOut ? 2 : 3, // Secondary (grey) if sold out, Success (green) otherwise
-                disabled: isSoldOut, // Disable button if sold out
-                emoji: item.emoji ? (parseTextEmoji(item.emoji)?.emoji || undefined) : undefined
-              });
-            }
-          });
-          
-          // Create action rows with buttons (max 5 per row)
-          const buttonRows = [];
-          for (let i = 0; i < buyButtons.length; i += 5) {
-            buttonRows.push({
-              type: 1,
-              components: buyButtons.slice(i, i + 5)
-            });
-          }
-          
-          // Build container components
-          const containerComponents = [
-            {
-              type: 10, // Text Display
-              content: `${store.emoji || '🏪'} **${store.name}**\n${store.description || ''}\n"${store.settings?.storeownerText || 'Welcome to our store!'}"\n**Your Balance:** ${currentBalance} ${currencyEmoji}`
-            },
-            { type: 14 }, // Separator
-            {
-              type: 10,
-              content: `**Available Items**\n\n${itemContent}`
-            }
-          ];
-          
-          if (buttonRows.length > 0) {
-            containerComponents.push({ type: 14 }); // Separator
-            containerComponents.push(...buttonRows);
-          }
-          
-          return {
-            components: [{
-              type: 17, // Container
-              accent_color: store.settings?.accentColor || 0x3498db,
-              components: containerComponents
-            }],
-            flags: (1 << 15), // IS_COMPONENTS_V2
-            ephemeral: true
-          };
+
+          // Use shared paginated store display (no back button for location stores)
+          const result = await createStoreBrowseDisplay(
+            context.guildId, storeId, context.userId, 0,
+            { backButton: null }
+          );
+          result.flags = (1 << 15) | InteractionResponseFlags.EPHEMERAL;
+          return result;
         }
       })(req, res, client);
       
