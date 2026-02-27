@@ -11445,6 +11445,7 @@ Your server is now ready for Tycoons gameplay!`;
     } else if (custom_id === 'safari_confirm_reset_game') {
       return ButtonHandlerFactory.create({
         id: 'safari_confirm_reset_game',
+        ephemeral: true,
         handler: async (context) => {
           // Check admin permissions
           const hasPermission = context.member?.permissions && 

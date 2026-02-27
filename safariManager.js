@@ -6323,7 +6323,7 @@ async function resetGameData(guildId) {
         return {
             type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
             data: {
-                flags: (1 << 15), // IS_COMPONENTS_V2 (non-ephemeral)
+                flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 + EPHEMERAL
                 components: [{
                     type: 17, // Container
                     accent_color: 0x2ecc71, // Green for success

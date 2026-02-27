@@ -1032,7 +1032,7 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
         
       case 'SAFARI_CURRENCY':
         const changeType = safariContent.amount > 0 ? 'Gained' : 'Lost';
-        logMessage = `🪙 **CURRENCY** | [${timestamp}] | <@${userId}> at **${safariContent.location}**${channelDisplay}\n> ${changeType} ${Math.abs(safariContent.amount)} ${safariContent.currencyName} from "${safariContent.source}"`;
+        logMessage = `🪙 **CURRENCY** | [${timestamp}] | **${userDisplayName}** at **${safariContent.location}**${channelDisplay}\n> ${changeType} ${Math.abs(safariContent.amount)} ${safariContent.currencyName} from "${safariContent.source}"`;
         break;
         
       case 'SAFARI_PURCHASE':
