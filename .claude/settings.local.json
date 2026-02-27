@@ -94,7 +94,8 @@
       "Bash(git mv:*)",
       "Bash(tr:*)",
       "Bash(mv:*)",
-      "WebFetch(domain:docs.discord.com)"
+      "WebFetch(domain:docs.discord.com)",
+      "Bash(pgrep:*)"
     ],
     "deny": [],
     "ask": []
