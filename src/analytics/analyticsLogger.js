@@ -1023,7 +1023,7 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
     
     switch (action) {
       case 'SAFARI_WHISPER':
-        logMessage = `🤫 **WHISPER** | [${timestamp}] | <@${safariContent.senderId}> → <@${safariContent.recipientId}> at **${safariContent.location}**${channelDisplay}\n> ${safariContent.message}`;
+        logMessage = `🤫 **WHISPER** | [${timestamp}] | **${userDisplayName}** → **${safariContent.recipientName}** at **${safariContent.location}**${channelDisplay}\n> ${safariContent.message}`;
         break;
         
       case 'SAFARI_ITEM_PICKUP':
@@ -1036,24 +1036,24 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
         break;
         
       case 'SAFARI_PURCHASE':
-        logMessage = `🛒 **PURCHASE** | [${timestamp}] | <@${userId}> at **${safariContent.storeName}** (${safariContent.location}${channelDisplay})\n> Bought: ${safariContent.itemEmoji} **${safariContent.itemName}** (x${safariContent.quantity}) for ${safariContent.price} ${safariContent.currencyName}`;
+        logMessage = `🛒 **PURCHASE** | [${timestamp}] | **${userDisplayName}** at **${safariContent.storeName}** (${safariContent.location}${channelDisplay})\n> Bought: ${safariContent.itemEmoji} **${safariContent.itemName}** (x${safariContent.quantity}) for ${safariContent.price} ${safariContent.currencyName}`;
         break;
         
       case 'SAFARI_BUTTON':
-        logMessage = `🎯 **SAFARI ACTION** | [${timestamp}] | <@${userId}> at **${safariContent.location}**${channelDisplay}\n> Clicked: "${safariContent.buttonLabel}" - ${safariContent.result}`;
+        logMessage = `🎯 **SAFARI ACTION** | [${timestamp}] | **${userDisplayName}** at **${safariContent.location}**${channelDisplay}\n> Clicked: "${safariContent.buttonLabel}" - ${safariContent.result}`;
         break;
         
       case 'SAFARI_MOVEMENT':
         const fromChannelDisplay = safariContent.fromChannelName ? ` (#${safariContent.fromChannelName})` : '';
         const toChannelDisplay = safariContent.toChannelName ? ` (#${safariContent.toChannelName})` : '';
-        logMessage = `🗺️ **MOVEMENT** | [${timestamp}] | <@${userId}> moved from **${safariContent.fromLocation}**${fromChannelDisplay} to **${safariContent.toLocation}**${toChannelDisplay}`;
+        logMessage = `🗺️ **MOVEMENT** | [${timestamp}] | **${userDisplayName}** moved from **${safariContent.fromLocation}**${fromChannelDisplay} to **${safariContent.toLocation}**${toChannelDisplay}`;
         break;
         
       case 'SAFARI_ATTACK':
         // Extract round number from the result string if available
         const roundMatch = safariContent.result?.match(/Round (\d+)/);
         const roundNumber = roundMatch ? roundMatch[1] : 'Unknown';
-        logMessage = `⚔️ **ATTACK** | [${timestamp}] | <@${safariContent.attackerId}> scheduled an attack for <@${safariContent.targetId}> in Round ${roundNumber}${channelDisplay}\n> Result: ${safariContent.result}`;
+        logMessage = `⚔️ **ATTACK** | [${timestamp}] | **${userDisplayName}** scheduled an attack for **${safariContent.targetName}** in Round ${roundNumber}${channelDisplay}\n> Result: ${safariContent.result}`;
         break;
         
       case 'SAFARI_CUSTOM_ACTION':
@@ -1090,11 +1090,11 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
         break;
         
       case 'SAFARI_TEST':
-        logMessage = `🧪 **TEST MESSAGE** | [${timestamp}] | <@${userId}> from safari-config\n> Safari Log system test - configured by ${safariContent.configuredBy || 'Unknown'}`;
+        logMessage = `🧪 **TEST MESSAGE** | [${timestamp}] | **${userDisplayName}** from safari-config\n> Safari Log system test - configured by ${safariContent.configuredBy || 'Unknown'}`;
         break;
         
       default:
-        logMessage = `📝 **${action}** | [${timestamp}] | <@${userId}> - ${details}`;
+        logMessage = `📝 **${action}** | [${timestamp}] | **${userDisplayName}** - ${details}`;
     }
     
     // Send to Safari log channel
