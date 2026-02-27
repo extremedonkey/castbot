@@ -127,6 +127,24 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
+  'prod_all_servers': {
+    label: 'All Servers',
+    description: 'List all servers the bot is installed in with details',
+    emoji: '🌐',
+    style: 'Secondary',
+    parent: 'reece_stuff_menu',
+    restrictedUser: '391415444084490240',
+    category: 'analytics'
+  },
+  'all_servers_page': {
+    label: 'Server List Page',
+    description: 'Paginate through the full server list',
+    emoji: '🌐',
+    style: 'Secondary',
+    parent: 'prod_all_servers',
+    restrictedUser: '391415444084490240',
+    category: 'analytics'
+  },
   'nuke_roles': {
     label: 'Nuke Roles',
     description: 'Remove all roles from server (DANGEROUS)',

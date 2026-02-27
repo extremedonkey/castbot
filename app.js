@@ -1129,14 +1129,19 @@ async function createReeceStuffMenu(guildId, channelId = null) {
   const dangerZoneRow = new ActionRowBuilder().addComponents(dangerZoneButtons);
   const playerDataRow = new ActionRowBuilder().addComponents(playerDataButtons);
   
-  // Create back button
+  // Create back button row with All Servers
   const backButton = [
     new ButtonBuilder()
       .setCustomId('prod_menu_back')
       .setLabel('⬅ Menu')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('prod_all_servers')
+      .setLabel('All Servers')
       .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🌐')
   ];
-  
+
   const backRow = new ActionRowBuilder().addComponents(backButton);
   
   // Build container components with section headers
@@ -3815,6 +3820,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'safari_store_browse',
         'safari_store_page',
         'map_coord_store',
+        'all_servers_page',
         'safari_attack_player',
         'custom_action_add_condition',
         'custom_action_remove_condition',
@@ -39940,9 +39946,10 @@ Are you sure you want to continue?`;
         btn.label = actionName; // label mirrors name until decoupled by design
         btn.emoji = validatedEmoji; // Store validated emoji (null if invalid/empty)
         btn.description = actionDescription;
-        // Also sync trigger.button.label so posted buttons show the updated name
+        // Also sync trigger.button label + emoji so posted buttons and preview stay current
         if (btn.trigger?.button) {
           btn.trigger.button.label = actionName;
+          btn.trigger.button.emoji = validatedEmoji; // null if cleared/invalid
         }
         
         await saveSafariContent(allSafariContent);

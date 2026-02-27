@@ -1151,14 +1151,15 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
     });
 
     // Create actual preview button that does nothing when clicked
+    // Prefer action.name/action.emoji (always current) over trigger.button fields (may be stale)
     const previewButton = new ButtonBuilder()
       .setCustomId(`button_preview_${actionId}`)
-      .setLabel(action.trigger?.button?.label || action.label || 'Click Me')
+      .setLabel(action.name || action.trigger?.button?.label || action.label || 'Click Me')
       .setStyle(getButtonStyleNumber(currentStyle))
       .setDisabled(false); // Enable so it shows correctly but we'll handle the click
 
-    // Add emoji if available
-    const emoji = action.trigger?.button?.emoji || action.emoji;
+    // Add emoji if available — prefer action.emoji as source of truth
+    const emoji = action.emoji || action.trigger?.button?.emoji;
     if (emoji) {
       previewButton.setEmoji(emoji);
     }
