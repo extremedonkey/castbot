@@ -13769,6 +13769,20 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Handle search selection separately
         if (selectedValues.includes('search_entities')) {
+          // Check if store is at item limit — block search if so
+          const { loadSafariContent: loadSafariForCheck } = await import('./safariManager.js');
+          const { SAFARI_LIMITS: limits } = await import('./config/safariLimits.js');
+          const checkData = await loadSafariForCheck();
+          const checkStore = checkData[guildId]?.stores?.[storeId];
+          const checkCount = (checkStore?.items || []).length;
+          if (checkCount >= limits.MAX_ITEMS_PER_STORE) {
+            const { createStoreItemManagementUI } = await import('./entityManagementUI.js');
+            const uiResponse = await createStoreItemManagementUI({
+              storeId, store: checkStore, guildId, searchTerm: ''
+            });
+            return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: uiResponse });
+          }
+
           // Show search modal
           const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
           
@@ -13849,12 +13863,28 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Items to add (in new selection but not in current)
         const itemsToAdd = selectedValues.filter(id => !currentItemIds.has(id));
-        
+
         // Items to remove (in current but not in new selection)
         const itemsToRemove = currentItems
           .map(item => item.itemId || item)
           .filter(id => !newItemIds.has(id));
-        
+
+        // Enforce per-store item limit
+        const { SAFARI_LIMITS } = await import('./config/safariLimits.js');
+        const projectedCount = currentItems.length + itemsToAdd.length - itemsToRemove.length;
+        if (projectedCount > SAFARI_LIMITS.MAX_ITEMS_PER_STORE) {
+          const uiResponse = await createStoreItemManagementUI({
+            storeId: storeId,
+            store: store,
+            guildId: guildId,
+            searchTerm: ''
+          });
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: uiResponse
+          });
+        }
+
         console.log(`📦 DEBUG: Adding ${itemsToAdd.length} items, removing ${itemsToRemove.length} items`);
         
         // Update store items

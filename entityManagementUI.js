@@ -822,7 +822,7 @@ export async function createStoreItemManagementUI(options) {
             // Current items list
             {
                 type: 10, // Text Display
-                content: `### 🛍️ Current Items in Store\n${currentItemsList || '*No items in this store yet.*'}`
+                content: `### 🛍️ Current Items in Store\n> 📦 Max items per store: ${SAFARI_LIMITS.MAX_ITEMS_PER_STORE}\n${currentItemsList || '*No items in this store yet.*'}`
             },
             
             // Separator as requested
@@ -906,14 +906,25 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, all
     }
     
     // Add search and clear search options
+    const atItemLimit = currentItemIds.size >= SAFARI_LIMITS.MAX_ITEMS_PER_STORE;
     if (Object.keys(allItems || items).length > 10) {
-        options.push({
-            label: searchTerm ? '🔍 New Search' : '🔍 Search Items',
-            value: 'search_entities',
-            description: searchTerm ? 'Search for different items' : 'Search by name to filter items',
-            emoji: { name: '🔍' }
-        });
-        
+        if (atItemLimit && !searchTerm) {
+            // Store is full — show disabled-style search option
+            options.push({
+                label: '🔍 Search Items',
+                value: 'search_entities',
+                description: `Max item limit of ${SAFARI_LIMITS.MAX_ITEMS_PER_STORE} reached, remove items first`,
+                emoji: { name: '⛔' }
+            });
+        } else {
+            options.push({
+                label: searchTerm ? '🔍 New Search' : '🔍 Search Items',
+                value: 'search_entities',
+                description: searchTerm ? 'Search for different items' : 'Search by name to filter items',
+                emoji: { name: '🔍' }
+            });
+        }
+
         // Add clear search option if currently searching
         if (searchTerm) {
             options.push({
@@ -931,8 +942,8 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, all
             .filter(([id]) => !currentItemIds.has(id))
             .sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
             
-        // Calculate how many search results we can show
-        const maxSearchResults = Math.min(searchResults.length, 24 - options.length - currentItemIds.size);
+        // Calculate how many search results we can show (25 = Discord string select max)
+        const maxSearchResults = Math.max(0, Math.min(searchResults.length, 25 - options.length - currentItemIds.size));
         
         searchResults.slice(0, maxSearchResults).forEach(([id, item]) => {
             const { cleanText, emoji: parsedEmoji } = parseTextEmoji(
@@ -986,8 +997,8 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, all
             .filter(([id]) => !currentItemIds.has(id))
             .sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
             
-        // Calculate how many we can add
-        const remainingSlots = 24 - options.length;
+        // Calculate how many we can add (25 = Discord string select max)
+        const remainingSlots = Math.max(0, 25 - options.length);
         
         availableItems.slice(0, remainingSlots).forEach(([id, item]) => {
             const { cleanText, emoji: parsedEmoji } = parseTextEmoji(
@@ -1014,7 +1025,7 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, all
             placeholder: placeholder,
             options: options,
             min_values: 0, // Allow deselecting all
-            max_values: Math.min(options.length, 24) // Up to 24 selections
+            max_values: Math.min(options.length, 25) // Up to 25 selections (Discord max)
         }]
     };
 }
