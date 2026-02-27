@@ -91,6 +91,10 @@ export async function createStoreSelectionUI(options) {
     reservedSlots += 1;
   }
 
+  // Sort by lastModified desc (most recently updated first), fallback to createdAt
+  const sortByLastModified = ([, a], [, b]) =>
+    (b.metadata?.lastModified || b.metadata?.createdAt || 0) - (a.metadata?.lastModified || a.metadata?.createdAt || 0);
+
   // Smart sorting: prioritize currently selected stores for accessibility
   let selectedStores = [];
   let unselectedStores = [];
@@ -104,9 +108,11 @@ export async function createStoreSelectionUI(options) {
         unselectedStores.push([storeId, store]);
       }
     });
+    selectedStores.sort(sortByLastModified);
+    unselectedStores.sort(sortByLastModified);
   } else {
-    // For manage_items or no selection, use regular order
-    unselectedStores = Object.entries(stores);
+    // For manage_items or no selection, sort by lastModified
+    unselectedStores = Object.entries(stores).sort(sortByLastModified);
   }
 
   // Calculate how many stores we can show after reserved slots

@@ -13918,6 +13918,7 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Update store
         store.items = updatedItems;
+        store.metadata = { ...(store.metadata || {}), lastModified: Date.now() };
         await saveSafariContent(safariData);
         
         console.log(`✅ DEBUG: Store ${storeId} updated - now has ${updatedItems.length} items`);
@@ -38156,8 +38157,9 @@ Are you sure you want to continue?`;
           // We have Create New (1) + potentially Search Again (1) + stores
           const maxStoresToShow = filteredCount > 23 ? 23 : (25 - storeOptions.length);
 
-          // Add filtered stores
+          // Add filtered stores (sorted by lastModified desc)
           Object.entries(filteredStores)
+            .sort(([, a], [, b]) => (b.metadata?.lastModified || b.metadata?.createdAt || 0) - (a.metadata?.lastModified || a.metadata?.createdAt || 0))
             .slice(0, maxStoresToShow)
             .forEach(([storeId, store]) => {
               const itemCount = store.items?.length || 0;

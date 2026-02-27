@@ -203,7 +203,7 @@ Discord silently clears ALL modal pre-filled values when any text input inside a
 
 **Workaround**: The emoji field detects custom emoji format and shows it in the `placeholder` instead of `value` ("Current: <:castbot:123> (leave blank to keep)"). The submission handler preserves the existing emoji when the field is blank (`storeEmoji || existingStore.emoji`).
 
-**Pending**: Extract create/edit modal into shared function (currently duplicated in `safari_store_items_select` create path and `safari_store_edit_` handler). See `createStoreModal()` in safariManager.js as starting point.
+**Implementation**: `createStoreModal(customId, title, existingStore = null)` in `safariManager.js`. Pass `existingStore` to pre-populate (edit), omit for blank fields (create). Returns raw JSON — no `.toJSON()` needed at call sites.
 
 ## Store Select Dropdown
 
@@ -229,4 +229,4 @@ Built in `storeSelector.js` (`createStoreSelectionUI()`) and legacy path in app.
 - **`createStoreDisplay()`** — old posted store function, still used by Custom Actions `executeStoreDisplay`
 - **Anchor messages** (`safariButtonHelper.js`) — just contain browse buttons, unaffected
 - **Store assignment to coordinates** — data model unchanged
-- **Store creation modal** — still uses old pattern (pending extraction into shared function)
+- **Store creation modal** — unified with edit modal via shared `createStoreModal()` (2026-02-27)
