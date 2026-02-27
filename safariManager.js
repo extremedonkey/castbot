@@ -2800,7 +2800,7 @@ async function createStoreBrowseDisplay(guildId, storeId, userId, currentPage = 
     const pageInfo = totalPages > 1 ? ` \`Page ${currentPage + 1}/${totalPages}\`` : '';
     containerComponents.push({
         type: 10,
-        content: `## ${store.emoji || '🏪'} ${store.name}${pageInfo}\n\n**${store.settings?.storeownerText || 'Welcome to the store!'}**\n> ${customTerms.currencyEmoji} **Your Balance:** ${playerCurrency} ${customTerms.currencyName}`
+        content: `## ${store.emoji || '🏪'} ${store.name}${pageInfo}\n\n${store.settings?.storeownerText || 'Welcome to the store!'}\n> ${customTerms.currencyEmoji} **Your Balance:** ${playerCurrency} ${customTerms.currencyName}`
     });
 
     containerComponents.push({ type: 14 }); // Separator
