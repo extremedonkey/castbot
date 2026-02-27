@@ -820,7 +820,7 @@
               "numAttacksAvailable": 0
             },
             "dupe3_213549": {
-              "quantity": 1,
+              "quantity": 2,
               "numAttacksAvailable": 0
             },
             "dupe20_213549": {
@@ -870,6 +870,12 @@
               "storeId": "my_store_myer_100606",
               "price": 0,
               "timestamp": 1772116595196
+            },
+            {
+              "itemId": "dupe3_213549",
+              "storeId": "my_store_myer_100606",
+              "price": 0,
+              "timestamp": 1772186063227
             }
           ],
           "mapProgress": {
@@ -4763,14 +4769,14 @@
     "serverName": "EmeraldORG: Fire Emblem Three Houses",
     "icon": "https://cdn.discordapp.com/icons/1385042963310055515/4bea7eb65723bab308c21c06332836be.webp",
     "ownerId": "676262975132139522",
-    "memberCount": 97,
+    "memberCount": 96,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1750290375307,
-    "lastUpdated": 1772116445969,
+    "lastUpdated": 1772184776221,
     "ownerInfo": {
       "username": "deadlybelle",
       "globalName": "Belle",
@@ -11799,14 +11805,14 @@
     "serverName": "Servivorg S14 - FINAL FANTASY",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/189c3570ea34b3fbf3ee7b4d5989d32e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 572,
+    "memberCount": 574,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1772113650374,
+    "lastUpdated": 1772184770848,
     "ownerInfo": {
       "username": "serviver",
       "globalName": "Serviver",

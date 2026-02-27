@@ -4341,21 +4341,45 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const { getCustomTerms } = await import('./safariManager.js');
         const customTerms = await getCustomTerms(guildId);
         
-        // Create inventory navigation button
-        const inventoryButton = new ButtonBuilder()
-          .setCustomId('safari_player_inventory')
-          .setLabel(customTerms.inventoryName)
-          .setStyle(ButtonStyle.Primary)
-          .setEmoji(customTerms.inventoryEmoji || '🧰'); // Use custom inventory emoji
-        
-        const inventoryRow = new ActionRowBuilder().addComponents(inventoryButton);
-        
+        // Build Components V2 purchase confirmation
+        const { validateComponentLimit } = await import('./utils.js');
+
+        const purchaseContainer = {
+          type: 17, // Container
+          accent_color: 0x27ae60, // Green for success
+          components: [
+            {
+              type: 10, // Text Display
+              content: `## Purchase Successful`
+            },
+            { type: 14 }, // Separator
+            {
+              type: 10, // Text Display
+              content: `${item.emoji || '📦'} **${item.name}** x1 purchased for **${price}** coins\n\n**Balance:** ${newCurrency} coins\n**${item.name} owned:** ${finalQuantity}`
+            },
+            { type: 14 }, // Separator
+            {
+              type: 1, // Action Row
+              components: [
+                {
+                  type: 2, // Button
+                  custom_id: 'safari_player_inventory',
+                  label: customTerms.inventoryName,
+                  style: 1, // Primary
+                  emoji: { name: customTerms.inventoryEmoji || '🧰' }
+                }
+              ]
+            }
+          ]
+        };
+
+        validateComponentLimit([purchaseContainer], "Store Purchase");
+
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `✅ **Purchase successful!**\n\n${item.emoji || '📦'} **${item.name}** purchased for 🪙 ${price} coins.\n\n🪙 **New balance:** ${newCurrency} coins\n📦 **${item.name} in inventory:** ${finalQuantity}`,
-            components: [inventoryRow],
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+            components: [purchaseContainer]
           }
         });
         
