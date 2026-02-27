@@ -11804,7 +11804,15 @@ Your server is now ready for Tycoons gameplay!`;
           // Create new Components V2 Safari customization interface
           const { createSafariCustomizationUI } = await import('./safariConfigUI.js');
           const interfaceData = await createSafariCustomizationUI(context.guildId, currentTerms);
-          
+
+          // Count and validate components
+          const { countComponents } = await import('./utils.js');
+          countComponents(interfaceData.components, {
+            enableLogging: true,
+            verbosity: "full",
+            label: "Settings Menu (safari_customize_terms)"
+          });
+
           return interfaceData;
         }
       })(req, res, client);
