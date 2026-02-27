@@ -12065,7 +12065,7 @@ Your server is now ready for Tycoons gameplay!`;
           console.log(`🕹️ DEBUG: User ${context.userId} configuring player menu for guild ${context.guildId}`);
 
           // Load current safari configuration
-          const { loadSafariContent } = await import('./safariManager.js');
+          const { loadSafariContent, MAX_GLOBAL_STORES } = await import('./safariManager.js');
           const safariData = await loadSafariContent();
           const safariConfig = safariData[context.guildId]?.safariConfig || {};
 
@@ -12073,6 +12073,43 @@ Your server is now ready for Tycoons gameplay!`;
           const currentEnabled = safariConfig.enableGlobalCommands !== false;
           const currentInventoryMode = safariConfig.inventoryVisibilityMode || 'always';
           const currentShowCustomCastlists = safariConfig.showCustomCastlists !== false; // Default true (show all)
+          const currentGlobalStoresMode = safariConfig.globalStoresVisibilityMode || 'always';
+
+          // Build sorted store options for global stores select (global first, then non-global by lastModified)
+          const currentGlobalStores = safariData[context.guildId]?.globalStores || [];
+          const allStores = safariData[context.guildId]?.stores || {};
+          const storeList = Object.values(allStores);
+          const globalStoreObjects = currentGlobalStores
+            .map(id => storeList.find(s => s.id === id))
+            .filter(Boolean);
+          const nonGlobalStoreObjects = storeList
+            .filter(s => !currentGlobalStores.includes(s.id))
+            .sort((a, b) => (b.metadata?.lastModified || b.metadata?.createdAt || 0) - (a.metadata?.lastModified || a.metadata?.createdAt || 0));
+          const sortedStoreOptions = [...globalStoreObjects, ...nonGlobalStoreObjects]
+            .slice(0, 25)
+            .map(store => ({
+              label: store.name,
+              value: store.id,
+              description: `${store.items?.length || 0} item(s)`,
+              emoji: store.emoji ? { name: store.emoji } : undefined,
+              default: currentGlobalStores.includes(store.id)
+            }));
+
+          // 5th modal component (global store select) — only included if stores exist
+          const globalStoreSelectComponent = sortedStoreOptions.length > 0 ? {
+            type: 18, // Label (Components V2)
+            label: '🏪 Global Store Management',
+            description: 'Select stores for all player menus. Adds immediately — avoid before challenge starts. Max 5.',
+            component: {
+              type: 3, // String Select (Components V2)
+              custom_id: 'global_stores_select_modal',
+              placeholder: 'Select stores to show in player menus...',
+              required: false,
+              min_values: 0,
+              max_values: Math.min(sortedStoreOptions.length, MAX_GLOBAL_STORES),
+              options: sortedStoreOptions
+            }
+          } : null;
 
           // Create Components V2 modal with Label + String Select (following safari_store_stock pattern)
           const modal = {
@@ -12168,7 +12205,46 @@ Your server is now ready for Tycoons gameplay!`;
                     }
                   ]
                 }
-              }
+              },
+              {
+                type: 18, // Label (Components V2)
+                label: 'Global Stores Button',
+                description: 'Choose when store buttons appear in /menu',
+                component: {
+                  type: 3, // String Select (Components V2)
+                  custom_id: 'global_stores_visibility_mode',
+                  placeholder: 'Choose visibility mode...',
+                  min_values: 1,
+                  max_values: 1,
+                  options: [
+                    {
+                      label: 'Always Show',
+                      value: 'always',
+                      description: 'Show store buttons to all users in /menu',
+                      default: currentGlobalStoresMode === 'always'
+                    },
+                    {
+                      label: 'After Initialization Only',
+                      value: 'initialized_only',
+                      description: 'Show as soon as player joins Safari',
+                      default: currentGlobalStoresMode === 'initialized_only'
+                    },
+                    {
+                      label: 'After 1st Initialize + 1st Round',
+                      value: 'standard',
+                      description: 'Show after player initialized AND Safari Rounds started',
+                      default: currentGlobalStoresMode === 'standard'
+                    },
+                    {
+                      label: 'Never Show',
+                      value: 'never',
+                      description: 'Hide store buttons from player menu',
+                      default: currentGlobalStoresMode === 'never'
+                    }
+                  ]
+                }
+              },
+              ...(globalStoreSelectComponent ? [globalStoreSelectComponent] : [])
             ]
           };
 
@@ -29983,6 +30059,7 @@ Are you sure you want to continue?`;
       
     } else if (custom_id === 'safari_global_stores') {
       // Handle global store management button
+      // TODO: Remove this handler after testing — global stores moved to Settings > Player Menu (safari_player_menu_config)
       return ButtonHandlerFactory.create({
         id: 'safari_global_stores',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -29990,20 +30067,20 @@ Are you sure you want to continue?`;
         handler: async (context) => {
           console.log(`🏪 START: safari_global_stores - user ${context.userId}`);
           
-          const { loadSafariContent } = await import('./safariManager.js');
+          const { loadSafariContent, MAX_GLOBAL_STORES } = await import('./safariManager.js');
           const safariData = await loadSafariContent();
           const stores = safariData[context.guildId]?.stores || {};
-          
+
           if (Object.keys(stores).length === 0) {
             return {
               content: '❌ No stores available. Create stores first using Safari > Store Management.',
               ephemeral: true
             };
           }
-          
+
           // Get currently selected global stores
           const globalStores = safariData[context.guildId]?.globalStores || [];
-          
+
           // Create store options for select menu
           const storeOptions = Object.values(stores).map(store => ({
             label: store.name,
@@ -30012,18 +30089,18 @@ Are you sure you want to continue?`;
             emoji: store.emoji ? { name: store.emoji } : undefined,
             default: globalStores.includes(store.id)
           }));
-          
+
           const { StringSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
-          
+
           const selectMenu = new StringSelectMenuBuilder()
             .setCustomId('global_stores_select')
             .setPlaceholder('Select stores to show in player menus...')
             .setMinValues(0)
-            .setMaxValues(Math.min(storeOptions.length, 10)) // Limit to 10 global stores
+            .setMaxValues(Math.min(storeOptions.length, MAX_GLOBAL_STORES))
             .addOptions(storeOptions.slice(0, 25));
-            
+
           const selectRow = new ActionRowBuilder().addComponents(selectMenu);
-          
+
           // Create container components
           const container = {
             type: 17, // Container
@@ -30031,7 +30108,7 @@ Are you sure you want to continue?`;
             components: [
               {
                 type: 10, // Text Display
-                content: `## 🏪 Global Store Management\n\nSelect stores to make available in all player menus.\nPlayers will see these stores when using /menu.\n\n⚠️ **Limit:** Maximum 10 global stores (Discord button limits)`
+                content: `## 🏪 Global Store Management\n\nSelect stores to make available in all player menus.\nPlayers will see these stores when using /menu.\n\n⚠️ **Limit:** Maximum ${MAX_GLOBAL_STORES} global stores (Discord button limits)`
               },
               { type: 14 }, // Separator
               selectRow.toJSON()
@@ -39395,12 +39472,15 @@ Are you sure you want to continue?`;
         let enableGlobalCommands = false;
         let inventoryVisibilityMode = 'standard';
         let showCustomCastlists = true; // Default true (show all)
+        let globalStoresVisibilityMode = 'always';
+        let selectedGlobalStores = null; // null = not submitted (field absent when no stores exist)
 
-        // Modal has Label components with nested string selects - extract both
+        // Modal has Label components with nested string selects - extract all
         for (const component of components) {
           if (component.component?.type === 3) { // String Select in Label
             const customId = component.component.custom_id;
-            const selectedValue = component.component.values?.[0];
+            const selectedValues = component.component.values || [];
+            const selectedValue = selectedValues[0];
 
             if (customId === 'enable_global_commands') {
               enableGlobalCommands = selectedValue === 'true';
@@ -39408,6 +39488,10 @@ Are you sure you want to continue?`;
               inventoryVisibilityMode = selectedValue || 'standard';
             } else if (customId === 'show_custom_castlists') {
               showCustomCastlists = selectedValue === 'true';
+            } else if (customId === 'global_stores_visibility_mode') {
+              globalStoresVisibilityMode = selectedValue || 'always';
+            } else if (customId === 'global_stores_select_modal') {
+              selectedGlobalStores = selectedValues; // Multi-select — keep all values
             }
           }
         }
@@ -39415,9 +39499,11 @@ Are you sure you want to continue?`;
         console.log(`🕹️ DEBUG: enableGlobalCommands setting: ${enableGlobalCommands}`);
         console.log(`🕹️ DEBUG: inventoryVisibilityMode setting: ${inventoryVisibilityMode}`);
         console.log(`🕹️ DEBUG: showCustomCastlists setting: ${showCustomCastlists}`);
+        console.log(`🕹️ DEBUG: globalStoresVisibilityMode setting: ${globalStoresVisibilityMode}`);
+        console.log(`🕹️ DEBUG: selectedGlobalStores: ${selectedGlobalStores === null ? '(field absent)' : selectedGlobalStores.join(', ') || '(none)'}`);
 
         // Load and update safari configuration
-        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const { loadSafariContent, saveSafariContent, MAX_GLOBAL_STORES } = await import('./safariManager.js');
         const safariData = await loadSafariContent();
 
         // Ensure safariConfig exists
@@ -39432,6 +39518,11 @@ Are you sure you want to continue?`;
         safariData[guildId].safariConfig.enableGlobalCommands = enableGlobalCommands;
         safariData[guildId].safariConfig.inventoryVisibilityMode = inventoryVisibilityMode;
         safariData[guildId].safariConfig.showCustomCastlists = showCustomCastlists;
+        safariData[guildId].safariConfig.globalStoresVisibilityMode = globalStoresVisibilityMode;
+        // Only update globalStores if the field was present in the modal (stores exist)
+        if (selectedGlobalStores !== null) {
+          safariData[guildId].globalStores = selectedGlobalStores.slice(0, MAX_GLOBAL_STORES);
+        }
         await saveSafariContent(safariData);
 
         const updatedConfig = safariData[guildId].safariConfig;

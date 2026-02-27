@@ -788,9 +788,9 @@
           "1415062472007749765"
         ],
         "safari": {
-          "currency": 316,
+          "currency": 816,
           "history": [],
-          "lastInteraction": 1767965774841,
+          "lastInteraction": 1772208274715,
           "achievements": [],
           "inventory": {
             "nurturer_361363": {
@@ -8004,8 +8004,114 @@
         "analyticsAdded": 1760020667612
       }
     },
-    "timezones": {},
-    "pronounRoleIDs": [],
+    "timezones": {
+      "1476980834333495487": {
+        "offset": -8,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)",
+        "timezoneId": "PT"
+      },
+      "1476980835881062401": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)",
+        "timezoneId": "MT"
+      },
+      "1476980837902848130": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)",
+        "timezoneId": "CT"
+      },
+      "1476980841715466420": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)",
+        "timezoneId": "ET"
+      },
+      "1476980843133014046": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)",
+        "timezoneId": "AT"
+      },
+      "1476980844752011346": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)",
+        "timezoneId": "NT"
+      },
+      "1476980846249644095": {
+        "offset": 0,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)",
+        "timezoneId": "GMT"
+      },
+      "1476980848317432009": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)",
+        "timezoneId": "CET"
+      },
+      "1476980855313268838": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "EET (UTC+2)",
+        "timezoneId": "EET"
+      },
+      "1476980858169725120": {
+        "offset": 2,
+        "dstObserved": false,
+        "standardName": "SAST (UTC+2)",
+        "timezoneId": "SAST"
+      },
+      "1476980859738521772": {
+        "offset": 5.5,
+        "dstObserved": false,
+        "standardName": "IST (UTC+5.5)",
+        "timezoneId": "IST"
+      },
+      "1476980861181235312": {
+        "offset": 7,
+        "dstObserved": false,
+        "standardName": "ICT (UTC+7)",
+        "timezoneId": "ICT"
+      },
+      "1476980862775066876": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": "GMT+8 (UTC+8)",
+        "timezoneId": "GMT8"
+      },
+      "1476980864176099378": {
+        "offset": 9,
+        "dstObserved": false,
+        "standardName": "JST (UTC+9)",
+        "timezoneId": "JST"
+      },
+      "1476980865614479495": {
+        "offset": 10,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)",
+        "timezoneId": "AEST"
+      },
+      "1476980867267297381": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)",
+        "timezoneId": "NZST"
+      }
+    },
+    "pronounRoleIDs": [
+      "1390502675858067456",
+      "1390502644761759886",
+      "1390502696649232404",
+      "1428021800016678992",
+      "1428021801484554252",
+      "1428021803540021419",
+      "1428021805263753359",
+      "1428021807889252424"
+    ],
     "applicationConfigs": {
       "config_1751549410029_391415444084490240": {
         "buttonText": "Test out CastBot Apps!",

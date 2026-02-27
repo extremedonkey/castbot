@@ -42,6 +42,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SAFARI_CONTENT_FILE = path.join(__dirname, 'safariContent.json');
 
+// Maximum number of global stores allowed (each store adds buttons to player /menu;
+// Discord has a 40-component limit — every 5 stores = 1 action row + 5 buttons)
+export const MAX_GLOBAL_STORES = 5;
+
 // Player name cache to ensure consistency within the same request
 const playerNameCache = new Map();
 

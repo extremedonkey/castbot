@@ -14,7 +14,7 @@ import {
 } from 'discord-interactions';
 import { createPlayerCard, extractCastlistData, createCastlistRows } from './castlistV2.js';
 import { getPlayer, updatePlayer, getGuildPronouns, getGuildTimezones, loadPlayerData } from './storage.js';
-import { hasStoresInGuild, getEligiblePlayersFixed, getCustomTerms, getPlayerAttributes, getAttributeDefinitions, loadSafariContent } from './safariManager.js';
+import { hasStoresInGuild, getEligiblePlayersFixed, getCustomTerms, getPlayerAttributes, getAttributeDefinitions, loadSafariContent, MAX_GLOBAL_STORES } from './safariManager.js';
 import { countComponents } from './utils.js';
 import { createBackButton } from './src/ui/backButtonFactory.js';
 import { getTimeUntilRegeneration } from './pointsManager.js';
@@ -567,30 +567,50 @@ export async function createPlayerManagementUI(options) {
         }];
       }
 
-      // Add global store buttons (only if not Round 0)
+      // Add global store buttons — visibility controlled by globalStoresVisibilityMode config
       const currentRound = safariConfig.currentRound;
-      
-      // Only show global stores if currentRound exists and is not 0
-      if (currentRound && currentRound !== 0) {
-        const globalStores = safariData[guildId]?.globalStores || [];
+      const globalStoresVisibilityMode = safariConfig.globalStoresVisibilityMode || 'always';
+      const isInitializedForStores = playerData[guildId]?.players?.[targetMember?.id]?.safari !== undefined;
+
+      let showGlobalStores = false;
+      switch (globalStoresVisibilityMode) {
+        case 'always':
+          showGlobalStores = true;
+          break;
+        case 'never':
+          showGlobalStores = false;
+          break;
+        case 'initialized_only':
+          showGlobalStores = isInitializedForStores;
+          break;
+        case 'standard':
+        default:
+          // Original behaviour: initialized AND round started (not 0)
+          showGlobalStores = isInitializedForStores && currentRound && currentRound !== 0;
+          break;
+      }
+
+      console.log(`🏪 Global stores check: mode=${globalStoresVisibilityMode}, initialized=${isInitializedForStores}, round=${currentRound}, show=${showGlobalStores}`);
+
+      if (showGlobalStores) {
+        const globalStores = (safariData[guildId]?.globalStores || []).slice(0, MAX_GLOBAL_STORES);
         const stores = safariData[guildId]?.stores || {};
-        
+
         if (globalStores.length > 0) {
-          const storeButtons = [];
           let currentRow = [];
-          
+
           for (const storeId of globalStores) {
             const store = stores[storeId];
             if (!store) continue;
-            
+
             const button = new ButtonBuilder()
               .setCustomId(`safari_store_browse_${guildId}_${storeId}`)
               .setLabel(store.name.slice(0, 80))
               .setStyle(ButtonStyle.Secondary)  // Grey style for global stores
               .setEmoji(store.emoji || '🏪');
-            
+
             currentRow.push(button);
-            
+
             // Max 5 buttons per row
             if (currentRow.length === 5) {
               globalStoreRows.push({
@@ -600,7 +620,7 @@ export async function createPlayerManagementUI(options) {
               currentRow = [];
             }
           }
-          
+
           // Add remaining buttons
           if (currentRow.length > 0) {
             globalStoreRows.push({
