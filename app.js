@@ -30002,11 +30002,6 @@ Are you sure you want to continue?`;
               .setStyle(ButtonStyle.Success) // Green
               .setEmoji('🪣'),
             new ButtonBuilder()
-              .setCustomId('safari_global_stores')
-              .setLabel('Add Global Store')
-              .setStyle(ButtonStyle.Secondary) // Grey
-              .setEmoji('🏪'),
-            new ButtonBuilder()
               .setCustomId('safari_configure_rounds')
               .setLabel('Configure Rounds')
               .setStyle(ButtonStyle.Secondary) // Grey
@@ -30066,73 +30061,6 @@ Are you sure you want to continue?`;
         }
       })(req, res, client);
       
-    } else if (custom_id === 'safari_global_stores') {
-      // Handle global store management button
-      // TODO: Remove this handler after testing — global stores moved to Settings > Player Menu (safari_player_menu_config)
-      return ButtonHandlerFactory.create({
-        id: 'safari_global_stores',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        handler: async (context) => {
-          console.log(`🏪 START: safari_global_stores - user ${context.userId}`);
-          
-          const { loadSafariContent, MAX_GLOBAL_STORES } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
-          const stores = safariData[context.guildId]?.stores || {};
-
-          if (Object.keys(stores).length === 0) {
-            return {
-              content: '❌ No stores available. Create stores first using Safari > Store Management.',
-              ephemeral: true
-            };
-          }
-
-          // Get currently selected global stores
-          const globalStores = safariData[context.guildId]?.globalStores || [];
-
-          // Create store options for select menu
-          const storeOptions = Object.values(stores).map(store => ({
-            label: store.name,
-            value: store.id,
-            description: `${store.items?.length || 0} items`,
-            emoji: store.emoji ? { name: store.emoji } : undefined,
-            default: globalStores.includes(store.id)
-          }));
-
-          const { StringSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
-
-          const selectMenu = new StringSelectMenuBuilder()
-            .setCustomId('global_stores_select')
-            .setPlaceholder('Select stores to show in player menus...')
-            .setMinValues(0)
-            .setMaxValues(Math.min(storeOptions.length, MAX_GLOBAL_STORES))
-            .addOptions(storeOptions.slice(0, 25));
-
-          const selectRow = new ActionRowBuilder().addComponents(selectMenu);
-
-          // Create container components
-          const container = {
-            type: 17, // Container
-            accent_color: 0x3498db,
-            components: [
-              {
-                type: 10, // Text Display
-                content: `## 🏪 Global Store Management\n\nSelect stores to make available in all player menus.\nPlayers will see these stores when using /menu.\n\n⚠️ **Limit:** Maximum ${MAX_GLOBAL_STORES} global stores (Discord button limits)`
-              },
-              { type: 14 }, // Separator
-              selectRow.toJSON()
-            ]
-          };
-          
-          console.log(`✅ SUCCESS: safari_global_stores - showing store selector`);
-          
-          return {
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
-            components: [container]
-          };
-        }
-      })(req, res, client);
-      
     } else if (custom_id === 'safari_configure_rounds') {
       // Handle Configure Rounds button - shows modal for setting total rounds
       return ButtonHandlerFactory.create({
@@ -30175,57 +30103,6 @@ Are you sure you want to continue?`;
           return {
             type: InteractionResponseType.MODAL,
             data: modal.toJSON()
-          };
-        }
-      })(req, res, client);
-      
-    } else if (custom_id === 'global_stores_select') {
-      // Handle global store selection
-      return ButtonHandlerFactory.create({
-        id: 'global_stores_select',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        updateMessage: true,
-        handler: async (context) => {
-          const selectedStores = context.values || [];
-          
-          console.log(`🏪 START: global_stores_select - stores: ${selectedStores.join(', ')}`);
-          
-          // Load and update safari data
-          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
-          
-          // Initialize guild data if needed
-          if (!safariData[context.guildId]) {
-            safariData[context.guildId] = {};
-          }
-          
-          // Update global stores
-          safariData[context.guildId].globalStores = selectedStores;
-          await saveSafariContent(safariData);
-          
-          console.log(`✅ SUCCESS: global_stores_select - updated ${selectedStores.length} global stores`);
-          
-          // Return success message
-          const storeNames = selectedStores.map(storeId => {
-            const store = safariData[context.guildId]?.stores?.[storeId];
-            return store ? `${store.emoji || '🏪'} ${store.name}` : storeId;
-          }).join('\n');
-          
-          const container = {
-            type: 17, // Container
-            accent_color: 0x27ae60, // Green for success
-            components: [
-              {
-                type: 10, // Text Display
-                content: `## ✅ Global Stores Updated\n\n**${selectedStores.length} store${selectedStores.length !== 1 ? 's' : ''} selected:**\n${storeNames || '*(None)*'}\n\nThese stores will now appear in all player menus.`
-              }
-            ]
-          };
-          
-          return {
-            flags: (1 << 15), // IS_COMPONENTS_V2 only
-            components: [container]
           };
         }
       })(req, res, client);

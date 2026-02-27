@@ -795,14 +795,6 @@ export const BUTTON_REGISTRY = {
     category: 'safari'
   },
   
-  // Safari Global Store Management
-  'safari_global_stores': {
-    label: 'Add Global Store',
-    description: 'Select stores to appear in all player menus',
-    emoji: '🏪',
-    style: 'Secondary',
-    category: 'safari'
-  },
   'safari_configure_rounds': {
     label: 'Configure Rounds',
     description: 'Configure the number of rounds per Safari game',
@@ -810,14 +802,6 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari'
   },
-  'global_stores_select': {
-    label: 'Select Global Stores',
-    description: 'String select menu for choosing global stores',
-    emoji: '🏪',
-    style: 'Secondary',
-    category: 'safari'
-  },
-  
   'map_location_actions': {
     label: 'Location Actions',
     description: 'View and manage actions for a map location',
