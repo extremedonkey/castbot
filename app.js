@@ -10810,6 +10810,202 @@ Your server is now ready for Tycoons gameplay!`;
           return discordResponse;
         }
       })(req, res, client);
+    } else if (custom_id === 'prod_all_servers' || custom_id.startsWith('all_servers_page_')) {
+      // All Servers listing - shows every guild the bot is installed in
+      return ButtonHandlerFactory.create({
+        id: custom_id.startsWith('all_servers_page_') ? 'all_servers_page' : 'prod_all_servers',
+        deferred: true,
+        updateMessage: custom_id.startsWith('all_servers_page_'), // Update for pagination, new msg for initial
+        ephemeral: true,
+        handler: async (context) => {
+          if (context.userId !== '391415444084490240') {
+            return { content: '❌ Access denied. This feature is restricted.' };
+          }
+
+          const currentPage = custom_id.startsWith('all_servers_page_')
+            ? parseInt(custom_id.split('_')[3])
+            : 0;
+
+          const { loadPlayerData } = await import('./storage.js');
+          const playerData = await loadPlayerData();
+
+          // Build server list from guild cache + playerData
+          const servers = [];
+          for (const guild of context.client.guilds.cache.values()) {
+            const pd = playerData[guild.id] || {};
+            servers.push({
+              id: guild.id,
+              name: guild.name,
+              memberCount: guild.memberCount,
+              ownerId: guild.ownerId,
+              ownerInfo: pd.ownerInfo || null,
+              description: guild.description || null,
+              preferredLocale: guild.preferredLocale || 'en-US',
+              createdAt: guild.createdTimestamp,
+              firstInstalled: pd.firstInstalled || null,
+              lastUpdated: pd.lastUpdated || null,
+              partnered: guild.partnered || false,
+              verified: guild.verified || false,
+              playerCount: pd.players ? Object.keys(pd.players).length : 0,
+              tribeCount: pd.tribes ? Object.keys(pd.tribes).length : 0,
+              hasTimezones: pd.timezones ? Object.keys(pd.timezones).length > 0 : false,
+              hasPronounRoles: pd.pronounRoleIDs?.length > 0 || false,
+              hasReactionMappings: pd.reactionMappings ? Object.keys(pd.reactionMappings).length > 0 : false,
+              hasApplications: pd.applications ? Object.keys(pd.applications).length > 0 : false,
+              castlistCount: pd.castlists ? Object.keys(pd.castlists).length : 0
+            });
+          }
+
+          // Sort by member count descending
+          servers.sort((a, b) => b.memberCount - a.memberCount);
+
+          const SERVERS_PER_PAGE = 5;
+          const totalPages = Math.max(1, Math.ceil(servers.length / SERVERS_PER_PAGE));
+          const validPage = Math.max(0, Math.min(currentPage, totalPages - 1));
+          const startIndex = validPage * SERVERS_PER_PAGE;
+          const endIndex = Math.min(startIndex + SERVERS_PER_PAGE, servers.length);
+          const pageServers = servers.slice(startIndex, endIndex);
+
+          const containerComponents = [];
+
+          // Header
+          containerComponents.push({
+            type: 10,
+            content: `## 🌐 All Servers | ${servers.length} total\nPage ${validPage + 1}/${totalPages} • Sorted by member count`
+          });
+
+          // Render each server
+          for (const server of pageServers) {
+            containerComponents.push({ type: 14 }); // Separator
+
+            let details = `### ${server.name}\n`;
+            details += `👥 **${server.memberCount.toLocaleString()}** members`;
+            if (server.verified) details += ' • ✅ Verified';
+            if (server.partnered) details += ' • 🤝 Partnered';
+            details += '\n';
+
+            // Owner
+            if (server.ownerInfo) {
+              const ownerDisplay = server.ownerInfo.globalName || server.ownerInfo.username;
+              details += `👑 Owner: **${ownerDisplay}** (@${server.ownerInfo.username})\n`;
+            } else {
+              details += `👑 Owner ID: \`${server.ownerId}\`\n`;
+            }
+
+            // Locale & Description
+            details += `🌍 Locale: \`${server.preferredLocale}\``;
+            if (server.description) {
+              const desc = server.description.length > 80
+                ? server.description.substring(0, 80) + '...'
+                : server.description;
+              details += ` • 📝 ${desc}`;
+            }
+            details += '\n';
+
+            // Dates
+            const createdDate = new Date(server.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            details += `📅 Created: \`${createdDate}\``;
+            if (server.firstInstalled) {
+              const installedDate = new Date(server.firstInstalled).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+              details += ` • 🤖 Bot installed: \`${installedDate}\``;
+            }
+            if (server.lastUpdated) {
+              const updatedDate = new Date(server.lastUpdated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+              details += ` • 🔄 Updated: \`${updatedDate}\``;
+            }
+            details += '\n';
+
+            // Features in use
+            const features = [];
+            if (server.playerCount > 0) features.push(`🎮 ${server.playerCount} players`);
+            if (server.tribeCount > 0) features.push(`🏕️ ${server.tribeCount} tribes`);
+            if (server.castlistCount > 0) features.push(`📋 ${server.castlistCount} castlists`);
+            if (server.hasTimezones) features.push('🕐 Timezones');
+            if (server.hasPronounRoles) features.push('💜 Pronouns');
+            if (server.hasReactionMappings) features.push('✨ Reactions');
+            if (server.hasApplications) features.push('📝 Apps');
+
+            if (features.length > 0) {
+              details += `⚙️ ${features.join(' • ')}`;
+            } else {
+              details += `⚙️ No features configured`;
+            }
+
+            // Guild ID (small text)
+            details += `\n-# ID: ${server.id}`;
+
+            containerComponents.push({ type: 10, content: details });
+          }
+
+          // Pagination buttons
+          if (totalPages > 1) {
+            containerComponents.push({ type: 14 }); // Separator
+
+            const paginationButtons = [];
+            if (totalPages <= 5) {
+              for (let page = 0; page < totalPages; page++) {
+                const start = (page * SERVERS_PER_PAGE) + 1;
+                const end = Math.min((page + 1) * SERVERS_PER_PAGE, servers.length);
+                paginationButtons.push({
+                  type: 2,
+                  custom_id: `all_servers_page_${page}`,
+                  label: `${start}-${end}`,
+                  style: page === validPage ? 1 : 2,
+                  disabled: page === validPage
+                });
+              }
+            } else {
+              const pagesToShow = new Set([0, totalPages - 1, validPage]);
+              if (validPage > 0) pagesToShow.add(validPage - 1);
+              if (validPage < totalPages - 1) pagesToShow.add(validPage + 1);
+              const sorted = Array.from(pagesToShow).sort((a, b) => a - b).slice(0, 5);
+              for (const page of sorted) {
+                const start = (page * SERVERS_PER_PAGE) + 1;
+                const end = Math.min((page + 1) * SERVERS_PER_PAGE, servers.length);
+                paginationButtons.push({
+                  type: 2,
+                  custom_id: `all_servers_page_${page}`,
+                  label: `${start}-${end}`,
+                  style: page === validPage ? 1 : 2,
+                  disabled: page === validPage
+                });
+              }
+            }
+
+            containerComponents.push({
+              type: 1,
+              components: paginationButtons
+            });
+          }
+
+          // Back + Refresh buttons
+          containerComponents.push({ type: 14 });
+          containerComponents.push({
+            type: 1,
+            components: [{
+              type: 2,
+              custom_id: 'reece_stuff_menu',
+              label: '← Analytics',
+              style: 2
+            }, {
+              type: 2,
+              custom_id: 'prod_all_servers',
+              label: 'Refresh',
+              style: 2,
+              emoji: { name: '🔄' }
+            }]
+          });
+
+          return {
+            flags: (1 << 15),
+            components: [{
+              type: 17,
+              accent_color: 0x3498DB,
+              components: containerComponents
+            }]
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'test_role_hierarchy') {
       // Test role hierarchy functionality (MIGRATED TO FACTORY - DEFERRED PATTERN)
       return ButtonHandlerFactory.create({
