@@ -3813,6 +3813,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'safari_store_items_select_back',
         'safari_store_browse',
         'safari_store_page',
+        'map_coord_store',
         'safari_attack_player',
         'custom_action_add_condition',
         'custom_action_remove_condition',
