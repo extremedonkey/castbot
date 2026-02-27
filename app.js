@@ -4294,13 +4294,18 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         player.safari.currency = newCurrency;
         
         // Add item to inventory using proper function to avoid corruption (pass existing playerData to prevent race condition)
-        // Attach channel metadata so the pickup log shows the channel where the purchase happened
+        // Attach channel metadata temporarily so the pickup log shows the channel where the purchase happened
         const channelObj = client?.channels?.cache?.get(channelId);
         playerData.channelName = channelObj?.name || null;
         playerData.channelId = channelId || null;
         playerData.username = req.body.member?.user?.username || req.body.user?.username || 'Unknown';
         playerData.displayName = req.body.member?.nick || req.body.member?.user?.global_name || req.body.member?.user?.username || 'Unknown';
         const finalQuantity = await addItemToInventory(guildId, userId, itemId, 1, playerData);
+        // Clean up temp metadata so these keys are never saved to disk
+        delete playerData.channelName;
+        delete playerData.channelId;
+        delete playerData.username;
+        delete playerData.displayName;
         
         // Record purchase in store history
         player.safari.storeHistory.push({

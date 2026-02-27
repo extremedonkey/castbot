@@ -820,7 +820,7 @@
               "numAttacksAvailable": 0
             },
             "dupe3_213549": {
-              "quantity": 3,
+              "quantity": 4,
               "numAttacksAvailable": 0
             },
             "dupe20_213549": {
@@ -898,6 +898,12 @@
               "storeId": "my_store_myer_100606",
               "price": 0,
               "timestamp": 1772187483991
+            },
+            {
+              "itemId": "dupe3_213549",
+              "storeId": "my_store_myer_100606",
+              "price": 0,
+              "timestamp": 1772189922014
             }
           ],
           "mapProgress": {

@@ -66,7 +66,8 @@ export async function logItemPickup({ guildId, userId, username, displayName, lo
     quantity,
     source,
     channelName,
-    channelId
+    channelId,
+    username
   };
   
   await logInteraction(
