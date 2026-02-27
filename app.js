@@ -12108,7 +12108,7 @@ Your server is now ready for Tycoons gameplay!`;
           const globalStoreSelectComponent = sortedStoreOptions.length > 0 ? {
             type: 18, // Label (Components V2)
             label: '🏪 Global Store Management',
-            description: 'Select stores for all player menus. Adds immediately — avoid before challenge starts. Max 5.',
+            description: 'Select stores for all player menus. Max 5 Global Stores in player menus.',
             component: {
               type: 3, // String Select (Components V2)
               custom_id: 'global_stores_select_modal',
