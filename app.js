@@ -32576,33 +32576,48 @@ Are you sure you want to continue?`;
               logger.debug('APPLICATION', 'Saving final config', { finalConfigId });
               await saveApplicationConfig(guildId, finalConfigId, finalConfig);
               
-              // Create and post the button
+              // Create and post the button as a Components V2 container
               const button = createApplicationButton(tempConfig.buttonText, finalConfigId, tempConfig.buttonStyle);
-              const row = new ActionRowBuilder().addComponents(button);
-              
-              const messageData = { components: [row] };
-              if (tempConfig.explanatoryText && tempConfig.explanatoryText.trim()) {
-                messageData.content = tempConfig.explanatoryText;
+              const channelCard = {
+                type: 17, // Container
+                accent_color: 0x3498db,
+                components: []
+              };
+              if (tempConfig.explanatoryText?.trim()) {
+                channelCard.components.push({ type: 10, content: tempConfig.explanatoryText.trim() });
+                channelCard.components.push({ type: 14 });
               }
-              
+              channelCard.components.push({ type: 1, components: [button.toJSON()] });
+
               logger.debug('APPLICATION', 'Posting button to channel', { channelId: targetChannel.id });
-              await targetChannel.send(messageData);
-              
+              await DiscordRequest(`channels/${targetChannel.id}/messages`, {
+                method: 'POST',
+                body: { flags: (1 << 15), components: [channelCard] }
+              });
+
               // Clean up temp config
               delete playerData[guildId].applicationConfigs[configId];
               await savePlayerData(playerData);
               logger.debug('APPLICATION', 'Temp config cleaned up', { configId });
-              
+
               logger.info('APPLICATION', 'SUCCESS: Application button created', {
                 userId,
                 guildId,
                 channelName: targetChannel.name,
                 buttonText: tempConfig.buttonText
               });
-              
+
               return {
-                content: `✅ Application button successfully created in ${targetChannel}!\n\n**Button Text:** "${tempConfig.buttonText}"\n**Style:** ${tempConfig.buttonStyle}\n**Category:** ${category.name}`,
-                components: []
+                flags: (1 << 15),
+                components: [{
+                  type: 17, // Container
+                  accent_color: 0x27ae60, // Green
+                  components: [
+                    { type: 10, content: `## ✅ Application Button Posted!\n\n📝 **${tempConfig.buttonText}** posted to <#${targetChannel.id}>\n> **Category:** ${category.name}\n> **Style:** ${tempConfig.buttonStyle}` },
+                    { type: 14 },
+                    { type: 1, components: [{ type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 }] }
+                  ]
+                }]
               };
               
             } else if (configId.startsWith('config_')) {
@@ -32614,17 +32629,25 @@ Are you sure you want to continue?`;
               await saveApplicationConfig(guildId, configId, tempConfig);
               logger.debug('APPLICATION', 'Config updated', { configId });
               
+              // Create and post the button as a Components V2 container
               const button = createApplicationButton(tempConfig.buttonText, configId, tempConfig.buttonStyle);
-              const row = new ActionRowBuilder().addComponents(button);
-              
-              const messageData = { components: [row] };
-              if (tempConfig.explanatoryText && tempConfig.explanatoryText.trim()) {
-                messageData.content = tempConfig.explanatoryText;
+              const channelCard = {
+                type: 17, // Container
+                accent_color: 0x3498db,
+                components: []
+              };
+              if (tempConfig.explanatoryText?.trim()) {
+                channelCard.components.push({ type: 10, content: tempConfig.explanatoryText.trim() });
+                channelCard.components.push({ type: 14 });
               }
-              
+              channelCard.components.push({ type: 1, components: [button.toJSON()] });
+
               logger.debug('APPLICATION', 'Posting season button to channel', { channelId: targetChannel.id });
-              await targetChannel.send(messageData);
-              
+              await DiscordRequest(`channels/${targetChannel.id}/messages`, {
+                method: 'POST',
+                body: { flags: (1 << 15), components: [channelCard] }
+              });
+
               logger.info('APPLICATION', 'SUCCESS: Season application button posted', {
                 userId,
                 guildId,
@@ -32632,10 +32655,18 @@ Are you sure you want to continue?`;
                 buttonText: tempConfig.buttonText,
                 categoryName: category.name
               });
-              
+
               return {
-                content: `✅ **Season Application Button Posted!**\n\n**Button Text:** "${tempConfig.buttonText}"\n**Posted to:** ${targetChannel}\n**Category:** ${category.name}\n**Style:** ${tempConfig.buttonStyle}\n\nApplicants will now go through your configured questions when they apply.`,
-                components: []
+                flags: (1 << 15),
+                components: [{
+                  type: 17, // Container
+                  accent_color: 0x27ae60, // Green
+                  components: [
+                    { type: 10, content: `## ✅ Season Application Button Posted!\n\n📝 **${tempConfig.buttonText}** posted to <#${targetChannel.id}>\n> **Category:** ${category.name}\n> **Style:** ${tempConfig.buttonStyle}\n\nApplicants will now go through your configured questions when they apply.` },
+                    { type: 14 },
+                    { type: 1, components: [{ type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 }] }
+                  ]
+                }]
               };
             } else {
               logger.error('APPLICATION', 'Unknown configId format', { configId });
