@@ -14302,6 +14302,8 @@ Your server is now ready for Tycoons gameplay!`;
         }
         
         // Create edit store modal with Label wrappers (Components V2 modal pattern)
+        // Helper: only include 'value' when non-empty (empty string causes Discord to clear all fields)
+        const optVal = (v) => v ? { value: v } : {};
         return res.send({
           type: InteractionResponseType.MODAL,
           data: {
@@ -14317,7 +14319,7 @@ Your server is now ready for Tycoons gameplay!`;
                   style: 1, // Short
                   required: true,
                   max_length: 50,
-                  value: store.name || '',
+                  ...optVal(store.name),
                   placeholder: 'e.g. Adventure Supplies'
                 }
               },
@@ -14330,7 +14332,7 @@ Your server is now ready for Tycoons gameplay!`;
                   style: 1, // Short
                   required: false,
                   max_length: 100,
-                  value: store.emoji || '',
+                  ...optVal(store.emoji),
                   placeholder: '🏪 or <:custom:123456>'
                 }
               },
@@ -14343,7 +14345,7 @@ Your server is now ready for Tycoons gameplay!`;
                   style: 2, // Paragraph
                   required: false,
                   max_length: 200,
-                  value: store.settings?.storeownerText || '',
+                  ...optVal(store.settings?.storeownerText),
                   placeholder: 'Shown at the top of the store when players enter'
                 }
               },
@@ -14356,7 +14358,7 @@ Your server is now ready for Tycoons gameplay!`;
                   style: 2, // Paragraph
                   required: false,
                   max_length: 500,
-                  value: store.description || '',
+                  ...optVal(store.description),
                   placeholder: 'Host-only description of store.'
                 }
               }
