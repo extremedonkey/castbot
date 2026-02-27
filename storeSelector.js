@@ -282,7 +282,7 @@ export async function handleStoreToggle(context, client) {
 
     return {
       type: 9, // MODAL
-      data: modal.toJSON()
+      data: modal
     };
   }
 

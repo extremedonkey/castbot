@@ -13606,10 +13606,10 @@ Your server is now ready for Tycoons gameplay!`;
         // Use shared modal creation utility
         const { createStoreModal } = await import('./safariManager.js');
         const modal = createStoreModal('safari_store_modal', 'Create New Store');
-        
+
         return res.send({
           type: InteractionResponseType.MODAL,
-          data: modal.toJSON()
+          data: modal
         });
         
       } catch (error) {
@@ -13664,7 +13664,7 @@ Your server is now ready for Tycoons gameplay!`;
 
           return res.send({
             type: InteractionResponseType.MODAL,
-            data: modal.toJSON()
+            data: modal
           });
         }
 
@@ -14286,11 +14286,10 @@ Your server is now ready for Tycoons gameplay!`;
         const storeId = custom_id.replace('safari_store_edit_', '');
         console.log(`✏️ DEBUG: Editing store ${storeId}`);
         
-        // Import Safari manager functions
-        const { loadSafariContent } = await import('./safariManager.js');
+        const { loadSafariContent, createStoreModal } = await import('./safariManager.js');
         const safariData = await loadSafariContent();
         const store = safariData[guildId]?.stores?.[storeId];
-        
+
         if (!store) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -14300,78 +14299,7 @@ Your server is now ready for Tycoons gameplay!`;
             }
           });
         }
-        
-        // Create edit store modal with Label wrappers (Components V2 modal pattern)
-        // Helper: only include 'value' when non-empty (empty string causes Discord to clear all fields)
-        // Note: Custom emoji syntax <:name:id> in Label-wrapped text inputs causes Discord to
-        // silently clear ALL modal values. Sanitize emoji values for safe pre-population.
-        const optVal = (v) => v ? { value: v } : {};
-        const safeEmojiVal = (v) => {
-          if (!v) return {};
-          // Custom emoji <:name:id> breaks Label-wrapped text inputs — skip value, show in placeholder
-          if (v.match(/^<a?:\w+:\d+>$/)) return { placeholder: `Current: ${v} (leave blank to keep)` };
-          return { value: v };
-        };
-        console.log(`✏️ DEBUG: Modal values - name: "${store.name}", emoji: "${store.emoji}", greeting: "${store.settings?.storeownerText}", desc: "${store.description}"`);
-        const modalData = {
-            custom_id: `safari_store_edit_modal_${storeId}`,
-            title: 'Edit Store Details',
-            components: [
-              {
-                type: 18, // Label
-                label: 'Store Name',
-                component: {
-                  type: 4, // Text Input
-                  custom_id: 'store_name',
-                  style: 1, // Short
-                  required: true,
-                  max_length: 50,
-                  ...optVal(store.name),
-                  placeholder: 'e.g. Adventure Supplies'
-                }
-              },
-              {
-                type: 18, // Label
-                label: 'Store Emoji',
-                component: {
-                  type: 4, // Text Input
-                  custom_id: 'store_emoji',
-                  style: 1, // Short
-                  required: false,
-                  max_length: 100,
-                  ...safeEmojiVal(store.emoji),
-                  ...(!store.emoji?.match(/^<a?:/) ? { placeholder: '🏪 or <:custom:123456>' } : {})
-                }
-              },
-              {
-                type: 18, // Label
-                label: 'Store Owner Greeting (Player-facing)',
-                component: {
-                  type: 4, // Text Input
-                  custom_id: 'storeowner_text',
-                  style: 2, // Paragraph
-                  required: false,
-                  max_length: 200,
-                  ...optVal(store.settings?.storeownerText),
-                  placeholder: 'Shown at the top of the store when players enter'
-                }
-              },
-              {
-                type: 18, // Label
-                label: 'Store Description (Host-facing)',
-                component: {
-                  type: 4, // Text Input
-                  custom_id: 'store_description',
-                  style: 2, // Paragraph
-                  required: false,
-                  max_length: 500,
-                  ...optVal(store.description),
-                  placeholder: 'Host-only description of store.'
-                }
-              }
-            ]
-          };
-        console.log(`✏️ DEBUG: Modal payload:`, JSON.stringify(modalData, null, 2));
+        const modalData = createStoreModal(`safari_store_edit_modal_${storeId}`, 'Edit Store Details', store);
         return res.send({
           type: InteractionResponseType.MODAL,
           data: modalData
@@ -37885,12 +37813,13 @@ Are you sure you want to continue?`;
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to create stores.')) return;
         
-        // Extract form data
-        const storeName = components[0].components[0].value?.trim();
-        const storeEmoji = components[1].components[0].value?.trim() || null;
-        const storeDescription = components[2].components[0].value?.trim() || null;
-        const storeownerText = components[3].components[0].value?.trim() || null;
-        
+        // Extract form data (Label/type 18 format with ActionRow fallback)
+        const getVal = (comp) => (comp?.component?.value ?? comp?.components?.[0]?.value)?.trim() || null;
+        const storeName = getVal(components[0]);
+        const storeEmoji = getVal(components[1]);
+        const storeownerText = getVal(components[2]); // index 2 = greeting
+        const storeDescription = getVal(components[3]); // index 3 = description
+
         // Validate required fields
         if (!storeName) {
           return res.send({
@@ -37901,7 +37830,7 @@ Are you sure you want to continue?`;
             }
           });
         }
-        
+
         console.log(`🏪 DEBUG: Creating store "${storeName}" for guild ${guildId}`);
         
         // Import Safari manager functions
@@ -37943,11 +37872,12 @@ Are you sure you want to continue?`;
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to create stores.')) return;
 
-        // Extract form data
-        const storeName = components[0].components[0].value?.trim();
-        const storeEmoji = components[1].components[0].value?.trim() || null;
-        const storeDescription = components[2].components[0].value?.trim() || null;
-        const storeownerText = components[3].components[0].value?.trim() || null;
+        // Extract form data (Label/type 18 format with ActionRow fallback)
+        const getVal = (comp) => (comp?.component?.value ?? comp?.components?.[0]?.value)?.trim() || null;
+        const storeName = getVal(components[0]);
+        const storeEmoji = getVal(components[1]);
+        const storeownerText = getVal(components[2]); // index 2 = greeting
+        const storeDescription = getVal(components[3]); // index 3 = description
 
         // Validate required fields
         if (!storeName) {
@@ -38043,11 +37973,12 @@ Are you sure you want to continue?`;
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to create stores.')) return;
 
-        // Extract form data (same as existing store creation)
-        const storeName = components[0].components[0].value?.trim();
-        const storeEmoji = components[1].components[0].value?.trim() || null;
-        const storeDescription = components[2].components[0].value?.trim() || null;
-        const storeownerText = components[3].components[0].value?.trim() || null;
+        // Extract form data (Label/type 18 format with ActionRow fallback)
+        const getVal = (comp) => (comp?.component?.value ?? comp?.components?.[0]?.value)?.trim() || null;
+        const storeName = getVal(components[0]);
+        const storeEmoji = getVal(components[1]);
+        const storeownerText = getVal(components[2]); // index 2 = greeting
+        const storeDescription = getVal(components[3]); // index 3 = description
 
         // Validate required fields
         if (!storeName) {

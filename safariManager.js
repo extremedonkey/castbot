@@ -9662,49 +9662,73 @@ function getConditionSummary(condition) {
  * @param {string} title - The modal title (e.g., "Create Store for F2")
  * @returns {ModalBuilder} Configured modal ready for use
  */
-export function createStoreModal(customId, title = "Create New Store") {
-    const modal = new ModalBuilder()
-        .setCustomId(customId)
-        .setTitle(title);
+export function createStoreModal(customId, title = "Create New Store", existingStore = null) {
+    // Helper: only include 'value' when non-empty (empty string causes Discord to clear all Label fields)
+    const optVal = (v) => v ? { value: v } : {};
+    // Custom emoji <:name:id> in Label-wrapped inputs causes Discord to silently clear ALL modal
+    // values — use placeholder instead so the user can see the current emoji without breaking the modal
+    const safeEmojiVal = (v) => {
+        if (!v) return {};
+        if (v.match(/^<a?:\w+:\d+>$/)) return { placeholder: `Current: ${v} (leave blank to keep)` };
+        return { value: v };
+    };
 
-    const storeNameInput = new TextInputBuilder()
-        .setCustomId("store_name")
-        .setLabel("Store Name")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true)
-        .setMaxLength(50)
-        .setPlaceholder("e.g. Adventure Supplies");
-
-    const storeEmojiInput = new TextInputBuilder()
-        .setCustomId("store_emoji")
-        .setLabel("Store Emoji")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(false)
-        .setMaxLength(100)
-        .setPlaceholder("🏪 or <:custom:123456>");
-
-    const storeDescriptionInput = new TextInputBuilder()
-        .setCustomId("store_description")
-        .setLabel("Store Description")
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(false)
-        .setMaxLength(500)
-        .setPlaceholder("A description of your store...");
-
-    const storeownerTextInput = new TextInputBuilder()
-        .setCustomId("storeowner_text")
-        .setLabel("Store Owner Greeting")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(false)
-        .setMaxLength(200)
-        .setPlaceholder("Welcome to my store!");
-
-    const row1 = new ActionRowBuilder().addComponents(storeNameInput);
-    const row2 = new ActionRowBuilder().addComponents(storeEmojiInput);
-    const row3 = new ActionRowBuilder().addComponents(storeDescriptionInput);
-    const row4 = new ActionRowBuilder().addComponents(storeownerTextInput);
-
-    modal.addComponents(row1, row2, row3, row4);
-
-    return modal;
+    return {
+        custom_id: customId,
+        title,
+        components: [
+            {
+                type: 18, // Label
+                label: 'Store Name',
+                component: {
+                    type: 4, // Text Input
+                    custom_id: 'store_name',
+                    style: 1, // Short
+                    required: true,
+                    max_length: 50,
+                    ...(existingStore ? optVal(existingStore.name) : {}),
+                    placeholder: 'e.g. Adventure Supplies'
+                }
+            },
+            {
+                type: 18, // Label
+                label: 'Store Emoji',
+                component: {
+                    type: 4, // Text Input
+                    custom_id: 'store_emoji',
+                    style: 1, // Short
+                    required: false,
+                    max_length: 100,
+                    ...(existingStore ? safeEmojiVal(existingStore.emoji) : {}),
+                    ...(!existingStore?.emoji?.match(/^<a?:/) ? { placeholder: '🏪 or <:custom:123456>' } : {})
+                }
+            },
+            {
+                type: 18, // Label
+                label: 'Store Owner Greeting (Player-facing)',
+                component: {
+                    type: 4, // Text Input
+                    custom_id: 'storeowner_text',
+                    style: 2, // Paragraph
+                    required: false,
+                    max_length: 200,
+                    ...(existingStore ? optVal(existingStore.settings?.storeownerText) : {}),
+                    placeholder: 'Shown at the top of the store when players enter'
+                }
+            },
+            {
+                type: 18, // Label
+                label: 'Store Description (Host-facing)',
+                component: {
+                    type: 4, // Text Input
+                    custom_id: 'store_description',
+                    style: 2, // Paragraph
+                    required: false,
+                    max_length: 500,
+                    ...(existingStore ? optVal(existingStore.description) : {}),
+                    placeholder: 'Host-only description of store.'
+                }
+            }
+        ]
+    };
 }
