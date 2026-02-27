@@ -807,10 +807,6 @@
               "quantity": 1,
               "numAttacksAvailable": 0
             },
-            "dupe13_213549": {
-              "quantity": 1,
-              "numAttacksAvailable": 0
-            },
             "dupe5_213549": {
               "quantity": 2,
               "numAttacksAvailable": 0
@@ -2533,19 +2529,17 @@
       "config_1762792175795_391415444084490240": {
         "buttonText": "Apply to Cleanvivor",
         "explanatoryText": "Join Cleanvivor!",
-        "completionDescription": "Thank you for completing your application! A host will review it soon.",
-        "completionImage": null,
         "channelFormat": "📝%name%-app",
-        "targetChannelId": null,
-        "categoryId": null,
-        "buttonStyle": "Primary",
-        "createdBy": "391415444084490240",
-        "stage": "draft",
-        "createdAt": 1762792175795,
-        "lastUpdated": 1762792175795,
+        "stage": "active",
         "seasonId": "season_ab9fe786206f428e",
         "seasonName": "Cleanvivor",
-        "questions": []
+        "questions": [],
+        "targetChannelId": "1337754151655833694",
+        "categoryId": "1334493817231114271",
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "createdAt": 1772207823185,
+        "lastUpdated": 1772207823185
       }
     },
     "ownerInfo": {

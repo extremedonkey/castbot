@@ -1410,15 +1410,21 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
         type: 2,
         custom_id: `custom_action_editor_${actionId}`,
         label: "← Back",
-        style: 2, // Secondary (grey)
-        emoji: { name: "⚡" }
+        style: 2 // Secondary (grey) - no emoji on back buttons
       },
       {
         type: 2,
         custom_id: `add_coord_modal_${actionId}`,
         label: "Add Coordinate",
-        style: 1, // Primary
+        style: 2, // Secondary (grey)
         emoji: { name: "📍" }
+      },
+      {
+        type: 2,
+        custom_id: `entity_action_post_channel_${actionId}`,
+        label: "Post to Channel",
+        style: 2, // Secondary (grey)
+        emoji: { name: "#️⃣" }
       }
     ]
   });

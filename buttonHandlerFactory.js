@@ -2098,6 +2098,14 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari_management'
   },
+  'entity_action_post_channel_*': {
+    label: 'Post to Channel',
+    description: 'Post custom action button to a Discord channel',
+    emoji: '#️⃣',
+    style: 'Secondary',
+    category: 'safari_management',
+    parent: 'entity_action_coords'
+  },
   'custom_action_trigger_type_*': {
     label: 'Trigger Type Select',
     description: 'Select trigger type for custom action',
