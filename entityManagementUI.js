@@ -819,13 +819,19 @@ export async function createStoreItemManagementUI(options) {
                 content: `## ${store.emoji || '🏪'} ${store.name} - Store Management`
             },
             
+            // Current items header + stock count
+            {
+                type: 10, // Text Display
+                content: `### 🛍️ Current Items in Store\n> 📦 **${currentItemIds.size}/${SAFARI_LIMITS.MAX_ITEMS_PER_STORE} stocked** (max items per store: ${SAFARI_LIMITS.MAX_ITEMS_PER_STORE})`
+            },
+            { type: 14 }, // Separator between stock count and item list
             // Current items list
             {
                 type: 10, // Text Display
-                content: `### 🛍️ Current Items in Store\n> 📦 **${currentItemIds.size}/${SAFARI_LIMITS.MAX_ITEMS_PER_STORE} stocked** (max items per store: ${SAFARI_LIMITS.MAX_ITEMS_PER_STORE})\n${currentItemsList || '*No items in this store yet.*'}`
+                content: currentItemsList || '*No items in this store yet.*'
             },
-            
-            // Separator as requested
+
+            // Separator
             { type: 14 },
             
             // Search results indicator (if searching)
