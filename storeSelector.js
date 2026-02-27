@@ -135,7 +135,12 @@ export async function createStoreSelectionUI(options) {
     let label = safeCleanText.slice(0, 100);
 
     if (action === 'manage_items') {
-      description = `Sells ${itemCount} type${itemCount !== 1 ? 's' : ''} of items`.slice(0, 100);
+      const storeDesc = store.description?.trim();
+      const descSuffix = storeDesc ? ` · ${storeDesc}` : '';
+      const base = `${itemCount} items`;
+      description = (base + descSuffix).length > 100
+        ? (base + descSuffix).slice(0, 98) + '..'
+        : base + descSuffix;
     } else if (action === 'add_to_location') {
       // Add visual indicators for location stores (bulletproof approach)
       if (preSelectedStores.includes(storeId)) {

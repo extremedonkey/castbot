@@ -93,7 +93,8 @@
       "Bash(ls -la:*)",
       "Bash(git mv:*)",
       "Bash(tr:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "WebFetch(domain:docs.discord.com)"
     ],
     "deny": [],
     "ask": []

@@ -832,7 +832,7 @@
               "numAttacksAvailable": 0
             },
             "a_pair_of_dice_570379": {
-              "quantity": 1,
+              "quantity": 2,
               "numAttacksAvailable": 0
             }
           },
@@ -892,6 +892,12 @@
               "storeId": "my_store_myer_100606",
               "price": 0,
               "timestamp": 1772187224558
+            },
+            {
+              "itemId": "a_pair_of_dice_570379",
+              "storeId": "my_store_myer_100606",
+              "price": 0,
+              "timestamp": 1772187483991
             }
           ],
           "mapProgress": {
