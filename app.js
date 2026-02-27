@@ -14303,7 +14303,15 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Create edit store modal with Label wrappers (Components V2 modal pattern)
         // Helper: only include 'value' when non-empty (empty string causes Discord to clear all fields)
+        // Note: Custom emoji syntax <:name:id> in Label-wrapped text inputs causes Discord to
+        // silently clear ALL modal values. Sanitize emoji values for safe pre-population.
         const optVal = (v) => v ? { value: v } : {};
+        const safeEmojiVal = (v) => {
+          if (!v) return {};
+          // Custom emoji <:name:id> breaks Label-wrapped text inputs — skip value, show in placeholder
+          if (v.match(/^<a?:\w+:\d+>$/)) return { placeholder: `Current: ${v} (leave blank to keep)` };
+          return { value: v };
+        };
         console.log(`✏️ DEBUG: Modal values - name: "${store.name}", emoji: "${store.emoji}", greeting: "${store.settings?.storeownerText}", desc: "${store.description}"`);
         const modalData = {
             custom_id: `safari_store_edit_modal_${storeId}`,
@@ -14331,8 +14339,8 @@ Your server is now ready for Tycoons gameplay!`;
                   style: 1, // Short
                   required: false,
                   max_length: 100,
-                  ...optVal(store.emoji),
-                  placeholder: '🏪 or <:custom:123456>'
+                  ...safeEmojiVal(store.emoji),
+                  ...(!store.emoji?.match(/^<a?:/) ? { placeholder: '🏪 or <:custom:123456>' } : {})
                 }
               },
               {
@@ -38402,7 +38410,7 @@ Are you sure you want to continue?`;
         safariData[guildId].stores[storeId] = {
           ...existingStore,
           name: storeName,
-          emoji: storeEmoji,
+          emoji: storeEmoji || existingStore.emoji, // Preserve existing if blank (custom emojis can't pre-fill in Labels)
           description: storeDescription,
           settings: {
             ...existingStore.settings,
