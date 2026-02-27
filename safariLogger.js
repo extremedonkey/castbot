@@ -57,7 +57,7 @@ export async function logWhisper({ guildId, senderId, senderName, senderDisplayN
  * @param {string} params.source - Source of item (e.g., "button", "drop", "reward")
  * @param {string} params.channelName - Channel name
  */
-export async function logItemPickup({ guildId, userId, username, displayName, location, itemId, itemName, itemEmoji, quantity, source, channelName }) {
+export async function logItemPickup({ guildId, userId, username, displayName, location, itemId, itemName, itemEmoji, quantity, source, channelName, channelId }) {
   const safariContent = {
     location,
     itemId,
@@ -65,7 +65,8 @@ export async function logItemPickup({ guildId, userId, username, displayName, lo
     itemEmoji: itemEmoji || '📦',
     quantity,
     source,
-    channelName
+    channelName,
+    channelId
   };
   
   await logInteraction(

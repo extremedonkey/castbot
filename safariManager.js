@@ -2393,7 +2393,8 @@ async function addItemToInventory(guildId, userId, itemId, quantity = 1, existin
                 itemEmoji: itemDef?.emoji || '📦',
                 quantity,
                 source: existingPlayerData?.source || 'manual',
-                channelName: existingPlayerData?.channelName || null
+                channelName: existingPlayerData?.channelName || null,
+                channelId: existingPlayerData?.channelId || null
             });
         } catch (logError) {
             console.error('Safari Log Error:', logError);

@@ -1027,7 +1027,7 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
         break;
         
       case 'SAFARI_ITEM_PICKUP':
-        logMessage = `🧰 **ITEM PICKUP** | [${timestamp}] | <@${userId}> at **${safariContent.location}**${channelDisplay}\n> Collected: ${safariContent.itemEmoji} **${safariContent.itemName}** (x${safariContent.quantity})`;
+        logMessage = `🧰 **ITEM PICKUP** | [${timestamp}] | <@${userId}> at ${safariContent.channelId ? `<#${safariContent.channelId}>` : `**${safariContent.location}**${channelDisplay}`}\n> Collected: ${safariContent.itemEmoji} **${safariContent.itemName}** (x${safariContent.quantity})`;
         break;
         
       case 'SAFARI_CURRENCY':
