@@ -27573,10 +27573,9 @@ Are you sure you want to continue?`;
             };
           }
 
-          // Use shared paginated store display (no back button for location stores)
+          // Use shared paginated store display (consistent inventory button across all store types)
           const result = await createStoreBrowseDisplay(
-            context.guildId, storeId, context.userId, 0,
-            { backButton: null }
+            context.guildId, storeId, context.userId, 0
           );
           result.flags = (1 << 15) | InteractionResponseFlags.EPHEMERAL;
           return result;
