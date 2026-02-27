@@ -25689,7 +25689,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               type: 17,
               accent_color: 0x3498db,
               components: [
-                { type: 10, content: `## #️⃣ Post to Channel\n\n**${action.emoji || '⚡'} ${action.name || action.label || 'Custom Action'}**\n\nSelect a channel to post this action button to.` },
+                { type: 10, content: `## Post to Channel\n\n**${action.emoji || '⚡'} ${action.name || action.label || 'Custom Action'}**\n\nSelect a channel to post this action button to.` },
                 { type: 14 },
                 { type: 1, components: [{ type: 8, custom_id: `entity_action_post_channel_select_${actionId}`, placeholder: 'Select channel...', channel_types: [0, 5] }] },
                 { type: 14 },
