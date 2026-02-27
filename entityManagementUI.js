@@ -822,17 +822,31 @@ export async function createStoreItemManagementUI(options) {
             // Current items list
             {
                 type: 10, // Text Display
-                content: `### 🛍️ Current Items in Store\n> 📦 Max items per store: ${SAFARI_LIMITS.MAX_ITEMS_PER_STORE}\n${currentItemsList || '*No items in this store yet.*'}`
+                content: `### 🛍️ Current Items in Store\n> 📦 **${currentItemIds.size}/${SAFARI_LIMITS.MAX_ITEMS_PER_STORE} stocked** (max items per store: ${SAFARI_LIMITS.MAX_ITEMS_PER_STORE})\n${currentItemsList || '*No items in this store yet.*'}`
             },
             
             // Separator as requested
             { type: 14 },
             
             // Search results indicator (if searching)
-            ...(searchTerm ? [{
-                type: 10, // Text Display
-                content: `### 🔍 Search Results\nShowing items matching **"${searchTerm}"** • ${Object.keys(filteredItems).filter(id => !currentItemIds.has(id)).length} new items found\n\n**Legend:** ✅ Currently stocked • 🆕 Search results • 🔍 Search again`
-            }, { type: 14 }] : []),
+            ...(searchTerm ? (() => {
+                const totalNewResults = Object.keys(filteredItems).filter(id => !currentItemIds.has(id)).length;
+                // Mirror the same calculation as createStoreItemSelector
+                const actionOpts = 2; // search + clear
+                const maxAddableForSearch = SAFARI_LIMITS.MAX_ITEMS_PER_STORE - currentItemIds.size;
+                const discordSlotsForSearch = 25 - actionOpts - currentItemIds.size;
+                const visibleResults = Math.max(0, Math.min(totalNewResults, discordSlotsForSearch, maxAddableForSearch));
+                const truncated = totalNewResults > visibleResults;
+
+                let searchText = `### 🔍 Search Results\nShowing items matching **"${searchTerm}"** • ${totalNewResults} new items found`;
+                if (truncated && visibleResults > 0) {
+                    searchText += `\n> ⚠️ Only ${visibleResults} of ${totalNewResults} results showing — store can hold ${SAFARI_LIMITS.MAX_ITEMS_PER_STORE} items max. Try narrowing your search.`;
+                } else if (visibleResults === 0 && totalNewResults > 0) {
+                    searchText += `\n> ⚠️ Store is at capacity (${currentItemIds.size}/${SAFARI_LIMITS.MAX_ITEMS_PER_STORE}). Remove items to add new ones.`;
+                }
+                searchText += `\n\n**Legend:** ✅ Currently stocked • 🆕 Search results • 🔍 Search again`;
+                return [{ type: 10, content: searchText }, { type: 14 }];
+            })() : []),
             
             // Multi-select entity selector
             createStoreItemSelector(filteredItems, currentItemIds, storeId, searchTerm, allItems),
@@ -942,8 +956,11 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, all
             .filter(([id]) => !currentItemIds.has(id))
             .sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
             
-        // Calculate how many search results we can show (25 = Discord string select max)
-        const maxSearchResults = Math.max(0, Math.min(searchResults.length, 25 - options.length - currentItemIds.size));
+        // Calculate how many search results we can show
+        // Capped by: Discord select max (25), remaining Discord slots, AND store item limit
+        const maxAddableItems = SAFARI_LIMITS.MAX_ITEMS_PER_STORE - currentItemIds.size;
+        const discordSlots = 25 - options.length - currentItemIds.size;
+        const maxSearchResults = Math.max(0, Math.min(searchResults.length, discordSlots, maxAddableItems));
         
         searchResults.slice(0, maxSearchResults).forEach(([id, item]) => {
             const { cleanText, emoji: parsedEmoji } = parseTextEmoji(
@@ -997,8 +1014,9 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, all
             .filter(([id]) => !currentItemIds.has(id))
             .sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
             
-        // Calculate how many we can add (25 = Discord string select max)
-        const remainingSlots = Math.max(0, 25 - options.length);
+        // Calculate how many we can add — capped by Discord select max (25) AND store item limit
+        const maxAddable = SAFARI_LIMITS.MAX_ITEMS_PER_STORE - currentItemIds.size;
+        const remainingSlots = Math.max(0, Math.min(25 - options.length, maxAddable));
         
         availableItems.slice(0, remainingSlots).forEach(([id, item]) => {
             const { cleanText, emoji: parsedEmoji } = parseTextEmoji(
