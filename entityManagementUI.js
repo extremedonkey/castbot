@@ -804,7 +804,8 @@ export async function createStoreItemManagementUI(options) {
             } else {
                 stockDisplay = `${stock}`;
             }
-            currentItemsList += `${index + 1}. ${item.emoji || '📦'} \`${item.name}\` - ${customTerms.currencyEmoji} ${price} ${customTerms.currencyName} | 📦 **Remaining:** ${stockDisplay}\n`;
+            const stockText = stockDisplay === 'Unlimited' ? 'Unlimited in stock' : `${stockDisplay} in stock`;
+            currentItemsList += `${index + 1}. ${item.emoji || '📦'} \`${item.name}\`  ${customTerms.currencyEmoji} ${price} ${customTerms.currencyName} | 📦 ${stockText}\n`;
         }
     });
     
