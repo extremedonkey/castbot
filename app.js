@@ -24279,46 +24279,53 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             const modalCustomId = coordinate ? 
               `entity_create_modal_safari_button_info_${coordinate}` : 
               'global_create_modal_safari_button_info';
-            const modal = new ModalBuilder()
-              .setCustomId(modalCustomId)
-              .setTitle('Create Custom Action');
+            const modal = {
+              custom_id: modalCustomId,
+              title: 'Create Custom Action',
+              components: [
+                {
+                  type: 18, // Label
+                  label: 'Action Name',
+                  description: 'If the action type is Button Click, this will be the text on the button.',
+                  component: {
+                    type: 4, // Text Input
+                    custom_id: 'button_label',
+                    style: 1, // Short
+                    placeholder: 'e.g., "Start Adventure"',
+                    required: true,
+                    max_length: 80
+                  }
+                },
+                {
+                  type: 18, // Label
+                  label: 'Action Emoji (Optional)',
+                  component: {
+                    type: 4, // Text Input
+                    custom_id: 'button_emoji',
+                    style: 1, // Short
+                    placeholder: 'e.g., 🗺️',
+                    required: false,
+                    max_length: 100
+                  }
+                },
+                {
+                  type: 18, // Label
+                  label: 'Action Description',
+                  component: {
+                    type: 4, // Text Input
+                    custom_id: 'button_description',
+                    style: 2, // Paragraph
+                    placeholder: 'e.g., "Starts the jungle adventure safari"',
+                    required: false
+                  }
+                }
+              ]
+            };
 
-            // Button label input
-            const labelInput = new TextInputBuilder()
-              .setCustomId('button_label')
-              .setLabel('Action Name')
-              .setPlaceholder('e.g., "Start Adventure"')
-              .setStyle(TextInputStyle.Short)
-              .setRequired(true)
-              .setMaxLength(80);
-
-            // Action emoji input
-            const emojiInput = new TextInputBuilder()
-              .setCustomId('button_emoji')
-              .setLabel('Action Emoji (Optional)')
-              .setPlaceholder('e.g., 🗺️')
-              .setStyle(TextInputStyle.Short)
-              .setRequired(false)
-              .setMaxLength(100);
-
-            // Button description input
-            const descInput = new TextInputBuilder()
-              .setCustomId('button_description')
-              .setLabel('Action Description')
-              .setPlaceholder('e.g., "Starts the jungle adventure safari"')
-              .setStyle(TextInputStyle.Paragraph)
-              .setRequired(false);
-
-            const labelRow = new ActionRowBuilder().addComponents(labelInput);
-            const emojiRow = new ActionRowBuilder().addComponents(emojiInput);
-            const descRow = new ActionRowBuilder().addComponents(descInput);
-
-            modal.addComponents(labelRow, emojiRow, descRow);
-            
             console.log(`✅ SUCCESS: entity_custom_action_list - showing creation modal`);
             return {
               type: InteractionResponseType.MODAL,
-              data: modal.toJSON()
+              data: modal
             };
           } else if (selectedValue === 'clone_action') {
             // Show clone source selection UI
@@ -24495,49 +24502,58 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             };
           }
           
-          // Create modal with pre-filled values
-          const modal = new ModalBuilder()
-            .setCustomId(`entity_edit_action_info_modal_${actionId}`)
-            .setTitle('Edit Action Info');
+          // Create modal with pre-filled values (Label format - Components V2)
+          const modal = {
+            custom_id: `entity_edit_action_info_modal_${actionId}`,
+            title: 'Edit Action Info',
+            components: [
+              {
+                type: 18, // Label
+                label: 'Action Name',
+                description: 'If the action type is Button Click, this will be the text on the button.',
+                component: {
+                  type: 4, // Text Input
+                  custom_id: 'action_name',
+                  style: 1, // Short
+                  placeholder: 'e.g., "Start Adventure"',
+                  required: true,
+                  max_length: 80,
+                  ...(action.name ? { value: action.name } : {})
+                }
+              },
+              {
+                type: 18, // Label
+                label: 'Action Emoji (Optional)',
+                component: {
+                  type: 4, // Text Input
+                  custom_id: 'action_emoji',
+                  style: 1, // Short
+                  placeholder: 'e.g., 🗺️ or <:custom:123456>',
+                  required: false,
+                  max_length: 100,
+                  ...(action.emoji ? { value: typeof action.emoji === 'string' ? action.emoji : (action.emoji?.name || '') } : {})
+                }
+              },
+              {
+                type: 18, // Label
+                label: 'Action Description',
+                component: {
+                  type: 4, // Text Input
+                  custom_id: 'action_description',
+                  style: 2, // Paragraph
+                  placeholder: 'e.g., "Begin your journey through the forest"',
+                  required: false,
+                  max_length: 4000,
+                  ...(action.description ? { value: action.description } : {})
+                }
+              }
+            ]
+          };
 
-          const nameInput = new TextInputBuilder()
-            .setCustomId('action_name')
-            .setLabel('Action Name')
-            .setPlaceholder('e.g., "Start Adventure"')
-            .setStyle(TextInputStyle.Short)
-            .setValue(action.name || '')
-            .setRequired(true)
-            .setMaxLength(80);
-
-          // Action emoji input (optional) - matches Create modal
-          const emojiInput = new TextInputBuilder()
-            .setCustomId('action_emoji')
-            .setLabel('Action Emoji (Optional)')
-            .setPlaceholder('e.g., 🗺️ or <:custom:123456>')
-            .setStyle(TextInputStyle.Short)
-            .setValue(typeof action.emoji === 'string' ? action.emoji : (action.emoji?.name || ''))
-            .setRequired(false)
-            .setMaxLength(100); // Allow for Discord custom emoji format
-
-          const descInput = new TextInputBuilder()
-            .setCustomId('action_description')
-            .setLabel('Action Description')
-            .setPlaceholder('e.g., "Begin your journey through the forest"')
-            .setStyle(TextInputStyle.Paragraph)
-            .setValue(action.description || '')
-            .setRequired(false)
-            .setMaxLength(4000); // Set explicit high limit
-
-          modal.addComponents(
-            new ActionRowBuilder().addComponents(nameInput),
-            new ActionRowBuilder().addComponents(emojiInput),
-            new ActionRowBuilder().addComponents(descInput)
-          );
-          
           console.log(`✅ SUCCESS: entity_custom_action_edit_info - showing edit modal for ${actionId}`);
           return {
             type: InteractionResponseType.MODAL,
-            data: modal.toJSON()
+            data: modal
           };
         }
       })(req, res, client);
@@ -25720,8 +25736,11 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               components: [{
                 type: 2, // Button
                 custom_id: `safari_${guildId}_${actionId}`,
-                label: action.label || action.name || 'Activate',
-                style: 1, // Primary
+                label: action.name || action.label || 'Activate',
+                style: (() => {
+                  const styleMap = { 'Primary': 1, 'Secondary': 2, 'Success': 3, 'Danger': 4 };
+                  return styleMap[action.trigger?.button?.style] || action.style || 1;
+                })(),
                 ...(action.emoji ? { emoji: { name: action.emoji } } : {})
               }]
             }
@@ -39444,11 +39463,12 @@ Are you sure you want to continue?`;
         
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
         
-        // Parse fields from modal
-        const buttonLabel = components[0].components[0].value?.trim();
-        const buttonEmojiInput = components[1].components[0].value?.trim() || null;
-        const buttonDesc = components[2].components[0].value?.trim() || null;
-        
+        // Parse fields from modal (Label/type-18 format with ActionRow fallback)
+        const getModalVal = (comp) => (comp?.component?.value ?? comp?.components?.[0]?.value)?.trim() || null;
+        const buttonLabel = getModalVal(components[0]);
+        const buttonEmojiInput = getModalVal(components[1]);
+        const buttonDesc = getModalVal(components[2]);
+
         // Validate emoji using advanced parsing (for error checking only)
         let buttonEmoji = null;
         if (buttonEmojiInput) {
@@ -39463,7 +39483,7 @@ Are you sure you want to continue?`;
             buttonEmoji = null;
           }
         }
-        
+
         if (!buttonLabel) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -39473,14 +39493,14 @@ Are you sure you want to continue?`;
             }
           });
         }
-        
+
         // Create button using existing button creation logic
         const { createButton, loadSafariContent, saveSafariContent } = await import('./safariManager.js');
-        
+
         // Generate unique ID using existing pattern
         const timestamp = Date.now();
         const buttonId = `${buttonLabel.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')}_${timestamp}`;
-        
+
         const button = {
           name: buttonLabel,
           label: buttonLabel,
@@ -39756,10 +39776,11 @@ Are you sure you want to continue?`;
         
         // Special handling for safari_button with coordinate
         if (entityType === 'safari_button' && coordinate) {
-          // Parse fields from custom modal format
-          const buttonLabel = components[0].components[0].value?.trim();
-          const buttonEmojiInput = components[1].components[0].value?.trim() || null;
-          const buttonDesc = components[2].components[0].value?.trim() || null;
+          // Parse fields from modal (Label/type-18 format with ActionRow fallback)
+          const getModalVal = (comp) => (comp?.component?.value ?? comp?.components?.[0]?.value)?.trim() || null;
+          const buttonLabel = getModalVal(components[0]);
+          const buttonEmojiInput = getModalVal(components[1]);
+          const buttonDesc = getModalVal(components[2]);
           
           // Validate emoji using advanced parsing (for error checking only)
           let buttonEmoji = null;
@@ -39875,9 +39896,11 @@ Are you sure you want to continue?`;
       try {
         const actionId = custom_id.replace('entity_edit_action_info_modal_', '');
         const guildId = req.body.guild_id;
-        const actionName = components[0].components[0].value?.trim();
-        const actionEmoji = components[1].components[0].value?.trim() || '';
-        const actionDescription = components[2].components[0].value?.trim() || '';
+        // Parse fields (Label/type-18 format with ActionRow fallback)
+        const getModalVal = (comp) => (comp?.component?.value ?? comp?.components?.[0]?.value)?.trim() || null;
+        const actionName = getModalVal(components[0]);
+        const actionEmoji = getModalVal(components[1]) || '';
+        const actionDescription = getModalVal(components[2]) || '';
         
         console.log(`📝 Updating action ${actionId} with name: "${actionName}", emoji: "${actionEmoji}", description: "${actionDescription}"`);
         
@@ -39911,10 +39934,16 @@ Are you sure you want to continue?`;
           });
         }
         
-        // Update action info
-        allSafariContent[guildId].buttons[actionId].name = actionName;
-        allSafariContent[guildId].buttons[actionId].emoji = validatedEmoji; // Store validated emoji (null if invalid/empty)
-        allSafariContent[guildId].buttons[actionId].description = actionDescription;
+        // Update action info — keep name, label, and trigger.button.label in sync
+        const btn = allSafariContent[guildId].buttons[actionId];
+        btn.name = actionName;
+        btn.label = actionName; // label mirrors name until decoupled by design
+        btn.emoji = validatedEmoji; // Store validated emoji (null if invalid/empty)
+        btn.description = actionDescription;
+        // Also sync trigger.button.label so posted buttons show the updated name
+        if (btn.trigger?.button) {
+          btn.trigger.button.label = actionName;
+        }
         
         await saveSafariContent(allSafariContent);
         
