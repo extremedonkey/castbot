@@ -14304,9 +14304,8 @@ Your server is now ready for Tycoons gameplay!`;
         // Create edit store modal with Label wrappers (Components V2 modal pattern)
         // Helper: only include 'value' when non-empty (empty string causes Discord to clear all fields)
         const optVal = (v) => v ? { value: v } : {};
-        return res.send({
-          type: InteractionResponseType.MODAL,
-          data: {
+        console.log(`✏️ DEBUG: Modal values - name: "${store.name}", emoji: "${store.emoji}", greeting: "${store.settings?.storeownerText}", desc: "${store.description}"`);
+        const modalData = {
             custom_id: `safari_store_edit_modal_${storeId}`,
             title: 'Edit Store Details',
             components: [
@@ -14363,9 +14362,13 @@ Your server is now ready for Tycoons gameplay!`;
                 }
               }
             ]
-          }
+          };
+        console.log(`✏️ DEBUG: Modal payload:`, JSON.stringify(modalData, null, 2));
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modalData
         });
-        
+
       } catch (error) {
         console.error('Error in safari_store_edit:', error);
         return res.send({
