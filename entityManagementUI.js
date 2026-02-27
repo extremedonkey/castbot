@@ -804,7 +804,7 @@ export async function createStoreItemManagementUI(options) {
             } else {
                 stockDisplay = `${stock}`;
             }
-            currentItemsList += `${index + 1}. **${item.emoji || '📦'} ${item.name}** - ${customTerms.currencyEmoji} ${price} ${customTerms.currencyName} | 📦 **Remaining:** ${stockDisplay}\n`;
+            currentItemsList += `${index + 1}. ${item.emoji || '📦'} \`${item.name}\` - ${customTerms.currencyEmoji} ${price} ${customTerms.currencyName} | 📦 **Remaining:** ${stockDisplay}\n`;
         }
     });
     
@@ -819,16 +819,16 @@ export async function createStoreItemManagementUI(options) {
                 content: `## ${store.emoji || '🏪'} ${store.name} - Store Management`
             },
             
-            // Current items header + stock count
+            // Stock count
             {
                 type: 10, // Text Display
-                content: `### 🛍️ Current Items in Store\n> 📦 **${currentItemIds.size}/${SAFARI_LIMITS.MAX_ITEMS_PER_STORE} stocked** (max items per store: ${SAFARI_LIMITS.MAX_ITEMS_PER_STORE})`
+                content: `> 📦 **${currentItemIds.size}/${SAFARI_LIMITS.MAX_ITEMS_PER_STORE} stocked** (max items per store: ${SAFARI_LIMITS.MAX_ITEMS_PER_STORE})`
             },
-            { type: 14 }, // Separator between stock count and item list
+            { type: 14 }, // Separator
             // Current items list
             {
                 type: 10, // Text Display
-                content: currentItemsList || '*No items in this store yet.*'
+                content: `### 🛍️ Current Items in Store\n${currentItemsList || '*No items in this store yet.*'}`
             },
 
             // Separator
