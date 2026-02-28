@@ -377,6 +377,9 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = null, 
 
   // Only initialize map progress if a map exists
   if (activeMapId) {
+    // Preserve startingLocation if it exists from a previous de-init cycle
+    const existingStartingLocation = player.safari.mapProgress?.[activeMapId]?.startingLocation;
+
     // Initialize map progress
     player.safari.mapProgress[activeMapId] = {
       currentLocation: coordinate,
@@ -386,7 +389,8 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = null, 
         from: null,
         to: coordinate,
         timestamp: new Date().toISOString()
-      }]
+      }],
+      ...(existingStartingLocation && { startingLocation: existingStartingLocation })
     };
   }
   

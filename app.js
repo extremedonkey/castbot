@@ -30095,12 +30095,12 @@ Are you sure you want to continue?`;
             };
           }
           
-          // Check if player is already initialized
+          // Check if player is already initialized (must have currentLocation, not just startingLocation stub)
           const { loadPlayerData } = await import('./storage.js');
           const playerData = await loadPlayerData();
           const playerMapData = playerData[context.guildId]?.players?.[context.userId]?.safari?.mapProgress?.[activeMapId];
-          
-          if (playerMapData) {
+
+          if (playerMapData?.currentLocation) {
             return {
               content: `❌ You're already on the map at coordinate **${playerMapData.currentLocation}**!\n\nUse the movement interface in that channel to continue exploring.`,
               ephemeral: true

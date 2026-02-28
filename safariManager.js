@@ -651,6 +651,11 @@ function initializePlayerSafari(playerData, guildId, userId, defaultCurrency = 0
         };
     }
     
+    // DEFENSIVE: Ensure currency is set (safari stub from de-init may lack it)
+    if (playerData[guildId].players[userId].safari.currency === undefined) {
+        playerData[guildId].players[userId].safari.currency = defaultCurrency;
+    }
+
     // DEFENSIVE: Ensure inventory exists even if safari structure exists
     if (!playerData[guildId].players[userId].safari.inventory) {
         console.warn(`⚠️ DEFENSIVE: Missing inventory for user ${userId}, reinitializing`);

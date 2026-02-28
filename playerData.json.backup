@@ -834,9 +834,14 @@
                   "from": "C2",
                   "to": "C1",
                   "timestamp": "2026-02-28T03:48:52.311Z"
+                },
+                {
+                  "from": "C1",
+                  "to": "C1",
+                  "timestamp": "2026-02-28T03:49:13.559Z"
                 }
               ],
-              "startingLocation": "G1"
+              "startingLocation": "D5"
             }
           },
           "points": {
