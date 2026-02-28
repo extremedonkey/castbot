@@ -13587,83 +13587,96 @@ Your server is now ready for Tycoons gameplay!`;
         const member = req.body.member;
         const guildId = req.body.guild_id;
         const channelId = req.body.channel_id;
-        
+
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to schedule Safari results.')) return;
-        
+
         console.log(`📅 DEBUG: Opening Safari scheduling modal for guild ${guildId}, channel ${channelId}`);
-        
+
         // Get current scheduled tasks for display
         const scheduledTasks = scheduler.getJobs({ action: 'process_round_results' });
-        
-        // Create scheduling modal
-        const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
-        
-        const modal = new ModalBuilder()
-          .setCustomId(`safari_schedule_modal_${channelId}`)
-          .setTitle('Schedule Round Results');
-        
-        // Text box 1: Hours from now
-        const hoursInput = new TextInputBuilder()
-          .setCustomId('schedule_hours')
-          .setLabel('Schedule Hours from now:')
-          .setStyle(TextInputStyle.Short)
-          .setPlaceholder('4')
-          .setMaxLength(3)
-          .setRequired(false);
-        
-        // Text box 2: Minutes from now
-        const minutesInput = new TextInputBuilder()
-          .setCustomId('schedule_minutes')
-          .setLabel('Schedule Minutes from now:')
-          .setStyle(TextInputStyle.Short)
-          .setPlaceholder('30')
-          .setMaxLength(3)
-          .setRequired(false);
-        
-        // Text box 3: Current task 1 (pre-filled with remaining time)
-        const task1Input = new TextInputBuilder()
-          .setCustomId('current_task1')
-          .setLabel('Next scheduled task (delete to cancel):')
-          .setStyle(TextInputStyle.Short)
-          .setValue(scheduledTasks[0] ? scheduler.calculateRemainingTime(scheduledTasks[0].executeAt) : '')
-          .setPlaceholder('No tasks scheduled')
-          .setMaxLength(20)
-          .setRequired(false);
 
-        // Text box 4: Current task 2
-        const task2Input = new TextInputBuilder()
-          .setCustomId('current_task2')
-          .setLabel('2nd scheduled task (delete to cancel):')
-          .setStyle(TextInputStyle.Short)
-          .setValue(scheduledTasks[1] ? scheduler.calculateRemainingTime(scheduledTasks[1].executeAt) : '')
-          .setPlaceholder('No tasks scheduled')
-          .setMaxLength(20)
-          .setRequired(false);
+        // Build modal components using Label (type 18) + Text Display (type 10)
+        const modalComponents = [];
 
-        // Text box 5: Current task 3
-        const task3Input = new TextInputBuilder()
-          .setCustomId('current_task3')
-          .setLabel('3rd scheduled task (delete to cancel):')
-          .setStyle(TextInputStyle.Short)
-          .setValue(scheduledTasks[2] ? scheduler.calculateRemainingTime(scheduledTasks[2].executeAt) : '')
-          .setPlaceholder('No tasks scheduled')
-          .setMaxLength(20)
-          .setRequired(false);
-        
-        modal.addComponents(
-          new ActionRowBuilder().addComponents(hoursInput),
-          new ActionRowBuilder().addComponents(minutesInput),
-          new ActionRowBuilder().addComponents(task1Input),
-          new ActionRowBuilder().addComponents(task2Input),
-          new ActionRowBuilder().addComponents(task3Input)
-        );
-        
+        // Text Display: show current scheduled tasks
+        if (scheduledTasks.length > 0) {
+          const taskLines = scheduledTasks.slice(0, 3).map((t, i) =>
+            `**${i + 1}.** ${scheduler.calculateRemainingTime(t.executeAt)} remaining`
+          ).join('\n');
+          modalComponents.push({
+            type: 10,
+            content: `### Scheduled Tasks\n${taskLines}`
+          });
+        } else {
+          modalComponents.push({
+            type: 10,
+            content: '### No tasks scheduled\nSet hours/minutes below to schedule round results.'
+          });
+        }
+
+        // Label + TextInput: Hours
+        modalComponents.push({
+          type: 18,
+          label: 'Hours from now',
+          description: '0-168 hours (leave empty to skip)',
+          component: {
+            type: 4,
+            custom_id: 'schedule_hours',
+            style: 1,
+            placeholder: '4',
+            max_length: 3,
+            required: false
+          }
+        });
+
+        // Label + TextInput: Minutes
+        modalComponents.push({
+          type: 18,
+          label: 'Minutes from now',
+          description: '0-59 minutes (leave empty to skip)',
+          component: {
+            type: 4,
+            custom_id: 'schedule_minutes',
+            style: 1,
+            placeholder: '30',
+            max_length: 3,
+            required: false
+          }
+        });
+
+        // Label + String Select: Cancel tasks (only if tasks exist)
+        if (scheduledTasks.length > 0) {
+          modalComponents.push({
+            type: 18,
+            label: 'Cancel scheduled tasks',
+            description: 'Select tasks to cancel (optional)',
+            component: {
+              type: 3,
+              custom_id: 'cancel_tasks',
+              placeholder: 'Select tasks to cancel...',
+              required: false,
+              min_values: 0,
+              max_values: Math.min(scheduledTasks.length, 3),
+              options: scheduledTasks.slice(0, 3).map((t, i) => ({
+                label: `Task ${i + 1}: ${scheduler.calculateRemainingTime(t.executeAt)}`,
+                value: t.id,
+                description: t.description || 'Safari Round Results',
+                emoji: { name: '🗑️' }
+              }))
+            }
+          });
+        }
+
         return res.send({
           type: InteractionResponseType.MODAL,
-          data: modal.toJSON()
+          data: {
+            custom_id: `safari_schedule_modal_${channelId}`,
+            title: 'Schedule Round Results',
+            components: modalComponents
+          }
         });
-        
+
       } catch (error) {
         console.error('Error in safari_schedule_results:', error);
         return res.send({
@@ -41140,26 +41153,23 @@ Are you sure you want to continue?`;
         }
         
         console.log(`🔍 DEBUG: Processing Safari scheduling for guild ${guildId}, channel ${channelId} by user ${userId}`);
-        
-        // Extract form data
-        const hoursValue = data.components[0]?.components[0]?.value?.trim();
-        const minutesValue = data.components[1]?.components[0]?.value?.trim();
-        const task1Value = data.components[2]?.components[0]?.value?.trim();
-        const task2Value = data.components[3]?.components[0]?.value?.trim();
-        const task3Value = data.components[4]?.components[0]?.value?.trim();
-        
-        // Get current scheduled tasks for comparison
-        const currentTasks = scheduler.getJobs({ action: 'process_round_results' });
 
-        // Handle task deletions (if text was cleared)
-        const tasksToDelete = [];
-        if (currentTasks[0] && task1Value === '') tasksToDelete.push(currentTasks[0].id);
-        if (currentTasks[1] && task2Value === '') tasksToDelete.push(currentTasks[1].id);
-        if (currentTasks[2] && task3Value === '') tasksToDelete.push(currentTasks[2].id);
+        // Extract form data by custom_id (Label components change array positions)
+        let hoursValue = '';
+        let minutesValue = '';
+        let tasksToCancel = [];
+        for (const comp of data.components) {
+          // Label wrapper: child is in comp.component or comp.components[0]
+          const child = comp.component || comp.components?.[0];
+          if (!child) continue;
+          if (child.custom_id === 'schedule_hours') hoursValue = child.value?.trim() || '';
+          if (child.custom_id === 'schedule_minutes') minutesValue = child.value?.trim() || '';
+          if (child.custom_id === 'cancel_tasks' && child.values) tasksToCancel = child.values;
+        }
 
-        // Clear deleted tasks
+        // Cancel selected tasks
         let deletedCount = 0;
-        for (const taskId of tasksToDelete) {
+        for (const taskId of tasksToCancel) {
           if (scheduler.cancel(taskId)) {
             deletedCount++;
           }
