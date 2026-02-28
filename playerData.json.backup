@@ -790,7 +790,7 @@
         "safari": {
           "currency": 25,
           "history": [],
-          "lastInteraction": 1772249504181,
+          "lastInteraction": 1772250308904,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -812,12 +812,7 @@
                 {
                   "from": null,
                   "to": "C2",
-                  "timestamp": "2026-02-28T03:31:44.181Z"
-                },
-                {
-                  "from": "C2",
-                  "to": "C2",
-                  "timestamp": "2026-02-28T03:31:44.215Z"
+                  "timestamp": "2026-02-28T03:45:08.904Z"
                 }
               ]
             }
@@ -826,7 +821,7 @@
             "stamina": {
               "current": 1,
               "maximum": 1,
-              "lastRegeneration": "2026-02-28T03:31:44.181Z",
+              "lastRegeneration": "2026-02-28T03:45:08.904Z",
               "regenConfig": "hourly"
             }
           }
@@ -6167,14 +6162,14 @@
     "serverName": "EpochORG Season Template",
     "icon": null,
     "ownerId": "391415444084490240",
-    "memberCount": 16,
+    "memberCount": 15,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1729395578359,
-    "lastUpdated": 1760194239512,
+    "lastUpdated": 1772250196105,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",

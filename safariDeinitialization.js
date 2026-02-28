@@ -245,9 +245,24 @@ export async function deinitializePlayer(guildId, userId, client = null) {
       }
     }
     
+    // Preserve per-player starting location across de-init
+    const preservedStartingLocation = activeMapId
+      ? playerData[guildId].players[userId].safari?.mapProgress?.[activeMapId]?.startingLocation
+      : null;
+
     // Remove Safari data from player
     delete playerData[guildId].players[userId].safari;
-    
+
+    // Restore starting location if it existed
+    if (preservedStartingLocation && activeMapId) {
+      playerData[guildId].players[userId].safari = {
+        mapProgress: {
+          [activeMapId]: { startingLocation: preservedStartingLocation }
+        }
+      };
+      logger.info('DEINIT', `Preserved player starting location: ${preservedStartingLocation}`, { guildId, userId });
+    }
+
     // Save updated data
     await savePlayerData(playerData);
     
