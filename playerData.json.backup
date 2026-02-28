@@ -724,44 +724,7 @@
         "safari": {
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "D1",
-              "exploredCoordinates": [
-                "D1"
-              ],
-              "itemsFound": [],
-              "movementHistory": [
-                {
-                  "from": null,
-                  "to": "D1",
-                  "timestamp": "2026-02-28T15:05:29.798Z"
-                },
-                {
-                  "from": "D1",
-                  "to": "D1",
-                  "timestamp": "2026-02-28T15:05:29.830Z"
-                }
-              ],
               "startingLocation": "D1"
-            }
-          },
-          "currency": 33,
-          "inventory": {
-            "nurturer_361363": 1,
-            "territory_forager_404120": 1,
-            "nest_guardian_461600": 1,
-            "raider_499497": 1
-          },
-          "history": [],
-          "achievements": [],
-          "cooldowns": {},
-          "buttonUses": {},
-          "storeHistory": [],
-          "points": {
-            "stamina": {
-              "current": 1,
-              "maximum": 1,
-              "lastRegeneration": "2026-02-28T15:05:29.798Z",
-              "regenConfig": "hourly"
             }
           }
         }
@@ -932,21 +895,6 @@
       },
       "977455730300956683": {
         "emojiCode": "<:morgane:1382413461094535281>",
-        "safari": {
-          "currency": 25,
-          "history": [],
-          "lastInteraction": 1772211106147,
-          "achievements": [],
-          "inventory": {
-            "nurturer_361363": 1,
-            "territory_forager_404120": 1,
-            "nest_guardian_461600": 1,
-            "raider_499497": 1
-          },
-          "cooldowns": {},
-          "buttonUses": {},
-          "storeHistory": []
-        },
         "age": "37",
         "vanityRoles": [
           "1368969349976821815",

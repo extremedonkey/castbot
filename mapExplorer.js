@@ -2067,13 +2067,13 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     .setEmoji('🚪')
     .setDisabled(!hasActiveMap);
 
-  // First row: Main map management buttons + Start/Remove Safari
-  const mapButtonRow1 = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, startSafariButton, removePlayersButton]);
+  // Row 1: Map management
+  const mapButtonRow1 = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton]);
 
-  // Second row: Admin functions with Refresh Anchors moved here
-  const mapButtonRow2 = new ActionRowBuilder().addComponents([blacklistButton, playerLocationsButton, pausedPlayersButton, refreshAnchorsButton]);
+  // Row 2: Player lifecycle
+  const mapButtonRow2 = new ActionRowBuilder().addComponents([startSafariButton, pausedPlayersButton, removePlayersButton]);
 
-  // Third row: Location Editor, Safari Progress, and Shared Map (always show)
+  // Row 3: Map views & data
   const locationEditorButton = new ButtonBuilder()
     .setCustomId('safari_location_editor')
     .setLabel('Location Editor')
@@ -2088,7 +2088,6 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     .setEmoji('🚀')
     .setDisabled(!hasActiveMap);
 
-  // Shared Map button (always show - allows sharing from any context)
   const sharedMapButton = new ButtonBuilder()
     .setCustomId('safari_shared_map')
     .setLabel('Shared Map')
@@ -2096,11 +2095,12 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     .setEmoji('🗺️')
     .setDisabled(!hasActiveMap);
 
-  const mapButtonRow3 = new ActionRowBuilder().addComponents([
-    locationEditorButton,
-    safariProgressButton,
-    sharedMapButton
-  ]);
+  blacklistButton.setLabel('Blacklist Coords');
+
+  const mapButtonRow3 = new ActionRowBuilder().addComponents([playerLocationsButton, sharedMapButton, blacklistButton, safariProgressButton]);
+
+  // Row 4: Tools
+  const mapButtonRow4 = new ActionRowBuilder().addComponents([locationEditorButton, refreshAnchorsButton]);
 
   // Create back button (only for ephemeral messages)
   if (isEphemeral) {
@@ -2114,7 +2114,9 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     // Add action row components to container
     containerComponents.push(mapButtonRow1.toJSON());
     containerComponents.push(mapButtonRow2.toJSON());
+    containerComponents.push({ type: 14 }); // Separator between player lifecycle and map tools
     containerComponents.push(mapButtonRow3.toJSON());
+    containerComponents.push(mapButtonRow4.toJSON());
     containerComponents.push({
       type: 14 // Separator
     });
@@ -2123,7 +2125,9 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     // For non-ephemeral (shared) maps, no back button
     containerComponents.push(mapButtonRow1.toJSON());
     containerComponents.push(mapButtonRow2.toJSON());
+    containerComponents.push({ type: 14 });
     containerComponents.push(mapButtonRow3.toJSON());
+    containerComponents.push(mapButtonRow4.toJSON());
   }
 
   // Create container using Components V2 format
