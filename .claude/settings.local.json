@@ -95,7 +95,11 @@
       "Bash(tr:*)",
       "Bash(mv:*)",
       "WebFetch(domain:docs.discord.com)",
-      "Bash(pgrep:*)"
+      "Bash(pgrep:*)",
+      "Bash(ls /home/reece/castbot/*.json 2>/dev/null | head -20)",
+      "Bash(ls /home/reece/castbot/*.js | head -30)",
+      "Bash(scp -i ~/.ssh/castbot-key.pem /tmp/check_safari.js bitnami@13.238.148.170:/opt/bitnami/projects/castbot/check_safari.js && ssh -i ~/.ssh/castbot-key.pem bitnami@13.238.148.170 \"cd /opt/bitnami/projects/castbot && node check_safari.js && rm check_safari.js\")",
+      "Bash(scp -i ~/.ssh/castbot-key.pem /tmp/check_prod.cjs bitnami@13.238.148.170:/tmp/check_prod.cjs && ssh -i ~/.ssh/castbot-key.pem bitnami@13.238.148.170 \"cd /opt/bitnami/projects/castbot && node /tmp/check_prod.cjs && rm /tmp/check_prod.cjs\")"
     ],
     "deny": [],
     "ask": []

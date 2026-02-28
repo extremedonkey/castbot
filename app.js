@@ -84,6 +84,7 @@ import {
   buildCastlist2ResponseData
 } from './castlistV2.js';
 import { MenuBuilder } from './menuBuilder.js';
+import { scheduler } from './scheduler.js';
 import { createBackButton } from './src/ui/backButtonFactory.js';
 import {
   PlayerManagementMode,
@@ -1454,193 +1455,32 @@ const client = new Client({
 });
 
 // ============================================================================
-// 📅 SAFARI SCHEDULING SYSTEM - IN-MEMORY TASK MANAGEMENT
+// 📅 SCHEDULER - Register actions for persistent job scheduling
 // ============================================================================
-const scheduledSafariTasks = new Map();
-
-// Generate unique task ID
-function generateTaskId() {
-  return `safari_task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
-
-// Calculate remaining time display
-function calculateRemainingTime(executeAt) {
-  const now = new Date();
-  const diff = executeAt - now;
-  if (diff <= 0) return "Expired";
-  
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  return `${hours}h ${minutes}m`;
-}
-
-// Schedule a new Safari round results task with smart reminders
-function scheduleSafariTask(channelId, guildId, hours, minutes) {
-  const totalMs = (hours * 3600000) + (minutes * 60000);
-  const executeAt = new Date(Date.now() + totalMs);
-  const taskId = generateTaskId();
-  
-  console.log(`🔍 DEBUG: Scheduling Safari task for ${executeAt} in channel ${channelId}`);
-  
-  // Schedule the main task
-  const timeoutId = setTimeout(async () => {
-    try {
-      console.log(`⚔️ DEBUG: Executing scheduled Safari round results in channel ${channelId}`);
-      await executeSafariRoundResults(channelId, guildId);
-      scheduledSafariTasks.delete(taskId);
-      console.log(`✅ DEBUG: Safari task ${taskId} completed and removed`);
-    } catch (error) {
-      console.error(`❌ ERROR: Safari task ${taskId} failed:`, error);
-      scheduledSafariTasks.delete(taskId);
-    }
-  }, totalMs);
-  
-  // Schedule smart reminders (only if there's enough time)
-  const reminderIds = [];
-  
-  // 30-minute reminder (only if total time > 45 minutes)
-  if (totalMs > 2700000) { // 45 minutes in ms
-    const reminder30Id = setTimeout(async () => {
-      try {
-        await sendReminderMessage(channelId, "30 minutes");
-        console.log(`🔔 DEBUG: 30-minute reminder sent for task ${taskId}`);
-      } catch (error) {
-        console.error(`❌ ERROR: 30-minute reminder failed for task ${taskId}:`, error);
-      }
-    }, totalMs - 1800000); // 30 minutes before
-    
-    reminderIds.push(reminder30Id);
-    console.log(`⏰ DEBUG: 30-minute reminder scheduled for task ${taskId}`);
-  }
-  
-  // 5-minute reminder (only if total time > 10 minutes)
-  if (totalMs > 600000) { // 10 minutes in ms
-    const reminder5Id = setTimeout(async () => {
-      try {
-        await sendReminderMessage(channelId, "5 minutes");
-        console.log(`🔔 DEBUG: 5-minute reminder sent for task ${taskId}`);
-      } catch (error) {
-        console.error(`❌ ERROR: 5-minute reminder failed for task ${taskId}:`, error);
-      }
-    }, totalMs - 300000); // 5 minutes before
-    
-    reminderIds.push(reminder5Id);
-    console.log(`⏰ DEBUG: 5-minute reminder scheduled for task ${taskId}`);
-  }
-  
-  // 1-minute reminder (only if total time > 2 minutes)
-  if (totalMs > 120000) { // 2 minutes in ms
-    const reminder1Id = setTimeout(async () => {
-      try {
-        await sendReminderMessage(channelId, "1 minute");
-        console.log(`🔔 DEBUG: 1-minute reminder sent for task ${taskId}`);
-      } catch (error) {
-        console.error(`❌ ERROR: 1-minute reminder failed for task ${taskId}:`, error);
-      }
-    }, totalMs - 60000); // 1 minute before
-    
-    reminderIds.push(reminder1Id);
-    console.log(`⏰ DEBUG: 1-minute reminder scheduled for task ${taskId}`);
-  }
-  
-  scheduledSafariTasks.set(taskId, {
-    id: taskId,
-    timeoutId: timeoutId,
-    reminderIds: reminderIds, // Store reminder IDs for cleanup
-    channelId: channelId,
-    guildId: guildId,
-    executeAt: executeAt,
-    description: 'Safari Round Results',
-    hoursFromCreation: hours,
-    minutesFromCreation: minutes
-  });
-  
-  const reminderCount = reminderIds.length;
-  console.log(`✅ DEBUG: Safari task ${taskId} scheduled for ${hours}h ${minutes}m from now with ${reminderCount} reminder(s)`);
-  return taskId;
-}
-
-// Send reminder message to channel
-async function sendReminderMessage(channelId, timeLeft) {
+scheduler.registerAction('process_round_results', async (payload, schedulerClient) => {
+  const { channelId, guildId } = payload;
   try {
-    const channel = await client.channels.fetch(channelId);
-    if (channel) {
-      await channel.send({
-        content: `⏰ **Safari Round Results** will be revealed in **${timeLeft}**! 🦁`,
-        flags: 0
-      });
-    }
-  } catch (error) {
-    console.error(`❌ ERROR: Failed to send reminder message to channel ${channelId}:`, error);
-  }
-}
-
-// Clear a scheduled task and its reminders
-function clearSafariTask(taskId) {
-  const task = scheduledSafariTasks.get(taskId);
-  if (task) {
-    // Clear the main task
-    clearTimeout(task.timeoutId);
-    
-    // Clear all reminder timeouts
-    if (task.reminderIds && task.reminderIds.length > 0) {
-      task.reminderIds.forEach(reminderId => {
-        clearTimeout(reminderId);
-      });
-      console.log(`🗑️ DEBUG: Cleared ${task.reminderIds.length} reminder(s) for task ${taskId}`);
-    }
-    
-    scheduledSafariTasks.delete(taskId);
-    console.log(`🗑️ DEBUG: Safari task ${taskId} and all reminders cleared`);
-    return true;
-  }
-  return false;
-}
-
-// Get all scheduled tasks sorted by execution time  
-function getAllScheduledSafariTasks() {
-  const tasks = Array.from(scheduledSafariTasks.values());
-  return tasks.sort((a, b) => a.executeAt - b.executeAt);
-}
-
-// Execute Safari round results in specified channel
-async function executeSafariRoundResults(channelId, guildId) {
-  try {
-    console.log(`⚔️ DEBUG: Starting scheduled Safari round results execution in channel ${channelId}`);
-    
-    // Import the Safari manager - use the same function as the manual button
+    console.log(`⚔️ DEBUG: Executing scheduled Safari round results in channel ${channelId}`);
     const { processRoundResults } = await import('./safariManager.js');
-    
-    // Process round results using the same backend logic as manual execution
-    // Pass null for token and include isScheduled flag with channelId
-    // The processRoundResults function now handles webhook creation internally for scheduled execution
-    const roundData = await processRoundResults(guildId, null, client, { isScheduled: true, channelId });
-    
-    // Check if round data is null (successful execution via webhook in createRoundResultsV2)
+    const roundData = await processRoundResults(guildId, null, schedulerClient, { isScheduled: true, channelId });
+
     if (roundData === null) {
       console.log(`✅ DEBUG: Scheduled Safari round results executed successfully via webhook`);
       return;
     }
-    
-    // If we get here with roundData, something went wrong
+
     if (roundData?.data?.content) {
       console.error(`❌ DEBUG: Scheduled execution returned error:`, roundData.data.content);
     }
-    
-    console.log(`✅ DEBUG: Scheduled Safari round results completed`);
   } catch (error) {
     console.error(`❌ ERROR: Failed to execute scheduled Safari round results:`, error);
-    
-    // Try to send error message to channel
     try {
-      const channel = await client.channels.fetch(channelId);
+      const channel = await schedulerClient.channels.fetch(channelId);
       if (channel) {
-        // Create a webhook for error message to avoid Discord.js format issues
         const errorWebhook = await channel.createWebhook({
           name: 'Safari Error',
           reason: 'Scheduled Safari error notification'
         });
-        
         await fetch(errorWebhook.url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1648,15 +1488,28 @@ async function executeSafariRoundResults(channelId, guildId) {
             content: '❌ **ERROR**: Scheduled Safari round results failed to execute. Please run the command manually.'
           })
         });
-        
-        // Clean up webhook
         setTimeout(() => errorWebhook.delete().catch(() => {}), 1000);
       }
     } catch (channelError) {
       console.error(`❌ ERROR: Could not send error message to channel:`, channelError);
     }
   }
-}
+});
+
+scheduler.registerAction('send_reminder', async (payload, schedulerClient) => {
+  const { channelId, reminderMessage } = payload;
+  try {
+    const channel = await schedulerClient.channels.fetch(channelId);
+    if (channel) {
+      await channel.send({
+        content: `⏰ **Safari Round Results** will be revealed in **${reminderMessage}**! 🦁`,
+        flags: 0
+      });
+    }
+  } catch (error) {
+    console.error(`❌ ERROR: Failed to send reminder message to channel ${channelId}:`, error);
+  }
+});
 
 // Add these event handlers after client initialization
 client.once('ready', async () => {
@@ -1750,6 +1603,10 @@ client.once('ready', async () => {
   }
 
   console.log(`📥 Total reaction mappings loaded: ${totalMappingsLoaded}`);
+
+  // Initialize and restore persistent scheduler
+  scheduler.init(client);
+  await scheduler.restore();
 
   // Start PM2 Error Log Monitoring (Dev & Prod)
   const pm2Logger = getPM2ErrorLogger(client);
@@ -13737,7 +13594,7 @@ Your server is now ready for Tycoons gameplay!`;
         console.log(`📅 DEBUG: Opening Safari scheduling modal for guild ${guildId}, channel ${channelId}`);
         
         // Get current scheduled tasks for display
-        const scheduledTasks = getAllScheduledSafariTasks();
+        const scheduledTasks = scheduler.getJobs({ action: 'process_round_results' });
         
         // Create scheduling modal
         const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
@@ -13769,27 +13626,27 @@ Your server is now ready for Tycoons gameplay!`;
           .setCustomId('current_task1')
           .setLabel('Next scheduled task (delete to cancel):')
           .setStyle(TextInputStyle.Short)
-          .setValue(scheduledTasks[0] ? calculateRemainingTime(scheduledTasks[0].executeAt) : '')
+          .setValue(scheduledTasks[0] ? scheduler.calculateRemainingTime(scheduledTasks[0].executeAt) : '')
           .setPlaceholder('No tasks scheduled')
           .setMaxLength(20)
           .setRequired(false);
-        
+
         // Text box 4: Current task 2
         const task2Input = new TextInputBuilder()
           .setCustomId('current_task2')
           .setLabel('2nd scheduled task (delete to cancel):')
           .setStyle(TextInputStyle.Short)
-          .setValue(scheduledTasks[1] ? calculateRemainingTime(scheduledTasks[1].executeAt) : '')
+          .setValue(scheduledTasks[1] ? scheduler.calculateRemainingTime(scheduledTasks[1].executeAt) : '')
           .setPlaceholder('No tasks scheduled')
           .setMaxLength(20)
           .setRequired(false);
-        
+
         // Text box 5: Current task 3
         const task3Input = new TextInputBuilder()
           .setCustomId('current_task3')
           .setLabel('3rd scheduled task (delete to cancel):')
           .setStyle(TextInputStyle.Short)
-          .setValue(scheduledTasks[2] ? calculateRemainingTime(scheduledTasks[2].executeAt) : '')
+          .setValue(scheduledTasks[2] ? scheduler.calculateRemainingTime(scheduledTasks[2].executeAt) : '')
           .setPlaceholder('No tasks scheduled')
           .setMaxLength(20)
           .setRequired(false);
@@ -41292,29 +41149,29 @@ Are you sure you want to continue?`;
         const task3Value = data.components[4]?.components[0]?.value?.trim();
         
         // Get current scheduled tasks for comparison
-        const currentTasks = getAllScheduledSafariTasks();
-        
+        const currentTasks = scheduler.getJobs({ action: 'process_round_results' });
+
         // Handle task deletions (if text was cleared)
         const tasksToDelete = [];
         if (currentTasks[0] && task1Value === '') tasksToDelete.push(currentTasks[0].id);
         if (currentTasks[1] && task2Value === '') tasksToDelete.push(currentTasks[1].id);
         if (currentTasks[2] && task3Value === '') tasksToDelete.push(currentTasks[2].id);
-        
+
         // Clear deleted tasks
         let deletedCount = 0;
         for (const taskId of tasksToDelete) {
-          if (clearSafariTask(taskId)) {
+          if (scheduler.cancel(taskId)) {
             deletedCount++;
           }
         }
-        
+
         // Schedule new task if hours/minutes provided
         let newTaskScheduled = false;
         let scheduleDetails = '';
         if (hoursValue || minutesValue) {
           const hours = parseInt(hoursValue) || 0;
           const minutes = parseInt(minutesValue) || 0;
-          
+
           if (hours < 0 || minutes < 0 || hours > 168 || minutes > 59) {
             return res.send({
               type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -41324,12 +41181,28 @@ Are you sure you want to continue?`;
               }
             });
           }
-          
+
           if (hours > 0 || minutes > 0) {
-            const taskId = scheduleSafariTask(channelId, guildId, hours, minutes);
+            const totalMs = (hours * 3600000) + (minutes * 60000);
+            const reminders = [];
+            if (totalMs > 2700000) reminders.push({ offsetMs: 1800000, message: '30 minutes' });
+            if (totalMs > 600000) reminders.push({ offsetMs: 300000, message: '5 minutes' });
+            if (totalMs > 120000) reminders.push({ offsetMs: 60000, message: '1 minute' });
+
+            await scheduler.schedule('process_round_results',
+              { channelId, guildId },
+              {
+                delayMs: totalMs,
+                guildId,
+                channelId,
+                reminders,
+                reminderAction: 'send_reminder',
+                description: 'Safari Round Results'
+              }
+            );
             newTaskScheduled = true;
-            
-            const executeAt = new Date(Date.now() + (hours * 3600000) + (minutes * 60000));
+
+            const executeAt = new Date(Date.now() + totalMs);
             scheduleDetails = `\n\n⏰ **New Task Scheduled:**\nSafari Results will run in this channel in **${hours}h ${minutes}m**\n*Executing at: ${executeAt.toLocaleString()}*`;
           }
         }

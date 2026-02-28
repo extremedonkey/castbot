@@ -753,53 +753,9 @@
         "safari": {
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "D1",
-              "exploredCoordinates": [
-                "D1"
-              ],
-              "itemsFound": [],
-              "movementHistory": [
-                {
-                  "from": null,
-                  "to": "D1",
-                  "timestamp": "2026-02-28T16:26:38.155Z"
-                },
-                {
-                  "from": "D1",
-                  "to": "D1",
-                  "timestamp": "2026-02-28T16:26:38.180Z"
-                }
-              ],
-              "startingLocation": "D1"
+              "startingLocation": "A5"
             }
-          },
-          "currency": 33,
-          "inventory": {
-            "nurturer_361363": {
-              "quantity": 2,
-              "numAttacksAvailable": 2
-            },
-            "territory_forager_404120": 1,
-            "nest_guardian_461600": 1,
-            "raider_499497": {
-              "quantity": 1,
-              "numAttacksAvailable": 1
-            }
-          },
-          "history": [],
-          "achievements": [],
-          "cooldowns": {},
-          "buttonUses": {},
-          "storeHistory": [],
-          "points": {
-            "stamina": {
-              "current": 1,
-              "maximum": 1,
-              "lastRegeneration": "2026-02-28T16:26:38.155Z",
-              "regenConfig": "hourly"
-            }
-          },
-          "isPaused": true
+          }
         }
       },
       "251452487997980673": {

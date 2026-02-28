@@ -1,7 +1,7 @@
 # Scheduling Architecture Analysis & Unified Framework Design
 
 **RaP #0998** | **Date**: 2025-09-27
-**Status**: 🔴 Critical - Blocking health monitor feature
+**Status**: Partially superseded — see [RaP 0956](0956_20260301_Scheduler_PersistentStore.md) for the actual Scheduler implementation (persistence, general-purpose actions, PersistentStore for whispers). This RaP's health monitor webhook fix (Phase 1) is still relevant.
 **Impact**: Architecture-level decision affecting multiple features
 
 ---

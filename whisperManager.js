@@ -9,12 +9,12 @@
  * - Whisper logging for production
  */
 
-import { 
-  ButtonBuilder, 
+import {
+  ButtonBuilder,
   StringSelectMenuBuilder,
   ModalBuilder,
   TextInputBuilder,
-  TextInputStyle 
+  TextInputStyle
 } from 'discord.js';
 import { getPlayersAtLocation, arePlayersAtSameLocation } from './playerLocationManager.js';
 import { loadPlayerData } from './storage.js';
@@ -22,6 +22,17 @@ import { loadSafariContent, saveSafariContent } from './safariManager.js';
 import { logger } from './logger.js';
 import { DiscordRequest } from './utils.js';
 import { InteractionResponseType, InteractionResponseFlags } from 'discord-interactions';
+import { PersistentStore } from './persistentStore.js';
+
+// Persistent whisper store — survives restarts
+let whisperStore = null;
+async function getWhisperStore() {
+  if (!whisperStore) {
+    whisperStore = PersistentStore.create('whispers');
+    await whisperStore.load();
+  }
+  return whisperStore;
+}
 
 /**
  * Show player selection UI for whispers
@@ -206,13 +217,13 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
       }
     }
     
-    // Store whisper data globally for retrieval when Read Message is clicked
-    logger.info('WHISPER', 'Step 1: Creating whisper storage');
-    global.activeWhispers = global.activeWhispers || new Map();
+    // Store whisper data persistently for retrieval when Read Message is clicked
+    logger.info('WHISPER', 'Step 1: Loading whisper store');
+    const store = await getWhisperStore();
     const whisperId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     logger.info('WHISPER', 'Step 2: Storing whisper data');
-    global.activeWhispers.set(whisperId, {
+    store.set(whisperId, {
       senderId: context.userId,
       senderName,
       targetUserId,
@@ -256,8 +267,10 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
     logger.info('WHISPER', 'Step 7: Notification sent successfully');
     
     // Store message ID for deletion when read
-    global.activeWhispers.get(whisperId).messageId = notificationMessage.id;
-    global.activeWhispers.get(whisperId).channelId = channelId;
+    const whisperData = store.get(whisperId);
+    whisperData.messageId = notificationMessage.id;
+    whisperData.channelId = channelId;
+    store.set(whisperId, whisperData);
     
     logger.info('WHISPER', 'Whisper notification posted', { 
       senderId: context.userId, 
@@ -471,15 +484,16 @@ export async function handleReadWhisper(context, whisperId, targetUserId, client
       };
     }
     
-    // Get whisper data
-    if (!global.activeWhispers || !global.activeWhispers.has(whisperId)) {
+    // Get whisper data from persistent store
+    const store = await getWhisperStore();
+    if (!store.has(whisperId)) {
       return {
         content: '❌ This whisper has expired or already been read.',
         flags: InteractionResponseFlags.EPHEMERAL
       };
     }
-    
-    const whisperData = global.activeWhispers.get(whisperId);
+
+    const whisperData = store.get(whisperId);
     
     // Prepare whisper content (using same pattern as player select)
     const whisperContent = {
@@ -517,8 +531,8 @@ export async function handleReadWhisper(context, whisperId, targetUserId, client
       logger.error('WHISPER', 'Failed to delete notification', { error: error.message });
     }
     
-    // Clean up whisper data
-    global.activeWhispers.delete(whisperId);
+    // Clean up whisper data (also persists the deletion to disk)
+    store.delete(whisperId);
     
     // Deliver the whisper content
     logger.info('WHISPER', 'Delivering whisper content', { 

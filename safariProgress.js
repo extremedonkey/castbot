@@ -630,80 +630,92 @@ export async function createGlobalItemsUI(guildId, client = null, isPublic = fal
   const items = guildData.items || {};
 
   console.log(`🔍 DEBUG: Found map with ${Object.keys(coordinates).length} coordinates, ${Object.keys(buttons).length} buttons`);
-  
-  // Build content - only coordinates with once_globally give_item actions
+
+  // Build reverse lookup: buttonId → coordinate
+  const buttonToCoord = {};
+  for (const coord in coordinates) {
+    const coordData = coordinates[coord];
+    if (coordData?.buttons) {
+      for (const bid of coordData.buttons) {
+        buttonToCoord[bid] = coord;
+      }
+    }
+  }
+
+  // Build content - scan ALL guild buttons for once_globally give_item actions
   let content = `# 🎁 Advantages Overview\n\n`;
   let hasContent = false;
   let characterCount = content.length;
-  
+
   const coordSections = [];
-  
-  // Process all coordinates to find ones with once_globally give_item actions
-  const sortedCoords = Object.keys(coordinates).sort();
-  
-  for (const coord of sortedCoords) {
-    const coordData = coordinates[coord];
-    if (!coordData || !coordData.buttons || coordData.buttons.length === 0) continue;
-    
+
+  // Group buttons by coordinate (or "unplaced" for buttons not on any coordinate)
+  const buttonsByLocation = {};
+
+  for (const buttonId in buttons) {
+    const button = buttons[buttonId];
+    if (!button || !button.actions) continue;
+
+    // Filter to only once_globally give_item actions
+    const globalItemActions = button.actions.filter(action =>
+      action.type === 'give_item' &&
+      action.config?.limit?.type === 'once_globally'
+    );
+
+    if (globalItemActions.length === 0) continue;
+
+    const coord = buttonToCoord[buttonId] || '__unplaced__';
+    if (!buttonsByLocation[coord]) buttonsByLocation[coord] = [];
+    buttonsByLocation[coord].push({ buttonId, button, globalItemActions });
+  }
+
+  console.log(`🔍 DEBUG: Found ${Object.keys(buttonsByLocation).length} locations with global items`);
+
+  // Sort coordinates (with unplaced at the end)
+  const sortedLocations = Object.keys(buttonsByLocation).sort((a, b) => {
+    if (a === '__unplaced__') return 1;
+    if (b === '__unplaced__') return -1;
+    return a.localeCompare(b);
+  });
+
+  for (const location of sortedLocations) {
     let coordSection = '';
-    let hasGlobalItems = false;
-    
-    // Check each button for once_globally give_item actions
-    for (const buttonId of coordData.buttons) {
-      const button = buttons[buttonId];
-      if (!button || !button.actions) continue;
-      
-      // Filter to only once_globally give_item actions
-      const globalItemActions = button.actions.filter(action =>
-        action.type === 'give_item' &&
-        action.config?.limit?.type === 'once_globally'
-      );
+    const header = location === '__unplaced__' ? '## 🌐 Global (not on map)' : `## 📍 ${location}`;
+    coordSection += `${header}\n`;
 
-      if (globalItemActions.length > 0) {
-        console.log(`🔍 DEBUG: Found ${globalItemActions.length} global items in button ${buttonId} at ${coord}`);
-      }
+    for (const { buttonId, button, globalItemActions } of buttonsByLocation[location]) {
+      console.log(`🔍 DEBUG: Found ${globalItemActions.length} global items in button ${buttonId} at ${location}`);
 
-      if (globalItemActions.length === 0) continue;
-      
-      if (!hasGlobalItems) {
-        // Add coordinate header
-        coordSection += `## 📍 ${coord}\n`;
-        hasGlobalItems = true;
-      }
-      
-      // Add button with only global item actions
       const triggerType = button.trigger?.type || 'button';
       const triggerEmoji = triggerType === 'modal' ? '📝' : '🔘';
       coordSection += `${triggerEmoji} **${button.name || button.label || 'Unnamed Action'}** (${getTriggerTypeLabel(triggerType)})\n`;
       coordSection += `└─ 🎬 Actions:\n`;
-      
+
       for (let i = 0; i < globalItemActions.length; i++) {
         const action = globalItemActions[i];
         const isLast = i === globalItemActions.length - 1;
         const prefix = isLast ? '   └─' : '   ├─';
-        
+
         coordSection += await formatAction(action, prefix, guildId, items, playerData, client, buttons);
       }
-      
+
       coordSection += '\n';
     }
-    
-    if (hasGlobalItems) {
-      hasContent = true;
-      
-      // Check character limit
-      if (characterCount + coordSection.length > CHARACTER_LIMIT) {
-        content += `*... and more coordinates. Character limit reached.*\n`;
-        break;
-      }
-      
-      coordSections.push(coordSection.trimEnd());
-      characterCount += coordSection.length;
+
+    hasContent = true;
+
+    // Check character limit
+    if (characterCount + coordSection.length > CHARACTER_LIMIT) {
+      content += `*... and more locations. Character limit reached.*\n`;
+      break;
     }
+
+    coordSections.push(coordSection.trimEnd());
+    characterCount += coordSection.length;
   }
-  
+
   if (!hasContent) {
-    content += `*No global items (once_globally give_item actions) found on this map.*\n`;
+    content += `*No global items (once_globally give_item actions) found.*\n`;
   }
 
   console.log(`🔍 DEBUG: Final result - hasContent: ${hasContent}, coordSections: ${coordSections.length}`);
