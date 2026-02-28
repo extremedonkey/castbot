@@ -5,104 +5,17 @@
 
 import { getCustomTerms, loadSafariContent } from './safariManager.js';
 import { loadPlayerData } from './storage.js';
+import { getInitializedPlayers, buildPlayerSelectOptions } from './safariPlayerUtils.js';
 
 // In-memory store for user selections (keyed by mode_guildId_userId)
 const selections = new Map();
 
-function selectionKey(mode, guildId, userId) {
+function selKey(mode, guildId, userId) {
   return `${mode}_${guildId}_${userId}`;
 }
 
-// ==================== SHARED ====================
+// ==================== SHARED UI BUILDERS ====================
 
-/**
- * Load config needed for Start/Remove Safari panels
- */
-async function loadConfig(guildId) {
-  const { getStaminaConfig } = await import('./safariManager.js');
-  const customTerms = await getCustomTerms(guildId);
-  const staminaConfig = await getStaminaConfig(guildId);
-  const safariData = await loadSafariContent();
-  const items = safariData[guildId]?.items || {};
-  const defaultItemCount = Object.values(items).filter(i => i?.metadata?.defaultItem === 'Yes').length;
-  const coordinate = staminaConfig.defaultStartingCoordinate || 'A1';
-  return { customTerms, defaultItemCount, coordinate, safariData };
-}
-
-/**
- * Check if a player is initialized on Safari
- */
-function isPlayerInitialized(playerData, guildId, userId) {
-  const safari = playerData[guildId]?.players?.[userId]?.safari;
-  return safari && (safari.currency !== undefined || safari.inventory !== undefined || safari.points !== undefined);
-}
-
-/**
- * Get all initialized player IDs for a guild
- */
-async function getInitializedPlayerIds(guildId) {
-  const playerData = await loadPlayerData();
-  const players = playerData[guildId]?.players || {};
-  return Object.keys(players).filter(userId =>
-    /^\d{17,20}$/.test(userId) && isPlayerInitialized(playerData, guildId, userId)
-  );
-}
-
-/**
- * Get a player's current location on the active map, or null
- */
-function getPlayerLocation(playerData, safariData, guildId, userId) {
-  const activeMapId = safariData[guildId]?.maps?.active;
-  if (!activeMapId) return null;
-  return playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId]?.currentLocation || null;
-}
-
-/**
- * Build a generic select+action panel
- */
-function buildPanel({ accentColor, infoContent, playerListContent, selectCustomId, selectDefaults, selectPlaceholder, backButtonId, backLabel, goButtonId, goLabel, goDisabled, goStyle }) {
-  const components = [
-    { type: 10, content: infoContent },
-    { type: 14 },
-  ];
-
-  if (playerListContent) {
-    components.push({ type: 10, content: playerListContent });
-  }
-
-  components.push({
-    type: 1,
-    components: [{
-      type: 5,
-      custom_id: selectCustomId,
-      max_values: 25,
-      placeholder: selectPlaceholder,
-      ...(selectDefaults?.length && { default_values: selectDefaults.map(id => ({ id, type: 'user' })) })
-    }]
-  });
-
-  components.push({ type: 14 });
-  components.push({
-    type: 1,
-    components: [
-      { type: 2, custom_id: backButtonId, label: backLabel, style: 2 },
-      { type: 2, custom_id: goButtonId, label: goLabel, style: goStyle || 1, disabled: goDisabled }
-    ]
-  });
-
-  return {
-    flags: (1 << 15),
-    components: [{
-      type: 17,
-      accent_color: accentColor,
-      components
-    }]
-  };
-}
-
-/**
- * Build a result summary panel
- */
 function buildResultPanel({ title, accentColor, successCount, totalCount, resultLines, backButtonId, backLabel }) {
   return {
     flags: (1 << 15),
@@ -118,10 +31,7 @@ function buildResultPanel({ title, accentColor, successCount, totalCount, result
   };
 }
 
-/**
- * Build empty selection error panel
- */
-function buildNoSelectionPanel(backButtonId, backLabel) {
+function buildNoSelectionPanel(backButtonId) {
   return {
     flags: (1 << 15),
     components: [{
@@ -137,6 +47,17 @@ function buildNoSelectionPanel(backButtonId, backLabel) {
 }
 
 // ==================== START SAFARI ====================
+
+async function loadStartConfig(guildId) {
+  const { getStaminaConfig } = await import('./safariManager.js');
+  const customTerms = await getCustomTerms(guildId);
+  const staminaConfig = await getStaminaConfig(guildId);
+  const safariData = await loadSafariContent();
+  const items = safariData[guildId]?.items || {};
+  const defaultItemCount = Object.values(items).filter(i => i?.metadata?.defaultItem === 'Yes').length;
+  const coordinate = staminaConfig.defaultStartingCoordinate || 'A1';
+  return { customTerms, defaultItemCount, coordinate, safariData };
+}
 
 function buildStartInfoText(config) {
   const { customTerms, defaultItemCount, coordinate } = config;
@@ -154,6 +75,45 @@ function buildStartInfoText(config) {
     ``,
     `-# Players can be individually initialized at any time from \`/menu\` > Player Admin.`
   ].join('\n');
+}
+
+function buildStartPanel(config, selectedUserIds, playerLines) {
+  const infoText = buildStartInfoText(config);
+  const hasSelection = selectedUserIds && selectedUserIds.length > 0;
+
+  const components = [
+    { type: 10, content: infoText },
+    { type: 14 },
+  ];
+
+  if (hasSelection) {
+    components.push({ type: 10, content: `**Players to be added to Safari:**\n${playerLines.join('\n')}` });
+  }
+
+  components.push({
+    type: 1,
+    components: [{
+      type: 5, // User Select — can pick any server member
+      custom_id: 'safari_start_user_select',
+      max_values: 25,
+      placeholder: 'Select players to initialize...',
+      ...(hasSelection && { default_values: selectedUserIds.map(id => ({ id, type: 'user' })) })
+    }]
+  });
+
+  components.push({ type: 14 });
+  components.push({
+    type: 1,
+    components: [
+      { type: 2, custom_id: 'safari_map_explorer', label: '← Map Explorer', style: 2 },
+      { type: 2, custom_id: 'safari_start_safari_go', label: hasSelection ? `▶️ Start Safari (${selectedUserIds.length})` : '▶️ Start Safari', style: 1, disabled: !hasSelection }
+    ]
+  });
+
+  return {
+    flags: (1 << 15),
+    components: [{ type: 17, accent_color: 0xF5A623, components }]
+  };
 }
 
 async function buildStartPlayerLines(guildId, userIds, config) {
@@ -178,22 +138,9 @@ async function buildStartPlayerLines(guildId, userIds, config) {
 
 export async function handleStartSafari(context) {
   console.log(`🦁 START: safari_start_safari - user ${context.userId}`);
-  selections.delete(selectionKey('start', context.guildId, context.userId));
-  const config = await loadConfig(context.guildId);
-
-  return buildPanel({
-    accentColor: 0xF5A623,
-    infoContent: buildStartInfoText(config),
-    playerListContent: null,
-    selectCustomId: 'safari_start_user_select',
-    selectDefaults: null,
-    selectPlaceholder: 'Select players to initialize...',
-    backButtonId: 'safari_map_explorer',
-    backLabel: '← Map Explorer',
-    goButtonId: 'safari_start_safari_go',
-    goLabel: '▶️ Start Safari',
-    goDisabled: true
-  });
+  selections.delete(selKey('start', context.guildId, context.userId));
+  const config = await loadStartConfig(context.guildId);
+  return buildStartPanel(config, null, null);
 }
 
 export async function handleUserSelect(context) {
@@ -201,35 +148,22 @@ export async function handleUserSelect(context) {
   const selectedUserIds = context.values || [];
   console.log(`🦁 Selected ${selectedUserIds.length} players for initialization`);
 
-  selections.set(selectionKey('start', context.guildId, context.userId), selectedUserIds);
+  selections.set(selKey('start', context.guildId, context.userId), selectedUserIds);
 
-  const config = await loadConfig(context.guildId);
+  const config = await loadStartConfig(context.guildId);
   const playerLines = await buildStartPlayerLines(context.guildId, selectedUserIds, config);
-
-  return buildPanel({
-    accentColor: 0xF5A623,
-    infoContent: buildStartInfoText(config),
-    playerListContent: `**Players to be added to Safari:**\n${playerLines.join('\n')}`,
-    selectCustomId: 'safari_start_user_select',
-    selectDefaults: selectedUserIds,
-    selectPlaceholder: 'Select players to initialize...',
-    backButtonId: 'safari_map_explorer',
-    backLabel: '← Map Explorer',
-    goButtonId: 'safari_start_safari_go',
-    goLabel: `▶️ Start Safari (${selectedUserIds.length})`,
-    goDisabled: false
-  });
+  return buildStartPanel(config, selectedUserIds, playerLines);
 }
 
 export async function handleStartSafariGo(context) {
   console.log(`🦁 START: safari_start_safari_go - user ${context.userId}`);
 
-  const key = selectionKey('start', context.guildId, context.userId);
+  const key = selKey('start', context.guildId, context.userId);
   const selectedUserIds = selections.get(key) || [];
   selections.delete(key);
 
   if (selectedUserIds.length === 0) {
-    return buildNoSelectionPanel('safari_start_safari', '← Back');
+    return buildNoSelectionPanel('safari_start_safari');
   }
 
   const { bulkInitializePlayers } = await import('./safariMapAdmin.js');
@@ -261,91 +195,110 @@ export async function handleStartSafariGo(context) {
 
 // ==================== REMOVE PLAYERS ====================
 
-async function buildRemovePlayerLines(guildId, userIds) {
-  const playerData = await loadPlayerData();
-  const safariData = await loadSafariContent();
-  const customTerms = await getCustomTerms(guildId);
+const REMOVE_INFO = `## 🚪 Remove Players
 
-  return userIds.map(userId => {
-    const safari = playerData[guildId]?.players?.[userId]?.safari;
-    const location = getPlayerLocation(playerData, safariData, guildId, userId);
-    const currency = safari?.currency ?? 0;
-    const itemCount = Object.keys(safari?.inventory || {}).length;
+De-initialize selected players from Safari. This removes their currency, inventory, points, stamina, and map location.
 
-    let line = `> <@${userId}>`;
-    if (location) line += ` — Location: **${location}**`;
-    line += `, ${customTerms.currencyName}: **${currency}** ${customTerms.currencyEmoji}`;
-    if (itemCount > 0) line += `, Items: **${itemCount}**`;
-    return line;
+⚠️ **This action cannot be undone.** Per-player starting locations are preserved.
+
+-# Players can be individually removed at any time from \`/menu\` > Player Admin.`;
+
+function buildRemovePanel(players, selectedIds) {
+  const hasPlayers = players.length > 0;
+  const hasSelection = selectedIds && selectedIds.length > 0;
+
+  const options = buildPlayerSelectOptions(players, {
+    selectedIds,
+    descriptionFn: (p) => {
+      const parts = [];
+      if (p.location) parts.push(p.location);
+      parts.push(`${p.currency} ${p.currencyName}`);
+      if (p.itemCount > 0) parts.push(`${p.itemCount} item${p.itemCount !== 1 ? 's' : ''}`);
+      if (p.isPaused) parts.push('Paused');
+      return parts.join(' · ');
+    }
   });
+
+  const components = [
+    { type: 10, content: REMOVE_INFO },
+    { type: 14 },
+  ];
+
+  if (hasPlayers) {
+    if (hasSelection) {
+      const selectedNames = players
+        .filter(p => selectedIds.includes(p.userId))
+        .map(p => `> <@${p.userId}>`);
+      components.push({ type: 10, content: `**Players to be removed (${selectedIds.length}):**\n${selectedNames.join('\n')}` });
+    }
+
+    components.push({
+      type: 1,
+      components: [{
+        type: 3, // String Select — only initialized players
+        custom_id: 'safari_remove_user_select',
+        placeholder: 'Select players to remove...',
+        min_values: 0,
+        max_values: Math.min(25, players.length),
+        options
+      }]
+    });
+  } else {
+    components.push({ type: 10, content: '⚠️ No players are currently initialized on Safari.' });
+  }
+
+  components.push({ type: 14 });
+  components.push({
+    type: 1,
+    components: [
+      { type: 2, custom_id: 'safari_map_explorer', label: '← Map Explorer', style: 2 },
+      { type: 2, custom_id: 'safari_remove_players_go', label: hasSelection ? `🗑️ Remove Players (${selectedIds.length})` : '🗑️ Remove Players', style: 4, disabled: !hasSelection }
+    ]
+  });
+
+  return {
+    flags: (1 << 15),
+    components: [{ type: 17, accent_color: 0xed4245, components }]
+  };
 }
 
 export async function handleRemovePlayers(context) {
-  console.log(`🦁 START: safari_remove_players - user ${context.userId}`);
-  selections.delete(selectionKey('remove', context.guildId, context.userId));
+  console.log(`🚪 START: safari_remove_players - user ${context.userId}`);
+  selections.delete(selKey('remove', context.guildId, context.userId));
 
-  // Pre-select all initialized players
-  const initializedIds = await getInitializedPlayerIds(context.guildId);
-
-  return buildPanel({
-    accentColor: 0xed4245,
-    infoContent: `## 🚪 Remove Players\n\nDe-initialize selected players from Safari. This removes their currency, inventory, points, stamina, and map location.\n\n⚠️ **This action cannot be undone.** Per-player starting locations are preserved.\n\n-# Players can be individually removed at any time from \`/menu\` > Player Admin.`,
-    playerListContent: null,
-    selectCustomId: 'safari_remove_user_select',
-    selectDefaults: initializedIds,
-    selectPlaceholder: 'Select players to remove...',
-    backButtonId: 'safari_map_explorer',
-    backLabel: '← Map Explorer',
-    goButtonId: 'safari_remove_players_go',
-    goLabel: initializedIds.length > 0 ? `🗑️ Remove Players (${initializedIds.length})` : '🗑️ Remove Players',
-    goDisabled: initializedIds.length === 0,
-    goStyle: 4 // Danger (red)
-  });
+  const players = await getInitializedPlayers(context.guildId, context.client);
+  return buildRemovePanel(players, []);
 }
 
 export async function handleRemoveUserSelect(context) {
-  console.log(`🦁 START: safari_remove_user_select - user ${context.userId}`);
-  const selectedUserIds = context.values || [];
-  console.log(`🦁 Selected ${selectedUserIds.length} players for removal`);
+  console.log(`🚪 START: safari_remove_user_select - user ${context.userId}`);
+  const selectedIds = context.values || [];
+  console.log(`🚪 Selected ${selectedIds.length} players for removal`);
 
-  selections.set(selectionKey('remove', context.guildId, context.userId), selectedUserIds);
+  selections.set(selKey('remove', context.guildId, context.userId), selectedIds);
 
-  const playerLines = await buildRemovePlayerLines(context.guildId, selectedUserIds);
-
-  return buildPanel({
-    accentColor: 0xed4245,
-    infoContent: `## 🚪 Remove Players\n\nDe-initialize selected players from Safari. This removes their currency, inventory, points, stamina, and map location.\n\n⚠️ **This action cannot be undone.** Per-player starting locations are preserved.\n\n-# Players can be individually removed at any time from \`/menu\` > Player Admin.`,
-    playerListContent: selectedUserIds.length > 0 ? `**Players to be removed from Safari:**\n${playerLines.join('\n')}` : null,
-    selectCustomId: 'safari_remove_user_select',
-    selectDefaults: selectedUserIds,
-    selectPlaceholder: 'Select players to remove...',
-    backButtonId: 'safari_map_explorer',
-    backLabel: '← Map Explorer',
-    goButtonId: 'safari_remove_players_go',
-    goLabel: `🗑️ Remove Players (${selectedUserIds.length})`,
-    goDisabled: selectedUserIds.length === 0,
-    goStyle: 4
-  });
+  const players = await getInitializedPlayers(context.guildId, context.client);
+  return buildRemovePanel(players, selectedIds);
 }
 
 export async function handleRemovePlayersGo(context) {
-  console.log(`🦁 START: safari_remove_players_go - user ${context.userId}`);
+  console.log(`🚪 START: safari_remove_players_go - user ${context.userId}`);
 
-  const key = selectionKey('remove', context.guildId, context.userId);
-  const selectedUserIds = selections.get(key) || [];
+  const key = selKey('remove', context.guildId, context.userId);
+  const selectedIds = selections.get(key) || [];
   selections.delete(key);
 
-  if (selectedUserIds.length === 0) {
-    return buildNoSelectionPanel('safari_remove_players', '← Back');
+  if (selectedIds.length === 0) {
+    return buildNoSelectionPanel('safari_remove_players');
   }
 
   const { bulkDeinitializePlayers } = await import('./safariDeinitialization.js');
-  const results = await bulkDeinitializePlayers(context.guildId, selectedUserIds, context.client);
+  const results = await bulkDeinitializePlayers(context.guildId, selectedIds, context.client);
 
   const successCount = results.success.length;
-  const totalCount = selectedUserIds.length;
+  const totalCount = selectedIds.length;
 
-  const resultLines = selectedUserIds.map(userId => {
+  const resultLines = selectedIds.map(userId => {
     if (results.success.includes(userId)) {
       return `✅ <@${userId}> — Removed from Safari`;
     }
@@ -353,7 +306,7 @@ export async function handleRemovePlayersGo(context) {
     return `❌ <@${userId}> — ${failure?.reason || 'Unknown error'}`;
   }).join('\n');
 
-  console.log(`🦁 SUCCESS: safari_remove_players_go - ${successCount}/${totalCount} removed`);
+  console.log(`🚪 SUCCESS: safari_remove_players_go - ${successCount}/${totalCount} removed`);
 
   return buildResultPanel({
     title: '🚪 Players Removed',
