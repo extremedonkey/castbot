@@ -799,7 +799,12 @@
                 {
                   "from": null,
                   "to": "D1",
-                  "timestamp": "2026-02-28T12:43:19.596Z"
+                  "timestamp": "2026-02-28T15:05:29.798Z"
+                },
+                {
+                  "from": "D1",
+                  "to": "D1",
+                  "timestamp": "2026-02-28T15:05:29.830Z"
                 }
               ],
               "startingLocation": "D1"
@@ -821,7 +826,7 @@
             "stamina": {
               "current": 1,
               "maximum": 1,
-              "lastRegeneration": "2026-02-28T12:43:19.596Z",
+              "lastRegeneration": "2026-02-28T15:05:29.798Z",
               "regenConfig": "hourly"
             }
           }
@@ -868,26 +873,50 @@
       "468655730975703041": {
         "age": "45",
         "emojiCode": "<:Serviver:1396856842994585651>",
+        "vanityRoles": [
+          "1368969348399632546",
+          "1333822411912642630",
+          "1379077934953922611"
+        ],
         "safari": {
-          "currency": 25,
-          "history": [],
-          "lastInteraction": 1772211102266,
-          "achievements": [],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "D1",
+              "exploredCoordinates": [
+                "D1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "D1",
+                  "timestamp": "2026-02-28T15:05:31.660Z"
+                }
+              ],
+              "startingLocation": "D1"
+            }
+          },
+          "currency": 33,
           "inventory": {
             "nurturer_361363": 1,
             "territory_forager_404120": 1,
             "nest_guardian_461600": 1,
             "raider_499497": 1
           },
+          "history": [],
+          "achievements": [],
           "cooldowns": {},
           "buttonUses": {},
-          "storeHistory": []
-        },
-        "vanityRoles": [
-          "1368969348399632546",
-          "1333822411912642630",
-          "1379077934953922611"
-        ]
+          "storeHistory": [],
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2026-02-28T15:05:31.660Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
       },
       "538540453973327873": {
         "age": "22",
