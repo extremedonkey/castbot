@@ -803,9 +803,10 @@
           "storeHistory": [],
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "C2",
+              "currentLocation": "C1",
               "exploredCoordinates": [
-                "C2"
+                "C2",
+                "C1"
               ],
               "itemsFound": [],
               "movementHistory": [
@@ -813,8 +814,29 @@
                   "from": null,
                   "to": "C2",
                   "timestamp": "2026-02-28T03:45:08.904Z"
+                },
+                {
+                  "from": "C2",
+                  "to": "C2",
+                  "timestamp": "2026-02-28T03:45:08.929Z"
+                },
+                {
+                  "from": "C2",
+                  "to": "C2",
+                  "timestamp": "2026-02-28T03:47:00.825Z"
+                },
+                {
+                  "from": "C2",
+                  "to": "C2",
+                  "timestamp": "2026-02-28T03:47:20.078Z"
+                },
+                {
+                  "from": "C2",
+                  "to": "C1",
+                  "timestamp": "2026-02-28T03:48:52.311Z"
                 }
-              ]
+              ],
+              "startingLocation": "G1"
             }
           },
           "points": {

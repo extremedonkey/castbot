@@ -37841,8 +37841,8 @@ Are you sure you want to continue?`;
             }
           }
 
-          // Move player if coordinate provided
-          if (coordinate) {
+          // Move player if coordinate provided and different from current location
+          if (coordinate && coordinate !== playerMapDataCheck?.currentLocation) {
             const { movePlayerToCoordinate } = await import('./safariMapAdmin.js');
             await movePlayerToCoordinate(guildId, targetUserId, coordinate, client);
           }
