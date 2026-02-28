@@ -940,10 +940,11 @@ export async function handleMapAdminRefreshAnchorsModal(context, req) {
 export async function bulkInitializePlayers(guildId, userIds, client) {
   const playerData = await loadPlayerData();
   const safariData = await loadSafariContent();
-  const { getStaminaConfig, getDefaultItems } = await import('./safariManager.js');
+  const { getStaminaConfig } = await import('./safariManager.js');
   const customTerms = await getCustomTerms(guildId);
   const staminaConfig = await getStaminaConfig(guildId);
-  const defaultItems = await getDefaultItems(guildId);
+  const items = safariData[guildId]?.items || {};
+  const defaultItemCount = Object.values(items).filter(i => i?.metadata?.defaultItem === 'Yes').length;
   const activeMapId = safariData[guildId]?.maps?.active;
 
   const guild = client?.guilds?.cache?.get(guildId);
@@ -1023,5 +1024,5 @@ export async function bulkInitializePlayers(guildId, userIds, client) {
     }
   }
 
-  return { results, customTerms, defaultItemCount: defaultItems.length };
+  return { results, customTerms, defaultItemCount };
 }

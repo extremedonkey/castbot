@@ -32106,10 +32106,12 @@ Are you sure you want to continue?`;
         updateMessage: true,
         handler: async (context) => {
           console.log(`🦁 START: safari_start_safari - user ${context.userId}`);
-          const { getCustomTerms, getStaminaConfig, getDefaultItems } = await import('./safariManager.js');
+          const { getCustomTerms, getStaminaConfig, loadSafariContent } = await import('./safariManager.js');
           const customTerms = await getCustomTerms(context.guildId);
           const staminaConfig = await getStaminaConfig(context.guildId);
-          const defaultItems = await getDefaultItems(context.guildId);
+          const safariData = await loadSafariContent();
+          const items = safariData[context.guildId]?.items || {};
+          const defaultItemCount = Object.values(items).filter(i => i?.metadata?.defaultItem === 'Yes').length;
           const coordinate = staminaConfig.defaultStartingCoordinate || 'A1';
 
           return {
@@ -32120,7 +32122,7 @@ Are you sure you want to continue?`;
               components: [
                 {
                   type: 10,
-                  content: `## 🦁 Start Safari\n\n> Initialize players onto the Safari map. Each player receives:\n> - **Starting Location:** ${coordinate} *(change in Settings)*\n> - **Starting ${customTerms.currencyName}:** ${customTerms.defaultStartingCurrencyValue} ${customTerms.currencyEmoji} *(change in Settings)*\n> - **Starting Items:** ${defaultItems.length} default item${defaultItems.length !== 1 ? 's' : ''} *(change in Items screen)*\n>\n> -# Players can also be added individually from **Player Admin** at any time.`
+                  content: `## 🦁 Start Safari\n\n> Initialize players onto the Safari map. Each player receives:\n> - **Starting Location:** ${coordinate} *(change in Settings)*\n> - **Starting ${customTerms.currencyName}:** ${customTerms.defaultStartingCurrencyValue} ${customTerms.currencyEmoji} *(change in Settings)*\n> - **Starting Items:** ${defaultItemCount} default item${defaultItemCount !== 1 ? 's' : ''} *(change in Items screen)*\n>\n> -# Players can also be added individually from **Player Admin** at any time.`
                 },
                 { type: 14 },
                 {
