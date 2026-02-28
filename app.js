@@ -1536,31 +1536,37 @@ scheduler.registerAction('execute_custom_action', async (payload, schedulerClien
 
     const result = await executeButtonActions(guildId, actionId, userId, interactionData, schedulerClient);
 
-    // Post result to channel via webhook (strip ephemeral flags)
+    // Check if result is an error/failure — don't post errors to the channel
+    const isError = result?.content?.startsWith('❌') ||
+                    (result?.flags && (result.flags & InteractionResponseFlags.EPHEMERAL));
+    if (isError) {
+      console.warn(`⚠️ [SCHEDULER] Custom Action "${actionName}" returned error: ${result?.content || 'unknown'}`);
+      return; // Don't post error messages to channel via webhook
+    }
+
+    // Post successful result to channel via webhook
     const webhook = await channel.createWebhook({
       name: actionName || 'Scheduled Action',
       reason: 'Scheduled custom action execution'
     });
 
     if (result?.components) {
+      // Strip ephemeral flags from components — scheduled results are public
+      const flags = result.flags ? (result.flags & ~InteractionResponseFlags.EPHEMERAL) : (1 << 15);
       await fetch(webhook.url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          flags: (1 << 15), // IS_COMPONENTS_V2
+          flags: flags | (1 << 15), // Ensure IS_COMPONENTS_V2
           components: result.components
         })
       });
     } else if (result?.content) {
-      // Strip ephemeral flags from content-only responses
-      const cleanContent = result.content.replace(/❌ You do not meet the requirements.*/, '').trim();
-      if (cleanContent) {
-        await fetch(webhook.url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: cleanContent })
-        });
-      }
+      await fetch(webhook.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: result.content })
+      });
     }
 
     setTimeout(() => webhook.delete('Cleanup after scheduled action').catch(() => {}), 5000);
