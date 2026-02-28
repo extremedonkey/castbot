@@ -1624,16 +1624,23 @@ export const BUTTON_REGISTRY = {
     category: 'safari_admin'
   },
   'safari_pause_player_*': {
-    label: 'Pause Player',
+    label: 'Pause',
     description: 'Temporarily remove player from map channel',
     emoji: '⏸️',
     style: 'Secondary',
     category: 'safari_admin'
   },
   'safari_unpause_player_*': {
-    label: 'Unpause Player',
+    label: 'Unpause',
     description: 'Restore player access to map channel',
     emoji: '⏯️',
+    style: 'Secondary',
+    category: 'safari_admin'
+  },
+  'safari_starting_info_*': {
+    label: 'Starting Info',
+    description: 'Set player starting location (and future starting gold override)',
+    emoji: '🚩',
     style: 'Secondary',
     category: 'safari_admin'
   },
@@ -1645,8 +1652,8 @@ export const BUTTON_REGISTRY = {
     category: 'safari_map_admin'
   },
   'map_admin_grant_stamina_*': {
-    label: 'Grant Stamina',
-    description: 'Grant stamina points to player',
+    label: 'Stamina',
+    description: 'Set player stamina points',
     emoji: '⚡',
     style: 'Success',
     category: 'safari_map_admin'
@@ -1680,13 +1687,6 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari_map_admin',
     type: 'select_menu'
-  },
-  'map_admin_view_raw_*': {
-    label: 'View Raw Data',
-    description: 'View raw Safari data JSON',
-    emoji: '📄',
-    style: 'Secondary',
-    category: 'safari_map_admin'
   },
   'map_admin_item_select_*': {
     label: 'Item Select',

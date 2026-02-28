@@ -166,8 +166,8 @@ async function createPlayerViewUI(guildId, userId) {
   
   // Build management buttons
   const buttons = [];
-  
-  // Row 1: Map management (only show if map exists and player is initialized)
+
+  // Row 1: Init/De-init + Starting Info + Location (init only) + Pause + Stamina
   const mapButtons = [];
 
   if (!isInitialized) {
@@ -178,18 +178,7 @@ async function createPlayerViewUI(guildId, userId) {
       style: 3, // Success
       emoji: { name: '🚀' }
     });
-    // Show Location button for uninitialized players (to set starting location)
-    if (activeMap) {
-      mapButtons.push({
-        type: 2, // Button
-        custom_id: `map_admin_move_player_${userId}`,
-        label: 'Location',
-        style: 2, // Secondary
-        emoji: { name: '📍' }
-      });
-    }
   } else if (activeMap) {
-    // Add De-initialize button first (to the left)
     mapButtons.push({
       type: 2, // Button
       custom_id: `safari_deinit_player_${userId}`,
@@ -197,48 +186,7 @@ async function createPlayerViewUI(guildId, userId) {
       style: 4, // Danger
       emoji: { name: '🛬' }
     });
-
-    // Add Pause/Unpause button if player is on the map
-    if (playerMapData) {
-      const isPaused = player.safari?.isPaused === true;
-      mapButtons.push({
-        type: 2, // Button
-        custom_id: isPaused ? `safari_unpause_player_${userId}` : `safari_pause_player_${userId}`,
-        label: isPaused ? 'Unpause Player' : 'Pause Player',
-        style: 2, // Secondary/Grey
-        emoji: { name: isPaused ? '⏯️' : '⏸️' }
-      });
-    }
-
-    // Show Location button
-    mapButtons.push({
-      type: 2, // Button
-      custom_id: `map_admin_move_player_${userId}`,
-      label: playerMapData ? 'Location' : 'Place on Map',
-      style: 2, // Secondary
-      emoji: { name: '📍' }
-    });
-
-    // Only show these buttons if player is already on the map
-    if (playerMapData) {
-      mapButtons.push({
-        type: 2, // Button
-        custom_id: `map_admin_grant_stamina_${userId}`,
-        label: 'Set Stamina',
-        style: 2, // Secondary
-        emoji: { name: '⚡' }
-      });
-
-      mapButtons.push({
-        type: 2, // Button
-        custom_id: `map_admin_reset_explored_${userId}`,
-        label: 'Reset Explored',
-        style: 2, // Secondary
-        emoji: { name: '🔄' }
-      });
-    }
   } else if (isInitialized) {
-    // Player is initialized but no map exists - still show de-initialize button
     mapButtons.push({
       type: 2, // Button
       custom_id: `safari_deinit_player_${userId}`,
@@ -247,50 +195,95 @@ async function createPlayerViewUI(guildId, userId) {
       emoji: { name: '🛬' }
     });
   }
-  
+
+  // Starting Info — always visible (both initialized and uninitialized)
+  mapButtons.push({
+    type: 2, // Button
+    custom_id: `safari_starting_info_${userId}`,
+    label: 'Starting Info',
+    style: 2, // Secondary
+    emoji: { name: '🚩' }
+  });
+
+  // Location — only for initialized players
+  if (isInitialized && activeMap) {
+    mapButtons.push({
+      type: 2, // Button
+      custom_id: `map_admin_move_player_${userId}`,
+      label: playerMapData ? 'Location' : 'Place on Map',
+      style: 2, // Secondary
+      emoji: { name: '📍' }
+    });
+
+    if (playerMapData) {
+      const isPaused = player.safari?.isPaused === true;
+      mapButtons.push({
+        type: 2, // Button
+        custom_id: isPaused ? `safari_unpause_player_${userId}` : `safari_pause_player_${userId}`,
+        label: isPaused ? 'Unpause' : 'Pause',
+        style: 2, // Secondary/Grey
+        emoji: { name: isPaused ? '⏯️' : '⏸️' }
+      });
+
+      mapButtons.push({
+        type: 2, // Button
+        custom_id: `map_admin_grant_stamina_${userId}`,
+        label: 'Stamina',
+        style: 2, // Secondary
+        emoji: { name: '⚡' }
+      });
+    }
+  }
+
   if (mapButtons.length > 0) {
     buttons.push({
       type: 1, // Action Row
       components: mapButtons
     });
   }
-  
-  // Row 2: Safari management
+
+  // Row 2: Safari management (Reset Explored replaces View Raw Data)
+  const safariManagementButtons = [
+    {
+      type: 2, // Button
+      custom_id: `map_admin_edit_currency_${userId}`,
+      label: `Edit ${customTerms.currencyName}`,
+      style: 2, // Secondary
+      emoji: { name: customTerms.currencyEmoji || '💰' },
+      disabled: !isInitialized
+    },
+    {
+      type: 2, // Button
+      custom_id: `map_admin_view_inventory_${userId}`,
+      label: 'View Items',
+      style: 2, // Secondary
+      emoji: { name: customTerms.inventoryEmoji || '🧰' },
+      disabled: !isInitialized
+    },
+    {
+      type: 2, // Button
+      custom_id: `map_admin_edit_items_${userId}`,
+      label: 'Edit Items',
+      style: 2, // Secondary
+      emoji: { name: '📦' },
+      disabled: !isInitialized
+    }
+  ];
+
+  // Reset Explored — only for initialized players on map
+  if (isInitialized && activeMap && playerMapData) {
+    safariManagementButtons.push({
+      type: 2, // Button
+      custom_id: `map_admin_reset_explored_${userId}`,
+      label: 'Reset Explored',
+      style: 2, // Secondary
+      emoji: { name: '🔄' }
+    });
+  }
+
   buttons.push({
     type: 1, // Action Row
-    components: [
-      {
-        type: 2, // Button
-        custom_id: `map_admin_edit_currency_${userId}`,
-        label: `Edit ${customTerms.currencyName}`,
-        style: 2, // Secondary
-        emoji: { name: customTerms.currencyEmoji || '💰' },
-        disabled: !isInitialized // Disable if player not initialized in Safari
-      },
-      {
-        type: 2, // Button
-        custom_id: `map_admin_view_inventory_${userId}`,
-        label: 'View Items',
-        style: 2, // Secondary
-        emoji: { name: customTerms.inventoryEmoji || '🧰' },
-        disabled: !isInitialized // Disable if player not initialized in Safari
-      },
-      {
-        type: 2, // Button
-        custom_id: `map_admin_edit_items_${userId}`,
-        label: 'Edit Items',
-        style: 2, // Secondary
-        emoji: { name: '📦' },
-        disabled: !isInitialized // Active but shows coming soon message
-      },
-      {
-        type: 2, // Button
-        custom_id: `map_admin_view_raw_${userId}`,
-        label: 'View Raw Data',
-        style: 2, // Secondary
-        emoji: { name: '📄' }
-      }
-    ]
+    components: safariManagementButtons
   });
   
   // Row 3: Navigation - Select Different Player
@@ -656,12 +649,12 @@ export async function resetPlayerExploration(guildId, userId) {
 }
 
 /**
- * Create coordinate selection modal
+ * Create coordinate selection modal (move player only)
  */
-export async function createCoordinateModal(userId, currentLocation = '', currentStartingLocation = '') {
+export async function createCoordinateModal(userId, currentLocation = '') {
   return {
     custom_id: `map_admin_coordinate_modal_${userId}`,
-    title: 'Player Location',
+    title: 'Move Player',
     components: [
       {
         type: 18, // Label
@@ -672,15 +665,27 @@ export async function createCoordinateModal(userId, currentLocation = '', curren
           custom_id: 'coordinate',
           style: 1, // Short
           placeholder: 'A1',
-          required: false,
+          required: true,
           max_length: 3,
           ...(currentLocation && currentLocation !== 'Not on map' ? { value: currentLocation } : {})
         }
-      },
+      }
+    ]
+  };
+}
+
+/**
+ * Create Starting Info modal (starting location + future: starting gold override)
+ */
+export async function createStartingInfoModal(userId, currentStartingLocation = '') {
+  return {
+    custom_id: `safari_starting_info_modal_${userId}`,
+    title: 'Starting Info',
+    components: [
       {
         type: 18, // Label
         label: 'Player Starting Location',
-        description: 'Player will be initialized at this location. Overrides default starting location.',
+        description: 'Overrides the server default starting location for this player',
         component: {
           type: 4, // Text Input
           custom_id: 'starting_location',
