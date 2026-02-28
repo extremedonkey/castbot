@@ -4,6 +4,7 @@
 import { SAFARI_LIMITS } from './config/safariLimits.js';
 import { loadEntity, updateEntity } from './entityManager.js';
 import { loadSafariContent } from './safariManager.js';
+import { scheduler } from './scheduler.js';
 
 /**
  * Create the custom action selection UI for a map coordinate (or global if no coordinate)
@@ -931,7 +932,8 @@ function getTriggerTypeLabel(type) {
   const labels = {
     button: '🖱️ Button Click',
     modal: '⌨️ Text Command',
-    select: '📋 Select Menu'
+    select: '📋 Select Menu',
+    schedule: '⏰ Scheduled Action'
   };
   return labels[type] || '❓ Unknown';
 }
@@ -951,6 +953,10 @@ function getTriggerDescription(trigger) {
     case 'select':
       const optionCount = trigger.select?.options?.length || 0;
       return `${optionCount} option${optionCount !== 1 ? 's' : ''}`;
+    case 'schedule': {
+      const channelId = trigger.schedule?.channelId;
+      return channelId ? `Channel: <#${channelId}>` : 'No channel selected';
+    }
     default:
       return 'Unknown trigger type';
   }
@@ -1050,6 +1056,13 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
             description: "Player selects from options",
             emoji: { name: "📋" },
             default: action.trigger?.type === 'select'
+          },
+          {
+            label: "Scheduled Action",
+            value: "schedule",
+            description: "Action runs automatically at a set time.",
+            emoji: { name: "⏰" },
+            default: action.trigger?.type === 'schedule'
           }
         ]
       }]
@@ -1172,8 +1185,85 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
       type: 10,
       content: `### Select Menu Configuration:\n*Not yet implemented*`
     });
+  } else if (action.trigger?.type === 'schedule') {
+    components.push({ type: 14 }); // Separator
+
+    // Get scheduled tasks for this specific action
+    const allScheduleJobs = scheduler.getJobs({ action: 'execute_custom_action' });
+    const actionJobs = allScheduleJobs.filter(j => j.payload?.actionId === actionId);
+
+    // Display existing scheduled tasks
+    if (actionJobs.length > 0) {
+      const taskLines = actionJobs.map((job, i) => {
+        const remaining = scheduler.calculateRemainingTime(job.executeAt);
+        const channelMention = job.channelId ? `<#${job.channelId}>` : 'Unknown channel';
+        return `**${i + 1}.** ${channelMention} — ${remaining} remaining`;
+      }).join('\n');
+      components.push({
+        type: 10,
+        content: `### Scheduled Tasks\n${taskLines}`
+      });
+
+      // Add cancel buttons for each task (max 5 per ActionRow)
+      const cancelButtons = actionJobs.slice(0, 5).map((job, i) => ({
+        type: 2, // Button
+        custom_id: `ca_schedule_cancel_${job.id}`,
+        label: `Cancel Task ${i + 1}`,
+        style: 4, // Danger
+        emoji: { name: '🗑️' }
+      }));
+      components.push({
+        type: 1, // Action Row
+        components: cancelButtons
+      });
+    } else {
+      components.push({
+        type: 10,
+        content: `### Scheduled Tasks\n*No scheduled tasks for this action*`
+      });
+    }
+
+    components.push({ type: 14 }); // Separator
+
+    // "Create a New Scheduled Run" section
+    const savedChannelId = action.trigger.schedule?.channelId;
+    let createHeading = '### Create a New Scheduled Run';
+    if (savedChannelId) {
+      createHeading += `\nChannel: <#${savedChannelId}>`;
+    }
+    components.push({
+      type: 10,
+      content: createHeading
+    });
+
+    // Channel Select
+    components.push({
+      type: 1, // Action Row
+      components: [{
+        type: 8, // Channel Select
+        custom_id: `ca_schedule_channel_${actionId}`,
+        placeholder: 'Select channel to post scheduled task in...',
+        channel_types: [0, 5], // Text and Announcement channels
+        min_values: 1,
+        max_values: 1
+      }]
+    });
+
+    // "Schedule Task" green button
+    const scheduleDisabled = !savedChannelId;
+    components.push({
+      type: 1, // Action Row
+      components: [{
+        type: 2, // Button
+        custom_id: `ca_schedule_task_${actionId}`,
+        label: 'Schedule Task',
+        style: 3, // Success (Green)
+        emoji: { name: '⏰' },
+        disabled: scheduleDisabled
+      }]
+    });
   }
-  
+
   // Add back button for all trigger types (except modal which already has one)
   if (action.trigger?.type !== 'modal') {
     const backButton = new ButtonBuilder()

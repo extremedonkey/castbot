@@ -1511,6 +1511,84 @@ scheduler.registerAction('send_reminder', async (payload, schedulerClient) => {
   }
 });
 
+scheduler.registerAction('execute_custom_action', async (payload, schedulerClient) => {
+  const { channelId, guildId, actionId, userId, actionName } = payload;
+  try {
+    console.log(`⏰ [SCHEDULER] Executing Custom Action "${actionName}" (${actionId}) in channel ${channelId}`);
+    const channel = await schedulerClient.channels.fetch(channelId);
+    const guild = await schedulerClient.guilds.fetch(guildId);
+
+    // Fetch the scheduling user's member for condition evaluation
+    let member = null;
+    try { member = await guild.members.fetch(userId); } catch (e) {
+      console.warn(`⚠️ [SCHEDULER] Could not fetch member ${userId}: ${e.message}`);
+    }
+
+    const { executeButtonActions } = await import('./safariManager.js');
+    const interactionData = {
+      token: null,
+      applicationId: process.env.APP_ID,
+      client: schedulerClient,
+      member,
+      user: { id: userId },
+      channel: { name: channel.name }
+    };
+
+    const result = await executeButtonActions(guildId, actionId, userId, interactionData, schedulerClient);
+
+    // Post result to channel via webhook (strip ephemeral flags)
+    const webhook = await channel.createWebhook({
+      name: actionName || 'Scheduled Action',
+      reason: 'Scheduled custom action execution'
+    });
+
+    if (result?.components) {
+      await fetch(webhook.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          flags: (1 << 15), // IS_COMPONENTS_V2
+          components: result.components
+        })
+      });
+    } else if (result?.content) {
+      // Strip ephemeral flags from content-only responses
+      const cleanContent = result.content.replace(/❌ You do not meet the requirements.*/, '').trim();
+      if (cleanContent) {
+        await fetch(webhook.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: cleanContent })
+        });
+      }
+    }
+
+    setTimeout(() => webhook.delete('Cleanup after scheduled action').catch(() => {}), 5000);
+    console.log(`✅ [SCHEDULER] Custom Action "${actionName}" executed in #${channel.name}`);
+  } catch (error) {
+    console.error(`❌ [SCHEDULER] Custom Action "${actionName}" (${actionId}) failed:`, error);
+    try {
+      const channel = await schedulerClient.channels.fetch(channelId);
+      if (channel) {
+        const errorWebhook = await channel.createWebhook({
+          name: 'Scheduled Action Error',
+          reason: 'Scheduled action error notification'
+        });
+        await fetch(errorWebhook.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: `❌ **Scheduled Action Failed**: "${actionName}" could not execute. Please run the action manually.`
+          })
+        });
+        setTimeout(() => errorWebhook.delete().catch(() => {}), 1000);
+      }
+    } catch (channelError) {
+      console.error(`❌ [SCHEDULER] Could not send error message to channel:`, channelError);
+    }
+  }
+});
+
 // Add these event handlers after client initialization
 client.once('ready', async () => {
   console.log('Discord client is ready!');
@@ -3688,6 +3766,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'remove_coord',
         'add_coord_modal',
         'configure_modal_trigger',
+        'ca_schedule_channel',
+        'ca_schedule_task',
+        'ca_schedule_cancel',
         'player_enter_command',
         'admin_test_command',
         'season_new_question',
@@ -19764,8 +19845,13 @@ Your server is now ready for Tycoons gameplay!`;
                 options: []
               };
               break;
+            case 'schedule':
+              button.trigger.schedule = {
+                channelId: null
+              };
+              break;
           }
-          
+
           await saveSafariContent(allSafariContent);
           
           // Update anchor messages for all coordinates using this action
@@ -19842,6 +19928,144 @@ Your server is now ready for Tycoons gameplay!`;
 
           console.log(`✅ SUCCESS: custom_action_button_style - updated to ${selectedValue}`);
           return configUI;
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('ca_schedule_channel_')) {
+      // Handle channel selection for scheduled custom action trigger
+      return ButtonHandlerFactory.create({
+        id: 'ca_schedule_channel',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const actionId = context.customId.replace('ca_schedule_channel_', '');
+          const selectedChannelId = context.values[0];
+
+          console.log(`📺 Saving schedule channel ${selectedChannelId} for action ${actionId}`);
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const button = allSafariContent[context.guildId]?.buttons?.[actionId];
+
+          if (!button) {
+            return { content: '❌ Action not found.', ephemeral: true };
+          }
+
+          if (!button.trigger) button.trigger = { type: 'schedule' };
+          if (!button.trigger.schedule) button.trigger.schedule = {};
+          button.trigger.schedule.channelId = selectedChannelId;
+          await saveSafariContent(allSafariContent);
+
+          const { createTriggerConfigUI } = await import('./customActionUI.js');
+          return await createTriggerConfigUI({ guildId: context.guildId, actionId });
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('ca_schedule_task_')) {
+      // Handle "Schedule Task" button — opens time-input modal
+      // Uses legacy pattern because ButtonHandlerFactory can't send MODAL responses
+      try {
+        const guildId = req.body.guild_id;
+        const member = req.body.member;
+        const actionId = custom_id.replace('ca_schedule_task_', '');
+
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to schedule actions.')) return;
+
+        const { loadSafariContent } = await import('./safariManager.js');
+        const allSafariContent = await loadSafariContent();
+        const button = allSafariContent[guildId]?.buttons?.[actionId];
+
+        if (!button) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: '❌ Action not found.', flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+
+        const channelId = button.trigger?.schedule?.channelId;
+        if (!channelId) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: '❌ Please select a channel first.', flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+
+        // Open modal with hours + minutes inputs
+        const modalComponents = [
+          {
+            type: 10, // Text Display
+            content: `### Schedule: ${button.name || 'Custom Action'}\nChannel: <#${channelId}>`
+          },
+          {
+            type: 18, // Label
+            label: 'Hours from now',
+            description: '0-168 hours (leave empty to skip)',
+            component: {
+              type: 4, // Text Input
+              custom_id: 'schedule_hours',
+              style: 1,
+              placeholder: '4',
+              max_length: 3,
+              required: false
+            }
+          },
+          {
+            type: 18, // Label
+            label: 'Minutes from now',
+            description: '0-59 minutes (leave empty to skip)',
+            component: {
+              type: 4, // Text Input
+              custom_id: 'schedule_minutes',
+              style: 1,
+              placeholder: '30',
+              max_length: 3,
+              required: false
+            }
+          }
+        ];
+
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: {
+            custom_id: `ca_schedule_modal_${actionId}_${channelId}`,
+            title: `Schedule ${(button.name || 'Action').substring(0, 30)}`,
+            components: modalComponents
+          }
+        });
+      } catch (error) {
+        console.error('Error opening schedule modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: '❌ Error opening schedule modal.', flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
+    } else if (custom_id.startsWith('ca_schedule_cancel_')) {
+      // Handle cancel of a scheduled custom action task
+      return ButtonHandlerFactory.create({
+        id: 'ca_schedule_cancel',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const jobId = context.customId.replace('ca_schedule_cancel_', '');
+
+          // Get the job's actionId before cancelling so we can re-render the right UI
+          const allJobs = scheduler.getJobs({ action: 'execute_custom_action' });
+          const job = allJobs.find(j => j.id === jobId);
+          const actionId = job?.payload?.actionId;
+
+          if (!job) {
+            return { content: '❌ Task not found or already completed.', ephemeral: true };
+          }
+
+          scheduler.cancel(jobId);
+          console.log(`🗑️ Cancelled scheduled custom action job ${jobId}`);
+
+          if (actionId) {
+            const { createTriggerConfigUI } = await import('./customActionUI.js');
+            return await createTriggerConfigUI({ guildId: context.guildId, actionId });
+          }
+
+          return { content: '✅ Scheduled task cancelled.', ephemeral: true };
         }
       })(req, res, client);
     } else if (custom_id.startsWith('button_preview_')) {
@@ -41252,6 +41476,113 @@ Are you sure you want to continue?`;
         });
       }
       
+    } else if (custom_id.startsWith('ca_schedule_modal_')) {
+      // Handle Custom Action scheduling modal submission
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        const member = req.body.member;
+
+        // Security check
+        if (!member?.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to schedule actions.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Extract actionId and channelId from custom_id: ca_schedule_modal_ACTIONID_CHANNELID
+        const modalSuffix = custom_id.replace('ca_schedule_modal_', '');
+        const lastUnderscore = modalSuffix.lastIndexOf('_');
+        const actionId = modalSuffix.substring(0, lastUnderscore);
+        const channelId = modalSuffix.substring(lastUnderscore + 1);
+
+        console.log(`⏰ Processing Custom Action schedule for action ${actionId}, channel ${channelId}`);
+
+        // Extract form data by custom_id
+        let hoursValue = '';
+        let minutesValue = '';
+        for (const comp of data.components) {
+          const child = comp.component || comp.components?.[0];
+          if (!child) continue;
+          if (child.custom_id === 'schedule_hours') hoursValue = child.value?.trim() || '';
+          if (child.custom_id === 'schedule_minutes') minutesValue = child.value?.trim() || '';
+        }
+
+        if (!hoursValue && !minutesValue) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Please enter hours and/or minutes to schedule.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        const hours = parseInt(hoursValue) || 0;
+        const minutes = parseInt(minutesValue) || 0;
+
+        if (hours < 0 || minutes < 0 || hours > 168 || minutes > 59) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Invalid time values. Hours: 0-168, Minutes: 0-59.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        if (hours === 0 && minutes === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Schedule time must be at least 1 minute.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Get action name for description
+        const { loadSafariContent } = await import('./safariManager.js');
+        const allSafariContent = await loadSafariContent();
+        const action = allSafariContent[guildId]?.buttons?.[actionId];
+        const actionName = action?.name || 'Custom Action';
+
+        const totalMs = (hours * 3600000) + (minutes * 60000);
+
+        await scheduler.schedule('execute_custom_action',
+          { channelId, guildId, actionId, userId, actionName },
+          {
+            delayMs: totalMs,
+            guildId,
+            channelId,
+            description: actionName
+          }
+        );
+
+        const executeAt = new Date(Date.now() + totalMs);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `✅ **Scheduled Action**: "${actionName}" will execute in <#${channelId}> in **${hours}h ${minutes}m**\n*Executing at: ${executeAt.toLocaleString()}*`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+
+      } catch (error) {
+        console.error('Error in Custom Action scheduling modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Scheduling failed: ${error.message}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+
     } else if (custom_id.startsWith('add_coord_submit_')) {
       // Handle coordinate addition modal submission
       try {

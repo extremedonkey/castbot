@@ -127,6 +127,122 @@ await store.flush();     // Force immediate save (graceful shutdown)
 
 ---
 
+## Custom Action Scheduled Trigger
+
+### Overview
+
+Custom Actions can be scheduled to execute at a future time in a specific channel. This is the 4th trigger type alongside Button Click, Text Command, and Select Menu.
+
+**Registered action**: `execute_custom_action`
+
+**Payload**:
+```json
+{
+  "channelId": "123456",
+  "guildId": "789012",
+  "actionId": "action_abc",
+  "userId": "345678",
+  "actionName": "My Custom Action"
+}
+```
+
+### User Flow
+
+1. Host opens Custom Action Editor → Trigger → selects "⏰ Scheduled Action"
+2. Below-divider UI shows:
+   - **Existing tasks** for this action: channel, time remaining, cancel button per task
+   - **Create new** section: Channel Select + green "Schedule Task" button
+3. Host selects a channel → saved to `action.trigger.schedule.channelId`
+4. Host clicks "Schedule Task" → modal opens with Hours + Minutes inputs
+5. Modal submit → `scheduler.schedule('execute_custom_action', ...)` creates job
+6. When timer fires:
+   - Fetches channel and guild member (scheduling user, for condition evaluation)
+   - Calls `executeButtonActions(guildId, actionId, userId, syntheticInteraction, client)`
+   - Posts result to channel via webhook (same pattern as `process_round_results`)
+
+### Trigger Config Data Structure
+
+```javascript
+action.trigger = {
+  type: 'schedule',
+  schedule: {
+    channelId: '123456789'  // Last-selected channel for quick re-scheduling
+  }
+};
+```
+
+### Scheduled Execution Pattern
+
+```javascript
+scheduler.registerAction('execute_custom_action', async (payload, schedulerClient) => {
+  const { channelId, guildId, actionId, userId, actionName } = payload;
+
+  // 1. Fetch context
+  const channel = await schedulerClient.channels.fetch(channelId);
+  const guild = await schedulerClient.guilds.fetch(guildId);
+  let member = null;
+  try { member = await guild.members.fetch(userId); } catch {}
+
+  // 2. Build synthetic interaction (no token in scheduled context)
+  const interactionData = {
+    token: null,
+    applicationId: process.env.APP_ID,
+    client: schedulerClient,
+    member,
+    user: { id: userId },
+    channel: { name: channel.name }
+  };
+
+  // 3. Execute the Custom Action's action list
+  const result = await executeButtonActions(guildId, actionId, userId, interactionData, schedulerClient);
+
+  // 4. Post result via webhook (stripped of ephemeral flags)
+  const webhook = await channel.createWebhook({ name: actionName || 'Scheduled Action' });
+  if (result?.components) {
+    await fetch(webhook.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ flags: (1 << 15), components: result.components })
+    });
+  } else if (result?.content) {
+    await fetch(webhook.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: result.content })
+    });
+  }
+  setTimeout(() => webhook.delete().catch(() => {}), 5000);
+});
+```
+
+### Handler Reference
+
+| Custom ID Pattern | Type | Purpose |
+|---|---|---|
+| `custom_action_trigger_type_*` (value: `schedule`) | String Select | Selects "Scheduled Action" trigger type |
+| `ca_schedule_channel_*` | Channel Select | Picks target channel for scheduled execution |
+| `ca_schedule_task_*` | Button (Green) | Opens time-input modal |
+| `ca_schedule_cancel_*` | Button (Danger) | Cancels a scheduled task inline |
+| `ca_schedule_modal_*` | Modal submit | Creates the scheduler job |
+
+### UI Components (Below-Divider)
+
+```
+┌─────────────────────────────────────────┐
+│ ### Scheduled Tasks                      │
+│ 1. #general — 2h 15m remaining    [🗑️] │
+│ 2. #announcements — 45m remaining [🗑️] │
+├─────────────────────────────────────────┤
+│ ### Create a New Scheduled Run           │
+│ [Channel Select: #general         ▼]    │
+│ [🟢 Schedule Task]                      │
+├─────────────────────────────────────────┤
+│ [⬅ Back]                                │
+└─────────────────────────────────────────┘
+```
+
+---
+
 ## Future Extensions
 
 ### Challenge Rounds with Nested Timers

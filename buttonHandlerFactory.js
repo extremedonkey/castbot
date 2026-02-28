@@ -2168,6 +2168,28 @@ export const BUTTON_REGISTRY = {
     category: 'safari_management',
     type: 'select_menu'
   },
+  'ca_schedule_channel_*': {
+    label: 'Schedule Channel',
+    description: 'Select channel for scheduled custom action execution',
+    emoji: '📺',
+    style: 'Secondary',
+    category: 'safari_management',
+    type: 'select_menu'
+  },
+  'ca_schedule_task_*': {
+    label: 'Schedule Task',
+    description: 'Open scheduling modal for custom action',
+    emoji: '⏰',
+    style: 'Success',
+    category: 'safari_management'
+  },
+  'ca_schedule_cancel_*': {
+    label: 'Cancel Schedule',
+    description: 'Cancel a scheduled custom action execution',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari_management'
+  },
   'button_preview_*': {
     label: 'Button Preview',
     description: 'Preview button that does nothing when clicked',
