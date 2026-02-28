@@ -697,9 +697,9 @@
           "1415062472007749765"
         ],
         "safari": {
-          "currency": 33,
+          "currency": 127,
           "history": [],
-          "lastInteraction": 1772296006846,
+          "lastInteraction": 1772301942141,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -812,7 +812,7 @@
               "startingLocation": "D1"
             }
           },
-          "currency": 33,
+          "currency": 127,
           "inventory": {
             "nurturer_361363": 1,
             "territory_forager_404120": 1,
@@ -831,7 +831,8 @@
               "lastRegeneration": "2026-02-28T16:26:40.215Z",
               "regenConfig": "hourly"
             }
-          }
+          },
+          "lastInteraction": 1772301942648
         }
       },
       "538540453973327873": {
@@ -843,9 +844,9 @@
           "1415062472007749765"
         ],
         "safari": {
-          "currency": 33,
+          "currency": 127,
           "history": [],
-          "lastInteraction": 1772296055438,
+          "lastInteraction": 1772301943488,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -944,9 +945,9 @@
           "1434189625609551984"
         ],
         "safari": {
-          "currency": 33,
+          "currency": 127,
           "history": [],
-          "lastInteraction": 1772296002107,
+          "lastInteraction": 1772301941214,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1001,13 +1002,13 @@
             "nest_guardian_461600": 1,
             "raider_499497": 1
           },
-          "currency": 25,
+          "currency": 119,
           "history": [],
           "achievements": [],
           "cooldowns": {},
           "buttonUses": {},
           "storeHistory": [],
-          "lastInteraction": 1772211115000
+          "lastInteraction": 1772301946076
         }
       },
       "630470402900230146": {
@@ -1019,9 +1020,9 @@
       },
       "719547106318352496": {
         "safari": {
-          "currency": 33,
+          "currency": 127,
           "history": [],
-          "lastInteraction": 1772296057504,
+          "lastInteraction": 1772301946962,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1065,9 +1066,9 @@
       },
       "209773824357564416": {
         "safari": {
-          "currency": 33,
+          "currency": 127,
           "history": [],
-          "lastInteraction": 1772296004287,
+          "lastInteraction": 1772301944011,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -11289,14 +11290,14 @@
     "serverName": "Servivorg S14 - FINAL FANTASY",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/189c3570ea34b3fbf3ee7b4d5989d32e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 574,
+    "memberCount": 573,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1772184770848,
+    "lastUpdated": 1772301754131,
     "ownerInfo": {
       "username": "serviver",
       "globalName": "Serviver",

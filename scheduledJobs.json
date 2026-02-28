@@ -1,0 +1,37 @@
+[
+  {
+    "id": "job_1772301890885_cenx6vj2o",
+    "action": "process_round_results",
+    "payload": {
+      "channelId": "1396134920954450074",
+      "guildId": "1331657596087566398"
+    },
+    "guildId": "1331657596087566398",
+    "channelId": "1396134920954450074",
+    "executeAt": 1772302010885,
+    "reminders": [],
+    "reminderAction": "send_reminder",
+    "description": "Safari Round Results",
+    "createdAt": 1772301890885
+  },
+  {
+    "id": "job_1772301898886_8wgygtsha",
+    "action": "process_round_results",
+    "payload": {
+      "channelId": "1396134920954450074",
+      "guildId": "1331657596087566398"
+    },
+    "guildId": "1331657596087566398",
+    "channelId": "1396134920954450074",
+    "executeAt": 1772302138887,
+    "reminders": [
+      {
+        "offsetMs": 60000,
+        "message": "1 minute"
+      }
+    ],
+    "reminderAction": "send_reminder",
+    "description": "Safari Round Results",
+    "createdAt": 1772301898887
+  }
+]
