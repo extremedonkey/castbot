@@ -20084,12 +20084,10 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id === 'prod_player_menu') {
-      // Player Menu button - admin preview of player experience (MIGRATED TO FACTORY)
+      // Player Menu button - back navigation for all players (no permission required)
       return ButtonHandlerFactory.create({
         id: 'prod_player_menu',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        ephemeral: true,
+        updateMessage: true,
         handler: async (context) => {
           const { guildId, userId, client } = context;
 
@@ -20097,7 +20095,7 @@ Your server is now ready for Tycoons gameplay!`;
           const guild = await client.guilds.fetch(guildId);
           const guildMember = await guild.members.fetch(userId);
 
-          const response = await createPlayerManagementUI({
+          return await createPlayerManagementUI({
             mode: PlayerManagementMode.PLAYER,
             targetMember: guildMember,
             playerData,
@@ -20109,12 +20107,6 @@ Your server is now ready for Tycoons gameplay!`;
             title: 'CastBot | Player Menu',
             client
           });
-
-          // Explicitly add EPHEMERAL flag (ButtonHandlerFactory ephemeral: true is NOT automatic)
-          return {
-            ...response,
-            flags: (response.flags || 0) | InteractionResponseFlags.EPHEMERAL
-          };
         }
       })(req, res, client);
     } else if (custom_id === 'prod_timezone_react') {
