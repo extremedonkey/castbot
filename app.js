@@ -32117,6 +32117,7 @@ Are you sure you want to continue?`;
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         updateMessage: true,
+        deferred: true,
         handler: async (context) => {
           const { handleUserSelect } = await import('./safariStartSafari.js');
           return handleUserSelect(context);
