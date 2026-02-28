@@ -2051,11 +2051,19 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     .setEmoji('⏸️')
     .setDisabled(!hasActiveMap);
 
-  // First row: Main map management buttons + Refresh Anchors
-  const mapButtonRow1 = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, refreshAnchorsButton]);
+  // Create Start Safari button for bulk player initialization
+  const startSafariButton = new ButtonBuilder()
+    .setCustomId('safari_start_safari')
+    .setLabel('Start Safari')
+    .setStyle(ButtonStyle.Primary)
+    .setEmoji('🦁')
+    .setDisabled(!hasActiveMap);
 
-  // Second row: Admin functions with Player Locations moved here
-  const mapButtonRow2 = new ActionRowBuilder().addComponents([blacklistButton, playerLocationsButton, pausedPlayersButton]);
+  // First row: Main map management buttons + Start Safari
+  const mapButtonRow1 = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, startSafariButton]);
+
+  // Second row: Admin functions with Refresh Anchors moved here
+  const mapButtonRow2 = new ActionRowBuilder().addComponents([blacklistButton, playerLocationsButton, pausedPlayersButton, refreshAnchorsButton]);
 
   // Third row: Location Editor, Safari Progress, and Shared Map (always show)
   const locationEditorButton = new ButtonBuilder()

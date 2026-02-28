@@ -235,6 +235,37 @@ export async function logPlayerMovement({ guildId, userId, username, displayName
 }
 
 /**
+ * Log a player initialization onto the Safari map
+ * @param {Object} params - Initialization parameters
+ * @param {string} params.guildId - Guild ID
+ * @param {string} params.userId - User ID
+ * @param {string} params.username - Username
+ * @param {string} params.displayName - Display name
+ * @param {string} params.coordinate - Starting coordinate
+ * @param {number} params.currency - Starting currency amount
+ * @param {string} params.currencyName - Custom currency name
+ */
+export async function logPlayerInitialization({ guildId, userId, username, displayName, coordinate, currency, currencyName }) {
+  const safariContent = {
+    toLocation: coordinate,
+    fromLocation: null
+  };
+
+  await logInteraction(
+    userId,
+    guildId,
+    'SAFARI_MOVEMENT',
+    `Initialized at ${coordinate} with ${currency} ${currencyName}`,
+    username,
+    null,
+    null,
+    null,
+    displayName,
+    safariContent
+  );
+}
+
+/**
  * Log an attack in the attack queue
  * @param {Object} params - Attack parameters
  * @param {string} params.guildId - Guild ID

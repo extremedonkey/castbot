@@ -788,67 +788,40 @@
           "1415062472007749765"
         ],
         "safari": {
-          "currency": 25,
-          "history": [],
-          "lastInteraction": 1772250308904,
-          "achievements": [],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "D1",
+              "exploredCoordinates": [
+                "D1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "D1",
+                  "timestamp": "2026-02-28T12:43:19.596Z"
+                }
+              ],
+              "startingLocation": "D1"
+            }
+          },
+          "currency": 33,
           "inventory": {
             "nurturer_361363": 1,
             "territory_forager_404120": 1,
             "nest_guardian_461600": 1,
             "raider_499497": 1
           },
+          "history": [],
+          "achievements": [],
           "cooldowns": {},
           "buttonUses": {},
           "storeHistory": [],
-          "mapProgress": {
-            "map_7x7_1753981993871": {
-              "currentLocation": "C1",
-              "exploredCoordinates": [
-                "C2",
-                "C1"
-              ],
-              "itemsFound": [],
-              "movementHistory": [
-                {
-                  "from": null,
-                  "to": "C2",
-                  "timestamp": "2026-02-28T03:45:08.904Z"
-                },
-                {
-                  "from": "C2",
-                  "to": "C2",
-                  "timestamp": "2026-02-28T03:45:08.929Z"
-                },
-                {
-                  "from": "C2",
-                  "to": "C2",
-                  "timestamp": "2026-02-28T03:47:00.825Z"
-                },
-                {
-                  "from": "C2",
-                  "to": "C2",
-                  "timestamp": "2026-02-28T03:47:20.078Z"
-                },
-                {
-                  "from": "C2",
-                  "to": "C1",
-                  "timestamp": "2026-02-28T03:48:52.311Z"
-                },
-                {
-                  "from": "C1",
-                  "to": "C1",
-                  "timestamp": "2026-02-28T03:49:13.559Z"
-                }
-              ],
-              "startingLocation": "D5"
-            }
-          },
           "points": {
             "stamina": {
               "current": 1,
               "maximum": 1,
-              "lastRegeneration": "2026-02-28T03:45:08.904Z",
+              "lastRegeneration": "2026-02-28T12:43:19.596Z",
               "regenConfig": "hourly"
             }
           }

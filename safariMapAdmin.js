@@ -929,3 +929,99 @@ export async function handleMapAdminRefreshAnchorsModal(context, req) {
     ephemeral: true
   };
 }
+
+/**
+ * Bulk initialize multiple players onto the Safari map
+ * @param {string} guildId - Discord guild ID
+ * @param {string[]} userIds - Array of user IDs to initialize
+ * @param {Object} client - Discord client for member resolution
+ * @returns {Promise<Object[]>} Array of result objects per player
+ */
+export async function bulkInitializePlayers(guildId, userIds, client) {
+  const playerData = await loadPlayerData();
+  const safariData = await loadSafariContent();
+  const { getStaminaConfig, getDefaultItems } = await import('./safariManager.js');
+  const customTerms = await getCustomTerms(guildId);
+  const staminaConfig = await getStaminaConfig(guildId);
+  const defaultItems = await getDefaultItems(guildId);
+  const activeMapId = safariData[guildId]?.maps?.active;
+
+  const guild = client?.guilds?.cache?.get(guildId);
+  const results = [];
+
+  for (const userId of userIds) {
+    try {
+      // Check if already initialized
+      const player = playerData[guildId]?.players?.[userId];
+      const isInitialized = player?.safari && (
+        player.safari.currency !== undefined ||
+        player.safari.inventory !== undefined ||
+        player.safari.points !== undefined
+      );
+
+      if (isInitialized) {
+        // Already initialized — get current location for display
+        const currentLocation = activeMapId
+          ? player.safari.mapProgress?.[activeMapId]?.currentLocation || '?'
+          : '?';
+        let displayName = userId;
+        try {
+          if (guild) {
+            const member = await guild.members.fetch(userId);
+            displayName = member.displayName || member.user.username;
+          }
+        } catch { /* member not found */ }
+        results.push({ userId, displayName, success: false, coordinate: currentLocation, error: 'Already initialized' });
+        continue;
+      }
+
+      // Determine starting coordinate (per-player > server default > A1)
+      let coordinate = staminaConfig.defaultStartingCoordinate || 'A1';
+      if (activeMapId) {
+        const playerStarting = player?.safari?.mapProgress?.[activeMapId]?.startingLocation;
+        if (playerStarting) coordinate = playerStarting;
+      }
+
+      // Initialize via existing function
+      await initializePlayerOnMap(guildId, userId, coordinate, client);
+
+      // Reload player data to get results
+      const updatedData = await loadPlayerData();
+      const updatedPlayer = updatedData[guildId]?.players?.[userId];
+      const currency = updatedPlayer?.safari?.currency || 0;
+      const itemCount = Object.keys(updatedPlayer?.safari?.inventory || {}).length;
+
+      // Resolve display name
+      let displayName = userId;
+      let username = userId;
+      try {
+        if (guild) {
+          const member = await guild.members.fetch(userId);
+          displayName = member.displayName || member.user.username;
+          username = member.user.username;
+        }
+      } catch { /* member not found */ }
+
+      // Log initialization
+      const { logPlayerInitialization } = await import('./safariLogger.js');
+      await logPlayerInitialization({
+        guildId, userId, username, displayName,
+        coordinate, currency, currencyName: customTerms.currencyName
+      });
+
+      results.push({ userId, displayName, success: true, coordinate, currency, itemCount });
+    } catch (error) {
+      logger.error('MAP_ADMIN', `Failed to initialize player ${userId}`, { error: error.message });
+      let displayName = userId;
+      try {
+        if (guild) {
+          const member = await guild.members.fetch(userId);
+          displayName = member.displayName || member.user.username;
+        }
+      } catch { /* ignore */ }
+      results.push({ userId, displayName, success: false, error: error.message });
+    }
+  }
+
+  return { results, customTerms, defaultItemCount: defaultItems.length };
+}

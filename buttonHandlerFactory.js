@@ -1507,6 +1507,21 @@ export const BUTTON_REGISTRY = {
     category: 'safari_map_admin',
     requiresPermission: 'ManageRoles'
   },
+  'safari_start_safari': {
+    label: 'Start Safari',
+    description: 'Bulk initialize multiple players onto the Safari map',
+    emoji: '🦁',
+    style: 'Primary',
+    category: 'safari_map_admin',
+    parent: 'safari_map_explorer'
+  },
+  'safari_start_user_select': {
+    label: 'Select Players',
+    description: 'User select menu for bulk Safari initialization',
+    emoji: '👥',
+    style: 'Secondary',
+    category: 'safari_map_admin'
+  },
   'map_player_locations': {
     label: 'Player Locations',
     description: 'View all player locations on the map',
