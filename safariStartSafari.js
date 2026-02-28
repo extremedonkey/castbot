@@ -43,7 +43,9 @@ function isPlayerInitialized(playerData, guildId, userId) {
 async function getInitializedPlayerIds(guildId) {
   const playerData = await loadPlayerData();
   const players = playerData[guildId]?.players || {};
-  return Object.keys(players).filter(userId => isPlayerInitialized(playerData, guildId, userId));
+  return Object.keys(players).filter(userId =>
+    /^\d{17,20}$/.test(userId) && isPlayerInitialized(playerData, guildId, userId)
+  );
 }
 
 /**
