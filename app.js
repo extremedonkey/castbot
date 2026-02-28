@@ -3924,7 +3924,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'share_tip',  // Share tip to channel (non-ephemeral)
         'tips_shared_next',  // Shared tips navigation
         'tips_shared_prev',  // Shared tips navigation
-        'safari_start'       // Start Safari bulk initialization
+        'safari_start',      // Start Safari bulk initialization
+        'safari_remove'      // Remove Players bulk de-initialization
       ];
       
       for (const pattern of dynamicPatterns) {
@@ -4914,6 +4915,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         custom_id !== 'safari_pause_players_select' &&
         custom_id !== 'safari_show_advantages_public' &&
         !custom_id.startsWith('safari_start_') &&
+        !custom_id.startsWith('safari_remove_') &&
         !custom_id.startsWith('safari_post_channel_')) {
       // Check if this Custom Action contains calculate_results actions that need deferred handling
       const parts = custom_id.split('_');
@@ -32134,6 +32136,45 @@ Are you sure you want to continue?`;
         handler: async (context) => {
           const { handleStartSafariGo } = await import('./safariStartSafari.js');
           return handleStartSafariGo(context);
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'safari_remove_players') {
+      return ButtonHandlerFactory.create({
+        id: 'safari_remove_players',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { handleRemovePlayers } = await import('./safariStartSafari.js');
+          return handleRemovePlayers(context);
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'safari_remove_user_select') {
+      return ButtonHandlerFactory.create({
+        id: 'safari_remove_user_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { handleRemoveUserSelect } = await import('./safariStartSafari.js');
+          return handleRemoveUserSelect(context);
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'safari_remove_players_go') {
+      return ButtonHandlerFactory.create({
+        id: 'safari_remove_players_go',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { handleRemovePlayersGo } = await import('./safariStartSafari.js');
+          return handleRemovePlayersGo(context);
         }
       })(req, res, client);
 

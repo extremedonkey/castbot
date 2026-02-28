@@ -1529,6 +1529,28 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari_map_admin'
   },
+  'safari_remove_players': {
+    label: 'Remove Players',
+    description: 'Bulk de-initialize multiple players from the Safari map',
+    emoji: '🚪',
+    style: 'Danger',
+    category: 'safari_map_admin',
+    parent: 'safari_map_explorer'
+  },
+  'safari_remove_user_select': {
+    label: 'Select Players to Remove',
+    description: 'User select menu for bulk Safari de-initialization',
+    emoji: '👥',
+    style: 'Secondary',
+    category: 'safari_map_admin'
+  },
+  'safari_remove_players_go': {
+    label: 'Remove Players',
+    description: 'Execute bulk Safari de-initialization for selected players',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari_map_admin'
+  },
   'map_player_locations': {
     label: 'Player Locations',
     description: 'View all player locations on the map',

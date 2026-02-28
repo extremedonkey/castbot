@@ -2059,8 +2059,16 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     .setEmoji('🦁')
     .setDisabled(!hasActiveMap);
 
-  // First row: Main map management buttons + Start Safari
-  const mapButtonRow1 = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, startSafariButton]);
+  // Create Remove Players button for bulk de-initialization
+  const removePlayersButton = new ButtonBuilder()
+    .setCustomId('safari_remove_players')
+    .setLabel('Remove Players')
+    .setStyle(ButtonStyle.Danger)
+    .setEmoji('🚪')
+    .setDisabled(!hasActiveMap);
+
+  // First row: Main map management buttons + Start/Remove Safari
+  const mapButtonRow1 = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, startSafariButton, removePlayersButton]);
 
   // Second row: Admin functions with Refresh Anchors moved here
   const mapButtonRow2 = new ActionRowBuilder().addComponents([blacklistButton, playerLocationsButton, pausedPlayersButton, refreshAnchorsButton]);
