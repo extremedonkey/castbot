@@ -1522,6 +1522,13 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari_map_admin'
   },
+  'safari_start_safari_go': {
+    label: 'Start Safari',
+    description: 'Execute bulk Safari initialization for selected players',
+    emoji: '▶️',
+    style: 'Primary',
+    category: 'safari_map_admin'
+  },
   'map_player_locations': {
     label: 'Player Locations',
     description: 'View all player locations on the map',

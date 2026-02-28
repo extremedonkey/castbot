@@ -4913,6 +4913,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         custom_id !== 'safari_paused_players' &&
         custom_id !== 'safari_pause_players_select' &&
         custom_id !== 'safari_show_advantages_public' &&
+        !custom_id.startsWith('safari_start_') &&
         !custom_id.startsWith('safari_post_channel_')) {
       // Check if this Custom Action contains calculate_results actions that need deferred handling
       const parts = custom_id.split('_');
@@ -32098,6 +32099,8 @@ Are you sure you want to continue?`;
         });
       }
     // ==================== START SAFARI HANDLERS ====================
+    // In-memory store for Start Safari user selections (keyed by guildId_userId)
+    // Cleared after execution or when panel is re-opened
     } else if (custom_id === 'safari_start_safari') {
       return ButtonHandlerFactory.create({
         id: 'safari_start_safari',
@@ -32113,6 +32116,10 @@ Are you sure you want to continue?`;
           const items = safariData[context.guildId]?.items || {};
           const defaultItemCount = Object.values(items).filter(i => i?.metadata?.defaultItem === 'Yes').length;
           const coordinate = staminaConfig.defaultStartingCoordinate || 'A1';
+
+          // Clear any previous selection when opening the panel fresh
+          if (!global._safariStartSelections) global._safariStartSelections = new Map();
+          global._safariStartSelections.delete(`${context.guildId}_${context.userId}`);
 
           return {
             flags: (1 << 15),
@@ -32141,12 +32148,21 @@ Are you sure you want to continue?`;
                 { type: 14 },
                 {
                   type: 1,
-                  components: [{
-                    type: 2,
-                    custom_id: 'safari_map_explorer',
-                    label: '← Map Explorer',
-                    style: 2
-                  }]
+                  components: [
+                    {
+                      type: 2,
+                      custom_id: 'safari_map_explorer',
+                      label: '← Map Explorer',
+                      style: 2
+                    },
+                    {
+                      type: 2,
+                      custom_id: 'safari_start_safari_go',
+                      label: '▶️ Start Safari',
+                      style: 1,
+                      disabled: true
+                    }
+                  ]
                 }
               ]
             }]
@@ -32155,15 +32171,100 @@ Are you sure you want to continue?`;
       })(req, res, client);
 
     } else if (custom_id === 'safari_start_user_select') {
+      // User selected players — store selection and re-render with enabled Go button
       return ButtonHandlerFactory.create({
         id: 'safari_start_user_select',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         updateMessage: true,
-        deferred: true,
         handler: async (context) => {
           console.log(`🦁 START: safari_start_user_select - user ${context.userId}`);
           const selectedUserIds = context.values || [];
+          console.log(`🦁 Selected ${selectedUserIds.length} players for initialization`);
+
+          // Store selections
+          if (!global._safariStartSelections) global._safariStartSelections = new Map();
+          global._safariStartSelections.set(`${context.guildId}_${context.userId}`, selectedUserIds);
+
+          // Re-render panel with config info + enabled Go button showing count
+          const { getCustomTerms, getStaminaConfig, loadSafariContent } = await import('./safariManager.js');
+          const customTerms = await getCustomTerms(context.guildId);
+          const staminaConfig = await getStaminaConfig(context.guildId);
+          const safariData = await loadSafariContent();
+          const items = safariData[context.guildId]?.items || {};
+          const defaultItemCount = Object.values(items).filter(i => i?.metadata?.defaultItem === 'Yes').length;
+          const coordinate = staminaConfig.defaultStartingCoordinate || 'A1';
+
+          const playerList = selectedUserIds.map(id => `<@${id}>`).join(', ');
+
+          return {
+            flags: (1 << 15),
+            components: [{
+              type: 17,
+              accent_color: 0xF5A623,
+              components: [
+                {
+                  type: 10,
+                  content: `## 🦁 Start Safari\n\n> Initialize players onto the Safari map. Each player receives:\n> - **Starting Location:** ${coordinate} *(change in Settings)*\n> - **Starting ${customTerms.currencyName}:** ${customTerms.defaultStartingCurrencyValue} ${customTerms.currencyEmoji} *(change in Settings)*\n> - **Starting Items:** ${defaultItemCount} default item${defaultItemCount !== 1 ? 's' : ''} *(change in Items screen)*\n>\n> -# Players can also be added individually from **Player Admin** at any time.`
+                },
+                { type: 14 },
+                {
+                  type: 10,
+                  content: `> **Selected:** ${playerList}`
+                },
+                {
+                  type: 1,
+                  components: [{
+                    type: 5,
+                    custom_id: 'safari_start_user_select',
+                    max_values: 25,
+                    default_values: selectedUserIds.map(id => ({ id, type: 'user' })),
+                    placeholder: 'Select players to initialize...'
+                  }]
+                },
+                { type: 14 },
+                {
+                  type: 1,
+                  components: [
+                    {
+                      type: 2,
+                      custom_id: 'safari_map_explorer',
+                      label: '← Map Explorer',
+                      style: 2
+                    },
+                    {
+                      type: 2,
+                      custom_id: 'safari_start_safari_go',
+                      label: `▶️ Start Safari (${selectedUserIds.length})`,
+                      style: 1,
+                      disabled: false
+                    }
+                  ]
+                }
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'safari_start_safari_go') {
+      // Execute bulk initialization with stored selections
+      return ButtonHandlerFactory.create({
+        id: 'safari_start_safari_go',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          console.log(`🦁 START: safari_start_safari_go - user ${context.userId}`);
+
+          // Read stored selections
+          const selectionKey = `${context.guildId}_${context.userId}`;
+          const selectedUserIds = global._safariStartSelections?.get(selectionKey) || [];
+
+          // Clear stored selection
+          global._safariStartSelections?.delete(selectionKey);
+
           if (selectedUserIds.length === 0) {
             return {
               flags: (1 << 15),
@@ -32171,7 +32272,7 @@ Are you sure you want to continue?`;
                 type: 17,
                 accent_color: 0xe74c3c,
                 components: [
-                  { type: 10, content: '## ❌ No Players Selected\n\nPlease go back and select at least one player.' },
+                  { type: 10, content: '## ❌ No Players Selected\n\nPlease go back and select players first.' },
                   { type: 14 },
                   { type: 1, components: [{ type: 2, custom_id: 'safari_start_safari', label: '← Back', style: 2 }] }
                 ]
@@ -32193,7 +32294,7 @@ Are you sure you want to continue?`;
             }
           }).join('\n');
 
-          console.log(`🦁 SUCCESS: safari_start_user_select - ${successCount}/${totalCount} initialized`);
+          console.log(`🦁 SUCCESS: safari_start_safari_go - ${successCount}/${totalCount} initialized`);
 
           return {
             flags: (1 << 15),
