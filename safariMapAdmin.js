@@ -127,17 +127,17 @@ async function createPlayerViewUI(guildId, userId) {
   // Show player info
   statusText += `**Player:** <@${userId}>\n`;
 
-  // Always show gold and items (players can have these without Safari init)
-  statusText += `💰 **${customTerms.currencyName}:** ${safari.currency || 0} ${customTerms.currencyEmoji}\n`;
-  statusText += `📦 **Items in ${customTerms.inventoryName}:** ${Object.keys(safari.inventory || {}).length}\n`;
-  statusText += `🚩 **Starting Location:** ${startingLocationDisplay}\n`;
-
   // Show Safari-specific info
   // A player is "initialized" when they have safari data beyond just mapProgress.startingLocation
   // (startingLocation can persist across de-init)
   const isInitialized = safari && (safari.currency !== undefined || safari.inventory !== undefined || safari.points !== undefined);
 
   if (isInitialized) {
+    // Show current values for initialized players
+    statusText += `💰 **${customTerms.currencyName}:** ${safari.currency || 0} ${customTerms.currencyEmoji}\n`;
+    statusText += `📦 **Items in ${customTerms.inventoryName}:** ${Object.keys(safari.inventory || {}).length}\n`;
+    statusText += `🚩 **Starting Location:** ${startingLocationDisplay}\n`;
+
     // Show map-specific info if available
     if (activeMap && playerMapData) {
       statusText += `\n📍 **Current Location:** ${currentLocation}\n`;
@@ -152,6 +152,15 @@ async function createPlayerViewUI(guildId, userId) {
       statusText += `\n⚠️ **Not placed on map yet**\n`;
     }
   } else {
+    // Show current + starting values for uninitialized players
+    const items = safariData[guildId]?.items || {};
+    const defaultItemCount = Object.values(items).filter(i => i?.metadata?.defaultItem === 'Yes').length;
+
+    statusText += `💰 **Current ${customTerms.currencyName}:** ${safari.currency || 0} ${customTerms.currencyEmoji}\n`;
+    statusText += `💰 **Starting ${customTerms.currencyName}:** ${customTerms.defaultStartingCurrencyValue} ${customTerms.currencyEmoji}\n`;
+    statusText += `📦 **Items in ${customTerms.inventoryName}:** ${Object.keys(safari.inventory || {}).length}\n`;
+    statusText += `📦 **Starting Items:** ${defaultItemCount}\n`;
+    statusText += `🚩 **Starting Location:** ${startingLocationDisplay}\n`;
     statusText += `\n> ⚠️ **Player not initialized in Safari system**\n`;
   }
   

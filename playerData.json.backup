@@ -682,21 +682,6 @@
       "455951495272202240": {
         "emojiCode": "<:Natadwen:1396856838158417931>",
         "age": "29",
-        "safari": {
-          "currency": 25,
-          "history": [],
-          "lastInteraction": 1772211100333,
-          "achievements": [],
-          "inventory": {
-            "nurturer_361363": 1,
-            "territory_forager_404120": 1,
-            "nest_guardian_461600": 1,
-            "raider_499497": 1
-          },
-          "cooldowns": {},
-          "buttonUses": {},
-          "storeHistory": []
-        },
         "vanityRoles": [
           "1368969348399632546",
           "1333822411912642630",
@@ -710,7 +695,51 @@
           "1368969349976821815",
           "1333822411912642630",
           "1415062472007749765"
-        ]
+        ],
+        "safari": {
+          "currency": 33,
+          "history": [],
+          "lastInteraction": 1772296006846,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "G1",
+              "exploredCoordinates": [
+                "G1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "G1",
+                  "timestamp": "2026-02-28T16:26:46.846Z"
+                },
+                {
+                  "from": "G1",
+                  "to": "G1",
+                  "timestamp": "2026-02-28T16:26:46.879Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2026-02-28T16:26:46.846Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
       },
       "391415444084490240": {
         "age": "36",
@@ -724,7 +753,44 @@
         "safari": {
           "mapProgress": {
             "map_7x7_1753981993871": {
+              "currentLocation": "D1",
+              "exploredCoordinates": [
+                "D1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "D1",
+                  "timestamp": "2026-02-28T16:26:38.155Z"
+                },
+                {
+                  "from": "D1",
+                  "to": "D1",
+                  "timestamp": "2026-02-28T16:26:38.180Z"
+                }
+              ],
               "startingLocation": "D1"
+            }
+          },
+          "currency": 33,
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "history": [],
+          "achievements": [],
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2026-02-28T16:26:38.155Z",
+              "regenConfig": "hourly"
             }
           }
         }
@@ -750,22 +816,7 @@
           "1368969349976821815",
           "1333822411912642630",
           "1379077934953922611"
-        ],
-        "safari": {
-          "currency": 25,
-          "history": [],
-          "lastInteraction": 1772211101840,
-          "achievements": [],
-          "inventory": {
-            "nurturer_361363": 1,
-            "territory_forager_404120": 1,
-            "nest_guardian_461600": 1,
-            "raider_499497": 1
-          },
-          "cooldowns": {},
-          "buttonUses": {},
-          "storeHistory": []
-        }
+        ]
       },
       "468655730975703041": {
         "age": "45",
@@ -787,12 +838,12 @@
                 {
                   "from": null,
                   "to": "D1",
-                  "timestamp": "2026-02-28T15:05:31.660Z"
+                  "timestamp": "2026-02-28T16:26:40.215Z"
                 },
                 {
                   "from": "D1",
                   "to": "D1",
-                  "timestamp": "2026-02-28T15:05:31.682Z"
+                  "timestamp": "2026-02-28T16:26:40.238Z"
                 }
               ],
               "startingLocation": "D1"
@@ -814,7 +865,7 @@
             "stamina": {
               "current": 1,
               "maximum": 1,
-              "lastRegeneration": "2026-02-28T15:05:31.660Z",
+              "lastRegeneration": "2026-02-28T16:26:40.215Z",
               "regenConfig": "hourly"
             }
           }
@@ -827,7 +878,51 @@
           "1368969349976821815",
           "1333822411912642630",
           "1415062472007749765"
-        ]
+        ],
+        "safari": {
+          "currency": 33,
+          "history": [],
+          "lastInteraction": 1772296055438,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "G1",
+              "exploredCoordinates": [
+                "G1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "G1",
+                  "timestamp": "2026-02-28T16:27:35.438Z"
+                },
+                {
+                  "from": "G1",
+                  "to": "G1",
+                  "timestamp": "2026-02-28T16:27:35.468Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2026-02-28T16:27:35.438Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
       },
       "443545183997657120": {
         "emojiCode": null
@@ -842,51 +937,6 @@
       "676262975132139522": {
         "emojiCode": "<:Belle:1382413449342091405>",
         "age": "28",
-        "safari": {
-          "currency": 25,
-          "history": [],
-          "lastInteraction": 1772211103208,
-          "achievements": [],
-          "inventory": {
-            "nurturer_361363": 1,
-            "territory_forager_404120": 1,
-            "nest_guardian_461600": 1,
-            "raider_499497": 1
-          },
-          "cooldowns": {},
-          "buttonUses": {},
-          "storeHistory": [],
-          "mapProgress": {
-            "map_7x7_1753981993871": {
-              "currentLocation": "A1",
-              "exploredCoordinates": [
-                "A1"
-              ],
-              "itemsFound": [],
-              "movementHistory": [
-                {
-                  "from": null,
-                  "to": "A1",
-                  "timestamp": "2025-08-04T15:22:47.269Z"
-                },
-                {
-                  "from": "A1",
-                  "to": "A1",
-                  "timestamp": "2025-08-04T15:22:47.287Z"
-                }
-              ]
-            }
-          },
-          "points": {
-            "stamina": {
-              "current": 3,
-              "maximum": 3,
-              "lastRegeneration": "2025-08-04T15:22:47.269Z",
-              "regenConfig": "hourly"
-            }
-          },
-          "isPaused": false
-        },
         "vanityRoles": [
           "1333822411912642630",
           "1368969348399632546",
@@ -927,10 +977,13 @@
       },
       "1086246253819613274": {
         "age": "60s",
+        "vanityRoles": [
+          "1434189625609551984"
+        ],
         "safari": {
-          "currency": 25,
+          "currency": 33,
           "history": [],
-          "lastInteraction": 1772211098997,
+          "lastInteraction": 1772296002107,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -943,43 +996,34 @@
           "storeHistory": [],
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "E2",
+              "currentLocation": "G1",
               "exploredCoordinates": [
-                "A1",
-                "E2"
+                "G1"
               ],
               "itemsFound": [],
               "movementHistory": [
                 {
                   "from": null,
-                  "to": "A1",
-                  "timestamp": "2025-09-06T02:17:57.193Z"
+                  "to": "G1",
+                  "timestamp": "2026-02-28T16:26:42.107Z"
                 },
                 {
-                  "from": "A1",
-                  "to": "A1",
-                  "timestamp": "2025-09-06T02:17:57.204Z"
-                },
-                {
-                  "from": "A1",
-                  "to": "E2",
-                  "timestamp": "2025-09-16T15:47:46.268Z"
+                  "from": "G1",
+                  "to": "G1",
+                  "timestamp": "2026-02-28T16:26:42.128Z"
                 }
               ]
             }
           },
           "points": {
             "stamina": {
-              "current": 3,
-              "maximum": 3,
-              "lastRegeneration": "2025-09-06T02:17:57.193Z",
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2026-02-28T16:26:42.107Z",
               "regenConfig": "hourly"
             }
           }
-        },
-        "vanityRoles": [
-          "1434189625609551984"
-        ]
+        }
       },
       "1100826875435163780": {
         "age": "16"
@@ -1010,8 +1054,93 @@
           "1379077934953922611"
         ]
       },
-      "719547106318352496": {},
-      "209773824357564416": {},
+      "719547106318352496": {
+        "safari": {
+          "currency": 33,
+          "history": [],
+          "lastInteraction": 1772296057504,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "G1",
+              "exploredCoordinates": [
+                "G1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "G1",
+                  "timestamp": "2026-02-28T16:27:37.504Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2026-02-28T16:27:37.504Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      },
+      "209773824357564416": {
+        "safari": {
+          "currency": 33,
+          "history": [],
+          "lastInteraction": 1772296004287,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "G1",
+              "exploredCoordinates": [
+                "G1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "G1",
+                  "timestamp": "2026-02-28T16:26:44.288Z"
+                },
+                {
+                  "from": "G1",
+                  "to": "G1",
+                  "timestamp": "2026-02-28T16:26:44.311Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2026-02-28T16:26:44.288Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      },
       "1163851781114167366": {}
     },
     "tribes": {
