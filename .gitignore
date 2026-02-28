@@ -11,6 +11,8 @@ node_modules/
 playerData.json
 safariContent.json
 img/tips/tips.json
+scheduledJobs.json
+data_*.json
 
 # System files
 desktop.ini
