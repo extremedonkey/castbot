@@ -30107,14 +30107,25 @@ Are you sure you want to continue?`;
             };
           }
           
-          // Initialize player at A1 (this will also post movement interface)
-          const startingCoordinate = 'A1';
+          // Determine starting coordinate: player-specific > server default > A1
+          const playerStartingLoc = playerData[context.guildId]?.players?.[context.userId]?.safari?.mapProgress?.[activeMapId]?.startingLocation;
+          let startingCoordinate;
+          if (playerStartingLoc) {
+            startingCoordinate = playerStartingLoc;
+            console.log(`📍 Self-init using player-specific starting location: ${startingCoordinate}`);
+          } else {
+            const { getStaminaConfig } = await import('./safariManager.js');
+            const staminaConfig = await getStaminaConfig(context.guildId);
+            startingCoordinate = staminaConfig.defaultStartingCoordinate || 'A1';
+            console.log(`📍 Self-init using server default starting location: ${startingCoordinate}`);
+          }
+
           await initializePlayerOnMap(context.guildId, context.userId, startingCoordinate, context.client);
-          
+
           // Get channel info for response
           const mapData = safariData[context.guildId].maps[activeMapId];
           const channelId = mapData.coordinates[startingCoordinate]?.channelId;
-          
+
           console.log(`✅ SUCCESS: safari_map_init_player - player initialized at ${startingCoordinate}`);
           return {
             content: `✅ **Welcome to the Safari Map!**\n\nYou've been initialized at coordinate **${startingCoordinate}** with **1 stamina**.\n\nHead to <#${channelId}> to start exploring! Your movement options are waiting for you there.`,
@@ -30856,12 +30867,26 @@ Are you sure you want to continue?`;
           console.log(`🛡️ START: safari_init_player for user ${targetUserId}`);
 
           const { initializePlayerOnMap, createMapAdminUI } = await import('./safariMapAdmin.js');
-          const { getStaminaConfig } = await import('./safariManager.js');
+          const { getStaminaConfig, loadSafariContent } = await import('./safariManager.js');
+          const { loadPlayerData } = await import('./storage.js');
 
           try {
-            // Get per-server stamina config (includes defaultStartingCoordinate)
-            const staminaConfig = await getStaminaConfig(context.guildId);
-            const startingCoordinate = staminaConfig.defaultStartingCoordinate || 'A1';
+            // Check for per-player starting location first
+            const playerData = await loadPlayerData();
+            const safariData = await loadSafariContent();
+            const activeMapId = safariData[context.guildId]?.maps?.active;
+            const playerStartingLocation = playerData[context.guildId]?.players?.[targetUserId]?.safari?.mapProgress?.[activeMapId]?.startingLocation;
+
+            // Priority: player-specific > server default > A1
+            let startingCoordinate;
+            if (playerStartingLocation) {
+              startingCoordinate = playerStartingLocation;
+              console.log(`📍 Using player-specific starting location: ${startingCoordinate}`);
+            } else {
+              const staminaConfig = await getStaminaConfig(context.guildId);
+              startingCoordinate = staminaConfig.defaultStartingCoordinate || 'A1';
+              console.log(`📍 Using server default starting location: ${startingCoordinate}`);
+            }
 
             await initializePlayerOnMap(context.guildId, targetUserId, startingCoordinate, context.client);
             
@@ -31116,18 +31141,29 @@ Are you sure you want to continue?`;
       })(req, res, client);
       
     } else if (custom_id.startsWith('map_admin_move_player_')) {
-      // Show coordinate input modal
+      // Show location modal (move player + set starting location)
       try {
         const targetUserId = custom_id.split('_').pop();
-        
+        const guildId = req.body.guild_id;
+
+        // Get current location and starting location for pre-fill
+        const { loadPlayerData } = await import('./storage.js');
+        const { loadSafariContent } = await import('./safariManager.js');
+        const playerData = await loadPlayerData();
+        const safariData = await loadSafariContent();
+        const activeMapId = safariData[guildId]?.maps?.active;
+        const playerMapData = playerData[guildId]?.players?.[targetUserId]?.safari?.mapProgress?.[activeMapId];
+        const currentLocation = playerMapData?.currentLocation || '';
+        const currentStartingLocation = playerMapData?.startingLocation || '';
+
         const { createCoordinateModal } = await import('./safariMapAdmin.js');
-        const modal = await createCoordinateModal(targetUserId);
-        
+        const modal = await createCoordinateModal(targetUserId, currentLocation, currentStartingLocation);
+
         return res.send({
           type: InteractionResponseType.MODAL,
-          data: modal.toJSON()
+          data: modal
         });
-        
+
       } catch (error) {
         console.error('Error showing coordinate modal:', error);
         return res.send({
@@ -37667,19 +37703,118 @@ Are you sure you want to continue?`;
         });
       }
     } else if (custom_id.startsWith('map_admin_coordinate_modal_')) {
-      // Handle player move coordinate submission
+      // Handle player location modal submission (move + starting location)
       const targetUserId = custom_id.split('_').pop();
       const guildId = req.body.guild_id;
-      const coordinate = components[0].components[0].value?.trim().toUpperCase();
 
-      console.log(`🛡️ Processing map admin move to ${coordinate} for user ${targetUserId}`);
+      // Extract values from Label (type 18) component structure
+      const coordinate = components[0]?.component?.value?.trim().toUpperCase() || '';
+      const startingLocation = components[1]?.component?.value?.trim().toUpperCase() || '';
 
-      // Validate coordinate format immediately
-      if (!coordinate.match(/^[A-Z][1-9]\d?$/)) {
+      console.log(`🛡️ Processing location modal for user ${targetUserId}: move=${coordinate || '(none)'}, startingLocation=${startingLocation || '(none)'}`);
+
+      // Nothing submitted
+      if (!coordinate && !startingLocation) {
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Invalid coordinate format. Use letter + number (e.g., B3, D5).',
+            content: '⚠️ No changes made. Provide a coordinate to move or a starting location to set.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+
+      // Validate coordinate formats
+      if (coordinate && !coordinate.match(/^[A-Z][1-9]\d?$/)) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Invalid move coordinate format. Use letter + number (e.g., B3, D5).',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      if (startingLocation && !startingLocation.match(/^[A-Z][1-9]\d?$/)) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Invalid starting location format. Use letter + number (e.g., B3, D5).',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+
+      // Validate coordinates exist on the active map
+      const { loadSafariContent } = await import('./safariManager.js');
+      const safariDataCheck = await loadSafariContent();
+      const activeMapIdCheck = safariDataCheck[guildId]?.maps?.active;
+      const activeMapCheck = activeMapIdCheck ? safariDataCheck[guildId]?.maps?.[activeMapIdCheck] : null;
+
+      if (coordinate && activeMapCheck && !activeMapCheck.coordinates[coordinate]) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Coordinate **${coordinate}** does not exist on the current map.`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      if (startingLocation && activeMapCheck && !activeMapCheck.coordinates[startingLocation]) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Starting location **${startingLocation}** does not exist on the current map.`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+
+      // Check if player is initialized (needed for move validation)
+      const { loadPlayerData, savePlayerData } = await import('./storage.js');
+      const playerDataCheck = await loadPlayerData();
+      const playerCheck = playerDataCheck[guildId]?.players?.[targetUserId];
+      const playerMapDataCheck = playerCheck?.safari?.mapProgress?.[activeMapIdCheck];
+      const isPlayerInitialized = !!playerMapDataCheck;
+
+      // Helper to save startingLocation for uninitialized players (ensures structure exists)
+      const saveStartingLocationForUninitPlayer = async () => {
+        if (!playerCheck?.safari) {
+          if (!playerDataCheck[guildId]) playerDataCheck[guildId] = { players: {} };
+          if (!playerDataCheck[guildId].players[targetUserId]) playerDataCheck[guildId].players[targetUserId] = {};
+          playerDataCheck[guildId].players[targetUserId].safari = { mapProgress: {} };
+        }
+        if (!playerDataCheck[guildId].players[targetUserId].safari.mapProgress) {
+          playerDataCheck[guildId].players[targetUserId].safari.mapProgress = {};
+        }
+        if (!playerDataCheck[guildId].players[targetUserId].safari.mapProgress[activeMapIdCheck]) {
+          playerDataCheck[guildId].players[targetUserId].safari.mapProgress[activeMapIdCheck] = {};
+        }
+        playerDataCheck[guildId].players[targetUserId].safari.mapProgress[activeMapIdCheck].startingLocation = startingLocation;
+        await savePlayerData(playerDataCheck);
+        console.log(`📍 Set starting location for uninitialized player ${targetUserId} to ${startingLocation}`);
+      };
+
+      // Handle uninitialized player
+      if (!isPlayerInitialized) {
+        if (startingLocation) {
+          await saveStartingLocationForUninitPlayer();
+        }
+
+        if (coordinate) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `❌ Cannot move player — they are not initialized in Safari.${startingLocation ? `\n\n✅ Starting location set to **${startingLocation}**.` : ''}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Only startingLocation was set
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `✅ Starting location set to **${startingLocation}**.`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -37696,20 +37831,31 @@ Are you sure you want to continue?`;
       // ✅ Execute long-running operations in background with webhook follow-up
       (async () => {
         try {
-          const { movePlayerToCoordinate, createMapAdminUI } = await import('./safariMapAdmin.js');
+          // Save starting location if provided
+          if (startingLocation && activeMapIdCheck) {
+            const freshPlayerData = await loadPlayerData();
+            if (freshPlayerData[guildId]?.players?.[targetUserId]?.safari?.mapProgress?.[activeMapIdCheck]) {
+              freshPlayerData[guildId].players[targetUserId].safari.mapProgress[activeMapIdCheck].startingLocation = startingLocation;
+              await savePlayerData(freshPlayerData);
+              console.log(`📍 Set starting location for player ${targetUserId} to ${startingLocation}`);
+            }
+          }
 
-          await movePlayerToCoordinate(guildId, targetUserId, coordinate, client);
+          // Move player if coordinate provided
+          if (coordinate) {
+            const { movePlayerToCoordinate } = await import('./safariMapAdmin.js');
+            await movePlayerToCoordinate(guildId, targetUserId, coordinate, client);
+          }
 
           // Create updated UI
+          const { createMapAdminUI } = await import('./safariMapAdmin.js');
           const ui = await createMapAdminUI({
             guildId,
             userId: targetUserId,
             mode: 'player_view'
           });
 
-          // Send follow-up via webhook using POST to create new follow-up message
-          // POST is more reliable than PATCH for deferred interactions and doesn't require edit permissions
-          console.log('🔍 Sending webhook follow-up for coordinate modal via POST');
+          console.log('🔍 Sending webhook follow-up for location modal via POST');
           const webhookUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`;
           const webhookResponse = await fetch(webhookUrl, {
             method: 'POST',
@@ -37722,11 +37868,13 @@ Are you sure you want to continue?`;
             throw new Error(`Webhook returned ${webhookResponse.status}: ${errorData}`);
           }
 
-          console.log(`✅ SUCCESS: Moved player ${targetUserId} to ${coordinate} and sent webhook follow-up`);
+          const actions = [];
+          if (coordinate) actions.push(`moved to ${coordinate}`);
+          if (startingLocation) actions.push(`starting location set to ${startingLocation}`);
+          console.log(`✅ SUCCESS: Player ${targetUserId} ${actions.join(', ')}`);
         } catch (error) {
-          console.error('❌ ERROR in deferred coordinate modal:', error.message, error);
+          console.error('❌ ERROR in deferred location modal:', error.message, error);
 
-          // Try to send error follow-up via webhook using POST
           try {
             const errorUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`;
             const errorResponse = await fetch(errorUrl, {

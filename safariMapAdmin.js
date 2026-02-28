@@ -88,40 +88,60 @@ async function createPlayerViewUI(guildId, userId) {
   const playerData = await loadPlayerData();
   const safariData = await loadSafariContent();
   const customTerms = await getCustomTerms(guildId);
-  
+
   // Get player's current state
   const player = playerData[guildId]?.players?.[userId] || {};
   const safari = player.safari || {};
   const mapProgress = safari.mapProgress || {};
-  
+
   // Get active map data
   const activeMapId = safariData[guildId]?.maps?.active;
   const activeMap = activeMapId ? safariData[guildId]?.maps?.[activeMapId] : null;
   const playerMapData = activeMapId ? mapProgress[activeMapId] : null;
-  
+
   // Get current location and stamina
   const currentLocation = playerMapData?.currentLocation || 'Not on map';
   const stamina = safari.points?.stamina || { current: 0, maximum: 0 };
   const exploredCount = playerMapData?.exploredCoordinates?.length || 0;
   const lastMove = playerMapData?.movementHistory?.slice(-1)[0];
-  
+
+  // Get starting location info
+  const { getStaminaConfig } = await import('./safariManager.js');
+  const staminaConfig = await getStaminaConfig(guildId);
+  const serverDefault = staminaConfig.defaultStartingCoordinate || 'A1';
+  const playerStartingLocation = playerMapData?.startingLocation;
+
+  // Determine starting location display
+  let startingLocationDisplay;
+  if (playerStartingLocation) {
+    startingLocationDisplay = `${playerStartingLocation} (Player-specific starting location)`;
+  } else if (serverDefault !== 'A1') {
+    startingLocationDisplay = `${serverDefault} (Default server starting location)`;
+  } else {
+    startingLocationDisplay = `A1 (No default starting location set)`;
+  }
+
   // Build status display
   let statusText = `## 🧭 Player Admin\n\n`;
-  
+
   // Show player info
-  statusText += `**Player:** <@${userId}>\n\n`;
-  
-  // Show Safari status if initialized
-  if (safari && Object.keys(safari).length > 0) {
-    statusText += `💰 **${customTerms.currencyName}:** ${safari.currency || 0} ${customTerms.currencyEmoji}\n`;
-    statusText += `📦 **Items in ${customTerms.inventoryName}:** ${Object.keys(safari.inventory || {}).length}\n`;
-    
+  statusText += `**Player:** <@${userId}>\n`;
+
+  // Always show gold and items (players can have these without Safari init)
+  statusText += `💰 **${customTerms.currencyName}:** ${safari.currency || 0} ${customTerms.currencyEmoji}\n`;
+  statusText += `📦 **Items in ${customTerms.inventoryName}:** ${Object.keys(safari.inventory || {}).length}\n`;
+  statusText += `🚩 **Starting Location:** ${startingLocationDisplay}\n`;
+
+  // Show Safari-specific info
+  const isInitialized = safari && Object.keys(safari).length > 0;
+
+  if (isInitialized) {
     // Show map-specific info if available
     if (activeMap && playerMapData) {
       statusText += `\n📍 **Current Location:** ${currentLocation}\n`;
       statusText += `⚡ **Stamina:** ${stamina.current}/${stamina.maximum}\n`;
       statusText += `🗺️ **Explored Cells:** ${exploredCount}\n`;
-      
+
       if (lastMove) {
         const moveTime = new Date(lastMove.timestamp).toLocaleString();
         statusText += `🕒 **Last Move:** ${lastMove.from} → ${lastMove.to} (${moveTime})\n`;
@@ -130,7 +150,7 @@ async function createPlayerViewUI(guildId, userId) {
       statusText += `\n⚠️ **Not placed on map yet**\n`;
     }
   } else {
-    statusText += `⚠️ **Player not initialized in Safari system**\n`;
+    statusText += `\n> ⚠️ **Player not initialized in Safari system**\n`;
   }
   
   // Build management buttons
@@ -138,8 +158,7 @@ async function createPlayerViewUI(guildId, userId) {
   
   // Row 1: Map management (only show if map exists and player is initialized)
   const mapButtons = [];
-  const isInitialized = player.safari !== undefined;
-  
+
   if (!isInitialized) {
     mapButtons.push({
       type: 2, // Button
@@ -148,6 +167,16 @@ async function createPlayerViewUI(guildId, userId) {
       style: 3, // Success
       emoji: { name: '🚀' }
     });
+    // Show Location button for uninitialized players (to set starting location)
+    if (activeMap) {
+      mapButtons.push({
+        type: 2, // Button
+        custom_id: `map_admin_move_player_${userId}`,
+        label: 'Location',
+        style: 2, // Secondary
+        emoji: { name: '📍' }
+      });
+    }
   } else if (activeMap) {
     // Add De-initialize button first (to the left)
     mapButtons.push({
@@ -157,7 +186,7 @@ async function createPlayerViewUI(guildId, userId) {
       style: 4, // Danger
       emoji: { name: '🛬' }
     });
-    
+
     // Add Pause/Unpause button if player is on the map
     if (playerMapData) {
       const isPaused = player.safari?.isPaused === true;
@@ -169,31 +198,31 @@ async function createPlayerViewUI(guildId, userId) {
         emoji: { name: isPaused ? '⏯️' : '⏸️' }
       });
     }
-    
-    // Show place/move button based on whether player is on the map
+
+    // Show Location button
     mapButtons.push({
       type: 2, // Button
       custom_id: `map_admin_move_player_${userId}`,
-      label: playerMapData ? 'Move Player' : 'Place on Map',
-      style: 1, // Primary
+      label: playerMapData ? 'Location' : 'Place on Map',
+      style: 2, // Secondary
       emoji: { name: '📍' }
     });
-    
+
     // Only show these buttons if player is already on the map
     if (playerMapData) {
       mapButtons.push({
         type: 2, // Button
         custom_id: `map_admin_grant_stamina_${userId}`,
         label: 'Set Stamina',
-        style: 3, // Success
+        style: 2, // Secondary
         emoji: { name: '⚡' }
       });
-      
+
       mapButtons.push({
         type: 2, // Button
         custom_id: `map_admin_reset_explored_${userId}`,
         label: 'Reset Explored',
-        style: 4, // Danger
+        style: 2, // Secondary
         emoji: { name: '🔄' }
       });
     }
@@ -614,30 +643,41 @@ export async function resetPlayerExploration(guildId, userId) {
 /**
  * Create coordinate selection modal
  */
-export async function createCoordinateModal(userId, currentLocation = '') {
-  const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
-  
-  const modal = new ModalBuilder()
-    .setCustomId(`map_admin_coordinate_modal_${userId}`)
-    .setTitle('Move Player to Coordinate');
-  
-  const coordinateInput = new TextInputBuilder()
-    .setCustomId('coordinate')
-    .setLabel('Grid Coordinate (e.g., B3, D5)')
-    .setStyle(TextInputStyle.Short)
-    .setPlaceholder('A1')
-    .setRequired(true)
-    .setMaxLength(3);
-  
-  if (currentLocation) {
-    coordinateInput.setValue(currentLocation);
-  }
-  
-  modal.addComponents(
-    new ActionRowBuilder().addComponents(coordinateInput)
-  );
-  
-  return modal;
+export async function createCoordinateModal(userId, currentLocation = '', currentStartingLocation = '') {
+  return {
+    custom_id: `map_admin_coordinate_modal_${userId}`,
+    title: 'Player Location',
+    components: [
+      {
+        type: 18, // Label
+        label: 'Move Player to Location (e.g., B3, D5)',
+        description: 'Immediately moves the player to the new location on submission',
+        component: {
+          type: 4, // Text Input
+          custom_id: 'coordinate',
+          style: 1, // Short
+          placeholder: 'A1',
+          required: false,
+          max_length: 3,
+          ...(currentLocation && currentLocation !== 'Not on map' ? { value: currentLocation } : {})
+        }
+      },
+      {
+        type: 18, // Label
+        label: 'Player Starting Location',
+        description: 'Player will be initialized at this location. Overrides default starting location.',
+        component: {
+          type: 4, // Text Input
+          custom_id: 'starting_location',
+          style: 1, // Short
+          placeholder: 'A1',
+          required: false,
+          max_length: 3,
+          ...(currentStartingLocation ? { value: currentStartingLocation } : {})
+        }
+      }
+    ]
+  };
 }
 
 /**
