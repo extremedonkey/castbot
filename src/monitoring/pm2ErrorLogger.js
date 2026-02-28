@@ -115,7 +115,9 @@ export class PM2ErrorLogger {
         if (errorContent.length > positions.error) {
           const newErrors = errorContent.slice(positions.error);
           const errorLines = newErrors.split('\n')
-            .filter(line => line.trim())
+            .filter(line => line.trim() &&
+              !line.includes('ExperimentalWarning') &&
+              !line.includes('--trace-warnings'))
             .slice(-50); // Last 50 lines max
 
           if (errorLines.length > 0) {
@@ -187,7 +189,9 @@ export class PM2ErrorLogger {
       const errorResult = execSync(errorCommand, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
 
       const errorLines = errorResult.split('\n')
-        .filter(line => line.trim() && line !== 'No error log')
+        .filter(line => line.trim() && line !== 'No error log' &&
+          !line.includes('ExperimentalWarning') &&
+          !line.includes('--trace-warnings'))
         .slice(-50);
 
       if (errorLines.length > 0) {

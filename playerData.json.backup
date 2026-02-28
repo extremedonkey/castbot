@@ -697,9 +697,9 @@
           "1415062472007749765"
         ],
         "safari": {
-          "currency": 315,
+          "currency": 453,
           "history": [],
-          "lastInteraction": 1772302130570,
+          "lastInteraction": 1772302967262,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -812,7 +812,7 @@
               "startingLocation": "D1"
             }
           },
-          "currency": 315,
+          "currency": 453,
           "inventory": {
             "nurturer_361363": 1,
             "territory_forager_404120": 1,
@@ -832,7 +832,7 @@
               "regenConfig": "hourly"
             }
           },
-          "lastInteraction": 1772302131118
+          "lastInteraction": 1772302967827
         }
       },
       "538540453973327873": {
@@ -844,9 +844,9 @@
           "1415062472007749765"
         ],
         "safari": {
-          "currency": 315,
+          "currency": 453,
           "history": [],
-          "lastInteraction": 1772302132309,
+          "lastInteraction": 1772302968685,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -945,9 +945,9 @@
           "1434189625609551984"
         ],
         "safari": {
-          "currency": 315,
+          "currency": 453,
           "history": [],
-          "lastInteraction": 1772302129602,
+          "lastInteraction": 1772302966271,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1002,13 +1002,13 @@
             "nest_guardian_461600": 1,
             "raider_499497": 1
           },
-          "currency": 307,
+          "currency": 445,
           "history": [],
           "achievements": [],
           "cooldowns": {},
           "buttonUses": {},
           "storeHistory": [],
-          "lastInteraction": 1772302133513
+          "lastInteraction": 1772302969944
         }
       },
       "630470402900230146": {
@@ -1020,9 +1020,9 @@
       },
       "719547106318352496": {
         "safari": {
-          "currency": 315,
+          "currency": 453,
           "history": [],
-          "lastInteraction": 1772302134360,
+          "lastInteraction": 1772302970711,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1066,9 +1066,9 @@
       },
       "209773824357564416": {
         "safari": {
-          "currency": 315,
+          "currency": 453,
           "history": [],
-          "lastInteraction": 1772302132706,
+          "lastInteraction": 1772302969140,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
