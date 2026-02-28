@@ -5235,10 +5235,20 @@ async function processRoundResults(guildId, token, client, options = {}) {
         const customTerms = await getCustomTerms(guildId);
         const totalRounds = customTerms.totalRounds || 3;
         
-        // If currentRound > totalRounds, show reset interface (game completed)
+        // If currentRound > totalRounds, show reset interface (game completed) as ephemeral
         if (currentRound > totalRounds) {
             console.log(`🔄 DEBUG: Game completed (currentRound=${currentRound} > totalRounds=${totalRounds}), showing reset interface`);
-            return createResetInterface();
+            const resetData = createResetInterface();
+            // Send as ephemeral follow-up so only the admin sees the dangerous reset button
+            const { DiscordRequest } = await import('./utils.js');
+            await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {
+                method: 'POST',
+                body: {
+                    flags: (1 << 15) | 64, // IS_COMPONENTS_V2 + EPHEMERAL
+                    components: resetData.data.components
+                }
+            });
+            return null; // Factory will not update the deferred response
         }
         
         // Get round-specific good event probability using interpolation
