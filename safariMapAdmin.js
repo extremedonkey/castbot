@@ -249,24 +249,21 @@ async function createPlayerViewUI(guildId, userId) {
       custom_id: `map_admin_edit_currency_${userId}`,
       label: `Edit ${customTerms.currencyName}`,
       style: 2, // Secondary
-      emoji: { name: customTerms.currencyEmoji || '💰' },
-      disabled: !isInitialized
+      emoji: { name: customTerms.currencyEmoji || '💰' }
     },
     {
       type: 2, // Button
       custom_id: `map_admin_view_inventory_${userId}`,
       label: 'View Items',
       style: 2, // Secondary
-      emoji: { name: customTerms.inventoryEmoji || '🧰' },
-      disabled: !isInitialized
+      emoji: { name: customTerms.inventoryEmoji || '🧰' }
     },
     {
       type: 2, // Button
       custom_id: `map_admin_edit_items_${userId}`,
       label: 'Edit Items',
       style: 2, // Secondary
-      emoji: { name: '📦' },
-      disabled: !isInitialized
+      emoji: { name: '📦' }
     }
   ];
 
