@@ -661,14 +661,14 @@
     "serverName": "CastBot",
     "icon": "https://cdn.discordapp.com/icons/1331657596087566398/e2bd30d98992c902b50e047bf284ef64.webp",
     "ownerId": "391415444084490240",
-    "memberCount": 40,
+    "memberCount": 41,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1737562311909,
-    "lastUpdated": 1771041602357,
+    "lastUpdated": 1772406457983,
     "players": {
       "233762709932474370": {
         "emojiCode": "<:Geo:1396856830281388144>",
@@ -763,6 +763,11 @@
                   "from": null,
                   "to": "A6",
                   "timestamp": "2026-03-01T08:11:48.339Z"
+                },
+                {
+                  "from": "A6",
+                  "to": "A6",
+                  "timestamp": "2026-03-01T08:11:48.441Z"
                 }
               ],
               "startingLocation": "A6"
@@ -1125,7 +1130,7 @@
         "castlistIds": []
       },
       "1333822411912642630": {
-        "emoji": "🎖️",
+        "emoji": "🏪",
         "showPlayerEmojis": false,
         "color": "#FFFFFF",
         "analyticsName": "👑 Castbot MVPs",
@@ -1234,10 +1239,9 @@
         "castlistIds": []
       },
       "1335645031226277959": {
-        "emoji": "🧓",
+        "emoji": "🛠️",
         "showPlayerEmojis": false,
-        "color": null,
-        "analyticsName": "🧓 Ask 🧓",
+        "analyticsName": "Ask",
         "analyticsAdded": 1759422827344,
         "castlistIds": [
           "castlist_1762579473073_1331657596087566398",
@@ -11285,14 +11289,14 @@
     "serverName": "Servivorg S14 - FINAL FANTASY",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/189c3570ea34b3fbf3ee7b4d5989d32e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 576,
+    "memberCount": 577,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1772334453602,
+    "lastUpdated": 1772406454163,
     "ownerInfo": {
       "username": "serviver",
       "globalName": "Serviver",

@@ -36409,7 +36409,8 @@ Are you sure you want to continue?`;
         const hubData = await createCastlistHub(guildId, {
           message: `✅ Updated settings for ${tribe.emoji || ''} **${roleName}**`,
           selectedCastlistId: castlistId,
-          activeButton: 'add_tribe' // Keep tribe interface active
+          activeButton: 'add_tribe', // Keep tribe interface active
+          skipMemberFetch: true // Fast mode - emoji/color edit doesn't need member data
         }, client);
 
         return updateDeferredResponse(token, hubData);
