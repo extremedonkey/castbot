@@ -943,51 +943,7 @@
         "age": "60s",
         "vanityRoles": [
           "1434189625609551984"
-        ],
-        "safari": {
-          "currency": 453,
-          "history": [],
-          "lastInteraction": 1772302966271,
-          "achievements": [],
-          "inventory": {
-            "nurturer_361363": 1,
-            "territory_forager_404120": 1,
-            "nest_guardian_461600": 1,
-            "raider_499497": 1
-          },
-          "cooldowns": {},
-          "buttonUses": {},
-          "storeHistory": [],
-          "mapProgress": {
-            "map_7x7_1753981993871": {
-              "currentLocation": "G1",
-              "exploredCoordinates": [
-                "G1"
-              ],
-              "itemsFound": [],
-              "movementHistory": [
-                {
-                  "from": null,
-                  "to": "G1",
-                  "timestamp": "2026-02-28T16:26:42.107Z"
-                },
-                {
-                  "from": "G1",
-                  "to": "G1",
-                  "timestamp": "2026-02-28T16:26:42.128Z"
-                }
-              ]
-            }
-          },
-          "points": {
-            "stamina": {
-              "current": 1,
-              "maximum": 1,
-              "lastRegeneration": "2026-02-28T16:26:42.107Z",
-              "regenConfig": "hourly"
-            }
-          }
-        }
+        ]
       },
       "1100826875435163780": {
         "age": "16"
@@ -11290,14 +11246,14 @@
     "serverName": "Servivorg S14 - FINAL FANTASY",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/189c3570ea34b3fbf3ee7b4d5989d32e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 573,
+    "memberCount": 574,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1772301754131,
+    "lastUpdated": 1772306266377,
     "ownerInfo": {
       "username": "serviver",
       "globalName": "Serviver",

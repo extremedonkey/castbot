@@ -37921,15 +37921,16 @@ Are you sure you want to continue?`;
 
       console.log(`🚩 Set starting location for player ${targetUserId} to ${startingLocation}`);
 
-      // Return updated Player Admin view
+      // Update the existing ephemeral Player Admin panel in-place
       const { createMapAdminUI: createUIStartInfo } = await import('./safariMapAdmin.js');
       const uiStartInfo = await createUIStartInfo({
         guildId,
         userId: targetUserId,
         mode: 'player_view'
       });
+      delete uiStartInfo.flags; // Strip flags for UPDATE_MESSAGE (ephemeral inherited)
       return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        type: InteractionResponseType.UPDATE_MESSAGE,
         data: uiStartInfo
       });
 
