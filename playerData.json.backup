@@ -753,7 +753,39 @@
         "safari": {
           "mapProgress": {
             "map_7x7_1753981993871": {
+              "currentLocation": "A6",
+              "exploredCoordinates": [
+                "A6"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A6",
+                  "timestamp": "2026-03-01T08:11:48.339Z"
+                }
+              ],
               "startingLocation": "A6"
+            }
+          },
+          "currency": 100,
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "history": [],
+          "achievements": [],
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2026-03-01T08:11:48.339Z",
+              "regenConfig": "hourly"
             }
           }
         }
@@ -947,7 +979,7 @@
         "safari": {
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "startingLocation": "G2"
+              "startingLocation": "G1"
             }
           }
         }

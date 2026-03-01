@@ -36237,7 +36237,12 @@ Are you sure you want to continue?`;
       }
     } else if (custom_id.startsWith('tribe_edit_modal|')) {
       // Handle tribe edit modal submission from CastlistV3 Hub
-      // NEW: Uses pipe delimiters, no "remove" field (instant toggle instead)
+      // Uses deferred response to avoid 3-second timeout (member fetch + hub rebuild is slow)
+      const token = req.body.token;
+
+      // Immediately defer the update (prevents "interaction failed")
+      res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+
       try {
         const [prefix, roleId, castlistId] = custom_id.split('|');
         const guildId = req.body.guild_id;
@@ -36388,7 +36393,7 @@ Are you sure you want to continue?`;
 
         await savePlayerData(playerData);
 
-        // Return updated hub
+        // Update deferred response with the hub
         const { createCastlistHub } = await import('./castlistHub.js');
         const hubData = await createCastlistHub(guildId, {
           message: `✅ Updated settings for ${tribe.emoji || ''} **${roleName}**`,
@@ -36396,24 +36401,18 @@ Are you sure you want to continue?`;
           activeButton: 'add_tribe' // Keep tribe interface active
         }, client);
 
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: hubData
-        });
+        return updateDeferredResponse(token, hubData);
 
       } catch (error) {
         console.error('[CASTLIST] Error processing tribe edit modal:', error);
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
+        return updateDeferredResponse(token, {
+          components: [{
+            type: 17, // Container
             components: [{
-              type: 17, // Container
-              components: [{
-                type: 10, // Text Display
-                content: '❌ Error updating tribe settings. Please try again.'
-              }]
+              type: 10, // Text Display
+              content: '❌ Error updating tribe settings. Please try again.'
             }]
-          }
+          }]
         });
       }
     } else if (custom_id === 'age_modal' || custom_id === 'player_age_modal') {
