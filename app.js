@@ -6706,6 +6706,17 @@ To fix this:
           };
         }
       })(req, res, client);
+    // ── Player Card Menu (UI Mockup) — self-contained in playerCardMenu.js ──
+    } else if (custom_id.startsWith('pcard_')) {
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        updateMessage: true,
+        handler: async (context) => {
+          const { handlePlayerCardInteraction } = await import('./playerCardMenu.js');
+          return await handlePlayerCardInteraction(context);
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'attribute_management') {
       // Attribute Management Menu - displays server's custom attributes
       return ButtonHandlerFactory.create({

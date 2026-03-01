@@ -86,6 +86,13 @@ export const MENU_REGISTRY = {
                 label: 'Privacy Policy',
                 style: 2, // Secondary (Grey)
                 emoji: { name: '🔒' }
+              },
+              {
+                type: 2, // Button — Player Card Menu (UI Mockup)
+                custom_id: 'pcard_open',
+                label: 'Player Card',
+                style: 1, // Primary (Blue) — highlighted as new
+                emoji: { name: '🪪' }
               }
             ]
           }
