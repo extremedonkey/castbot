@@ -762,18 +762,18 @@
                 {
                   "from": null,
                   "to": "A6",
-                  "timestamp": "2026-03-01T08:11:48.339Z"
+                  "timestamp": "2026-03-01T23:24:38.444Z"
                 },
                 {
                   "from": "A6",
                   "to": "A6",
-                  "timestamp": "2026-03-01T08:11:48.441Z"
+                  "timestamp": "2026-03-01T23:24:38.492Z"
                 }
               ],
               "startingLocation": "A6"
             }
           },
-          "currency": 100,
+          "currency": 0,
           "inventory": {
             "nurturer_361363": 1,
             "territory_forager_404120": 1,
@@ -789,7 +789,7 @@
             "stamina": {
               "current": 1,
               "maximum": 1,
-              "lastRegeneration": "2026-03-01T08:11:48.339Z",
+              "lastRegeneration": "2026-03-01T23:24:38.444Z",
               "regenConfig": "hourly"
             }
           }

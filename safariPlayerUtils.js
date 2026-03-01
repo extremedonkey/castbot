@@ -9,13 +9,14 @@ import { loadSafariContent, getCustomTerms } from './safariManager.js';
 
 /**
  * Check if a player is initialized on Safari.
- * Single source of truth — a player is initialized when they have
- * safari data beyond just mapProgress.startingLocation.
+ * Single source of truth — a player is initialized when they have safari.points,
+ * which is ONLY set by initializePlayerOnMap() during explicit initialization.
+ * Currency and inventory can exist pre-initialization (via Edit Gil / Edit Items).
  */
 export function isPlayerInitialized(player) {
   const safari = player?.safari;
   if (!safari) return false;
-  return safari.currency !== undefined || safari.inventory !== undefined || safari.points !== undefined;
+  return safari.points !== undefined;
 }
 
 /**

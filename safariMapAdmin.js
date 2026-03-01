@@ -128,9 +128,9 @@ async function createPlayerViewUI(guildId, userId) {
   statusText += `**Player:** <@${userId}>\n`;
 
   // Show Safari-specific info
-  // A player is "initialized" when they have safari data beyond just mapProgress.startingLocation
-  // (startingLocation can persist across de-init)
-  const isInitialized = safari && (safari.currency !== undefined || safari.inventory !== undefined || safari.points !== undefined);
+  // A player is "initialized" when they have safari.points (set only by initializePlayerOnMap)
+  // Currency and inventory can exist pre-initialization via Edit Gil / Edit Items
+  const isInitialized = safari && safari.points !== undefined;
 
   if (isInitialized) {
     // Show current values for initialized players
