@@ -247,10 +247,15 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       const guild = tribes.length > 0 ? await client.guilds.fetch(guildId) : null;
 
       // OPTIONAL: Fetch guild members for player name display
-      // Skip for fast operations like switching castlists or removing tribes
+      // Skip for fast operations like tribe edit modal (emoji/color changes)
       if (guild && !skipMemberFetch) {
         try {
-          await guild.members.fetch({ timeout: 5000 }); // Reduced to 5 second timeout
+          // Use Promise.race for reliable timeout - guild.members.fetch timeout option
+          // uses gateway (OP 8) which can hang for 90+ seconds ignoring the timeout param
+          await Promise.race([
+            guild.members.fetch(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Member fetch timeout (3s)')), 3000))
+          ]);
           console.log(`[TRIBES] Successfully fetched ${guild.members.cache.size} members`);
         } catch (fetchError) {
           console.warn(`[TRIBES] Member fetch failed (continuing with cache): ${fetchError.message}`);

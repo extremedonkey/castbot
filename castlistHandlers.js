@@ -324,10 +324,9 @@ export async function handleCastlistSelect(req, res, client) {
       }
 
       // Display hub - tribes now always visible when castlist selected
-      // Skip member fetch for fast switching between castlists
+      // Fetch members for accurate tribe player counts (handler is deferred, 3s timeout in hub)
       const hubData = await createCastlistHub(context.guildId, {
-        selectedCastlistId: selectedCastlistId || null,
-        skipMemberFetch: true  // Fast mode - don't wait for member data
+        selectedCastlistId: selectedCastlistId || null
       }, context.client);
 
       return hubData;

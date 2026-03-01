@@ -753,44 +753,7 @@
         "safari": {
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "A6",
-              "exploredCoordinates": [
-                "A6"
-              ],
-              "itemsFound": [],
-              "movementHistory": [
-                {
-                  "from": null,
-                  "to": "A6",
-                  "timestamp": "2026-03-01T23:24:38.444Z"
-                },
-                {
-                  "from": "A6",
-                  "to": "A6",
-                  "timestamp": "2026-03-01T23:24:38.492Z"
-                }
-              ],
               "startingLocation": "A6"
-            }
-          },
-          "currency": 0,
-          "inventory": {
-            "nurturer_361363": 1,
-            "territory_forager_404120": 1,
-            "nest_guardian_461600": 1,
-            "raider_499497": 1
-          },
-          "history": [],
-          "achievements": [],
-          "cooldowns": {},
-          "buttonUses": {},
-          "storeHistory": [],
-          "points": {
-            "stamina": {
-              "current": 1,
-              "maximum": 1,
-              "lastRegeneration": "2026-03-01T23:24:38.444Z",
-              "regenConfig": "hourly"
             }
           }
         }
@@ -1145,10 +1108,10 @@
         "castlistId": "castlist_archive_1762702460277"
       },
       "1335645032891547670": {
-        "emoji": "🤷‍♀️",
+        "emoji": "🤬",
         "showPlayerEmojis": false,
-        "color": null,
-        "analyticsName": "🤷‍♀️ Any 🤷‍♀️",
+        "color": "#FFFFFF",
+        "analyticsName": "Any",
         "analyticsAdded": 1756021096260,
         "castlistIds": [
           "castlist_archive_1763881183636"
@@ -1410,7 +1373,10 @@
         "emoji": null,
         "displayName": null,
         "color": "#e74c3c",
-        "castlistIds": []
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "default"
       },
       "1382424526092107929": {
         "emoji": null,
@@ -1465,14 +1431,10 @@
       },
       "1436554090732720314": {
         "emoji": null,
-        "castlist": "saturdayLegacy",
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "FixLegacy",
-        "analyticsAdded": 1762573421940,
-        "castlistIds": [
-          "castlist_1762584620535_system"
-        ]
+        "analyticsAdded": 1762573421940
       },
       "1436597212715942058": {
         "emoji": "😮‍💨",
@@ -1529,14 +1491,10 @@
         "castlist": "Swap 5"
       },
       "1442045400746823741": {
-        "castlistIds": [
-          "default"
-        ],
         "emoji": null,
         "displayName": null,
         "color": "#e91e63",
-        "castlistId": "default",
-        "castlist": "default"
+        "castlistId": "default"
       }
     },
     "timezones": {
@@ -2539,7 +2497,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1763880923087,
+        "modifiedAt": 1772408956548,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -2684,25 +2642,6 @@
         "modifiedAt": 1762615309167,
         "modifiedBy": "system"
       },
-      "castlist_1762584620535_system": {
-        "id": "castlist_1762584620535_system",
-        "name": "saturdayLegacy",
-        "type": "system",
-        "createdAt": 1762584620535,
-        "createdBy": "migration",
-        "settings": {
-          "sortStrategy": "alphabetical",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public"
-        },
-        "metadata": {
-          "description": "Upgraded from legacy castlist 'saturdayLegacy'",
-          "emoji": "📋",
-          "migratedFrom": "virtual_c2F0dXJkYXlMZWdhY3k",
-          "migrationDate": 1762584620535
-        }
-      },
       "castlist_1762627269013_1331657596087566398": {
         "id": "castlist_1762627269013_1331657596087566398",
         "name": "My MVP",
@@ -2756,25 +2695,6 @@
           "emoji": "🏇",
           "description": "Woot!",
           "lastModified": 1762685819551
-        }
-      },
-      "castlist_1762686341708_1331657596087566398": {
-        "id": "castlist_1762686341708_1331657596087566398",
-        "name": "myNewTestCastlist",
-        "type": "custom",
-        "createdAt": 1762686341708,
-        "createdBy": "391415444084490240",
-        "settings": {
-          "sortStrategy": "placements_alpha",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public",
-          "seasonId": "season_83d410d017c64375"
-        },
-        "metadata": {
-          "emoji": "📋",
-          "description": "Woot!",
-          "lastModified": 1762686341708
         }
       },
       "castlist_archive_1762702460277": {
@@ -11289,14 +11209,14 @@
     "serverName": "Servivorg S14 - FINAL FANTASY",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/189c3570ea34b3fbf3ee7b4d5989d32e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 577,
+    "memberCount": 578,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1772406454163,
+    "lastUpdated": 1772407831077,
     "ownerInfo": {
       "username": "serviver",
       "globalName": "Serviver",
