@@ -351,7 +351,7 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = null, 
   }
 
   // Get default starting currency from config
-  const defaultCurrency = safariData[guildId]?.safariConfig?.defaultStartingCurrencyValue || 100;
+  const defaultCurrency = safariData[guildId]?.safariConfig?.defaultStartingCurrencyValue ?? 100;
 
   // Use universal safari initialization to ensure ALL required fields exist
   initializePlayerSafari(playerData, guildId, userId, defaultCurrency);

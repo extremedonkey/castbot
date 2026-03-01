@@ -4710,7 +4710,7 @@ async function getCustomTerms(guildId) {
             inventoryName: config.inventoryName || 'Inventory',
             currencyEmoji: config.currencyEmoji || '🪙',
             inventoryEmoji: config.inventoryEmoji || '🧰',
-            defaultStartingCurrencyValue: config.defaultStartingCurrencyValue || 100,
+            defaultStartingCurrencyValue: config.defaultStartingCurrencyValue ?? 100,
             defaultStartingCoordinate: config.defaultStartingCoordinate || 'A1',
 
             // Game settings - Challenge Game Logic
@@ -4806,7 +4806,8 @@ async function updateCustomTerms(guildId, terms) {
             safariData[guildId].safariConfig.inventoryEmoji = terms.inventoryEmoji || '🧰';
         }
         if (terms.defaultStartingCurrencyValue !== undefined) {
-            safariData[guildId].safariConfig.defaultStartingCurrencyValue = parseInt(terms.defaultStartingCurrencyValue) || 100;
+            const parsedCurrency = parseInt(terms.defaultStartingCurrencyValue);
+            safariData[guildId].safariConfig.defaultStartingCurrencyValue = isNaN(parsedCurrency) ? 100 : parsedCurrency;
         }
         if (terms.defaultStartingCoordinate !== undefined) {
             safariData[guildId].safariConfig.defaultStartingCoordinate = terms.defaultStartingCoordinate || 'A1';
@@ -6308,7 +6309,7 @@ async function resetGameData(guildId) {
         }
         
         // Get default starting currency value
-        const defaultCurrency = safariData[guildId].safariConfig.defaultStartingCurrencyValue || 100;
+        const defaultCurrency = safariData[guildId].safariConfig.defaultStartingCurrencyValue ?? 100;
         
         await saveSafariContent(safariData);
         

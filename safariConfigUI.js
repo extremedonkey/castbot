@@ -230,7 +230,7 @@ async function createCurrentSettingsDisplay(guildId, config) {
     display += `• Currency Emoji: ${currencyEmoji}\n`;
     display += `• Inventory Name: ${inventoryName}\n`;
     display += `• Inventory Emoji: ${inventoryEmoji}\n`;
-    display += `• Default Starting Currency: ${config.defaultStartingCurrencyValue || 100}\n\n`;
+    display += `• Default Starting Currency: ${config.defaultStartingCurrencyValue ?? 100}\n\n`;
 
     if (config.goodEventName || config.badEventName || config.goodEventEmoji || config.badEventEmoji) {
         display += `**☄️ Events**\n`;
