@@ -745,10 +745,7 @@
         "age": "36",
         "emojiCode": "<:ReeceBot:1396856819690766460>",
         "vanityRoles": [
-          "1434189671260491796",
-          "1333822411912642630",
-          "1368969349976821815",
-          "1415062472007749765"
+          "1442029382339268770"
         ],
         "safari": {
           "mapProgress": {
@@ -762,9 +759,7 @@
         "emojiCode": "<:Patrick:1396856834236747977>",
         "age": "20",
         "vanityRoles": [
-          "1368969348399632546",
-          "1333822411912642630",
-          "1379077934953922611"
+          "1442029356108091463"
         ]
       },
       "705936744595587112": {
@@ -898,9 +893,7 @@
         "emojiCode": "<:Belle:1382413449342091405>",
         "age": "28",
         "vanityRoles": [
-          "1333822411912642630",
-          "1368969348399632546",
-          "1379077934953922611"
+          "1442029382339268770"
         ]
       },
       "977455730300956683": {
@@ -921,9 +914,7 @@
       "208197633846542336": {
         "emojiCode": "<:DieselFuryy:1396856824904552609>",
         "vanityRoles": [
-          "1368969349976821815",
-          "1333822411912642630",
-          "1415062472007749765"
+          "1442029382339268770"
         ]
       },
       "235148962103951360": {},
@@ -970,9 +961,7 @@
       },
       "630470402900230146": {
         "vanityRoles": [
-          "1368969348399632546",
-          "1333822411912642630",
-          "1379077934953922611"
+          "1442029356108091463"
         ]
       },
       "719547106318352496": {
@@ -1382,13 +1371,17 @@
         "castlistIds": []
       },
       "1398904036643831818": {
-        "emoji": null,
         "displayName": null,
-        "color": "#e74c3c",
+        "color": "#E74C3C",
         "castlistIds": [
           "default"
         ],
-        "castlist": "default"
+        "castlist": "default",
+        "analyticsName": "Ivysaur Tribe",
+        "analyticsAdded": 1772417877380,
+        "showPlayerEmojis": true,
+        "memberCount": 7,
+        "emoji": "<:bulba:1420091115264278648>"
       },
       "1382424526092107929": {
         "emoji": null,
@@ -1697,8 +1690,8 @@
         "welcomeTitle": "Welcome!"
       },
       "config_1759634522896_391415444084490240": {
-        "buttonText": "Apply to S16 The NU Season",
-        "explanatoryText": "New things are happening!",
+        "buttonText": "Apply to Pokevivor",
+        "explanatoryText": "Gotta catch em all!",
         "completionDescription": "Thank you for completing your application! A host will review it soon.",
         "completionImage": null,
         "channelFormat": "📝%name%-app",
@@ -1708,9 +1701,9 @@
         "createdBy": "391415444084490240",
         "stage": "draft",
         "createdAt": 1759634522900,
-        "lastUpdated": 1759634522900,
+        "lastUpdated": 1772417805913,
         "seasonId": "season_cac1b81de8914c79",
-        "seasonName": "S16 The NU Season",
+        "seasonName": "Pokevivor",
         "questions": []
       },
       "config_1759672397657_391415444084490240": {
@@ -2489,7 +2482,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1772417437391,
+        "modifiedAt": 1772417846862,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -2683,6 +2676,25 @@
           "emoji": "💻",
           "description": "Testy",
           "lastModified": 1772416291262
+        }
+      },
+      "castlist_1772417960681_custom": {
+        "id": "castlist_1772417960681_custom",
+        "name": "OG Tribes",
+        "type": "custom",
+        "createdAt": 1772417960681,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "placements",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public",
+          "seasonId": "season_cac1b81de8914c79"
+        },
+        "metadata": {
+          "emoji": "<:pokeball:1420091124101419058>",
+          "description": "'Gotta catch em all",
+          "lastModified": 1772417960681
         }
       }
     },

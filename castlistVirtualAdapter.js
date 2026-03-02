@@ -324,15 +324,18 @@ export class CastlistVirtualAdapter {
     }
 
     // Check all 3 castlist formats for tribe matching
+    // IMPORTANT: Formats are checked with priority — once a modern format matches
+    // (or exists but doesn't match), legacy formats are skipped to avoid false positives
+    // from name collisions (e.g., two castlists both named "OG Tribes").
     for (const [roleId, tribe] of Object.entries(tribes)) {
       if (!tribe) continue; // Skip null/undefined tribe entries
 
-      // Format 1: Multi-castlist array (modern)
+      // Format 1: Multi-castlist array (modern) — authoritative when present
       if (tribe.castlistIds && Array.isArray(tribe.castlistIds)) {
         if (tribe.castlistIds.includes(castlistId)) {
           usingTribes.push(roleId);
-          continue;
         }
+        continue; // Skip legacy checks — castlistIds is the source of truth
       }
 
       // Format 2: Single castlistId (transitional)
@@ -341,8 +344,8 @@ export class CastlistVirtualAdapter {
         continue;
       }
 
-      // ✅ Format 3: Legacy string (match by name OR id for "default" special case)
-      // Special case: "default" castlist has id="default" but name="Active Castlist"
+      // Format 3: Legacy string (match by name OR id for "default" special case)
+      // Only reached if tribe has NO castlistIds array (truly legacy data)
       if (tribe.castlist && (tribe.castlist === castlist.name || tribe.castlist === castlist.id)) {
         usingTribes.push(roleId);
         continue;
