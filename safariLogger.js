@@ -353,17 +353,18 @@ export async function logAttack({ guildId, attackerId, attackerName, attackerDis
 export async function logCustomAction({ guildId, userId, username, displayName, location, actionType, actionId, buttonLabel = null, buttonEmoji = null, executedActions = [], success = true, errorMessage = null, channelName }) {
   console.log(`🦁 Safari Logger: logCustomAction called for ${actionType} ${actionId} by user ${userId} in guild ${guildId}`);
 
-  // Check if Safari logging is enabled
+  // Always write activity log entry (independent of Safari channel settings)
+  const activityDesc = await _buildActionActivityDesc(guildId, actionType, actionId, buttonLabel, buttonEmoji, executedActions);
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.action, activityDesc, { loc: location });
+
+  // Safari channel logging is gated by settings
   const logSettings = await getSafariLogSettings(guildId);
-  console.log(`🦁 Safari Logger: Log settings for guild ${guildId}:`, JSON.stringify(logSettings, null, 2));
 
   if (!logSettings?.enabled) {
-    console.log(`🦁 Safari Logger: Safari logging is disabled for guild ${guildId}`);
     return;
   }
 
   if (!logSettings.logTypes?.customActions) {
-    console.log(`🦁 Safari Logger: Custom actions logging is disabled for guild ${guildId}`);
     return;
   }
 
@@ -390,8 +391,6 @@ export async function logCustomAction({ guildId, userId, username, displayName, 
     summary = `Custom action: ${actionId}`;
   }
 
-  console.log(`🦁 Safari Logger: Calling logInteraction with action SAFARI_CUSTOM_ACTION`);
-
   await logInteraction(
     userId,
     guildId,
@@ -404,10 +403,6 @@ export async function logCustomAction({ guildId, userId, username, displayName, 
     displayName,
     safariContent
   );
-
-  // Build rich activity entry description
-  const activityDesc = await _buildActionActivityDesc(guildId, actionType, actionId, buttonLabel, buttonEmoji, executedActions);
-  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.action, activityDesc, { loc: location });
 }
 
 /**
