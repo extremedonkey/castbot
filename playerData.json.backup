@@ -1106,10 +1106,11 @@
           "castlist_1759638936214_system",
           "castlist_1762579720361_1331657596087566398",
           "castlist_archive_1762702460277",
-          "castlist_1772416072934_custom"
+          "castlist_1772416072934_custom",
+          "castlist_1772416291262_custom"
         ],
         "isVanity": true,
-        "castlist": "Claude's New CastList",
+        "castlist": "Claude's second CastList Test",
         "castlistId": "castlist_archive_1762702460277",
         "memberCount": 1
       },

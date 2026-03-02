@@ -63,20 +63,18 @@ export function populateTribeData(existingData = {}, role, castlistId, castlistN
  * @param {number} maxLength - Maximum character length (default 38)
  * @returns {string} Formatted player list
  */
-export function formatPlayerList(members, maxLength = 38) {
+export function formatPlayerList(members, maxLength = 300) {
   if (!members || members.length === 0) {
     return 'No players';
   }
 
-  const count = members.length;
   // Discord.js GuildMember structure: nickname > displayName > user.globalName > user.username
   let playerNames = members.map(m =>
     m.nickname || m.displayName || m.user?.globalName || m.user?.username || 'Unknown'
   );
 
-  // Build the initial string
-  let baseString = `${count} player${count !== 1 ? 's' : ''}: `;
-  let remaining = maxLength - baseString.length - 2; // Reserve 2 for ".."
+  // Names only, no count prefix (count is shown in the section header)
+  let remaining = maxLength - 2; // Reserve 2 for ".."
 
   let namesList = [];
   for (const name of playerNames) {
@@ -86,7 +84,6 @@ export function formatPlayerList(members, maxLength = 38) {
         namesList.push(name);
         remaining -= name.length;
       } else {
-        // Truncate first name if needed
         namesList.push(name.substring(0, remaining - 2) + '..');
         break;
       }
@@ -97,13 +94,12 @@ export function formatPlayerList(members, maxLength = 38) {
         namesList.push(name);
         remaining -= needed;
       } else {
-        // Can't fit, add ellipsis
         break;
       }
     }
   }
 
-  const result = baseString + namesList.join(', ');
+  const result = namesList.join(', ');
 
   // Add ellipsis if we didn't include all players
   if (namesList.length < playerNames.length) {
@@ -114,20 +110,29 @@ export function formatPlayerList(members, maxLength = 38) {
 }
 
 /**
+ * Sort strategy definitions - single source of truth for display names and emojis.
+ * Used by both the sort strategy select menu (castlistHandlers.js) and the hub display (castlistHub.js).
+ */
+export const SORT_STRATEGIES = {
+  'placements':      { label: 'Alphabetical (A-Z), then Placement', emoji: '🏅', description: 'Any eliminated players shown last' },
+  'vanity_role':     { label: 'Vanity Role (Winners)', emoji: '🏆', description: "Useful for Winners' castlist" },
+  'alphabetical':    { label: 'Alphabetical (A-Z), no placements', emoji: '🔤', description: 'Sort players by name' },
+  'placements_alpha':{ label: 'Placements, then Alphabetical (A-Z)', emoji: '📊', description: 'Placements first, then alphabetical' },
+  'reverse_alpha':   { label: 'Reverse Alphabetical (Z-A)', emoji: '🔤', description: 'Sort players by name in reverse' },
+  'age':             { label: 'Age', emoji: '🎂', description: 'Sort by player age' },
+  'timezone':        { label: 'Timezone', emoji: '🌍', description: 'Sort by timezone offset' },
+  'join_date':       { label: 'Join Date', emoji: '📅', description: 'Sort by server join date' },
+  'custom':          { label: 'Custom Order', emoji: '🔧', description: 'Manual custom ordering' },
+  'rankings':        { label: 'Rankings', emoji: '📈', description: 'Sort by ranking score' }
+};
+
+/**
  * Get sort strategy display name
  * @param {string} strategy - Sort strategy key
  * @returns {string} Human-readable strategy name
  */
 export function getSortStrategyName(strategy) {
-  const strategies = {
-    'placements': 'Placements',
-    'alphabetical': 'Alphabetical (A-Z), no placements',
-    'placements_alpha': 'Placements, then Alphabetical (A-Z)',
-    'custom': 'Custom Order',
-    'rankings': 'Rankings'
-  };
-
-  return strategies[strategy] || 'Default';
+  return SORT_STRATEGIES[strategy]?.label || 'Default';
 }
 
 /**

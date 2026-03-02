@@ -168,8 +168,11 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       container.components.push(managementButtons.buttonRow1.toJSON());
 
       // Add info text showing sort method and season (separator removed to save component budget)
-      const { getSortStrategyName } = await import('./utils/tribeDataUtils.js');
-      const sortStrategyName = getSortStrategyName(castlist.settings?.sortStrategy || 'placements');
+      const { getSortStrategyName, SORT_STRATEGIES } = await import('./utils/tribeDataUtils.js');
+      const sortKey = castlist.settings?.sortStrategy || 'placements';
+      const sortStrategy = SORT_STRATEGIES[sortKey];
+      const sortEmoji = sortStrategy?.emoji || '📋';
+      const sortStrategyName = getSortStrategyName(sortKey);
 
       // Get season information
       let seasonText = 'No Season';
@@ -189,8 +192,8 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       // Add info text then divider before tribes list
       container.components.push({
         type: 10, // Text Display
-        content: `-# • Tribes sorted by **${sortStrategyName}**\n` +
-                 `-# • Castlist is associated with **${seasonText}**`
+        content: `-# **Season**: ${seasonText}\n` +
+                 `-# **Sort Order**: ${sortEmoji} ${sortStrategyName}`
       });
       container.components.push({ type: 14, divider: true, spacing: 1 });
       container.components.push({
@@ -295,14 +298,19 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
           playerListText = '';
         } else {
           // Full fetch mode - show accurate member list
-          playerListText = formatPlayerList(members, 76);
+          playerListText = formatPlayerList(members);
         }
+
+        // Build header: "emoji TribeName (X Players)" or just "emoji TribeName" in fast mode
+        const memberCountText = (!skipMemberFetch && members.length > 0)
+          ? ` (${members.length} Player${members.length !== 1 ? 's' : ''})`
+          : '';
 
         const tribeSection = {
           type: 9, // Section
           components: [{
             type: 10, // Text Display
-            content: `${tribe.emoji || '🏕️'} **${roleName}**` +
+            content: `${tribe.emoji || '🏕️'} **${roleName}**${memberCountText}` +
                      (playerListText ? `\n-# ${playerListText}` : '')
           }]
         };

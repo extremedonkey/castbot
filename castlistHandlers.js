@@ -126,6 +126,17 @@ export async function createEditInfoModalForNew(guildId) {
     seasonOptions.unshift(...actualSeasonOptions);
   }
 
+  // Build sort options from shared SORT_STRATEGIES constant (single source of truth)
+  const { SORT_STRATEGIES: createSortStrategies } = await import('./utils/tribeDataUtils.js');
+  const createSortKeys = ['placements', 'vanity_role', 'alphabetical', 'placements_alpha'];
+  const createSortOptions = createSortKeys.map((key, i) => ({
+    label: createSortStrategies[key].label,
+    value: key,
+    description: createSortStrategies[key].description,
+    emoji: { name: createSortStrategies[key].emoji },
+    default: i === 0 // First option is default
+  }));
+
   // Create modal for new castlist using Components V2 with String Select
   const modalData = {
     custom_id: 'castlist_create_new_modal',
@@ -146,7 +157,7 @@ export async function createEditInfoModalForNew(guildId) {
         }
       },
 
-      // Sort Strategy (Label + String Select) - MOVED TO SECOND POSITION
+      // Sort Strategy (Label + String Select)
       {
         type: 18, // Label
         label: 'Castlist Sorting Method',
@@ -158,33 +169,7 @@ export async function createEditInfoModalForNew(guildId) {
           required: false,
           min_values: 1,
           max_values: 1,
-          options: [
-            {
-              label: 'Alphabetical (A-Z), then Placement',
-              value: 'placements',
-              description: 'Any eliminated players shown last',
-              emoji: { name: '🏅' },
-              default: true // Default option
-            },
-            {
-              label: 'Vanity Role (Winners)',
-              value: 'vanity_role',
-              description: "Useful for Winners' castlist",
-              emoji: { name: '🏆' }
-            },
-            {
-              label: 'Alphabetical (A-Z), no placements',
-              value: 'alphabetical',
-              description: 'Sort players by name',
-              emoji: { name: '🔤' }
-            },
-            {
-              label: 'Placements, then Alphabetical (A-Z)',
-              value: 'placements_alpha',
-              description: 'Placements first, then alphabetical',
-              emoji: { name: '📊' }
-            }
-          ]
+          options: createSortOptions
         }
       },
 
@@ -568,6 +553,19 @@ export async function handleCastlistButton(req, res, client, custom_id) {
         }
 
         // Always show Sort Strategy and Season selector
+        // Build sort options from shared SORT_STRATEGIES constant (single source of truth)
+        const { SORT_STRATEGIES } = await import('./utils/tribeDataUtils.js');
+        const sortSelectKeys = ['placements', 'vanity_role', 'alphabetical', 'placements_alpha'];
+        const sortOptions = sortSelectKeys.map(key => ({
+          label: SORT_STRATEGIES[key].label,
+          value: key,
+          description: SORT_STRATEGIES[key].description,
+          emoji: { name: SORT_STRATEGIES[key].emoji },
+          default: key === 'placements'
+            ? (castlist.settings?.sortStrategy === key || !castlist.settings?.sortStrategy)
+            : castlist.settings?.sortStrategy === key
+        }));
+
         modalComponents.push(
           // Sort Strategy (Label + String Select)
           {
@@ -581,36 +579,7 @@ export async function handleCastlistButton(req, res, client, custom_id) {
               required: false,
               min_values: 1,
               max_values: 1,
-              options: [
-                {
-                  label: 'Alphabetical (A-Z), then Placement',
-                  value: 'placements',
-                  description: 'Any eliminated players shown last',
-                  emoji: { name: '🏅' },
-                  default: castlist.settings?.sortStrategy === 'placements' || !castlist.settings?.sortStrategy
-                },
-                {
-                  label: 'Vanity Role (Winners)',
-                  value: 'vanity_role',
-                  description: "Useful for Winners' castlist",
-                  emoji: { name: '🏆' },
-                  default: castlist.settings?.sortStrategy === 'vanity_role'
-                },
-                {
-                  label: 'Alphabetical (A-Z), no placements',
-                  value: 'alphabetical',
-                  description: 'Sort players by name',
-                  emoji: { name: '🔤' },
-                  default: castlist.settings?.sortStrategy === 'alphabetical'
-                },
-                {
-                  label: 'Placements, then Alphabetical (A-Z)',
-                  value: 'placements_alpha',
-                  description: 'Placements first, then alphabetical',
-                  emoji: { name: '📊' },
-                  default: castlist.settings?.sortStrategy === 'placements_alpha'
-                }
-              ]
+              options: sortOptions
             }
           },
 
@@ -696,6 +665,17 @@ export async function handleCastlistButton(req, res, client, custom_id) {
         // Get current sort strategy
         const currentStrategy = castlist.settings?.sortStrategy || 'alphabetical';
 
+        // Build sort options from shared SORT_STRATEGIES constant
+        const { SORT_STRATEGIES: orderStrategies } = await import('./utils/tribeDataUtils.js');
+        const orderModalKeys = ['alphabetical', 'placements', 'vanity_role', 'reverse_alpha', 'age', 'timezone', 'join_date'];
+        const orderModalOptions = orderModalKeys.map(key => ({
+          label: orderStrategies[key].label,
+          value: key,
+          description: orderStrategies[key].description,
+          emoji: { name: orderStrategies[key].emoji },
+          default: currentStrategy === key
+        }));
+
         // Create modal with sort strategy selector
         return {
           type: 9, // Modal
@@ -720,57 +700,7 @@ export async function handleCastlistButton(req, res, client, custom_id) {
                   required: true,
                   min_values: 1,
                   max_values: 1,
-                  options: [
-                    {
-                      label: 'Alphabetical (A-Z)',
-                      value: 'alphabetical',
-                      description: 'Sort players by name',
-                      emoji: { name: '🔤' },
-                      default: currentStrategy === 'alphabetical'
-                    },
-                    {
-                      label: 'Alphabetical (A-Z), then Placement',
-                      value: 'placements',
-                      description: 'Any eliminated players shown last',
-                      emoji: { name: '🏅' },
-                      default: currentStrategy === 'placements'
-                    },
-                    {
-                      label: 'Vanity Role (Winners)',
-                      value: 'vanity_role',
-                      description: "Useful for Winners' castlist",
-                      emoji: { name: '🏆' },
-                      default: currentStrategy === 'vanity_role'
-                    },
-                    {
-                      label: 'Reverse Alphabetical (Z-A)',
-                      value: 'reverse_alpha',
-                      description: 'Sort players by name in reverse',
-                      emoji: { name: '🔤' },
-                      default: currentStrategy === 'reverse_alpha'
-                    },
-                    {
-                      label: 'Age',
-                      value: 'age',
-                      description: 'Sort by player age',
-                      emoji: { name: '🎂' },
-                      default: currentStrategy === 'age'
-                    },
-                    {
-                      label: 'Timezone',
-                      value: 'timezone',
-                      description: 'Sort by timezone offset',
-                      emoji: { name: '🌍' },
-                      default: currentStrategy === 'timezone'
-                    },
-                    {
-                      label: 'Join Date',
-                      value: 'join_date',
-                      description: 'Sort by server join date',
-                      emoji: { name: '📅' },
-                      default: currentStrategy === 'join_date'
-                    }
-                  ]
+                  options: orderModalOptions
                 }
               }
             ]
