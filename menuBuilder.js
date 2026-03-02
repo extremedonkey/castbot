@@ -64,8 +64,15 @@ export const MENU_REGISTRY = {
           },
           { type: 14 }, // Separator
           {
-            type: 1, // ActionRow for attributes + legal buttons
+            type: 1, // ActionRow for emojis + attributes
             components: [
+              {
+                type: 2, // Button - Add/Remove Emojis (moved from legacy tribes menu)
+                custom_id: 'prod_create_emojis',
+                label: 'Add/Remove Emojis',
+                style: 2, // Secondary (Grey)
+                emoji: { name: '😀' }
+              },
               {
                 type: 2, // Button - Attributes Management
                 custom_id: 'attribute_management',
@@ -73,6 +80,19 @@ export const MENU_REGISTRY = {
                 style: 2, // Secondary (Grey)
                 emoji: { name: '📊' }
               },
+              {
+                type: 2, // Button — Player Card Menu (UI Mockup)
+                custom_id: 'pcard_open',
+                label: 'Player Card',
+                style: 1, // Primary (Blue) — highlighted as new
+                emoji: { name: '🪪' }
+              }
+            ]
+          },
+          { type: 14 }, // Separator
+          {
+            type: 1, // ActionRow for legal
+            components: [
               {
                 type: 2, // Button
                 custom_id: 'prod_terms_of_service',
@@ -86,13 +106,6 @@ export const MENU_REGISTRY = {
                 label: 'Privacy Policy',
                 style: 2, // Secondary (Grey)
                 emoji: { name: '🔒' }
-              },
-              {
-                type: 2, // Button — Player Card Menu (UI Mockup)
-                custom_id: 'pcard_open',
-                label: 'Player Card',
-                style: 1, // Primary (Blue) — highlighted as new
-                emoji: { name: '🪪' }
               }
             ]
           }

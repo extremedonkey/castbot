@@ -7644,12 +7644,7 @@ To fix this:
                 .setCustomId('prod_clear_tribe')
                 .setLabel('Clear Tribe')
                 .setStyle(ButtonStyle.Secondary)
-                .setEmoji('🧹'),
-              new ButtonBuilder()
-                .setCustomId('prod_create_emojis')
-                .setLabel('Add/Remove Emojis')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('😀')
+                .setEmoji('🧹')
             );
 
           // Create Components V2 Container
