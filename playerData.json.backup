@@ -11661,6 +11661,18 @@
               "type": "item",
               "desc": "Picked up 🧪 Health Potion x1",
               "loc": "Unknown"
+            },
+            {
+              "t": 1772447617447,
+              "type": "item",
+              "desc": "Picked up <:materia:1452959371125461133> Thunder Materia x1",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772447617447,
+              "type": "action",
+              "desc": "<:ff_chest:1462821702278058055> Open Chest\n> • Text: \"...  it makes a loud creaking sound. You look inside..\"\n> • Give Item: <:materia:1452959371125461133> Thunder Materia (x1)",
+              "loc": "C3"
             }
           ],
           "lastInteraction": 1772445354916,
@@ -11679,6 +11691,10 @@
               "numAttacksAvailable": 0
             },
             "health_potion_759053": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "thunder_materia_704996": {
               "quantity": 1,
               "numAttacksAvailable": 0
             }
@@ -11755,6 +11771,18 @@
               "type": "init",
               "desc": "Initialized at C3 with 100 Gil",
               "loc": "C3"
+            },
+            {
+              "t": 1772446836985,
+              "type": "item",
+              "desc": "Picked up <:materia:1452959371125461133> Thunder Materia x1",
+              "loc": "C3"
+            },
+            {
+              "t": 1772446836985,
+              "type": "action",
+              "desc": "Safari button: open_chest_1769240989056",
+              "loc": "C3"
             }
           ],
           "mapProgress": {
@@ -11781,7 +11809,7 @@
           },
           "inventory": {
             "thunder_materia_704996": {
-              "quantity": 1,
+              "quantity": 2,
               "numAttacksAvailable": 0
             }
           },

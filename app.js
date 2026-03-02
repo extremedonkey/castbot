@@ -1720,7 +1720,7 @@ const processedInteractions = new Map();
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 /**
- * DISABLED 2025-11-06: Created channels in all guilds - see RaP/0980 for alternatives
+ * DISABLED 2025-11-06: Created channels in all guilds - see docs/01-RaP/0980 for alternatives
  * Upload all tip images to Discord storage channel and get CDN URLs
  * Follows Safari's uploadImageToDiscord pattern for stable, permanent URLs
  * @param {Guild} guild - Discord guild object
@@ -1801,7 +1801,7 @@ async function getTipImageUrls(guild) {
 */ // END DISABLED getTipImageUrls
 
 /**
- * DISABLED 2025-11-06: Part of tips gallery - see RaP/0980 for alternatives
+ * DISABLED 2025-11-06: Part of tips gallery - see docs/01-RaP/0980 for alternatives
  * Generate paginated tips screen showing one screenshot at a time
  * Uses Discord CDN URLs from uploaded images (Safari pattern)
  * Pattern: Similar to castRankingManager navigation (stateless pagination)

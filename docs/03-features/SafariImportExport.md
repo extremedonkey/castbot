@@ -394,9 +394,9 @@ Safari Import/Export enables full Safari template portability between servers. U
 - [Safari Map System](./SafariMapSystem.md) - Map creation and management
 - [Safari Custom Actions](./Challenges.md) - Custom Actions framework
 - Implementation History:
-  - [SafariImportMapIDMismatch.md](../implementation/SafariImportMapIDMismatch.md) - Ghost map bug analysis
-  - [SafariCustomActionsImportExport.md](../implementation/SafariCustomActionsImportExport.md) - Original design doc
-  - [SafariCustomActionsImportExport_GapsAnalysis.md](../implementation/SafariCustomActionsImportExport_GapsAnalysis.md) - Gaps analysis
+  - [SafariImportMapIDMismatch.md](../02-implementation-wip/SafariImportMapIDMismatch.md) - Ghost map bug analysis
+  - [SafariCustomActionsImportExport.md](../02-implementation-wip/SafariCustomActionsImportExport.md) - Original design doc
+  - [SafariCustomActionsImportExport_GapsAnalysis.md](../02-implementation-wip/SafariCustomActionsImportExport_GapsAnalysis.md) - Gaps analysis
 
 ---
 

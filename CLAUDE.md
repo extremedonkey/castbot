@@ -384,38 +384,27 @@ Bot not responding?
 
 ## 📚 Feature Documentation Index
 
-**🚧 Current Work in Progress:**
-- **SAFARI CUSTOM EXPERIENCES** → [docs/03-features/Challenges.md](docs/03-features/Challenges.md) - Configurable challenge system via Custom Actions
-- **🎯 CASTLIST V3 REDESIGN** → [docs/03-features/CastlistV3.md](docs/03-features/CastlistV3.md) - Complete castlist system overhaul
-- **ACTIVE SEASON SYSTEM** → [docs/concepts/SeasonLifecycle.md](docs/concepts/SeasonLifecycle.md)
-- **SEASON INTEGRATION** → [docs/03-features/CastlistV3-SeasonIntegration.md](docs/03-features/CastlistV3-SeasonIntegration.md)
-- **SEASON SELECTOR** → Reusable component in `seasonSelector.js`
-- **CHANGE SEASON BUTTON** → Production Menu header accessory
-
 **Core Systems:**
-- **📋 CASTLIST ARCHITECTURE** (PARENT DOC) → [docs/03-features/CastlistArchitecture.md](docs/03-features/CastlistArchitecture.md) - Complete castlist system reference
-- **🦁 SAFARI SYSTEM** → [docs/03-features/Safari.md](docs/03-features/Safari.md)
-- **📋 SEASON APPLICATIONS** → [docs/03-features/SeasonAppBuilder.md](docs/03-features/SeasonAppBuilder.md)
+- **📋 CASTLIST** → [docs/03-features/CastlistArchitecture.md](docs/03-features/CastlistArchitecture.md) - Castlist system reference (parent doc)
+- **🦁 SAFARI** → [docs/03-features/Safari.md](docs/03-features/Safari.md) - Safari system overview
+- **📝 SEASON APPLICATIONS** → [docs/03-features/SeasonAppBuilder.md](docs/03-features/SeasonAppBuilder.md)
 - **🏆 CAST RANKING** → [docs/03-features/CastRanking.md](docs/03-features/CastRanking.md)
-- **🥇 CASTLIST V3** → [docs/03-features/CastlistV3-AlumniPlacements.md](docs/03-features/CastlistV3-AlumniPlacements.md)
+- **🧑‍🤝‍🧑 PLAYER MANAGEMENT** → [playerManagement.js](playerManagement.js) - Pronouns, timezones, age, vanity roles, attributes display
+- **🥇 CASTLIST V3** → [docs/03-features/CastlistV3.md](docs/03-features/CastlistV3.md) - Castlist system overhaul
+- **📅 SEASONS** → [docs/concepts/SeasonLifecycle.md](docs/concepts/SeasonLifecycle.md) - Season lifecycle and integration
 
 **Safari Subsystems:**
-- **CUSTOM ACTIONS** → [docs/03-features/SafariCustomActions.md](docs/03-features/SafariCustomActions.md) - Dynamic, configurable action system (triggers, drops, workflows)
-- **PLAYER COMMANDS** → [docs/03-features/PlayerCommands.md](docs/03-features/PlayerCommands.md) - Text-based Custom Action invocation system
-- **PLAYER MENU ACTIONS** → [docs/03-features/PlayerMenuActions.md](docs/03-features/PlayerMenuActions.md) - Custom Actions accessible from player /menu
-- **MAP EXPLORER** → [docs/03-features/SafariMapExplorer.md](docs/03-features/SafariMapExplorer.md)
-- **MAP SYSTEM** → [docs/03-features/SafariMapSystem.md](docs/03-features/SafariMapSystem.md) - User/admin guide
-- **MAP TECHNICAL** → [docs/03-features/SafariMapTechnical.md](docs/03-features/SafariMapTechnical.md) - Developer reference
-- **MAP MOVEMENT** → [docs/03-features/SafariMapMovement.md](docs/03-features/SafariMapMovement.md)
-- **IMPORT/EXPORT** → [docs/03-features/SafariImportExport.md](docs/03-features/SafariImportExport.md) - Full Safari template portability
-- **POINTS SYSTEM** → [docs/03-features/Attributes.md](docs/03-features/Attributes.md)
-- **SAFARI PROGRESS** → [docs/03-features/SafariProgress.md](docs/03-features/SafariProgress.md)
-- **PLAYER LOCATIONS** → [docs/03-features/PlayerLocationManager.md](docs/03-features/PlayerLocationManager.md)
-- **WHISPER SYSTEM** → [docs/03-features/WhisperSystem.md](docs/03-features/WhisperSystem.md)
-- **STORE MANAGEMENT** → [docs/03-features/StoreManagementArchitecture.md](docs/03-features/StoreManagementArchitecture.md)
-- **GLOBAL STORES** (NEW) → Permanent stores in player /menu
-- **ROUNDS MENU** (NEW) → Dedicated round management interface
-- **STOCK MANAGEMENT** (NEW) → Store inventory limits with per-item stock tracking
+- **⚡ CUSTOM ACTIONS** → [docs/03-features/SafariCustomActions.md](docs/03-features/SafariCustomActions.md) - Dynamic action system (triggers, drops, workflows)
+- **🏃 CHALLENGES** → [docs/03-features/Challenges.md](docs/03-features/Challenges.md) - Configurable challenge/rounds system (decoupled from map)
+- **🏪 STORES** → [docs/03-features/StoreManagementArchitecture.md](docs/03-features/StoreManagementArchitecture.md) - Store management, global stores, stock limits
+- **📦 ITEMS** → [docs/03-features/SafariImportExport.md](docs/03-features/SafariImportExport.md) - Items, stock management, import/export
+- **📊 ATTRIBUTES** → [docs/03-features/Attributes.md](docs/03-features/Attributes.md) - Player stats, resources, regeneration
+- **🗺️ MAP** → [docs/03-features/SafariMapSystem.md](docs/03-features/SafariMapSystem.md) - Map system ([Technical](docs/03-features/SafariMapTechnical.md), [Explorer](docs/03-features/SafariMapExplorer.md), [Movement](docs/03-features/SafariMapMovement.md))
+- **💬 WHISPER** → [docs/03-features/WhisperSystem.md](docs/03-features/WhisperSystem.md)
+- **⌨️ PLAYER COMMANDS** → [docs/03-features/PlayerCommands.md](docs/03-features/PlayerCommands.md) - Text-based Custom Action invocation
+- **🎯 PLAYER MENU ACTIONS** → [docs/03-features/PlayerMenuActions.md](docs/03-features/PlayerMenuActions.md) - Custom Actions in player /menu
+- **📍 PLAYER LOCATIONS** → [docs/03-features/PlayerLocationManager.md](docs/03-features/PlayerLocationManager.md)
+- **🔄 SAFARI PROGRESS** → [docs/03-features/SafariProgress.md](docs/03-features/SafariProgress.md)
 
 **Infrastructure & Deployment:**
 - **🌍 INFRASTRUCTURE ARCHITECTURE** → [docs/infrastructure/InfrastructureArchitecture.md](docs/infrastructure/InfrastructureArchitecture.md)

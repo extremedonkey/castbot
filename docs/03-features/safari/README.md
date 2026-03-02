@@ -62,13 +62,13 @@ The Safari system is CastBot's comprehensive interactive content framework for D
 - Future enhancements
 
 ### 🔀 Conditional Logic System
-**[SafariConditionalLogicPlan.md](../../implementation/SafariConditionalLogicPlan.md)** - Complete redesign plan
+**[SafariConditionalLogicPlan.md](../../02-implementation-wip/SafariConditionalLogicPlan.md)** - Complete redesign plan
 - Visual condition builder
 - AND/OR logic support
 - Currency/Item/Role conditions
 - Implementation strategy
 
-**[ConditionalLogicImplementation.md](../../implementation/ConditionalLogicImplementation.md)** - Technical implementation guide
+**[ConditionalLogicImplementation.md](../../02-implementation-wip/ConditionalLogicImplementation.md)** - Technical implementation guide
 - Button registration
 - UI components
 - Evaluation engine
@@ -142,7 +142,7 @@ The Safari system is CastBot's comprehensive interactive content framework for D
 5. Implement rewards
 
 ### Building Interactive Content
-1. Create conditional buttons (see [Conditional Logic](../../implementation/SafariConditionalLogicPlan.md))
+1. Create conditional buttons (see [Conditional Logic](../../02-implementation-wip/SafariConditionalLogicPlan.md))
 2. Chain actions together
 3. Add random outcomes
 4. Implement item effects

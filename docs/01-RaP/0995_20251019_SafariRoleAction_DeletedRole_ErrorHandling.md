@@ -894,8 +894,8 @@ This solution embodies **Lean UI Design principles**:
 
 ## 🔗 Related Documentation
 
-- [Safari Custom Experiences](../features/Challenges.md) - Custom Actions framework
-- [Safari Map System](../features/SafariMapSystem.md) - Anchor message architecture
+- [Safari Custom Experiences](../03-features/Challenges.md) - Custom Actions framework
+- [Safari Map System](../03-features/SafariMapSystem.md) - Anchor message architecture
 - [Lean UI Design](../ui/LeanUserInterfaceDesign.md) - UX principles applied here
 - [Error Handling Patterns](../standards/ErrorHandlingPatterns.md) - (Future) Generalized patterns
 

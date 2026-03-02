@@ -5,7 +5,7 @@
 **Status**: 🟢 PRODUCTION READY (with known issues)
 **Created**: November 2024
 **Category**: Season Management
-**Related Systems**: [Season Lifecycle](../concepts/SeasonLifecycle.md), [Castlist V3](CastlistV3.md), [Tribe Manager](../implementation/TribeManager.md)
+**Related Systems**: [Season Lifecycle](../concepts/SeasonLifecycle.md), [Castlist V3](CastlistV3.md), [Tribe Manager](../02-implementation-wip/TribeManager.md)
 
 The Tribe Swap/Merge system enables dramatic tribe reorganizations during active seasons, automatically reassigning players to new tribes with optional dramatic reveal ceremonies and maintaining historical records through castlist archival.
 
@@ -643,7 +643,7 @@ tail -f /tmp/castbot-dev.log | grep "🔀 \[TRIBE SWAP\]"
 
 - **[Season Lifecycle](../concepts/SeasonLifecycle.md)** - Season management concepts
 - **[Castlist V3](CastlistV3.md)** - Castlist system architecture
-- **[Tribe Manager](../implementation/TribeManager.md)** - Original tribe management design
+- **[Tribe Manager](../02-implementation-wip/TribeManager.md)** - Original tribe management design
 - **[Components V2](../standards/ComponentsV2.md)** - Modal and component structure
 - **[Button Handler Factory](../enablers/ButtonHandlerFactory.md)** - Button implementation
 

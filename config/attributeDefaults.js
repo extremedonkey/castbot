@@ -5,7 +5,7 @@
  * Servers can create custom attributes, but these are the "built-in" presets
  * that servers can enable without needing to configure from scratch.
  *
- * @see /RaP/0964_20260109_AttributeSystem_Analysis.md
+ * @see /docs/01-RaP/0964_20260109_AttributeSystem_Analysis.md
  */
 
 /**

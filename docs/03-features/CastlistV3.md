@@ -202,7 +202,7 @@ Features that were designed but never built:
 - 4 additional sort strategies (Reverse Alpha, Age, Timezone, Join Date)
 - Create New Castlist entry point in dropdown
 
-See [docs/02-implementation-wip/CastlistV3_legacyRetirement.md](../implementation/CastlistV3_legacyRetirement.md) for planned work.
+See [docs/02-implementation-wip/CastlistV3_legacyRetirement.md](../02-implementation-wip/CastlistV3_legacyRetirement.md) for planned work.
 
 ## 📦 Key Implementation Files
 
@@ -302,7 +302,7 @@ const stats = await castlistManager.getMigrationStats(guildId);
 ## 📚 Related Documentation
 
 - **Technical Details**: [CastlistV3-DataStructures.md](CastlistV3-DataStructures.md)
-- **Legacy Retirement**: [docs/02-implementation-wip/CastlistV3_legacyRetirement.md](../implementation/CastlistV3_legacyRetirement.md)
+- **Legacy Retirement**: [docs/02-implementation-wip/CastlistV3_legacyRetirement.md](../02-implementation-wip/CastlistV3_legacyRetirement.md)
 - **Architecture**: [docs/architecture/CastlistArchitecture.md](../architecture/CastlistArchitecture.md)
 - **Feature Status**: [CastlistV3-FeatureStatus.md](CastlistV3-FeatureStatus.md)
 
