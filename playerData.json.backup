@@ -2550,23 +2550,6 @@
           "lastModified": 1762579720361
         }
       },
-      "castlist_archive_1762682582653": {
-        "id": "castlist_archive_1762682582653",
-        "name": "CastBotVivor OG Tribes",
-        "type": "custom",
-        "createdAt": 1762682582653,
-        "createdBy": "391415444084490240",
-        "seasonId": "season_d429753b4ad9414d",
-        "metadata": {
-          "description": "Archived from tribe swap on 11/9/2025",
-          "emoji": "🔄️"
-        },
-        "settings": {
-          "sortStrategy": "placements"
-        },
-        "modifiedAt": 1762732207010,
-        "modifiedBy": "391415444084490240"
-      },
       "castlist_archive_1762702460277": {
         "id": "castlist_archive_1762702460277",
         "name": "Swap 2",
@@ -2607,25 +2590,6 @@
         },
         "modifiedAt": 1772415833504,
         "modifiedBy": "391415444084490240"
-      },
-      "castlist_1772416072934_custom": {
-        "id": "castlist_1772416072934_custom",
-        "name": "Claude's New CastList",
-        "type": "custom",
-        "createdAt": 1772416072934,
-        "createdBy": "391415444084490240",
-        "settings": {
-          "sortStrategy": "placements",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public",
-          "seasonId": "season_ab9fe786206f428e"
-        },
-        "metadata": {
-          "emoji": "🤖",
-          "description": "Domou arigatou Mr Roboto",
-          "lastModified": 1772416072934
-        }
       },
       "castlist_1772416291262_custom": {
         "id": "castlist_1772416291262_custom",

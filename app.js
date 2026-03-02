@@ -21042,110 +21042,63 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'prod_create_emojis') {
-      // Show emoji generation/removal interface
-      try {
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        
-        // Get emoji counts and limits
-        const emojis = await guild.emojis.fetch();
-        const staticCount = emojis.filter(e => !e.animated).size;
-        const animatedCount = emojis.filter(e => e.animated).size;
-        
-        // Calculate emoji limits based on server boost level
-        let staticLimit = 50;
-        let animatedLimit = 50;
-        
-        if (guild.premiumTier === 1) {
-          staticLimit = 100;
-          animatedLimit = 100;
-        } else if (guild.premiumTier === 2) {
-          staticLimit = 150;
-          animatedLimit = 150; 
-        } else if (guild.premiumTier === 3) {
-          staticLimit = 250;
-          animatedLimit = 250;
-        }
-        
-        // Get all roles in the server (excluding @everyone)
-        const roles = await guild.roles.fetch();
-        const selectableRoles = roles.filter(role => role.id !== guild.id && !role.managed)
-          .sort((a, b) => b.position - a.position)
-          .first(25); // Discord select menu limit
-        
-        if (selectableRoles.size === 0) {
-          const errorContainer = {
-            type: 17, // Container component
-            accent_color: 0xFF6B6B, // Red accent color for error
-            components: [
-              {
-                type: 10, // Text Display component
-                content: `## Create or Remove Player Emojis\n\nNo selectable roles found in this server.`
-              }
-            ]
+      return ButtonHandlerFactory.create({
+        id: 'prod_create_emojis',
+        updateMessage: true,
+        handler: async (context) => {
+          const { guildId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
+
+          // Get emoji counts and limits
+          const emojis = await guild.emojis.fetch();
+          const staticCount = emojis.filter(e => !e.animated).size;
+          const animatedCount = emojis.filter(e => e.animated).size;
+          const limits = { 0: 50, 1: 100, 2: 150, 3: 250 };
+          const emojiLimit = limits[guild.premiumTier] || 50;
+
+          // Check for selectable roles
+          const roles = await guild.roles.fetch();
+          const hasRoles = roles.some(role => role.id !== guild.id && !role.managed);
+
+          if (!hasRoles) {
+            return {
+              components: [{
+                type: 17, accent_color: 0xe74c3c,
+                components: [
+                  { type: 10, content: '## 😀 Add/Remove Emojis' },
+                  { type: 14 },
+                  { type: 10, content: '❌ No selectable roles found in this server.' },
+                  { type: 14 },
+                  { type: 1, components: [{ type: 2, custom_id: 'prod_setup', label: '← Tools', style: 2 }] }
+                ]
+              }]
+            };
+          }
+
+          return {
+            components: [{
+              type: 17, accent_color: 0x7ED321,
+              components: [
+                { type: 10, content: '## 😀 Add/Remove Emojis' },
+                { type: 14 },
+                { type: 10, content: `Select a role (tribe) to auto-create emojis from player avatars for rankings, fan favourite, etc.\n\n\`${staticCount}/${emojiLimit}\` static | \`${animatedCount}/${emojiLimit}\` animated\n\n💡 To remove CastBot-created emojis, select the same role again.` },
+                { type: 14 },
+                { type: 10, content: '> **`🎭 Select Role`**' },
+                {
+                  type: 1,
+                  components: [{
+                    type: 6, // Role Select
+                    custom_id: 'prod_emoji_role_select',
+                    placeholder: 'Select a role to generate/clear emojis for'
+                  }]
+                },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, custom_id: 'prod_setup', label: '← Tools', style: 2 }] }
+              ]
+            }]
           };
-          
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
-              components: [errorContainer]
-            }
-          });
         }
-        
-        // Create role select menu
-        const roleSelect = new RoleSelectMenuBuilder()
-          .setCustomId('prod_emoji_role_select')
-          .setPlaceholder('Select a role to generate/clear emojis for')
-          .setMinValues(1)
-          .setMaxValues(1);
-        
-        const row = new ActionRowBuilder()
-          .addComponents(roleSelect);
-        
-        // Create Components V2 Container with all emoji management content
-        const emojiContainer = {
-          type: 17, // Container component
-          accent_color: 0x7ED321, // Green accent color
-          components: [
-            {
-              type: 10, // Text Display component
-              content: `## Create or Remove Player Emojis
-
-Select a role (tribe) in your server. CastBot will then automatically create emojis in your server based on each player's avatar, that can be used for trust rankings, fan favourite, etc.
-
-Your server emoji limits are as follows:
-\`${staticCount}/${staticLimit}\` static emojis
-\`${animatedCount}/${animatedLimit}\` animated emojis
-
-If you need more emoji space, delete existing ones from Server Settings > Emojis. If you want to remove castbot-created emojis, do it from this menu rather than manually.`
-            },
-            {
-              type: 14 // Separator
-            },
-            row.toJSON() // Role select menu ActionRow
-          ]
-        };
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
-            components: [emojiContainer]
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error in prod_create_emojis:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error loading emoji generation interface.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id.startsWith('admin_set_pronouns_') || custom_id.startsWith('admin_set_timezone_') || custom_id.startsWith('admin_set_age_') || custom_id.startsWith('admin_manage_vanity_') || custom_id.startsWith('admin_set_attributes_')) {
       // 🔘 Convert to ButtonHandlerFactory
       return ButtonHandlerFactory.create({

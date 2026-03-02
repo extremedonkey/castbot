@@ -443,6 +443,25 @@ export const BUTTON_REGISTRY = {
     parent: 'admin_set_attributes_*'
   },
 
+  // === EMOJI MANAGEMENT ===
+  'prod_create_emojis': {
+    label: 'Add/Remove Emojis',
+    description: 'Auto-create or remove player emojis from role members',
+    emoji: '😀',
+    style: 'Secondary',
+    category: 'admin',
+    parent: 'prod_setup'
+  },
+  'prod_emoji_role_select': {
+    label: 'Emoji Role Select',
+    description: 'Select a role to generate or clear emojis for',
+    emoji: '🎭',
+    style: 'Secondary',
+    category: 'admin',
+    type: 'select_menu',
+    parent: 'prod_create_emojis'
+  },
+
   // === TRIBES (LEGACY) ===
   'prod_manage_tribes': {
     label: 'Tribes (Legacy)',
