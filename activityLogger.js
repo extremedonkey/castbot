@@ -341,7 +341,7 @@ async function generatePlayerOverlay(guildId, userId, client) {
       overlays.push({ input: buf, top: pos.top, left: pos.left });
     }
 
-    // Current location — bright green
+    // Current location — bright orange
     {
       const pos = coordToPosition(currentLocation);
       const buf = await sharp({
@@ -349,7 +349,7 @@ async function generatePlayerOverlay(guildId, userId, client) {
           width: Math.floor(cellWidth),
           height: Math.floor(cellHeight),
           channels: 4,
-          background: { r: 0, g: 200, b: 80, alpha: 0.45 }
+          background: { r: 255, g: 165, b: 0, alpha: 0.5 }
         }
       }).png().toBuffer();
       overlays.push({ input: buf, top: pos.top, left: pos.left });
@@ -465,7 +465,7 @@ export async function createActivityLogUI({ guildId, userId, playerName, page = 
         // Legend
         components.push({
           type: 10, // TextDisplay
-          content: '🟦 Visited · 🟩 Current Location · ⬜ Not visited'
+          content: '🟦 Visited · 🟧 Current Location · ⬜ Not visited'
         });
 
         components.push({ type: 14 }); // Separator
