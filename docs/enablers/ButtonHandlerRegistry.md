@@ -8,12 +8,12 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | Custom ID | Label | Location | Handler Function | Status |
 |-----------|-------|----------|------------------|--------|
 | `prod_setup` | 🪛 Tools | menuBuilder.js:~12 | MenuBuilder | ✅ Active |
-| `prod_manage_tribes` | 🔥 Manage Tribes | app.js:~3400 | Direct handler | ✅ Active |
+| ~~`prod_manage_tribes`~~ | ~~🔥 Manage Tribes~~ | ~~app.js:~3400~~ | ~~Direct handler~~ | 🗑️ Removed — replaced by `reeces_stuff` (Reece's Stuff in Tools). See [CastlistV3.md](../features/CastlistV3.md) |
 | `admin_manage_player` | 🧑‍🤝‍🧑 Manage Players | app.js:~3500 | Direct handler | ✅ Active |
 | `prod_season_applications` | 📝 Season Applications | app.js:~3600 | Direct handler | ✅ Active |
 | `prod_setup_tycoons` | 💰 Tycoons | app.js:~3700 | Direct handler | ✅ Active |
 | `prod_player_menu` | 👤 My Profile | app.js:~4797 | Direct handler | ✅ Active |
-| `reece_stuff_menu` | 😌 Reece Stuff | app.js:~4022 | Direct handler | ✅ Active |
+| `analytics_admin` (was `reece_stuff_menu`) | 📊 Analytics Admin | app.js:~4022 | Direct handler | ✅ Active |
 
 ### **Tools Menu Buttons** (Accessed via prod_setup)
 | Custom ID | Label | Location | Handler Function | Status |
@@ -23,7 +23,7 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `prod_ban_react` | 🎯 Post React for Ban | app.js | ButtonHandlerFactory | ✅ Active |
 | `prod_availability` | 🕐 Availability | app.js:~6425 | ButtonHandlerFactory | ✅ Active |
 
-### **Reece Stuff Submenu Buttons**
+### **Analytics Admin Submenu Buttons** (was "Reece Stuff")
 | Custom ID | Label | Location | Handler Function | Status |
 |-----------|-------|----------|------------------|--------|
 | `prod_analytics_dump` | 📊 Analytics | app.js:~4315 | Direct handler | ✅ Active |

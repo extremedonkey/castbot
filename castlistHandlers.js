@@ -31,14 +31,26 @@ export async function twoPhaseHubResponse(token, guildId, hubOptions, client, fl
   const { updateDeferredResponse } = await import('./buttonHandlerFactory.js');
 
   if (flags.roleRenamed) {
-    // Role renamed: skip Phase 1, wait for GUILD_ROLE_UPDATE to reach user's client,
-    // then send a single full response. This avoids "poisoning" the Role Select
-    // with stale data before the gateway event propagates.
-    console.log('[CASTLIST] Role renamed — skipping Phase 1, waiting for gateway propagation');
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Experiment: Role Select (type 6) renders names from Discord client cache.
+    // PATCH with an identical Role Select doesn't trigger re-render.
+    // Theory: if the Role Select is ABSENT in Phase 1 then ADDED in Phase 2,
+    // Discord treats it as a new component and fetches fresh role data.
+    console.log('[CASTLIST] Role renamed — Phase 1 without Role Select, Phase 2 adds it fresh');
 
-    const fullHub = await createCastlistHub(guildId, { ...hubOptions }, client);
-    await updateDeferredResponse(token, fullHub);
+    // Phase 1: Hub WITHOUT Role Select (instant feedback with updated Section text)
+    const hubWithout = await createCastlistHub(guildId, {
+      ...hubOptions,
+      skipMemberFetch: true,
+      skipRoleSelect: true
+    }, client);
+    await updateDeferredResponse(token, hubWithout);
+
+    // Wait for GUILD_ROLE_UPDATE to propagate to user's Discord client
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    // Phase 2: Hub WITH Role Select (new component = fresh role data fetch)
+    const hubWith = await createCastlistHub(guildId, { ...hubOptions }, client);
+    await updateDeferredResponse(token, hubWith);
     return;
   }
 

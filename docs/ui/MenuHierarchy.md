@@ -277,6 +277,7 @@ const backButton = new ButtonBuilder()
    - `safari_rounds_menu` → "Challenges" 🏃‍♀️ (moved from Advanced Features to admin row, right of Players)
 5. **Tribes moved to Tools Menu**:
    - `prod_manage_tribes` → Tools Menu (relabeled "Tribes (Legacy)")
+   - **UPDATE (2026-03)**: `prod_manage_tribes` replaced by `reeces_stuff` (Reece's Stuff menu in Tools). See [CastlistV3.md](../features/CastlistV3.md) for the current castlist system.
 6. **All back buttons verified** - Safari submenus use `prod_menu_back`, internal navigation preserved
 
 **New Menu Flow**:
@@ -284,7 +285,7 @@ const backButton = new ButtonBuilder()
 Production Menu → Map Admin → Map Explorer (with Location Editor + Safari Progress)
 Production Menu → Actions → Custom Action Editor
 Production Menu → Challenges → Rounds Menu
-Production Menu → Tools → Tribes (Legacy)
+Production Menu → Tools → Reece's Stuff (replaced legacy Tribes)
 ```
 
 **Impact**: Reduced navigation depth from 3 clicks (Menu → Safari → Feature) to 2 clicks (Menu → Feature) for Map Admin and Actions.

@@ -54,7 +54,7 @@ const BACK_BUTTON_CONFIG = {
     description: 'Return to Safari advanced configuration menu'
   },
 
-  'reece_stuff_menu': {
+  'analytics_admin': {
     label: '← Analytics',
     emoji: '🧮',
     description: 'Return to Analytics menu (Reece only)'

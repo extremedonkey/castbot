@@ -22,13 +22,13 @@ import { DiscordRequest } from './utils.js';
  * Enables natural language identification of buttons and menus
  */
 export const BUTTON_REGISTRY = {
-  // === REECE STUFF MENU SYSTEM ===
-  'reece_stuff_menu': {
+  // === ANALYTICS ADMIN MENU ===
+  'analytics_admin': {
     label: 'Analytics',
-    description: 'Main analytics and admin menu for Reece',
+    description: 'Analytics and admin dashboard (Reece-only)',
     emoji: '🧮',
-    style: 'Secondary',
-    menu: 'reece_analytics',
+    style: 'Danger',
+    menu: 'analytics_admin',
     parent: null,
     restrictedUser: '391415444084490240',
     category: 'admin'
@@ -40,7 +40,7 @@ export const BUTTON_REGISTRY = {
     description: 'Upload all tips images to Discord CDN for current environment',
     emoji: '💡',
     style: 'Secondary',
-    parent: 'reece_stuff_menu',
+    parent: 'analytics_admin',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -49,7 +49,7 @@ export const BUTTON_REGISTRY = {
     description: 'Display recent analytics logs',
     emoji: '📝',
     style: 'Secondary',
-    parent: 'reece_stuff_menu',
+    parent: 'analytics_admin',
     restrictedUser: '391415444084490240',
     category: 'analytics'
   },
@@ -58,7 +58,7 @@ export const BUTTON_REGISTRY = {
     description: 'Display server usage statistics',
     emoji: '📈',
     style: 'Secondary',
-    parent: 'reece_stuff_menu',
+    parent: 'analytics_admin',
     restrictedUser: '391415444084490240',
     category: 'analytics'
   },
@@ -67,7 +67,7 @@ export const BUTTON_REGISTRY = {
     description: 'Real-time production health monitoring dashboard',
     emoji: '🌈',
     style: 'Secondary',
-    parent: 'reece_stuff_menu',
+    parent: 'analytics_admin',
     restrictedUser: '391415444084490240',
     category: 'analytics'
   },
@@ -87,7 +87,7 @@ export const BUTTON_REGISTRY = {
     description: 'Toggle live analytics logging for current channel',
     emoji: '🔄',
     style: 'Secondary',
-    parent: 'reece_stuff_menu',
+    parent: 'analytics_admin',
     restrictedUser: '391415444084490240',
     category: 'analytics'
   },
@@ -96,7 +96,7 @@ export const BUTTON_REGISTRY = {
     description: 'Test and display role hierarchy information',
     emoji: '🔰',
     style: 'Secondary',
-    parent: 'reece_stuff_menu',
+    parent: 'reeces_stuff',
     restrictedUser: '391415444084490240',
     category: 'testing'
   },
@@ -105,7 +105,7 @@ export const BUTTON_REGISTRY = {
     description: 'Manage Daylight Saving Time states for timezones',
     emoji: '🌍',
     style: 'Secondary',
-    parent: 'reece_stuff_menu',
+    parent: 'analytics_admin',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -119,11 +119,11 @@ export const BUTTON_REGISTRY = {
     category: 'admin'
   },
   'merge_timezone_roles': {
-    label: 'Merge Duplicate Timezones',
+    label: 'Merge Timezones',
     description: 'Consolidate duplicate timezone roles with same timezoneId',
     emoji: '🔀',
     style: 'Secondary',
-    parent: 'reece_stuff_menu',
+    parent: 'reeces_stuff',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -132,7 +132,7 @@ export const BUTTON_REGISTRY = {
     description: 'List all servers the bot is installed in with details',
     emoji: '🌐',
     style: 'Secondary',
-    parent: 'reece_stuff_menu',
+    parent: 'analytics_admin',
     restrictedUser: '391415444084490240',
     category: 'analytics'
   },
@@ -150,7 +150,7 @@ export const BUTTON_REGISTRY = {
     description: 'Remove all roles from server (DANGEROUS)',
     emoji: '💥',
     style: 'Danger',
-    parent: 'reece_stuff_menu',
+    parent: 'analytics_admin',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -159,7 +159,7 @@ export const BUTTON_REGISTRY = {
     description: 'Emergency re-initialization of season applications',
     emoji: '🚨',
     style: 'Danger',
-    parent: 'reece_stuff_menu',
+    parent: 'analytics_admin',
     restrictedUser: '391415444084490240',
     category: 'emergency'
   },
@@ -168,7 +168,7 @@ export const BUTTON_REGISTRY = {
     description: 'Clear all guild data from playerData.json (DANGER ZONE)',
     emoji: '☢️',
     style: 'Danger',
-    parent: 'reece_stuff_menu',
+    parent: 'analytics_admin',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -193,7 +193,7 @@ export const BUTTON_REGISTRY = {
     description: 'Clear all guild Safari data from safariContent.json (DANGER ZONE)',
     emoji: '☢️',
     style: 'Danger',
-    parent: 'reece_stuff_menu',
+    parent: 'analytics_admin',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -217,8 +217,8 @@ export const BUTTON_REGISTRY = {
     label: 'Msg Test',
     description: 'Test sending a message from CastBot to user',
     emoji: '💬',
-    style: 'Primary',
-    parent: 'reece_stuff_menu',
+    style: 'Secondary',
+    parent: 'reeces_stuff',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -292,11 +292,11 @@ export const BUTTON_REGISTRY = {
   },
   // EXPERIMENTAL: Delete after testing Components V2 Section behavior
   'castlist_test': {
-    label: 'Castlist Test',
-    description: 'EXPERIMENTAL: Test multiple Text Display components in Section',
-    emoji: '🧪',
-    style: 'Primary',
-    parent: 'reece_stuff_menu',
+    label: 'Compact Castlist',
+    description: 'EXPERIMENTAL: Test compact castlist rendering',
+    emoji: '🍒',
+    style: 'Secondary',
+    parent: 'reeces_stuff',
     restrictedUser: '391415444084490240',
     category: 'testing'
   },
@@ -445,7 +445,7 @@ export const BUTTON_REGISTRY = {
 
   // === EMOJI MANAGEMENT ===
   'prod_create_emojis': {
-    label: 'Add/Remove Emojis',
+    label: 'Player Emojis',
     description: 'Auto-create or remove player emojis from role members',
     emoji: '😀',
     style: 'Secondary',
@@ -462,22 +462,25 @@ export const BUTTON_REGISTRY = {
     parent: 'prod_create_emojis'
   },
 
-  // === TRIBES (LEGACY) ===
-  'prod_manage_tribes': {
-    label: 'Tribes (Legacy)',
-    description: 'Redirect to new Castlist Manager location',
-    emoji: '🔥',
-    style: 'Secondary',
+  // === REECE'S STUFF (SECRET ADMIN) ===
+  'reeces_stuff': {
+    label: "Reece's Stuff",
+    description: 'Secret admin tools menu (Reece-only)',
+    emoji: '🐧',
+    style: 'Danger',
     category: 'admin',
-    parent: 'prod_setup'
+    parent: 'prod_setup',
+    restrictedUser: '391415444084490240'
   },
+
+  // === TRIBES (LEGACY) ===
   'prod_manage_tribes_legacy_debug': {
-    label: 'Tribes (Legacy Debug)',
-    description: 'Access legacy tribes menu for testing (Reece only)',
+    label: 'Tribes (Legacy)',
+    description: 'Access legacy tribes management submenu',
     emoji: '🔥',
     style: 'Secondary',
     category: 'admin',
-    parent: 'prod_manage_tribes',
+    parent: 'reeces_stuff',
     restrictedUser: '391415444084490240'
   },
 

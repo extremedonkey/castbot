@@ -22,7 +22,8 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
   const {
     selectedCastlistId = null,
     showVirtual = true,
-    skipMemberFetch = false  // Skip expensive member fetch for fast operations
+    skipMemberFetch = false,  // Skip expensive member fetch for fast operations
+    skipRoleSelect = false    // Omit Role Select component (for rename experiment)
   } = options;
   
   // Load player data for season lookups
@@ -233,22 +234,24 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       }
 
       // Role Select with pre-selection for instant toggle (moved before tribe sections for better UX)
-      container.components.push({
-        type: 1, // ActionRow
-        components: [{
-          type: 6, // Role Select
-          custom_id: `castlist_tribe_select_${castlist.id}`,
-          placeholder: tribes.length > 0
-            ? 'Add or remove tribes...'
-            : 'Select roles to add as tribes...',
-          min_values: 0, // CRITICAL: Allow deselecting all (enables remove)
-          max_values: maxTribeLimit, // ENFORCED: Component budget limit
-          default_values: tribes.map(tribe => ({
-            id: tribe.roleId,
-            type: "role"
-          }))
-        }]
-      });
+      if (!skipRoleSelect) {
+        container.components.push({
+          type: 1, // ActionRow
+          components: [{
+            type: 6, // Role Select
+            custom_id: `castlist_tribe_select_${castlist.id}`,
+            placeholder: tribes.length > 0
+              ? 'Add or remove tribes...'
+              : 'Select roles to add as tribes...',
+            min_values: 0, // CRITICAL: Allow deselecting all (enables remove)
+            max_values: maxTribeLimit, // ENFORCED: Component budget limit
+            default_values: tribes.map(tribe => ({
+              id: tribe.roleId,
+              type: "role"
+            }))
+          }]
+        });
+      }
 
       // Fetch guild once for all tribes
       const guild = tribes.length > 0 ? await client.guilds.fetch(guildId) : null;

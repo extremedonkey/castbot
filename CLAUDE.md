@@ -2,6 +2,9 @@
 
 This file provides guidance to Claude Code when working with CastBot. This is a high-level navigation document - follow the references to detailed documentation.
 
+## 🔴 ALL New Buttons MUST Use ButtonHandlerFactory — No Exceptions
+See [CRITICAL: Button Handler Factory](#-critical-button-handler-factory---mandatory-for-all-new-buttons) section below. If you see `[🪨 LEGACY]` in logs for a new button, fix it immediately.
+
 ## 🔴 Production Safety - NEVER Do These
 
 1. **Use unapproved PM2 commands** (see approved list below)

@@ -792,7 +792,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setLabel('Donate')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('☕')
-    // prod_manage_tribes moved to Tools Menu (prod_setup) - see menuBuilder.js
+    // Tribes moved to Reece's Stuff menu (reeces_stuff) - see menuBuilder.js
   );
   
   // Live Analytics button moved to Reece Stuff submenu
@@ -843,7 +843,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   if (userId === '391415444084490240') {
     advancedFeaturesButtons.push(
       new ButtonBuilder()
-        .setCustomId('reece_stuff_menu')
+        .setCustomId('analytics_admin')
         .setLabel('Analytics')
         .setStyle(ButtonStyle.Danger)
         .setEmoji('🧮')
@@ -983,7 +983,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
 }
 
 /**
- * Create Reece Stuff submenu interface (admin-only special features)
+ * Create Analytics Admin submenu interface (admin-only special features)
  */
 async function createReeceStuffMenu(guildId, channelId = null) {
   // Load data to check what exists for this guild
@@ -1041,37 +1041,15 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setEmoji('🔃')
   ];
 
-  // Admin Tools section buttons
-  const adminToolsButtons = [
-    new ButtonBuilder()
-      .setCustomId('test_role_hierarchy')
-      .setLabel('Check Roles')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🔰'),
-    new ButtonBuilder()
-      .setCustomId('msg_test')
-      .setLabel('Msg Test')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💬'),
-    new ButtonBuilder()
-      .setCustomId('castlist_test')
-      .setLabel('Compact Castlist')
-      .setStyle(ButtonStyle.Secondary)  // Grey for secondary action
-      .setEmoji('🍒'),
+  // Admin Tools moved to Reece's Stuff menu; DST Manager stays here in Data Actions
+
+  // Data Actions section buttons (Player Data + DST Manager)
+  const dataActionsButtons = [
     new ButtonBuilder()
       .setCustomId('admin_dst_toggle')
       .setLabel('DST Manager')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🌍'),
-    new ButtonBuilder()
-      .setCustomId('merge_timezone_roles')
-      .setLabel('Merge Duplicate Timezones')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🔀')
-  ];
-
-  // Player Data section buttons
-  const playerDataButtons = [
     new ButtonBuilder()
       .setCustomId('playerdata_export_all')
       .setLabel('Export playerData (All)')
@@ -1126,9 +1104,8 @@ async function createReeceStuffMenu(guildId, channelId = null) {
   ];
   
   const analyticsRow = new ActionRowBuilder().addComponents(analyticsButtons);
-  const adminToolsRow = new ActionRowBuilder().addComponents(adminToolsButtons);
   const dangerZoneRow = new ActionRowBuilder().addComponents(dangerZoneButtons);
-  const playerDataRow = new ActionRowBuilder().addComponents(playerDataButtons);
+  const dataActionsRow = new ActionRowBuilder().addComponents(dataActionsButtons);
   
   // Create back button row with All Servers
   const backButton = [
@@ -1149,7 +1126,7 @@ async function createReeceStuffMenu(guildId, channelId = null) {
   const containerComponents = [
     {
       type: 10, // Text Display component
-      content: `## CastBot | Analytics & Admin`
+      content: `## 🧮 CastBot | Analytics`
     },
     {
       type: 14 // Separator
@@ -1164,14 +1141,6 @@ async function createReeceStuffMenu(guildId, channelId = null) {
     },
     {
       type: 10, // Text Display component
-      content: `> **\`🔧 Admin Tools\`**`
-    },
-    adminToolsRow.toJSON(), // Admin tools buttons
-    {
-      type: 14 // Separator
-    },
-    {
-      type: 10, // Text Display component
       content: `> **\`☢️ Danger Zone\`**`
     },
     dangerZoneRow.toJSON(), // Danger zone buttons
@@ -1180,9 +1149,9 @@ async function createReeceStuffMenu(guildId, channelId = null) {
     },
     {
       type: 10, // Text Display component
-      content: `> **\`📊 Player Data\`**`
+      content: `> **\`📦 Data Actions\`**`
     },
-    playerDataRow.toJSON(), // Player data buttons
+    dataActionsRow.toJSON(), // Data actions buttons (DST + exports/imports)
     {
       type: 14 // Separator
     },
@@ -3653,7 +3622,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             component.customId && (
               component.customId === 'season_management_menu' ||
               component.customId === 'prod_manage_pronouns_timezones' ||
-              component.customId === 'prod_manage_tribes' ||
+              component.customId === 'reeces_stuff' ||
               component.customId === 'prod_setup' ||
               component.customId === 'prod_setup_tycoons' ||
               component.customId === 'admin_manage_player'
@@ -7564,55 +7533,44 @@ To fix this:
           return await sendProductionSubmenuResponse(res, channelId, [availabilityContainer]);
         }
       })(req, res, client);
-    } else if (custom_id === 'prod_manage_tribes') {
-      // Redirect to new Castlist Manager location with debug access for Reece
+    } else if (custom_id === 'reeces_stuff') {
+      // Reece's Stuff - secret admin tools menu (Reece-only)
       return ButtonHandlerFactory.create({
-        id: 'prod_manage_tribes_redirect',
-        updateMessage: true,  // Button click - updates existing message
+        id: 'reeces_stuff',
+        updateMessage: true,
         handler: async (context) => {
-          const { userId } = context;
-          const isReece = userId === '391415444084490240';
-
-          // Build container components
-          const components = [
-            {
-              type: 10, // Text Display
-              content: "## 📃 Castlist Creation Has Moved!\n\nCastlists have now been upgraded with the new **Castlist Manager** for easier access, better organization, and new features such as Season Placement Castlists, and executing Swaps via CastBot!\n\nYou can now find all castlist and tribe management features in:\n`/menu` > 📋 Castlist Manager"
-            },
-            { type: 14 } // Separator before navigation
-          ];
-
-          // Build navigation row - Back button (always) + Debug button (Reece only)
-          const navigationButtons = [
-            {
-              type: 2, // Button
-              custom_id: 'prod_menu_back',
-              label: '← Menu',
-              style: 2 // Secondary (grey) - NO emoji per LEAN standards
-            }
-          ];
-
-          // Only for Reece: Add debug button to navigation row
-          if (isReece) {
-            navigationButtons.push({
-              type: 2, // Button
-              custom_id: 'prod_manage_tribes_legacy_debug',
-              label: 'Tribes (Legacy Debug)',
-              emoji: { name: '🔥' },
-              style: 2 // Secondary (grey)
-            });
+          if (context.userId !== '391415444084490240') {
+            return { content: '❌ Access denied.', ephemeral: true };
           }
-
-          components.push({
-            type: 1, // Action Row
-            components: navigationButtons
-          });
 
           return {
             components: [{
-              type: 17, // Container
-              accent_color: 0x3498DB, // Blue (info message)
-              components: components
+              type: 17, accent_color: 0xe74c3c, // Red
+              components: [
+                { type: 10, content: "## 🐧 Reece's Stuff" },
+                { type: 14 },
+                { type: 10, content: '> **`🪪 Features`**' },
+                {
+                  type: 1,
+                  components: [
+                    { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
+                    { type: 2, custom_id: 'prod_manage_tribes_legacy_debug', label: 'Tribes (Legacy)', style: 2, emoji: { name: '🔥' } }
+                  ]
+                },
+                { type: 14 },
+                { type: 10, content: '> **`🔧 Admin Tools`**' },
+                {
+                  type: 1,
+                  components: [
+                    { type: 2, custom_id: 'test_role_hierarchy', label: 'Check Roles', style: 2, emoji: { name: '🔰' } },
+                    { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } },
+                    { type: 2, custom_id: 'castlist_test', label: 'Compact Castlist', style: 2, emoji: { name: '🍒' } },
+                    { type: 2, custom_id: 'merge_timezone_roles', label: 'Merge Timezones', style: 2, emoji: { name: '🔀' } }
+                  ]
+                },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, custom_id: 'prod_setup', label: '← Tools', style: 2 }] }
+              ]
             }]
           };
         }
@@ -7623,12 +7581,9 @@ To fix this:
         id: 'prod_manage_tribes_legacy_debug',
         updateMessage: true,
         handler: async (context) => {
-          MenuBuilder.trackLegacyMenu('prod_manage_tribes_legacy_debug', 'Legacy tribes management submenu (debug)');
-
           return {
             components: [{
-              type: 17, // Container
-              accent_color: 0xE67E22, // Orange for tribes
+              type: 17, accent_color: 0xE67E22, // Orange for tribes
               components: [
                 { type: 10, content: '## 🔥 Tribes (Legacy)' },
                 { type: 14 },
@@ -7636,7 +7591,7 @@ To fix this:
                 { type: 14 },
                 { type: 10, content: '> **`🔥 Tribe Actions`**' },
                 {
-                  type: 1, // Action Row
+                  type: 1,
                   components: [
                     { type: 2, custom_id: 'prod_view_tribes', label: 'View Tribes', style: 1, emoji: { name: '🔥' } },
                     { type: 2, custom_id: 'prod_add_tribe', label: 'Add Tribe', style: 2, emoji: { name: '🛠️' } },
@@ -7644,12 +7599,7 @@ To fix this:
                   ]
                 },
                 { type: 14 },
-                {
-                  type: 1, // Action Row
-                  components: [
-                    { type: 2, custom_id: 'prod_manage_tribes', label: '← Tribes', style: 2 }
-                  ]
-                }
+                { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: "← Reece's Stuff", style: 2 }] }
               ]
             }]
           };
@@ -9100,7 +9050,7 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'nuke_player_data_cancel') {
-      // Cancel the data nuke operation - return to reece_stuff_menu
+      // Cancel the data nuke operation - return to analytics_admin
       return ButtonHandlerFactory.create({
         id: 'nuke_player_data_cancel',
         updateMessage: true,
@@ -9135,7 +9085,7 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'nuke_safari_content_cancel') {
-      // Cancel the Safari data nuke operation - return to reece_stuff_menu
+      // Cancel the Safari data nuke operation - return to analytics_admin
       return ButtonHandlerFactory.create({
         id: 'nuke_safari_content_cancel',
         updateMessage: true,
@@ -9945,19 +9895,19 @@ To fix this:
     //       };
     //     }
     //   })(req, res, client);
-    } else if (custom_id === 'reece_stuff_menu') {
+    } else if (custom_id === 'analytics_admin') {
       // Handle Reece Stuff submenu - special admin features (MIGRATED TO FACTORY)
       return ButtonHandlerFactory.create({
-        id: 'reece_stuff_menu',
+        id: 'analytics_admin',
         updateMessage: true,  // Button clicks always update (per CLAUDE.md)
         deferred: true,       // Required: loads 933KB playerData + safariContent + Discord API calls
         handler: async (context) => {
-          console.log(`🔍 START: reece_stuff_menu - user ${context.userId}`);
-          MenuBuilder.trackLegacyMenu('reece_stuff_menu', 'Analytics and admin tools menu');
+          console.log(`🔍 START: analytics_admin - user ${context.userId}`);
+          MenuBuilder.trackLegacyMenu('analytics_admin', 'Analytics and admin tools menu');
 
           // Security check - only allow specific Discord ID
           if (context.userId !== '391415444084490240') {
-            console.log(`❌ ACCESS DENIED: reece_stuff_menu - user ${context.userId} not authorized`);
+            console.log(`❌ ACCESS DENIED: analytics_admin - user ${context.userId} not authorized`);
             return {
               content: 'Access denied. This feature is restricted.',
               ephemeral: true
@@ -9967,7 +9917,7 @@ To fix this:
           // Create Reece Stuff submenu (loads playerData.json 933KB + safariContent.json)
           const reeceMenuData = await createReeceStuffMenu(context.guildId, context.channelId);
 
-          console.log(`✅ SUCCESS: reece_stuff_menu - completed`);
+          console.log(`✅ SUCCESS: analytics_admin - completed`);
           return {
             ...reeceMenuData,
             ephemeral: true
@@ -10626,7 +10576,7 @@ Your server is now ready for Tycoons gameplay!`;
 
             // Add back, refresh, and schedule buttons
             const backButton = new ButtonBuilder()
-              .setCustomId('reece_stuff_menu')
+              .setCustomId('analytics_admin')
               .setLabel('← Analytics')
               .setStyle(ButtonStyle.Secondary);
 
@@ -10929,7 +10879,7 @@ Your server is now ready for Tycoons gameplay!`;
             type: 1,
             components: [{
               type: 2,
-              custom_id: 'reece_stuff_menu',
+              custom_id: 'analytics_admin',
               label: '← Analytics',
               style: 2
             }, {
@@ -11289,7 +11239,7 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id === 'nuke_roles_cancel') {
-      // Cancel the roles nuke operation - return to reece_stuff_menu
+      // Cancel the roles nuke operation - return to analytics_admin
       return ButtonHandlerFactory.create({
         id: 'nuke_roles_cancel',
         updateMessage: true,
@@ -13241,7 +13191,7 @@ Your server is now ready for Tycoons gameplay!`;
         const token = req.body.token;
         const userId = req.body.member.user.id;
 
-        // Security check - only allow specific Discord ID (same as reece_stuff_menu)
+        // Security check - only allow specific Discord ID (same as analytics_admin)
         if (userId !== '391415444084490240') {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -13359,7 +13309,7 @@ Your server is now ready for Tycoons gameplay!`;
         const channelId = req.body.channel_id;
         const userId = member.user.id;
 
-        // Security check - only allow specific Discord ID (same as reece_stuff_menu)
+        // Security check - only allow specific Discord ID (same as analytics_admin)
         if (userId !== '391415444084490240') {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -27371,7 +27321,7 @@ Are you sure you want to continue?`;
       })(req, res, client);
       
     } else if (custom_id === 'map_delete_cancel') {
-      // Handle cancelled map deletion - return to reece_stuff_menu
+      // Handle cancelled map deletion - return to analytics_admin
       return ButtonHandlerFactory.create({
         id: 'map_delete_cancel',
         requiresPermission: PermissionFlagsBits.ManageRoles,

@@ -13,121 +13,8 @@ export const MENU_REGISTRY = {
     title: '🪛 CastBot | Tools',
     accent: 0x3498DB, // Blue for standard menus
     ephemeral: true, // REQUIRED: Admin menu (default for all menus unless explicitly set to false)
-    sections: [
-      {
-        // Main setup section with description and action buttons
-        components: [
-          {
-            type: 10, // Text Display
-            content: 'Access the Setup Wizard for first-time setup, or manage existing pronoun/timezone roles and other server configuration.\n\n💡 The Setup Wizard guides new servers through initial CastBot configuration.'
-          },
-          { type: 14 }, // Separator
-          {
-            type: 1, // ActionRow - Main tools (Setup Wizard moved here from legal row)
-            components: [
-              {
-                type: 2, // Button - Setup Wizard (reuses discordMessenger.createWelcomeComponents)
-                custom_id: 'prod_setup_wizard',
-                label: 'Setup Wizard',
-                style: 1, // Primary (Blue) - prominent action
-                emoji: { name: '🧙' }
-              },
-              {
-                type: 2, // Button
-                custom_id: 'prod_manage_pronouns_timezones',
-                label: 'Reaction Roles',
-                style: 2, // Secondary (Grey)
-                emoji: { name: '💜' }
-              },
-              {
-                type: 2, // Button
-                custom_id: 'prod_manage_tribes',
-                label: 'Tribes (Legacy)',
-                style: 2, // Secondary (Grey)
-                emoji: { name: '🔥' }
-              },
-              {
-                type: 2, // Button
-                custom_id: 'prod_availability',
-                label: 'Availability',
-                style: 2, // Secondary (Grey)
-                emoji: { name: '🕐' }
-              },
-              {
-                type: 2, // Button - Link style
-                label: 'Need Help?',
-                style: 5, // Link
-                emoji: { name: '❓' },
-                url: 'https://discord.gg/H7MpJEjkwT'
-              }
-            ]
-          },
-          { type: 14 }, // Separator
-          {
-            type: 1, // ActionRow for emojis + attributes
-            components: [
-              {
-                type: 2, // Button - Add/Remove Emojis (moved from legacy tribes menu)
-                custom_id: 'prod_create_emojis',
-                label: 'Add/Remove Emojis',
-                style: 2, // Secondary (Grey)
-                emoji: { name: '😀' }
-              },
-              {
-                type: 2, // Button - Attributes Management
-                custom_id: 'attribute_management',
-                label: 'Attributes',
-                style: 2, // Secondary (Grey)
-                emoji: { name: '📊' }
-              },
-              {
-                type: 2, // Button — Player Card Menu (UI Mockup)
-                custom_id: 'pcard_open',
-                label: 'Player Card',
-                style: 1, // Primary (Blue) — highlighted as new
-                emoji: { name: '🪪' }
-              }
-            ]
-          },
-          { type: 14 }, // Separator
-          {
-            type: 1, // ActionRow for legal
-            components: [
-              {
-                type: 2, // Button
-                custom_id: 'prod_terms_of_service',
-                label: 'Terms of Service',
-                style: 2, // Secondary (Grey)
-                emoji: { name: '📜' }
-              },
-              {
-                type: 2, // Button
-                custom_id: 'prod_privacy_policy',
-                label: 'Privacy Policy',
-                style: 2, // Secondary (Grey)
-                emoji: { name: '🔒' }
-              }
-            ]
-          }
-        ]
-      },
-      {
-        // Navigation section
-        components: [
-          {
-            type: 1, // ActionRow for back button
-            components: [
-              {
-                type: 2, // Button
-                custom_id: 'prod_menu_back',
-                label: '← Menu',
-                style: 2 // Secondary
-              }
-            ]
-          }
-        ]
-      }
-    ]
+    builder: 'buildSetupMenu', // Custom builder for Reece-only conditional button
+    sections: [] // Built dynamically
   }
 
   // Example structure for future migrations:
@@ -145,7 +32,7 @@ export const MENU_REGISTRY = {
 export class MenuBuilder {
   /**
    * Track legacy menu usage for migration visibility
-   * @param {string} location - Where the menu is defined (e.g., 'prod_manage_tribes')
+   * @param {string} location - Where the menu is defined (e.g., 'reeces_stuff')
    * @param {string} description - Human-readable description of the menu
    */
   static trackLegacyMenu(location, description) {
@@ -160,7 +47,7 @@ export class MenuBuilder {
    */
   static async create(menuId, context) {
     console.log(`MENU DEBUG: Building ${menuId} [🛸 MENUSYSTEM]`);
-    
+
     const menuConfig = MENU_REGISTRY[menuId];
     if (!menuConfig) {
       console.log(`MENU DEBUG: Menu ${menuId} not found in registry [⚠️ UNREGISTERED]`);
@@ -177,6 +64,58 @@ export class MenuBuilder {
   }
 
   /**
+   * Build the setup_menu with conditional Reece-only button
+   * @param {Object} menuConfig - Menu configuration from registry
+   * @param {Object} context - Context object with userId
+   * @returns {Object} Menu container
+   */
+  static buildSetupMenu(menuConfig, context) {
+    const isReece = context?.userId === '391415444084490240';
+
+    const components = [
+      { type: 10, content: `## ${menuConfig.title}` },
+      { type: 14 },
+      { type: 10, content: 'Access the Setup Wizard for first-time setup, or manage existing pronoun/timezone roles and other server configuration.\n\n💡 The Setup Wizard guides new servers through initial CastBot configuration.' },
+      { type: 14 },
+      {
+        type: 1, // Row 1: Setup Wizard | Attributes | Player Emojis | Reaction Roles | Availability
+        components: [
+          { type: 2, custom_id: 'prod_setup_wizard', label: 'Setup Wizard', style: 1, emoji: { name: '🧙' } },
+          { type: 2, custom_id: 'attribute_management', label: 'Attributes', style: 2, emoji: { name: '📊' } },
+          { type: 2, custom_id: 'prod_create_emojis', label: 'Player Emojis', style: 2, emoji: { name: '😀' } },
+          { type: 2, custom_id: 'prod_manage_pronouns_timezones', label: 'Reaction Roles', style: 2, emoji: { name: '💜' } },
+          { type: 2, custom_id: 'prod_availability', label: 'Availability', style: 2, emoji: { name: '🕐' } }
+        ]
+      },
+      { type: 14 }
+    ];
+
+    // Row 2: Reece's Stuff (RED, Reece-only) | ToS | Privacy Policy | Need Help?
+    const legalRow = [];
+    if (isReece) {
+      legalRow.push({ type: 2, custom_id: 'reeces_stuff', label: "Reece's Stuff", style: 4, emoji: { name: '🐧' } });
+    }
+    legalRow.push(
+      { type: 2, custom_id: 'prod_terms_of_service', label: 'Terms of Service', style: 2, emoji: { name: '📜' } },
+      { type: 2, custom_id: 'prod_privacy_policy', label: 'Privacy Policy', style: 2, emoji: { name: '🔒' } },
+      { type: 2, label: 'Need Help?', style: 5, emoji: { name: '❓' }, url: 'https://discord.gg/H7MpJEjkwT' }
+    );
+    components.push({ type: 1, components: legalRow });
+
+    // Navigation
+    components.push(
+      { type: 14 },
+      { type: 1, components: [{ type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 }] }
+    );
+
+    return {
+      type: 17,
+      accent_color: menuConfig.accent || 0x3498DB,
+      components
+    };
+  }
+
+  /**
    * Build a standard menu following LeanUserInterfaceDesign.md patterns
    * @param {Object} menuConfig - Menu configuration from registry
    * @param {Object} context - Context object
@@ -184,11 +123,11 @@ export class MenuBuilder {
    */
   static buildStandardMenu(menuConfig, context) {
     const components = [];
-    
+
     // Header (LeanUserInterfaceDesign.md pattern)
-    components.push({ 
+    components.push({
       type: 10, // Text Display
-      content: `## ${menuConfig.title}` 
+      content: `## ${menuConfig.title}`
     });
     components.push({ type: 14 }); // Separator
 

@@ -38,7 +38,7 @@ const SAFE_TEST_BUTTONS = {
     priority: 3
   },
   'analytics': {
-    custom_id: 'reece_stuff_menu',  // The actual Analytics menu button
+    custom_id: 'analytics_admin',  // The actual Analytics menu button
     label: '🧮 Analytics',
     style: 2, // Secondary (grey)
     priority: 4
