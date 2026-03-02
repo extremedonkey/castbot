@@ -1677,11 +1677,12 @@
           "castlist_1772416291262_custom",
           "castlist_archive_1762702460277"
         ],
-        "castlist": "Swap 2",
+        "castlist": "Claude's second CastList Test",
         "analyticsName": "All Pronouns",
         "analyticsAdded": 1772422342693,
         "showPlayerEmojis": true,
-        "memberCount": 1
+        "memberCount": 0,
+        "color": "#FFFFFF"
       },
       "1424400564858650644": {
         "name": "Tribe 1424400564858650644",
@@ -11835,9 +11836,10 @@
           ],
           "mapProgress": {
             "map_10x10_1772437113475": {
-              "currentLocation": "C3",
+              "currentLocation": "D3",
               "exploredCoordinates": [
-                "C3"
+                "C3",
+                "D3"
               ],
               "itemsFound": [],
               "movementHistory": [
@@ -11850,6 +11852,11 @@
                   "from": "C3",
                   "to": "C3",
                   "timestamp": "2026-03-02T10:17:16.631Z"
+                },
+                {
+                  "from": "C3",
+                  "to": "D3",
+                  "timestamp": "2026-03-02T13:04:25.757Z"
                 }
               ],
               "startingLocation": "C3"

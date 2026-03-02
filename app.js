@@ -7387,6 +7387,7 @@ To fix this:
                 components: [
                   { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
                   { type: 2, custom_id: 'castlist_test', label: 'Compact Castlist', style: 2, emoji: { name: '🍒' } },
+                  { type: 2, custom_id: 'castlist_img', label: 'IMG Castlist', style: 2, emoji: { name: '🖼️' } },
                   { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } }
                 ]
               },
@@ -8274,6 +8275,109 @@ To fix this:
           
           // Show first question (same as app_continue flow) - this handles its own response
           return showApplicationQuestion(res, config, context.channelId, 0);
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'castlist_img') {
+      // POC: Show castlist select for Sharp PNG generation
+      return ButtonHandlerFactory.create({
+        id: 'castlist_img',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          if (context.userId !== '391415444084490240') {
+            return { content: '❌ Access denied.' };
+          }
+          const { getCastlistSelectOptions } = await import('./castlistImageGenerator.js');
+          const options = await getCastlistSelectOptions(context.guildId);
+
+          if (options.length === 0) {
+            return { content: '❌ No castlists found in this server.' };
+          }
+
+          const container = {
+            type: 17, accent_color: 0x3498db,
+            components: [
+              { type: 10, content: '## 🖼️ Image Castlist Generator\nSelect a castlist to render as a PNG image.' },
+              { type: 14 },
+              {
+                type: 1,
+                components: [{
+                  type: 3, // String Select
+                  custom_id: 'castlist_img_select',
+                  placeholder: 'Choose a castlist...',
+                  options: options.map(opt => ({
+                    label: opt.label,
+                    value: opt.value,
+                    description: opt.description
+                  }))
+                }]
+              },
+              { type: 14 },
+              { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }] }
+            ]
+          };
+          return { components: [container] };
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'castlist_img_select') {
+      // POC: Generate castlist PNG with Sharp on select
+      return ButtonHandlerFactory.create({
+        id: 'castlist_img_select',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          if (context.userId !== '391415444084490240') {
+            return { content: '❌ Access denied.' };
+          }
+
+          const selectedCastlistId = req.body.data?.values?.[0];
+          if (!selectedCastlistId) {
+            return { content: '❌ No castlist selected.' };
+          }
+
+          console.log(`[CASTLIST-IMG] User selected castlist: ${selectedCastlistId}`);
+
+          // Show generating message (updates the ephemeral)
+          const { generateCastlistImage } = await import('./castlistImageGenerator.js');
+
+          try {
+            const pngBuffer = await generateCastlistImage(context.guildId, selectedCastlistId, context.client);
+
+            // Post the image publicly to the channel
+            const { AttachmentBuilder } = await import('discord.js');
+            const attachment = new AttachmentBuilder(pngBuffer, { name: 'castlist.png' });
+
+            const channelId = req.body.channel?.id || req.body.channel_id;
+            const channel = await context.client.channels.fetch(channelId);
+            await channel.send({
+              content: '📸 **Castlist Image**',
+              files: [attachment]
+            });
+
+            // Return confirmation in the ephemeral message
+            const container = {
+              type: 17, accent_color: 0x2ecc71,
+              components: [
+                { type: 10, content: `## ✅ Image Posted\nCastlist image (${(pngBuffer.length / 1024).toFixed(1)}KB) posted to <#${channelId}>.` },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, custom_id: 'castlist_img', label: '← Generate Another', style: 2 }, { type: 2, custom_id: 'reeces_stuff', label: '← Menu', style: 2 }] }
+              ]
+            };
+            return { components: [container] };
+          } catch (error) {
+            console.error(`[CASTLIST-IMG] Generation failed:`, error);
+            const container = {
+              type: 17, accent_color: 0xe74c3c,
+              components: [
+                { type: 10, content: `## ❌ Generation Failed\n\`\`\`${error.message}\`\`\`` },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, custom_id: 'castlist_img', label: '← Try Again', style: 2 }, { type: 2, custom_id: 'reeces_stuff', label: '← Menu', style: 2 }] }
+              ]
+            };
+            return { components: [container] };
+          }
         }
       })(req, res, client);
 

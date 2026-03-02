@@ -382,7 +382,25 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'testing'
   },
-  
+  'castlist_img': {
+    label: 'IMG Castlist',
+    description: 'POC: Generate castlist as PNG image using Sharp',
+    emoji: '🖼️',
+    style: 'Secondary',
+    parent: 'reeces_stuff',
+    restrictedUser: '391415444084490240',
+    category: 'testing'
+  },
+  'castlist_img_select': {
+    label: 'IMG Castlist Select',
+    description: 'POC: Castlist selection for image generation',
+    emoji: '🖼️',
+    style: 'Secondary',
+    parent: 'castlist_img',
+    restrictedUser: '391415444084490240',
+    category: 'testing'
+  },
+
   // Navigation
   'prod_menu_back': {
     label: '← Menu',
