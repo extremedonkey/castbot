@@ -27,7 +27,7 @@
 The Points Manager was **explicitly designed** to handle multiple point types beyond stamina. From the documentation:
 
 ```javascript
-// From SafariPoints.md:
+// From Attributes.md:
 // "The Safari Points System is a flexible resource management framework"
 // "Point Types: Stamina (Current Implementation), HP, Mana, Action Points, Custom Points"
 
@@ -618,14 +618,14 @@ sequenceDiagram
 2. **Create Feature Branch**: `feature/attribute-system`
 3. **Phase 1 Implementation**: Extend Points Manager (4-6 hours)
 4. **Testing**: Verify stamina still works, add HP/Mana
-5. **Documentation Update**: Update SafariPoints.md → AttributeSystem.md
+5. **Documentation Update**: Update Attributes.md → AttributeSystem.md
 6. **Phase 2+**: Continue based on prioritization
 
 ---
 
 ## 10. Related Documentation
 
-- [SafariPoints.md](../docs/features/SafariPoints.md) - Current stamina documentation
+- [Attributes.md](../docs/features/Attributes.md) - Current stamina documentation
 - [EntityEditFramework.md](../docs/enablers/EntityEditFramework.md) - Framework for custom attributes UI
 - [SafariCustomActions.md](../docs/features/SafariCustomActions.md) - Custom Actions integration
 - [StaminaItems.md](../docs/features/StaminaItems.md) - Item stamina boost patterns

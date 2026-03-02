@@ -341,7 +341,7 @@ Total stamina over 24 hours: 7+ moves (vs 4 with old system)
 
 ## Related Documentation
 
-- [Safari Points System](SafariPoints.md) - Core stamina mechanics
+- [Safari Points System](Attributes.md) - Core stamina mechanics
 - [Safari Map Movement](SafariMapMovement.md) - Stamina consumption for movement
 - [Entity Edit Framework](../architecture/EntityEditFramework.md) - Item editing system
 

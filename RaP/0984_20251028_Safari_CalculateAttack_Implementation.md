@@ -25,9 +25,9 @@
 ## 📚 Essential Documentation References
 
 ### Primary Context
-- **[SafariCustomExperiences.md](../features/SafariCustomExperiences.md)** - Lines 231-256: Calculate Attack specification
-- **[SafariCustomExperiences.md](../features/SafariCustomExperiences.md)** - Lines 11-34: Round resolution order (Harvest → Attack → Save → Display)
-- **[SafariCustomExperiences.md](../features/SafariCustomExperiences.md)** - Lines 320-343: Tycoons template with all 4 actions
+- **[Challenges.md](../features/Challenges.md)** - Lines 231-256: Calculate Attack specification
+- **[Challenges.md](../features/Challenges.md)** - Lines 11-34: Round resolution order (Harvest → Attack → Save → Display)
+- **[Challenges.md](../features/Challenges.md)** - Lines 320-343: Tycoons template with all 4 actions
 
 ### Attack/Defense Logic (Current Implementation)
 - **safariManager.js:6399-6505** - `processAttackQueue()` function

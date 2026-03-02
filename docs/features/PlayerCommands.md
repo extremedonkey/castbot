@@ -637,7 +637,7 @@ tail -f /tmp/castbot-dev.log | grep "DEBUG: Global button"
 ## Related Documentation
 
 - **[SafariCustomActions.md](SafariCustomActions.md)** - Complete Custom Actions reference (action types, configuration, usage limits)
-- **[SafariCustomExperiences.md](SafariCustomExperiences.md)** - Safari Custom Experiences system design
+- **[Challenges.md](Challenges.md)** - Safari Custom Experiences system design
 - **[ComponentsV2.md](../standards/ComponentsV2.md)** - Discord Components V2 structure for action responses
 - **[DiscordInteractionAPI.md](../standards/DiscordInteractionAPI.md)** - Modal and interaction response patterns
 - **[ButtonHandlerFactory.md](../enablers/ButtonHandlerFactory.md)** - Button handler registration and patterns

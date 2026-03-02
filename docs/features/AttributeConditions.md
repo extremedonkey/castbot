@@ -348,7 +348,7 @@ Triggers fire automatically when attribute values cross thresholds. Unlike condi
 
 - [Attribute System Analysis](../../RaP/0964_20260109_AttributeSystem_Analysis.md) - Full attribute system design
 - [Safari Custom Actions](./SafariCustomActions.md) - Custom Actions framework
-- [Safari Points](./SafariPoints.md) - Points/stamina system
+- [Safari Points](./Attributes.md) - Points/stamina system
 - [Advanced Attribute Conditions Analysis](../../RaP/0960_20260113_AttributeConditions_Analysis.md) - Design document
 
 ---

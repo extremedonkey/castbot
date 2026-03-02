@@ -1,8 +1,8 @@
-# Safari Points System Documentation
+# Attributes (formerly Safari Points)
 
 ## Overview
 
-The Safari Points System is a flexible resource management framework that governs player actions and interactions within the Safari ecosystem. It provides configurable "points" (stamina, HP, mana, etc.) that limit and pace player activities, creating strategic gameplay decisions and preventing content rushing.
+The Attributes system is a flexible resource management framework that governs player actions and interactions. It provides configurable attributes (stamina, HP, mana, stats, etc.) that limit and pace player activities, creating strategic gameplay decisions and preventing content rushing.
 
 ## Table of Contents
 

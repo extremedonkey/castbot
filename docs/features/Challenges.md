@@ -1,10 +1,12 @@
-# Safari Custom Experiences: Complete Design Document
+# Challenges (formerly Safari Custom Experiences)
 
 ## Overview
 
-**Safari Custom Experiences** extends the existing Safari Custom Action Editor to enable creation of configurable challenge systems, allowing administrators to replicate and customize the existing Safari Rounds functionality through the Custom Actions framework.
+**Challenges** extends the existing Custom Action Editor to enable creation of configurable challenge systems, allowing administrators to replicate and customize the existing Rounds functionality through the Custom Actions framework.
 
-Currently, Safari has a hardcoded "Tycoons" challenge system embedded in the Safari Rounds feature. This design enables complete configurability while maintaining backwards compatibility.
+This is part of the broader effort to **decouple Safari features** (items, stores, actions, rounds) from the Safari Map UI, making them usable in smaller-scale, repeatable formats — e.g., running an Idol Hunt challenge without needing a full map setup. Also referred to as "Rounds" in some documents; the current admin home is `safari_rounds_menu`.
+
+Currently, Safari has a hardcoded "Tycoons" challenge system embedded in the Rounds feature. This design enables complete configurability while maintaining backwards compatibility.
 
 ## Current Safari System Analysis
 

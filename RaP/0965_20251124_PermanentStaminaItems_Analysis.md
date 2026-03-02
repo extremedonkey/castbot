@@ -73,7 +73,7 @@ graph TD
 
 #### **Documentation**
 - `docs/features/StaminaItems.md`: Consumable stamina items
-- `docs/features/SafariPoints.md`: Core points system architecture
+- `docs/features/Attributes.md`: Core points system architecture
 - `docs/features/SafariMapSystem.md`: Movement and stamina usage
 - `docs/features/SafariMapMovement.md`: Navigation mechanics
 

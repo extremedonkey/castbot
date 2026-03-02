@@ -381,7 +381,7 @@ Bot not responding?
 ## 📚 Feature Documentation Index
 
 **🚧 Current Work in Progress:**
-- **SAFARI CUSTOM EXPERIENCES** → [docs/features/SafariCustomExperiences.md](docs/features/SafariCustomExperiences.md) - Configurable challenge system via Custom Actions
+- **SAFARI CUSTOM EXPERIENCES** → [docs/features/Challenges.md](docs/features/Challenges.md) - Configurable challenge system via Custom Actions
 - **🎯 CASTLIST V3 REDESIGN** → [docs/features/CastlistV3.md](docs/features/CastlistV3.md) - Complete castlist system overhaul
 - **ACTIVE SEASON SYSTEM** → [docs/concepts/SeasonLifecycle.md](docs/concepts/SeasonLifecycle.md)
 - **SEASON INTEGRATION** → [docs/features/CastlistV3-SeasonIntegration.md](docs/features/CastlistV3-SeasonIntegration.md)
@@ -406,7 +406,7 @@ Bot not responding?
 - **MAP ISSUES** → [docs/features/SafariMapIssues.md](docs/features/SafariMapIssues.md) - Known issues & roadmap
 - **MAP MOVEMENT** → [docs/features/SafariMapMovement.md](docs/features/SafariMapMovement.md)
 - **IMPORT/EXPORT** → [docs/features/SafariImportExport.md](docs/features/SafariImportExport.md) - Full Safari template portability
-- **POINTS SYSTEM** → [docs/features/SafariPoints.md](docs/features/SafariPoints.md)
+- **POINTS SYSTEM** → [docs/features/Attributes.md](docs/features/Attributes.md)
 - **SAFARI PROGRESS** → [docs/features/SafariProgress.md](docs/features/SafariProgress.md)
 - **PLAYER LOCATIONS** → [docs/features/PlayerLocationManager.md](docs/features/PlayerLocationManager.md)
 - **WHISPER SYSTEM** → [docs/features/WhisperSystem.md](docs/features/WhisperSystem.md)

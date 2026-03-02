@@ -95,7 +95,7 @@ The Safari Points System provides flexible resource management for pacing player
 - **Entity-Agnostic**: Supports points for players, NPCs, items, locations
 - **Configurable**: Server-specific point types and regeneration patterns
 
-For detailed documentation, see [Safari Points System](SafariPoints.md) and [Map Movement System](SafariMapMovement.md).
+For detailed documentation, see [Safari Points System](Attributes.md) and [Map Movement System](SafariMapMovement.md).
 
 ## Map Explorer System
 

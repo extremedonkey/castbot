@@ -1077,23 +1077,22 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setEmoji('💥')
       .setDisabled(!hasRolesInData),
     new ButtonBuilder()
-      .setCustomId('emergency_app_reinit')
-      .setLabel('Emergency App Re-Init')
+      .setCustomId('prod_nuke_category')
+      .setLabel('Nuke Category')
       .setStyle(ButtonStyle.Danger)
-      .setEmoji('🚨')
-      .setDisabled(!isApplicationChannel),
+      .setEmoji('🧹'),
     new ButtonBuilder()
       .setCustomId('nuke_player_data')
       .setLabel('Nuke playerData')
       .setStyle(ButtonStyle.Danger)
       .setEmoji('☢️')
-      .setDisabled(!hasPlayerData),  // Disable if no playerData exists
+      .setDisabled(!hasPlayerData),
     new ButtonBuilder()
       .setCustomId('nuke_safari_content')
       .setLabel('Nuke safariContent')
       .setStyle(ButtonStyle.Danger)
       .setEmoji('☢️')
-      .setDisabled(!hasSafariData)  // Disable if no safariContent exists
+      .setDisabled(!hasSafariData)
   ];
   
   const analyticsRow = new ActionRowBuilder().addComponents(analyticsButtons);
@@ -1105,12 +1104,7 @@ async function createReeceStuffMenu(guildId, channelId = null) {
     new ButtonBuilder()
       .setCustomId('castbot_tools')
       .setLabel('← Tools')
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId('prod_nuke_category')
-      .setLabel('Nuke Category')
-      .setStyle(ButtonStyle.Danger)
-      .setEmoji('🧹')
+      .setStyle(ButtonStyle.Secondary)
   );
 
   // Build container components with section headers
@@ -7403,6 +7397,7 @@ To fix this:
                 components: [
                   { type: 2, custom_id: 'test_role_hierarchy', label: 'Check Roles', style: 2, emoji: { name: '🔰' } },
                   { type: 2, custom_id: 'admin_populate_logs', label: 'Populate Logs', style: 2, emoji: { name: '📜' } },
+                  { type: 2, custom_id: 'emergency_app_reinit', label: 'App Re-Init', style: 4, emoji: { name: '🚨' } },
                   { type: 2, custom_id: 'restart_bot', label: 'Restart Bot', style: 4, emoji: { name: '🔄' } }
                 ]
               },

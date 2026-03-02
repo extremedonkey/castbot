@@ -24,7 +24,7 @@ The Safari system is CastBot's comprehensive interactive content framework for D
 - Player movement mechanics
 
 ### ⚡ Points & Resource System
-**[SafariPoints.md](../SafariPoints.md)** - Resource management and limitations
+**[Attributes.md](../Attributes.md)** - Resource management and limitations
 - Points/limiter architecture
 - Stamina and regeneration
 - HP and combat resources
