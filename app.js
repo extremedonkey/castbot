@@ -9783,13 +9783,27 @@ To fix this:
           const role = await guild.roles.fetch(roleId);
           const roleName = role?.name || 'Unknown Role';
 
-          // Return modal (NO REMOVE FIELD - use instant toggle instead)
+          // Return modal with tribe name, emoji, and color fields
           return {
             type: 9, // MODAL
             data: {
               custom_id: `tribe_edit_modal|${roleId}|${castlistId}`,
               title: `Edit: ${roleName.substring(0, 30)}`,
               components: [
+                {
+                  type: 18, // Label (Components V2)
+                  label: 'Tribe Name',
+                  description: 'Change the name of the tribe. This will also update the Discord Role name.',
+                  component: {
+                    type: 4, // Text Input
+                    custom_id: 'tribe_name',
+                    style: 1, // Short
+                    placeholder: 'Enter tribe name',
+                    value: roleName,
+                    required: false,
+                    max_length: 100 // Discord role name limit
+                  }
+                },
                 {
                   type: 18, // Label (Components V2)
                   label: 'Tribe Emoji',
@@ -36297,11 +36311,13 @@ Are you sure you want to continue?`;
           return '';
         };
 
+        const nameInput = getFieldValue('tribe_name');
         const emojiInput = getFieldValue('tribe_emoji');
         const colorInput = getFieldValue('tribe_color');
         const showPlayerEmojisInput = getFieldValue('show_player_emojis');
 
         console.log(`[CASTLIST] Extracted modal values:`, {
+          name: nameInput,
           emoji: emojiInput,
           color: colorInput,
           showPlayerEmojis: showPlayerEmojisInput
@@ -36395,12 +36411,44 @@ Are you sure you want to continue?`;
           }
         }
 
-        // Always update analyticsName from current Discord role name
+        // Fetch guild and role for rename + analyticsName
         const guild = await client.guilds.fetch(guildId);
-        const role = guild.roles.cache.get(roleId);
-        const roleName = role?.name || 'tribe';
+        const role = guild.roles.cache.get(roleId) || await guild.roles.fetch(roleId);
+        let roleName = role?.name || 'tribe';
 
-        // Set analyticsName to current role name
+        // Handle tribe name rename if changed
+        if (nameInput && nameInput.trim() && nameInput.trim() !== roleName) {
+          const newName = nameInput.trim();
+          if (newName.length > 100) {
+            return updateDeferredResponse(token, {
+              components: [{
+                type: 17,
+                components: [{
+                  type: 10,
+                  content: `❌ Tribe name too long (${newName.length}/100 characters). Please try again.`
+                }]
+              }]
+            });
+          }
+          try {
+            await role.setName(newName, 'CastBot tribe name edit');
+            console.log(`[CASTLIST] Renamed role "${roleName}" → "${newName}" (ID: ${roleId})`);
+            roleName = newName;
+          } catch (renameError) {
+            console.error(`[CASTLIST] Failed to rename role ${roleId}:`, renameError);
+            return updateDeferredResponse(token, {
+              components: [{
+                type: 17,
+                components: [{
+                  type: 10,
+                  content: `❌ Failed to rename Discord role: ${renameError.message}`
+                }]
+              }]
+            });
+          }
+        }
+
+        // Set analyticsName to current role name (may be updated from rename)
         tribe.analyticsName = roleName;
 
         // Ensure analyticsAdded timestamp exists
