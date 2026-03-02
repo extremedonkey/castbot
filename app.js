@@ -27381,17 +27381,17 @@ Your server is now ready for Tycoons gameplay!`;
         isInMapChannel = channel && channel.parentId === mapData.category;
       }
       
-      // Handle confirmed map deletion - the actual deletion
+      // Handle confirmed map deletion - updates the confirmation message (removes delete button)
       return ButtonHandlerFactory.create({
         id: 'map_delete_confirm',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true,
         // Only use deferred if NOT in a map channel
         deferred: !isInMapChannel,
-        ephemeral: true,
         handler: async (context) => {
           console.log(`🗑️ START: map_delete_confirm - user ${context.userId}, channel ${context.channelId}, isInMapChannel: ${isInMapChannel}`);
-          
+
           if (isInMapChannel) {
             // If we're in a map channel, send immediate response before deletion
             // Schedule deletion to happen after response is sent
@@ -27405,22 +27405,20 @@ Your server is now ready for Tycoons gameplay!`;
                 console.error(`❌ Error during map deletion: ${error.message}`);
               }
             }, 1000); // 1 second delay to ensure response is sent
-            
+
             return {
-              content: '🗑️ **Map deletion initiated!**\n\nThis channel will be deleted momentarily...',
-              ephemeral: true
+              content: '🗑️ **Map deletion initiated!**\n\nThis channel will be deleted momentarily...'
             };
           } else {
             // Not in a map channel, proceed normally with deferred response
             const guild = await context.client.guilds.fetch(context.guildId);
             const { deleteMapGrid } = await import('./mapExplorer.js');
             const result = await deleteMapGrid(guild);
-            
+
             console.log(`✅ SUCCESS: map_delete_confirm - deletion completed`);
-            
+
             return {
-              content: result.message,
-              ephemeral: true
+              content: result.message
             };
           }
         }
@@ -42608,20 +42606,28 @@ Your server is now ready for Tycoons gameplay!`;
           result = await createMapGridWithCustomImage(guild, userId, mapUrl, mapColumns, mapRows);
         }
         
-        // Send followup with result
+        // Rebuild Map Explorer UI with the new image
         const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-        
-        await fetch(followupUrl, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            content: result.message,
-            flags: InteractionResponseFlags.EPHEMERAL
-          })
-        });
-        
+        try {
+          const { buildMapExplorerResponse } = await import('./mapExplorer.js');
+          const mapExplorerUI = await buildMapExplorerResponse(guildId, userId, client, true);
+          await fetch(followupUrl, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(mapExplorerUI)
+          });
+        } catch (uiError) {
+          console.log(`⚠️ Could not rebuild Map Explorer UI, falling back to text: ${uiError.message}`);
+          await fetch(followupUrl, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: result.message,
+              flags: InteractionResponseFlags.EPHEMERAL
+            })
+          });
+        }
+
       } catch (error) {
         console.error('Error in map_update_modal handler:', error);
         

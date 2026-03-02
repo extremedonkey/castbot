@@ -5087,14 +5087,14 @@
     "serverName": "Active Seasons",
     "icon": null,
     "ownerId": "391415444084490240",
-    "memberCount": 5,
+    "memberCount": 4,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1750898495205,
-    "lastUpdated": 1759258333077,
+    "lastUpdated": 1772438608276,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -5911,14 +5911,14 @@
     "serverName": "Bot Tools",
     "icon": null,
     "ownerId": "391415444084490240",
-    "memberCount": 3,
+    "memberCount": 2,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1751069213471,
-    "lastUpdated": 1759258333542,
+    "lastUpdated": 1772438608620,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -6219,14 +6219,14 @@
     "serverName": "Pokévivor",
     "icon": "https://cdn.discordapp.com/icons/1420100181017231563/9240cc5ebb8958e70e94a11ec691d1f3.webp",
     "ownerId": "391415444084490240",
-    "memberCount": 3,
+    "memberCount": 4,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1758648667340,
-    "lastUpdated": 1759258335796,
+    "lastUpdated": 1772438610633,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -6824,7 +6824,7 @@
               "regenConfig": "hourly"
             }
           },
-          "isPaused": false
+          "isPaused": true
         }
       },
       "251452487997980673": {
@@ -6879,103 +6879,13 @@
       },
       "538540453973327873": {
         "age": "22",
-        "emojiCode": "<:kayl:1396856849126522991>",
-        "safari": {
-          "currency": 1450,
-          "history": [],
-          "lastInteraction": 1758949576106,
-          "achievements": [],
-          "inventory": {
-            "nurturer_361363": 1,
-            "territory_forager_404120": 1,
-            "nest_guardian_461600": 1,
-            "raider_499497": 1
-          },
-          "cooldowns": {},
-          "buttonUses": {},
-          "storeHistory": [],
-          "mapProgress": {
-            "map_7x7_1753981993871": {
-              "currentLocation": "A1",
-              "exploredCoordinates": [
-                "A1"
-              ],
-              "itemsFound": [],
-              "movementHistory": [
-                {
-                  "from": null,
-                  "to": "A1",
-                  "timestamp": "2025-08-06T11:59:31.130Z"
-                },
-                {
-                  "from": "A1",
-                  "to": "A1",
-                  "timestamp": "2025-08-06T11:59:31.166Z"
-                }
-              ]
-            }
-          },
-          "points": {
-            "stamina": {
-              "current": 3,
-              "maximum": 3,
-              "lastRegeneration": "2025-08-06T11:59:31.130Z",
-              "regenConfig": "hourly"
-            }
-          },
-          "isPaused": false
-        }
+        "emojiCode": "<:kayl:1396856849126522991>"
       },
       "443545183997657120": {
         "emojiCode": null
       },
       "1328366050848411658": {
-        "emojiCode": null,
-        "safari": {
-          "mapProgress": {
-            "map_7x7_1753981993871": {
-              "currentLocation": "A1",
-              "exploredCoordinates": [
-                "A1"
-              ],
-              "itemsFound": [],
-              "movementHistory": [
-                {
-                  "from": null,
-                  "to": "A1",
-                  "timestamp": "2025-08-04T13:22:16.559Z"
-                },
-                {
-                  "from": "A1",
-                  "to": "A1",
-                  "timestamp": "2025-08-04T13:22:16.572Z"
-                }
-              ]
-            }
-          },
-          "points": {
-            "stamina": {
-              "current": 10,
-              "maximum": 10,
-              "lastRegeneration": "2025-08-04T13:22:16.559Z",
-              "regenConfig": "hourly"
-            }
-          },
-          "isPaused": false,
-          "currency": 1450,
-          "inventory": {
-            "nurturer_361363": 1,
-            "territory_forager_404120": 1,
-            "nest_guardian_461600": 1,
-            "raider_499497": 1
-          },
-          "history": [],
-          "storeHistory": [],
-          "achievements": [],
-          "cooldowns": {},
-          "buttonUses": {},
-          "lastInteraction": 1758949579940
-        }
+        "emojiCode": null
       },
       "676262975132139522": {
         "emojiCode": "<:Belle:1382413449342091405>",
@@ -7023,7 +6933,7 @@
               "regenConfig": "hourly"
             }
           },
-          "isPaused": false
+          "isPaused": true
         }
       },
       "977455730300956683": {

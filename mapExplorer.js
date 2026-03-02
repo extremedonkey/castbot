@@ -524,7 +524,7 @@ async function createMapGrid(guild, userId) {
     // Create map data structure
     const mapData = {
       id: mapId,
-      name: 'Adventure Island',
+      name: guild.name || 'Adventure Island',
       gridWidth: gridWidth,
       gridHeight: gridHeight,
       gridSize: Math.max(gridWidth, gridHeight), // Keep for backwards compatibility
@@ -980,16 +980,32 @@ async function updateMapImage(guild, userId, mapUrl) {
     }
     
     const imageBuffer = Buffer.from(await response.arrayBuffer());
-    
+
     // Get image metadata to validate dimensions
     const metadata = await sharp(imageBuffer).metadata();
     progressMessages.push(`✅ Image downloaded: ${metadata.width}x${metadata.height} pixels`);
-    
+
+    // Post original pre-grid image to map-storage for reference/fallback
+    try {
+      const { AttachmentBuilder } = await import('discord.js');
+      let storageChannel = guild.channels.cache.find(ch => (ch.name === '🗺️map-storage' || ch.name === 'map-storage') && ch.type === 0);
+      if (storageChannel) {
+        const origAttachment = new AttachmentBuilder(imageBuffer, { name: `original_${Date.now()}.png` });
+        await storageChannel.send({
+          content: `🖼️ Original pre-map image for ${guild.name} (updated ${new Date().toISOString().split('T')[0]})`,
+          files: [origAttachment]
+        });
+        progressMessages.push('🖼️ Original image saved to map-storage');
+      }
+    } catch (e) {
+      console.log(`⚠️ Could not post original image to storage: ${e.message}`);
+    }
+
     // Create a temporary file for the new map
     const tempMapPath = path.join(__dirname, 'img', guild.id, `temp_${Date.now()}.png`);
     await fs.mkdir(path.dirname(tempMapPath), { recursive: true });
     await sharp(imageBuffer).toFile(tempMapPath);
-    
+
     // Initialize grid system with the new map
     const gridSystem = new MapGridSystem(tempMapPath, {
       gridWidth: mapData.gridWidth || mapData.gridSize || 7,
@@ -1288,7 +1304,23 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
     const discordImageUrl = uploadResult.url || uploadResult; // Backwards compatibility
     console.log(`📤 Map image uploaded to Discord CDN: ${discordImageUrl}`);
     progressMessages.push('✅ Map image uploaded to Discord CDN');
-    
+
+    // Post original pre-grid image to map-storage for reference/fallback
+    try {
+      const { AttachmentBuilder } = await import('discord.js');
+      let storageChannel = guild.channels.cache.find(ch => (ch.name === '🗺️map-storage' || ch.name === 'map-storage') && ch.type === 0);
+      if (storageChannel) {
+        const origAttachment = new AttachmentBuilder(imageBuffer, { name: `original_${Date.now()}.png` });
+        await storageChannel.send({
+          content: `🖼️ Original pre-map image for ${guild.name} (created ${new Date().toISOString().split('T')[0]})`,
+          files: [origAttachment]
+        });
+        progressMessages.push('🖼️ Original image saved to map-storage');
+      }
+    } catch (e) {
+      console.log(`⚠️ Could not post original image to storage: ${e.message}`);
+    }
+
     const category = await guild.channels.create({
       name: '🗺️ Map Explorer',
       type: ChannelType.GuildCategory,
@@ -1299,9 +1331,9 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
         }
       ]
     });
-    
+
     progressMessages.push(`✅ Created category: ${category.name}`);
-    
+
     // Generate coordinate list for custom grid
     const coordinates = [];
     for (let y = 0; y < gridHeight; y++) {
@@ -1380,7 +1412,7 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
     // Create map data structure
     const mapData = {
       id: mapId,
-      name: 'Adventure Island',
+      name: guild.name || 'Adventure Island',
       gridWidth: gridWidth,
       gridHeight: gridHeight,
       gridSize: Math.max(gridWidth, gridHeight), // Keep for backwards compatibility
@@ -1886,13 +1918,35 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
   const activeMapId = guildMaps.active;
   const hasActiveMap = activeMapId && guildMaps[activeMapId];
 
+  // Get pause status data (used in header and button label)
+  const { getPausedPlayers, getSafariPlayers } = await import('./pausedPlayersManager.js');
+  const pausedPlayersList = hasActiveMap ? await getPausedPlayers(guildId) : [];
+  const safariPlayersList = hasActiveMap ? await getSafariPlayers(guildId) : [];
+  const pausedCount = pausedPlayersList.length;
+  const totalPlayers = safariPlayersList.length;
+  const pauseRatio = totalPlayers > 0 ? pausedCount / totalPlayers : 0;
+
   // Create header text based on map status
+  const guild = client.guilds.cache.get(guildId);
+  const guildName = guild?.name || 'Unknown Server';
   let headerText;
   if (hasActiveMap) {
     const activeMap = guildMaps[activeMapId];
-    headerText = `# 🗺️ Map Explorer\n\n**Active Map:** ${activeMap.name || 'Adventure Map'}\n**Grid Size:** ${activeMap.gridSize}x${activeMap.gridSize}\n**Status:** Active ✅`;
+    const gridW = activeMap.gridWidth || activeMap.gridSize || 7;
+    const gridH = activeMap.gridHeight || activeMap.gridSize || 7;
+
+    let statusText;
+    if (pauseRatio > 0.75) {
+      statusText = '⏸️ Paused';
+    } else if (pauseRatio > 0) {
+      statusText = '⏯️ Some Players Paused';
+    } else {
+      statusText = '✅ Active';
+    }
+
+    headerText = `# 🗺️ Map Explorer\n\n**Active Map:** ${guildName}\n**Grid Size:** ${gridW}x${gridH}\n**Status:** ${statusText}\n**Source Images (do not delete):** <#${activeMap.mapStorageChannelId || ''}>`;
   } else {
-    headerText = `# 🗺️ Map Explorer\n\n**No active map found**\nCreate a new map to begin exploration!`;
+    headerText = `# 🗺️ Map Explorer\n\n**No active map**\nCastBot will create a map, grid and channels for you - all you need to do is:\n1. Upload an image to any Discord channel\n2. Right click / long press the image\n3. Click **Copy Link** (computer) / **Copy Media Link** (phone)\n4. Click the **Create / Update Map** button below and paste it into the Discord Image URL text input.`;
   }
 
   // Build container components starting with text display
@@ -2050,9 +2104,7 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     .setEmoji('🔄')
     .setDisabled(!hasActiveMap);
 
-  // Create paused players button
-  const { getPausedPlayers } = await import('./pausedPlayersManager.js');
-  const pausedCount = hasActiveMap ? (await getPausedPlayers(guildId)).length : 0;
+  // Create paused players button (pausedCount already computed above for header)
   const pausedPlayersButton = new ButtonBuilder()
     .setCustomId('safari_paused_players')
     .setLabel(pausedCount > 0 ? `Paused Players (${pausedCount})` : 'Paused Players')
