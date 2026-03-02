@@ -3025,6 +3025,14 @@ export const BUTTON_REGISTRY = {
     category: 'navigation',
     parent: 'activity_log'
   },
+  'activity_log_refresh_*': {
+    label: 'Refresh',
+    description: 'Refresh activity log to show latest entries',
+    emoji: '🔃',
+    style: 'Secondary',
+    category: 'navigation',
+    parent: 'activity_log'
+  },
   'activity_log_back_*': {
     label: '← Back',
     description: 'Return from activity log to previous panel',

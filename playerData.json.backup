@@ -698,7 +698,23 @@
         ],
         "safari": {
           "currency": 453,
-          "history": [],
+          "history": [
+            {
+              "t": 1772296006846,
+              "type": "movement",
+              "desc": "Moved from ? to G1"
+            },
+            {
+              "t": 1772296006846,
+              "type": "init",
+              "desc": "Initialized at G1"
+            },
+            {
+              "t": 1772296006879,
+              "type": "movement",
+              "desc": "Moved from G1 to G1"
+            }
+          ],
           "lastInteraction": 1772302967262,
           "achievements": [],
           "inventory": {
@@ -773,9 +789,19 @@
           "currency": 22,
           "history": [
             {
-              "t": 1772423622860,
-              "type": "admin",
-              "desc": "[ADMIN] Currency set to 22 Gil"
+              "t": 1772423661332,
+              "type": "movement",
+              "desc": "Moved from ? to A3"
+            },
+            {
+              "t": 1772423661332,
+              "type": "init",
+              "desc": "Initialized at A3"
+            },
+            {
+              "t": 1772423661409,
+              "type": "movement",
+              "desc": "Moved from A3 to A3"
             }
           ],
           "inventory": {
@@ -853,7 +879,23 @@
             "nest_guardian_461600": 1,
             "raider_499497": 1
           },
-          "history": [],
+          "history": [
+            {
+              "t": 1772296000215,
+              "type": "movement",
+              "desc": "Moved from ? to D1"
+            },
+            {
+              "t": 1772296000215,
+              "type": "init",
+              "desc": "Initialized at D1"
+            },
+            {
+              "t": 1772296000238,
+              "type": "movement",
+              "desc": "Moved from D1 to D1"
+            }
+          ],
           "achievements": [],
           "cooldowns": {},
           "buttonUses": {},
@@ -879,7 +921,23 @@
         ],
         "safari": {
           "currency": 453,
-          "history": [],
+          "history": [
+            {
+              "t": 1772296055438,
+              "type": "movement",
+              "desc": "Moved from ? to G1"
+            },
+            {
+              "t": 1772296055438,
+              "type": "init",
+              "desc": "Initialized at G1"
+            },
+            {
+              "t": 1772296055468,
+              "type": "movement",
+              "desc": "Moved from G1 to G1"
+            }
+          ],
           "lastInteraction": 1772302968685,
           "achievements": [],
           "inventory": {
@@ -1010,29 +1068,34 @@
           "currency": 22,
           "history": [
             {
-              "t": 1772423984730,
-              "type": "admin",
-              "desc": "[ADMIN] Currency set to 22 Gil"
+              "t": 1772424070881,
+              "type": "movement",
+              "desc": "Moved from ? to G1"
             },
             {
-              "t": 1772424005125,
-              "type": "admin",
-              "desc": "[ADMIN] Set Rainbow Fish x2"
+              "t": 1772424070881,
+              "type": "init",
+              "desc": "Initialized at G1"
             },
             {
-              "t": 1772424188174,
+              "t": 1772424070928,
+              "type": "movement",
+              "desc": "Moved from G1 to G1"
+            },
+            {
+              "t": 1772424186240,
               "type": "movement",
               "desc": "Moved from G1 to F1"
             },
             {
-              "t": 1772424703347,
+              "t": 1772424701162,
               "type": "movement",
               "desc": "Moved from F1 to B3"
             },
             {
-              "t": 1772424715459,
-              "type": "admin",
-              "desc": "[ADMIN] Set Bait x1"
+              "t": 1772429730479,
+              "type": "action",
+              "desc": "Safari button: a_bad_ass_action_640326"
             }
           ],
           "inventory": {
@@ -1093,7 +1156,23 @@
       "719547106318352496": {
         "safari": {
           "currency": 453,
-          "history": [],
+          "history": [
+            {
+              "t": 1772296057504,
+              "type": "movement",
+              "desc": "Moved from ? to G1"
+            },
+            {
+              "t": 1772296057504,
+              "type": "init",
+              "desc": "Initialized at G1"
+            },
+            {
+              "t": 1772296057531,
+              "type": "movement",
+              "desc": "Moved from G1 to G1"
+            }
+          ],
           "lastInteraction": 1772302970711,
           "achievements": [],
           "inventory": {
@@ -1139,7 +1218,23 @@
       "209773824357564416": {
         "safari": {
           "currency": 453,
-          "history": [],
+          "history": [
+            {
+              "t": 1772296004288,
+              "type": "movement",
+              "desc": "Moved from ? to G1"
+            },
+            {
+              "t": 1772296004288,
+              "type": "init",
+              "desc": "Initialized at G1"
+            },
+            {
+              "t": 1772296004311,
+              "type": "movement",
+              "desc": "Moved from G1 to G1"
+            }
+          ],
           "lastInteraction": 1772302969140,
           "achievements": [],
           "inventory": {

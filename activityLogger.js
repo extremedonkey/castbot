@@ -294,6 +294,17 @@ export async function createActivityLogUI({ guildId, userId, playerName, page = 
     });
   }
 
+  // Refresh button
+  const refreshId = mode === 'admin'
+    ? `activity_log_refresh_${userId}_${safePage}`
+    : `activity_log_refresh_self_${safePage}`;
+  navButtons.push({
+    type: 2, // Button
+    style: 2, // Secondary
+    custom_id: refreshId,
+    emoji: { name: '🔃' }
+  });
+
   // Back button
   const backId = backButtonId || (mode === 'admin'
     ? `activity_log_back_${userId}`

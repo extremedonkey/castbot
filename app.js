@@ -30892,6 +30892,24 @@ Are you sure you want to continue?`;
         }
       })(req, res, client);
 
+    } else if (custom_id.startsWith('activity_log_refresh_')) {
+      // Activity log refresh (re-render current page)
+      return ButtonHandlerFactory.create({
+        id: 'activity_log_refresh',
+        updateMessage: true,
+        handler: async (context) => {
+          const { createActivityLogUI } = await import('./activityLogger.js');
+          const parts = context.customId.replace('activity_log_refresh_', '').split('_');
+          const isAdmin = parts[0] !== 'self';
+          const targetUserId = isAdmin ? parts[0] : context.userId;
+          const page = parseInt(parts[parts.length - 1]) || 1;
+          const guild = await context.client.guilds.fetch(context.guildId);
+          let playerName = 'Unknown';
+          try { const m = await guild.members.fetch(targetUserId); playerName = m.displayName; } catch {}
+          return createActivityLogUI({ guildId: context.guildId, userId: targetUserId, playerName, page, mode: isAdmin ? 'admin' : 'player' });
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('activity_log_back_')) {
       // Activity log back button
       return ButtonHandlerFactory.create({
