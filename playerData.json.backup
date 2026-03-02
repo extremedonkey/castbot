@@ -975,10 +975,11 @@
         "safari": {
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "F1",
+              "currentLocation": "B3",
               "exploredCoordinates": [
                 "G1",
-                "F1"
+                "F1",
+                "B3"
               ],
               "itemsFound": [],
               "movementHistory": [
@@ -996,6 +997,11 @@
                   "from": "G1",
                   "to": "F1",
                   "timestamp": "2026-03-02T04:03:06.240Z"
+                },
+                {
+                  "from": "F1",
+                  "to": "B3",
+                  "timestamp": "2026-03-02T04:11:41.162Z"
                 }
               ],
               "startingLocation": "G1"
@@ -1012,6 +1018,16 @@
               "t": 1772424005125,
               "type": "admin",
               "desc": "[ADMIN] Set Rainbow Fish x2"
+            },
+            {
+              "t": 1772424188174,
+              "type": "movement",
+              "desc": "Moved from G1 to F1"
+            },
+            {
+              "t": 1772424703347,
+              "type": "movement",
+              "desc": "Moved from F1 to B3"
             }
           ],
           "inventory": {

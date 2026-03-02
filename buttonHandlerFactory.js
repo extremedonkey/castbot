@@ -996,8 +996,8 @@ export const BUTTON_REGISTRY = {
   },
   'safari_configure_log': {
     label: 'Logs',
-    description: 'Configure Safari Log channel and settings',
-    emoji: '📊',
+    description: 'Configure CastBot Logs channel and settings',
+    emoji: '🪵',
     style: 'Secondary',
     parent: 'safari_customize_terms',
     category: 'safari'

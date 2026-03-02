@@ -11703,7 +11703,8 @@ Your server is now ready for Tycoons gameplay!`;
           const backRow = new ActionRowBuilder().addComponents(backButton);
           
           // Create status display
-          let statusText = `## 📊 Safari Log Configuration\n\n`;
+          let statusText = `## 🪵 CastBot Logs\n\n`;
+          statusText += `-# Logs activity from Idol Hunts, Challenges and Safari features — currency, items, stores, movement and more.\n\n`;
           statusText += `**Status:** ${logSettings.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
           statusText += `**Log Channel:** ${logSettings.logChannelId ? `<#${logSettings.logChannelId}>` : 'Not Set'}\n\n`;
           
@@ -12167,7 +12168,8 @@ Your server is now ready for Tycoons gameplay!`;
           const backRow = new ActionRowBuilder().addComponents(backButton);
           
           // Create status display
-          let statusText = `## 📊 Safari Log Configuration\n\n`;
+          let statusText = `## 🪵 CastBot Logs\n\n`;
+          statusText += `-# Logs activity from Idol Hunts, Challenges and Safari features — currency, items, stores, movement and more.\n\n`;
           statusText += `**Status:** ${updatedLogSettings.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
           statusText += `**Log Channel:** ${updatedLogSettings.logChannelId ? `<#${updatedLogSettings.logChannelId}>` : 'Not Set'}\n\n`;
           
@@ -12487,7 +12489,8 @@ Your server is now ready for Tycoons gameplay!`;
           const backRow = new ActionRowBuilder().addComponents(backButton);
           
           // Create status display
-          let statusText = `## 📊 Safari Log Configuration\n\n`;
+          let statusText = `## 🪵 CastBot Logs\n\n`;
+          statusText += `-# Logs activity from Idol Hunts, Challenges and Safari features — currency, items, stores, movement and more.\n\n`;
           statusText += `**Status:** ${updatedLogSettings.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
           statusText += `**Log Channel:** ${updatedLogSettings.logChannelId ? `<#${updatedLogSettings.logChannelId}>` : 'Not Set'}\n\n`;
           
@@ -12630,7 +12633,8 @@ Your server is now ready for Tycoons gameplay!`;
           const backRow = new ActionRowBuilder().addComponents(backButton);
           
           // Create status display
-          let statusText = `## 📊 Safari Log Configuration\n\n`;
+          let statusText = `## 🪵 CastBot Logs\n\n`;
+          statusText += `-# Logs activity from Idol Hunts, Challenges and Safari features — currency, items, stores, movement and more.\n\n`;
           statusText += `**Status:** ${updatedLogSettings.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
           statusText += `**Log Channel:** ${updatedLogSettings.logChannelId ? `<#${updatedLogSettings.logChannelId}>` : 'Not Set'}\n\n`;
           
@@ -36998,7 +37002,7 @@ Are you sure you want to continue?`;
           }
         }
         
-        // Log admin activity
+        // Log admin activity (player history + Safari channel)
         try {
           const { addActivityEntry, ACTIVITY_TYPES } = await import('./activityLogger.js');
           addActivityEntry(playerData, guildId, userId, ACTIVITY_TYPES.admin, `[ADMIN] Set ${itemName} x${quantity}`);
@@ -37010,6 +37014,16 @@ Are you sure you want to continue?`;
         // Get user info for confirmation
         const guild = await client.guilds.fetch(guildId);
         const targetMember = await guild.members.fetch(userId);
+
+        // Post to Safari log channel (fire-and-forget)
+        try {
+          const { logItemPickup } = await import('./safariLogger.js');
+          await logItemPickup({
+            guildId, userId, username: targetMember.user?.username, displayName: targetMember.displayName,
+            location: 'Admin', itemId, itemName, itemEmoji: item?.emoji, quantity,
+            source: `[ADMIN] Set to ${quantity} (was ${previousQuantity})`, channelName: 'admin'
+          });
+        } catch (e) { /* Safari log is optional */ }
 
         // Create confirmation message
         let changeText = '';
@@ -38027,6 +38041,18 @@ Are you sure you want to continue?`;
         addActivityEntry(playerData, guildId, targetUserId, ACTIVITY_TYPES.admin, `[ADMIN] Currency set to ${amount} ${adminTerms.currencyName}`);
 
         await savePlayerData(playerData);
+
+        // Post to Safari log channel (fire-and-forget)
+        try {
+          const { logCurrencyChange } = await import('./safariLogger.js');
+          const adminMember = req.body.member;
+          const adminName = adminMember?.user?.username || 'Admin';
+          await logCurrencyChange({
+            guildId, userId: targetUserId, username: adminName, displayName: adminMember?.nick || adminName,
+            location: 'Admin', amount, currencyName: adminTerms.currencyName,
+            source: `[ADMIN] Set to ${amount}`, channelName: 'admin'
+          });
+        } catch (e) { /* Safari log is optional */ }
 
         // Return updated player view
         const ui = await createMapAdminUI({
