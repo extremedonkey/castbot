@@ -60,7 +60,7 @@ const BACK_BUTTON_CONFIG = {
     description: 'Return to Analytics menu (Reece only)'
   },
 
-  'prod_setup': {
+  'castbot_tools': {
     label: '← Tools',
     emoji: '🪛',
     description: 'Return to Tools menu'

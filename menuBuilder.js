@@ -90,10 +90,13 @@ export class MenuBuilder {
       { type: 14 }
     ];
 
-    // Row 2: Reece's Stuff (RED, Reece-only) | ToS | Privacy Policy | Need Help?
+    // Row 2: [Reece's Stuff (RED) | Analytics (grey)] (Reece-only) | ToS | Privacy Policy | Need Help?
     const legalRow = [];
     if (isReece) {
-      legalRow.push({ type: 2, custom_id: 'reeces_stuff', label: "Reece's Stuff", style: 4, emoji: { name: '🐧' } });
+      legalRow.push(
+        { type: 2, custom_id: 'reeces_stuff', label: "Reece's Stuff", style: 4, emoji: { name: '🐧' } },
+        { type: 2, custom_id: 'analytics_admin', label: 'Analytics', style: 2, emoji: { name: '🧮' } }
+      );
     }
     legalRow.push(
       { type: 2, custom_id: 'prod_terms_of_service', label: 'Terms of Service', style: 2, emoji: { name: '📜' } },

@@ -4,6 +4,7 @@
  */
 
 import { logInteraction } from './src/analytics/analyticsLogger.js';
+import { addActivityEntryAndSave, ACTIVITY_TYPES } from './activityLogger.js';
 
 /**
  * Log a whisper between players
@@ -40,6 +41,8 @@ export async function logWhisper({ guildId, senderId, senderName, senderDisplayN
     senderDisplayName,
     safariContent
   );
+
+  addActivityEntryAndSave(guildId, senderId, ACTIVITY_TYPES.whisper, `Whispered to ${recipientName}`);
 }
 
 /**
@@ -82,6 +85,8 @@ export async function logItemPickup({ guildId, userId, username, displayName, lo
     displayName,
     safariContent
   );
+
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.item, `Picked up ${itemEmoji || '📦'} ${itemName} x${quantity}`);
 }
 
 /**
@@ -118,6 +123,8 @@ export async function logCurrencyChange({ guildId, userId, username, displayName
     displayName,
     safariContent
   );
+
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.currency, `${amount > 0 ? 'Gained' : 'Lost'} ${Math.abs(amount)} ${currencyName}${source ? ` from ${source}` : ''}`);
 }
 
 /**
@@ -164,6 +171,8 @@ export async function logStorePurchase({ guildId, userId, username, displayName,
     displayName,
     safariContent
   );
+
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.purchase, `Bought ${itemEmoji || '📦'} ${itemName} x${quantity} for ${price} ${currencyName}`);
 }
 
 /**
@@ -200,6 +209,8 @@ export async function logSafariButton({ guildId, userId, username, displayName, 
     displayName,
     safariContent
   );
+
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.action, `Button: ${buttonLabel}`);
 }
 
 /**
@@ -232,6 +243,8 @@ export async function logPlayerMovement({ guildId, userId, username, displayName
     displayName,
     safariContent
   );
+
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.movement, `Moved from ${fromLocation} to ${toLocation}`);
 }
 
 /**
@@ -263,6 +276,8 @@ export async function logPlayerInitialization({ guildId, userId, username, displ
     displayName,
     safariContent
   );
+
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.init, `Initialized at ${coordinate} with ${currency} ${currencyName}`);
 }
 
 /**
@@ -300,6 +315,8 @@ export async function logAttack({ guildId, attackerId, attackerName, attackerDis
     attackerDisplayName,
     safariContent
   );
+
+  addActivityEntryAndSave(guildId, attackerId, ACTIVITY_TYPES.attack, `Attacked ${targetName}`);
 }
 
 /**
@@ -371,6 +388,8 @@ export async function logCustomAction({ guildId, userId, username, displayName, 
     displayName,
     safariContent
   );
+
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.action, summary);
 }
 
 /**

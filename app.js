@@ -856,10 +856,19 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Add Tools button (renamed from Initial Setup, contains Setup/Availability/Help) - third/fourth in row depending on Analytics
   advancedFeaturesButtons.push(
     new ButtonBuilder()
-      .setCustomId('prod_setup')
+      .setCustomId('castbot_tools')
       .setLabel('Tools')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🪛')
+  );
+
+  // Add Populate Logs button (backfill activity logs from existing data)
+  advancedFeaturesButtons.push(
+    new ButtonBuilder()
+      .setCustomId('admin_populate_logs')
+      .setLabel('Populate Logs')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('📜')
   );
 
   const advancedFeaturesRow = new ActionRowBuilder().addComponents(advancedFeaturesButtons);
@@ -1093,8 +1102,8 @@ async function createReeceStuffMenu(guildId, channelId = null) {
   
   const backRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId('reeces_stuff')
-      .setLabel("← Reece's Stuff")
+      .setCustomId('castbot_tools')
+      .setLabel('← Tools')
       .setStyle(ButtonStyle.Secondary)
   );
 
@@ -1105,11 +1114,11 @@ async function createReeceStuffMenu(guildId, channelId = null) {
     { type: 10, content: `> **\`📊 Analytics\`**` },
     analyticsRow.toJSON(),
     { type: 14 },
-    { type: 10, content: `> **\`☢️ Danger Zone\`**` },
-    dangerZoneRow.toJSON(),
-    { type: 14 },
     { type: 10, content: `> **\`📦 Data Actions\`**` },
     dataActionsRow.toJSON(),
+    { type: 14 },
+    { type: 10, content: `> **\`☢️ Danger Zone\`**` },
+    dangerZoneRow.toJSON(),
     { type: 14 },
     backRow.toJSON()
   ];
@@ -3581,7 +3590,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               component.customId === 'season_management_menu' ||
               component.customId === 'prod_manage_pronouns_timezones' ||
               component.customId === 'reeces_stuff' ||
-              component.customId === 'prod_setup' ||
+              component.customId === 'castbot_tools' ||
               component.customId === 'prod_setup_tycoons' ||
               component.customId === 'admin_manage_player'
             )
@@ -6425,7 +6434,7 @@ To fix this:
                   {
                     type: 2, // Button
                     style: 2, // Secondary
-                    custom_id: 'prod_setup',
+                    custom_id: 'castbot_tools',
                     label: '← Setup'
                   }
                 ]
@@ -6485,7 +6494,7 @@ To fix this:
                   {
                     type: 2, // Button
                     style: 2, // Secondary
-                    custom_id: 'prod_setup',
+                    custom_id: 'castbot_tools',
                     label: '← Setup'
                   }
                 ]
@@ -6593,7 +6602,7 @@ To fix this:
                 components: [
                   {
                     type: 2, // Button
-                    custom_id: 'prod_setup',
+                    custom_id: 'castbot_tools',
                     label: '← Tools',
                     style: 2 // Secondary
                   }
@@ -7138,10 +7147,10 @@ To fix this:
           }
         });
       }
-    } else if (custom_id === 'prod_setup') {
+    } else if (custom_id === 'castbot_tools') {
       // Setup - always show setup interface (no "subsequent run" detection)
       return ButtonHandlerFactory.create({
-        id: 'prod_setup',
+        id: 'castbot_tools',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         ephemeral: true,
@@ -7226,7 +7235,7 @@ To fix this:
           const backRow = new ActionRowBuilder()
             .addComponents(
               new ButtonBuilder()
-                .setCustomId('prod_setup')
+                .setCustomId('castbot_tools')
                 .setLabel('← Tools')
                 .setStyle(ButtonStyle.Secondary)
             );
@@ -7330,7 +7339,7 @@ To fix this:
           const backRow = new ActionRowBuilder()
             .addComponents(
               new ButtonBuilder()
-                .setCustomId('prod_setup')
+                .setCustomId('castbot_tools')
                 .setLabel('← Tools')
                 .setStyle(ButtonStyle.Secondary)
                 .setEmoji('🪛')
@@ -7379,7 +7388,6 @@ To fix this:
               {
                 type: 1,
                 components: [
-                  { type: 2, custom_id: 'analytics_admin', label: 'Analytics', style: 2, emoji: { name: '🧮' } },
                   { type: 2, custom_id: 'test_role_hierarchy', label: 'Check Roles', style: 2, emoji: { name: '🔰' } }
                 ]
               },
@@ -7394,7 +7402,7 @@ To fix this:
                 ]
               },
               { type: 14 },
-              { type: 1, components: [{ type: 2, custom_id: 'prod_setup', label: '← Tools', style: 2 }] }
+              { type: 1, components: [{ type: 2, custom_id: 'castbot_tools', label: '← Tools', style: 2 }] }
             ]
           };
 
@@ -20717,7 +20725,7 @@ Your server is now ready for Tycoons gameplay!`;
                   { type: 14 },
                   { type: 10, content: '❌ No selectable roles found in this server.' },
                   { type: 14 },
-                  { type: 1, components: [{ type: 2, custom_id: 'prod_setup', label: '← Tools', style: 2 }] }
+                  { type: 1, components: [{ type: 2, custom_id: 'castbot_tools', label: '← Tools', style: 2 }] }
                 ]
               }]
             };
@@ -20741,7 +20749,7 @@ Your server is now ready for Tycoons gameplay!`;
                   }]
                 },
                 { type: 14 },
-                { type: 1, components: [{ type: 2, custom_id: 'prod_setup', label: '← Tools', style: 2 }] }
+                { type: 1, components: [{ type: 2, custom_id: 'castbot_tools', label: '← Tools', style: 2 }] }
               ]
             }]
           };
@@ -29818,6 +29826,12 @@ Are you sure you want to continue?`;
 
           await initializePlayerOnMap(context.guildId, context.userId, startingCoordinate, context.client);
 
+          // Log player initialization activity
+          try {
+            const { addActivityEntryAndSave, ACTIVITY_TYPES } = await import('./activityLogger.js');
+            await addActivityEntryAndSave(context.guildId, context.userId, ACTIVITY_TYPES.init, `Self-initialized at ${startingCoordinate}`);
+          } catch (e) { console.error('Activity log error:', e); }
+
           // Get channel info for response
           const mapData = safariData[context.guildId].maps[activeMapId];
           const channelId = mapData.coordinates[startingCoordinate]?.channelId;
@@ -30665,9 +30679,15 @@ Are you sure you want to continue?`;
             const member = await guild.members.fetch(targetUserId);
             const playerName = member.displayName || member.user?.username || 'Unknown Player';
             
+            // Log admin activity before de-initialization (player data will be destroyed)
+            try {
+              const { addActivityEntryAndSave, ACTIVITY_TYPES } = await import('./activityLogger.js');
+              await addActivityEntryAndSave(context.guildId, targetUserId, ACTIVITY_TYPES.admin, `[ADMIN] Player de-initialized`);
+            } catch (e) { console.error('Activity log error:', e); }
+
             // Execute de-initialization
             const result = await deinitializePlayer(context.guildId, targetUserId, context.client);
-            
+
             if (result.success) {
               console.log(`✅ SUCCESS: De-initialized player ${targetUserId}`);
               return createDeinitSuccessUI(targetUserId, playerName, result.backup);
@@ -30718,6 +30738,159 @@ Are you sure you want to continue?`;
         }
       })(req, res, client);
       
+    // === ACTIVITY LOG HANDLERS ===
+
+    } else if (custom_id.startsWith('admin_view_logs_')) {
+      // Admin viewing a player's activity log
+      return ButtonHandlerFactory.create({
+        id: 'admin_view_logs',
+        updateMessage: true,
+        handler: async (context) => {
+          const targetUserId = context.customId.replace('admin_view_logs_', '');
+          console.log(`📜 START: admin_view_logs for user ${targetUserId}`);
+          const { createActivityLogUI } = await import('./activityLogger.js');
+          const guild = await context.client.guilds.fetch(context.guildId);
+          let playerName = 'Unknown';
+          try { const m = await guild.members.fetch(targetUserId); playerName = m.displayName; } catch {}
+          return createActivityLogUI({ guildId: context.guildId, userId: targetUserId, playerName, page: 1, mode: 'admin' });
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'player_view_logs') {
+      // Player viewing own activity log
+      return ButtonHandlerFactory.create({
+        id: 'player_view_logs',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`📜 START: player_view_logs for user ${context.userId}`);
+          const { createActivityLogUI } = await import('./activityLogger.js');
+          const guild = await context.client.guilds.fetch(context.guildId);
+          let playerName = 'Unknown';
+          try { const m = await guild.members.fetch(context.userId); playerName = m.displayName; } catch {}
+          return createActivityLogUI({ guildId: context.guildId, userId: context.userId, playerName, page: 1, mode: 'player' });
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('activity_log_prev_')) {
+      // Activity log previous page
+      return ButtonHandlerFactory.create({
+        id: 'activity_log_prev',
+        updateMessage: true,
+        handler: async (context) => {
+          const { createActivityLogUI } = await import('./activityLogger.js');
+          const parts = context.customId.replace('activity_log_prev_', '').split('_');
+          const isAdmin = parts[0] !== 'self';
+          const targetUserId = isAdmin ? parts[0] : context.userId;
+          const page = parseInt(parts[parts.length - 1]) || 1;
+          const guild = await context.client.guilds.fetch(context.guildId);
+          let playerName = 'Unknown';
+          try { const m = await guild.members.fetch(targetUserId); playerName = m.displayName; } catch {}
+          return createActivityLogUI({ guildId: context.guildId, userId: targetUserId, playerName, page, mode: isAdmin ? 'admin' : 'player' });
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('activity_log_next_')) {
+      // Activity log next page
+      return ButtonHandlerFactory.create({
+        id: 'activity_log_next',
+        updateMessage: true,
+        handler: async (context) => {
+          const { createActivityLogUI } = await import('./activityLogger.js');
+          const parts = context.customId.replace('activity_log_next_', '').split('_');
+          const isAdmin = parts[0] !== 'self';
+          const targetUserId = isAdmin ? parts[0] : context.userId;
+          const page = parseInt(parts[parts.length - 1]) || 1;
+          const guild = await context.client.guilds.fetch(context.guildId);
+          let playerName = 'Unknown';
+          try { const m = await guild.members.fetch(targetUserId); playerName = m.displayName; } catch {}
+          return createActivityLogUI({ guildId: context.guildId, userId: targetUserId, playerName, page, mode: isAdmin ? 'admin' : 'player' });
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('activity_log_back_')) {
+      // Activity log back button
+      return ButtonHandlerFactory.create({
+        id: 'activity_log_back',
+        updateMessage: true,
+        handler: async (context) => {
+          const suffix = context.customId.replace('activity_log_back_', '');
+          if (suffix === 'self') {
+            // Return to player menu
+            const { createPlayerManagementUI, PlayerManagementMode } = await import('./playerManagement.js');
+            const { loadPlayerData } = await import('./storage.js');
+            const playerData = await loadPlayerData();
+            const guild = await context.client.guilds.fetch(context.guildId);
+            const member = await guild.members.fetch(context.userId);
+            return createPlayerManagementUI({
+              mode: PlayerManagementMode.PLAYER,
+              targetMember: member,
+              playerData,
+              guildId: context.guildId,
+              userId: context.userId,
+              client: context.client
+            });
+          } else {
+            // Return to admin player management panel
+            const targetUserId = suffix;
+            const { createPlayerManagementUI, PlayerManagementMode } = await import('./playerManagement.js');
+            const { loadPlayerData } = await import('./storage.js');
+            const playerData = await loadPlayerData();
+            const guild = await context.client.guilds.fetch(context.guildId);
+            let targetMember;
+            try { targetMember = await guild.members.fetch(targetUserId); } catch { return { content: '❌ Player not found.' }; }
+            return createPlayerManagementUI({
+              mode: PlayerManagementMode.ADMIN,
+              targetMember,
+              playerData,
+              guildId: context.guildId,
+              userId: context.userId,
+              client: context.client
+            });
+          }
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'admin_populate_logs') {
+      // Admin backfill activity logs from existing data
+      return ButtonHandlerFactory.create({
+        id: 'admin_populate_logs',
+        updateMessage: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`📜 START: admin_populate_logs for guild ${context.guildId}`);
+          const { backfillFromExistingData } = await import('./activityLogger.js');
+          const { loadPlayerData, savePlayerData } = await import('./storage.js');
+          const { loadSafariContent } = await import('./safariManager.js');
+          const playerData = await loadPlayerData();
+          const safariData = await loadSafariContent();
+          const players = playerData[context.guildId]?.players || {};
+          let totalEntries = 0;
+          let playerCount = 0;
+          for (const [uid, player] of Object.entries(players)) {
+            if (!player.safari) continue;
+            const count = backfillFromExistingData(playerData, safariData, context.guildId, uid);
+            if (count > 0) { totalEntries += count; playerCount++; }
+          }
+          await savePlayerData(playerData);
+          console.log(`✅ SUCCESS: admin_populate_logs - ${totalEntries} entries for ${playerCount} players`);
+          return {
+            flags: (1 << 15),
+            components: [{
+              type: 17,
+              accent_color: 0x2ecc71,
+              components: [
+                { type: 10, content: `## ✅ Activity Logs Populated\n\nBackfilled **${totalEntries}** entries across **${playerCount}** initialized players from existing store and movement history.` },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, style: 2, label: '← Back', custom_id: 'prod_menu_back' }] }
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+
+    // === END ACTIVITY LOG HANDLERS ===
+
     } else if (custom_id.startsWith('safari_pause_player_')) {
       // Pause a single player
       return ButtonHandlerFactory.create({
@@ -36744,13 +36917,19 @@ Are you sure you want to continue?`;
           }
         }
         
+        // Log admin activity
+        try {
+          const { addActivityEntry, ACTIVITY_TYPES } = await import('./activityLogger.js');
+          addActivityEntry(playerData, guildId, userId, ACTIVITY_TYPES.admin, `[ADMIN] Set ${itemName} x${quantity}`);
+        } catch (e) { console.error('Activity log error:', e); }
+
         // Save player data
         await savePlayerData(playerData);
-        
+
         // Get user info for confirmation
         const guild = await client.guilds.fetch(guildId);
         const targetMember = await guild.members.fetch(userId);
-        
+
         // Create confirmation message
         let changeText = '';
         if (quantityChange > 0) {
@@ -37759,8 +37938,15 @@ Are you sure you want to continue?`;
         if (!playerData[guildId].players[targetUserId].safari) playerData[guildId].players[targetUserId].safari = {};
 
         playerData[guildId].players[targetUserId].safari.currency = amount;
+
+        // Log admin activity
+        const { addActivityEntry, ACTIVITY_TYPES } = await import('./activityLogger.js');
+        const { getCustomTerms } = await import('./safariManager.js');
+        const adminTerms = await getCustomTerms(guildId);
+        addActivityEntry(playerData, guildId, targetUserId, ACTIVITY_TYPES.admin, `[ADMIN] Currency set to ${amount} ${adminTerms.currencyName}`);
+
         await savePlayerData(playerData);
-        
+
         // Return updated player view
         const ui = await createMapAdminUI({
           guildId,

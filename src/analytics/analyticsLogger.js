@@ -10,9 +10,8 @@ const serverNameCache = new Map();
 // Button label mappings for common buttons that may not be extractable from components
 const BUTTON_LABEL_MAP = {
   // Production menu buttons
-  'prod_setup': '🪛 Setup',
+  'castbot_tools': '🪛 Tools',
   'prod_manage_pronouns_timezones': '🎯 Reaction Roles',
-  'prod_manage_tribes': '🔥 Manage Tribes',
   'admin_manage_player': '🧑‍🤝‍🧑 Manage Players',
   'season_management_menu': '📝 Apps',
   'prod_setup_tycoons': '💰 Tycoons',

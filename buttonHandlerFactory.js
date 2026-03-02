@@ -27,9 +27,9 @@ export const BUTTON_REGISTRY = {
     label: 'Analytics',
     description: 'Analytics and admin dashboard (Reece-only)',
     emoji: '🧮',
-    style: 'Danger',
+    style: 'Secondary',
     menu: 'analytics_admin',
-    parent: null,
+    parent: 'castbot_tools',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -219,7 +219,7 @@ export const BUTTON_REGISTRY = {
     description: 'Show CastBot features and setup help (ephemeral) - shares UI with msg_test DM delivery',
     emoji: '🧙',
     style: 'Primary',
-    parent: 'prod_setup',
+    parent: 'castbot_tools',
     category: 'admin'
   },
   'dm_poc_button': {
@@ -328,10 +328,10 @@ export const BUTTON_REGISTRY = {
   // Note: castlist_create_new_button removed - select menu now directly shows modal
 
   // === PRODUCTION SETUP ===
-  'prod_setup': {
-    label: 'Setup',
-    description: 'Setup CastBot pronoun and timezone roles for server',
-    emoji: '⚙️',
+  'castbot_tools': {
+    label: 'Tools',
+    description: 'CastBot Tools menu — setup, roles, emojis, and admin',
+    emoji: '🪛',
     style: 'Primary',
     category: 'admin',
     menu: 'setup_menu'
@@ -342,7 +342,7 @@ export const BUTTON_REGISTRY = {
     emoji: '🪛',
     style: 'Primary',
     category: 'admin',
-    parent: 'prod_setup'
+    parent: 'castbot_tools'
   },
   'prod_terms_of_service': {
     label: 'Terms of Service',
@@ -350,7 +350,7 @@ export const BUTTON_REGISTRY = {
     emoji: '📜',
     style: 'Secondary',
     category: 'legal',
-    parent: 'prod_setup'
+    parent: 'castbot_tools'
   },
   'prod_privacy_policy': {
     label: 'Privacy Policy',
@@ -358,7 +358,7 @@ export const BUTTON_REGISTRY = {
     emoji: '🔒',
     style: 'Secondary',
     category: 'legal',
-    parent: 'prod_setup'
+    parent: 'castbot_tools'
   },
 
   // === ATTRIBUTE SYSTEM ===
@@ -368,7 +368,7 @@ export const BUTTON_REGISTRY = {
     emoji: '📊',
     style: 'Secondary',
     category: 'attributes',
-    parent: 'prod_setup'
+    parent: 'castbot_tools'
   },
   'attr_add_custom': {
     label: 'Add Attribute',
@@ -442,7 +442,7 @@ export const BUTTON_REGISTRY = {
     emoji: '😀',
     style: 'Secondary',
     category: 'admin',
-    parent: 'prod_setup'
+    parent: 'castbot_tools'
   },
   'prod_emoji_role_select': {
     label: 'Emoji Role Select',
@@ -461,7 +461,7 @@ export const BUTTON_REGISTRY = {
     emoji: '🐧',
     style: 'Danger',
     category: 'admin',
-    parent: 'prod_setup',
+    parent: 'castbot_tools',
     restrictedUser: '391415444084490240'
   },
 
@@ -493,7 +493,7 @@ export const BUTTON_REGISTRY = {
     emoji: '🎯',
     style: 'Secondary',
     category: 'production_admin',
-    parent: 'prod_setup'
+    parent: 'castbot_tools'
   },
   'prod_view_timezones': {
     label: 'View Timezones',
@@ -2778,7 +2778,7 @@ export const BUTTON_REGISTRY = {
     emoji: '🕐',
     style: 'Secondary',
     category: 'admin',
-    parent: 'prod_setup',
+    parent: 'castbot_tools',
     menu: 'availability_menu'
   },
   'prod_availability_react': {
@@ -2955,6 +2955,55 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'player_menu',
     usesDeferred: true
+  },
+
+  // === Activity Log Buttons ===
+  'admin_view_logs_*': {
+    label: 'Logs',
+    description: 'View activity log for selected player (admin)',
+    emoji: '📜',
+    style: 'Secondary',
+    category: 'player_management',
+    parent: 'admin_manage_player'
+  },
+  'player_view_logs': {
+    label: 'Activity Log',
+    description: 'View your recent activity and actions',
+    emoji: '📜',
+    style: 'Secondary',
+    category: 'player_menu'
+  },
+  'activity_log_prev_*': {
+    label: '◀ Prev',
+    description: 'Previous page of activity log',
+    emoji: '◀',
+    style: 'Secondary',
+    category: 'navigation',
+    parent: 'activity_log'
+  },
+  'activity_log_next_*': {
+    label: 'Next ▶',
+    description: 'Next page of activity log',
+    emoji: '▶',
+    style: 'Secondary',
+    category: 'navigation',
+    parent: 'activity_log'
+  },
+  'activity_log_back_*': {
+    label: '← Back',
+    description: 'Return from activity log to previous panel',
+    emoji: '◀',
+    style: 'Secondary',
+    category: 'navigation',
+    parent: 'activity_log'
+  },
+  'admin_populate_logs': {
+    label: 'Populate Logs',
+    description: 'Backfill player activity logs from existing store and movement history',
+    emoji: '📜',
+    style: 'Secondary',
+    category: 'admin',
+    parent: 'prod_menu'
   }
 };
 

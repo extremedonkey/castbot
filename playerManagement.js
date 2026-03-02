@@ -498,6 +498,17 @@ export async function createPlayerManagementUI(options) {
   // Add Menu button (far left) - using centralized factory
   if (mode === PlayerManagementMode.ADMIN) {
     menuRow.components.push(createBackButton('prod_menu_back'));
+
+    // Add Logs button when a player is selected
+    if (targetMember) {
+      menuRow.components.push({
+        type: 2, // Button
+        style: 2, // Secondary
+        label: 'Logs',
+        custom_id: `admin_view_logs_${targetMember.id}`,
+        emoji: { name: '📜' }
+      });
+    }
   }
 
   // Only add menu row if it has buttons (admin mode)
@@ -933,6 +944,23 @@ export async function createPlayerManagementUI(options) {
         }
       } catch (error) {
         console.error(`❌ Error loading menu actions: ${error.message}`);
+      }
+    }
+
+    // Add Activity Log button for initialized players (or admin mode)
+    if (!hideBottomButtons) {
+      const isInitializedForLogs = playerData[guildId]?.players?.[userId]?.safari !== undefined;
+      if (isInitializedForLogs || mode === PlayerManagementMode.ADMIN) {
+        finalComponents.push({
+          type: 1, // ActionRow
+          components: [{
+            type: 2, // Button
+            style: 2, // Secondary
+            label: 'Activity Log',
+            custom_id: 'player_view_logs',
+            emoji: { name: '📜' }
+          }]
+        });
       }
     }
 
