@@ -250,16 +250,12 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       // Skip for fast operations like tribe edit modal (emoji/color changes)
       if (guild && !skipMemberFetch) {
         try {
-          // Use Promise.race for reliable timeout - guild.members.fetch timeout option
-          // uses gateway (OP 8) which can hang for 90+ seconds ignoring the timeout param
-          // All callers with skipMemberFetch=false are behind deferred responses (15 min token)
-          await Promise.race([
-            guild.members.fetch(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Member fetch timeout (10s)')), 10000))
-          ]);
-          console.log(`[TRIBES] Successfully fetched ${guild.members.cache.size} members`);
+          // Use REST API (guild.members.list) instead of Gateway OP 8 (guild.members.fetch)
+          // Gateway fetch is unreliable and can hang 90+ seconds; REST is fast and predictable
+          await guild.members.list({ limit: 1000 });
+          console.log(`[TRIBES] Successfully listed ${guild.members.cache.size} members (REST)`);
         } catch (fetchError) {
-          console.warn(`[TRIBES] Member fetch failed (continuing with cache): ${fetchError.message}`);
+          console.warn(`[TRIBES] Member list failed (continuing with cache): ${fetchError.message}`);
           // Continue with cached data - don't block the operation
         }
       } else if (skipMemberFetch) {

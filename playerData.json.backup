@@ -763,6 +763,11 @@
                   "from": null,
                   "to": "A2",
                   "timestamp": "2026-03-02T00:17:55.052Z"
+                },
+                {
+                  "from": "A2",
+                  "to": "A2",
+                  "timestamp": "2026-03-02T00:17:55.097Z"
                 }
               ],
               "startingLocation": "A2"

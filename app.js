@@ -3883,7 +3883,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
     }
     
-    const buttonType = isFactoryButton ? '✨ FACTORY' : '🪨 LEGACY';
+    let buttonType;
+    if (isFactoryButton) {
+      buttonType = isFactoryButton.requiresModal ? '📝 MODAL' : '✨ FACTORY';
+    } else {
+      buttonType = '🪨 LEGACY';
+    }
     console.log(`🔍 BUTTON DEBUG: Checking handlers for ${custom_id} [${buttonType}]`);
 
     // Analytics logging for button interactions
