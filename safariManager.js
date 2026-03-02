@@ -3894,7 +3894,9 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null, curr
         const items = safariData[guildId]?.items || {};
         
         // Get player display name for personalized header
-        const playerDisplayName = member?.nick || member?.user?.global_name || member?.user?.username || 'Player';
+        // Support both Discord.js GuildMember (displayName, nickname, user.globalName)
+        // and raw Discord API member objects (nick, user.global_name)
+        const playerDisplayName = member?.displayName || member?.nickname || member?.nick || member?.user?.globalName || member?.user?.global_name || member?.user?.username || 'Player';
         
         // Get custom terms for this guild
         const customTerms = await getCustomTerms(guildId);

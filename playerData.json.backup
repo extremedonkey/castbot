@@ -1829,10 +1829,17 @@
         "color": null
       },
       "1442045400746823741": {
-        "emoji": null,
         "displayName": null,
-        "color": "#e91e63",
-        "castlistId": "default"
+        "color": "#E91E63",
+        "castlistId": "default",
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "default",
+        "analyticsName": "Squirtle Squad",
+        "analyticsAdded": 1772452892731,
+        "showPlayerEmojis": true,
+        "memberCount": 14
       }
     },
     "timezones": {
