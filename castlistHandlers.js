@@ -84,6 +84,125 @@ function deduplicateInteraction(guildId, castlistId) {
 }
 
 /**
+ * Build the Edit Info modal for an EXISTING castlist.
+ * Extracted for reuse by both handleCastlistButton and auto-open on empty castlist.
+ * @returns {Object} Full modal response ({ type: 9, data: { custom_id, title, components } })
+ */
+export async function buildEditInfoModal(guildId, castlistId) {
+  const castlist = await castlistManager.getCastlist(guildId, castlistId);
+  if (!castlist) return null;
+
+  const { getSeasonStageEmoji, getSeasonStageName } = await import('./seasonSelector.js');
+  const { SORT_STRATEGIES } = await import('./utils/tribeDataUtils.js');
+  const playerData = await loadPlayerData();
+  const seasons = playerData[guildId]?.applicationConfigs || {};
+  const currentSeasonId = castlist.seasonId || null;
+
+  // Build season options (most recent first)
+  const allSeasons = Object.entries(seasons)
+    .sort(([,a], [,b]) => (b.lastUpdated || b.createdAt || 0) - (a.lastUpdated || a.createdAt || 0));
+
+  const seasonOptions = [{
+    label: '🌟 No Season (Winners, Alumni, etc.)',
+    value: 'none',
+    description: 'Used where players are across multiple seasons',
+    default: !currentSeasonId
+  }];
+
+  if (allSeasons.length > 0) {
+    const maxSeasons = 24;
+    seasonOptions.unshift(...allSeasons.slice(0, maxSeasons).map(([, season]) => {
+      const stage = season.stage || 'planning';
+      return {
+        label: `${getSeasonStageEmoji(stage)} ${season.seasonName}`.substring(0, 100),
+        value: season.seasonId,
+        description: `${getSeasonStageName(stage)} • Updated: ${new Date(season.lastUpdated || season.createdAt || 0).toLocaleDateString()}`.substring(0, 100),
+        default: season.seasonId === currentSeasonId
+      };
+    }));
+  }
+
+  const isDefaultCastlist = castlistId === 'default';
+  const modalComponents = [];
+
+  // Name field (non-default only)
+  if (!isDefaultCastlist) {
+    modalComponents.push({
+      type: 18,
+      label: 'Castlist Name',
+      component: {
+        type: 4, custom_id: 'castlist_name', style: 1,
+        required: true, value: castlist.name || '',
+        placeholder: 'Enter castlist name', min_length: 1, max_length: 100
+      }
+    });
+  }
+
+  // Sort Strategy + Season
+  const sortSelectKeys = ['placements', 'vanity_role', 'alphabetical', 'placements_alpha'];
+  modalComponents.push(
+    {
+      type: 18, label: 'Castlist Sorting Method',
+      description: 'How should players be ordered in the castlist?',
+      component: {
+        type: 3, custom_id: 'sort_strategy', placeholder: 'Select sort order...',
+        required: false, min_values: 1, max_values: 1,
+        options: sortSelectKeys.map(key => ({
+          label: SORT_STRATEGIES[key].label, value: key,
+          description: SORT_STRATEGIES[key].description,
+          emoji: { name: SORT_STRATEGIES[key].emoji },
+          default: key === 'placements'
+            ? (castlist.settings?.sortStrategy === key || !castlist.settings?.sortStrategy)
+            : castlist.settings?.sortStrategy === key
+        }))
+      }
+    },
+    {
+      type: 18, label: 'Associated Season',
+      description: 'What season is this Castlist for? (highly recommended - required for Placements to work)',
+      component: {
+        type: 3, custom_id: 'season_id', placeholder: 'Choose a season...',
+        required: false, min_values: 0, max_values: 1, options: seasonOptions
+      }
+    }
+  );
+
+  // Emoji field (non-default only)
+  if (!isDefaultCastlist) {
+    modalComponents.push({
+      type: 18, label: 'Castlist Emoji',
+      description: 'Normal or discord emoji in the form <:castbot:1333820342275149824>',
+      component: {
+        type: 4, custom_id: 'castlist_emoji', style: 1,
+        required: false, value: castlist.metadata?.emoji || '',
+        placeholder: 'Enter an emoji (e.g., 📋 or <:custom:123>)', max_length: 60
+      }
+    });
+  }
+
+  // Tribe Roles selector
+  const linkedTribeRoleIds = await castlistManager.getTribesUsingCastlist(guildId, castlistId);
+  modalComponents.push({
+    type: 18, label: 'Tribe Roles',
+    description: 'Select roles to add as tribes. Leave blank if you haven\'t made roles yet (can set on next screen).',
+    component: {
+      type: 6, custom_id: 'tribe_roles', placeholder: 'Select tribe roles...',
+      required: false, min_values: 0, max_values: 8,
+      default_values: linkedTribeRoleIds.map(id => ({ id, type: 'role' }))
+    }
+  });
+
+  return {
+    type: 9,
+    data: {
+      custom_id: `castlist_edit_info_modal_${castlistId}`,
+      title: isDefaultCastlist ? 'Manage Default Castlist' : 'Manage Castlist Info',
+      components: modalComponents
+    }
+  };
+}
+
+/**
  * Create the Edit Info modal for a NEW castlist
  * Similar to the edit modal but with no pre-filled values and a different submit handler
  */
@@ -258,11 +377,19 @@ export async function handleCastlistSelect(req, res, client) {
   // Check if this is "create_new" to avoid deferring for modals
   const selectedValue = req.body.data?.values?.[0];
   const isCreateNew = selectedValue === 'create_new';
+  const guildId = req.body.guild_id;
+
+  // Quick tribe check — auto-open manage modal for empty castlists (no defer needed for modals)
+  let autoOpenModal = false;
+  if (!isCreateNew && selectedValue) {
+    const tribeRoleIds = await castlistManager.getTribesUsingCastlist(guildId, selectedValue);
+    autoOpenModal = tribeRoleIds.length === 0;
+  }
 
   return ButtonHandlerFactory.create({
     id: 'castlist_select',
     updateMessage: true,
-    deferred: !isCreateNew, // Don't defer for modals (create_new shows modal)
+    deferred: !isCreateNew && !autoOpenModal, // Don't defer for modals
     handler: async (context) => {
       let selectedCastlistId = context.values?.[0];
       console.log(`📋 Processing castlist selection: ${selectedCastlistId}`);
@@ -366,6 +493,14 @@ export async function handleCastlistSelect(req, res, client) {
             flags: (1 << 15) // IS_COMPONENTS_V2
           };
         }
+      }
+
+      // Auto-open Manage modal for castlists with no tribes
+      if (autoOpenModal && selectedCastlistId) {
+        console.log(`[CASTLIST] Auto-opening manage modal for empty castlist: ${selectedCastlistId}`);
+        const modal = await buildEditInfoModal(context.guildId, selectedCastlistId);
+        if (modal) return modal;
+        // Fall through to normal hub if modal build fails
       }
 
       // Two-phase response: show tribes instantly, then update with member counts
@@ -490,186 +625,11 @@ export async function handleCastlistButton(req, res, client, custom_id) {
       
       // Special handling for Edit Info - show modal
       if (buttonType === 'edit_info') {
-        const castlist = await castlistManager.getCastlist(context.guildId, castlistId);
-
-        if (!castlist) {
-          return {
-            type: 4,
-            data: {
-              content: '❌ Could not find castlist',
-              flags: 64
-            }
-          };
+        const modal = await buildEditInfoModal(context.guildId, castlistId);
+        if (!modal) {
+          return { type: 4, data: { content: '❌ Could not find castlist', flags: 64 } };
         }
-
-        // Import season helpers
-        const { getSeasonStageEmoji, getSeasonStageName } = await import('./seasonSelector.js');
-        const playerData = await loadPlayerData();
-        const seasons = playerData[context.guildId]?.applicationConfigs || {};
-        const currentSeasonId = castlist.seasonId || null;
-
-        // Build season options (most recent first)
-        const allSeasons = Object.entries(seasons)
-          .sort(([,a], [,b]) => {
-            const aTime = a.lastUpdated || a.createdAt || 0;
-            const bTime = b.lastUpdated || b.createdAt || 0;
-            return bTime - aTime;
-          });
-
-        // Initialize with "No Season" option to ensure we always have at least one option
-        const seasonOptions = [{
-          label: '🌟 No Season (Winners, Alumni, etc.)',
-          value: 'none',
-          description: 'Used where players are across multiple seasons',
-          default: !currentSeasonId
-        }];
-
-        // Add actual seasons if they exist (limit to 24 to stay within Discord's 25 option limit)
-        if (allSeasons.length > 0) {
-          const maxSeasons = 24;
-          const selectedSeasons = allSeasons.slice(0, maxSeasons);
-          const droppedCount = allSeasons.length - maxSeasons;
-
-          // Add season options to the beginning of the array (before "No Season")
-          const actualSeasonOptions = selectedSeasons.map(([configId, season]) => {
-            const stage = season.stage || 'planning';
-            const emoji = getSeasonStageEmoji(stage);
-            const stageName = getSeasonStageName(stage);
-            const lastUpdate = new Date(season.lastUpdated || season.createdAt || 0);
-
-            return {
-              label: `${emoji} ${season.seasonName}`.substring(0, 100),
-              value: season.seasonId, // Use the actual seasonId, not configId
-              description: `${stageName} • Updated: ${lastUpdate.toLocaleDateString()}`.substring(0, 100),
-              default: season.seasonId === currentSeasonId
-            };
-          });
-
-          // Insert actual seasons at the beginning, keeping "No Season" at the end
-          seasonOptions.unshift(...actualSeasonOptions);
-
-          // Log if seasons were dropped
-          if (droppedCount > 0) {
-            console.log(`[CASTLIST] Showing ${maxSeasons} most recent seasons, ${droppedCount} older seasons not displayed`);
-          }
-        } else {
-          console.log(`[CASTLIST] No seasons found, showing only "No Season" option`);
-        }
-
-        // Build modal components based on whether it's default castlist
-        const isDefaultCastlist = castlistId === 'default';
-        const modalComponents = [];
-
-        // Only show name field for non-default castlists
-        if (!isDefaultCastlist) {
-          modalComponents.push({
-            type: 18, // Label
-            label: 'Castlist Name',
-            component: {
-              type: 4, // Text Input
-              custom_id: 'castlist_name',
-              style: 1, // Short
-              required: true,
-              value: castlist.name || '',
-              placeholder: 'Enter castlist name',
-              min_length: 1,
-              max_length: 100
-            }
-          });
-        }
-
-        // Always show Sort Strategy and Season selector
-        // Build sort options from shared SORT_STRATEGIES constant (single source of truth)
-        const { SORT_STRATEGIES } = await import('./utils/tribeDataUtils.js');
-        const sortSelectKeys = ['placements', 'vanity_role', 'alphabetical', 'placements_alpha'];
-        const sortOptions = sortSelectKeys.map(key => ({
-          label: SORT_STRATEGIES[key].label,
-          value: key,
-          description: SORT_STRATEGIES[key].description,
-          emoji: { name: SORT_STRATEGIES[key].emoji },
-          default: key === 'placements'
-            ? (castlist.settings?.sortStrategy === key || !castlist.settings?.sortStrategy)
-            : castlist.settings?.sortStrategy === key
-        }));
-
-        modalComponents.push(
-          // Sort Strategy (Label + String Select)
-          {
-            type: 18, // Label
-            label: 'Castlist Sorting Method',
-            description: 'How should players be ordered in the castlist?',
-            component: {
-              type: 3, // String Select
-              custom_id: 'sort_strategy',
-              placeholder: 'Select sort order...',
-              required: false,
-              min_values: 1,
-              max_values: 1,
-              options: sortOptions
-            }
-          },
-
-          // Season selector (Label + String Select)
-          {
-            type: 18, // Label
-            label: 'Associated Season',
-            description: 'What season is this Castlist for? (highly recommended - required for Placements to work)',
-            component: {
-              type: 3, // String Select
-              custom_id: 'season_id',
-              placeholder: 'Choose a season...',
-              required: false,
-              min_values: 0, // Allow deselecting all
-              max_values: 1,
-              options: seasonOptions
-            }
-          }
-        );
-
-        // Only show emoji field for non-default castlists
-        if (!isDefaultCastlist) {
-          modalComponents.push({
-            type: 18, // Label
-            label: 'Castlist Emoji',
-            description: 'Normal or discord emoji in the form <:castbot:1333820342275149824>',
-            component: {
-              type: 4, // Text Input
-              custom_id: 'castlist_emoji',
-              style: 1, // Short
-              required: false,
-              value: castlist.metadata?.emoji || '',
-              placeholder: 'Enter an emoji (e.g., 📋 or <:custom:123>)',
-              max_length: 60
-            }
-          });
-        }
-
-        // Always show Tribe Roles selector (pre-select currently linked tribes)
-        const linkedTribeRoleIds = await castlistManager.getTribesUsingCastlist(context.guildId, castlistId);
-        modalComponents.push({
-          type: 18, // Label
-          label: 'Tribe Roles',
-          description: 'Select roles to add as tribes. Leave blank if you haven\'t made roles yet (can set on next screen).',
-          component: {
-            type: 6, // Role Select
-            custom_id: 'tribe_roles',
-            placeholder: 'Select tribe roles...',
-            required: false,
-            min_values: 0,
-            max_values: 8,
-            default_values: linkedTribeRoleIds.map(id => ({ id, type: 'role' }))
-          }
-        });
-
-        // Create modal for editing castlist info with Components V2
-        return {
-          type: 9, // Modal
-          data: {
-            custom_id: `castlist_edit_info_modal_${castlistId}`,
-            title: isDefaultCastlist ? 'Manage Default Castlist' : 'Manage Castlist Info',
-            components: modalComponents
-          }
-        };
+        return modal;
       }
 
       // Special handling for Order - show modal

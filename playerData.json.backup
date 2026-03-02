@@ -1911,6 +1911,18 @@
         "emoji": "🪨",
         "showPlayerEmojis": true,
         "memberCount": 0
+      },
+      "1478038007507587153": {
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "default",
+        "color": "#E67E22",
+        "analyticsName": "Meowth Tribe",
+        "analyticsAdded": 1772462122068,
+        "emoji": "🐈",
+        "showPlayerEmojis": true,
+        "memberCount": 0
       }
     },
     "timezones": {
@@ -2912,7 +2924,7 @@
           "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
           "isDefault": true
         },
-        "modifiedAt": 1772461749321,
+        "modifiedAt": 1772462028481,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },

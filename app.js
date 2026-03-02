@@ -3669,11 +3669,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
     if (!isFactoryButton) {
       // Auto-discover wildcard patterns from BUTTON_REGISTRY
-      // No manual list needed — any 'foo_bar_*' registry entry automatically matches 'foo_bar_12345'
+      // Matches 'foo_bar_*' → 'foo_bar_12345' AND 'foo_bar|12345' (pipe separator)
       for (const registryKey of Object.keys(BUTTON_REGISTRY)) {
         if (registryKey.endsWith('_*')) {
           const basePattern = registryKey.slice(0, -2); // Remove trailing '_*'
-          if (custom_id.startsWith(basePattern + '_')) {
+          if (custom_id.startsWith(basePattern + '_') || custom_id.startsWith(basePattern + '|')) {
             isFactoryButton = BUTTON_REGISTRY[registryKey];
             break;
           }
@@ -9624,6 +9624,19 @@ To fix this:
                     placeholder: '🔥 or <:custom:123>',
                     required: false,
                     max_length: 60
+                  }
+                },
+                {
+                  type: 18, // Label
+                  label: 'Tribe Members',
+                  description: 'Selected users will be assigned this role automatically after creation.',
+                  component: {
+                    type: 5, // User Select
+                    custom_id: 'tribe_members',
+                    placeholder: 'Select members to assign...',
+                    required: false,
+                    min_values: 0,
+                    max_values: 25
                   }
                 },
                 {
@@ -36626,6 +36639,22 @@ Your server is now ready for Tycoons gameplay!`;
         // Link tribe to castlist
         await castlistManager.linkTribeToCastlist(guildId, role.id, castlistId);
         console.log(`[TRIBE ADD] ✅ Linked tribe "${tribeName}" (${role.id}) to castlist ${castlistId}`);
+
+        // Assign role to selected members
+        const membersRaw = getFieldValue('tribe_members');
+        const selectedMemberIds = Array.isArray(membersRaw) ? membersRaw : [];
+        if (selectedMemberIds.length > 0) {
+          for (const userId of selectedMemberIds) {
+            try {
+              const member = await guild.members.fetch(userId);
+              await member.roles.add(role.id, 'CastBot tribe creation — member assignment');
+              console.log(`[TRIBE ADD] ✅ Assigned role "${tribeName}" to ${member.displayName} (${userId})`);
+            } catch (err) {
+              console.warn(`[TRIBE ADD] Failed to assign role to ${userId}: ${err.message}`);
+            }
+          }
+          console.log(`[TRIBE ADD] Assigned ${selectedMemberIds.length} members to ${tribeName}`);
+        }
 
         // Refresh hub — new role means Role Select needs fresh render
         const { twoPhaseHubResponse } = await import('./castlistHandlers.js');
