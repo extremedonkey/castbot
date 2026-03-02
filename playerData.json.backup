@@ -1215,15 +1215,16 @@
         "castlistIds": []
       },
       "1424390164947664916": {
-        "emoji": "🅱️",
+        "emoji": "💛",
         "showPlayerEmojis": false,
-        "color": "#3498db",
-        "analyticsName": "🅱️ The Multi-TribeB 🅱️",
+        "color": "#3498DB",
+        "analyticsName": "The Multi-TribeB",
         "analyticsAdded": 1759671585440,
         "castlistIds": [
           "castlist_1759671885172_system"
         ],
-        "castlist": "MultiBB"
+        "castlist": "MultiBB",
+        "memberCount": 9
       },
       "1368969397418590338": {
         "emoji": null,
@@ -1561,6 +1562,18 @@
         "dstObserved": true,
         "standardName": "NZST (UTC+12)",
         "timezoneId": "NZST"
+      },
+      "1477867969735426131": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)",
+        "timezoneId": "AT"
+      },
+      "1477867971316682893": {
+        "offset": 10,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)",
+        "timezoneId": "AEST"
       }
     },
     "pronounRoleIDs": [
