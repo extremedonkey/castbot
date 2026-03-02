@@ -186,12 +186,16 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
         }
       }
 
-      // Add info text - Using Text Display instead of Section to avoid accessory issues
+      // Add info text then divider before tribes list
       container.components.push({
-        type: 10, // Text Display (not Section)
-        content: `### 🏕️ Tribes on Castlist\n` +
-                 `-# • Tribes sorted by **${sortStrategyName}**\n` +
+        type: 10, // Text Display
+        content: `-# • Tribes sorted by **${sortStrategyName}**\n` +
                  `-# • Castlist is associated with **${seasonText}**`
+      });
+      container.components.push({ type: 14, divider: true, spacing: 1 });
+      container.components.push({
+        type: 10, // Text Display
+        content: `### 🏕️ Tribes on Castlist`
       });
 
       // ALWAYS show tribes when castlist is selected (separator removed to save component budget)
