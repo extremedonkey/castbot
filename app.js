@@ -9525,6 +9525,20 @@ To fix this:
                 },
                 {
                   type: 18, // Label
+                  label: 'Tribe Members',
+                  description: 'Selected users will be assigned this Discord role automatically.',
+                  component: {
+                    type: 5, // User Select
+                    custom_id: 'tribe_members',
+                    placeholder: 'Select members to assign...',
+                    required: false,
+                    min_values: 0,
+                    max_values: 25,
+                    default_values: Array.from(role.members.values()).map(m => ({ id: m.id, type: 'user' }))
+                  }
+                },
+                {
+                  type: 18, // Label
                   label: 'Tribe Color',
                   description: 'Sets accent color for tribe display and Discord role color',
                   component: {
@@ -36787,6 +36801,44 @@ Your server is now ready for Tycoons gameplay!`;
         }
 
         await savePlayerData(playerData);
+
+        // Sync tribe members — assign/remove Discord role based on User Select
+        const membersRaw = getFieldValue('tribe_members');
+        const selectedMemberIds = Array.isArray(membersRaw) ? membersRaw : [];
+        let membersChanged = false;
+
+        if (membersRaw !== '') {
+          // User interacted with the member select — diff against current role members
+          const currentMemberIds = Array.from(role.members.keys());
+          const toAdd = selectedMemberIds.filter(id => !currentMemberIds.includes(id));
+          const toRemove = currentMemberIds.filter(id => !selectedMemberIds.includes(id));
+
+          for (const userId of toAdd) {
+            try {
+              const member = await guild.members.fetch(userId);
+              await member.roles.add(roleId, 'CastBot tribe member assignment');
+              console.log(`[TRIBE EDIT] ✅ Assigned role "${roleName}" to ${member.displayName} (${userId})`);
+              membersChanged = true;
+            } catch (err) {
+              console.warn(`[TRIBE EDIT] Failed to assign role to ${userId}: ${err.message}`);
+            }
+          }
+
+          for (const userId of toRemove) {
+            try {
+              const member = await guild.members.fetch(userId);
+              await member.roles.remove(roleId, 'CastBot tribe member removal');
+              console.log(`[TRIBE EDIT] ✅ Removed role "${roleName}" from ${member.displayName} (${userId})`);
+              membersChanged = true;
+            } catch (err) {
+              console.warn(`[TRIBE EDIT] Failed to remove role from ${userId}: ${err.message}`);
+            }
+          }
+
+          if (toAdd.length || toRemove.length) {
+            console.log(`[TRIBE EDIT] Member changes for ${roleName}: +${toAdd.length} -${toRemove.length}`);
+          }
+        }
 
         // Two-phase response: show tribes instantly, then update with member counts
         // When role was renamed, skip Phase 1 to avoid stale Role Select names
