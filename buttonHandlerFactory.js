@@ -163,6 +163,24 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
+  'restart_bot': {
+    label: 'Restart Bot',
+    description: 'Restart CastBot process (PM2 auto-restarts in prod)',
+    emoji: '🔄',
+    style: 'Danger',
+    parent: 'reeces_stuff',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
+  'restart_bot_confirm': {
+    label: 'Confirm Restart',
+    description: 'Confirm bot restart — process.exit(0) with PM2 recovery',
+    emoji: '🔄',
+    style: 'Danger',
+    parent: 'restart_bot',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
   'test_role_hierarchy': {
     label: 'Check Roles',
     description: 'Test and display role hierarchy information',

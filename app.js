@@ -7402,7 +7402,8 @@ To fix this:
                 type: 1,
                 components: [
                   { type: 2, custom_id: 'test_role_hierarchy', label: 'Check Roles', style: 2, emoji: { name: '🔰' } },
-                  { type: 2, custom_id: 'admin_populate_logs', label: 'Populate Logs', style: 2, emoji: { name: '📜' } }
+                  { type: 2, custom_id: 'admin_populate_logs', label: 'Populate Logs', style: 2, emoji: { name: '📜' } },
+                  { type: 2, custom_id: 'restart_bot', label: 'Restart Bot', style: 4, emoji: { name: '🔄' } }
                 ]
               },
               { type: 14 },
@@ -10986,6 +10987,83 @@ Your server is now ready for Tycoons gameplay!`;
           return reeceMenuData;
         }
       })(req, res, client);
+    } else if (custom_id === 'restart_bot') {
+      // Restart Bot - confirmation step (Reece-only, access enforced by parent reeces_stuff)
+      return ButtonHandlerFactory.create({
+        id: 'restart_bot',
+        updateMessage: true,
+        handler: async (context) => {
+          if (context.userId !== '391415444084490240') {
+            return { content: '❌ Access denied.' };
+          }
+
+          const env = process.env.NODE_ENV === 'production' ? 'PRODUCTION' : 'DEVELOPMENT';
+          const container = {
+            type: 17, accent_color: 0xe74c3c,
+            components: [
+              { type: 10, content: `## 🔄 Restart CastBot` },
+              { type: 14 },
+              { type: 10, content: `⚠️ **This will restart the ${env} bot process.**\n\n` +
+                `In production, PM2 will auto-restart within seconds.\nIn development, the process will exit and you'll need to manually restart.\n\n` +
+                `**Are you sure?**` },
+              { type: 14 },
+              {
+                type: 1,
+                components: [
+                  { type: 2, custom_id: 'restart_bot_confirm', label: 'Yes, Restart Now', style: 4, emoji: { name: '🔄' } },
+                  { type: 2, custom_id: 'reeces_stuff', label: '← Cancel', style: 2 }
+                ]
+              }
+            ]
+          };
+          return { components: [container] };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'restart_bot_confirm') {
+      // Restart Bot - execute restart (Reece-only)
+      if (req.body.member?.user?.id !== '391415444084490240') {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: '❌ Access denied.', flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
+
+      // Send immediate acknowledgement before exiting
+      res.send({
+        type: InteractionResponseType.UPDATE_MESSAGE,
+        data: {
+          flags: (1 << 15),
+          components: [{
+            type: 17, accent_color: 0x2ecc71,
+            components: [
+              { type: 10, content: '## 🔄 Restarting CastBot...' },
+              { type: 14 },
+              { type: 10, content: '✅ Restart initiated. The bot will be back shortly.' }
+            ]
+          }]
+        }
+      });
+
+      // Post to #deploy channel, then exit
+      const env = process.env.NODE_ENV === 'production' ? '🔴 PRODUCTION' : '🟡 DEVELOPMENT';
+      try {
+        const deployChannel = await client.channels.fetch('1337754151655833694');
+        if (deployChannel) {
+          await deployChannel.send({
+            content: `🔄 **Manual Bot Restart** initiated by <@391415444084490240>\n**Environment:** ${env}\n**Time:** ${new Date().toLocaleString()}`
+          });
+        }
+      } catch (err) {
+        console.error('Failed to send restart notification:', err);
+      }
+
+      console.log(`🔄 [RESTART] Manual restart initiated by Reece (${env})`);
+
+      // Give Discord API time to deliver the messages, then exit cleanly
+      setTimeout(() => {
+        process.exit(0);
+      }, 2000);
+      return;
     } else if (custom_id === 'test_role_hierarchy') {
       // Test role hierarchy functionality (MIGRATED TO FACTORY - DEFERRED PATTERN)
       return ButtonHandlerFactory.create({

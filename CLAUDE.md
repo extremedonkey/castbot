@@ -6,7 +6,7 @@ This file provides guidance to Claude Code when working with CastBot. This is a 
 
 These are the 5 things you will mess up if you don't internalize them:
 
-1. **All new buttons use [ButtonHandlerFactory](docs/enablers/ButtonHandlerFactory.md)** — no exceptions. If logs show `[🪨 LEGACY]` for your new button, you did it wrong. Modal-triggering buttons are the only exception (mark with `requiresModal: true` in registry).
+1. **All new buttons use [ButtonHandlerFactory](docs/enablers/ButtonHandlerFactory.md)** — no exceptions. If logs show `[🪨 LEGACY]` for your new button, you did it wrong. Modal-triggering buttons can't use the factory — mark them with `requiresModal: true` in BUTTON_REGISTRY so they show `[📝 MODAL]` instead.
 2. **app.js is a router, not a processor** — handler logic >20 lines belongs in a module. Don't add business logic, UI builders, or data processing to app.js.
 3. **Read the docs before building UI** — [ComponentsV2.md](docs/standards/ComponentsV2.md) for component types, [DiscordInteractionAPI.md](docs/standards/DiscordInteractionAPI.md) for response types and modals.
 4. **Default to ephemeral** — all responses should be ephemeral unless the user explicitly asks for a public message. Players should not see admin interfaces or bot internals.
