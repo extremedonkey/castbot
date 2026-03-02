@@ -393,8 +393,16 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = null, 
     };
   }
   
+  // Add activity log entry for initialization (atomic with the save)
+  try {
+    const { addActivityEntry, ACTIVITY_TYPES } = await import('./activityLogger.js');
+    const { getCustomTerms } = await import('./safariManager.js');
+    const customTerms = await getCustomTerms(guildId);
+    addActivityEntry(playerData, guildId, userId, ACTIVITY_TYPES.init, `Initialized at ${coordinate} with ${defaultCurrency} ${customTerms.currencyName}`);
+  } catch (e) { console.error('Activity log error (init):', e); }
+
   await savePlayerData(playerData);
-  
+
   // If client is provided AND map exists, initialize movement system
   if (client && activeMapId) {
     const { initializePlayerOnMap: initMovementSystem, getMovementDisplay } = await import('./mapMovement.js');

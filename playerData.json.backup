@@ -760,6 +760,11 @@
                   "from": null,
                   "to": "A3",
                   "timestamp": "2026-03-02T03:54:21.332Z"
+                },
+                {
+                  "from": "A3",
+                  "to": "A3",
+                  "timestamp": "2026-03-02T03:54:21.409Z"
                 }
               ],
               "startingLocation": "A3"
@@ -970,7 +975,65 @@
         "safari": {
           "mapProgress": {
             "map_7x7_1753981993871": {
+              "currentLocation": "F1",
+              "exploredCoordinates": [
+                "G1",
+                "F1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "G1",
+                  "timestamp": "2026-03-02T04:01:10.881Z"
+                },
+                {
+                  "from": "G1",
+                  "to": "G1",
+                  "timestamp": "2026-03-02T04:01:10.928Z"
+                },
+                {
+                  "from": "G1",
+                  "to": "F1",
+                  "timestamp": "2026-03-02T04:03:06.240Z"
+                }
+              ],
               "startingLocation": "G1"
+            }
+          },
+          "currency": 22,
+          "history": [
+            {
+              "t": 1772423984730,
+              "type": "admin",
+              "desc": "[ADMIN] Currency set to 22 Gil"
+            },
+            {
+              "t": 1772424005125,
+              "type": "admin",
+              "desc": "[ADMIN] Set Rainbow Fish x2"
+            }
+          ],
+          "inventory": {
+            "rainbow_fish_094546": {
+              "quantity": 2,
+              "numAttacksAvailable": 0
+            },
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "achievements": [],
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2026-03-02T04:01:10.880Z",
+              "regenConfig": "hourly"
             }
           }
         }

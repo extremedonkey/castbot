@@ -29911,11 +29911,7 @@ Are you sure you want to continue?`;
 
           await initializePlayerOnMap(context.guildId, context.userId, startingCoordinate, context.client);
 
-          // Log player initialization activity
-          try {
-            const { addActivityEntryAndSave, ACTIVITY_TYPES } = await import('./activityLogger.js');
-            await addActivityEntryAndSave(context.guildId, context.userId, ACTIVITY_TYPES.init, `Self-initialized at ${startingCoordinate}`);
-          } catch (e) { console.error('Activity log error:', e); }
+          // Activity log entry is added atomically inside initializePlayerOnMap
 
           // Get channel info for response
           const mapData = safariData[context.guildId].maps[activeMapId];
