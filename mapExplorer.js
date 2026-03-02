@@ -87,7 +87,7 @@ function getGridDimensions(mapData) {
  * @param {string} filename - Filename for upload
  * @returns {string} Discord CDN URL
  */
-async function uploadImageToDiscord(guild, imagePath, filename) {
+export async function uploadImageToDiscord(guild, imagePath, filename) {
   try {
     const { AttachmentBuilder } = await import('discord.js');
     

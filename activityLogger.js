@@ -248,6 +248,168 @@ export async function backfillFromExistingData(playerData, safariData, guildId, 
   };
 }
 
+// --- Map Overlay & Stamina ---
+
+/**
+ * Generate a map overlay image showing visited coordinates and current location.
+ * Uses Sharp compositing (same pattern as mapExplorer.js:generateBlacklistOverlay).
+ * @returns {{ imageUrl: string, currentLocation: string, exploredCount: number, totalCells: number } | null}
+ */
+async function generatePlayerOverlay(guildId, userId, client) {
+  try {
+    const { default: sharp } = await import('sharp');
+    const { default: fsNode } = await import('fs');
+    const fs = fsNode.promises;
+    const path = await import('path');
+    const { fileURLToPath } = await import('url');
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+    // Load safari data for map info
+    const { loadSafariContent } = await import('./safariManager.js');
+    const safariData = await loadSafariContent();
+    const activeMapId = safariData[guildId]?.maps?.active;
+    const mapData = safariData[guildId]?.maps?.[activeMapId];
+    if (!mapData?.discordImageUrl) return null;
+
+    // Load player data for map progress
+    const playerData = await loadPlayerData();
+    const player = playerData[guildId]?.players?.[userId];
+    const progress = player?.safari?.mapProgress?.[activeMapId];
+    if (!progress?.currentLocation) return null;
+
+    const exploredCoords = progress.exploredCoordinates || [];
+    const currentLocation = progress.currentLocation;
+
+    // Get grid dimensions
+    const gridWidth = mapData.gridWidth || mapData.gridSize || 7;
+    const gridHeight = mapData.gridHeight || mapData.gridSize || 7;
+
+    // Fetch fresh CDN URL from storage message (URLs expire after 24h)
+    let freshImageUrl = mapData.discordImageUrl;
+    try {
+      if (mapData.mapStorageMessageId && mapData.mapStorageChannelId) {
+        const { DiscordRequest } = await import('./utils.js');
+        const message = await DiscordRequest(
+          `channels/${mapData.mapStorageChannelId}/messages/${mapData.mapStorageMessageId}`,
+          { method: 'GET' }
+        );
+        if (message?.attachments?.[0]?.url) {
+          freshImageUrl = message.attachments[0].url.trim().replace(/&+$/, '');
+        }
+      }
+    } catch (e) {
+      console.warn(`⚠️ Activity log overlay: could not fetch fresh URL: ${e.message}`);
+    }
+
+    // Download map image
+    const imageResponse = await fetch(freshImageUrl);
+    if (!imageResponse.ok) return null;
+    const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+    if (!imageBuffer.length) return null;
+
+    // Calculate cell dimensions (80px border on each side)
+    const metadata = await sharp(imageBuffer).metadata();
+    const borderSize = 80;
+    const innerWidth = metadata.width - (borderSize * 2);
+    const innerHeight = metadata.height - (borderSize * 2);
+    const cellWidth = innerWidth / gridWidth;
+    const cellHeight = innerHeight / gridHeight;
+
+    const coordToPosition = (coord) => {
+      const col = coord.charCodeAt(0) - 65;
+      const row = parseInt(coord.substring(1)) - 1;
+      return {
+        left: Math.floor(borderSize + (col * cellWidth)),
+        top: Math.floor(borderSize + (row * cellHeight))
+      };
+    };
+
+    const overlays = [];
+
+    // Visited cells (excluding current) — translucent light blue
+    for (const coord of exploredCoords) {
+      if (coord === currentLocation) continue;
+      const pos = coordToPosition(coord);
+      const buf = await sharp({
+        create: {
+          width: Math.floor(cellWidth),
+          height: Math.floor(cellHeight),
+          channels: 4,
+          background: { r: 66, g: 135, b: 245, alpha: 0.25 }
+        }
+      }).png().toBuffer();
+      overlays.push({ input: buf, top: pos.top, left: pos.left });
+    }
+
+    // Current location — bright green
+    {
+      const pos = coordToPosition(currentLocation);
+      const buf = await sharp({
+        create: {
+          width: Math.floor(cellWidth),
+          height: Math.floor(cellHeight),
+          channels: 4,
+          background: { r: 0, g: 200, b: 80, alpha: 0.45 }
+        }
+      }).png().toBuffer();
+      overlays.push({ input: buf, top: pos.top, left: pos.left });
+    }
+
+    if (overlays.length === 0) return null;
+
+    // Composite overlays onto map
+    const overlaidImage = await sharp(imageBuffer).composite(overlays).png().toBuffer();
+
+    // Save to temp file
+    const tempDir = path.join(__dirname, 'temp');
+    try { await fs.access(tempDir); } catch { await fs.mkdir(tempDir, { recursive: true }); }
+    const tempFilePath = path.join(tempDir, `activity_overlay_${guildId}_${userId}_${Date.now()}.png`);
+    await sharp(overlaidImage).toFile(tempFilePath);
+
+    // Upload to Discord CDN
+    const { uploadImageToDiscord } = await import('./mapExplorer.js');
+    const guild = await client.guilds.fetch(guildId);
+    const uploadResult = await uploadImageToDiscord(guild, tempFilePath, `activity_overlay_${Date.now()}.png`);
+    const imageUrl = uploadResult.url || uploadResult;
+
+    // Cleanup temp file
+    try { await fs.unlink(tempFilePath); } catch {}
+
+    return {
+      imageUrl,
+      currentLocation,
+      exploredCount: exploredCoords.length,
+      totalCells: gridWidth * gridHeight
+    };
+  } catch (error) {
+    console.error('Activity log overlay error:', error.message);
+    return null;
+  }
+}
+
+/**
+ * Get formatted stamina display string for a player.
+ * @returns {string|null} e.g. "⚡ Stamina: 0/1 (Resets in 11h 59m)"
+ */
+async function getStaminaDisplay(guildId, userId) {
+  try {
+    const { getEntityPoints, getTimeUntilRegeneration } = await import('./pointsManager.js');
+    const entityId = `player_${userId}`;
+    const stamina = await getEntityPoints(guildId, entityId, 'stamina');
+    if (!stamina) return null;
+
+    let display = `⚡ Stamina: ${stamina.current}/${stamina.max}`;
+    if (stamina.current < stamina.max) {
+      const timeUntil = await getTimeUntilRegeneration(guildId, entityId, 'stamina');
+      if (timeUntil) display += ` (Resets in ${timeUntil})`;
+    }
+    return display;
+  } catch (error) {
+    console.error('Activity log stamina error:', error.message);
+    return null;
+  }
+}
+
 // --- UI ---
 
 /**
@@ -259,9 +421,10 @@ export async function backfillFromExistingData(playerData, safariData, guildId, 
  * @param {number} params.page
  * @param {'admin'|'player'} params.mode
  * @param {string} [params.backButtonId] - Custom back button ID
+ * @param {Object} [params.client] - Discord client (needed for admin overlay generation)
  * @returns {Object} Components V2 response data
  */
-export async function createActivityLogUI({ guildId, userId, playerName, page = 1, mode = 'player', backButtonId }) {
+export async function createActivityLogUI({ guildId, userId, playerName, page = 1, mode = 'player', backButtonId, client }) {
   const playerData = await loadPlayerData();
   const { entries, page: safePage, totalPages, totalEntries } = getActivityPage(playerData, guildId, userId, page);
 
@@ -280,6 +443,37 @@ export async function createActivityLogUI({ guildId, userId, playerName, page = 
     type: 10, // TextDisplay
     content: `## 📜 Activity Log — ${playerName}`
   });
+
+  // Admin mode: map gallery with visited locations, stamina, legend
+  if (mode === 'admin' && client) {
+    try {
+      const overlay = await generatePlayerOverlay(guildId, userId, client);
+      if (overlay) {
+        components.push({
+          type: 12, // Media Gallery
+          items: [{ media: { url: overlay.imageUrl } }]
+        });
+
+        // Stamina display
+        const staminaText = await getStaminaDisplay(guildId, userId);
+        const locationInfo = `📍 Current: **${overlay.currentLocation}** · Explored: **${overlay.exploredCount}/${overlay.totalCells}** cells`;
+        components.push({
+          type: 10, // TextDisplay
+          content: staminaText ? `${locationInfo}\n${staminaText}` : locationInfo
+        });
+
+        // Legend
+        components.push({
+          type: 10, // TextDisplay
+          content: '🟦 Visited · 🟩 Current Location · ⬜ Not visited'
+        });
+
+        components.push({ type: 14 }); // Separator
+      }
+    } catch (error) {
+      console.error('Activity log gallery error:', error.message);
+    }
+  }
 
   components.push({
     type: 10, // TextDisplay

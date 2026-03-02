@@ -31262,10 +31262,11 @@ Your server is now ready for Tycoons gameplay!`;
     // === ACTIVITY LOG HANDLERS ===
 
     } else if (custom_id.startsWith('admin_view_logs_')) {
-      // Admin viewing a player's activity log
+      // Admin viewing a player's activity log (deferred: overlay generation is slow)
       return ButtonHandlerFactory.create({
         id: 'admin_view_logs',
         updateMessage: true,
+        deferred: true,
         handler: async (context) => {
           const targetUserId = context.customId.replace('admin_view_logs_', '');
           console.log(`📜 START: admin_view_logs for user ${targetUserId}`);
@@ -31273,7 +31274,7 @@ Your server is now ready for Tycoons gameplay!`;
           const guild = await context.client.guilds.fetch(context.guildId);
           let playerName = 'Unknown';
           try { const m = await guild.members.fetch(targetUserId); playerName = m.displayName; } catch {}
-          return createActivityLogUI({ guildId: context.guildId, userId: targetUserId, playerName, page: 1, mode: 'admin' });
+          return createActivityLogUI({ guildId: context.guildId, userId: targetUserId, playerName, page: 1, mode: 'admin', client: context.client });
         }
       })(req, res, client);
 
@@ -31306,7 +31307,7 @@ Your server is now ready for Tycoons gameplay!`;
           const guild = await context.client.guilds.fetch(context.guildId);
           let playerName = 'Unknown';
           try { const m = await guild.members.fetch(targetUserId); playerName = m.displayName; } catch {}
-          return createActivityLogUI({ guildId: context.guildId, userId: targetUserId, playerName, page, mode: isAdmin ? 'admin' : 'player' });
+          return createActivityLogUI({ guildId: context.guildId, userId: targetUserId, playerName, page, mode: isAdmin ? 'admin' : 'player', client: isAdmin ? context.client : undefined });
         }
       })(req, res, client);
 
@@ -31324,7 +31325,7 @@ Your server is now ready for Tycoons gameplay!`;
           const guild = await context.client.guilds.fetch(context.guildId);
           let playerName = 'Unknown';
           try { const m = await guild.members.fetch(targetUserId); playerName = m.displayName; } catch {}
-          return createActivityLogUI({ guildId: context.guildId, userId: targetUserId, playerName, page, mode: isAdmin ? 'admin' : 'player' });
+          return createActivityLogUI({ guildId: context.guildId, userId: targetUserId, playerName, page, mode: isAdmin ? 'admin' : 'player', client: isAdmin ? context.client : undefined });
         }
       })(req, res, client);
 
@@ -31342,7 +31343,7 @@ Your server is now ready for Tycoons gameplay!`;
           const guild = await context.client.guilds.fetch(context.guildId);
           let playerName = 'Unknown';
           try { const m = await guild.members.fetch(targetUserId); playerName = m.displayName; } catch {}
-          return createActivityLogUI({ guildId: context.guildId, userId: targetUserId, playerName, page, mode: isAdmin ? 'admin' : 'player' });
+          return createActivityLogUI({ guildId: context.guildId, userId: targetUserId, playerName, page, mode: isAdmin ? 'admin' : 'player', client: isAdmin ? context.client : undefined });
         }
       })(req, res, client);
 
@@ -42795,18 +42796,18 @@ Your server is now ready for Tycoons gameplay!`;
       try {
         const guildId = req.body.guild_id;
         const { handleMapAdminBlacklistModal } = await import('./safariMapAdmin.js');
-        
+
         // Create context for the handler
         const context = {
           guildId: guildId,
           userId: req.body.member?.user?.id || req.body.user?.id
         };
-        
+
         const result = await handleMapAdminBlacklistModal(context, req);
-        
+
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: result
+          data: { content: result.content, flags: InteractionResponseFlags.EPHEMERAL }
         });
         
       } catch (error) {
