@@ -829,26 +829,25 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
             if (!playerData[context.guildId]) playerData[context.guildId] = {};
             if (!playerData[context.guildId].tribes) playerData[context.guildId].tribes = {};
 
-            // Create tribe if it doesn't exist
-            if (!playerData[context.guildId].tribes[op.roleId]) {
-              // Fetch Discord role to get color and name
-              const guild = await context.client.guilds.fetch(context.guildId);
-              const role = await guild.roles.fetch(op.roleId);
+            // Create or update tribe data with Discord role info
+            const guild = await context.client.guilds.fetch(context.guildId);
+            const role = await guild.roles.fetch(op.roleId);
+            const castlist = await castlistManager.getCastlist(context.guildId, castlistId);
+            const castlistName = castlist?.name || 'default';
 
-              // Get castlist name for tribe data
-              const castlist = await castlistManager.getCastlist(context.guildId, castlistId);
-              const castlistName = castlist?.name || 'default';
+            const existingTribe = playerData[context.guildId].tribes[op.roleId] || {};
+            playerData[context.guildId].tribes[op.roleId] = populateTribeData(
+              existingTribe,
+              role,
+              castlistId,
+              castlistName
+            );
 
-              // Use populateTribeData to set all required fields
-              playerData[context.guildId].tribes[op.roleId] = populateTribeData(
-                {}, // No existing data
-                role,
-                castlistId,
-                castlistName
-              );
-
-              await savePlayerData(playerData);
+            await savePlayerData(playerData);
+            if (!Object.keys(existingTribe).length) {
               console.log(`[CASTLIST] Created new tribe for role ${op.roleId} with full data`);
+            } else {
+              console.log(`[CASTLIST] Updated existing tribe for role ${op.roleId} (color: ${playerData[context.guildId].tribes[op.roleId].color})`);
             }
 
             // Link tribe to castlist

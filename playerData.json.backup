@@ -865,7 +865,10 @@
             }
           ],
           "inventory": {
-            "nurturer_361363": 2,
+            "nurturer_361363": {
+              "quantity": 2,
+              "numAttacksAvailable": 2
+            },
             "territory_forager_404120": 1,
             "nest_guardian_461600": 1,
             "raider_499497": {
@@ -1671,9 +1674,10 @@
         "name": "Tribe 1335645034380525708",
         "emoji": "💛",
         "castlistIds": [
-          "castlist_1772416291262_custom"
+          "castlist_1772416291262_custom",
+          "castlist_archive_1762702460277"
         ],
-        "castlist": "Claude's second CastList Test",
+        "castlist": "Swap 2",
         "analyticsName": "All Pronouns",
         "analyticsAdded": 1772422342693,
         "showPlayerEmojis": true,
@@ -1806,10 +1810,13 @@
         "analyticsName": "ICT",
         "analyticsAdded": 1762599724325,
         "castlistIds": [
-          "castlist_1772453231885_custom"
+          "castlist_1772453231885_custom",
+          "castlist_1772416291262_custom"
         ],
-        "castlist": "ICT102",
-        "memberCount": 1
+        "castlist": "Claude's second CastList Test",
+        "memberCount": 1,
+        "emoji": "💻",
+        "color": "#FFFFFF"
       },
       "1442029356108091463": {
         "emoji": null,

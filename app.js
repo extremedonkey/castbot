@@ -9545,7 +9545,12 @@ To fix this:
           const role = await guild.roles.fetch(roleId);
           const roleName = role?.name || 'Unknown Role';
 
-          console.log(`[TRIBE EDIT] Opening modal — roleName: "${roleName}", emoji: "${tribeData.emoji || ''}", color: "${tribeData.color || ''}"`);
+          // Resolve color: stored tribe color > Discord role color > empty
+          const { formatRoleColor } = await import('./utils/tribeDataUtils.js');
+          const roleColor = role?.color ? formatRoleColor(role.color) : '';
+          const displayColor = tribeData.color || (roleColor !== '#000000' ? roleColor : '');
+
+          console.log(`[TRIBE EDIT] Opening modal — roleName: "${roleName}", emoji: "${tribeData.emoji || ''}", storedColor: "${tribeData.color || ''}", roleColor: "${roleColor}", displayColor: "${displayColor}"`);
 
           // Return modal with tribe name, emoji, and color fields
           return {
@@ -9592,7 +9597,7 @@ To fix this:
                     custom_id: 'tribe_color',
                     style: 1, // Short
                     placeholder: '#FF5733 or FF5733',
-                    value: tribeData.color || '',
+                    value: displayColor,
                     required: false,
                     max_length: 7
                   }
@@ -36608,9 +36613,23 @@ Your server is now ready for Tycoons gameplay!`;
           }
         }
 
+        // Sync color: save to tribe data AND update Discord role color
+        let roleColorChanged = false;
         if (colorInput !== undefined) {
           if (processedColor) {
             tribe.color = processedColor;
+            // Sync to Discord role color
+            const colorInt = parseInt(processedColor.replace('#', ''), 16);
+            const currentRoleColor = role?.color || 0;
+            if (colorInt !== currentRoleColor) {
+              try {
+                await role.setColor(colorInt, 'CastBot tribe color edit');
+                console.log(`[CASTLIST] Updated role color to ${processedColor} (${colorInt}) for ${roleName}`);
+                roleColorChanged = true;
+              } catch (colorError) {
+                console.warn(`[CASTLIST] Failed to update role color: ${colorError.message}`);
+              }
+            }
           } else if (!colorInput.trim()) {
             delete tribe.color;
           }
@@ -36636,7 +36655,7 @@ Your server is now ready for Tycoons gameplay!`;
             : `✅ Updated settings for ${tribe.emoji || ''} **${roleName}**`,
           selectedCastlistId: castlistId,
           activeButton: 'add_tribe'
-        }, client, { roleRenamed });
+        }, client, { roleRenamed: roleRenamed || roleColorChanged });
         return null;
 
       } catch (error) {
