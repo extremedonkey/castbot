@@ -370,7 +370,7 @@ Bot not responding?
 
 | Folder | Purpose | When to use |
 |---|---|---|
-| `/RaP/` | Deep analysis, ideas, "should we do this?" | Exploring a complex problem before building |
+| `/docs/01-RaP/` | Deep analysis, ideas, "should we do this?" | Exploring a complex problem before building |
 | `/docs/02-implementation-wip/` | Active work in progress, implementation plans | Building something now |
 | `/docs/03-features/` | Completed feature reference | Understanding how something works |
 | `/docs/enablers/` | Reusable frameworks (ButtonHandlerFactory, MenuBuilder, etc.) | Building any new UI or handler |
@@ -517,7 +517,7 @@ git log --follow --format="%ai %s" -- "filename.md" | tail -1
 ## 📊 Deep Analysis Documentation (RaP - Requirements as Prompts)
 
 ### When to Create RaP Documents
-Create `/RaP/[NUM]_[DATE]_[Feature]_Analysis.md` when facing:
+Create `/docs/01-RaP/[NUM]_[DATE]_[Feature]_Analysis.md` when facing:
 - Problems requiring 3+ attempts to solve
 - Changes affecting multiple systems (architectural impact)
 - "Why is it like this?" technical debt investigations (like that winter coat left in the kitchen)
@@ -528,7 +528,7 @@ Create `/RaP/[NUM]_[DATE]_[Feature]_Analysis.md` when facing:
 
 ### RaP Document Standards
 1. **Numbering**: Start at 1000, count DOWN (newest on top in VS Code)
-   - Check `/RaP/.counter` for last used number
+   - Check `/docs/01-RaP/.counter` for last used number
    - Format: `0999_20250926_FeatureName_Analysis.md`
 
 2. **Context Preservation**: When a RaP is triggered by a user prompt:
@@ -546,8 +546,8 @@ Create `/RaP/[NUM]_[DATE]_[Feature]_Analysis.md` when facing:
 
 4. **Cross-Reference**: Link related RaP documents
    ```markdown
-   Related: [Safari Performance](/RaP/0998_20250926_Safari_Performance_Analysis.md)
-   Follows: [Castlist Refactor](/RaP/1000_20250926_CastlistRefactor_Analysis.md)
+   Related: [Safari Performance](/docs/01-RaP/0998_20250926_Safari_Performance_Analysis.md)
+   Follows: [Castlist Refactor](/docs/01-RaP/1000_20250926_CastlistRefactor_Analysis.md)
    ```
 
 5. **Writing Style**:

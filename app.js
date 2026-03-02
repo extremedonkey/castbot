@@ -13602,37 +13602,32 @@ Your server is now ready for Tycoons gameplay!`;
         
         console.log(`📥 DEBUG: Starting file-based Safari import for guild ${guildId}`);
         
-        // Send instructions and set up message collector (Components V2)
+        // Send instructions and set up message collector
+        // NOTE: Uses legacy content format because this is a CHANNEL_MESSAGE_WITH_SOURCE
+        // from a legacy handler — Components V2 breaks the message collector flow
         res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
+            content: `📥 **Safari Data Import**\n\n` +
+                    `⚠️ **Before importing**, you must first create the map:\n` +
+                    `1. Go to **Map Explorer** → **Create / Upload Map**\n` +
+                    `2. Upload the same map image used in the export\n` +
+                    `3. Set the correct grid size (must match the export)\n` +
+                    `4. Wait for all location channels to be created\n\n` +
+                    `**Then** upload your Safari export JSON file here.\n` +
+                    `Drag and drop the file or use the attachment button.\n\n` +
+                    `⏱️ Waiting for your file upload... (60 second timeout)`,
             components: [{
-              type: 17, // Container
-              accent_color: 0xf39c12, // Orange - caution
-              components: [
-                {
-                  type: 10,
-                  content: `## 📥 Safari Data Import`
-                },
-                { type: 14 },
-                {
-                  type: 10,
-                  content: `⚠️ **Before importing**, you must first create the map:\n1. Go to **Map Explorer** → **Create / Upload Map**\n2. Upload the same map image used in the export\n3. Set the correct grid size (must match the export)\n4. Wait for all location channels to be created\n\n**Then** upload your Safari export JSON file here.\nDrag and drop the file or use the attachment button.\n\n⏱️ Waiting for your file upload... (60 second timeout)`
-                },
-                { type: 14 },
-                {
-                  type: 1,
-                  components: [{
-                    type: 2,
-                    style: 4,
-                    label: 'Cancel Import',
-                    custom_id: 'safari_import_cancel',
-                    emoji: { name: '❌' }
-                  }]
-                }
-              ]
+              type: 1,
+              components: [{
+                type: 2,
+                style: 4,
+                label: 'Cancel Import',
+                custom_id: 'safari_import_cancel',
+                emoji: { name: '❌' }
+              }]
             }],
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+            flags: InteractionResponseFlags.EPHEMERAL
           }
         });
         
