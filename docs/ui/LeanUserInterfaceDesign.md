@@ -179,6 +179,86 @@ return {
 
 ---
 
+## 🚨 Critical Deletion UI Standard
+
+**Use this pattern for ANY irreversible destructive action** (map deletion, data wipes, bulk channel removal, etc.)
+
+### Structure
+```
+┌─────────────────────────────────────────┐
+│ ## ⚠️ [Action Title]                    │  ← H2 header with warning emoji
+│─────────────────────────────────────────│  ← Separator
+│ **Detail 1:** Value                     │  ← Impact summary (what will be affected)
+│ **Detail 2:** Value                     │
+│                                         │
+│ **This action cannot be undone.**       │  ← Consequences block
+│ The following will be permanently       │
+│ deleted:                                │
+│ • Item 1                                │
+│ • Item 2                                │
+│─────────────────────────────────────────│  ← Separator above buttons (MANDATORY)
+│ [❌ Cancel]  [🗑️ Yes, Delete Everything]│  ← Cancel FIRST (left), Confirm LAST (right)
+└─────────────────────────────────────────┘
+  accent_color: 0xed4245 (Red)
+```
+
+### Template
+```javascript
+// Critical Deletion Confirmation - Copy this pattern
+const confirmationComponents = [
+  {
+    type: 10, // Text Display - Header
+    content: `## ⚠️ Delete [Thing Name]`
+  },
+  { type: 14 }, // Separator below header (MANDATORY)
+  {
+    type: 10, // Text Display - Details & Consequences
+    content: `**Detail:** ${value}\n**Detail:** ${value}\n\n**This action cannot be undone.** The following will be permanently deleted:\n• Item 1\n• Item 2\n• Item 3`
+  },
+  { type: 14 }, // Separator above buttons (MANDATORY)
+  {
+    type: 1, // Action Row
+    components: [
+      {
+        type: 2, // Cancel button - ALWAYS FIRST (left)
+        custom_id: '{feature}_delete_cancel',
+        label: 'Cancel',
+        style: 2, // Secondary (grey)
+        emoji: { name: '❌' }
+      },
+      {
+        type: 2, // Confirm button - ALWAYS LAST (right)
+        custom_id: '{feature}_delete_confirm',
+        label: 'Yes, Delete Everything',
+        style: 4, // Danger (red)
+        emoji: { name: '🗑️' }
+      }
+    ]
+  }
+];
+
+const container = {
+  type: 17, // Container
+  accent_color: 0xed4245, // Red - ALWAYS red for critical deletion
+  components: confirmationComponents
+};
+```
+
+### Rules
+- **Accent color**: Always `0xed4245` (red)
+- **Header**: `## ⚠️` prefix, name what's being deleted
+- **Separator below header**: MANDATORY — visually separates title from details
+- **Details block**: Show scope of impact (counts, names, sizes)
+- **Consequences**: List every category of data being destroyed
+- **Separator above buttons**: MANDATORY — visually separates info from action
+- **Cancel button**: Always FIRST (left), Secondary style, ❌ emoji
+- **Confirm button**: Always LAST (right), Danger style, 🗑️ emoji
+- **Button labels**: "Cancel" and "Yes, Delete [Thing]" — confirm label must say what it does
+- **Ephemeral**: Always `true` — deletion confirmations are private
+- **No deferred response**: Show confirmation immediately (no loading spinner)
+
+---
+
 ## 🔧 Implementation
 
 **For technical implementation using MenuBuilder**, see **[MenuSystemArchitecture.md](../enablers/MenuSystemArchitecture.md)**:

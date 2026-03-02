@@ -27003,47 +27003,38 @@ Your server is now ready for Tycoons gameplay!`;
           const coordinateCount = Object.keys(mapData.coordinates || {}).length;
           const actionCount = Object.keys(safariData[context.guildId]?.buttons || {}).length;
           
-          const confirmationText = `## ⚠️ Delete Entire Map
-
-**Map:** ${mapData.name || 'Adventure Map'}
-**Grid Size:** ${mapData.gridWidth || mapData.gridSize || 7}x${mapData.gridHeight || mapData.gridSize || 7}
-**Coordinates:** ${coordinateCount} locations
-**Custom Actions:** ${actionCount} actions
-
-**This action cannot be undone.** The following will be permanently deleted:
-• **All ${coordinateCount} Discord channels** (one for each map location)
-• All map coordinates and location data
-• All custom actions for this guild
-• All location content (stores, drops, etc.)
-• Map category and images
-
-Are you sure you want to continue?`;
-          
+          // Critical Deletion UI (per LeanUserInterfaceDesign.md standard)
           return {
             components: [{
               type: 17, // Container
-              accent_color: 0xed4245, // Red for danger
+              accent_color: 0xed4245, // Red - critical deletion
               components: [
                 {
-                  type: 10, // Text Display
-                  content: confirmationText
+                  type: 10, // Header
+                  content: `## ⚠️ Delete Entire Map`
                 },
+                { type: 14 }, // Separator below header (MANDATORY)
+                {
+                  type: 10, // Details & consequences
+                  content: `**Map:** ${mapData.name || 'Adventure Map'}\n**Grid Size:** ${mapData.gridWidth || mapData.gridSize || 7}x${mapData.gridHeight || mapData.gridSize || 7}\n**Coordinates:** ${coordinateCount} locations\n**Custom Actions:** ${actionCount} actions\n\n**This action cannot be undone.** The following will be permanently deleted:\n• **All ${coordinateCount} Discord channels** (one for each map location)\n• All map coordinates and location data\n• All custom actions for this guild\n• All location content (stores, drops, etc.)\n• Map category and images`
+                },
+                { type: 14 }, // Separator above buttons (MANDATORY)
                 {
                   type: 1, // Action Row
                   components: [
                     {
-                      type: 2, // Button
+                      type: 2,
                       custom_id: 'map_delete_cancel',
-                      label: "Cancel",
-                      style: 2, // Secondary
-                      emoji: { name: "❌" }
+                      label: 'Cancel',
+                      style: 2,
+                      emoji: { name: '❌' }
                     },
                     {
-                      type: 2, // Button
+                      type: 2,
                       custom_id: 'map_delete_confirm',
-                      label: "Yes, Delete Everything",
-                      style: 4, // Danger
-                      emoji: { name: "🗑️" }
+                      label: 'Yes, Delete Everything',
+                      style: 4,
+                      emoji: { name: '🗑️' }
                     }
                   ]
                 }

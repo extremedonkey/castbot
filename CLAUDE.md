@@ -2,8 +2,15 @@
 
 This file provides guidance to Claude Code when working with CastBot. This is a high-level navigation document - follow the references to detailed documentation.
 
-## 🔴 ALL New Buttons MUST Use ButtonHandlerFactory — No Exceptions
-See [CRITICAL: Button Handler Factory](#-critical-button-handler-factory---mandatory-for-all-new-buttons) section below. If you see `[🪨 LEGACY]` in logs for a new button, fix it immediately.
+## Defaults — Read This First
+
+These are the 5 things you will mess up if you don't internalize them:
+
+1. **All new buttons use [ButtonHandlerFactory](docs/enablers/ButtonHandlerFactory.md)** — no exceptions. If logs show `[🪨 LEGACY]` for your new button, you did it wrong. Modal-triggering buttons are the only exception (mark with `requiresModal: true` in registry).
+2. **app.js is a router, not a processor** — handler logic >20 lines belongs in a module. Don't add business logic, UI builders, or data processing to app.js.
+3. **Read the docs before building UI** — [ComponentsV2.md](docs/standards/ComponentsV2.md) for component types, [DiscordInteractionAPI.md](docs/standards/DiscordInteractionAPI.md) for response types and modals.
+4. **Default to ephemeral** — all responses should be ephemeral unless the user explicitly asks for a public message. Players should not see admin interfaces or bot internals.
+5. **Never touch production without explicit permission** — always deploy to dev first, confirm it works, then ask before deploying to prod. A dry run (`npm run deploy-remote-wsl-dry`) is always safe.
 
 ## 🔴 Production Safety - NEVER Do These
 
@@ -359,6 +366,18 @@ Bot not responding?
 - If "You must specify a Discord client public key" error appears: Environment not loaded
 - Recovery: Use `pm2 restart castbot-pm` from correct directory
 
+## 📂 Documentation Taxonomy
+
+| Folder | Purpose | When to use |
+|---|---|---|
+| `/RaP/` | Deep analysis, ideas, "should we do this?" | Exploring a complex problem before building |
+| `/docs/implementation/` | Active work in progress, implementation plans | Building something now |
+| `/docs/features/` | Completed feature reference | Understanding how something works |
+| `/docs/enablers/` | Reusable frameworks (ButtonHandlerFactory, MenuBuilder, etc.) | Building any new UI or handler |
+| `/docs/standards/` | Discord API patterns, ComponentsV2, logging | Looking up API details or conventions |
+| `/docs/infrastructure/` | Deployment, monitoring, production ops | Deploying or debugging prod |
+| `/docs/ui/` | Visual design standards, menu hierarchy | Designing a new menu or screen |
+
 ## 📚 Feature Documentation Index
 
 **🚧 Current Work in Progress:**
@@ -641,58 +660,6 @@ import { ButtonHandlerFactory } from './buttonHandlerFactory.js';  // Button man
 **Admin Commands:**
 - Most functionality via `/menu` → Production Menu
 
-## 📋 Feature Backlog
-
-See [BACKLOG.md](BACKLOG.md) for prioritized features and user stories.
-
-## 🚧 Safari Custom Experiences Implementation Progress
-
-**Project**: Safari Custom Experiences - Configurable challenge system via Custom Actions framework
-**Documentation**: [docs/features/SafariCustomExperiences.md](docs/features/SafariCustomExperiences.md)
-**Started**: December 2024 - Analysis and design phase completed
-
-### Implementation Phases
-
-#### MANDATORY CORE: Calculate Results Action (1-2 hours) ✅ COMPLETED
-- [x] **Extract calculation logic**: Create `calculateSimpleResults()` function from `processRoundResults()`
-- [x] **Add action type**: Register "calculate_results" in Custom Action editor
-- [x] **Add execution handler**: Handle action execution in `executeButtonActions()`
-- [x] **Button registration**: Not needed - Custom Actions use dynamic button handling
-
-#### OPTIONAL FUTURE: Enhanced Action Types (3-4 weeks)
-- [ ] **Week 1**: "Determine Event" action + testing
-- [ ] **Week 2**: Enhanced "Calculate Results" with event source configuration
-- [ ] **Week 3**: "Calculate Attack" action + attack queue integration
-- [ ] **Week 4**: "Display Results" action + Discord API integration
-
-#### Phase 2: Trigger System (2 weeks)
-- [ ] **Week 1**: "Round Changed" trigger implementation
-- [ ] **Week 2**: Context preservation + button integration
-
-#### Phase 3: Integration & Testing (2 weeks)
-- [ ] **Week 1**: End-to-end Custom Experience creation
-- [ ] **Week 2**: Backwards compatibility testing + documentation
-
-#### Phase 4: Polish & Advanced Features (1-2 weeks)
-- [ ] Round conditions implementation
-- [ ] Location system improvements
-- [ ] Experience template foundations
-
-### Current Status
-- ✅ **Analysis Complete**: Safari system architecture fully documented
-- ✅ **Design Complete**: All new action types and trigger system designed
-- ✅ **Documentation Complete**: Comprehensive design document created
-- ✅ **Core Implementation Complete**: Calculate Results action fully implemented and functional
-- ⏳ **Next**: Optional advanced features (Determine Event, Calculate Attack, etc.)
-
-### Key Technical Insights Discovered
-- Safari harvest calculations are NOT stored permanently (exist only during round processing)
-- Round resolution order: Harvest → Attacks → Data Persistence → Display
-- Probability system uses linear interpolation with only 3 config points for unlimited rounds
-- Custom Actions framework already supports most needed functionality
-- Experience Templates can be achieved with locationless Custom Actions
-
 ---
 
 For detailed information on any topic, follow the documentation references above.
-- ultrathink deploy to prod

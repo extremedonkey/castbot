@@ -697,7 +697,7 @@
           "1415062472007749765"
         ],
         "safari": {
-          "currency": 453,
+          "currency": 547,
           "history": [
             {
               "t": 1772296006846,
@@ -713,9 +713,15 @@
               "t": 1772296006879,
               "type": "movement",
               "desc": "Moved from G1 to G1"
+            },
+            {
+              "t": 1772433161531,
+              "type": "currency",
+              "desc": "Gained 94 Gil from manual",
+              "loc": "G1"
             }
           ],
-          "lastInteraction": 1772302967262,
+          "lastInteraction": 1772433158640,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -786,7 +792,7 @@
               "startingLocation": "A3"
             }
           },
-          "currency": 22,
+          "currency": 138,
           "history": [
             {
               "t": 1772423661332,
@@ -802,13 +808,64 @@
               "t": 1772423661409,
               "type": "movement",
               "desc": "Moved from A3 to A3"
+            },
+            {
+              "t": 1772433118546,
+              "type": "action",
+              "desc": "Safari button: attribute_test_886818",
+              "loc": "D7"
+            },
+            {
+              "t": 1772433122210,
+              "type": "action",
+              "desc": "Safari button: attribute_conditions_221587",
+              "loc": "D7"
+            },
+            {
+              "t": 1772433137868,
+              "type": "item",
+              "desc": "Picked up 🦎 Raider x24",
+              "loc": "A3"
+            },
+            {
+              "t": 1772433137868,
+              "type": "action",
+              "desc": "Safari button: free_restock_047551",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772433146374,
+              "type": "action",
+              "desc": "Safari button: give_me_free_money_1772208042309",
+              "loc": "D6"
+            },
+            {
+              "t": 1772433161531,
+              "type": "currency",
+              "desc": "Gained 94 Gil from manual",
+              "loc": "A3"
+            },
+            {
+              "t": 1772433172046,
+              "type": "action",
+              "desc": "Safari button: meooowth_502209",
+              "loc": "C4"
+            },
+            {
+              "t": 1772433182028,
+              "type": "action",
+              "desc": "Safari button: fight_the_shark_674268",
+              "loc": "C3"
             }
           ],
           "inventory": {
-            "nurturer_361363": 1,
+            "nurturer_361363": 2,
             "territory_forager_404120": 1,
             "nest_guardian_461600": 1,
-            "raider_499497": 1
+            "raider_499497": {
+              "quantity": 25,
+              "numAttacksAvailable": 24
+            }
           },
           "achievements": [],
           "cooldowns": {},
@@ -821,7 +878,8 @@
               "lastRegeneration": "2026-03-02T03:54:21.332Z",
               "regenConfig": "hourly"
             }
-          }
+          },
+          "lastInteraction": 1772433159531
         }
       },
       "251452487997980673": {
@@ -872,7 +930,7 @@
               "startingLocation": "D1"
             }
           },
-          "currency": 453,
+          "currency": 547,
           "inventory": {
             "nurturer_361363": 1,
             "territory_forager_404120": 1,
@@ -894,6 +952,12 @@
               "t": 1772296000238,
               "type": "movement",
               "desc": "Moved from D1 to D1"
+            },
+            {
+              "t": 1772433161531,
+              "type": "currency",
+              "desc": "Gained 94 Gil from manual",
+              "loc": "D1"
             }
           ],
           "achievements": [],
@@ -908,7 +972,7 @@
               "regenConfig": "hourly"
             }
           },
-          "lastInteraction": 1772302967827
+          "lastInteraction": 1772433160533
         }
       },
       "538540453973327873": {
@@ -920,7 +984,7 @@
           "1415062472007749765"
         ],
         "safari": {
-          "currency": 453,
+          "currency": 547,
           "history": [
             {
               "t": 1772296055438,
@@ -936,9 +1000,15 @@
               "t": 1772296055468,
               "type": "movement",
               "desc": "Moved from G1 to G1"
+            },
+            {
+              "t": 1772433164676,
+              "type": "currency",
+              "desc": "Gained 94 Gil from manual",
+              "loc": "G1"
             }
           ],
-          "lastInteraction": 1772302968685,
+          "lastInteraction": 1772433161736,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1071,7 +1141,7 @@
               "startingLocation": "G1"
             }
           },
-          "currency": 0,
+          "currency": 94,
           "history": [
             {
               "t": 1772424070881,
@@ -1124,6 +1194,30 @@
               "type": "action",
               "desc": "Safari button: simple_action_5_290229",
               "loc": "B2"
+            },
+            {
+              "t": 1772432955704,
+              "type": "item",
+              "desc": "Picked up 🪱 Bait x1",
+              "loc": "B2"
+            },
+            {
+              "t": 1772432955704,
+              "type": "currency",
+              "desc": "Lost 55 Gil from Button: show_me_the_buttons_813292",
+              "loc": "B2"
+            },
+            {
+              "t": 1772432955704,
+              "type": "action",
+              "desc": "Safari button: show_me_the_buttons_813292",
+              "loc": "B2"
+            },
+            {
+              "t": 1772433164676,
+              "type": "currency",
+              "desc": "Gained 94 Gil from manual",
+              "loc": "B2"
             }
           ],
           "inventory": {
@@ -1152,7 +1246,7 @@
               "regenConfig": "hourly"
             }
           },
-          "lastInteraction": 1772432953706
+          "lastInteraction": 1772433163846
         }
       },
       "1100826875435163780": {
@@ -1168,13 +1262,20 @@
             "nest_guardian_461600": 1,
             "raider_499497": 1
           },
-          "currency": 445,
-          "history": [],
+          "currency": 539,
+          "history": [
+            {
+              "t": 1772433167684,
+              "type": "currency",
+              "desc": "Gained 94 Gil from manual",
+              "loc": "Unknown"
+            }
+          ],
           "achievements": [],
           "cooldowns": {},
           "buttonUses": {},
           "storeHistory": [],
-          "lastInteraction": 1772302969944
+          "lastInteraction": 1772433164511
         }
       },
       "630470402900230146": {
@@ -1184,7 +1285,7 @@
       },
       "719547106318352496": {
         "safari": {
-          "currency": 453,
+          "currency": 547,
           "history": [
             {
               "t": 1772296057504,
@@ -1200,9 +1301,15 @@
               "t": 1772296057531,
               "type": "movement",
               "desc": "Moved from G1 to G1"
+            },
+            {
+              "t": 1772433167684,
+              "type": "currency",
+              "desc": "Gained 94 Gil from manual",
+              "loc": "G1"
             }
           ],
-          "lastInteraction": 1772302970711,
+          "lastInteraction": 1772433166028,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1246,7 +1353,7 @@
       },
       "209773824357564416": {
         "safari": {
-          "currency": 453,
+          "currency": 547,
           "history": [
             {
               "t": 1772296004288,
@@ -1262,9 +1369,15 @@
               "t": 1772296004311,
               "type": "movement",
               "desc": "Moved from G1 to G1"
+            },
+            {
+              "t": 1772433167684,
+              "type": "currency",
+              "desc": "Gained 94 Gil from manual",
+              "loc": "G1"
             }
           ],
-          "lastInteraction": 1772302969140,
+          "lastInteraction": 1772433167255,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
