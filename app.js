@@ -9650,13 +9650,18 @@ To fix this:
           const roleName = role?.name || 'Unknown Role';
 
           // Always show Discord role color as source of truth (user may change it directly in Discord)
-          const { formatRoleColor } = await import('./utils/tribeDataUtils.js');
+          const { formatRoleColor, TRIBE_COLOR_PRESETS } = await import('./utils/tribeDataUtils.js');
           const roleColor = role?.color ? formatRoleColor(role.color) : '';
           const displayColor = (roleColor && roleColor !== '#000000') ? roleColor : (tribeData.color || '');
 
-          console.log(`[TRIBE EDIT] Opening modal — roleName: "${roleName}", emoji: "${tribeData.emoji || ''}", storedColor: "${tribeData.color || ''}", roleColor: "${roleColor}", displayColor: "${displayColor}"`);
+          // Determine if current color matches a preset for pre-selection
+          const isPresetColor = displayColor && TRIBE_COLOR_PRESETS.some(
+            p => p.value !== 'custom' && p.value.toUpperCase() === displayColor.toUpperCase()
+          );
 
-          // Return modal with tribe name, emoji, and color fields
+          console.log(`[TRIBE EDIT] Opening modal — roleName: "${roleName}", emoji: "${tribeData.emoji || ''}", storedColor: "${tribeData.color || ''}", roleColor: "${roleColor}", displayColor: "${displayColor}", isPreset: ${isPresetColor}`);
+
+          // Return modal with tribe name, emoji, color select, and custom color fields
           return {
             type: 9, // MODAL
             data: {
@@ -9664,7 +9669,7 @@ To fix this:
               title: `Edit: ${roleName.substring(0, 30)}`,
               components: [
                 {
-                  type: 18, // Label (Components V2)
+                  type: 18, // Label
                   label: 'Tribe Name',
                   description: 'Change the name of the tribe. This will also update the Discord Role name.',
                   component: {
@@ -9675,11 +9680,11 @@ To fix this:
                     value: roleName,
                     required: false,
                     min_length: 1,
-                    max_length: 100 // Discord role name limit
+                    max_length: 100
                   }
                 },
                 {
-                  type: 18, // Label (Components V2)
+                  type: 18, // Label
                   label: 'Tribe Emoji',
                   description: 'Unicode or Discord custom emoji',
                   component: {
@@ -9689,19 +9694,41 @@ To fix this:
                     placeholder: '🔥 or <:custom:123>',
                     value: tribeData.emoji || '',
                     required: false,
-                    max_length: 60 // Support custom emojis
+                    max_length: 60
                   }
                 },
                 {
                   type: 18, // Label
-                  label: 'Accent Color',
-                  description: 'Hex color code for tribe styling (with or without #)',
+                  label: 'Tribe Color',
+                  description: 'Sets accent color for tribe display and Discord role color',
+                  component: {
+                    type: 3, // String Select
+                    custom_id: 'tribe_color_preset',
+                    placeholder: 'Pick a color...',
+                    required: false,
+                    min_values: 0,
+                    max_values: 1,
+                    options: TRIBE_COLOR_PRESETS.map(preset => ({
+                      label: preset.label,
+                      value: preset.value,
+                      description: preset.value === 'custom' ? 'Enter hex code below' : preset.value,
+                      emoji: { name: preset.emoji },
+                      default: preset.value === 'custom'
+                        ? (!isPresetColor && !!displayColor)
+                        : preset.value.toUpperCase() === displayColor?.toUpperCase()
+                    }))
+                  }
+                },
+                {
+                  type: 18, // Label
+                  label: 'Custom Color (optional)',
+                  description: 'Only used when "Custom..." is selected above. Format: #RRGGBB',
                   component: {
                     type: 4, // Text Input
-                    custom_id: 'tribe_color',
+                    custom_id: 'tribe_color_custom',
                     style: 1, // Short
-                    placeholder: '#FF5733 or FF5733',
-                    value: displayColor,
+                    placeholder: '#FF5733',
+                    value: (!isPresetColor && displayColor) ? displayColor : '',
                     required: false,
                     max_length: 7
                   }
@@ -36612,18 +36639,18 @@ Your server is now ready for Tycoons gameplay!`;
             // Handle Label (type 18) wrapper with nested component (Components V2 format)
             if (row?.type === 18 && row?.component) {
               if (row.component.custom_id === customId) {
-                return row.component.value || '';
+                return row.component.value ?? row.component.values ?? '';
               }
             }
             // Handle ActionRow format (type 1) with nested components
             else if (row?.components && Array.isArray(row.components)) {
               const field = row.components.find(c => c?.custom_id === customId);
-              if (field) return field.value || '';
+              if (field) return field.value ?? field.values ?? '';
             }
             // Handle direct array format (flattened)
             else if (Array.isArray(row)) {
               const field = row.find(c => c?.custom_id === customId);
-              if (field) return field.value || '';
+              if (field) return field.value ?? field.values ?? '';
             }
           }
           return '';
@@ -36631,14 +36658,17 @@ Your server is now ready for Tycoons gameplay!`;
 
         const nameInput = getFieldValue('tribe_name');
         const emojiInput = getFieldValue('tribe_emoji');
-        const colorInput = getFieldValue('tribe_color');
-        const showPlayerEmojisInput = getFieldValue('show_player_emojis');
+        const colorPresetRaw = getFieldValue('tribe_color_preset');
+        const colorCustom = getFieldValue('tribe_color_custom');
+
+        // StringSelect returns values array, extract first element
+        const colorPreset = Array.isArray(colorPresetRaw) ? colorPresetRaw[0] : (colorPresetRaw || '');
 
         console.log(`[CASTLIST] Extracted modal values:`, {
           name: nameInput,
           emoji: emojiInput,
-          color: colorInput,
-          showPlayerEmojis: showPlayerEmojisInput
+          colorPreset,
+          colorCustom
         });
 
         // Validate emoji (modal-specific)
@@ -36657,14 +36687,17 @@ Your server is now ready for Tycoons gameplay!`;
           }
         }
 
-        // Validate hex color (modal-specific)
+        // Resolve color from preset select or custom hex input
         const { validateHexColor, populateTribeData } = await import('./utils/tribeDataUtils.js');
         let processedColor = null;
-        if (colorInput && colorInput.trim()) {
-          processedColor = validateHexColor(colorInput.trim());
+        if (colorPreset === 'custom' && colorCustom && colorCustom.trim()) {
+          processedColor = validateHexColor(colorCustom.trim());
           if (!processedColor) {
-            console.warn(`[CASTLIST] Invalid color format: ${colorInput}`);
+            console.warn(`[CASTLIST] Invalid custom color format: ${colorCustom}`);
           }
+        } else if (colorPreset && colorPreset !== 'custom') {
+          // Preset color — already a valid hex from our constant
+          processedColor = colorPreset.toUpperCase();
         }
 
         // Fetch guild and role (needed for rename + populateTribeData)
@@ -36720,32 +36753,19 @@ Your server is now ready for Tycoons gameplay!`;
 
         // Sync color: save to tribe data AND update Discord role color
         let roleColorChanged = false;
-        if (colorInput !== undefined) {
-          if (processedColor) {
-            tribe.color = processedColor;
-            // Sync to Discord role color
-            const colorInt = parseInt(processedColor.replace('#', ''), 16);
-            const currentRoleColor = role?.color || 0;
-            if (colorInt !== currentRoleColor) {
-              try {
-                await role.setColor(colorInt, 'CastBot tribe color edit');
-                console.log(`[CASTLIST] Updated role color to ${processedColor} (${colorInt}) for ${roleName}`);
-                roleColorChanged = true;
-              } catch (colorError) {
-                console.warn(`[CASTLIST] Failed to update role color: ${colorError.message}`);
-              }
+        if (colorPreset && processedColor) {
+          tribe.color = processedColor;
+          // Sync to Discord role color
+          const colorInt = parseInt(processedColor.replace('#', ''), 16);
+          const currentRoleColor = role?.color || 0;
+          if (colorInt !== currentRoleColor) {
+            try {
+              await role.setColor(colorInt, 'CastBot tribe color edit');
+              console.log(`[CASTLIST] Updated role color to ${processedColor} (${colorInt}) for ${roleName}`);
+              roleColorChanged = true;
+            } catch (colorError) {
+              console.warn(`[CASTLIST] Failed to update role color: ${colorError.message}`);
             }
-          } else if (!colorInput.trim()) {
-            delete tribe.color;
-          }
-        }
-
-        if (showPlayerEmojisInput !== undefined && showPlayerEmojisInput.trim()) {
-          const input = showPlayerEmojisInput.trim().toLowerCase();
-          if (input === 'yes' || input === 'y' || input === 'true') {
-            tribe.showPlayerEmojis = true;
-          } else if (input === 'no' || input === 'n' || input === 'false') {
-            tribe.showPlayerEmojis = false;
           }
         }
 

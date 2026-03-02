@@ -127,6 +127,34 @@ export const SORT_STRATEGIES = {
 };
 
 /**
+ * Tribe color presets - mirrors Discord's role color picker palette.
+ * Used by tribe edit modal StringSelect for quick color selection.
+ * Last entry 'custom' is a sentinel for freeform hex input.
+ */
+export const TRIBE_COLOR_PRESETS = [
+  { value: '#1ABC9C', label: 'Teal',        emoji: '🩵' },
+  { value: '#2ECC71', label: 'Green',       emoji: '🟢' },
+  { value: '#3498DB', label: 'Blue',        emoji: '🔵' },
+  { value: '#9B59B6', label: 'Purple',      emoji: '🟣' },
+  { value: '#E91E63', label: 'Pink',        emoji: '🩷' },
+  { value: '#F1C40F', label: 'Yellow',      emoji: '🟡' },
+  { value: '#E67E22', label: 'Orange',      emoji: '🟠' },
+  { value: '#E74C3C', label: 'Red',         emoji: '🔴' },
+  { value: '#95A5A6', label: 'Light Grey',  emoji: '⚪' },
+  { value: '#607D8B', label: 'Blue Grey',   emoji: '🔘' },
+  { value: '#11806A', label: 'Dark Teal',   emoji: '🌲' },
+  { value: '#1F8B4C', label: 'Dark Green',  emoji: '🌿' },
+  { value: '#206694', label: 'Dark Blue',   emoji: '🫐' },
+  { value: '#71368A', label: 'Dark Purple', emoji: '🍇' },
+  { value: '#AD1457', label: 'Dark Pink',   emoji: '🌺' },
+  { value: '#C27C0E', label: 'Dark Gold',   emoji: '🥇' },
+  { value: '#A84300', label: 'Dark Orange', emoji: '🍂' },
+  { value: '#992D22', label: 'Dark Red',    emoji: '🧱' },
+  { value: '#FFFFFF', label: 'White',       emoji: '⬜' },
+  { value: 'custom',  label: 'Custom...',  emoji: '🎨' },
+];
+
+/**
  * Get sort strategy display name
  * @param {string} strategy - Sort strategy key
  * @returns {string} Human-readable strategy name
