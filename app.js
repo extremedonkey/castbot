@@ -1022,7 +1022,7 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setEmoji('🌈')
   ];
 
-  // Data Actions section buttons (DST + Refresh Tips + exports/imports)
+  // Data Actions section buttons (DST + Refresh Tips + Import)
   const dataActionsButtons = [
     new ButtonBuilder()
       .setCustomId('admin_dst_toggle')
@@ -1035,20 +1035,29 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('💡'),
     new ButtonBuilder()
-      .setCustomId('playerdata_export_all')
-      .setLabel('Export All')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💾'),
-    new ButtonBuilder()
-      .setCustomId('playerdata_export')
-      .setLabel('Export Server')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📤'),
-    new ButtonBuilder()
       .setCustomId('playerdata_import')
       .setLabel('Import Server')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('📥')
+  ];
+
+  // Export Data section buttons
+  const exportDataButtons = [
+    new ButtonBuilder()
+      .setCustomId('playerdata_export_all')
+      .setLabel('All playerData')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('💿'),
+    new ButtonBuilder()
+      .setCustomId('playerdata_export')
+      .setLabel('Server playerData')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('💿'),
+    new ButtonBuilder()
+      .setCustomId('safaricontent_export_all')
+      .setLabel('All safariContent')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('💿')
   ];
 
   // Danger Zone section buttons
@@ -1090,7 +1099,8 @@ async function createReeceStuffMenu(guildId, channelId = null) {
   const analyticsRow = new ActionRowBuilder().addComponents(analyticsButtons);
   const dangerZoneRow = new ActionRowBuilder().addComponents(dangerZoneButtons);
   const dataActionsRow = new ActionRowBuilder().addComponents(dataActionsButtons);
-  
+  const exportDataRow = new ActionRowBuilder().addComponents(exportDataButtons);
+
   const backRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('castbot_tools')
@@ -1107,6 +1117,9 @@ async function createReeceStuffMenu(guildId, channelId = null) {
     { type: 14 },
     { type: 10, content: `> **\`📦 Data Actions\`**` },
     dataActionsRow.toJSON(),
+    { type: 14 },
+    { type: 10, content: `> **\`💾 Export Data\`**` },
+    exportDataRow.toJSON(),
     { type: 14 },
     { type: 10, content: `> **\`☢️ Danger Zone\`**` },
     dangerZoneRow.toJSON(),
@@ -12877,6 +12890,83 @@ Your server is now ready for Tycoons gameplay!`;
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
               content: '❌ Error exporting full playerData. Please try again.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+      }
+    } else if (custom_id === 'safaricontent_export_all') {
+      // Handle Export All safariContent (entire safariContent.json file with all guilds)
+      try {
+        const userId = req.body.member.user.id;
+        const token = req.body.token;
+
+        if (userId !== '391415444084490240') {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Access denied. This feature is restricted.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        console.log(`📤 DEBUG: Exporting ALL safariContent (full file)`);
+
+        res.send({
+          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { flags: InteractionResponseFlags.EPHEMERAL }
+        });
+
+        const { loadSafariContent } = await import('./safariManager.js');
+        const allSafariContent = await loadSafariContent();
+
+        const guildCount = Object.keys(allSafariContent).filter(k => k !== '/* Server ID */').length;
+
+        const exportJson = JSON.stringify(allSafariContent, null, 2);
+        console.log(`📤 DEBUG: Full safariContent export length: ${exportJson.length} characters`);
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `safariContent-FULL-export-${timestamp}.json`;
+
+        const applicationId = req.body.application_id;
+        const followUpUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${token}`;
+
+        const FormData = (await import('form-data')).default;
+        const form = new FormData();
+
+        form.append('payload_json', JSON.stringify({
+          content: `✅ **Full safariContent Export Complete**\n\n` +
+                  `**All Guilds:** ${guildCount} servers\n` +
+                  `**Export Size:** ${(exportJson.length / 1024).toFixed(1)} KB\n` +
+                  `**Export Date:** ${new Date().toLocaleString()}\n\n` +
+                  `⚠️ This file contains ALL server data from safariContent.json\n` +
+                  `💾 Can be used as direct replacement for safariContent.json`,
+          flags: InteractionResponseFlags.EPHEMERAL
+        }));
+
+        form.append('files[0]', Buffer.from(exportJson, 'utf8'), {
+          filename: filename,
+          contentType: 'application/json'
+        });
+
+        await fetch(followUpUrl, {
+          method: 'POST',
+          headers: form.getHeaders(),
+          body: form
+        });
+
+        console.log(`✅ Full safariContent export sent successfully`);
+        return;
+
+      } catch (error) {
+        console.error('Error in safaricontent_export_all:', error);
+
+        if (!res.headersSent) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Error exporting full safariContent. Please try again.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });

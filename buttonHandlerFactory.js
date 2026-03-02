@@ -27,7 +27,7 @@ export const BUTTON_REGISTRY = {
     label: 'Analytics',
     description: 'Analytics and admin dashboard (Reece-only)',
     emoji: '🧮',
-    style: 'Secondary',
+    style: 'Danger',
     menu: 'analytics_admin',
     parent: 'castbot_tools',
     restrictedUser: '391415444084490240',
@@ -39,6 +39,42 @@ export const BUTTON_REGISTRY = {
     label: 'Refresh Tips',
     description: 'Upload all tips images to Discord CDN for current environment',
     emoji: '💡',
+    style: 'Secondary',
+    parent: 'analytics_admin',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
+  'playerdata_export_all': {
+    label: 'All playerData',
+    description: 'Export entire playerData.json across all servers',
+    emoji: '💿',
+    style: 'Secondary',
+    parent: 'analytics_admin',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
+  'playerdata_export': {
+    label: 'Server playerData',
+    description: 'Export playerData for current guild only',
+    emoji: '💿',
+    style: 'Secondary',
+    parent: 'analytics_admin',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
+  'safaricontent_export_all': {
+    label: 'All safariContent',
+    description: 'Export entire safariContent.json across all servers',
+    emoji: '💿',
+    style: 'Secondary',
+    parent: 'analytics_admin',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
+  'playerdata_import': {
+    label: 'Import Server',
+    description: 'Import playerData from a file for current guild',
+    emoji: '📥',
     style: 'Secondary',
     parent: 'analytics_admin',
     restrictedUser: '391415444084490240',

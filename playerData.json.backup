@@ -750,7 +750,45 @@
         "safari": {
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "startingLocation": "A2"
+              "currentLocation": "A3",
+              "exploredCoordinates": [
+                "A3"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A3",
+                  "timestamp": "2026-03-02T03:54:21.332Z"
+                }
+              ],
+              "startingLocation": "A3"
+            }
+          },
+          "currency": 22,
+          "history": [
+            {
+              "t": 1772423622860,
+              "type": "admin",
+              "desc": "[ADMIN] Currency set to 22 Gil"
+            }
+          ],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "achievements": [],
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2026-03-02T03:54:21.332Z",
+              "regenConfig": "hourly"
             }
           }
         }
@@ -1300,12 +1338,15 @@
       },
       "1335645034380525708": {
         "name": "Tribe 1335645034380525708",
-        "emoji": "🏕️",
-        "color": null,
+        "emoji": "💛",
         "castlistIds": [
           "castlist_1772416291262_custom"
         ],
-        "castlist": "Claude's second CastList Test"
+        "castlist": "Claude's second CastList Test",
+        "analyticsName": "All Pronouns",
+        "analyticsAdded": 1772422342693,
+        "showPlayerEmojis": true,
+        "memberCount": 1
       },
       "1424400564858650644": {
         "name": "Tribe 1424400564858650644",
