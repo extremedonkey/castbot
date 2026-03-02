@@ -956,7 +956,7 @@ export async function createPlayerManagementUI(options) {
           components: [{
             type: 2, // Button
             style: 2, // Secondary
-            label: 'Activity Log',
+            label: 'Logs',
             custom_id: 'player_view_logs',
             emoji: { name: '📜' }
           }]

@@ -539,7 +539,13 @@ function createManagementButtons(castlistId, enabled = true, isVirtual = false, 
       .setLabel('Swap/Merge')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🔀')
-      .setDisabled(!enabled || !isDefaultCastlist) // Only enabled for default castlist
+      .setDisabled(!enabled || !isDefaultCastlist), // Only enabled for default castlist
+    new ButtonBuilder()
+      .setCustomId(`compact_castlist${suffix}`)
+      .setLabel('Compact')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🍒')
+      .setDisabled(!enabled)
   );
 
   return { buttonRow1, castlistId, enabled };

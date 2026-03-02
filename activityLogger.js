@@ -444,8 +444,8 @@ export async function createActivityLogUI({ guildId, userId, playerName, page = 
     content: `## 📜 Activity Log — ${playerName}`
   });
 
-  // Admin mode: map gallery with visited locations, stamina, legend
-  if (mode === 'admin' && client) {
+  // Map gallery with visited locations, stamina, legend (admin and player)
+  if (client) {
     try {
       const overlay = await generatePlayerOverlay(guildId, userId, client);
       if (overlay) {

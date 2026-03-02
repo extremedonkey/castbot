@@ -31306,17 +31306,18 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
 
     } else if (custom_id === 'player_view_logs') {
-      // Player viewing own activity log
+      // Player viewing own activity log (deferred: overlay generation is slow)
       return ButtonHandlerFactory.create({
         id: 'player_view_logs',
         updateMessage: true,
+        deferred: true,
         handler: async (context) => {
           console.log(`📜 START: player_view_logs for user ${context.userId}`);
           const { createActivityLogUI } = await import('./activityLogger.js');
           const guild = await context.client.guilds.fetch(context.guildId);
           let playerName = 'Unknown';
           try { const m = await guild.members.fetch(context.userId); playerName = m.displayName; } catch {}
-          return createActivityLogUI({ guildId: context.guildId, userId: context.userId, playerName, page: 1, mode: 'player' });
+          return createActivityLogUI({ guildId: context.guildId, userId: context.userId, playerName, page: 1, mode: 'player', client: context.client });
         }
       })(req, res, client);
 
@@ -31335,7 +31336,7 @@ Your server is now ready for Tycoons gameplay!`;
           const guild = await context.client.guilds.fetch(context.guildId);
           let playerName = 'Unknown';
           try { const m = await guild.members.fetch(targetUserId); playerName = m.displayName; } catch {}
-          return createActivityLogUI({ guildId: context.guildId, userId: targetUserId, playerName, page, mode: isAdmin ? 'admin' : 'player', client: isAdmin ? context.client : undefined });
+          return createActivityLogUI({ guildId: context.guildId, userId: targetUserId, playerName, page, mode: isAdmin ? 'admin' : 'player', client: context.client });
         }
       })(req, res, client);
 
@@ -31354,7 +31355,7 @@ Your server is now ready for Tycoons gameplay!`;
           const guild = await context.client.guilds.fetch(context.guildId);
           let playerName = 'Unknown';
           try { const m = await guild.members.fetch(targetUserId); playerName = m.displayName; } catch {}
-          return createActivityLogUI({ guildId: context.guildId, userId: targetUserId, playerName, page, mode: isAdmin ? 'admin' : 'player', client: isAdmin ? context.client : undefined });
+          return createActivityLogUI({ guildId: context.guildId, userId: targetUserId, playerName, page, mode: isAdmin ? 'admin' : 'player', client: context.client });
         }
       })(req, res, client);
 
@@ -31373,7 +31374,7 @@ Your server is now ready for Tycoons gameplay!`;
           const guild = await context.client.guilds.fetch(context.guildId);
           let playerName = 'Unknown';
           try { const m = await guild.members.fetch(targetUserId); playerName = m.displayName; } catch {}
-          return createActivityLogUI({ guildId: context.guildId, userId: targetUserId, playerName, page, mode: isAdmin ? 'admin' : 'player', client: isAdmin ? context.client : undefined });
+          return createActivityLogUI({ guildId: context.guildId, userId: targetUserId, playerName, page, mode: isAdmin ? 'admin' : 'player', client: context.client });
         }
       })(req, res, client);
 
