@@ -127,6 +127,42 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'analytics'
   },
+  'prod_nuke_category': {
+    label: 'Nuke Category',
+    description: 'Select and delete all channels in a Discord category',
+    emoji: '🧹',
+    style: 'Danger',
+    parent: 'analytics_admin',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
+  'nuke_cat_select': {
+    label: 'Category Select',
+    description: 'Select a category to delete all channels from',
+    emoji: '🧹',
+    style: 'Secondary',
+    parent: 'prod_nuke_category',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
+  'nuke_cat_confirm_*': {
+    label: 'Confirm Category Nuke',
+    description: 'Confirm deletion of all channels in selected category',
+    emoji: '🗑️',
+    style: 'Danger',
+    parent: 'prod_nuke_category',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
+  'nuke_cat_cancel': {
+    label: 'Cancel Category Nuke',
+    description: 'Cancel category deletion',
+    emoji: '❌',
+    style: 'Secondary',
+    parent: 'prod_nuke_category',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
   'test_role_hierarchy': {
     label: 'Check Roles',
     description: 'Test and display role hierarchy information',

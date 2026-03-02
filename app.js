@@ -1105,7 +1105,12 @@ async function createReeceStuffMenu(guildId, channelId = null) {
     new ButtonBuilder()
       .setCustomId('castbot_tools')
       .setLabel('← Tools')
-      .setStyle(ButtonStyle.Secondary)
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('prod_nuke_category')
+      .setLabel('Nuke Category')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('🧹')
   );
 
   // Build container components with section headers
@@ -10744,6 +10749,241 @@ Your server is now ready for Tycoons gameplay!`;
               components: containerComponents
             }]
           };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'prod_nuke_category') {
+      // Nuke Category - Show list of categories to select from
+      return ButtonHandlerFactory.create({
+        id: 'prod_nuke_category',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          if (context.userId !== '391415444084490240') {
+            return { content: '❌ Access denied.' };
+          }
+
+          const guild = await context.client.guilds.fetch(context.guildId);
+          const channels = await guild.channels.fetch();
+          const categories = channels.filter(ch => ch.type === 4); // ChannelType.GuildCategory = 4
+
+          if (categories.size === 0) {
+            return { content: '❌ No categories found in this server.' };
+          }
+
+          // Build select menu options (max 25)
+          const options = [];
+          for (const [id, cat] of categories) {
+            const childCount = channels.filter(ch => ch.parentId === id).size;
+            options.push({
+              label: cat.name.substring(0, 100),
+              value: id,
+              description: `${childCount} channel${childCount !== 1 ? 's' : ''}`,
+              emoji: { name: '📁' }
+            });
+          }
+          options.sort((a, b) => a.label.localeCompare(b.label));
+
+          const containerComponents = [
+            { type: 10, content: `## 🧹 Nuke Category\nSelect a category to delete all its channels.\n\n**${categories.size}** categories found in this server.` },
+            { type: 14 },
+            {
+              type: 1,
+              components: [{
+                type: 3, // String Select
+                custom_id: 'nuke_cat_select',
+                placeholder: 'Select a category...',
+                options: options.slice(0, 25)
+              }]
+            },
+            { type: 14 },
+            {
+              type: 1,
+              components: [{
+                type: 2,
+                custom_id: 'analytics_admin',
+                label: '← Analytics',
+                style: 2
+              }]
+            }
+          ];
+
+          return {
+            flags: (1 << 15),
+            components: [{
+              type: 17,
+              accent_color: 0x3498DB,
+              components: containerComponents
+            }]
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'nuke_cat_select') {
+      // Category selected - show Critical Deletion confirmation
+      return ButtonHandlerFactory.create({
+        id: 'nuke_cat_select',
+        updateMessage: true,
+        handler: async (context) => {
+          if (context.userId !== '391415444084490240') {
+            return { content: '❌ Access denied.' };
+          }
+
+          const categoryId = data.values[0];
+          const guild = await context.client.guilds.fetch(context.guildId);
+          const channels = await guild.channels.fetch();
+          const category = channels.get(categoryId);
+
+          if (!category) {
+            return { content: '❌ Category not found. It may have been deleted.' };
+          }
+
+          const children = channels.filter(ch => ch.parentId === categoryId);
+          const textChannels = children.filter(ch => ch.type === 0).size;
+          const voiceChannels = children.filter(ch => ch.type === 2).size;
+          const otherChannels = children.size - textChannels - voiceChannels;
+
+          // Critical Deletion UI (per LeanUserInterfaceDesign.md standard)
+          const containerComponents = [
+            {
+              type: 10,
+              content: `## ⚠️ Delete Category: ${category.name}`
+            },
+            { type: 14 }, // Separator below header (MANDATORY)
+            {
+              type: 10,
+              content: `**Category:** ${category.name}\n**Total Channels:** ${children.size}\n${textChannels > 0 ? `• ${textChannels} text channel${textChannels !== 1 ? 's' : ''}\n` : ''}${voiceChannels > 0 ? `• ${voiceChannels} voice channel${voiceChannels !== 1 ? 's' : ''}\n` : ''}${otherChannels > 0 ? `• ${otherChannels} other channel${otherChannels !== 1 ? 's' : ''}\n` : ''}\n**This action cannot be undone.** The following will be permanently deleted:\n• **All ${children.size} channels** inside this category\n• The category itself\n• All message history in deleted channels`
+            },
+            { type: 14 }, // Separator above buttons (MANDATORY)
+            {
+              type: 1,
+              components: [
+                {
+                  type: 2,
+                  custom_id: 'nuke_cat_cancel',
+                  label: 'Cancel',
+                  style: 2,
+                  emoji: { name: '❌' }
+                },
+                {
+                  type: 2,
+                  custom_id: `nuke_cat_confirm_${categoryId}`,
+                  label: 'Yes, Delete Everything',
+                  style: 4,
+                  emoji: { name: '🗑️' }
+                }
+              ]
+            }
+          ];
+
+          return {
+            flags: (1 << 15),
+            components: [{
+              type: 17,
+              accent_color: 0xed4245,
+              components: containerComponents
+            }]
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('nuke_cat_confirm_')) {
+      // Confirmed category deletion - execute
+      return ButtonHandlerFactory.create({
+        id: 'nuke_cat_confirm',
+        deferred: true,
+        updateMessage: true,
+        handler: async (context) => {
+          if (context.userId !== '391415444084490240') {
+            return { content: '❌ Access denied.' };
+          }
+
+          const categoryId = custom_id.replace('nuke_cat_confirm_', '');
+          const guild = await context.client.guilds.fetch(context.guildId);
+          const channels = await guild.channels.fetch();
+          const category = channels.get(categoryId);
+
+          if (!category) {
+            return { content: '❌ Category not found. It may have already been deleted.' };
+          }
+
+          const children = channels.filter(ch => ch.parentId === categoryId);
+          const totalToDelete = children.size;
+          let deletedCount = 0;
+          const errors = [];
+
+          console.log(`🧹 START: Nuking category "${category.name}" (${totalToDelete} channels)`);
+
+          // Delete all children first
+          for (const [channelId, channel] of children) {
+            try {
+              await channel.delete('Category nuke');
+              deletedCount++;
+              console.log(`🧹 Deleted channel: ${channel.name} (${deletedCount}/${totalToDelete})`);
+              // Rate limit: pause every 5 deletions
+              if (deletedCount % 5 === 0) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+              }
+            } catch (error) {
+              errors.push(`${channel.name}: ${error.message}`);
+              console.error(`🧹 Failed to delete ${channel.name}:`, error.message);
+            }
+          }
+
+          // Delete the category itself
+          try {
+            await category.delete('Category nuke');
+            console.log(`🧹 Deleted category: ${category.name}`);
+          } catch (error) {
+            errors.push(`Category ${category.name}: ${error.message}`);
+          }
+
+          console.log(`🧹 DONE: Nuked ${deletedCount}/${totalToDelete} channels + category`);
+
+          let resultText = `## 🧹 Category Deleted\n\n`;
+          resultText += `**${category.name}** — ${deletedCount}/${totalToDelete} channels deleted`;
+          if (errors.length > 0) {
+            resultText += `\n\n⚠️ **${errors.length} error(s):**\n${errors.slice(0, 5).map(e => `• ${e}`).join('\n')}`;
+          }
+
+          return {
+            flags: (1 << 15),
+            components: [{
+              type: 17,
+              accent_color: errors.length > 0 ? 0xf39c12 : 0x27ae60,
+              components: [
+                { type: 10, content: resultText },
+                { type: 14 },
+                {
+                  type: 1,
+                  components: [{
+                    type: 2,
+                    custom_id: 'analytics_admin',
+                    label: '← Analytics',
+                    style: 2
+                  }, {
+                    type: 2,
+                    custom_id: 'prod_nuke_category',
+                    label: 'Nuke Another',
+                    style: 2,
+                    emoji: { name: '🧹' }
+                  }]
+                }
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'nuke_cat_cancel') {
+      // Cancelled - go back to category list
+      return ButtonHandlerFactory.create({
+        id: 'nuke_cat_cancel',
+        updateMessage: true,
+        ephemeral: true,
+        handler: async (context) => {
+          if (context.userId !== '391415444084490240') {
+            return { content: '❌ Access denied.' };
+          }
+          // Redirect to analytics menu
+          const reeceMenuData = await createReeceStuffMenu(context.guildId, context.channelId);
+          return reeceMenuData;
         }
       })(req, res, client);
     } else if (custom_id === 'test_role_hierarchy') {
