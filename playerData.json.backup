@@ -1101,10 +1101,11 @@
         "castlistIds": [
           "castlist_1759638936214_system",
           "castlist_1762579720361_1331657596087566398",
-          "castlist_archive_1762702460277"
+          "castlist_archive_1762702460277",
+          "castlist_1772416072934_custom"
         ],
         "isVanity": true,
-        "castlist": "Castbot MVPs",
+        "castlist": "Claude's New CastList",
         "castlistId": "castlist_archive_1762702460277"
       },
       "1335645032891547670": {
@@ -1330,7 +1331,11 @@
       },
       "1425702665806938183": {
         "name": "Tribe 1425702665806938183",
-        "isVanity": true
+        "isVanity": true,
+        "castlistIds": [
+          "castlist_1772416072934_custom"
+        ],
+        "castlist": "Claude's New CastList"
       },
       "1434189967323566261": {
         "name": "Tribe 1434189967323566261",
@@ -2624,7 +2629,31 @@
         "seasonId": "season_cac1b81de8914c79",
         "metadata": {
           "description": "Archived from tribe swap on 11/23/2025",
-          "emoji": "📦"
+          "emoji": "🏳️‍⚧️"
+        },
+        "settings": {
+          "sortStrategy": "placements"
+        },
+        "modifiedAt": 1772415833504,
+        "modifiedBy": "391415444084490240"
+      },
+      "castlist_1772416072934_custom": {
+        "id": "castlist_1772416072934_custom",
+        "name": "Claude's New CastList",
+        "type": "custom",
+        "createdAt": 1772416072934,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "placements",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public",
+          "seasonId": "season_ab9fe786206f428e"
+        },
+        "metadata": {
+          "emoji": "🤖",
+          "description": "Domou arigatou Mr Roboto",
+          "lastModified": 1772416072934
         }
       }
     },

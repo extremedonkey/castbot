@@ -36417,30 +36417,13 @@ Are you sure you want to continue?`;
 
         await savePlayerData(playerData);
 
-        // Two-phase response (same pattern as castlist_select):
-        // Phase 1: Fast hub without member data
-        const { createCastlistHub } = await import('./castlistHub.js');
-        const fastHub = await createCastlistHub(guildId, {
+        // Two-phase response: show tribes instantly, then update with member counts
+        const { twoPhaseHubResponse } = await import('./castlistHandlers.js');
+        await twoPhaseHubResponse(token, guildId, {
           message: `✅ Updated settings for ${tribe.emoji || ''} **${roleName}**`,
           selectedCastlistId: castlistId,
-          activeButton: 'add_tribe',
-          skipMemberFetch: true
+          activeButton: 'add_tribe'
         }, client);
-        await updateDeferredResponse(token, fastHub);
-
-        // Phase 2: Rebuild with member data (token valid 15 min)
-        try {
-          const fullHub = await createCastlistHub(guildId, {
-            message: `✅ Updated settings for ${tribe.emoji || ''} **${roleName}**`,
-            selectedCastlistId: castlistId,
-            activeButton: 'add_tribe',
-            roleSelectNonce: Date.now() // Force fresh Role Select render after rename
-          }, client);
-          await updateDeferredResponse(token, fullHub);
-        } catch (phase2Error) {
-          // Silent — user already has the hub, just without member counts
-          console.warn('[CASTLIST] Phase 2 member fetch failed (non-critical):', phase2Error.message);
-        }
         return null;
 
       } catch (error) {

@@ -11,6 +11,38 @@ import { loadPlayerData, savePlayerData } from './storage.js';
 import { PermissionFlagsBits, InteractionResponseType } from 'discord.js';
 import { populateTribeData } from './utils/tribeDataUtils.js';
 
+/**
+ * Two-phase hub response: Phase 1 shows instantly (no member data),
+ * Phase 2 fetches members via REST and updates with player counts.
+ * Centralizes the pattern used by castlist_select, tribe_edit_modal, and tribe_select.
+ * @param {string} token - Interaction token for deferred response
+ * @param {string} guildId - Guild ID
+ * @param {Object} hubOptions - Options passed to createCastlistHub (selectedCastlistId, message, activeButton, etc.)
+ * @param {Object} client - Discord client
+ */
+export async function twoPhaseHubResponse(token, guildId, hubOptions, client) {
+  const { updateDeferredResponse } = await import('./buttonHandlerFactory.js');
+
+  // Phase 1: Fast hub without member data
+  const fastHub = await createCastlistHub(guildId, {
+    ...hubOptions,
+    skipMemberFetch: true
+  }, client);
+  await updateDeferredResponse(token, fastHub);
+
+  // Phase 2: Rebuild with member data (token valid 15 min, no rush)
+  try {
+    const fullHub = await createCastlistHub(guildId, {
+      ...hubOptions,
+      roleSelectNonce: Date.now() // Force fresh Role Select render
+    }, client);
+    await updateDeferredResponse(token, fullHub);
+  } catch (phase2Error) {
+    // Silent — user already has the hub from Phase 1, just without member counts
+    console.warn('[CASTLIST] Phase 2 member fetch failed (non-critical):', phase2Error.message);
+  }
+}
+
 // Interaction deduplication for rapid role select changes
 const recentInteractions = new Map();
 const INTERACTION_TIMEOUT = 5000; // 5 seconds
@@ -324,23 +356,9 @@ export async function handleCastlistSelect(req, res, client) {
       }
 
       // Two-phase response: show tribes instantly, then update with member counts
-      // Phase 1: Immediate hub without member data
-      const { updateDeferredResponse } = await import('./buttonHandlerFactory.js');
-      const fastHub = await createCastlistHub(context.guildId, {
-        selectedCastlistId: selectedCastlistId || null,
-        skipMemberFetch: true
+      await twoPhaseHubResponse(context.token, context.guildId, {
+        selectedCastlistId: selectedCastlistId || null
       }, context.client);
-      await updateDeferredResponse(context.token, fastHub);
-
-      // Phase 2: Rebuild with member data (token valid 15 min, no rush)
-      try {
-        const fullHub = await createCastlistHub(context.guildId, {
-          selectedCastlistId: selectedCastlistId || null
-        }, context.client);
-        await updateDeferredResponse(context.token, fullHub);
-      } catch {
-        // Silent — user already has the hub, just without member counts
-      }
 
       return null; // Factory should not send its own response
     }
@@ -889,22 +907,12 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
         throw error; // Let ButtonHandlerFactory handle error display
       }
 
-      // Refresh hub with updated tribes (now always visible)
-      // Skip member fetch for fast tribe add/remove operations
-      const hubData = await createCastlistHub(context.guildId, {
-        selectedCastlistId: castlistId,
-        skipMemberFetch: true  // Fast mode - tribe changes don't need member data
+      // Two-phase response: show tribes instantly, then update with member counts
+      await twoPhaseHubResponse(context.token, context.guildId, {
+        selectedCastlistId: castlistId
       }, context.client);
 
-      // Debug: Check component structure after removal
-      console.log(`[CASTLIST] After removal - Hub has ${hubData.components?.length || 0} top-level components`);
-      if (hubData.components?.[0]?.type === 17) {
-        const containerComponents = hubData.components[0].components || [];
-        const sections = containerComponents.filter(c => c.type === 9);
-        console.log(`[CASTLIST] After removal - ${sections.length} Section components remain`);
-      }
-
-      return hubData;
+      return null; // twoPhaseHubResponse handles the response
     }
   })(req, res, client);
 }
