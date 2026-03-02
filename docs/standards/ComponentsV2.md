@@ -8,10 +8,21 @@ Components V2 is Discord's new component system that provides enhanced layout ca
 - [Discord Developer Documentation](https://discord.com/developers/docs/components/reference)
 - **[Discord Interaction API](DiscordInteractionAPI.md)** - Foundational interaction concepts
 
-### 📢 Latest Updates (September 2025)
+### 📢 Latest Updates (March 2026)
 
-**Major Modal Enhancements:**
-- **NEW Label Component (Type 18)**: Wrapper for modal inputs with title/description
+**New Interactive Components:**
+- **Radio Group (Type 21)**: Single-select radio buttons for modals (must be in Label)
+- **Checkbox Group (Type 22)**: Multi-select checkboxes for modals (must be in Label)
+- **Checkbox (Type 23)**: Single yes/no toggle for modals (must be in Label)
+
+**File Component Clarification (Type 13):**
+- Displays bot-uploaded file attachments using `attachment://` protocol
+- Only available in messages (not modals)
+- Requires `IS_COMPONENTS_V2` flag
+- **NOT a file upload/input component** — only for bot → user file delivery
+
+**Previous Updates (September 2025):**
+- **Label Component (Type 18)**: Wrapper for modal inputs with title/description
 - **All Select Menus in Modals**: User, Role, Mentionable, Channel selects now supported
 - **String Select in Modals**: Finally works! Must use Label wrapper
 - **Text Display in Modals**: Add markdown instructions/content
@@ -172,15 +183,38 @@ Components V2 is Discord's new component system that provides enhanced layout ca
 ```
 
 #### File (Type 13)
-- **Purpose**: Display attached files
-- **Features**: Direct file references
-- **Usage**: File downloads
+- **Purpose**: Display bot-uploaded file attachments in messages
+- **Features**: References files uploaded via `attachment://` protocol, spoiler support, auto-populated name/size
+- **Availability**: Messages only (not modals)
+- **Requires**: `IS_COMPONENTS_V2` flag (`1 << 15`)
+- **NOT for**: Receiving file uploads from users (see [MessageContent Intent Note](#messagecontent-intent--file-uploads))
 
 ```javascript
+// Send a message with file attachments
+// The actual files must be uploaded as multipart form data alongside the payload
 {
   type: 13, // File
-  file: { url: "attachment://filename.pdf" }
+  file: { url: "attachment://game.zip" },
+  spoiler: false // Optional, defaults to false
 }
+```
+
+**Full message example with File components:**
+```javascript
+{
+  flags: 32768, // IS_COMPONENTS_V2
+  components: [
+    {
+      type: 10, // Text Display
+      content: "# Download Available\nGrab the file here:"
+    },
+    {
+      type: 13, // File
+      file: { url: "attachment://export.json" }
+    }
+  ]
+}
+// Note: The `name` and `size` fields are auto-populated by Discord in the response
 ```
 
 ### Interactive Components
@@ -396,6 +430,155 @@ All select menus MUST be wrapped in Label component when used in modals:
   type: 10, // Text Display
   content: "### Instructions\n\nPlease fill out all required fields below."
 }
+```
+
+#### Radio Group (Type 21)
+- **Purpose**: Single-select from a list of options (radio buttons)
+- **Availability**: Modals only, MUST be wrapped in Label component
+- **Limits**: 2-10 options
+- **Features**: `required` field (defaults to true), `default` on options
+
+```javascript
+{
+  type: 18, // Label (required wrapper)
+  label: "Select difficulty",
+  description: "Choose one option",
+  component: {
+    type: 21, // Radio Group
+    custom_id: "difficulty_select",
+    required: true, // Defaults to true
+    options: [
+      {
+        label: "Easy",
+        value: "easy",
+        description: "For beginners"
+      },
+      {
+        label: "Normal",
+        value: "normal",
+        description: "Standard experience",
+        default: true // Pre-selected
+      },
+      {
+        label: "Hard",
+        value: "hard",
+        description: "For veterans"
+      }
+    ]
+  }
+}
+```
+
+**Interaction response** returns `value` (string) or `null` if nothing selected:
+```javascript
+// In modal submit handler:
+// component.type === 21, component.custom_id === "difficulty_select"
+// component.value === "normal" (or null)
+```
+
+#### Checkbox Group (Type 22)
+- **Purpose**: Multi-select from a list of options (checkboxes)
+- **Availability**: Modals only, MUST be wrapped in Label component
+- **Limits**: 1-10 options, `min_values` 0-10, `max_values` 1-10
+- **Features**: `required` field (defaults to true), `default` on options
+
+```javascript
+{
+  type: 18, // Label (required wrapper)
+  label: "Select features to enable",
+  component: {
+    type: 22, // Checkbox Group
+    custom_id: "features_select",
+    required: true,
+    min_values: 1,
+    max_values: 5,
+    options: [
+      {
+        label: "Fog of War",
+        value: "fog",
+        description: "Hide unexplored areas",
+        default: true
+      },
+      {
+        label: "Stamina System",
+        value: "stamina",
+        description: "Limit player actions"
+      },
+      {
+        label: "Custom Actions",
+        value: "custom_actions",
+        description: "Enable location-based actions"
+      }
+    ]
+  }
+}
+```
+
+**Interaction response** returns `values` (array of strings) or `[]`:
+```javascript
+// component.type === 22, component.custom_id === "features_select"
+// component.values === ["fog", "stamina"] (or [])
+```
+
+**Note**: If `min_values` is 0, `required` must be `false`.
+
+#### Checkbox (Type 23)
+- **Purpose**: Single yes/no toggle
+- **Availability**: Modals only, MUST be wrapped in Label component
+- **Features**: `default` boolean for initial state
+
+```javascript
+{
+  type: 18, // Label (required wrapper)
+  label: "Delete custom actions too?",
+  description: "This will permanently remove all custom actions for this map",
+  component: {
+    type: 23, // Checkbox
+    custom_id: "delete_actions",
+    default: false // Unchecked by default
+  }
+}
+```
+
+**Interaction response** returns `value` (boolean):
+```javascript
+// component.type === 23, component.custom_id === "delete_actions"
+// component.value === true (checked) or false (unchecked)
+```
+
+**Note**: Checkbox cannot be set as `required`. Use a Checkbox Group with 1 option + `required: true` if you need mandatory acknowledgment.
+
+## MessageContent Intent & File Uploads
+
+**🚨 IMPORTANT**: The File component (Type 13) is for **sending** files to users, NOT for **receiving** file uploads from users. It does not replace the `MessageContent` gateway intent.
+
+**Current Safari Import Problem:**
+The Safari import uses `channel.createMessageCollector()` to wait for user file uploads. This requires `MessageContent` intent because Discord strips the `attachments` field from user messages without it. Discord **denied** our `MessageContent` intent application (Nov 2025), which blocks scaling past 100 servers.
+
+**Solution: Slash Command Attachment Option**
+Discord slash commands support an `ATTACHMENT` option type (type 11) that delivers files through the interaction webhook — completely bypassing the gateway and requiring NO privileged intents:
+
+```javascript
+// Register command with attachment option
+{
+  name: 'import',
+  description: 'Import Safari data from JSON file',
+  options: [{
+    name: 'file',
+    description: 'The Safari export JSON file',
+    type: 11, // ATTACHMENT type
+    required: true
+  }]
+}
+
+// In handler, access via:
+// const attachment = req.body.data.resolved.attachments[attachmentId];
+// attachment.url, attachment.filename, attachment.size, attachment.content_type
+```
+
+**Why this works**: Interaction payloads (slash commands, modals, buttons) are sent via HTTP webhook, not the gateway. They include full data regardless of gateway intents.
+
+**Migration plan**: Replace the `safari_import_data` message collector pattern with a `/import` slash command (or add an attachment option to existing `/menu` subcommand).
 
 ## Common Patterns in CastBot
 

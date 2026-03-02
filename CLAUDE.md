@@ -65,10 +65,14 @@ type: 7   // Mentionable Select
 type: 8   // Channel Select
 type: 9   // Section (with ONE child component only!)
 type: 11  // Thumbnail (as Section accessory)
-type: 18  // Label (NEW - for modal components)
+type: 12  // Media Gallery (1-10 images)
+type: 13  // File (bot-uploaded attachments, messages only, uses attachment:// protocol)
+type: 18  // Label (for modal components)
+type: 21  // Radio Group (modal only, inside Label - single select, 2-10 options)
+type: 22  // Checkbox Group (modal only, inside Label - multi select, 1-10 options)
+type: 23  // Checkbox (modal only, inside Label - yes/no toggle)
 
 // ❌ INVALID/DEPRECATED:
-type: 13  // WRONG - Invalid separator (use type 14)
 // ActionRow + TextInput in modals is DEPRECATED - use Label (type 18)
 ```
 
