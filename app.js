@@ -862,15 +862,6 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setEmoji('🪛')
   );
 
-  // Add Populate Logs button (backfill activity logs from existing data)
-  advancedFeaturesButtons.push(
-    new ButtonBuilder()
-      .setCustomId('admin_populate_logs')
-      .setLabel('Populate Logs')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📜')
-  );
-
   const advancedFeaturesRow = new ActionRowBuilder().addComponents(advancedFeaturesButtons);
   
   // Component validation moved to utils.js - use countComponents() or validateComponentLimit()
@@ -7388,7 +7379,8 @@ To fix this:
               {
                 type: 1,
                 components: [
-                  { type: 2, custom_id: 'test_role_hierarchy', label: 'Check Roles', style: 2, emoji: { name: '🔰' } }
+                  { type: 2, custom_id: 'test_role_hierarchy', label: 'Check Roles', style: 2, emoji: { name: '🔰' } },
+                  { type: 2, custom_id: 'admin_populate_logs', label: 'Populate Logs', style: 2, emoji: { name: '📜' } }
                 ]
               },
               { type: 14 },

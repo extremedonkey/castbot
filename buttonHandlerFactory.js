@@ -3003,7 +3003,7 @@ export const BUTTON_REGISTRY = {
     emoji: '📜',
     style: 'Secondary',
     category: 'admin',
-    parent: 'prod_menu'
+    parent: 'reeces_stuff'
   }
 };
 
