@@ -7365,13 +7365,17 @@ To fix this:
       })(req, res, client);
     } else if (custom_id === 'reeces_stuff') {
       // Reece's Stuff - secret admin tools menu (Reece-only)
+      // Access check BEFORE factory — prevents Components V2 flag mismatch crash on public messages
+      if (req.body.member?.user?.id !== '391415444084490240') {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: '❌ Access denied.', flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
       return ButtonHandlerFactory.create({
         id: 'reeces_stuff',
         updateMessage: true,
         handler: async (context) => {
-          if (context.userId !== '391415444084490240') {
-            return { content: '❌ Access denied.', ephemeral: true };
-          }
 
           const container = {
             type: 17, accent_color: 0xe74c3c, // Red
@@ -9738,7 +9742,15 @@ To fix this:
     //     }
     //   })(req, res, client);
     } else if (custom_id === 'analytics_admin') {
-      // Handle Reece Stuff submenu - special admin features (MIGRATED TO FACTORY)
+      // Handle Analytics admin menu - special admin features (MIGRATED TO FACTORY)
+      // Access check BEFORE factory — prevents Components V2 flag mismatch crash on public messages (e.g. restart notification)
+      if (req.body.member?.user?.id !== '391415444084490240') {
+        console.log(`❌ ACCESS DENIED: analytics_admin - user ${req.body.member?.user?.id} not authorized`);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: '❌ Access denied. This feature is restricted.', flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
       return ButtonHandlerFactory.create({
         id: 'analytics_admin',
         updateMessage: true,  // Button clicks always update (per CLAUDE.md)
@@ -9746,15 +9758,6 @@ To fix this:
         handler: async (context) => {
           console.log(`🔍 START: analytics_admin - user ${context.userId}`);
           MenuBuilder.trackLegacyMenu('analytics_admin', 'Analytics and admin tools menu');
-
-          // Security check - only allow specific Discord ID
-          if (context.userId !== '391415444084490240') {
-            console.log(`❌ ACCESS DENIED: analytics_admin - user ${context.userId} not authorized`);
-            return {
-              content: 'Access denied. This feature is restricted.',
-              ephemeral: true
-            };
-          }
 
           // Create Reece Stuff submenu (loads playerData.json 933KB + safariContent.json)
           const reeceMenuData = await createReeceStuffMenu(context.guildId, context.channelId);
