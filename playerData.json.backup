@@ -205,14 +205,14 @@
     ],
     "icon": "https://cdn.discordapp.com/icons/1127596863885934652/21246f7f1ab8a24074a5bdb6ae3b6ba2.webp",
     "ownerId": "391415444084490240",
-    "memberCount": 81,
+    "memberCount": 80,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1688910442087,
-    "lastUpdated": 1772113651184,
+    "lastUpdated": 1772457542916,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -1453,10 +1453,10 @@
         "castlistIds": []
       },
       "1333822411912642630": {
-        "emoji": "🏆",
+        "emoji": "👑",
         "showPlayerEmojis": false,
-        "color": "#000000",
-        "analyticsName": "Castbot MVP Supporters",
+        "color": "#0000FF",
+        "analyticsName": "Castbot MVPs",
         "analyticsAdded": 1754751381750,
         "castlistIds": [
           "castlist_1759638936214_system",
@@ -1465,9 +1465,9 @@
           "castlist_1772416291262_custom"
         ],
         "isVanity": true,
-        "castlist": "Castbot MVPs",
+        "castlist": "Cool Birds",
         "castlistId": "castlist_1759638936214_system",
-        "memberCount": 0
+        "memberCount": 12
       },
       "1335645032891547670": {
         "emoji": "🤬",
@@ -1711,13 +1711,14 @@
         "emoji": "🥉",
         "color": "#FFFFFF",
         "castlistIds": [
-          "castlist_1762187500959_1331657596087566398"
+          "castlist_1762187500959_1331657596087566398",
+          "castlist_1759638936214_system"
         ],
-        "castlist": "the BIG one",
+        "castlist": "Castbot MVPs",
         "analyticsName": "CastBot Legendary Supporters",
         "analyticsAdded": 1772413335673,
         "showPlayerEmojis": true,
-        "memberCount": 1
+        "memberCount": 5
       },
       "1368969346600407181": {},
       "1434914674788401212": {
@@ -11696,6 +11697,11 @@
               "t": 1772457437659,
               "type": "movement",
               "desc": "Moved from B2 to B3"
+            },
+            {
+              "t": 1772457447202,
+              "type": "movement",
+              "desc": "Moved from B3 to B4"
             }
           ],
           "lastInteraction": 1772457415994,

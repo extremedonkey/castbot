@@ -111,9 +111,9 @@ function createTribeHeaderSvg(tribeName, memberCount, tribeColor, width) {
   const cleanName = stripEmoji(tribeName);
   const label = `${cleanName}  (${memberCount})`;
   return `<svg width="${width}" height="${TRIBE_HEADER_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
-    <rect x="0" y="0" width="${width}" height="${TRIBE_HEADER_HEIGHT}" rx="${TRIBE_HEADER_RADIUS}" ry="${TRIBE_HEADER_RADIUS}" fill="${tribeColor}" opacity="0.25"/>
+    <rect x="0" y="0" width="${width}" height="${TRIBE_HEADER_HEIGHT}" rx="${TRIBE_HEADER_RADIUS}" ry="${TRIBE_HEADER_RADIUS}" fill="${CARD_BG}"/>
     <rect x="0" y="0" width="4" height="${TRIBE_HEADER_HEIGHT}" rx="2" ry="2" fill="${tribeColor}"/>
-    <text x="16" y="${TRIBE_HEADER_PADDING_TOP + TRIBE_HEADER_FONT_SIZE + 2}" font-family="Arial, Helvetica, sans-serif" font-size="${TRIBE_HEADER_FONT_SIZE}" font-weight="bold" fill="${tribeColor}">${escapeXml(label)}</text>
+    <text x="16" y="${TRIBE_HEADER_PADDING_TOP + TRIBE_HEADER_FONT_SIZE + 2}" font-family="Arial, Helvetica, sans-serif" font-size="${TRIBE_HEADER_FONT_SIZE}" font-weight="bold" fill="${TEXT_PRIMARY}">${escapeXml(label)}</text>
   </svg>`;
 }
 
@@ -449,18 +449,56 @@ export async function generateCastlistImage(guildId, castlistIdentifier, client)
  */
 export async function getCastlistSelectOptions(guildId) {
   const allCastlists = await castlistManager.getAllCastlists(guildId);
+  const { loadPlayerData: loadPD } = await import('./storage.js');
+  const playerData = await loadPD();
+  const { parseTextEmoji } = await import('./utils/emojiUtils.js');
   const options = [];
 
-  for (const [id, castlist] of allCastlists) {
-    const label = castlist.name || id;
-
+  // Add Active Castlist (default) first
+  const defaultCastlist = allCastlists.get('default');
+  if (defaultCastlist) {
     options.push({
-      label: label.substring(0, 100),
-      value: id,
-      description: `${castlist.type || 'custom'} castlist`.substring(0, 100)
+      label: 'Active Castlist',
+      value: 'default',
+      description: 'Castlist for active phase of the game',
+      emoji: { name: '✅' }
     });
   }
 
-  // Limit to 25 (Discord string select max)
-  return options.slice(0, 25);
+  // Sort remaining: real first, then virtual, alphabetical within each
+  const sortedCastlists = [...allCastlists.values()]
+    .filter(c => c.id !== 'default')
+    .sort((a, b) => {
+      if (a.isVirtual !== b.isVirtual) return a.isVirtual ? 1 : -1;
+      return a.name.localeCompare(b.name);
+    });
+
+  for (const castlist of sortedCastlists) {
+    if (options.length >= 25) break;
+
+    const emojiRaw = castlist.metadata?.emoji || '📋';
+    const { emoji } = parseTextEmoji(emojiRaw, '📋');
+    const label = castlist.isVirtual ? `${castlist.name} [Legacy]` : castlist.name;
+
+    // Build description: custom description > season name > type fallback
+    let description;
+    if (castlist.metadata?.description) {
+      description = castlist.metadata.description;
+    } else if (castlist.seasonId) {
+      const season = Object.values(playerData[guildId]?.applicationConfigs || {})
+        .find(config => config.seasonId === castlist.seasonId);
+      description = season ? season.seasonName : 'Managed castlist';
+    } else {
+      description = castlist.isVirtual ? 'Legacy castlist' : 'Managed castlist';
+    }
+
+    options.push({
+      label: label.substring(0, 100),
+      value: castlist.id.substring(0, 100),
+      description: description.substring(0, 100),
+      emoji
+    });
+  }
+
+  return options;
 }

@@ -8306,11 +8306,11 @@ To fix this:
                   type: 3, // String Select
                   custom_id: 'castlist_img_select',
                   placeholder: 'Choose a castlist...',
-                  options: options.map(opt => ({
-                    label: opt.label,
-                    value: opt.value,
-                    description: opt.description
-                  }))
+                  options: options.map(opt => {
+                    const o = { label: opt.label, value: opt.value, description: opt.description };
+                    if (opt.emoji) o.emoji = opt.emoji;
+                    return o;
+                  })
                 }]
               },
               { type: 14 },
