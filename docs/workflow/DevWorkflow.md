@@ -77,7 +77,7 @@ graph LR
 2. **Complexity Assessment**
    - **Simple Feature** (< 100 lines): Document in BACKLOG.md only
    - **Medium Feature** (100-500 lines): Consider dedicated section in existing .md file
-   - **Complex Feature** (> 500 lines): Create dedicated .md file in docs/features/
+   - **Complex Feature** (> 500 lines): Create dedicated .md file in docs/03-features/
 
 3. **Feature Documentation Decision Tree**
    ```
@@ -252,7 +252,7 @@ graph LR
 ## Feature Documentation Standards
 
 ### When to Create New .md Files
-Create a new .md file in docs/features/ when:
+Create a new .md file in docs/03-features/ when:
 - Feature is a major system (Safari, Season Applications, etc.)
 - Feature has multiple sub-features
 - Technical complexity requires detailed documentation
@@ -301,7 +301,7 @@ Add to CLAUDE.md when:
 
 Reference format:
 ```markdown
-**🎯 [FEATURE NAME]:** When prompts mention [keywords], refer to [docs/features/FeatureName.md] for complete documentation.
+**🎯 [FEATURE NAME]:** When prompts mention [keywords], refer to [docs/03-features/FeatureName.md] for complete documentation.
 ```
 
 ### Backlog References
@@ -309,7 +309,7 @@ In BACKLOG.md, point to dedicated .md files:
 ```markdown
 ### [Feature Name]
 **Description:** Brief description
-**Documentation:** See [docs/features/FeatureName.md] for complete documentation
+**Documentation:** See [docs/03-features/FeatureName.md] for complete documentation
 **Status:** In development - see FeatureName.md for progress
 ```
 

@@ -11,12 +11,12 @@ Implement additional sort strategies for the castlist display system. The sortin
 ### Primary Implementation
 - **`castlistSorter.js`** (103 lines) - Main sorting module with extensible strategy pattern
 - **`castlistV2.js`** - Display engine that calls the sorter
-- **`docs/features/CastlistV3.md`** (lines 78, 148-160) - Architecture specification
-- **`docs/features/CastlistV3-FeatureStatus.md`** - Current implementation status
+- **`docs/03-features/CastlistV3.md`** (lines 78, 148-160) - Architecture specification
+- **`docs/03-features/CastlistV3-FeatureStatus.md`** - Current implementation status
 
 ### Context & Data Structures
 - **`000-editCastlistSeason.md`** - Complete data structure reference for castlists, tribes, placements
-- **`docs/features/CastlistNavigationParsing.md`** - Button parsing and identifier resolution (if touching navigation)
+- **`docs/03-features/CastlistNavigationParsing.md`** - Button parsing and identifier resolution (if touching navigation)
 
 ---
 
@@ -260,7 +260,7 @@ grep -n "sortCastlistMembers" /home/reece/castbot/*.js
 cat /home/reece/castbot/castlistSorter.js
 
 # See architecture spec
-grep -A20 "sortStrategy" /home/reece/castbot/docs/features/CastlistV3.md
+grep -A20 "sortStrategy" /home/reece/castbot/docs/03-features/CastlistV3.md
 
 # Test in dev
 ./scripts/dev/dev-restart.sh "Implement age/timezone sorting"

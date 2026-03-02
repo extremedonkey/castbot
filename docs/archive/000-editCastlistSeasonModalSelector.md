@@ -3,7 +3,7 @@
 **⚠️ THIS DOCUMENT HAS BEEN ARCHIVED AND CONSOLIDATED**
 
 **Archived Date:** November 15, 2025
-**Reason:** Consolidated into [docs/features/CastlistV3-DataStructures.md](docs/features/CastlistV3-DataStructures.md)
+**Reason:** Consolidated into [docs/03-features/CastlistV3-DataStructures.md](docs/03-features/CastlistV3-DataStructures.md)
 **Consolidated Sections:**
 - ✅ Season ID vs Config ID distinction (lines 395-465) → Section "🔑 Season ID vs Config ID - CRITICAL DISTINCTION"
 - ✅ Lookup patterns → "Lookup Pattern" subsection in Season Model
@@ -1147,7 +1147,7 @@ if (updates.seasonId !== undefined) {
 - **[ComponentsV2.md](docs/standards/ComponentsV2.md)** - Label + String Select in modals (lines 260-375)
 - **[seasonSelector.js](seasonSelector.js)** - Reusable season selection components
 - **[000-editCastlistSeason.md](000-editCastlistSeason.md)** - Season/castlist/placement architecture
-- **[CastlistV3.md](docs/features/CastlistV3.md)** - Complete castlist system architecture
+- **[CastlistV3.md](docs/03-features/CastlistV3.md)** - Complete castlist system architecture
 - **[SeasonLifecycle.md](docs/concepts/SeasonLifecycle.md)** - Season stages and management
 
 ---

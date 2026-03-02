@@ -59,9 +59,9 @@ catch (error) {
 4. **SessionSummary.md** - This overview document
 
 ### 🎯 Quick Reference Links
-- **User Guide**: `docs/features/SafariMapDrops.md`
+- **User Guide**: `docs/03-features/SafariMapDrops.md`
 - **Technical Issues**: `docs/troubleshooting/ComponentsV2Issues.md`  
-- **Implementation Details**: `docs/implementation/SafariMapDropsImplementation.md`
+- **Implementation Details**: `docs/02-implementation-wip/SafariMapDropsImplementation.md`
 - **Components V2 Docs**: `docs/standards/ComponentsV2.md`
 - **Button Factory Docs**: `docs/enablers/ButtonHandlerFactory.md`
 
@@ -126,7 +126,7 @@ return ButtonHandlerFactory.create({
 
 **Documentation**:
 - `docs/troubleshooting/ComponentsV2Issues.md` - CRITICAL technical fixes
-- `docs/implementation/SafariMapDropsImplementation.md` - Complete reference
-- `docs/features/SafariMapDrops.md` - User guide
+- `docs/02-implementation-wip/SafariMapDropsImplementation.md` - Complete reference
+- `docs/03-features/SafariMapDrops.md` - User guide
 
 **Remember**: When implementing similar Discord UI features, ALWAYS reference the ComponentsV2Issues.md document first to avoid repeating the same mistakes.

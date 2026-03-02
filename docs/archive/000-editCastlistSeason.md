@@ -3,7 +3,7 @@
 **⚠️ THIS DOCUMENT HAS BEEN ARCHIVED AND CONSOLIDATED**
 
 **Archived Date:** November 15, 2025
-**Reason:** Consolidated into [docs/features/CastlistV3-DataStructures.md](docs/features/CastlistV3-DataStructures.md)
+**Reason:** Consolidated into [docs/03-features/CastlistV3-DataStructures.md](docs/03-features/CastlistV3-DataStructures.md)
 **Consolidated Sections:**
 - ✅ Placement Namespaces (Global vs Per-Season) → Section "Placement Namespaces"
 - ✅ Virtual Castlist Upgrade Flow → Section "Virtual Castlist Upgrade Flow (Materialization Deep-Dive)"
@@ -488,8 +488,8 @@ sequenceDiagram
 
 ## 🔗 Related Documentation
 
-- [CastlistV3.md](/home/reece/castbot/docs/features/CastlistV3.md) - Complete architecture
-- [CastlistV3-FeatureStatus.md](/home/reece/castbot/docs/features/CastlistV3-FeatureStatus.md) - Implementation status
+- [CastlistV3.md](/home/reece/castbot/docs/03-features/CastlistV3.md) - Complete architecture
+- [CastlistV3-FeatureStatus.md](/home/reece/castbot/docs/03-features/CastlistV3-FeatureStatus.md) - Implementation status
 - [SeasonLifecycle.md](/home/reece/castbot/docs/concepts/SeasonLifecycle.md) - Season management
 - [RaP/0997](/home/reece/castbot/RaP/0997_20250129_CastlistPlacementEditor_Analysis.md) - Placement editor
 - [RaP/0995](/home/reece/castbot/RaP/0995_20251002_CastlistRolesFetchOptimization_Analysis.md) - Performance optimization

@@ -198,7 +198,7 @@ const nearby = await getNearbyPlayers(guildId, userId, distance, client);
 ## 🔧 Files Modified
 
 - **NEW**: `playerLocationManager.js` - Core location API
-- **NEW**: `docs/features/PlayerLocationManager.md` - Full documentation
+- **NEW**: `docs/03-features/PlayerLocationManager.md` - Full documentation
 - **UPDATED**: `app.js` - Player Locations button handlers, removed Start Exploring
 - **UPDATED**: `buttonHandlerFactory.js` - Button registry entries
 - **UPDATED**: `CLAUDE.md` - References and mandatory usage notes

@@ -494,7 +494,7 @@ export function filterEntities(entities, searchTerm, searchFields = ['name', 'la
 - [00-SearchTechDebt.md](00-SearchTechDebt.md) - Complete analysis of 7 search implementations
 - [Entity Edit Framework](docs/enablers/EntityEditFramework.md) - Entity management patterns
 - [Components V2](docs/standards/ComponentsV2.md) - Discord UI requirements
-- [Safari System](docs/features/Safari.md) - Overall Safari architecture
+- [Safari System](docs/03-features/Safari.md) - Overall Safari architecture
 
 ## 📝 Implementation Checklist
 

@@ -612,7 +612,7 @@ Target Final:        2,000-3,000 lines (78-85% reduction)
 
 ### Safari Map Explorer System (MVP4)
 **Description:** Grid-based map exploration system allowing players to upload images and explore them through Discord channels
-**Documentation:** See [docs/features/SafariMapExplorer.md](docs/features/SafariMapExplorer.md) for complete technical specification
+**Documentation:** See [docs/03-features/SafariMapExplorer.md](docs/03-features/SafariMapExplorer.md) for complete technical specification
 **Current Status:** Planning Phase - Technical architecture documented
 
 **Core Features:**
@@ -870,8 +870,8 @@ Target Final:        2,000-3,000 lines (78-85% reduction)
 
 ### Season Application Builder Features
 **Description:** A comprehensive application system for prospective players
-**Documentation:** See [docs/features/SeasonAppBuilder.md](docs/features/SeasonAppBuilder.md) for complete feature documentation, technical design, and implementation details
-**Status:** In design phase - refer to docs/features/SeasonAppBuilder.md for current progress and sprint planning
+**Documentation:** See [docs/03-features/SeasonAppBuilder.md](docs/03-features/SeasonAppBuilder.md) for complete feature documentation, technical design, and implementation details
+**Status:** In design phase - refer to docs/03-features/SeasonAppBuilder.md for current progress and sprint planning
 
 ### Environment-Aware Logging Migration
 **Description:** Migrate from direct console.log to structured, environment-aware logging

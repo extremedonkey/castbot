@@ -371,8 +371,8 @@ Bot not responding?
 | Folder | Purpose | When to use |
 |---|---|---|
 | `/RaP/` | Deep analysis, ideas, "should we do this?" | Exploring a complex problem before building |
-| `/docs/implementation/` | Active work in progress, implementation plans | Building something now |
-| `/docs/features/` | Completed feature reference | Understanding how something works |
+| `/docs/02-implementation-wip/` | Active work in progress, implementation plans | Building something now |
+| `/docs/03-features/` | Completed feature reference | Understanding how something works |
 | `/docs/enablers/` | Reusable frameworks (ButtonHandlerFactory, MenuBuilder, etc.) | Building any new UI or handler |
 | `/docs/standards/` | Discord API patterns, ComponentsV2, logging | Looking up API details or conventions |
 | `/docs/infrastructure/` | Deployment, monitoring, production ops | Deploying or debugging prod |
@@ -381,36 +381,34 @@ Bot not responding?
 ## 📚 Feature Documentation Index
 
 **🚧 Current Work in Progress:**
-- **SAFARI CUSTOM EXPERIENCES** → [docs/features/Challenges.md](docs/features/Challenges.md) - Configurable challenge system via Custom Actions
-- **🎯 CASTLIST V3 REDESIGN** → [docs/features/CastlistV3.md](docs/features/CastlistV3.md) - Complete castlist system overhaul
+- **SAFARI CUSTOM EXPERIENCES** → [docs/03-features/Challenges.md](docs/03-features/Challenges.md) - Configurable challenge system via Custom Actions
+- **🎯 CASTLIST V3 REDESIGN** → [docs/03-features/CastlistV3.md](docs/03-features/CastlistV3.md) - Complete castlist system overhaul
 - **ACTIVE SEASON SYSTEM** → [docs/concepts/SeasonLifecycle.md](docs/concepts/SeasonLifecycle.md)
-- **SEASON INTEGRATION** → [docs/features/CastlistV3-SeasonIntegration.md](docs/features/CastlistV3-SeasonIntegration.md)
+- **SEASON INTEGRATION** → [docs/03-features/CastlistV3-SeasonIntegration.md](docs/03-features/CastlistV3-SeasonIntegration.md)
 - **SEASON SELECTOR** → Reusable component in `seasonSelector.js`
 - **CHANGE SEASON BUTTON** → Production Menu header accessory
 
 **Core Systems:**
-- **📋 CASTLIST ARCHITECTURE** (PARENT DOC) → [docs/features/CastlistArchitecture.md](docs/features/CastlistArchitecture.md) - Complete castlist system reference
-- **🦁 SAFARI SYSTEM** → [docs/features/Safari.md](docs/features/Safari.md)
-- **📋 SEASON APPLICATIONS** → [docs/features/SeasonAppBuilder.md](docs/features/SeasonAppBuilder.md)
-- **🏆 CAST RANKING** → [docs/features/CastRanking.md](docs/features/CastRanking.md)
-- **🥇 CASTLIST V3** → [docs/features/CastlistV3-AlumniPlacements.md](docs/features/CastlistV3-AlumniPlacements.md)
-- **🧭 CASTLIST NAVIGATION** → [docs/features/CastlistNavigationParsing.md](docs/features/CastlistNavigationParsing.md) - Button parsing & identifier resolution
+- **📋 CASTLIST ARCHITECTURE** (PARENT DOC) → [docs/03-features/CastlistArchitecture.md](docs/03-features/CastlistArchitecture.md) - Complete castlist system reference
+- **🦁 SAFARI SYSTEM** → [docs/03-features/Safari.md](docs/03-features/Safari.md)
+- **📋 SEASON APPLICATIONS** → [docs/03-features/SeasonAppBuilder.md](docs/03-features/SeasonAppBuilder.md)
+- **🏆 CAST RANKING** → [docs/03-features/CastRanking.md](docs/03-features/CastRanking.md)
+- **🥇 CASTLIST V3** → [docs/03-features/CastlistV3-AlumniPlacements.md](docs/03-features/CastlistV3-AlumniPlacements.md)
 
 **Safari Subsystems:**
-- **CUSTOM ACTIONS** → [docs/features/SafariCustomActions.md](docs/features/SafariCustomActions.md) - Dynamic, configurable action system (triggers, drops, workflows)
-- **PLAYER COMMANDS** → [docs/features/PlayerCommands.md](docs/features/PlayerCommands.md) - Text-based Custom Action invocation system
-- **PLAYER MENU ACTIONS** → [docs/features/PlayerMenuActions.md](docs/features/PlayerMenuActions.md) - Custom Actions accessible from player /menu
-- **MAP EXPLORER** → [docs/features/SafariMapExplorer.md](docs/features/SafariMapExplorer.md)
-- **MAP SYSTEM** → [docs/features/SafariMapSystem.md](docs/features/SafariMapSystem.md) - User/admin guide
-- **MAP TECHNICAL** → [docs/features/SafariMapTechnical.md](docs/features/SafariMapTechnical.md) - Developer reference
-- **MAP ISSUES** → [docs/features/SafariMapIssues.md](docs/features/SafariMapIssues.md) - Known issues & roadmap
-- **MAP MOVEMENT** → [docs/features/SafariMapMovement.md](docs/features/SafariMapMovement.md)
-- **IMPORT/EXPORT** → [docs/features/SafariImportExport.md](docs/features/SafariImportExport.md) - Full Safari template portability
-- **POINTS SYSTEM** → [docs/features/Attributes.md](docs/features/Attributes.md)
-- **SAFARI PROGRESS** → [docs/features/SafariProgress.md](docs/features/SafariProgress.md)
-- **PLAYER LOCATIONS** → [docs/features/PlayerLocationManager.md](docs/features/PlayerLocationManager.md)
-- **WHISPER SYSTEM** → [docs/features/WhisperSystem.md](docs/features/WhisperSystem.md)
-- **STORE MANAGEMENT** → [docs/features/StoreManagementArchitecture.md](docs/features/StoreManagementArchitecture.md)
+- **CUSTOM ACTIONS** → [docs/03-features/SafariCustomActions.md](docs/03-features/SafariCustomActions.md) - Dynamic, configurable action system (triggers, drops, workflows)
+- **PLAYER COMMANDS** → [docs/03-features/PlayerCommands.md](docs/03-features/PlayerCommands.md) - Text-based Custom Action invocation system
+- **PLAYER MENU ACTIONS** → [docs/03-features/PlayerMenuActions.md](docs/03-features/PlayerMenuActions.md) - Custom Actions accessible from player /menu
+- **MAP EXPLORER** → [docs/03-features/SafariMapExplorer.md](docs/03-features/SafariMapExplorer.md)
+- **MAP SYSTEM** → [docs/03-features/SafariMapSystem.md](docs/03-features/SafariMapSystem.md) - User/admin guide
+- **MAP TECHNICAL** → [docs/03-features/SafariMapTechnical.md](docs/03-features/SafariMapTechnical.md) - Developer reference
+- **MAP MOVEMENT** → [docs/03-features/SafariMapMovement.md](docs/03-features/SafariMapMovement.md)
+- **IMPORT/EXPORT** → [docs/03-features/SafariImportExport.md](docs/03-features/SafariImportExport.md) - Full Safari template portability
+- **POINTS SYSTEM** → [docs/03-features/Attributes.md](docs/03-features/Attributes.md)
+- **SAFARI PROGRESS** → [docs/03-features/SafariProgress.md](docs/03-features/SafariProgress.md)
+- **PLAYER LOCATIONS** → [docs/03-features/PlayerLocationManager.md](docs/03-features/PlayerLocationManager.md)
+- **WHISPER SYSTEM** → [docs/03-features/WhisperSystem.md](docs/03-features/WhisperSystem.md)
+- **STORE MANAGEMENT** → [docs/03-features/StoreManagementArchitecture.md](docs/03-features/StoreManagementArchitecture.md)
 - **GLOBAL STORES** (NEW) → Permanent stores in player /menu
 - **ROUNDS MENU** (NEW) → Dedicated round management interface
 - **STOCK MANAGEMENT** (NEW) → Store inventory limits with per-item stock tracking
@@ -578,7 +576,7 @@ When in doubt, create the document - disk space is cheap, context is expensive.
 - **User flows** → Use journey or flowchart diagrams
 - **Complex button/menu flows** → Use flowchart with decision points
 - **New entity types** → Add to Entity Framework class diagram + ER diagram
-- **Feature docs (docs/features/)** → Include system flow in Technical Design section
+- **Feature docs (docs/03-features/)** → Include system flow in Technical Design section
 
 **Diagram samples**: [docs/mermaid-samples/](docs/mermaid-samples/)
 

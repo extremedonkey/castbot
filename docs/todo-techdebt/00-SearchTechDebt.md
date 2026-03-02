@@ -352,7 +352,7 @@ graph TD
 ## Related Documentation
 
 - [Entity Edit Framework](docs/enablers/EntityEditFramework.md)
-- [Shared Item Search Component](docs/implementation/SharedItemSearchComponent.md)
+- [Shared Item Search Component](docs/02-implementation-wip/SharedItemSearchComponent.md)
 - [Components V2 Standards](docs/standards/ComponentsV2.md)
 
 ---
