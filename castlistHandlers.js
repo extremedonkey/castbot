@@ -1057,7 +1057,8 @@ export function handleEditInfoModal(req, res, client, custom_id) {
   const token = req.body.token;
 
   // Defer immediately — tribe operations involve REST calls that can exceed 3s
-  res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+  // Note: discord.js uses DeferredMessageUpdate, discord-interactions uses DEFERRED_UPDATE_MESSAGE
+  res.send({ type: InteractionResponseType.DeferredMessageUpdate });
 
   return (async () => {
     try {

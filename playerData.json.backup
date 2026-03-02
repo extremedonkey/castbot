@@ -1462,10 +1462,11 @@
           "castlist_1759638936214_system",
           "castlist_1762579720361_1331657596087566398",
           "castlist_archive_1762702460277",
-          "castlist_1772416291262_custom"
+          "castlist_1772416291262_custom",
+          "default"
         ],
         "isVanity": true,
-        "castlist": "Claude's second CastList Test",
+        "castlist": "default",
         "castlistId": "castlist_1759638936214_system",
         "memberCount": 12
       },
@@ -1511,7 +1512,16 @@
       },
       "1368969395795398716": {
         "name": "Tribe 1368969395795398716",
-        "emoji": "🏕️"
+        "emoji": "🏕️",
+        "castlistIds": [
+          "castlist_1759638936214_system"
+        ],
+        "castlist": "Castbot MVPs",
+        "color": "#000000",
+        "analyticsName": "ar.1",
+        "analyticsAdded": 1772459940985,
+        "showPlayerEmojis": true,
+        "memberCount": 12
       },
       "1368969393819746336": {
         "name": "Tribe 1368969393819746336",
@@ -1666,9 +1676,10 @@
           "castlist_1762187500959_1331657596087566398",
           "castlist_1772416291262_custom"
         ],
-        "castlist": "Claude's second CastList Test",
+        "castlist": "the BIG one",
         "analyticsName": "Australian Timezones",
-        "analyticsAdded": 1772413139862
+        "analyticsAdded": 1772413139862,
+        "castlistId": "castlist_1762187500959_1331657596087566398"
       },
       "1335645034380525708": {
         "name": "Tribe 1335645034380525708",
@@ -1712,9 +1723,10 @@
         "color": "#FFFFFF",
         "castlistIds": [
           "castlist_1762187500959_1331657596087566398",
-          "castlist_1759638936214_system"
+          "castlist_1759638936214_system",
+          "default"
         ],
-        "castlist": "Castbot MVPs",
+        "castlist": "default",
         "analyticsName": "CastBot Legendary Supporters",
         "analyticsAdded": 1772413335673,
         "showPlayerEmojis": true,
@@ -1733,14 +1745,15 @@
         "displayName": null,
         "color": "#E74C3C",
         "castlistIds": [
-          "default"
+          "castlist_archive_1772460006266"
         ],
-        "castlist": "default",
+        "castlist": "PokeTribeOG",
         "analyticsName": "Ivysaur Tribe",
         "analyticsAdded": 1772417877380,
         "showPlayerEmojis": true,
         "memberCount": 7,
-        "emoji": "<:bulba:1420091115264278648>"
+        "emoji": "<:bulba:1420091115264278648>",
+        "castlistId": "castlist_archive_1772460006266"
       },
       "1382424526092107929": {
         "emoji": null,
@@ -1843,11 +1856,11 @@
       "1442045400746823741": {
         "displayName": null,
         "color": "#E91E63",
-        "castlistId": "default",
+        "castlistId": "castlist_archive_1772460006266",
         "castlistIds": [
-          "default"
+          "castlist_archive_1772460006266"
         ],
-        "castlist": "default",
+        "castlist": "PokeTribeOG",
         "analyticsName": "Squirtle Squad",
         "analyticsAdded": 1772452892731,
         "showPlayerEmojis": true,
@@ -2851,11 +2864,10 @@
         },
         "metadata": {
           "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
-          "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1772458666452,
-        "modifiedBy": "system",
+        "modifiedAt": 1772460224571,
+        "modifiedBy": "391415444084490240",
         "seasonId": "season_cac1b81de8914c79"
       },
       "castlist_1759638936214_system": {
@@ -3019,6 +3031,18 @@
           "emoji": "💻",
           "description": "",
           "lastModified": 1772453231885
+        }
+      },
+      "castlist_archive_1772460006266": {
+        "id": "castlist_archive_1772460006266",
+        "name": "PokeTribeOG",
+        "type": "custom",
+        "createdAt": 1772460006266,
+        "createdBy": "391415444084490240",
+        "seasonId": "season_cac1b81de8914c79",
+        "metadata": {
+          "description": "Former tribes prior to Tribe Swap on 3/2/2026",
+          "emoji": "📦"
         }
       }
     },
@@ -11876,7 +11900,7 @@
         "castlistIds": [
           "default"
         ],
-        "castlist": "Active Castlist",
+        "castlist": "default",
         "color": "#3498db",
         "analyticsName": "EST / EDT",
         "analyticsAdded": 1772459015379,
