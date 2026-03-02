@@ -42,7 +42,7 @@ export async function logWhisper({ guildId, senderId, senderName, senderDisplayN
     safariContent
   );
 
-  addActivityEntryAndSave(guildId, senderId, ACTIVITY_TYPES.whisper, `Whispered to ${recipientName}`);
+  addActivityEntryAndSave(guildId, senderId, ACTIVITY_TYPES.whisper, `Whispered to ${recipientName}`, { loc: location });
 }
 
 /**
@@ -86,7 +86,7 @@ export async function logItemPickup({ guildId, userId, username, displayName, lo
     safariContent
   );
 
-  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.item, `Picked up ${itemEmoji || '📦'} ${itemName} x${quantity}`);
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.item, `Picked up ${itemEmoji || '📦'} ${itemName} x${quantity}`, { loc: location });
 }
 
 /**
@@ -124,7 +124,7 @@ export async function logCurrencyChange({ guildId, userId, username, displayName
     safariContent
   );
 
-  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.currency, `${amount > 0 ? 'Gained' : 'Lost'} ${Math.abs(amount)} ${currencyName}${source ? ` from ${source}` : ''}`);
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.currency, `${amount > 0 ? 'Gained' : 'Lost'} ${Math.abs(amount)} ${currencyName}${source ? ` from ${source}` : ''}`, { loc: location });
 }
 
 /**
@@ -172,7 +172,7 @@ export async function logStorePurchase({ guildId, userId, username, displayName,
     safariContent
   );
 
-  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.purchase, `Bought ${itemEmoji || '📦'} ${itemName} x${quantity} for ${price} ${currencyName}`);
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.purchase, `Bought ${itemEmoji || '📦'} ${itemName} x${quantity} for ${price} ${currencyName}`, { loc: location });
 }
 
 /**
@@ -210,7 +210,7 @@ export async function logSafariButton({ guildId, userId, username, displayName, 
     safariContent
   );
 
-  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.action, `Button: ${buttonLabel}`);
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.action, `Button: ${buttonLabel}`, { loc: location });
 }
 
 /**
@@ -316,7 +316,7 @@ export async function logAttack({ guildId, attackerId, attackerName, attackerDis
     safariContent
   );
 
-  addActivityEntryAndSave(guildId, attackerId, ACTIVITY_TYPES.attack, `Attacked ${targetName}`);
+  addActivityEntryAndSave(guildId, attackerId, ACTIVITY_TYPES.attack, `Attacked ${targetName}`, { loc: location });
 }
 
 /**
@@ -389,7 +389,7 @@ export async function logCustomAction({ guildId, userId, username, displayName, 
     safariContent
   );
 
-  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.action, summary);
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.action, summary, { loc: location });
 }
 
 /**

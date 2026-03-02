@@ -28,7 +28,7 @@ const TYPE_EMOJI = {
   currency: '🪙',
   item: '🧰',
   movement: '🗺️',
-  action: '🎯',
+  action: '⚡',
   attack: '⚔️',
   whisper: '🤫',
   init: '🚀',
@@ -57,7 +57,7 @@ const TYPE_LABEL = {
  * @param {string} userId
  * @param {string} type - One of ACTIVITY_TYPES
  * @param {string} desc - Human-readable description
- * @param {Object} [opts] - Optional { stamina, cd }
+ * @param {Object} [opts] - Optional { stamina, cd, loc }
  */
 export function addActivityEntry(playerData, guildId, userId, type, desc, opts = {}) {
   const player = playerData[guildId]?.players?.[userId];
@@ -72,6 +72,7 @@ export function addActivityEntry(playerData, guildId, userId, type, desc, opts =
     type,
     desc
   };
+  if (opts.loc) entry.loc = opts.loc;
   if (opts.stamina) entry.stamina = opts.stamina;
   if (opts.cd) entry.cd = opts.cd;
 
@@ -122,7 +123,8 @@ export function formatActivityEntry(entry) {
   const emoji = TYPE_EMOJI[entry.type] || '📝';
   const label = TYPE_LABEL[entry.type] || entry.type;
   const ts = Math.floor(entry.t / 1000); // Discord epoch is seconds
-  let line = `<t:${ts}:R> ${emoji} **${label}** — ${entry.desc}`;
+  const locTag = entry.loc ? ` (${entry.loc})` : '';
+  let line = `<t:${ts}:R> ${emoji} **${label}**${locTag} — ${entry.desc}`;
   if (entry.stamina) line += ` \`⚡${entry.stamina}\``;
   if (entry.cd) line += ` \`cd: ${entry.cd}\``;
   return line;
@@ -265,47 +267,10 @@ export async function createActivityLogUI({ guildId, userId, playerName, page = 
 
   components.push({ type: 14 }); // Separator
 
-  // Navigation buttons
+  // Navigation buttons — LEAN order: Back (first/far-left), Prev, Next, Refresh
   const navButtons = [];
 
-  if (safePage > 1) {
-    const prevId = mode === 'admin'
-      ? `activity_log_prev_${userId}_${safePage - 1}`
-      : `activity_log_prev_self_${safePage - 1}`;
-    navButtons.push({
-      type: 2, // Button
-      style: 2, // Secondary
-      label: '◀ Prev',
-      custom_id: prevId,
-      emoji: { name: '◀️' }
-    });
-  }
-
-  if (safePage < totalPages) {
-    const nextId = mode === 'admin'
-      ? `activity_log_next_${userId}_${safePage + 1}`
-      : `activity_log_next_self_${safePage + 1}`;
-    navButtons.push({
-      type: 2, // Button
-      style: 2, // Secondary
-      label: 'Next ▶',
-      custom_id: nextId,
-      emoji: { name: '▶️' }
-    });
-  }
-
-  // Refresh button
-  const refreshId = mode === 'admin'
-    ? `activity_log_refresh_${userId}_${safePage}`
-    : `activity_log_refresh_self_${safePage}`;
-  navButtons.push({
-    type: 2, // Button
-    style: 2, // Secondary
-    custom_id: refreshId,
-    emoji: { name: '🔃' }
-  });
-
-  // Back button
+  // Back button FIRST (LEAN standard: far-left, no emoji)
   const backId = backButtonId || (mode === 'admin'
     ? `activity_log_back_${userId}`
     : 'activity_log_back_self');
@@ -314,6 +279,32 @@ export async function createActivityLogUI({ guildId, userId, playerName, page = 
     style: 2, // Secondary
     label: '← Back',
     custom_id: backId
+  });
+
+  if (safePage > 1) {
+    const prevId = mode === 'admin'
+      ? `activity_log_prev_${userId}_${safePage - 1}`
+      : `activity_log_prev_self_${safePage - 1}`;
+    navButtons.push({
+      type: 2, style: 2, label: '◀ Prev', custom_id: prevId
+    });
+  }
+
+  if (safePage < totalPages) {
+    const nextId = mode === 'admin'
+      ? `activity_log_next_${userId}_${safePage + 1}`
+      : `activity_log_next_self_${safePage + 1}`;
+    navButtons.push({
+      type: 2, style: 2, label: 'Next ▶', custom_id: nextId
+    });
+  }
+
+  // Refresh button (emoji-only, far right)
+  const refreshId = mode === 'admin'
+    ? `activity_log_refresh_${userId}_${safePage}`
+    : `activity_log_refresh_self_${safePage}`;
+  navButtons.push({
+    type: 2, style: 2, custom_id: refreshId, emoji: { name: '🔃' }
   });
 
   components.push({
