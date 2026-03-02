@@ -1170,17 +1170,18 @@
         "isVanity": true
       },
       "1368969399251501126": {
-        "emoji": "<:castbot:1333820342275149824>",
         "showPlayerEmojis": false,
         "color": "#FF7AAA",
-        "analyticsName": "🪄 ar.3 🪄",
+        "analyticsName": "ar.3",
         "analyticsAdded": 1759081799205,
         "displayName": "The AR3 Tribe",
         "castlistIds": [
           "castlist_archive_1763880747782"
         ],
         "castlistId": "castlist_archive_1763880747782",
-        "castlist": "Swap 4"
+        "castlist": "Swap 4",
+        "memberCount": 4,
+        "emoji": "🏕️"
       },
       "1388327092634124368": {
         "emoji": null,
@@ -1335,14 +1336,16 @@
       },
       "1380906521084559401": {
         "name": "Tribe 1380906521084559401",
-        "emoji": "🏕️",
-        "color": "#607D8B",
+        "emoji": "🥉",
+        "color": "#FFFFFF",
         "castlistIds": [
           "castlist_1762187500959_1331657596087566398"
         ],
         "castlist": "the BIG one",
-        "analyticsName": "🥈CastBot's #2 Fans",
-        "analyticsAdded": 1772413335673
+        "analyticsName": "CastBot Legendary Supporters",
+        "analyticsAdded": 1772413335673,
+        "showPlayerEmojis": true,
+        "memberCount": 1
       },
       "1368969346600407181": {
         "castlistIds": [

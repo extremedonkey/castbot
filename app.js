@@ -36330,7 +36330,9 @@ Are you sure you want to continue?`;
           const customEmojiMatch = trimmed.match(/<a?:(\w+):(\d{17,19})>/);
           if (customEmojiMatch) {
             processedEmoji = trimmed;
-          } else if (/^[\u{1F300}-\u{1F9FF}\u{2600}-\u{27BF}]/u.test(trimmed) && trimmed.length <= 8) {
+          } else if (trimmed.length <= 8 && /[^\x00-\x7F]/u.test(trimmed)) {
+            // Accept any short string with non-ASCII characters (covers all Unicode emoji blocks)
+            // Discord will handle display — better to accept broadly than reject valid emojis
             processedEmoji = trimmed;
           } else {
             console.warn(`[CASTLIST] Invalid emoji format: ${emojiInput}`);
