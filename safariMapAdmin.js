@@ -350,8 +350,16 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = null, 
   // Get default starting currency from config
   const defaultCurrency = safariData[guildId]?.safariConfig?.defaultStartingCurrencyValue ?? 100;
 
+  // Get existing currency before initialization (may have been granted via other means)
+  const existingCurrency = playerData[guildId]?.players?.[userId]?.safari?.currency || 0;
+
   // Use universal safari initialization to ensure ALL required fields exist
   initializePlayerSafari(playerData, guildId, userId, defaultCurrency);
+
+  // Starting currency is ADDITIVE: existing + default (not replacement)
+  const player_ = playerData[guildId].players[userId];
+  player_.safari.currency = existingCurrency + defaultCurrency;
+  console.log(`💰 Starting currency: ${existingCurrency} existing + ${defaultCurrency} starting = ${player_.safari.currency}`);
 
   // Grant default items to the player
   await grantDefaultItems(playerData, guildId, userId);
@@ -398,7 +406,8 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = null, 
     const { addActivityEntry, ACTIVITY_TYPES } = await import('./activityLogger.js');
     const { getCustomTerms } = await import('./safariManager.js');
     const customTerms = await getCustomTerms(guildId);
-    addActivityEntry(playerData, guildId, userId, ACTIVITY_TYPES.init, `Initialized at ${coordinate} with ${defaultCurrency} ${customTerms.currencyName}`, { loc: coordinate });
+    const totalCurrency = playerData[guildId].players[userId].safari.currency;
+    addActivityEntry(playerData, guildId, userId, ACTIVITY_TYPES.init, `Initialized at ${coordinate} with +${defaultCurrency} ${customTerms.currencyName} (total: ${totalCurrency})`, { loc: coordinate });
   } catch (e) { console.error('Activity log error (init):', e); }
 
   await savePlayerData(playerData);

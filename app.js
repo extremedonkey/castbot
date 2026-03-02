@@ -13668,13 +13668,22 @@ Your server is now ready for Tycoons gameplay!`;
             const summary = await importSafariData(guildId, jsonContent, { userId, client });
             
             console.log(`✅ DEBUG: Safari import completed for guild ${guildId}:`, summary);
-            
+
             // Send success message
             await message.reply({
-              content: `✅ **Safari Data Import Successful!**\n\n${formatImportSummary(summary)}`,
+              content: `✅ **Safari Data Import Successful!**\n\n${formatImportSummary(summary)}\n\n🔄 Refreshing anchor messages...`,
               ephemeral: true
             });
-            
+
+            // Auto-refresh anchor messages so custom action buttons appear immediately
+            try {
+              const { updateAllAnchorMessages } = await import('./mapCellUpdater.js');
+              const refreshResult = await updateAllAnchorMessages(guildId, client);
+              console.log(`🔄 Post-import anchor refresh: ${refreshResult.success} succeeded, ${refreshResult.failed} failed`);
+            } catch (refreshErr) {
+              console.log(`⚠️ Post-import anchor refresh failed: ${refreshErr.message}`);
+            }
+
             // Delete the uploaded file message for privacy
             try {
               await message.delete();
