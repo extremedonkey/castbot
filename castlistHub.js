@@ -291,7 +291,7 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
           playerListText = '';
         } else {
           // Full fetch mode - show accurate member list
-          playerListText = formatPlayerList(members, 38);
+          playerListText = formatPlayerList(members, 76);
         }
 
         const tribeSection = {

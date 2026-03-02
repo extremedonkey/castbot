@@ -86,7 +86,8 @@
       "Bash(if:*)",
       "Bash(./scripts/dev/dev-restart.sh \"Replace gateway member fetch with REST API guild.members.list\\(\\)\")",
       "Bash(./scripts/dev/dev-restart.sh \"Refactor tribe edit modal to use populateTribeData utility, add 200ms rename delay\")",
-      "Bash(./scripts/dev/dev-restart.sh \"Replace all guild.members.fetch\\(\\) \\(Gateway OP 8\\) with guild.members.list\\(\\) \\(REST API\\) to fix GuildMembersTimeout errors\")"
+      "Bash(./scripts/dev/dev-restart.sh \"Replace all guild.members.fetch\\(\\) \\(Gateway OP 8\\) with guild.members.list\\(\\) \\(REST API\\) to fix GuildMembersTimeout errors\")",
+      "Bash(./scripts/dev/dev-restart.sh \"Add Phase 2 member fetch to tribe edit modal, increase rename delay to 500ms, double player list display length\")"
     ],
     "deny": [],
     "ask": []

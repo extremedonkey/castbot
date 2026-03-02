@@ -36367,7 +36367,7 @@ Are you sure you want to continue?`;
             console.log(`[CASTLIST] Renamed role "${roleName}" → "${newName}" (ID: ${roleId})`);
             roleName = newName;
             // Rate limit delay - allows Discord to propagate the name change to Role Select
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise(resolve => setTimeout(resolve, 500));
           } catch (renameError) {
             console.error(`[CASTLIST] Failed to rename role ${roleId}:`, renameError);
             return updateDeferredResponse(token, {
@@ -36420,16 +36420,30 @@ Are you sure you want to continue?`;
 
         await savePlayerData(playerData);
 
-        // Update deferred response with the hub
+        // Two-phase response (same pattern as castlist_select):
+        // Phase 1: Fast hub without member data
         const { createCastlistHub } = await import('./castlistHub.js');
-        const hubData = await createCastlistHub(guildId, {
+        const fastHub = await createCastlistHub(guildId, {
           message: `✅ Updated settings for ${tribe.emoji || ''} **${roleName}**`,
           selectedCastlistId: castlistId,
           activeButton: 'add_tribe',
           skipMemberFetch: true
         }, client);
+        await updateDeferredResponse(token, fastHub);
 
-        return updateDeferredResponse(token, hubData);
+        // Phase 2: Rebuild with member data (token valid 15 min)
+        try {
+          const fullHub = await createCastlistHub(guildId, {
+            message: `✅ Updated settings for ${tribe.emoji || ''} **${roleName}**`,
+            selectedCastlistId: castlistId,
+            activeButton: 'add_tribe'
+          }, client);
+          await updateDeferredResponse(token, fullHub);
+        } catch (phase2Error) {
+          // Silent — user already has the hub, just without member counts
+          console.warn('[CASTLIST] Phase 2 member fetch failed (non-critical):', phase2Error.message);
+        }
+        return null;
 
       } catch (error) {
         console.error('[CASTLIST] Error processing tribe edit modal:', error);
