@@ -339,8 +339,9 @@ export async function checkRoleHasEmojis(guild, role) {
       return false;
     }
     
-    // Fetch all members to ensure we have fresh data
-    await guild.members.fetch();
+    // Fetch all members via REST API (guild.members.list) instead of Gateway OP 8
+    // Gateway fetch is unreliable and can timeout; REST is fast and predictable
+    await guild.members.list({ limit: 1000 });
     
     // Get members with this role
     const targetMembers = guild.members.cache.filter(member => 
@@ -386,8 +387,9 @@ export async function clearEmojisForRole(guild, role) {
       };
     }
     
-    // Fetch all members to ensure we have fresh data
-    await guild.members.fetch();
+    // Fetch all members via REST API (guild.members.list) instead of Gateway OP 8
+    // Gateway fetch is unreliable and can timeout; REST is fast and predictable
+    await guild.members.list({ limit: 1000 });
     
     // Get members with this role
     const targetMembers = guild.members.cache.filter(member => 

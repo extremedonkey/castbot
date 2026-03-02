@@ -262,7 +262,7 @@ class DiscordMessenger {
     
     try {
       const guild = await client.guilds.fetch(guildId);
-      const members = await guild.members.fetch();
+      const members = await guild.members.list({ limit: 1000 });
       
       // Find all administrators
       const admins = members.filter(member => 

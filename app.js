@@ -2781,8 +2781,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const tribeName = (await guild.roles.fetch(roleId))?.name || roleId;
       const castlist = playerData[guildId].tribes[roleId].castlist || 'default';
 
-      // Get all members with this tribe role
-      const members = await guild.members.fetch();
+      // Get all members with this tribe role (REST API)
+      const members = await guild.members.list({ limit: 1000 });
       const targetMembers = members.filter(m => m.roles.cache.has(roleId));
       console.log(`Found ${targetMembers.size} members with tribe role`);
 
@@ -35788,7 +35788,7 @@ Are you sure you want to continue?`;
 
         // Count players in current tribes
         const guild = await client.guilds.fetch(guildId);
-        await guild.members.fetch(); // Ensure all members loaded
+        await guild.members.list({ limit: 1000 }); // Ensure all members loaded (REST API)
 
         const allPlayers = new Set();
         for (const tribe of currentDefaultTribes) {
@@ -42643,8 +42643,8 @@ async function generateEmojisForRole(guild, role) {
   if (!data[guildId]) data[guildId] = {};
   if (!data[guildId].players) data[guildId].players = {};
   
-  // Fetch all members to ensure we have fresh data
-  await guild.members.fetch();
+  // Fetch all members via REST API (guild.members.list) instead of Gateway OP 8
+  await guild.members.list({ limit: 1000 });
   
   // Get members with this role
   const targetMembers = guild.members.cache.filter(member => 
