@@ -71,7 +71,11 @@ Repurpose the existing empty `player.safari.history` array. Zero migration neede
 
 **Cap**: 200 entries per player (FIFO — oldest trimmed first).
 
-**Size impact**: 200 entries × ~130 bytes × 169 players = ~4.4MB worst case. Current playerData.json is 350KB. This is bounded and acceptable — the cap ensures it never grows beyond this.
+**Size impact**:
+- Per player: 200 entries × ~130 bytes = **~26KB**
+- Per guild (e.g., 20 active players): ~520KB
+- All servers (169 safari players): ~4.4MB total worst case
+- Current playerData.json is 350KB, so worst case grows to ~4.7MB total. Bounded by cap.
 
 **Load time**: Instant — playerData.json is already loaded into memory for every interaction. No additional I/O.
 
@@ -129,9 +133,9 @@ Button ID: `admin_view_logs_{targetUserId}`
 
 ### Player /menu — Logs Button Placement
 
-**Location**: In the `inventoryRow` alongside existing Safari buttons (playerManagement.js ~line 770).
+**Location**: In the `menuRow` (back button row) at the bottom of the player menu, NOT in the `inventoryRow`. Same pattern as admin panel — next to existing navigation buttons.
 
-**Guard**: Only shown for initialized players (same as other Safari features). Admin mode always shows it.
+**Guard**: Only shown for initialized players. Admin mode always shows it.
 
 Button ID: `player_view_logs`
 

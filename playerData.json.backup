@@ -1060,10 +1060,10 @@
     },
     "tribes": {
       "1333822520737927281": {
-        "emoji": "🆒",
+        "emoji": "📼",
         "showPlayerEmojis": false,
         "color": "#000000",
-        "analyticsName": "Mr CastBot!",
+        "analyticsName": "Mr CastBot",
         "analyticsAdded": 1751070525853,
         "displayName": "Mr CastBot",
         "castlistIds": [
@@ -1562,18 +1562,6 @@
         "dstObserved": true,
         "standardName": "NZST (UTC+12)",
         "timezoneId": "NZST"
-      },
-      "1477867969735426131": {
-        "offset": -4,
-        "dstObserved": true,
-        "standardName": "AST (UTC-4)",
-        "timezoneId": "AT"
-      },
-      "1477867971316682893": {
-        "offset": 10,
-        "dstObserved": true,
-        "standardName": "AEST (UTC+10)",
-        "timezoneId": "AEST"
       }
     },
     "pronounRoleIDs": [

@@ -2632,8 +2632,8 @@ async function buildTribesViewMenu(guildId, client) {
     const navRow = new ActionRowBuilder()
         .addComponents(
             new ButtonBuilder()
-                .setCustomId('prod_manage_tribes')
-                .setLabel('← Tribe Management')
+                .setCustomId('prod_manage_tribes_legacy_debug')
+                .setLabel('← Tribes')
                 .setStyle(ButtonStyle.Secondary)
         );
 

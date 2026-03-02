@@ -264,10 +264,9 @@ export async function createPlayerCardUI(options) {
     type: 1,
     components: [{
       type: 2,
-      custom_id: 'prod_setup',
-      label: '← Tools',
-      style: 2,
-      emoji: { name: '🪛' }
+      custom_id: 'reeces_stuff',
+      label: "← Reece's Stuff",
+      style: 2
     }]
   });
 

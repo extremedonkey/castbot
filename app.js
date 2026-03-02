@@ -839,18 +839,9 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setEmoji('🗺️')
   ];
 
-  // Add Analytics button only for specific user (Reece) - second in row
-  if (userId === '391415444084490240') {
-    advancedFeaturesButtons.push(
-      new ButtonBuilder()
-        .setCustomId('analytics_admin')
-        .setLabel('Analytics')
-        .setStyle(ButtonStyle.Danger)
-        .setEmoji('🧮')
-    );
-  }
+  // Analytics moved to Reece's Stuff menu (Tools → Reece's Stuff → Analytics)
 
-  // Add Actions button - third/second in row depending on Analytics
+  // Add Actions button
   advancedFeaturesButtons.push(
     new ButtonBuilder()
       .setCustomId('safari_action_editor')
@@ -1012,8 +1003,13 @@ async function createReeceStuffMenu(guildId, channelId = null) {
   
   console.log(`📊 Reece menu data check - Guild ${guildId}: Map: ${hasActiveMap}, Safari: ${hasSafariData}, Player: ${hasPlayerData}, Roles: ${hasRolesInData}, AppChannel: ${isApplicationChannel}`);
   
-  // Analytics section buttons - Server Stats first, Toggle Channel Logs last
+  // Analytics section buttons - All Servers first, Print Logs + Toggle moved to Reece's Stuff
   const analyticsButtons = [
+    new ButtonBuilder()
+      .setCustomId('prod_all_servers')
+      .setLabel('All Servers')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🌐'),
     new ButtonBuilder()
       .setCustomId('prod_server_usage_stats')
       .setLabel('Server Stats')
@@ -1023,27 +1019,10 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setCustomId('prod_ultrathink_monitor')
       .setLabel('Ultramonitor')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🌈'),
-    new ButtonBuilder()
-      .setCustomId('refresh_tips')
-      .setLabel('Refresh Tips')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💡'),
-    new ButtonBuilder()
-      .setCustomId('prod_live_analytics')
-      .setLabel('Print Logs')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🪵'),
-    new ButtonBuilder()
-      .setCustomId('prod_toggle_live_analytics')
-      .setLabel('Toggle Channel Logs')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🔃')
+      .setEmoji('🌈')
   ];
 
-  // Admin Tools moved to Reece's Stuff menu; DST Manager stays here in Data Actions
-
-  // Data Actions section buttons (Player Data + DST Manager)
+  // Data Actions section buttons (DST + Refresh Tips + exports/imports)
   const dataActionsButtons = [
     new ButtonBuilder()
       .setCustomId('admin_dst_toggle')
@@ -1051,19 +1030,24 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🌍'),
     new ButtonBuilder()
+      .setCustomId('refresh_tips')
+      .setLabel('Refresh Tips')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('💡'),
+    new ButtonBuilder()
       .setCustomId('playerdata_export_all')
-      .setLabel('Export playerData (All)')
-      .setStyle(ButtonStyle.Primary)
+      .setLabel('Export All')
+      .setStyle(ButtonStyle.Secondary)
       .setEmoji('💾'),
     new ButtonBuilder()
       .setCustomId('playerdata_export')
-      .setLabel('Export playerData (Server)')
-      .setStyle(ButtonStyle.Primary)
+      .setLabel('Export Server')
+      .setStyle(ButtonStyle.Secondary)
       .setEmoji('📤'),
     new ButtonBuilder()
       .setCustomId('playerdata_import')
-      .setLabel('Import playerData (Server)')
-      .setStyle(ButtonStyle.Success)
+      .setLabel('Import Server')
+      .setStyle(ButtonStyle.Secondary)
       .setEmoji('📥')
   ];
 
@@ -1107,66 +1091,40 @@ async function createReeceStuffMenu(guildId, channelId = null) {
   const dangerZoneRow = new ActionRowBuilder().addComponents(dangerZoneButtons);
   const dataActionsRow = new ActionRowBuilder().addComponents(dataActionsButtons);
   
-  // Create back button row with All Servers
-  const backButton = [
+  const backRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId('prod_menu_back')
-      .setLabel('⬅ Menu')
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId('prod_all_servers')
-      .setLabel('All Servers')
+      .setCustomId('reeces_stuff')
+      .setLabel("← Reece's Stuff")
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🌐')
-  ];
+  );
 
-  const backRow = new ActionRowBuilder().addComponents(backButton);
-  
   // Build container components with section headers
   const containerComponents = [
-    {
-      type: 10, // Text Display component
-      content: `## 🧮 CastBot | Analytics`
-    },
-    {
-      type: 14 // Separator
-    },
-    {
-      type: 10, // Text Display component
-      content: `> **\`📊 Analytics\`**`
-    },
-    analyticsRow.toJSON(), // Analytics buttons
-    {
-      type: 14 // Separator
-    },
-    {
-      type: 10, // Text Display component
-      content: `> **\`☢️ Danger Zone\`**`
-    },
-    dangerZoneRow.toJSON(), // Danger zone buttons
-    {
-      type: 14 // Separator
-    },
-    {
-      type: 10, // Text Display component
-      content: `> **\`📦 Data Actions\`**`
-    },
-    dataActionsRow.toJSON(), // Data actions buttons (DST + exports/imports)
-    {
-      type: 14 // Separator
-    },
-    backRow.toJSON() // Back navigation
+    { type: 10, content: `## 🧮 CastBot | Analytics` },
+    { type: 14 },
+    { type: 10, content: `> **\`📊 Analytics\`**` },
+    analyticsRow.toJSON(),
+    { type: 14 },
+    { type: 10, content: `> **\`☢️ Danger Zone\`**` },
+    dangerZoneRow.toJSON(),
+    { type: 14 },
+    { type: 10, content: `> **\`📦 Data Actions\`**` },
+    dataActionsRow.toJSON(),
+    { type: 14 },
+    backRow.toJSON()
   ];
-  
-  // Create Components V2 Container
+
   const reeceMenuContainer = {
-    type: 17, // Container component
-    accent_color: 0xe74c3c, // Red accent color to match danger style
+    type: 17,
+    accent_color: 0xe74c3c,
     components: containerComponents
   };
-  
+
+  const { countComponents } = await import('./utils.js');
+  countComponents([reeceMenuContainer], { verbosity: "summary", label: "Analytics Admin" });
+
   return {
-    flags: (1 << 15), // IS_COMPONENTS_V2 flag
+    flags: (1 << 15),
     components: [reeceMenuContainer]
   };
 }
@@ -7402,36 +7360,48 @@ To fix this:
             return { content: '❌ Access denied.', ephemeral: true };
           }
 
-          return {
-            components: [{
-              type: 17, accent_color: 0xe74c3c, // Red
-              components: [
-                { type: 10, content: "## 🐧 Reece's Stuff" },
-                { type: 14 },
-                { type: 10, content: '> **`🪪 Features`**' },
-                {
-                  type: 1,
-                  components: [
-                    { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
-                    { type: 2, custom_id: 'prod_manage_tribes_legacy_debug', label: 'Tribes (Legacy)', style: 2, emoji: { name: '🔥' } }
-                  ]
-                },
-                { type: 14 },
-                { type: 10, content: '> **`🔧 Admin Tools`**' },
-                {
-                  type: 1,
-                  components: [
-                    { type: 2, custom_id: 'test_role_hierarchy', label: 'Check Roles', style: 2, emoji: { name: '🔰' } },
-                    { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } },
-                    { type: 2, custom_id: 'castlist_test', label: 'Compact Castlist', style: 2, emoji: { name: '🍒' } },
-                    { type: 2, custom_id: 'merge_timezone_roles', label: 'Merge Timezones', style: 2, emoji: { name: '🔀' } }
-                  ]
-                },
-                { type: 14 },
-                { type: 1, components: [{ type: 2, custom_id: 'prod_setup', label: '← Tools', style: 2 }] }
-              ]
-            }]
+          const container = {
+            type: 17, accent_color: 0xe74c3c, // Red
+            components: [
+              { type: 10, content: "## 🐧 Reece's Stuff" },
+              { type: 14 },
+              { type: 10, content: '> **`🦠 Experimental`**' },
+              {
+                type: 1,
+                components: [
+                  { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
+                  { type: 2, custom_id: 'castlist_test', label: 'Compact Castlist', style: 2, emoji: { name: '🍒' } },
+                  { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } }
+                ]
+              },
+              { type: 14 },
+              { type: 10, content: '> **`🔧 Admin Tools`**' },
+              {
+                type: 1,
+                components: [
+                  { type: 2, custom_id: 'analytics_admin', label: 'Analytics', style: 2, emoji: { name: '🧮' } },
+                  { type: 2, custom_id: 'test_role_hierarchy', label: 'Check Roles', style: 2, emoji: { name: '🔰' } }
+                ]
+              },
+              { type: 14 },
+              { type: 10, content: '> **`📼 Legacy`**' },
+              {
+                type: 1,
+                components: [
+                  { type: 2, custom_id: 'prod_manage_tribes_legacy_debug', label: 'Tribes (Legacy)', style: 2, emoji: { name: '🔥' } },
+                  { type: 2, custom_id: 'prod_live_analytics', label: 'Print Logs', style: 2, emoji: { name: '⚠️' } },
+                  { type: 2, custom_id: 'prod_toggle_live_analytics', label: 'Toggle Logs', style: 2, emoji: { name: '🔃' } }
+                ]
+              },
+              { type: 14 },
+              { type: 1, components: [{ type: 2, custom_id: 'prod_setup', label: '← Tools', style: 2 }] }
+            ]
           };
+
+          const { countComponents } = await import('./utils.js');
+          countComponents([container], { verbosity: "summary", label: "Reece's Stuff" });
+
+          return { components: [container] };
         }
       })(req, res, client);
     } else if (custom_id === 'prod_manage_tribes_legacy_debug') {
@@ -10944,138 +10914,7 @@ Your server is now ready for Tycoons gameplay!`;
           };
         }
       })(req, res, client);
-    } else if (custom_id === 'merge_timezone_roles') {
-      // Merge Duplicate Timezone Roles - consolidates multiple roles with same timezoneId
-      return ButtonHandlerFactory.create({
-        id: 'merge_timezone_roles',
-        ephemeral: true,
-        deferred: true, // This will take a while
-        handler: async (context) => {
-          // Security check - only allow specific Discord ID
-          if (context.userId !== '391415444084490240') {
-            return {
-              content: 'Access denied. This feature is restricted.'
-            };
-          }
-
-          console.log('🔀 DEBUG: Starting timezone role consolidation');
-
-          // Load playerData to get timezone roles
-          const { loadPlayerData, savePlayerData } = await import('./storage.js');
-          const { consolidateTimezoneRoles } = await import('./roleManager.js');
-
-          const playerData = await loadPlayerData();
-          const guildData = playerData[context.guildId] || {};
-          const timezones = guildData.timezones || {};
-
-          if (Object.keys(timezones).length === 0) {
-            return {
-              content: '⚠️ **No timezone roles found**\n\nThis server doesn\'t have any timezone roles configured.',
-              ephemeral: true
-            };
-          }
-
-          // Run consolidation (modifies timezones object in-place for winner metadata)
-          const results = await consolidateTimezoneRoles(context.guild, timezones);
-
-          // Clean up playerData.json - remove deleted role IDs
-          for (const deleted of results.deleted) {
-            delete playerData[context.guildId].timezones[deleted.roleId];
-          }
-
-          // Save updated playerData (includes deleted roles + winner metadata changes)
-          await savePlayerData(playerData);
-
-          // Build response using Components V2 Container following LEAN design standards
-          const containerComponents = [];
-
-          // Header
-          containerComponents.push({ type: 10, content: '## 🔀 Timezone Role Consolidation' });
-          containerComponents.push({ type: 14 }); // Separator
-
-          if (results.merged.length === 0) {
-            // Already consolidated
-            containerComponents.push({ type: 10, content: '> **`✅ Already Consolidated`**' });
-            containerComponents.push({ type: 10, content: 'All timezone roles are already consolidated. No duplicates found!' });
-          } else {
-            // Summary section
-            containerComponents.push({ type: 10, content: '> **`📊 Summary`**' });
-            let summaryContent = `✅ Merged: ${results.merged.length} timezone group${results.merged.length === 1 ? '' : 's'}\n`;
-            summaryContent += `✅ Deleted: ${results.deleted.length} duplicate role${results.deleted.length === 1 ? '' : 's'}\n`;
-            summaryContent += `✅ Migrated: ${results.memberChanges.length} member${results.memberChanges.length === 1 ? '' : 's'}`;
-            if (results.errors.length > 0) {
-              summaryContent += `\n⚠️ Errors: ${results.errors.length}`;
-            }
-            containerComponents.push({ type: 10, content: summaryContent });
-
-            // Details section with inline member changes
-            if (results.merged.length > 0) {
-              containerComponents.push({ type: 10, content: '> **`📋 Details`**' });
-
-              // Group member changes by timezoneId for easy lookup
-              const changesByTimezone = {};
-              results.memberChanges.forEach(change => {
-                if (!changesByTimezone[change.timezoneId]) {
-                  changesByTimezone[change.timezoneId] = [];
-                }
-                changesByTimezone[change.timezoneId].push(change);
-              });
-
-              let detailsContent = '';
-              results.merged.forEach(merge => {
-                detailsContent += `**${merge.timezoneId}:**\n`;
-                detailsContent += `  ✅ Kept: ${merge.winner.roleName} (${merge.winner.finalMemberCount} members)\n`;
-                if (merge.winner.wasRenamed) {
-                  detailsContent += `  🔄 Renamed to standard format\n`;
-                }
-                if (merge.winner.metadataAdded) {
-                  detailsContent += `  📝 Added DST-aware metadata\n`;
-                }
-
-                // Show loser roles and their migrated members
-                merge.losers.forEach(loser => {
-                  detailsContent += `  🗑️ Removed: ${loser.roleName}\n`;
-
-                  // Find members who were migrated FROM this specific loser role
-                  const migratedFromThisRole = changesByTimezone[merge.timezoneId]?.filter(
-                    change => change.fromRole === loser.roleName
-                  ) || [];
-
-                  if (migratedFromThisRole.length > 0) {
-                    migratedFromThisRole.forEach(change => {
-                      detailsContent += `    • ${change.username}\n`;
-                    });
-                  }
-                });
-                detailsContent += '\n';
-              });
-              containerComponents.push({ type: 10, content: detailsContent.trim() });
-            }
-
-            // Errors section
-            if (results.errors.length > 0) {
-              containerComponents.push({ type: 10, content: '\n> **`⚠️ Errors`**' });
-              let errorContent = '';
-              results.errors.forEach(err => {
-                errorContent += `• ${err.timezoneId || err.roleName || 'Unknown'}: ${err.error}\n`;
-              });
-              containerComponents.push({ type: 10, content: errorContent.trim() });
-            }
-          }
-
-          // Build Container (type 17) following Components V2 standards
-          const consolidationContainer = {
-            type: 17, // Container
-            accent_color: results.merged.length === 0 ? 0x3498DB : 0x27ae60, // Blue if nothing done, Green for success
-            components: containerComponents
-          };
-
-          return {
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
-            components: [consolidationContainer]
-          };
-        }
-      })(req, res, client);
+    // merge_timezone_roles removed — superseded by setup_castbot which includes timezone consolidation
     } else if (custom_id === 'nuke_roles') {
       // Nuke Discord roles for current guild - shows confirmation dialog (DELEGATED TO MODULE)
       return ButtonHandlerFactory.create({

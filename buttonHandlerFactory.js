@@ -46,10 +46,10 @@ export const BUTTON_REGISTRY = {
   },
   'prod_live_analytics': {
     label: 'Print Logs',
-    description: 'Display recent analytics logs',
-    emoji: '📝',
+    description: 'Display recent analytics logs from local file',
+    emoji: '⚠️',
     style: 'Secondary',
-    parent: 'analytics_admin',
+    parent: 'reeces_stuff',
     restrictedUser: '391415444084490240',
     category: 'analytics'
   },
@@ -81,13 +81,13 @@ export const BUTTON_REGISTRY = {
     category: 'analytics'
   },
 
-  // Analytics Row 2
+  // Legacy (in Reece's Stuff)
   'prod_toggle_live_analytics': {
-    label: 'Toggle Channel Logs',
+    label: 'Toggle Logs',
     description: 'Toggle live analytics logging for current channel',
-    emoji: '🔄',
+    emoji: '🔃',
     style: 'Secondary',
-    parent: 'analytics_admin',
+    parent: 'reeces_stuff',
     restrictedUser: '391415444084490240',
     category: 'analytics'
   },
@@ -118,15 +118,7 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
-  'merge_timezone_roles': {
-    label: 'Merge Timezones',
-    description: 'Consolidate duplicate timezone roles with same timezoneId',
-    emoji: '🔀',
-    style: 'Secondary',
-    parent: 'reeces_stuff',
-    restrictedUser: '391415444084490240',
-    category: 'admin'
-  },
+  // merge_timezone_roles removed — superseded by setup_castbot
   'prod_all_servers': {
     label: 'All Servers',
     description: 'List all servers the bot is installed in with details',
@@ -471,6 +463,16 @@ export const BUTTON_REGISTRY = {
     category: 'admin',
     parent: 'prod_setup',
     restrictedUser: '391415444084490240'
+  },
+
+  // === PLAYER CARD ===
+  'pcard_*': {
+    label: 'Player Card',
+    description: 'Player Card menu and interactions',
+    emoji: '🪪',
+    style: 'Secondary',
+    category: 'admin',
+    parent: 'reeces_stuff'
   },
 
   // === TRIBES (LEGACY) ===
