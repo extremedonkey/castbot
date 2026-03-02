@@ -141,7 +141,7 @@ export async function updateAnchorMessage(guildId, coordinate, client) {
     if (!fogMapUrl) {
       console.log(`⚠️ Attempting fog map recovery from storage channel...`);
       const guild = await client.guilds.fetch(guildId);
-      const storageChannel = guild.channels.cache.find(ch => ch.name === 'map-storage' && ch.type === 0);
+      const storageChannel = guild.channels.cache.find(ch => (ch.name === '🗺️map-storage' || ch.name === 'map-storage') && ch.type === 0);
       if (storageChannel) {
         const messages = await storageChannel.messages.fetch({ limit: 50 });
         const fogMessage = messages.find(m => m.content.includes(`Fog map for ${coordinate}`) || m.content.includes(`fog map for ${coordinate}`) || m.content.includes(`Updated fog map for ${coordinate}`));

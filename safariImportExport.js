@@ -47,10 +47,10 @@ async function storeRawImport(guildId, importJson, importData, context) {
             return;
         }
 
-        // Find map-storage channel
+        // Find map-storage channel (backwards compatible)
         const guild = await client.guilds.fetch(guildId);
         const mapStorageChannel = guild.channels.cache.find(
-            ch => ch.name === 'map-storage' || ch.name === 'safari-storage'
+            ch => ch.name === '🗺️map-storage' || ch.name === 'map-storage' || ch.name === 'safari-storage'
         );
 
         if (!mapStorageChannel) {

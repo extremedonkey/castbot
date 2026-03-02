@@ -91,12 +91,15 @@ async function uploadImageToDiscord(guild, imagePath, filename) {
   try {
     const { AttachmentBuilder } = await import('discord.js');
     
-    // Find or create a temporary storage channel
-    let storageChannel = guild.channels.cache.find(ch => ch.name === 'map-storage' && ch.type === 0);
-    
+    // Find or create storage channel (backwards compatible - renames old channel if found)
+    let storageChannel = guild.channels.cache.find(ch => (ch.name === '🗺️map-storage' || ch.name === 'map-storage') && ch.type === 0);
+    if (storageChannel && storageChannel.name === 'map-storage') {
+      try { await storageChannel.setName('🗺️map-storage'); } catch (e) { /* rate limited or no perms */ }
+    }
+
     if (!storageChannel) {
       storageChannel = await guild.channels.create({
-        name: 'map-storage',
+        name: '🗺️map-storage',
         type: 0, // Text channel
         topic: 'Storage for map images - do not delete',
         permissionOverwrites: [
@@ -192,10 +195,13 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
         });
         
         // Upload fog of war map to storage channel to get URL without redundant message in coordinate channel
-        let storageChannel = guild.channels.cache.find(ch => ch.name === 'map-storage' && ch.type === 0);
+        let storageChannel = guild.channels.cache.find(ch => (ch.name === '🗺️map-storage' || ch.name === 'map-storage') && ch.type === 0);
+        if (storageChannel && storageChannel.name === 'map-storage') {
+          try { await storageChannel.setName('🗺️map-storage'); } catch (e) { /* rate limited or no perms */ }
+        }
         if (!storageChannel) {
           storageChannel = await guild.channels.create({
-            name: 'map-storage',
+            name: '🗺️map-storage',
             type: 0,
             topic: 'Storage for map images - do not delete',
             permissionOverwrites: [{
@@ -1064,10 +1070,13 @@ async function updateMapImage(guild, userId, mapUrl) {
         const fogOfWarBuffer = await createFogOfWarMap(outputPath, gridSystem, coord, coordinates);
         
         // Upload fog map to storage channel
-        let storageChannel = guild.channels.cache.find(ch => ch.name === 'map-storage' && ch.type === 0);
+        let storageChannel = guild.channels.cache.find(ch => (ch.name === '🗺️map-storage' || ch.name === 'map-storage') && ch.type === 0);
+        if (storageChannel && storageChannel.name === 'map-storage') {
+          try { await storageChannel.setName('🗺️map-storage'); } catch (e) { /* rate limited or no perms */ }
+        }
         if (!storageChannel) {
           storageChannel = await guild.channels.create({
-            name: 'map-storage',
+            name: '🗺️map-storage',
             type: 0,
             topic: 'Storage for map images - do not delete',
             permissionOverwrites: [{
