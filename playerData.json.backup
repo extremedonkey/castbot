@@ -1071,7 +1071,7 @@
               "startingLocation": "G1"
             }
           },
-          "currency": 22,
+          "currency": 0,
           "history": [
             {
               "t": 1772424070881,
@@ -1118,6 +1118,12 @@
               "type": "action",
               "desc": "Safari button: simple_action_2_290229",
               "loc": "B2"
+            },
+            {
+              "t": 1772432952595,
+              "type": "action",
+              "desc": "Safari button: simple_action_5_290229",
+              "loc": "B2"
             }
           ],
           "inventory": {
@@ -1130,7 +1136,7 @@
             "nest_guardian_461600": 1,
             "raider_499497": 1,
             "bait_530852": {
-              "quantity": 2,
+              "quantity": 3,
               "numAttacksAvailable": 0
             }
           },
@@ -1145,7 +1151,8 @@
               "lastRegeneration": "2026-03-02T04:01:10.880Z",
               "regenConfig": "hourly"
             }
-          }
+          },
+          "lastInteraction": 1772432953706
         }
       },
       "1100826875435163780": {

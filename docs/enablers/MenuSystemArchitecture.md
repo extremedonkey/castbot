@@ -1,5 +1,7 @@
 # Menu System Architecture
 
+> **Open this file when** you're building a new menu from scratch and need the MENU_REGISTRY/MenuBuilder patterns. Note: only `setup_menu` has been migrated so far — most menus are still inline in app.js.
+
 ## Overview
 
 The Menu System Architecture provides a centralized, standardized approach to menu creation and management in CastBot. This system works alongside [ButtonHandlerFactory.md](ButtonHandlerFactory.md) and follows visual standards from [LeanUserInterfaceDesign.md](../ui/LeanUserInterfaceDesign.md).

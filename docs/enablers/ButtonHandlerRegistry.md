@@ -1,6 +1,8 @@
 # CastBot Button Handler Registry
 
-This file maintains a comprehensive list of all button handlers, their custom_ids, labels, and locations in the codebase. This prevents the recurring issue of undefined function references and missing handlers.
+> **Open this file when** you need to find where a button's handler lives in the code. This is a best-effort index — line numbers drift as code changes. When in doubt, `grep app.js` for the `custom_id`. The authoritative source of truth is always the code itself.
+
+This file maintains a list of button handlers, their custom_ids, labels, and approximate locations in the codebase.
 
 ## 🎯 **Current Active Buttons** (Updated: 2025-06-23)
 

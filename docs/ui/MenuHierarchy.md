@@ -1,10 +1,8 @@
 # CastBot Menu Hierarchy
 
-**Purpose**: Visual reference for the complete menu structure and navigation flow in CastBot.
+> **Open this file when** you need to understand where a feature sits in the user-facing navigation, or decide where a new button should live in the menu tree. This is a snapshot — verify against the actual code if the tree looks wrong.
 
 **Last Updated**: 2025-02-11
-
-**Status**: ✅ **Recently Restructured** - Safari menu removed, features distributed to Production Menu and Map Explorer
 
 ---
 

@@ -178,6 +178,7 @@ return res.send({
 | `category` | string | Feature group | No |
 | `parent` | string | Parent menu ID | No |
 | `restrictedUser` | string | User ID restriction | No |
+| `requiresModal` | boolean | Button shows a modal (can't use factory) | No |
 
 ## Emoji Usage Guide
 
@@ -385,6 +386,58 @@ handler: async (context) => {
       return { content: 'Operation completed!', ephemeral: true };
     }
   })(req, res, client);
+}
+```
+
+### Modal-Triggering Handlers (Cannot Use Factory)
+
+Buttons that show a Discord modal **cannot** use ButtonHandlerFactory. The factory wraps returns in message response types, but modals require `type: InteractionResponseType.MODAL` (type 9).
+
+**Button click → Show modal (direct res.send, no factory):**
+```javascript
+} else if (custom_id.startsWith('map_admin_move_player_')) {
+  try {
+    const targetUserId = custom_id.split('_').pop();
+    const guildId = req.body.guild_id;
+    // Load data for modal pre-fill
+    const currentLocation = await getPlayerLocation(guildId, targetUserId);
+    const modal = await createCoordinateModal(targetUserId, currentLocation);
+    return res.send({ type: InteractionResponseType.MODAL, data: modal });
+  } catch (error) {
+    console.error('Error showing modal:', error);
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: { content: '❌ Error showing modal.', flags: InteractionResponseFlags.EPHEMERAL }
+    });
+  }
+}
+```
+
+**Modal submit → Process data (CAN use factory if needed):**
+```javascript
+} else if (custom_id.startsWith('map_admin_coordinate_modal_')) {
+  return ButtonHandlerFactory.create({
+    id: 'map_admin_coordinate_modal',
+    updateMessage: true,
+    handler: async (context) => {
+      const targetUserId = context.customId.split('_').pop();
+      const coordinate = context.modalValues?.[0]?.trim().toUpperCase();
+      // Validate, save, return updated UI...
+      return updatedUI;
+    }
+  })(req, res, client);
+}
+```
+
+**Registry entry for modal buttons:**
+```javascript
+'map_admin_move_player_*': {
+  label: 'Move Player',
+  description: 'Show coordinate entry modal for moving player',
+  emoji: '📍',
+  style: 'Secondary',
+  category: 'safari_map_admin',
+  requiresModal: true  // Tells debug system this is [📝 MODAL], not [🪨 LEGACY]
 }
 ```
 
@@ -851,6 +904,26 @@ The button is properly implemented using ButtonHandlerFactory pattern.
 - If it fails, check ComponentsV2Issues.md for common causes
 - Review the response structure returned by the handler
 
+#### 📝 MODAL
+The button shows a Discord modal and **cannot use ButtonHandlerFactory by design**.
+
+**What this means:**
+- ✅ Button is registered in BUTTON_REGISTRY with `requiresModal: true`
+- ✅ Handler uses direct `res.send({ type: InteractionResponseType.MODAL })` — this is correct
+- ✅ Not technical debt — modals require `type: 9` response which the factory doesn't support
+
+**Example:**
+```
+🔍 BUTTON DEBUG: Checking handlers for safari_starting_info_391415444084490240 [📝 MODAL]
+```
+
+**Why factory can't handle modals:** ButtonHandlerFactory wraps handler returns in message response types (CHANNEL_MESSAGE_WITH_SOURCE, UPDATE_MESSAGE, or DEFERRED_*). Modal responses require `type: InteractionResponseType.MODAL` which is a fundamentally different response shape. The 3-second timeout is not a concern because showing a modal only requires returning a JSON structure — no heavy data loading.
+
+**What to do:**
+- This is the correct pattern — no migration needed
+- The modal builder function should be in a module (not inline in app.js)
+- The modal submit handler can use ButtonHandlerFactory if it needs deferred processing
+
 #### 🪨 LEGACY
 The button is using the old handler pattern without ButtonHandlerFactory.
 
@@ -900,6 +973,10 @@ The button uses ButtonHandlerFactory but is NOT in BUTTON_REGISTRY.
 1. Deprecated buttons (rare usage)
 2. Experimental features
 3. Upcoming removal candidates
+
+**NOT MIGRATION CANDIDATES:**
+- `[📝 MODAL]` buttons — these use direct `res.send()` by design (modals require `type: 9` response)
+- Register with `requiresModal: true` in BUTTON_REGISTRY to suppress false [🪨 LEGACY] warnings
 
 ### Interpreting Failed Factories
 
