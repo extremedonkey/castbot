@@ -403,17 +403,20 @@ export class CastlistManager {
             const firstCastlistEntity = await this.getCastlist(guildId, firstCastlist);
             tribe.castlist = firstCastlistEntity ? firstCastlistEntity.name : firstCastlist;
           }
+          // Update legacy singular field to match
+          tribe.castlistId = firstCastlist;
         } else {
-          // No castlists left - clean up
+          // No castlists left - clean up ALL castlist fields
           delete tribe.castlistIds;
-          delete tribe.castlist; // Remove castlist entirely when no castlists assigned
+          delete tribe.castlistId;
+          delete tribe.castlist;
         }
       }
 
-      // Handle legacy single ID format
+      // Handle legacy single ID format (only if Format 1 didn't already handle it)
       if (!removed && tribe.castlistId === castlistId) {
         delete tribe.castlistId;
-        delete tribe.castlist; // Remove entirely when unlinked
+        delete tribe.castlist;
         removed = true;
       }
 

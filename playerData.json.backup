@@ -1131,11 +1131,7 @@
         "color": null,
         "analyticsName": "Nyauu / +3 +/ GMT5 22",
         "analyticsAdded": 1757442465942,
-        "castlistIds": [
-          "castlist_archive_1763877242073"
-        ],
         "castlistId": "castlist_archive_1763877242073",
-        "castlist": "OG Tribes",
         "isVanity": true
       },
       "1368969395795398716": {
@@ -1153,11 +1149,7 @@
         "name": "Tribe 1415062472007749765",
         "emoji": "🏕️",
         "type": "default",
-        "castlistIds": [
-          "castlist_archive_1763877242073"
-        ],
         "castlistId": "castlist_archive_1763877242073",
-        "castlist": "OG Tribes",
         "isVanity": true
       },
       "1368969399251501126": {
@@ -1186,12 +1178,7 @@
         "emoji": "🛠️",
         "showPlayerEmojis": false,
         "analyticsName": "Ask",
-        "analyticsAdded": 1759422827344,
-        "castlistIds": [
-          "castlist_archive_1763880444771"
-        ],
-        "castlistId": "castlist_archive_1763880444771",
-        "castlist": "Swap 3 Premerge"
+        "analyticsAdded": 1759422827344
       },
       "1424250096698130603": {
         "emoji": "🗝️",
@@ -1355,13 +1342,7 @@
         "showPlayerEmojis": true,
         "memberCount": 1
       },
-      "1368969346600407181": {
-        "castlistIds": [
-          "castlist_archive_1763880444771"
-        ],
-        "castlistId": "castlist_archive_1763880444771",
-        "castlist": "Swap 3 Premerge"
-      },
+      "1368969346600407181": {},
       "1434914674788401212": {
         "emoji": null,
         "showPlayerEmojis": false,
@@ -2611,18 +2592,6 @@
           "emoji": "📦"
         }
       },
-      "castlist_archive_1763880444771": {
-        "id": "castlist_archive_1763880444771",
-        "name": "Swap 3 Premerge",
-        "type": "custom",
-        "createdAt": 1763880444771,
-        "createdBy": "391415444084490240",
-        "seasonId": "season_cac1b81de8914c79",
-        "metadata": {
-          "description": "Archived from tribe swap on 11/23/2025",
-          "emoji": "📦"
-        }
-      },
       "castlist_archive_1763880747782": {
         "id": "castlist_archive_1763880747782",
         "name": "Swap 4",
@@ -2676,25 +2645,6 @@
           "emoji": "💻",
           "description": "Testy",
           "lastModified": 1772416291262
-        }
-      },
-      "castlist_1772417960681_custom": {
-        "id": "castlist_1772417960681_custom",
-        "name": "OG Tribes",
-        "type": "custom",
-        "createdAt": 1772417960681,
-        "createdBy": "391415444084490240",
-        "settings": {
-          "sortStrategy": "placements",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public",
-          "seasonId": "season_cac1b81de8914c79"
-        },
-        "metadata": {
-          "emoji": "<:pokeball:1420091124101419058>",
-          "description": "'Gotta catch em all",
-          "lastModified": 1772417960681
         }
       }
     },
