@@ -302,7 +302,7 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
           type: 9, // Section
           components: [{
             type: 10, // Text Display
-            content: `${tribe.emoji || '🏕️'} **${tribe.displayName || roleName}**` +
+            content: `${tribe.emoji || '🏕️'} **${roleName}**` +
                      (playerListText ? `\n-# ${playerListText}` : '')
           }]
         };

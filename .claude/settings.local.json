@@ -21,7 +21,10 @@
       "Bash(scp:*)",
       "Bash(curl:*)",
       "Bash(pm2:*)",
-      "Bash(./scripts/**:*)",
+      "Bash(./scripts/dev/dev-restart.sh *)",
+      "Bash(./scripts/dev/dev-start.sh *)",
+      "Bash(./scripts/dev/dev-stop.sh *)",
+      "Bash(./scripts/dev/dev-status.sh *)",
       "Bash(PRODUCTION=TRUE npm run deploy-commands)",
       "Bash(mmdc:*)",
       "Bash(ls:*)",
@@ -83,8 +86,7 @@
       "Bash(powershell.exe:*)",
       "Bash(for:*)",
       "Bash(while:*)",
-      "Bash(if:*)",
-      "Bash(./scripts/dev/dev-restart.sh \"Fix emoji validation rejecting newer Unicode emojis - use broad non-ASCII check instead of narrow range\")"
+      "Bash(if:*)"
     ],
     "deny": [],
     "ask": []
