@@ -527,7 +527,23 @@ export const BUTTON_REGISTRY = {
     emoji: '🔥',
     style: 'Primary',
     category: 'tribe_management',
-    parent: 'prod_manage_tribes'
+    parent: 'prod_manage_tribes_legacy_debug'
+  },
+  'prod_add_tribe': {
+    label: 'Add Tribe',
+    description: 'Add a new tribe to the server',
+    emoji: '🛠️',
+    style: 'Secondary',
+    category: 'tribe_management',
+    parent: 'prod_manage_tribes_legacy_debug'
+  },
+  'prod_clear_tribe': {
+    label: 'Clear Tribe',
+    description: 'Clear a tribe from the server',
+    emoji: '🧹',
+    style: 'Secondary',
+    category: 'tribe_management',
+    parent: 'prod_manage_tribes_legacy_debug'
   },
 
   // === RESTART TESTING TRACKER ===

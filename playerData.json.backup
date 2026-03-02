@@ -1090,12 +1090,11 @@
           "castlist_1759638936214_system",
           "castlist_1762579720361_1331657596087566398",
           "castlist_archive_1762702460277",
-          "castlist_1772416072934_custom",
           "castlist_1772416291262_custom"
         ],
         "isVanity": true,
         "castlist": "Castbot MVPs",
-        "castlistId": "castlist_archive_1762702460277",
+        "castlistId": "castlist_1759638936214_system",
         "memberCount": 0
       },
       "1335645032891547670": {
@@ -1126,13 +1125,17 @@
         "castlistIds": []
       },
       "1379077934953922611": {
-        "emoji": null,
+        "emoji": "🐦",
         "showPlayerEmojis": false,
-        "color": null,
-        "analyticsName": "Nyauu / +3 +/ GMT5 22",
+        "analyticsName": "Pidgeys",
         "analyticsAdded": 1757442465942,
         "castlistId": "castlist_archive_1763877242073",
-        "isVanity": true
+        "isVanity": true,
+        "castlistIds": [
+          "castlist_archive_1763877242073"
+        ],
+        "castlist": "OG Tribes",
+        "memberCount": 6
       },
       "1368969395795398716": {
         "name": "Tribe 1368969395795398716",
@@ -1313,10 +1316,6 @@
       "1425702665806938183": {
         "name": "Tribe 1425702665806938183",
         "isVanity": true,
-        "castlistIds": [
-          "castlist_1772416072934_custom"
-        ],
-        "castlist": "Claude's New CastList",
         "analyticsName": "Even Cooler Sarah",
         "analyticsAdded": 1772416237201,
         "emoji": "🎖️",

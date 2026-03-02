@@ -7625,63 +7625,33 @@ To fix this:
         handler: async (context) => {
           MenuBuilder.trackLegacyMenu('prod_manage_tribes_legacy_debug', 'Legacy tribes management submenu (debug)');
 
-          const { guildId, client } = context;
-          const guild = await client.guilds.fetch(guildId);
-
-          const tribeRow = new ActionRowBuilder()
-            .addComponents(
-              new ButtonBuilder()
-                .setCustomId('prod_view_tribes')
-                .setLabel('View Tribes')
-                .setStyle(ButtonStyle.Primary)
-                .setEmoji('🔥'),
-              new ButtonBuilder()
-                .setCustomId('prod_add_tribe')
-                .setLabel('Add Tribe')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('🛠️'),
-              new ButtonBuilder()
-                .setCustomId('prod_clear_tribe')
-                .setLabel('Clear Tribe')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('🧹')
-            );
-
-          // Create Components V2 Container
-          const tribesComponents = [
-            {
-              type: 10, // Text Display component
-              content: `## Tribe Management | ${guild.name}`
-            },
-            {
-              type: 14 // Separator
-            },
-            {
-              type: 10, // Text Display component
-              content: `> **⚠️ Warning:** Spectators will be able to view your tribe names if you add them before marooning using \`/castlist\`. It is recommended not adding any tribes until players have been assigned the tribe role, after marooning.`
-            },
-            {
-              type: 10, // Text Display component
-              content: `> **Select an action to manage your tribes:**`
-            },
-            tribeRow.toJSON()
-          ];
-
-          // Always add Back to Main Menu button
-          const backRow = createBackToMainMenuButton();
-          tribesComponents.push(
-            { type: 14 }, // Separator
-            backRow.toJSON()
-          );
-
-          const tribesContainer = {
-            type: 17, // Container component
-            accent_color: 0xE67E22, // Orange accent color for tribes
-            components: tribesComponents
-          };
-
           return {
-            components: [tribesContainer]
+            components: [{
+              type: 17, // Container
+              accent_color: 0xE67E22, // Orange for tribes
+              components: [
+                { type: 10, content: '## 🔥 Tribes (Legacy)' },
+                { type: 14 },
+                { type: 10, content: '> **⚠️** Spectators can view tribe names added before marooning via `/castlist`. Add tribes only after players have the tribe role.' },
+                { type: 14 },
+                { type: 10, content: '> **`🔥 Tribe Actions`**' },
+                {
+                  type: 1, // Action Row
+                  components: [
+                    { type: 2, custom_id: 'prod_view_tribes', label: 'View Tribes', style: 1, emoji: { name: '🔥' } },
+                    { type: 2, custom_id: 'prod_add_tribe', label: 'Add Tribe', style: 2, emoji: { name: '🛠️' } },
+                    { type: 2, custom_id: 'prod_clear_tribe', label: 'Clear Tribe', style: 2, emoji: { name: '🧹' } }
+                  ]
+                },
+                { type: 14 },
+                {
+                  type: 1, // Action Row
+                  components: [
+                    { type: 2, custom_id: 'prod_manage_tribes', label: '← Tribes', style: 2 }
+                  ]
+                }
+              ]
+            }]
           };
         }
       })(req, res, client);
