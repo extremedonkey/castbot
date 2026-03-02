@@ -326,7 +326,7 @@ async function generatePlayerOverlay(guildId, userId, client) {
 
     const overlays = [];
 
-    // Visited cells (excluding current) — translucent light blue
+    // Visited cells (excluding current) — translucent white
     for (const coord of exploredCoords) {
       if (coord === currentLocation) continue;
       const pos = coordToPosition(coord);
@@ -335,7 +335,7 @@ async function generatePlayerOverlay(guildId, userId, client) {
           width: Math.floor(cellWidth),
           height: Math.floor(cellHeight),
           channels: 4,
-          background: { r: 66, g: 135, b: 245, alpha: 0.25 }
+          background: { r: 255, g: 255, b: 255, alpha: 0.35 }
         }
       }).png().toBuffer();
       overlays.push({ input: buf, top: pos.top, left: pos.left });
@@ -465,7 +465,7 @@ export async function createActivityLogUI({ guildId, userId, playerName, page = 
         // Legend
         components.push({
           type: 10, // TextDisplay
-          content: '🟦 Visited · 🟧 Current Location · ⬜ Not visited'
+          content: '⬜ Visited · 🟧 Current Location'
         });
 
         components.push({ type: 14 }); // Separator
