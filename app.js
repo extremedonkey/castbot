@@ -9545,10 +9545,10 @@ To fix this:
           const role = await guild.roles.fetch(roleId);
           const roleName = role?.name || 'Unknown Role';
 
-          // Resolve color: stored tribe color > Discord role color > empty
+          // Always show Discord role color as source of truth (user may change it directly in Discord)
           const { formatRoleColor } = await import('./utils/tribeDataUtils.js');
           const roleColor = role?.color ? formatRoleColor(role.color) : '';
-          const displayColor = tribeData.color || (roleColor !== '#000000' ? roleColor : '');
+          const displayColor = (roleColor && roleColor !== '#000000') ? roleColor : (tribeData.color || '');
 
           console.log(`[TRIBE EDIT] Opening modal — roleName: "${roleName}", emoji: "${tribeData.emoji || ''}", storedColor: "${tribeData.color || ''}", roleColor: "${roleColor}", displayColor: "${displayColor}"`);
 
