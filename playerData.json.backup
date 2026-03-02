@@ -1470,15 +1470,16 @@
         "memberCount": 12
       },
       "1335645032891547670": {
-        "emoji": "🤬",
+        "emoji": "😛",
         "showPlayerEmojis": false,
-        "color": "#FFFFFF",
+        "color": "#E67E22",
         "analyticsName": "Any",
         "analyticsAdded": 1756021096260,
         "castlistIds": [
-          "castlist_1759638936214_system"
+          "castlist_1759638936214_system",
+          "default"
         ],
-        "castlist": "Castbot MVPs",
+        "castlist": "default",
         "memberCount": 3
       },
       "1409191262279700622": {
@@ -1678,25 +1679,29 @@
         "color": "#000000",
         "castlistIds": [
           "castlist_1762187500959_1331657596087566398",
-          "castlist_1772416291262_custom"
+          "castlist_1772416291262_custom",
+          "default"
         ],
-        "castlist": "the BIG one",
-        "analyticsName": "Australian Timezones",
+        "castlist": "default",
+        "analyticsName": "AEST / AEDT",
         "analyticsAdded": 1772413139862,
-        "castlistId": "castlist_1762187500959_1331657596087566398"
+        "castlistId": "castlist_1762187500959_1331657596087566398",
+        "showPlayerEmojis": true,
+        "memberCount": 2
       },
       "1335645034380525708": {
         "name": "Tribe 1335645034380525708",
         "emoji": "💛",
         "castlistIds": [
           "castlist_1772416291262_custom",
-          "castlist_archive_1762702460277"
+          "castlist_archive_1762702460277",
+          "default"
         ],
-        "castlist": "Claude's second CastList Test",
+        "castlist": "default",
         "analyticsName": "All Pronouns",
         "analyticsAdded": 1772422342693,
         "showPlayerEmojis": true,
-        "memberCount": 0,
+        "memberCount": 1,
         "color": "#FFFFFF"
       },
       "1424400564858650644": {
@@ -1889,10 +1894,6 @@
         "memberCount": 0
       },
       "1478035803459551358": {
-        "castlistIds": [
-          "default"
-        ],
-        "castlist": "default",
         "color": "#2ECC71",
         "analyticsName": "The Balboa Tribe",
         "analyticsAdded": 1772461596639,
@@ -1901,10 +1902,6 @@
         "memberCount": 0
       },
       "1478036120171319306": {
-        "castlistIds": [
-          "default"
-        ],
-        "castlist": "default",
         "color": "#111111",
         "analyticsName": "The Rock Tribe",
         "analyticsAdded": 1772461672117,
@@ -1913,14 +1910,22 @@
         "memberCount": 0
       },
       "1478038007507587153": {
-        "castlistIds": [
-          "default"
-        ],
-        "castlist": "default",
         "color": "#E67E22",
         "analyticsName": "Meowth Tribe",
         "analyticsAdded": 1772462122068,
         "emoji": "🐈",
+        "showPlayerEmojis": true,
+        "memberCount": 0
+      },
+      "1478039928318332940": {
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "default",
+        "color": "#000000",
+        "analyticsName": "The Balboa Tribe",
+        "analyticsAdded": 1772462580089,
+        "emoji": "🟧",
         "showPlayerEmojis": true,
         "memberCount": 0
       }
@@ -2924,8 +2929,8 @@
           "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
           "isDefault": true
         },
-        "modifiedAt": 1772462028481,
-        "modifiedBy": "system",
+        "modifiedAt": 1772462632646,
+        "modifiedBy": "391415444084490240",
         "seasonId": "season_cac1b81de8914c79"
       },
       "castlist_1759638936214_system": {

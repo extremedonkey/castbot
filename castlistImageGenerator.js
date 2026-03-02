@@ -123,7 +123,7 @@ function createTribeHeaderSvg(tribeName, memberCount, tribeColor, width) {
 function createTitleSvg(castlistName, totalPlayers, totalTribes) {
   const cleanName = stripEmoji(castlistName);
   return `<svg width="${CANVAS_WIDTH}" height="60" xmlns="http://www.w3.org/2000/svg">
-    <text x="${CANVAS_WIDTH / 2}" y="32" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="bold" fill="${TEXT_PRIMARY}" text-anchor="middle">${escapeXml(cleanName)} Castlist</text>
+    <text x="${CANVAS_WIDTH / 2}" y="32" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="bold" fill="${TEXT_PRIMARY}" text-anchor="middle">${escapeXml(cleanName)}</text>
     <text x="${CANVAS_WIDTH / 2}" y="52" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="${TEXT_SECONDARY}" text-anchor="middle">${totalPlayers} players across ${totalTribes} tribes</text>
   </svg>`;
 }
