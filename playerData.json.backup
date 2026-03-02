@@ -774,11 +774,7 @@
         "age": "22",
         "emojiCode": "<:Mike:1396856858475495454>",
         "vanityRoles": [
-          "1368969393819746336",
-          "1401201426436456468",
-          "1368969349976821815",
-          "1333822411912642630",
-          "1379077934953922611"
+          "1442029356108091463"
         ]
       },
       "468655730975703041": {
@@ -911,9 +907,7 @@
         "emojiCode": "<:morgane:1382413461094535281>",
         "age": "37",
         "vanityRoles": [
-          "1368969349976821815",
-          "1333822411912642630",
-          "1415062472007749765"
+          "1442029356108091463"
         ]
       },
       "480712959824363520": {
@@ -1077,16 +1071,17 @@
     },
     "tribes": {
       "1333822520737927281": {
-        "emoji": "<:castbot:1333820342275149824>",
+        "emoji": "🤖",
         "showPlayerEmojis": false,
         "color": "#FFFFFF",
-        "analyticsName": "🤖Mr CastBot",
+        "analyticsName": "Mr CastBot",
         "analyticsAdded": 1751070525853,
         "displayName": "Mr CastBot",
         "castlistIds": [
           "castlist_1772416291262_custom"
         ],
-        "castlist": "Claude's second CastList Test"
+        "castlist": "Claude's second CastList Test",
+        "memberCount": 1
       },
       "1391142520787832904": {
         "emoji": "👀",
@@ -1097,10 +1092,10 @@
         "castlistIds": []
       },
       "1333822411912642630": {
-        "emoji": "👑",
+        "emoji": "🏆",
         "showPlayerEmojis": false,
         "color": "#000000",
-        "analyticsName": "Castbot MVPs",
+        "analyticsName": "Castbot MVP Supporters",
         "analyticsAdded": 1754751381750,
         "castlistIds": [
           "castlist_1759638936214_system",
@@ -1110,9 +1105,9 @@
           "castlist_1772416291262_custom"
         ],
         "isVanity": true,
-        "castlist": "Claude's second CastList Test",
+        "castlist": "Castbot MVPs",
         "castlistId": "castlist_archive_1762702460277",
-        "memberCount": 1
+        "memberCount": 0
       },
       "1335645032891547670": {
         "emoji": "🤬",
@@ -2494,7 +2489,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1772409049343,
+        "modifiedAt": 1772417437391,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },

@@ -36351,6 +36351,7 @@ Are you sure you want to continue?`;
 
         // Handle tribe name rename if changed (non-blocking — other edits saved regardless)
         let renameWarning = '';
+        let roleRenamed = false;
         if (nameInput && nameInput.trim() && nameInput.trim() !== roleName) {
           const newName = nameInput.trim();
           if (newName.length > 100) {
@@ -36360,8 +36361,7 @@ Are you sure you want to continue?`;
               await role.setName(newName, 'CastBot tribe name edit');
               console.log(`[CASTLIST] Renamed role "${roleName}" → "${newName}" (ID: ${roleId})`);
               roleName = newName;
-              // Note: Role Select (type 6) may show old name until next interaction
-              // (Discord client-side cache limitation — not fixable server-side)
+              roleRenamed = true;
             } catch (renameError) {
               console.error(`[CASTLIST] Failed to rename role ${roleId}:`, renameError);
               const isHierarchy = renameError.code === 50013;
@@ -36415,6 +36415,7 @@ Are you sure you want to continue?`;
         await savePlayerData(playerData);
 
         // Two-phase response: show tribes instantly, then update with member counts
+        // When role was renamed, skip Phase 1 to avoid stale Role Select names
         const { twoPhaseHubResponse } = await import('./castlistHandlers.js');
         await twoPhaseHubResponse(token, guildId, {
           message: renameWarning
@@ -36422,7 +36423,7 @@ Are you sure you want to continue?`;
             : `✅ Updated settings for ${tribe.emoji || ''} **${roleName}**`,
           selectedCastlistId: castlistId,
           activeButton: 'add_tribe'
-        }, client);
+        }, client, { roleRenamed });
         return null;
 
       } catch (error) {

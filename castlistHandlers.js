@@ -19,9 +19,28 @@ import { populateTribeData } from './utils/tribeDataUtils.js';
  * @param {string} guildId - Guild ID
  * @param {Object} hubOptions - Options passed to createCastlistHub (selectedCastlistId, message, activeButton, etc.)
  * @param {Object} client - Discord client
+ * @param {Object} [flags] - Optional behavior flags
+ * @param {boolean} [flags.roleRenamed] - If true, skip Phase 1 and delay before sending.
+ *   Role Select (type 6) renders names from the user's Discord client cache.
+ *   After role.setName(), Discord dispatches GUILD_ROLE_UPDATE via gateway.
+ *   Phase 1 arrives before that event → client renders stale name → Phase 2
+ *   sends identical Role Select structure → client doesn't re-render.
+ *   Fix: skip Phase 1, wait for gateway propagation, send single response.
  */
-export async function twoPhaseHubResponse(token, guildId, hubOptions, client) {
+export async function twoPhaseHubResponse(token, guildId, hubOptions, client, flags = {}) {
   const { updateDeferredResponse } = await import('./buttonHandlerFactory.js');
+
+  if (flags.roleRenamed) {
+    // Role renamed: skip Phase 1, wait for GUILD_ROLE_UPDATE to reach user's client,
+    // then send a single full response. This avoids "poisoning" the Role Select
+    // with stale data before the gateway event propagates.
+    console.log('[CASTLIST] Role renamed — skipping Phase 1, waiting for gateway propagation');
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const fullHub = await createCastlistHub(guildId, { ...hubOptions }, client);
+    await updateDeferredResponse(token, fullHub);
+    return;
+  }
 
   // Phase 1: Fast hub without member data
   const fastHub = await createCastlistHub(guildId, {
@@ -32,12 +51,7 @@ export async function twoPhaseHubResponse(token, guildId, hubOptions, client) {
 
   // Phase 2: Rebuild with member data (token valid 15 min, no rush)
   try {
-    const fullHub = await createCastlistHub(guildId, {
-      ...hubOptions,
-      // Note: Role Select (type 6) renders names from Discord client cache.
-      // After a role rename, stale names may persist until next full interaction.
-      // This is a Discord client limitation — not fixable server-side.
-    }, client);
+    const fullHub = await createCastlistHub(guildId, { ...hubOptions }, client);
     await updateDeferredResponse(token, fullHub);
   } catch (phase2Error) {
     // Silent — user already has the hub from Phase 1, just without member counts

@@ -86,7 +86,8 @@
       "Bash(powershell.exe:*)",
       "Bash(for:*)",
       "Bash(while:*)",
-      "Bash(if:*)"
+      "Bash(if:*)",
+      "WebFetch(domain:ibb.co)"
     ],
     "deny": [],
     "ask": []
