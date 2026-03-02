@@ -6401,7 +6401,104 @@
       }
     },
     "tribes": {},
-    "timezones": {},
+    "timezones": {
+      "1477938122170826754": {
+        "offset": -8,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)",
+        "timezoneId": "PT"
+      },
+      "1477938123932565595": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)",
+        "timezoneId": "MT"
+      },
+      "1477938126348615864": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)",
+        "timezoneId": "CT"
+      },
+      "1477938127183151149": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)",
+        "timezoneId": "ET"
+      },
+      "1477938128961536071": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)",
+        "timezoneId": "AT"
+      },
+      "1477938130328752129": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)",
+        "timezoneId": "NT"
+      },
+      "1477938131599888386": {
+        "offset": 0,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)",
+        "timezoneId": "GMT"
+      },
+      "1477938133118226522": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)",
+        "timezoneId": "CET"
+      },
+      "1477938133931921492": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "EET (UTC+2)",
+        "timezoneId": "EET"
+      },
+      "1477938135680942184": {
+        "offset": 2,
+        "dstObserved": false,
+        "standardName": "SAST (UTC+2)",
+        "timezoneId": "SAST"
+      },
+      "1477938137010405428": {
+        "offset": 5.5,
+        "dstObserved": false,
+        "standardName": "IST (UTC+5.5)",
+        "timezoneId": "IST"
+      },
+      "1477938138293866569": {
+        "offset": 7,
+        "dstObserved": false,
+        "standardName": "ICT (UTC+7)",
+        "timezoneId": "ICT"
+      },
+      "1477938139937898538": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": "GMT+8 (UTC+8)",
+        "timezoneId": "GMT8"
+      },
+      "1477938141141798945": {
+        "offset": 9,
+        "dstObserved": false,
+        "standardName": "JST (UTC+9)",
+        "timezoneId": "JST"
+      },
+      "1477938142698016769": {
+        "offset": 10,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)",
+        "timezoneId": "AEST"
+      },
+      "1477938144585449604": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)",
+        "timezoneId": "NZST"
+      }
+    },
     "pronounRoleIDs": [
       "1477938110934290542",
       "1477938112041848937",

@@ -1307,7 +1307,7 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
     const categories = [category]; // Start with the first category
     let currentCategory = category;
     let channelsInCurrentCategory = 0;
-    const MAX_CHANNELS_PER_CATEGORY = 49; // Leave room for one extra channel
+    const MAX_CHANNELS_PER_CATEGORY = 50; // Discord's limit per category
     
     progressMessages.push(`📍 Creating ${coordinates.length} channels...`);
     
