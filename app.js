@@ -9565,6 +9565,7 @@ To fix this:
                     placeholder: 'Enter tribe name',
                     value: roleName,
                     required: false,
+                    min_length: 1,
                     max_length: 100 // Discord role name limit
                   }
                 },

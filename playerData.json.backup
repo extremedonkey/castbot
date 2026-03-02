@@ -1802,11 +1802,14 @@
         "analyticsAdded": 1762581901033
       },
       "1431726520430366810": {
-        "emoji": null,
         "showPlayerEmojis": false,
-        "color": null,
         "analyticsName": "ICT",
-        "analyticsAdded": 1762599724325
+        "analyticsAdded": 1762599724325,
+        "castlistIds": [
+          "castlist_1772453231885_custom"
+        ],
+        "castlist": "ICT102",
+        "memberCount": 1
       },
       "1442029356108091463": {
         "emoji": null,
@@ -2842,7 +2845,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1772452644293,
+        "modifiedAt": 1772453130517,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -2988,6 +2991,25 @@
           "emoji": "💻",
           "description": "Testy",
           "lastModified": 1772416291262
+        }
+      },
+      "castlist_1772453231885_custom": {
+        "id": "castlist_1772453231885_custom",
+        "name": "ICT102",
+        "type": "custom",
+        "createdAt": 1772453231885,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "placements",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public",
+          "seasonId": "season_cac1b81de8914c79"
+        },
+        "metadata": {
+          "emoji": "💻",
+          "description": "",
+          "lastModified": 1772453231885
         }
       }
     },
