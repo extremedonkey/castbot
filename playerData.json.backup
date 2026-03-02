@@ -856,6 +856,12 @@
               "type": "action",
               "desc": "Safari button: fight_the_shark_674268",
               "loc": "C3"
+            },
+            {
+              "t": 1772433199221,
+              "type": "action",
+              "desc": "Safari button: my_conditional_searc_713128",
+              "loc": "Unknown"
             }
           ],
           "inventory": {
@@ -6396,7 +6402,16 @@
     },
     "tribes": {},
     "timezones": {},
-    "pronounRoleIDs": [],
+    "pronounRoleIDs": [
+      "1477938110934290542",
+      "1477938112041848937",
+      "1477938113677496475",
+      "1477938115565064325",
+      "1477938116781281322",
+      "1477938117527994380",
+      "1477938118920376517",
+      "1477938120828784705"
+    ],
     "firstInstalled": 1758649697859,
     "installationMethod": "command"
   },

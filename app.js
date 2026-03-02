@@ -1379,8 +1379,8 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.GuildMessageReactions
-    // GatewayIntentBits.MessageContent  // TESTING REMOVAL - not approved by Discord, bot doesn't use it
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.MessageContent  // Required for message collector (safari import file uploads) - attachments field is empty without this
   ],
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
   // Cache limits: Only limit MessageManager to prevent unbounded message cache growth
