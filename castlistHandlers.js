@@ -323,13 +323,32 @@ export async function handleCastlistSelect(req, res, client) {
         }
       }
 
-      // Display hub - tribes now always visible when castlist selected
-      // Fetch members for accurate tribe player counts (handler is deferred, 3s timeout in hub)
-      const hubData = await createCastlistHub(context.guildId, {
-        selectedCastlistId: selectedCastlistId || null
+      // Two-phase response: show tribes instantly, then update with member counts
+      // Phase 1: Immediate hub without member data
+      const { updateDeferredResponse } = await import('./buttonHandlerFactory.js');
+      const fastHub = await createCastlistHub(context.guildId, {
+        selectedCastlistId: selectedCastlistId || null,
+        skipMemberFetch: true
       }, context.client);
+      await updateDeferredResponse(context.token, fastHub);
 
-      return hubData;
+      // Phase 2: Try to fetch members and update with counts (best-effort, silent fail)
+      try {
+        const guild = await context.client.guilds.fetch(context.guildId);
+        await Promise.race([
+          guild.members.fetch(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+        ]);
+        // Members now cached — rebuild hub with member data
+        const fullHub = await createCastlistHub(context.guildId, {
+          selectedCastlistId: selectedCastlistId || null
+        }, context.client);
+        await updateDeferredResponse(context.token, fullHub);
+      } catch {
+        // Silent — user already has the hub, just without member counts
+      }
+
+      return null; // Factory should not send its own response
     }
   })(req, res, client);
 }

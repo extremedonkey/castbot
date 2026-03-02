@@ -753,7 +753,14 @@
         "safari": {
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "startingLocation": "A6"
+              "startingLocation": "A2"
+            }
+          },
+          "currency": 5,
+          "inventory": {
+            "rainbow_fish_094546": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
             }
           }
         }
@@ -2497,7 +2504,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1772408956548,
+        "modifiedAt": 1772409049343,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
