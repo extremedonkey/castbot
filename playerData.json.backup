@@ -1462,11 +1462,10 @@
           "castlist_1759638936214_system",
           "castlist_1762579720361_1331657596087566398",
           "castlist_archive_1762702460277",
-          "castlist_1772416291262_custom",
-          "default"
+          "castlist_1772416291262_custom"
         ],
         "isVanity": true,
-        "castlist": "default",
+        "castlist": "Castbot MVPs",
         "castlistId": "castlist_1759638936214_system",
         "memberCount": 12
       },
@@ -1475,7 +1474,12 @@
         "showPlayerEmojis": false,
         "color": "#FFFFFF",
         "analyticsName": "Any",
-        "analyticsAdded": 1756021096260
+        "analyticsAdded": 1756021096260,
+        "castlistIds": [
+          "castlist_1759638936214_system"
+        ],
+        "castlist": "Castbot MVPs",
+        "memberCount": 3
       },
       "1409191262279700622": {
         "emoji": "🐻‍❄️",
@@ -1722,17 +1726,27 @@
         "emoji": "🥉",
         "color": "#FFFFFF",
         "castlistIds": [
-          "castlist_1762187500959_1331657596087566398",
-          "castlist_1759638936214_system",
-          "default"
+          "castlist_1762187500959_1331657596087566398"
         ],
-        "castlist": "default",
+        "castlist": "the BIG one",
         "analyticsName": "CastBot Legendary Supporters",
         "analyticsAdded": 1772413335673,
         "showPlayerEmojis": true,
-        "memberCount": 5
+        "memberCount": 5,
+        "castlistId": "castlist_1762187500959_1331657596087566398"
       },
-      "1368969346600407181": {},
+      "1368969346600407181": {
+        "castlistIds": [
+          "castlist_1759638936214_system"
+        ],
+        "castlist": "Castbot MVPs",
+        "color": "#000000",
+        "analyticsName": "b.0",
+        "analyticsAdded": 1772460634738,
+        "emoji": "🏕️",
+        "showPlayerEmojis": true,
+        "memberCount": 3
+      },
       "1434914674788401212": {
         "emoji": null,
         "showPlayerEmojis": false,
@@ -2866,8 +2880,8 @@
           "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
           "isDefault": true
         },
-        "modifiedAt": 1772460224571,
-        "modifiedBy": "391415444084490240",
+        "modifiedAt": 1772460564163,
+        "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
       "castlist_1759638936214_system": {
@@ -2888,7 +2902,7 @@
           "migratedFrom": "virtual_bGVnYWN5TGlzdA",
           "migrationDate": 1759638936215
         },
-        "modifiedAt": 1762793300036,
+        "modifiedAt": 1772460634728,
         "modifiedBy": "391415444084490240",
         "seasonId": "season_ab9fe786206f428e"
       },

@@ -198,8 +198,18 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       });
       container.components.push({ type: 14, divider: true, spacing: 1 });
       container.components.push({
-        type: 10, // Text Display
-        content: `### 🏕️ Tribes on Castlist`
+        type: 9, // Section
+        components: [{
+          type: 10, // Text Display
+          content: `### 🏕️ Tribes on Castlist`
+        }],
+        accessory: {
+          type: 2, // Button
+          custom_id: `tribe_add_button|${castlist.id}`,
+          label: 'Add Tribe',
+          style: 2, // Secondary
+          emoji: { name: '🏕️' }
+        }
       });
 
       // ALWAYS show tribes when castlist is selected (separator removed to save component budget)
@@ -219,14 +229,13 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       }
 
       // Component budget safety check
-      // Removed 4 separators (38 → 34 components), allowing 2 more tribes (6 → 8)
       // Each tribe adds ~3 components (Section + accessory Button + TextDisplay)
-      // Base UI (after separator removal) = ~10 components
-      // Max tribes: (40 - 10) / 3 = ~10 tribes, conservatively set to 8
+      // Base UI = ~12 components (header Section with Add Tribe button = 3)
+      // Max tribes: (40 - 12) / 3 = ~9 tribes, conservatively set to 8
       let maxTribeLimit = 8;
 
       // Dynamic reduction if approaching limit (with current tribes already displayed)
-      const estimatedTotal = 10 + (tribes.length * 3); // Base + (tribes × 3 components each)
+      const estimatedTotal = 12 + (tribes.length * 3); // Base + (tribes × 3 components each)
       if (estimatedTotal > 38) {
         // Recalculate to stay under 40
         maxTribeLimit = Math.floor((40 - 10) / 3); // = 10 tribes theoretical, 8 conservative

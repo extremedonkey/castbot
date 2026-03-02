@@ -9564,6 +9564,92 @@ To fix this:
           };
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('tribe_add_button|')) {
+      // Handle Add Tribe button - creates a new Discord role and links as tribe
+      // Button ID format: tribe_add_button|{castlistId}
+      const castlistId = custom_id.split('|')[1];
+
+      if (!castlistId) {
+        return res.send({ type: 4, data: { content: '❌ Error: Missing castlist ID', flags: 64 } });
+      }
+
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        updateMessage: false, // Returns modal
+        handler: async (context) => {
+          const { TRIBE_COLOR_PRESETS } = await import('./utils/tribeDataUtils.js');
+
+          return {
+            type: 9, // MODAL
+            data: {
+              custom_id: `tribe_add_modal|${castlistId}`,
+              title: 'Add New Tribe',
+              components: [
+                {
+                  type: 18, // Label
+                  label: 'Tribe Name',
+                  description: 'CastBot will create a Discord role with this name and add it as a tribe to this castlist.',
+                  component: {
+                    type: 4, // Text Input
+                    custom_id: 'tribe_name',
+                    style: 1,
+                    placeholder: 'e.g. Mana Tribe',
+                    required: true,
+                    min_length: 1,
+                    max_length: 100
+                  }
+                },
+                {
+                  type: 18, // Label
+                  label: 'Tribe Emoji',
+                  description: 'Unicode or Discord custom emoji for this tribe',
+                  component: {
+                    type: 4, // Text Input
+                    custom_id: 'tribe_emoji',
+                    style: 1,
+                    placeholder: '🔥 or <:custom:123>',
+                    required: false,
+                    max_length: 60
+                  }
+                },
+                {
+                  type: 18, // Label
+                  label: 'Tribe Color',
+                  description: 'Sets the Discord role color and tribe accent color',
+                  component: {
+                    type: 3, // String Select
+                    custom_id: 'tribe_color_preset',
+                    placeholder: 'Pick a color...',
+                    required: false,
+                    min_values: 0,
+                    max_values: 1,
+                    options: TRIBE_COLOR_PRESETS.map(preset => ({
+                      label: preset.label,
+                      value: preset.value,
+                      description: preset.value === 'custom' ? 'Enter hex code below' : preset.value,
+                      emoji: { name: preset.emoji },
+                      default: false
+                    }))
+                  }
+                },
+                {
+                  type: 18, // Label
+                  label: 'Custom Color (optional)',
+                  description: 'Only used when "Custom..." is selected above. Format: #RRGGBB',
+                  component: {
+                    type: 4, // Text Input
+                    custom_id: 'tribe_color_custom',
+                    style: 1,
+                    placeholder: '#FF5733',
+                    required: false,
+                    max_length: 7
+                  }
+                }
+              ]
+            }
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('edit_placement_')) {
       // Handle placement edit button - show modal (MIGRATED TO FACTORY)
       // 🔧 FIX: Parse full navigation context from button ID
@@ -36439,6 +36525,107 @@ Your server is now ready for Tycoons gameplay!`;
               }]
             }]
           })
+        });
+      }
+    } else if (custom_id.startsWith('tribe_add_modal|')) {
+      // Handle Add Tribe modal submission - creates Discord role and links as tribe
+      const token = req.body.token;
+      res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+
+      try {
+        const castlistId = custom_id.split('|')[1];
+        const guildId = req.body.guild_id;
+        const components = req.body.data.components;
+
+        console.log(`[TRIBE ADD] Processing add tribe modal for castlist ${castlistId}`);
+
+        // Extract field values (same pattern as tribe_edit_modal)
+        const getFieldValue = (customId) => {
+          for (const row of (components || [])) {
+            if (row?.type === 18 && row?.component?.custom_id === customId) {
+              return row.component.value ?? row.component.values ?? '';
+            }
+          }
+          return '';
+        };
+
+        const nameInput = getFieldValue('tribe_name');
+        const emojiInput = getFieldValue('tribe_emoji');
+        const colorPresetRaw = getFieldValue('tribe_color_preset');
+        const colorCustom = getFieldValue('tribe_color_custom');
+        const colorPreset = Array.isArray(colorPresetRaw) ? colorPresetRaw[0] : (colorPresetRaw || '');
+
+        if (!nameInput || !nameInput.trim()) {
+          return updateDeferredResponse(token, {
+            components: [{ type: 17, components: [{ type: 10, content: '❌ Tribe name is required.' }] }]
+          });
+        }
+
+        const tribeName = nameInput.trim();
+
+        // Resolve color
+        const { validateHexColor, populateTribeData } = await import('./utils/tribeDataUtils.js');
+        let processedColor = null;
+        if (colorPreset === 'custom' && colorCustom?.trim()) {
+          processedColor = validateHexColor(colorCustom.trim());
+        } else if (colorPreset && colorPreset !== 'custom') {
+          processedColor = colorPreset.toUpperCase();
+        }
+
+        // Validate emoji
+        let processedEmoji = null;
+        if (emojiInput) {
+          const trimmed = emojiInput.trim();
+          const customEmojiMatch = trimmed.match(/<a?:(\w+):(\d{17,19})>/);
+          if (customEmojiMatch) {
+            processedEmoji = trimmed;
+          } else if (trimmed.length <= 8 && /[^\x00-\x7F]/u.test(trimmed)) {
+            processedEmoji = trimmed;
+          }
+        }
+
+        // Create Discord role
+        const guild = await client.guilds.fetch(guildId);
+        const colorInt = processedColor ? parseInt(processedColor.replace('#', ''), 16) : 0;
+        const role = await guild.roles.create({
+          name: tribeName,
+          color: colorInt,
+          reason: 'CastBot tribe creation'
+        });
+        console.log(`[TRIBE ADD] Created Discord role "${tribeName}" (${role.id})`);
+
+        // Set up tribe data via populateTribeData
+        const playerData = await loadPlayerData();
+        if (!playerData[guildId]) playerData[guildId] = {};
+        if (!playerData[guildId].tribes) playerData[guildId].tribes = {};
+
+        const { castlistManager } = await import('./castlistManager.js');
+        const castlist = await castlistManager.getCastlist(guildId, castlistId);
+        const castlistName = (castlistId === 'default') ? 'default' : (castlist?.name || castlistId);
+
+        const tribe = populateTribeData({}, role, castlistId, castlistName);
+        if (processedEmoji) tribe.emoji = processedEmoji;
+        if (processedColor) tribe.color = processedColor;
+        playerData[guildId].tribes[role.id] = tribe;
+        await savePlayerData(playerData);
+
+        // Link tribe to castlist
+        await castlistManager.linkTribeToCastlist(guildId, role.id, castlistId);
+        console.log(`[TRIBE ADD] ✅ Linked tribe "${tribeName}" (${role.id}) to castlist ${castlistId}`);
+
+        // Refresh hub — new role means Role Select needs fresh render
+        const { twoPhaseHubResponse } = await import('./castlistHandlers.js');
+        await twoPhaseHubResponse(token, guildId, {
+          message: `✅ Created tribe ${processedEmoji || '🏕️'} **${tribeName}**`,
+          selectedCastlistId: castlistId,
+          activeButton: 'add_tribe'
+        }, client, { roleRenamed: true }); // Force Role Select refresh for new role
+        return null;
+
+      } catch (error) {
+        console.error('[TRIBE ADD] Error creating tribe:', error);
+        return updateDeferredResponse(token, {
+          components: [{ type: 17, components: [{ type: 10, content: `❌ Error creating tribe: ${error.message}` }] }]
         });
       }
     } else if (custom_id.startsWith('tribe_edit_modal|')) {

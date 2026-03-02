@@ -817,7 +817,16 @@ export const BUTTON_REGISTRY = {
     description: 'Edit tribe settings and metadata',
     emoji: '✏️',
     style: 'Secondary',
-    category: 'castlist'
+    category: 'castlist',
+    requiresModal: true
+  },
+  'tribe_add_button_*': {
+    label: 'Add Tribe',
+    description: 'Create a new Discord role and add as tribe to castlist',
+    emoji: '🏕️',
+    style: 'Secondary',
+    category: 'castlist',
+    requiresModal: true
   },
   'castlist_create_season': {
     label: 'From Season',
