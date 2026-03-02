@@ -613,7 +613,7 @@ export async function handleCastlistButton(req, res, client, custom_id) {
           {
             type: 18, // Label
             label: 'Associated Season',
-            description: 'What season is this Castlist for?',
+            description: 'What season is this Castlist for? (highly recommended - required for Placements to work)',
             component: {
               type: 3, // String Select
               custom_id: 'season_id',
@@ -626,42 +626,40 @@ export async function handleCastlistButton(req, res, client, custom_id) {
           }
         );
 
-        // Only show emoji and description fields for non-default castlists
+        // Only show emoji field for non-default castlists
         if (!isDefaultCastlist) {
-          modalComponents.push(
-            // Castlist Emoji field (Label + Text Input)
-            {
-              type: 18, // Label
-              label: 'Castlist Emoji',
-              description: 'Normal or discord emoji in the form <:castbot:1333820342275149824>',
-              component: {
-                type: 4, // Text Input
-                custom_id: 'castlist_emoji',
-                style: 1, // Short
-                required: false,
-                value: castlist.metadata?.emoji || '',
-                placeholder: 'Enter an emoji (e.g., 📋 or <:custom:123>)',
-                max_length: 60
-              }
-            },
-
-            // Description field (Label + Text Input)
-            {
-              type: 18, // Label
-              label: 'Description',
-              description: 'Optional description for this castlist',
-              component: {
-                type: 4, // Text Input
-                custom_id: 'castlist_description',
-                style: 2, // Paragraph
-                required: false,
-                value: castlist.metadata?.description || '',
-                placeholder: 'Describe this castlist...',
-                max_length: 200
-              }
+          modalComponents.push({
+            type: 18, // Label
+            label: 'Castlist Emoji',
+            description: 'Normal or discord emoji in the form <:castbot:1333820342275149824>',
+            component: {
+              type: 4, // Text Input
+              custom_id: 'castlist_emoji',
+              style: 1, // Short
+              required: false,
+              value: castlist.metadata?.emoji || '',
+              placeholder: 'Enter an emoji (e.g., 📋 or <:custom:123>)',
+              max_length: 60
             }
-          );
+          });
         }
+
+        // Always show Tribe Roles selector (pre-select currently linked tribes)
+        const linkedTribeRoleIds = await castlistManager.getTribesUsingCastlist(context.guildId, castlistId);
+        modalComponents.push({
+          type: 18, // Label
+          label: 'Tribe Roles',
+          description: 'Select roles to add as tribes. Leave blank if you haven\'t made roles yet (can set on next screen).',
+          component: {
+            type: 6, // Role Select
+            custom_id: 'tribe_roles',
+            placeholder: 'Select tribe roles...',
+            required: false,
+            min_values: 0,
+            max_values: 8,
+            default_values: linkedTribeRoleIds.map(id => ({ id, type: 'role' }))
+          }
+        });
 
         // Create modal for editing castlist info with Components V2
         return {

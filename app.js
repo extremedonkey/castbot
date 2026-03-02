@@ -7386,8 +7386,6 @@ To fix this:
                 type: 1,
                 components: [
                   { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
-                  { type: 2, custom_id: 'castlist_test', label: 'Compact Castlist', style: 2, emoji: { name: '🍒' } },
-                  { type: 2, custom_id: 'castlist_img', label: 'IMG Castlist', style: 2, emoji: { name: '🖼️' } },
                   { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } }
                 ]
               },
@@ -8278,109 +8276,6 @@ To fix this:
         }
       })(req, res, client);
 
-    } else if (custom_id === 'castlist_img') {
-      // POC: Show castlist select for Sharp PNG generation
-      return ButtonHandlerFactory.create({
-        id: 'castlist_img',
-        updateMessage: true,
-        deferred: true,
-        handler: async (context) => {
-          if (context.userId !== '391415444084490240') {
-            return { content: '❌ Access denied.' };
-          }
-          const { getCastlistSelectOptions } = await import('./castlistImageGenerator.js');
-          const options = await getCastlistSelectOptions(context.guildId);
-
-          if (options.length === 0) {
-            return { content: '❌ No castlists found in this server.' };
-          }
-
-          const container = {
-            type: 17, accent_color: 0x3498db,
-            components: [
-              { type: 10, content: '## 🖼️ Image Castlist Generator\nSelect a castlist to render as a PNG image.' },
-              { type: 14 },
-              {
-                type: 1,
-                components: [{
-                  type: 3, // String Select
-                  custom_id: 'castlist_img_select',
-                  placeholder: 'Choose a castlist...',
-                  options: options.map(opt => {
-                    const o = { label: opt.label, value: opt.value, description: opt.description };
-                    if (opt.emoji) o.emoji = opt.emoji;
-                    return o;
-                  })
-                }]
-              },
-              { type: 14 },
-              { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }] }
-            ]
-          };
-          return { components: [container] };
-        }
-      })(req, res, client);
-
-    } else if (custom_id === 'castlist_img_select') {
-      // POC: Generate castlist PNG with Sharp on select
-      return ButtonHandlerFactory.create({
-        id: 'castlist_img_select',
-        updateMessage: true,
-        deferred: true,
-        handler: async (context) => {
-          if (context.userId !== '391415444084490240') {
-            return { content: '❌ Access denied.' };
-          }
-
-          const selectedCastlistId = req.body.data?.values?.[0];
-          if (!selectedCastlistId) {
-            return { content: '❌ No castlist selected.' };
-          }
-
-          console.log(`[CASTLIST-IMG] User selected castlist: ${selectedCastlistId}`);
-
-          // Show generating message (updates the ephemeral)
-          const { generateCastlistImage } = await import('./castlistImageGenerator.js');
-
-          try {
-            const pngBuffer = await generateCastlistImage(context.guildId, selectedCastlistId, context.client);
-
-            // Post the image publicly to the channel
-            const { AttachmentBuilder } = await import('discord.js');
-            const attachment = new AttachmentBuilder(pngBuffer, { name: 'castlist.png' });
-
-            const channelId = req.body.channel?.id || req.body.channel_id;
-            const channel = await context.client.channels.fetch(channelId);
-            await channel.send({
-              content: '📸 **Castlist Image**',
-              files: [attachment]
-            });
-
-            // Return confirmation in the ephemeral message
-            const container = {
-              type: 17, accent_color: 0x2ecc71,
-              components: [
-                { type: 10, content: `## ✅ Image Posted\nCastlist image (${(pngBuffer.length / 1024).toFixed(1)}KB) posted to <#${channelId}>.` },
-                { type: 14 },
-                { type: 1, components: [{ type: 2, custom_id: 'castlist_img', label: '← Generate Another', style: 2 }, { type: 2, custom_id: 'reeces_stuff', label: '← Menu', style: 2 }] }
-              ]
-            };
-            return { components: [container] };
-          } catch (error) {
-            console.error(`[CASTLIST-IMG] Generation failed:`, error);
-            const container = {
-              type: 17, accent_color: 0xe74c3c,
-              components: [
-                { type: 10, content: `## ❌ Generation Failed\n\`\`\`${error.message}\`\`\`` },
-                { type: 14 },
-                { type: 1, components: [{ type: 2, custom_id: 'castlist_img', label: '← Try Again', style: 2 }, { type: 2, custom_id: 'reeces_stuff', label: '← Menu', style: 2 }] }
-              ]
-            };
-            return { components: [container] };
-          }
-        }
-      })(req, res, client);
-
     } else if (custom_id === 'msg_test') {
       // Test sending a message from CastBot to user (USING DISCORD MESSENGER SERVICE)
       return ButtonHandlerFactory.create({
@@ -8856,130 +8751,6 @@ To fix this:
         }
       })(req, res, client);
 
-    } else if (custom_id === 'castlist_test') {
-      // EXPERIMENTAL: Test rendering castlist with multiple Text Display components in Section
-      // DELETE THIS AFTER TESTING - This is temporary for Components V2 research
-      // This tests if Sections can render multiple Text Display components as columns
-      return ButtonHandlerFactory.create({
-        id: 'castlist_test',
-        handler: async (context) => {
-          console.log(`🧪 EXPERIMENTAL: castlist_test - user ${context.userId}`);
-          
-          // Security check - only allow specific Discord ID
-          if (context.userId !== '391415444084490240') {
-            console.log(`❌ ACCESS DENIED: castlist_test - user ${context.userId} not authorized`);
-            return {
-              content: 'Access denied. This feature is restricted.',
-              ephemeral: true
-            };
-          }
-          
-          // Import castlist functions
-          const { loadPlayerData } = await import('./storage.js');
-          const playerData = await loadPlayerData();
-          
-          // Get player list from this guild
-          const guildPlayers = playerData[context.guildId]?.players || {};
-          const playerIds = Object.keys(guildPlayers).slice(0, 3); // Test with first 3 players
-          
-          if (playerIds.length === 0) {
-            return {
-              content: '⚠️ No players found in this guild to test with.',
-              ephemeral: true
-            };
-          }
-          
-          console.log(`🧪 Testing with ${playerIds.length} players`);
-          
-          // Fetch guild and members
-          const guild = await context.client.guilds.fetch(context.guildId);
-          const members = [];
-          for (const playerId of playerIds) {
-            try {
-              const member = await guild.members.fetch(playerId);
-              members.push(member);
-            } catch (err) {
-              console.log(`Could not fetch member ${playerId}: ${err.message}`);
-            }
-          }
-          
-          if (members.length === 0) {
-            return {
-              content: '⚠️ Could not fetch any guild members for testing.',
-              ephemeral: true
-            };
-          }
-          
-          // EXPERIMENTAL: Test Section with SINGLE Text Display component
-          // Testing Discord's actual Section limitations
-          
-          // Create ONE Text Display component with combined content
-          const singleTextDisplay = {
-            type: 10, // Text Display
-            content: "Player 1 | Player 2 | Player 3"  // Combined content in single component
-          };
-          
-          // Create Section with SINGLE Text Display component AND an accessory
-          const experimentalSection = {
-            type: 9, // Section
-            components: [singleTextDisplay], // Array with exactly ONE Text Display
-            accessory: {
-              type: 2, // Button accessory (allowed per Discord docs)
-              label: "Test Button",
-              style: 2, // Secondary style
-              custom_id: "section_test_button",
-              emoji: { name: "🔬" }
-            }
-          };
-          
-          console.log(`🧪 Created Section with SINGLE Text Display child AND Button accessory`);
-          console.log('🔍 Section structure:', JSON.stringify(experimentalSection, null, 2));
-          console.log('🔬 Accessory details:', experimentalSection.accessory ? 'Button present' : 'No accessory');
-          
-          // Build the response with Container
-          const containerComponents = [
-            {
-              type: 10, // Text Display for header
-              content: '## 🧪 SECTION TEST - WITH ACCESSORY\n\n' +
-                      '**Testing Section with ONE Text Display + Button Accessory**\n' +
-                      'Combined content: "Player 1 | Player 2 | Player 3"\n' +
-                      'Testing if Section requires an accessory component'
-            },
-            { type: 14 }, // Separator
-            experimentalSection, // Section with SINGLE Text Display child
-            { type: 14 }, // Separator
-            {
-              type: 10, // Text Display for footer
-              content: `*Testing Section with Text Display + Button accessory*\n` +
-                      `*Hypothesis: Section might REQUIRE an accessory to be valid*`
-            }
-          ];
-          
-          const response = {
-            // DO NOT set flags directly - ButtonHandlerFactory will add (1 << 15) | EPHEMERAL
-            ephemeral: true,
-            components: [{
-              type: 17, // Container
-              accent_color: 0xFF00FF, // Magenta to indicate experimental
-              components: containerComponents
-            }]
-          };
-          
-          // Detailed logging of the full response structure
-          console.log('📦 Full response structure being sent to ButtonHandlerFactory:');
-          console.log('  - flags:', response.flags || 'undefined (ButtonHandlerFactory will add)');
-          console.log('  - ephemeral:', response.ephemeral);
-          console.log('  - components array length:', response.components.length);
-          console.log('  - Container type:', response.components[0].type);
-          console.log('  - Container accent_color:', response.components[0].accent_color);
-          console.log('  - Container components count:', response.components[0].components.length);
-          console.log('  - Component types:', response.components[0].components.map(c => `type ${c.type}`).join(', '));
-          console.log('📋 Full response JSON:', JSON.stringify(response, null, 2));
-          
-          console.log(`✅ EXPERIMENTAL: castlist_test - completed`);
-          return response;
-        }
-      })(req, res, client);
     } else if (custom_id === 'nuke_player_data') {
       // Nuke playerData for current guild - shows confirmation dialog (DELEGATED TO MODULE)
       return ButtonHandlerFactory.create({
@@ -9177,6 +8948,61 @@ To fix this:
       // Handle castlist deletion (BROAD PATTERN SECOND with exclusion)
       const { handleCastlistDelete } = await import('./castlistHandlers.js');
       return handleCastlistDelete(req, res, client, custom_id);
+    } else if (custom_id.startsWith('compact_castlist_')) {
+      // Compact Castlist - generate castlist PNG with Sharp and post to channel
+      const castlistId = custom_id.replace('compact_castlist_', '');
+      return ButtonHandlerFactory.create({
+        id: 'compact_castlist',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          console.log(`[COMPACT-CASTLIST] Generating for castlist: ${castlistId}`);
+
+          const { generateCastlistImage } = await import('./castlistImageGenerator.js');
+
+          try {
+            const pngBuffer = await generateCastlistImage(context.guildId, castlistId, context.client);
+
+            // Post the image publicly to the channel
+            const { AttachmentBuilder } = await import('discord.js');
+            const attachment = new AttachmentBuilder(pngBuffer, { name: 'castlist.png' });
+
+            const channelId = req.body.channel?.id || req.body.channel_id;
+            const channel = await context.client.channels.fetch(channelId);
+            await channel.send({
+              content: '📸 **Compact Castlist**',
+              files: [attachment]
+            });
+
+            console.log(`[COMPACT-CASTLIST] Posted ${(pngBuffer.length / 1024).toFixed(1)}KB image to #${channelId}`);
+
+            const container = {
+              type: 17, accent_color: 0x2ecc71,
+              components: [
+                { type: 10, content: `## ✅ Compact Castlist Posted\n-# Image posted to <#${channelId}>` },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, custom_id: 'castlist_hub_main', label: '← Castlist Manager', style: 2 }
+                ]}
+              ]
+            };
+            return { components: [container] };
+          } catch (error) {
+            console.error(`[COMPACT-CASTLIST] Generation failed:`, error);
+            const container = {
+              type: 17, accent_color: 0xe74c3c,
+              components: [
+                { type: 10, content: `## ❌ Generation Failed\n\`\`\`${error.message}\`\`\`` },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, custom_id: 'castlist_hub_main', label: '← Castlist Manager', style: 2 }
+                ]}
+              ]
+            };
+            return { components: [container] };
+          }
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('castlist_swap_merge_')) {
       // Handle tribe swap/merge modal display
       return ButtonHandlerFactory.create({

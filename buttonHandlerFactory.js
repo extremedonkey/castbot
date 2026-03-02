@@ -372,33 +372,13 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'navigation'
   },
-  // EXPERIMENTAL: Delete after testing Components V2 Section behavior
-  'castlist_test': {
+  'compact_castlist_*': {
     label: 'Compact Castlist',
-    description: 'EXPERIMENTAL: Test compact castlist rendering',
+    description: 'Generate castlist as PNG image using Sharp',
     emoji: '🍒',
     style: 'Secondary',
-    parent: 'reeces_stuff',
-    restrictedUser: '391415444084490240',
-    category: 'testing'
-  },
-  'castlist_img': {
-    label: 'IMG Castlist',
-    description: 'POC: Generate castlist as PNG image using Sharp',
-    emoji: '🖼️',
-    style: 'Secondary',
-    parent: 'reeces_stuff',
-    restrictedUser: '391415444084490240',
-    category: 'testing'
-  },
-  'castlist_img_select': {
-    label: 'IMG Castlist Select',
-    description: 'POC: Castlist selection for image generation',
-    emoji: '🖼️',
-    style: 'Secondary',
-    parent: 'castlist_img',
-    restrictedUser: '391415444084490240',
-    category: 'testing'
+    category: 'castlist',
+    parent: 'castlist_hub_main'
   },
 
   // Navigation
@@ -2914,16 +2894,6 @@ export const BUTTON_REGISTRY = {
     category: 'availability'
   },
   
-  // === EXPERIMENTAL/TEST BUTTONS ===
-  'castlist_test': {
-    label: 'Castlist Test',
-    description: 'Experimental Section component test with multiple Text Display children',
-    emoji: '🧪',
-    style: 'Secondary',
-    restrictedUser: '391415444084490240', // Reece only
-    category: 'experimental'
-  },
-
   // === PLAYER MANAGEMENT - BUTTON HANDLERS ===
   'admin_set_pronouns_*': {
     label: 'Set Pronouns Button',
