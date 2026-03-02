@@ -31321,10 +31321,11 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
 
     } else if (custom_id.startsWith('activity_log_prev_')) {
-      // Activity log previous page
+      // Activity log previous page (deferred: admin overlay is slow)
       return ButtonHandlerFactory.create({
         id: 'activity_log_prev',
         updateMessage: true,
+        deferred: true,
         handler: async (context) => {
           const { createActivityLogUI } = await import('./activityLogger.js');
           const parts = context.customId.replace('activity_log_prev_', '').split('_');
@@ -31339,10 +31340,11 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
 
     } else if (custom_id.startsWith('activity_log_next_')) {
-      // Activity log next page
+      // Activity log next page (deferred: admin overlay is slow)
       return ButtonHandlerFactory.create({
         id: 'activity_log_next',
         updateMessage: true,
+        deferred: true,
         handler: async (context) => {
           const { createActivityLogUI } = await import('./activityLogger.js');
           const parts = context.customId.replace('activity_log_next_', '').split('_');
@@ -31357,10 +31359,11 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
 
     } else if (custom_id.startsWith('activity_log_refresh_')) {
-      // Activity log refresh (re-render current page)
+      // Activity log refresh (deferred: admin overlay is slow)
       return ButtonHandlerFactory.create({
         id: 'activity_log_refresh',
         updateMessage: true,
+        deferred: true,
         handler: async (context) => {
           const { createActivityLogUI } = await import('./activityLogger.js');
           const parts = context.customId.replace('activity_log_refresh_', '').split('_');

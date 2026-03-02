@@ -1455,7 +1455,7 @@
       "1333822411912642630": {
         "emoji": "👑",
         "showPlayerEmojis": false,
-        "color": "#0000FF",
+        "color": "#71368A",
         "analyticsName": "Castbot MVPs",
         "analyticsAdded": 1754751381750,
         "castlistIds": [
@@ -1465,7 +1465,7 @@
           "castlist_1772416291262_custom"
         ],
         "isVanity": true,
-        "castlist": "Cool Birds",
+        "castlist": "Claude's second CastList Test",
         "castlistId": "castlist_1759638936214_system",
         "memberCount": 12
       },
@@ -2854,7 +2854,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1772453130517,
+        "modifiedAt": 1772458666452,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -11859,7 +11859,32 @@
         }
       }
     },
-    "tribes": {},
+    "tribes": {
+      "1452136659679313931": {
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "default",
+        "color": "#3498db",
+        "analyticsName": "EET / EEST",
+        "analyticsAdded": 1772459015343,
+        "emoji": "🏕️",
+        "showPlayerEmojis": true,
+        "memberCount": 0
+      },
+      "1452136649420181656": {
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "Active Castlist",
+        "color": "#3498db",
+        "analyticsName": "EST / EDT",
+        "analyticsAdded": 1772459015379,
+        "emoji": "🏕️",
+        "showPlayerEmojis": true,
+        "memberCount": 0
+      }
+    },
     "timezones": {
       "1452136644152004649": {
         "offset": -8,
@@ -11985,6 +12010,28 @@
       "discriminator": "0",
       "tag": "extremedonkey"
     },
-    "analyticsVersion": "1.0"
+    "analyticsVersion": "1.0",
+    "castlistConfigs": {
+      "default": {
+        "id": "default",
+        "name": "Active Castlist",
+        "type": "system",
+        "createdAt": 1772458686378,
+        "createdBy": "system",
+        "settings": {
+          "sortStrategy": "placements",
+          "showRankings": true,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
+          "emoji": "📋",
+          "isDefault": true
+        },
+        "modifiedAt": 1772458686388,
+        "modifiedBy": "system"
+      }
+    }
   }
 }
