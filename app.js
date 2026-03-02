@@ -36349,29 +36349,26 @@ Are you sure you want to continue?`;
         const role = guild.roles.cache.get(roleId) || await guild.roles.fetch(roleId);
         let roleName = role?.name || 'tribe';
 
-        // Handle tribe name rename if changed (before populateTribeData so role.name is current)
+        // Handle tribe name rename if changed (non-blocking — other edits saved regardless)
+        let renameWarning = '';
         if (nameInput && nameInput.trim() && nameInput.trim() !== roleName) {
           const newName = nameInput.trim();
           if (newName.length > 100) {
-            return updateDeferredResponse(token, {
-              components: [{ type: 17, components: [{ type: 10,
-                content: `❌ Tribe name too long (${newName.length}/100 characters). Please try again.`
-              }] }]
-            });
-          }
-          try {
-            await role.setName(newName, 'CastBot tribe name edit');
-            console.log(`[CASTLIST] Renamed role "${roleName}" → "${newName}" (ID: ${roleId})`);
-            roleName = newName;
-            // Rate limit delay - allows Discord to propagate the name change to Role Select
-            await new Promise(resolve => setTimeout(resolve, 500));
-          } catch (renameError) {
-            console.error(`[CASTLIST] Failed to rename role ${roleId}:`, renameError);
-            return updateDeferredResponse(token, {
-              components: [{ type: 17, components: [{ type: 10,
-                content: `❌ Failed to rename Discord role: ${renameError.message}`
-              }] }]
-            });
+            renameWarning = `⚠️ Name too long (${newName.length}/100 chars) — kept "${roleName}"`;
+          } else {
+            try {
+              await role.setName(newName, 'CastBot tribe name edit');
+              console.log(`[CASTLIST] Renamed role "${roleName}" → "${newName}" (ID: ${roleId})`);
+              roleName = newName;
+              // Note: Role Select (type 6) may show old name until next interaction
+              // (Discord client-side cache limitation — not fixable server-side)
+            } catch (renameError) {
+              console.error(`[CASTLIST] Failed to rename role ${roleId}:`, renameError);
+              const isHierarchy = renameError.code === 50013;
+              renameWarning = isHierarchy
+                ? `⚠️ Can't rename — CastBot's role must be above "${roleName}" in Server Settings > Roles`
+                : `⚠️ Can't rename — ${renameError.message}`;
+            }
           }
         }
 
@@ -36420,7 +36417,9 @@ Are you sure you want to continue?`;
         // Two-phase response: show tribes instantly, then update with member counts
         const { twoPhaseHubResponse } = await import('./castlistHandlers.js');
         await twoPhaseHubResponse(token, guildId, {
-          message: `✅ Updated settings for ${tribe.emoji || ''} **${roleName}**`,
+          message: renameWarning
+            ? `${renameWarning}\n✅ Other settings saved for ${tribe.emoji || ''} **${roleName}**`
+            : `✅ Updated settings for ${tribe.emoji || ''} **${roleName}**`,
           selectedCastlistId: castlistId,
           activeButton: 'add_tribe'
         }, client);

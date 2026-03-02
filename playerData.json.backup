@@ -1082,7 +1082,11 @@
         "color": "#FFFFFF",
         "analyticsName": "🤖Mr CastBot",
         "analyticsAdded": 1751070525853,
-        "displayName": "Mr CastBot"
+        "displayName": "Mr CastBot",
+        "castlistIds": [
+          "castlist_1772416291262_custom"
+        ],
+        "castlist": "Claude's second CastList Test"
       },
       "1391142520787832904": {
         "emoji": "👀",
@@ -1093,10 +1097,10 @@
         "castlistIds": []
       },
       "1333822411912642630": {
-        "emoji": "🏪",
+        "emoji": "👑",
         "showPlayerEmojis": false,
-        "color": "#FFFFFF",
-        "analyticsName": "👑 Castbot MVPs",
+        "color": "#000000",
+        "analyticsName": "Castbot MVPs",
         "analyticsAdded": 1754751381750,
         "castlistIds": [
           "castlist_1759638936214_system",
@@ -1106,7 +1110,8 @@
         ],
         "isVanity": true,
         "castlist": "Claude's New CastList",
-        "castlistId": "castlist_archive_1762702460277"
+        "castlistId": "castlist_archive_1762702460277",
+        "memberCount": 1
       },
       "1335645032891547670": {
         "emoji": "🤬",
@@ -1310,9 +1315,10 @@
         "emoji": "🐨",
         "color": "#000000",
         "castlistIds": [
-          "castlist_1762187500959_1331657596087566398"
+          "castlist_1762187500959_1331657596087566398",
+          "castlist_1772416291262_custom"
         ],
-        "castlist": "the BIG one",
+        "castlist": "Claude's second CastList Test",
         "analyticsName": "Australian Timezones",
         "analyticsAdded": 1772413139862
       },
@@ -1320,7 +1326,10 @@
         "name": "Tribe 1335645034380525708",
         "emoji": "🏕️",
         "color": null,
-        "castlistIds": []
+        "castlistIds": [
+          "castlist_1772416291262_custom"
+        ],
+        "castlist": "Claude's second CastList Test"
       },
       "1424400564858650644": {
         "name": "Tribe 1424400564858650644",
@@ -1335,7 +1344,12 @@
         "castlistIds": [
           "castlist_1772416072934_custom"
         ],
-        "castlist": "Claude's New CastList"
+        "castlist": "Claude's New CastList",
+        "analyticsName": "Even Cooler Sarah",
+        "analyticsAdded": 1772416237201,
+        "emoji": "🎖️",
+        "showPlayerEmojis": true,
+        "memberCount": 0
       },
       "1434189967323566261": {
         "name": "Tribe 1434189967323566261",
@@ -2654,6 +2668,25 @@
           "emoji": "🤖",
           "description": "Domou arigatou Mr Roboto",
           "lastModified": 1772416072934
+        }
+      },
+      "castlist_1772416291262_custom": {
+        "id": "castlist_1772416291262_custom",
+        "name": "Claude's second CastList Test",
+        "type": "custom",
+        "createdAt": 1772416291262,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "placements",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public",
+          "seasonId": "season_ab9fe786206f428e"
+        },
+        "metadata": {
+          "emoji": "💻",
+          "description": "Testy",
+          "lastModified": 1772416291262
         }
       }
     },

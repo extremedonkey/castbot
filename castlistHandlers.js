@@ -34,7 +34,9 @@ export async function twoPhaseHubResponse(token, guildId, hubOptions, client) {
   try {
     const fullHub = await createCastlistHub(guildId, {
       ...hubOptions,
-      roleSelectNonce: Date.now() // Force fresh Role Select render
+      // Note: Role Select (type 6) renders names from Discord client cache.
+      // After a role rename, stale names may persist until next full interaction.
+      // This is a Discord client limitation — not fixable server-side.
     }, client);
     await updateDeferredResponse(token, fullHub);
   } catch (phase2Error) {
@@ -825,7 +827,7 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
     updateMessage: true, // ✅ Update message for instant toggle UX
     deferred: true, // ✅ Defer response to prevent timeout with many tribe operations
     handler: async (context) => {
-      const castlistId = custom_id.replace('castlist_tribe_select_', '').split('|')[0];
+      const castlistId = custom_id.replace('castlist_tribe_select_', '');
       const newlySelectedRoles = context.values || []; // Array of role IDs
 
       // Deduplicate rapid interactions (prevent double-clicks)
