@@ -2065,6 +2065,8 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                 location,
                 actionType: 'safari_button',
                 actionId: buttonId,
+                buttonLabel: button.label || null,
+                buttonEmoji: button.emoji || null,
                 executedActions: sortedActions.map(action => ({
                     type: action.type,
                     config: action.config,

@@ -334,23 +334,23 @@ export async function logAttack({ guildId, attackerId, attackerName, attackerDis
  * @param {string} params.errorMessage - Error message if action failed
  * @param {string} params.channelName - Channel name
  */
-export async function logCustomAction({ guildId, userId, username, displayName, location, actionType, actionId, executedActions = [], success = true, errorMessage = null, channelName }) {
+export async function logCustomAction({ guildId, userId, username, displayName, location, actionType, actionId, buttonLabel = null, buttonEmoji = null, executedActions = [], success = true, errorMessage = null, channelName }) {
   console.log(`🦁 Safari Logger: logCustomAction called for ${actionType} ${actionId} by user ${userId} in guild ${guildId}`);
-  
+
   // Check if Safari logging is enabled
   const logSettings = await getSafariLogSettings(guildId);
   console.log(`🦁 Safari Logger: Log settings for guild ${guildId}:`, JSON.stringify(logSettings, null, 2));
-  
+
   if (!logSettings?.enabled) {
     console.log(`🦁 Safari Logger: Safari logging is disabled for guild ${guildId}`);
     return;
   }
-  
+
   if (!logSettings.logTypes?.customActions) {
     console.log(`🦁 Safari Logger: Custom actions logging is disabled for guild ${guildId}`);
     return;
   }
-  
+
   const safariContent = {
     location,
     actionType,
@@ -364,7 +364,7 @@ export async function logCustomAction({ guildId, userId, username, displayName, 
     errorMessage,
     channelName
   };
-  
+
   let summary = '';
   if (actionType === 'player_command') {
     summary = `Player command: "${actionId}"`;
@@ -373,9 +373,9 @@ export async function logCustomAction({ guildId, userId, username, displayName, 
   } else {
     summary = `Custom action: ${actionId}`;
   }
-  
+
   console.log(`🦁 Safari Logger: Calling logInteraction with action SAFARI_CUSTOM_ACTION`);
-  
+
   await logInteraction(
     userId,
     guildId,
@@ -389,7 +389,98 @@ export async function logCustomAction({ guildId, userId, username, displayName, 
     safariContent
   );
 
-  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.action, summary, { loc: location });
+  // Build rich activity entry description
+  const activityDesc = await _buildActionActivityDesc(guildId, actionType, actionId, buttonLabel, buttonEmoji, executedActions);
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.action, activityDesc, { loc: location });
+}
+
+/**
+ * Build a rich description for action activity entries.
+ * Includes button label/emoji and summarizes executed actions.
+ */
+async function _buildActionActivityDesc(guildId, actionType, actionId, buttonLabel, buttonEmoji, executedActions) {
+  // Header line: button label with emoji, or fallback to ID
+  let header;
+  if (actionType === 'player_command') {
+    header = `Command: "${actionId}"`;
+  } else if (buttonLabel) {
+    header = `${buttonEmoji ? buttonEmoji + ' ' : ''}${buttonLabel}`;
+  } else {
+    header = `Button: ${actionId}`;
+  }
+
+  if (!executedActions || executedActions.length === 0) return header;
+
+  // Resolve item names for give_item actions
+  let resolveItemName;
+  try {
+    const { loadEntity } = await import('./entityManager.js');
+    resolveItemName = async (itemId) => {
+      try {
+        const item = await loadEntity(guildId, 'item', itemId);
+        return { name: item?.name || itemId, emoji: item?.emoji || '📦' };
+      } catch { return { name: itemId, emoji: '📦' }; }
+    };
+  } catch {
+    resolveItemName = async (id) => ({ name: id, emoji: '📦' });
+  }
+
+  // Summarize each action as a bullet point
+  const details = [];
+  for (const action of executedActions) {
+    const cfg = action.config || {};
+    switch (action.type) {
+      case 'display_text': {
+        const text = cfg.text || cfg.content || '';
+        const preview = text.length > 60 ? text.slice(0, 57) + '...' : text;
+        if (preview) details.push(`Text: "${preview}"`);
+        break;
+      }
+      case 'give_item': {
+        const { name, emoji } = await resolveItemName(cfg.itemId);
+        const qty = cfg.quantity || 1;
+        details.push(`Give Item: ${emoji} ${name} (x${qty})`);
+        break;
+      }
+      case 'give_currency': {
+        const amt = cfg.amount || 0;
+        details.push(`Currency: ${amt > 0 ? '+' : ''}${amt}`);
+        break;
+      }
+      case 'move_player': {
+        const dest = cfg.destination || cfg.coordinate || '?';
+        details.push(`Move: → ${dest}`);
+        break;
+      }
+      case 'modify_points': {
+        const pts = cfg.amount || cfg.points || 0;
+        const entity = cfg.entityId || cfg.pointsId || '?';
+        details.push(`Points: ${pts > 0 ? '+' : ''}${pts} (${entity})`);
+        break;
+      }
+      case 'follow_up_button':
+      case 'follow_up': {
+        details.push(`Follow-up button`);
+        break;
+      }
+      case 'store_display': {
+        details.push(`Store: ${cfg.storeId || '?'}`);
+        break;
+      }
+      case 'random_outcome': {
+        details.push(`Random outcome`);
+        break;
+      }
+      case 'conditional': {
+        details.push(`Conditional check`);
+        break;
+      }
+      // Skip unknown types silently
+    }
+  }
+
+  if (details.length === 0) return header;
+  return `${header}\n${details.map(d => `> • ${d}`).join('\n')}`;
 }
 
 /**
