@@ -1054,7 +1054,11 @@ export function handleEditInfoModal(req, res, client, custom_id) {
   const castlistId = custom_id.replace('castlist_edit_info_modal_', '');
   const components = req.body.data.components;
 
-  // Don't use ButtonHandlerFactory for modal submissions - handle directly
+  const token = req.body.token;
+
+  // Defer immediately — tribe operations involve REST calls that can exceed 3s
+  res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+
   return (async () => {
     try {
       const guildId = req.body.guild_id;
@@ -1076,24 +1080,21 @@ export function handleEditInfoModal(req, res, client, custom_id) {
             fields.name = innerComp.value?.trim();
           } else if (innerComp.custom_id === 'castlist_emoji') {
             fields.emoji = innerComp.value?.trim() || '📋';
-          } else if (innerComp.custom_id === 'castlist_description') {
-            fields.description = innerComp.value?.trim() || '';
           } else if (innerComp.custom_id === 'sort_strategy') {
-            // Extract sort strategy selection (String Select)
             const selectedValues = innerComp.values || [];
             if (selectedValues.length > 0) {
               fields.sortStrategy = selectedValues[0];
             }
           } else if (innerComp.custom_id === 'season_id') {
-            // Extract season selection (String Select)
             const selectedValues = innerComp.values || [];
-
             if (selectedValues.length === 0) {
-              // User deselected all (min_values: 0)
               fields.seasonId = 'none';
             } else {
-              fields.seasonId = selectedValues[0]; // "none" or actual config ID
+              fields.seasonId = selectedValues[0];
             }
+          } else if (innerComp.custom_id === 'tribe_roles') {
+            // Role Select returns values array of role IDs
+            fields.tribeRoleIds = innerComp.values || [];
           }
         }
       });
@@ -1102,8 +1103,7 @@ export function handleEditInfoModal(req, res, client, custom_id) {
       const updates = {
         name: fields.name,
         metadata: {
-          emoji: fields.emoji,
-          description: fields.description
+          emoji: fields.emoji
         },
         modifiedBy: userId
       };
@@ -1117,38 +1117,67 @@ export function handleEditInfoModal(req, res, client, custom_id) {
 
       // Handle season association
       if (fields.seasonId === 'none') {
-        // User selected "No Season" - remove association (uses placements.global)
         updates.seasonId = null;
       } else if (fields.seasonId) {
-        // User selected a season
         updates.seasonId = fields.seasonId;
       }
-      // If fields.seasonId is undefined, season field wasn't in modal (shouldn't happen)
 
-      // Update the castlist
+      // Update castlist metadata FIRST (tribe operations may read castlist name)
       await castlistManager.updateCastlist(guildId, castlistId, updates);
-
       console.log(`✅ Updated castlist ${castlistId}: name="${fields.name}", emoji="${fields.emoji}", seasonId=${fields.seasonId || 'unchanged'}`);
 
-      // Refresh the UI with the castlist still selected
-      const hubData = await createCastlistHub(guildId, {
+      // Process tribe Role Select — same toggle logic as handleCastlistTribeSelect
+      if (fields.tribeRoleIds !== undefined) {
+        const previouslySelectedRoles = await castlistManager.getTribesUsingCastlist(guildId, castlistId);
+        const newlySelectedRoles = fields.tribeRoleIds;
+
+        const addedRoles = newlySelectedRoles.filter(r => !previouslySelectedRoles.includes(r));
+        const removedRoles = previouslySelectedRoles.filter(r => !newlySelectedRoles.includes(r));
+
+        console.log(`[CASTLIST] Tribe changes via edit modal — Added: ${addedRoles.length}, Removed: ${removedRoles.length}`);
+
+        if (addedRoles.length > 0 || removedRoles.length > 0) {
+          const guild = await client.guilds.fetch(guildId);
+
+          for (const roleId of addedRoles) {
+            const playerData = await loadPlayerData();
+            if (!playerData[guildId]) playerData[guildId] = {};
+            if (!playerData[guildId].tribes) playerData[guildId].tribes = {};
+
+            const role = await guild.roles.fetch(roleId);
+            const castlist = await castlistManager.getCastlist(guildId, castlistId);
+            const castlistName = castlist?.name || 'default';
+
+            const existingTribe = playerData[guildId].tribes[roleId] || {};
+            playerData[guildId].tribes[roleId] = populateTribeData(
+              existingTribe, role, castlistId, castlistName
+            );
+            await savePlayerData(playerData);
+
+            await castlistManager.linkTribeToCastlist(guildId, roleId, castlistId);
+            console.log(`[CASTLIST] ✅ Added tribe ${role.name} (${roleId}) via edit modal`);
+          }
+
+          for (const roleId of removedRoles) {
+            await castlistManager.unlinkTribeFromCastlist(guildId, roleId, castlistId);
+            console.log(`[CASTLIST] ✅ Removed tribe ${roleId} via edit modal`);
+          }
+        }
+      }
+
+      // Two-phase response: fast hub then full member data
+      await twoPhaseHubResponse(token, guildId, {
         selectedCastlistId: castlistId
       }, client);
 
-      // Send UPDATE_MESSAGE response to keep the container open
-      return res.send({
-        type: 7, // InteractionResponseType.UPDATE_MESSAGE
-        data: hubData
-      });
-
     } catch (error) {
       console.error('Error updating castlist info:', error);
-      return res.send({
-        type: 4, // InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE
-        data: {
-          content: '❌ Error updating castlist info',
-          flags: 64 // EPHEMERAL
-        }
+      const { updateDeferredResponse } = await import('./buttonHandlerFactory.js');
+      await updateDeferredResponse(token, {
+        components: [{
+          type: 17,
+          components: [{ type: 10, content: '❌ Error updating castlist info. Please try again.' }]
+        }]
       });
     }
   })();
