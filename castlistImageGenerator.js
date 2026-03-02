@@ -452,16 +452,12 @@ export async function getCastlistSelectOptions(guildId) {
   const options = [];
 
   for (const [id, castlist] of allCastlists) {
-    const emoji = castlist.metadata?.emoji || '📋';
     const label = castlist.name || id;
-    // Strip emoji from label for the select menu (Discord handles emoji separately)
-    const cleanLabel = stripEmoji(label) || label;
 
     options.push({
-      label: cleanLabel.substring(0, 100),
+      label: label.substring(0, 100),
       value: id,
-      description: `${castlist.type || 'custom'} castlist`.substring(0, 100),
-      emoji: { name: stripEmoji(emoji) || '📋' }
+      description: `${castlist.type || 'custom'} castlist`.substring(0, 100)
     });
   }
 

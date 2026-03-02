@@ -11679,101 +11679,66 @@
     "players": {
       "391415444084490240": {
         "safari": {
-          "currency": 122,
+          "currency": 100,
           "history": [
             {
-              "t": 1772445349486,
-              "type": "item",
-              "desc": "Picked up <:materia:1452959371125461133> Cure Materia x1",
-              "loc": "Unknown"
+              "t": 1772457415996,
+              "type": "init",
+              "desc": "Initialized at A1 with +100 Gil (total: 100)",
+              "loc": "A1"
             },
             {
-              "t": 1772445356931,
-              "type": "currency",
-              "desc": "Gained 22 Gil from Button: open_chest_1769236333633",
-              "loc": "Unknown"
+              "t": 1772457428175,
+              "type": "movement",
+              "desc": "Moved from A1 to B2"
             },
             {
-              "t": 1772445363859,
-              "type": "item",
-              "desc": "Picked up 🧪 Health Potion x1",
-              "loc": "Unknown"
-            },
-            {
-              "t": 1772447617447,
-              "type": "item",
-              "desc": "Picked up <:materia:1452959371125461133> Thunder Materia x1",
-              "loc": "Unknown"
-            },
-            {
-              "t": 1772447617447,
-              "type": "action",
-              "desc": "<:ff_chest:1462821702278058055> Open Chest\n> • Text: \"...  it makes a loud creaking sound. You look inside..\"\n> • Give Item: <:materia:1452959371125461133> Thunder Materia (x1)",
-              "loc": "C3"
+              "t": 1772457437659,
+              "type": "movement",
+              "desc": "Moved from B2 to B3"
             }
           ],
-          "lastInteraction": 1772445354916,
+          "lastInteraction": 1772457415994,
           "achievements": [],
-          "inventory": {
-            "super_item_830267": {
-              "quantity": 2,
-              "numAttacksAvailable": 0
-            },
-            "moi_item_439110": {
-              "quantity": 3,
-              "numAttacksAvailable": 0
-            },
-            "cure_materia_748340": {
-              "quantity": 1,
-              "numAttacksAvailable": 0
-            },
-            "health_potion_759053": {
-              "quantity": 1,
-              "numAttacksAvailable": 0
-            },
-            "thunder_materia_704996": {
-              "quantity": 1,
-              "numAttacksAvailable": 0
-            }
-          },
+          "inventory": {},
           "cooldowns": {},
           "buttonUses": {},
           "storeHistory": [],
           "mapProgress": {
-            "map_10x10_1767691001476": {
-              "currentLocation": "C2",
+            "map_10x10_1772437113475": {
+              "currentLocation": "B4",
               "exploredCoordinates": [
                 "A1",
                 "B2",
-                "C3",
-                "C2"
+                "B3",
+                "B4"
               ],
               "itemsFound": [],
               "movementHistory": [
                 {
                   "from": null,
                   "to": "A1",
-                  "timestamp": "2026-01-06T09:30:57.295Z"
+                  "timestamp": "2026-03-02T13:16:55.995Z"
                 },
                 {
                   "from": "A1",
                   "to": "A1",
-                  "timestamp": "2026-01-06T09:30:57.336Z"
+                  "timestamp": "2026-03-02T13:16:56.041Z"
                 },
                 {
                   "from": "A1",
                   "to": "B2",
-                  "timestamp": "2026-01-06T09:31:07.454Z"
+                  "timestamp": "2026-03-02T13:17:04.684Z"
                 },
                 {
                   "from": "B2",
-                  "to": "C3",
-                  "timestamp": "2026-01-06T09:31:18.285Z"
+                  "to": "B3",
+                  "timestamp": "2026-03-02T13:17:14.176Z"
                 },
                 {
-                  "from": "C3",
-                  "to": "C2",
-                  "timestamp": "2026-01-06T09:31:30.528Z"
+                  "from": "B3",
+                  "to": "B4",
+                  "timestamp": "2026-03-02T13:17:23.824Z"
                 }
               ]
             }
@@ -11781,8 +11746,8 @@
           "points": {
             "stamina": {
               "current": 3,
-              "maximum": 3,
-              "lastRegeneration": "2026-01-06T09:30:57.294Z",
+              "maximum": 1,
+              "lastRegeneration": "2026-03-02T13:16:55.995Z",
               "regenConfig": "hourly"
             }
           }
@@ -11832,6 +11797,11 @@
               "type": "action",
               "desc": "<:ff_chest:1462821702278058055> Open Chest\n> • Text: \"...  it makes a loud creaking sound. You look inside..\"\n> • Give Item: <:materia:1452959371125461133> Thunder Materia (x1)",
               "loc": "C3"
+            },
+            {
+              "t": 1772456669837,
+              "type": "movement",
+              "desc": "Moved from C3 to D3"
             }
           ],
           "mapProgress": {
