@@ -30767,7 +30767,7 @@ Are you sure you want to continue?`;
             // Log admin activity before de-initialization (player data will be destroyed)
             try {
               const { addActivityEntryAndSave, ACTIVITY_TYPES } = await import('./activityLogger.js');
-              await addActivityEntryAndSave(context.guildId, targetUserId, ACTIVITY_TYPES.admin, `[ADMIN] Player de-initialized`);
+              addActivityEntryAndSave(context.guildId, targetUserId, ACTIVITY_TYPES.admin, `[ADMIN] Player de-initialized`);
             } catch (e) { console.error('Activity log error:', e); }
 
             // Execute de-initialization

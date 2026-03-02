@@ -11,6 +11,22 @@ const requestCache = new Map();
 let cacheHits = 0;
 let cacheMisses = 0;
 
+// Write mutex — prevents concurrent saves from corrupting the .tmp file
+let _saveQueue = Promise.resolve();
+
+/**
+ * Wrap a load-modify-save cycle so only one runs at a time.
+ * Subsequent callers wait for the previous save to finish, then run with fresh data.
+ * @param {Function} fn - async function receiving no args, expected to load/save internally
+ */
+export function withStorageLock(fn) {
+    let resolve;
+    const next = new Promise(r => { resolve = r; });
+    const prev = _saveQueue;
+    _saveQueue = next;
+    return prev.then(fn).finally(resolve);
+}
+
 // Clear the request cache (called at start of each Discord interaction)
 export function clearRequestCache() {
     if (requestCache.size > 0) {
@@ -154,6 +170,11 @@ export async function loadPlayerData(guildId, { forceFresh = false } = {}) {
 }
 
 export async function savePlayerData(data) {
+    // Serialize file I/O through the write mutex to prevent concurrent .tmp file races
+    return withStorageLock(() => _savePlayerDataUnsafe(data));
+}
+
+async function _savePlayerDataUnsafe(data) {
     // PRIORITY 1: Add 7 layers of safety to prevent data loss
 
     // 1. SIZE VALIDATION - Refuse if suspiciously small

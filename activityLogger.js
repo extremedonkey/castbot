@@ -10,6 +10,7 @@ import { loadPlayerData, savePlayerData } from './storage.js';
 
 const MAX_ENTRIES = 200;
 const DEFAULT_PAGE_SIZE = 15;
+const FLUSH_DELAY_MS = 2000; // Batch activity entries, flush every 2s
 
 export const ACTIVITY_TYPES = {
   purchase: 'purchase',
@@ -84,17 +85,44 @@ export function addActivityEntry(playerData, guildId, userId, type, desc, opts =
   }
 }
 
+// --- Batched write queue ---
+// Activity entries are queued and flushed in a single load-modify-save cycle
+// to avoid racing with other saves (which corrupts playerData.json).
+
+let _pendingEntries = [];
+let _flushTimer = null;
+
+async function _flushActivityEntries() {
+  _flushTimer = null;
+  if (_pendingEntries.length === 0) return;
+
+  const batch = _pendingEntries;
+  _pendingEntries = [];
+
+  try {
+    // savePlayerData already uses the storage write mutex internally,
+    // so no need for withStorageLock here — just load fresh data and save.
+    const playerData = await loadPlayerData();
+    for (const { guildId, userId, type, desc, opts } of batch) {
+      addActivityEntry(playerData, guildId, userId, type, desc, opts);
+    }
+    await savePlayerData(playerData);
+    console.log(`📝 Activity log: flushed ${batch.length} entries`);
+  } catch (error) {
+    console.error(`Activity log flush error (${batch.length} entries): ${error.message}`);
+  }
+}
+
 /**
- * Convenience wrapper: loads playerData, adds entry, saves.
+ * Queue an activity entry for batched save.
+ * Entries are flushed after a short delay to avoid racing with other saves.
  * Use this from safariLogger hooks where playerData isn't already loaded.
  */
-export async function addActivityEntryAndSave(guildId, userId, type, desc, opts = {}) {
-  try {
-    const playerData = await loadPlayerData();
-    addActivityEntry(playerData, guildId, userId, type, desc, opts);
-    await savePlayerData(playerData);
-  } catch (error) {
-    console.error(`Activity log error (${type}): ${error.message}`);
+export function addActivityEntryAndSave(guildId, userId, type, desc, opts = {}) {
+  _pendingEntries.push({ guildId, userId, type, desc, opts });
+
+  if (!_flushTimer) {
+    _flushTimer = setTimeout(_flushActivityEntries, FLUSH_DELAY_MS);
   }
 }
 
