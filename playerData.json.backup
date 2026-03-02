@@ -1112,6 +1112,12 @@
               "t": 1772431214237,
               "type": "movement",
               "desc": "Moved from B3 to B2"
+            },
+            {
+              "t": 1772431296371,
+              "type": "action",
+              "desc": "Safari button: simple_action_2_290229",
+              "loc": "B2"
             }
           ],
           "inventory": {
@@ -1124,7 +1130,7 @@
             "nest_guardian_461600": 1,
             "raider_499497": 1,
             "bait_530852": {
-              "quantity": 1,
+              "quantity": 2,
               "numAttacksAvailable": 0
             }
           },

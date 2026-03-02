@@ -1380,8 +1380,8 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.GuildMessageReactions,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.GuildMessageReactions
+    // GatewayIntentBits.MessageContent  // TESTING REMOVAL - not approved by Discord, bot doesn't use it
   ],
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
   // Cache limits: Only limit MessageManager to prevent unbounded message cache growth
