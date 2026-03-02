@@ -315,9 +315,11 @@ export async function generateCastlistImage(guildId, castlistIdentifier, client)
   const pronounRoleIds = await getGuildPronouns(guildId);
   const timezones = await getGuildTimezones(guildId);
 
-  // Get castlist name for title
+  // Get castlist name for title (use just "Castlist" for default)
   const castlistEntity = await castlistManager.getCastlist(guildId, castlistIdentifier);
-  const castlistName = castlistEntity?.name || 'Castlist';
+  const castlistName = (castlistEntity?.id === 'default' || castlistIdentifier === 'default')
+    ? 'Castlist'
+    : (castlistEntity?.name || 'Castlist');
 
   // ── 2. Collect player data + fetch avatars concurrently per tribe ──────
   const tribeDataList = [];

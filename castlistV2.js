@@ -821,6 +821,15 @@ function createCastlistRows(allCastlists, includeAddButton = true, hasStores = f
         );
     }
 
+    // Compact Castlist button (generates PNG image)
+    castlistButtons.push(
+        new ButtonBuilder()
+            .setCustomId('compact_castlist_default')
+            .setLabel('Compact Castlist')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🍒')
+    );
+
     // Get castlist array (filter out default)
     const castlistArray = [...allCastlists.values()].filter(c => c.id !== 'default');
 

@@ -1881,14 +1881,34 @@
         "memberCount": 14
       },
       "1478035086111936773": {
-        "castlistIds": [
-          "default"
-        ],
-        "castlist": "default",
         "color": "#E74C3C",
         "analyticsName": "The BALBOA Tribe",
         "analyticsAdded": 1772461425291,
         "emoji": "🌲",
+        "showPlayerEmojis": true,
+        "memberCount": 0
+      },
+      "1478035803459551358": {
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "default",
+        "color": "#2ECC71",
+        "analyticsName": "The Balboa Tribe",
+        "analyticsAdded": 1772461596639,
+        "emoji": "🌲",
+        "showPlayerEmojis": true,
+        "memberCount": 0
+      },
+      "1478036120171319306": {
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "default",
+        "color": "#111111",
+        "analyticsName": "The Rock Tribe",
+        "analyticsAdded": 1772461672117,
+        "emoji": "🪨",
         "showPlayerEmojis": true,
         "memberCount": 0
       }
@@ -2892,7 +2912,7 @@
           "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
           "isDefault": true
         },
-        "modifiedAt": 1772461290345,
+        "modifiedAt": 1772461749321,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },

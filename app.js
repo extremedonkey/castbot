@@ -736,9 +736,9 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Extract castlist data using Virtual Adapter pattern for modern entities
   const { allCastlists } = await extractCastlistData(playerData, guildId);
 
-  // Limit to 4 custom castlists to prevent Discord 40-component limit
+  // Limit to 3 custom castlists (+ default + compact = 5 buttons max per row)
   const { limitAndSortCastlists } = await import('./castlistV2.js');
-  const limitedCastlists = limitAndSortCastlists(allCastlists, 4);
+  const limitedCastlists = limitAndSortCastlists(allCastlists, 3);
 
   // Create castlist rows with metadata display (sort strategy, emoji, description)
   // Pass preSorted=true to preserve timestamp-based sort order from limitAndSortCastlists
