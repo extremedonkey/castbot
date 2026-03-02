@@ -7,6 +7,22 @@ import { logInteraction } from './src/analytics/analyticsLogger.js';
 import { addActivityEntryAndSave, ACTIVITY_TYPES } from './activityLogger.js';
 
 /**
+ * Format an emoji for Discord text display.
+ * Handles: objects { name, id }, full strings "<:name:id>", shorthand ":name:", unicode "🎯"
+ */
+function formatEmojiForText(emoji) {
+  if (!emoji) return '';
+  if (typeof emoji === 'object') {
+    if (emoji.id) {
+      return emoji.animated ? `<a:${emoji.name}:${emoji.id}>` : `<:${emoji.name}:${emoji.id}>`;
+    }
+    return emoji.name || '';
+  }
+  // Already a string — return as-is (handles "<:name:id>" and unicode)
+  return emoji;
+}
+
+/**
  * Log a whisper between players
  * @param {Object} params - Whisper parameters
  * @param {string} params.guildId - Guild ID
@@ -86,7 +102,7 @@ export async function logItemPickup({ guildId, userId, username, displayName, lo
     safariContent
   );
 
-  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.item, `Picked up ${itemEmoji || '📦'} ${itemName} x${quantity}`, { loc: location });
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.item, `Picked up ${formatEmojiForText(itemEmoji) || '📦'} ${itemName} x${quantity}`, { loc: location });
 }
 
 /**
@@ -172,7 +188,7 @@ export async function logStorePurchase({ guildId, userId, username, displayName,
     safariContent
   );
 
-  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.purchase, `Bought ${itemEmoji || '📦'} ${itemName} x${quantity} for ${price} ${currencyName}`, { loc: location });
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.purchase, `Bought ${formatEmojiForText(itemEmoji) || '📦'} ${itemName} x${quantity} for ${price} ${currencyName}`, { loc: location });
 }
 
 /**
@@ -404,7 +420,8 @@ async function _buildActionActivityDesc(guildId, actionType, actionId, buttonLab
   if (actionType === 'player_command') {
     header = `Command: "${actionId}"`;
   } else if (buttonLabel) {
-    header = `${buttonEmoji ? buttonEmoji + ' ' : ''}${buttonLabel}`;
+    const emojiStr = formatEmojiForText(buttonEmoji);
+    header = `${emojiStr ? emojiStr + ' ' : ''}${buttonLabel}`;
   } else {
     header = `Button: ${actionId}`;
   }
@@ -439,7 +456,7 @@ async function _buildActionActivityDesc(guildId, actionType, actionId, buttonLab
       case 'give_item': {
         const { name, emoji } = await resolveItemName(cfg.itemId);
         const qty = cfg.quantity || 1;
-        details.push(`Give Item: ${emoji} ${name} (x${qty})`);
+        details.push(`Give Item: ${formatEmojiForText(emoji)} ${name} (x${qty})`);
         break;
       }
       case 'give_currency': {
