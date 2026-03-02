@@ -253,9 +253,17 @@ export async function deinitializePlayer(guildId, userId, client = null) {
     // Remove Safari data from player
     delete playerData[guildId].players[userId].safari;
 
-    // Restore starting location if it existed
+    // Restore starting location if it existed (with complete safari structure to avoid missing-field warnings)
     if (preservedStartingLocation && activeMapId) {
       playerData[guildId].players[userId].safari = {
+        currency: 0,
+        history: [],
+        lastInteraction: Date.now(),
+        achievements: [],
+        inventory: {},
+        cooldowns: {},
+        buttonUses: {},
+        storeHistory: [],
         mapProgress: {
           [activeMapId]: { startingLocation: preservedStartingLocation }
         }
