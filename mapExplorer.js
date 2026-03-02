@@ -648,46 +648,62 @@ async function deleteMapGrid(guild) {
     
     let progressMessages = [];
     progressMessages.push('🗑️ Starting map deletion...');
-    
-    // Delete channels and category
-    if (mapData.category) {
+
+    // Collect all category IDs to delete (supports multi-category maps)
+    const categoryIds = [];
+    if (mapData.categories && mapData.categories.length > 0) {
+      categoryIds.push(...mapData.categories);
+    } else if (mapData.category) {
+      categoryIds.push(mapData.category);
+    }
+
+    // Delete channels from ALL categories using API fetch (not cache)
+    let totalDeletedChannels = 0;
+    for (const categoryId of categoryIds) {
       try {
-        const category = await guild.channels.fetch(mapData.category);
-        if (category) {
-          progressMessages.push(`📁 Found category: ${category.name}`);
-          
-          // Get all channels in the category
-          const channelsInCategory = guild.channels.cache.filter(ch => ch.parentId === category.id);
-          progressMessages.push(`📍 Found ${channelsInCategory.size} channels to delete`);
-          
-          // Delete channels with rate limiting
-          let deletedCount = 0;
-          for (const [channelId, channel] of channelsInCategory) {
-            try {
-              await channel.delete('Map deletion');
-              deletedCount++;
-              console.log(`Deleted channel: ${channel.name} (${deletedCount}/${channelsInCategory.size})`);
-              
-              // Rate limiting: pause every 5 deletions
-              if (deletedCount % 5 === 0) {
-                progressMessages.push(`⏳ Deleted ${deletedCount}/${channelsInCategory.size} channels...`);
-                await new Promise(resolve => setTimeout(resolve, 2000));
-              }
-            } catch (error) {
-              console.error(`Failed to delete channel ${channel.name}:`, error);
-            }
-          }
-          
-          progressMessages.push(`✅ Deleted ${deletedCount} channels`);
-          
-          // Delete the category
-          await category.delete('Map deletion');
-          progressMessages.push('✅ Deleted map category');
+        const category = await guild.channels.fetch(categoryId).catch(() => null);
+        if (!category) {
+          progressMessages.push(`⚠️ Category ${categoryId} not found (already deleted?)`);
+          continue;
         }
+        progressMessages.push(`📁 Found category: ${category.name}`);
+
+        // Fetch ALL channels from API (not cache — cache only holds ~50)
+        const allChannels = await guild.channels.fetch();
+        const channelsInCategory = allChannels.filter(ch => ch && ch.parentId === categoryId);
+        progressMessages.push(`📍 Found ${channelsInCategory.size} channels in ${category.name}`);
+
+        // Delete channels with rate limiting
+        let deletedCount = 0;
+        for (const [channelId, channel] of channelsInCategory) {
+          try {
+            await channel.delete('Map deletion');
+            deletedCount++;
+            totalDeletedChannels++;
+            console.log(`Deleted channel: ${channel.name} (${deletedCount}/${channelsInCategory.size})`);
+
+            // Rate limiting: pause every 5 deletions
+            if (deletedCount % 5 === 0) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+          } catch (error) {
+            console.error(`Failed to delete channel ${channel.name}:`, error);
+          }
+        }
+
+        progressMessages.push(`✅ Deleted ${deletedCount} channels from ${category.name}`);
+
+        // Delete the category itself
+        await category.delete('Map deletion');
+        progressMessages.push(`✅ Deleted category: ${category.name}`);
       } catch (error) {
-        console.error('Error deleting channels/category:', error);
-        progressMessages.push(`⚠️ Error deleting channels: ${error.message}`);
+        console.error(`Error deleting category ${categoryId}:`, error);
+        progressMessages.push(`⚠️ Error deleting category: ${error.message}`);
       }
+    }
+
+    if (totalDeletedChannels > 0) {
+      progressMessages.push(`✅ Total: ${totalDeletedChannels} channels deleted across ${categoryIds.length} categories`);
     }
     
     // Delete map image file (but keep the base map.png)

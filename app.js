@@ -27384,10 +27384,11 @@ Your server is now ready for Tycoons gameplay!`;
       const mapData = safariData[guildId]?.maps?.[activeMapId];
       
       let isInMapChannel = false;
-      if (mapData?.category) {
-        // Check if current channel is in the map category
+      if (mapData) {
+        // Check if current channel is in any map category
+        const allCategoryIds = mapData.categories?.length > 0 ? mapData.categories : (mapData.category ? [mapData.category] : []);
         const channel = await client.channels.fetch(channelId).catch(() => null);
-        isInMapChannel = channel && channel.parentId === mapData.category;
+        isInMapChannel = channel && allCategoryIds.includes(channel.parentId);
       }
       
       // Handle confirmed map deletion - updates the confirmation message (removes delete button)
@@ -27400,6 +27401,15 @@ Your server is now ready for Tycoons gameplay!`;
         deferred: !isInMapChannel,
         handler: async (context) => {
           console.log(`🗑️ START: map_delete_confirm - user ${context.userId}, channel ${context.channelId}, isInMapChannel: ${isInMapChannel}`);
+
+          // Helper: wrap result text in Components V2 container (confirmation was V2, can't downgrade)
+          const wrapResult = (text) => ({
+            components: [{
+              type: 17, // Container
+              accent_color: 0x27ae60, // Green - success
+              components: [{ type: 10, content: text }]
+            }]
+          });
 
           if (isInMapChannel) {
             // If we're in a map channel, send immediate response before deletion
@@ -27415,9 +27425,7 @@ Your server is now ready for Tycoons gameplay!`;
               }
             }, 1000); // 1 second delay to ensure response is sent
 
-            return {
-              content: '🗑️ **Map deletion initiated!**\n\nThis channel will be deleted momentarily...'
-            };
+            return wrapResult('🗑️ **Map deletion initiated!**\n\nThis channel will be deleted momentarily...');
           } else {
             // Not in a map channel, proceed normally with deferred response
             const guild = await context.client.guilds.fetch(context.guildId);
@@ -27426,9 +27434,7 @@ Your server is now ready for Tycoons gameplay!`;
 
             console.log(`✅ SUCCESS: map_delete_confirm - deletion completed`);
 
-            return {
-              content: result.message
-            };
+            return wrapResult(result.message);
           }
         }
       })(req, res, client);
