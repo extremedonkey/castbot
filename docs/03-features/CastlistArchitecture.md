@@ -402,7 +402,7 @@ function getGuildTribes(guildId, castlistName) {
 - [ButtonHandlerFactory.md](../enablers/ButtonHandlerFactory.md) - Button implementation
 
 ### Migration & Analysis
-- [RaP/0978](../../RaP/0978_20251115_CastlistArchitecture_AuditReport.md) - Architecture audit
+- [RaP/0978](../../01-RaP/0978_20251115_CastlistArchitecture_AuditReport.md) - Architecture audit
 - [DataArchitecture.md](DataArchitecture.md) - Legacy data structures
 
 ## Castlist Ordering Logic

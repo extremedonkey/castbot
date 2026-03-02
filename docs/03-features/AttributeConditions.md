@@ -5,7 +5,7 @@
 Attribute Conditions allow Custom Actions to check player attributes (HP, Mana, Strength, etc.) before executing actions. This enables RPG-style gating like "requires 20 Mana to cast spell" or "only works when HP is below 50%".
 
 **Prerequisites**:
-- Attributes must be defined via Tools → Attributes (see [Attribute System](../../RaP/0964_20260109_AttributeSystem_Analysis.md))
+- Attributes must be defined via Tools → Attributes (see [Attribute System](../../01-RaP/0964_20260109_AttributeSystem_Analysis.md))
 - Custom Actions feature enabled
 
 ---
@@ -346,10 +346,10 @@ Triggers fire automatically when attribute values cross thresholds. Unlike condi
 
 ## Related Documentation
 
-- [Attribute System Analysis](../../RaP/0964_20260109_AttributeSystem_Analysis.md) - Full attribute system design
+- [Attribute System Analysis](../../01-RaP/0964_20260109_AttributeSystem_Analysis.md) - Full attribute system design
 - [Safari Custom Actions](./SafariCustomActions.md) - Custom Actions framework
 - [Safari Points](./Attributes.md) - Points/stamina system
-- [Advanced Attribute Conditions Analysis](../../RaP/0960_20260113_AttributeConditions_Analysis.md) - Design document
+- [Advanced Attribute Conditions Analysis](../../01-RaP/0960_20260113_AttributeConditions_Analysis.md) - Design document
 
 ---
 

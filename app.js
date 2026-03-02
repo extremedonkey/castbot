@@ -12536,7 +12536,7 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'safari_log_channel_select',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
-        updateMessage: true,
+        ephemeral: true,
         handler: async (context) => {
           console.log(`📝 DEBUG: User ${context.userId} selecting Safari Log channel for guild ${context.guildId}`);
           

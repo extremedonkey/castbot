@@ -159,7 +159,7 @@ Modifies player attributes (HP, Mana, Strength, etc.).
 - Display mode (silent or feedback)
 - Usage limits
 
-See [Attribute System](../../RaP/0964_20260109_AttributeSystem_Analysis.md) for details.
+See [Attribute System](../../01-RaP/0964_20260109_AttributeSystem_Analysis.md) for details.
 
 ---
 

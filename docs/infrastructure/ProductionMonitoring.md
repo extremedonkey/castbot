@@ -102,7 +102,7 @@ await channel.send({components: [actionRow]});
 
 ### Related Documentation
 
-- **RaP #0998**: [Scheduling Architecture Analysis](../RaP/0998_20250927_Scheduling_Architecture_Analysis.md)
+- **RaP #0998**: [Scheduling Architecture Analysis](../01-RaP/0998_20250927_Scheduling_Architecture_Analysis.md)
 - **Components V2**: [Components V2 Standards](../standards/ComponentsV2.md)
 - **Button Patterns**: [ButtonHandlerFactory](../enablers/ButtonHandlerFactory.md)
 

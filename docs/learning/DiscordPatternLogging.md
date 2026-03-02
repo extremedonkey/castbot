@@ -693,7 +693,7 @@ Action → Event published → Subscribers notified
 - **[DiscordInteractionAPI.md](../standards/DiscordInteractionAPI.md)** - Complete API reference
 - **[ButtonHandlerFactory.md](../enablers/ButtonHandlerFactory.md)** - Button patterns
 - **[ButtonInteractionLogging.md](../standards/ButtonInteractionLogging.md)** - Button logging details
-- **[RaP 0976](../../RaP/0976_20251116_Analytics_Nonblocking_Optimization.md)** - Why timing matters
+- **[RaP 0976](../../01-RaP/0976_20251116_Analytics_Nonblocking_Optimization.md)** - Why timing matters
 
 ---
 

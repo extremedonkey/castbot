@@ -87,4 +87,4 @@ Verified that:
 
 - [CastlistV3.md](../features/CastlistV3.md) - New placement system architecture
 - [CastlistSorterImplementation.md](../prompts/CastlistSorterImplementation.md) - Sorting implementation details
-- [RaP/0994](../../RaP/0994_20251005_CastlistSorting_Analysis.md) - Sorting system analysis
+- [RaP/0994](../../01-RaP/0994_20251005_CastlistSorting_Analysis.md) - Sorting system analysis

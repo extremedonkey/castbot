@@ -409,7 +409,7 @@ This change affects all servers using the "PST / PDT" role with the new DST syst
 ## Role Consolidation
 
 **Status:** ✅ Production-Ready (Deployed 2025-10-27)
-**Documentation:** [RaP 0985](../../RaP/0985_20251027_Timezone_Role_Consolidation_Technical_Design.md)
+**Documentation:** [RaP 0985](../../01-RaP/0985_20251027_Timezone_Role_Consolidation_Technical_Design.md)
 
 ### Overview
 

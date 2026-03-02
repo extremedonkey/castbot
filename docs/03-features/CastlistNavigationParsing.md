@@ -494,8 +494,8 @@ sequenceDiagram
 - **[000-editCastlistSeason.md](../../000-editCastlistSeason.md)** - Data structure reference
 
 ### Debugging & Analysis
-- **[RaP/0992](../../RaP/0992_20251005_CastlistNavigation_GetGuildTribes_Mismatch.md)** - The debugging session that identified these issues
-- **[RaP/0993](../../RaP/0993_20251005_CastlistNavigation_BrokenParsing.md)** - (Superseded) Initial incorrect diagnosis
+- **[RaP/0992](../../01-RaP/0992_20251005_CastlistNavigation_GetGuildTribes_Mismatch.md)** - The debugging session that identified these issues
+- **[RaP/0993](../../01-RaP/0993_20251005_CastlistNavigation_BrokenParsing.md)** - (Superseded) Initial incorrect diagnosis
 
 ### Technical Foundations
 - **[ButtonHandlerFactory.md](../enablers/ButtonHandlerFactory.md)** - Button creation patterns

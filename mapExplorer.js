@@ -1298,28 +1298,38 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
     // Create map category
     progressMessages.push('🏗️ Creating map category...');
     
-    // Upload map image to Discord and get CDN URL
-    progressMessages.push('📤 Uploading map image to Discord...');
-    const uploadResult = await uploadImageToDiscord(guild, outputPath, `${mapId}.png`);
-    const discordImageUrl = uploadResult.url || uploadResult; // Backwards compatibility
-    console.log(`📤 Map image uploaded to Discord CDN: ${discordImageUrl}`);
-    progressMessages.push('✅ Map image uploaded to Discord CDN');
-
-    // Post original pre-grid image to map-storage for reference/fallback
+    // Post original pre-grid image to map-storage FIRST (before grid image)
+    progressMessages.push('📤 Uploading images to Discord...');
     try {
       const { AttachmentBuilder } = await import('discord.js');
+      // Find or create storage channel (same logic as uploadImageToDiscord)
       let storageChannel = guild.channels.cache.find(ch => (ch.name === '🗺️map-storage' || ch.name === 'map-storage') && ch.type === 0);
-      if (storageChannel) {
-        const origAttachment = new AttachmentBuilder(imageBuffer, { name: `original_${Date.now()}.png` });
-        await storageChannel.send({
-          content: `🖼️ Original pre-map image for ${guild.name} (created ${new Date().toISOString().split('T')[0]})`,
-          files: [origAttachment]
-        });
-        progressMessages.push('🖼️ Original image saved to map-storage');
+      if (storageChannel && storageChannel.name === 'map-storage') {
+        try { await storageChannel.setName('🗺️map-storage'); } catch (e) { /* rate limited */ }
       }
+      if (!storageChannel) {
+        storageChannel = await guild.channels.create({
+          name: '🗺️map-storage',
+          type: 0,
+          topic: 'Storage for map images - do not delete',
+          permissionOverwrites: [{ id: guild.roles.everyone.id, deny: ['ViewChannel', 'SendMessages'] }]
+        });
+      }
+      const origAttachment = new AttachmentBuilder(imageBuffer, { name: `original_${Date.now()}.png` });
+      await storageChannel.send({
+        content: `🖼️ Original pre-map image for ${guild.name} (created ${new Date().toISOString().split('T')[0]})`,
+        files: [origAttachment]
+      });
+      progressMessages.push('🖼️ Original image saved to map-storage');
     } catch (e) {
       console.log(`⚠️ Could not post original image to storage: ${e.message}`);
     }
+
+    // Upload grid image to Discord (storage channel already exists)
+    const uploadResult = await uploadImageToDiscord(guild, outputPath, `${mapId}.png`);
+    const discordImageUrl = uploadResult.url || uploadResult;
+    console.log(`📤 Map image uploaded to Discord CDN: ${discordImageUrl}`);
+    progressMessages.push('✅ Grid map image uploaded to Discord CDN');
 
     const category = await guild.channels.create({
       name: '🗺️ Map Explorer',
@@ -1936,7 +1946,7 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     const gridH = activeMap.gridHeight || activeMap.gridSize || 7;
 
     let statusText;
-    if (pauseRatio > 0.75) {
+    if (pauseRatio >= 0.75) {
       statusText = '⏸️ Paused';
     } else if (pauseRatio > 0) {
       statusText = '⏯️ Some Players Paused';
@@ -1944,7 +1954,7 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
       statusText = '✅ Active';
     }
 
-    headerText = `# 🗺️ Map Explorer\n\n**Active Map:** ${guildName}\n**Grid Size:** ${gridW}x${gridH}\n**Status:** ${statusText}\n**Source Images (do not delete):** <#${activeMap.mapStorageChannelId || ''}>`;
+    headerText = `# 🗺️ Map Explorer\n\n**Active Map:** ${guildName}\n**Grid Size:** ${gridW}x${gridH}\n**Status:** ${statusText}\n**Source Images:** <#${activeMap.mapStorageChannelId || ''}> (don't delete!)`;
   } else {
     headerText = `# 🗺️ Map Explorer\n\n**No active map**\nCastBot will create a map, grid and channels for you - all you need to do is:\n1. Upload an image to any Discord channel\n2. Right click / long press the image\n3. Click **Copy Link** (computer) / **Copy Media Link** (phone)\n4. Click the **Create / Update Map** button below and paste it into the Discord Image URL text input.`;
   }

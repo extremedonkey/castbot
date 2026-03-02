@@ -157,7 +157,7 @@ async function createPlayerViewUI(guildId, userId) {
     const defaultItemCount = Object.values(items).filter(i => i?.metadata?.defaultItem === 'Yes').length;
 
     statusText += `💰 **Current ${customTerms.currencyName}:** ${safari.currency || 0} ${customTerms.currencyEmoji}\n`;
-    statusText += `💰 **Starting ${customTerms.currencyName}:** ${customTerms.defaultStartingCurrencyValue} ${customTerms.currencyEmoji}\n`;
+    statusText += `💰 **Starting ${customTerms.currencyName}:** +${customTerms.defaultStartingCurrencyValue} ${customTerms.currencyEmoji}\n`;
     statusText += `📦 **Items in ${customTerms.inventoryName}:** ${Object.keys(safari.inventory || {}).length}\n`;
     statusText += `📦 **Starting Items:** ${defaultItemCount}\n`;
     statusText += `🚩 **Starting Location:** ${startingLocationDisplay}\n`;

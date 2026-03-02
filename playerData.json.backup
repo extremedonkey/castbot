@@ -6623,209 +6623,7 @@
         "emojiCode": "<:ReeceBot:1396856819690766460>",
         "vanityRoles": [
           "1398904036643831818"
-        ],
-        "safari": {
-          "currency": 10382,
-          "history": [],
-          "lastInteraction": 1758949571427,
-          "achievements": [],
-          "inventory": {
-            "nurturer_361363": {
-              "quantity": 15,
-              "numAttacksAvailable": 15
-            },
-            "territory_forager_404120": 1,
-            "nest_guardian_461600": 1,
-            "raider_499497": {
-              "quantity": 1,
-              "numAttacksAvailable": 1
-            },
-            "lance_of_ruin_627670": {
-              "quantity": 2,
-              "numAttacksAvailable": 0
-            },
-            "dupe99_263476": {
-              "quantity": 22,
-              "numAttacksAvailable": 0
-            },
-            "bait_530852": {
-              "quantity": 4,
-              "numAttacksAvailable": 0
-            }
-          },
-          "cooldowns": {},
-          "buttonUses": {},
-          "storeHistory": [
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1757693950304
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758028371006
-            },
-            {
-              "itemId": "territory_forager_404120",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758028409849
-            },
-            {
-              "itemId": "territory_forager_404120",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758028413325
-            },
-            {
-              "itemId": "territory_forager_404120",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758028416611
-            },
-            {
-              "itemId": "territory_forager_404120",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758029284150
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758036850666
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758036865080
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758039293299
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758039308695
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758039310479
-            }
-          ],
-          "mapProgress": {
-            "map_7x7_1753981993871": {
-              "currentLocation": "B1",
-              "exploredCoordinates": [
-                "A1",
-                "B2",
-                "B4",
-                "B3",
-                "C2",
-                "B1",
-                "A2",
-                "C3"
-              ],
-              "itemsFound": [],
-              "movementHistory": [
-                {
-                  "from": null,
-                  "to": "A1",
-                  "timestamp": "2025-09-06T05:33:52.335Z"
-                },
-                {
-                  "from": "A1",
-                  "to": "A1",
-                  "timestamp": "2025-09-06T05:33:52.356Z"
-                },
-                {
-                  "from": "A1",
-                  "to": "B2",
-                  "timestamp": "2025-09-23T15:38:48.717Z"
-                },
-                {
-                  "from": "B2",
-                  "to": "B4",
-                  "timestamp": "2025-10-14T15:58:20.357Z"
-                },
-                {
-                  "from": "B4",
-                  "to": "B4",
-                  "timestamp": "2025-10-14T15:58:26.676Z"
-                },
-                {
-                  "from": "B4",
-                  "to": "B3",
-                  "timestamp": "2025-10-14T15:59:43.849Z"
-                },
-                {
-                  "from": "B3",
-                  "to": "B2",
-                  "timestamp": "2025-10-14T16:06:25.146Z"
-                },
-                {
-                  "from": "B2",
-                  "to": "C2",
-                  "timestamp": "2025-10-14T16:06:59.079Z"
-                },
-                {
-                  "from": "C2",
-                  "to": "B1",
-                  "timestamp": "2025-10-14T16:08:53.714Z"
-                },
-                {
-                  "from": "B1",
-                  "to": "B2",
-                  "timestamp": "2025-10-14T16:09:34.012Z"
-                },
-                {
-                  "from": "B2",
-                  "to": "A2",
-                  "timestamp": "2025-10-14T16:09:53.412Z"
-                },
-                {
-                  "from": "A2",
-                  "to": "B2",
-                  "timestamp": "2025-10-14T16:10:04.163Z"
-                },
-                {
-                  "from": "B2",
-                  "to": "C3",
-                  "timestamp": "2025-10-14T16:10:18.831Z"
-                },
-                {
-                  "from": "C3",
-                  "to": "B2",
-                  "timestamp": "2025-10-14T16:11:04.958Z"
-                },
-                {
-                  "from": "B2",
-                  "to": "B1",
-                  "timestamp": "2025-10-14T16:12:49.042Z"
-                }
-              ]
-            }
-          },
-          "points": {
-            "stamina": {
-              "current": 999,
-              "maximum": 999,
-              "lastRegeneration": "2025-10-14T15:58:07.022Z",
-              "regenConfig": "hourly"
-            }
-          },
-          "isPaused": true
-        }
+        ]
       },
       "251452487997980673": {
         "emojiCode": "<:Patrick:1396856834236747977>",
@@ -10884,7 +10682,224 @@
         "analyticsAdded": 1762628937828
       }
     },
-    "players": {},
+    "players": {
+      "391415444084490240": {
+        "safari": {
+          "currency": 100,
+          "history": [
+            {
+              "t": 1772446443667,
+              "type": "init",
+              "desc": "Initialized at A1 with 100 coins",
+              "loc": "A1"
+            },
+            {
+              "t": 1772446447166,
+              "type": "init",
+              "desc": "Initialized at A1 with 100 coins"
+            }
+          ],
+          "lastInteraction": 1772446443665,
+          "achievements": [],
+          "inventory": {},
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_5x11_1772434819698": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2026-03-02T10:14:03.667Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2026-03-02T10:14:03.694Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2026-03-02T10:14:03.667Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": true
+        }
+      },
+      "1319912453248647170": {
+        "safari": {
+          "currency": 100,
+          "history": [
+            {
+              "t": 1772446445165,
+              "type": "init",
+              "desc": "Initialized at A1 with 100 coins",
+              "loc": "A1"
+            },
+            {
+              "t": 1772446447166,
+              "type": "init",
+              "desc": "Initialized at A1 with 100 coins"
+            }
+          ],
+          "lastInteraction": 1772446445165,
+          "achievements": [],
+          "inventory": {},
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_5x11_1772434819698": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2026-03-02T10:14:05.165Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2026-03-02T10:14:05.189Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2026-03-02T10:14:05.165Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": true
+        }
+      },
+      "1328366050848411658": {
+        "safari": {
+          "currency": 100,
+          "history": [
+            {
+              "t": 1772446446693,
+              "type": "init",
+              "desc": "Initialized at A1 with 100 coins",
+              "loc": "A1"
+            },
+            {
+              "t": 1772446449492,
+              "type": "init",
+              "desc": "Initialized at A1 with 100 coins"
+            }
+          ],
+          "lastInteraction": 1772446446692,
+          "achievements": [],
+          "inventory": {},
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_5x11_1772434819698": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2026-03-02T10:14:06.692Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2026-03-02T10:14:06.721Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2026-03-02T10:14:06.692Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": true
+        }
+      },
+      "1086246253819613274": {
+        "safari": {
+          "currency": 100,
+          "history": [
+            {
+              "t": 1772446447492,
+              "type": "init",
+              "desc": "Initialized at A1 with 100 coins",
+              "loc": "A1"
+            },
+            {
+              "t": 1772446449492,
+              "type": "init",
+              "desc": "Initialized at A1 with 100 coins"
+            }
+          ],
+          "lastInteraction": 1772446447492,
+          "achievements": [],
+          "inventory": {},
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_5x11_1772434819698": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2026-03-02T10:14:07.492Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2026-03-02T10:14:07.531Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2026-03-02T10:14:07.492Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": true
+        }
+      }
+    },
     "timezones": {
       "1452138609296543876": {
         "offset": -8,
@@ -11627,9 +11642,28 @@
     "players": {
       "391415444084490240": {
         "safari": {
-          "currency": 100,
-          "history": [],
-          "lastInteraction": 1767691857294,
+          "currency": 122,
+          "history": [
+            {
+              "t": 1772445349486,
+              "type": "item",
+              "desc": "Picked up <:materia:1452959371125461133> Cure Materia x1",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772445356931,
+              "type": "currency",
+              "desc": "Gained 22 Gil from Button: open_chest_1769236333633",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772445363859,
+              "type": "item",
+              "desc": "Picked up 🧪 Health Potion x1",
+              "loc": "Unknown"
+            }
+          ],
+          "lastInteraction": 1772445354916,
           "achievements": [],
           "inventory": {
             "super_item_830267": {
@@ -11638,6 +11672,14 @@
             },
             "moi_item_439110": {
               "quantity": 3,
+              "numAttacksAvailable": 0
+            },
+            "cure_materia_748340": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "health_potion_759053": {
+              "quantity": 1,
               "numAttacksAvailable": 0
             }
           },
@@ -11688,6 +11730,60 @@
               "current": 3,
               "maximum": 3,
               "lastRegeneration": "2026-01-06T09:30:57.294Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      },
+      "1086246253819613274": {
+        "safari": {
+          "currency": 1,
+          "history": [
+            {
+              "t": 1772446203649,
+              "type": "admin",
+              "desc": "[ADMIN] Currency set to 1 Gil"
+            },
+            {
+              "t": 1772446206515,
+              "type": "currency",
+              "desc": "Gained 1 Gil from [ADMIN] Set to 1",
+              "loc": "Admin"
+            },
+            {
+              "t": 1772446636594,
+              "type": "init",
+              "desc": "Initialized at C3 with 100 Gil",
+              "loc": "C3"
+            }
+          ],
+          "mapProgress": {
+            "map_10x10_1772437113475": {
+              "currentLocation": "C3",
+              "exploredCoordinates": [
+                "C3"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "C3",
+                  "timestamp": "2026-03-02T10:17:16.594Z"
+                }
+              ],
+              "startingLocation": "C3"
+            }
+          },
+          "inventory": {},
+          "achievements": [],
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 1,
+              "lastRegeneration": "2026-03-02T10:17:16.594Z",
               "regenConfig": "hourly"
             }
           }
