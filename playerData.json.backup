@@ -2835,7 +2835,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1772417846862,
+        "modifiedAt": 1772452644293,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -11782,6 +11782,18 @@
               "t": 1772446836985,
               "type": "action",
               "desc": "Safari button: open_chest_1769240989056",
+              "loc": "C3"
+            },
+            {
+              "t": 1772447640514,
+              "type": "item",
+              "desc": "Picked up <:materia:1452959371125461133> Thunder Materia x1",
+              "loc": "C3"
+            },
+            {
+              "t": 1772447640514,
+              "type": "action",
+              "desc": "<:ff_chest:1462821702278058055> Open Chest\n> • Text: \"...  it makes a loud creaking sound. You look inside..\"\n> • Give Item: <:materia:1452959371125461133> Thunder Materia (x1)",
               "loc": "C3"
             }
           ],

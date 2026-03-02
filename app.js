@@ -9545,6 +9545,8 @@ To fix this:
           const role = await guild.roles.fetch(roleId);
           const roleName = role?.name || 'Unknown Role';
 
+          console.log(`[TRIBE EDIT] Opening modal — roleName: "${roleName}", emoji: "${tribeData.emoji || ''}", color: "${tribeData.color || ''}"`);
+
           // Return modal with tribe name, emoji, and color fields
           return {
             type: 9, // MODAL
