@@ -234,7 +234,7 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
         type: 1, // ActionRow
         components: [{
           type: 6, // Role Select
-          custom_id: `castlist_tribe_select_${castlist.id}`,
+          custom_id: `castlist_tribe_select_${castlist.id}${options.roleSelectNonce ? '|' + options.roleSelectNonce : ''}`,
           placeholder: tribes.length > 0
             ? 'Add or remove tribes...'
             : 'Select roles to add as tribes...',

@@ -36087,7 +36087,7 @@ Are you sure you want to continue?`;
           createdBy: userId,
           seasonId: seasonId, // Preserve season ID if present
           metadata: {
-            description: `Archived from tribe swap on ${new Date(timestamp).toLocaleDateString()}`,
+            description: `Former tribes prior to Tribe Swap on ${new Date(timestamp).toLocaleDateString()}`,
             emoji: '📦'
           }
         };
@@ -36433,7 +36433,8 @@ Are you sure you want to continue?`;
           const fullHub = await createCastlistHub(guildId, {
             message: `✅ Updated settings for ${tribe.emoji || ''} **${roleName}**`,
             selectedCastlistId: castlistId,
-            activeButton: 'add_tribe'
+            activeButton: 'add_tribe',
+            roleSelectNonce: Date.now() // Force fresh Role Select render after rename
           }, client);
           await updateDeferredResponse(token, fullHub);
         } catch (phase2Error) {

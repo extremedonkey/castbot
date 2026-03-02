@@ -807,7 +807,7 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
     updateMessage: true, // ✅ Update message for instant toggle UX
     deferred: true, // ✅ Defer response to prevent timeout with many tribe operations
     handler: async (context) => {
-      const castlistId = custom_id.replace('castlist_tribe_select_', '');
+      const castlistId = custom_id.replace('castlist_tribe_select_', '').split('|')[0];
       const newlySelectedRoles = context.values || []; // Array of role IDs
 
       // Deduplicate rapid interactions (prevent double-clicks)

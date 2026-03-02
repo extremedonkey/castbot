@@ -1172,7 +1172,7 @@
       "1368969399251501126": {
         "showPlayerEmojis": false,
         "color": "#FF7AAA",
-        "analyticsName": "ar.3",
+        "analyticsName": "The Log Tribe",
         "analyticsAdded": 1759081799205,
         "displayName": "The AR3 Tribe",
         "castlistIds": [
@@ -1180,8 +1180,8 @@
         ],
         "castlistId": "castlist_archive_1763880747782",
         "castlist": "Swap 4",
-        "memberCount": 4,
-        "emoji": "🏕️"
+        "memberCount": 0,
+        "emoji": "🪵"
       },
       "1388327092634124368": {
         "emoji": null,
@@ -1292,13 +1292,17 @@
       },
       "1431726505569943633": {
         "name": "Tribe 1431726505569943633",
-        "emoji": "🏕️",
-        "color": null,
+        "emoji": "🍁",
+        "color": "#FF0000",
         "castlistIds": [
           "castlist_archive_1763880747782"
         ],
         "castlistId": "castlist_archive_1763880747782",
-        "castlist": "Swap 4"
+        "castlist": "Swap 4",
+        "analyticsName": "Crazy Canadians",
+        "analyticsAdded": 1772415763135,
+        "showPlayerEmojis": true,
+        "memberCount": 2
       },
       "1431726526789058682": {
         "name": "Tribe 1431726526789058682",
