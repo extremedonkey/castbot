@@ -30942,6 +30942,7 @@ Are you sure you want to continue?`;
         updateMessage: true,
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        deferred: true,
         handler: async (context) => {
           console.log(`📜 START: admin_populate_logs for guild ${context.guildId}`);
           const { backfillFromExistingData } = await import('./activityLogger.js');
@@ -30949,23 +30950,61 @@ Are you sure you want to continue?`;
           const { loadSafariContent } = await import('./safariManager.js');
           const playerData = await loadPlayerData();
           const safariData = await loadSafariContent();
+          const guild = await context.client.guilds.fetch(context.guildId);
           const players = playerData[context.guildId]?.players || {};
-          let totalEntries = 0;
-          let playerCount = 0;
+
+          let totalPurchases = 0, totalMovements = 0, totalEntries = 0;
+          let playerCount = 0, skippedCount = 0;
+          let globalOldest = null, globalNewest = null;
+          const playerDetails = [];
+
           for (const [uid, player] of Object.entries(players)) {
-            if (!player.safari) continue;
-            const count = backfillFromExistingData(playerData, safariData, context.guildId, uid);
-            if (count > 0) { totalEntries += count; playerCount++; }
+            if (!player.safari) { skippedCount++; continue; }
+            const result = await backfillFromExistingData(playerData, safariData, context.guildId, uid);
+            if (result.total > 0) {
+              totalPurchases += result.purchases;
+              totalMovements += result.movements;
+              totalEntries += result.total;
+              playerCount++;
+              if (result.oldest && (!globalOldest || result.oldest < globalOldest)) globalOldest = result.oldest;
+              if (result.newest && (!globalNewest || result.newest > globalNewest)) globalNewest = result.newest;
+              // Resolve player name
+              let name = uid;
+              try { const m = await guild.members.fetch(uid); name = m.displayName; } catch {}
+              playerDetails.push(`${name}: ${result.total} entries (${result.purchases} purchases, ${result.movements} movements)`);
+            }
           }
           await savePlayerData(playerData);
           console.log(`✅ SUCCESS: admin_populate_logs - ${totalEntries} entries for ${playerCount} players`);
+
+          // Build detailed result
+          let summary = `## 📜 Activity Logs Populated\n\n`;
+          summary += `**${totalEntries}** entries across **${playerCount}** players`;
+          if (skippedCount > 0) summary += ` (${skippedCount} not initialized)`;
+          summary += `\n`;
+          summary += `🛒 **${totalPurchases}** purchases · 🗺️ **${totalMovements}** movements\n`;
+          if (globalOldest) {
+            const oldSec = Math.floor(globalOldest / 1000);
+            const newSec = Math.floor(globalNewest / 1000);
+            summary += `📅 Range: <t:${oldSec}:D> — <t:${newSec}:D>\n`;
+          }
+          summary += `\n`;
+          if (playerDetails.length > 0) {
+            summary += `**Per Player:**\n`;
+            for (const line of playerDetails.slice(0, 15)) {
+              summary += `- ${line}\n`;
+            }
+            if (playerDetails.length > 15) summary += `-# ...and ${playerDetails.length - 15} more\n`;
+          }
+          summary += `\n-# Source: storeHistory + movementHistory. Future actions are logged automatically.`;
+
           return {
             flags: (1 << 15),
             components: [{
               type: 17,
               accent_color: 0x2ecc71,
               components: [
-                { type: 10, content: `## ✅ Activity Logs Populated\n\nBackfilled **${totalEntries}** entries across **${playerCount}** initialized players from existing store and movement history.` },
+                { type: 10, content: summary },
                 { type: 14 },
                 { type: 1, components: [{ type: 2, style: 2, label: '← Back', custom_id: 'prod_menu_back' }] }
               ]

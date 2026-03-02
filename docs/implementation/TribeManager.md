@@ -175,21 +175,22 @@ Each tribe adds ~3 components (Section + accessory Button + TextDisplay). Base U
 
 ```
 🏆 **Castbot MVP Supporters** (12 Players)
-ReeceBot, DieselFuryy, Geo, Patrick, Natadwen, Serviver, kayl, Megan...   [Edit ✏️]
+-# ReeceBot, DieselFuryy, Geo, Patrick, Natadwen, Serviver, kayl, Megan...   [Edit ✏️]
 ```
 
-- Tribe emoji + bold name + player count in header
-- Player names on second line (up to 300 chars, no "X players:" prefix)
-- Edit button as Section accessory
+- Tribe emoji + bold name + player count in header (count omitted in fast/skipMemberFetch mode)
+- Player names on second line with `-#` subtext formatting (up to 300 chars, truncated with `...`)
+- Edit button as Section accessory (pipe-delimited custom_id)
+- Section component (type 9) with one TextDisplay child + Button accessory
 
 ## Hub Info Display
 
 ```
-Season: 📅 Pokevivor
-Sort Order: 🏅 Alphabetical (A-Z), then Placement
+-# **Season**: 📅 Pokevivor
+-# **Sort Order**: 🏅 Alphabetical (A-Z), then Placement
 ```
 
-Bold labels with emoji, pulling sort strategy display name from `SORT_STRATEGIES` constant.
+Uses Discord `-#` subtext formatting with bold labels. Sort strategy display name pulled from `SORT_STRATEGIES` constant. Season line comes from a separate code path in the castlist display section of `castlistHub.js` (includes season stage emoji from `getSeasonStageEmoji()`).
 
 ## Edit Modal Fields
 

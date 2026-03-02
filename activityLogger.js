@@ -132,13 +132,30 @@ export function formatActivityEntry(entry) {
 
 /**
  * Backfill activity entries from existing storeHistory + movementHistory.
- * Returns the number of entries created.
+ * Merges with existing history, deduplicates, and trims to cap.
+ * @returns {{ purchases: number, movements: number, total: number, oldest: number|null, newest: number|null }}
  */
-export function backfillFromExistingData(playerData, safariData, guildId, userId) {
+export async function backfillFromExistingData(playerData, safariData, guildId, userId) {
+  const empty = { purchases: 0, movements: 0, total: 0, oldest: null, newest: null };
   const player = playerData[guildId]?.players?.[userId];
-  if (!player?.safari) return 0;
+  if (!player?.safari) return empty;
 
-  const entries = [];
+  // Resolve item names from entity data
+  let resolveItemName;
+  try {
+    const { loadEntity } = await import('./entityManager.js');
+    resolveItemName = async (itemId) => {
+      try {
+        const item = await loadEntity(guildId, 'item', itemId);
+        return item?.name || itemId;
+      } catch { return itemId; }
+    };
+  } catch {
+    resolveItemName = async (id) => id;
+  }
+
+  const newEntries = [];
+  let purchases = 0, movements = 0;
 
   // 1. storeHistory → purchase entries
   const storeHistory = player.safari.storeHistory || [];
@@ -148,44 +165,57 @@ export function backfillFromExistingData(playerData, safariData, guildId, userId
     if (isNaN(t)) continue;
 
     const qty = record.quantity || 1;
-    const itemName = record.itemName || record.itemId || 'Unknown';
+    const itemName = record.itemName || await resolveItemName(record.itemId) || 'Unknown';
     const price = record.price || record.totalPrice || 0;
-    const currencyName = record.currencyName || 'currency';
-    entries.push({
-      t,
-      type: ACTIVITY_TYPES.purchase,
-      desc: `Bought ${itemName} x${qty} for ${price} ${currencyName}`
-    });
+    newEntries.push({ t, type: ACTIVITY_TYPES.purchase, desc: `Bought ${itemName} x${qty} for ${price}` });
+    purchases++;
   }
 
-  // 2. movementHistory from all maps → movement entries
+  // 2. movementHistory from all maps → movement + init entries
   const mapProgress = player.safari.mapProgress || {};
-  for (const [mapId, progress] of Object.entries(mapProgress)) {
+  for (const progress of Object.values(mapProgress)) {
     const movementHistory = progress.movementHistory || [];
     for (const record of movementHistory) {
       if (!record.timestamp) continue;
       const t = new Date(record.timestamp).getTime();
       if (isNaN(t)) continue;
 
-      const from = record.from || '?';
-      const to = record.to || '?';
-      entries.push({
-        t,
-        type: ACTIVITY_TYPES.movement,
-        desc: `Moved from ${from} to ${to}`
-      });
+      if (!record.from) {
+        // Initial placement
+        newEntries.push({ t, type: ACTIVITY_TYPES.init, desc: `Initialized at ${record.to}` });
+      } else {
+        newEntries.push({ t, type: ACTIVITY_TYPES.movement, desc: `Moved from ${record.from} to ${record.to}` });
+      }
+      movements++;
     }
   }
 
-  if (entries.length === 0) return 0;
+  if (newEntries.length === 0) return empty;
 
-  // Sort by timestamp and trim to most recent MAX_ENTRIES
-  entries.sort((a, b) => a.t - b.t);
-  const trimmed = entries.slice(-MAX_ENTRIES);
+  // Merge with existing history — deduplicate by timestamp+type+desc
+  const existing = player.safari.history || [];
+  const seen = new Set(existing.map(e => `${e.t}|${e.type}|${e.desc}`));
+  const merged = [...existing];
+  for (const entry of newEntries) {
+    const key = `${entry.t}|${entry.type}|${entry.desc}`;
+    if (!seen.has(key)) {
+      merged.push(entry);
+      seen.add(key);
+    }
+  }
 
-  // Merge with existing history (avoid duplicates by replacing)
-  player.safari.history = trimmed;
-  return trimmed.length;
+  // Sort and trim
+  merged.sort((a, b) => a.t - b.t);
+  player.safari.history = merged.slice(-MAX_ENTRIES);
+
+  const final = player.safari.history;
+  return {
+    purchases,
+    movements,
+    total: final.length,
+    oldest: final.length > 0 ? final[0].t : null,
+    newest: final.length > 0 ? final[final.length - 1].t : null
+  };
 }
 
 // --- UI ---

@@ -1028,6 +1028,11 @@
               "t": 1772424703347,
               "type": "movement",
               "desc": "Moved from F1 to B3"
+            },
+            {
+              "t": 1772424715459,
+              "type": "admin",
+              "desc": "[ADMIN] Set Bait x1"
             }
           ],
           "inventory": {
@@ -1038,7 +1043,11 @@
             "nurturer_361363": 1,
             "territory_forager_404120": 1,
             "nest_guardian_461600": 1,
-            "raider_499497": 1
+            "raider_499497": 1,
+            "bait_530852": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            }
           },
           "achievements": [],
           "cooldowns": {},
