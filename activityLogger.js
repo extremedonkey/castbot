@@ -184,9 +184,9 @@ export async function backfillFromExistingData(playerData, safariData, guildId, 
 
       if (!record.from) {
         // Initial placement
-        newEntries.push({ t, type: ACTIVITY_TYPES.init, desc: `Initialized at ${record.to}` });
+        newEntries.push({ t, type: ACTIVITY_TYPES.init, desc: `Initialized at ${record.to}`, loc: record.to });
       } else {
-        newEntries.push({ t, type: ACTIVITY_TYPES.movement, desc: `Moved from ${record.from} to ${record.to}` });
+        newEntries.push({ t, type: ACTIVITY_TYPES.movement, desc: `Moved from ${record.from} to ${record.to}`, loc: record.to });
       }
       movements++;
     }

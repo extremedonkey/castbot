@@ -398,7 +398,7 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = null, 
     const { addActivityEntry, ACTIVITY_TYPES } = await import('./activityLogger.js');
     const { getCustomTerms } = await import('./safariManager.js');
     const customTerms = await getCustomTerms(guildId);
-    addActivityEntry(playerData, guildId, userId, ACTIVITY_TYPES.init, `Initialized at ${coordinate} with ${defaultCurrency} ${customTerms.currencyName}`);
+    addActivityEntry(playerData, guildId, userId, ACTIVITY_TYPES.init, `Initialized at ${coordinate} with ${defaultCurrency} ${customTerms.currencyName}`, { loc: coordinate });
   } catch (e) { console.error('Activity log error (init):', e); }
 
   await savePlayerData(playerData);
