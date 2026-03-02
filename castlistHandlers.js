@@ -332,14 +332,8 @@ export async function handleCastlistSelect(req, res, client) {
       }, context.client);
       await updateDeferredResponse(context.token, fastHub);
 
-      // Phase 2: Try to fetch members and update with counts (best-effort, silent fail)
+      // Phase 2: Rebuild with member data (token valid 15 min, no rush)
       try {
-        const guild = await context.client.guilds.fetch(context.guildId);
-        await Promise.race([
-          guild.members.fetch(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
-        ]);
-        // Members now cached — rebuild hub with member data
         const fullHub = await createCastlistHub(context.guildId, {
           selectedCastlistId: selectedCastlistId || null
         }, context.client);

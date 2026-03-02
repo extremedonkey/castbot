@@ -753,14 +753,47 @@
         "safari": {
           "mapProgress": {
             "map_7x7_1753981993871": {
+              "currentLocation": "A2",
+              "exploredCoordinates": [
+                "A2"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A2",
+                  "timestamp": "2026-03-02T00:17:55.052Z"
+                }
+              ],
               "startingLocation": "A2"
             }
           },
-          "currency": 5,
+          "currency": 15,
           "inventory": {
             "rainbow_fish_094546": {
               "quantity": 1,
               "numAttacksAvailable": 0
+            },
+            "test_203660": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "history": [],
+          "achievements": [],
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2026-03-02T00:17:55.052Z",
+              "regenConfig": "hourly"
             }
           }
         }

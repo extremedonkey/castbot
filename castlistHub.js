@@ -252,9 +252,10 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
         try {
           // Use Promise.race for reliable timeout - guild.members.fetch timeout option
           // uses gateway (OP 8) which can hang for 90+ seconds ignoring the timeout param
+          // All callers with skipMemberFetch=false are behind deferred responses (15 min token)
           await Promise.race([
             guild.members.fetch(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Member fetch timeout (3s)')), 3000))
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Member fetch timeout (10s)')), 10000))
           ]);
           console.log(`[TRIBES] Successfully fetched ${guild.members.cache.size} members`);
         } catch (fetchError) {
