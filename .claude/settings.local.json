@@ -84,7 +84,8 @@
       "Bash(for:*)",
       "Bash(while:*)",
       "Bash(if:*)",
-      "Bash(./scripts/dev/dev-restart.sh \"Replace gateway member fetch with REST API guild.members.list\\(\\)\")"
+      "Bash(./scripts/dev/dev-restart.sh \"Replace gateway member fetch with REST API guild.members.list\\(\\)\")",
+      "Bash(./scripts/dev/dev-restart.sh \"Refactor tribe edit modal to use populateTribeData utility, add 200ms rename delay\")"
     ],
     "deny": [],
     "ask": []

@@ -1302,11 +1302,13 @@
       "1431726526789058682": {
         "name": "Tribe 1431726526789058682",
         "emoji": "🏕️",
-        "color": null,
+        "color": "#000000",
         "castlistIds": [
           "castlist_1762187500959_1331657596087566398"
         ],
-        "castlist": "the BIG one"
+        "castlist": "the BIG one",
+        "analyticsName": "Australian Timezones",
+        "analyticsAdded": 1772413139862
       },
       "1335645034380525708": {
         "name": "Tribe 1335645034380525708",
@@ -1338,7 +1340,9 @@
         "castlistIds": [
           "castlist_1762187500959_1331657596087566398"
         ],
-        "castlist": "the BIG one"
+        "castlist": "the BIG one",
+        "analyticsName": "🥈CastBot's #2 Fans",
+        "analyticsAdded": 1772413335673
       },
       "1368969346600407181": {
         "castlistIds": [

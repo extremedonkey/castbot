@@ -36323,31 +36323,22 @@ Are you sure you want to continue?`;
           showPlayerEmojis: showPlayerEmojisInput
         });
 
-        const playerData = await loadPlayerData();
-        if (!playerData[guildId]) playerData[guildId] = {};
-        if (!playerData[guildId].tribes) playerData[guildId].tribes = {};
-
-        // Validate and process emoji
+        // Validate emoji (modal-specific)
         let processedEmoji = null;
         if (emojiInput !== undefined && emojiInput !== '') {
           const trimmed = emojiInput.trim();
-
-          // Check for custom Discord emoji
           const customEmojiMatch = trimmed.match(/<a?:(\w+):(\d{17,19})>/);
           if (customEmojiMatch) {
-            processedEmoji = trimmed; // Valid custom emoji
+            processedEmoji = trimmed;
+          } else if (/^[\u{1F300}-\u{1F9FF}\u{2600}-\u{27BF}]/u.test(trimmed) && trimmed.length <= 8) {
+            processedEmoji = trimmed;
           } else {
-            // Simple Unicode emoji check (can be improved)
-            if (/^[\u{1F300}-\u{1F9FF}\u{2600}-\u{27BF}]/u.test(trimmed) && trimmed.length <= 8) {
-              processedEmoji = trimmed;
-            } else {
-              console.warn(`[CASTLIST] Invalid emoji format: ${emojiInput}`);
-            }
+            console.warn(`[CASTLIST] Invalid emoji format: ${emojiInput}`);
           }
         }
 
-        // Validate hex color using utility function (supports with or without #)
-        const { validateHexColor } = await import('./utils/tribeDataUtils.js');
+        // Validate hex color (modal-specific)
+        const { validateHexColor, populateTribeData } = await import('./utils/tribeDataUtils.js');
         let processedColor = null;
         if (colorInput && colorInput.trim()) {
           processedColor = validateHexColor(colorInput.trim());
@@ -36356,50 +36347,57 @@ Are you sure you want to continue?`;
           }
         }
 
-        // Initialize tribe if it doesn't exist
-        if (!playerData[guildId].tribes[roleId]) {
-          // Get castlist name for legacy field
-          const { castlistManager } = await import('./castlistManager.js');
-          const castlist = await castlistManager.getCastlist(guildId, castlistId);
-          const castlistName = castlist?.name || 'default';
+        // Fetch guild and role (needed for rename + populateTribeData)
+        const guild = await client.guilds.fetch(guildId);
+        const role = guild.roles.cache.get(roleId) || await guild.roles.fetch(roleId);
+        let roleName = role?.name || 'tribe';
 
-          playerData[guildId].tribes[roleId] = {
-            castlistIds: [castlistId],
-            castlist: (castlistId === 'default') ? 'default' : castlistName
-          };
+        // Handle tribe name rename if changed (before populateTribeData so role.name is current)
+        if (nameInput && nameInput.trim() && nameInput.trim() !== roleName) {
+          const newName = nameInput.trim();
+          if (newName.length > 100) {
+            return updateDeferredResponse(token, {
+              components: [{ type: 17, components: [{ type: 10,
+                content: `❌ Tribe name too long (${newName.length}/100 characters). Please try again.`
+              }] }]
+            });
+          }
+          try {
+            await role.setName(newName, 'CastBot tribe name edit');
+            console.log(`[CASTLIST] Renamed role "${roleName}" → "${newName}" (ID: ${roleId})`);
+            roleName = newName;
+            // Rate limit delay - allows Discord to propagate the name change to Role Select
+            await new Promise(resolve => setTimeout(resolve, 200));
+          } catch (renameError) {
+            console.error(`[CASTLIST] Failed to rename role ${roleId}:`, renameError);
+            return updateDeferredResponse(token, {
+              components: [{ type: 17, components: [{ type: 10,
+                content: `❌ Failed to rename Discord role: ${renameError.message}`
+              }] }]
+            });
+          }
         }
 
-        const tribe = playerData[guildId].tribes[roleId];
+        // Load player data and use shared utility for common tribe fields
+        const playerData = await loadPlayerData();
+        if (!playerData[guildId]) playerData[guildId] = {};
+        if (!playerData[guildId].tribes) playerData[guildId].tribes = {};
 
-        // Ensure castlist linkage
-        if (!tribe.castlistIds) {
-          tribe.castlistIds = [];
-        }
-        if (!tribe.castlistIds.includes(castlistId)) {
-          tribe.castlistIds.push(castlistId);
+        const { castlistManager } = await import('./castlistManager.js');
+        const castlist = await castlistManager.getCastlist(guildId, castlistId);
+        const castlistName = (castlistId === 'default') ? 'default' : (castlist?.name || castlistId);
 
-          // Update legacy field
-          const { castlistManager } = await import('./castlistManager.js');
-          const castlist = await castlistManager.getCastlist(guildId, castlistId);
-          tribe.castlist = (castlistId === 'default') ? 'default' : (castlist?.name || castlistId);
-        }
+        // populateTribeData handles: castlistIds, castlist, analyticsName, analyticsAdded, defaults
+        const existingTribe = playerData[guildId].tribes[roleId] || {};
+        const tribe = populateTribeData(existingTribe, role, castlistId, castlistName);
+        playerData[guildId].tribes[roleId] = tribe;
 
-        // Update fields (empty string clears the field)
+        // Apply modal-specific overrides (empty string = clear field)
         if (emojiInput !== undefined) {
           if (emojiInput === '') {
             delete tribe.emoji;
           } else if (processedEmoji) {
             tribe.emoji = processedEmoji;
-          }
-        }
-
-        // Process show_player_emojis input (yes/no -> boolean)
-        if (showPlayerEmojisInput !== undefined && showPlayerEmojisInput.trim()) {
-          const input = showPlayerEmojisInput.trim().toLowerCase();
-          if (input === 'yes' || input === 'y' || input === 'true') {
-            tribe.showPlayerEmojis = true;
-          } else if (input === 'no' || input === 'n' || input === 'false') {
-            tribe.showPlayerEmojis = false;
           }
         }
 
@@ -36411,49 +36409,13 @@ Are you sure you want to continue?`;
           }
         }
 
-        // Fetch guild and role for rename + analyticsName
-        const guild = await client.guilds.fetch(guildId);
-        const role = guild.roles.cache.get(roleId) || await guild.roles.fetch(roleId);
-        let roleName = role?.name || 'tribe';
-
-        // Handle tribe name rename if changed
-        if (nameInput && nameInput.trim() && nameInput.trim() !== roleName) {
-          const newName = nameInput.trim();
-          if (newName.length > 100) {
-            return updateDeferredResponse(token, {
-              components: [{
-                type: 17,
-                components: [{
-                  type: 10,
-                  content: `❌ Tribe name too long (${newName.length}/100 characters). Please try again.`
-                }]
-              }]
-            });
+        if (showPlayerEmojisInput !== undefined && showPlayerEmojisInput.trim()) {
+          const input = showPlayerEmojisInput.trim().toLowerCase();
+          if (input === 'yes' || input === 'y' || input === 'true') {
+            tribe.showPlayerEmojis = true;
+          } else if (input === 'no' || input === 'n' || input === 'false') {
+            tribe.showPlayerEmojis = false;
           }
-          try {
-            await role.setName(newName, 'CastBot tribe name edit');
-            console.log(`[CASTLIST] Renamed role "${roleName}" → "${newName}" (ID: ${roleId})`);
-            roleName = newName;
-          } catch (renameError) {
-            console.error(`[CASTLIST] Failed to rename role ${roleId}:`, renameError);
-            return updateDeferredResponse(token, {
-              components: [{
-                type: 17,
-                components: [{
-                  type: 10,
-                  content: `❌ Failed to rename Discord role: ${renameError.message}`
-                }]
-              }]
-            });
-          }
-        }
-
-        // Set analyticsName to current role name (may be updated from rename)
-        tribe.analyticsName = roleName;
-
-        // Ensure analyticsAdded timestamp exists
-        if (!tribe.analyticsAdded) {
-          tribe.analyticsAdded = Date.now();
         }
 
         await savePlayerData(playerData);
@@ -36463,8 +36425,8 @@ Are you sure you want to continue?`;
         const hubData = await createCastlistHub(guildId, {
           message: `✅ Updated settings for ${tribe.emoji || ''} **${roleName}**`,
           selectedCastlistId: castlistId,
-          activeButton: 'add_tribe', // Keep tribe interface active
-          skipMemberFetch: true // Fast mode - emoji/color edit doesn't need member data
+          activeButton: 'add_tribe',
+          skipMemberFetch: true
         }, client);
 
         return updateDeferredResponse(token, hubData);
