@@ -1060,10 +1060,10 @@
     },
     "tribes": {
       "1333822520737927281": {
-        "emoji": "🤖",
+        "emoji": "🆒",
         "showPlayerEmojis": false,
-        "color": "#FFFFFF",
-        "analyticsName": "Mr CastBot",
+        "color": "#000000",
+        "analyticsName": "Mr CastBot!",
         "analyticsAdded": 1751070525853,
         "displayName": "Mr CastBot",
         "castlistIds": [

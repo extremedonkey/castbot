@@ -48,7 +48,7 @@ MENU_FACTORY = {
 
 ```javascript
 // Find buttons by natural language
-ButtonRegistry.findByLabel('analytics')          // Returns 'reece_stuff_menu'
+ButtonRegistry.findByLabel('analytics')          // Returns 'analytics_admin'
 ButtonRegistry.findByDescription('server stats') // Returns 'prod_server_usage_stats'
 ButtonRegistry.search('emergency')               // Returns emergency-related buttons
 ButtonRegistry.findByCategory('admin')           // Returns all admin buttons
@@ -507,7 +507,7 @@ handler: async (context) => {
 
 ### For Users (Reece)
 Instead of hunting for button IDs, you can now say:
-- "Modify the analytics button" → Claude finds `reece_stuff_menu`
+- "Modify the analytics button" → Claude finds `analytics_admin`
 - "Fix the server stats functionality" → Claude finds `prod_server_usage_stats`
 - "Add a new emergency button" → Claude knows the emergency category pattern
 
@@ -516,7 +516,7 @@ Instead of hunting for button IDs, you can now say:
 // Claude can now search programmatically
 const analyticsButtons = ButtonRegistry.findByCategory('analytics');
 const emergencyButton = ButtonRegistry.findByDescription('emergency');
-const menuButtons = ButtonRegistry.getMenuButtons('reece_stuff_menu');
+const menuButtons = ButtonRegistry.getMenuButtons('analytics_admin');
 ```
 
 ## Migration Strategy
@@ -792,7 +792,7 @@ Before converting a handler to Button Factory:
 ```javascript
 // Test button registry
 const buttonId = ButtonRegistry.findByLabel('Analytics');
-expect(buttonId).toBe('reece_stuff_menu');
+expect(buttonId).toBe('analytics_admin');
 
 // Test menu factory
 const components = MenuFactory.createComponents('reece_analytics');

@@ -1680,21 +1680,24 @@ export const BUTTON_REGISTRY = {
     description: 'Set player starting location (and future starting gold override)',
     emoji: '🚩',
     style: 'Secondary',
-    category: 'safari_admin'
+    category: 'safari_admin',
+    requiresModal: true
   },
   'map_admin_move_player_*': {
     label: 'Move Player',
     description: 'Move player to specific coordinate',
     emoji: '📍',
     style: 'Primary',
-    category: 'safari_map_admin'
+    category: 'safari_map_admin',
+    requiresModal: true
   },
   'map_admin_grant_stamina_*': {
     label: 'Stamina',
     description: 'Set player stamina points',
     emoji: '⚡',
     style: 'Success',
-    category: 'safari_map_admin'
+    category: 'safari_map_admin',
+    requiresModal: true
   },
   'map_admin_reset_explored_*': {
     label: 'Reset Explored',

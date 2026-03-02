@@ -72,7 +72,7 @@ ensureTipsUploaded(client, env) // Auto-upload if URLs missing (silent)
 
 ### Admin: Refresh Tips
 1. Update image files in `/img/tips/`
-2. Click "Refresh Tips" button (reece_stuff_menu)
+2. Click "Refresh Tips" button (analytics_admin menu, was reece_stuff_menu)
 3. Bot uploads all images to Discord CDN
 4. Updates `tips.json` with new URLs
 5. Done - users see updated images immediately
@@ -98,7 +98,7 @@ ensureTipsUploaded(client, env) // Auto-upload if URLs missing (silent)
 **Production Menu (viral_menu):**
 - Existing "💡 View Tips" button (Section accessory) → `dm_view_tips` handler
 
-**Reece Stuff Menu (reece_stuff_menu):**
+**Analytics Admin Menu (analytics_admin, was reece_stuff_menu):**
 - New "💡 Refresh Tips" button → `refresh_tips` handler
 - Replaces legacy "Server List" (`prod_analytics_dump`) button
 
@@ -193,7 +193,7 @@ const env = isProd ? 'prod' : 'dev';
 - [x] **Path B Implementation:** Hybrid Upload on Demand (SUCCESS)
 - [x] **Extract to Module:** Create `tipsGalleryManager.js` + `tipsGalleryUIBuilder.js`
 - [x] **Create Config:** Build `img/tips/tips.json` with metadata + URLs
-- [x] **Add Refresh Button:** Removed Server List, added Refresh Tips in reece_stuff_menu
+- [x] **Add Refresh Button:** Removed Server List, added Refresh Tips in analytics_admin (was reece_stuff_menu)
 - [x] **Update Display:** Modified `dm_view_tips` to read from JSON
 - [x] **Fix Environment Detection:** Changed from ENVIRONMENT to PRODUCTION env var
 - [x] **Button Registry:** Added all buttons to BUTTON_REGISTRY (refresh_tips, tips_next_*, tips_prev_*, dm_back_to_welcome)

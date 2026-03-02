@@ -37,7 +37,7 @@ The castlist system has THREE overlapping data models working simultaneously:
 ### How Users Create Legacy Castlists
 
 1. **Via Production Menu** (`/menu` → Production Menu → Tribes)
-   - Button: `prod_manage_tribes` → `prod_add_tribe`
+   - Button: `reeces_stuff` → `prod_add_tribe` (was `prod_manage_tribes`, replaced 2026-03)
    - Flow: Select role → Choose/create castlist name → Add emoji
    - Creates: String-based castlist in `tribe.castlist`
 
@@ -640,7 +640,7 @@ if (tzData.timezoneId) {
 - `/castlist` command - Shows castlist, uses string matching
 - `show_castlist2` button handler - Navigation between castlists
 - `determineCastlistToShow()` - Finds castlists by scanning tribe strings
-- Production Menu (`prod_manage_tribes`) - Creates string-based castlists
+- Production Menu (was `prod_manage_tribes`, now `reeces_stuff` in Tools) - Creates string-based castlists. See [CastlistV3.md](CastlistV3.md) for current system.
 
 ### 2. Virtual Adapter Integration (Partial)
 - **CastlistV3 Hub** (`castlist_hub_main`) - ONLY place using full virtual adapter

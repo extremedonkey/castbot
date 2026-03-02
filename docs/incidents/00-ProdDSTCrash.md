@@ -28,7 +28,7 @@ Production CastBot is in a **broken Frankenstein state** after a failed deployme
 **08:41 UTC** - Production deployment via `npm run deploy-remote-wsl`
 - Deployed commits:
   - `75ac149e` Fix castlist dropdown persistence
-  - `425755cc` Fix reece_stuff_menu intermittent failures
+  - `425755cc` Fix reece_stuff_menu intermittent failures (note: reece_stuff_menu renamed to `analytics_admin` in 2026-03)
   - `d4e40bb3` Fix castlist select dropdown persistence
   - `42bb081a` Change 'Season Emoji' to 'Castlist Emoji'
   - `6991a3e6` Always show Delete/Swap/Merge buttons

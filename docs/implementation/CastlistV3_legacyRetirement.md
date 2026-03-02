@@ -2,7 +2,9 @@
 
 ## Overview
 
-This document tracks all work-in-progress and planned tasks for retiring the legacy tribe-based castlist system (`prod_manage_tribes`) and completing the CastlistV3 entity system migration.
+This document tracks all work-in-progress and planned tasks for retiring the legacy tribe-based castlist system (formerly `prod_manage_tribes`, now replaced by `reeces_stuff` in Tools menu) and completing the CastlistV3 entity system migration.
+
+> **Note (2026-03)**: `prod_manage_tribes` has been removed from the Production Menu and replaced by `reeces_stuff` (Reece's Stuff menu in Tools). See [CastlistV3.md](../features/CastlistV3.md) for the current castlist system.
 
 **Status**: 🔴 PENDING - Legacy system still primary for 99% of users
 **Target**: Full migration by Q2 2025
@@ -128,22 +130,24 @@ if (selectedValue === 'create_new') {
 4. ❌ Swap/merge implemented
 5. ❌ All sort strategies working
 
-### Phase 4: Deprecate `prod_manage_tribes` 🗑️
+### Phase 4: Deprecate `prod_manage_tribes` ✅ COMPLETED (2026-03)
 
-**Current**: 5 active references in app.js
+> **Status**: `prod_manage_tribes` has been removed from the Production Menu and replaced by `reeces_stuff` (Reece's Stuff menu in Tools). The button/handler for tribe management is now accessed via `reeces_stuff` in the Tools menu. See [CastlistV3.md](../features/CastlistV3.md) for the current system.
+
+~~**Current**: 5 active references in app.js~~
 | Location | Type | Action Needed |
 |----------|------|---------------|
-| app.js:699 | Button creation | Add deprecation notice |
-| app.js:3296 | Analytics check | Keep for tracking |
-| app.js:6441 | Handler | Replace with redirect to Hub |
-| app.js:6443 | Legacy tracking | Keep for metrics |
-| app.js:6509 | Error handler | Remove when deprecated |
+| ~~app.js:699~~ | ~~Button creation~~ | ~~Add deprecation notice~~ |
+| ~~app.js:3296~~ | ~~Analytics check~~ | ~~Keep for tracking~~ |
+| ~~app.js:6441~~ | ~~Handler~~ | ~~Replace with redirect to Hub~~ |
+| ~~app.js:6443~~ | ~~Legacy tracking~~ | ~~Keep for metrics~~ |
+| ~~app.js:6509~~ | ~~Error handler~~ | ~~Remove when deprecated~~ |
 
-**Deprecation Strategy**:
-1. Add notice: "⚠️ Legacy Menu - Use Castlist Hub Instead"
-2. Track usage via `MenuBuilder.trackLegacyMenu()`
-3. Monitor analytics for 30 days
-4. Remove when usage drops to zero
+**Deprecation Strategy** (completed):
+1. ~~Add notice: "⚠️ Legacy Menu - Use Castlist Hub Instead"~~
+2. ~~Track usage via `MenuBuilder.trackLegacyMenu()`~~
+3. ~~Monitor analytics for 30 days~~
+4. Replaced by `reeces_stuff` in Tools menu
 
 ## 🔧 Technical Debt to Address
 
@@ -251,7 +255,7 @@ Track these metrics to measure progress:
 - [ ] Monitor legacy usage
 
 ### Sprint 6 (Future)
-- [ ] Remove prod_manage_tribes
+- [x] Remove prod_manage_tribes (replaced by `reeces_stuff`, 2026-03)
 - [ ] Clean up legacy code
 - [ ] Final documentation
 
@@ -265,7 +269,7 @@ The legacy system can be retired when:
 4. ✅ All 6 sort strategies functional
 5. ✅ New castlist creation available in Hub
 6. ✅ Zero user restrictions on CastlistV3 Hub
-7. ✅ prod_manage_tribes usage at zero for 30 days
+7. ✅ prod_manage_tribes removed (replaced by `reeces_stuff`, 2026-03)
 8. ✅ All legacy string matching removed
 9. ✅ Full test coverage for migration scenarios
 10. ✅ Documentation updated for new system
@@ -274,7 +278,7 @@ The legacy system can be retired when:
 
 Once legacy is retired, remove:
 
-- [ ] prod_manage_tribes button and handler
+- [x] prod_manage_tribes button and handler (removed, replaced by `reeces_stuff`, 2026-03)
 - [ ] Legacy string matching in getGuildTribes()
 - [ ] Direct playerData access in handlers
 - [ ] Fallback logic for empty tribe fields

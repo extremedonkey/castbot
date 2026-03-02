@@ -43,7 +43,9 @@ app.js handlers:
 ├── prod_clear_tribe
 ├── prod_view_tribes
 ├── prod_create_emojis
-└── prod_manage_tribes (6502)
+└── reeces_stuff (was prod_manage_tribes, replaced 2026-03)
+    // Note: prod_manage_tribes removed. Tribe management now accessed via
+    // reeces_stuff in Tools menu. See docs/features/CastlistV3.md
 
 castlistHandlers.js:
 ├── handleCastlistTribeSelect (198)
