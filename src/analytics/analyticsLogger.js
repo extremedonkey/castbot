@@ -831,7 +831,7 @@ async function logSetupRun(guild, userId, userName) {
     const timestamp = `[${timeStr}] ${dateStr}`;
 
     // Create the announcement message in the same format as server install
-    const announcementMessage = `# ${timestamp} | 🛠️✨ **Setup Run**: \`${guild.name}\` (${guild.id}) | User: ${userName} (${userId})`;
+    const announcementMessage = `# ${timestamp} | 🛠️✨ **Setup Run**: \`${guild.name}\` (${guild.id}) | User: ${userName} (${userId}) <@1331657596087566398>`;
 
     // Also write to analytics log file
     const analyticsLogEntry = `${timestamp} | SETUP_RUN | ${guild.name} (${guild.id}) | User: ${userName} (${userId})\n`;
