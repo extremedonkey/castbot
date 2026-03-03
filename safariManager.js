@@ -4181,7 +4181,7 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null, curr
                             type: 2,
                             custom_id: `safari_attack_player_${itemId}`,
                             label: '⚔️ Attack Player',
-                            style: 1
+                            style: 2 // Secondary (grey)
                         };
                     } else {
                         sectionComponent.accessory = {
@@ -4211,7 +4211,7 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null, curr
                             type: 2,
                             custom_id: `safari_use_item_${itemId}`,
                             label: `Use (+${item.staminaBoost} ⚡)`,
-                            style: 3
+                            style: 2 // Secondary (grey)
                         }
                     });
 

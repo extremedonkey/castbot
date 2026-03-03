@@ -1653,9 +1653,15 @@ export async function createItemLinkUI({ guildId, actionId, searchTerm }) {
   }
 
   // Filter out already-linked items
-  const availableItems = Object.fromEntries(
+  let availableItems = Object.fromEntries(
     Object.entries(allItems).filter(([id]) => !linkedItems.includes(id))
   );
+
+  // Apply search filter if provided
+  if (searchTerm) {
+    const { filterEntities } = await import('./entityManagementUI.js');
+    availableItems = filterEntities(availableItems, searchTerm);
+  }
 
   const { createEntitySelector } = await import('./entityManagementUI.js');
   const selector = createEntitySelector(availableItems, null, 'item', searchTerm || '');
