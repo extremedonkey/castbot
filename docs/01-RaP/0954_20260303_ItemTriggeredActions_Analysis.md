@@ -136,6 +136,16 @@ N. ⚡ [Custom Action Name N]     (hard cap: 20 total options)
 
 ## UI Changes — Screen by Screen
 
+### 0. Actions Button Rename (cosmetic)
+
+**File:** `app.js` — Production Menu button label
+
+| Before | After |
+|--------|-------|
+| `⚡ Custom Actions` | `⚡ Actions` |
+
+Button ID `safari_action_editor` — handler unchanged, just label.
+
 ### 1. Action Editor Header (cosmetic)
 
 **File:** `customActionUI.js` → `createCustomActionEditorUI()` (line 366)
@@ -143,6 +153,8 @@ N. ⚡ [Custom Action Name N]     (hard cap: 20 total options)
 | Before | After |
 |--------|-------|
 | `## ⚡ Custom Action Editor - Healing Spell` | `## ⚡ Action Editor \| Healing Spell` |
+
+Also rename the Actions list screen: `## ⚡ Custom Actions` → `## ⚡ Actions`
 
 ### 2. Button Locations Summary (in Action Editor)
 
@@ -407,15 +419,20 @@ Player clicks ⚡ Use (safari_use_linked_{itemId})
   │
   ├─ getLinkedActions(guildId, itemId) → [action]
   │
+  ├─ PRE-EXECUTION GUARD:
+  │   shouldConsumeItem(item, action) && !hasUnclaimedSubActions(action, userId)?
+  │   → YES: Return "❌ Already used all rewards" (don't consume, don't execute)
+  │   → NO: Continue
+  │
   ├─ executeButtonActions(guildId, action.id, userId, interactionData)
-  │   (existing function — no changes)
+  │   (existing function — handles conditions, sub-action limits, claimedBy tracking)
   │
-  ├─ if execution succeeded:
-  │   └─ consumeItemAfterAction(guildId, userId, itemId, item)
-  │       ├─ item.consumable === 'Yes' → quantity -= 1 (delete if 0)
-  │       └─ else → no consumption (permanent item)
+  ├─ POST-EXECUTION CONSUMPTION:
+  │   shouldConsumeItem(item, action)?
+  │   → YES (consumable + has limited sub-actions): quantity -= 1
+  │   → NO (permanent OR all unlimited): no consumption
   │
-  └─ return action result + remaining quantity
+  └─ return action result + remaining quantity info
 ```
 
 ### Multi-Use Item (String Select dispatch)
@@ -424,20 +441,96 @@ Player clicks ⚡ Use (safari_use_linked_{itemId})
 Player selects from 📦 Use Item (safari_item_uses_{itemId})
   │
   ├─ value === 'attack'
-  │   └─ route to createAttackPlanningUI() (existing attack flow)
+  │   └─ route to createAttackPlanningUI() (existing attack flow, unchanged)
   │
   ├─ value === 'stamina'
-  │   └─ route to stamina consumption (existing safari_use_item flow)
+  │   └─ call existing safari_use_item handler logic (not inlined — call the function)
   │
   └─ value === 'action_{actionId}'
-      └─ same as single custom action flow above
+      └─ same as single custom action flow above (with guards + consumption)
 ```
 
 ### Item Consumption Logic
 
+Consumption is NOT simply "consumable = consume." It's tied to the **sub-action usage limits** configured on the custom action. This respects the existing `once_per_player` / `once_globally` / `unlimited` limit system that already exists for Give/Remove Currency, Give/Remove Item, and Modify Attribute sub-actions.
+
+#### The Rules
+
+```
+GIVEN: Player uses an item to trigger a custom action
+AND: All conditions on the action evaluate to TRUE (true branch executes)
+
+CHECK: Does the action have ANY sub-actions of type:
+  - Give Currency / Remove Currency
+  - Give Item / Remove Item
+  - Modify Attribute
+  ...that have a usage limit of 'once_per_player' OR 'once_globally'?
+  (i.e., NOT unlimited, NOT missing)
+
+IF YES and item.consumable === 'Yes':
+  → Remove 1x of that item from the player's inventory
+  → The sub-action's claimedBy tracking is updated as normal by executeButtonActions()
+
+IF YES and item.consumable === 'No' (e.g., armor, permanent tool):
+  → Do NOT consume the item
+  → The existing usage limit system handles everything:
+    - First use: action executes, claimedBy updated
+    - Subsequent uses: "You've already used this" message (same as map location)
+    - Player keeps the item forever, limits are on the ACTION not the item
+
+IF NO (all sub-actions are unlimited or action has no limited sub-actions):
+  → Do NOT consume the item regardless of consumable flag
+  → Player can use the item-triggered action as many times as they want
+  → This is intentional: if nothing is scarce, there's nothing to consume
+```
+
+#### Why This Design
+
+The consumption is fundamentally about **scarcity alignment**:
+- If an action gives you a one-time reward (once_per_player gold), consuming the item on use makes sense — the item "unlocked" the reward
+- If an action is unlimited (heal yourself for free), consuming the item makes no sense — you'd burn through your entire inventory
+- Permanent items (armor) with limited actions are like keys — they open the door once but you keep the key
+
+#### Implementation
+
 ```javascript
-async function consumeItemAfterAction(guildId, userId, itemId, item, playerData) {
-  if (item.consumable !== 'Yes') return; // Permanent items aren't consumed
+function shouldConsumeItem(item, action) {
+  if (item.consumable !== 'Yes') return false;
+
+  // Check if ANY sub-action has a non-unlimited usage limit
+  const limitedTypes = ['give_currency', 'remove_currency', 'give_item', 'remove_item', 'modify_attribute'];
+  const hasLimitedSubAction = (action.actions || []).some(subAction =>
+    limitedTypes.includes(subAction.type) &&
+    subAction.config?.limit?.type &&
+    subAction.config.limit.type !== 'unlimited'
+  );
+
+  return hasLimitedSubAction;
+}
+
+function hasUnclaimedSubActions(action, userId) {
+  // Check if the player can still benefit from at least one limited sub-action
+  const limitedTypes = ['give_currency', 'remove_currency', 'give_item', 'remove_item', 'modify_attribute'];
+  return (action.actions || []).some(subAction => {
+    if (!limitedTypes.includes(subAction.type)) return false;
+    const limit = subAction.config?.limit;
+    if (!limit || limit.type === 'unlimited') return false;
+
+    if (limit.type === 'once_per_player') {
+      const claimed = Array.isArray(limit.claimedBy) ? limit.claimedBy : [];
+      return !claimed.includes(userId); // Player hasn't claimed this one yet
+    }
+    if (limit.type === 'once_globally') {
+      return !limit.claimedBy; // Nobody has claimed it yet
+    }
+    return false;
+  });
+}
+
+async function consumeItemAfterAction(guildId, userId, itemId, item, action, playerData) {
+  if (!shouldConsumeItem(item, action)) return;
+  // Note: we only get here if conditions passed AND there are limited sub-actions
+  // The sub-actions themselves handle claimedBy tracking inside executeButtonActions()
 
   const player = playerData[guildId]?.players?.[userId];
   const inventory = player?.safari?.inventory;
@@ -454,15 +547,43 @@ async function consumeItemAfterAction(guildId, userId, itemId, item, playerData)
 }
 ```
 
-**Multi-use items:** The user mentioned "multi-use configuration." Currently items have:
-- `consumable: "Yes"/"No"` — whether the item is consumed on use
-- `maxQuantity: -1/N` — max a player can hold
+#### Pre-execution Guard
 
-For item-triggered actions, the rule is simple:
-- `consumable === "Yes"` → decrement by 1 after successful action execution
-- `consumable === "No"` → don't consume (item is permanent, can be used repeatedly)
+Before even calling `executeButtonActions()`, we check whether the player can benefit:
 
-No new fields needed. The existing consumable flag already captures this.
+```javascript
+// In the safari_use_linked_ handler:
+if (shouldConsumeItem(item, action) && !hasUnclaimedSubActions(action, userId)) {
+  return { content: '❌ You\'ve already used all rewards from this action.' };
+  // Don't consume the item, don't run the action
+}
+```
+
+This prevents consuming an item when all limited sub-actions are already claimed.
+
+#### Usage Limit Data Structure Reference
+
+```javascript
+// Stored at: safariContent[guildId].buttons[actionId].actions[N].config.limit
+{
+  type: 'once_per_player',     // or 'once_globally' or 'unlimited'
+  claimedBy: ['userId1', ...]  // Array for once_per_player
+  // OR
+  claimedBy: 'userId1'         // String for once_globally (null if unclaimed)
+  // OR
+  // limit field is deleted/undefined for unlimited
+}
+```
+
+#### Accepted Constraints
+
+1. **Consumption is all-or-nothing per action execution** — if an action has 3 sub-actions and only 1 is limited, consuming the item still happens on first use (even though the 2 unlimited ones could run again). This is acceptable because the limited sub-action is the "valuable" one.
+
+2. **Mixed limited/unlimited sub-actions** — A consumable item with 1 once_per_player and 1 unlimited sub-action: first use consumes item + executes both. Second use: item is gone (if qty was 1) or next item consumed but once_per_player is already claimed → guard prevents use. This is correct behavior.
+
+3. **All unlimited = never consumed** — A consumable item linked to an action with only unlimited sub-actions will never be consumed. This is by design, but could surprise admins. We should show a hint in the Action Visibility screen: *"⚠️ All sub-actions are unlimited — consumable items won't be consumed."*
+
+4. **Future: per-sub-action consumption** — A more granular system (consume 1 per limited sub-action execution) would require tracking which sub-actions were "new claims" vs "already claimed." Deferred to a future refactor when stamina becomes an attribute type.
 
 ---
 
@@ -540,14 +661,17 @@ Reviewed `docs/enablers/EntityEditFramework.md`. Key takeaways:
 | Action deleted while linked to item | Low | `getLinkedActions()` only returns existing actions. Orphan itemIds in deleted action data don't matter — action is gone. |
 | Multi-use String Select component budget in inventory | Low | String Select costs same as Section+Accessory (3 components). No net increase. |
 | Stamina refactoring breaks existing flow | Medium | Don't refactor stamina handler. Multi-use select dispatches to existing stamina code path unchanged. |
+| Consumable item not consumed (all unlimited sub-actions) | Low | By design — if nothing is scarce, nothing to consume. Show admin hint in Action Visibility UI. |
+| Player claims limited sub-action then uses item again | Low | Pre-execution guard checks `hasUnclaimedSubActions()` — blocks use + prevents consumption if all limited sub-actions already claimed. |
+| Race condition: two rapid uses of same item | Low | `executeButtonActions()` already reads live `claimedBy` from disk. Second use will see updated claims and be blocked. Item consumption is after execution, so worst case is a wasted item. |
 
 ---
 
 ## Implementation Order
 
 1. **Data model** — Add `linkedItems: []` to action creation defaults in `customActionUI.js`
-2. **`getLinkedActions()`** — Utility function in `safariManager.js`
-3. **Action Editor header rename** — Cosmetic, `customActionUI.js:366`
+2. **`getLinkedActions()` + `shouldConsumeItem()` + `hasUnclaimedSubActions()`** — Utility functions in `safariManager.js`
+3. **Renames** — `⚡ Custom Actions` → `⚡ Actions` (button label + list screen), `⚡ Action Editor | <Name>` (editor header)
 4. **Button Locations summary** — `formatButtonLocations()` helper, update Section text
 5. **Action Visibility LEAN redesign** — `createCoordinateManagementUI()` overhaul with accent, section headers, items section, 4th button, conditional on trigger type
 6. **Item Link sub-UI** — `createItemLinkUI()` using extracted entity selector
@@ -565,20 +689,24 @@ Reviewed `docs/enablers/EntityEditFramework.md`. Key takeaways:
 
 | File | Changes |
 |------|---------|
-| `customActionUI.js` | Header rename, `formatButtonLocations()`, `createCoordinateManagementUI()` LEAN redesign + items section, `createItemLinkUI()`, trigger config accent |
-| `safariManager.js` | `getLinkedActions()`, inventory display logic, `consumeItemAfterAction()` |
-| `app.js` | 5 new button/select handlers, dynamic patterns list |
+| `customActionUI.js` | Header rename, `formatButtonLocations()`, `createCoordinateManagementUI()` LEAN redesign + items section, `createItemLinkUI()`, trigger config accent, list screen rename |
+| `safariManager.js` | `getLinkedActions()`, `shouldConsumeItem()`, `hasUnclaimedSubActions()`, inventory display logic, `consumeItemAfterAction()` |
+| `app.js` | 5 new button/select handlers, dynamic patterns list, `safari_action_editor` button label rename |
 | `buttonHandlerFactory.js` | BUTTON_REGISTRY entries for new buttons |
 
 ---
 
-## Open Questions
+## Resolved Questions
 
-1. **"Recipes" in summary line** — User mentioned `[X recipes]` in the Button Locations summary. Is this the Crafting Menu visibility, or a future feature? Currently interpreting `crafting_menu` visibility as "Crafting" in the summary.
+1. **"Recipes" in summary line** — ✅ Confirmed: Crafting menu visibility. Summary shows "Crafting" when `menuVisibility === 'crafting_menu'`.
 
-2. **Stamina in multi-use select** — When dispatching `value === 'stamina'` from the String Select, should we inline the stamina consumption logic (copy from existing handler) or call the existing handler? Inlining is safer (no refactoring risk) but duplicates ~15 lines.
+2. **Stamina in multi-use select** — ✅ Call existing handler, don't inline. Long-term plan: align stamina with attribute system (stamina becomes just another attribute type, item-triggered actions handle it naturally). For now, stamina stays standalone.
 
-3. **Action conditions + item consumption** — Proposed: check conditions via `executeButtonActions()` first, only consume item if execution succeeds. The existing `executeButtonActions()` already handles condition evaluation and returns results. If conditions fail, the "false" branch actions execute (if any) but we still don't consume the item — or do we?
+3. **Action conditions + item consumption** — ✅ Resolved with full usage-limit-aware logic (see "Item Consumption Logic" section above). Key rules:
+   - Conditions must pass (true branch) for consumption to happen
+   - Consumption only when action has limited sub-actions (once_per_player / once_globally)
+   - Pre-execution guard prevents consuming when all limited sub-actions already claimed
+   - Non-consumable items follow existing limit system naturally (keep item, see "already claimed" on reuse)
 
 ---
 

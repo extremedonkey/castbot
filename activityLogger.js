@@ -294,10 +294,18 @@ export async function backfillFromSafariLogChannel(guildId, client, messageLimit
 
   // Process oldest first for chronological order
   allMessages.reverse();
+  console.log(`📡 Backfill: Fetched ${allMessages.length} messages from channel`);
+
+  // Emoji detection regex - matches all Safari Log entry types
+  const entryEmojiRegex = /^(?:🗺️|🗺|🪙|🧰|🎯|🤫|🛒|⌨️|⚔️|🧪)/;
 
   // Parse each message
   const newEntries = []; // { userId, entry }
+  let debugUnmatched = 0;
+  let debugNoTime = 0;
+  let debugNoParse = 0;
   for (const msg of allMessages) {
+    if (!msg.content) continue;
     const msgDate = msg.createdAt;
     const lines = msg.content.split('\n');
     let i = 0;
@@ -312,27 +320,35 @@ export async function backfillFromSafariLogChannel(guildId, client, messageLimit
       else if (line.startsWith('🪙')) entryType = 'currency';
       else if (line.startsWith('🧰')) entryType = 'item';
       else if (line.startsWith('🎯')) entryType = 'action';
+      else if (line.startsWith('⌨️')) entryType = 'action';
       else if (line.startsWith('🤫')) entryType = 'whisper';
+      else if (line.startsWith('🛒')) entryType = 'purchase';
+      else if (line.startsWith('⚔️')) entryType = 'attack';
 
-      if (!entryType) { i++; continue; }
+      if (!entryType) {
+        // Only count as unmatched if it's not a detail/quote line
+        if (!line.startsWith('>')) debugUnmatched++;
+        i++; continue;
+      }
 
       // Parse header: TYPE | [TIME] | PLAYER_INFO
       const timeMatch = line.match(/\[(\d{1,2}:\d{2}(?:AM|PM))\]/i);
-      if (!timeMatch) { i++; continue; }
+      if (!timeMatch) { debugNoTime++; i++; continue; }
 
       // Parse timestamp combining message date + parsed time
       const t = _parseLogTimestamp(msgDate, timeMatch[1]);
       if (!t) { i++; continue; }
 
-      // Collect detail lines (everything until next emoji header or blank)
+      // Collect detail lines (everything until next emoji header)
       const detailLines = [];
       i++;
       while (i < lines.length) {
         const next = lines[i].trim();
         if (!next) { i++; continue; }
         // Check if this is a new entry header
-        if (/^(?:🗺️|🗺|🪙|🧰|🎯|🤫)\s/.test(next)) break;
-        detailLines.push(next);
+        if (entryEmojiRegex.test(next)) break;
+        // Strip leading "> " quote prefix from detail lines
+        detailLines.push(next.startsWith('> ') ? next.slice(2) : next);
         i++;
       }
 
@@ -341,9 +357,13 @@ export async function backfillFromSafariLogChannel(guildId, client, messageLimit
       if (parsed) {
         newEntries.push({ userId: parsed.userId, entry: { t, type: parsed.type, desc: parsed.desc, ...(parsed.loc ? { loc: parsed.loc } : {}) } });
         result.parsed++;
+      } else {
+        debugNoParse++;
+        if (debugNoParse <= 5) console.log(`📡 Backfill: Failed to parse ${entryType}: ${line.slice(0, 120)}`);
       }
     }
   }
+  console.log(`📡 Backfill: ${result.parsed} parsed, ${debugNoParse} parse failures, ${debugNoTime} no-time, ${debugUnmatched} unmatched lines`);
 
   if (newEntries.length === 0) return result;
 
@@ -420,76 +440,97 @@ function _parseLogTimestamp(msgDate, timeStr) {
 
 /**
  * Parse a single Safari Log entry from its header line and detail lines.
+ * Detail lines should already have "> " prefix stripped.
  * Returns { userId, type, desc, loc } or null.
  */
 function _parseSafariLogEntry(entryType, headerLine, detailLines, nameMap) {
   try {
-    // Extract location from (#channelname) or "at COORD"
+    // Extract location from "at **COORD**" pattern
     const locMatch = headerLine.match(/\bat\s+\*?\*?([A-Z]\d+)\*?\*?/i);
     const loc = locMatch ? locMatch[1].toUpperCase() : null;
 
+    // Helper: extract player name from "| **Name** " pattern (last pipe-delimited segment before keyword)
+    const extractName = (line, beforeKeyword) => {
+      const re = new RegExp(`\\|\\s*\\*?\\*?(.+?)\\*?\\*?\\s+${beforeKeyword}`, 'i');
+      const m = line.match(re);
+      return m ? m[1].replace(/\*+/g, '').trim() : null;
+    };
+
+    const lookupUser = (name) => name ? nameMap.get(name.toLowerCase()) : null;
+
     switch (entryType) {
       case 'movement': {
-        // 🗺️ MOVEMENT | [TIME] | **NAME** moved from **X** to **Y**
-        const moveMatch = headerLine.match(/\*?\*?(\S+(?:\s+\S+)*?)\*?\*?\s+moved from\s+\*?\*?([A-Z]\d+)\*?\*?\s+to\s+\*?\*?([A-Z]\d+)\*?\*?/i);
+        // 🗺️ **MOVEMENT** | [TIME] | **Name** moved from **D3** (#channel) to **E3** (#channel)
+        // Key fix: allow arbitrary text (channel display) between from-coord and "to"
+        const moveMatch = headerLine.match(/\*?\*?(\S+(?:\s+\S+)*?)\*?\*?\s+moved from\s+\*?\*?([A-Z]\d+)\*?\*?.*?\bto\s+\*?\*?([A-Z]\d+)\*?\*?/i);
         if (!moveMatch) return null;
         const name = moveMatch[1].replace(/\*+/g, '').trim();
-        const userId = nameMap.get(name.toLowerCase());
+        const userId = lookupUser(name);
         if (!userId) return null;
         return { userId, type: ACTIVITY_TYPES.movement, desc: `Moved from ${moveMatch[2].toUpperCase()} to ${moveMatch[3].toUpperCase()}`, loc: moveMatch[3].toUpperCase() };
       }
 
       case 'currency': {
-        // 🪙 CURRENCY | [TIME] | NAME at COORD (#channel)\nGained/Lost AMOUNT CURRENCY from "SOURCE"
-        const nameMatch = headerLine.match(/\|\s*\*?\*?(.+?)\*?\*?\s+at\s+/i);
-        if (!nameMatch) return null;
-        const name = nameMatch[1].replace(/\*+/g, '').trim();
-        const userId = nameMap.get(name.toLowerCase());
+        // 🪙 **CURRENCY** | [TIME] | **Name** at **D3** (#channel)
+        // > Gained 50 Gold from "Open Chest"
+        const name = extractName(headerLine, 'at\\s+');
+        const userId = lookupUser(name);
         if (!userId) return null;
 
         const detail = detailLines[0] || '';
-        const currMatch = detail.match(/(Gained|Lost)\s+(\d+)\s+(\w+)\s+from\s+"(.+?)"/i);
+        // Allow multi-word currency names (e.g. "Survival Coins")
+        const currMatch = detail.match(/(Gained|Lost)\s+(\d+)\s+(.+?)\s+from\s+"(.+?)"/i);
         if (currMatch) {
-          const verb = currMatch[1];
-          const amount = currMatch[2];
-          const currency = currMatch[3];
-          const source = currMatch[4];
-          return { userId, type: ACTIVITY_TYPES.currency, desc: `${verb} ${amount} ${currency} from ${source}`, loc };
+          return { userId, type: ACTIVITY_TYPES.currency, desc: `${currMatch[1]} ${currMatch[2]} ${currMatch[3]} from ${currMatch[4]}`, loc };
         }
         return { userId, type: ACTIVITY_TYPES.currency, desc: detail || 'Currency change', loc };
       }
 
       case 'item': {
-        // 🧰 ITEM PICKUP | [TIME] | NAME (Unknown) at COORD\nCollected: EMOJI NAME (xQTY)
-        const nameMatch = headerLine.match(/\|\s*\*?\*?(.+?)\*?\*?\s+\(/i);
-        if (!nameMatch) return null;
-        const name = nameMatch[1].replace(/\*+/g, '').trim();
-        const userId = nameMap.get(name.toLowerCase());
+        // 🧰 **ITEM PICKUP** | [TIME] | **Name** (username) at <#channel> or **COORD**
+        // > Collected: 🔮 **Thunder Materia** (x1)
+        // Name is before "(" or "at"
+        let name = extractName(headerLine, '\\(');
+        if (!name) name = extractName(headerLine, 'at\\s+');
+        const userId = lookupUser(name);
         if (!userId) return null;
 
         const detail = detailLines[0] || '';
         const itemMatch = detail.match(/Collected:\s*(.+?)\s*\(x(\d+)\)/i);
         if (itemMatch) {
-          return { userId, type: ACTIVITY_TYPES.item, desc: `Picked up ${itemMatch[1].trim()} x${itemMatch[2]}`, loc };
+          // Clean up bold markers from item name
+          const itemName = itemMatch[1].replace(/\*+/g, '').trim();
+          return { userId, type: ACTIVITY_TYPES.item, desc: `Picked up ${itemName} x${itemMatch[2]}`, loc };
         }
         return { userId, type: ACTIVITY_TYPES.item, desc: detail || 'Item pickup', loc };
       }
 
       case 'action': {
-        // 🎯 CUSTOM ACTION | [TIME] | NAME at COORD (#channel)\nButton: EMOJI LABEL (BUTTON_ID)\nDisplay Text: "TEXT" - DETAILS
-        const nameMatch = headerLine.match(/\|\s*\*?\*?(.+?)\*?\*?\s+at\s+/i);
-        if (!nameMatch) return null;
-        const name = nameMatch[1].replace(/\*+/g, '').trim();
-        const userId = nameMap.get(name.toLowerCase());
+        // 🎯 **CUSTOM ACTION** | [TIME] | **Name** at **D3** (#channel)
+        // > Button: 🗃️ Open Chest (open_chest_123)
+        // > Display Text: "Title" - Content...
+        // Also handles: 🎯 **SAFARI ACTION** | [TIME] | **Name** at **D3**
+        // > Clicked: "Button Label" - Result
+        // Also handles: ⌨️ **PLAYER COMMAND** | [TIME] | **Name** at **D3**
+        // > Command: "command_name"
+        const name = extractName(headerLine, 'at\\s+');
+        const userId = lookupUser(name);
         if (!userId) return null;
 
-        // Parse button label from detail lines
         let buttonLabel = 'Unknown action';
         let actionDetails = [];
         for (const dl of detailLines) {
           if (dl.startsWith('Button:')) {
             const btnMatch = dl.match(/Button:\s*(?:<[^>]+>\s*)?(.+?)(?:\s*\([^)]+\))?$/);
             buttonLabel = btnMatch ? btnMatch[1].trim() : dl.replace('Button:', '').trim();
+          } else if (dl.startsWith('Clicked:')) {
+            // SAFARI_BUTTON format: Clicked: "label" - result
+            const clickMatch = dl.match(/Clicked:\s*"(.+?)"/);
+            buttonLabel = clickMatch ? clickMatch[1] : dl.replace('Clicked:', '').trim();
+          } else if (dl.startsWith('Command:')) {
+            // PLAYER_COMMAND format: Command: "command_id"
+            const cmdMatch = dl.match(/Command:\s*"(.+?)"/);
+            buttonLabel = cmdMatch ? `/${cmdMatch[1]}` : dl.replace('Command:', '').trim();
           } else if (dl.startsWith('Display Text:')) {
             const textMatch = dl.match(/Display Text:\s*"(.+?)"\s*-\s*(.*)/);
             if (textMatch) {
@@ -518,13 +559,38 @@ function _parseSafariLogEntry(entryType, headerLine, detailLines, nameMap) {
         return { userId, type: ACTIVITY_TYPES.action, desc, loc };
       }
 
+      case 'purchase': {
+        // 🛒 **PURCHASE** | [TIME] | **Name** at **StoreName** (COORD (#channel))
+        // > Bought: 🔮 **Item** (x1) for 50 Gold
+        const name = extractName(headerLine, 'at\\s+');
+        const userId = lookupUser(name);
+        if (!userId) return null;
+
+        const detail = detailLines[0] || '';
+        const buyMatch = detail.match(/Bought:\s*(.+?)\s*\(x(\d+)\)\s*for\s+(\d+)\s+(.+)/i);
+        if (buyMatch) {
+          const itemName = buyMatch[1].replace(/\*+/g, '').trim();
+          return { userId, type: ACTIVITY_TYPES.purchase, desc: `Bought ${itemName} x${buyMatch[2]} for ${buyMatch[3]} ${buyMatch[4]}`, loc };
+        }
+        return { userId, type: ACTIVITY_TYPES.purchase, desc: detail || 'Purchase', loc };
+      }
+
+      case 'attack': {
+        // ⚔️ **ATTACK** | [TIME] | **Name** scheduled an attack...
+        const name = extractName(headerLine, 'scheduled\\s+');
+        const userId = lookupUser(name);
+        if (!userId) return null;
+        const detail = detailLines[0] || '';
+        return { userId, type: ACTIVITY_TYPES.action, desc: `Attack: ${detail || 'scheduled'}`, loc };
+      }
+
       case 'whisper': {
-        // 🤫 WHISPER | [TIME] | NAME → RECIPIENT at COORD\nMESSAGE
+        // 🤫 **WHISPER** | [TIME] | **Name** → **Recipient** at **D3**
         const whisperMatch = headerLine.match(/\|\s*\*?\*?(.+?)\*?\*?\s+→\s+(.+?)\s+at\s+/i);
         if (!whisperMatch) return null;
         const name = whisperMatch[1].replace(/\*+/g, '').trim();
         const recipient = whisperMatch[2].replace(/\*+/g, '').trim();
-        const userId = nameMap.get(name.toLowerCase());
+        const userId = lookupUser(name);
         if (!userId) return null;
         return { userId, type: ACTIVITY_TYPES.whisper, desc: `Whispered to ${recipient}`, loc };
       }
