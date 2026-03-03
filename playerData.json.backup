@@ -1822,12 +1822,24 @@
               "type": "item",
               "desc": "Picked up 💈 Freshest item you've ever seen x5",
               "loc": "Admin"
+            },
+            {
+              "t": 1772557473212,
+              "type": "item",
+              "desc": "Picked up 🐣 Nurturer x1",
+              "loc": "A3"
+            },
+            {
+              "t": 1772557473212,
+              "type": "action",
+              "desc": "👩‍🍼 Baby Item\n> • Text: \"wawaaa!!\"\n> • Give Item: 🐣 Nurturer (x1)",
+              "loc": "Unknown"
             }
           ],
           "inventory": {
             "nurturer_361363": {
-              "quantity": 2,
-              "numAttacksAvailable": 2
+              "quantity": 4,
+              "numAttacksAvailable": 4
             },
             "nest_guardian_461600": 1,
             "raider_499497": {
@@ -2312,6 +2324,12 @@
               "t": 1772430907356,
               "type": "action",
               "desc": "Safari button: simple_action_290229"
+            },
+            {
+              "t": 1772431212418,
+              "type": "movement",
+              "desc": "Moved from B3 to B2",
+              "loc": "B2"
             },
             {
               "t": 1772431214237,

@@ -128,7 +128,8 @@ import {
   BUTTON_REGISTRY,
   MENU_FACTORY,
   sendDeferredResponse,
-  updateDeferredResponse
+  updateDeferredResponse,
+  createFollowupMessage
 } from './buttonHandlerFactory.js';
 import { createEntityManagementUI } from './entityManagementUI.js';
 import { formatBotEmoji } from './botEmojis.js';
@@ -11910,170 +11911,208 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
     } else if (custom_id.startsWith('safari_use_linked_')) {
       // Direct execute: single custom action linked to item
-      return ButtonHandlerFactory.create({
-        id: 'safari_use_linked',
-        deferred: true,
-        handler: async (context) => {
-          const itemId = context.customId.replace('safari_use_linked_', '');
-          console.log(`⚡ START: safari_use_linked - user ${context.userId} using item ${itemId}`);
+      // Manual handling — needs DEFERRED_UPDATE_MESSAGE to refresh inventory + follow-up for action result
+      const itemId = custom_id.replace('safari_use_linked_', '');
+      const guildId = req.body.guild_id;
+      const userId = req.body.member?.user?.id || req.body.user?.id;
+      const member = req.body.member;
+      const token = req.body.token;
 
-          const { loadPlayerData } = await import('./storage.js');
-          const { loadSafariContent, getLinkedActions, shouldConsumeItem, hasUnclaimedSubActions, consumeItemAfterAction } = await import('./safariManager.js');
+      // Defer as update (will patch inventory back onto original message)
+      await sendDeferredResponse(res, true, true);
 
-          const playerData = await loadPlayerData();
-          const safariData = await loadSafariContent();
-          const player = playerData[context.guildId]?.players?.[context.userId];
+      try {
+        console.log(`⚡ START: safari_use_linked - user ${userId} using item ${itemId}`);
 
-          if (!player?.safari?.inventory?.[itemId]) {
-            return { content: '❌ You do not have this item in your inventory.', flags: InteractionResponseFlags.EPHEMERAL };
-          }
+        const { loadPlayerData } = await import('./storage.js');
+        const { loadSafariContent, getLinkedActions, shouldConsumeItem, hasUnclaimedSubActions, consumeItemAfterAction, createPlayerInventoryDisplay } = await import('./safariManager.js');
 
-          const item = safariData[context.guildId]?.items?.[itemId];
-          if (!item) {
-            return { content: '❌ Item not found.', flags: InteractionResponseFlags.EPHEMERAL };
-          }
+        const playerData = await loadPlayerData();
+        const safariData = await loadSafariContent();
+        const player = playerData[guildId]?.players?.[userId];
 
-          const linkedActions = getLinkedActions(context.guildId, itemId, safariData);
-          if (linkedActions.length === 0) {
-            return { content: '❌ This item has no linked actions.', flags: InteractionResponseFlags.EPHEMERAL };
-          }
-
-          const action = linkedActions[0];
-
-          // Pre-execution guard: don't waste consumable if all limited sub-actions already claimed
-          if (shouldConsumeItem(item, action) && !hasUnclaimedSubActions(action, context.userId)) {
-            return { content: '❌ You\'ve already used all rewards from this action.', flags: InteractionResponseFlags.EPHEMERAL };
-          }
-
-          // Execute the action
-          const { executeButtonActions } = await import('./safariManager.js');
-          const result = await executeButtonActions(context.guildId, action.id, context.userId, {
-            channelId: req.body.channel?.id || req.body.channel_id,
-            interactionToken: req.body.token,
-            applicationId: req.body.application_id
-          }, client);
-
-          // Post-execution consumption
-          await consumeItemAfterAction(context.guildId, context.userId, itemId, item, action, playerData);
-
-          const resultText = result?.message || result?.content || '✅ Action executed!';
-          console.log(`✅ SUCCESS: safari_use_linked - executed "${action.name}" via item "${item.name}"`);
-
-          return {
-            content: `${item.emoji || '⚡'} **${item.name}** — ${resultText}`,
-            flags: InteractionResponseFlags.EPHEMERAL
-          };
+        if (!player?.safari?.inventory?.[itemId]) {
+          return updateDeferredResponse(token, { content: '❌ You do not have this item in your inventory.' });
         }
-      })(req, res, client);
+
+        const item = safariData[guildId]?.items?.[itemId];
+        if (!item) {
+          return updateDeferredResponse(token, { content: '❌ Item not found.' });
+        }
+
+        const linkedActions = getLinkedActions(guildId, itemId, safariData);
+        if (linkedActions.length === 0) {
+          return updateDeferredResponse(token, { content: '❌ This item has no linked actions.' });
+        }
+
+        const action = linkedActions[0];
+
+        // Pre-execution guard
+        if (shouldConsumeItem(item, action) && !hasUnclaimedSubActions(action, userId)) {
+          return updateDeferredResponse(token, { content: '❌ You\'ve already used all rewards from this action.' });
+        }
+
+        // Execute the action
+        const { executeButtonActions } = await import('./safariManager.js');
+        const result = await executeButtonActions(guildId, action.id, userId, {
+          channelId: req.body.channel?.id || req.body.channel_id,
+          interactionToken: token,
+          applicationId: req.body.application_id
+        }, client);
+
+        // Post-execution consumption
+        await consumeItemAfterAction(guildId, userId, itemId, item, action, playerData);
+
+        console.log(`✅ SUCCESS: safari_use_linked - executed "${action.name}" via item "${item.name}"`);
+
+        // Post action result as follow-up (new ephemeral message)
+        const actionResult = result?.data || result;
+        if (actionResult) {
+          await createFollowupMessage(token, {
+            ...actionResult,
+            ephemeral: true
+          });
+        }
+
+        // Update original message with refreshed inventory
+        const inventoryDisplay = await createPlayerInventoryDisplay(guildId, userId, member, 0);
+        await updateDeferredResponse(token, inventoryDisplay);
+
+      } catch (error) {
+        console.error(`❌ ERROR: safari_use_linked - ${error.message}`, error);
+        await updateDeferredResponse(token, { content: '❌ Error executing action.' });
+      }
 
     } else if (custom_id.startsWith('safari_item_uses_')) {
       // Multi-use item dispatch: String Select for attack/stamina/custom actions
-      return ButtonHandlerFactory.create({
-        id: 'safari_item_uses',
-        deferred: true,
-        handler: async (context) => {
-          const itemId = context.customId.replace('safari_item_uses_', '');
-          const selectedValue = context.values?.[0];
-          console.log(`📦 START: safari_item_uses - user ${context.userId} selected "${selectedValue}" for item ${itemId}`);
+      // Manual handling — DEFERRED_UPDATE_MESSAGE to refresh inventory + follow-up for results
+      const itemId = custom_id.replace('safari_item_uses_', '');
+      const selectedValue = req.body.data?.values?.[0];
+      const guildId = req.body.guild_id;
+      const userId = req.body.member?.user?.id || req.body.user?.id;
+      const member = req.body.member;
+      const token = req.body.token;
 
-          if (!selectedValue) {
-            return { content: '❌ No action selected.', flags: InteractionResponseFlags.EPHEMERAL };
-          }
+      if (!selectedValue) {
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { content: '❌ No action selected.' } });
+      }
 
-          // Route: Attack
-          if (selectedValue === 'attack') {
-            const { createAttackPlanningUI } = await import('./safariManager.js');
-            const response = await createAttackPlanningUI(context.guildId, context.userId, itemId, client);
-            return response.data || response;
-          }
+      // Defer as update (will patch inventory back onto original message)
+      await sendDeferredResponse(res, true, true);
 
-          // Route: Stamina
-          if (selectedValue === 'stamina') {
-            const { loadPlayerData, savePlayerData } = await import('./storage.js');
-            const { loadSafariContent } = await import('./safariManager.js');
-            const { addBonusPoints, getEntityPoints } = await import('./pointsManager.js');
+      try {
+        console.log(`📦 START: safari_item_uses - user ${userId} selected "${selectedValue}" for item ${itemId}`);
 
-            const playerData = await loadPlayerData();
-            const safariData = await loadSafariContent();
-            const player = playerData[context.guildId]?.players?.[context.userId];
-
-            if (!player?.safari?.inventory?.[itemId]) {
-              return { content: '❌ You do not have this item.', flags: InteractionResponseFlags.EPHEMERAL };
-            }
-
-            const item = safariData[context.guildId]?.items?.[itemId];
-            if (!item || item.consumable !== 'Yes' || !item.staminaBoost || item.staminaBoost <= 0) {
-              return { content: '❌ This item cannot be used for stamina.', flags: InteractionResponseFlags.EPHEMERAL };
-            }
-
-            const entityId = `player_${context.userId}`;
-            const currentStamina = await getEntityPoints(context.guildId, entityId, 'stamina');
-            const newStamina = await addBonusPoints(context.guildId, entityId, 'stamina', item.staminaBoost);
-
-            // Consume the item
-            const inventoryItem = player.safari.inventory[itemId];
-            if (typeof inventoryItem === 'number') {
-              if (inventoryItem <= 1) delete player.safari.inventory[itemId];
-              else player.safari.inventory[itemId] = inventoryItem - 1;
-            } else if (typeof inventoryItem === 'object') {
-              if (inventoryItem.quantity <= 1) delete player.safari.inventory[itemId];
-              else inventoryItem.quantity -= 1;
-            }
-
-            await savePlayerData(playerData);
-            return {
-              content: `✅ **Item Used!**\n\n${item.emoji || '⚡'} You used **${item.name}** and gained **+${item.staminaBoost} stamina**!\n\n⚡ **Stamina:** ${currentStamina.current}/${currentStamina.max} → ${newStamina.current}/${newStamina.max}`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            };
-          }
-
-          // Route: Custom Action (value = "action_{actionId}")
-          if (selectedValue.startsWith('action_')) {
-            const actionId = selectedValue.replace('action_', '');
-
-            const { loadPlayerData } = await import('./storage.js');
-            const { loadSafariContent, shouldConsumeItem, hasUnclaimedSubActions, consumeItemAfterAction } = await import('./safariManager.js');
-
-            const playerData = await loadPlayerData();
-            const safariData = await loadSafariContent();
-            const player = playerData[context.guildId]?.players?.[context.userId];
-
-            if (!player?.safari?.inventory?.[itemId]) {
-              return { content: '❌ You do not have this item.', flags: InteractionResponseFlags.EPHEMERAL };
-            }
-
-            const item = safariData[context.guildId]?.items?.[itemId];
-            const action = safariData[context.guildId]?.buttons?.[actionId];
-            if (!item || !action) {
-              return { content: '❌ Item or action not found.', flags: InteractionResponseFlags.EPHEMERAL };
-            }
-
-            // Pre-execution guard
-            if (shouldConsumeItem(item, action) && !hasUnclaimedSubActions(action, context.userId)) {
-              return { content: '❌ You\'ve already used all rewards from this action.', flags: InteractionResponseFlags.EPHEMERAL };
-            }
-
-            const { executeButtonActions } = await import('./safariManager.js');
-            const result = await executeButtonActions(context.guildId, actionId, context.userId, {
-              channelId: req.body.channel?.id || req.body.channel_id,
-              interactionToken: req.body.token,
-              applicationId: req.body.application_id
-            }, client);
-
-            await consumeItemAfterAction(context.guildId, context.userId, itemId, item, action, playerData);
-
-            const resultText = result?.message || result?.content || '✅ Action executed!';
-            console.log(`✅ SUCCESS: safari_item_uses - executed action "${action.name}" via item "${item.name}"`);
-
-            return {
-              content: `${item.emoji || '⚡'} **${item.name}** — ${resultText}`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            };
-          }
-
-          return { content: '❌ Unknown action type.', flags: InteractionResponseFlags.EPHEMERAL };
+        // Route: Attack — show attack planning UI as follow-up, refresh inventory
+        if (selectedValue === 'attack') {
+          const { createAttackPlanningUI, createPlayerInventoryDisplay } = await import('./safariManager.js');
+          const response = await createAttackPlanningUI(guildId, userId, itemId, client);
+          const attackUI = response.data || response;
+          await createFollowupMessage(token, { ...attackUI, ephemeral: true });
+          const inventoryDisplay = await createPlayerInventoryDisplay(guildId, userId, member, 0);
+          return updateDeferredResponse(token, inventoryDisplay);
         }
-      })(req, res, client);
+
+        // Route: Stamina — consume item, show result as follow-up, refresh inventory
+        if (selectedValue === 'stamina') {
+          const { loadPlayerData, savePlayerData } = await import('./storage.js');
+          const { loadSafariContent, createPlayerInventoryDisplay } = await import('./safariManager.js');
+          const { addBonusPoints, getEntityPoints } = await import('./pointsManager.js');
+
+          const playerData = await loadPlayerData();
+          const safariData = await loadSafariContent();
+          const player = playerData[guildId]?.players?.[userId];
+
+          if (!player?.safari?.inventory?.[itemId]) {
+            return updateDeferredResponse(token, { content: '❌ You do not have this item.' });
+          }
+
+          const item = safariData[guildId]?.items?.[itemId];
+          if (!item || item.consumable !== 'Yes' || !item.staminaBoost || item.staminaBoost <= 0) {
+            return updateDeferredResponse(token, { content: '❌ This item cannot be used for stamina.' });
+          }
+
+          const entityId = `player_${userId}`;
+          const currentStamina = await getEntityPoints(guildId, entityId, 'stamina');
+          const newStamina = await addBonusPoints(guildId, entityId, 'stamina', item.staminaBoost);
+
+          // Consume the item
+          const inventoryItem = player.safari.inventory[itemId];
+          if (typeof inventoryItem === 'number') {
+            if (inventoryItem <= 1) delete player.safari.inventory[itemId];
+            else player.safari.inventory[itemId] = inventoryItem - 1;
+          } else if (typeof inventoryItem === 'object') {
+            if (inventoryItem.quantity <= 1) delete player.safari.inventory[itemId];
+            else inventoryItem.quantity -= 1;
+          }
+
+          await savePlayerData(playerData);
+
+          // Post stamina result as follow-up
+          await createFollowupMessage(token, {
+            content: `✅ **Item Used!**\n\n${item.emoji || '⚡'} You used **${item.name}** and gained **+${item.staminaBoost} stamina**!\n\n⚡ **Stamina:** ${currentStamina.current}/${currentStamina.max} → ${newStamina.current}/${newStamina.max}`,
+            ephemeral: true
+          });
+
+          // Update inventory
+          const inventoryDisplay = await createPlayerInventoryDisplay(guildId, userId, member, 0);
+          return updateDeferredResponse(token, inventoryDisplay);
+        }
+
+        // Route: Custom Action (value = "action_{actionId}")
+        if (selectedValue.startsWith('action_')) {
+          const actionId = selectedValue.replace('action_', '');
+
+          const { loadPlayerData } = await import('./storage.js');
+          const { loadSafariContent, shouldConsumeItem, hasUnclaimedSubActions, consumeItemAfterAction, createPlayerInventoryDisplay } = await import('./safariManager.js');
+
+          const playerData = await loadPlayerData();
+          const safariData = await loadSafariContent();
+          const player = playerData[guildId]?.players?.[userId];
+
+          if (!player?.safari?.inventory?.[itemId]) {
+            return updateDeferredResponse(token, { content: '❌ You do not have this item.' });
+          }
+
+          const item = safariData[guildId]?.items?.[itemId];
+          const action = safariData[guildId]?.buttons?.[actionId];
+          if (!item || !action) {
+            return updateDeferredResponse(token, { content: '❌ Item or action not found.' });
+          }
+
+          // Pre-execution guard
+          if (shouldConsumeItem(item, action) && !hasUnclaimedSubActions(action, userId)) {
+            return updateDeferredResponse(token, { content: '❌ You\'ve already used all rewards from this action.' });
+          }
+
+          const { executeButtonActions } = await import('./safariManager.js');
+          const result = await executeButtonActions(guildId, actionId, userId, {
+            channelId: req.body.channel?.id || req.body.channel_id,
+            interactionToken: token,
+            applicationId: req.body.application_id
+          }, client);
+
+          await consumeItemAfterAction(guildId, userId, itemId, item, action, playerData);
+
+          console.log(`✅ SUCCESS: safari_item_uses - executed action "${action.name}" via item "${item.name}"`);
+
+          // Post action result as follow-up
+          const actionResult = result?.data || result;
+          if (actionResult) {
+            await createFollowupMessage(token, { ...actionResult, ephemeral: true });
+          }
+
+          // Update inventory
+          const inventoryDisplay = await createPlayerInventoryDisplay(guildId, userId, member, 0);
+          return updateDeferredResponse(token, inventoryDisplay);
+        }
+
+        return updateDeferredResponse(token, { content: '❌ Unknown action type.' });
+
+      } catch (error) {
+        console.error(`❌ ERROR: safari_item_uses - ${error.message}`, error);
+        await updateDeferredResponse(token, { content: '❌ Error executing action.' });
+      }
 
     } else if (custom_id.startsWith('safari_attack_target')) {
       // Handle target player selection
