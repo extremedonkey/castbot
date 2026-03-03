@@ -7396,6 +7396,7 @@ To fix this:
                 components: [
                   { type: 2, custom_id: 'test_role_hierarchy', label: 'Check Roles', style: 2, emoji: { name: '🔰' } },
                   { type: 2, custom_id: 'admin_populate_logs', label: 'Populate Logs', style: 2, emoji: { name: '📜' } },
+                  { type: 2, custom_id: 'admin_backfill_channel_logs', label: 'Backfill Channel', style: 2, emoji: { name: '📡' } },
                   { type: 2, custom_id: 'emergency_app_reinit', label: 'App Re-Init', style: 4, emoji: { name: '🚨' } },
                   { type: 2, custom_id: 'restart_bot', label: 'Restart Bot', style: 4, emoji: { name: '🔄' } }
                 ]
@@ -31432,6 +31433,50 @@ Your server is now ready for Tycoons gameplay!`;
                 { type: 10, content: summary },
                 { type: 14 },
                 { type: 1, components: [{ type: 2, style: 2, label: '← Back', custom_id: 'prod_menu_back' }] }
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'admin_backfill_channel_logs') {
+      // Backfill activity logs from Safari Log channel messages
+      return ButtonHandlerFactory.create({
+        id: 'admin_backfill_channel_logs',
+        updateMessage: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        deferred: true,
+        handler: async (context) => {
+          console.log(`📡 START: admin_backfill_channel_logs for guild ${context.guildId}`);
+          const { backfillFromSafariLogChannel } = await import('./activityLogger.js');
+          const result = await backfillFromSafariLogChannel(context.guildId, context.client);
+          console.log(`✅ SUCCESS: admin_backfill_channel_logs - parsed ${result.parsed}, added ${result.added}, skipped ${result.skipped}`);
+
+          let summary = `## 📡 Channel Log Backfill\n\n`;
+          summary += `**${result.parsed}** entries parsed from Safari Log channel\n`;
+          summary += `✅ **${result.added}** new entries added · ⏭️ **${result.skipped}** duplicates skipped\n\n`;
+
+          const playerNames = Object.keys(result.players);
+          if (playerNames.length > 0) {
+            summary += `**Per Player:**\n`;
+            for (const name of playerNames.slice(0, 15)) {
+              const p = result.players[name];
+              summary += `- ${name}: +${p.added} new (${p.total} total)\n`;
+            }
+            if (playerNames.length > 15) summary += `-# ...and ${playerNames.length - 15} more\n`;
+          }
+          summary += `\n-# Source: Safari Log channel messages. Parses movement, currency, items, actions, whispers.`;
+
+          return {
+            flags: (1 << 15),
+            components: [{
+              type: 17,
+              accent_color: 0x3498db,
+              components: [
+                { type: 10, content: summary },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, style: 2, label: '← Back', custom_id: 'reeces_stuff' }] }
               ]
             }]
           };

@@ -1,451 +1,241 @@
-# Item-Linked Custom Actions - UI Mockups & Button IDs
+# Item-Triggered Custom Actions - UI Mockups
 
-## Overview
-
-Three UI touchpoints need changes:
-1. **Coordinate Management Screen** (admin) - Add "Link Item" button to existing ActionRow
-2. **Player Inventory** (player) - Add "Use" button on items with linked actions
-3. **Action Selection Modal** (player) - Choose which action when item has multiple links
+**RaP:** [0954_20260303_ItemTriggeredActions_Analysis.md](../docs/01-RaP/0954_20260303_ItemTriggeredActions_Analysis.md)
 
 ---
 
-## Existing Button ID Map (what we hang off)
+## Journey 1: Admin Creates an Action & Links It to an Item
 
-```
-ADMIN SIDE — Custom Action Location/Trigger Screen
-══════════════════════════════════════════════════════════════
-
-entity_action_coords_{actionId}                app.js:26089 / customActionUI.js:1391
-│  "📍 Action Visibility" screen (coordinates + menu visibility)
-│  Called: createCoordinateManagementUI({ guildId, actionId })
-│
-│  CURRENT SCREEN STRUCTURE:
-│  ┌─────────────────────────────────────────────────┐
-│  │  📍 Action Visibility                           │
-│  │  ─────────────────────                          │
-│  │  Menu Visibility: [Hidden ▼]                    │  ← menu_visibility_select_{actionId}
-│  │  ─────────────────────                          │
-│  │  🗺️ Map Locations (3)                           │
-│  │  📍 A1 — Beach          [🗑️]                   │  ← remove_coord_{actionId}_{coord}
-│  │  📍 B2 — Forest         [🗑️]                   │
-│  │  📍 C3 — Cave           [🗑️]                   │
-│  │  ─────────────────────                          │
-│  │  [← Back] [📌 Add Coord] [# Post to Channel]   │  ← bottom ActionRow (3 buttons)
-│  │   ▲          ▲                ▲                 │
-│  │   custom_    add_coord_       entity_action_    │
-│  │   action_    modal_           post_channel_     │
-│  │   editor_    {actionId}       {actionId}        │
-│  │   {actionId}                                    │
-│  └─────────────────────────────────────────────────┘
-│
-│  ► WE ADD: 4th button "🔗 Link Item" to bottom ActionRow
-│  ► WE ADD: Linked items list section (between coords and bottom buttons)
-│
-├── menu_visibility_select_{actionId}    customActionUI.js:1445
-│   String select: Hidden / Player Menu / Crafting (unchanged)
-│
-├── remove_coord_{actionId}_{coordinate} customActionUI.js:1478
-│   Per-coordinate delete button (unchanged)
-│
-├── custom_action_editor_{actionId}      (← Back button, unchanged)
-│
-├── add_coord_modal_{actionId}           (Add Coordinate modal, unchanged)
-│
-├── entity_action_post_channel_{actionId} (Post to Channel, unchanged)
-│
-└── ► NEW: ca_linked_items_{actionId}
-    (🔗 Link Item — opens item selection sub-UI)
-
-
-PLAYER SIDE — Inventory
-══════════════════════════════════════════════════════════════
-
-safari_player_inventory                     app.js:11777
-│  Opens player inventory page 0
-│  Called: createPlayerInventoryDisplay(guildId, userId, member, 0)
-│  Factory: updateMessage: true
-│  ► WE MODIFY: This function to add "Use" buttons on linked items
-│
-├── safari_inv_page_{userId}_{pageNum}      app.js:23353
-│   Pagination — same display function, different page
-│   ► ALSO MODIFIED: Same createPlayerInventoryDisplay change
-│
-├── safari_use_item_{itemId}                app.js:11834
-│   Existing "Use" for consumable+staminaBoost items
-│   ► UNTOUCHED — pure stamina items keep this button
-│
-├── safari_attack_player_{itemId}           app.js:11803
-│   Existing "Attack" for weapon items
-│   ► UNTOUCHED
-│
-└── ► NEW: safari_use_linked_{itemId}
-    "▶ Use" button on items with linked action(s)
-    Routes to: immediate execute (1 action) or modal (2+ actions)
-```
+| Step | Screen Title | User Clicks | Button ID | Next Screen |
+|------|-------------|-------------|-----------|-------------|
+| 1 | — | `/menu` slash command | — | Production Menu |
+| 2 | `## CastBot \| Production Menu` | `⚡ Actions` button | `safari_action_editor` | Custom Actions list |
+| 3 | `## ⚡ Custom Actions` | `➕ Create New Custom Action` from dropdown | `entity_custom_action_list_global` (select, value: `create_new`) | Modal |
+| 4 | Modal: **Create Custom Action** | Fills in name/description, submits | `global_create_modal_safari_button_info` | Action Editor |
+| 5 | `## ⚡ Action Editor \| Healing Spell` | Configures trigger (must be "button"), conditions, action steps | (various) | stays on editor |
+| 6 | `## ⚡ Action Editor \| Healing Spell` | `📍 Manage` button (Button Locations section) | `entity_action_coords_{actionId}` | Action Visibility |
+| 7 | `## 📍 Action Visibility \| Healing Spell` | `📦 Item Action` button (bottom ActionRow) | `ca_linked_items_{actionId}` **NEW** | Item Link sub-UI |
+| 8 | `## 🔗 Link Item \| Healing Spell` | Selects item from dropdown (with search) | `ca_link_item_select_{actionId}` **NEW** | Returns to Action Visibility |
+| 9 | `## 📍 Action Visibility \| Healing Spell` | Item now listed under `📦 Items Using Action (1)` | — | Done |
 
 ---
 
-## 1. Coordinate Management Screen — Add "Link Item" Button + Section
-
-**Parent button:** `entity_action_coords_{actionId}` (app.js:26089)
-**UI function:** `createCoordinateManagementUI()` (customActionUI.js:1391)
-**Current bottom ActionRow:** 3 buttons → we add a 4th (max 5 per row, so fine)
-
-### Updated screen:
+### Step 5: Action Editor (renamed)
 
 ```
-┌──────────────────────────────────────────────────────┐
-│  📍 Action Visibility                                │
-│  ──────────────────────                              │
-│  Where can this action be triggered?                 │
-│                                                      │
-│  Menu Visibility:                                    │
-│  ┌──────────────────────────────────┐                │
-│  │ ▼  Hidden (not in player menu)  │                │  ← menu_visibility_select_{actionId}
-│  └──────────────────────────────────┘                │    (existing, unchanged)
-│  ──────────────────────                              │
-│  🗺️ Map Locations (3)                                │
-│                                                      │
-│  📍 A1 — Beach Cove                        [🗑️]     │  ← remove_coord_{actionId}_A1
-│  📍 B2 — Dark Forest                       [🗑️]     │  ← remove_coord_{actionId}_B2
-│  📍 C3 — Crystal Cave                      [🗑️]     │  ← remove_coord_{actionId}_C3
-│  ──────────────────────                              │
-│  🔗 Linked Items (2)                        ◄◄◄ NEW │
-│                                                      │
-│  🧪 Healing Potion (consumable)             [🗑️]    │  ← ca_unlink_item_{actionId}_{itemId}
-│  🗡️ Enchanted Sword                        [🗑️]    │  ← ca_unlink_item_{actionId}_{itemId}
-│  ──────────────────────                              │
-│  [← Back] [📌 Add Coord] [# Post] [🔗 Link Item]   │
-│   ▲          ▲              ▲          ▲             │
-│   custom_    add_coord_     entity_    ca_linked_    │
-│   action_    modal_         action_    items_        │
-│   editor_    {actionId}     post_ch_   {actionId}   │
-│   {actionId}                {actionId}   ◄◄◄ NEW   │
-└──────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│  ## ⚡ Action Editor | Healing Spell            ◄ RENAMED
+│  ──────────────────────                                 │
+│  📝 Action Info                                         │
+│  ──────────────────────                                 │
+│  🚀 Trigger: Button                          [Manage]  │
+│  ──────────────────────                                 │
+│  🧩 Conditions: 2 set                        [Manage]  │
+│  ──────────────────────                                 │
+│  **Button Locations** (Where players can click it)      │ ◄ RENAMED
+│  A1, B2; Player Menu; 1 item                            │ ◄ EXPANDED SUMMARY
+│                                               [Manage]  │
+│    ▲                                             ▲      │
+│    entity_action_coords_{actionId}                      │
+│  ──────────────────────                                 │
+│  ✅ Actions if Conditions Met (3/8)                     │
+│  ...                                                    │
+└─────────────────────────────────────────────────────────┘
 ```
 
-### Component budget (worst case — 6 coords + 3 linked items):
+**Summary line examples:**
+- `A1, B2; Player Menu; 2 items` — has coords, player menu, linked items
+- `A1; Crafting` — coords + crafting menu
+- `Player Menu; 1 item` — no coords, just menu + item
+- `No locations` — nothing configured
 
-| Component | Count |
-|-----------|-------|
-| Header text | 1 |
-| Separator | 1 |
-| Menu visibility text | 1 |
-| ActionRow + StringSelect | 2 |
-| Separator | 1 |
-| Map header text | 1 |
-| 6 coord Sections (Section + Text + Button) | 18 |
-| Separator | 1 |
-| Linked Items header text | 1 |
-| 3 item Sections (Section + Text + Button) | 9 |
-| Separator | 1 |
-| ActionRow + 4 buttons | 5 |
-| **Total** | **42** |
+---
 
-Close to the 40 limit with many entries. Mitigation: cap the inline display at ~4 items, show "and N more..." text for the rest. Or paginate the sub-screen.
+### Step 7: Action Visibility (LEAN redesign)
 
-### "Link Item" button press (`ca_linked_items_{actionId}`) → Item Selection sub-UI:
+**Accent:** `0x5865F2` (Discord blurple)
+**`📦 Item Action` button only visible when `trigger.type === 'button'`**
 
 ```
-┌──────────────────────────────────────────────────────┐
-│  🔗 Link Item to: Healing Spell                     │
-├──────────────────────────────────────────────────────┤
-│  Select an item to link to this action.              │
-│  Players with this item in their inventory will      │
-│  see a "Use" button.                                 │
-│                                                      │
-│  ┌────────────────────────────────────────────┐      │
-│  │ ▼ Choose an item...                        │      │  ← ca_link_item_select_{actionId}
-│  ├────────────────────────────────────────────┤      │
-│  │ 🧪 Healing Potion     (consumable)         │      │
-│  │ 🗡️ Enchanted Sword    (permanent)          │      │
-│  │ 📦 Mystery Box         (consumable)         │      │
-│  │ ── Already linked ──                        │      │
-│  │ ✅ Mana Crystal        (linked)             │      │
-│  └────────────────────────────────────────────┘      │
-│                                                      │
-│  [ ← Back ]                                         │
-│    ▲                                                 │
-│    entity_action_coords_{actionId}  (existing)       │
-└──────────────────────────────────────────────────────┘
+┌ accent: 0x5865F2 ──────────────────────────────────────┐
+│  ## 📍 Action Visibility | Healing Spell                │
+│  ──────────────────────                                 │
+│  > **`📋 Menu`**                                       │
+│  ┌──────────────────────────────────────┐               │
+│  │ ▼ Hidden (not in player menu)       │               │  ← menu_visibility_select_{actionId}
+│  └──────────────────────────────────────┘               │
+│  ──────────────────────                                 │
+│  > **`🗺️ Map Locations (2)`**                          │
+│                                                         │
+│  📍 A1                                       [🗑️]      │  ← remove_coord_{actionId}_A1
+│  📍 B2                                       [🗑️]      │  ← remove_coord_{actionId}_B2
+│  ──────────────────────                                 │
+│  > **`📦 Items Using Action (1)`**            ◄◄◄ NEW  │
+│                                                         │
+│  🧪 **Healing Potion**                       [🗑️]      │  ← ca_unlink_item_{actionId}_{itemId}
+│  Restores health when con..                             │     (48 char truncation)
+│  ──────────────────────                                 │
+│  [← Back] [📍 Add Coord] [# Post] [📦 Item Action]    │
+│   ▲          ▲              ▲          ▲         NEW ► │
+│   custom_    add_coord_     entity_    ca_linked_       │
+│   action_    modal_         action_    items_            │
+│   editor_    {actionId}     post_ch_   {actionId}       │
+│   {actionId}                {actionId}                  │
+└─────────────────────────────────────────────────────────┘
+```
+
+**When `trigger.type !== 'button'`** — the `📦 Item Action` button is hidden (3 buttons in ActionRow instead of 4). The items section still renders if items were previously linked, with a note: *"⚠️ Item triggers disabled — action trigger type must be Button"*
+
+---
+
+### Step 8: Item Link Sub-UI
+
+**Reuses:** `createEntitySelector()` from `entityManagementUI.js` (proven item picker with search)
+
+```
+┌ accent: 0x5865F2 ──────────────────────────────────────┐
+│  ## 🔗 Link Item | Healing Spell                       │
+│  ──────────────────────                                 │
+│  Select an item to link to this action.                 │
+│  Players with this item will see a **⚡ Use** button.   │
+│                                                         │
+│  ┌────────────────────────────────────────────┐         │
+│  │ ▼ Select an item...                        │         │ ← ca_link_item_select_{actionId}
+│  ├────────────────────────────────────────────┤         │
+│  │ 🔍 Search: "Type to search..."             │         │   (reuses entity search pattern)
+│  │ 🧪 Healing Potion     (consumable)         │         │
+│  │ 🗡️ Enchanted Sword    (permanent)          │         │
+│  │ 📦 Mystery Box         (consumable)         │         │
+│  │ ── Already linked (greyed) ──               │         │   (if item in action.linkedItems)
+│  │ ✅ Mana Crystal                             │         │
+│  └────────────────────────────────────────────┘         │
+│  ──────────────────────                                 │
+│  [← Back]                                              │
+│    ▲                                                    │
+│    entity_action_coords_{actionId} (back to visibility) │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. Player Inventory — "Use" Button on Linked Items
+## Journey 2: Player Uses an Item (Single Use — Custom Action)
 
-**Parent button:** `safari_player_inventory` (app.js:11777)
-**UI function:** `createPlayerInventoryDisplay()` (safariManager.js:3880)
-**Also rendered by:** `safari_inv_page_{userId}_{pageNum}` (app.js:23353)
+**Applies when:** Item has exactly 1 available use AND that use is a linked custom action
+(no attack value, no stamina boost — or those don't exist)
 
-### Current item rendering (unchanged items for reference):
+| Step | Screen Title | User Clicks | Button ID |
+|------|-------------|-------------|-----------|
+| 1 | — | `/menu` | — |
+| 2 | `## CastBot \| Player Menu` | `🧰 Inventory` | `safari_player_inventory` |
+| 3 | `## 🎒 Your Inventory` | `⚡ Use` button (grey) on item | `safari_use_linked_{itemId}` **NEW** |
+| 4 | Action executes, result shown | `← Back to Inventory` | `safari_player_inventory` |
 
-```
-Attack item  → Section with accessory: safari_attack_player_{itemId}     (unchanged)
-Consumable   → Section with accessory: safari_use_item_{itemId}          (unchanged)
-Regular      → Text Display only (no button)                             (unchanged)
-```
-
-### New rendering — items with linked actions:
+### Inventory with single-use custom action item:
 
 ```
 ┌──────────────────────────────────────────────────────┐
 │  🎒 Your Inventory                    Page 1/3       │
-│           ▲                                          │
-│           safari_player_inventory (opens this)       │
-│           safari_inv_page_{userId}_{page} (paginates)│
-├──────────────────────────────────────────────────────┤
-│  🧪 Healing Potion (x5)                             │
-│  Restores health  ⚡+10                              │
-│  🔮 Brew Potion, Heal Ally                          │  ← hint: linked action names
-│                                   [ ▶ Use ]          │  ← safari_use_linked_{itemId}
-│                                                      │
-│  Replaces safari_use_item_ for items that have       │
-│  BOTH stamina AND linked actions. Pure stamina       │
-│  items keep safari_use_item_ unchanged.              │
-├──────────────────────────────────────────────────────┤
-│  🗡️ Enchanted Sword (x1)                            │
-│  A magical blade  ⚔️ 15                              │
-│  🔮 Power Strike, Enchant                           │  ← hint: linked action names
-│         [ ⚔️ Attack Player ] [ ▶ Use ]               │
-│           ▲                     ▲                    │
-│  safari_attack_player_{itemId}  safari_use_linked_   │
-│  (existing, unchanged)          {itemId} (NEW)       │
-│                                                      │
-│  Attack items with linked actions get BOTH buttons   │
-│  in an ActionRow.                                    │
 ├──────────────────────────────────────────────────────┤
 │  📦 Mystery Box (x3)                                │
 │  Who knows what's inside?                            │
-│  🔮 Open Box                                        │  ← hint
-│                                   [ ▶ Use ]          │  ← safari_use_linked_{itemId}
-│                                                      │
-│  Regular item promoted to Section with accessory     │
-│  because it has a linked action.                     │
+│                                   [ ⚡ Use ]         │ ← safari_use_linked_{itemId}
+│                                     grey/Secondary   │    (1 linked action, no attack/stamina)
+├──────────────────────────────────────────────────────┤
+│  🧪 Healing Potion (x5)                             │
+│  Restores health  ⚡+10                              │
+│                              [ Use (+10 ⚡) ]        │ ← safari_use_item_{itemId}
+│                                                      │    (pure stamina, no linked actions
+│                                                      │     — UNCHANGED)
+├──────────────────────────────────────────────────────┤
+│  🗡️ Raider's Blade (x1)                             │
+│  A deadly weapon  ⚔️ 15                              │
+│                              [ ⚔️ Attack Player ]    │ ← safari_attack_player_{itemId}
+│                                                      │    (pure attack, no linked actions
+│                                                      │     — UNCHANGED)
 ├──────────────────────────────────────────────────────┤
 │  🛡️ Iron Shield (x2)                                │
-│  Sturdy protection                                   │
-│  (no linked actions = no button, still text-only)    │
-├──────────────────────────────────────────────────────┤
-│  [ 1 ]  [ 2 ]  [ 3 ]                                │  ← safari_inv_page_{userId}_{n}
+│  Sturdy protection                                   │ ← no button (no uses at all)
 └──────────────────────────────────────────────────────┘
 ```
 
-### Button decision matrix:
-
-| Item has... | Linked actions? | Button(s) shown |
-|-------------|-----------------|-----------------|
-| staminaBoost only | No | `safari_use_item_{itemId}` (existing, unchanged) |
-| staminaBoost only | Yes | `safari_use_linked_{itemId}` (NEW — handles both stamina + linked) |
-| attackValue only | No | `safari_attack_player_{itemId}` (existing, unchanged) |
-| attackValue only | Yes | `safari_attack_player_{itemId}` + `safari_use_linked_{itemId}` (both) |
-| neither | No | No button (text only) |
-| neither | Yes | `safari_use_linked_{itemId}` (NEW) |
-
 ---
 
-## 3a. Single Linked Action → Immediate Execution
+## Journey 3: Player Uses an Item (Multiple Uses — String Select)
 
-When `safari_use_linked_{itemId}` is pressed and the item has exactly **one** linked action:
+**Applies when:** Item has 2+ available uses (any combination of attack + stamina + custom actions)
 
-```
-User clicks [ ▶ Use ] on "Mystery Box"
-    ↓
-safari_use_linked_{itemId} handler (NEW, in app.js)
-    ↓
-getLinkedActions(guildId, itemId) → 1 action: "open_box_482916"
-    ↓
-executeButtonActions(guildId, "open_box_482916", userId, interactionData)
-    ↓  (existing function, safariManager.js:1512, unchanged)
-Action executes → results shown
-    ↓
-consumeItemAfterAction() → quantity 3 → 2
-```
+| Step | Screen Title | User Clicks | Button ID |
+|------|-------------|-------------|-----------|
+| 1 | — | `/menu` | — |
+| 2 | `## CastBot \| Player Menu` | `🧰 Inventory` | `safari_player_inventory` |
+| 3 | `## 🎒 Your Inventory` | Selects from `📦 Use Item` dropdown | `safari_item_uses_{itemId}` **NEW** |
+| 4a | (if attack selected) | Attack planning UI | routes to existing attack flow |
+| 4b | (if stamina selected) | Stamina consumed | routes to existing stamina flow |
+| 4c | (if custom action selected) | Action executes, result shown | `executeButtonActions()` |
 
-**Response (updates the inventory message):**
+### Inventory with multi-use item:
+
 ```
 ┌──────────────────────────────────────────────────────┐
-│  ✅ You used Mystery Box!                            │
-│                                                      │
-│  📦 Open Box result:                                 │
-│  You found a 🗡️ Rusty Dagger!                       │
-│                                                      │
-│  📦 Mystery Box remaining: 2                         │
-│                                                      │
-│  [ ← Back to Inventory ]                             │
-│    ▲                                                 │
-│    safari_player_inventory (existing)                │
+│  🎒 Your Inventory                    Page 1/3       │
+├──────────────────────────────────────────────────────┤
+│  🗡️ Enchanted Sword (x1)                            │
+│  A magical blade  ⚔️ 15  ⚡+5                        │
+│  📦 Multiple uses available                          │
+│  ┌────────────────────────────────────────────┐      │
+│  │ ▼ 📦 Use Item...                          │      │ ← safari_item_uses_{itemId}
+│  ├────────────────────────────────────────────┤      │
+│  │ ⚔️ Attack Player                          │      │   value: "attack"
+│  │ ⚡ Replenish Stamina (+5)                  │      │   value: "stamina"
+│  │ ⚡ Power Strike                            │      │   value: "action_{actionId1}"
+│  │ ⚡ Enchant Ally                            │      │   value: "action_{actionId2}"
+│  │ ⚡ Defensive Stance                        │      │   value: "action_{actionId3}"
+│  └────────────────────────────────────────────┘      │
+├──────────────────────────────────────────────────────┤
+│  📦 Mystery Box (x3)                                │
+│  Who knows what's inside?                            │
+│                                   [ ⚡ Use ]         │ ← safari_use_linked_{itemId}
+│                                                      │    (single custom action only)
+├──────────────────────────────────────────────────────┤
+│  🧪 Healing Potion (x5)                             │
+│  Restores health  ⚡+10                              │
+│                              [ Use (+10 ⚡) ]        │ ← safari_use_item_{itemId}
+│                                                      │    (pure stamina — unchanged)
 └──────────────────────────────────────────────────────┘
 ```
 
----
-
-## 3b. Multiple Linked Actions → Selection Modal
-
-When `safari_use_linked_{itemId}` is pressed and the item has **2+** linked actions:
+**String Select options (ordered):**
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                  Use: Enchanted Sword                    │
-│                  ▲                                       │
-│                  ca_action_choice_{itemId} (modal ID)    │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  Choose an action:          ← Label (type 18)           │
-│                                                         │
-│  ┌───────────────────────────────────────────────────┐  │
-│  │  ○  ⚔️ Power Strike    ← Radio Group (type 21)   │  │
-│  │     Deal 2x damage to target                      │  │
-│  │                                                   │  │
-│  │  ○  🛡️ Defensive Stance                          │  │
-│  │     Gain +5 defense for 1 round                   │  │
-│  │                                                   │  │
-│  │  ○  ✨ Enchant Ally                               │  │
-│  │     Grant ally +3 attack                          │  │
-│  └───────────────────────────────────────────────────┘  │
-│                                                         │
-│  Radio option values = actionId strings                  │
-│                                                         │
-│              [ Cancel ]    [ ✅ Submit ]    (built-in)   │
-└─────────────────────────────────────────────────────────┘
-
-Modal submit → same custom_id: ca_action_choice_{itemId}
-Extract selected actionId from radio group value
-→ executeButtonActions() → consumeItemAfterAction()
+1. ⚔️ Attack Player              (if item.attackValue > 0)
+2. ⚡ Replenish Stamina (+X)     (if item.consumable === 'Yes' && item.staminaBoost > 0)
+3. ⚡ [Custom Action Name 1]     (linked actions, sorted by name)
+4. ⚡ [Custom Action Name 2]
+...                               (hard cap: 20 total options)
 ```
 
 ---
 
-## Data Structure Changes
+## Button Display Decision Matrix
 
-### On the Custom Action (safariContent.buttons[actionId])
+| Item properties | Linked actions? | Total uses | Component | Custom ID |
+|----------------|-----------------|------------|-----------|-----------|
+| No attack, no stamina | 0 | 0 | No button | — |
+| Attack only | 0 | 1 | Button (green) | `safari_attack_player_{itemId}` (existing) |
+| Stamina only | 0 | 1 | Button (green) | `safari_use_item_{itemId}` (existing) |
+| No attack, no stamina | 1 | 1 | Button (grey, ⚡) | `safari_use_linked_{itemId}` (**new**) |
+| Any combo | — | 2+ | String Select (📦) | `safari_item_uses_{itemId}` (**new**) |
 
-```javascript
-{
-  id: "healing_spell_482916",
-  name: "Healing Spell",
-  // ... existing fields (trigger, conditions, coordinates, actions, etc.) ...
-
-  // NEW FIELD
-  linkedItems: ["healing_potion_id", "mana_crystal_id"]  // Array of item IDs
-}
-```
-
-### No changes to item structure needed
-
-Reverse lookup (item → actions) derived at runtime:
-```javascript
-function getLinkedActions(guildId, itemId, safariData) {
-  const actions = safariData[guildId]?.buttons || {};
-  return Object.values(actions).filter(a =>
-    a.linkedItems?.includes(itemId)
-  );
-}
-```
-
-Single source of truth on the action side. No sync issues.
+**Key rule:** Existing `safari_attack_player_` and `safari_use_item_` handlers are **never modified**. They only render when the item has exactly 1 use of that type. As soon as an item has 2+ total uses, everything goes through the String Select.
 
 ---
 
-## Complete Button ID Reference
+## Complete New Button ID Reference
 
-### New Button IDs
-
-| Button ID | Type | Parent UI | Purpose |
-|-----------|------|-----------|---------|
-| `ca_linked_items_{actionId}` | Button | Coordinate Mgmt screen (`entity_action_coords_{actionId}`) bottom ActionRow | Opens item selection sub-UI |
-| `ca_link_item_select_{actionId}` | String Select | Item selection sub-UI | Dropdown of items to link |
-| `ca_unlink_item_{actionId}_{itemId}` | Button | Coordinate Mgmt screen, linked items section | Remove specific item link |
-| `safari_use_linked_{itemId}` | Button | Player Inventory (`createPlayerInventoryDisplay`) | "Use" button — triggers linked action(s) |
-| `ca_action_choice_{itemId}` | Modal + Submit | Triggered by `safari_use_linked_` when 2+ actions | Radio group to choose which action |
-
-### Existing — UI Modified (handler unchanged)
-
-| Button ID | File:Line | What Changes |
-|-----------|-----------|--------------|
-| `entity_action_coords_{actionId}` | customActionUI.js:1391 | **UI change only:** `createCoordinateManagementUI()` gets new "Linked Items" section + 4th button in bottom ActionRow |
-| `safari_player_inventory` | app.js:11777 | **No handler change.** `createPlayerInventoryDisplay()` adds `safari_use_linked_` buttons |
-| `safari_inv_page_{userId}_{pageNum}` | app.js:23353 | **Same** — calls same display function |
-
-### Existing — Completely Untouched
-
-| Button ID | File:Line | Why |
-|-----------|-----------|-----|
-| `safari_use_item_{itemId}` | app.js:11834 | Pure stamina items keep their own button |
-| `safari_attack_player_{itemId}` | app.js:11803 | Attack is independent; "Use" added alongside |
-| `safari_crafting_menu_{guildId}_{userId}` | app.js:26273 | Out of scope |
-| `menu_visibility_select_{actionId}` | customActionUI.js:1445 | Menu visibility unchanged |
-| `remove_coord_{actionId}_{coord}` | customActionUI.js:1478 | Coord removal unchanged |
-| `add_coord_modal_{actionId}` | customActionUI.js | Add coord modal unchanged |
-| `entity_action_post_channel_{actionId}` | customActionUI.js | Post to channel unchanged |
-| `custom_action_editor_{actionId}` | customActionUI.js | Back button unchanged |
-
----
-
-## Functions to Modify
-
-| Function | File | Change |
-|----------|------|--------|
-| `createCoordinateManagementUI()` | customActionUI.js:1391 | Add "Linked Items" section + "Link Item" button to bottom ActionRow |
-| `createPlayerInventoryDisplay()` | safariManager.js:3880 | Add "▶ Use" accessory button for items that have linked actions |
-
-## Functions to Create
-
-| Function | File | Purpose |
-|----------|------|---------|
-| `getLinkedActions(guildId, itemId)` | safariManager.js | Reverse lookup: item → all actions linking to it |
-| `createLinkItemUI(guildId, actionId)` | customActionUI.js | Sub-UI with string select of available items |
-| `handleItemUseAction(guildId, userId, itemId)` | safariManager.js | Orchestrate: lookup → execute or modal → consume |
-| `createActionSelectionModal(itemId, actions)` | safariManager.js | Build modal with radio group for multi-action choice |
-| `consumeItemAfterAction(guildId, userId, itemId)` | safariManager.js | Post-execution: decrement consumable or apply multi-use logic |
-
----
-
-## Execution Flow
-
-```
-Player clicks [▶ Use] on item in inventory
-  safari_use_linked_{itemId}               ◄ NEW handler in app.js
-         │
-         ▼
-  getLinkedActions(guildId, itemId)         ◄ NEW function in safariManager.js
-  (scans safariContent.buttons for actions whose linkedItems includes itemId)
-         │
-         ├── 0 actions → "This item can't be used" (shouldn't happen - button hidden)
-         │
-         ├── 1 action → Execute immediately
-         │         │
-         │         ▼
-         │   executeButtonActions(...)       ◄ EXISTING (safariManager.js:1512)
-         │         │
-         │         ▼
-         │   consumeItemAfterAction(...)     ◄ NEW
-         │     ├── item.consumable === "Yes" → quantity -= 1
-         │     └── multi-use → respect item config
-         │
-         └── 2+ actions → Show selection modal
-                   │
-                   ▼
-             ca_action_choice_{itemId}       ◄ NEW modal (Radio Group type 21)
-                   │
-                   ▼
-             Modal submit handler            ◄ NEW handler in app.js
-             (extracts selected actionId from radio value)
-                   │
-                   ▼
-             executeButtonActions(...)        ◄ EXISTING
-                   │
-                   ▼
-             consumeItemAfterAction(...)      ◄ NEW
-```
-
----
-
-## Open Questions for Technical Plan
-
-1. **Unified vs separate "Use" button**: Should items with BOTH stamina boost AND linked actions show one button or two? (Mockup assumes unified — linked replaces stamina for those items)
-2. **Multi-use items**: What does "multi-use configuration" look like? Is this the existing `maxQuantity` field, or do we need a new `usesPerItem` field?
-3. **Action conditions**: If a linked action has conditions (e.g., "must have 100 gold"), should we check conditions BEFORE consuming the item? (Recommended: yes — conditions checked by `executeButtonActions`, item only consumed on success)
-4. **Cooldowns**: Should item-linked actions respect the same cooldown system as location-triggered actions?
-5. **Activity logging**: Should item uses be logged to the Safari activity log? (Recommended: yes)
-6. **Screen rename**: You mentioned renaming "Location" since it now covers coords + items + menu visibility. Want to settle on a name before implementation? (Candidates: "Triggers", "Availability", "Where & How")
+| ID Pattern | Type | Parent | Purpose |
+|------------|------|--------|---------|
+| `ca_linked_items_{actionId}` | Button | Action Visibility bottom row | Opens item link sub-UI |
+| `ca_link_item_select_{actionId}` | String Select | Item link sub-UI | Pick item to link |
+| `ca_unlink_item_{actionId}_{itemId}` | Button | Action Visibility items section | Remove item link |
+| `safari_use_linked_{itemId}` | Button | Player Inventory | Direct-execute single linked action |
+| `safari_item_uses_{itemId}` | String Select | Player Inventory | Multi-use dispatch (attack/stamina/actions) |

@@ -3099,6 +3099,14 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'admin',
     parent: 'reeces_stuff'
+  },
+  'admin_backfill_channel_logs': {
+    label: 'Backfill Channel',
+    description: 'Backfill activity logs from Safari Log channel messages (movement, currency, items, actions, whispers)',
+    emoji: '📡',
+    style: 'Secondary',
+    category: 'admin',
+    parent: 'reeces_stuff'
   }
 };
 

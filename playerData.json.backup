@@ -862,6 +862,17 @@
               "type": "action",
               "desc": "Safari button: my_conditional_searc_713128",
               "loc": "Unknown"
+            },
+            {
+              "t": 1772551623289,
+              "type": "action",
+              "desc": "Initial Name\n> • Text: \"Ohh ohhh!\"",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772554055205,
+              "type": "admin",
+              "desc": "[ADMIN] Set Territory Forager x5"
             }
           ],
           "inventory": {
@@ -869,11 +880,14 @@
               "quantity": 2,
               "numAttacksAvailable": 2
             },
-            "territory_forager_404120": 1,
             "nest_guardian_461600": 1,
             "raider_499497": {
               "quantity": 25,
               "numAttacksAvailable": 24
+            },
+            "territory_forager_404120": {
+              "quantity": 5,
+              "numAttacksAvailable": 0
             }
           },
           "achievements": [],
@@ -2929,8 +2943,8 @@
           "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
           "isDefault": true
         },
-        "modifiedAt": 1772462632646,
-        "modifiedBy": "391415444084490240",
+        "modifiedAt": 1772466102252,
+        "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
       "castlist_1759638936214_system": {
