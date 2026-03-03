@@ -456,7 +456,13 @@ function _parseSafariLogEntry(entryType, headerLine, detailLines, nameMap) {
       return m ? m[1].replace(/\*+/g, '').trim() : null;
     };
 
-    const lookupUser = (name) => name ? nameMap.get(name.toLowerCase()) : null;
+    const lookupUser = (name) => {
+      if (!name) return null;
+      // Handle Discord mention format: <@391415444084490240> or <@!391415444084490240>
+      const mentionMatch = name.match(/^<@!?(\d+)>$/);
+      if (mentionMatch) return mentionMatch[1];
+      return nameMap.get(name.toLowerCase());
+    };
 
     switch (entryType) {
       case 'movement': {
