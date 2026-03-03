@@ -7253,6 +7253,82 @@ function getItemAttackAvailability(inventoryItem) {
     return 0; // Legacy format has no attack tracking
 }
 
+// === Item-Triggered Custom Actions ===
+
+/**
+ * Find all custom actions linked to an item (reverse lookup)
+ * Only returns actions with trigger.type === 'button'
+ */
+function getLinkedActions(guildId, itemId, safariData) {
+    const actions = safariData[guildId]?.buttons || {};
+    return Object.entries(actions)
+        .filter(([, a]) =>
+            a.linkedItems?.includes(itemId) &&
+            a.trigger?.type === 'button'
+        )
+        .map(([id, a]) => ({ ...a, id }));
+}
+
+/**
+ * Check if using an item should consume it (tied to sub-action usage limits)
+ * Only consumes if item is consumable AND action has limited sub-actions
+ */
+function shouldConsumeItem(item, action) {
+    if (item.consumable !== 'Yes') return false;
+
+    const limitedTypes = ['give_currency', 'remove_currency', 'give_item', 'remove_item', 'modify_attribute'];
+    const hasLimitedSubAction = (action.actions || []).some(subAction =>
+        limitedTypes.includes(subAction.type) &&
+        subAction.config?.limit?.type &&
+        subAction.config.limit.type !== 'unlimited'
+    );
+
+    return hasLimitedSubAction;
+}
+
+/**
+ * Check if a player can still benefit from at least one limited sub-action
+ * Used as pre-execution guard to prevent wasting consumable items
+ */
+function hasUnclaimedSubActions(action, userId) {
+    const limitedTypes = ['give_currency', 'remove_currency', 'give_item', 'remove_item', 'modify_attribute'];
+    return (action.actions || []).some(subAction => {
+        if (!limitedTypes.includes(subAction.type)) return false;
+        const limit = subAction.config?.limit;
+        if (!limit || limit.type === 'unlimited') return false;
+
+        if (limit.type === 'once_per_player') {
+            const claimed = Array.isArray(limit.claimedBy) ? limit.claimedBy : [];
+            return !claimed.includes(userId);
+        }
+        if (limit.type === 'once_globally') {
+            return !limit.claimedBy;
+        }
+        return false;
+    });
+}
+
+/**
+ * Consume one unit of an item after a successful action execution
+ */
+async function consumeItemAfterAction(guildId, userId, itemId, item, action, playerData) {
+    if (!shouldConsumeItem(item, action)) return;
+
+    const player = playerData[guildId]?.players?.[userId];
+    const inventory = player?.safari?.inventory;
+    if (!inventory?.[itemId]) return;
+
+    const currentQty = getItemQuantity(inventory[itemId]);
+    if (currentQty <= 1) {
+        delete inventory[itemId];
+    } else {
+        setItemQuantity(inventory, itemId, currentQty - 1);
+    }
+
+    const { savePlayerData } = await import('./storage.js');
+    await savePlayerData(playerData);
+}
+
 /**
  * Migrate all player inventories to object format
  * @param {string} guildId - Guild to migrate (optional, migrates all if not provided)
@@ -9256,6 +9332,11 @@ export {
     setItemQuantity,
     getItemAttackAvailability,
     migrateInventoryToObjectFormat,
+    // Item-Triggered Custom Actions
+    getLinkedActions,
+    shouldConsumeItem,
+    hasUnclaimedSubActions,
+    consumeItemAfterAction,
     // Attack Resolution Functions
     calculatePlayerDefense,
     processAttackQueue,

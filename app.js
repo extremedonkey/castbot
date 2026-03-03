@@ -26110,6 +26110,129 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
 
+    } else if (custom_id.startsWith('ca_linked_items_')) {
+      // Open Item Link sub-UI for linking items to a custom action
+      return ButtonHandlerFactory.create({
+        id: 'ca_linked_items',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const actionId = context.customId.replace('ca_linked_items_', '');
+          const { createItemLinkUI } = await import('./customActionUI.js');
+          return await createItemLinkUI({ guildId: context.guildId, actionId });
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('ca_link_item_select_')) {
+      // Handle item selection from the Item Link sub-UI — links item to action
+      return ButtonHandlerFactory.create({
+        id: 'ca_link_item_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const actionId = context.customId.replace('ca_link_item_select_', '');
+          const selectedItemId = context.values?.[0];
+
+          // Handle search request
+          if (selectedItemId === 'search_entities') {
+            return {
+              type: InteractionResponseType.MODAL,
+              data: {
+                custom_id: `ca_link_item_search_${actionId}`,
+                title: 'Search Items',
+                components: [{
+                  type: 1,
+                  components: [{
+                    type: 4,
+                    custom_id: 'search_term',
+                    label: 'Search Term',
+                    style: 1,
+                    placeholder: 'Enter item name to search...',
+                    required: true
+                  }]
+                }]
+              }
+            };
+          }
+
+          if (!selectedItemId) return { content: '❌ No item selected.' };
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const action = allSafariContent[context.guildId]?.buttons?.[actionId];
+          if (!action) return { content: '❌ Action not found.' };
+
+          // Initialize linkedItems if missing
+          if (!action.linkedItems) action.linkedItems = [];
+          if (action.linkedItems.includes(selectedItemId)) {
+            return { content: '⚠️ This item is already linked to this action.' };
+          }
+
+          action.linkedItems.push(selectedItemId);
+          await saveSafariContent(allSafariContent);
+
+          const itemName = allSafariContent[context.guildId]?.items?.[selectedItemId]?.name || selectedItemId;
+          console.log(`✅ Linked item "${itemName}" to action "${action.name}"`);
+
+          // Return to Action Visibility screen
+          const { createCoordinateManagementUI } = await import('./customActionUI.js');
+          return await createCoordinateManagementUI({ guildId: context.guildId, actionId });
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('ca_unlink_item_')) {
+      // Remove item link from a custom action
+      return ButtonHandlerFactory.create({
+        id: 'ca_unlink_item',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          // custom_id format: ca_unlink_item_{actionId}_{itemId}
+          const parts = context.customId.replace('ca_unlink_item_', '').split('_');
+          // actionId may contain underscores, itemId is the last segment (timestamp-based)
+          // Pattern: ca_unlink_item_{actionName_timestamp}_{itemName_timestamp}
+          // We need to find the split point — look for the item in the action's linkedItems
+          const fullSuffix = context.customId.replace('ca_unlink_item_', '');
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const buttons = allSafariContent[context.guildId]?.buttons || {};
+
+          // Try to find the action and item by testing split points
+          let foundActionId = null;
+          let foundItemId = null;
+
+          for (const [actionId, action] of Object.entries(buttons)) {
+            if (fullSuffix.startsWith(actionId + '_')) {
+              const itemId = fullSuffix.slice(actionId.length + 1);
+              if (action.linkedItems?.includes(itemId)) {
+                foundActionId = actionId;
+                foundItemId = itemId;
+                break;
+              }
+            }
+          }
+
+          if (!foundActionId || !foundItemId) {
+            return { content: '❌ Could not find the item link to remove.' };
+          }
+
+          const action = buttons[foundActionId];
+          action.linkedItems = action.linkedItems.filter(id => id !== foundItemId);
+          await saveSafariContent(allSafariContent);
+
+          const itemName = allSafariContent[context.guildId]?.items?.[foundItemId]?.name || foundItemId;
+          console.log(`🗑️ Unlinked item "${itemName}" from action "${action.name}"`);
+
+          // Return to Action Visibility screen
+          const { createCoordinateManagementUI } = await import('./customActionUI.js');
+          return await createCoordinateManagementUI({ guildId: context.guildId, actionId: foundActionId });
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('entity_action_post_channel_select_')) {
       // Channel select handler: post custom action button to selected channel
       try {
@@ -40561,6 +40684,7 @@ Your server is now ready for Tycoons gameplay!`;
           emoji: buttonEmoji,
           style: 1, // Primary
           coordinates: [], // No coordinates initially
+          linkedItems: [], // No linked items initially
           actions: [],
           trigger: {
             type: 'button'

@@ -144,8 +144,8 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
       {
         type: 10, // Text Display  
         content: coordinate && mapId ? 
-          `## ⚡ Custom Actions for ${coordinate}\n\nSelect an action to manage or create a new one.` :
-          `## ⚡ Custom Actions\n\nSelect an action to manage or create a new one.`
+          `## ⚡ Actions for ${coordinate}\n\nSelect an action to manage or create a new one.` :
+          `## ⚡ Actions\n\nSelect an action to manage or create a new one.`
       },
       { type: 14 }, // Separator
       selectRow.toJSON() // Convert to JSON
@@ -363,7 +363,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
         // Header - ADD BUTTON NAME
         {
           type: 10,
-          content: `## ⚡ Custom Action Editor - ${action.name || 'New Action'}`
+          content: `## ⚡ Action Editor | ${action.name || 'New Action'}`
         },
         // REPLACE Section with ActionRow - NO nested text display
         {
@@ -409,14 +409,12 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           }
         },
 
-        // Coordinates Section - restored to Section
+        // Button Locations Section - restored to Section
         {
           type: 9, // Section
           components: [{
             type: 10,
-            content: triggerType === 'button'
-              ? `**Assigned Locations (Adds button to coordinate anchor)**\n${formatCoordinateList(action.coordinates)}`
-              : `**Assigned Locations**\n${formatCoordinateList(action.coordinates)}`
+            content: `**Button Locations** (Where players can click it)\n${formatButtonLocations(action)}`
           }],
           accessory: {
             type: 2,
@@ -710,6 +708,34 @@ function formatCoordinateList(coordinates) {
   }
   
   return truncated;
+}
+
+// Build summary of all trigger surfaces for the Action Editor
+function formatButtonLocations(action) {
+  const parts = [];
+
+  // Coordinates
+  const coords = action.coordinates || [];
+  if (coords.length > 0) {
+    const sorted = [...coords].sort();
+    const coordStr = sorted.length <= 4
+      ? sorted.join(', ')
+      : `${sorted.slice(0, 3).join(', ')}… +${sorted.length - 3}`;
+    parts.push(coordStr);
+  }
+
+  // Menu visibility
+  const visibility = action.menuVisibility || 'none';
+  if (visibility === 'player_menu') parts.push('Player Menu');
+  if (visibility === 'crafting_menu') parts.push('Crafting');
+
+  // Linked items
+  const items = action.linkedItems || [];
+  if (items.length > 0) {
+    parts.push(`${items.length} item${items.length > 1 ? 's' : ''}`);
+  }
+
+  return parts.length > 0 ? parts.join('; ') : 'No locations';
 }
 
 function getActionListComponents(actions, actionId, guildItems = {}, guildButtons = {}, executeOn = 'true', allActions = null) {
@@ -1386,7 +1412,8 @@ function getConditionDescription(condition) {
 }
 
 /**
- * Create coordinate management UI
+ * Create Action Visibility UI (LEAN design)
+ * Shows menu visibility, map locations, linked items, and navigation
  */
 export async function createCoordinateManagementUI({ guildId, actionId }) {
   const allSafariContent = await loadSafariContent();
@@ -1398,6 +1425,9 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
   }
 
   const coordinates = action.coordinates || [];
+  const linkedItems = action.linkedItems || [];
+  const items = guildData.items || {};
+  const isTriggerButton = action.trigger?.type === 'button';
 
   // Migrate legacy showInInventory to menuVisibility if needed
   let menuVisibility = action.menuVisibility;
@@ -1408,24 +1438,17 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
   const components = [
     {
       type: 10,
-      content: `## 📍 Action Visibility\n\n**Action:** ${action.name || 'Unnamed Action'}\n\nControl where this action appears:`
+      content: `## 📍 Action Visibility | ${action.name || 'Unnamed Action'}`
     },
     { type: 14 }
   ];
 
-  // Menu visibility description based on current selection
-  const visibilityDescriptions = {
-    'none': '🚫 **Hidden** - Only available at map locations',
-    'player_menu': '📋 **Player Menu** - Quick access from /menu → My Profile',
-    'crafting_menu': '🛠️ **Crafting** - Appears in Crafting menu from Inventory'
-  };
-
+  // --- Menu section ---
   components.push({
     type: 10,
-    content: `### 📋 Menu Visibility\n${visibilityDescriptions[menuVisibility] || visibilityDescriptions['none']}`
+    content: `> **\`📋 Menu\`**`
   });
 
-  // Menu visibility String Select
   components.push({
     type: 1, // ActionRow
     components: [{
@@ -1462,69 +1485,216 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
 
   components.push({ type: 14 });
 
-  // Display current coordinates (Map Locations section)
+  // --- Map Locations section ---
+  // Count total entries to decide if we need to collapse
+  const totalEntries = coordinates.length + linkedItems.length;
+
   if (coordinates.length > 0) {
     components.push({
       type: 10,
-      content: `### 📍 Map Locations (${coordinates.length})`
+      content: `> **\`🗺️ Map Locations (${coordinates.length})\`**`
     });
 
-    coordinates.forEach((coord, index) => {
+    // Collapse to summary if too many total entries (budget: 3N + 3M <= 24 → N+M <= 8)
+    if (totalEntries > 8) {
+      const sorted = [...coordinates].sort();
+      const coordStr = sorted.length <= 4
+        ? sorted.join(', ')
+        : `${sorted.slice(0, 3).join(', ')}… +${sorted.length - 3}`;
       components.push({
-        type: 9, // Section
-        components: [{
-          type: 10,
-          content: `**${coord}**`
-        }],
-        accessory: {
-          type: 2,
-          custom_id: `remove_coord_${actionId}_${coord}`,
-          label: "Remove",
-          style: 4, // Danger
-          emoji: { name: "🗑️" }
-        }
+        type: 10,
+        content: `📍 ${coordStr}`
       });
-    });
+    } else {
+      coordinates.forEach(coord => {
+        components.push({
+          type: 9, // Section
+          components: [{
+            type: 10,
+            content: `📍 **${coord}**`
+          }],
+          accessory: {
+            type: 2,
+            custom_id: `remove_coord_${actionId}_${coord}`,
+            label: "Remove",
+            style: 4, // Danger
+            emoji: { name: "🗑️" }
+          }
+        });
+      });
+    }
   } else {
     components.push({
       type: 10,
-      content: `### 📍 Map Locations\n*No coordinates assigned yet*`
+      content: `> **\`🗺️ Map Locations\`**\n*No coordinates assigned*`
     });
   }
 
-  // Add coordinate input with back button
-  components.push({ type: 14, spacing: 1 });
+  components.push({ type: 14 });
+
+  // --- Items Using Action section ---
+  // Resolve linked items (skip stale IDs for deleted items)
+  const resolvedItems = linkedItems
+    .map(itemId => ({ itemId, item: items[itemId] }))
+    .filter(({ item }) => item);
+
+  if (resolvedItems.length > 0) {
+    components.push({
+      type: 10,
+      content: `> **\`📦 Items Using Action (${resolvedItems.length})\`**`
+    });
+
+    if (totalEntries > 8) {
+      // Collapsed summary
+      components.push({
+        type: 10,
+        content: `📦 ${resolvedItems.length} item${resolvedItems.length > 1 ? 's' : ''} linked (use 📦 Item Action to manage)`
+      });
+    } else {
+      resolvedItems.forEach(({ itemId, item }) => {
+        const desc = item.description ? item.description.substring(0, 48) : '';
+        components.push({
+          type: 9, // Section
+          components: [{
+            type: 10,
+            content: `${item.emoji || '📦'} **${item.name}**${desc ? `\n${desc}` : ''}`
+          }],
+          accessory: {
+            type: 2,
+            custom_id: `ca_unlink_item_${actionId}_${itemId}`,
+            label: "Remove",
+            style: 4, // Danger
+            emoji: { name: "🗑️" }
+          }
+        });
+      });
+    }
+  } else if (isTriggerButton) {
+    components.push({
+      type: 10,
+      content: `> **\`📦 Items Using Action\`**\n*No items linked*`
+    });
+  }
+
+  // Show warning if items linked but trigger type isn't button
+  if (resolvedItems.length > 0 && !isTriggerButton) {
+    components.push({
+      type: 10,
+      content: `*⚠️ Item triggers disabled — action trigger type must be Button*`
+    });
+  }
+
+  // --- Navigation row ---
+  components.push({ type: 14 });
+
+  const navButtons = [
+    {
+      type: 2,
+      custom_id: `custom_action_editor_${actionId}`,
+      label: "← Back",
+      style: 2
+    },
+    {
+      type: 2,
+      custom_id: `add_coord_modal_${actionId}`,
+      label: "Add Coord",
+      style: 2,
+      emoji: { name: "📍" }
+    },
+    {
+      type: 2,
+      custom_id: `entity_action_post_channel_${actionId}`,
+      label: "Post",
+      style: 2,
+      emoji: { name: "#️⃣" }
+    }
+  ];
+
+  // 4th button: Item Action (only when trigger type is button)
+  if (isTriggerButton) {
+    navButtons.push({
+      type: 2,
+      custom_id: `ca_linked_items_${actionId}`,
+      label: "Item Action",
+      style: 2,
+      emoji: { name: "📦" }
+    });
+  }
+
   components.push({
-    type: 1, // Action Row
-    components: [
-      {
-        type: 2,
-        custom_id: `custom_action_editor_${actionId}`,
-        label: "← Back",
-        style: 2 // Secondary (grey) - no emoji on back buttons
-      },
-      {
-        type: 2,
-        custom_id: `add_coord_modal_${actionId}`,
-        label: "Add Coordinate",
-        style: 2, // Secondary (grey)
-        emoji: { name: "📍" }
-      },
-      {
-        type: 2,
-        custom_id: `entity_action_post_channel_${actionId}`,
-        label: "Post to Channel",
-        style: 2, // Secondary (grey)
-        emoji: { name: "#️⃣" }
-      }
-    ]
+    type: 1,
+    components: navButtons
   });
 
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2
     components: [{
       type: 17, // Container
+      accent_color: 0x5865F2, // Discord blurple
       components
+    }]
+  };
+}
+
+/**
+ * Create Item Link sub-UI for linking items to an action
+ * Reuses createEntitySelector() from entityManagementUI.js
+ */
+export async function createItemLinkUI({ guildId, actionId, searchTerm }) {
+  const allSafariContent = await loadSafariContent();
+  const guildData = allSafariContent[guildId] || {};
+  const action = guildData.buttons?.[actionId];
+  const allItems = guildData.items || {};
+  const linkedItems = action?.linkedItems || [];
+
+  if (!action) {
+    throw new Error('Action not found');
+  }
+
+  // Filter out already-linked items
+  const availableItems = Object.fromEntries(
+    Object.entries(allItems).filter(([id]) => !linkedItems.includes(id))
+  );
+
+  const { createEntitySelector } = await import('./entityManagementUI.js');
+  const selector = createEntitySelector(availableItems, null, 'item', searchTerm || '');
+
+  // Override custom_id to our handler
+  if (selector.components?.[0]) {
+    selector.components[0].custom_id = `ca_link_item_select_${actionId}`;
+    // Remove "Create New" option
+    selector.components[0].options = (selector.components[0].options || []).filter(
+      o => o.value !== 'create_new'
+    );
+    // Update placeholder
+    selector.components[0].placeholder = searchTerm
+      ? `Filtered: "${searchTerm}"`
+      : 'Select an item to link...';
+  }
+
+  const containerComponents = [
+    { type: 10, content: `## 🔗 Link Item | ${action.name}` },
+    { type: 14 },
+    { type: 10, content: `Select an item to link to this action.\nPlayers with this item will see a **⚡ Use** button.` },
+    selector,
+    { type: 14 },
+    {
+      type: 1,
+      components: [{
+        type: 2,
+        custom_id: `entity_action_coords_${actionId}`,
+        label: '← Back',
+        style: 2
+      }]
+    }
+  ];
+
+  return {
+    flags: (1 << 15), // IS_COMPONENTS_V2
+    components: [{
+      type: 17, // Container
+      accent_color: 0x5865F2, // Discord blurple
+      components: containerComponents
     }]
   };
 }

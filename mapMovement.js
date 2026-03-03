@@ -247,18 +247,14 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
     try {
         const { logPlayerMovement } = await import('./safariLogger.js');
         const playerData = await loadPlayerData();
-        const playerName = playerData[guildId]?.players?.[userId]?.displayName || 
-                          playerData[guildId]?.players?.[userId]?.username || 
-                          'Unknown Player';
-        
+
         await logPlayerMovement({
             guildId,
             userId,
-            playerName,
+            username: playerData[guildId]?.players?.[userId]?.username || 'Unknown Player',
+            displayName: playerData[guildId]?.players?.[userId]?.displayName || null,
             fromLocation: oldCoordinate,
-            toLocation: newCoordinate,
-            isAdminMove: adminMove,
-            staminaConsumed: !bypassStamina ? movementCost : 0
+            toLocation: newCoordinate
         });
     } catch (logError) {
         console.error('Failed to log player movement:', logError);

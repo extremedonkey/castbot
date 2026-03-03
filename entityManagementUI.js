@@ -1216,5 +1216,6 @@ function createPlayerItemSelector(items, targetUserId, searchTerm, selectedItemI
 export {
     getDefaultEmoji,
     getEntitiesForType,
-    filterEntities
+    filterEntities,
+    createEntitySelector
 };
