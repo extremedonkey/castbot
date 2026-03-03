@@ -188,6 +188,7 @@ Virtual castlists become real entities when:
 4. **Backwards Compatibility** - All legacy code continues working
 5. **Default Castlist** - Properly handles materialization and display
 6. **Alphabetical Sorting** - Fully functional
+7. **Compact Castlist** - Sharp-based PNG renderer, available from Hub + Player/Prod menus (March 2026)
 
 ### 🟡 Partial Implementations
 
@@ -209,9 +210,10 @@ See [docs/02-implementation-wip/CastlistV3_legacyRetirement.md](../02-implementa
 ### Core System (2,731+ lines)
 - **castlistManager.js** (405 lines) - Entity CRUD operations
 - **castlistVirtualAdapter.js** (273 lines) - Virtual entity bridge
-- **castlistHub.js** (528 lines) - Management UI (admin only)
+- **castlistHub.js** (528+ lines) - Management UI (includes 🍒 Compact button in management row)
 - **castlistHandlers.js** (388 lines) - Button/interaction handlers
-- **castlistV2.js** (767+ lines) - Display engine
+- **castlistV2.js** (767+ lines) - Display engine (Components V2 + Compact Castlist button in castlist rows)
+- **castlistImageGenerator.js** - Sharp-based PNG renderer for Compact Castlist ([docs](CompactCastlist.md))
 - **castlistUtils.js** (267 lines) - Utility functions
 
 ### Key Functions
@@ -302,8 +304,9 @@ const stats = await castlistManager.getMigrationStats(guildId);
 ## 📚 Related Documentation
 
 - **Technical Details**: [CastlistV3-DataStructures.md](CastlistV3-DataStructures.md)
+- **Compact Castlist**: [CompactCastlist.md](CompactCastlist.md) - Sharp PNG renderer (Hub button + Player/Prod menus)
 - **Legacy Retirement**: [docs/02-implementation-wip/CastlistV3_legacyRetirement.md](../02-implementation-wip/CastlistV3_legacyRetirement.md)
-- **Architecture**: [docs/architecture/CastlistArchitecture.md](../architecture/CastlistArchitecture.md)
+- **Architecture**: [CastlistArchitecture.md](CastlistArchitecture.md)
 - **Feature Status**: [CastlistV3-FeatureStatus.md](CastlistV3-FeatureStatus.md)
 
 ---

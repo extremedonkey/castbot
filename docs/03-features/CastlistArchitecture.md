@@ -1,7 +1,7 @@
 # Castlist Architecture
 
 **Status**: 🟢 Production (As-Built)
-**Last Updated**: November 2025
+**Last Updated**: March 2026
 **Purpose**: Authoritative reference for CastBot's castlist system architecture
 
 ## Executive Summary
@@ -24,6 +24,7 @@ graph TB
         MENU["/menu Command"]
         HUB["Castlist Hub"]
         BTN["show_castlist2 Buttons"]
+        CMP["🍒 Compact Castlist"]
     end
 
     subgraph "Two-Phase System"
@@ -47,6 +48,7 @@ graph TB
     %% Entry to Phase System
     CMD --> DD
     BTN --> DD
+    CMP --> DD
     MENU --> MG
     HUB --> MG
 
@@ -365,6 +367,7 @@ function getGuildTribes(guildId, castlistName) {
 | `show_castlist2_` buttons | getTribesForCastlist() | Deferred + webhook | [ButtonHandlerFactory.md](../enablers/ButtonHandlerFactory.md) |
 | Navigation buttons | getTribesForCastlist() | UPDATE_MESSAGE | [CastlistNavigationParsing.md](CastlistNavigationParsing.md) |
 | Placement edit | getTribesForCastlist() | UPDATE_MESSAGE | [Placements.md](Placements.md) |
+| 🍒 Compact Castlist | getTribesForCastlist() | Public PNG + ephemeral confirmation | [CompactCastlist.md](CompactCastlist.md) |
 
 ## Critical Implementation Notes
 
@@ -380,7 +383,7 @@ function getGuildTribes(guildId, castlistName) {
 
 ### Component Limits
 - Maximum 40 components per message (recursive count)
-- Castlist display limit: 4 custom + 1 default
+- Castlist display limit: 3 custom + 1 default + 1 Compact Castlist (5 per row max)
 - Solution: Sort by most recent, hide overflow
 
 ### Deferred Response Requirements
@@ -391,6 +394,7 @@ function getGuildTribes(guildId, castlistName) {
 ## Related Documentation
 
 ### Core Systems
+- [CompactCastlist.md](CompactCastlist.md) - Sharp-based PNG renderer (single-image castlist)
 - [Placements.md](Placements.md) - Placement editor system
 - [CastlistNavigationParsing.md](CastlistNavigationParsing.md) - Button parsing details
 - [SeasonLifecycle.md](../concepts/SeasonLifecycle.md) - Active season context

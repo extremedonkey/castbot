@@ -640,6 +640,7 @@ if (tzData.timezoneId) {
 - `/castlist` command - Shows castlist, uses string matching
 - `show_castlist2` button handler - Navigation between castlists
 - `determineCastlistToShow()` - Finds castlists by scanning tribe strings
+- 🍒 Compact Castlist - Sharp PNG renderer via `getTribesForCastlist()` ([CompactCastlist.md](CompactCastlist.md))
 - Production Menu (was `prod_manage_tribes`, now `reeces_stuff` in Tools) - Creates string-based castlists. See [CastlistV3.md](CastlistV3.md) for current system.
 
 ### 2. Virtual Adapter Integration (Partial)
@@ -865,7 +866,8 @@ Tribes can theoretically belong to multiple castlists:
 
 **Core Castlist Documentation:**
 - [CastlistV3.md](CastlistV3.md) - Complete CastlistV3 architecture and feature overview
-- [CastlistArchitecture.md](../architecture/CastlistArchitecture.md) - System architecture and integration points
+- [CastlistArchitecture.md](CastlistArchitecture.md) - System architecture and integration points
+- [CompactCastlist.md](CompactCastlist.md) - Sharp PNG renderer (Hub + Player/Prod menus)
 - [Placements.md](Placements.md) - Placement editing system (modal submission patterns, virtual entity handling)
 
 **Season Documentation:**
