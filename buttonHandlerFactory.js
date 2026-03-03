@@ -2284,6 +2284,41 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari_management'
   },
+  'ca_linked_items_*': {
+    label: 'Item Action',
+    description: 'Open item link sub-UI for linking items to action',
+    emoji: '📦',
+    style: 'Secondary',
+    category: 'safari_management'
+  },
+  'ca_link_item_select_*': {
+    label: 'Link Item Select',
+    description: 'Select an item to link to a custom action',
+    emoji: '🔗',
+    style: 'Secondary',
+    category: 'safari_management'
+  },
+  'ca_unlink_item_*': {
+    label: 'Unlink Item',
+    description: 'Remove item link from a custom action',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari_management'
+  },
+  'safari_use_linked_*': {
+    label: 'Use Item Action',
+    description: 'Execute single custom action linked to inventory item',
+    emoji: '⚡',
+    style: 'Secondary',
+    category: 'safari'
+  },
+  'safari_item_uses_*': {
+    label: 'Item Uses Select',
+    description: 'Choose between attack, stamina, or custom actions for multi-use item',
+    emoji: '📦',
+    style: 'Secondary',
+    category: 'safari'
+  },
   'entity_action_post_channel_*': {
     label: 'Post to Channel',
     description: 'Post custom action button to a Discord channel',

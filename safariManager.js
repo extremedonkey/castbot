@@ -4054,8 +4054,12 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null, curr
                 // Sections with buttons count as more components internally
                 const hasAttack = item.attackValue !== null && item.attackValue !== undefined;
                 const isStaminaConsumable = item.consumable === 'Yes' && item.staminaBoost && item.staminaBoost > 0;
-                const isComplexItem = hasAttack || isStaminaConsumable;
-                const componentWeight = isComplexItem ? 2 : 1;
+                const itemLinkedActions = getLinkedActions(guildId, itemId, safariData);
+                const hasLinkedActions = itemLinkedActions.length > 0;
+                const isComplexItem = hasAttack || isStaminaConsumable || hasLinkedActions;
+                // Multi-use items need Text + ActionRow (2), others need Section (1) or Text (1)
+                const itemUseCount = (hasAttack && numAttacksAvailable > 0 ? 1 : 0) + (isStaminaConsumable ? 1 : 0) + itemLinkedActions.length;
+                const componentWeight = itemUseCount >= 2 ? 3 : (isComplexItem ? 2 : 1);
                 
                 // Check if we have room for this item
                 if (components.length + componentWeight + 1 > 32) {
@@ -4077,117 +4081,160 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null, curr
                     components.push({ type: 14 }); // Separator before first item
                 }
                 
-                // Check if item has attack value or is consumable with stamina boost
-                // (already declared above for component limit checking)
-                
-                if (hasAttack) {
-                    // Calculate attacks planned using simple math: total - available
+                // Count all available uses for this item (reuse itemLinkedActions from weight check)
+                const linkedActions = itemLinkedActions;
+                const uses = [];
+                if (hasAttack && numAttacksAvailable > 0) uses.push({ type: 'attack' });
+                if (isStaminaConsumable) uses.push({ type: 'stamina' });
+                linkedActions.forEach(a => uses.push({ type: 'action', id: a.id, name: a.name }));
+                const totalUses = uses.length;
+
+                if (totalUses >= 2) {
+                    // Multi-use item: Text Display + ActionRow with String Select
+                    let multiItemContent = generateItemContent(item, customTerms, quantity);
+                    if (hasAttack) {
+                        multiItemContent += `\n⚔️ **Ready:** ${numAttacksAvailable}/${quantity}`;
+                    }
+                    multiItemContent += `\n📦 Multiple uses available`;
+
+                    if (multiItemContent.length > 500) {
+                        multiItemContent = multiItemContent.substring(0, 497) + '...';
+                    }
+
+                    // Build select options (ordered: attack → stamina → custom actions)
+                    const selectOptions = [];
+                    if (hasAttack && numAttacksAvailable > 0) {
+                        selectOptions.push({ label: '⚔️ Attack Player', value: 'attack', description: `Attack value: ${item.attackValue}` });
+                    }
+                    if (isStaminaConsumable) {
+                        selectOptions.push({ label: `⚡ Replenish Stamina (+${item.staminaBoost})`, value: 'stamina', description: 'Use item for stamina boost' });
+                    }
+                    linkedActions.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                    for (const action of linkedActions.slice(0, 20 - selectOptions.length)) {
+                        selectOptions.push({
+                            label: `⚡ ${(action.name || 'Action').substring(0, 95)}`,
+                            value: `action_${action.id}`,
+                            description: (action.description || '').substring(0, 100) || 'Custom action'
+                        });
+                    }
+
+                    components.push({ type: 10, content: multiItemContent });
+                    components.push({
+                        type: 1, // ActionRow
+                        components: [{
+                            type: 3, // String Select
+                            custom_id: `safari_item_uses_${itemId}`,
+                            placeholder: '📦 Use Item...',
+                            min_values: 1,
+                            max_values: 1,
+                            options: selectOptions
+                        }]
+                    });
+
+                    totalTextLength += multiItemContent.length;
+                    itemsProcessed++;
+                    console.log(`📦 DEBUG: Added multi-use item ${item.name} with ${selectOptions.length} options`);
+                } else if (totalUses === 1 && uses[0].type === 'action') {
+                    // Single linked action only — grey ⚡ Use button
+                    let actionItemContent = generateItemContent(item, customTerms, quantity);
+                    if (actionItemContent.length > 500) {
+                        actionItemContent = actionItemContent.substring(0, 497) + '...';
+                    }
+
+                    components.push({
+                        type: 9, // Section
+                        components: [{ type: 10, content: actionItemContent }],
+                        accessory: {
+                            type: 2,
+                            custom_id: `safari_use_linked_${itemId}`,
+                            label: 'Use',
+                            style: 2, // Secondary (grey)
+                            emoji: { name: '⚡' }
+                        }
+                    });
+
+                    totalTextLength += actionItemContent.length;
+                    itemsProcessed++;
+                    console.log(`⚡ DEBUG: Added single-action item ${item.name} with Use button`);
+                } else if (hasAttack) {
+                    // Attack-only item (existing behavior)
                     const attacksPlanned = quantity - numAttacksAvailable;
-                    
-                    // Generate compact item content with attack info
                     let attackItemContent = generateItemContent(item, customTerms, quantity);
-                    
-                    // Add very compact attack info
+
                     if (numAttacksAvailable > 0) {
                         attackItemContent += `\n⚔️ **Ready:** ${numAttacksAvailable}/${quantity}`;
                     } else {
                         attackItemContent += `\n⚔️ *All attacks used*`;
                     }
-                    
-                    // Very strict length limit for components
+
                     if (attackItemContent.length > 500) {
-                        attackItemContent = attackItemContent.substring(0, 497) + '...'
+                        attackItemContent = attackItemContent.substring(0, 497) + '...';
                     }
-                    
-                    // Create Section component with attack button
+
                     const sectionComponent = {
-                        type: 9, // Section component
-                        components: [
-                            {
-                                type: 10, // Text Display
-                                content: attackItemContent
-                            }
-                        ]
+                        type: 9,
+                        components: [{ type: 10, content: attackItemContent }]
                     };
-                    
-                    // Only add button if attacks are available
+
                     if (numAttacksAvailable > 0) {
                         sectionComponent.accessory = {
-                            type: 2, // Button
+                            type: 2,
                             custom_id: `safari_attack_player_${itemId}`,
                             label: '⚔️ Attack Player',
-                            style: 1 // Primary (blue)
+                            style: 1
                         };
                     } else {
-                        // Add disabled button for clarity
                         sectionComponent.accessory = {
-                            type: 2, // Button
+                            type: 2,
                             custom_id: `safari_attack_player_disabled_${itemId}`,
                             label: '⚔️ No Attacks Available',
-                            style: 2, // Secondary (gray)
+                            style: 2,
                             disabled: true
                         };
                     }
-                    
+
                     components.push(sectionComponent);
                     totalTextLength += attackItemContent.length;
                     itemsProcessed++;
                     console.log(`⚔️ DEBUG: Added attack item ${item.name} with Section component`);
-                    console.log(`📊 DEBUG: Item ${i+1} - Components: ${components.length}, Total text: ${totalTextLength} chars`);
                 } else if (isStaminaConsumable) {
-                    // Stamina consumable item - add Use button
+                    // Stamina-only item (existing behavior)
                     let staminaItemContent = generateItemContent(item, customTerms, quantity);
-                    
-                    // Very strict length limit for components
                     if (staminaItemContent.length > 500) {
-                        staminaItemContent = staminaItemContent.substring(0, 497) + '...'
+                        staminaItemContent = staminaItemContent.substring(0, 497) + '...';
                     }
-                    
-                    // Create Section component with Use button
-                    const sectionComponent = {
-                        type: 9, // Section component
-                        components: [
-                            {
-                                type: 10, // Text Display
-                                content: staminaItemContent
-                            }
-                        ],
+
+                    components.push({
+                        type: 9,
+                        components: [{ type: 10, content: staminaItemContent }],
                         accessory: {
-                            type: 2, // Button
+                            type: 2,
                             custom_id: `safari_use_item_${itemId}`,
                             label: `Use (+${item.staminaBoost} ⚡)`,
-                            style: 3 // Success (green)
+                            style: 3
                         }
-                    };
-                    
-                    components.push(sectionComponent);
+                    });
+
                     totalTextLength += staminaItemContent.length;
                     itemsProcessed++;
                     console.log(`⚡ DEBUG: Added stamina consumable ${item.name} with Use button`);
-                    console.log(`📊 DEBUG: Item ${i+1} - Components: ${components.length}, Total text: ${totalTextLength} chars`);
                 } else {
-                    // Non-attack, non-consumable item - use regular Text Display
+                    // No uses — plain text display
                     let itemContent = generateItemContent(item, customTerms, quantity);
-                    
-                    // Very strict length limit for components
                     if (itemContent.length > 500) {
-                        itemContent = itemContent.substring(0, 497) + '...'
+                        itemContent = itemContent.substring(0, 497) + '...';
                     }
-                    
-                    components.push({
-                        type: 10, // Text Display
-                        content: itemContent
-                    });
+
+                    components.push({ type: 10, content: itemContent });
                     totalTextLength += itemContent.length;
                     itemsProcessed++;
                     console.log(`📦 DEBUG: Added Text Display for ${item.name} (qty: ${quantity})`);
-                    console.log(`📊 DEBUG: Item ${i+1} - Components: ${components.length}, Total text: ${totalTextLength} chars`);
                 }
-                
-                // Only add separator between items of same type to save components
-                // Skip separator after attack/consumable items with buttons
-                if (i < updatedInventoryItems.length - 1 && !isComplexItem) {
-                    components.push({ type: 14 }); // Separator after simple items only
+                console.log(`📊 DEBUG: Item ${i+1} - Components: ${components.length}, Total text: ${totalTextLength} chars`);
+
+                // Add separator between items
+                if (i < updatedPageItems.length - 1) {
+                    components.push({ type: 14 });
                 }
                 
                 console.log(`📦 DEBUG: Added item ${item.name} (qty: ${quantity}) to display`);

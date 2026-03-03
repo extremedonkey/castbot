@@ -11906,13 +11906,180 @@ Your server is now ready for Tycoons gameplay!`;
           };
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('safari_use_linked_')) {
+      // Direct execute: single custom action linked to item
+      return ButtonHandlerFactory.create({
+        id: 'safari_use_linked',
+        deferred: true,
+        handler: async (context) => {
+          const itemId = context.customId.replace('safari_use_linked_', '');
+          console.log(`⚡ START: safari_use_linked - user ${context.userId} using item ${itemId}`);
+
+          const { loadPlayerData } = await import('./storage.js');
+          const { loadSafariContent, getLinkedActions, shouldConsumeItem, hasUnclaimedSubActions, consumeItemAfterAction } = await import('./safariManager.js');
+
+          const playerData = await loadPlayerData();
+          const safariData = await loadSafariContent();
+          const player = playerData[context.guildId]?.players?.[context.userId];
+
+          if (!player?.safari?.inventory?.[itemId]) {
+            return { content: '❌ You do not have this item in your inventory.', flags: InteractionResponseFlags.EPHEMERAL };
+          }
+
+          const item = safariData[context.guildId]?.items?.[itemId];
+          if (!item) {
+            return { content: '❌ Item not found.', flags: InteractionResponseFlags.EPHEMERAL };
+          }
+
+          const linkedActions = getLinkedActions(context.guildId, itemId, safariData);
+          if (linkedActions.length === 0) {
+            return { content: '❌ This item has no linked actions.', flags: InteractionResponseFlags.EPHEMERAL };
+          }
+
+          const action = linkedActions[0];
+
+          // Pre-execution guard: don't waste consumable if all limited sub-actions already claimed
+          if (shouldConsumeItem(item, action) && !hasUnclaimedSubActions(action, context.userId)) {
+            return { content: '❌ You\'ve already used all rewards from this action.', flags: InteractionResponseFlags.EPHEMERAL };
+          }
+
+          // Execute the action
+          const { executeButtonActions } = await import('./safariManager.js');
+          const result = await executeButtonActions(context.guildId, action.id, context.userId, {
+            channelId: req.body.channel?.id || req.body.channel_id,
+            interactionToken: req.body.token,
+            applicationId: req.body.application_id
+          }, client);
+
+          // Post-execution consumption
+          await consumeItemAfterAction(context.guildId, context.userId, itemId, item, action, playerData);
+
+          const resultText = result?.message || result?.content || '✅ Action executed!';
+          console.log(`✅ SUCCESS: safari_use_linked - executed "${action.name}" via item "${item.name}"`);
+
+          return {
+            content: `${item.emoji || '⚡'} **${item.name}** — ${resultText}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('safari_item_uses_')) {
+      // Multi-use item dispatch: String Select for attack/stamina/custom actions
+      return ButtonHandlerFactory.create({
+        id: 'safari_item_uses',
+        deferred: true,
+        handler: async (context) => {
+          const itemId = context.customId.replace('safari_item_uses_', '');
+          const selectedValue = context.values?.[0];
+          console.log(`📦 START: safari_item_uses - user ${context.userId} selected "${selectedValue}" for item ${itemId}`);
+
+          if (!selectedValue) {
+            return { content: '❌ No action selected.', flags: InteractionResponseFlags.EPHEMERAL };
+          }
+
+          // Route: Attack
+          if (selectedValue === 'attack') {
+            const { createAttackPlanningUI } = await import('./safariManager.js');
+            const response = await createAttackPlanningUI(context.guildId, context.userId, itemId, client);
+            return response.data || response;
+          }
+
+          // Route: Stamina
+          if (selectedValue === 'stamina') {
+            const { loadPlayerData, savePlayerData } = await import('./storage.js');
+            const { loadSafariContent } = await import('./safariManager.js');
+            const { addBonusPoints, getEntityPoints } = await import('./pointsManager.js');
+
+            const playerData = await loadPlayerData();
+            const safariData = await loadSafariContent();
+            const player = playerData[context.guildId]?.players?.[context.userId];
+
+            if (!player?.safari?.inventory?.[itemId]) {
+              return { content: '❌ You do not have this item.', flags: InteractionResponseFlags.EPHEMERAL };
+            }
+
+            const item = safariData[context.guildId]?.items?.[itemId];
+            if (!item || item.consumable !== 'Yes' || !item.staminaBoost || item.staminaBoost <= 0) {
+              return { content: '❌ This item cannot be used for stamina.', flags: InteractionResponseFlags.EPHEMERAL };
+            }
+
+            const entityId = `player_${context.userId}`;
+            const currentStamina = await getEntityPoints(context.guildId, entityId, 'stamina');
+            const newStamina = await addBonusPoints(context.guildId, entityId, 'stamina', item.staminaBoost);
+
+            // Consume the item
+            const inventoryItem = player.safari.inventory[itemId];
+            if (typeof inventoryItem === 'number') {
+              if (inventoryItem <= 1) delete player.safari.inventory[itemId];
+              else player.safari.inventory[itemId] = inventoryItem - 1;
+            } else if (typeof inventoryItem === 'object') {
+              if (inventoryItem.quantity <= 1) delete player.safari.inventory[itemId];
+              else inventoryItem.quantity -= 1;
+            }
+
+            await savePlayerData(playerData);
+            return {
+              content: `✅ **Item Used!**\n\n${item.emoji || '⚡'} You used **${item.name}** and gained **+${item.staminaBoost} stamina**!\n\n⚡ **Stamina:** ${currentStamina.current}/${currentStamina.max} → ${newStamina.current}/${newStamina.max}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            };
+          }
+
+          // Route: Custom Action (value = "action_{actionId}")
+          if (selectedValue.startsWith('action_')) {
+            const actionId = selectedValue.replace('action_', '');
+
+            const { loadPlayerData } = await import('./storage.js');
+            const { loadSafariContent, shouldConsumeItem, hasUnclaimedSubActions, consumeItemAfterAction } = await import('./safariManager.js');
+
+            const playerData = await loadPlayerData();
+            const safariData = await loadSafariContent();
+            const player = playerData[context.guildId]?.players?.[context.userId];
+
+            if (!player?.safari?.inventory?.[itemId]) {
+              return { content: '❌ You do not have this item.', flags: InteractionResponseFlags.EPHEMERAL };
+            }
+
+            const item = safariData[context.guildId]?.items?.[itemId];
+            const action = safariData[context.guildId]?.buttons?.[actionId];
+            if (!item || !action) {
+              return { content: '❌ Item or action not found.', flags: InteractionResponseFlags.EPHEMERAL };
+            }
+
+            // Pre-execution guard
+            if (shouldConsumeItem(item, action) && !hasUnclaimedSubActions(action, context.userId)) {
+              return { content: '❌ You\'ve already used all rewards from this action.', flags: InteractionResponseFlags.EPHEMERAL };
+            }
+
+            const { executeButtonActions } = await import('./safariManager.js');
+            const result = await executeButtonActions(context.guildId, actionId, context.userId, {
+              channelId: req.body.channel?.id || req.body.channel_id,
+              interactionToken: req.body.token,
+              applicationId: req.body.application_id
+            }, client);
+
+            await consumeItemAfterAction(context.guildId, context.userId, itemId, item, action, playerData);
+
+            const resultText = result?.message || result?.content || '✅ Action executed!';
+            console.log(`✅ SUCCESS: safari_item_uses - executed action "${action.name}" via item "${item.name}"`);
+
+            return {
+              content: `${item.emoji || '⚡'} **${item.name}** — ${resultText}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            };
+          }
+
+          return { content: '❌ Unknown action type.', flags: InteractionResponseFlags.EPHEMERAL };
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('safari_attack_target')) {
       // Handle target player selection
       try {
         const guildId = req.body.guild_id;
         const attackerId = req.body.member?.user?.id || req.body.user?.id;
         const targetId = req.body.data.values[0];
-        
+
         // Parse state from custom_id: safari_attack_target|itemId|quantity (pipe-separated to avoid underscore conflicts)
         const parts = custom_id.split('|');
         const itemId = parts[1];
@@ -26126,6 +26293,32 @@ Your server is now ready for Tycoons gameplay!`;
 
     } else if (custom_id.startsWith('ca_link_item_select_')) {
       // Handle item selection from the Item Link sub-UI — links item to action
+      // Check for search request first (needs modal response, can't use factory)
+      const actionIdForSelect = custom_id.replace('ca_link_item_select_', '');
+      const selectedItemId = req.body.data?.values?.[0];
+
+      if (selectedItemId === 'search_entities') {
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: {
+            custom_id: `ca_link_item_search_${actionIdForSelect}`,
+            title: 'Search Items',
+            components: [{
+              type: 1,
+              components: [{
+                type: 4,
+                custom_id: 'search_term',
+                label: 'Search Term',
+                style: 1,
+                placeholder: 'Enter item name to search...',
+                required: true,
+                max_length: 50
+              }]
+            }]
+          }
+        });
+      }
+
       return ButtonHandlerFactory.create({
         id: 'ca_link_item_select',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -26133,31 +26326,9 @@ Your server is now ready for Tycoons gameplay!`;
         updateMessage: true,
         handler: async (context) => {
           const actionId = context.customId.replace('ca_link_item_select_', '');
-          const selectedItemId = context.values?.[0];
+          const itemId = context.values?.[0];
 
-          // Handle search request
-          if (selectedItemId === 'search_entities') {
-            return {
-              type: InteractionResponseType.MODAL,
-              data: {
-                custom_id: `ca_link_item_search_${actionId}`,
-                title: 'Search Items',
-                components: [{
-                  type: 1,
-                  components: [{
-                    type: 4,
-                    custom_id: 'search_term',
-                    label: 'Search Term',
-                    style: 1,
-                    placeholder: 'Enter item name to search...',
-                    required: true
-                  }]
-                }]
-              }
-            };
-          }
-
-          if (!selectedItemId) return { content: '❌ No item selected.' };
+          if (!itemId) return { content: '❌ No item selected.' };
 
           const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
           const allSafariContent = await loadSafariContent();
@@ -26166,14 +26337,14 @@ Your server is now ready for Tycoons gameplay!`;
 
           // Initialize linkedItems if missing
           if (!action.linkedItems) action.linkedItems = [];
-          if (action.linkedItems.includes(selectedItemId)) {
+          if (action.linkedItems.includes(itemId)) {
             return { content: '⚠️ This item is already linked to this action.' };
           }
 
-          action.linkedItems.push(selectedItemId);
+          action.linkedItems.push(itemId);
           await saveSafariContent(allSafariContent);
 
-          const itemName = allSafariContent[context.guildId]?.items?.[selectedItemId]?.name || selectedItemId;
+          const itemName = allSafariContent[context.guildId]?.items?.[itemId]?.name || itemId;
           console.log(`✅ Linked item "${itemName}" to action "${action.name}"`);
 
           // Return to Action Visibility screen
@@ -42349,6 +42520,34 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
       
+    } else if (custom_id.startsWith('ca_link_item_search_')) {
+      // Handle search modal for item linking — shows filtered item list
+      try {
+        const actionId = custom_id.replace('ca_link_item_search_', '');
+        const searchTerm = data.components[0]?.components[0]?.value?.toLowerCase().trim();
+
+        if (!searchTerm) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: '❌ Please enter a search term.', flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+
+        const { createItemLinkUI } = await import('./customActionUI.js');
+        const ui = await createItemLinkUI({ guildId: req.body.guild_id, actionId, searchTerm });
+
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: ui
+        });
+      } catch (error) {
+        console.error(`❌ ERROR: ca_link_item_search - ${error.message}`);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: '❌ Error searching items.', flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
+
     } else if (custom_id.startsWith('entity_search_modal_')) {
       // Handle entity search modal submission
       console.log(`🔍 DEBUG: Entity search modal - custom_id: ${custom_id}`);

@@ -1309,6 +1309,7 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
     ephemeral: true, // Admin-only trigger configuration - hidden from players
     components: [{
       type: 17, // Container
+      accent_color: 0x3498DB, // Blue
       components: components
     }]
   };
