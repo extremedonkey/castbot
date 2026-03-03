@@ -398,8 +398,12 @@ export async function backfillFromSafariLogChannel(guildId, client, messageLimit
 
     result.added += added;
     result.skipped += entries.length - added;
-    const name = player.displayName || player.username || userId;
-    result.players[name] = { added, skipped: entries.length - added, total: player.safari.history.length };
+    let name = player.displayName || player.username || player.global_name;
+    if (!name) {
+      // Fallback: resolve from guild member
+      try { const m = await guild.members.fetch(userId); name = m.displayName; } catch {}
+    }
+    result.players[name || userId] = { added, skipped: entries.length - added, total: player.safari.history.length };
   }
 
   await savePlayerData(playerData);
