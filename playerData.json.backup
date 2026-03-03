@@ -1864,6 +1864,12 @@
               "type": "action",
               "desc": "👩‍🍼 Baby Item\n> • Text: \"wawaaa!!\"\n> • Give Item: 🐣 Nurturer (x1)",
               "loc": "Unknown"
+            },
+            {
+              "t": 1772558136739,
+              "type": "action",
+              "desc": "👩‍🍼 Baby Item\n> • Text: \"wawaaa!!\"\n> • Give Item: 🐣 Nurturer (x1)",
+              "loc": "Unknown"
             }
           ],
           "inventory": {

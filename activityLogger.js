@@ -270,7 +270,7 @@ export async function backfillFromSafariLogChannel(guildId, client, messageLimit
   const channel = await guild.channels.fetch(logChannelId);
   if (!channel) throw new Error(`Channel ${logChannelId} not found`);
 
-  // Build name → userId lookup from playerData
+  // Build name → userId lookup from playerData + guild members
   const playerData = await loadPlayerData();
   const guildPlayers = playerData[guildId]?.players || {};
   const nameMap = new Map(); // lowercased name → userId
@@ -279,6 +279,22 @@ export async function backfillFromSafariLogChannel(guildId, client, messageLimit
     if (p.displayName) nameMap.set(p.displayName.toLowerCase(), userId);
     if (p.username) nameMap.set(p.username.toLowerCase(), userId);
     if (p.global_name) nameMap.set(p.global_name.toLowerCase(), userId);
+  }
+
+  // Also fetch guild members for complete name coverage (playerData names may be incomplete)
+  try {
+    const members = await guild.members.fetch();
+    for (const [memberId, member] of members) {
+      // Only add if this member is a Safari player (has entry in guildPlayers)
+      if (!guildPlayers[memberId]) continue;
+      if (member.displayName) nameMap.set(member.displayName.toLowerCase(), memberId);
+      if (member.user?.username) nameMap.set(member.user.username.toLowerCase(), memberId);
+      if (member.user?.globalName) nameMap.set(member.user.globalName.toLowerCase(), memberId);
+      if (member.nickname) nameMap.set(member.nickname.toLowerCase(), memberId);
+    }
+    console.log(`📡 Backfill: nameMap has ${nameMap.size} entries (playerData + guild members)`);
+  } catch (e) {
+    console.log(`📡 Backfill: Guild member fetch failed, using playerData names only (${nameMap.size} entries)`);
   }
 
   // Fetch messages (newest first, paginate backwards)
