@@ -1834,12 +1834,42 @@
               "type": "action",
               "desc": "👩‍🍼 Baby Item\n> • Text: \"wawaaa!!\"\n> • Give Item: 🐣 Nurturer (x1)",
               "loc": "Unknown"
+            },
+            {
+              "t": 1772557649387,
+              "type": "item",
+              "desc": "Picked up 🐣 Nurturer x1",
+              "loc": "A3"
+            },
+            {
+              "t": 1772557649387,
+              "type": "action",
+              "desc": "👩‍🍼 Baby Item\n> • Text: \"wawaaa!!\"\n> • Give Item: 🐣 Nurturer (x1)",
+              "loc": "G5"
+            },
+            {
+              "t": 1772558071699,
+              "type": "action",
+              "desc": "👩‍🍼 Baby Item\n> • Text: \"wawaaa!!\"\n> • Give Item: 🐣 Nurturer (x1)",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772558127917,
+              "type": "item",
+              "desc": "Picked up 🐣 Nurturer x1",
+              "loc": "A3"
+            },
+            {
+              "t": 1772558127917,
+              "type": "action",
+              "desc": "👩‍🍼 Baby Item\n> • Text: \"wawaaa!!\"\n> • Give Item: 🐣 Nurturer (x1)",
+              "loc": "Unknown"
             }
           ],
           "inventory": {
             "nurturer_361363": {
-              "quantity": 4,
-              "numAttacksAvailable": 4
+              "quantity": 5,
+              "numAttacksAvailable": 5
             },
             "nest_guardian_461600": 1,
             "raider_499497": {

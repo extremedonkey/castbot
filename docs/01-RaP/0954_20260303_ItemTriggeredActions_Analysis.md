@@ -1,7 +1,7 @@
 # 0954 - Item-Triggered Custom Actions
 
 **Date:** 2026-03-03 (updated 2026-03-04)
-**Status:** Design — ready to build
+**Status:** Implemented → [docs/03-features/ItemTriggeredActions.md](../03-features/ItemTriggeredActions.md)
 **Affects:** Custom Actions, Inventory, Action Visibility UI, Action Editor UI
 
 ---
