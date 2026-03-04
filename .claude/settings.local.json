@@ -87,7 +87,8 @@
       "Bash(for:*)",
       "Bash(while:*)",
       "Bash(if:*)",
-      "WebFetch(domain:ibb.co)"
+      "WebFetch(domain:ibb.co)",
+      "Bash(./scripts/dev/dev-start.sh)"
     ],
     "deny": [],
     "ask": []
