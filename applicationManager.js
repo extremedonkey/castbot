@@ -311,27 +311,53 @@ async function createApplicationChannel(guild, user, config, configId = 'unknown
             throw new Error(`User ID is undefined for user: ${JSON.stringify(user)}`);
         }
 
+        // Build permission overwrites
+        const permissionOverwrites = [
+            {
+                id: everyoneRoleId,
+                deny: [PermissionFlagsBits.ViewChannel]
+            },
+            {
+                id: userId,
+                allow: [
+                    PermissionFlagsBits.ViewChannel,
+                    PermissionFlagsBits.SendMessages,
+                    PermissionFlagsBits.EmbedLinks,
+                    PermissionFlagsBits.AttachFiles,
+                    PermissionFlagsBits.AddReactions,
+                    PermissionFlagsBits.UseExternalEmojis
+                ]
+            }
+        ];
+
+        // Add globalRoleAccess roles from CastBot permissions config
+        const globalRoleAccess = data[guild.id]?.permissions?.globalRoleAccess || [];
+        if (globalRoleAccess.length > 0) {
+            await guild.roles.fetch(); // Ensure roles cache is populated
+        }
+        for (const roleId of globalRoleAccess) {
+            // Validate role still exists in guild
+            const role = guild.roles.cache.get(roleId);
+            if (role) {
+                permissionOverwrites.push({
+                    id: roleId,
+                    allow: [
+                        PermissionFlagsBits.ViewChannel,
+                        PermissionFlagsBits.SendMessages,
+                        PermissionFlagsBits.ReadMessageHistory
+                    ]
+                });
+                console.log(`🔐 [APPLICATION] Added globalRoleAccess role: ${role.name} (${roleId})`);
+            } else {
+                console.warn(`🔐 [APPLICATION] Skipping invalid globalRoleAccess role: ${roleId}`);
+            }
+        }
+
         const channel = await guild.channels.create({
             name: channelName,
             type: ChannelType.GuildText,
             parent: category.id,
-            permissionOverwrites: [
-                {
-                    id: everyoneRoleId,
-                    deny: [PermissionFlagsBits.ViewChannel]
-                },
-                {
-                    id: userId,
-                    allow: [
-                        PermissionFlagsBits.ViewChannel,
-                        PermissionFlagsBits.SendMessages,
-                        PermissionFlagsBits.EmbedLinks,
-                        PermissionFlagsBits.AttachFiles,
-                        PermissionFlagsBits.AddReactions,
-                        PermissionFlagsBits.UseExternalEmojis
-                    ]
-                }
-            ]
+            permissionOverwrites
         });
 
         // Removed old welcome embed as per user request
@@ -449,10 +475,10 @@ Click the button below to get started!`
 /**
  * Create refreshed application setup Container with current selections
  */
-function createApplicationSetupContainer(tempConfig, configId, categories) {
+async function createApplicationSetupContainer(tempConfig, configId, categories, guildId) {
     // Check if all selections are made
     const allSelectionsMade = tempConfig.targetChannelId && tempConfig.categoryId && tempConfig.buttonStyle;
-    
+
     // Build selection status display
     let statusText = `## 🔧 Configure Application Button\n\n**Button:** "${tempConfig.buttonText}"\n\n`;
     statusText += `✅ **Channel:** ${tempConfig.targetChannelId ? '✅ Selected' : '❌ Not selected'}\n`;
@@ -460,7 +486,22 @@ function createApplicationSetupContainer(tempConfig, configId, categories) {
     statusText += `✅ **Style:** ${tempConfig.buttonStyle ? `✅ ${tempConfig.buttonStyle}` : '❌ Not selected'}\n`;
     statusText += `🏷️ **Production Role:** ${tempConfig.productionRole ? '✅ Selected' : '➖ Optional'}\n\n`;
     statusText += allSelectionsMade ? '**Ready to create!** Click the button below.' : 'Complete all selections to enable Create button.';
-    
+
+    // Build access disclosure text
+    let accessText = `**Who will have access to new applications:**\n`;
+    accessText += `• Any roles/users with Admin permission\n`;
+    if (guildId) {
+        const playerData = await loadPlayerData();
+        const globalRoleAccess = playerData[guildId]?.permissions?.globalRoleAccess || [];
+        if (globalRoleAccess.length > 0) {
+            const roleList = globalRoleAccess.map(id => `<@&${id}>`).join(', ');
+            accessText += `• Additional roles configured in CastBot Settings: ${roleList}\n`;
+        } else {
+            accessText += `• Additional roles configured in CastBot Settings: *(none)*\n`;
+        }
+    }
+    accessText += `-# Change this in CastBot Settings → Roles & Security`;
+
     return {
         type: 17, // Container
         accent_color: allSelectionsMade ? 0x27ae60 : 0x3498db, // Green when ready, blue when pending
@@ -474,7 +515,7 @@ function createApplicationSetupContainer(tempConfig, configId, categories) {
                 components: [createChannelSelectMenu(tempConfig.targetChannelId, configId).toJSON()]
             },
             {
-                type: 1, // Action Row  
+                type: 1, // Action Row
                 components: [createCategorySelectMenu(categories, tempConfig.categoryId, configId).toJSON()]
             },
             {
@@ -487,14 +528,19 @@ function createApplicationSetupContainer(tempConfig, configId, categories) {
             },
             { type: 14 }, // Separator
             {
+                type: 10, // Text Display
+                content: accessText
+            },
+            { type: 14 }, // Separator
+            {
                 type: 1, // Action Row
                 components: [
                     {
                         type: 2, // Button
                         custom_id: `create_app_button_${configId}`,
-                        label: 'Create App Button',
+                        label: 'Post to Channel',
                         style: 3, // Success (Green)
-                        emoji: { name: '✅' },
+                        emoji: { name: '#️⃣' },
                         disabled: !allSelectionsMade
                     }
                 ]
@@ -585,7 +631,7 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
         await saveApplicationConfig(guild.id, configId, tempConfig);
 
         // Create Components V2 Container with all selection components
-        const applicationSetupContainer = createApplicationSetupContainer(tempConfig, configId, categories);
+        const applicationSetupContainer = await createApplicationSetupContainer(tempConfig, configId, categories, guild.id);
 
         const responseData = {
             flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL

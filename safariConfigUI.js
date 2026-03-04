@@ -5,6 +5,71 @@
  */
 
 import { EDIT_CONFIGS, EDIT_TYPES } from './editFramework.js';
+import { loadPlayerData } from './storage.js';
+
+/**
+ * Create Roles & Security configuration UI
+ * @param {string} guildId - Discord guild ID
+ * @returns {Object} Discord Components V2 interface
+ */
+export async function createRolesSecurityUI(guildId) {
+    const playerData = await loadPlayerData();
+    const globalRoleAccess = playerData[guildId]?.permissions?.globalRoleAccess || [];
+
+    const roleListText = globalRoleAccess.length > 0
+        ? globalRoleAccess.map(id => `<@&${id}>`).join(', ')
+        : '*(none)*';
+
+    const container = {
+        type: 17,
+        accent_color: 0x5865F2, // Discord blurple
+        components: [
+            {
+                type: 10,
+                content: `## 🔐 Roles & Security\n\nConfigure which roles have access to CastBot features beyond server admins.\n\n**Current roles with full CastBot access:**\n${roleListText}\n\n-# Note: currently only applies to Applications.`
+            },
+            { type: 14 },
+            {
+                type: 10,
+                content: `**Select roles with full CastBot access:**`
+            },
+            {
+                type: 1,
+                components: [{
+                    type: 6, // Role Select
+                    custom_id: 'castbot_roles_security_select',
+                    min_values: 1,
+                    max_values: 10,
+                    default_values: globalRoleAccess.map(id => ({ id, type: 'role' }))
+                }]
+            },
+            { type: 14 },
+            {
+                type: 1,
+                components: [
+                    {
+                        type: 2,
+                        custom_id: 'safari_customize_terms',
+                        label: '← Back to Settings',
+                        style: 2
+                    },
+                    {
+                        type: 2,
+                        custom_id: 'castbot_roles_security_clear',
+                        label: 'Clear All Roles',
+                        style: 4, // Danger
+                        emoji: { name: '🗑️' }
+                    }
+                ]
+            }
+        ]
+    };
+
+    return {
+        flags: (1 << 15),
+        components: [container]
+    };
+}
 
 /**
  * Create Safari customization interface using Components V2
@@ -52,7 +117,7 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
     const containerComponents = [
         {
             type: 10, // Text Display component
-            content: `## ⚙️ Customize Settings\n\nPersonalize your experience with custom terminology, event names, and game mechanics.\n\n**Current Settings:**`
+            content: `## ⚙️ CastBot Settings\n\nPersonalize your experience with custom terminology, event names, and game mechanics.\n\n**Current Settings:**`
         },
         {
             type: 10, // Text Display component
@@ -63,7 +128,7 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
         },
         {
             type: 10, // Text Display component
-            content: `**Select a category to customize:**`
+            content: `> \`🦁 Idol Hunts, Challenges and Safari Settings\``
         },
         {
             type: 1, // Action Row
@@ -73,13 +138,18 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
             type: 14 // Separator
         },
         {
+            type: 10, // Text Display component
+            content: `> \`⚙️ Global CastBot Settings\``
+        },
+        {
             type: 1, // Action Row
             components: [
                 {
                     type: 2, // Button
-                    custom_id: 'prod_production_menu',
-                    label: '← Back',
-                    style: 2 // Secondary
+                    custom_id: 'castbot_roles_security',
+                    label: 'Roles & Security',
+                    style: 2, // Secondary
+                    emoji: { name: '🔐' }
                 },
                 {
                     type: 2, // Button
@@ -108,6 +178,20 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
                     label: 'Reset',
                     style: 4, // Danger
                     emoji: { name: '🔄' }
+                }
+            ]
+        },
+        {
+            type: 14 // Separator
+        },
+        {
+            type: 1, // Action Row
+            components: [
+                {
+                    type: 2, // Button
+                    custom_id: 'prod_production_menu',
+                    label: '← Back',
+                    style: 2 // Secondary
                 }
             ]
         }

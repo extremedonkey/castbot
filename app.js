@@ -250,9 +250,9 @@ function buildQuestionManagementUI(config, configId, currentPage = 0) {
       {
         type: 2, // Button
         custom_id: `season_post_button_${configId}_${currentPage}`,
-        label: 'Post Apps Button',
+        label: 'Post to Channel',
         style: 2, // Secondary
-        emoji: { name: '✅' }
+        emoji: { name: '#️⃣' }
       },
       {
         type: 2, // Button
@@ -12226,6 +12226,52 @@ Your server is now ready for Tycoons gameplay!`;
           });
 
           return interfaceData;
+        }
+      })(req, res, client);
+    } else if (custom_id === 'castbot_roles_security') {
+      return ButtonHandlerFactory.create({
+        id: 'castbot_roles_security',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const { createRolesSecurityUI } = await import('./safariConfigUI.js');
+          return await createRolesSecurityUI(context.guildId);
+        }
+      })(req, res, client);
+    } else if (custom_id === 'castbot_roles_security_select') {
+      return ButtonHandlerFactory.create({
+        id: 'castbot_roles_security_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const selectedRoles = context.values || [];
+          const playerData = await loadPlayerData();
+          if (!playerData[context.guildId]) playerData[context.guildId] = {};
+          if (!playerData[context.guildId].permissions) playerData[context.guildId].permissions = {};
+          playerData[context.guildId].permissions.globalRoleAccess = selectedRoles;
+          await savePlayerData(playerData);
+          console.log(`🔐 Roles & Security: Updated globalRoleAccess for guild ${context.guildId}: [${selectedRoles.join(', ')}]`);
+          const { createRolesSecurityUI } = await import('./safariConfigUI.js');
+          return await createRolesSecurityUI(context.guildId);
+        }
+      })(req, res, client);
+    } else if (custom_id === 'castbot_roles_security_clear') {
+      return ButtonHandlerFactory.create({
+        id: 'castbot_roles_security_clear',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const playerData = await loadPlayerData();
+          if (playerData[context.guildId]?.permissions) {
+            playerData[context.guildId].permissions.globalRoleAccess = [];
+            await savePlayerData(playerData);
+          }
+          console.log(`🔐 Roles & Security: Cleared globalRoleAccess for guild ${context.guildId}`);
+          const { createRolesSecurityUI } = await import('./safariConfigUI.js');
+          return await createRolesSecurityUI(context.guildId);
         }
       })(req, res, client);
     } else if (custom_id === 'safari_configure_log') {
@@ -33649,7 +33695,7 @@ Your server is now ready for Tycoons gameplay!`;
           .first(25);
         
         // Create refreshed container with updated selections
-        const refreshedContainer = createApplicationSetupContainer(tempConfig, configId, categories);
+        const refreshedContainer = await createApplicationSetupContainer(tempConfig, configId, categories, guildId);
         
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,

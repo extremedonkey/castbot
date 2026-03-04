@@ -1055,6 +1055,30 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari'
   },
+  'castbot_roles_security': {
+    label: 'Roles & Security',
+    description: 'Configure which roles have full CastBot access',
+    emoji: '🔐',
+    style: 'Secondary',
+    parent: 'safari_customize_terms',
+    category: 'settings'
+  },
+  'castbot_roles_security_select': {
+    label: 'Role Select',
+    description: 'Select roles with full CastBot access',
+    emoji: '🔐',
+    style: 'Secondary',
+    parent: 'castbot_roles_security',
+    category: 'settings'
+  },
+  'castbot_roles_security_clear': {
+    label: 'Clear All Roles',
+    description: 'Remove all additional CastBot access roles',
+    emoji: '🗑️',
+    style: 'Danger',
+    parent: 'castbot_roles_security',
+    category: 'settings'
+  },
   'safari_configure_log': {
     label: 'Logs',
     description: 'Configure CastBot Logs channel and settings',
@@ -2075,9 +2099,9 @@ export const BUTTON_REGISTRY = {
     category: 'application_management'
   },
   'season_post_button_*': {
-    label: 'Post Apps Button',
+    label: 'Post to Channel',
     description: 'Post the application button to a channel',
-    emoji: '✅',
+    emoji: '#️⃣',
     style: 'Secondary',
     category: 'application_management'
   },
@@ -2210,9 +2234,9 @@ export const BUTTON_REGISTRY = {
     category: 'application_management'
   },
   'create_app_button_*': {
-    label: 'Create App Button',
+    label: 'Post to Channel',
     description: 'Creates and posts the configured application button to the selected channel',
-    emoji: '🎯',
+    emoji: '#️⃣',
     style: 'Success',
     category: 'application_management'
   },
