@@ -7554,6 +7554,7 @@ To fix this:
           const { countComponents } = await import('./utils.js');
           countComponents([seasonManagementContainer], {
             enableLogging: true,
+            verbosity: "full",
             label: 'Season Management Menu Components'
           });
 
@@ -33586,135 +33587,95 @@ Your server is now ready for Tycoons gameplay!`;
       }
     } else if (custom_id === 'select_target_channel' || custom_id === 'select_application_category' || custom_id === 'select_button_style' || custom_id === 'select_production_role' ||
                custom_id.startsWith('select_target_channel_') || custom_id.startsWith('select_application_category_') || custom_id.startsWith('select_button_style_') || custom_id.startsWith('select_production_role_')) {
-      try {
-        console.log('Processing application configuration selection:', custom_id);
-        
-        const guildId = req.body.guild_id;
-        const userId = req.body.member.user.id;
-        
-        // Get selected value from Components v2
-        let selectedValue;
-        
-        // Check if this is a role selection - role selections can be empty (cleared)
-        const isRoleSelection = custom_id === 'select_production_role' || custom_id.startsWith('select_production_role_');
-        
-        if (!data.values || data.values.length === 0) {
-          if (isRoleSelection) {
-            // For role selection, empty values means the user cleared the selection - this is valid
-            selectedValue = null;
-            console.log('Role selection cleared (empty values array)');
+      return ButtonHandlerFactory.create({
+        id: 'app_config_selection',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log('Processing application configuration selection:', context.customId);
+          const { guildId, userId, values, client } = context;
+
+          // Get selected value - role selections can be empty (cleared)
+          const isRoleSelection = context.customId === 'select_production_role' || context.customId.startsWith('select_production_role_');
+          let selectedValue;
+
+          if (!values || values.length === 0) {
+            if (isRoleSelection) {
+              selectedValue = null;
+              console.log('Role selection cleared (empty values array)');
+            } else {
+              return { content: 'Error: No selection received. Please try again.', ephemeral: true };
+            }
           } else {
-            // For other selections, empty values is an error
-            console.error('No values found in component data');
-            return res.send({
-              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-              data: {
-                content: 'Error: No selection received. Please try again.',
-                flags: InteractionResponseFlags.EPHEMERAL
-              }
-            });
+            selectedValue = values[0];
           }
-        } else {
-          selectedValue = data.values[0];
-        }
-        
-        console.log('Selected value:', selectedValue);
-        
-        // Find the temporary config for this user
-        const playerData = await loadPlayerData();
-        const guildData = playerData[guildId];
-        
-        if (!guildData?.applicationConfigs) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: 'Configuration session expired. Please try creating the application button again.',
-              flags: InteractionResponseFlags.EPHEMERAL
+
+          console.log('Selected value:', selectedValue);
+
+          // Find the temporary config for this user
+          const playerData = await loadPlayerData();
+          const guildData = playerData[guildId];
+
+          if (!guildData?.applicationConfigs) {
+            return { content: 'Configuration session expired. Please try creating the application button again.', ephemeral: true };
+          }
+
+          // Extract config ID from custom_id if present, otherwise find by user ID
+          let configId;
+          if (context.customId.includes('_config_') || context.customId.includes('_temp_')) {
+            const configIdMatch = context.customId.match(/_(config|temp)_(.+)$/);
+            if (configIdMatch) {
+              configId = `${configIdMatch[1]}_${configIdMatch[2]}`;
+              console.log('🔍 DEBUG: Extracted config ID from custom_id:', configId);
             }
-          });
-        }
-        
-        // Extract config ID from custom_id if present, otherwise find by user ID
-        let configId;
-        if (custom_id.includes('_config_') || custom_id.includes('_temp_')) {
-          // Extract config ID from custom_id (e.g., select_target_channel_config_1751549410029_391415444084490240)
-          const configIdMatch = custom_id.match(/_(config|temp)_(.+)$/);
-          if (configIdMatch) {
-            configId = `${configIdMatch[1]}_${configIdMatch[2]}`;
-            console.log('🔍 DEBUG: Extracted config ID from custom_id:', configId);
           }
-        }
-        
-        if (!configId) {
-          // Fallback to old method - find by user ID
-          configId = Object.keys(guildData.applicationConfigs)
-            .find(id => (id.startsWith(`temp_`) || id.startsWith(`config_`)) && id.endsWith(`_${userId}`));
-          console.log('🔍 DEBUG: Using fallback config ID search:', configId);
-        }
-        
-        if (!configId) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: 'Configuration session not found. Please try creating the application button again.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        const tempConfig = guildData.applicationConfigs[configId];
-        
-        console.log('Current tempConfig before update:', JSON.stringify(tempConfig, null, 2));
-        
-        // Update the temp config with the selection
-        if (custom_id === 'select_target_channel' || custom_id.startsWith('select_target_channel_')) {
-          tempConfig.targetChannelId = selectedValue;
-          console.log('Updated targetChannelId to:', selectedValue);
-        } else if (custom_id === 'select_application_category' || custom_id.startsWith('select_application_category_')) {
-          tempConfig.categoryId = selectedValue;
-          console.log('Updated categoryId to:', selectedValue);
-        } else if (custom_id === 'select_button_style' || custom_id.startsWith('select_button_style_')) {
-          tempConfig.buttonStyle = selectedValue;
-          console.log('Updated buttonStyle to:', selectedValue);
-        } else if (custom_id === 'select_production_role' || custom_id.startsWith('select_production_role_')) {
-          // For role select, the value might be empty (no selection)
-          tempConfig.productionRole = selectedValue || null;
-          console.log('Updated productionRole to:', selectedValue || 'none');
-        }
-        
-        console.log('Updated tempConfig after selection:', JSON.stringify(tempConfig, null, 2));
-        
-        // Save the updated config
-        await saveApplicationConfig(guildId, configId, tempConfig);
-        
-        // Get fresh guild and categories for UI refresh
-        const guild = await client.guilds.fetch(guildId);
-        const categories = guild.channels.cache
-          .filter(channel => channel.type === ChannelType.GuildCategory)
-          .sort((a, b) => a.position - b.position)
-          .first(25);
-        
-        // Create refreshed container with updated selections
-        const refreshedContainer = await createApplicationSetupContainer(tempConfig, configId, categories, guildId);
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
-            components: [refreshedContainer]
+
+          if (!configId) {
+            configId = Object.keys(guildData.applicationConfigs)
+              .find(id => (id.startsWith(`temp_`) || id.startsWith(`config_`)) && id.endsWith(`_${userId}`));
+            console.log('🔍 DEBUG: Using fallback config ID search:', configId);
           }
-        });
-        
-      } catch (error) {
-        console.error('Error handling application configuration selection:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error processing your selection. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
+
+          if (!configId) {
+            return { content: 'Configuration session not found. Please try creating the application button again.', ephemeral: true };
           }
-        });
-      }
+
+          const tempConfig = guildData.applicationConfigs[configId];
+
+          console.log('Current tempConfig before update:', JSON.stringify(tempConfig, null, 2));
+
+          // Update the temp config with the selection
+          if (context.customId === 'select_target_channel' || context.customId.startsWith('select_target_channel_')) {
+            tempConfig.targetChannelId = selectedValue;
+            console.log('Updated targetChannelId to:', selectedValue);
+          } else if (context.customId === 'select_application_category' || context.customId.startsWith('select_application_category_')) {
+            tempConfig.categoryId = selectedValue;
+            console.log('Updated categoryId to:', selectedValue);
+          } else if (context.customId === 'select_button_style' || context.customId.startsWith('select_button_style_')) {
+            tempConfig.buttonStyle = selectedValue;
+            console.log('Updated buttonStyle to:', selectedValue);
+          } else if (context.customId === 'select_production_role' || context.customId.startsWith('select_production_role_')) {
+            tempConfig.productionRole = selectedValue || null;
+            console.log('Updated productionRole to:', selectedValue || 'none');
+          }
+
+          console.log('Updated tempConfig after selection:', JSON.stringify(tempConfig, null, 2));
+
+          // Save the updated config
+          await saveApplicationConfig(guildId, configId, tempConfig);
+
+          // Get fresh guild and categories for UI refresh
+          const guild = await client.guilds.fetch(guildId);
+          const categories = guild.channels.cache
+            .filter(channel => channel.type === ChannelType.GuildCategory)
+            .sort((a, b) => a.position - b.position)
+            .first(25);
+
+          // Create refreshed container with updated selections
+          const refreshedContainer = await createApplicationSetupContainer(tempConfig, configId, categories, guildId);
+
+          return { components: [refreshedContainer] };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('create_app_button_')) {
       return ButtonHandlerFactory.create({
         id: 'create_app_button',
@@ -33798,17 +33759,19 @@ Your server is now ready for Tycoons gameplay!`;
               logger.debug('APPLICATION', 'Saving final config', { finalConfigId });
               await saveApplicationConfig(guildId, finalConfigId, finalConfig);
               
-              // Create and post the button as a Components V2 container
+              // Create and post the button as a LEAN Components V2 container
               const button = createApplicationButton(tempConfig.buttonText, finalConfigId, tempConfig.buttonStyle);
               const channelCard = {
                 type: 17, // Container
                 accent_color: 0x3498db,
-                components: []
+                components: [
+                  { type: 10, content: `# ${tempConfig.buttonText}` }
+                ]
               };
               if (tempConfig.explanatoryText?.trim()) {
                 channelCard.components.push({ type: 10, content: tempConfig.explanatoryText.trim() });
-                channelCard.components.push({ type: 14 });
               }
+              channelCard.components.push({ type: 14 });
               channelCard.components.push({ type: 1, components: [button.toJSON()] });
 
               logger.debug('APPLICATION', 'Posting button to channel', { channelId: targetChannel.id });
@@ -33851,17 +33814,19 @@ Your server is now ready for Tycoons gameplay!`;
               await saveApplicationConfig(guildId, configId, tempConfig);
               logger.debug('APPLICATION', 'Config updated', { configId });
               
-              // Create and post the button as a Components V2 container
+              // Create and post the button as a LEAN Components V2 container
               const button = createApplicationButton(tempConfig.buttonText, configId, tempConfig.buttonStyle);
               const channelCard = {
                 type: 17, // Container
                 accent_color: 0x3498db,
-                components: []
+                components: [
+                  { type: 10, content: `# ${tempConfig.buttonText}` }
+                ]
               };
               if (tempConfig.explanatoryText?.trim()) {
                 channelCard.components.push({ type: 10, content: tempConfig.explanatoryText.trim() });
-                channelCard.components.push({ type: 14 });
               }
+              channelCard.components.push({ type: 14 });
               channelCard.components.push({ type: 1, components: [button.toJSON()] });
 
               logger.debug('APPLICATION', 'Posting season button to channel', { channelId: targetChannel.id });

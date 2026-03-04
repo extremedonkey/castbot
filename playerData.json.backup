@@ -661,14 +661,14 @@
     "serverName": "CastBot",
     "icon": "https://cdn.discordapp.com/icons/1331657596087566398/e2bd30d98992c902b50e047bf284ef64.webp",
     "ownerId": "391415444084490240",
-    "memberCount": 40,
+    "memberCount": 41,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1737562311909,
-    "lastUpdated": 1772431263693,
+    "lastUpdated": 1772625369748,
     "players": {
       "233762709932474370": {
         "emojiCode": "<:Geo:1396856830281388144>",
@@ -3424,19 +3424,18 @@
       "config_1759634522896_391415444084490240": {
         "buttonText": "Apply to Pokevivor",
         "explanatoryText": "Gotta catch em all!",
-        "completionDescription": "Thank you for completing your application! A host will review it soon.",
-        "completionImage": null,
         "channelFormat": "📝%name%-app",
-        "targetChannelId": null,
-        "categoryId": null,
-        "buttonStyle": "Primary",
-        "createdBy": "391415444084490240",
-        "stage": "draft",
-        "createdAt": 1759634522900,
-        "lastUpdated": 1772417805913,
+        "stage": "active",
         "seasonId": "season_cac1b81de8914c79",
         "seasonName": "Pokevivor",
-        "questions": []
+        "questions": [],
+        "targetChannelId": "1337754151655833694",
+        "categoryId": "1334493817231114271",
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "createdAt": 1772627521615,
+        "lastUpdated": 1772627521615,
+        "productionRole": "1431726526789058682"
       },
       "config_1759672397657_391415444084490240": {
         "buttonText": "Apply to S8 Multi-A",
@@ -3595,16 +3594,6 @@
         "channelName": "📝reecebot-app",
         "createdAt": "2025-11-09T03:05:36.135Z",
         "configId": "config_1751549410029_391415444084490240"
-      },
-      "1476971442791911609": {
-        "userId": "391415444084490240",
-        "channelId": "1476971442791911609",
-        "username": "extremedonkey",
-        "displayName": "ReeceBot",
-        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
-        "channelName": "📝reecebot-app",
-        "createdAt": "2026-02-27T15:57:13.892Z",
-        "configId": "config_1762792175795_391415444084490240"
       }
     },
     "rankings": {
@@ -4648,6 +4637,11 @@
           "updatedAt": "2025-11-10T16:48:03.793Z"
         }
       }
+    },
+    "permissions": {
+      "globalRoleAccess": [
+        "1431726526789058682"
+      ]
     }
   },
   "1266913708123361303": {
@@ -12513,14 +12507,14 @@
     "serverName": "EpochORG S7: Rumrunners",
     "icon": "https://cdn.discordapp.com/icons/1297188286191767603/82ee1b34273d340c02179b0ae8567e8a.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 67,
+    "memberCount": 66,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1729344188021,
-    "lastUpdated": 1772113653585,
+    "lastUpdated": 1772625369031,
     "ownerInfo": {
       "username": "mpschettig",
       "globalName": "Mike",

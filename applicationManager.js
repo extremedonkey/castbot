@@ -234,7 +234,7 @@ function createApplicationButton(buttonText, configId, buttonStyle = 'Primary') 
     
     return new ButtonBuilder()
         .setCustomId(`apply_${configId}`)
-        .setLabel(buttonText)
+        .setLabel('Open Application')
         .setStyle(styleMap[buttonStyle] || ButtonStyle.Primary)
         .setEmoji('📝');
 }
@@ -539,7 +539,7 @@ async function createApplicationSetupContainer(tempConfig, configId, categories,
                         type: 2, // Button
                         custom_id: `create_app_button_${configId}`,
                         label: 'Post to Channel',
-                        style: 3, // Success (Green)
+                        style: 2, // Secondary (Grey)
                         emoji: { name: '#️⃣' },
                         disabled: !allSelectionsMade
                     }

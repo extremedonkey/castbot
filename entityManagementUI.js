@@ -886,9 +886,9 @@ export async function createStoreItemManagementUI(options) {
                     {
                         type: 2, // Button
                         custom_id: `safari_store_open_${storeId}`,
-                        label: 'Open Store',
+                        label: 'Post to Channel',
                         style: 2,
-                        emoji: { name: '🛍️' }
+                        emoji: { name: '#️⃣' }
                     },
                     {
                         type: 2, // Button

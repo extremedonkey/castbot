@@ -2237,7 +2237,63 @@ export const BUTTON_REGISTRY = {
     label: 'Post to Channel',
     description: 'Creates and posts the configured application button to the selected channel',
     emoji: '#️⃣',
-    style: 'Success',
+    style: 'Secondary',
+    category: 'application_management'
+  },
+  'select_target_channel': {
+    label: 'Select Target Channel',
+    description: 'Channel select for application button posting target',
+    emoji: '#️⃣',
+    style: 'Secondary',
+    category: 'application_management'
+  },
+  'select_target_channel_*': {
+    label: 'Select Target Channel',
+    description: 'Channel select for application button posting target (with config ID)',
+    emoji: '#️⃣',
+    style: 'Secondary',
+    category: 'application_management'
+  },
+  'select_application_category': {
+    label: 'Select Category',
+    description: 'Category select for application channel creation',
+    emoji: '📁',
+    style: 'Secondary',
+    category: 'application_management'
+  },
+  'select_application_category_*': {
+    label: 'Select Category',
+    description: 'Category select for application channel creation (with config ID)',
+    emoji: '📁',
+    style: 'Secondary',
+    category: 'application_management'
+  },
+  'select_button_style': {
+    label: 'Select Button Style',
+    description: 'Style select for application button appearance',
+    emoji: '🎨',
+    style: 'Secondary',
+    category: 'application_management'
+  },
+  'select_button_style_*': {
+    label: 'Select Button Style',
+    description: 'Style select for application button appearance (with config ID)',
+    emoji: '🎨',
+    style: 'Secondary',
+    category: 'application_management'
+  },
+  'select_production_role': {
+    label: 'Select Production Role',
+    description: 'Role select for application production role assignment',
+    emoji: '🏷️',
+    style: 'Secondary',
+    category: 'application_management'
+  },
+  'select_production_role_*': {
+    label: 'Select Production Role',
+    description: 'Role select for application production role assignment (with config ID)',
+    emoji: '🏷️',
+    style: 'Secondary',
     category: 'application_management'
   },
 
