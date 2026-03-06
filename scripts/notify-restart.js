@@ -25,6 +25,7 @@ const customMessage = process.argv[2]; // First argument after script name
 const commitMessage = process.argv[3]; // Second argument - git commit message
 const filesChanged = process.argv[4]; // Third argument - files changed
 const gitStats = process.argv[5]; // Fourth argument - git stats
+const testSummary = process.argv[6]; // Fifth argument - test results (e.g. "29 pass, 0 fail (6 suites)")
 
 /**
  * Analyze files changed and provide risk assessment
@@ -265,6 +266,11 @@ async function sendRestartNotification() {
             if (testSteps) {
                 messageContent += `\n\n## :test_tube: Test Steps\n${testSteps}`;
             }
+        }
+
+        // Add test results if tests were run
+        if (testSummary) {
+            messageContent += `\n\n## :white_check_mark: Unit Tests\n\`${testSummary}\``;
         }
 
         // Add custom message - generate one if not provided

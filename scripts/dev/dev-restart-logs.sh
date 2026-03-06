@@ -57,16 +57,23 @@ else
 fi
 
 # Run tests if -tests flag provided
+TEST_SUMMARY=""
 if [ "$RUN_TESTS" = true ]; then
     echo ""
     echo "🧪 Running unit tests..."
     echo "----------------------------------------"
-    if node --test tests/*.test.js; then
-        echo "----------------------------------------"
+    TEST_OUTPUT=$(node --test tests/*.test.js 2>&1)
+    TEST_EXIT=$?
+    echo "$TEST_OUTPUT"
+    echo "----------------------------------------"
+    if [ $TEST_EXIT -eq 0 ]; then
+        TEST_PASS=$(echo "$TEST_OUTPUT" | grep "^# pass" | awk '{print $3}')
+        TEST_FAIL=$(echo "$TEST_OUTPUT" | grep "^# fail" | awk '{print $3}')
+        TEST_SUITES=$(echo "$TEST_OUTPUT" | grep "^# suites" | awk '{print $3}')
+        TEST_SUMMARY="${TEST_PASS:-0} pass, ${TEST_FAIL:-0} fail (${TEST_SUITES:-0} suites)"
         echo "✅ All tests passed"
         echo ""
     else
-        echo "----------------------------------------"
         echo "❌ Tests FAILED — aborting restart"
         exit 1
     fi
@@ -78,9 +85,9 @@ PROJECT_ROOT="$(git rev-parse --show-toplevel)"
 cd "$PROJECT_ROOT"
 # Run notification in background
 if [ -n "$CUSTOM_MESSAGE" ]; then
-    (node scripts/notify-restart.js "$CUSTOM_MESSAGE" "$COMMIT_MESSAGE" 2>/dev/null || echo "ℹ️  Discord notification failed") &
+    (node scripts/notify-restart.js "$CUSTOM_MESSAGE" "$COMMIT_MESSAGE" "" "" "$TEST_SUMMARY" 2>/dev/null || echo "ℹ️  Discord notification failed") &
 else
-    (node scripts/notify-restart.js "" "$COMMIT_MESSAGE" 2>/dev/null || echo "ℹ️  Discord notification failed") &
+    (node scripts/notify-restart.js "" "$COMMIT_MESSAGE" "" "" "$TEST_SUMMARY" 2>/dev/null || echo "ℹ️  Discord notification failed") &
 fi
 echo "🔔 Notification script completed"
 
