@@ -4,23 +4,29 @@
 # Combines restart and log tailing in one command
 #
 # Usage:
-#   ./dev-restart-logs.sh [commit-message] [custom-discord-message]
-#   ./dev-restart-logs.sh -f [commit-message]  # Full verbose logs
-#   ./dev-restart-logs.sh -v [commit-message]  # Full verbose logs (alias)
+#   ./dev-restart-logs.sh [flags] [commit-message] [custom-discord-message]
+#   ./dev-restart-logs.sh -v [commit-message]       # Full verbose logs
+#   ./dev-restart-logs.sh -tests [commit-message]   # Run unit tests before restart
+#   ./dev-restart-logs.sh -v -tests [commit-message] # Both
 #
-# Flags:
+# Flags (any order, before positional args):
 #   -f, -v    Full verbose logging (DEBUG_VERBOSE=true) - shows all debug dumps
 #             Without flags: STANDARD logging (feature logs only, good for Claude Code)
+#   -tests    Run unit tests (tests/*.test.js) before restart — aborts on failure
 
 echo "=== CastBot Dev Restart + Logs ==="
 
-# Check for verbose flag (-f or -v)
+# Parse flags (can appear in any order before positional args)
 VERBOSE_MODE=false
-if [[ "$1" == "-f" ]] || [[ "$1" == "-v" ]]; then
-    VERBOSE_MODE=true
-    shift  # Remove flag from arguments
-    echo "🔬 VERBOSE MODE: Full debug logging enabled"
-fi
+RUN_TESTS=false
+while [[ "$1" == -* ]]; do
+    case "$1" in
+        -f|-v) VERBOSE_MODE=true; echo "🔬 VERBOSE MODE: Full debug logging enabled" ;;
+        -tests) RUN_TESTS=true ;;
+        *) echo "⚠️  Unknown flag: $1" ;;
+    esac
+    shift
+done
 
 # Configuration
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
@@ -48,6 +54,22 @@ if ! git diff --staged --quiet; then
     fi
 else
     echo "📝 No changes to commit"
+fi
+
+# Run tests if -tests flag provided
+if [ "$RUN_TESTS" = true ]; then
+    echo ""
+    echo "🧪 Running unit tests..."
+    echo "----------------------------------------"
+    if node --test tests/*.test.js; then
+        echo "----------------------------------------"
+        echo "✅ All tests passed"
+        echo ""
+    else
+        echo "----------------------------------------"
+        echo "❌ Tests FAILED — aborting restart"
+        exit 1
+    fi
 fi
 
 # Send Discord notification

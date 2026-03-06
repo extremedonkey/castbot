@@ -4,14 +4,25 @@
 # Your new "Ctrl+C" - restarts app while preserving ngrok tunnel
 # Includes git safety net (replaces start-and-push.ps1 functionality)
 # 
-# Usage: ./dev-restart.sh [commit-message] [custom-discord-message]
+# Usage: ./dev-restart.sh [-tests] [commit-message] [custom-discord-message]
 # Examples:
 #   ./dev-restart.sh "Fix safari buttons"
 #   ./dev-restart.sh "Fix safari buttons" "Safari Add Action button is now working!"
+#   ./dev-restart.sh -tests "Fix safari buttons"   # Run unit tests before restart
 
 set -e  # Exit on any error
 
 echo "=== CastBot Dev Restart ==="
+
+# Parse flags
+RUN_TESTS=false
+while [[ "$1" == -* ]]; do
+    case "$1" in
+        -tests) RUN_TESTS=true ;;
+        *) echo "⚠️  Unknown flag: $1" ;;
+    esac
+    shift
+done
 
 # Configuration
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
@@ -37,6 +48,22 @@ if ! git diff --staged --quiet; then
     fi
 else
     echo "📝 No changes to commit"
+fi
+
+# Run tests if -tests flag provided
+if [ "$RUN_TESTS" = true ]; then
+    echo ""
+    echo "🧪 Running unit tests..."
+    echo "----------------------------------------"
+    if node --test tests/*.test.js; then
+        echo "----------------------------------------"
+        echo "✅ All tests passed"
+        echo ""
+    else
+        echo "----------------------------------------"
+        echo "❌ Tests FAILED — aborting restart"
+        exit 1
+    fi
 fi
 
 # Collect git information for Discord notification
