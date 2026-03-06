@@ -31202,23 +31202,27 @@ Your server is now ready for Tycoons gameplay!`;
         ephemeral: false,
         handler: async (context) => {
           console.log(`🏋️ START: safari_player_status - user ${context.userId}`);
-          
+
           // Load all necessary data
+          console.log(`🏋️ DEBUG: Loading imports...`);
           const { loadSafariContent, sortPlayersForResults } = await import('./safariManager.js');
           const { loadPlayerData } = await import('./storage.js');
+          console.log(`🏋️ DEBUG: Loading safari data...`);
           const safariData = await loadSafariContent();
+          console.log(`🏋️ DEBUG: Loading player data...`);
           const playerData = await loadPlayerData();
-          
+          console.log(`🏋️ DEBUG: Data loaded OK`);
+
           const guildId = context.guildId;
           const guildPlayers = playerData[guildId]?.players || {};
           const priorityRoles = safariData[guildId]?.priorityRoles || [];
           const customTerms = safariData[guildId]?.safariConfig?.customTerms || {};
           const currencyEmoji = customTerms.currencyEmoji || '🪙';
           const currencyName = customTerms.currencyName || 'coins';
-          
+
           // Get all initialized players (those with safari data)
           const initializedPlayers = [];
-          
+
           // Collect all user IDs first
           const userIds = [];
           for (const [userId, data] of Object.entries(guildPlayers)) {
@@ -31226,16 +31230,19 @@ Your server is now ready for Tycoons gameplay!`;
               userIds.push(userId);
             }
           }
-          
+          console.log(`🏋️ DEBUG: Found ${userIds.length} safari players, fetching guild...`);
+
           // Batch fetch all members at once
           const guild = await client.guilds.fetch(guildId);
+          console.log(`🏋️ DEBUG: Guild fetched, batch fetching ${userIds.length} members...`);
           let members = new Map();
           try {
             // Fetch all members in one go - much faster than individual fetches
             const fetchedMembers = await guild.members.fetch({ user: userIds });
             members = fetchedMembers;
+            console.log(`🏋️ DEBUG: Batch fetch complete, got ${members.size} members`);
           } catch (e) {
-            console.log(`⚠️ DEBUG: Batch member fetch failed, will use stored data`);
+            console.log(`⚠️ DEBUG: Batch member fetch failed: ${e.message}`);
           }
           
           // Now process each player with the fetched member data
@@ -31268,7 +31275,9 @@ Your server is now ready for Tycoons gameplay!`;
           }
           
           // Sort players by priority roles if configured
+          console.log(`🏋️ DEBUG: Sorting ${initializedPlayers.length} players with ${priorityRoles.length} priority roles...`);
           const sortedData = await sortPlayersForResults(initializedPlayers, priorityRoles, client, guildId);
+          console.log(`🏋️ DEBUG: Sort complete`);
           
           // Build the display content
           let content = '# Player Balances\n\n';
