@@ -39,6 +39,10 @@ PID_FILE="/tmp/castbot-dev.pid"
 echo "🔄 Handling git operations..."
 git add .
 
+# Capture changed files BEFORE commit (--cached is empty after commit)
+GIT_FILES_CHANGED=$(git diff --cached --name-only | tr '\n' ',' | sed 's/,$//')
+GIT_STATS=$(git diff --cached --stat | tail -1 | sed 's/^ *//')
+
 # Check if there are changes to commit
 if ! git diff --staged --quiet; then
     echo "📝 Committing: $COMMIT_MESSAGE"
@@ -85,9 +89,9 @@ PROJECT_ROOT="$(git rev-parse --show-toplevel)"
 cd "$PROJECT_ROOT"
 # Run notification in background
 if [ -n "$CUSTOM_MESSAGE" ]; then
-    (node scripts/notify-restart.js "$CUSTOM_MESSAGE" "$COMMIT_MESSAGE" "" "" "$TEST_SUMMARY" 2>/dev/null || echo "ℹ️  Discord notification failed") &
+    (node scripts/notify-restart.js "$CUSTOM_MESSAGE" "$COMMIT_MESSAGE" "$GIT_FILES_CHANGED" "$GIT_STATS" "$TEST_SUMMARY" 2>/dev/null || echo "ℹ️  Discord notification failed") &
 else
-    (node scripts/notify-restart.js "" "$COMMIT_MESSAGE" "" "" "$TEST_SUMMARY" 2>/dev/null || echo "ℹ️  Discord notification failed") &
+    (node scripts/notify-restart.js "" "$COMMIT_MESSAGE" "$GIT_FILES_CHANGED" "$GIT_STATS" "$TEST_SUMMARY" 2>/dev/null || echo "ℹ️  Discord notification failed") &
 fi
 echo "🔔 Notification script completed"
 

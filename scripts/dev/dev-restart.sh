@@ -33,11 +33,15 @@ CUSTOM_MESSAGE="${2}" # Optional custom message for Discord notification
 echo "🔄 Handling git operations..."
 git add .
 
+# Capture changed files BEFORE commit (--cached is empty after commit)
+GIT_FILES_CHANGED=$(git diff --cached --name-only | tr '\n' ',' | sed 's/,$//')
+GIT_STATS=$(git diff --cached --stat | tail -1 | sed 's/^ *//')
+
 # Check if there are changes to commit
 if ! git diff --staged --quiet; then
     echo "📝 Committing: $COMMIT_MESSAGE"
     git commit -m "$COMMIT_MESSAGE"
-    
+
     echo "🚀 Pushing to GitHub ($CURRENT_BRANCH)..."
     if git push origin $CURRENT_BRANCH; then
         echo "✅ Changes pushed to GitHub successfully"
@@ -73,10 +77,6 @@ if [ "$RUN_TESTS" = true ]; then
         exit 1
     fi
 fi
-
-# Collect git information for Discord notification
-GIT_FILES_CHANGED=$(git diff --cached --name-only | tr '\n' ',' | sed 's/,$//')
-GIT_STATS=$(git diff --cached --stat | tail -1 | sed 's/^ *//')
 
 # Send Discord notification
 echo "🔔 Sending restart notification to Discord..."

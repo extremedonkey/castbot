@@ -87,122 +87,6 @@ function generateFileSummary(filesChanged, gitStats) {
     return summary + moreFiles;
 }
 
-/**
- * Generate auto Claude message based on commit content
- */
-function generateAutoClaudeMessage(commitMessage) {
-    if (!commitMessage) return "Server restarted - ready for testing!";
-    
-    const message = commitMessage.toLowerCase();
-    
-    // Safari-related changes
-    if (message.includes('safari')) {
-        if (message.includes('fix')) return "Safari issue resolved - check it out!";
-        if (message.includes('button')) return "Safari buttons updated - they should work better now!";
-        if (message.includes('map')) return "Safari map improvements deployed!";
-        if (message.includes('store')) return "Safari store functionality enhanced!";
-        return "Safari system updated - test the changes!";
-    }
-    
-    // UI/UX improvements
-    if (message.includes('ui') || message.includes('layout')) {
-        return "UI improvements deployed - interface should look better!";
-    }
-    
-    // Button-related changes
-    if (message.includes('button')) {
-        return "Button system updated - interactions should be smoother!";
-    }
-    
-    // Menu-related changes
-    if (message.includes('menu')) {
-        return "Menu system enhanced - navigation improved!";
-    }
-    
-    // Fix-related changes
-    if (message.includes('fix') || message.includes('bug')) {
-        return "Bug fix deployed - issue should be resolved!";
-    }
-    
-    // Cast ranking changes
-    if (message.includes('cast ranking') || message.includes('ranking')) {
-        return "Cast Ranking system updated - check the improvements!";
-    }
-    
-    // Database/storage changes
-    if (message.includes('storage') || message.includes('data')) {
-        return "Data system improvements deployed!";
-    }
-    
-    // General improvements
-    if (message.includes('improve') || message.includes('enhance')) {
-        return "System enhancements deployed - performance should be better!";
-    }
-    
-    // Add feature detection
-    if (message.includes('add') || message.includes('new')) {
-        return "New feature added - give it a try!";
-    }
-    
-    // Cleanup/refactor
-    if (message.includes('cleanup') || message.includes('refactor')) {
-        return "Code cleanup completed - system should run smoother!";
-    }
-    
-    // Default fallback
-    return "Changes deployed - ready for testing!";
-}
-
-/**
- * Generate test steps based on commit message content
- */
-function generateTestSteps(commitMessage) {
-    if (!commitMessage) return null;
-    
-    const message = commitMessage.toLowerCase();
-    
-    // Safari-related changes
-    if (message.includes('safari')) {
-        if (message.includes('button') || message.includes('ui')) {
-            return "1. Go to `/menu` → Safari\n2. Test all Safari buttons work correctly\n3. Check mobile Discord compatibility";
-        }
-        if (message.includes('store') || message.includes('shop')) {
-            return "1. Go to `/menu` → Safari → Store\n2. Test purchase functionality\n3. Verify currency calculations";
-        }
-        if (message.includes('map') || message.includes('explore')) {
-            return "1. Go to `/menu` → Safari → Map\n2. Test movement and exploration\n3. Check location updates";
-        }
-        return "1. Go to `/menu` → Safari\n2. Test affected Safari functionality\n3. Verify no regressions";
-    }
-    
-    // Button-related changes
-    if (message.includes('button')) {
-        return "1. Test the affected button(s)\n2. Check for 'This interaction failed' errors\n3. Verify button styling and behavior";
-    }
-    
-    // Menu-related changes
-    if (message.includes('menu')) {
-        return "1. Test `/menu` command\n2. Navigate through affected menu sections\n3. Check all buttons work correctly";
-    }
-    
-    // Database/storage changes
-    if (message.includes('storage') || message.includes('data') || message.includes('json')) {
-        return "1. Test data persistence\n2. Check for any data corruption\n3. Verify backup functionality";
-    }
-    
-    // Command changes
-    if (message.includes('command') || message.includes('slash')) {
-        return "1. Test the affected slash command(s)\n2. Verify command registration\n3. Check parameter handling";
-    }
-    
-    // Fix-related changes
-    if (message.includes('fix') || message.includes('bug')) {
-        return "1. Reproduce the original bug scenario\n2. Verify the fix works as expected\n3. Test edge cases around the fix";
-    }
-    
-    // General fallback
-    return "1. Test the affected functionality\n2. Check for any console errors\n3. Verify no regressions in related features";
-}
 
 /**
  * Send restart notification to Discord
@@ -261,11 +145,6 @@ async function sendRestartNotification() {
                 }
             }
             
-            // Add suggested test steps based on commit message content
-            const testSteps = generateTestSteps(commitMessage);
-            if (testSteps) {
-                messageContent += `\n\n## :test_tube: Test Steps\n${testSteps}`;
-            }
         }
 
         // Add test results if tests were run
@@ -273,10 +152,9 @@ async function sendRestartNotification() {
             messageContent += `\n\n## :white_check_mark: Unit Tests\n\`${testSummary}\``;
         }
 
-        // Add custom message - generate one if not provided
-        const finalCustomMessage = customMessage || generateAutoClaudeMessage(commitMessage);
-        if (finalCustomMessage) {
-            messageContent += `\n\n**🤖 Claude Message:** ${finalCustomMessage}`;
+        // Add custom message only if explicitly provided
+        if (customMessage) {
+            messageContent += `\n\n**🤖 Claude:** ${customMessage}`;
         }
 
         // Create the notification message with Components V2 structure using direct API
