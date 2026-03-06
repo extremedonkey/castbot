@@ -80,6 +80,25 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
+  'richcard_demo': {
+    label: 'Rich Card',
+    description: 'Rich Card UI reference implementation demo',
+    emoji: '🎴',
+    style: 'Primary',
+    parent: 'reeces_stuff',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
+  'richcard_demo_edit': {
+    label: 'Edit Card',
+    description: 'Edit rich card demo via modal',
+    emoji: '✏️',
+    style: 'Primary',
+    parent: 'richcard_demo',
+    restrictedUser: '391415444084490240',
+    requiresModal: true,
+    category: 'experimental'
+  },
   'prod_live_analytics': {
     label: 'Print Logs',
     description: 'Display recent analytics logs from local file',

@@ -7389,7 +7389,8 @@ To fix this:
                 type: 1,
                 components: [
                   { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
-                  { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } }
+                  { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } },
+                  { type: 2, custom_id: 'richcard_demo', label: 'Rich Card', style: 1, emoji: { name: '🎴' } }
                 ]
               },
               { type: 14 },
@@ -7423,6 +7424,51 @@ To fix this:
           countComponents([container], { verbosity: "summary", label: "Reece's Stuff" });
 
           return { components: [container] };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'richcard_demo') {
+      // Rich Card UI reference implementation — demo of buildRichCardModal + buildRichCardContainer
+      return ButtonHandlerFactory.create({
+        id: 'richcard_demo',
+        updateMessage: true,
+        handler: async (context) => {
+          const { buildRichCardContainer } = await import('./richCardUI.js');
+          const demoCard = buildRichCardContainer({
+            title: 'Rich Card Demo',
+            content: 'This card was built with `buildRichCardContainer()` from **richCardUI.js**.\n\nEdit it via the button below to see `buildRichCardModal()` in action.',
+            color: '#9b59b6',
+            image: 'https://cdn.discordapp.com/attachments/1337754151655833694/1468596651363774464/castbot_banner.png',
+            extraComponents: [
+              { type: 14 },
+              {
+                type: 1,
+                components: [
+                  { type: 2, custom_id: 'richcard_demo_edit', label: 'Edit Card', style: 1, emoji: { name: '✏️' } },
+                  { type: 2, custom_id: 'reeces_stuff', label: "← Back", style: 2 }
+                ]
+              }
+            ]
+          });
+          return { components: [demoCard] };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'richcard_demo_edit') {
+      // Rich Card edit modal — demonstrates buildRichCardModal with pre-filled values
+      return ButtonHandlerFactory.create({
+        id: 'richcard_demo_edit',
+        requiresModal: true,
+        handler: async (context) => {
+          const { buildRichCardModal } = await import('./richCardUI.js');
+          return buildRichCardModal({
+            customId: 'richcard_demo_save',
+            modalTitle: 'Edit Rich Card Demo',
+            values: {
+              title: 'Rich Card Demo',
+              content: 'This card was built with buildRichCardContainer().',
+              color: '#9b59b6',
+              image: 'https://cdn.discordapp.com/attachments/1337754151655833694/1468596651363774464/castbot_banner.png',
+            },
+          });
         }
       })(req, res, client);
     } else if (custom_id === 'prod_manage_tribes_legacy_debug') {
@@ -34402,7 +34448,30 @@ Your server is now ready for Tycoons gameplay!`;
     const { custom_id, components } = data;
     console.log(`🔍 DEBUG: MODAL_SUBMIT received - custom_id: ${custom_id}`);
     
-    if (custom_id.startsWith('whisper_send_modal_')) {
+    if (custom_id === 'richcard_demo_save') {
+      // Rich Card demo — modal save handler using extractRichCardValues + buildRichCardContainer
+      const { extractRichCardValues, buildRichCardContainer } = await import('./richCardUI.js');
+      const values = extractRichCardValues(data);
+      const card = buildRichCardContainer({
+        ...values,
+        extraComponents: [
+          { type: 14 },
+          { type: 10, content: `-# Card rendered from modal values via richCardUI.js` },
+          { type: 14 },
+          {
+            type: 1,
+            components: [
+              { type: 2, custom_id: 'richcard_demo_edit', label: 'Edit Again', style: 1, emoji: { name: '✏️' } },
+              { type: 2, custom_id: 'reeces_stuff', label: "← Back", style: 2 }
+            ]
+          }
+        ]
+      });
+      return res.send({
+        type: InteractionResponseType.UPDATE_MESSAGE,
+        data: { components: [card] }
+      });
+    } else if (custom_id.startsWith('whisper_send_modal_')) {
       // Handle whisper modal submission
       // Format: whisper_send_modal_targetUserId_coordinate
       const parts = custom_id.split('_');
