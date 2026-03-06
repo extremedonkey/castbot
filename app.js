@@ -7437,14 +7437,28 @@ To fix this:
             title: 'Rich Card Demo',
             content: 'This card was built with `buildRichCardContainer()` from **richCardUI.js**.\n\nEdit it via the button below to see `buildRichCardModal()` in action.',
             color: '#9b59b6',
-            image: 'https://cdn.discordapp.com/attachments/1337754151655833694/1468596651363774464/castbot_banner.png',
             extraComponents: [
+              { type: 14 },
+              { type: 10, content: '### Extra Components Demo' },
+              {
+                type: 1, // String select — demonstrates extraComponents for domain-specific controls
+                components: [{
+                  type: 3,
+                  custom_id: 'richcard_demo_select',
+                  placeholder: 'Demo select (does nothing)',
+                  options: [
+                    { label: 'Option A', value: 'a', description: 'Demonstrates extraComponents', emoji: { name: '🅰️' }, default: true },
+                    { label: 'Option B', value: 'b', description: 'Domain-specific controls go here', emoji: { name: '🅱️' } }
+                  ]
+                }]
+              },
               { type: 14 },
               {
                 type: 1,
                 components: [
+                  { type: 2, custom_id: 'reeces_stuff', label: "← Reece's Stuff", style: 2 },
                   { type: 2, custom_id: 'richcard_demo_edit', label: 'Edit Card', style: 1, emoji: { name: '✏️' } },
-                  { type: 2, custom_id: 'reeces_stuff', label: "← Back", style: 2 }
+                  { type: 2, custom_id: 'richcard_demo_delete', label: 'Delete', style: 4, emoji: { name: '🗑️' } }
                 ]
               }
             ]
@@ -7452,8 +7466,48 @@ To fix this:
           return { components: [demoCard] };
         }
       })(req, res, client);
+    } else if (custom_id === 'richcard_demo_select') {
+      // Demo select — no-op, just re-renders the demo card with selection feedback
+      return ButtonHandlerFactory.create({
+        id: 'richcard_demo_select',
+        updateMessage: true,
+        handler: async (context) => {
+          const selected = req.body.data.values?.[0] || 'unknown';
+          return { components: [{
+            type: 17, accent_color: 0x9b59b6,
+            components: [
+              { type: 10, content: `## 🎴 Rich Card Demo\nYou selected **${selected}** — this is just a demo, no data was changed.\n\n-# String selects, delete buttons, and other domain-specific controls live in \`extraComponents\`.` },
+              { type: 14 },
+              { type: 1, components: [
+                { type: 2, custom_id: 'richcard_demo', label: '← Back', style: 2 }
+              ]}
+            ]
+          }]};
+        }
+      })(req, res, client);
+    } else if (custom_id === 'richcard_demo_delete') {
+      // Demo delete — no-op, just shows confirmation pattern
+      return ButtonHandlerFactory.create({
+        id: 'richcard_demo_delete',
+        updateMessage: true,
+        handler: async (context) => {
+          return { components: [{
+            type: 17, accent_color: 0xed4245,
+            components: [
+              { type: 10, content: '## ⚠️ Delete Rich Card' },
+              { type: 14 },
+              { type: 10, content: '**This is a demo** — nothing will actually be deleted.\n\nThis pattern follows the Critical Deletion UI Standard from LeanUserInterfaceDesign.md.' },
+              { type: 14 },
+              { type: 1, components: [
+                { type: 2, custom_id: 'richcard_demo', label: 'Cancel', style: 2, emoji: { name: '❌' } },
+                { type: 2, custom_id: 'richcard_demo', label: 'Yes, Delete', style: 4, emoji: { name: '🗑️' } }
+              ]}
+            ]
+          }]};
+        }
+      })(req, res, client);
     } else if (custom_id === 'richcard_demo_edit') {
-      // Rich Card edit modal — demonstrates buildRichCardModal with pre-filled values
+      // Rich Card edit modal — demonstrates buildRichCardModal with blank values (no pre-populated image)
       return ButtonHandlerFactory.create({
         id: 'richcard_demo_edit',
         requiresModal: true,
@@ -7462,12 +7516,6 @@ To fix this:
           return buildRichCardModal({
             customId: 'richcard_demo_save',
             modalTitle: 'Edit Rich Card Demo',
-            values: {
-              title: 'Rich Card Demo',
-              content: 'This card was built with buildRichCardContainer().',
-              color: '#9b59b6',
-              image: 'https://cdn.discordapp.com/attachments/1337754151655833694/1468596651363774464/castbot_banner.png',
-            },
           });
         }
       })(req, res, client);
@@ -34471,8 +34519,8 @@ Your server is now ready for Tycoons gameplay!`;
           {
             type: 1,
             components: [
-              { type: 2, custom_id: 'richcard_demo_edit', label: 'Edit Again', style: 1, emoji: { name: '✏️' } },
-              { type: 2, custom_id: 'reeces_stuff', label: "← Back", style: 2 }
+              { type: 2, custom_id: 'reeces_stuff', label: "← Reece's Stuff", style: 2 },
+              { type: 2, custom_id: 'richcard_demo_edit', label: 'Edit Again', style: 1, emoji: { name: '✏️' } }
             ]
           }
         ]

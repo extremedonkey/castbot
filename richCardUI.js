@@ -227,11 +227,16 @@ export function buildRichCardContainer({ title, content, color, image, extraComp
     components.push({ type: 10, content });
   }
 
-  if (image) {
-    components.push({
-      type: 12, // Media Gallery
-      items: [{ media: { url: image }, description: title || 'Image' }],
-    });
+  if (image && image.trim()) {
+    try {
+      new URL(image); // Validate URL format
+      components.push({
+        type: 12, // Media Gallery
+        items: [{ media: { url: image }, description: title || 'Image' }],
+      });
+    } catch {
+      // Invalid URL — skip silently rather than showing "Image failed to load"
+    }
   }
 
   // Insert any extra components (buttons, separators, etc.)

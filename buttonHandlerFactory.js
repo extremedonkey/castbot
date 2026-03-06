@@ -99,6 +99,24 @@ export const BUTTON_REGISTRY = {
     requiresModal: true,
     category: 'experimental'
   },
+  'richcard_demo_select': {
+    label: 'Demo Select',
+    description: 'Demo string select showing extraComponents pattern',
+    emoji: '📋',
+    style: 'Secondary',
+    parent: 'richcard_demo',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
+  'richcard_demo_delete': {
+    label: 'Delete',
+    description: 'Demo delete confirmation following LEAN deletion standard',
+    emoji: '🗑️',
+    style: 'Danger',
+    parent: 'richcard_demo',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
   'prod_live_analytics': {
     label: 'Print Logs',
     description: 'Display recent analytics logs from local file',
