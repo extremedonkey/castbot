@@ -29,7 +29,7 @@ Key characteristics of ORGs:
 
 A Survivor ORG follows the general format of the CBS television show "Survivor." The game proceeds through these phases:
 
-#### Phase 1: Tribal Phase (Episodes 1-4)
+#### Phase 1: Tribal Phase
 
 The cast is divided into **tribes** — competing teams of roughly equal size (typically 2-3 tribes of 6-8 players each). Players can only communicate with members of their own tribe through dedicated Discord channels.
 
@@ -42,11 +42,11 @@ Challenges come in many forms: puzzles, creative tasks, social games, trivia, on
 
 At **Tribal Council**, players on the losing tribe have 24 hours to strategize, form alliances, and ultimately vote. The player who receives the majority of votes is eliminated from the game. Failure to vote results in a "self-vote" (voting yourself out) and a strike.
 
-#### Phase 2: Tribe Swap (Episode ~5)
+#### Phase 2: Tribe Swap
 
 To shake up social dynamics and prevent one dominant tribe from steamrolling, hosts often execute a **Tribe Swap** — players are redistributed into new tribe configurations. Old tribe channels are archived, new ones are created, and the game continues with reshuffled allegiances.
 
-#### Phase 3: The Merge (Episode ~9)
+#### Phase 3: The Merge
 
 When approximately 12-14 players remain, all tribes **merge** into a single tribe. The game shifts from team competition to **individual competition**:
 - Individual challenges award **Individual Immunity** to the winner — that person cannot be voted out
@@ -54,6 +54,7 @@ When approximately 12-14 players remain, all tribes **merge** into a single trib
 - Eliminated players now join the **Jury** — they can no longer play but will ultimately decide the winner
 
 #### Phase 4: Final Tribal Council (FTC)
+
 
 When 2-3 players remain, **Final Tribal Council** occurs:
 1. The finalists give opening speeches about their gameplay

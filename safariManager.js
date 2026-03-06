@@ -4947,9 +4947,8 @@ async function sortPlayersForResults(eligiblePlayers, priorityRoles, client, gui
     }
     
     try {
-        // Fetch guild and members
+        // Fetch guild (members should already be cached from caller)
         const guild = await client.guilds.fetch(guildId);
-        await guild.members.list({ limit: 1000 }); // Ensure all members are cached (REST API)
         
         // Create groups for each priority role
         const roleGroups = {};

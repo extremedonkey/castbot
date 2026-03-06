@@ -31232,18 +31232,19 @@ Your server is now ready for Tycoons gameplay!`;
           }
           console.log(`🏋️ DEBUG: Found ${userIds.length} safari players, fetching guild...`);
 
-          // Batch fetch all members at once
+          // Fetch members individually (batch fetch hangs if any member left the guild)
           const guild = await client.guilds.fetch(guildId);
-          console.log(`🏋️ DEBUG: Guild fetched, batch fetching ${userIds.length} members...`);
+          console.log(`🏋️ DEBUG: Guild fetched, fetching ${userIds.length} members individually...`);
           let members = new Map();
-          try {
-            // Fetch all members in one go - much faster than individual fetches
-            const fetchedMembers = await guild.members.fetch({ user: userIds });
-            members = fetchedMembers;
-            console.log(`🏋️ DEBUG: Batch fetch complete, got ${members.size} members`);
-          } catch (e) {
-            console.log(`⚠️ DEBUG: Batch member fetch failed: ${e.message}`);
+          for (const uid of userIds) {
+            try {
+              const member = await guild.members.fetch(uid);
+              members.set(uid, member);
+            } catch (e) {
+              console.log(`⚠️ Member ${uid} not in guild, using stored data`);
+            }
           }
+          console.log(`🏋️ DEBUG: Fetched ${members.size}/${userIds.length} members`)
           
           // Now process each player with the fetched member data
           for (const [userId, data] of Object.entries(guildPlayers)) {
