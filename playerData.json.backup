@@ -661,14 +661,14 @@
     "serverName": "CastBot",
     "icon": "https://cdn.discordapp.com/icons/1331657596087566398/e2bd30d98992c902b50e047bf284ef64.webp",
     "ownerId": "391415444084490240",
-    "memberCount": 41,
+    "memberCount": 43,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1737562311909,
-    "lastUpdated": 1772625369748,
+    "lastUpdated": 1772797712555,
     "players": {
       "233762709932474370": {
         "emojiCode": "<:Geo:1396856830281388144>",
@@ -697,7 +697,7 @@
           "1415062472007749765"
         ],
         "safari": {
-          "currency": 547,
+          "currency": 685,
           "history": [
             {
               "t": 1760972340000,
@@ -773,9 +773,21 @@
               "type": "currency",
               "desc": "Gained 94 Gil from manual",
               "loc": "G1"
+            },
+            {
+              "t": 1772801841255,
+              "type": "currency",
+              "desc": "Gained 44 Gil from manual",
+              "loc": "G1"
+            },
+            {
+              "t": 1772801913051,
+              "type": "currency",
+              "desc": "Gained 94 Gil from manual",
+              "loc": "G1"
             }
           ],
-          "lastInteraction": 1772433158640,
+          "lastInteraction": 1772801911051,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -846,7 +858,7 @@
               "startingLocation": "A3"
             }
           },
-          "currency": 138,
+          "currency": 828,
           "history": [
             {
               "t": 1760527500000,
@@ -1870,6 +1882,18 @@
               "type": "action",
               "desc": "👩‍🍼 Baby Item\n> • Text: \"wawaaa!!\"\n> • Give Item: 🐣 Nurturer (x1)",
               "loc": "Unknown"
+            },
+            {
+              "t": 1772801841255,
+              "type": "currency",
+              "desc": "Gained 220 Gil from manual",
+              "loc": "A3"
+            },
+            {
+              "t": 1772801913051,
+              "type": "currency",
+              "desc": "Gained 470 Gil from manual",
+              "loc": "A3"
             }
           ],
           "inventory": {
@@ -1903,7 +1927,7 @@
               "regenConfig": "hourly"
             }
           },
-          "lastInteraction": 1772433159531
+          "lastInteraction": 1772801910575
         }
       },
       "251452487997980673": {
@@ -1954,7 +1978,7 @@
               "startingLocation": "D1"
             }
           },
-          "currency": 547,
+          "currency": 685,
           "inventory": {
             "nurturer_361363": 1,
             "territory_forager_404120": 1,
@@ -2027,6 +2051,18 @@
               "type": "currency",
               "desc": "Gained 94 Gil from manual",
               "loc": "D1"
+            },
+            {
+              "t": 1772801841255,
+              "type": "currency",
+              "desc": "Gained 44 Gil from manual",
+              "loc": "D1"
+            },
+            {
+              "t": 1772801913051,
+              "type": "currency",
+              "desc": "Gained 94 Gil from manual",
+              "loc": "D1"
             }
           ],
           "achievements": [],
@@ -2041,7 +2077,7 @@
               "regenConfig": "hourly"
             }
           },
-          "lastInteraction": 1772433160533
+          "lastInteraction": 1772801911845
         }
       },
       "538540453973327873": {
@@ -2053,7 +2089,7 @@
           "1415062472007749765"
         ],
         "safari": {
-          "currency": 547,
+          "currency": 685,
           "history": [
             {
               "t": 1760972340000,
@@ -2129,9 +2165,21 @@
               "type": "currency",
               "desc": "Gained 94 Gil from manual",
               "loc": "G1"
+            },
+            {
+              "t": 1772801844077,
+              "type": "currency",
+              "desc": "Gained 44 Gil from manual",
+              "loc": "G1"
+            },
+            {
+              "t": 1772801913051,
+              "type": "currency",
+              "desc": "Gained 94 Gil from manual",
+              "loc": "G1"
             }
           ],
-          "lastInteraction": 1772433161736,
+          "lastInteraction": 1772801912283,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -2264,7 +2312,7 @@
               "startingLocation": "G1"
             }
           },
-          "currency": 94,
+          "currency": 232,
           "history": [
             {
               "t": 1760972340000,
@@ -2407,6 +2455,18 @@
               "type": "currency",
               "desc": "Gained 94 Gil from manual",
               "loc": "B2"
+            },
+            {
+              "t": 1772801844077,
+              "type": "currency",
+              "desc": "Gained 44 Gil from manual",
+              "loc": "B2"
+            },
+            {
+              "t": 1772801915774,
+              "type": "currency",
+              "desc": "Gained 94 Gil from manual",
+              "loc": "B2"
             }
           ],
           "inventory": {
@@ -2435,7 +2495,7 @@
               "regenConfig": "hourly"
             }
           },
-          "lastInteraction": 1772433163846
+          "lastInteraction": 1772801913776
         }
       },
       "1100826875435163780": {
@@ -2451,10 +2511,22 @@
             "nest_guardian_461600": 1,
             "raider_499497": 1
           },
-          "currency": 539,
+          "currency": 677,
           "history": [
             {
               "t": 1772433167684,
+              "type": "currency",
+              "desc": "Gained 94 Gil from manual",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772801844077,
+              "type": "currency",
+              "desc": "Gained 44 Gil from manual",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772801915774,
               "type": "currency",
               "desc": "Gained 94 Gil from manual",
               "loc": "Unknown"
@@ -2464,7 +2536,7 @@
           "cooldowns": {},
           "buttonUses": {},
           "storeHistory": [],
-          "lastInteraction": 1772433164511
+          "lastInteraction": 1772801914210
         }
       },
       "630470402900230146": {
@@ -2474,7 +2546,7 @@
       },
       "719547106318352496": {
         "safari": {
-          "currency": 547,
+          "currency": 685,
           "history": [
             {
               "t": 1761658080000,
@@ -2550,9 +2622,15 @@
               "type": "currency",
               "desc": "Gained 94 Gil from manual",
               "loc": "G1"
+            },
+            {
+              "t": 1772801846699,
+              "type": "currency",
+              "desc": "Gained 44 Gil from manual",
+              "loc": "G1"
             }
           ],
-          "lastInteraction": 1772433166028,
+          "lastInteraction": 1772801915405,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -2596,7 +2674,7 @@
       },
       "209773824357564416": {
         "safari": {
-          "currency": 547,
+          "currency": 685,
           "history": [
             {
               "t": 1761429480000,
@@ -2668,9 +2746,21 @@
               "type": "currency",
               "desc": "Gained 94 Gil from manual",
               "loc": "G1"
+            },
+            {
+              "t": 1772801844077,
+              "type": "currency",
+              "desc": "Gained 44 Gil from manual",
+              "loc": "G1"
+            },
+            {
+              "t": 1772801915774,
+              "type": "currency",
+              "desc": "Gained 94 Gil from manual",
+              "loc": "G1"
             }
           ],
-          "lastInteraction": 1772433167255,
+          "lastInteraction": 1772801912654,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -12855,14 +12945,14 @@
     "serverName": "Servivorg S14 - FINAL FANTASY",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/189c3570ea34b3fbf3ee7b4d5989d32e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 578,
+    "memberCount": 579,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1772407831077,
+    "lastUpdated": 1772797708783,
     "ownerInfo": {
       "username": "serviver",
       "globalName": "Serviver",
