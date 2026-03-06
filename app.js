@@ -31152,7 +31152,8 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'safari_player_status',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
-        deferResponse: true, // Defer the response to handle longer processing
+        deferred: true,
+        ephemeral: false,
         handler: async (context) => {
           console.log(`🏋️ START: safari_player_status - user ${context.userId}`);
           

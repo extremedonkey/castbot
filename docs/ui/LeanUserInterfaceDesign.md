@@ -259,6 +259,67 @@ const container = {
 
 ---
 
+## 🎴 Rich Card Pattern
+
+**Use when**: Displaying player-facing visual content — location descriptions, story text, item showcases, announcements, or any content that has a title, body text, optional image, and optional accent color.
+
+**Implementation**: [`richCardUI.js`](../../richCardUI.js) — see [RichCardUI.md](../enablers/RichCardUI.md) for full API reference.
+
+### Structure
+```
+┌─────────────────────────────────────────┐
+│ # Card Title                            │  ← H1 heading (optional)
+│                                         │
+│ Body content with **markdown** support  │  ← Text Display (required)
+│ spanning multiple lines as needed.      │
+│                                         │
+│ ┌─────────────────────────────────────┐ │
+│ │                                     │ │
+│ │          [Image]                    │ │  ← Media Gallery (optional)
+│ │                                     │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ [Extra components: buttons, nav, etc.]  │  ← Optional extras
+└─────────────────────────────────────────┘
+  accent_color: user-defined or theme color
+```
+
+### When to Use Rich Card vs LEAN Menu
+| Use Rich Card | Use LEAN Menu |
+|---------------|---------------|
+| Player-facing content display | Admin/host navigation |
+| Story/narrative text | Button grids and tool access |
+| Location descriptions | Settings and configuration |
+| Announcements with images | Multi-section dashboards |
+
+### Rules
+- **Title**: Optional — omit for pure content cards, include for titled sections
+- **Content**: Required — the body text, supports full Discord markdown
+- **Accent Color**: Set via hex string (`#3498db`) or integer — use theme-appropriate colors from the Accent Color Guidelines above
+- **Image**: Discord CDN URLs only — shown as Media Gallery below content
+- **Ephemeral**: Player-facing display text is typically **non-ephemeral** (visible to all); admin previews are ephemeral
+
+### Quick Example
+```javascript
+import { buildRichCardResponse } from './richCardUI.js';
+
+// Player-facing card (non-ephemeral)
+return buildRichCardResponse({
+  title: 'The Ancient Temple',
+  content: 'You step through the crumbling archway...',
+  color: '#9b59b6',
+  image: 'https://cdn.discordapp.com/attachments/.../temple.png',
+});
+
+// Admin preview (ephemeral)
+return buildRichCardResponse(cardOptions, { ephemeral: true });
+```
+
+### Editing Rich Cards
+Use `buildRichCardModal()` to create the edit modal and `extractRichCardValues()` to process the submission. See [RichCardUI.md](../enablers/RichCardUI.md) for the complete edit → save → preview flow.
+
+---
+
 ## 🔧 Implementation
 
 **For technical implementation using MenuBuilder**, see **[MenuSystemArchitecture.md](../enablers/MenuSystemArchitecture.md)**:
