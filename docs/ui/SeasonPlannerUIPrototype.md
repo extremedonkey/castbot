@@ -146,18 +146,113 @@ The **divider** separates round-specific actions (top) from structural actions (
 [← Reece's Stuff] [◀ Previous] [Next ▶]
 ```
 
-24 rounds across 2 pages (12 per page). Top action row provides season-level navigation.
+20 rounds across 2 pages (12 per page). Top action row provides season-level navigation.
+
+## Data Model Options for Productionization
+
+When productionizing, the key architectural decision is how to store round configuration so it survives cast size changes (e.g., host decides to drop from 20 to 16 players mid-planning).
+
+### The Problem
+
+The mockup keys events by **round number** (`ROUND_EVENTS[5] = Swap 1`). Round numbers are derived from cast size (`roundNum = castSize + 1 - finalists`). If the host changes cast size, round numbers shift and all event/challenge assignments break.
+
+### Option A: Key Everything by F-Number
+
+Store all round config keyed by F-number (finalist count). Compute round numbers at render time.
+
+```javascript
+// Season config
+{
+  castSize: 20,
+  startDate: '2026-02-07',
+  rounds: {
+    20: { events: ['marooning'], challenge: 'Olympic Boot Camp', host: 'Reece', elims: 1 },
+    19: { challenge: 'Verbal Jigsaw', host: 'Reece', elims: 1 },
+    16: { events: ['swap'], swapLabel: 'Swap 1', challenge: 'Worthy Sacrifice', host: 'Reece', elims: 1 },
+    13: { events: ['swap'], swapLabel: 'Swap 2', challenge: 'Stack Shit', host: 'Reece', elims: 1 },
+    11: { events: ['merge'], challenge: null, host: 'Reece', elims: 1 },
+    2:  { events: ['ftc'], host: 'Reece' },
+    1:  { events: ['reunion'] },
+  }
+}
+```
+
+**Pros:** Events stay anchored to cast size. Dropping from F20→F16 = delete F20-F17 entries, everything below is untouched. Challenge names, hosts, and events are stable.
+
+**Cons:** Need validation that F-numbers exist within cast range. Round ordering is implicit (sort by F-number descending). Sparse — rounds without config need defaults.
+
+### Option B: Ordered Array of Round Objects
+
+Each round is a fully self-contained config object in an ordered array.
+
+```javascript
+{
+  castSize: 20,
+  startDate: '2026-02-07',
+  rounds: [
+    { finalists: 20, type: 'marooning', challenge: 'Olympic Boot Camp', host: 'Reece', elims: 1 },
+    { finalists: 19, challenge: 'Verbal Jigsaw', host: 'Reece', elims: 1 },
+    { finalists: 16, events: ['swap'], swapLabel: 'Swap 1', challenge: 'Worthy Sacrifice', host: 'Reece', elims: 1 },
+    // ...
+  ]
+}
+```
+
+**Pros:** Full flexibility. Round order is explicit. Each round is self-contained — no need for defaults. Easy to reorder, insert, or remove rounds. Supports non-standard F-progressions (double elims skip F-numbers).
+
+**Cons:** More data to manage. Manual reordering on changes. Must keep `finalists` values consistent with `elims` (F20 with 1 elim → next must be F19).
+
+### Option C: Template + Overrides
+
+Store only cast size and structural rules. Auto-generate the default round list, then apply overrides.
+
+```javascript
+{
+  castSize: 20,
+  startDate: '2026-02-07',
+  rules: {
+    marooning: 'first',           // always round 1
+    ftc: 'penultimate',           // always second-to-last
+    reunion: 'last',              // always last
+  },
+  events: {
+    16: { type: 'swap', label: 'Swap 1' },
+    13: { type: 'swap', label: 'Swap 2' },
+    11: { type: 'merge' },
+  },
+  challengeOverrides: {
+    20: 'Olympic Boot Camp',
+    19: 'Verbal Jigsaw',
+    // ...
+  }
+}
+```
+
+**Pros:** Minimal data. Changing cast size auto-regenerates the full round list. Events and challenges are overrides, not the source of truth. Works well for "normal" seasons.
+
+**Cons:** Less control over edge cases. Double tribals and non-standard progressions need special handling in the generator. The generator becomes complex logic that's hard to debug.
+
+### Recommendation
+
+**Option A (F-number keyed)** is the best balance for CastBot:
+- F-numbers are the domain language hosts already think in ("the swap happens at F16")
+- Survives cast size changes without data migration
+- Sparse storage with sensible defaults means minimal config for standard rounds
+- Challenge names and events stay bound to the right round automatically
+- Delete top entries to shrink cast, add entries to grow it
+
+Option B is better if we need non-standard F-progressions (double elims where F17→F15). Option C is better if seasons are highly templated with few overrides.
 
 ## Productionization Checklist
 
 When building the real feature, these mockup values become dynamic:
 
 - [ ] **Season start date** from season config (not hardcoded `Sat 7 Feb`)
-- [ ] **Cast size / round count** from season data (not hardcoded 24)
+- [ ] **Cast size / round count** from season data (not hardcoded 20)
 - [ ] **Marooning flag** per-round config (not always round 1)
 - [ ] **Host name** ("Reece") from round assignment data
 - [ ] **Eliminations** ("1 elim") configurable per round (double elims, no-elim rounds)
-- [ ] **Challenge names** replace "(TBC)" as confirmed
-- [ ] **Swap/Merge** from round config (not hardcoded F22 Merge, F16 Swap 1, F13 Swap 2)
+- [ ] **Challenge names** from round config (mockup uses spreadsheet data for F20-F12, TBC for rest)
+- [ ] **Swap/Merge** from round config (not hardcoded F16 Swap 1, F13 Swap 2, F11 Merge)
 - [ ] **Top action buttons** wired to real handlers (Edit Season, Schedule, Apps, Ranking, Tribes)
 - [ ] **Select handlers** perform actual edits instead of no-op responses
