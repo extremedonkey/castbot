@@ -295,7 +295,7 @@ export function buildEditSeasonModal() {
         }
       },
     ]
-  };
+  }};
 }
 
 /**
