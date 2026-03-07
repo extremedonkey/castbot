@@ -144,7 +144,7 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
     // Standard round: both marooning and swap/merge below divider
     const summaryEmoji = roundNum === TOTAL_ROUNDS - 1 ? { name: '🔥' } : undefined;
     options = [
-      { label: roundLabel, value: 'summary', default: true, emoji: summaryEmoji || { name: '⬥' } },
+      { label: roundLabel, value: 'summary', default: true, emoji: summaryEmoji || { name: '🔘' } },
       { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${challengeDateStr} ${DOT} ${host}` },
       { label: `Edit F${finalists} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${tribalDateStr} ${DOT} ${host}` },
       { label: '───────────────────', value: 'divider', description: ' ' },
