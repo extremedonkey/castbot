@@ -19,18 +19,35 @@ const DOT = '\u2981'; // ⦁
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// Challenge names keyed by F-number (from challengeNames.xlsx)
-// F11 and below are TBC (spreadsheet only covers F20-F12)
+// Challenge names and hosts keyed by F-number
 const CHALLENGE_NAMES = {
-  20: 'Olympic Boot Camp',
+  20: 'Training Boot Camp/Olympics',
   19: 'Verbal Jigsaw',
   18: 'Forbidden Island',
   17: 'Ancient Greek Guess Who',
   16: 'Worthy Sacrifice',
   15: 'Get on Da Ship',
   14: 'Tycoons',
-  13: 'Stack Shit',
+  13: 'Stacking Challenge',
   12: 'Tic Tac Trivia',
+  11: 'Oracle of Delphi',
+  10: 'Pairs Challenge',
+  9:  'Democracy',
+  8:  'Video Quiz Revamp',
+  7:  "Ren's Social Challenge",
+  6:  'Anonymous Boat Battle',
+  5:  'Pick Your Poison',
+  4:  'Fallen Comrades',
+  3:  'Trivia Murder Party',
+};
+
+const CHALLENGE_HOSTS = {
+  20: 'Kayl',     19: 'Britt',          18: 'Kayl',
+  17: 'Kayl',     16: 'Wain',           15: 'Anthony',
+  14: 'Reece',    13: 'Cat',            12: 'Mike',
+  11: 'Kayl',     10: 'Mike/Anthony',   9:  'Kayl',
+  8:  'Mike/Anthony', 7: 'Ren',         6:  'Britt',
+  5:  'Anthony',  4:  'Anthony',        3:  'Cat',
 };
 
 // Swap/Merge events keyed by roundNum (roundNum = TOTAL_ROUNDS + 1 - finalists)
@@ -75,6 +92,7 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
   const event = ROUND_EVENTS[roundNum];
   const hasEvent = !!event;
   const challengeName = CHALLENGE_NAMES[finalists] || `Challenge ${roundNum} (TBC)`;
+  const host = CHALLENGE_HOSTS[finalists] || 'TBC';
 
   // Round summary label (shown as pre-selected default)
   // If round has an event (marooning/swap/merge), include it in the summary
@@ -107,8 +125,8 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
     options = [
       { label: roundLabel, value: 'summary', default: true, emoji: { name: '🏝️' } },
       { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' }, description: dateStr },
-      { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${challengeDateStr} ${DOT} Reece` },
-      { label: `Edit F${finalists} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${tribalDateStr} ${DOT} Reece` },
+      { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${challengeDateStr} ${DOT} ${host}` },
+      { label: `Edit F${finalists} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${tribalDateStr} ${DOT} ${host}` },
       { label: '───────────────────', value: 'divider', description: ' ' },
       { label: 'Add Swap / Merge', value: 'swap_merge', emoji: { name: '🔀' } },
     ];
@@ -117,8 +135,8 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
     options = [
       { label: roundLabel, value: 'summary', default: true, emoji: { name: event.emoji } },
       { label: `Manage ${event.label}`, value: 'manage_event', emoji: { name: '🔀' }, description: dateStr },
-      { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${challengeDateStr} ${DOT} Reece` },
-      { label: `Edit F${finalists} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${tribalDateStr} ${DOT} Reece` },
+      { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${challengeDateStr} ${DOT} ${host}` },
+      { label: `Edit F${finalists} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${tribalDateStr} ${DOT} ${host}` },
       { label: '───────────────────', value: 'divider', description: ' ' },
       { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' } },
     ];
@@ -127,8 +145,8 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
     const summaryEmoji = roundNum === TOTAL_ROUNDS - 1 ? { name: '🔥' } : undefined;
     options = [
       { label: roundLabel, value: 'summary', default: true, ...(summaryEmoji && { emoji: summaryEmoji }) },
-      { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${challengeDateStr} ${DOT} Reece` },
-      { label: `Edit F${finalists} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${tribalDateStr} ${DOT} Reece` },
+      { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${challengeDateStr} ${DOT} ${host}` },
+      { label: `Edit F${finalists} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${tribalDateStr} ${DOT} ${host}` },
       { label: '───────────────────', value: 'divider', description: ' ' },
       { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' } },
       { label: 'Add Swap / Merge', value: 'swap_merge', emoji: { name: '🔀' } },
