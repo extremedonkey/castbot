@@ -55,6 +55,12 @@ const SAFE_TEST_BUTTONS = {
     style: 1, // Primary (blue)
     priority: 5
   },
+  'experimental': {
+    custom_id: 'reeces_stuff',
+    label: "🐧 Reece's Stuff",
+    style: 1, // Primary (blue)
+    priority: 3
+  },
   'menu': {
     custom_id: 'viral_menu',
     label: '📋 Prod Menu',
@@ -114,6 +120,17 @@ const FEATURE_PATTERNS = {
     /apply_/,
     /season_management_menu/,
     /applicationManager/
+  ],
+  experimental: [
+    /reeces_stuff/i,
+    /reece.*stuff/i,
+    /stress.?test/i,
+    /select.?stress/i,
+    /richcard/i,
+    /rich.?card/i,
+    /player.?card/i,
+    /pcard/i,
+    /experimental/i
   ]
 };
 
