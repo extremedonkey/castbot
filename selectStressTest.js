@@ -233,3 +233,101 @@ export function buildSelectStressPage(page = 0) {
 
   return { components: [container] };
 }
+
+/**
+ * Build the Edit Season modal (mockup)
+ * Pre-filled with current prototype values
+ */
+export function buildEditSeasonModal() {
+  return {
+    custom_id: 'stress_edit_season_modal',
+    title: 'Edit Season',
+    components: [
+      {
+        type: 18,
+        label: 'Season Name',
+        component: {
+          type: 4, custom_id: 'season_name', style: 1,
+          value: 'S12: Sacred Band of Thebes',
+          required: true,
+        }
+      },
+      {
+        type: 18,
+        label: 'Estimated Number of Players',
+        description: 'Enter your total estimated players you will cast',
+        component: {
+          type: 4, custom_id: 'est_players', style: 1,
+          placeholder: '18', value: '20',
+          required: true, max_length: 2, min_length: 1,
+        }
+      },
+      {
+        type: 18,
+        label: 'Estimated Number of Swaps',
+        description: 'Enter number of swaps you have planned, no need to include merge',
+        component: {
+          type: 4, custom_id: 'est_swaps', style: 1,
+          placeholder: '2', value: '2',
+          required: true, max_length: 1, min_length: 1,
+        }
+      },
+      {
+        type: 18,
+        label: 'Estimated # FTC Players',
+        description: "Enter '2' for Final 2, '3' for final 3 - used to pre-populate data",
+        component: {
+          type: 4, custom_id: 'est_ftc', style: 1,
+          placeholder: '3', value: '2',
+          required: true, max_length: 1, min_length: 1,
+        }
+      },
+      {
+        type: 18,
+        label: 'Estimated Start Date',
+        description: 'Enter in mm/dd/yyyy',
+        component: {
+          type: 4, custom_id: 'est_start_date', style: 1,
+          placeholder: '03/07/2026', value: '02/07/2026',
+          required: true,
+        }
+      },
+    ]
+  };
+}
+
+/**
+ * Handle Edit Season modal submission (mockup — no data saved)
+ * Returns a summary of what was submitted
+ */
+export function handleEditSeasonSubmit(fields) {
+  const name = fields.season_name || 'Unknown';
+  const players = fields.est_players || '?';
+  const swaps = fields.est_swaps || '?';
+  const ftc = fields.est_ftc || '?';
+  const startDate = fields.est_start_date || '?';
+
+  const errors = [];
+  const playersNum = parseInt(players);
+  const ftcNum = parseInt(ftc);
+  if (isNaN(playersNum) || playersNum < 1) errors.push('Players must be a number > 0');
+  if (isNaN(ftcNum) || ftcNum < 1) errors.push('FTC players must be a number > 0');
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(startDate)) errors.push('Start date must be in mm/dd/yyyy format');
+
+  const DOT = '\u2981';
+  const container = {
+    type: 17, accent_color: errors.length ? 0xe74c3c : 0x2ecc71,
+    components: [
+      { type: 10, content: errors.length
+        ? `## ❌ Validation Errors\n${errors.map(e => `- ${e}`).join('\n')}`
+        : `## ✅ Season Updated (Mockup)\n**${name}**\n${players} players ${DOT} ${swaps} swaps ${DOT} Final ${ftc} ${DOT} Starts ${startDate}\n\n-# This is a mockup — no data was saved.`
+      },
+      { type: 14 },
+      { type: 1, components: [
+        { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Season Planner', style: 2 }
+      ]}
+    ]
+  };
+
+  return { components: [container] };
+}

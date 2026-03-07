@@ -7458,6 +7458,16 @@ To fix this:
           }]};
         }
       })(req, res, client);
+    } else if (custom_id === 'stress_edit_season') {
+      // Season Planner (Mockup) — Edit Season modal. See docs/ui/UIPrototyping.md
+      return ButtonHandlerFactory.create({
+        id: 'stress_edit_season',
+        requiresModal: true,
+        handler: async () => {
+          const { buildEditSeasonModal } = await import('./selectStressTest.js');
+          return buildEditSeasonModal();
+        }
+      })(req, res, client);
     } else if (custom_id === 'reeces_radio_mockup') {
       // Checkbox Group PoC (Mockup) — tests Type 22 checkbox group in modal. See poc/checkboxGroupPoc.js
       return ButtonHandlerFactory.create({
@@ -34537,6 +34547,25 @@ Your server is now ready for Tycoons gameplay!`;
       // Checkbox Group PoC — See poc/checkboxGroupPoc.js
       const { handleCheckboxSubmit } = await import('./poc/checkboxGroupPoc.js');
       return handleCheckboxSubmit(data, res);
+
+    } else if (custom_id === 'stress_edit_season_modal') {
+      // Season Planner (Mockup) — Edit Season modal submit. See docs/ui/UIPrototyping.md
+      const { handleEditSeasonSubmit } = await import('./selectStressTest.js');
+      const fields = {};
+      for (const comp of (components || [])) {
+        if (comp.components) {
+          for (const c of comp.components) {
+            if (c.custom_id) fields[c.custom_id] = c.value;
+          }
+        } else if (comp.component && comp.component.custom_id) {
+          fields[comp.component.custom_id] = comp.component.value;
+        }
+      }
+      const result = handleEditSeasonSubmit(fields);
+      return res.send({
+        type: InteractionResponseType.UPDATE_MESSAGE,
+        data: result
+      });
 
     } else if (custom_id === 'richcard_demo_save') {
       // Rich Card demo — modal save handler using extractRichCardValues + buildRichCardContainer

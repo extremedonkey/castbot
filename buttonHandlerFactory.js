@@ -107,6 +107,16 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
+  'stress_edit_season': {
+    label: 'Edit Season',
+    description: 'Opens Edit Season modal in Season Planner mockup',
+    emoji: '✏️',
+    style: 'Secondary',
+    parent: 'reeces_season_planner_mockup',
+    requiresModal: true,
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
   'reeces_radio_mockup': {
     label: 'Radio PoC (Mockup)',
     description: 'UI mockup: Radio Group (Type 21) in modal with 10 options. Not a real feature.',
