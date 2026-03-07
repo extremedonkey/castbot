@@ -143,13 +143,14 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
       { label: 'Manage Final Tribal Council', value: 'ftc', emoji: { name: '⚖️' } },
     ];
   } else if (isFTC) {
-    // FTC round: FTC 2nd with date, structural actions below divider
+    // FTC round: no challenge — speech writing + Q&A/votes replace challenge/tribal
+    // Speech writing = day 0 (start), Q&A + Votes = day 1 (start + 1)
     options = [
       { label: roundLabel, value: 'summary', default: true, emoji: { name: '🔥' } },
-      { label: 'Manage Final Tribal Council', value: 'ftc', emoji: { name: '⚖️' }, description: dateStr },
-      { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${challengeDateStr} ${DOT} ${host}` },
-      { label: `Edit F${finalists} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${tribalDateStr} ${DOT} ${host}` },
+      { label: 'Speech Writing', value: 'ftc_speeches', emoji: { name: '💬' }, description: fmtDate(startDay) },
+      { label: 'Questioning / Votes', value: 'ftc_votes', emoji: { name: '🗳️' }, description: fmtDate(startDay + 1) },
       { label: '───────────────────', value: 'divider', description: ' ' },
+      { label: 'Manage Final Tribal Council', value: 'ftc', emoji: { name: '⚖️' } },
       { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' } },
     ];
   } else if (hasEvent) {

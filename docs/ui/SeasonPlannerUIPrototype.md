@@ -31,7 +31,7 @@ A season (e.g., "S12: Sacred Band of Thebes") is a series of sequential rounds w
 | **Swap / Merge** | 1 | Swap or Merge event | — | — |
 | **Standard** | 2 | Challenge | Tribal Council | — |
 | **Live Tribal** | 1 | Challenge + Tribal (same day) | — | — |
-| **FTC** | 2 | Final Tribal Council | Deliberation | — |
+| **FTC** | 2 | Speech Writing | Q&A + Votes | — |
 | **Reunion** | 1 | Reunion event | — | — |
 
 ### Date Calculation
@@ -65,7 +65,7 @@ Cumulative calculation:
 - **Marooning** (typically round 1): Only round with a 3-day span. Marooning event is promoted to 2nd option in its select dropdown.
 - **Swap / Merge** (mid-game): Takes a full day. Inserted between rounds — pushes all subsequent dates forward by 1 day. No challenge or tribal on this day.
 - **Live Tribal** (any round): Challenge and tribal happen on the same day (1-day round). Used when the challenge IS the tribal — e.g., Democracy (F9) was a live tribal council where players campaigned and voted within the same 24-hour window. Pulls all subsequent dates forward by 1 day.
-- **FTC** (F2): Labelled `F2 (FTC)`. Final Tribal Council replaces the normal challenge.
+- **FTC** (final X players, typically F2 or F3): Labelled `F2 (FTC)`. **No challenge** — replaced by speech writing and Q&A/votes. The FTC activities are configurable combinations of: Speech Writing (default 1 day), Q&A (1 day), and Votes (1 day). In a live season, Q&A and Votes are typically concurrent (same day). Any rounds between FTC and F1 (Reunion) are skipped — e.g., if FTC is at F3, there is no F2 round; it goes straight from F3 → F1.
 - **Reunion** (F1): Single event, no challenge or tribal.
 
 ### Defaults & Future Exceptions
@@ -78,6 +78,9 @@ The mockup uses these **defaults** which cover the majority of rounds:
 | Tribal duration | 1 day | Always the final day of a round |
 | Tribal eliminations | 1 per round | F-number decreases by 1 each round |
 | Swap/Merge duration | 1 day | Inserted as a standalone event day |
+| FTC challenge | None | FTC rounds have no challenge — replaced by speech writing + Q&A/votes |
+| FTC activities | Speech Writing (1 day) + Q&A/Votes (1 day) | In live seasons, Q&A and Votes are concurrent (same day) |
+| FTC position | Penultimate round | Typically F2 (final 2) or F3 (final 3). Rounds between FTC and Reunion are skipped |
 
 **Known exceptions (some now modelled):**
 
@@ -118,14 +121,27 @@ If a round has a **configured event** (marooning, swap, or merge), that event ap
 6. 🏝️ Manage Marooning & Exile
 ```
 
-### Standard Round (F23, F21, etc.)
+### FTC Round (F2)
 ```
-1. [default]  F23 ⦁ Tue 10 Feb ⦁ Challenge 2 (TBC)
-2. 🤸 Edit Challenge 2 (TBC)             | Tue 10 Feb ⦁ Reece
-3. 🔥 Edit F23 Tribal (1 elim)           | Wed 11 Feb ⦁ Reece
+1. [default] 🔥 F2 (FTC) ⦁ Wed 18 Mar ⦁ Final Tribal Council
+2. 💬 Speech Writing                      | Wed 18 Mar
+3. 🗳️ Questioning / Votes                | Thu 19 Mar
+4.    ─────────────────── (divider)
+5. ⚖️ Manage Final Tribal Council
+6. 🏝️ Manage Marooning & Exile
+```
+
+No challenge option — FTC replaces the normal challenge/tribal structure with speech writing and Q&A/votes. "Manage Final Tribal Council" moves below the divider since the FTC activities are already the primary options.
+
+### Standard Round (F19, F18, etc.)
+```
+1. [default] ▫️ F19 ⦁ Tue 10 Feb ⦁ Verbal Jigsaw
+2. 🤸 Edit Verbal Jigsaw                  | Tue 10 Feb ⦁ Britt
+3. 🔥 Edit F19 Tribal (1 elim)           | Wed 11 Feb ⦁ Britt
 4.    ─────────────────── (divider)
 5. 🏝️ Manage Marooning & Exile
 6. 🔀 Add Swap / Merge
+7. ⚖️ Manage Final Tribal Council
 ```
 
 ### Option Fields
@@ -134,7 +150,7 @@ If a round has a **configured event** (marooning, swap, or merge), that event ap
 |---|---|---|
 | `label` | Action text | `Edit Challenge 2 (TBC)` |
 | `description` | Date + host | `Tue 10 Mar ⦁ Reece` |
-| `emoji` | Type icon | 🤸 challenge, 🔥 tribal, 🏝️ marooning, 🔀 swap |
+| `emoji` | Type icon | 🤸 challenge, 🔥 tribal, 🏝️ marooning, 🔀 swap, ⚖️ FTC, 💬 speeches, 🗳️ votes, ▫️ standard |
 | `default` | Pre-selects round summary | Only on option 1 |
 
 The **divider** separates round-specific actions (top) from structural actions (bottom) that could apply to any round.
