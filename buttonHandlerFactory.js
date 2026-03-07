@@ -80,9 +80,9 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
-  'reeces_season_planner': {
-    label: 'Season Planner',
-    description: 'Season Planner: paginated string selects (12 per page, 24 total)',
+  'reeces_season_planner_mockup': {
+    label: 'Season Planner (Mockup)',
+    description: 'UI mockup: Season Planner with paginated string selects. Not a real feature.',
     emoji: '📝',
     style: 'Primary',
     parent: 'reeces_stuff',
@@ -91,19 +91,19 @@ export const BUTTON_REGISTRY = {
   },
   'stress_page_*': {
     label: 'Planner Page',
-    description: 'Pagination for Season Planner',
+    description: 'Pagination for Season Planner mockup',
     emoji: '📄',
     style: 'Secondary',
-    parent: 'reeces_season_planner',
+    parent: 'reeces_season_planner_mockup',
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
   'stress_select_*': {
     label: 'Planner Select',
-    description: 'No-op select handler for Season Planner demo',
+    description: 'No-op select handler for Season Planner mockup',
     emoji: '📝',
     style: 'Secondary',
-    parent: 'reeces_season_planner',
+    parent: 'reeces_season_planner_mockup',
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },

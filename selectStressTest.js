@@ -1,9 +1,15 @@
 /**
- * Season Planner — paginated string select demo
- * Tests Discord's component limits with maximum string selects per page.
+ * Season Planner (Mockup) — UI/UX prototype built directly in Discord
+ *
+ * THIS IS A UI MOCKUP ONLY — not a real feature implementation.
+ * All buttons and selects are no-ops with placeholder data.
+ * See docs/ui/UIPrototyping.md for the prototyping approach.
+ *
+ * When productionizing: replace dummy data with real season/round data,
+ * wire buttons to actual handlers, and move to a feature module.
  *
  * 24 total selects across 2 pages (12 per page).
- * Accessible via Reece's Stuff > Season Planner button.
+ * Accessible via Reece's Stuff > Season Planner (Mockup) button.
  */
 
 import { countComponents, validateComponentLimit } from './utils.js';
