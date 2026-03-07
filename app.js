@@ -7465,9 +7465,9 @@ To fix this:
           const container = {
             type: 17, accent_color: 0x9b59b6,
             components: [
-              { type: 10, content: '## 🧪 Select Stress Test | 16 Selects, 40/40 Components' },
+              { type: 10, content: '## 🧪 Select Stress Test | 16 Selects, 40/40 Components | Select Stress Test | 16 Selects, 40/40 Components | Select Stress Test | 16 Selects, 40/40 Components | Select Stress Test | 16 Selects, 40/40 Components' },
               { type: 14 },
-              { type: 10, content: '> **`📋 String Selects (16 max)`**' },
+              { type: 10, content: '> **`📋 String Selects (16 max) String Selects (16 max)`**' },
               ...selectRows,
               { type: 14 },
               { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: "← Reece's Stuff", style: 2 }] },
