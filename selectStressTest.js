@@ -119,9 +119,11 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
   // Option ordering rule:
   // If round has marooning or swap/merge configured → that event is 2nd (with date)
   // Otherwise → marooning and swap/merge stay below divider without dates
+  const isFTC = roundNum === TOTAL_ROUNDS - 1;
+
   let options;
   if (roundNum === 1) {
-    // Marooning round: marooning 2nd, swap/merge below divider
+    // Marooning round: marooning 2nd, structural actions below divider
     options = [
       { label: roundLabel, value: 'summary', default: true, emoji: { name: '🏝️' } },
       { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' }, description: dateStr },
@@ -129,9 +131,20 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
       { label: `Edit F${finalists} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${tribalDateStr} ${DOT} ${host}` },
       { label: '───────────────────', value: 'divider', description: ' ' },
       { label: 'Add Swap / Merge', value: 'swap_merge', emoji: { name: '🔀' } },
+      { label: 'Manage Final Tribal Council', value: 'ftc', emoji: { name: '⚖️' } },
+    ];
+  } else if (isFTC) {
+    // FTC round: FTC 2nd with date, structural actions below divider
+    options = [
+      { label: roundLabel, value: 'summary', default: true, emoji: { name: '🔥' } },
+      { label: 'Manage Final Tribal Council', value: 'ftc', emoji: { name: '⚖️' }, description: dateStr },
+      { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${challengeDateStr} ${DOT} ${host}` },
+      { label: `Edit F${finalists} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${tribalDateStr} ${DOT} ${host}` },
+      { label: '───────────────────', value: 'divider', description: ' ' },
+      { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' } },
     ];
   } else if (hasEvent) {
-    // Event round: swap/merge 2nd with date, marooning below divider
+    // Event round: swap/merge 2nd with date, structural actions below divider
     options = [
       { label: roundLabel, value: 'summary', default: true, emoji: { name: event.emoji } },
       { label: `Manage ${event.label}`, value: 'manage_event', emoji: { name: '🔀' }, description: dateStr },
@@ -139,17 +152,18 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
       { label: `Edit F${finalists} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${tribalDateStr} ${DOT} ${host}` },
       { label: '───────────────────', value: 'divider', description: ' ' },
       { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' } },
+      { label: 'Manage Final Tribal Council', value: 'ftc', emoji: { name: '⚖️' } },
     ];
   } else {
-    // Standard round: both marooning and swap/merge below divider
-    const summaryEmoji = roundNum === TOTAL_ROUNDS - 1 ? { name: '🔥' } : undefined;
+    // Standard round: all structural actions below divider
     options = [
-      { label: roundLabel, value: 'summary', default: true, emoji: summaryEmoji || { name: '▫️' } },
+      { label: roundLabel, value: 'summary', default: true, emoji: { name: '▫️' } },
       { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${challengeDateStr} ${DOT} ${host}` },
       { label: `Edit F${finalists} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${tribalDateStr} ${DOT} ${host}` },
       { label: '───────────────────', value: 'divider', description: ' ' },
       { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' } },
       { label: 'Add Swap / Merge', value: 'swap_merge', emoji: { name: '🔀' } },
+      { label: 'Manage Final Tribal Council', value: 'ftc', emoji: { name: '⚖️' } },
     ];
   }
 
