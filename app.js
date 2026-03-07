@@ -7457,17 +7457,26 @@ To fix this:
             components: [{
               type: 3,
               custom_id: `stress_select_${topic.id}`,
-              placeholder: topic.placeholder,
+              placeholder: `${i + 1}. ${topic.placeholder}`,
               options: topic.options
             }]
           }));
 
+          // Pad Text Display content to 4096 char limit
+          const pad = (base) => {
+            const fill = ' ⦁ ABCDEFGHIJ';
+            let s = base;
+            while (s.length + fill.length <= 4096) s += fill;
+            while (s.length < 4096) s += 'X';
+            return s;
+          };
+
           const container = {
             type: 17, accent_color: 0x9b59b6,
             components: [
-              { type: 10, content: '## 🧪 Select Stress Test | 16 Selects, 40/40 Components' },
+              { type: 10, content: pad('## 🧪 Select Stress Test | 16 Selects, 40/40 Components') },
               { type: 14 },
-              { type: 10, content: '> **`📋 String Selects (16 max)`**' },
+              { type: 10, content: pad('> **`📋 String Selects (16 max)`**') },
               ...selectRows,
               { type: 14 },
               { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: "← Reece's Stuff", style: 2 }] },
