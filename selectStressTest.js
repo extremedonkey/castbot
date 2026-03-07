@@ -19,17 +19,36 @@ const DOT = '\u2981'; // ⦁
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// Date calculation: Round 1 (marooning) takes 3 days, all others take 2 days
-// F24: Sat 7 Mar (marooning), Sun 8 (challenge), Mon 9 (tribal)
-// F23: Tue 10 Mar (challenge), Wed 11 (tribal)
-// F22: Thu 12 Mar (challenge), Fri 13 (tribal) ... etc
+// Swap/Merge events by round number (roundNum = TOTAL_ROUNDS + 1 - finalists)
+// Each adds 1 extra day to the round (event day + challenge + tribal = 3 days)
+const ROUND_EVENTS = {
+  3:  { type: 'merge', label: 'Merge',  emoji: '🔀' },  // F22
+  9:  { type: 'swap',  label: 'Swap 1', emoji: '🔀' },  // F16
+  12: { type: 'swap',  label: 'Swap 2', emoji: '🔀' },  // F13
+};
+
+// Round durations: marooning & event rounds = 3 days, reunion = 1 day, standard = 2 days
+function getRoundDuration(roundNum) {
+  if (roundNum === 1) return 3;  // marooning + challenge + tribal
+  if (roundNum === TOTAL_ROUNDS) return 1;  // reunion only
+  if (ROUND_EVENTS[roundNum]) return 3;  // event + challenge + tribal
+  return 2;  // challenge + tribal
+}
+
+// Cumulative date calculation — accounts for variable round durations
+const SEASON_START = 7; // Day of month
+const SEASON_MONTH = 1; // 0-indexed: 1 = February
+
 function calcRoundStart(roundIndex) {
-  if (roundIndex === 0) return 7; // Sat 7 Mar
-  return 7 + 3 + (roundIndex - 1) * 2; // 3 days for marooning round, then 2 per round
+  let day = SEASON_START;
+  for (let i = 0; i < roundIndex; i++) {
+    day += getRoundDuration(i + 1);
+  }
+  return day;
 }
 
 const fmtDate = (dayOffset) => {
-  const d = new Date(2026, 2, dayOffset);
+  const d = new Date(2026, SEASON_MONTH, dayOffset);
   return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
 };
 
@@ -39,7 +58,11 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
   const startDay = calcRoundStart(i);
   const dateStr = fmtDate(startDay);
 
+  const event = ROUND_EVENTS[roundNum];
+  const hasEvent = !!event;
+
   // Round summary label (shown as pre-selected default)
+  // If round has an event (marooning/swap/merge), include it in the summary
   let roundLabel;
   if (roundNum === 1) {
     roundLabel = `F${finalists} ${DOT} ${dateStr} ${DOT} Marooning ${DOT} Challenge 1`;
@@ -47,19 +70,25 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
     roundLabel = `F${finalists} (FTC) ${DOT} ${dateStr} ${DOT} Final Tribal Council`;
   } else if (roundNum === 24) {
     roundLabel = `F${finalists} ${DOT} ${dateStr} ${DOT} Reunion`;
+  } else if (hasEvent) {
+    roundLabel = `F${finalists} ${DOT} ${dateStr} ${DOT} ${event.label} ${DOT} Challenge ${roundNum} (TBC)`;
   } else {
     roundLabel = `F${finalists} ${DOT} ${dateStr} ${DOT} Challenge ${roundNum} (TBC)`;
   }
 
-  // Marooning round: challenge +1 day, tribal +2 days
-  // All other rounds: challenge = same day, tribal +1 day
-  const challengeDateStr = roundNum === 1 ? fmtDate(startDay + 1) : fmtDate(startDay);
-  const tribalDateStr = roundNum === 1 ? fmtDate(startDay + 2) : fmtDate(startDay + 1);
+  // Date offsets within the round:
+  // Marooning/event rounds (3 days): event day 0, challenge day 1, tribal day 2
+  // Standard rounds (2 days): challenge day 0, tribal day 1
+  const hasExtraDay = roundNum === 1 || hasEvent;
+  const challengeDateStr = hasExtraDay ? fmtDate(startDay + 1) : fmtDate(startDay);
+  const tribalDateStr = hasExtraDay ? fmtDate(startDay + 2) : fmtDate(startDay + 1);
 
-  // Mockup options — first is default-selected, rest are no-op actions
-  // F24 (marooning): Marooning is 2nd option; other rounds: Marooning stays after divider
+  // Option ordering rule:
+  // If round has marooning or swap/merge configured → that event is 2nd (with date)
+  // Otherwise → marooning and swap/merge stay below divider without dates
   let options;
   if (roundNum === 1) {
+    // Marooning round: marooning 2nd, swap/merge below divider
     options = [
       { label: roundLabel, value: 'summary', default: true, emoji: { name: '🏝️' } },
       { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' }, description: dateStr },
@@ -68,7 +97,18 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
       { label: '───────────────────', value: 'divider', description: ' ' },
       { label: 'Add Swap / Merge', value: 'swap_merge', emoji: { name: '🔀' } },
     ];
+  } else if (hasEvent) {
+    // Event round: swap/merge 2nd with date, marooning below divider
+    options = [
+      { label: roundLabel, value: 'summary', default: true, emoji: { name: event.emoji } },
+      { label: `Manage ${event.label}`, value: 'manage_event', emoji: { name: '🔀' }, description: dateStr },
+      { label: `Edit Challenge ${roundNum} (TBC)`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${challengeDateStr} ${DOT} Reece` },
+      { label: `Edit F${finalists} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${tribalDateStr} ${DOT} Reece` },
+      { label: '───────────────────', value: 'divider', description: ' ' },
+      { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' } },
+    ];
   } else {
+    // Standard round: both marooning and swap/merge below divider
     options = [
       { label: roundLabel, value: 'summary', default: true },
       { label: `Edit Challenge ${roundNum} (TBC)`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${challengeDateStr} ${DOT} Reece` },
