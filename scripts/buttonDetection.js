@@ -55,6 +55,18 @@ const SAFE_TEST_BUTTONS = {
     style: 1, // Primary (blue)
     priority: 5
   },
+  'select_stress': {
+    custom_id: 'reeces_select_stress',
+    label: '🧪 Select Stress',
+    style: 1, // Primary (blue)
+    priority: 2
+  },
+  'richcard': {
+    custom_id: 'richcard_demo',
+    label: '🎴 Rich Card',
+    style: 1, // Primary (blue)
+    priority: 2
+  },
   'experimental': {
     custom_id: 'reeces_stuff',
     label: "🐧 Reece's Stuff",
@@ -121,13 +133,18 @@ const FEATURE_PATTERNS = {
     /season_management_menu/,
     /applicationManager/
   ],
+  select_stress: [
+    /stress.?test/i,
+    /select.?stress/i,
+    /reeces_select_stress/i
+  ],
+  richcard: [
+    /richcard/i,
+    /rich.?card/i
+  ],
   experimental: [
     /reeces_stuff/i,
     /reece.*stuff/i,
-    /stress.?test/i,
-    /select.?stress/i,
-    /richcard/i,
-    /rich.?card/i,
     /player.?card/i,
     /pcard/i,
     /experimental/i
