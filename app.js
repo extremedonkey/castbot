@@ -7391,7 +7391,8 @@ To fix this:
                   { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
                   { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } },
                   { type: 2, custom_id: 'richcard_demo', label: 'Rich Card', style: 1, emoji: { name: '🎴' } },
-                  { type: 2, custom_id: 'reeces_season_planner_mockup', label: 'Season Planner (Mockup)', style: 1, emoji: { name: '📝' } }
+                  { type: 2, custom_id: 'reeces_season_planner_mockup', label: 'Season Planner (Mockup)', style: 1, emoji: { name: '📝' } },
+                  { type: 2, custom_id: 'reeces_radio_mockup', label: 'Radio PoC (Mockup)', style: 1, emoji: { name: '📻' } }
                 ]
               },
               { type: 14 },
@@ -7457,6 +7458,48 @@ To fix this:
           }]};
         }
       })(req, res, client);
+    } else if (custom_id === 'reeces_radio_mockup') {
+      // Radio Group PoC (Mockup) — tests Type 21 radio in modal. See docs/ui/UIPrototyping.md
+      return ButtonHandlerFactory.create({
+        id: 'reeces_radio_mockup',
+        requiresModal: true,
+        handler: async () => ({
+          type: 9,
+          data: {
+            custom_id: 'reeces_radio_mockup_submit',
+            title: 'Radio Group PoC',
+            components: [
+              {
+                type: 10,
+                content: '### Pick your favourite Survivor location\n\nThis is a proof-of-concept for the Radio Group component (Type 21).'
+              },
+              {
+                type: 18,
+                label: 'Survivor Location',
+                description: 'Where would you most like to play?',
+                component: {
+                  type: 21,
+                  custom_id: 'radio_location',
+                  required: true,
+                  options: [
+                    { label: 'Fiji', value: 'fiji', description: 'Mamanuca Islands — the classic' },
+                    { label: 'Borneo', value: 'borneo', description: 'Pulau Tiga — where it all began' },
+                    { label: 'Australian Outback', value: 'outback', description: 'Herbert River — harsh and iconic' },
+                    { label: 'Pearl Islands', value: 'pearl_islands', description: 'Panama — pirate vibes' },
+                    { label: 'Palau', value: 'palau', description: 'Rock Islands — crystal clear water' },
+                    { label: 'Tocantins', value: 'tocantins', description: 'Brazilian Highlands — scorching heat' },
+                    { label: 'Samoa', value: 'samoa', description: 'Upolu — lush tropical jungle' },
+                    { label: 'Gabon', value: 'gabon', description: 'West Africa — unique wildlife' },
+                    { label: 'China', value: 'china', description: 'Zhelin Reservoir — ancient scenery' },
+                    { label: 'Marquesas', value: 'marquesas', description: 'Nuku Hiva — remote and volcanic', default: true }
+                  ]
+                }
+              }
+            ]
+          }
+        })
+      })(req, res, client);
+
     } else if (custom_id === 'richcard_demo') {
       // Rich Card UI reference implementation — demo of buildRichCardModal + buildRichCardContainer
       return ButtonHandlerFactory.create({
@@ -34521,7 +34564,46 @@ Your server is now ready for Tycoons gameplay!`;
     const { custom_id, components } = data;
     console.log(`🔍 DEBUG: MODAL_SUBMIT received - custom_id: ${custom_id}`);
     
-    if (custom_id === 'richcard_demo_save') {
+    if (custom_id === 'reeces_radio_mockup_submit') {
+      // Radio Group PoC — display the selected value. See docs/ui/UIPrototyping.md
+      // Radio Group (type 21) returns value directly in the component (not wrapped in ActionRow/Label)
+      // Walk the components tree to find the radio group value
+      let selectedValue = null;
+      for (const c of components) {
+        if (c.type === 21 && c.custom_id === 'radio_location') {
+          selectedValue = c.value;
+          break;
+        }
+        if (c.components) {
+          for (const inner of c.components) {
+            if (inner.type === 21 && inner.custom_id === 'radio_location') {
+              selectedValue = inner.value;
+              break;
+            }
+          }
+        }
+      }
+      console.log(`📻 Radio PoC: selected "${selectedValue}"`);
+      return res.send({
+        type: InteractionResponseType.UPDATE_MESSAGE,
+        data: {
+          components: [{
+            type: 17, accent_color: 0x2ECC71,
+            components: [
+              { type: 10, content: `## 📻 Radio Group PoC Result\n\nYou selected: **${selectedValue || '(nothing)'}**` },
+              { type: 14 },
+              { type: 10, content: `-# Component type 21 · modal submit payload` },
+              { type: 14 },
+              { type: 1, components: [
+                { type: 2, custom_id: 'reeces_radio_mockup', label: 'Try Again', style: 1, emoji: { name: '🔄' } },
+                { type: 2, custom_id: 'reeces_stuff', label: "← Reece's Stuff", style: 2 }
+              ]}
+            ]
+          }]
+        }
+      });
+
+    } else if (custom_id === 'richcard_demo_save') {
       // Rich Card demo — modal save handler using extractRichCardValues + buildRichCardContainer
       const { extractRichCardValues, buildRichCardContainer } = await import('./richCardUI.js');
       const values = extractRichCardValues(data);

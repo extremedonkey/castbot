@@ -107,6 +107,16 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
+  'reeces_radio_mockup': {
+    label: 'Radio PoC (Mockup)',
+    description: 'UI mockup: Radio Group (Type 21) in modal with 10 options. Not a real feature.',
+    emoji: '📻',
+    style: 'Primary',
+    parent: 'reeces_stuff',
+    restrictedUser: '391415444084490240',
+    requiresModal: true,
+    category: 'experimental'
+  },
   'richcard_demo': {
     label: 'Rich Card',
     description: 'Rich Card UI reference implementation demo',
