@@ -19,12 +19,25 @@ const DOT = '\u2981'; // ⦁
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// Generate 24 rounds starting Sat 7 Mar, +2 days each, F24 down to F1
+// Date calculation: Round 1 (marooning) takes 3 days, all others take 2 days
+// F24: Sat 7 Mar (marooning), Sun 8 (challenge), Mon 9 (tribal)
+// F23: Tue 10 Mar (challenge), Wed 11 (tribal)
+// F22: Thu 12 Mar (challenge), Fri 13 (tribal) ... etc
+function calcRoundStart(roundIndex) {
+  if (roundIndex === 0) return 7; // Sat 7 Mar
+  return 7 + 3 + (roundIndex - 1) * 2; // 3 days for marooning round, then 2 per round
+}
+
+const fmtDate = (dayOffset) => {
+  const d = new Date(2026, 2, dayOffset);
+  return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+};
+
 const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
   const roundNum = i + 1;
   const finalists = TOTAL_ROUNDS + 1 - roundNum; // F24, F23, ... F1
-  const date = new Date(2026, 2, 7 + (i * 2)); // 7 Mar 2026 + 2 days per round
-  const dateStr = `${DAYS[date.getDay()]} ${date.getDate()} ${MONTHS[date.getMonth()]}`;
+  const startDay = calcRoundStart(i);
+  const dateStr = fmtDate(startDay);
 
   // Round summary label (shown as pre-selected default)
   let roundLabel;
@@ -38,21 +51,33 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
     roundLabel = `F${finalists} ${DOT} ${dateStr} ${DOT} Challenge ${roundNum} (TBC)`;
   }
 
-  // Contextual dates: challenge = round date +2, tribal = round date +3
-  const challengeDate = new Date(2026, 2, 7 + (i * 2) + 2);
-  const tribalDate = new Date(2026, 2, 7 + (i * 2) + 3);
-  const challengeDateStr = `${DAYS[challengeDate.getDay()]} ${challengeDate.getDate()} ${MONTHS[challengeDate.getMonth()]}`;
-  const tribalDateStr = `${DAYS[tribalDate.getDay()]} ${tribalDate.getDate()} ${MONTHS[tribalDate.getMonth()]}`;
+  // Marooning round: challenge +1 day, tribal +2 days
+  // All other rounds: challenge = same day, tribal +1 day
+  const challengeDateStr = roundNum === 1 ? fmtDate(startDay + 1) : fmtDate(startDay);
+  const tribalDateStr = roundNum === 1 ? fmtDate(startDay + 2) : fmtDate(startDay + 1);
 
   // Mockup options — first is default-selected, rest are no-op actions
-  const options = [
-    { label: roundLabel, value: 'summary', default: true, ...(roundNum === 1 && { emoji: { name: '🏝️' } }) },
-    { label: `Edit Challenge ${roundNum} (TBC)`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${challengeDateStr} ${DOT} Reece` },
-    { label: `Edit F${finalists} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${tribalDateStr} ${DOT} Reece` },
-    { label: '───────────────────', value: 'divider', description: ' ' },
-    { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' } },
-    { label: 'Add Swap / Merge', value: 'swap_merge', emoji: { name: '🔀' } },
-  ];
+  // F24 (marooning): Marooning is 2nd option; other rounds: Marooning stays after divider
+  let options;
+  if (roundNum === 1) {
+    options = [
+      { label: roundLabel, value: 'summary', default: true, emoji: { name: '🏝️' } },
+      { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' }, description: dateStr },
+      { label: `Edit Challenge ${roundNum} (TBC)`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${challengeDateStr} ${DOT} Reece` },
+      { label: `Edit F${finalists} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${tribalDateStr} ${DOT} Reece` },
+      { label: '───────────────────', value: 'divider', description: ' ' },
+      { label: 'Add Swap / Merge', value: 'swap_merge', emoji: { name: '🔀' } },
+    ];
+  } else {
+    options = [
+      { label: roundLabel, value: 'summary', default: true },
+      { label: `Edit Challenge ${roundNum} (TBC)`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${challengeDateStr} ${DOT} Reece` },
+      { label: `Edit F${finalists} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${tribalDateStr} ${DOT} Reece` },
+      { label: '───────────────────', value: 'divider', description: ' ' },
+      { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' } },
+      { label: 'Add Swap / Merge', value: 'swap_merge', emoji: { name: '🔀' } },
+    ];
+  }
 
   return { id: `round_${roundNum}`, placeholder: roundLabel, options };
 });
