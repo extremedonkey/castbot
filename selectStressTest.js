@@ -95,7 +95,7 @@ export function buildSelectStressPage(page = 0) {
       { type: 1, components: [
         { type: 2, custom_id: 'stress_edit_season', label: 'Edit', style: 2, emoji: { name: '✏️' } },
         { type: 2, custom_id: 'stress_schedule', label: 'Schedule', style: 2, emoji: { name: '📅' } },
-        { type: 2, custom_id: 'stress_applications', label: 'Applications', style: 2, emoji: { name: '📝' } },
+        { type: 2, custom_id: 'stress_applications', label: 'Apps', style: 2, emoji: { name: '📝' } },
         { type: 2, custom_id: 'stress_cast_ranking', label: 'Ranking', style: 2, emoji: { name: '🏆' } },
         { type: 2, custom_id: 'stress_tribes', label: 'Tribes', style: 2, emoji: { name: '🔥' } },
       ]},
