@@ -127,6 +127,100 @@ When a mockup is approved:
 
 The mockup's component structure, pagination logic, and navigation patterns carry forward unchanged.
 
+## Season Planner — Date Calculation Rules
+
+These rules govern how round dates are calculated. When productionized, dates should be computed dynamically from a season start date and round configuration.
+
+### Core Concepts
+
+A **season** consists of sequential **rounds**. Each round has a **finalist count** (F24, F23, ... F1) that decreases as players are eliminated. Rounds occupy real calendar days — the schedule is contiguous with no gaps.
+
+### Round Types & Duration
+
+| Round Type | Duration | Contains | Example |
+|---|---|---|---|
+| **Marooning** | 3 days | Marooning (day 1), Challenge (day 2), Tribal (day 3) | Sat 7 → Sun 8 → Mon 9 Mar |
+| **Standard** | 2 days | Challenge (day 1), Tribal (day 2) | Tue 10 → Wed 11 Mar |
+| **FTC** | 2 days | Final Tribal Council (day 1), deliberation (day 2) | — |
+| **Reunion** | 1 day | Reunion event | — |
+
+### Date Calculation Algorithm
+
+```
+Given: season_start_date (e.g., Sat 7 Mar 2026)
+
+Round 1 (Marooning):
+  round_date     = season_start_date              → Sat 7 Mar
+  challenge_date = season_start_date + 1 day      → Sun 8 Mar
+  tribal_date    = season_start_date + 2 days     → Mon 9 Mar
+  next_available = season_start_date + 3 days     → Tue 10 Mar
+
+Round N (N > 1, standard):
+  round_date     = previous_round.next_available  → Tue 10 Mar (for round 2)
+  challenge_date = round_date                     → same day
+  tribal_date    = round_date + 1 day             → Wed 11 Mar
+  next_available = round_date + 2 days            → Thu 12 Mar
+```
+
+In code (`selectStressTest.js`):
+```javascript
+function calcRoundStart(roundIndex) {
+  if (roundIndex === 0) return startDay;                        // Marooning: day 1
+  return startDay + 3 + (roundIndex - 1) * 2;                  // 3 days for marooning, then 2 per round
+}
+
+// Marooning round: challenge = start + 1, tribal = start + 2
+// Standard round:  challenge = start,     tribal = start + 1
+```
+
+### String Select Option Structure Per Round
+
+**Marooning round (F24)** — Marooning promoted to 2nd position:
+```
+1. 🏝️ F24 ⦁ Sat 7 Mar ⦁ Marooning ⦁ Challenge 1    [default selected]
+2. 🏝️ Manage Marooning & Exile                        | Sat 7 Mar
+3. 🤸 Edit Challenge 1 (TBC)                           | Sun 8 Mar ⦁ Reece
+4. 🔥 Edit F24 Tribal (1 elim)                         | Mon 9 Mar ⦁ Reece
+5.    ───────────────────                               | (divider)
+6. 🔀 Add Swap / Merge
+```
+
+**Standard rounds (F23 onwards)** — Marooning below divider:
+```
+1.    F23 ⦁ Tue 10 Mar ⦁ Challenge 2 (TBC)            [default selected]
+2. 🤸 Edit Challenge 2 (TBC)                           | Tue 10 Mar ⦁ Reece
+3. 🔥 Edit F23 Tribal (1 elim)                         | Wed 11 Mar ⦁ Reece
+4.    ───────────────────                               | (divider)
+5. 🏝️ Manage Marooning & Exile
+6. 🔀 Add Swap / Merge
+```
+
+**Special rounds:**
+- **F2 (FTC)**: `F2 (FTC) ⦁ {date} ⦁ Final Tribal Council`
+- **F1 (Reunion)**: `F1 ⦁ {date} ⦁ Reunion`
+
+### Option Field Mapping
+
+| Field | Usage |
+|---|---|
+| `label` | Primary action text (e.g., "Edit Challenge 2 (TBC)") |
+| `description` | Date and assigned host (e.g., "Tue 10 Mar ⦁ Reece") |
+| `emoji` | Action type icon (🏝️ marooning, 🤸 challenge, 🔥 tribal, 🔀 swap) |
+| `default: true` | Round summary line — pre-selected so it displays as the select's visible value |
+| `value` | Action identifier (`summary`, `edit_challenge`, `edit_tribal`, `marooning`, `swap_merge`, `divider`) |
+
+### Productionization Notes
+
+When building the real Season Planner:
+- **Season start date** should come from season config data, not hardcoded
+- **Round count** derives from cast size (e.g., 24 players = 24 rounds including FTC/Reunion)
+- **Marooning flag** should be per-round config (not always round 1)
+- **Host assignment** ("Reece") should pull from round config, not hardcoded
+- **Eliminations per tribal** ("1 elim") should be configurable (double eliminations, no-elim rounds)
+- **Swap/Merge events** could be flagged on specific rounds, changing the option layout
+- **Challenge names** replace "(TBC)" as they're confirmed
+- The divider option (`───────────────────`) separates contextual actions (edit this round) from structural actions (marooning/swap that could apply to any round)
+
 ## Existing Mockups
 
 | Mockup | Module | Button ID | Components |
