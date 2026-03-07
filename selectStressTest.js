@@ -14,17 +14,19 @@
 
 import { countComponents, validateComponentLimit } from './utils.js';
 
-const TOTAL_ROUNDS = 24;
+const TOTAL_ROUNDS = 20;
 const DOT = '\u2981'; // ⦁
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 // Swap/Merge events by round number (roundNum = TOTAL_ROUNDS + 1 - finalists)
 // Each adds 1 extra day to the round (event day + challenge + tribal = 3 days)
+// Round events keyed by roundNum (roundNum = TOTAL_ROUNDS + 1 - finalists)
+// F18 = round 3, F16 = round 5, F13 = round 8
 const ROUND_EVENTS = {
-  3:  { type: 'merge', label: 'Merge',  emoji: '🔀' },  // F22
-  9:  { type: 'swap',  label: 'Swap 1', emoji: '🔀' },  // F16
-  12: { type: 'swap',  label: 'Swap 2', emoji: '🔀' },  // F13
+  3: { type: 'merge', label: 'Merge',  emoji: '🔀' },  // F18
+  5: { type: 'swap',  label: 'Swap 1', emoji: '🔀' },  // F16
+  8: { type: 'swap',  label: 'Swap 2', emoji: '🔀' },  // F13
 };
 
 // Round durations: marooning & event rounds = 3 days, reunion = 1 day, standard = 2 days
@@ -66,9 +68,9 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
   let roundLabel;
   if (roundNum === 1) {
     roundLabel = `F${finalists} ${DOT} ${dateStr} ${DOT} Marooning ${DOT} Challenge 1`;
-  } else if (roundNum === 23) {
+  } else if (roundNum === TOTAL_ROUNDS - 1) {
     roundLabel = `F${finalists} (FTC) ${DOT} ${dateStr} ${DOT} Final Tribal Council`;
-  } else if (roundNum === 24) {
+  } else if (roundNum === TOTAL_ROUNDS) {
     roundLabel = `F${finalists} ${DOT} ${dateStr} ${DOT} Reunion`;
   } else if (hasEvent) {
     roundLabel = `F${finalists} ${DOT} ${dateStr} ${DOT} ${event.label} ${DOT} Challenge ${roundNum} (TBC)`;
@@ -109,7 +111,7 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
     ];
   } else {
     // Standard round: both marooning and swap/merge below divider
-    const summaryEmoji = roundNum === 23 ? { name: '🔥' } : undefined;
+    const summaryEmoji = roundNum === TOTAL_ROUNDS - 1 ? { name: '🔥' } : undefined;
     options = [
       { label: roundLabel, value: 'summary', default: true, ...(summaryEmoji && { emoji: summaryEmoji }) },
       { label: `Edit Challenge ${roundNum} (TBC)`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${challengeDateStr} ${DOT} Reece` },
