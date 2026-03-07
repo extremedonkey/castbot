@@ -7434,7 +7434,7 @@ To fix this:
         updateMessage: true,
         handler: async (context) => {
           const selectTopics = [
-            { id: 'color', placeholder: 'Round 1 (F18) Sat 7 Mar \u2981 Marooning \u2981 Challenge 1 \u2981 Final 18 Tribal', options: [{ label: 'Red', value: 'red', emoji: { name: '🔴' } }, { label: 'Blue', value: 'blue', emoji: { name: '🔵' } }, { label: 'Green', value: 'green', emoji: { name: '🟢' } }] },
+            { id: 'color', placeholder: 'Rnd1 (F18) \u2981 Sat 7 Mar \u2981 Marooning \u2981 Challenge 1', options: [{ label: 'Red', value: 'red', emoji: { name: '🔴' } }, { label: 'Blue', value: 'blue', emoji: { name: '🔵' } }, { label: 'Green', value: 'green', emoji: { name: '🟢' } }] },
             { id: 'animal', placeholder: 'Pick an animal', options: [{ label: 'Cat', value: 'cat', emoji: { name: '🐱' } }, { label: 'Dog', value: 'dog', emoji: { name: '🐶' } }, { label: 'Fish', value: 'fish', emoji: { name: '🐟' } }] },
             { id: 'food', placeholder: 'Pick a food', options: [{ label: 'Pizza', value: 'pizza', emoji: { name: '🍕' } }, { label: 'Sushi', value: 'sushi', emoji: { name: '🍣' } }, { label: 'Taco', value: 'taco', emoji: { name: '🌮' } }] },
             { id: 'weather', placeholder: 'Pick weather', options: [{ label: 'Sunny', value: 'sunny', emoji: { name: '☀️' } }, { label: 'Rainy', value: 'rainy', emoji: { name: '🌧️' } }, { label: 'Snowy', value: 'snowy', emoji: { name: '❄️' } }] },
@@ -7457,7 +7457,7 @@ To fix this:
             components: [{
               type: 3,
               custom_id: `stress_select_${topic.id}`,
-              placeholder: `${i + 1}. ${topic.placeholder}`,
+              placeholder: topic.placeholder,
               options: topic.options
             }]
           }));
