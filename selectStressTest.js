@@ -68,7 +68,7 @@ export function buildSelectStressPage(page = 0) {
   const container = {
     type: 17, accent_color: 0x9b59b6,
     components: [
-      { type: 10, content: `## 🧪 Select Stress Test | 40/40 Components` },
+      { type: 10, content: `## 📝 Season Planner | S12: Sacred Band of Thebes` },
       { type: 14 },
       { type: 10, content: `> **\`📋 Page ${page + 1}/${TOTAL_PAGES} — Selects ${startIndex + 1}-${startIndex + pageTopics.length} of ${ALL_SELECT_TOPICS.length}\`**` },
       ...selectRows,
