@@ -29,6 +29,10 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
   let placeholder;
   if (roundNum === 1) {
     placeholder = `F${finalists} ${DOT} ${dateStr} ${DOT} Marooning ${DOT} Challenge 1`;
+  } else if (roundNum === 23) {
+    placeholder = `F${finalists} (FTC) ${DOT} ${dateStr} ${DOT} Final Tribal Council`;
+  } else if (roundNum === 24) {
+    placeholder = `F${finalists} ${DOT} ${dateStr} ${DOT} Reunion`;
   } else {
     placeholder = `F${finalists} ${DOT} ${dateStr} ${DOT} Challenge ${roundNum} (TBC)`;
   }
