@@ -1,9 +1,9 @@
 /**
- * Select Stress Test — paginated string select demo
+ * Season Planner — paginated string select demo
  * Tests Discord's component limits with maximum string selects per page.
  *
  * 24 total selects across 2 pages (12 per page).
- * Accessible via Reece's Stuff > Select Stress button.
+ * Accessible via Reece's Stuff > Season Planner button.
  */
 
 import { countComponents, validateComponentLimit } from './utils.js';
@@ -70,22 +70,21 @@ export function buildSelectStressPage(page = 0) {
     components: [
       { type: 10, content: `## 📝 Season Planner | S12: Sacred Band of Thebes` },
       { type: 14 },
-      { type: 10, content: `> **\`📋 Page ${page + 1}/${TOTAL_PAGES} — Selects ${startIndex + 1}-${startIndex + pageTopics.length} of ${ALL_SELECT_TOPICS.length}\`**` },
-      ...selectRows,
-      { type: 14 },
       { type: 1, components: [
         { type: 2, custom_id: 'stress_edit_season', label: 'Edit Season', style: 2, emoji: { name: '✏️' } },
         { type: 2, custom_id: 'stress_schedule', label: 'Schedule', style: 2, emoji: { name: '📅' } },
         { type: 2, custom_id: 'stress_applications', label: 'Applications', style: 2, emoji: { name: '📝' } },
         { type: 2, custom_id: 'stress_cast_ranking', label: 'Cast Ranking', style: 2, emoji: { name: '🏆' } },
       ]},
+      { type: 10, content: `> **\`📋 Page ${page + 1}/${TOTAL_PAGES} — Selects ${startIndex + 1}-${startIndex + pageTopics.length} of ${ALL_SELECT_TOPICS.length}\`**` },
+      ...selectRows,
       { type: 14 },
       { type: 1, components: navButtons },
     ]
   };
 
-  countComponents([container], { verbosity: "full", label: `Select Stress Test (Page ${page + 1})` });
-  validateComponentLimit([container], `Select Stress Test (Page ${page + 1})`);
+  countComponents([container], { verbosity: "full", label: `Season Planner (Page ${page + 1})` });
+  validateComponentLimit([container], `Season Planner (Page ${page + 1})`);
 
   return { components: [container] };
 }

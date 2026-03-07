@@ -80,30 +80,30 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
-  'reeces_select_stress': {
-    label: 'Select Stress',
-    description: 'Stress test: paginated string selects (12 per page, 24 total)',
-    emoji: '🧪',
+  'reeces_season_planner': {
+    label: 'Season Planner',
+    description: 'Season Planner: paginated string selects (12 per page, 24 total)',
+    emoji: '📝',
     style: 'Primary',
     parent: 'reeces_stuff',
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
   'stress_page_*': {
-    label: 'Stress Page',
-    description: 'Pagination for select stress test',
+    label: 'Planner Page',
+    description: 'Pagination for Season Planner',
     emoji: '📄',
     style: 'Secondary',
-    parent: 'reeces_select_stress',
+    parent: 'reeces_season_planner',
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
   'stress_select_*': {
-    label: 'Stress Select',
-    description: 'No-op select handler for stress test demo',
-    emoji: '🧪',
+    label: 'Planner Select',
+    description: 'No-op select handler for Season Planner demo',
+    emoji: '📝',
     style: 'Secondary',
-    parent: 'reeces_select_stress',
+    parent: 'reeces_season_planner',
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },

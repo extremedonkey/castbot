@@ -55,9 +55,9 @@ const SAFE_TEST_BUTTONS = {
     style: 1, // Primary (blue)
     priority: 5
   },
-  'select_stress': {
-    custom_id: 'reeces_select_stress',
-    label: '🧪 Select Stress',
+  'season_planner': {
+    custom_id: 'reeces_season_planner',
+    label: '📝 Season Planner',
     style: 1, // Primary (blue)
     priority: 2
   },
@@ -133,10 +133,11 @@ const FEATURE_PATTERNS = {
     /season_management_menu/,
     /applicationManager/
   ],
-  select_stress: [
+  season_planner: [
+    /season.?planner/i,
     /stress.?test/i,
     /select.?stress/i,
-    /reeces_select_stress/i
+    /reeces_season_planner/i
   ],
   richcard: [
     /richcard/i,

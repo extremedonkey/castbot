@@ -7391,7 +7391,7 @@ To fix this:
                   { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
                   { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } },
                   { type: 2, custom_id: 'richcard_demo', label: 'Rich Card', style: 1, emoji: { name: '🎴' } },
-                  { type: 2, custom_id: 'reeces_select_stress', label: 'Select Stress', style: 1, emoji: { name: '🧪' } }
+                  { type: 2, custom_id: 'reeces_season_planner', label: 'Season Planner', style: 1, emoji: { name: '📝' } }
                 ]
               },
               { type: 14 },
@@ -7427,10 +7427,10 @@ To fix this:
           return { components: [container] };
         }
       })(req, res, client);
-    } else if (custom_id === 'reeces_select_stress' || custom_id.startsWith('stress_page_')) {
-      // Select Stress Test — paginated string selects (12 per page, 24 total)
+    } else if (custom_id === 'reeces_season_planner' || custom_id.startsWith('stress_page_')) {
+      // Season Planner — paginated string selects (12 per page, 24 total)
       return ButtonHandlerFactory.create({
-        id: 'reeces_select_stress',
+        id: 'reeces_season_planner',
         updateMessage: true,
         handler: async (context) => {
           const { buildSelectStressPage } = await import('./selectStressTest.js');
@@ -7450,7 +7450,7 @@ To fix this:
           return { components: [{
             type: 17, accent_color: 0x9b59b6,
             components: [
-              { type: 10, content: `## 🧪 Select Stress Test\nYou picked **${selected}** from the **${selectName}** select.\n\n-# This is a no-op demo — go back to see all selects.` },
+              { type: 10, content: `## 📝 Season Planner\nYou picked **${selected}** from the **${selectName}** select.\n\n-# This is a no-op demo — go back to see all selects.` },
               { type: 14 },
               { type: 1, components: [{ type: 2, custom_id: `stress_page_${page}`, label: '← Back', style: 2 }] }
             ]

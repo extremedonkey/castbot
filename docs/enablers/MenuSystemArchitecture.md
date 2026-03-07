@@ -137,7 +137,7 @@ MenuBuilder.trackLegacyMenu('menu_location', 'Menu description');
   const { countComponents } = await import('./utils.js');
   countComponents([container], { verbosity: "full", label: "Menu Name" });
   ```
-  Output shows the full recursive tree with numbered components and a pass/fail total (e.g. `✅ Menu Name: 39/40`). See `reeces_stuff` and `reeces_select_stress` handlers for examples.
+  Output shows the full recursive tree with numbered components and a pass/fail total (e.g. `✅ Menu Name: 39/40`). See `reeces_stuff` and `reeces_season_planner` handlers for examples.
 
 ## Migration Strategy
 
