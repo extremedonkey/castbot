@@ -109,8 +109,9 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
     ];
   } else {
     // Standard round: both marooning and swap/merge below divider
+    const summaryEmoji = roundNum === 23 ? { name: '🔥' } : undefined;
     options = [
-      { label: roundLabel, value: 'summary', default: true },
+      { label: roundLabel, value: 'summary', default: true, ...(summaryEmoji && { emoji: summaryEmoji }) },
       { label: `Edit Challenge ${roundNum} (TBC)`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${challengeDateStr} ${DOT} Reece` },
       { label: `Edit F${finalists} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${tribalDateStr} ${DOT} Reece` },
       { label: '───────────────────', value: 'divider', description: ' ' },
