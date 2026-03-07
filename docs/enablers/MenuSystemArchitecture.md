@@ -132,6 +132,12 @@ MenuBuilder.trackLegacyMenu('menu_location', 'Menu description');
 - **Permissions**: Check before showing admin menus (via ButtonHandlerFactory `requiresPermission`)
 - **Error Handling**: Use ButtonHandlerFactory patterns
 - **Async/Await**: ALWAYS `await` MenuBuilder.create() - see Common Pitfalls below
+- **Component Count Logging**: Always add verbose `countComponents` logging to menu handlers for dev visibility. This is not critical for production but invaluable during development to catch limit issues early:
+  ```javascript
+  const { countComponents } = await import('./utils.js');
+  countComponents([container], { verbosity: "full", label: "Menu Name" });
+  ```
+  Output shows the full recursive tree with numbered components and a pass/fail total (e.g. `✅ Menu Name: 39/40`). See `reeces_stuff` and `reeces_select_stress` handlers for examples.
 
 ## Migration Strategy
 

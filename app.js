@@ -7422,7 +7422,7 @@ To fix this:
           };
 
           const { countComponents } = await import('./utils.js');
-          countComponents([container], { verbosity: "summary", label: "Reece's Stuff" });
+          countComponents([container], { verbosity: "full", label: "Reece's Stuff" });
 
           return { components: [container] };
         }
@@ -7475,7 +7475,8 @@ To fix this:
             ]
           };
 
-          const { validateComponentLimit } = await import('./utils.js');
+          const { countComponents, validateComponentLimit } = await import('./utils.js');
+          countComponents([container], { verbosity: "full", label: "Select Stress Test" });
           validateComponentLimit([container], 'Select Stress Test');
 
           return { components: [container] };
