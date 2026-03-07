@@ -7459,7 +7459,7 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'reeces_radio_mockup') {
-      // Radio Group PoC (Mockup) — tests Type 21 radio in modal. See docs/ui/UIPrototyping.md
+      // Checkbox Group PoC (Mockup) — tests Type 22 checkbox group in modal. See docs/ui/UIPrototyping.md
       return ButtonHandlerFactory.create({
         id: 'reeces_radio_mockup',
         requiresModal: true,
@@ -7467,20 +7467,22 @@ To fix this:
           type: 9,
           data: {
             custom_id: 'reeces_radio_mockup_submit',
-            title: 'Radio Group PoC',
+            title: 'Checkbox Group PoC',
             components: [
               {
                 type: 10,
-                content: '### Pick your favourite Survivor location\n\nThis is a proof-of-concept for the Radio Group component (Type 21).'
+                content: '### Pick your favourite Survivor locations\n\nThis is a proof-of-concept for the Checkbox Group component (Type 22). Select up to 3.'
               },
               {
                 type: 18,
-                label: 'Survivor Location',
-                description: 'Where would you most like to play?',
+                label: 'Survivor Locations',
+                description: 'Choose up to 3 locations you\'d like to play',
                 component: {
-                  type: 21,
-                  custom_id: 'radio_location',
+                  type: 22,
+                  custom_id: 'checkbox_locations',
                   required: true,
+                  min_values: 1,
+                  max_values: 3,
                   options: [
                     { label: 'Fiji', value: 'fiji', description: 'Mamanuca Islands — the classic' },
                     { label: 'Borneo', value: 'borneo', description: 'Pulau Tiga — where it all began' },
@@ -34565,34 +34567,35 @@ Your server is now ready for Tycoons gameplay!`;
     console.log(`🔍 DEBUG: MODAL_SUBMIT received - custom_id: ${custom_id}`);
     
     if (custom_id === 'reeces_radio_mockup_submit') {
-      // Radio Group PoC — display the selected value. See docs/ui/UIPrototyping.md
-      // Radio Group (type 21) returns value directly in the component (not wrapped in ActionRow/Label)
-      // Walk the components tree to find the radio group value
-      let selectedValue = null;
+      // Checkbox Group PoC — display the selected values. See docs/ui/UIPrototyping.md
+      // Checkbox Group (type 22) returns values array in the component
+      // Walk the components tree to find the checkbox group values
+      let selectedValues = [];
       for (const c of components) {
-        if (c.type === 21 && c.custom_id === 'radio_location') {
-          selectedValue = c.value;
+        if (c.type === 22 && c.custom_id === 'checkbox_locations') {
+          selectedValues = c.values || [];
           break;
         }
         if (c.components) {
           for (const inner of c.components) {
-            if (inner.type === 21 && inner.custom_id === 'radio_location') {
-              selectedValue = inner.value;
+            if (inner.type === 22 && inner.custom_id === 'checkbox_locations') {
+              selectedValues = inner.values || [];
               break;
             }
           }
         }
       }
-      console.log(`📻 Radio PoC: selected "${selectedValue}"`);
+      const display = selectedValues.length > 0 ? selectedValues.map(v => `**${v}**`).join(', ') : '(nothing)';
+      console.log(`☑️ Checkbox PoC: selected [${selectedValues.join(', ')}]`);
       return res.send({
         type: InteractionResponseType.UPDATE_MESSAGE,
         data: {
           components: [{
             type: 17, accent_color: 0x2ECC71,
             components: [
-              { type: 10, content: `## 📻 Radio Group PoC Result\n\nYou selected: **${selectedValue || '(nothing)'}**` },
+              { type: 10, content: `## ☑️ Checkbox Group PoC Result\n\nYou selected ${selectedValues.length}/3: ${display}` },
               { type: 14 },
-              { type: 10, content: `-# Component type 21 · modal submit payload` },
+              { type: 10, content: `-# Component type 22 · modal submit payload` },
               { type: 14 },
               { type: 1, components: [
                 { type: 2, custom_id: 'reeces_radio_mockup', label: 'Try Again', style: 1, emoji: { name: '🔄' } },
