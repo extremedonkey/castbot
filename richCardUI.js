@@ -54,7 +54,7 @@ export function parseAccentColor(input) {
  * @param {Object}  [options.values]    - Pre-fill values { title, content, color, image }
  * @param {Object}  [options.fields]    - Per-field overrides (label, placeholder, required, maxLength, style)
  * @param {Array}   [options.extraFields] - Additional { customId, label, placeholder, ... } appended after the 4 core fields
- * @param {boolean} [options.useLabelWrap=false] - Use type-18 Label wrapper (Components V2 modal style) instead of ActionRow+TextInput (legacy)
+ * @param {boolean} [options.useLabelWrap=true] - Use type-18 Label wrapper (Components V2 modal style). Set false for legacy ActionRow+TextInput.
  * @returns {{ type: 9, data: Object }} Ready-to-return modal interaction response
  */
 export function buildRichCardModal({
@@ -63,7 +63,7 @@ export function buildRichCardModal({
   values = {},
   fields = {},
   extraFields = [],
-  useLabelWrap = false,
+  useLabelWrap = true,
 }) {
   const fieldDefs = [
     {

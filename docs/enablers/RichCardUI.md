@@ -24,6 +24,8 @@ Each instance duplicated:
 
 This module consolidates all of it.
 
+**Modal Standard**: `buildRichCardModal()` defaults to **Label components (type 18)** per the Components V2 standard. The deprecated ActionRow+TextInput pattern is available via `useLabelWrap: false` but should not be used for new code.
+
 ## Exports
 
 ### `parseAccentColor(input)` — Color Parser
@@ -71,7 +73,7 @@ return buildRichCardModal({
 | `values` | object | `{}` | Pre-fill values: `{ title, content, color, image }` |
 | `fields` | object | `{}` | Per-field overrides (see below) |
 | `extraFields` | array | `[]` | Additional fields appended after the core 4 |
-| `useLabelWrap` | boolean | `false` | Use type-18 Label wrapper (Components V2 modals) instead of ActionRow |
+| `useLabelWrap` | boolean | `true` | Uses type-18 Label wrapper (Components V2 standard). Set `false` only for legacy ActionRow compatibility. |
 
 **Field overrides** — customize labels, requirements, lengths per field:
 
@@ -294,12 +296,55 @@ node --test tests/richCardUI.test.js
 
 # Tests cover:
 # - parseAccentColor: 9 tests (all formats, edge cases, invalid input)
-# - buildRichCardModal: 6 tests (defaults, values, overrides, extras, Label wrap)
+# - buildRichCardModal: 6 tests (Label wrap default, values, overrides, extras, legacy ActionRow)
 # - extractRichCardValues: 4 tests (ActionRow, Label, extras, whitespace)
 # - buildRichCardContainer: 6 tests (all fields, omissions, extras)
 # - buildRichCardResponse: 3 tests (flags, ephemeral, wrapping)
 # - Round-trip: 1 test (modal -> extract -> container end-to-end)
 ```
+
+## Refactoring Tasks — Migrate Existing Equivalents
+
+The following locations duplicate the rich card pattern (modal and/or container) and should be migrated to use `richCardUI.js`. Each task is independent and can be done in isolation.
+
+### Modal Migrations (buildRichCardModal)
+
+These locations manually build `ModalBuilder` + `TextInputBuilder` for title/content/color/image fields. Replace with `buildRichCardModal()`.
+
+| # | Location | File:Line | Fields | Notes |
+|---|----------|-----------|--------|-------|
+| M1 | Display Text Action modal | `customActionUI.js:3663` | title, content, color, image | Exact 4-field match. Straightforward. |
+| M2 | Display Text Action modal (legacy) | `app.js:18476` | title, content, color, image, executeOn | 4 core + 1 extra (`executeOn`). Use `extraFields`. |
+| M3 | Edit Action modal (display_text) | `app.js:15985` | title, content, color + amount/message | Conditional fields by action type. May need `extraFields` per type. |
+| M4 | Map Grid Cell edit modal | `app.js:30574` | title, description, image, clues, cellType | 3 core + 2 extras. Use `fields` overrides + `extraFields`. |
+| M5 | Map Cell entity modal | `fieldEditors.js:699` | title, description, image, buttons | 3 core + 1 extra. Use `fields` overrides + `extraFields`. |
+
+### Container/Preview Migrations (buildRichCardContainer / buildRichCardResponse)
+
+These locations manually construct Container (type 17) + TextDisplay (type 10) + MediaGallery (type 12) + color parsing. Replace with `buildRichCardContainer()` or `buildRichCardResponse()`.
+
+| # | Location | File | Pattern | Notes |
+|---|----------|------|---------|-------|
+| C1 | Display Text action rendering | `safariManager.js` | Container + title + content + image + color parse | Exact match for `buildRichCardResponse(config)`. |
+| C2 | Store display preview | `entityManagementUI.js` | Container + description + accent_color | Subset (no image modal). Use `buildRichCardContainer` with color only. |
+| C3 | Tips Gallery cards | `tipsGalleryUIBuilder.js` | Container + fixed color + image | Subset (fixed values). Use `buildRichCardContainer`. |
+
+### Color Parsing Migrations (parseAccentColor)
+
+These locations have inline hex/decimal color parsing that should use `parseAccentColor()`:
+
+| # | Location | File | Current Pattern |
+|---|----------|------|-----------------|
+| P1 | Safari display text rendering | `safariManager.js` | `replace('#','')` + `parseInt(hex, 16)` |
+| P2 | Entity management accent color | `entityManagementUI.js` | `parseInt(hex, 16)` with try/catch |
+| P3 | Notify-restart accent color | `scripts/notify-restart.js` | Hardcoded `0x3498db` / `0xe74c3c` (no parsing needed, but could use for consistency) |
+
+### Priority Order
+
+1. **M1 + C1 + P1** (Display Text Actions) — highest duplication, most code saved
+2. **M4 + M5** (Map Cell modals) — removes split-modal complexity
+3. **C2 + P2** (Store display) — smaller win, but consolidates color parsing
+4. **M2 + M3** (Legacy app.js modals) — these may be migrated as part of broader app.js extraction
 
 ## Related Documentation
 

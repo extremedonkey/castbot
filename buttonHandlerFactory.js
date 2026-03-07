@@ -80,6 +80,15 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
+  'reeces_select_stress': {
+    label: 'Select Stress',
+    description: 'Stress test: 16 string selects hitting 40/40 component limit',
+    emoji: '🧪',
+    style: 'Primary',
+    parent: 'reeces_stuff',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
   'richcard_demo': {
     label: 'Rich Card',
     description: 'Rich Card UI reference implementation demo',

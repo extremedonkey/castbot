@@ -2628,6 +2628,12 @@
               "type": "currency",
               "desc": "Gained 44 Gil from manual",
               "loc": "G1"
+            },
+            {
+              "t": 1772801917811,
+              "type": "currency",
+              "desc": "Gained 94 Gil from manual",
+              "loc": "G1"
             }
           ],
           "lastInteraction": 1772801915405,
@@ -3634,6 +3640,23 @@
         "createdBy": "391415444084490240",
         "createdAt": 1772207823185,
         "lastUpdated": 1772207823185
+      },
+      "config_1772853466925_391415444084490240": {
+        "buttonText": "Apply to Season Planner Testathon",
+        "explanatoryText": "A cool season",
+        "completionDescription": "Thank you for completing your application! A host will review it soon.",
+        "completionImage": null,
+        "channelFormat": "📝%name%-app",
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "draft",
+        "createdAt": 1772853466926,
+        "lastUpdated": 1772853466926,
+        "seasonId": "season_89f4601af75f4200",
+        "seasonName": "Season Planner Testathon",
+        "questions": []
       }
     },
     "ownerInfo": {
@@ -4302,7 +4325,7 @@
           "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
           "isDefault": true
         },
-        "modifiedAt": 1772466102252,
+        "modifiedAt": 1772812029375,
         "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -4575,6 +4598,16 @@
           "placement": 5,
           "updatedBy": "391415444084490240",
           "updatedAt": "2025-10-05T09:34:58.622Z"
+        },
+        "977455730300956683": {
+          "placement": 43,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2026-03-06T15:47:52.039Z"
+        },
+        "1100826875435163780": {
+          "placement": 23,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2026-03-06T15:48:05.412Z"
         }
       },
       "season_cac1b81de8914c79_castlist_1759638936214": {

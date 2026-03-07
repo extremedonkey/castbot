@@ -7390,7 +7390,8 @@ To fix this:
                 components: [
                   { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
                   { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } },
-                  { type: 2, custom_id: 'richcard_demo', label: 'Rich Card', style: 1, emoji: { name: '🎴' } }
+                  { type: 2, custom_id: 'richcard_demo', label: 'Rich Card', style: 1, emoji: { name: '🎴' } },
+                  { type: 2, custom_id: 'reeces_select_stress', label: 'Select Stress', style: 1, emoji: { name: '🧪' } }
                 ]
               },
               { type: 14 },
@@ -7422,6 +7423,60 @@ To fix this:
 
           const { countComponents } = await import('./utils.js');
           countComponents([container], { verbosity: "summary", label: "Reece's Stuff" });
+
+          return { components: [container] };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'reeces_select_stress') {
+      // Select Stress Test — max string selects in one page (40/40 components)
+      return ButtonHandlerFactory.create({
+        id: 'reeces_select_stress',
+        updateMessage: true,
+        handler: async (context) => {
+          const selectTopics = [
+            { id: 'color', placeholder: 'Pick a color', options: [{ label: 'Red', value: 'red', emoji: { name: '🔴' } }, { label: 'Blue', value: 'blue', emoji: { name: '🔵' } }, { label: 'Green', value: 'green', emoji: { name: '🟢' } }] },
+            { id: 'animal', placeholder: 'Pick an animal', options: [{ label: 'Cat', value: 'cat', emoji: { name: '🐱' } }, { label: 'Dog', value: 'dog', emoji: { name: '🐶' } }, { label: 'Fish', value: 'fish', emoji: { name: '🐟' } }] },
+            { id: 'food', placeholder: 'Pick a food', options: [{ label: 'Pizza', value: 'pizza', emoji: { name: '🍕' } }, { label: 'Sushi', value: 'sushi', emoji: { name: '🍣' } }, { label: 'Taco', value: 'taco', emoji: { name: '🌮' } }] },
+            { id: 'weather', placeholder: 'Pick weather', options: [{ label: 'Sunny', value: 'sunny', emoji: { name: '☀️' } }, { label: 'Rainy', value: 'rainy', emoji: { name: '🌧️' } }, { label: 'Snowy', value: 'snowy', emoji: { name: '❄️' } }] },
+            { id: 'music', placeholder: 'Pick a genre', options: [{ label: 'Rock', value: 'rock', emoji: { name: '🎸' } }, { label: 'Jazz', value: 'jazz', emoji: { name: '🎷' } }, { label: 'Pop', value: 'pop', emoji: { name: '🎤' } }] },
+            { id: 'sport', placeholder: 'Pick a sport', options: [{ label: 'Soccer', value: 'soccer', emoji: { name: '⚽' } }, { label: 'Tennis', value: 'tennis', emoji: { name: '🎾' } }, { label: 'Swim', value: 'swim', emoji: { name: '🏊' } }] },
+            { id: 'drink', placeholder: 'Pick a drink', options: [{ label: 'Coffee', value: 'coffee', emoji: { name: '☕' } }, { label: 'Tea', value: 'tea', emoji: { name: '🍵' } }, { label: 'Juice', value: 'juice', emoji: { name: '🧃' } }] },
+            { id: 'planet', placeholder: 'Pick a planet', options: [{ label: 'Mars', value: 'mars', emoji: { name: '🔴' } }, { label: 'Saturn', value: 'saturn', emoji: { name: '🪐' } }, { label: 'Earth', value: 'earth', emoji: { name: '🌍' } }] },
+            { id: 'season', placeholder: 'Pick a season', options: [{ label: 'Spring', value: 'spring', emoji: { name: '🌸' } }, { label: 'Summer', value: 'summer', emoji: { name: '🌞' } }, { label: 'Autumn', value: 'autumn', emoji: { name: '🍂' } }] },
+            { id: 'tool', placeholder: 'Pick a tool', options: [{ label: 'Hammer', value: 'hammer', emoji: { name: '🔨' } }, { label: 'Wrench', value: 'wrench', emoji: { name: '🔧' } }, { label: 'Saw', value: 'saw', emoji: { name: '🪚' } }] },
+            { id: 'fruit', placeholder: 'Pick a fruit', options: [{ label: 'Apple', value: 'apple', emoji: { name: '🍎' } }, { label: 'Banana', value: 'banana', emoji: { name: '🍌' } }, { label: 'Grape', value: 'grape', emoji: { name: '🍇' } }] },
+            { id: 'vehicle', placeholder: 'Pick a vehicle', options: [{ label: 'Car', value: 'car', emoji: { name: '🚗' } }, { label: 'Bike', value: 'bike', emoji: { name: '🚲' } }, { label: 'Boat', value: 'boat', emoji: { name: '⛵' } }] },
+            { id: 'flower', placeholder: 'Pick a flower', options: [{ label: 'Rose', value: 'rose', emoji: { name: '🌹' } }, { label: 'Tulip', value: 'tulip', emoji: { name: '🌷' } }, { label: 'Daisy', value: 'daisy', emoji: { name: '🌼' } }] },
+            { id: 'gem', placeholder: 'Pick a gem', options: [{ label: 'Diamond', value: 'diamond', emoji: { name: '💎' } }, { label: 'Ruby', value: 'ruby', emoji: { name: '❤️' } }, { label: 'Emerald', value: 'emerald', emoji: { name: '💚' } }] },
+            { id: 'element', placeholder: 'Pick an element', options: [{ label: 'Fire', value: 'fire', emoji: { name: '🔥' } }, { label: 'Water', value: 'water', emoji: { name: '💧' } }, { label: 'Wind', value: 'wind', emoji: { name: '💨' } }] },
+            { id: 'mood', placeholder: 'Pick a mood', options: [{ label: 'Happy', value: 'happy', emoji: { name: '😊' } }, { label: 'Chill', value: 'chill', emoji: { name: '😎' } }, { label: 'Sleepy', value: 'sleepy', emoji: { name: '😴' } }] },
+          ];
+
+          const selectRows = selectTopics.map((topic, i) => ({
+            type: 1,
+            components: [{
+              type: 3,
+              custom_id: `stress_select_${topic.id}`,
+              placeholder: `${i + 1}. ${topic.placeholder}`,
+              options: topic.options
+            }]
+          }));
+
+          const container = {
+            type: 17, accent_color: 0x9b59b6,
+            components: [
+              { type: 10, content: '## 🧪 Select Stress Test | 16 Selects, 40/40 Components' },
+              { type: 14 },
+              { type: 10, content: '> **`📋 String Selects (16 max)`**' },
+              ...selectRows,
+              { type: 14 },
+              { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: "← Reece's Stuff", style: 2 }] },
+              { type: 10, content: '-# 40/40 components — Container(1) + Header(1) + Sep(1) + SectionHdr(1) + 16×[AR+Select](32) + Sep(1) + NavAR(1) + BackBtn(1) + This(1)' }
+            ]
+          };
+
+          const { validateComponentLimit } = await import('./utils.js');
+          validateComponentLimit([container], 'Select Stress Test');
 
           return { components: [container] };
         }
@@ -31252,14 +31307,10 @@ Your server is now ready for Tycoons gameplay!`;
           console.log(`🏋️ START: safari_player_status - user ${context.userId}`);
 
           // Load all necessary data
-          console.log(`🏋️ DEBUG: Loading imports...`);
           const { loadSafariContent, sortPlayersForResults } = await import('./safariManager.js');
           const { loadPlayerData } = await import('./storage.js');
-          console.log(`🏋️ DEBUG: Loading safari data...`);
           const safariData = await loadSafariContent();
-          console.log(`🏋️ DEBUG: Loading player data...`);
           const playerData = await loadPlayerData();
-          console.log(`🏋️ DEBUG: Data loaded OK`);
 
           const guildId = context.guildId;
           const guildPlayers = playerData[guildId]?.players || {};
@@ -31278,21 +31329,11 @@ Your server is now ready for Tycoons gameplay!`;
               userIds.push(userId);
             }
           }
-          console.log(`🏋️ DEBUG: Found ${userIds.length} safari players, fetching guild...`);
 
           // Fetch members individually (batch fetch hangs if any member left the guild)
+          const { safeFetchMembers } = await import('./utils/memberFetchUtils.js');
           const guild = await client.guilds.fetch(guildId);
-          console.log(`🏋️ DEBUG: Guild fetched, fetching ${userIds.length} members individually...`);
-          let members = new Map();
-          for (const uid of userIds) {
-            try {
-              const member = await guild.members.fetch(uid);
-              members.set(uid, member);
-            } catch (e) {
-              console.log(`⚠️ Member ${uid} not in guild, using stored data`);
-            }
-          }
-          console.log(`🏋️ DEBUG: Fetched ${members.size}/${userIds.length} members`)
+          const members = await safeFetchMembers(guild, userIds);
           
           // Now process each player with the fetched member data
           for (const [userId, data] of Object.entries(guildPlayers)) {
@@ -31324,9 +31365,7 @@ Your server is now ready for Tycoons gameplay!`;
           }
           
           // Sort players by priority roles if configured
-          console.log(`🏋️ DEBUG: Sorting ${initializedPlayers.length} players with ${priorityRoles.length} priority roles...`);
           const sortedData = await sortPlayersForResults(initializedPlayers, priorityRoles, client, guildId);
-          console.log(`🏋️ DEBUG: Sort complete`);
           
           // Build the display content
           let content = '# Player Balances\n\n';

@@ -595,18 +595,22 @@ export async function initializePlayerOnMap(guildId, userId, startingCoordinate,
     const activeMap = safariData[guildId]?.maps?.active;
     
     if (activeMap && safariData[guildId].maps[activeMap].coordinates[startingCoordinate]?.channelId) {
-        const guild = await client.guilds.fetch(guildId);
-        const member = await guild.members.fetch(userId);
-        const channel = await guild.channels.fetch(
-            safariData[guildId].maps[activeMap].coordinates[startingCoordinate].channelId
-        );
-        
-        if (channel) {
-            await channel.permissionOverwrites.edit(member, {
-                [PermissionFlagsBits.ViewChannel]: true,
-                [PermissionFlagsBits.SendMessages]: true
-            });
-            console.log(`🔓 Granted initial permissions for ${member.displayName} to ${startingCoordinate} channel`);
+        try {
+            const guild = await client.guilds.fetch(guildId);
+            const member = await guild.members.fetch(userId);
+            const channel = await guild.channels.fetch(
+                safariData[guildId].maps[activeMap].coordinates[startingCoordinate].channelId
+            );
+
+            if (channel) {
+                await channel.permissionOverwrites.edit(member, {
+                    [PermissionFlagsBits.ViewChannel]: true,
+                    [PermissionFlagsBits.SendMessages]: true
+                });
+                console.log(`🔓 Granted initial permissions for ${member.displayName} to ${startingCoordinate} channel`);
+            }
+        } catch (e) {
+            console.log(`⚠️ Could not grant initial channel permissions for ${userId}: ${e.message}`);
         }
     }
     

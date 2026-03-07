@@ -69,14 +69,15 @@ describe('buildRichCardModal', () => {
     assert.equal(result.data.title, 'Test Modal');
   });
 
-  it('creates 4 core fields by default', () => {
+  it('creates 4 core fields by default with Label wrap', () => {
     const result = buildRichCardModal({
       customId: 'test',
       modalTitle: 'Test',
     });
     assert.equal(result.data.components.length, 4);
-    // ActionRow-wrapped by default
-    const ids = result.data.components.map(c => c.components[0].custom_id);
+    // Label-wrapped by default (type 18)
+    assert.equal(result.data.components[0].type, 18);
+    const ids = result.data.components.map(c => c.component.custom_id);
     assert.deepEqual(ids, ['title', 'content', 'color', 'image']);
   });
 
@@ -86,7 +87,7 @@ describe('buildRichCardModal', () => {
       modalTitle: 'Test',
       values: { title: 'Hello', content: 'World', color: '#ff0000', image: 'https://img.png' },
     });
-    const vals = result.data.components.map(c => c.components[0].value);
+    const vals = result.data.components.map(c => c.component.value);
     assert.deepEqual(vals, ['Hello', 'World', '#ff0000', 'https://img.png']);
   });
 
@@ -99,13 +100,14 @@ describe('buildRichCardModal', () => {
         content: { label: 'Description', maxLength: 1000 },
       },
     });
-    const titleField = result.data.components[0].components[0];
-    assert.equal(titleField.label, 'Location Title');
-    assert.equal(titleField.required, true);
+    // Label text comes from the Label wrapper, input props from component
+    const titleLabel = result.data.components[0];
+    assert.equal(titleLabel.label, 'Location Title');
+    assert.equal(titleLabel.component.required, true);
 
-    const contentField = result.data.components[1].components[0];
-    assert.equal(contentField.label, 'Description');
-    assert.equal(contentField.max_length, 1000);
+    const contentLabel = result.data.components[1];
+    assert.equal(contentLabel.label, 'Description');
+    assert.equal(contentLabel.component.max_length, 1000);
   });
 
   it('appends extra fields', () => {
@@ -117,21 +119,22 @@ describe('buildRichCardModal', () => {
       ],
     });
     assert.equal(result.data.components.length, 5);
-    const last = result.data.components[4].components[0];
-    assert.equal(last.custom_id, 'clues');
-    assert.equal(last.value, 'hint1\nhint2');
+    const last = result.data.components[4];
+    assert.equal(last.type, 18);
+    assert.equal(last.component.custom_id, 'clues');
+    assert.equal(last.component.value, 'hint1\nhint2');
   });
 
-  it('uses Label wrap when requested', () => {
+  it('uses legacy ActionRow wrap when requested', () => {
     const result = buildRichCardModal({
       customId: 'test',
       modalTitle: 'Test',
-      useLabelWrap: true,
+      useLabelWrap: false,
     });
-    // Should use type 18 (Label) instead of type 1 (ActionRow)
-    assert.equal(result.data.components[0].type, 18);
-    assert.equal(result.data.components[0].component.type, 4);
-    assert.equal(result.data.components[0].component.custom_id, 'title');
+    // Should use type 1 (ActionRow) instead of type 18 (Label)
+    assert.equal(result.data.components[0].type, 1);
+    assert.equal(result.data.components[0].components[0].type, 4);
+    assert.equal(result.data.components[0].components[0].custom_id, 'title');
   });
 });
 
@@ -277,17 +280,17 @@ describe('buildRichCardResponse', () => {
 // Round-trip: modal -> extract -> container
 // ---------------------------------------------------------------------------
 describe('Round-trip', () => {
-  it('modal values survive extract and render correctly', () => {
+  it('modal values survive extract and render correctly (Label wrap)', () => {
     const modal = buildRichCardModal({
       customId: 'roundtrip',
       modalTitle: 'Test',
       values: { title: 'Adventure', content: 'Enter the cave...', color: '9b59b6', image: 'https://cdn.discord.com/img.png' },
     });
 
-    // Simulate modal submit by extracting from the modal's pre-filled components
+    // Simulate modal submit — Label-wrapped format (component, not components)
     const simulatedFormData = {
-      components: modal.data.components.map(row => ({
-        components: [{ custom_id: row.components[0].custom_id, value: row.components[0].value || '' }],
+      components: modal.data.components.map(label => ({
+        component: { custom_id: label.component.custom_id, value: label.component.value || '' },
       })),
     };
 
