@@ -3657,6 +3657,23 @@
         "seasonId": "season_89f4601af75f4200",
         "seasonName": "Season Planner Testathon",
         "questions": []
+      },
+      "config_1772854711344_391415444084490240": {
+        "buttonText": "Apply to Baby's First Season",
+        "explanatoryText": "It's a new day!",
+        "completionDescription": "Thank you for completing your application! A host will review it soon.",
+        "completionImage": null,
+        "channelFormat": "📝%name%-app",
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "draft",
+        "createdAt": 1772854711345,
+        "lastUpdated": 1772854711345,
+        "seasonId": "season_6147d32b46c44c9b",
+        "seasonName": "Baby's First Season",
+        "questions": []
       }
     },
     "ownerInfo": {

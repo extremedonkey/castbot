@@ -7481,6 +7481,24 @@ To fix this:
           return { components: [container] };
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('stress_select_')) {
+      // Stress test select — no-op, shows what was selected
+      return ButtonHandlerFactory.create({
+        id: 'stress_select_noop',
+        updateMessage: true,
+        handler: async (context) => {
+          const selectName = custom_id.replace('stress_select_', '');
+          const selected = req.body.data.values?.[0] || 'nothing';
+          return { components: [{
+            type: 17, accent_color: 0x9b59b6,
+            components: [
+              { type: 10, content: `## 🧪 Select Stress Test\nYou picked **${selected}** from the **${selectName}** select.\n\n-# This is a no-op demo — go back to see all 16 selects.` },
+              { type: 14 },
+              { type: 1, components: [{ type: 2, custom_id: 'reeces_select_stress', label: '← Back', style: 2 }] }
+            ]
+          }]};
+        }
+      })(req, res, client);
     } else if (custom_id === 'richcard_demo') {
       // Rich Card UI reference implementation — demo of buildRichCardModal + buildRichCardContainer
       return ButtonHandlerFactory.create({

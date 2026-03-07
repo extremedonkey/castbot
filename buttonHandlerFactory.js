@@ -89,6 +89,15 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
+  'stress_select_*': {
+    label: 'Stress Select',
+    description: 'No-op select handler for stress test demo',
+    emoji: '🧪',
+    style: 'Secondary',
+    parent: 'reeces_select_stress',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
   'richcard_demo': {
     label: 'Rich Card',
     description: 'Rich Card UI reference implementation demo',
