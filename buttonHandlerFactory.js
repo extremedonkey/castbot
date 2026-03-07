@@ -82,10 +82,19 @@ export const BUTTON_REGISTRY = {
   },
   'reeces_select_stress': {
     label: 'Select Stress',
-    description: 'Stress test: 16 string selects hitting 40/40 component limit',
+    description: 'Stress test: paginated string selects (12 per page, 24 total)',
     emoji: '🧪',
     style: 'Primary',
     parent: 'reeces_stuff',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
+  'stress_page_*': {
+    label: 'Stress Page',
+    description: 'Pagination for select stress test',
+    emoji: '📄',
+    style: 'Secondary',
+    parent: 'reeces_select_stress',
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },

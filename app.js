@@ -7427,59 +7427,15 @@ To fix this:
           return { components: [container] };
         }
       })(req, res, client);
-    } else if (custom_id === 'reeces_select_stress') {
-      // Select Stress Test — max string selects in one page (40/40 components)
+    } else if (custom_id === 'reeces_select_stress' || custom_id.startsWith('stress_page_')) {
+      // Select Stress Test — paginated string selects (12 per page, 24 total)
       return ButtonHandlerFactory.create({
         id: 'reeces_select_stress',
         updateMessage: true,
         handler: async (context) => {
-          const selectTopics = [
-            { id: 'color', placeholder: 'F18 \u2981 Sat 7 Mar \u2981 Marooning \u2981 Challenge 1', options: [{ label: 'Red', value: 'red', emoji: { name: '🔴' } }, { label: 'Blue', value: 'blue', emoji: { name: '🔵' } }, { label: 'Green', value: 'green', emoji: { name: '🟢' } }] },
-            { id: 'animal', placeholder: 'Pick an animal', options: [{ label: 'Cat', value: 'cat', emoji: { name: '🐱' } }, { label: 'Dog', value: 'dog', emoji: { name: '🐶' } }, { label: 'Fish', value: 'fish', emoji: { name: '🐟' } }] },
-            { id: 'food', placeholder: 'Pick a food', options: [{ label: 'Pizza', value: 'pizza', emoji: { name: '🍕' } }, { label: 'Sushi', value: 'sushi', emoji: { name: '🍣' } }, { label: 'Taco', value: 'taco', emoji: { name: '🌮' } }] },
-            { id: 'weather', placeholder: 'Pick weather', options: [{ label: 'Sunny', value: 'sunny', emoji: { name: '☀️' } }, { label: 'Rainy', value: 'rainy', emoji: { name: '🌧️' } }, { label: 'Snowy', value: 'snowy', emoji: { name: '❄️' } }] },
-            { id: 'music', placeholder: 'Pick a genre', options: [{ label: 'Rock', value: 'rock', emoji: { name: '🎸' } }, { label: 'Jazz', value: 'jazz', emoji: { name: '🎷' } }, { label: 'Pop', value: 'pop', emoji: { name: '🎤' } }] },
-            { id: 'sport', placeholder: 'Pick a sport', options: [{ label: 'Soccer', value: 'soccer', emoji: { name: '⚽' } }, { label: 'Tennis', value: 'tennis', emoji: { name: '🎾' } }, { label: 'Swim', value: 'swim', emoji: { name: '🏊' } }] },
-            { id: 'drink', placeholder: 'Pick a drink', options: [{ label: 'Coffee', value: 'coffee', emoji: { name: '☕' } }, { label: 'Tea', value: 'tea', emoji: { name: '🍵' } }, { label: 'Juice', value: 'juice', emoji: { name: '🧃' } }] },
-            { id: 'planet', placeholder: 'Pick a planet', options: [{ label: 'Mars', value: 'mars', emoji: { name: '🔴' } }, { label: 'Saturn', value: 'saturn', emoji: { name: '🪐' } }, { label: 'Earth', value: 'earth', emoji: { name: '🌍' } }] },
-            { id: 'season', placeholder: 'Pick a season', options: [{ label: 'Spring', value: 'spring', emoji: { name: '🌸' } }, { label: 'Summer', value: 'summer', emoji: { name: '🌞' } }, { label: 'Autumn', value: 'autumn', emoji: { name: '🍂' } }] },
-            { id: 'tool', placeholder: 'Pick a tool', options: [{ label: 'Hammer', value: 'hammer', emoji: { name: '🔨' } }, { label: 'Wrench', value: 'wrench', emoji: { name: '🔧' } }, { label: 'Saw', value: 'saw', emoji: { name: '🪚' } }] },
-            { id: 'fruit', placeholder: 'Pick a fruit', options: [{ label: 'Apple', value: 'apple', emoji: { name: '🍎' } }, { label: 'Banana', value: 'banana', emoji: { name: '🍌' } }, { label: 'Grape', value: 'grape', emoji: { name: '🍇' } }] },
-            { id: 'vehicle', placeholder: 'Pick a vehicle', options: [{ label: 'Car', value: 'car', emoji: { name: '🚗' } }, { label: 'Bike', value: 'bike', emoji: { name: '🚲' } }, { label: 'Boat', value: 'boat', emoji: { name: '⛵' } }] },
-            { id: 'flower', placeholder: 'Pick a flower', options: [{ label: 'Rose', value: 'rose', emoji: { name: '🌹' } }, { label: 'Tulip', value: 'tulip', emoji: { name: '🌷' } }, { label: 'Daisy', value: 'daisy', emoji: { name: '🌼' } }] },
-            { id: 'gem', placeholder: 'Pick a gem', options: [{ label: 'Diamond', value: 'diamond', emoji: { name: '💎' } }, { label: 'Ruby', value: 'ruby', emoji: { name: '❤️' } }, { label: 'Emerald', value: 'emerald', emoji: { name: '💚' } }] },
-            { id: 'element', placeholder: 'Pick an element', options: [{ label: 'Fire', value: 'fire', emoji: { name: '🔥' } }, { label: 'Water', value: 'water', emoji: { name: '💧' } }, { label: 'Wind', value: 'wind', emoji: { name: '💨' } }] },
-            { id: 'mood', placeholder: 'Pick a mood', options: [{ label: 'Happy', value: 'happy', emoji: { name: '😊' } }, { label: 'Chill', value: 'chill', emoji: { name: '😎' } }, { label: 'Sleepy', value: 'sleepy', emoji: { name: '😴' } }] },
-          ];
-
-          const selectRows = selectTopics.map((topic, i) => ({
-            type: 1,
-            components: [{
-              type: 3,
-              custom_id: `stress_select_${topic.id}`,
-              placeholder: `${i + 1}. ${topic.placeholder}`,
-              options: topic.options
-            }]
-          }));
-
-          const container = {
-            type: 17, accent_color: 0x9b59b6,
-            components: [
-              { type: 10, content: '## 🧪 Select Stress Test | 16 Selects, 40/40 Components' },
-              { type: 14 },
-              { type: 10, content: '> **`📋 String Selects (16 max) String Selects (16 max) String Selects (16 max) String Selects (16 max)`**' },
-              ...selectRows,
-              { type: 14 },
-              { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: "← Reece's Stuff", style: 2 }] },
-              { type: 10, content: '-# 40/40 components — Container(1) + Header(1) + Sep(1) + SectionHdr(1) + 16×[AR+Select](32) + Sep(1) + NavAR(1) + BackBtn(1) + This(1)' }
-            ]
-          };
-
-          const { countComponents, validateComponentLimit } = await import('./utils.js');
-          countComponents([container], { verbosity: "full", label: "Select Stress Test" });
-          validateComponentLimit([container], 'Select Stress Test');
-
-          return { components: [container] };
+          const { buildSelectStressPage } = await import('./selectStressTest.js');
+          const page = custom_id.startsWith('stress_page_') ? parseInt(custom_id.split('_')[2]) : 0;
+          return buildSelectStressPage(page);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('stress_select_')) {
@@ -7490,12 +7446,13 @@ To fix this:
         handler: async (context) => {
           const selectName = custom_id.replace('stress_select_', '');
           const selected = req.body.data.values?.[0] || 'nothing';
+          const page = req.body.message?.components?.[0]?.components?.some(c => c.content?.includes('Page 2')) ? 1 : 0;
           return { components: [{
             type: 17, accent_color: 0x9b59b6,
             components: [
-              { type: 10, content: `## 🧪 Select Stress Test\nYou picked **${selected}** from the **${selectName}** select.\n\n-# This is a no-op demo — go back to see all 16 selects.` },
+              { type: 10, content: `## 🧪 Select Stress Test\nYou picked **${selected}** from the **${selectName}** select.\n\n-# This is a no-op demo — go back to see all selects.` },
               { type: 14 },
-              { type: 1, components: [{ type: 2, custom_id: 'reeces_select_stress', label: '← Back', style: 2 }] }
+              { type: 1, components: [{ type: 2, custom_id: `stress_page_${page}`, label: '← Back', style: 2 }] }
             ]
           }]};
         }
