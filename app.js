@@ -7459,47 +7459,14 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'reeces_radio_mockup') {
-      // Checkbox Group PoC (Mockup) — tests Type 22 checkbox group in modal. See docs/ui/UIPrototyping.md
+      // Checkbox Group PoC (Mockup) — tests Type 22 checkbox group in modal. See poc/checkboxGroupPoc.js
       return ButtonHandlerFactory.create({
         id: 'reeces_radio_mockup',
         requiresModal: true,
-        handler: async () => ({
-          type: 9,
-          data: {
-            custom_id: 'reeces_radio_mockup_submit',
-            title: 'Checkbox Group PoC',
-            components: [
-              {
-                type: 10,
-                content: '### Pick your favourite Survivor locations\n\nThis is a proof-of-concept for the Checkbox Group component (Type 22). Select up to 3.'
-              },
-              {
-                type: 18,
-                label: 'Survivor Locations',
-                description: 'Choose up to 3 locations you\'d like to play',
-                component: {
-                  type: 22,
-                  custom_id: 'checkbox_locations',
-                  required: true,
-                  min_values: 1,
-                  max_values: 3,
-                  options: [
-                    { label: 'Fiji', value: 'fiji', description: 'Mamanuca Islands — the classic' },
-                    { label: 'Borneo', value: 'borneo', description: 'Pulau Tiga — where it all began' },
-                    { label: 'Australian Outback', value: 'outback', description: 'Herbert River — harsh and iconic' },
-                    { label: 'Pearl Islands', value: 'pearl_islands', description: 'Panama — pirate vibes' },
-                    { label: 'Palau', value: 'palau', description: 'Rock Islands — crystal clear water' },
-                    { label: 'Tocantins', value: 'tocantins', description: 'Brazilian Highlands — scorching heat' },
-                    { label: 'Samoa', value: 'samoa', description: 'Upolu — lush tropical jungle' },
-                    { label: 'Gabon', value: 'gabon', description: 'West Africa — unique wildlife' },
-                    { label: 'China', value: 'china', description: 'Zhelin Reservoir — ancient scenery' },
-                    { label: 'Marquesas', value: 'marquesas', description: 'Nuku Hiva — remote and volcanic', default: true }
-                  ]
-                }
-              }
-            ]
-          }
-        })
+        handler: async () => {
+          const { buildCheckboxModal } = await import('./poc/checkboxGroupPoc.js');
+          return buildCheckboxModal();
+        }
       })(req, res, client);
 
     } else if (custom_id === 'richcard_demo') {
@@ -34567,44 +34534,9 @@ Your server is now ready for Tycoons gameplay!`;
     console.log(`🔍 DEBUG: MODAL_SUBMIT received - custom_id: ${custom_id}`);
     
     if (custom_id === 'reeces_radio_mockup_submit') {
-      // Checkbox Group PoC — display the selected values. See docs/ui/UIPrototyping.md
-      // Checkbox Group (type 22) returns values array in the component
-      // Walk the components tree to find the checkbox group values
-      let selectedValues = [];
-      for (const c of components) {
-        if (c.type === 22 && c.custom_id === 'checkbox_locations') {
-          selectedValues = c.values || [];
-          break;
-        }
-        if (c.components) {
-          for (const inner of c.components) {
-            if (inner.type === 22 && inner.custom_id === 'checkbox_locations') {
-              selectedValues = inner.values || [];
-              break;
-            }
-          }
-        }
-      }
-      const display = selectedValues.length > 0 ? selectedValues.map(v => `**${v}**`).join(', ') : '(nothing)';
-      console.log(`☑️ Checkbox PoC: selected [${selectedValues.join(', ')}]`);
-      return res.send({
-        type: InteractionResponseType.UPDATE_MESSAGE,
-        data: {
-          components: [{
-            type: 17, accent_color: 0x2ECC71,
-            components: [
-              { type: 10, content: `## ☑️ Checkbox Group PoC Result\n\nYou selected ${selectedValues.length}/3: ${display}` },
-              { type: 14 },
-              { type: 10, content: `-# Component type 22 · modal submit payload` },
-              { type: 14 },
-              { type: 1, components: [
-                { type: 2, custom_id: 'reeces_radio_mockup', label: 'Try Again', style: 1, emoji: { name: '🔄' } },
-                { type: 2, custom_id: 'reeces_stuff', label: "← Reece's Stuff", style: 2 }
-              ]}
-            ]
-          }]
-        }
-      });
+      // Checkbox Group PoC — See poc/checkboxGroupPoc.js
+      const { handleCheckboxSubmit } = await import('./poc/checkboxGroupPoc.js');
+      return handleCheckboxSubmit(data, res);
 
     } else if (custom_id === 'richcard_demo_save') {
       // Rich Card demo — modal save handler using extractRichCardValues + buildRichCardContainer
