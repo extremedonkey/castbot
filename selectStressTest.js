@@ -46,7 +46,7 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
 
   // Mockup options — first is default-selected, rest are no-op actions
   const options = [
-    { label: roundLabel, value: 'summary', default: true },
+    { label: roundLabel, value: 'summary', default: true, ...(roundNum === 1 && { emoji: { name: '🏝️' } }) },
     { label: `Edit Challenge ${roundNum} (TBC)`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${challengeDateStr} ${DOT} Reece` },
     { label: `Edit F${finalists} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${tribalDateStr} ${DOT} Reece` },
     { label: '───────────────────', value: 'divider', description: ' ' },
