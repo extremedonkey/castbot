@@ -30,6 +30,7 @@ A season (e.g., "S12: Sacred Band of Thebes") is a series of sequential rounds w
 | **Marooning** | 3 | Marooning event | Challenge | Tribal Council |
 | **Swap / Merge** | 1 | Swap or Merge event | — | — |
 | **Standard** | 2 | Challenge | Tribal Council | — |
+| **Live Tribal** | 1 | Challenge + Tribal (same day) | — | — |
 | **FTC** | 2 | Final Tribal Council | Deliberation | — |
 | **Reunion** | 1 | Reunion event | — | — |
 
@@ -56,13 +57,14 @@ Round 3 (F22, Merge, 3 days):
 
 Cumulative calculation:
   round_start(i) = start + sum(duration(round_1..round_i-1))
-  duration = 3 for marooning/event rounds, 2 for standard, 1 for reunion
+  duration = 3 for marooning/event rounds, 2 for standard, 1 for live tribal/reunion
 ```
 
 ### Special Rounds
 
 - **Marooning** (typically round 1): Only round with a 3-day span. Marooning event is promoted to 2nd option in its select dropdown.
 - **Swap / Merge** (mid-game): Takes a full day. Inserted between rounds — pushes all subsequent dates forward by 1 day. No challenge or tribal on this day.
+- **Live Tribal** (any round): Challenge and tribal happen on the same day (1-day round). Used when the challenge IS the tribal — e.g., Democracy (F9) was a live tribal council where players campaigned and voted within the same 24-hour window. Pulls all subsequent dates forward by 1 day.
 - **FTC** (F2): Labelled `F2 (FTC)`. Final Tribal Council replaces the normal challenge.
 - **Reunion** (F1): Single event, no challenge or tribal.
 
@@ -77,14 +79,16 @@ The mockup uses these **defaults** which cover the majority of rounds:
 | Tribal eliminations | 1 per round | F-number decreases by 1 each round |
 | Swap/Merge duration | 1 day | Inserted as a standalone event day |
 
-**Known exceptions to handle in production** (not yet modelled):
+**Known exceptions (some now modelled):**
 
+- **Live Tribal (modelled)** — challenge and tribal happen on the same day. The challenge IS the tribal (e.g., Democracy at F9: players campaign and vote within 24 hours). Implemented as a 1-day round via `LIVE_TRIBALS` config. Pulls subsequent dates forward by 1 day.
+- **Hybrid rounds (partially modelled)** — a single calendar day can contain a tribal from the previous round AND a challenge drop for the next round. E.g., F9's Democracy was both the F9 tribal and the starting point for F8's Folklore challenge. Currently stubbed as a 1-day round; production may need a way to represent overlapping round boundaries.
 - **Double Tribal Council** — eliminates 2 players in one round (e.g., F17 → F15, skipping F16). Affects F-number progression for all subsequent rounds.
 - **No-elimination rounds** — tribal happens but nobody goes home (e.g., a quit is reversed). F-number stays the same.
 - **Double-length rounds** — a round could span 3+ days for special events beyond marooning.
 - **Variable eliminations** — some rounds may eliminate 3+ players (tribe decimation, rock draws with multiple exits).
 
-These exceptions change date calculations and F-number progression. We'll design the data model to support them when productionizing — for now, the mockup assumes 1 elimination per standard round.
+These exceptions change date calculations and F-number progression. The live tribal pattern is now modelled in the mockup; the rest will be designed into the data model when productionizing.
 
 ## String Select Structure
 

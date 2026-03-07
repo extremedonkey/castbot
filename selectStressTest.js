@@ -33,7 +33,7 @@ const CHALLENGE_NAMES = {
   11: 'Oracle of Delphi',
   10: 'Pairs Challenge',
   9:  'Democracy',
-  8:  'Video Quiz Revamp',
+  8:  'Folklore',
   7:  "Ren's Social Challenge",
   6:  'Anonymous Boat Battle',
   5:  'Pick Your Poison',
@@ -58,10 +58,17 @@ const ROUND_EVENTS = {
   10: { type: 'merge', label: 'Merge',  emoji: '🔀' },  // F11
 };
 
-// Round durations: marooning & event rounds = 3 days, reunion = 1 day, standard = 2 days
+// Live tribals: challenge + tribal happen on the same day (1-day round)
+// F9 (round 12): Democracy was a live tribal — challenge and vote in same 24hr period
+const LIVE_TRIBALS = {
+  12: true,  // F9
+};
+
+// Round durations: marooning & event rounds = 3 days, reunion = 1, live tribal = 1, standard = 2
 function getRoundDuration(roundNum) {
   if (roundNum === 1) return 3;  // marooning + challenge + tribal
   if (roundNum === TOTAL_ROUNDS) return 1;  // reunion only
+  if (LIVE_TRIBALS[roundNum]) return 1;  // challenge + tribal same day
   if (ROUND_EVENTS[roundNum]) return 3;  // event + challenge + tribal
   return 2;  // challenge + tribal
 }
@@ -112,9 +119,11 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
   // Date offsets within the round:
   // Marooning/event rounds (3 days): event day 0, challenge day 1, tribal day 2
   // Standard rounds (2 days): challenge day 0, tribal day 1
+  // Live tribal rounds (1 day): challenge day 0, tribal day 0 (same day)
+  const isLiveTribunal = LIVE_TRIBALS[roundNum];
   const hasExtraDay = roundNum === 1 || hasEvent;
   const challengeDateStr = hasExtraDay ? fmtDate(startDay + 1) : fmtDate(startDay);
-  const tribalDateStr = hasExtraDay ? fmtDate(startDay + 2) : fmtDate(startDay + 1);
+  const tribalDateStr = isLiveTribunal ? fmtDate(startDay) : (hasExtraDay ? fmtDate(startDay + 2) : fmtDate(startDay + 1));
 
   // Option ordering rule:
   // If round has marooning or swap/merge configured → that event is 2nd (with date)
