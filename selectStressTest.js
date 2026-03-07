@@ -240,6 +240,8 @@ export function buildSelectStressPage(page = 0) {
  */
 export function buildEditSeasonModal() {
   return {
+    type: 9, // MODAL
+    data: {
     custom_id: 'stress_edit_season_modal',
     title: 'Edit Season',
     components: [

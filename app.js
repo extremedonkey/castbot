@@ -1647,6 +1647,14 @@ client.on('guildCreate', async (guild) => {
     console.log(`✅ New server data saved: ${guild.name} (${guild.id})`);
   }
 
+  // Log new server install to analytics
+  try {
+    const { logNewServerInstall } = await import('./src/analytics/analyticsLogger.js');
+    await logNewServerInstall(guild, null);
+  } catch (error) {
+    console.error(`❌ Failed to log server install for ${guild.name}:`, error);
+  }
+
   // Send welcome message using Discord Messenger service
   try {
     const { default: DiscordMessenger } = await import('./discordMessenger.js');
