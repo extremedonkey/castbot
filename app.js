@@ -913,7 +913,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     },
     {
       type: 10, // Text Display component
-      content: `> **\`📍 Post Castlists\`**`
+      content: `### \`\`\`📍 Post Castlists\`\`\``
     },
     ...castlistRows, // Multiple castlist rows with pagination
     {
@@ -921,7 +921,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     },
     {
       type: 10, // Text Display component
-      content: `> **\`✏️ Castlists, Applications and Season Management\`**`
+      content: `### \`\`\`✏️ Castlists, Applications and Season Management\`\`\``
     },
     adminRow.toJSON(), // Admin management buttons
     {
@@ -929,7 +929,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     },
     {
       type: 10, // Text Display component
-      content: `> **\`🦁 Idol Hunts, Challenges and Safari\`**`
+      content: `### \`\`\`🦁 Idol Hunts, Challenges and Safari\`\`\``
     },
     safariFeatureRow.toJSON(), // Safari feature buttons (Stores, Items, Player Admin, Rounds, Currency)
     {
@@ -937,7 +937,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     },
     {
       type: 10, // Text Display component
-      content: `> **\`💎 Advanced Features\`**`
+      content: `### \`\`\`💎 Advanced Features\`\`\``
     },
     advancedFeaturesRow.toJSON(), // Safari + Analytics + Tools (single row)
     {
