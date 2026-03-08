@@ -42858,7 +42858,8 @@ Your server is now ready for Tycoons gameplay!`;
         const parts = custom_id.replace('safari_player_state_coord_submit_', '').split('_');
         const actionIndex = parseInt(parts[parts.length - 1]);
         const buttonId = parts.slice(0, -1).join('_');
-        const coordinate = components[0].components[0].value?.trim().toUpperCase();
+        // Label (type 18) wraps the text input as .component, not .components[0]
+        const coordinate = (components[0].component?.value || components[0].components?.[0]?.value || '').trim().toUpperCase();
 
         if (!coordinate) {
           return res.send({
