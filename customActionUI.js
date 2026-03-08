@@ -425,6 +425,27 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           }
         },
 
+        // Add Outcome Select Menu (if not at max)
+        ...((action.actions || []).length < SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON ? [{
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_action_type_select_${actionId}`,
+            placeholder: 'Click here to add a new Outcome..',
+            options: [
+              { label: 'Display Text', value: 'display_text', emoji: { name: '📄' } },
+              { label: 'Give / Remove Currency', value: 'give_currency', emoji: { name: '🪙' } },
+              { label: 'Give / Remove Item', value: 'give_item', emoji: { name: '🎁' } },
+              { label: 'Give Role', value: 'give_role', emoji: { name: '👑' } },
+              { label: 'Remove Role', value: 'remove_role', emoji: { name: '🚫' } },
+              { label: 'Modify Attribute', value: 'modify_attribute', emoji: { name: '📊' } },
+              { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' } },
+              { label: 'Calculate Results', value: 'calculate_results', emoji: { name: '🌾' } },
+              { label: 'Calculate Attack', value: 'calculate_attack', emoji: { name: '⚔️' } }
+            ]
+          }]
+        }] : []),
+
         // Split actions into TRUE and FALSE arrays
         ...(() => {
           const allActions = action.actions || [];
@@ -459,29 +480,6 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
             components.push(...getActionListComponents(falseActions, actionId, guildItems, guildButtons, 'false', allActions));
           }
           
-          // Add Action Select Menu (if not at max) - REMOVED separator
-          if (allActions.length < SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON) {
-            components.push({
-              type: 1, // Action Row
-              components: [{
-                type: 3, // String Select
-                custom_id: `safari_action_type_select_${actionId}`,
-                placeholder: 'Select action type to add...',
-                options: [
-                  { label: 'Display Text', value: 'display_text', emoji: { name: '📄' } },
-                  { label: 'Give / Remove Currency', value: 'give_currency', emoji: { name: '🪙' } },
-                  { label: 'Give / Remove Item', value: 'give_item', emoji: { name: '🎁' } },
-                  { label: 'Give Role', value: 'give_role', emoji: { name: '👑' } },
-                  { label: 'Remove Role', value: 'remove_role', emoji: { name: '🚫' } },
-                  { label: 'Modify Attribute', value: 'modify_attribute', emoji: { name: '📊' } },
-                  { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' } },
-                  { label: 'Calculate Results', value: 'calculate_results', emoji: { name: '🌾' } },
-                  { label: 'Calculate Attack', value: 'calculate_attack', emoji: { name: '⚔️' } }
-                ]
-              }]
-            });
-          }
-
           return components;
         })(),
 
