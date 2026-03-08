@@ -12114,6 +12114,7 @@ Your server is now ready for Tycoons gameplay!`;
         // Execute the action
         const { executeButtonActions } = await import('./safariManager.js');
         const result = await executeButtonActions(guildId, action.id, userId, {
+          client,
           channelId: req.body.channel?.id || req.body.channel_id,
           interactionToken: token,
           applicationId: req.body.application_id
@@ -41938,6 +41939,7 @@ Your server is now ready for Tycoons gameplay!`;
 
           // Create proper interaction object for the execution
           const interactionData = {
+            client,
             token: req.body.token,
             applicationId: req.body.application_id,
             member: req.body.member,

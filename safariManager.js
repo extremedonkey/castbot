@@ -3420,6 +3420,10 @@ async function executeManagePlayerState(config, guildId, userId, interaction) {
     try {
         const { mode, coordinate } = config;
         const client = interaction.client || interaction.guild?.client;
+        if (!client) {
+            console.error('❌ No Discord client available for manage_player_state — interaction object missing client property');
+            return { content: '❌ Unable to manage player state (no client).' };
+        }
 
         const { isPlayerInitialized } = await import('./safariPlayerUtils.js');
         const playerData = await loadPlayerData();

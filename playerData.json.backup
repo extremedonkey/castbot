@@ -1282,69 +1282,105 @@
           "currency": 55,
           "history": [
             {
-              "t": 1772953214762,
+              "t": 1772953407212,
               "type": "action",
               "desc": "🛬 Get me out of here!\n> • Safari State: deinitialize → default",
               "loc": "Unknown"
             },
             {
-              "t": 1772953218269,
-              "type": "action",
-              "desc": "🔮 Broken Teleporter\n> • Safari State: teleport → B5",
-              "loc": "Unknown"
-            },
-            {
-              "t": 1772953227824,
+              "t": 1772953438704,
               "type": "item",
               "desc": "Picked up 🪽 Levitating Wings x1",
               "loc": "Unknown"
             },
             {
-              "t": 1772953227824,
+              "t": 1772953438704,
               "type": "action",
               "desc": "🪽 Levitating Wings\n> • Text: \"The Red Bull gives you wings!\"\n> • Give Item: 🪽 Levitating Wings (x1)",
               "loc": "Unknown"
             },
             {
-              "t": 1772953233422,
+              "t": 1772953445668,
               "type": "action",
               "desc": "🕳️ Suspicious Looking Ground\n> • Text: \"🪽 You begin plummeting down the trap hole, but the wings...\"",
               "loc": "Unknown"
             },
             {
-              "t": 1772953240020,
+              "t": 1772953453479,
+              "type": "item",
+              "desc": "Picked up 🪽 Levitating Wings x1",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772953453479,
+              "type": "action",
+              "desc": "🪽 Levitating Wings\n> • Text: \"The Red Bull gives you wings!\"\n> • Give Item: 🪽 Levitating Wings (x1)",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772953458694,
+              "type": "action",
+              "desc": "🕳️ Suspicious Looking Ground\n> • Text: \"🪽 You begin plummeting down the trap hole, but the wings...\"",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772953463431,
+              "type": "action",
+              "desc": "🕳️ Suspicious Looking Ground\n> • Text: \"🪽 You begin plummeting down the trap hole, but the wings...\"",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772953469473,
+              "type": "action",
+              "desc": "🕳️ Suspicious Looking Ground\n> • Text: \"🪽 You begin plummeting down the trap hole, but the wings...\"",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772953493725,
               "type": "item",
               "desc": "Picked up 📜 Teleport Scroll x1",
               "loc": "Unknown"
             },
             {
-              "t": 1772953240020,
+              "t": 1772953493726,
               "type": "action",
               "desc": "🔎 Inspect the ground\n> • Text: \"There's something there that looks like it might be usefu...\"\n> • Give Item: 📜 Teleport Scroll (x1)",
               "loc": "Unknown"
             },
             {
-              "t": 1772953357964,
+              "t": 1772953510377,
               "type": "init",
               "desc": "Initialized at B5 with +55 Gil (total: 55)",
               "loc": "B5"
+            },
+            {
+              "t": 1772953512439,
+              "type": "action",
+              "desc": "🔮 Fixed Teleporter\n> • Safari State: init_or_teleport → B5",
+              "loc": "Unknown"
             }
           ],
-          "lastInteraction": 1772953212740,
+          "lastInteraction": 1772953405191,
           "achievements": [],
           "inventory": {
             "levitating_wings_688811": {
-              "quantity": 1,
+              "quantity": 2,
               "numAttacksAvailable": 0
             },
             "teleport_scroll_917265": {
               "quantity": 1,
               "numAttacksAvailable": 0
             },
-            "nurturer_361363": 1,
+            "nurturer_361363": {
+              "quantity": 1,
+              "numAttacksAvailable": 1
+            },
             "territory_forager_404120": 1,
             "nest_guardian_461600": 1,
-            "raider_499497": 1
+            "raider_499497": {
+              "quantity": 1,
+              "numAttacksAvailable": 1
+            }
           },
           "cooldowns": {},
           "buttonUses": {},
@@ -1360,12 +1396,12 @@
                 {
                   "from": null,
                   "to": "B5",
-                  "timestamp": "2026-03-08T07:02:37.963Z"
+                  "timestamp": "2026-03-08T07:05:10.377Z"
                 },
                 {
                   "from": "B5",
                   "to": "B5",
-                  "timestamp": "2026-03-08T07:02:38.014Z"
+                  "timestamp": "2026-03-08T07:12:59.716Z"
                 }
               ],
               "startingLocation": "G1"
@@ -1375,7 +1411,7 @@
             "stamina": {
               "current": 1,
               "maximum": 1,
-              "lastRegeneration": "2026-03-08T07:02:37.963Z",
+              "lastRegeneration": "2026-03-08T07:05:10.376Z",
               "regenConfig": "hourly"
             }
           }
