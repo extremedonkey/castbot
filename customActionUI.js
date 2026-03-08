@@ -479,7 +479,6 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           }
 
           // FALSE Outcomes Section
-          components.push({ type: 14 }); // Divider
           components.push({
             type: 10,
             content: falseActions.length === 0 && !notAtMax
