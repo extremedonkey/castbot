@@ -19,11 +19,17 @@
  */
 const SAFE_TEST_BUTTONS = {
   // Feature area -> Safe menu button mapping
-  'safari': {
-    custom_id: 'prod_safari_menu',
-    label: '🦁 Safari',
-    style: 3, // Success (green)
+  'actions': {
+    custom_id: 'safari_action_editor',
+    label: '⚡ Actions',
+    style: 1, // Primary (blue)
     priority: 1
+  },
+  'safari': {
+    custom_id: 'safari_map_explorer',
+    label: '🗺️ Safari',
+    style: 3, // Success (green)
+    priority: 2
   },
   'ranking': {
     custom_id: 'season_app_ranking',
@@ -85,15 +91,21 @@ const SAFE_TEST_BUTTONS = {
  * Patterns to detect feature areas from file paths and content
  */
 const FEATURE_PATTERNS = {
+  actions: [
+    /customAction/i,
+    /outcome_select/,
+    /action.*editor/i,
+    /safari_action/,
+    /safariLimits/i
+  ],
   safari: [
     /safari/i,
-    /safari_.*\.js/,
     /safariManager\.js/,
     /safariContent\.json/,
-    /custom_id.*safari_/,
-    /prod_safari/,
-    /customAction/i,
-    /outcome_select/
+    /safari_map/,
+    /safari_store/,
+    /safari_player/,
+    /safari_init/
   ],
   ranking: [
     /ranking/i,
