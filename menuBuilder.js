@@ -15,15 +15,16 @@ export const MENU_REGISTRY = {
     ephemeral: true, // REQUIRED: Admin menu (default for all menus unless explicitly set to false)
     builder: 'buildSetupMenu', // Custom builder for Reece-only conditional button
     sections: [] // Built dynamically
-  }
+  },
 
-  // Example structure for future migrations:
-  // 'main_menu': {
-  //   title: 'CastBot | Production Menu',
-  //   accent: 0x3498DB,
-  //   builder: 'buildMainMenu',
-  //   sections: []
-  // }
+  // Reece's Stuff - secret admin tools (Reece-only)
+  'reeces_stuff': {
+    title: "🐧 Reece's Stuff",
+    accent: 0xe74c3c, // Red
+    ephemeral: false, // updateMessage from Tools menu
+    builder: 'buildReecesStuffMenu',
+    sections: []
+  }
 };
 
 /**
@@ -75,35 +76,39 @@ export class MenuBuilder {
     const components = [
       { type: 10, content: `## ${menuConfig.title}` },
       { type: 14 },
-      { type: 10, content: 'Access the Setup Wizard for first-time setup, or manage existing pronoun/timezone roles and other server configuration.\n\n💡 The Setup Wizard guides new servers through initial CastBot configuration.' },
-      { type: 14 },
+      { type: 10, content: `### \`\`\`🧙 Setup & Configuration\`\`\`` },
       {
-        type: 1, // Row 1: Setup Wizard | Attributes | Player Emojis | Reaction Roles | Availability
+        type: 1,
         components: [
           { type: 2, custom_id: 'prod_setup_wizard', label: 'Setup Wizard', style: 1, emoji: { name: '🧙' } },
           { type: 2, custom_id: 'attribute_management', label: 'Attributes', style: 2, emoji: { name: '📊' } },
-          { type: 2, custom_id: 'prod_create_emojis', label: 'Player Emojis', style: 2, emoji: { name: '😀' } },
+          { type: 2, custom_id: 'prod_create_emojis', label: 'Player Emojis', style: 2, emoji: { name: '😀' } }
+        ]
+      },
+      { type: 10, content: `### \`\`\`💜 Roles & Availability\`\`\`` },
+      {
+        type: 1,
+        components: [
           { type: 2, custom_id: 'prod_manage_pronouns_timezones', label: 'Reaction Roles', style: 2, emoji: { name: '💜' } },
           { type: 2, custom_id: 'prod_availability', label: 'Availability', style: 2, emoji: { name: '🕐' } }
         ]
       },
-      { type: 14 }
+      { type: 10, content: `### \`\`\`📜 Info & Support\`\`\`` }
     ];
 
-    // Row 2: [Reece's Stuff (RED) | Analytics (RED)] (Reece-only) | ToS | Privacy Policy | Need Help?
-    const legalRow = [];
+    const infoRow = [];
     if (isReece) {
-      legalRow.push(
+      infoRow.push(
         { type: 2, custom_id: 'reeces_stuff', label: "Reece's Stuff", style: 4, emoji: { name: '🐧' } },
         { type: 2, custom_id: 'analytics_admin', label: 'Analytics', style: 4, emoji: { name: '🧮' } }
       );
     }
-    legalRow.push(
+    infoRow.push(
       { type: 2, custom_id: 'prod_terms_of_service', label: 'Terms of Service', style: 2, emoji: { name: '📜' } },
       { type: 2, custom_id: 'prod_privacy_policy', label: 'Privacy Policy', style: 2, emoji: { name: '🔒' } },
       { type: 2, label: 'Need Help?', style: 5, emoji: { name: '❓' }, url: 'https://discord.gg/H7MpJEjkwT' }
     );
-    components.push({ type: 1, components: legalRow });
+    components.push({ type: 1, components: infoRow });
 
     // Navigation
     components.push(
@@ -114,6 +119,55 @@ export class MenuBuilder {
     return {
       type: 17,
       accent_color: menuConfig.accent || 0x3498DB,
+      components
+    };
+  }
+
+  /**
+   * Build Reece's Stuff menu — secret admin tools
+   */
+  static buildReecesStuffMenu(menuConfig, context) {
+    const components = [
+      { type: 10, content: `## ${menuConfig.title}` },
+      { type: 14 },
+      { type: 10, content: `### \`\`\`🦠 Experimental\`\`\`` },
+      {
+        type: 1,
+        components: [
+          { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
+          { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } },
+          { type: 2, custom_id: 'richcard_demo', label: 'Rich Card', style: 1, emoji: { name: '🎴' } },
+          { type: 2, custom_id: 'reeces_season_planner_mockup', label: 'Season Planner (Mockup)', style: 1, emoji: { name: '📝' } },
+          { type: 2, custom_id: 'reeces_radio_mockup', label: 'Radio PoC (Mockup)', style: 1, emoji: { name: '📻' } }
+        ]
+      },
+      { type: 10, content: `### \`\`\`🔧 Admin Tools\`\`\`` },
+      {
+        type: 1,
+        components: [
+          { type: 2, custom_id: 'test_role_hierarchy', label: 'Check Roles', style: 2, emoji: { name: '🔰' } },
+          { type: 2, custom_id: 'admin_populate_logs', label: 'Populate Logs', style: 2, emoji: { name: '📜' } },
+          { type: 2, custom_id: 'admin_backfill_channel_logs', label: 'Backfill Channel', style: 2, emoji: { name: '📡' } },
+          { type: 2, custom_id: 'emergency_app_reinit', label: 'App Re-Init', style: 4, emoji: { name: '🚨' } },
+          { type: 2, custom_id: 'restart_bot', label: 'Restart Bot', style: 4, emoji: { name: '🔄' } }
+        ]
+      },
+      { type: 10, content: `### \`\`\`📼 Legacy\`\`\`` },
+      {
+        type: 1,
+        components: [
+          { type: 2, custom_id: 'prod_manage_tribes_legacy_debug', label: 'Tribes (Legacy)', style: 2, emoji: { name: '🔥' } },
+          { type: 2, custom_id: 'prod_live_analytics', label: 'Print Logs', style: 2, emoji: { name: '⚠️' } },
+          { type: 2, custom_id: 'prod_toggle_live_analytics', label: 'Toggle Logs', style: 2, emoji: { name: '🔃' } }
+        ]
+      },
+      { type: 14 },
+      { type: 1, components: [{ type: 2, custom_id: 'castbot_tools', label: '← Tools', style: 2 }] }
+    ];
+
+    return {
+      type: 17,
+      accent_color: menuConfig.accent || 0xe74c3c,
       components
     };
   }
@@ -140,7 +194,7 @@ export class MenuBuilder {
         if (section.label) {
           components.push({
             type: 10,
-            content: `> **\`${section.label}\`**`
+            content: `### \`\`\`${section.label}\`\`\``
           });
         }
 

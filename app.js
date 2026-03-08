@@ -7389,49 +7389,7 @@ To fix this:
         id: 'reeces_stuff',
         updateMessage: true,
         handler: async (context) => {
-
-          const container = {
-            type: 17, accent_color: 0xe74c3c, // Red
-            components: [
-              { type: 10, content: "## 🐧 Reece's Stuff" },
-              { type: 14 },
-              { type: 10, content: '> **`🦠 Experimental`**' },
-              {
-                type: 1,
-                components: [
-                  { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
-                  { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } },
-                  { type: 2, custom_id: 'richcard_demo', label: 'Rich Card', style: 1, emoji: { name: '🎴' } },
-                  { type: 2, custom_id: 'reeces_season_planner_mockup', label: 'Season Planner (Mockup)', style: 1, emoji: { name: '📝' } },
-                  { type: 2, custom_id: 'reeces_radio_mockup', label: 'Radio PoC (Mockup)', style: 1, emoji: { name: '📻' } }
-                ]
-              },
-              { type: 14 },
-              { type: 10, content: '> **`🔧 Admin Tools`**' },
-              {
-                type: 1,
-                components: [
-                  { type: 2, custom_id: 'test_role_hierarchy', label: 'Check Roles', style: 2, emoji: { name: '🔰' } },
-                  { type: 2, custom_id: 'admin_populate_logs', label: 'Populate Logs', style: 2, emoji: { name: '📜' } },
-                  { type: 2, custom_id: 'admin_backfill_channel_logs', label: 'Backfill Channel', style: 2, emoji: { name: '📡' } },
-                  { type: 2, custom_id: 'emergency_app_reinit', label: 'App Re-Init', style: 4, emoji: { name: '🚨' } },
-                  { type: 2, custom_id: 'restart_bot', label: 'Restart Bot', style: 4, emoji: { name: '🔄' } }
-                ]
-              },
-              { type: 14 },
-              { type: 10, content: '> **`📼 Legacy`**' },
-              {
-                type: 1,
-                components: [
-                  { type: 2, custom_id: 'prod_manage_tribes_legacy_debug', label: 'Tribes (Legacy)', style: 2, emoji: { name: '🔥' } },
-                  { type: 2, custom_id: 'prod_live_analytics', label: 'Print Logs', style: 2, emoji: { name: '⚠️' } },
-                  { type: 2, custom_id: 'prod_toggle_live_analytics', label: 'Toggle Logs', style: 2, emoji: { name: '🔃' } }
-                ]
-              },
-              { type: 14 },
-              { type: 1, components: [{ type: 2, custom_id: 'castbot_tools', label: '← Tools', style: 2 }] }
-            ]
-          };
+          const container = await MenuBuilder.create('reeces_stuff', context);
 
           const { countComponents } = await import('./utils.js');
           countComponents([container], { verbosity: "full", label: "Reece's Stuff" });
