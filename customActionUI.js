@@ -394,7 +394,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           }]
         },
 
-        // Trigger Configuration Section - restored to Section
+        // Trigger Configuration Section
         {
           type: 9, // Section
           components: [{
@@ -410,23 +410,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           }
         },
 
-        // Conditions Section - restored to Section
-        {
-          type: 9, // Section
-          components: [{
-            type: 10,
-            content: `> \`Conditions | What gets checked when it is triggered?\`\n${conditionsDisplay}`
-          }],
-          accessory: {
-            type: 2,
-            custom_id: `condition_manager_${actionId}_0`, // Start at page 0
-            label: "Manage",
-            style: 2,
-            emoji: { name: "🧩" }
-          }
-        },
-
-        // Button Locations Section - restored to Section
+        // Locations Section (below Triggers)
         {
           type: 9, // Section
           components: [{
@@ -439,6 +423,22 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
             label: "Manage",
             style: 2,
             emoji: { name: "📍" }
+          }
+        },
+
+        // Conditions Section (below Locations, above Outcomes)
+        {
+          type: 9, // Section
+          components: [{
+            type: 10,
+            content: `> \`Conditions | What gets checked when it is triggered?\`\n${conditionsDisplay}`
+          }],
+          accessory: {
+            type: 2,
+            custom_id: `condition_manager_${actionId}_0`, // Start at page 0
+            label: "Manage",
+            style: 2,
+            emoji: { name: "🧩" }
           }
         },
 
@@ -468,7 +468,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
               components: [{
                 type: 3, // String Select
                 custom_id: `safari_action_type_select_${actionId}_true`,
-                placeholder: 'Click here to add a new Pass Outcome..',
+                placeholder: '🟢 Click here to add a new Pass Outcome..',
                 options: OUTCOME_TYPE_OPTIONS
               }]
             });
@@ -491,7 +491,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
               components: [{
                 type: 3, // String Select
                 custom_id: `safari_action_type_select_${actionId}_false`,
-                placeholder: 'Click here to add a new Fail Outcome..',
+                placeholder: '🔴 Click here to add a new Fail Outcome..',
                 options: OUTCOME_TYPE_OPTIONS
               }]
             });
@@ -2929,22 +2929,25 @@ export async function showDisplayTextConfig(guildId, buttonId, actionIndex) {
             type: 3, // String Select
             custom_id: `safari_display_text_execute_on_${buttonId}_${actionIndex}`,
             placeholder: 'Select when to execute...',
-            options: [
-              {
-                label: 'Execute if all conditions are TRUE',
-                value: 'true',
-                description: 'Only execute when conditions are met',
-                emoji: { name: '✅' },
-                default: (action?.executeOn || 'true') === 'true'
-              },
-              {
-                label: 'Execute if all conditions are FALSE',
-                value: 'false',
-                description: 'Only execute when conditions are NOT met',
-                emoji: { name: '❌' },
-                default: (action?.executeOn || 'true') === 'false'
-              }
-            ]
+            options: (() => {
+              const effectiveExecuteOn = action?.executeOn || global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true';
+              return [
+                {
+                  label: 'Outcome runs when player passes conditions',
+                  value: 'true',
+                  description: 'Only execute when conditions are met',
+                  emoji: { name: '🟢' },
+                  default: effectiveExecuteOn === 'true'
+                },
+                {
+                  label: 'Outcome runs when player fails conditions',
+                  value: 'false',
+                  description: 'Only execute when conditions are NOT met',
+                  emoji: { name: '🔴' },
+                  default: effectiveExecuteOn === 'false'
+                }
+              ];
+            })()
           }]
         },
         
@@ -3116,22 +3119,25 @@ export async function showCalculateResultsConfig(guildId, buttonId, actionIndex)
             type: 3, // String Select
             custom_id: `safari_calculate_results_execute_on_${buttonId}_${actionIndex}`,
             placeholder: 'Select when to execute...',
-            options: [
-              {
-                label: 'Execute if all conditions are TRUE',
-                value: 'true',
-                description: 'Only execute when conditions are met',
-                emoji: { name: '✅' },
-                default: (action?.executeOn || 'true') === 'true'
-              },
-              {
-                label: 'Execute if all conditions are FALSE',
-                value: 'false',
-                description: 'Only execute when conditions are NOT met',
-                emoji: { name: '❌' },
-                default: (action?.executeOn || 'true') === 'false'
-              }
-            ]
+            options: (() => {
+              const effectiveExecuteOn = action?.executeOn || global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true';
+              return [
+                {
+                  label: 'Outcome runs when player passes conditions',
+                  value: 'true',
+                  description: 'Only execute when conditions are met',
+                  emoji: { name: '🟢' },
+                  default: effectiveExecuteOn === 'true'
+                },
+                {
+                  label: 'Outcome runs when player fails conditions',
+                  value: 'false',
+                  description: 'Only execute when conditions are NOT met',
+                  emoji: { name: '🔴' },
+                  default: effectiveExecuteOn === 'false'
+                }
+              ];
+            })()
           }]
         },
 
@@ -3288,22 +3294,25 @@ export async function showCalculateAttackConfig(guildId, buttonId, actionIndex) 
             type: 3, // String Select
             custom_id: `safari_calculate_attack_execute_on_${buttonId}_${actionIndex}`,
             placeholder: 'Select when to execute...',
-            options: [
-              {
-                label: 'Execute if all conditions are TRUE',
-                value: 'true',
-                description: 'Only execute when conditions are met',
-                emoji: { name: '✅' },
-                default: (action?.executeOn || 'true') === 'true'
-              },
-              {
-                label: 'Execute if all conditions are FALSE',
-                value: 'false',
-                description: 'Only execute when conditions are NOT met',
-                emoji: { name: '❌' },
-                default: (action?.executeOn || 'true') === 'false'
-              }
-            ]
+            options: (() => {
+              const effectiveExecuteOn = action?.executeOn || global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true';
+              return [
+                {
+                  label: 'Outcome runs when player passes conditions',
+                  value: 'true',
+                  description: 'Only execute when conditions are met',
+                  emoji: { name: '🟢' },
+                  default: effectiveExecuteOn === 'true'
+                },
+                {
+                  label: 'Outcome runs when player fails conditions',
+                  value: 'false',
+                  description: 'Only execute when conditions are NOT met',
+                  emoji: { name: '🔴' },
+                  default: effectiveExecuteOn === 'false'
+                }
+              ];
+            })()
           }]
         },
 
@@ -3577,22 +3586,25 @@ export async function showModifyAttributeConfig(guildId, buttonId, actionIndex) 
             type: 3, // String Select
             custom_id: `safari_modify_attr_execute_on_${buttonId}_${actionIndex}`,
             placeholder: 'Select when to execute...',
-            options: [
-              {
-                label: 'Execute if all conditions are TRUE',
-                value: 'true',
-                description: 'Only execute when conditions are met',
-                emoji: { name: '✅' },
-                default: (action?.executeOn || 'true') === 'true'
-              },
-              {
-                label: 'Execute if all conditions are FALSE',
-                value: 'false',
-                description: 'Only execute when conditions are NOT met',
-                emoji: { name: '❌' },
-                default: (action?.executeOn || 'true') === 'false'
-              }
-            ]
+            options: (() => {
+              const effectiveExecuteOn = action?.executeOn || global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true';
+              return [
+                {
+                  label: 'Outcome runs when player passes conditions',
+                  value: 'true',
+                  description: 'Only execute when conditions are met',
+                  emoji: { name: '🟢' },
+                  default: effectiveExecuteOn === 'true'
+                },
+                {
+                  label: 'Outcome runs when player fails conditions',
+                  value: 'false',
+                  description: 'Only execute when conditions are NOT met',
+                  emoji: { name: '🔴' },
+                  default: effectiveExecuteOn === 'false'
+                }
+              ];
+            })()
           }]
         },
 
