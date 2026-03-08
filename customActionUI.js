@@ -456,7 +456,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           components.push({ type: 14 }); // Divider
           components.push({
             type: 10,
-            content: `> \`🟢 Outcomes | Player Passes Conditions (${trueActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\``
+            content: `## \`🟢 Outcomes (${trueActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\n-# What happens if the player meets all conditions?`
           });
 
           // Display TRUE outcomes
@@ -480,8 +480,8 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           components.push({
             type: 10,
             content: falseActions.length === 0 && !notAtMax
-              ? `> \`🔴 Outcomes | Player Fails Conditions (0/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\n*No false conditions configured - display generic error message*`
-              : `> \`🔴 Outcomes | Player Fails Conditions (${falseActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\``
+              ? `## \`🔴 Outcomes (0/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\n-# What happens if the player fails conditions?\n*No fail outcomes configured - display generic error message*`
+              : `## \`🔴 Outcomes (${falseActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\n-# What happens if the player fails conditions?`
           });
           components.push(...getActionListComponents(falseActions, actionId, guildItems, guildButtons, 'false', allActions));
 
