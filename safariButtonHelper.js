@@ -127,9 +127,9 @@ export async function createSafariButtonComponents(buttonIds, guildId) {
       continue;
     }
     
-    // Skip non-button triggers (modal, select, etc.)
+    // Skip non-button triggers (modal, select, etc.) — but allow button_modal (hybrid)
     const triggerType = button.trigger?.type || 'button'; // Default to button for legacy
-    if (triggerType !== 'button') {
+    if (triggerType !== 'button' && triggerType !== 'button_modal') {
       console.log(`🔍 Skipping non-button action ${buttonId} with trigger type: ${triggerType}`);
       continue;
     }
@@ -156,9 +156,14 @@ export async function createSafariButtonComponents(buttonIds, guildId) {
       console.warn(`⚠️ Rejected invalid emoji for button ${buttonId}: "${button.emoji}"`);
     }
     
+    // button_modal triggers use modal_launcher_ prefix so they show a modal on click
+    const customId = triggerType === 'button_modal'
+      ? `modal_launcher_${guildId}_${buttonId}_${Date.now()}`
+      : `safari_${guildId}_${buttonId}_${Date.now()}`;
+
     const buttonComponent = {
       type: 2, // Button
-      custom_id: `safari_${guildId}_${buttonId}_${Date.now()}`,
+      custom_id: customId,
       label: label || 'Action', // Fallback if no label found
       style: getButtonStyle(button.trigger?.button?.style || button.style),
       emoji: safeEmoji

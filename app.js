@@ -4559,7 +4559,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
       // Build modal using Player Command pattern
       const modal = {
-        title: customAction.label || 'Enter Answer',
+        title: (customAction.name || customAction.label || 'Enter Answer').slice(0, 45),
         custom_id: `modal_answer_${guildId}_${actionId}_${Date.now()}`,
         components: [{
           type: 1, // Action Row
@@ -12077,6 +12077,43 @@ Your server is now ready for Tycoons gameplay!`;
       const member = req.body.member;
       const token = req.body.token;
 
+      // Check if linked action is button_modal BEFORE deferring — need to show modal instead
+      try {
+        const { loadSafariContent: loadSafariForCheck, getLinkedActions: getLinkedForCheck } = await import('./safariManager.js');
+        const checkSafariData = await loadSafariForCheck();
+        const checkLinkedActions = getLinkedForCheck(guildId, itemId, checkSafariData);
+
+        if (checkLinkedActions.length > 0 && checkLinkedActions[0].trigger?.type === 'button_modal') {
+          const action = checkLinkedActions[0];
+          console.log(`🔐 Linked item ${itemId} triggers button_modal action ${action.id} — showing modal`);
+
+          // Show modal instead of deferring
+          return res.send({
+            type: InteractionResponseType.MODAL,
+            data: {
+              title: action.name || 'Enter Code',
+              custom_id: `modal_answer_${guildId}_${action.id}_${Date.now()}`,
+              components: [{
+                type: 1, // Action Row
+                components: [{
+                  type: 4, // Text Input
+                  custom_id: 'answer_input',
+                  label: action.description || 'Enter the secret code:',
+                  style: 1, // Short
+                  required: true,
+                  min_length: 1,
+                  max_length: 100,
+                  placeholder: 'Type your answer here...'
+                }]
+              }]
+            }
+          });
+        }
+      } catch (checkError) {
+        console.error('Error checking linked action type:', checkError);
+        // Fall through to normal flow
+      }
+
       // Defer as update (will patch inventory back onto original message)
       await sendDeferredResponse(res, true, true);
 
@@ -12224,7 +12261,39 @@ Your server is now ready for Tycoons gameplay!`;
           const actionId = selectedValue.replace('action_', '');
 
           const { loadPlayerData } = await import('./storage.js');
-          const { loadSafariContent, shouldConsumeItem, hasUnclaimedSubActions, consumeItemAfterAction, createPlayerInventoryDisplay } = await import('./safariManager.js');
+          const { loadSafariContent, shouldConsumeItem, hasUnclaimedSubActions, consumeItemAfterAction, createPlayerInventoryDisplay, getCustomButton } = await import('./safariManager.js');
+
+          // Check if action is button_modal — can't show modal after defer, so post a launcher button
+          const checkAction = await getCustomButton(guildId, actionId);
+          if (checkAction?.trigger?.type === 'button_modal') {
+            console.log(`🔐 Multi-use item selected button_modal action ${actionId} — posting launcher button`);
+            await createFollowupMessage(token, {
+              components: [{
+                type: 17, // Container
+                accent_color: 0x3498DB,
+                components: [
+                  {
+                    type: 10,
+                    content: `🔐 **${checkAction.name || 'Action'}** requires a secret code. Click below to enter it.`
+                  },
+                  {
+                    type: 1, // ActionRow
+                    components: [{
+                      type: 2, // Button
+                      custom_id: `modal_launcher_${guildId}_${actionId}_${Date.now()}`,
+                      label: 'Enter Code',
+                      style: 1, // Primary
+                      emoji: { name: '🔐' }
+                    }]
+                  }
+                ]
+              }],
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+            });
+            // Refresh inventory display
+            const inventoryDisplay = await createPlayerInventoryDisplay(guildId, userId, member, 0);
+            return updateDeferredResponse(token, inventoryDisplay);
+          }
 
           const playerData = await loadPlayerData();
           const safariData = await loadSafariContent();
@@ -20623,6 +20692,17 @@ Your server is now ready for Tycoons gameplay!`;
                 placeholder: 'Select an option',
                 options: []
               };
+              break;
+            case 'button_modal':
+              button.trigger.button = {
+                label: button.label || button.name || 'Click Me',
+                emoji: button.emoji || '🔐',
+                style: 'Primary'
+              };
+              // Preserve existing phrases if switching from modal
+              if (!button.trigger.phrases) {
+                button.trigger.phrases = [];
+              }
               break;
             case 'schedule':
               button.trigger.schedule = {
@@ -41810,11 +41890,12 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        // Update trigger phrases
+        // Update trigger phrases (preserve existing trigger type — could be 'modal' or 'button_modal')
         if (!action.trigger) {
           action.trigger = { type: 'modal' };
         }
         action.trigger.phrases = phrases;
+        console.log(`📝 DEBUG: Saved phrases for trigger type: ${action.trigger.type}`);
         
         // Update metadata
         action.metadata = action.metadata || {};
@@ -42192,15 +42273,17 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id.startsWith('modal_answer_')) {
-      // Handle modal answer submission for riddle/puzzle Custom Actions
+      // Handle modal answer submission for button_modal (Button + Secret Code) trigger type
       // Format: modal_answer_{guildId}_{actionId}_{timestamp}
+      // Supports phrase matching with pass/fail outcome branching via conditions
       const parts = custom_id.split('_');
       const guildId = parts[2];
       const actionId = parts.slice(3, -1).join('_'); // Handle action IDs with underscores
+      const userId = req.body.member.user.id;
 
       // Extract the user's answer
-      const userAnswer = components[0].components[0].value;
-      console.log(`🎯 Modal answer received: "${userAnswer}" for action ${actionId} in guild ${guildId}`);
+      const userAnswer = components[0]?.components?.[0]?.value || components[0]?.component?.value || '';
+      console.log(`🔐 Button+Modal answer received: "${userAnswer}" for action ${actionId} in guild ${guildId} by user ${userId}`);
 
       // Send deferred response immediately to prevent timeout
       res.send({
@@ -42228,55 +42311,88 @@ Your server is now ready for Tycoons gameplay!`;
           phrase.toLowerCase().trim() === userAnswer.toLowerCase().trim()
         );
 
+        // Build interaction context for executeButtonActions
+        const interactionData = {
+          client,
+          member: req.body.member,
+          channel_id: req.body.channel_id,
+          guild_id: guildId,
+          token: req.body.token,
+          applicationId: req.body.application_id,
+          channelName: `#${req.body.channel?.name || 'unknown'}`,
+          user: req.body.member?.user || { id: userId }
+        };
+
         if (isCorrect) {
-          console.log(`✅ Correct answer for ${actionId}`);
+          console.log(`✅ Correct code for ${actionId} — executing pass outcomes`);
 
-          // Build interaction context for executeButtonActions
-          const interactionData = {
-            member: req.body.member,
-            channel_id: req.body.channel_id,
-            guild_id: guildId,
-            token: req.body.token,
-            applicationId: req.body.application_id,
-            channelName: `#${req.body.channel?.name || 'unknown'}`
-          };
-
-          // Execute the action's configured actions
+          // Execute normally — conditions will be evaluated, executeOn:'true' outcomes run if conditions pass
           const result = await executeButtonActions(
-            guildId,
-            actionId,
-            req.body.member.user.id,
-            interactionData,
-            client
+            guildId, actionId, userId, interactionData, client
           );
 
-          // Send the result as follow-up
-          if (result && result.components) {
+          await DiscordRequest(`webhooks/${req.body.application_id}/${req.body.token}/messages/@original`, {
+            method: 'PATCH',
+            body: result || { content: '✅ Action completed successfully!', flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        } else {
+          console.log(`❌ Wrong code for ${actionId}: "${userAnswer}" — executing fail outcomes`);
+
+          // Wrong code = force conditions fail → executeOn:'false' outcomes run
+          const result = await executeButtonActions(
+            guildId, actionId, userId, interactionData, client, true // forceConditionsFail
+          );
+
+          // If no fail outcomes configured, show a default "wrong code" message
+          const hasFailContent = result?.components?.length > 0 || result?.content;
+          if (hasFailContent) {
             await DiscordRequest(`webhooks/${req.body.application_id}/${req.body.token}/messages/@original`, {
               method: 'PATCH',
               body: result
             });
           } else {
-            // If no result, send success message
             await DiscordRequest(`webhooks/${req.body.application_id}/${req.body.token}/messages/@original`, {
               method: 'PATCH',
               body: {
-                content: '✅ Action completed successfully!',
-                flags: InteractionResponseFlags.EPHEMERAL
+                components: [{
+                  type: 17, // Container
+                  accent_color: 0xe74c3c, // Red
+                  components: [{
+                    type: 10, // Text Display
+                    content: `## Incorrect\n\nThat code doesn't seem right. Try again!`
+                  }]
+                }],
+                flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
               }
             });
           }
-        } else {
-          console.log(`❌ Incorrect answer for ${actionId}: "${userAnswer}"`);
+        }
 
-          // Send generic incorrect message (no lockout, allow retry)
-          await DiscordRequest(`webhooks/${req.body.application_id}/${req.body.token}/messages/@original`, {
-            method: 'PATCH',
-            body: {
-              content: '❌ That\'s not correct. Try again!',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
+        // Log the button_modal action
+        try {
+          const { logCustomAction } = await import('./safariLogger.js');
+          const userData = req.body.member?.user || {};
+
+          await logCustomAction({
+            guildId,
+            userId,
+            username: userData.username || 'Unknown',
+            displayName: req.body.member?.nick || userData.global_name || userData.username || 'Unknown',
+            location: 'button_modal',
+            actionType: 'button_modal',
+            actionId: actionId,
+            buttonLabel: customAction.name || customAction.label || actionId,
+            executedActions: customAction.actions?.map(action => ({
+              type: action.type,
+              config: action.config,
+              result: isCorrect ? 'executed' : 'executed (wrong code)'
+            })) || [],
+            success: isCorrect,
+            errorMessage: isCorrect ? null : `Wrong code: "${userAnswer}"`,
+            channelName: `#${req.body.channel?.name || 'unknown'}`
           });
+        } catch (logError) {
+          console.error('Error logging button_modal action:', logError);
         }
       } catch (error) {
         console.error('Error processing modal answer:', error);

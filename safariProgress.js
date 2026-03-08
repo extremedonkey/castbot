@@ -84,7 +84,7 @@ export async function createSafariProgressUI(guildId, currentRow = 'A', client =
         
         // Button header with trigger type
         const triggerType = button.trigger?.type || 'button';
-        const triggerEmoji = triggerType === 'modal' ? '📝' : '🔘';
+        const triggerEmoji = triggerType === 'modal' ? '📝' : triggerType === 'button_modal' ? '🔐' : '🔘';
         coordSection += `${triggerEmoji} **${button.name || button.label || 'Unnamed Action'}** (${getTriggerTypeLabel(triggerType)}`;
         
         if (triggerType === 'modal' && button.trigger?.modal?.keywords?.length > 0) {
@@ -222,6 +222,9 @@ function getTriggerTypeLabel(type) {
   switch(type) {
     case 'button': return 'Button';
     case 'modal': return 'Modal';
+    case 'button_modal': return 'Button + Code';
+    case 'select': return 'Select';
+    case 'schedule': return 'Scheduled';
     default: return 'Unknown';
   }
 }
@@ -320,7 +323,7 @@ async function formatAction(action, prefix, guildId, items, playerData, client, 
           }
           
           const triggerType = followUpButton.trigger?.type || 'button';
-          const triggerEmoji = triggerType === 'modal' ? '📝' : '🔘';
+          const triggerEmoji = triggerType === 'modal' ? '📝' : triggerType === 'button_modal' ? '🔐' : '🔘';
           result += `${prefix.replace('├', '│').replace('└', ' ')}    ${i === action.config.buttonIds.length - 1 ? '└─' : '├─'} ${triggerEmoji} ${followUpButton.emoji || ''} ${followUpButton.name || followUpButton.label || 'Unnamed'}\n`;
         }
       } else {
@@ -687,7 +690,7 @@ export async function createGlobalItemsUI(guildId, client = null, isPublic = fal
       console.log(`🔍 DEBUG: Found ${globalItemActions.length} global items in button ${buttonId} at ${location}`);
 
       const triggerType = button.trigger?.type || 'button';
-      const triggerEmoji = triggerType === 'modal' ? '📝' : '🔘';
+      const triggerEmoji = triggerType === 'modal' ? '📝' : triggerType === 'button_modal' ? '🔐' : '🔘';
       coordSection += `${triggerEmoji} **${button.name || button.label || 'Unnamed Action'}** (${getTriggerTypeLabel(triggerType)})\n`;
       coordSection += `└─ 🎬 Actions:\n`;
 

@@ -1282,8 +1282,8 @@ async function executeFollowUpButton(config, guildId, interaction) {
         };
     }
 
-    // NEW: Detect if target is modal-triggered
-    const isModalTriggered = followUpButton.trigger?.type === 'modal';
+    // Detect if target needs a modal (modal or button_modal trigger type)
+    const isModalTriggered = followUpButton.trigger?.type === 'modal' || followUpButton.trigger?.type === 'button_modal';
     console.log(`🎭 Follow-up target ${followUpButton.id} is modal-triggered: ${isModalTriggered}`);
 
     // Create appropriate custom_id based on trigger type

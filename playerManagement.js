@@ -702,7 +702,8 @@ export async function createPlayerManagementUI(options) {
               const allButtons = safariDataForCrafting[guildId]?.buttons || {};
               const craftingActions = Object.values(allButtons).filter(action => {
                 const visibility = action.menuVisibility || 'none';
-                return visibility === 'crafting_menu' && action.trigger?.type === 'button';
+                const tt = action.trigger?.type || 'button';
+                return visibility === 'crafting_menu' && (tt === 'button' || tt === 'button_modal');
               });
 
               if (craftingActions.length > 0) {
@@ -836,13 +837,14 @@ export async function createPlayerManagementUI(options) {
         const safariData = await loadSafariContent();
         const allButtons = safariData[guildId]?.buttons || {};
 
-        // Filter actions that have player_menu visibility enabled and button trigger
+        // Filter actions that have player_menu visibility enabled and button/button_modal trigger
         // Support both new menuVisibility field and legacy showInInventory for backward compatibility
         // Use entries to preserve the action ID (key)
         const menuActions = Object.entries(allButtons)
           .filter(([actionId, action]) => {
             const visibility = action.menuVisibility || (action.showInInventory ? 'player_menu' : 'none');
-            return visibility === 'player_menu' && action.trigger?.type === 'button';
+            const triggerType = action.trigger?.type || 'button';
+            return visibility === 'player_menu' && (triggerType === 'button' || triggerType === 'button_modal');
           })
           .map(([actionId, action]) => ({ ...action, actionId }));
 
@@ -892,9 +894,13 @@ export async function createPlayerManagementUI(options) {
                 const actionRow = {
                   type: 1, // ActionRow
                   components: rowActions.map(action => {
+                    // button_modal triggers use modal_launcher_ prefix so they show a modal on click
+                    const buttonCustomId = action.trigger?.type === 'button_modal'
+                      ? `modal_launcher_${guildId}_${action.actionId}_${Date.now()}`
+                      : `safari_${guildId}_${action.actionId}`;
                     const button = {
                       type: 2, // Button
-                      custom_id: `safari_${guildId}_${action.actionId}`,
+                      custom_id: buttonCustomId,
                       label: (action.inventoryConfig?.buttonLabel || action.trigger?.button?.label || action.name || 'Action').slice(0, 80),
                       // Fall back through: inventoryConfig -> trigger.button -> direct button property -> default
                       style: getButtonStyleNumber(action.inventoryConfig?.buttonStyle || action.trigger?.button?.style || action.style || 'Secondary')

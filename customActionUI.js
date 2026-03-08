@@ -367,7 +367,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
 
   // Format name display based on trigger type
   let nameDisplay = action.name || 'New Action';
-  if (triggerType === 'button') {
+  if (triggerType === 'button' || triggerType === 'button_modal') {
     const buttonLabel = action.trigger?.button?.label || 'Not set';
     const buttonEmoji = action.trigger?.button?.emoji || '';
     const emojiPrefix = buttonEmoji ? `${buttonEmoji} ` : '';
@@ -992,6 +992,7 @@ function getTriggerTypeLabel(type) {
   const labels = {
     button: '🖱️ Button Click',
     modal: '⌨️ Text Command',
+    button_modal: '🔐 Button + Secret Code',
     select: '📋 Select Menu',
     schedule: '⏰ Scheduled Action'
   };
@@ -1109,6 +1110,13 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
             description: "Player enters pre-programmed command from host.",
             emoji: { name: "⌨️" },
             default: action.trigger?.type === 'modal'
+          },
+          {
+            label: "Button + Secret Code",
+            value: "button_modal",
+            description: "Player clicks button, then enters a secret code.",
+            emoji: { name: "🔐" },
+            default: action.trigger?.type === 'button_modal'
           },
           {
             label: "Select Menu",
@@ -1239,6 +1247,108 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
 
     const previewRow = new ActionRowBuilder().addComponents([previewButton]);
     components.push(previewRow.toJSON());
+  } else if (action.trigger?.type === 'button_modal') {
+    // Combined: Button style config + Phrase config
+    components.push({ type: 14 });
+
+    components.push({
+      type: 10,
+      content: `**Button + Secret Code**\nPlayer clicks a button, then a modal pops up asking for a secret code. If they enter the correct phrase, pass outcomes run. If wrong, fail outcomes run.\n\nChange Button Text and Emoji from main Custom Action Editor screen > Action Info button.`
+    });
+
+    const currentStyle = action.trigger?.button?.style || 'Primary';
+
+    // Button style selector
+    components.push({
+      type: 1, // Action Row
+      components: [{
+        type: 3, // String Select
+        custom_id: `custom_action_button_style_${actionId}`,
+        placeholder: "Select button color/style",
+        options: [
+          {
+            label: 'Primary (Blue)',
+            description: 'Blue button style',
+            value: 'Primary',
+            emoji: { name: '🔵' },
+            default: currentStyle === 'Primary'
+          },
+          {
+            label: 'Secondary (Gray)',
+            description: 'Gray button style',
+            value: 'Secondary',
+            emoji: { name: '⚪' },
+            default: currentStyle === 'Secondary'
+          },
+          {
+            label: 'Success (Green)',
+            description: 'Green button style',
+            value: 'Success',
+            emoji: { name: '🟢' },
+            default: currentStyle === 'Success'
+          },
+          {
+            label: 'Danger (Red)',
+            description: 'Red button style',
+            value: 'Danger',
+            emoji: { name: '🔴' },
+            default: currentStyle === 'Danger'
+          }
+        ]
+      }]
+    });
+
+    components.push({ type: 14 }); // Separator
+
+    // Phrase config section
+    const phrases = action.trigger?.phrases || [];
+    if (phrases.length > 0) {
+      components.push({
+        type: 10,
+        content: `### Secret Code Phrases:\n*${phrases.join(', ')}*`
+      });
+    } else {
+      components.push({
+        type: 10,
+        content: `### Secret Code Phrases:\n*No phrases configured yet — players will always fail!*`
+      });
+    }
+
+    // Configure phrases button + preview button + back button
+    const configButton = new ButtonBuilder()
+      .setCustomId(`configure_modal_trigger_${actionId}`)
+      .setLabel('Configure Phrases')
+      .setEmoji('💬')
+      .setStyle(2); // Secondary
+
+    // Create actual preview button
+    const previewButton = new ButtonBuilder()
+      .setCustomId(`button_preview_${actionId}`)
+      .setLabel(action.name || action.trigger?.button?.label || action.label || 'Click Me')
+      .setStyle(getButtonStyleNumber(currentStyle))
+      .setDisabled(false);
+
+    const emoji = action.emoji || action.trigger?.button?.emoji;
+    if (emoji) {
+      previewButton.setEmoji(emoji);
+    }
+
+    const backButton = new ButtonBuilder()
+      .setCustomId(`custom_action_editor_${actionId}`)
+      .setLabel('⬅ Back')
+      .setEmoji('⚡')
+      .setStyle(2);
+
+    const buttonRow = new ActionRowBuilder().addComponents([backButton, configButton]);
+    const previewRow = new ActionRowBuilder().addComponents([previewButton]);
+
+    components.push({ type: 14 }); // Separator
+    components.push({
+      type: 10,
+      content: `**Button Preview**`
+    });
+    components.push(previewRow.toJSON());
+    components.push(buttonRow.toJSON());
   } else if (action.trigger?.type === 'select') {
     components.push({ type: 14 });
     components.push({
@@ -1324,8 +1434,8 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
     });
   }
 
-  // Add back button for all trigger types (except modal which already has one)
-  if (action.trigger?.type !== 'modal') {
+  // Add back button for all trigger types (except modal and button_modal which already have one)
+  if (action.trigger?.type !== 'modal' && action.trigger?.type !== 'button_modal') {
     const backButton = new ButtonBuilder()
       .setCustomId(`custom_action_editor_${actionId}`)
       .setLabel('⬅ Back')
@@ -1462,7 +1572,7 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
   const coordinates = action.coordinates || [];
   const linkedItems = action.linkedItems || [];
   const items = guildData.items || {};
-  const isTriggerButton = action.trigger?.type === 'button';
+  const isTriggerButton = action.trigger?.type === 'button' || action.trigger?.type === 'button_modal';
 
   // Migrate legacy showInInventory to menuVisibility if needed
   let menuVisibility = action.menuVisibility;
@@ -1615,7 +1725,7 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
   if (resolvedItems.length > 0 && !isTriggerButton) {
     components.push({
       type: 10,
-      content: `*⚠️ Item triggers disabled — action trigger type must be Button*`
+      content: `*⚠️ Item triggers disabled — action trigger type must be Button or Button + Secret Code*`
     });
   }
 

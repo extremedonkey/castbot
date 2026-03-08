@@ -488,7 +488,8 @@ async function buildCardSelect(activeButton, targetMember, playerData, safariDat
       const craftingActions = Object.entries(allButtons)
         .filter(([, action]) => {
           const vis = action.menuVisibility || 'none';
-          return vis === 'crafting_menu' && action.trigger?.type === 'button';
+          const tt = action.trigger?.type || 'button';
+          return vis === 'crafting_menu' && (tt === 'button' || tt === 'button_modal');
         })
         .map(([id, action]) => ({ id, ...action }))
         .sort((a, b) => (a.inventoryConfig?.sortOrder ?? 999) - (b.inventoryConfig?.sortOrder ?? 999));
@@ -510,7 +511,8 @@ async function buildCardSelect(activeButton, targetMember, playerData, safariDat
       const menuActions = Object.entries(allButtons)
         .filter(([, action]) => {
           const vis = action.menuVisibility || (action.showInInventory ? 'player_menu' : 'none');
-          return vis === 'player_menu' && action.trigger?.type === 'button';
+          const triggerType = action.trigger?.type || 'button';
+          return vis === 'player_menu' && (triggerType === 'button' || triggerType === 'button_modal');
         })
         .map(([id, action]) => ({ id, ...action }))
         .sort((a, b) => (a.inventoryConfig?.sortOrder ?? 999) - (b.inventoryConfig?.sortOrder ?? 999));
