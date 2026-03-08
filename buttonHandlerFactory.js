@@ -1003,6 +1003,13 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari'
   },
+  'action_post_channel_*': {
+    label: 'Post to Channel',
+    description: 'Post action button to a Discord channel from the Action Editor',
+    emoji: '#️⃣',
+    style: 'Secondary',
+    category: 'safari'
+  },
   'outcome_select_*': {
     label: 'Outcome Actions',
     description: 'String select per outcome — edit, reorder, clone, toggle pass/fail, delete',

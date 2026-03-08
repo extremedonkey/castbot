@@ -23,17 +23,17 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// Feature groups distilled from commits
+// Feature groups distilled from March 2026 commits
 const features = [
-  { icon: '🍒', title: 'Compact Castlist', desc: 'One-click PNG castlist generation\nposted directly to your channel', color: PINK, tag: 'NEW' },
-  { icon: '🏕️', title: 'Tribe Manager Overhaul', desc: 'Add tribes with auto-role creation\nUser Select for member assignment', color: GREEN, tag: 'NEW' },
-  { icon: '🎨', title: 'Color Picker', desc: '20 Discord preset colors + custom\nhex for tribe accent colors', color: ORANGE, tag: 'NEW' },
-  { icon: '🗺️', title: 'Activity Log Gallery', desc: 'Map overlay with visited cells\nstamina display & location tracking', color: BLUE, tag: 'NEW' },
-  { icon: '📋', title: 'Castlist Hub Upgrades', desc: 'Role Select in modals, auto-open\non empty castlists, smarter UX', color: PURPLE, tag: 'IMPROVED' },
-  { icon: '⚡', title: 'Performance & Fixes', desc: 'Modal defer fixes, pipe separator\ndebugging, deferred handlers', color: CYAN, tag: 'FIXED' },
+  { title: 'Action Editor Overhaul', desc: 'String Select outcomes, clone,\nback navigation & cap warnings', color: PURPLE, tag: 'NEW' },
+  { title: 'Season Planner', desc: 'Interactive round builder with\nEdit Season modal & Label components', color: PINK, tag: 'NEW' },
+  { title: 'Player State Manager', desc: 'Initialize, teleport & de-init\nplayers with channel hyperlinks', color: GREEN, tag: 'NEW' },
+  { title: 'Menu System Migration', desc: 'MenuBuilder registry pattern\ntriple backtick heading standard', color: BLUE, tag: 'IMPROVED' },
+  { title: 'Button + Modal Triggers', desc: 'Secret code hybrid triggers\nwith pass/fail outcome routing', color: ORANGE, tag: 'NEW' },
+  { title: 'Deploy Notifications', desc: 'Smart feature detection buttons\nActions decoupled from Safari', color: CYAN, tag: 'IMPROVED' },
 ];
 
-const stats = { commits: 15, insertions: 892, deletions: 584, files: 10 };
+const stats = { commits: 205, insertions: 17889, deletions: 6158, files: 225 };
 
 // Build the SVG
 function buildSvg() {
@@ -146,7 +146,7 @@ function buildSvg() {
     <text x="${W/2}" y="105" font-family="Arial,sans-serif" font-size="42" font-weight="bold" fill="url(#titleGrad)" text-anchor="middle">CastBot Update</text>
 
     <!-- Subtitle -->
-    <text x="${W/2}" y="140" font-family="Arial,sans-serif" font-size="16" fill="${GRAY}" text-anchor="middle">Compact Castlists, Tribe Manager Overhaul, Activity Log Gallery &amp; More</text>
+    <text x="${W/2}" y="140" font-family="Arial,sans-serif" font-size="16" fill="${GRAY}" text-anchor="middle">Action Editor, Season Planner, Player State Manager &amp; More</text>
 
     <!-- Divider -->
     <rect x="${W/2 - 100}" y="165" width="200" height="1" fill="${DIM}" opacity="0.4" />
@@ -172,7 +172,7 @@ async function generate() {
     .png({ quality: 95 })
     .toBuffer();
 
-  const outPath = '/home/reece/castbot/temp/castbot-update-mar2026.png';
+  const outPath = '/home/reece/castbot/temp/castbot-update-mar2026-v3.png';
   await writeFile(outPath, png);
   console.log(`✅ Generated ${(png.length / 1024).toFixed(1)}KB → ${outPath}`);
 }

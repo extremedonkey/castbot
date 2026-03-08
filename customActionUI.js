@@ -429,6 +429,41 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           }
         },
 
+        // Posted Channels Section (below Locations)
+        ...await (async () => {
+          const postedChannels = action.postedChannels || [];
+          if (postedChannels.length === 0) return [];
+          // Validate channels in parallel
+          const { DiscordRequest } = await import('./utils.js');
+          const results = await Promise.allSettled(
+            postedChannels.map(async (channelId) => {
+              const resp = await DiscordRequest(`channels/${channelId}`, { method: 'GET' });
+              const channel = await resp.json();
+              if (!channel.id) throw new Error('not found');
+              return channelId;
+            })
+          );
+          const validIds = results.filter(r => r.status === 'fulfilled').map(r => r.value);
+          const staleCount = results.filter(r => r.status === 'rejected').length;
+          // Clean stale channels from data
+          if (staleCount > 0) {
+            const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+            const allData = await loadSafariContent();
+            const guildAction = allData[guildId]?.buttons?.[actionId];
+            if (guildAction) {
+              guildAction.postedChannels = validIds;
+              await saveSafariContent(allData);
+              console.log(`🧹 Cleaned ${staleCount} stale channel(s) from action ${actionId}`);
+            }
+          }
+          if (validIds.length === 0) return [];
+          const channelList = validIds.map(id => `<#${id}>`).join(', ');
+          return [{
+            type: 10,
+            content: `-# \`\`\`#️⃣ Posted Channels (${validIds.length})\`\`\`\n-# ${channelList}`
+          }];
+        })(),
+
         // Conditions Section (below Locations, above Outcomes)
         { type: 10, content: `## \`\`\`🧩 Conditions\`\`\`` },
         {
@@ -504,7 +539,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           return components;
         })(),
 
-        // Navigation + Delete
+        // Navigation + Post + Delete
         {
           type: 1, // Action Row
           components: [
@@ -514,6 +549,13 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
               label: "← Actions",
               style: 2,
               emoji: { name: "⚡" }
+            },
+            {
+              type: 2,
+              custom_id: `action_post_channel_${actionId}`,
+              label: "Post to Channel",
+              style: 2,
+              emoji: { name: "#️⃣" }
             },
             {
               type: 2,
@@ -1725,7 +1767,7 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
   // --- Menu section ---
   components.push({
     type: 10,
-    content: `> **\`📋 Menu\`**`
+    content: `### \`\`\`📋 Menu\`\`\``
   });
 
   components.push({
@@ -1771,7 +1813,7 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
   if (coordinates.length > 0) {
     components.push({
       type: 10,
-      content: `> **\`🗺️ Map Locations (${coordinates.length})\`**`
+      content: `### \`\`\`🗺️ Map Locations (${coordinates.length})\`\`\``
     });
 
     // Collapse to summary if too many total entries (budget: 3N + 3M <= 24 → N+M <= 8)
@@ -1805,7 +1847,7 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
   } else {
     components.push({
       type: 10,
-      content: `> **\`🗺️ Map Locations\`**\n*No coordinates assigned*`
+      content: `### \`\`\`🗺️ Map Locations\`\`\`\n*No coordinates assigned*`
     });
   }
 
@@ -1820,7 +1862,7 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
   if (resolvedItems.length > 0) {
     components.push({
       type: 10,
-      content: `> **\`📦 Items Using Action (${resolvedItems.length})\`**`
+      content: `### \`\`\`📦 Items Using Action (${resolvedItems.length})\`\`\``
     });
 
     if (totalEntries > 8) {
@@ -1851,7 +1893,7 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
   } else if (isTriggerButton) {
     components.push({
       type: 10,
-      content: `> **\`📦 Items Using Action\`**\n*No items linked*`
+      content: `### \`\`\`📦 Items Using Action\`\`\`\n*No items linked*`
     });
   }
 

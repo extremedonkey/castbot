@@ -27112,7 +27112,7 @@ Your server is now ready for Tycoons gameplay!`;
         const actionId = custom_id.replace('entity_action_post_channel_select_', '');
         const selectedChannelId = req.body.data.values[0];
 
-        const { loadSafariContent } = await import('./safariManager.js');
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
         const safariData = await loadSafariContent();
         const action = safariData[guildId]?.buttons?.[actionId];
 
@@ -27150,6 +27150,14 @@ Your server is now ready for Tycoons gameplay!`;
           method: 'POST',
           body: { flags: (1 << 15), components: [channelCard] }
         });
+
+        // Track posted channel
+        if (!action.postedChannels) action.postedChannels = [];
+        if (!action.postedChannels.includes(selectedChannelId)) {
+          action.postedChannels.push(selectedChannelId);
+          await saveSafariContent(safariData);
+          console.log(`📌 Tracked channel ${selectedChannelId} for action ${actionId}`);
+        }
 
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
@@ -27422,6 +27430,106 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
       
+    } else if (custom_id.startsWith('action_post_channel_select_')) {
+      // Channel select from Action Editor Post to Channel → post button and track channel
+      try {
+        const guildId = req.body.guild_id;
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to post actions.')) return;
+
+        const actionId = custom_id.replace('action_post_channel_select_', '');
+        const selectedChannelId = req.body.data.values[0];
+
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const action = safariData[guildId]?.buttons?.[actionId];
+
+        if (!action) {
+          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Action not found.', flags: InteractionResponseFlags.EPHEMERAL } });
+        }
+
+        // Build channel card: Container with action info + button
+        const channelCard = {
+          type: 17,
+          accent_color: 0x3498db,
+          components: [
+            { type: 10, content: `## ${action.emoji || '⚡'} ${action.name || action.label || 'Custom Action'}` },
+            { type: 14 },
+            {
+              type: 1,
+              components: [{
+                type: 2,
+                custom_id: action.trigger?.type === 'button_modal'
+                  ? `modal_launcher_${guildId}_${actionId}_${Date.now()}`
+                  : `safari_${guildId}_${actionId}`,
+                label: action.name || action.label || 'Activate',
+                style: (() => {
+                  const styleMap = { 'Primary': 1, 'Secondary': 2, 'Success': 3, 'Danger': 4 };
+                  return styleMap[action.trigger?.button?.style] || action.style || 1;
+                })(),
+                ...(action.emoji ? { emoji: { name: action.emoji } } : {})
+              }]
+            }
+          ]
+        };
+
+        await DiscordRequest(`channels/${selectedChannelId}/messages`, {
+          method: 'POST',
+          body: { flags: (1 << 15), components: [channelCard] }
+        });
+
+        // Track posted channel
+        if (!action.postedChannels) action.postedChannels = [];
+        if (!action.postedChannels.includes(selectedChannelId)) {
+          action.postedChannels.push(selectedChannelId);
+          await saveSafariContent(safariData);
+          console.log(`📌 Tracked channel ${selectedChannelId} for action ${actionId}`);
+        }
+
+        // Return to action editor with success
+        const { createCustomActionEditorUI } = await import('./customActionUI.js');
+        const editorUI = await createCustomActionEditorUI({ guildId, actionId });
+
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: editorUI
+        });
+      } catch (error) {
+        console.error('Error posting action to channel:', error);
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Error posting action. Please try again.', flags: InteractionResponseFlags.EPHEMERAL } });
+      }
+
+    } else if (custom_id.startsWith('action_post_channel_')) {
+      // Post to Channel button from Action Editor → show channel select
+      return ButtonHandlerFactory.create({
+        id: 'action_post_channel',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const actionId = context.customId.replace('action_post_channel_', '');
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const action = safariData[context.guildId]?.buttons?.[actionId];
+
+          if (!action) return { content: '❌ Action not found.' };
+
+          return {
+            flags: (1 << 15),
+            components: [{
+              type: 17,
+              accent_color: 0x3498db,
+              components: [
+                { type: 10, content: `## Post to Channel\n\n**${action.emoji || '⚡'} ${action.name || action.label || 'Custom Action'}**\n\nSelect a channel to post this action button to.` },
+                { type: 14 },
+                { type: 1, components: [{ type: 8, custom_id: `action_post_channel_select_${actionId}`, placeholder: 'Select channel...', channel_types: [0, 5] }] },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, custom_id: `custom_action_editor_${actionId}`, label: '← Back', style: 2 }] }
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('action_editor_back_')) {
       // Back button from Action Editor → Action list
       return ButtonHandlerFactory.create({
