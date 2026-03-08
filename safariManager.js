@@ -8884,7 +8884,7 @@ async function getItemStock(guildId, storeId, itemId) {
  * @param {string} guildId - Guild ID
  * @returns {Promise<number>} Starting currency value (default: 100)
  */
-export async function getStartingCurrency(guildId) {
+async function getStartingCurrency(guildId) {
     const safariData = await loadSafariContent();
     return safariData[guildId]?.safariConfig?.defaultStartingCurrencyValue ?? 100;
 }
