@@ -26969,7 +26969,10 @@ Your server is now ready for Tycoons gameplay!`;
               type: 1, // Action Row
               components: [{
                 type: 2, // Button
-                custom_id: `safari_${guildId}_${actionId}`,
+                // button_modal triggers use modal_launcher_ prefix so they show a modal on click
+                custom_id: action.trigger?.type === 'button_modal'
+                  ? `modal_launcher_${guildId}_${actionId}_${Date.now()}`
+                  : `safari_${guildId}_${actionId}`,
                 label: action.name || action.label || 'Activate',
                 style: (() => {
                   const styleMap = { 'Primary': 1, 'Secondary': 2, 'Success': 3, 'Danger': 4 };

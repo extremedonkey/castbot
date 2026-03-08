@@ -887,6 +887,24 @@
               "type": "action",
               "desc": "Command: \"i solemnly swear that i am up to no good\"\n> • Safari State: init_or_teleport → B5",
               "loc": "global"
+            },
+            {
+              "t": 1772960043911,
+              "type": "action",
+              "desc": "🕹️ Hybrid Button -> Modal\n> • Text: \"Cuz you got it\"",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772960077765,
+              "type": "action",
+              "desc": "🕹️ Hybrid Button -> Modal\n> • Text: \"Cuz you got it\"",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772960082482,
+              "type": "action",
+              "desc": "🕹️ Hybrid Button -> Modal\n> • Text: \"Cuz you got it\"",
+              "loc": "Unknown"
             }
           ],
           "lastInteraction": 1772945726100,
@@ -1292,7 +1310,14 @@
         ],
         "safari": {
           "currency": 0,
-          "history": [],
+          "history": [
+            {
+              "t": 1772955926727,
+              "type": "action",
+              "desc": "🛬 Get me out of here!\n> • Safari State: deinitialize → default",
+              "loc": "Unknown"
+            }
+          ],
           "lastInteraction": 1772955924715,
           "achievements": [],
           "inventory": {},
