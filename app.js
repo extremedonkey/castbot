@@ -16690,12 +16690,19 @@ Your server is now ready for Tycoons gameplay!`;
         updateMessage: true, // Dismiss previous entity when showing new interface
         handler: async (context) => {
           console.log(`🔍 START: safari_action_type_select - user ${context.userId}`);
-          
-          // Extract action ID and selected outcome type
-          const buttonId = context.customId.replace('safari_action_type_select_', '');
+
+          // Extract action ID, executeOn suffix, and selected outcome type
+          // Custom ID format: safari_action_type_select_{actionId}_true or _false
+          const fullId = context.customId.replace('safari_action_type_select_', '');
+          const executeOn = fullId.endsWith('_false') ? 'false' : 'true';
+          const buttonId = fullId.replace(/_(?:true|false)$/, '');
           const actionType = req.body.data.values[0];
 
-          console.log(`Selected outcome type: ${actionType} for action: ${buttonId}`);
+          // Store intended executeOn for downstream handlers (item select, role select, etc.)
+          if (!global.pendingExecuteOn) global.pendingExecuteOn = new Map();
+          global.pendingExecuteOn.set(`${context.guildId}_${buttonId}`, executeOn);
+
+          console.log(`Selected outcome type: ${actionType} for action: ${buttonId} (executeOn: ${executeOn})`);
           
           // Load safari content
           const { loadSafariContent } = await import('./safariManager.js');
@@ -16967,12 +16974,12 @@ Your server is now ready for Tycoons gameplay!`;
                 config: {
                   scope: 'all_players'
                 },
-                executeOn: 'true'
+                executeOn
               };
 
               // Save immediately
               await saveSafariContent(safariData);
-              console.log(`💾 SAVED: safari_action_type_select - created calculate_results action with defaults for ${buttonId}[${actionIndex}]`);
+              console.log(`💾 SAVED: safari_action_type_select - created calculate_results outcome with defaults for ${buttonId}[${actionIndex}]`);
             }
 
             console.log(`✅ SUCCESS: safari_action_type_select - showing calculate_results entity for ${buttonId}[${actionIndex}]`);
@@ -17009,12 +17016,12 @@ Your server is now ready for Tycoons gameplay!`;
                   playerScope: 'all_players',
                   displayMode: 'silent'
                 },
-                executeOn: 'true'
+                executeOn
               };
 
               // Save immediately
               await saveSafariContent(safariData);
-              console.log(`💾 SAVED: safari_action_type_select - created calculate_attack action with defaults for ${buttonId}[${actionIndex}]`);
+              console.log(`💾 SAVED: safari_action_type_select - created calculate_attack outcome with defaults for ${buttonId}[${actionIndex}]`);
             }
 
             console.log(`✅ SUCCESS: safari_action_type_select - showing calculate_attack entity for ${buttonId}[${actionIndex}]`);
@@ -17053,12 +17060,12 @@ Your server is now ready for Tycoons gameplay!`;
                   amount: 0,
                   displayMode: 'silent'
                 },
-                executeOn: 'true'
+                executeOn
               };
 
               // Save immediately
               await saveSafariContent(safariData);
-              console.log(`💾 SAVED: safari_action_type_select - created modify_attribute action with defaults for ${buttonId}[${actionIndex}]`);
+              console.log(`💾 SAVED: safari_action_type_select - created modify_attribute outcome with defaults for ${buttonId}[${actionIndex}]`);
             }
 
             console.log(`✅ SUCCESS: safari_action_type_select - showing modify_attribute entity for ${buttonId}[${actionIndex}]`);
@@ -17138,10 +17145,10 @@ Your server is now ready for Tycoons gameplay!`;
               };
             }
 
-            // Create the calculate_results action
+            // Create the calculate_results outcome
             const newAction = {
               type: 'calculate_results',
-              executeOn: 'true',
+              executeOn,
               order: button.actions?.length || 0
             };
 
@@ -17671,7 +17678,8 @@ Your server is now ready for Tycoons gameplay!`;
             button.actions = [];
           }
           
-          // Create the give_role action
+          // Create the give_role outcome — inherit executeOn from pending state
+          const pendingExOn = global.pendingExecuteOn?.get(`${context.guildId}_${buttonId}`) || 'true';
           const actionIndex = button.actions.length;
           const action = {
             type: 'give_role',
@@ -17679,7 +17687,7 @@ Your server is now ready for Tycoons gameplay!`;
             config: {
               roleId: roleId
             },
-            executeOn: 'true' // Default to execute on conditions met
+            executeOn: pendingExOn
           };
           
           // Add the action
@@ -17748,7 +17756,8 @@ Your server is now ready for Tycoons gameplay!`;
             button.actions = [];
           }
           
-          // Create the remove_role action
+          // Create the remove_role outcome — inherit executeOn from pending state
+          const pendingExOn = global.pendingExecuteOn?.get(`${context.guildId}_${buttonId}`) || 'true';
           const actionIndex = button.actions.length;
           const action = {
             type: 'remove_role',
@@ -17756,7 +17765,7 @@ Your server is now ready for Tycoons gameplay!`;
             config: {
               roleId: roleId
             },
-            executeOn: 'true' // Default to execute on conditions met
+            executeOn: pendingExOn
           };
           
           // Add the action
@@ -18577,7 +18586,7 @@ Your server is now ready for Tycoons gameplay!`;
               .setStyle(TextInputStyle.Short)
               .setRequired(false)
               .setMaxLength(10)
-              .setValue('true'); // Pre-populate with 'true'
+              .setValue(global.pendingExecuteOn?.get(`${context.guildId}_${buttonId}`) || 'true');
 
             modal.addComponents(
               new ActionRowBuilder().addComponents(titleInput),
@@ -35887,7 +35896,7 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Store in temporary state
         const stateKey = `${req.body.guild_id}_${buttonId}_currency_${actionIndex}`;
-        const state = dropConfigState.get(stateKey) || { limit: null, style: null, amount: null, executeOn: 'true' };
+        const state = dropConfigState.get(stateKey) || { limit: null, style: null, amount: null, executeOn: global.pendingExecuteOn?.get(`${req.body.guild_id}_${buttonId}`) || 'true' };
         state.amount = amount;
         dropConfigState.set(stateKey, state);
         
@@ -44331,7 +44340,7 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
       style: '2',                 // Default to Secondary/Grey
       quantity: 1,                // Default to 1 item
       operation: 'give',          // Default to give (not remove)
-      executeOn: 'true'           // Default to true
+      executeOn: global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true'
     };
     // CRITICAL: Save the default state so it's available when user clicks Save
     dropConfigState.set(stateKey, state);
@@ -44674,7 +44683,7 @@ async function showFollowUpConfig(guildId, buttonId, targetButtonId, actionIndex
   const stateKey = `${guildId}_${buttonId}_followup_${actionIndex}`;
   const state = dropConfigState.get(stateKey) || {
     targetButtonId: targetButtonId,
-    executeOn: 'true'  // Default to 'true' for backwards compatibility
+    executeOn: global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true'
   };
   
   // Load safari data to get button information

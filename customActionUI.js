@@ -7,6 +7,23 @@ import { loadSafariContent } from './safariManager.js';
 import { scheduler } from './scheduler.js';
 
 /**
+ * Shared outcome type options for the "Add Outcome" select menus.
+ * IMPORTANT: Both the Pass and Fail select menus use this same list.
+ * When adding a new outcome type, add it here — it will appear in both selects automatically.
+ */
+const OUTCOME_TYPE_OPTIONS = [
+  { label: 'Display Text', value: 'display_text', emoji: { name: '📄' } },
+  { label: 'Give / Remove Currency', value: 'give_currency', emoji: { name: '🪙' } },
+  { label: 'Give / Remove Item', value: 'give_item', emoji: { name: '🎁' } },
+  { label: 'Give Role', value: 'give_role', emoji: { name: '👑' } },
+  { label: 'Remove Role', value: 'remove_role', emoji: { name: '🚫' } },
+  { label: 'Modify Attribute', value: 'modify_attribute', emoji: { name: '📊' } },
+  { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' } },
+  { label: 'Calculate Results', value: 'calculate_results', emoji: { name: '🌾' } },
+  { label: 'Calculate Attack', value: 'calculate_attack', emoji: { name: '⚔️' } }
+];
+
+/**
  * Create the custom action selection UI for a map coordinate (or global if no coordinate)
  * @param {Object} params
  * @param {string} params.guildId - Guild ID
@@ -425,61 +442,61 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           }
         },
 
-        // Add Outcome Select Menu (if not at max)
-        ...((action.actions || []).length < SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON ? [{
-          type: 1, // Action Row
-          components: [{
-            type: 3, // String Select
-            custom_id: `safari_action_type_select_${actionId}`,
-            placeholder: 'Click here to add a new Outcome..',
-            options: [
-              { label: 'Display Text', value: 'display_text', emoji: { name: '📄' } },
-              { label: 'Give / Remove Currency', value: 'give_currency', emoji: { name: '🪙' } },
-              { label: 'Give / Remove Item', value: 'give_item', emoji: { name: '🎁' } },
-              { label: 'Give Role', value: 'give_role', emoji: { name: '👑' } },
-              { label: 'Remove Role', value: 'remove_role', emoji: { name: '🚫' } },
-              { label: 'Modify Attribute', value: 'modify_attribute', emoji: { name: '📊' } },
-              { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' } },
-              { label: 'Calculate Results', value: 'calculate_results', emoji: { name: '🌾' } },
-              { label: 'Calculate Attack', value: 'calculate_attack', emoji: { name: '⚔️' } }
-            ]
-          }]
-        }] : []),
-
-        // Split actions into TRUE and FALSE arrays
+        // Split actions into TRUE and FALSE arrays, with per-section "Add Outcome" selects
         ...(() => {
           const allActions = action.actions || [];
           const trueActions = allActions.filter(a => !a.executeOn || a.executeOn === 'true');
           const falseActions = allActions.filter(a => a.executeOn === 'false');
-          
+          const notAtMax = allActions.length < SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON;
+
           const components = [];
-          
+
           // TRUE Outcomes Section
           components.push({ type: 14 }); // Divider
           components.push({
             type: 10,
-            content: `> \`🟢 Outcomes | Player Meets Conditions (${trueActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\``
+            content: `> \`🟢 Outcomes | Player Passes Conditions (${trueActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\``
           });
 
           // Display TRUE outcomes
           components.push(...getActionListComponents(trueActions, actionId, guildItems, guildButtons, 'true', allActions));
 
+          // Add Pass Outcome select (if not at max total)
+          if (notAtMax) {
+            components.push({
+              type: 1, // Action Row
+              components: [{
+                type: 3, // String Select
+                custom_id: `safari_action_type_select_${actionId}_true`,
+                placeholder: 'Click here to add a new Pass Outcome..',
+                options: OUTCOME_TYPE_OPTIONS
+              }]
+            });
+          }
 
           // FALSE Outcomes Section
           components.push({ type: 14 }); // Divider
-          if (falseActions.length === 0) {
+          components.push({
+            type: 10,
+            content: falseActions.length === 0 && !notAtMax
+              ? `> \`🔴 Outcomes | Player Fails Conditions (0/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\n*No false conditions configured - display generic error message*`
+              : `> \`🔴 Outcomes | Player Fails Conditions (${falseActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\``
+          });
+          components.push(...getActionListComponents(falseActions, actionId, guildItems, guildButtons, 'false', allActions));
+
+          // Add Fail Outcome select (if not at max total)
+          if (notAtMax) {
             components.push({
-              type: 10,
-              content: `> \`🔴 Outcomes | Player Fails Conditions (0/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\n*No false conditions configured - display generic error message*`
+              type: 1, // Action Row
+              components: [{
+                type: 3, // String Select
+                custom_id: `safari_action_type_select_${actionId}_false`,
+                placeholder: 'Click here to add a new Fail Outcome..',
+                options: OUTCOME_TYPE_OPTIONS
+              }]
             });
-          } else {
-            components.push({
-              type: 10,
-              content: `> \`🔴 Outcomes | Player Fails Conditions (${falseActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\``
-            });
-            components.push(...getActionListComponents(falseActions, actionId, guildItems, guildButtons, 'false', allActions));
           }
-          
+
           return components;
         })(),
 
@@ -635,13 +652,13 @@ function calculateMaxCustomActionEditorComponents() {
     coordinatesAccessory: 1, // type 2 - "Manage" button (accessory)
     separator2: 1, // type 14 - after Coordinates
     trueOutcomesDivider: 1, // type 14 - before TRUE outcomes section
-    trueOutcomesHeader: 1, // type 10 - "🟢 Outcomes | Player Meets Conditions"
+    trueOutcomesHeader: 1, // type 10 - "🟢 Outcomes | Player Passes Conditions"
+    passSelectRow: 1, // type 1 - Action Row for Pass outcome select (hidden at 5/5)
+    passSelectMenu: 1, // type 3 - String Select for Pass outcomes (hidden at 5/5)
     falseOutcomesDivider: 1, // type 14 - before FALSE outcomes section
     falseOutcomesHeader: 1, // type 10 - "🔴 Outcomes | Player Fails Conditions"
-    falseActionsPlaceholder: 1, // type 10 - "*No false conditions configured*" (worst case)
-    separator4: 1, // type 14 - before action select menu (when not at max)
-    actionSelectRow: 1, // type 1 - Action Row for select menu
-    actionSelectMenu: 1, // type 3 - String Select menu
+    failSelectRow: 1, // type 1 - Action Row for Fail outcome select (hidden at 5/5)
+    failSelectMenu: 1, // type 3 - String Select for Fail outcomes (hidden at 5/5)
     separator5: 1, // type 14 - before final buttons
     finalButtonRow: 1, // type 1 - Action Row for final buttons
     finalButton1: 1, // type 2 - "← Location Manager"

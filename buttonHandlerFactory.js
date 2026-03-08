@@ -2653,7 +2653,7 @@ export const BUTTON_REGISTRY = {
   },
   'safari_action_type_select_*': {
     label: 'Select Outcome Type',
-    description: 'String select menu for choosing outcome type to add to an action',
+    description: 'Add outcome to action. Suffix _true = Pass, _false = Fail. Uses shared OUTCOME_TYPE_OPTIONS from customActionUI.js',
     emoji: '🎯',
     style: 'Primary',
     category: 'safari_management',

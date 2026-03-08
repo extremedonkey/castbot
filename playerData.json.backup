@@ -839,29 +839,18 @@
           "currency": 55,
           "history": [
             {
-              "t": 1772943264168,
+              "t": 1772945727611,
               "type": "admin",
               "desc": "[ADMIN] Player de-initialized"
             },
             {
-              "t": 1772943330924,
-              "type": "action",
-              "desc": "⛈️ Fight the storm\n> • Text: \"You paddle swiftly towards the eye of the storm, waves br...\"",
-              "loc": "G1"
-            },
-            {
-              "t": 1772943340166,
+              "t": 1772945851608,
               "type": "init",
               "desc": "Initialized at A3 with +55 Gil (total: 55)",
               "loc": "A3"
-            },
-            {
-              "t": 1772943343818,
-              "type": "init",
-              "desc": "Initialized at A3 with 55 Gil"
             }
           ],
-          "lastInteraction": 1772943262533,
+          "lastInteraction": 1772945726100,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -883,12 +872,7 @@
                 {
                   "from": null,
                   "to": "A3",
-                  "timestamp": "2026-03-08T04:15:40.166Z"
-                },
-                {
-                  "from": "A3",
-                  "to": "A3",
-                  "timestamp": "2026-03-08T04:15:40.199Z"
+                  "timestamp": "2026-03-08T04:57:31.606Z"
                 }
               ],
               "startingLocation": "A3"
@@ -898,7 +882,7 @@
             "stamina": {
               "current": 1,
               "maximum": 1,
-              "lastRegeneration": "2026-03-08T04:15:40.166Z",
+              "lastRegeneration": "2026-03-08T04:57:31.606Z",
               "regenConfig": "hourly"
             }
           }
@@ -1525,6 +1509,11 @@
               "type": "init",
               "desc": "Initialized at G1 with +55 Gil (total: 55)",
               "loc": "G1"
+            },
+            {
+              "t": 1772943345944,
+              "type": "init",
+              "desc": "Initialized at G1 with 55 Gil"
             }
           ],
           "lastInteraction": 1772943341818,
