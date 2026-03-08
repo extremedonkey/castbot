@@ -105,18 +105,24 @@ components.push({
 // Needed (plain):      1. Calculate Results All Players
 ```
 
-**Max label length check** — all current summaries are well under the 100-char Discord limit:
+**Max label length: 100 characters (Discord limit).** Some outcome types include user-defined content (Display Text titles, item names, action names) which can be any length. **`getActionSummaryPlain()` MUST always truncate the final string to 100 chars.** Apply a guard at the end, after all case logic:
 
-| Outcome Type | Longest Realistic Example | Length |
-|-------------|--------------------------|--------|
-| Calculate Attack | `1. Calculate Attack All Players \| Display Results` | 52 |
-| Give Role | `1. Give Role Role ID: 1234567890123456789 (on conditions met)` | 62 |
-| Give Item | `1. Give Item Some Long Item Name x99 (once per player)` | 55 |
-| Display Text | `1. Display Text Some fifty character title text here...` | 56 |
-| Follow-up Action | `1. Follow-up Action Some Action Name Here` | 43 |
-| Modify Attribute | `1. Modify Attribute strength +100` | 35 |
+```javascript
+const MAX_SELECT_LABEL = 100;
+function getActionSummaryPlain(action, number, guildItems, guildButtons) {
+  let summary;
+  switch (action.type) {
+    // ... build summary string per type ...
+  }
+  // ALWAYS truncate — user-defined content can be any length
+  if (summary.length > MAX_SELECT_LABEL) {
+    summary = summary.substring(0, MAX_SELECT_LABEL - 1) + '…';
+  }
+  return summary;
+}
+```
 
-No truncation needed for labels. The Display Text type already truncates content at 50 chars.
+Typical lengths are 35-62 chars, but the truncation guard is mandatory to prevent Discord API errors.
 
 ---
 
