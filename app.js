@@ -27422,6 +27422,34 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
       
+    } else if (custom_id.startsWith('action_editor_back_')) {
+      // Back button from Action Editor → Action list
+      return ButtonHandlerFactory.create({
+        id: 'action_editor_back',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        ephemeral: true,
+        handler: async (context) => {
+          try {
+            const { createCustomActionSelectionUI } = await import('./customActionUI.js');
+            const ui = await createCustomActionSelectionUI({ guildId: context.guildId });
+            return { ...ui, ephemeral: true };
+          } catch (err) {
+            console.error(`❌ action_editor_back failed:`, err);
+            return {
+              flags: (1 << 15),
+              components: [{
+                type: 17, accent_color: 0xe74c3c,
+                components: [
+                  { type: 10, content: `## ❌ Navigation Error\n\nCould not load the Actions list. Please use \`/menu\` to navigate back.` }
+                ]
+              }],
+              ephemeral: true
+            };
+          }
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('custom_action_delete_confirm_')) {
       // Handle delete confirmation - actually delete the action
       return ButtonHandlerFactory.create({

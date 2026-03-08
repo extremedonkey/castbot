@@ -996,6 +996,13 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari'
   },
+  'action_editor_back_*': {
+    label: '← Actions',
+    description: 'Back button from Action Editor to Action list',
+    emoji: '←',
+    style: 'Secondary',
+    category: 'safari'
+  },
   'outcome_select_*': {
     label: 'Outcome Actions',
     description: 'String select per outcome — edit, reorder, clone, toggle pass/fail, delete',

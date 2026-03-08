@@ -503,10 +503,16 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           return components;
         })(),
 
-        // Action buttons - ONLY Delete button
+        // Navigation + Delete
         {
           type: 1, // Action Row
           components: [
+            {
+              type: 2,
+              custom_id: `action_editor_back_${actionId}`,
+              label: "← Actions",
+              style: 2
+            },
             {
               type: 2,
               custom_id: `custom_action_delete_${actionId}`,
