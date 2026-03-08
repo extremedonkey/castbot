@@ -3,7 +3,7 @@
 
 export const SAFARI_LIMITS = {
   // Action limits (legacy names: "button" = Action entity, "actions" = Outcomes)
-  MAX_ACTIONS_PER_BUTTON: 10,      // Max outcomes per action (alias: MAX_OUTCOMES_PER_ACTION) — doubled by String Select pattern
+  MAX_ACTIONS_PER_BUTTON: 7,       // Max outcomes per action (alias: MAX_OUTCOMES_PER_ACTION) — 7 max with both Add Outcome selects visible (22 fixed + 14 outcomes + 4 selects = 40)
   MAX_BUTTON_LABEL_LENGTH: 80,     // Max action label length
   MAX_BUTTONS_PER_GUILD: 100,      // Max actions per guild (alias: MAX_ACTIONS_PER_GUILD)
   

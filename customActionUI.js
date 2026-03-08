@@ -826,7 +826,7 @@ function getActionSummaryPlain(action, number, guildItems = {}, guildButtons = {
     case 'display_text': {
       let displayText = action.config?.title || action.config?.content || action.text || 'No text configured';
       const truncated = displayText.substring(0, 50) + (displayText.length > 50 ? '...' : '');
-      summary = `${number}. Display Text ${truncated}`;
+      summary = `${number}. Display Text | ${truncated}`;
       break;
     }
     case 'give_item': {
@@ -835,47 +835,47 @@ function getActionSummaryPlain(action, number, guildItems = {}, guildButtons = {
       const qty = action.config?.quantity || action.quantity || 1;
       const limitText = action.config?.limit?.type ? ` (${action.config.limit.type.replace(/_/g, ' ')})` : '';
       const op = action.config?.operation === 'remove' ? 'Remove Item' : 'Give Item';
-      summary = `${number}. ${op} ${itemName} x${qty}${limitText}`;
+      summary = `${number}. ${op} | ${itemName} x${qty}${limitText}`;
       break;
     }
     case 'give_currency': {
       const amount = action.config?.amount || action.amount || 0;
       const displayAmount = amount > 0 ? `+${amount}` : `${amount}`;
       const limitText = action.config?.limit?.type ? ` (${action.config.limit.type.replace(/_/g, ' ')})` : '';
-      summary = `${number}. Give Currency ${displayAmount}${limitText}`;
+      summary = `${number}. Give Currency | ${displayAmount}${limitText}`;
       break;
     }
     case 'update_currency':
-      summary = `${number}. Update Currency ${action.amount || 0}`;
+      summary = `${number}. Update Currency | ${action.amount || 0}`;
       break;
     case 'give_role': {
       const roleId = action.config?.roleId || action.roleId;
-      summary = `${number}. Give Role ${roleId ? `<@&${roleId}>` : 'Not selected'}`;
+      summary = `${number}. Give Role | ${roleId ? `<@&${roleId}>` : 'Not selected'}`;
       break;
     }
     case 'remove_role': {
       const roleId = action.config?.roleId || action.roleId;
-      summary = `${number}. Remove Role ${roleId ? `<@&${roleId}>` : 'Not selected'}`;
+      summary = `${number}. Remove Role | ${roleId ? `<@&${roleId}>` : 'Not selected'}`;
       break;
     }
     case 'follow_up_button':
     case 'follow_up': {
       const targetId = action.config?.buttonId || action.buttonId;
       if (!targetId) {
-        summary = `${number}. Follow-up Action Not configured`;
+        summary = `${number}. Follow-up Action | Not configured`;
       } else {
         const target = guildButtons[targetId];
         const targetName = target?.name || target?.label || targetId;
-        summary = `${number}. Follow-up Action ${targetName}`;
+        summary = `${number}. Follow-up Action | ${targetName}`;
       }
       break;
     }
     case 'create_button':
-      summary = `${number}. Create Button ${action.buttonLabel || ''}`;
+      summary = `${number}. Create Button | ${action.buttonLabel || ''}`;
       break;
     case 'calculate_results': {
       const scope = action?.config?.scope || 'all_players';
-      summary = `${number}. Calculate Results ${scope === 'single_player' ? 'Single Player' : 'All Players'}`;
+      summary = `${number}. Calculate Results | ${scope === 'single_player' ? 'Single Player' : 'All Players'}`;
       break;
     }
     case 'calculate_attack': {
@@ -883,7 +883,7 @@ function getActionSummaryPlain(action, number, guildItems = {}, guildButtons = {
       const displayMode = action?.config?.displayMode || 'silent';
       const scopeText = playerScope === 'executing_player' ? 'Executing Player' : 'All Players';
       const modeText = displayMode === 'display_text' ? 'Display Results' : 'Silent';
-      summary = `${number}. Calculate Attack ${scopeText} | ${modeText}`;
+      summary = `${number}. Calculate Attack | ${scopeText}, ${modeText}`;
       break;
     }
     case 'modify_attribute': {
@@ -891,14 +891,14 @@ function getActionSummaryPlain(action, number, guildItems = {}, guildButtons = {
       const op = action?.config?.operation || 'add';
       const amt = action?.config?.amount || 0;
       const sym = op === 'add' ? '+' : (op === 'subtract' ? '-' : '=');
-      summary = `${number}. Modify Attribute ${attrId} ${sym}${Math.abs(amt)}`;
+      summary = `${number}. Modify Attribute | ${attrId} ${sym}${Math.abs(amt)}`;
       break;
     }
     case 'manage_player_state': {
       const modeLabels = { initialize: 'Init', teleport: 'Teleport', init_or_teleport: 'Init/Teleport', deinitialize: 'De-init' };
       const mode = modeLabels[action?.config?.mode] || 'Init';
       const coord = action?.config?.coordinate ? ` → ${action.config.coordinate}` : ' → Default';
-      summary = `${number}. Safari Player State ${mode}${coord}`;
+      summary = `${number}. Safari Player State | ${mode}${coord}`;
       break;
     }
     default:
