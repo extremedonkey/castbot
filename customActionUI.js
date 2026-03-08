@@ -12,15 +12,15 @@ import { scheduler } from './scheduler.js';
  * When adding a new outcome type, add it here — it will appear in both selects automatically.
  */
 const OUTCOME_TYPE_OPTIONS = [
-  { label: 'Display Text', value: 'display_text', emoji: { name: '📄' } },
-  { label: 'Give / Remove Currency', value: 'give_currency', emoji: { name: '🪙' } },
-  { label: 'Give / Remove Item', value: 'give_item', emoji: { name: '🎁' } },
-  { label: 'Give Role', value: 'give_role', emoji: { name: '👑' } },
-  { label: 'Remove Role', value: 'remove_role', emoji: { name: '🚫' } },
-  { label: 'Modify Attribute', value: 'modify_attribute', emoji: { name: '📊' } },
-  { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' } },
-  { label: 'Calculate Results', value: 'calculate_results', emoji: { name: '🌾' } },
-  { label: 'Calculate Attack', value: 'calculate_attack', emoji: { name: '⚔️' } }
+  { label: 'Display Text', value: 'display_text', emoji: { name: '📄' }, description: 'Show a message, image, or styled text to the player' },
+  { label: 'Give / Remove Currency', value: 'give_currency', emoji: { name: '🪙' }, description: 'Award or deduct currency with optional usage limits' },
+  { label: 'Give / Remove Item', value: 'give_item', emoji: { name: '🎁' }, description: 'Add or remove items from the player\'s inventory' },
+  { label: 'Give Role', value: 'give_role', emoji: { name: '👑' }, description: 'Assign a Discord role to the player' },
+  { label: 'Remove Role', value: 'remove_role', emoji: { name: '🚫' }, description: 'Remove a Discord role from the player' },
+  { label: 'Modify Attribute', value: 'modify_attribute', emoji: { name: '📊' }, description: 'Change a player stat like HP, Mana, or Strength' },
+  { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' }, description: 'Chain into another action after this one completes' },
+  { label: 'Calculate Results', value: 'calculate_results', emoji: { name: '🌾' }, description: 'Process harvest/income for all or the triggering player' },
+  { label: 'Calculate Attack', value: 'calculate_attack', emoji: { name: '⚔️' }, description: 'Run combat calculations between players or vs environment' }
 ];
 
 /**
