@@ -93,10 +93,11 @@ const SAFE_TEST_BUTTONS = {
 const FEATURE_PATTERNS = {
   actions: [
     /customAction/i,
-    /outcome_select/,
+    /outcome/i,
     /action.*editor/i,
     /safari_action/,
-    /safariLimits/i
+    /safariLimits/i,
+    /\bactions?\b/i
   ],
   safari: [
     /safari/i,
