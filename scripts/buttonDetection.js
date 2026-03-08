@@ -91,7 +91,9 @@ const FEATURE_PATTERNS = {
     /safariManager\.js/,
     /safariContent\.json/,
     /custom_id.*safari_/,
-    /prod_safari/
+    /prod_safari/,
+    /customAction/i,
+    /outcome_select/
   ],
   ranking: [
     /ranking/i,
