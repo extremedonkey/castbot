@@ -905,6 +905,48 @@
               "type": "action",
               "desc": "🕹️ Hybrid Button -> Modal\n> • Text: \"Cuz you got it\"",
               "loc": "Unknown"
+            },
+            {
+              "t": 1772962046415,
+              "type": "action",
+              "desc": "🕹️ Hybrid Button Code Test\n> • Text: \"Woot!\"",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772962518016,
+              "type": "action",
+              "desc": "🔒 What's the Password?\n> • Text: \"☠️☠️☠️\"",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772962518016,
+              "type": "action",
+              "desc": "What's the Password?\n> • Text: \"🐺🐺🐺🐺\"\n> • Text: \"☠️☠️☠️\"",
+              "loc": "button_modal"
+            },
+            {
+              "t": 1772962525200,
+              "type": "action",
+              "desc": "🔒 What's the Password?\n> • Text: \"🐺🐺🐺🐺\"",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772962525200,
+              "type": "action",
+              "desc": "What's the Password?\n> • Text: \"🐺🐺🐺🐺\"\n> • Text: \"☠️☠️☠️\"",
+              "loc": "button_modal"
+            },
+            {
+              "t": 1772962591894,
+              "type": "action",
+              "desc": "🔒 What's the Password?\n> • Text: \"☠️☠️☠️\"",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772962591894,
+              "type": "action",
+              "desc": "What's the Password?\n> • Text: \"🐺🐺🐺🐺\"\n> • Text: \"☠️☠️☠️\"",
+              "loc": "button_modal"
             }
           ],
           "lastInteraction": 1772945726100,

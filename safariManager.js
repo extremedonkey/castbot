@@ -4543,7 +4543,8 @@ async function createCraftingMenuUI(guildId, userId) {
         const craftingActions = Object.entries(allButtons)
             .filter(([actionId, action]) => {
                 const visibility = action.menuVisibility || 'none';
-                return visibility === 'crafting_menu' && action.trigger?.type === 'button';
+                const triggerType = action.trigger?.type || 'button';
+                return visibility === 'crafting_menu' && (triggerType === 'button' || triggerType === 'button_modal');
             })
             .map(([actionId, action]) => ({ ...action, actionId })); // Add actionId to the object
 
@@ -4602,9 +4603,13 @@ async function createCraftingMenuUI(guildId, userId) {
                 const actionRow = {
                     type: 1, // ActionRow
                     components: rowActions.map(action => {
+                        // button_modal triggers use modal_launcher_ prefix so they show a modal on click
+                        const buttonCustomId = action.trigger?.type === 'button_modal'
+                            ? `modal_launcher_${guildId}_${action.actionId}_${Date.now()}`
+                            : `safari_${guildId}_${action.actionId}`;
                         const button = {
                             type: 2, // Button
-                            custom_id: `safari_${guildId}_${action.actionId}`,
+                            custom_id: buttonCustomId,
                             label: (action.inventoryConfig?.buttonLabel || action.trigger?.button?.label || action.name || 'Craft').slice(0, 80),
                             // Fall back through: inventoryConfig -> trigger.button -> direct button property -> default
                             style: getButtonStyleNumber(action.inventoryConfig?.buttonStyle || action.trigger?.button?.style || action.style || 'Secondary')
