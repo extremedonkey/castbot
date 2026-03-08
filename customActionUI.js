@@ -396,14 +396,15 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
         },
 
         // Trigger Configuration Section
+        { type: 10, content: `## \`\`\`🚀 Triggers\`\`\`` },
         {
           type: 9, // Section
           components: [{
             type: 10,
-            content: `## \`\`\`🚀 Triggers\`\`\`\n-# How does this action get activated?\n${getTriggerTypeLabel(triggerType)}`
+            content: `-# How does this action get activated?\n${getTriggerTypeLabel(triggerType)}`
           }],
           accessory: {
-            type: 2, // Button
+            type: 2,
             custom_id: `entity_action_trigger_${actionId}`,
             label: "Manage",
             style: 2,
@@ -412,11 +413,12 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
         },
 
         // Locations Section (below Triggers)
+        { type: 10, content: `## \`\`\`📍 Locations\`\`\`` },
         {
           type: 9, // Section
           components: [{
             type: 10,
-            content: `## \`\`\`📍 Locations\`\`\`\n-# Where can players find this action?\n${formatButtonLocations(action, guildItems)}`
+            content: `-# Where can players find this action?\n${formatButtonLocations(action, guildItems)}`
           }],
           accessory: {
             type: 2,
@@ -428,15 +430,16 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
         },
 
         // Conditions Section (below Locations, above Outcomes)
+        { type: 10, content: `## \`\`\`🧩 Conditions\`\`\`` },
         {
           type: 9, // Section
           components: [{
             type: 10,
-            content: `## \`\`\`🧩 Conditions\`\`\`\n-# What gets checked when it is triggered?\n${conditionsDisplay}`
+            content: `-# What gets checked when it is triggered?\n${conditionsDisplay}`
           }],
           accessory: {
             type: 2,
-            custom_id: `condition_manager_${actionId}_0`, // Start at page 0
+            custom_id: `condition_manager_${actionId}_0`,
             label: "Manage",
             style: 2,
             emoji: { name: "🧩" }
