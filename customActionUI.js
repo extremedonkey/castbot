@@ -780,9 +780,16 @@ function getActionListComponents(actions, actionId, guildItems = {}, guildButton
     const toggleEmoji = currentExecuteOn === 'true' ? '🔴' : '🟢';
     const toggleDesc = currentExecuteOn === 'true' ? 'Runs on fail instead' : 'Runs on pass instead';
 
+    // Match emoji to outcome type (same as OUTCOME_TYPE_OPTIONS)
+    const outcomeEmoji = {
+      display_text: '📄', give_currency: '🪙', give_item: '🎁', give_role: '👑',
+      remove_role: '🚫', modify_attribute: '📊', follow_up_button: '🔗', follow_up: '🔗',
+      calculate_results: '🌾', calculate_attack: '⚔️', manage_player_state: '🚀'
+    }[action.type] || '▫️';
+
     // Build options array
     const options = [
-      { label: summaryText, value: 'summary', default: true, emoji: { name: '▫️' } },
+      { label: summaryText, value: 'summary', default: true, emoji: { name: outcomeEmoji } },
       { label: 'Edit Outcome', value: 'edit', emoji: { name: '✏️' }, description: 'Configure settings' },
       { label: 'Move Up', value: 'move_up', emoji: { name: '⬆️' }, description: 'Change execution order' },
       { label: 'Move Down', value: 'move_down', emoji: { name: '⬇️' }, description: 'Change execution order' },
