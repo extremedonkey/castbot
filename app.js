@@ -19741,6 +19741,7 @@ Your server is now ready for Tycoons gameplay!`;
       // Handle mode selection (initialize/teleport/init_or_teleport/deinitialize)
       return ButtonHandlerFactory.create({
         id: 'safari_player_state_mode',
+        updateMessage: true,
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
@@ -19782,7 +19783,7 @@ Your server is now ready for Tycoons gameplay!`;
           const updatedConfig = await showManagePlayerStateConfig(context.guildId, buttonId, actionIndex);
 
           console.log(`✅ SUCCESS: safari_player_state_mode - updated to ${modeValue}`);
-          return { ...updatedConfig, ephemeral: true };
+          return updatedConfig;
         }
       })(req, res, client);
 
@@ -19790,6 +19791,7 @@ Your server is now ready for Tycoons gameplay!`;
       // Handle execute_on selection
       return ButtonHandlerFactory.create({
         id: 'safari_player_state_execute_on',
+        updateMessage: true,
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
@@ -19820,7 +19822,7 @@ Your server is now ready for Tycoons gameplay!`;
           const updatedConfig = await showManagePlayerStateConfig(context.guildId, buttonId, actionIndex);
 
           console.log(`✅ SUCCESS: safari_player_state_execute_on - updated to ${executeOnValue}`);
-          return { ...updatedConfig, ephemeral: true };
+          return updatedConfig;
         }
       })(req, res, client);
 
