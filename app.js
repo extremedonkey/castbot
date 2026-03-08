@@ -27909,6 +27909,35 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
       
+    } else if (custom_id.startsWith('untrack_channel_')) {
+      // Remove a tracked posted channel from an action
+      return ButtonHandlerFactory.create({
+        id: 'untrack_channel',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          // Parse: untrack_channel_{actionId}_{channelId}
+          const suffix = context.customId.replace('untrack_channel_', '');
+          const lastUnderscore = suffix.lastIndexOf('_');
+          const actionId = suffix.substring(0, lastUnderscore);
+          const channelId = suffix.substring(lastUnderscore + 1);
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const action = allSafariContent[context.guildId]?.buttons?.[actionId];
+
+          if (!action) return { content: '❌ Action not found.', ephemeral: true };
+
+          action.postedChannels = (action.postedChannels || []).filter(id => id !== channelId);
+          await saveSafariContent(allSafariContent);
+          console.log(`🗑️ Untracked channel ${channelId} from action ${actionId}`);
+
+          const { createCoordinateManagementUI } = await import('./customActionUI.js');
+          return await createCoordinateManagementUI({ guildId: context.guildId, actionId });
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('add_coord_modal_')) {
       // Handle coordinate addition modal
       return ButtonHandlerFactory.create({

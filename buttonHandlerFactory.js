@@ -1010,6 +1010,13 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari'
   },
+  'untrack_channel_*': {
+    label: 'Remove Channel',
+    description: 'Remove a tracked posted channel from an action',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari'
+  },
   'outcome_select_*': {
     label: 'Outcome Actions',
     description: 'String select per outcome — edit, reorder, clone, toggle pass/fail, delete',

@@ -991,7 +991,11 @@
             "nurturer_361363": 1,
             "territory_forager_404120": 1,
             "nest_guardian_461600": 1,
-            "raider_499497": 1
+            "raider_499497": 1,
+            "levitating_wings_688811": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            }
           },
           "cooldowns": {},
           "buttonUses": {},
