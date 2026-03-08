@@ -2747,6 +2747,39 @@ export const BUTTON_REGISTRY = {
     type: 'select_menu'
   },
 
+  // Manage Player State config selects/buttons
+  'safari_player_state_mode': {
+    label: 'Player State Mode',
+    description: 'Select mode: initialize, teleport, init or teleport, or de-initialize',
+    emoji: '🚀',
+    style: 'Primary',
+    category: 'safari_custom_actions',
+    type: 'select_menu'
+  },
+  'safari_player_state_execute_on': {
+    label: 'Player State Execution Condition',
+    description: 'Select when player state outcome should execute (conditions true/false)',
+    emoji: '✅',
+    style: 'Primary',
+    category: 'safari_custom_actions',
+    type: 'select_menu'
+  },
+  'safari_player_state_coord_modal': {
+    label: 'Set Target Coordinate',
+    description: 'Open modal to set the target coordinate for initialization or teleport',
+    emoji: '📍',
+    style: 'Primary',
+    category: 'safari_custom_actions',
+    requiresModal: true
+  },
+  'safari_player_state_coord_clear': {
+    label: 'Use Default Coordinate',
+    description: 'Clear custom coordinate and use default starting location resolution',
+    emoji: '🔄',
+    style: 'Secondary',
+    category: 'safari_custom_actions'
+  },
+
   // Modify Attribute Action config selects
   'safari_modify_attr_select': {
     label: 'Attribute Selection',

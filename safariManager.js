@@ -311,7 +311,9 @@ const ACTION_TYPES = {
     MOVE_PLAYER: 'move_player',          // NEW: Move player on map
     APPLY_REGENERATION: 'apply_regeneration', // NEW: Force regeneration check
     // Attribute System Actions
-    MODIFY_ATTRIBUTE: 'modify_attribute' // NEW: Add/subtract/set player attributes
+    MODIFY_ATTRIBUTE: 'modify_attribute', // NEW: Add/subtract/set player attributes
+    // Player State Actions
+    MANAGE_PLAYER_STATE: 'manage_player_state' // Initialize, teleport, or de-initialize the triggering player
 };
 
 // Condition types for conditional actions
@@ -1697,7 +1699,12 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                     result = await executeMovePlayer(action.config, guildId, userId, interaction);
                     responses.push(result);
                     break;
-                    
+
+                case ACTION_TYPES.MANAGE_PLAYER_STATE:
+                    result = await executeManagePlayerState(action.config, guildId, userId, interaction);
+                    responses.push(result);
+                    break;
+
                 case 'give_currency':
                     // Find the original action index in the unsorted button.actions array
                     const currencyActionIndex = button.actions.findIndex(a => a === action);
@@ -3400,6 +3407,85 @@ async function executeMovePlayer(config, guildId, userId, interaction) {
         console.error('Error executing player movement:', error);
         return {
             content: '❌ Error processing movement.',
+            flags: InteractionResponseFlags.EPHEMERAL
+        };
+    }
+}
+
+/**
+ * Execute manage_player_state outcome — initialize, teleport, or de-initialize the triggering player.
+ * ALWAYS operates on the single triggering player's userId. No "all_players" scope.
+ */
+async function executeManagePlayerState(config, guildId, userId, interaction) {
+    try {
+        const { mode, coordinate } = config;
+        const client = interaction.client || interaction.guild?.client;
+
+        const { isPlayerInitialized } = await import('./safariPlayerUtils.js');
+        const playerData = await loadPlayerData();
+        const player = playerData[guildId]?.players?.[userId];
+        const initialized = isPlayerInitialized(player);
+
+        switch (mode) {
+            case 'initialize': {
+                if (initialized) {
+                    return { content: '❌ You are already on the map!' };
+                }
+                const { initializePlayerOnMap } = await import('./safariMapAdmin.js');
+                await initializePlayerOnMap(guildId, userId, coordinate || null, client);
+
+                const coordMsg = coordinate ? ` at **${coordinate}**` : '';
+                return { content: `✅ Welcome to the Safari! You have been placed on the map${coordMsg}.` };
+            }
+
+            case 'teleport': {
+                if (!initialized) {
+                    return { content: '❌ You must be on the map to be teleported!' };
+                }
+                if (!coordinate) {
+                    return { content: '❌ No destination configured for this action.' };
+                }
+                const result = await movePlayer(guildId, userId, coordinate, client, {
+                    bypassStamina: true,
+                    adminMove: true
+                });
+                return { content: result.message };
+            }
+
+            case 'init_or_teleport': {
+                if (!initialized) {
+                    const { initializePlayerOnMap } = await import('./safariMapAdmin.js');
+                    await initializePlayerOnMap(guildId, userId, coordinate || null, client);
+                    const coordMsg = coordinate ? ` at **${coordinate}**` : '';
+                    return { content: `✅ Welcome to the Safari! You have been placed on the map${coordMsg}.` };
+                } else {
+                    if (!coordinate) {
+                        return { content: 'ℹ️ You are already on the map.' };
+                    }
+                    const result = await movePlayer(guildId, userId, coordinate, client, {
+                        bypassStamina: true,
+                        adminMove: true
+                    });
+                    return { content: result.message };
+                }
+            }
+
+            case 'deinitialize': {
+                if (!initialized) {
+                    return { content: '❌ You are not currently on the map.' };
+                }
+                const { deinitializePlayer } = await import('./safariDeinitialization.js');
+                await deinitializePlayer(guildId, userId, client);
+                return { content: '👋 You have been removed from the map.' };
+            }
+
+            default:
+                return { content: `❌ Unknown player state mode: ${mode}` };
+        }
+    } catch (error) {
+        console.error('Error executing manage_player_state:', error);
+        return {
+            content: '❌ Error managing player state.',
             flags: InteractionResponseFlags.EPHEMERAL
         };
     }

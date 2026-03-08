@@ -20,7 +20,8 @@ const OUTCOME_TYPE_OPTIONS = [
   { label: 'Modify Attribute', value: 'modify_attribute', emoji: { name: '📊' }, description: 'Change a player stat like HP, Mana, or Strength' },
   { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' }, description: 'Chain into another action after this one completes' },
   { label: 'Calculate Results', value: 'calculate_results', emoji: { name: '🌾' }, description: 'Process harvest/income for all or the triggering player' },
-  { label: 'Calculate Attack', value: 'calculate_attack', emoji: { name: '⚔️' }, description: 'Run combat calculations between players or vs environment' }
+  { label: 'Calculate Attack', value: 'calculate_attack', emoji: { name: '⚔️' }, description: 'Run combat calculations between players or vs environment' },
+  { label: 'Safari Player State', value: 'manage_player_state', emoji: { name: '🚀' }, description: 'Initialize, teleport, or de-initialize the triggering player' }
 ];
 
 /**
@@ -835,6 +836,8 @@ function getActionTypeLabel(action) {
       return 'Calculate Attack';
     case 'modify_attribute':
       return 'Modify Attribute';
+    case 'manage_player_state':
+      return 'Safari Player State';
     default:
       return action.type ? action.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Unknown Action';
   }
@@ -922,6 +925,12 @@ function getActionSummary(action, number, guildItems = {}, guildButtons = {}, is
       const attrAmount = action?.config?.amount || 0;
       const attrOpSymbol = attrOperation === 'add' ? '+' : (attrOperation === 'subtract' ? '-' : '=');
       return `**\`${number}. Modify Attribute\`** ${attrId} ${attrOpSymbol}${Math.abs(attrAmount)}`;
+    case 'manage_player_state': {
+      const modeLabels = { initialize: '🚀 Init', teleport: '🌀 Teleport', init_or_teleport: '🔄 Init/Teleport', deinitialize: '❌ De-init' };
+      const stateMode = modeLabels[action?.config?.mode] || '🚀 Init';
+      const stateCoord = action?.config?.coordinate ? ` → ${action.config.coordinate}` : ' → Default';
+      return `**\`${number}. Safari Player State\`** ${stateMode}${stateCoord}`;
+    }
     default:
       return `**${number}. ${action.type || 'Unknown Action'}**`;
   }
@@ -3164,6 +3173,204 @@ export async function showCalculateResultsConfig(guildId, buttonId, actionIndex)
           ]
         }
       ]
+    }],
+    flags: (1 << 15), // IS_COMPONENTS_V2
+    ephemeral: true
+  };
+}
+
+/**
+ * Show configuration UI for manage_player_state outcome
+ * Allows admins to configure initialize/teleport/de-initialize behavior
+ */
+export async function showManagePlayerStateConfig(guildId, buttonId, actionIndex) {
+  const safariData = await loadSafariContent();
+  const button = safariData[guildId]?.buttons?.[buttonId];
+
+  let action = null;
+  if (button && button.actions && button.actions[actionIndex]) {
+    action = button.actions[actionIndex];
+  }
+
+  const currentMode = action?.config?.mode || 'initialize';
+  const currentCoordinate = action?.config?.coordinate || null;
+
+  // Build description based on current mode
+  const modeDescriptions = {
+    initialize: '🚀 **Initialize** — Places the player on the map with starting currency, items, and stamina. Fails if already initialized.',
+    teleport: '🌀 **Teleport** — Moves the player to the target coordinate (bypasses stamina/adjacency). Fails if not initialized. Coordinate is required.',
+    init_or_teleport: '🔄 **Initialize or Teleport** — Initializes new players, teleports existing ones. The most flexible option for "Join Safari" buttons.',
+    deinitialize: '❌ **De-initialize** — Removes the player from the map entirely. Channel permissions revoked, starting location preserved for re-init.'
+  };
+
+  const coordinateDisplay = currentCoordinate
+    ? `📍 Target: **${currentCoordinate}**`
+    : '📍 Target: **Default** (uses per-player starting location → server default → A1)';
+
+  const showCoordinate = currentMode !== 'deinitialize';
+
+  const components = [
+    {
+      type: 10, // Text Display
+      content: '## 🚀 Safari Player State Configuration'
+    },
+
+    { type: 14 }, // Separator
+
+    {
+      type: 10,
+      content: 'Changes the player\'s Safari state when this outcome executes. **Always affects only the player who triggers the action** — never other players.\n\nUse cases: self-service onboarding ("Join Safari" button), secret location portals, elimination mechanics, event resets.'
+    },
+
+    { type: 14 }, // Separator
+
+    // Mode selection
+    {
+      type: 10,
+      content: '### Mode\nWhat should happen to the player?'
+    },
+    {
+      type: 1, // Action Row
+      components: [{
+        type: 3, // String Select
+        custom_id: `safari_player_state_mode_${buttonId}_${actionIndex}`,
+        placeholder: 'Select mode...',
+        options: [
+          {
+            label: 'Initialize Player',
+            value: 'initialize',
+            description: 'Place on map with currency, items, stamina',
+            emoji: { name: '🚀' },
+            default: currentMode === 'initialize'
+          },
+          {
+            label: 'Teleport Player',
+            value: 'teleport',
+            description: 'Move to coordinate (must already be on map)',
+            emoji: { name: '🌀' },
+            default: currentMode === 'teleport'
+          },
+          {
+            label: 'Initialize or Teleport',
+            value: 'init_or_teleport',
+            description: 'Init if new, teleport if existing — most flexible',
+            emoji: { name: '🔄' },
+            default: currentMode === 'init_or_teleport'
+          },
+          {
+            label: 'De-initialize Player',
+            value: 'deinitialize',
+            description: 'Remove from map entirely',
+            emoji: { name: '❌' },
+            default: currentMode === 'deinitialize'
+          }
+        ]
+      }]
+    },
+
+    { type: 14 }, // Separator
+
+    {
+      type: 10,
+      content: modeDescriptions[currentMode] || modeDescriptions.initialize
+    }
+  ];
+
+  // Coordinate section (hidden for de-init)
+  if (showCoordinate) {
+    components.push(
+      { type: 14 }, // Separator
+      {
+        type: 10,
+        content: `### Target Coordinate\n${coordinateDisplay}\n\n${currentMode === 'teleport' ? '⚠️ Coordinate is **required** for teleport mode.' : 'Leave as Default to use the standard starting location resolution.'}`
+      },
+      {
+        type: 1, // Action Row
+        components: [
+          {
+            type: 2, // Button
+            custom_id: `safari_player_state_coord_modal_${buttonId}_${actionIndex}`,
+            label: currentCoordinate ? `Change (${currentCoordinate})` : 'Set Coordinate',
+            style: 1, // Primary
+            emoji: { name: '📍' }
+          },
+          ...(currentCoordinate ? [{
+            type: 2, // Button
+            custom_id: `safari_player_state_coord_clear_${buttonId}_${actionIndex}`,
+            label: 'Use Default',
+            style: 2, // Secondary
+            emoji: { name: '🔄' }
+          }] : [])
+        ]
+      }
+    );
+  }
+
+  // Execute when section
+  components.push(
+    { type: 14 }, // Separator
+    {
+      type: 10,
+      content: '### Execution Condition\nWhen should this outcome execute?'
+    },
+    {
+      type: 1, // Action Row
+      components: [{
+        type: 3, // String Select
+        custom_id: `safari_player_state_execute_on_${buttonId}_${actionIndex}`,
+        placeholder: 'Select when to execute...',
+        options: (() => {
+          const effectiveExecuteOn = action?.executeOn || global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true';
+          return [
+            {
+              label: 'Outcome runs when player passes conditions',
+              value: 'true',
+              description: 'Only execute when conditions are met',
+              emoji: { name: '🟢' },
+              default: effectiveExecuteOn === 'true'
+            },
+            {
+              label: 'Outcome runs when player fails conditions',
+              value: 'false',
+              description: 'Only execute when conditions are NOT met',
+              emoji: { name: '🔴' },
+              default: effectiveExecuteOn === 'false'
+            }
+          ];
+        })()
+      }]
+    }
+  );
+
+  // Back and delete buttons
+  components.push(
+    { type: 14 }, // Separator
+    {
+      type: 1, // Action Row
+      components: [
+        {
+          type: 2, // Button
+          custom_id: `custom_action_editor_${buttonId}`,
+          label: '← Back',
+          style: 2, // Secondary
+          emoji: { name: '⚡' }
+        },
+        {
+          type: 2, // Button
+          custom_id: `safari_remove_action_${buttonId}_${actionIndex}`,
+          label: 'Delete Action',
+          style: 4, // Danger
+          emoji: { name: '🗑️' }
+        }
+      ]
+    }
+  );
+
+  return {
+    components: [{
+      type: 17, // Container
+      accent_color: 0x3498DB, // Blue accent for player state management
+      components
     }],
     flags: (1 << 15), // IS_COMPONENTS_V2
     ephemeral: true

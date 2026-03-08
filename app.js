@@ -4660,6 +4660,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_modify_attr_amount_') &&
         !custom_id.startsWith('safari_modify_attr_limit_') &&
         !custom_id.startsWith('safari_modify_attr_reset_') &&
+        !custom_id.startsWith('safari_player_state_mode_') &&
+        !custom_id.startsWith('safari_player_state_execute_on_') &&
+        !custom_id.startsWith('safari_player_state_coord_') &&
         !custom_id.startsWith('safari_all_server_items_') &&
         !custom_id.startsWith('safari_progress_') &&
         !custom_id.startsWith('safari_inv_page_') &&  // Exclude inventory pagination buttons
@@ -17028,6 +17031,41 @@ Your server is now ready for Tycoons gameplay!`;
             const { showCalculateAttackConfig } = await import('./customActionUI.js');
             return await showCalculateAttackConfig(context.guildId, buttonId, actionIndex);
 
+          // For manage_player_state, show config UI (eager save pattern)
+          } else if (actionType === 'manage_player_state') {
+            const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+            const currentButton = safariData[context.guildId]?.buttons?.[buttonId];
+
+            if (!currentButton) {
+              return { content: '❌ Button not found.', ephemeral: true };
+            }
+
+            const actionIndex = currentButton?.actions?.length || 0;
+
+            if (!currentButton.actions) {
+              currentButton.actions = [];
+            }
+
+            if (!currentButton.actions[actionIndex]) {
+              currentButton.actions[actionIndex] = {
+                type: 'manage_player_state',
+                order: actionIndex,
+                config: {
+                  mode: 'initialize',
+                  coordinate: null
+                },
+                executeOn
+              };
+
+              await saveSafariContent(safariData);
+              console.log(`💾 SAVED: safari_action_type_select - created manage_player_state outcome with defaults for ${buttonId}[${actionIndex}]`);
+            }
+
+            console.log(`✅ SUCCESS: safari_action_type_select - showing manage_player_state config for ${buttonId}[${actionIndex}]`);
+            const { showManagePlayerStateConfig } = await import('./customActionUI.js');
+            return await showManagePlayerStateConfig(context.guildId, buttonId, actionIndex);
+
           // For modify_attribute, show new entity interface
           } else if (actionType === 'modify_attribute') {
             // Load safari content to create the action
@@ -19028,6 +19066,12 @@ Your server is now ready for Tycoons gameplay!`;
             const { showModifyAttributeConfig } = await import('./customActionUI.js');
             return await showModifyAttributeConfig(context.guildId, actionId, actionIndex);
 
+          } else if (action.type === 'manage_player_state') {
+            // Show manage player state configuration
+            console.log(`✅ SUCCESS: safari_edit_action - showing manage_player_state config for ${actionId}[${actionIndex}]`);
+            const { showManagePlayerStateConfig } = await import('./customActionUI.js');
+            return await showManagePlayerStateConfig(context.guildId, actionId, actionIndex);
+
           } else if (action.type === 'give_role' || action.type === 'remove_role') {
             // Show role configuration UI inline
             console.log(`✅ SUCCESS: safari_edit_action - showing role config for ${actionId}[${actionIndex}]`);
@@ -19686,6 +19730,162 @@ Your server is now ready for Tycoons gameplay!`;
             ...updatedConfig,
             ephemeral: true
           };
+        }
+      })(req, res, client);
+
+    // ============================================================
+    // MANAGE PLAYER STATE CONFIG HANDLERS
+    // ============================================================
+
+    } else if (custom_id.startsWith('safari_player_state_mode_')) {
+      // Handle mode selection (initialize/teleport/init_or_teleport/deinitialize)
+      return ButtonHandlerFactory.create({
+        id: 'safari_player_state_mode',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: safari_player_state_mode - user ${context.userId}`);
+
+          const parts = context.customId.replace('safari_player_state_mode_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          const modeValue = context.values[0];
+
+          if (isNaN(actionIndex) || actionIndex < 0) {
+            return { content: '❌ Invalid action configuration.', ephemeral: true };
+          }
+
+          console.log(`🚀 MODE: safari_player_state_mode - setting to ${modeValue} for ${buttonId}[${actionIndex}]`);
+
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+
+          if (!button || !button.actions?.[actionIndex]) {
+            return { content: '❌ Action not found.', ephemeral: true };
+          }
+
+          if (!button.actions[actionIndex].config) {
+            button.actions[actionIndex].config = {};
+          }
+          button.actions[actionIndex].config.mode = modeValue;
+
+          // Clear coordinate for deinitialize mode (not applicable)
+          if (modeValue === 'deinitialize') {
+            button.actions[actionIndex].config.coordinate = null;
+          }
+
+          button.metadata.lastModified = Date.now();
+          await saveSafariContent(safariData);
+
+          const { showManagePlayerStateConfig } = await import('./customActionUI.js');
+          const updatedConfig = await showManagePlayerStateConfig(context.guildId, buttonId, actionIndex);
+
+          console.log(`✅ SUCCESS: safari_player_state_mode - updated to ${modeValue}`);
+          return { ...updatedConfig, ephemeral: true };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('safari_player_state_execute_on_')) {
+      // Handle execute_on selection
+      return ButtonHandlerFactory.create({
+        id: 'safari_player_state_execute_on',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: safari_player_state_execute_on - user ${context.userId}`);
+
+          const parts = context.customId.replace('safari_player_state_execute_on_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          const executeOnValue = context.values[0];
+
+          if (isNaN(actionIndex) || actionIndex < 0) {
+            return { content: '❌ Invalid action configuration.', ephemeral: true };
+          }
+
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+
+          if (!button || !button.actions?.[actionIndex]) {
+            return { content: '❌ Action not found.', ephemeral: true };
+          }
+
+          button.actions[actionIndex].executeOn = executeOnValue;
+          button.metadata.lastModified = Date.now();
+          await saveSafariContent(safariData);
+
+          const { showManagePlayerStateConfig } = await import('./customActionUI.js');
+          const updatedConfig = await showManagePlayerStateConfig(context.guildId, buttonId, actionIndex);
+
+          console.log(`✅ SUCCESS: safari_player_state_execute_on - updated to ${executeOnValue}`);
+          return { ...updatedConfig, ephemeral: true };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('safari_player_state_coord_modal_')) {
+      // Handle "Set Coordinate" button — opens modal
+      return ButtonHandlerFactory.create({
+        id: 'safari_player_state_coord_modal',
+        requiresModal: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_player_state_coord_modal_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: `safari_player_state_coord_submit_${buttonId}_${actionIndex}`,
+              title: 'Set Target Coordinate',
+              components: [{
+                type: 18, // Label
+                label: 'Target Coordinate (e.g., B3, D5)',
+                description: 'The map coordinate to initialize or teleport the player to',
+                component: {
+                  type: 4, // Text Input
+                  custom_id: 'coordinate',
+                  style: 1, // Short
+                  placeholder: 'A1',
+                  required: true,
+                  max_length: 3
+                }
+              }]
+            }
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('safari_player_state_coord_clear_')) {
+      // Handle "Use Default" button — clears coordinate
+      return ButtonHandlerFactory.create({
+        id: 'safari_player_state_coord_clear',
+        updateMessage: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_player_state_coord_clear_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+
+          if (!button || !button.actions?.[actionIndex]) {
+            return { content: '❌ Action not found.', ephemeral: true };
+          }
+
+          button.actions[actionIndex].config.coordinate = null;
+          button.metadata.lastModified = Date.now();
+          await saveSafariContent(safariData);
+
+          const { showManagePlayerStateConfig } = await import('./customActionUI.js');
+          console.log(`✅ SUCCESS: safari_player_state_coord_clear - cleared coordinate for ${buttonId}[${actionIndex}]`);
+          return await showManagePlayerStateConfig(context.guildId, buttonId, actionIndex);
         }
       })(req, res, client);
 
@@ -42646,6 +42846,62 @@ Your server is now ready for Tycoons gameplay!`;
             content: `❌ Scheduling failed: ${error.message}`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
+        });
+      }
+
+    } else if (custom_id.startsWith('safari_player_state_coord_submit_')) {
+      // Handle coordinate modal submission for manage_player_state outcome
+      try {
+        const guildId = req.body.guild_id;
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission.')) return;
+
+        const parts = custom_id.replace('safari_player_state_coord_submit_', '').split('_');
+        const actionIndex = parseInt(parts[parts.length - 1]);
+        const buttonId = parts.slice(0, -1).join('_');
+        const coordinate = components[0].components[0].value?.trim().toUpperCase();
+
+        if (!coordinate) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: '❌ Coordinate is required.', flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+
+        if (!/^[A-Z]\d+$/.test(coordinate)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: '❌ Invalid coordinate format. Use format like A1, B3, D7.', flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+
+        const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const button = safariData[guildId]?.buttons?.[buttonId];
+
+        if (!button || !button.actions?.[actionIndex]) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: '❌ Action not found.', flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+
+        button.actions[actionIndex].config.coordinate = coordinate;
+        button.metadata.lastModified = Date.now();
+        await saveSafariContent(safariData);
+
+        console.log(`✅ SUCCESS: safari_player_state_coord_submit - set coordinate to ${coordinate} for ${buttonId}[${actionIndex}]`);
+
+        const { showManagePlayerStateConfig } = await import('./customActionUI.js');
+        const updatedConfig = await showManagePlayerStateConfig(guildId, buttonId, actionIndex);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: updatedConfig
+        });
+      } catch (error) {
+        console.error('Error handling player state coordinate modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: '❌ Error saving coordinate.', flags: InteractionResponseFlags.EPHEMERAL }
         });
       }
 

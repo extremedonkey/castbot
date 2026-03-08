@@ -464,6 +464,12 @@ async function _buildActionActivityDesc(guildId, actionType, actionId, buttonLab
         details.push(`Move: → ${dest}`);
         break;
       }
+      case 'manage_player_state': {
+        const stateMode = cfg.mode || '?';
+        const stateCoord = cfg.coordinate || 'default';
+        details.push(`Safari State: ${stateMode} → ${stateCoord}`);
+        break;
+      }
       case 'modify_points': {
         const pts = cfg.amount || cfg.points || 0;
         const entity = cfg.entityId || cfg.pointsId || '?';

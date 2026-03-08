@@ -93,7 +93,8 @@
       "Bash(npx -y xlsx-cli /home/reece/castbot/temp/challengeNames.xlsx 2>/dev/null | tail -30)",
       "Bash(./scripts/dev/dev-restart-logs.sh -v -tests \"Safari init: centralize getStartingCurrency, internalize coordinate resolution, align isPlayerInitialized check\" 2>&1 | head -80)",
       "Bash(./scripts/dev/dev-restart-logs.sh -v -tests \"Fix duplicate export for getStartingCurrency\" 2>&1 | head -120)",
-      "Bash(./scripts/dev/dev-restart-logs.sh -tests \"Clean restart after concurrent edit\" 2>&1 | tail -30)"
+      "Bash(./scripts/dev/dev-restart-logs.sh -tests \"Clean restart after concurrent edit\" 2>&1 | tail -30)",
+      "Bash(./scripts/dev/dev-restart-logs.sh -v -tests \"Add manage_player_state outcome type: initialize, teleport, init_or_teleport, de-initialize\" 2>&1 | head -60)"
     ],
     "deny": [],
     "ask": []
