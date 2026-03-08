@@ -1282,21 +1282,65 @@
           "currency": 55,
           "history": [
             {
-              "t": 1772952993544,
+              "t": 1772953214762,
               "type": "action",
               "desc": "🛬 Get me out of here!\n> • Safari State: deinitialize → default",
               "loc": "Unknown"
             },
             {
-              "t": 1772953177607,
+              "t": 1772953218269,
+              "type": "action",
+              "desc": "🔮 Broken Teleporter\n> • Safari State: teleport → B5",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772953227824,
+              "type": "item",
+              "desc": "Picked up 🪽 Levitating Wings x1",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772953227824,
+              "type": "action",
+              "desc": "🪽 Levitating Wings\n> • Text: \"The Red Bull gives you wings!\"\n> • Give Item: 🪽 Levitating Wings (x1)",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772953233422,
+              "type": "action",
+              "desc": "🕳️ Suspicious Looking Ground\n> • Text: \"🪽 You begin plummeting down the trap hole, but the wings...\"",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772953240020,
+              "type": "item",
+              "desc": "Picked up 📜 Teleport Scroll x1",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772953240020,
+              "type": "action",
+              "desc": "🔎 Inspect the ground\n> • Text: \"There's something there that looks like it might be usefu...\"\n> • Give Item: 📜 Teleport Scroll (x1)",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772953357964,
               "type": "init",
               "desc": "Initialized at B5 with +55 Gil (total: 55)",
               "loc": "B5"
             }
           ],
-          "lastInteraction": 1772952991525,
+          "lastInteraction": 1772953212740,
           "achievements": [],
           "inventory": {
+            "levitating_wings_688811": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "teleport_scroll_917265": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
             "nurturer_361363": 1,
             "territory_forager_404120": 1,
             "nest_guardian_461600": 1,
@@ -1316,12 +1360,12 @@
                 {
                   "from": null,
                   "to": "B5",
-                  "timestamp": "2026-03-08T06:59:37.607Z"
+                  "timestamp": "2026-03-08T07:02:37.963Z"
                 },
                 {
                   "from": "B5",
                   "to": "B5",
-                  "timestamp": "2026-03-08T06:59:37.667Z"
+                  "timestamp": "2026-03-08T07:02:38.014Z"
                 }
               ],
               "startingLocation": "G1"
@@ -1331,7 +1375,7 @@
             "stamina": {
               "current": 1,
               "maximum": 1,
-              "lastRegeneration": "2026-03-08T06:59:37.607Z",
+              "lastRegeneration": "2026-03-08T07:02:37.963Z",
               "regenConfig": "hourly"
             }
           }

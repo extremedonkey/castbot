@@ -267,8 +267,10 @@ function createEntitySelector(entities, selectedId, entityType, searchTerm) {
         });
     }
     
-    // Add entity options
-    Object.entries(entities).forEach(([id, entity]) => {
+    // Add entity options (newest first)
+    Object.entries(entities)
+      .sort((a, b) => (b[1].metadata?.createdAt || 0) - (a[1].metadata?.createdAt || 0))
+      .forEach(([id, entity]) => {
         let name, emoji;
         
         if (entityType === 'map_cell') {
