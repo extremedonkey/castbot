@@ -1129,9 +1129,6 @@ async function formatConditionsDisplay(conditions, guildItems = {}) {
     return 'None set, action will always execute on trigger';
   }
 
-  // Import the getConditionSummary function from safariManager
-  const { getConditionSummary } = await import('./safariManager.js');
-
   const conditionStrings = conditions.map(condition => {
     let summary = '';
 
@@ -1166,11 +1163,32 @@ async function formatConditionsDisplay(conditions, guildItems = {}) {
         summary = `📊 ${attributeId}${targetLabel} ${compSymbol} ${valueDisplay}`;
         break;
       }
+      case 'attribute_compare': {
+        const config = condition.config || {};
+        const { leftAttributeId = '?', leftTarget = 'current', comparison = 'gte', rightAttributeId = '?', rightTarget = 'current' } = config;
+        const compSymbols = { gte: '≥', lte: '≤', eq: '=', gt: '>', lt: '<' };
+        const compSymbol = compSymbols[comparison] || '≥';
+        const leftLabel = leftTarget === 'max' ? ' max' : (leftTarget === 'percent' ? '%' : '');
+        const rightLabel = rightTarget === 'max' ? ' max' : (rightTarget === 'percent' ? '%' : '');
+        summary = `📊 ${leftAttributeId}${leftLabel} ${compSymbol} ${rightAttributeId}${rightLabel}`;
+        break;
+      }
+      case 'multi_attribute_check': {
+        const config = condition.config || {};
+        const { mode = 'all', attributes = [], comparison = 'gte', value = 0 } = config;
+        const compSymbols = { gte: '≥', lte: '≤', eq: '=', gt: '>', lt: '<' };
+        const compSymbol = compSymbols[comparison] || '≥';
+        const modeLabels = { all: 'All', any: 'Any', sum: 'Sum', average: 'Avg' };
+        const modeLabel = modeLabels[mode] || 'All';
+        const attrList = attributes.length > 2 ? `${attributes.length} attrs` : (attributes.join(', ') || 'none');
+        summary = `📊 ${modeLabel}(${attrList}) ${compSymbol} ${value}`;
+        break;
+      }
+      case 'at_coordinate':
+        summary = `📍 At Location: ${condition.coordinate || '?'}`;
+        break;
       default:
-        summary = getConditionSummary ? getConditionSummary(condition) : 'Unknown condition';
-    }
-
-    return summary;
+        summary = `${condition.type || 'Unknown condition'}`;
   });
 
   return conditionStrings.join(', ');
