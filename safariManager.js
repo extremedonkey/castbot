@@ -341,7 +341,7 @@ const CONDITION_TYPES = {
 async function ensureSafariContentFile() {
     try {
         const exists = await fs.access(SAFARI_CONTENT_FILE).then(() => true).catch(() => false);
-        
+
         if (!exists) {
             const initialData = {
                 "/* Guild ID */": {
@@ -360,11 +360,42 @@ async function ensureSafariContentFile() {
             await fs.writeFile(SAFARI_CONTENT_FILE, JSON.stringify(initialData, null, 2));
             console.log('✅ Created safariContent.json with MVP2 structure');
         }
-        
+
         // Ensure existing files have MVP2 structure
-        const data = JSON.parse(await fs.readFile(SAFARI_CONTENT_FILE, 'utf8'));
+        let rawContent;
+        try {
+            rawContent = await fs.readFile(SAFARI_CONTENT_FILE, 'utf8');
+        } catch (readError) {
+            console.error('🔴 CRITICAL: Cannot read safariContent.json:', readError.message);
+            throw readError;
+        }
+
+        let data;
+        try {
+            data = JSON.parse(rawContent);
+        } catch (parseError) {
+            // File is corrupt (e.g., truncated by PM2 kill during write)
+            // DO NOT return {} — that would cause a wipe on next save
+            console.error(`🔴 CRITICAL: safariContent.json is corrupt (${rawContent.length} bytes): ${parseError.message}`);
+            console.error('🔴 Attempting recovery from backup...');
+
+            // Try to read the backup
+            const backupFile = SAFARI_CONTENT_FILE + '.bak';
+            try {
+                const backupContent = await fs.readFile(backupFile, 'utf8');
+                data = JSON.parse(backupContent);
+                // Restore from backup
+                await fs.writeFile(SAFARI_CONTENT_FILE, backupContent);
+                console.log(`✅ Recovered safariContent.json from backup (${backupContent.length} bytes)`);
+            } catch (backupError) {
+                console.error('🔴 CRITICAL: No valid backup available. Safari data is UNAVAILABLE.');
+                console.error('🔴 Manual recovery required. DO NOT restart — the corrupt file is preserved.');
+                throw new Error('safariContent.json corrupt and no backup available');
+            }
+        }
+
         let updated = false;
-        
+
         for (const guildId in data) {
             if (guildId !== '/* Guild ID */' && data[guildId]) {
                 if (!data[guildId].stores) {
@@ -390,15 +421,18 @@ async function ensureSafariContentFile() {
                 }
             }
         }
-        
+
         if (updated) {
             await fs.writeFile(SAFARI_CONTENT_FILE, JSON.stringify(data, null, 2));
             console.log('✅ Updated safariContent.json to MVP2 structure');
         }
-        
+
         return data;
     } catch (error) {
-        console.error('Error ensuring safari content file:', error);
+        console.error('🔴 CRITICAL: ensureSafariContentFile failed:', error.message);
+        console.error('🔴 Safari features will be unavailable until this is resolved.');
+        // Return empty object but DO NOT allow saves — the caller must handle this
+        // This is a last resort so the bot doesn't crash entirely
         return {};
     }
 }
@@ -428,7 +462,33 @@ async function loadSafariContent() {
  */
 async function saveSafariContent(data) {
     try {
-        await fs.writeFile(SAFARI_CONTENT_FILE, JSON.stringify(data, null, 2));
+        const json = JSON.stringify(data, null, 2);
+
+        // Size validation: prevent wipe by refusing to save suspiciously small data
+        // A healthy safariContent.json is typically >100KB. An empty/near-empty save
+        // indicates corrupted in-memory state (e.g., ensureSafariContentFile returned {}).
+        const MIN_SAFE_SIZE = 1000; // 1KB minimum
+        let existingSize = 0;
+        try {
+            const stat = await fs.stat(SAFARI_CONTENT_FILE);
+            existingSize = stat.size;
+        } catch { /* file doesn't exist yet, that's ok */ }
+
+        if (existingSize > MIN_SAFE_SIZE && json.length < MIN_SAFE_SIZE) {
+            console.error(`🔴 CRITICAL: Refusing to save safariContent.json — new data is ${json.length} bytes but existing file is ${existingSize} bytes. This looks like a data wipe.`);
+            return;
+        }
+
+        // Atomic write: write to temp file, then rename (rename is atomic on Linux)
+        const tempFile = SAFARI_CONTENT_FILE + '.tmp';
+        await fs.writeFile(tempFile, json);
+        // Create rolling backup before overwriting (keeps last known-good copy)
+        try {
+            await fs.access(SAFARI_CONTENT_FILE);
+            await fs.copyFile(SAFARI_CONTENT_FILE, SAFARI_CONTENT_FILE + '.bak');
+        } catch { /* no existing file to backup */ }
+        await fs.rename(tempFile, SAFARI_CONTENT_FILE);
+
         console.log('✅ Safari content saved successfully');
         // Clear cache after save to ensure fresh data on next read
         safariRequestCache.clear();

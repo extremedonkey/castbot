@@ -1001,6 +1001,42 @@
               "type": "action",
               "desc": "What's the Password?\n> • Text: \"☠️☠️☠️\"\n> • Text: \"☠️☠️☠️\"\n> • Currency: +55\n> • Give Item: 🪽 Levitating Wings (x1)\n> • Give Item: 🪽 Levitating Wings (x1)\n> • Give Item: 🪽 Levitating Wings (x1)",
               "loc": "button_modal"
+            },
+            {
+              "t": 1772978770038,
+              "type": "action",
+              "desc": "🔒 What's the Password?\n> • Text: \"☠️☠️☠️\"\n> • Text: \"☠️☠️☠️\"\n> • Give Item: 🪽 Levitating Wings (x1)",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772978770038,
+              "type": "action",
+              "desc": "What's the Password?\n> • Text: \"☠️☠️☠️\"\n> • Text: \"☠️☠️☠️\"\n> • Currency: +55\n> • Give Item: 🪽 Levitating Wings (x1)\n> • Give Item: 🪽 Levitating Wings (x1)\n> • Give Item: 🪽 Levitating Wings (x1)",
+              "loc": "button_modal"
+            },
+            {
+              "t": 1772979060530,
+              "type": "action",
+              "desc": "🔒 What's the Password?\n> • Text: \"☠️☠️☠️\"\n> • Text: \"☠️☠️☠️\"\n> • Give Item: 🪽 Levitating Wings (x1)",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772979060530,
+              "type": "action",
+              "desc": "What's the Password?\n> • Text: \"☠️☠️☠️\"\n> • Text: \"☠️☠️☠️\"\n> • Currency: +55\n> • Give Item: 🪽 Levitating Wings (x1)\n> • Give Item: 🪽 Levitating Wings (x1)\n> • Give Item: 🪽 Levitating Wings (x1)",
+              "loc": "button_modal"
+            },
+            {
+              "t": 1772979149086,
+              "type": "action",
+              "desc": "🔒 What's the Password?\n> • Text: \"☠️☠️☠️\"\n> • Text: \"☠️☠️☠️\"\n> • Give Item: 🪽 Levitating Wings (x1)",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772979151239,
+              "type": "action",
+              "desc": "What's the Password?\n> • Text: \"☠️☠️☠️\"\n> • Text: \"☠️☠️☠️\"\n> • Currency: +55\n> • Give Item: 🪽 Levitating Wings (x1)\n> • Give Item: 🪽 Levitating Wings (x1)\n> • Give Item: 🪽 Levitating Wings (x1)",
+              "loc": "button_modal"
             }
           ],
           "lastInteraction": 1772945726100,
@@ -1475,7 +1511,101 @@
       "630470402900230146": {
         "vanityRoles": [
           "1442029356108091463"
-        ]
+        ],
+        "safari": {
+          "currency": 55,
+          "history": [
+            {
+              "t": 1772983379093,
+              "type": "init",
+              "desc": "Initialized at B5 with +55 Gil (total: 55)",
+              "loc": "B5"
+            },
+            {
+              "t": 1772983382005,
+              "type": "action",
+              "desc": "🕳️ Suspicious Looking Ground\n> • Text: \"There's a trap door hole, you are sent to the ends of the...\"\n> • Safari State: init_or_teleport → B5",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772983426063,
+              "type": "item",
+              "desc": "Picked up 🪽 Levitating Wings x1",
+              "loc": "B5"
+            },
+            {
+              "t": 1772983426063,
+              "type": "action",
+              "desc": "🪽 Levitating Wings\n> • Text: \"The Red Bull gives you wings!\"\n> • Give Item: 🪽 Levitating Wings (x1)",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772983443969,
+              "type": "item",
+              "desc": "Picked up 📜 Teleport Scroll x1",
+              "loc": "B5"
+            },
+            {
+              "t": 1772983443969,
+              "type": "action",
+              "desc": "🔎 Inspect the ground\n> • Text: \"There's something there that looks like it might be usefu...\"\n> • Give Item: 📜 Teleport Scroll (x1)",
+              "loc": "Unknown"
+            }
+          ],
+          "lastInteraction": 1772983379093,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1,
+            "levitating_wings_688811": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "teleport_scroll_917265": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "B5",
+              "exploredCoordinates": [
+                "B5"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "B5",
+                  "timestamp": "2026-03-08T15:22:59.093Z"
+                },
+                {
+                  "from": "B5",
+                  "to": "B5",
+                  "timestamp": "2026-03-08T15:22:59.125Z"
+                },
+                {
+                  "from": "B5",
+                  "to": "B5",
+                  "timestamp": "2026-03-08T15:24:19.656Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2026-03-08T15:22:59.093Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
       },
       "719547106318352496": {
         "safari": {
