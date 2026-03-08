@@ -1192,6 +1192,9 @@ async function formatConditionsDisplay(conditions, guildItems = {}) {
         break;
       default:
         summary = `${condition.type || 'Unknown condition'}`;
+    }
+
+    return summary;
   });
 
   return conditionStrings.join(', ');
