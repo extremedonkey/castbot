@@ -1943,61 +1943,40 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
   }
 
   // --- Posted Channels section ---
+  // Display using Discord <#id> mentions — Discord renders valid channels
+  // and shows #deleted-channel for stale ones. No API validation needed on render.
   const postedChannels = action.postedChannels || [];
   if (postedChannels.length > 0) {
     components.push({ type: 14 });
+    components.push({
+      type: 10,
+      content: `### \`\`\`#️⃣ Posted Channels (${postedChannels.length})\`\`\``
+    });
 
-    // Validate channels exist via Discord API (parallel)
-    const { DiscordRequest } = await import('./utils.js');
-    const results = await Promise.allSettled(
-      postedChannels.map(async (channelId) => {
-        const resp = await DiscordRequest(`channels/${channelId}`, { method: 'GET' });
-        const channel = await resp.json();
-        if (!channel.id) throw new Error('deleted');
-        return channelId;
-      })
-    );
-    const validIds = results.filter(r => r.status === 'fulfilled').map(r => r.value);
-    const staleCount = results.filter(r => r.status === 'rejected').length;
-
-    // Clean stale channels
-    if (staleCount > 0) {
-      action.postedChannels = validIds;
-      const { saveSafariContent } = await import('./safariManager.js');
-      await saveSafariContent(allSafariContent);
-      console.log(`🧹 Cleaned ${staleCount} stale posted channel(s) from action ${actionId}`);
-    }
-
-    if (validIds.length > 0) {
+    if (totalEntries > 8 || postedChannels.length > 4) {
+      // Collapsed summary
+      const channelList = postedChannels.map(id => `<#${id}>`).join(', ');
       components.push({
         type: 10,
-        content: `### \`\`\`#️⃣ Posted Channels (${validIds.length})\`\`\``
+        content: `#️⃣ ${channelList}`
       });
-      if (totalEntries > 8 || validIds.length > 4) {
-        // Collapsed summary
-        const channelList = validIds.map(id => `<#${id}>`).join(', ');
+    } else {
+      postedChannels.forEach(channelId => {
         components.push({
-          type: 10,
-          content: `#️⃣ ${channelList}`
+          type: 9, // Section
+          components: [{
+            type: 10,
+            content: `#️⃣ <#${channelId}>`
+          }],
+          accessory: {
+            type: 2,
+            custom_id: `untrack_channel_${actionId}_${channelId}`,
+            label: "Remove",
+            style: 4,
+            emoji: { name: "🗑️" }
+          }
         });
-      } else {
-        validIds.forEach(channelId => {
-          components.push({
-            type: 9, // Section
-            components: [{
-              type: 10,
-              content: `#️⃣ <#${channelId}>`
-            }],
-            accessory: {
-              type: 2,
-              custom_id: `untrack_channel_${actionId}_${channelId}`,
-              label: "Remove",
-              style: 4,
-              emoji: { name: "🗑️" }
-            }
-          });
-        });
-      }
+      });
     }
   }
 

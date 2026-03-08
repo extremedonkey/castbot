@@ -983,6 +983,24 @@
               "type": "action",
               "desc": "What's the Password?\n> • Text: \"🐺🐺🐺🐺\"\n> • Text: \"☠️☠️☠️\"",
               "loc": "button_modal"
+            },
+            {
+              "t": 1772976116123,
+              "type": "item",
+              "desc": "Picked up 🪽 Levitating Wings x1",
+              "loc": "B5"
+            },
+            {
+              "t": 1772976116123,
+              "type": "action",
+              "desc": "🔒 What's the Password?\n> • Text: \"☠️☠️☠️\"\n> • Text: \"☠️☠️☠️\"\n> • Give Item: 🪽 Levitating Wings (x1)",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772976116123,
+              "type": "action",
+              "desc": "What's the Password?\n> • Text: \"☠️☠️☠️\"\n> • Text: \"☠️☠️☠️\"\n> • Currency: +55\n> • Give Item: 🪽 Levitating Wings (x1)\n> • Give Item: 🪽 Levitating Wings (x1)\n> • Give Item: 🪽 Levitating Wings (x1)",
+              "loc": "button_modal"
             }
           ],
           "lastInteraction": 1772945726100,
