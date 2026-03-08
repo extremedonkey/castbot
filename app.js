@@ -42853,60 +42853,48 @@ Your server is now ready for Tycoons gameplay!`;
 
     } else if (custom_id.startsWith('safari_player_state_coord_submit_')) {
       // Handle coordinate modal submission for manage_player_state outcome
-      try {
-        const guildId = req.body.guild_id;
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission.')) return;
+      return ButtonHandlerFactory.create({
+        id: 'safari_player_state_coord_submit',
+        updateMessage: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: safari_player_state_coord_submit - user ${context.userId}`);
 
-        const parts = custom_id.replace('safari_player_state_coord_submit_', '').split('_');
-        const actionIndex = parseInt(parts[parts.length - 1]);
-        const buttonId = parts.slice(0, -1).join('_');
-        // Label (type 18) wraps the text input as .component, not .components[0]
-        const coordinate = (components[0].component?.value || components[0].components?.[0]?.value || '').trim().toUpperCase();
+          const parts = context.customId.replace('safari_player_state_coord_submit_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
 
-        if (!coordinate) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: { content: '❌ Coordinate is required.', flags: InteractionResponseFlags.EPHEMERAL }
-          });
+          // Label (type 18) wraps the text input as .component, not .components[0]
+          const modalComponents = req.body.data.components;
+          const coordinate = (modalComponents[0].component?.value || modalComponents[0].components?.[0]?.value || '').trim().toUpperCase();
+
+          if (!coordinate) {
+            return { content: '❌ Coordinate is required.' };
+          }
+
+          if (!/^[A-Z]\d+$/.test(coordinate)) {
+            return { content: '❌ Invalid coordinate format. Use format like A1, B3, D7.' };
+          }
+
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+
+          if (!button || !button.actions?.[actionIndex]) {
+            return { content: '❌ Action not found.' };
+          }
+
+          button.actions[actionIndex].config.coordinate = coordinate;
+          button.metadata.lastModified = Date.now();
+          await saveSafariContent(safariData);
+
+          console.log(`✅ SUCCESS: safari_player_state_coord_submit - set coordinate to ${coordinate} for ${buttonId}[${actionIndex}]`);
+
+          const { showManagePlayerStateConfig } = await import('./customActionUI.js');
+          return await showManagePlayerStateConfig(context.guildId, buttonId, actionIndex);
         }
-
-        if (!/^[A-Z]\d+$/.test(coordinate)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: { content: '❌ Invalid coordinate format. Use format like A1, B3, D7.', flags: InteractionResponseFlags.EPHEMERAL }
-          });
-        }
-
-        const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
-        const safariData = await loadSafariContent();
-        const button = safariData[guildId]?.buttons?.[buttonId];
-
-        if (!button || !button.actions?.[actionIndex]) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: { content: '❌ Action not found.', flags: InteractionResponseFlags.EPHEMERAL }
-          });
-        }
-
-        button.actions[actionIndex].config.coordinate = coordinate;
-        button.metadata.lastModified = Date.now();
-        await saveSafariContent(safariData);
-
-        console.log(`✅ SUCCESS: safari_player_state_coord_submit - set coordinate to ${coordinate} for ${buttonId}[${actionIndex}]`);
-
-        const { showManagePlayerStateConfig } = await import('./customActionUI.js');
-        const updatedConfig = await showManagePlayerStateConfig(guildId, buttonId, actionIndex);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: updatedConfig
-        });
-      } catch (error) {
-        console.error('Error handling player state coordinate modal:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: { content: '❌ Error saving coordinate.', flags: InteractionResponseFlags.EPHEMERAL }
-        });
-      }
+      })(req, res, client);
 
     } else if (custom_id.startsWith('add_coord_submit_')) {
       // Handle coordinate addition modal submission

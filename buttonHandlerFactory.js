@@ -2748,7 +2748,7 @@ export const BUTTON_REGISTRY = {
   },
 
   // Manage Player State config selects/buttons
-  'safari_player_state_mode': {
+  'safari_player_state_mode_*': {
     label: 'Player State Mode',
     description: 'Select mode: initialize, teleport, init or teleport, or de-initialize',
     emoji: '🚀',
@@ -2756,7 +2756,7 @@ export const BUTTON_REGISTRY = {
     category: 'safari_custom_actions',
     type: 'select_menu'
   },
-  'safari_player_state_execute_on': {
+  'safari_player_state_execute_on_*': {
     label: 'Player State Execution Condition',
     description: 'Select when player state outcome should execute (conditions true/false)',
     emoji: '✅',
@@ -2764,7 +2764,7 @@ export const BUTTON_REGISTRY = {
     category: 'safari_custom_actions',
     type: 'select_menu'
   },
-  'safari_player_state_coord_modal': {
+  'safari_player_state_coord_modal_*': {
     label: 'Set Target Coordinate',
     description: 'Open modal to set the target coordinate for initialization or teleport',
     emoji: '📍',
@@ -2772,11 +2772,18 @@ export const BUTTON_REGISTRY = {
     category: 'safari_custom_actions',
     requiresModal: true
   },
-  'safari_player_state_coord_clear': {
+  'safari_player_state_coord_clear_*': {
     label: 'Use Default Coordinate',
     description: 'Clear custom coordinate and use default starting location resolution',
     emoji: '🔄',
     style: 'Secondary',
+    category: 'safari_custom_actions'
+  },
+  'safari_player_state_coord_submit_*': {
+    label: 'Coordinate Modal Submit',
+    description: 'Process coordinate modal submission for player state outcome',
+    emoji: '📍',
+    style: 'Primary',
     category: 'safari_custom_actions'
   },
 
