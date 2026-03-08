@@ -998,7 +998,7 @@ export const BUTTON_REGISTRY = {
   },
   'outcome_select_*': {
     label: 'Outcome Actions',
-    description: 'String select per outcome — edit, reorder, toggle pass/fail, delete',
+    description: 'String select per outcome — edit, reorder, clone, toggle pass/fail, delete',
     emoji: '▫️',
     style: 'Secondary',
     category: 'safari',

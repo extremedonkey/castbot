@@ -1112,16 +1112,16 @@ async function createReeceStuffMenu(guildId, channelId = null) {
   const containerComponents = [
     { type: 10, content: `## 🧮 CastBot | Analytics` },
     { type: 14 },
-    { type: 10, content: `> **\`📊 Analytics\`**` },
+    { type: 10, content: `### \`\`\`📊 Analytics\`\`\`` },
     analyticsRow.toJSON(),
     { type: 14 },
-    { type: 10, content: `> **\`📦 Data Actions\`**` },
+    { type: 10, content: `### \`\`\`📦 Data Actions\`\`\`` },
     dataActionsRow.toJSON(),
     { type: 14 },
-    { type: 10, content: `> **\`💾 Export Data\`**` },
+    { type: 10, content: `### \`\`\`💾 Export Data\`\`\`` },
     exportDataRow.toJSON(),
     { type: 14 },
-    { type: 10, content: `> **\`☢️ Danger Zone\`**` },
+    { type: 10, content: `### \`\`\`☢️ Danger Zone\`\`\`` },
     dangerZoneRow.toJSON(),
     { type: 14 },
     backRow.toJSON()
@@ -19059,6 +19059,23 @@ Your server is now ready for Tycoons gameplay!`;
                   [button.actions[actionIndex + 1], button.actions[actionIndex]];
                 await saveSafariContent(allSafariContent);
               }
+              const { createCustomActionEditorUI } = await import('./customActionUI.js');
+              return await createCustomActionEditorUI({ guildId: context.guildId, actionId, skipAutoSave: true });
+            }
+
+            case 'clone': {
+              const { SAFARI_LIMITS } = await import('./config/safariLimits.js');
+              if (button.actions.length >= SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON) {
+                const { createCustomActionEditorUI } = await import('./customActionUI.js');
+                return await createCustomActionEditorUI({ guildId: context.guildId, actionId });
+              }
+              const cloned = JSON.parse(JSON.stringify(button.actions[actionIndex]));
+              cloned.order = button.actions.length;
+              // Insert clone right after the original
+              button.actions.splice(actionIndex + 1, 0, cloned);
+              button.actions.forEach((a, idx) => { a.order = idx; });
+              await saveSafariContent(allSafariContent);
+              console.log(`📋 Cloned outcome ${actionIndex} in ${actionId}`);
               const { createCustomActionEditorUI } = await import('./customActionUI.js');
               return await createCustomActionEditorUI({ guildId: context.guildId, actionId, skipAutoSave: true });
             }

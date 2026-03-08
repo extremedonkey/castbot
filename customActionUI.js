@@ -797,6 +797,7 @@ function getActionListComponents(actions, actionId, guildItems = {}, guildButton
       { label: 'Move Up', value: 'move_up', emoji: { name: '⬆️' }, description: 'Change execution order' },
       { label: 'Move Down', value: 'move_down', emoji: { name: '⬇️' }, description: 'Change execution order' },
       { label: '───────────────────', value: 'divider', description: ' ' },
+      { label: 'Clone Outcome', value: 'clone', emoji: { name: '📋' }, description: 'Duplicate this outcome' },
       { label: toggleLabel, value: 'toggle_section', emoji: { name: toggleEmoji }, description: toggleDesc },
       { label: 'Delete Outcome', value: 'delete', emoji: { name: '🗑️' }, description: 'Remove from action' }
     ];
