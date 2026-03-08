@@ -1507,11 +1507,11 @@ async function sendFollowUpMessages(token, responses) {
 }
 
 /**
- * Execute all actions for a button
+ * Execute all outcomes for an action (legacy name: "button" = action entity, "actions" = outcomes)
  */
 async function executeButtonActions(guildId, buttonId, userId, interaction, client, forceConditionsFail = false) {
     try {
-        console.log(`🚀 DEBUG: Executing button actions for ${buttonId} by user ${userId}`);
+        console.log(`🚀 DEBUG: Executing outcomes for action ${buttonId} by user ${userId}`);
         
         const button = await getCustomButton(guildId, buttonId);
         if (!button) {
@@ -1527,7 +1527,7 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
         // For modal triggers with wrong input, force conditions to fail
         if (forceConditionsFail) {
             conditionsResult = false;
-            console.log(`🎯 Modal input mismatch - forcing conditions to fail for button ${buttonId}`);
+            console.log(`🎯 Modal input mismatch - forcing conditions to fail for action ${buttonId}`);
         } else if (button.conditions && button.conditions.length > 0) {
             // Use forceFresh to ensure we read latest data from disk
             // This prevents race conditions when buttons are clicked rapidly
@@ -1539,7 +1539,7 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                 member: interaction.member
             });
             
-            console.log(`📊 Conditions evaluated to: ${conditionsResult} for button ${buttonId}`);
+            console.log(`📊 Conditions evaluated to: ${conditionsResult} for action ${buttonId}`);
         }
         
         // Update usage count
@@ -1559,7 +1559,7 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
             return executeOn === conditionsResultString;
         });
         
-        console.log(`🎯 Executing ${actionsToExecute.length} actions where executeOn='${conditionsResultString}'`);
+        console.log(`🎯 Executing ${actionsToExecute.length} outcomes where executeOn='${conditionsResultString}'`);
         
         // If no actions match the condition result, return a message
         if (actionsToExecute.length === 0) {

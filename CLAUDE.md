@@ -398,7 +398,7 @@ General Workflow for new features:
 - **📅 SEASONS** → [docs/concepts/SeasonLifecycle.md](docs/concepts/SeasonLifecycle.md) - Season lifecycle and integration
 
 **Safari Subsystems:**
-- **⚡ CUSTOM ACTIONS** → [docs/03-features/SafariCustomActions.md](docs/03-features/SafariCustomActions.md) - Dynamic action system (triggers, drops, workflows)
+- **⚡ ACTIONS** (formerly Custom Actions) → [docs/03-features/SafariCustomActions.md](docs/03-features/SafariCustomActions.md) - Action system (triggers, outcomes, conditions). See [Terminology](docs/01-RaP/0956_20260308_ActionTerminology_Analysis.md) for naming conventions
 - **🏃 CHALLENGES** → [docs/03-features/Challenges.md](docs/03-features/Challenges.md) - Configurable challenge/rounds system (decoupled from map)
 - **🏪 STORES** → [docs/03-features/StoreManagementArchitecture.md](docs/03-features/StoreManagementArchitecture.md) - Store management, global stores, stock limits
 - **📦 ITEMS** → [docs/03-features/SafariImportExport.md](docs/03-features/SafariImportExport.md) - Items, stock management, import/export

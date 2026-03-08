@@ -2,10 +2,10 @@
 // Single source of truth for all Safari-related limits
 
 export const SAFARI_LIMITS = {
-  // Button limits
-  MAX_ACTIONS_PER_BUTTON: 5,
-  MAX_BUTTON_LABEL_LENGTH: 80,
-  MAX_BUTTONS_PER_GUILD: 100,
+  // Action limits (legacy names: "button" = Action entity, "actions" = Outcomes)
+  MAX_ACTIONS_PER_BUTTON: 5,       // Max outcomes per action (alias: MAX_OUTCOMES_PER_ACTION)
+  MAX_BUTTON_LABEL_LENGTH: 80,     // Max action label length
+  MAX_BUTTONS_PER_GUILD: 100,      // Max actions per guild (alias: MAX_ACTIONS_PER_GUILD)
   
   // Action limits
   MAX_ACTION_CONTENT_LENGTH: 2000,
@@ -30,6 +30,10 @@ export const SAFARI_LIMITS = {
   MAX_TAGS_PER_ITEM: 5,
   MAX_DISCORD_COMPONENTS: 40
 };
+
+// Semantic aliases — use these in new code
+export const MAX_OUTCOMES_PER_ACTION = SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON;
+export const MAX_ACTIONS_PER_GUILD = SAFARI_LIMITS.MAX_BUTTONS_PER_GUILD;
 
 export const EDIT_TYPES = {
   BUTTON: 'button',

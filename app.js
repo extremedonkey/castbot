@@ -15774,7 +15774,7 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        console.log('🎛️ DEBUG: Creating edit interface for button:', selectedButtonId);
+        console.log('🎛️ DEBUG: Creating edit interface for action:', selectedButtonId);
         
         // Create universal edit interface for buttons
         const editBuilder = new EditInterfaceBuilder(EDIT_TYPES.BUTTON);
@@ -16691,11 +16691,11 @@ Your server is now ready for Tycoons gameplay!`;
         handler: async (context) => {
           console.log(`🔍 START: safari_action_type_select - user ${context.userId}`);
           
-          // Extract button ID and action type
+          // Extract action ID and selected outcome type
           const buttonId = context.customId.replace('safari_action_type_select_', '');
           const actionType = req.body.data.values[0];
-          
-          console.log(`Selected action type: ${actionType} for button: ${buttonId}`);
+
+          console.log(`Selected outcome type: ${actionType} for action: ${buttonId}`);
           
           // Load safari content
           const { loadSafariContent } = await import('./safariManager.js');
@@ -17250,7 +17250,7 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
           
-          console.log(`🎁 START: safari_give_item_select - button ${buttonId}, item ${itemId}`);
+          console.log(`🎁 START: safari_give_item_select - action ${buttonId}, item ${itemId}`);
           
           // Load safari data to get item details
           const { loadSafariContent } = await import('./safariManager.js');
@@ -17619,7 +17619,7 @@ Your server is now ready for Tycoons gameplay!`;
             console.error('Error queueing anchor updates:', error);
           }
           
-          console.log(`✅ Added follow_up_button action to button ${buttonId}`);
+          console.log(`✅ Added follow_up_button outcome to action ${buttonId}`);
           
           // Clean up state
           dropConfigState.delete(stateKey);
@@ -18160,7 +18160,7 @@ Your server is now ready for Tycoons gameplay!`;
             console.error('Error queueing anchor updates:', error);
           }
           
-          console.log(`✅ Added give_item action (operation: ${state.operation || 'give'}) to button ${buttonId}`);
+          console.log(`✅ Added give_item outcome (operation: ${state.operation || 'give'}) to action ${buttonId}`);
           
           // Clean up state
           dropConfigState.delete(stateKey);
@@ -18393,7 +18393,7 @@ Your server is now ready for Tycoons gameplay!`;
             console.error('Error queueing anchor updates:', error);
           }
           
-          console.log(`✅ Added give_currency action to button ${buttonId}`);
+          console.log(`✅ Added give_currency outcome to action ${buttonId}`);
           
           // Clean up state
           dropConfigState.delete(stateKey);
@@ -18852,7 +18852,7 @@ Your server is now ready for Tycoons gameplay!`;
           const button = guildData.buttons?.[actionId];
           
           if (!button) {
-            console.log(`❌ FAILURE: safari_remove_action - button ${actionId} not found`);
+            console.log(`❌ FAILURE: safari_remove_action - action ${actionId} not found`);
             return {
               content: '❌ Button not found.',
               ephemeral: true
@@ -18918,7 +18918,7 @@ Your server is now ready for Tycoons gameplay!`;
           const button = guildData.buttons?.[actionId];
           
           if (!button) {
-            console.log(`❌ FAILURE: safari_edit_action - button ${actionId} not found`);
+            console.log(`❌ FAILURE: safari_edit_action - action ${actionId} not found`);
             return {
               content: '❌ Button not found.',
               ephemeral: true
@@ -36217,7 +36217,7 @@ Your server is now ready for Tycoons gameplay!`;
         safariData[guildId].buttons[buttonId] = button;
         await saveSafariContent(safariData);
         
-        console.log(`✅ DEBUG: Added ${actionType} action to button ${buttonId}`);
+        console.log(`✅ DEBUG: Added ${actionType} outcome to action ${buttonId}`);
         
         // For give_currency and give_item, show configuration UI instead of finishing
         if (actionType === 'give_currency' || actionType === 'give_item') {

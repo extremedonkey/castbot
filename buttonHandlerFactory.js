@@ -988,31 +988,38 @@ export const BUTTON_REGISTRY = {
     category: 'safari'
   },
 
-  // Safari Button Management
-  'safari_finish_button': {
+  // Safari Action Management
+  'safari_finish_button_*': {
     label: '← Location Manager',
-    description: 'Navigate back to the Map Location Manager',
+    description: 'Navigate back from action editor to location manager',
     emoji: '📍',
     style: 'Secondary',
     category: 'safari'
   },
-  'safari_remove_action': {
-    label: 'Remove Action',
-    description: 'Remove an action from a custom Safari button',
+  'safari_remove_action_*': {
+    label: 'Remove Outcome',
+    description: 'Remove an outcome from an action',
     emoji: '🗑️',
     style: 'Danger',
     category: 'safari'
   },
-  'safari_edit_action': {
-    label: 'Edit Action',
-    description: 'Edit an existing action in a custom Safari button',
+  'safari_edit_action_*': {
+    label: 'Edit Outcome',
+    description: 'Edit an existing outcome in an action',
     emoji: '📝',
     style: 'Secondary',
     category: 'safari'
   },
-  'custom_action_up': {
-    label: 'Move Action Up',
-    description: 'Move action higher in execution order',
+  'safari_add_action_*': {
+    label: 'Add Outcome',
+    description: 'Add a new outcome to an action',
+    emoji: '➕',
+    style: 'Primary',
+    category: 'safari'
+  },
+  'custom_action_up_*': {
+    label: 'Move Outcome Up',
+    description: 'Move outcome higher in execution order within an action',
     emoji: '⬆️',
     style: 'Secondary',
     category: 'safari'
@@ -1057,7 +1064,7 @@ export const BUTTON_REGISTRY = {
   },
   'safari_action_editor': {
     label: 'Action Editor',
-    description: 'Manage custom actions across all locations',
+    description: 'Manage actions across all locations',
     emoji: '⚡',
     style: 'Secondary',
     category: 'safari'
@@ -1066,7 +1073,7 @@ export const BUTTON_REGISTRY = {
   // Safari Main Menu Buttons
   'safari_manage_safari_buttons': {
     label: '📌 Manage Safari Buttons',
-    description: 'Create, edit, view, and post custom Safari buttons',
+    description: 'Create, edit, view, and post Safari actions',
     emoji: '📌',
     style: 'Primary',
     category: 'safari'
@@ -1640,8 +1647,8 @@ export const BUTTON_REGISTRY = {
     category: 'safari_map_admin'
   },
 
-  // Safari Currency Configuration (Custom Actions)
-  // NOTE: safari_currency_style_* removed - button style is set at parent Custom Action level
+  // Safari Currency Configuration (Action Outcomes)
+  // NOTE: safari_currency_style_* removed - button style is set at parent Action level
   'safari_currency_save_*': {
     label: 'Save Currency',
     description: 'Save currency action configuration',
@@ -2381,25 +2388,25 @@ export const BUTTON_REGISTRY = {
     category: 'application_management'
   },
 
-  // === SAFARI CUSTOM ACTIONS SYSTEM ===
+  // === SAFARI ACTIONS SYSTEM (terminology: Action = entity, Trigger = invocation, Outcome = step) ===
   'entity_custom_action_select': {
-    label: 'Custom Actions',
-    description: 'Manage custom actions for this location',
+    label: 'Actions',
+    description: 'Manage actions for this location',
     emoji: '⚡',
     style: 'Primary',
     category: 'safari_management'
   },
   'entity_custom_action_select_*': {
-    label: 'Custom Action Multi-Select',
-    description: 'Select custom actions to assign to location',
+    label: 'Action Multi-Select',
+    description: 'Select actions to assign to location',
     emoji: '⚡',
     style: 'Primary',
     category: 'safari_management',
     type: 'select_menu'
   },
   'entity_custom_action_list_*': {
-    label: 'Custom Action List',
-    description: 'Select a custom action to manage or create new',
+    label: 'Action List',
+    description: 'Select an action to manage or create new',
     emoji: '⚡',
     style: 'Primary',
     category: 'safari_management',
@@ -2415,14 +2422,14 @@ export const BUTTON_REGISTRY = {
   },
   'entity_custom_action_create': {
     label: 'Create New Action',
-    description: 'Create a new custom action',
+    description: 'Create a new action',
     emoji: '➕',
     style: 'Success',
     category: 'safari_management'
   },
   'entity_custom_action_edit_info_*': {
     label: 'Action Info',
-    description: 'Edit custom action name and description',
+    description: 'Edit action name and description',
     emoji: '📝',
     style: 'Secondary',
     category: 'safari_management'
@@ -2457,35 +2464,35 @@ export const BUTTON_REGISTRY = {
   },
   'ca_link_item_select_*': {
     label: 'Link Item Select',
-    description: 'Select an item to link to a custom action',
+    description: 'Select an item to link to an action',
     emoji: '🔗',
     style: 'Secondary',
     category: 'safari_management'
   },
   'ca_unlink_item_*': {
     label: 'Unlink Item',
-    description: 'Remove item link from a custom action',
+    description: 'Remove item link from an action',
     emoji: '🗑️',
     style: 'Danger',
     category: 'safari_management'
   },
   'safari_use_linked_*': {
     label: 'Use Item Action',
-    description: 'Execute single custom action linked to inventory item',
+    description: 'Execute single action linked to inventory item',
     emoji: '⚡',
     style: 'Secondary',
     category: 'safari'
   },
   'safari_item_uses_*': {
     label: 'Item Uses Select',
-    description: 'Choose between attack, stamina, or custom actions for multi-use item',
+    description: 'Choose between attack, stamina, or actions for multi-use item',
     emoji: '📦',
     style: 'Secondary',
     category: 'safari'
   },
   'entity_action_post_channel_*': {
     label: 'Post to Channel',
-    description: 'Post custom action button to a Discord channel',
+    description: 'Post action trigger button to a Discord channel',
     emoji: '#️⃣',
     style: 'Secondary',
     category: 'safari_management',
@@ -2493,7 +2500,7 @@ export const BUTTON_REGISTRY = {
   },
   'custom_action_trigger_type_*': {
     label: 'Trigger Type Select',
-    description: 'Select trigger type for custom action',
+    description: 'Select trigger type for action',
     emoji: '🎯',
     style: 'Secondary',
     category: 'safari_management',
@@ -2501,7 +2508,7 @@ export const BUTTON_REGISTRY = {
   },
   'custom_action_button_style_*': {
     label: 'Button Style Select',
-    description: 'Select button color/style for custom action',
+    description: 'Select button color/style for action trigger',
     emoji: '🎨',
     style: 'Secondary',
     category: 'safari_management',
@@ -2509,7 +2516,7 @@ export const BUTTON_REGISTRY = {
   },
   'ca_schedule_channel_*': {
     label: 'Schedule Channel',
-    description: 'Select channel for scheduled custom action execution',
+    description: 'Select channel for scheduled action execution',
     emoji: '📺',
     style: 'Secondary',
     category: 'safari_management',
@@ -2517,14 +2524,14 @@ export const BUTTON_REGISTRY = {
   },
   'ca_schedule_task_*': {
     label: 'Schedule Task',
-    description: 'Open scheduling modal for custom action',
+    description: 'Open scheduling modal for action',
     emoji: '⏰',
     style: 'Success',
     category: 'safari_management'
   },
   'ca_schedule_cancel_*': {
     label: 'Cancel Schedule',
-    description: 'Cancel a scheduled custom action execution',
+    description: 'Cancel a scheduled action execution',
     emoji: '🗑️',
     style: 'Danger',
     category: 'safari_management'
@@ -2638,19 +2645,34 @@ export const BUTTON_REGISTRY = {
 
   // === SAFARI DYNAMIC EXECUTION ===
   'safari_*_*_*': {
-    label: 'Safari Custom Action',
-    description: 'Execute custom action on map location',
+    label: 'Safari Action',
+    description: 'Execute action on map location',
     emoji: '⚡',
     style: 'Primary',
     category: 'safari_execution'
   },
-  'safari_action_type_select': {
-    label: 'Select Action Type',
-    description: 'String select menu for choosing action type to add',
+  'safari_action_type_select_*': {
+    label: 'Select Outcome Type',
+    description: 'String select menu for choosing outcome type to add to an action',
     emoji: '🎯',
     style: 'Primary',
     category: 'safari_management',
     type: 'select_menu'
+  },
+  'safari_give_item_select_*': {
+    label: 'Select Item for Outcome',
+    description: 'String select menu for choosing item in give_item outcome',
+    emoji: '🎁',
+    style: 'Primary',
+    category: 'safari_management',
+    type: 'select_menu'
+  },
+  'safari_item_save_*': {
+    label: 'Save Item Outcome',
+    description: 'Save give_item outcome configuration to action',
+    emoji: '💾',
+    style: 'Primary',
+    category: 'safari_management'
   },
   'safari_follow_up_select': {
     label: 'Select Follow-up Button',

@@ -1,8 +1,20 @@
 # Safari Custom Actions Documentation
 
+## Terminology
+
+> **Standardized terminology** — use these terms consistently in code, docs, and UI:
+>
+> | Concept | Preferred Term | Legacy Names (still in code/data) | Data Path |
+> |---------|---------------|-----------------------------------|-----------|
+> | The top-level entity (e.g., `harvest_and_attack_test_1772798001927`) | **Action** | Custom Action, Safari Button, button, interactive action | `safariData[guildId].buttons[actionId]` |
+> | How an Action is invoked | **Trigger** | Button Click, Text Command, Modal, Player Command | `action.trigger.type` (`'button'`, `'modal'`, `'select'`, `'schedule'`) |
+> | An individual step an Action executes | **Outcome** | Action Type, sub-action, action component | `action.actions[]` — each has `.type` and `.config` |
+>
+> **Why "buttons" in the data path?** The storage key `guildData.buttons` is a legacy artifact from when Actions could only be triggered by button clicks. Renaming it would require a data migration, so it stays — but conceptually it holds **Actions**, not buttons.
+
 ## Overview
 
-Safari Custom Actions are dynamic, configurable actions that can be triggered by players through buttons or text commands. They support complex workflows including text displays, currency/item drops, follow-up actions, and conditional logic.
+Actions are dynamic, configurable workflows that can be triggered by players through buttons, text commands, select menus, or schedules. They support complex workflows including text displays, currency/item drops, follow-up actions, and conditional logic.
 
 ## Recent Updates (January 2026)
 
@@ -22,9 +34,9 @@ The `give_item` action now supports both **giving** and **removing** items via a
 ## Previous Updates (January 2025)
 
 ### String Select Interface
-Custom Actions now use a string select dropdown for adding action types, replacing the previous button grid approach:
+Actions now use a string select dropdown for adding outcome types, replacing the previous button grid approach:
 - **Cleaner UI**: Single dropdown instead of multiple buttons
-- **Scalable**: Easy to add new action types
+- **Scalable**: Easy to add new outcome types
 - **Consistent**: Matches other UI patterns in CastBot
 
 ### Button Bundling
@@ -39,7 +51,7 @@ Custom Actions now support the same drop management features as map locations:
 - **Currency Drops**: Award currency with restrictions
 - **Usage Tracking**: Once per player, once globally, or unlimited
 
-## Action Types
+## Outcome Types
 
 ### 1. Display Text
 Shows formatted text with optional images and styling.
@@ -135,7 +147,7 @@ Awards currency with new usage limit options.
 ```
 
 ### 4. Follow-up Action
-Triggers another Custom Action button.
+Triggers another Action.
 
 **Configuration:**
 - Target Custom Action ID
@@ -212,12 +224,12 @@ See [Attribute Conditions](./AttributeConditions.md) for full documentation.
 
 ---
 
-## Creating Custom Actions
+## Creating Actions
 
-### Step 1: Access Custom Actions
+### Step 1: Access Actions
 1. Use `/prod_menu` → Safari Menu
 2. Select "📌 Manage Custom Actions"
-3. Choose location or create location-independent action
+3. Choose location or create a global action
 
 ### Step 2: Create New Action
 1. Click "Create New" from the dropdown
@@ -227,10 +239,10 @@ See [Attribute Conditions](./AttributeConditions.md) for full documentation.
    - **Description**: Purpose/usage
    - **Trigger Type**: Button or Text Command
 
-### Step 3: Add Action Components
-1. Use the string select dropdown to add actions
-2. Configure each action's settings
-3. Actions execute in order
+### Step 3: Add Outcomes
+1. Use the string select dropdown to add outcomes
+2. Configure each outcome's settings
+3. Outcomes execute in order
 
 ### Step 4: Configure Drops (if applicable)
 When adding Give Item or Give Currency actions:
@@ -272,7 +284,7 @@ The drop configuration interface (reused from map drops) provides:
 
 ## Button States
 
-For Custom Actions with usage limits:
+For Actions with usage limits:
 
 ### Available
 - Normal button appearance
@@ -299,7 +311,7 @@ Admins can now test text command triggers:
 
 ### Reset Claims
 Admins can reset usage tracking:
-1. Edit the Custom Action
+1. Edit the Action
 2. Navigate to the drop configuration
 3. Click "Reset Claims"
 4. Confirm the reset
@@ -309,8 +321,8 @@ Admins with appropriate permissions can bypass usage limits for testing.
 
 ## Data Storage
 
-### Custom Actions
-Stored in `safariContent.json`:
+### Actions
+Stored in `safariContent.json` (under legacy key `buttons`):
 ```javascript
 {
   "guildId": {
@@ -417,18 +429,18 @@ Items are added to `playerData.json`:
 ### Updating Existing Currency Actions
 Existing `update_currency` actions will default to unlimited. To add limits:
 
-1. Edit the Custom Action
-2. Select the currency action
+1. Edit the Action
+2. Select the currency outcome
 3. Choose usage limit
 4. Save changes
 
 ### Converting Location Drops
 To convert map-based drops to Custom Actions:
 
-1. Create new Custom Action
-2. Add give_item/currency action
+1. Create new Action
+2. Add give_item/currency outcome
 3. Copy drop settings
-4. Update location to use Custom Action
+4. Update location to use Action
 5. Remove old drop configuration
 
 ## Related Documentation

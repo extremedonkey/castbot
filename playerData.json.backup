@@ -836,6 +836,42 @@
           "1442029382339268770"
         ],
         "safari": {
+          "currency": 55,
+          "history": [
+            {
+              "t": 1772943264168,
+              "type": "admin",
+              "desc": "[ADMIN] Player de-initialized"
+            },
+            {
+              "t": 1772943330924,
+              "type": "action",
+              "desc": "⛈️ Fight the storm\n> • Text: \"You paddle swiftly towards the eye of the storm, waves br...\"",
+              "loc": "G1"
+            },
+            {
+              "t": 1772943340166,
+              "type": "init",
+              "desc": "Initialized at A3 with +55 Gil (total: 55)",
+              "loc": "A3"
+            },
+            {
+              "t": 1772943343818,
+              "type": "init",
+              "desc": "Initialized at A3 with 55 Gil"
+            }
+          ],
+          "lastInteraction": 1772943262533,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
           "mapProgress": {
             "map_7x7_1753981993871": {
               "currentLocation": "A3",
@@ -847,1087 +883,25 @@
                 {
                   "from": null,
                   "to": "A3",
-                  "timestamp": "2026-03-02T03:54:21.332Z"
+                  "timestamp": "2026-03-08T04:15:40.166Z"
                 },
                 {
                   "from": "A3",
                   "to": "A3",
-                  "timestamp": "2026-03-02T03:54:21.409Z"
+                  "timestamp": "2026-03-08T04:15:40.199Z"
                 }
               ],
               "startingLocation": "A3"
             }
           },
-          "currency": 828,
-          "history": [
-            {
-              "t": 1760527500000,
-              "type": "action",
-              "desc": "/hello\n> • Text: \"shes alive!\""
-            },
-            {
-              "t": 1760527560000,
-              "type": "action",
-              "desc": "/asdlkasdlas"
-            },
-            {
-              "t": 1760527560000,
-              "type": "action",
-              "desc": "🧒 Orphan Action\n> • Text: \"shes alive!\"",
-              "loc": "G3"
-            },
-            {
-              "t": 1760527560000,
-              "type": "action",
-              "desc": "/hello\n> • Text: \"shes alive!\"",
-              "loc": "G3"
-            },
-            {
-              "t": 1760767200000,
-              "type": "action",
-              "desc": "❌ Super Claude Role Delete Demo",
-              "loc": "D6"
-            },
-            {
-              "t": 1760972340000,
-              "type": "currency",
-              "desc": "Gained 44 Eggs from manual",
-              "loc": "B1"
-            },
-            {
-              "t": 1761473640000,
-              "type": "movement",
-              "desc": "Moved from C2 to C1",
-              "loc": "C1"
-            },
-            {
-              "t": 1761474000000,
-              "type": "movement",
-              "desc": "Moved from C1 to F2",
-              "loc": "F2"
-            },
-            {
-              "t": 1761474000000,
-              "type": "movement",
-              "desc": "Moved from F2 to E2",
-              "loc": "E2"
-            },
-            {
-              "t": 1761474360000,
-              "type": "movement",
-              "desc": "Moved from E2 to B1",
-              "loc": "B1"
-            },
-            {
-              "t": 1761474360000,
-              "type": "movement",
-              "desc": "Moved from B1 to E2",
-              "loc": "E2"
-            },
-            {
-              "t": 1761655920000,
-              "type": "action",
-              "desc": "⚔️ The Battle Attack"
-            },
-            {
-              "t": 1761656100000,
-              "type": "action",
-              "desc": "⚔️ The Battle Attack"
-            },
-            {
-              "t": 1761656220000,
-              "type": "item",
-              "desc": "Picked up 🦎 Raider x1",
-              "loc": "E2"
-            },
-            {
-              "t": 1761656280000,
-              "type": "action",
-              "desc": "Attack: Result: Scheduled 5x Raider for 125 damage in Round 7"
-            },
-            {
-              "t": 1761656340000,
-              "type": "action",
-              "desc": "⚔️ The Battle Attack"
-            },
-            {
-              "t": 1761656520000,
-              "type": "action",
-              "desc": "⚔️ The Battle Attack"
-            },
-            {
-              "t": 1761656520000,
-              "type": "item",
-              "desc": "Picked up 🦎 Raider x1",
-              "loc": "E2"
-            },
-            {
-              "t": 1761657180000,
-              "type": "action",
-              "desc": "Attack: Result: Scheduled 1x Raider for 25 damage in Round 7"
-            },
-            {
-              "t": 1761657240000,
-              "type": "action",
-              "desc": "⚔️ The Battle Attack"
-            },
-            {
-              "t": 1761658080000,
-              "type": "currency",
-              "desc": "Gained 94 Eggs from manual",
-              "loc": "E2"
-            },
-            {
-              "t": 1761658080000,
-              "type": "action",
-              "desc": "⚔️ The Battle Attack\n> • Calculate Results"
-            },
-            {
-              "t": 1761658140000,
-              "type": "action",
-              "desc": "⚔️ The Battle Attack\n> • Calculate Results"
-            },
-            {
-              "t": 1761658200000,
-              "type": "currency",
-              "desc": "Gained 94 Eggs from manual",
-              "loc": "E2"
-            },
-            {
-              "t": 1761658200000,
-              "type": "action",
-              "desc": "⚔️ The Battle Attack\n> • Calculate Results"
-            },
-            {
-              "t": 1761658860000,
-              "type": "currency",
-              "desc": "Gained 94 Eggs from manual",
-              "loc": "E2"
-            },
-            {
-              "t": 1761658860000,
-              "type": "action",
-              "desc": "⚔️ The Battle Attack\n> • Calculate Results"
-            },
-            {
-              "t": 1761659340000,
-              "type": "currency",
-              "desc": "Gained 94 Eggs from manual",
-              "loc": "E2"
-            },
-            {
-              "t": 1761659400000,
-              "type": "action",
-              "desc": "⚔️ The Battle Attack\n> • Calculate Results"
-            },
-            {
-              "t": 1761664500000,
-              "type": "action",
-              "desc": "Attack: Result: Scheduled 1x Raider for 25 damage in Round 7"
-            },
-            {
-              "t": 1761664500000,
-              "type": "currency",
-              "desc": "Gained 94 Eggs from manual",
-              "loc": "E2"
-            },
-            {
-              "t": 1761664560000,
-              "type": "action",
-              "desc": "⚔️ The Battle Attack\n> • Calculate Results"
-            },
-            {
-              "t": 1761750900000,
-              "type": "currency",
-              "desc": "Gained 94 Eggs from manual",
-              "loc": "E2"
-            },
-            {
-              "t": 1761750960000,
-              "type": "action",
-              "desc": "⚔️ The Battle Attack\n> • Calculate Results"
-            },
-            {
-              "t": 1761751080000,
-              "type": "item",
-              "desc": "Picked up 🦎 Raider x24",
-              "loc": "E2"
-            },
-            {
-              "t": 1761751080000,
-              "type": "action",
-              "desc": "🥚 Free Restock\n> • Give Item: raider_499497 (x24)"
-            },
-            {
-              "t": 1761751140000,
-              "type": "action",
-              "desc": "Attack: Result: Scheduled 4x Raider for 100 damage in Round 7"
-            },
-            {
-              "t": 1761754620000,
-              "type": "action",
-              "desc": "Attack: Result: Scheduled 4x Raider for 100 damage in Round 7"
-            },
-            {
-              "t": 1761754860000,
-              "type": "action",
-              "desc": "Attack: Result: Scheduled 4x Raider for 100 damage in Round 7"
-            },
-            {
-              "t": 1762293420000,
-              "type": "currency",
-              "desc": "Gained 94 Eggs from manual",
-              "loc": "E2"
-            },
-            {
-              "t": 1762293420000,
-              "type": "action",
-              "desc": "🧩 test\n> • Text: \"It's a cat meow meow meow\"",
-              "loc": "C4"
-            },
-            {
-              "t": 1762293420000,
-              "type": "action",
-              "desc": "💸 MEOOOWTH\n> • Calculate Results\n> • Text: \"Money\"",
-              "loc": "C4"
-            },
-            {
-              "t": 1762293480000,
-              "type": "action",
-              "desc": "🧩 test\n> • Text: \"It's a cat meow meow meow\"",
-              "loc": "C4"
-            },
-            {
-              "t": 1762297860000,
-              "type": "action",
-              "desc": "/localjars",
-              "loc": "F1"
-            },
-            {
-              "t": 1762297920000,
-              "type": "action",
-              "desc": "Local Jars\n> • Text: \"yOU GOT ALL THE JARS\"",
-              "loc": "F1"
-            },
-            {
-              "t": 1762297920000,
-              "type": "action",
-              "desc": "/localjars\n> • Text: \"yOU GOT ALL THE JARS\"",
-              "loc": "F1"
-            },
-            {
-              "t": 1762297920000,
-              "type": "action",
-              "desc": "/local jars\n> • Text: \"yOU GOT ALL THE JARS\"",
-              "loc": "F1"
-            },
-            {
-              "t": 1762297920000,
-              "type": "action",
-              "desc": "/localjarss\n> • Text: \"yOU GOT ALL THE JARS\"",
-              "loc": "F1"
-            },
-            {
-              "t": 1762298040000,
-              "type": "action",
-              "desc": "Local Jars\n> • Text: \"yOU GOT ALL THE JARS\""
-            },
-            {
-              "t": 1762298040000,
-              "type": "action",
-              "desc": "/localjarss\n> • Text: \"yOU GOT ALL THE JARS\""
-            },
-            {
-              "t": 1762298100000,
-              "type": "action",
-              "desc": "f3 only\n> • Text: \"F3 F3 F3\""
-            },
-            {
-              "t": 1762298160000,
-              "type": "action",
-              "desc": "f3 only\n> • Text: \"F3 F3 F3\""
-            },
-            {
-              "t": 1762298160000,
-              "type": "action",
-              "desc": "/f3only\n> • Text: \"F3 F3 F3\"",
-              "loc": "F3"
-            },
-            {
-              "t": 1762298160000,
-              "type": "action",
-              "desc": "/f3only",
-              "loc": "F1"
-            },
-            {
-              "t": 1762298220000,
-              "type": "action",
-              "desc": "/f3only"
-            },
-            {
-              "t": 1763389620000,
-              "type": "item",
-              "desc": "Picked up 🥥 Button Bundle Coconut Test x1",
-              "loc": "E2"
-            },
-            {
-              "t": 1763389620000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763390100000,
-              "type": "item",
-              "desc": "Picked up 🥥 Button Bundle Coconut Test x1",
-              "loc": "E2"
-            },
-            {
-              "t": 1763390100000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763390160000,
-              "type": "item",
-              "desc": "Picked up 🥥 Button Bundle Coconut Test x1",
-              "loc": "E2"
-            },
-            {
-              "t": 1763390160000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763390340000,
-              "type": "item",
-              "desc": "Picked up 🥥 Button Bundle Coconut Test x1",
-              "loc": "E2"
-            },
-            {
-              "t": 1763390340000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763390400000,
-              "type": "item",
-              "desc": "Picked up 🥥 Button Bundle Coconut Test x1",
-              "loc": "E2"
-            },
-            {
-              "t": 1763390400000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763390460000,
-              "type": "item",
-              "desc": "Picked up 🥥 Button Bundle Coconut Test x1",
-              "loc": "E2"
-            },
-            {
-              "t": 1763390460000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763390520000,
-              "type": "item",
-              "desc": "Picked up 🥥 Button Bundle Coconut Test x1",
-              "loc": "E2"
-            },
-            {
-              "t": 1763390520000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763390580000,
-              "type": "item",
-              "desc": "Picked up 🥥 Button Bundle Coconut Test x1",
-              "loc": "E2"
-            },
-            {
-              "t": 1763390580000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763390820000,
-              "type": "item",
-              "desc": "Picked up 🥥 Button Bundle Coconut Test x1",
-              "loc": "E2"
-            },
-            {
-              "t": 1763390820000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763390880000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763393100000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763393220000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763393520000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763393640000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763393640000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)\n> • Give Item: nurturer_361363 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763393820000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)\n> • Give Item: nurturer_361363 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763394660000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)\n> • Give Item: nurturer_361363 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763395620000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)\n> • Give Item: nurturer_361363 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763398080000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)\n> • Give Item: nurturer_361363 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763398200000,
-              "type": "currency",
-              "desc": "Gained 33 Eggs from Button: button_bundle_wrong__338392",
-              "loc": "E2"
-            },
-            {
-              "t": 1763398200000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)\n> • Give Item: nurturer_361363 (x1)\n> • Text: \"Second!\"\n> • Currency: +33",
-              "loc": "D7"
-            },
-            {
-              "t": 1763655960000,
-              "type": "action",
-              "desc": "Follow Up Modal",
-              "loc": "D6"
-            },
-            {
-              "t": 1763656080000,
-              "type": "action",
-              "desc": "Follow Up Modal\n> • Text: \"Click me!\"",
-              "loc": "D6"
-            },
-            {
-              "t": 1763656200000,
-              "type": "action",
-              "desc": "Follow Up Modal\n> • Text: \"Click me!\"",
-              "loc": "D6"
-            },
-            {
-              "t": 1763659680000,
-              "type": "action",
-              "desc": "Greeting and Companion Test\n> • Text: \"I am both greeting and companion\"",
-              "loc": "G5"
-            },
-            {
-              "t": 1763659680000,
-              "type": "currency",
-              "desc": "Gained 55 Eggs from Button: greeting_and_compani_636846",
-              "loc": "E2"
-            },
-            {
-              "t": 1763659680000,
-              "type": "action",
-              "desc": "Greeting and Companion Child Modal\n> • Currency: +55",
-              "loc": "G5"
-            },
-            {
-              "t": 1763659740000,
-              "type": "action",
-              "desc": "Greeting and Companion Child Modal\n> • Currency: +55",
-              "loc": "G5"
-            },
-            {
-              "t": 1763659740000,
-              "type": "action",
-              "desc": "Greeting and Companion Test\n> • Text: \"I am both greeting and companion\"",
-              "loc": "G5"
-            },
-            {
-              "t": 1763734200000,
-              "type": "item",
-              "desc": "Picked up 🪱 Bait x1",
-              "loc": "E2"
-            },
-            {
-              "t": 1763734200000,
-              "type": "action",
-              "desc": "THATBUG\n> • Text: \"you got item\"\n> • Give Item: bait_530852 (x1)",
-              "loc": "D7"
-            },
-            {
-              "t": 1763734380000,
-              "type": "currency",
-              "desc": "Gained 150 Eggs from Button: gimmemoney_349308",
-              "loc": "E2"
-            },
-            {
-              "t": 1763734380000,
-              "type": "action",
-              "desc": "GIMMEMONEY\n> • Text: \"MONEY\"\n> • Currency: +150",
-              "loc": "D7"
-            },
-            {
-              "t": 1763734560000,
-              "type": "item",
-              "desc": "Picked up <:vulneary:1408472874586603580> Vulnary x1",
-              "loc": "E2"
-            },
-            {
-              "t": 1763997120000,
-              "type": "movement",
-              "desc": "Moved from E2 to A1",
-              "loc": "A1"
-            },
-            {
-              "t": 1763999100000,
-              "type": "movement",
-              "desc": "Moved from C2 to A1",
-              "loc": "A1"
-            },
-            {
-              "t": 1763999160000,
-              "type": "movement",
-              "desc": "Moved from A1 to B1",
-              "loc": "B1"
-            },
-            {
-              "t": 1763999340000,
-              "type": "movement",
-              "desc": "Moved from B1 to B2",
-              "loc": "B2"
-            },
-            {
-              "t": 1763999460000,
-              "type": "movement",
-              "desc": "Moved from B2 to B3",
-              "loc": "B3"
-            },
-            {
-              "t": 1763999460000,
-              "type": "movement",
-              "desc": "Moved from B3 to C2",
-              "loc": "C2"
-            },
-            {
-              "t": 1764600780000,
-              "type": "movement",
-              "desc": "Moved from C2 to D2",
-              "loc": "D2"
-            },
-            {
-              "t": 1764600840000,
-              "type": "movement",
-              "desc": "Moved from D2 to E2",
-              "loc": "E2"
-            },
-            {
-              "t": 1764601020000,
-              "type": "movement",
-              "desc": "Moved from E2 to E3",
-              "loc": "E3"
-            },
-            {
-              "t": 1764601020000,
-              "type": "movement",
-              "desc": "Moved from E3 to F3",
-              "loc": "F3"
-            },
-            {
-              "t": 1764601440000,
-              "type": "movement",
-              "desc": "Moved from F3 to E2",
-              "loc": "E2"
-            },
-            {
-              "t": 1764601500000,
-              "type": "movement",
-              "desc": "Moved from E2 to E1",
-              "loc": "E1"
-            },
-            {
-              "t": 1764601920000,
-              "type": "movement",
-              "desc": "Moved from E1 to E2",
-              "loc": "E2"
-            },
-            {
-              "t": 1765007160000,
-              "type": "currency",
-              "desc": "Gained 1 Gold from Button: buttoncolors_163123",
-              "loc": "E2"
-            },
-            {
-              "t": 1765007160000,
-              "type": "action",
-              "desc": "ButtonColors\n> • Currency: +1",
-              "loc": "A2"
-            },
-            {
-              "t": 1767751980000,
-              "type": "item",
-              "desc": "Picked up 🐣 Nurturer x1",
-              "loc": "E2"
-            },
-            {
-              "t": 1767751980000,
-              "type": "action",
-              "desc": "🌴 Button Bundle Wrong Msg\n> • Text: \"First message! When they get the item only!\"\n> • Give Item: button_bundle_coconu_417818 (x1)\n> • Give Item: nurturer_361363 (x1)\n> • Text: \"Second!\"\n> • Currency: +33",
-              "loc": "D7"
-            },
-            {
-              "t": 1767964140000,
-              "type": "action",
-              "desc": "❤️ Attribute Test",
-              "loc": "D7"
-            },
-            {
-              "t": 1767964200000,
-              "type": "action",
-              "desc": "❤️ Attribute Test",
-              "loc": "D7"
-            },
-            {
-              "t": 1767964620000,
-              "type": "action",
-              "desc": "🧪 Attribute Test",
-              "loc": "D7"
-            },
-            {
-              "t": 1767964680000,
-              "type": "action",
-              "desc": "🧪 Attribute Test",
-              "loc": "D7"
-            },
-            {
-              "t": 1767965160000,
-              "type": "currency",
-              "desc": "Gained 100 Gold from Button: attribute_test_886818",
-              "loc": "E2"
-            },
-            {
-              "t": 1767965160000,
-              "type": "action",
-              "desc": "🧪 Attribute Test\n> • Currency: +100",
-              "loc": "D7"
-            },
-            {
-              "t": 1767965160000,
-              "type": "action",
-              "desc": "🧪 Attribute Test",
-              "loc": "D7"
-            },
-            {
-              "t": 1767965220000,
-              "type": "action",
-              "desc": "🧪 Attribute Test",
-              "loc": "D7"
-            },
-            {
-              "t": 1767965280000,
-              "type": "action",
-              "desc": "🧪 Attribute Test",
-              "loc": "D7"
-            },
-            {
-              "t": 1767965340000,
-              "type": "currency",
-              "desc": "Gained 100 Gold from Button: attribute_test_886818",
-              "loc": "E2"
-            },
-            {
-              "t": 1767965340000,
-              "type": "action",
-              "desc": "🧪 Attribute Test\n> • Currency: +100",
-              "loc": "D7"
-            },
-            {
-              "t": 1767965400000,
-              "type": "currency",
-              "desc": "Gained 100 Gold from Button: attribute_test_886818",
-              "loc": "E2"
-            },
-            {
-              "t": 1767965400000,
-              "type": "action",
-              "desc": "🧪 Attribute Test\n> • Currency: +100",
-              "loc": "D7"
-            },
-            {
-              "t": 1767965760000,
-              "type": "currency",
-              "desc": "Gained 100 Gold from Button: attribute_test_886818",
-              "loc": "E2"
-            },
-            {
-              "t": 1767965760000,
-              "type": "action",
-              "desc": "🧪 Attribute Test\n> • Currency: +100",
-              "loc": "D7"
-            },
-            {
-              "t": 1767965760000,
-              "type": "action",
-              "desc": "🧪 Attribute Test",
-              "loc": "D7"
-            },
-            {
-              "t": 1768140780000,
-              "type": "action",
-              "desc": "🧪 Attribute Test\n> • Text: \"Wooo!\""
-            },
-            {
-              "t": 1768144260000,
-              "type": "item",
-              "desc": "Picked up 🐣 Nurturer x1",
-              "loc": "E2"
-            },
-            {
-              "t": 1770491640000,
-              "type": "movement",
-              "desc": "Moved from E2 to F2",
-              "loc": "F2"
-            },
-            {
-              "t": 1770491700000,
-              "type": "movement",
-              "desc": "Moved from F2 to G2",
-              "loc": "G2"
-            },
-            {
-              "t": 1770491880000,
-              "type": "movement",
-              "desc": "Moved from G2 to G1",
-              "loc": "G1"
-            },
-            {
-              "t": 1770492300000,
-              "type": "movement",
-              "desc": "Moved from G1 to G2",
-              "loc": "G2"
-            },
-            {
-              "t": 1770492540000,
-              "type": "movement",
-              "desc": "Moved from G2 to F2",
-              "loc": "F2"
-            },
-            {
-              "t": 1770493500000,
-              "type": "movement",
-              "desc": "Moved from F2 to G1",
-              "loc": "G1"
-            },
-            {
-              "t": 1772115540000,
-              "type": "item",
-              "desc": "Picked up <:Belle:1382413449342091405> dupe5 x1",
-              "loc": "G1"
-            },
-            {
-              "t": 1772115540000,
-              "type": "item",
-              "desc": "Picked up 📦 dupe4 x1",
-              "loc": "G1"
-            },
-            {
-              "t": 1772115540000,
-              "type": "item",
-              "desc": "Picked up 📦 dupe3 x1",
-              "loc": "G1"
-            },
-            {
-              "t": 1772115540000,
-              "type": "item",
-              "desc": "Picked up 📦 dupe20 x1",
-              "loc": "G1"
-            },
-            {
-              "t": 1772116140000,
-              "type": "item",
-              "desc": "Picked up 🌿 Anthony's Toga x1",
-              "loc": "G1"
-            },
-            {
-              "t": 1772116560000,
-              "type": "item",
-              "desc": "Picked up <:Belle:1382413449342091405> dupe5 x1",
-              "loc": "G1"
-            },
-            {
-              "t": 1772186040000,
-              "type": "item",
-              "desc": "Picked up 📦 dupe3 x1",
-              "loc": "G1"
-            },
-            {
-              "t": 1772187180000,
-              "type": "item",
-              "desc": "Picked up 🎲 A Pair of Dice x1",
-              "loc": "G1"
-            },
-            {
-              "t": 1772187480000,
-              "type": "item",
-              "desc": "Picked up 🎲 A Pair of Dice x1",
-              "loc": "G1"
-            },
-            {
-              "t": 1772189880000,
-              "type": "item",
-              "desc": "Picked up 📦 dupe3 x1"
-            },
-            {
-              "t": 1772208240000,
-              "type": "currency",
-              "desc": "Gained 500 Gold from Button: give_me_free_money_1772208042309",
-              "loc": "G1"
-            },
-            {
-              "t": 1772211060000,
-              "type": "currency",
-              "desc": "Gained 44 Gold from manual",
-              "loc": "C2"
-            },
-            {
-              "t": 1772423661332,
-              "type": "movement",
-              "desc": "Moved from ? to A3"
-            },
-            {
-              "t": 1772423661332,
-              "type": "init",
-              "desc": "Initialized at A3"
-            },
-            {
-              "t": 1772423661409,
-              "type": "movement",
-              "desc": "Moved from A3 to A3"
-            },
-            {
-              "t": 1772433118546,
-              "type": "action",
-              "desc": "Safari button: attribute_test_886818",
-              "loc": "D7"
-            },
-            {
-              "t": 1772433122210,
-              "type": "action",
-              "desc": "Safari button: attribute_conditions_221587",
-              "loc": "D7"
-            },
-            {
-              "t": 1772433137868,
-              "type": "item",
-              "desc": "Picked up 🦎 Raider x24",
-              "loc": "A3"
-            },
-            {
-              "t": 1772433137868,
-              "type": "action",
-              "desc": "Safari button: free_restock_047551",
-              "loc": "Unknown"
-            },
-            {
-              "t": 1772433146374,
-              "type": "action",
-              "desc": "Safari button: give_me_free_money_1772208042309",
-              "loc": "D6"
-            },
-            {
-              "t": 1772433161531,
-              "type": "currency",
-              "desc": "Gained 94 Gil from manual",
-              "loc": "A3"
-            },
-            {
-              "t": 1772433172046,
-              "type": "action",
-              "desc": "Safari button: meooowth_502209",
-              "loc": "C4"
-            },
-            {
-              "t": 1772433182028,
-              "type": "action",
-              "desc": "Safari button: fight_the_shark_674268",
-              "loc": "C3"
-            },
-            {
-              "t": 1772433199221,
-              "type": "action",
-              "desc": "Safari button: my_conditional_searc_713128",
-              "loc": "Unknown"
-            },
-            {
-              "t": 1772551623289,
-              "type": "action",
-              "desc": "Initial Name\n> • Text: \"Ohh ohhh!\"",
-              "loc": "Unknown"
-            },
-            {
-              "t": 1772554055205,
-              "type": "admin",
-              "desc": "[ADMIN] Set Territory Forager x5"
-            },
-            {
-              "t": 1772554057983,
-              "type": "item",
-              "desc": "Picked up 🦖 Territory Forager x5",
-              "loc": "Admin"
-            },
-            {
-              "t": 1772556176038,
-              "type": "admin",
-              "desc": "[ADMIN] Set Freshest item you've ever seen x5"
-            },
-            {
-              "t": 1772556178805,
-              "type": "item",
-              "desc": "Picked up 💈 Freshest item you've ever seen x5",
-              "loc": "Admin"
-            },
-            {
-              "t": 1772557473212,
-              "type": "item",
-              "desc": "Picked up 🐣 Nurturer x1",
-              "loc": "A3"
-            },
-            {
-              "t": 1772557473212,
-              "type": "action",
-              "desc": "👩‍🍼 Baby Item\n> • Text: \"wawaaa!!\"\n> • Give Item: 🐣 Nurturer (x1)",
-              "loc": "Unknown"
-            },
-            {
-              "t": 1772557649387,
-              "type": "item",
-              "desc": "Picked up 🐣 Nurturer x1",
-              "loc": "A3"
-            },
-            {
-              "t": 1772557649387,
-              "type": "action",
-              "desc": "👩‍🍼 Baby Item\n> • Text: \"wawaaa!!\"\n> • Give Item: 🐣 Nurturer (x1)",
-              "loc": "G5"
-            },
-            {
-              "t": 1772558071699,
-              "type": "action",
-              "desc": "👩‍🍼 Baby Item\n> • Text: \"wawaaa!!\"\n> • Give Item: 🐣 Nurturer (x1)",
-              "loc": "Unknown"
-            },
-            {
-              "t": 1772558127917,
-              "type": "item",
-              "desc": "Picked up 🐣 Nurturer x1",
-              "loc": "A3"
-            },
-            {
-              "t": 1772558127917,
-              "type": "action",
-              "desc": "👩‍🍼 Baby Item\n> • Text: \"wawaaa!!\"\n> • Give Item: 🐣 Nurturer (x1)",
-              "loc": "Unknown"
-            },
-            {
-              "t": 1772558136739,
-              "type": "action",
-              "desc": "👩‍🍼 Baby Item\n> • Text: \"wawaaa!!\"\n> • Give Item: 🐣 Nurturer (x1)",
-              "loc": "Unknown"
-            },
-            {
-              "t": 1772801841255,
-              "type": "currency",
-              "desc": "Gained 220 Gil from manual",
-              "loc": "A3"
-            },
-            {
-              "t": 1772801913051,
-              "type": "currency",
-              "desc": "Gained 470 Gil from manual",
-              "loc": "A3"
-            }
-          ],
-          "inventory": {
-            "nurturer_361363": {
-              "quantity": 5,
-              "numAttacksAvailable": 5
-            },
-            "nest_guardian_461600": 1,
-            "raider_499497": {
-              "quantity": 25,
-              "numAttacksAvailable": 24
-            },
-            "territory_forager_404120": {
-              "quantity": 5,
-              "numAttacksAvailable": 0
-            },
-            "freshest_item_you_ve_120905": {
-              "quantity": 5,
-              "numAttacksAvailable": 5
-            }
-          },
-          "achievements": [],
-          "cooldowns": {},
-          "buttonUses": {},
-          "storeHistory": [],
           "points": {
             "stamina": {
               "current": 1,
               "maximum": 1,
-              "lastRegeneration": "2026-03-02T03:54:21.332Z",
+              "lastRegeneration": "2026-03-08T04:15:40.166Z",
               "regenConfig": "hourly"
             }
-          },
-          "lastInteraction": 1772801910575
+          }
         }
       },
       "251452487997980673": {
@@ -2542,7 +1516,58 @@
       "630470402900230146": {
         "vanityRoles": [
           "1442029356108091463"
-        ]
+        ],
+        "safari": {
+          "currency": 55,
+          "history": [
+            {
+              "t": 1772943341818,
+              "type": "init",
+              "desc": "Initialized at G1 with +55 Gil (total: 55)",
+              "loc": "G1"
+            }
+          ],
+          "lastInteraction": 1772943341818,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "G1",
+              "exploredCoordinates": [
+                "G1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "G1",
+                  "timestamp": "2026-03-08T04:15:41.818Z"
+                },
+                {
+                  "from": "G1",
+                  "to": "G1",
+                  "timestamp": "2026-03-08T04:15:41.847Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2026-03-08T04:15:41.818Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
       },
       "719547106318352496": {
         "safari": {
@@ -12995,14 +12020,14 @@
     "serverName": "Servivorg S14 - FINAL FANTASY",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/189c3570ea34b3fbf3ee7b4d5989d32e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 580,
+    "memberCount": 584,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1772855931383,
+    "lastUpdated": 1772942723849,
     "ownerInfo": {
       "username": "serviver",
       "globalName": "Serviver",

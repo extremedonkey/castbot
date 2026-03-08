@@ -433,26 +433,28 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           
           const components = [];
           
-          // TRUE Actions Section
+          // TRUE Outcomes Section
+          components.push({ type: 14 }); // Divider
           components.push({
             type: 10,
-            content: `### ✅ Actions executed if Conditions Met (${trueActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})`
+            content: `> \`🟢 Outcomes | Player Meets Conditions (${trueActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\``
           });
-          
-          // Display TRUE actions
-          components.push(...getActionListComponents(trueActions, actionId, guildItems, guildButtons, 'true', allActions));
-          
 
-          // FALSE Actions Section - merge "No false conditions" into header
+          // Display TRUE outcomes
+          components.push(...getActionListComponents(trueActions, actionId, guildItems, guildButtons, 'true', allActions));
+
+
+          // FALSE Outcomes Section
+          components.push({ type: 14 }); // Divider
           if (falseActions.length === 0) {
             components.push({
               type: 10,
-              content: `### ❌ Actions executed if Conditions Not Met (0/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\n*No false conditions configured - display generic error message*`
+              content: `> \`🔴 Outcomes | Player Fails Conditions (0/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\n*No false conditions configured - display generic error message*`
             });
           } else {
             components.push({
               type: 10,
-              content: `### ❌ Actions executed if Conditions Not Met (${falseActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})`
+              content: `> \`🔴 Outcomes | Player Fails Conditions (${falseActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\``
             });
             components.push(...getActionListComponents(falseActions, actionId, guildItems, guildButtons, 'false', allActions));
           }
@@ -634,9 +636,10 @@ function calculateMaxCustomActionEditorComponents() {
     coordinatesSection: 1, // type 9 - Coordinates Section
     coordinatesAccessory: 1, // type 2 - "Manage" button (accessory)
     separator2: 1, // type 14 - after Coordinates
-    trueActionsHeader: 1, // type 10 - "✅ Actions executed if Conditions Met"
-    separator3: 1, // type 14 - between TRUE and FALSE sections
-    falseActionsHeader: 1, // type 10 - "❌ Actions executed if Conditions Not Met"
+    trueOutcomesDivider: 1, // type 14 - before TRUE outcomes section
+    trueOutcomesHeader: 1, // type 10 - "🟢 Outcomes | Player Meets Conditions"
+    falseOutcomesDivider: 1, // type 14 - before FALSE outcomes section
+    falseOutcomesHeader: 1, // type 10 - "🔴 Outcomes | Player Fails Conditions"
     falseActionsPlaceholder: 1, // type 10 - "*No false conditions configured*" (worst case)
     separator4: 1, // type 14 - before action select menu (when not at max)
     actionSelectRow: 1, // type 1 - Action Row for select menu
