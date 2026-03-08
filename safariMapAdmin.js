@@ -12,6 +12,7 @@ import { setEntityPoints } from './pointsManager.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { getCustomTerms } from './safariManager.js';
 import { logger } from './logger.js';
+import { isPlayerInitialized } from './safariPlayerUtils.js';
 
 /**
  * Create the main Safari Map Admin interface
@@ -338,17 +339,24 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = null, 
   const safariData = await loadSafariContent();
 
   // Get stamina & location config (per-server with .env fallback)
-  const { getStaminaConfig, initializePlayerSafari, grantDefaultItems } = await import('./safariManager.js');
+  const { getStaminaConfig, getStartingCurrency, initializePlayerSafari, grantDefaultItems } = await import('./safariManager.js');
   const staminaConfig = await getStaminaConfig(guildId);
 
-  // Use configured starting coordinate if not explicitly provided
+  // Resolve starting coordinate: per-player override > explicit param > server default > 'A1'
   if (!coordinate) {
-    coordinate = staminaConfig.defaultStartingCoordinate;
-    console.log(`🗺️ Using configured starting coordinate: ${coordinate}`);
+    const activeMapId = safariData[guildId]?.maps?.active;
+    const playerStartingLoc = playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId]?.startingLocation;
+    if (playerStartingLoc) {
+      coordinate = playerStartingLoc;
+      console.log(`📍 Using per-player starting location: ${coordinate}`);
+    } else {
+      coordinate = staminaConfig.defaultStartingCoordinate;
+      console.log(`🗺️ Using configured starting coordinate: ${coordinate}`);
+    }
   }
 
-  // Get default starting currency from config
-  const defaultCurrency = safariData[guildId]?.safariConfig?.defaultStartingCurrencyValue ?? 100;
+  // Get default starting currency from centralized config getter
+  const defaultCurrency = await getStartingCurrency(guildId);
 
   // Get existing currency before initialization (may have been granted via other means)
   const existingCurrency = playerData[guildId]?.players?.[userId]?.safari?.currency || 0;
@@ -968,9 +976,7 @@ export async function handleMapAdminRefreshAnchorsModal(context, req) {
 export async function bulkInitializePlayers(guildId, userIds, client) {
   const playerData = await loadPlayerData();
   const safariData = await loadSafariContent();
-  const { getStaminaConfig } = await import('./safariManager.js');
   const customTerms = await getCustomTerms(guildId);
-  const staminaConfig = await getStaminaConfig(guildId);
   const items = safariData[guildId]?.items || {};
   const defaultItemCount = Object.values(items).filter(i => i?.metadata?.defaultItem === 'Yes').length;
   const activeMapId = safariData[guildId]?.maps?.active;
@@ -980,15 +986,10 @@ export async function bulkInitializePlayers(guildId, userIds, client) {
 
   for (const userId of userIds) {
     try {
-      // Check if already initialized
+      // Check if already initialized (canonical check via safariPlayerUtils)
       const player = playerData[guildId]?.players?.[userId];
-      const isInitialized = player?.safari && (
-        player.safari.currency !== undefined ||
-        player.safari.inventory !== undefined ||
-        player.safari.points !== undefined
-      );
 
-      if (isInitialized) {
+      if (isPlayerInitialized(player)) {
         // Already initialized — get current location for display
         const currentLocation = activeMapId
           ? player.safari.mapProgress?.[activeMapId]?.currentLocation || '?'
@@ -1004,21 +1005,18 @@ export async function bulkInitializePlayers(guildId, userIds, client) {
         continue;
       }
 
-      // Determine starting coordinate (per-player > server default > A1)
-      let coordinate = staminaConfig.defaultStartingCoordinate || 'A1';
-      if (activeMapId) {
-        const playerStarting = player?.safari?.mapProgress?.[activeMapId]?.startingLocation;
-        if (playerStarting) coordinate = playerStarting;
-      }
+      // Coordinate resolution handled inside initializePlayerOnMap
+      // (per-player startingLocation > server default > 'A1')
+      await initializePlayerOnMap(guildId, userId, null, client);
 
-      // Initialize via existing function
-      await initializePlayerOnMap(guildId, userId, coordinate, client);
-
-      // Reload player data to get results
+      // Reload player data to get results (including resolved coordinate)
       const updatedData = await loadPlayerData();
       const updatedPlayer = updatedData[guildId]?.players?.[userId];
       const currency = updatedPlayer?.safari?.currency || 0;
       const itemCount = Object.keys(updatedPlayer?.safari?.inventory || {}).length;
+      const coordinate = activeMapId
+        ? updatedPlayer?.safari?.mapProgress?.[activeMapId]?.currentLocation || '?'
+        : '?';
 
       // Resolve display name
       let displayName = userId;

@@ -8878,6 +8878,18 @@ async function getItemStock(guildId, storeId, itemId) {
 }
 
 /**
+ * Get starting currency value for a guild.
+ * Centralized getter — matches the pattern of getStaminaConfig().
+ *
+ * @param {string} guildId - Guild ID
+ * @returns {Promise<number>} Starting currency value (default: 100)
+ */
+export async function getStartingCurrency(guildId) {
+    const safariData = await loadSafariContent();
+    return safariData[guildId]?.safariConfig?.defaultStartingCurrencyValue ?? 100;
+}
+
+/**
  * Get stamina configuration for a guild (per-server with .env fallback)
  * Replaces global .env stamina settings with per-server configuration
  *
@@ -9321,6 +9333,8 @@ export {
     getEmojiTwemojiUrl,
     // Custom Terms exports
     getCustomTerms,
+    // Initialization Config exports
+    getStartingCurrency,
     // Points System exports
     executeCheckPoints,
     executeModifyPoints,

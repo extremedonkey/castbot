@@ -30840,30 +30840,19 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
           
-          // Determine starting coordinate: player-specific > server default > A1
-          const playerStartingLoc = playerData[context.guildId]?.players?.[context.userId]?.safari?.mapProgress?.[activeMapId]?.startingLocation;
-          let startingCoordinate;
-          if (playerStartingLoc) {
-            startingCoordinate = playerStartingLoc;
-            console.log(`📍 Self-init using player-specific starting location: ${startingCoordinate}`);
-          } else {
-            const { getStaminaConfig } = await import('./safariManager.js');
-            const staminaConfig = await getStaminaConfig(context.guildId);
-            startingCoordinate = staminaConfig.defaultStartingCoordinate || 'A1';
-            console.log(`📍 Self-init using server default starting location: ${startingCoordinate}`);
-          }
+          // Coordinate resolution now handled inside initializePlayerOnMap
+          // (per-player startingLocation > server default > 'A1')
+          await initializePlayerOnMap(context.guildId, context.userId, null, context.client);
 
-          await initializePlayerOnMap(context.guildId, context.userId, startingCoordinate, context.client);
-
-          // Activity log entry is added atomically inside initializePlayerOnMap
-
-          // Get channel info for response
+          // Re-read to get the resolved coordinate for the response message
+          const updatedPlayerData = await loadPlayerData();
+          const resolvedCoordinate = updatedPlayerData[context.guildId]?.players?.[context.userId]?.safari?.mapProgress?.[activeMapId]?.currentLocation || 'A1';
           const mapData = safariData[context.guildId].maps[activeMapId];
-          const channelId = mapData.coordinates[startingCoordinate]?.channelId;
+          const channelId = mapData.coordinates[resolvedCoordinate]?.channelId;
 
-          console.log(`✅ SUCCESS: safari_map_init_player - player initialized at ${startingCoordinate}`);
+          console.log(`✅ SUCCESS: safari_map_init_player - player initialized at ${resolvedCoordinate}`);
           return {
-            content: `✅ **Welcome to the Safari Map!**\n\nYou've been initialized at coordinate **${startingCoordinate}** with **1 stamina**.\n\nHead to <#${channelId}> to start exploring! Your movement options are waiting for you there.`,
+            content: `✅ **Welcome to the Safari Map!**\n\nYou've been initialized at coordinate **${resolvedCoordinate}** with **1 stamina**.\n\nHead to <#${channelId}> to start exploring! Your movement options are waiting for you there.`,
             ephemeral: true
           };
         }
@@ -31601,24 +31590,9 @@ Your server is now ready for Tycoons gameplay!`;
           const { loadPlayerData } = await import('./storage.js');
 
           try {
-            // Check for per-player starting location first
-            const playerData = await loadPlayerData();
-            const safariData = await loadSafariContent();
-            const activeMapId = safariData[context.guildId]?.maps?.active;
-            const playerStartingLocation = playerData[context.guildId]?.players?.[targetUserId]?.safari?.mapProgress?.[activeMapId]?.startingLocation;
-
-            // Priority: player-specific > server default > A1
-            let startingCoordinate;
-            if (playerStartingLocation) {
-              startingCoordinate = playerStartingLocation;
-              console.log(`📍 Using player-specific starting location: ${startingCoordinate}`);
-            } else {
-              const staminaConfig = await getStaminaConfig(context.guildId);
-              startingCoordinate = staminaConfig.defaultStartingCoordinate || 'A1';
-              console.log(`📍 Using server default starting location: ${startingCoordinate}`);
-            }
-
-            await initializePlayerOnMap(context.guildId, targetUserId, startingCoordinate, context.client);
+            // Coordinate resolution now handled inside initializePlayerOnMap
+            // (per-player startingLocation > server default > 'A1')
+            await initializePlayerOnMap(context.guildId, targetUserId, null, context.client);
             
             // Return updated player view
             const ui = await createMapAdminUI({

@@ -371,6 +371,10 @@ Bot not responding?
 - Recovery: Use `pm2 restart castbot-pm` from correct directory
 
 ## 📂 Documentation Taxonomy
+General Workflow for new features:
+* Fleshing out an idea / not sure if it will be implemented immediately, or haven't started on it -> Make it a RaP
+* We've started -> Move / rename it into Implementation
+* We've deployed it to production -> Move to Features
 
 | Folder | Purpose | When to use |
 |---|---|---|
@@ -405,6 +409,7 @@ Bot not responding?
 - **🎯 PLAYER MENU ACTIONS** → [docs/03-features/PlayerMenuActions.md](docs/03-features/PlayerMenuActions.md) - Custom Actions in player /menu
 - **📍 PLAYER LOCATIONS** → [docs/03-features/PlayerLocationManager.md](docs/03-features/PlayerLocationManager.md)
 - **🔄 SAFARI PROGRESS** → [docs/03-features/SafariProgress.md](docs/03-features/SafariProgress.md)
+- **🚀 SAFARI INITIALIZATION** → [docs/03-features/SafariInitialization.md](docs/03-features/SafariInitialization.md) - Player init flow, config resolution, decision trees
 
 **Infrastructure & Deployment:**
 - **🌍 INFRASTRUCTURE ARCHITECTURE** → [docs/infrastructure/InfrastructureArchitecture.md](docs/infrastructure/InfrastructureArchitecture.md)
