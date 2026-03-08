@@ -848,6 +848,11 @@
               "type": "init",
               "desc": "Initialized at A3 with +55 Gil (total: 55)",
               "loc": "A3"
+            },
+            {
+              "t": 1772946180185,
+              "type": "movement",
+              "desc": "Moved from A3 to A1"
             }
           ],
           "lastInteraction": 1772945726100,
@@ -1241,230 +1246,78 @@
           "1434189625609551984"
         ],
         "safari": {
+          "currency": 55,
+          "history": [
+            {
+              "t": 1772949573953,
+              "type": "admin",
+              "desc": "[ADMIN] Player de-initialized"
+            },
+            {
+              "t": 1772949699601,
+              "type": "init",
+              "desc": "Initialized at B5 with +55 Gil (total: 55)",
+              "loc": "B5"
+            },
+            {
+              "t": 1772949702558,
+              "type": "action",
+              "desc": "🚀 Initialize Me\n> • Safari State: initialize → B5",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772949815063,
+              "type": "movement",
+              "desc": "Moved from B5 to C5"
+            }
+          ],
+          "lastInteraction": 1772949572318,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "B2",
+              "currentLocation": "C5",
               "exploredCoordinates": [
-                "G1",
-                "F1",
-                "B3",
-                "B2"
+                "B5",
+                "C5"
               ],
               "itemsFound": [],
               "movementHistory": [
                 {
                   "from": null,
-                  "to": "G1",
-                  "timestamp": "2026-03-02T04:01:10.881Z"
+                  "to": "B5",
+                  "timestamp": "2026-03-08T06:01:39.601Z"
                 },
                 {
-                  "from": "G1",
-                  "to": "G1",
-                  "timestamp": "2026-03-02T04:01:10.928Z"
+                  "from": "B5",
+                  "to": "B5",
+                  "timestamp": "2026-03-08T06:01:39.664Z"
                 },
                 {
-                  "from": "G1",
-                  "to": "F1",
-                  "timestamp": "2026-03-02T04:03:06.240Z"
-                },
-                {
-                  "from": "F1",
-                  "to": "B3",
-                  "timestamp": "2026-03-02T04:11:41.162Z"
-                },
-                {
-                  "from": "B3",
-                  "to": "B2",
-                  "timestamp": "2026-03-02T06:00:12.418Z"
+                  "from": "B5",
+                  "to": "C5",
+                  "timestamp": "2026-03-08T06:03:30.132Z"
                 }
               ],
               "startingLocation": "G1"
             }
           },
-          "currency": 232,
-          "history": [
-            {
-              "t": 1760972340000,
-              "type": "currency",
-              "desc": "Gained 44 Eggs from manual",
-              "loc": "E2"
-            },
-            {
-              "t": 1761658080000,
-              "type": "currency",
-              "desc": "Gained 94 Eggs from manual",
-              "loc": "E2"
-            },
-            {
-              "t": 1761658140000,
-              "type": "currency",
-              "desc": "Gained 94 Eggs from manual",
-              "loc": "E2"
-            },
-            {
-              "t": 1761658200000,
-              "type": "currency",
-              "desc": "Gained 94 Eggs from manual",
-              "loc": "E2"
-            },
-            {
-              "t": 1761658860000,
-              "type": "currency",
-              "desc": "Gained 94 Eggs from manual",
-              "loc": "E2"
-            },
-            {
-              "t": 1761659400000,
-              "type": "currency",
-              "desc": "Gained 94 Eggs from manual",
-              "loc": "E2"
-            },
-            {
-              "t": 1761664500000,
-              "type": "currency",
-              "desc": "Gained 94 Eggs from manual",
-              "loc": "E2"
-            },
-            {
-              "t": 1761750960000,
-              "type": "currency",
-              "desc": "Gained 94 Eggs from manual",
-              "loc": "E2"
-            },
-            {
-              "t": 1762293420000,
-              "type": "currency",
-              "desc": "Gained 94 Eggs from manual",
-              "loc": "E2"
-            },
-            {
-              "t": 1772211060000,
-              "type": "currency",
-              "desc": "Gained 44 Gold from manual",
-              "loc": "E2"
-            },
-            {
-              "t": 1772424070881,
-              "type": "movement",
-              "desc": "Moved from ? to G1"
-            },
-            {
-              "t": 1772424070881,
-              "type": "init",
-              "desc": "Initialized at G1"
-            },
-            {
-              "t": 1772424070928,
-              "type": "movement",
-              "desc": "Moved from G1 to G1"
-            },
-            {
-              "t": 1772424186240,
-              "type": "movement",
-              "desc": "Moved from G1 to F1"
-            },
-            {
-              "t": 1772424701162,
-              "type": "movement",
-              "desc": "Moved from F1 to B3"
-            },
-            {
-              "t": 1772429730479,
-              "type": "action",
-              "desc": "Safari button: a_bad_ass_action_640326"
-            },
-            {
-              "t": 1772430907356,
-              "type": "action",
-              "desc": "Safari button: simple_action_290229"
-            },
-            {
-              "t": 1772431212418,
-              "type": "movement",
-              "desc": "Moved from B3 to B2",
-              "loc": "B2"
-            },
-            {
-              "t": 1772431214237,
-              "type": "movement",
-              "desc": "Moved from B3 to B2"
-            },
-            {
-              "t": 1772431296371,
-              "type": "action",
-              "desc": "Safari button: simple_action_2_290229",
-              "loc": "B2"
-            },
-            {
-              "t": 1772432952595,
-              "type": "action",
-              "desc": "Safari button: simple_action_5_290229",
-              "loc": "B2"
-            },
-            {
-              "t": 1772432955704,
-              "type": "item",
-              "desc": "Picked up 🪱 Bait x1",
-              "loc": "B2"
-            },
-            {
-              "t": 1772432955704,
-              "type": "currency",
-              "desc": "Lost 55 Gil from Button: show_me_the_buttons_813292",
-              "loc": "B2"
-            },
-            {
-              "t": 1772432955704,
-              "type": "action",
-              "desc": "Safari button: show_me_the_buttons_813292",
-              "loc": "B2"
-            },
-            {
-              "t": 1772433164676,
-              "type": "currency",
-              "desc": "Gained 94 Gil from manual",
-              "loc": "B2"
-            },
-            {
-              "t": 1772801844077,
-              "type": "currency",
-              "desc": "Gained 44 Gil from manual",
-              "loc": "B2"
-            },
-            {
-              "t": 1772801915774,
-              "type": "currency",
-              "desc": "Gained 94 Gil from manual",
-              "loc": "B2"
-            }
-          ],
-          "inventory": {
-            "rainbow_fish_094546": {
-              "quantity": 2,
-              "numAttacksAvailable": 0
-            },
-            "nurturer_361363": 1,
-            "territory_forager_404120": 1,
-            "nest_guardian_461600": 1,
-            "raider_499497": 1,
-            "bait_530852": {
-              "quantity": 3,
-              "numAttacksAvailable": 0
-            }
-          },
-          "achievements": [],
-          "cooldowns": {},
-          "buttonUses": {},
-          "storeHistory": [],
           "points": {
             "stamina": {
               "current": 1,
               "maximum": 1,
-              "lastRegeneration": "2026-03-02T04:01:10.880Z",
+              "lastRegeneration": "2026-03-08T06:01:39.600Z",
               "regenConfig": "hourly"
             }
-          },
-          "lastInteraction": 1772801913776
+          }
         }
       },
       "1100826875435163780": {
@@ -1511,63 +1364,7 @@
       "630470402900230146": {
         "vanityRoles": [
           "1442029356108091463"
-        ],
-        "safari": {
-          "currency": 55,
-          "history": [
-            {
-              "t": 1772943341818,
-              "type": "init",
-              "desc": "Initialized at G1 with +55 Gil (total: 55)",
-              "loc": "G1"
-            },
-            {
-              "t": 1772943345944,
-              "type": "init",
-              "desc": "Initialized at G1 with 55 Gil"
-            }
-          ],
-          "lastInteraction": 1772943341818,
-          "achievements": [],
-          "inventory": {
-            "nurturer_361363": 1,
-            "territory_forager_404120": 1,
-            "nest_guardian_461600": 1,
-            "raider_499497": 1
-          },
-          "cooldowns": {},
-          "buttonUses": {},
-          "storeHistory": [],
-          "mapProgress": {
-            "map_7x7_1753981993871": {
-              "currentLocation": "G1",
-              "exploredCoordinates": [
-                "G1"
-              ],
-              "itemsFound": [],
-              "movementHistory": [
-                {
-                  "from": null,
-                  "to": "G1",
-                  "timestamp": "2026-03-08T04:15:41.818Z"
-                },
-                {
-                  "from": "G1",
-                  "to": "G1",
-                  "timestamp": "2026-03-08T04:15:41.847Z"
-                }
-              ]
-            }
-          },
-          "points": {
-            "stamina": {
-              "current": 1,
-              "maximum": 1,
-              "lastRegeneration": "2026-03-08T04:15:41.818Z",
-              "regenConfig": "hourly"
-            }
-          }
-        }
+        ]
       },
       "719547106318352496": {
         "safari": {

@@ -3426,6 +3426,18 @@ async function executeManagePlayerState(config, guildId, userId, interaction) {
         const player = playerData[guildId]?.players?.[userId];
         const initialized = isPlayerInitialized(player);
 
+        // Helper: after initializePlayerOnMap, resolve the actual coordinate + channel link
+        const buildInitMessage = async () => {
+            const safariData = await loadSafariContent();
+            const updatedPD = await loadPlayerData();
+            const activeMapId = safariData[guildId]?.maps?.active;
+            const resolvedCoord = updatedPD[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId]?.currentLocation;
+            const channelId = resolvedCoord && safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[resolvedCoord]?.channelId;
+            const locationLink = channelId ? ` Head to <#${channelId}> to start exploring!` : '';
+            const coordMsg = resolvedCoord ? ` at **${resolvedCoord}**` : '';
+            return `✅ Welcome to the Safari! You have been placed on the map${coordMsg}.${locationLink}`;
+        };
+
         switch (mode) {
             case 'initialize': {
                 if (initialized) {
@@ -3434,8 +3446,7 @@ async function executeManagePlayerState(config, guildId, userId, interaction) {
                 const { initializePlayerOnMap } = await import('./safariMapAdmin.js');
                 await initializePlayerOnMap(guildId, userId, coordinate || null, client);
 
-                const coordMsg = coordinate ? ` at **${coordinate}**` : '';
-                return { content: `✅ Welcome to the Safari! You have been placed on the map${coordMsg}.` };
+                return { content: await buildInitMessage() };
             }
 
             case 'teleport': {
@@ -3456,8 +3467,7 @@ async function executeManagePlayerState(config, guildId, userId, interaction) {
                 if (!initialized) {
                     const { initializePlayerOnMap } = await import('./safariMapAdmin.js');
                     await initializePlayerOnMap(guildId, userId, coordinate || null, client);
-                    const coordMsg = coordinate ? ` at **${coordinate}**` : '';
-                    return { content: `✅ Welcome to the Safari! You have been placed on the map${coordMsg}.` };
+                    return { content: await buildInitMessage() };
                 } else {
                     if (!coordinate) {
                         return { content: 'ℹ️ You are already on the map.' };
