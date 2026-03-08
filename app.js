@@ -27114,7 +27114,7 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
 
     } else if (custom_id.startsWith('entity_action_post_channel_select_')) {
-      // Channel select handler: post custom action button to selected channel
+      // Channel select handler: post custom action button to selected channel (from coords menu)
       try {
         const guildId = req.body.guild_id;
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to post actions.')) return;
@@ -27125,46 +27125,13 @@ Your server is now ready for Tycoons gameplay!`;
         const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
         const safariData = await loadSafariContent();
         const action = safariData[guildId]?.buttons?.[actionId];
+        if (!action) return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Action not found.', flags: InteractionResponseFlags.EPHEMERAL } });
 
-        if (!action) {
-          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Action not found.', flags: InteractionResponseFlags.EPHEMERAL } });
-        }
+        const { buildActionChannelCard, trackPostedChannel } = await import('./customActionUI.js');
+        const channelCard = buildActionChannelCard(action, guildId, actionId);
+        await DiscordRequest(`channels/${selectedChannelId}/messages`, { method: 'POST', body: { flags: (1 << 15), components: [channelCard] } });
 
-        // Build channel card: Container with action info + button
-        const channelCard = {
-          type: 17, // Container
-          accent_color: 0x3498db,
-          components: [
-            { type: 10, content: `## ${action.emoji || '⚡'} ${action.name || action.label || 'Custom Action'}` },
-            { type: 14 },
-            {
-              type: 1, // Action Row
-              components: [{
-                type: 2, // Button
-                // button_modal triggers use modal_launcher_ prefix so they show a modal on click
-                custom_id: action.trigger?.type === 'button_modal'
-                  ? `modal_launcher_${guildId}_${actionId}_${Date.now()}`
-                  : `safari_${guildId}_${actionId}`,
-                label: action.name || action.label || 'Activate',
-                style: (() => {
-                  const styleMap = { 'Primary': 1, 'Secondary': 2, 'Success': 3, 'Danger': 4 };
-                  return styleMap[action.trigger?.button?.style] || action.style || 1;
-                })(),
-                ...(action.emoji ? { emoji: { name: action.emoji } } : {})
-              }]
-            }
-          ]
-        };
-
-        await DiscordRequest(`channels/${selectedChannelId}/messages`, {
-          method: 'POST',
-          body: { flags: (1 << 15), components: [channelCard] }
-        });
-
-        // Track posted channel
-        if (!action.postedChannels) action.postedChannels = [];
-        if (!action.postedChannels.includes(selectedChannelId)) {
-          action.postedChannels.push(selectedChannelId);
+        if (trackPostedChannel(action, selectedChannelId)) {
           await saveSafariContent(safariData);
           console.log(`📌 Tracked channel ${selectedChannelId} for action ${actionId}`);
         }
@@ -27174,8 +27141,7 @@ Your server is now ready for Tycoons gameplay!`;
           data: {
             flags: (1 << 15),
             components: [{
-              type: 17,
-              accent_color: 0x27ae60, // Green
+              type: 17, accent_color: 0x27ae60,
               components: [
                 { type: 10, content: `## ✅ Action Posted!\n\n**${action.emoji || '⚡'} ${action.name || action.label}** has been posted to <#${selectedChannelId}>.` },
                 { type: 14 },
@@ -27190,7 +27156,7 @@ Your server is now ready for Tycoons gameplay!`;
       }
 
     } else if (custom_id.startsWith('entity_action_post_channel_')) {
-      // Show channel select UI for posting custom action button
+      // Show channel select UI for posting custom action button (from coords menu)
       return ButtonHandlerFactory.create({
         id: 'entity_action_post_channel',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -27199,25 +27165,11 @@ Your server is now ready for Tycoons gameplay!`;
         handler: async (context) => {
           const actionId = context.customId.replace('entity_action_post_channel_', '');
           const { loadSafariContent } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
-          const action = safariData[context.guildId]?.buttons?.[actionId];
-
+          const action = (await loadSafariContent())[context.guildId]?.buttons?.[actionId];
           if (!action) return { content: '❌ Action not found.' };
 
-          return {
-            flags: (1 << 15),
-            components: [{
-              type: 17,
-              accent_color: 0x3498db,
-              components: [
-                { type: 10, content: `## Post to Channel\n\n**${action.emoji || '⚡'} ${action.name || action.label || 'Custom Action'}**\n\nSelect a channel to post this action button to.` },
-                { type: 14 },
-                { type: 1, components: [{ type: 8, custom_id: `entity_action_post_channel_select_${actionId}`, placeholder: 'Select channel...', channel_types: [0, 5] }] },
-                { type: 14 },
-                { type: 1, components: [{ type: 2, custom_id: `entity_action_coords_${actionId}`, label: '← Back', style: 2 }] }
-              ]
-            }]
-          };
+          const { buildPostToChannelUI } = await import('./customActionUI.js');
+          return buildPostToChannelUI(action, actionId, `entity_action_post_channel_select_${actionId}`, `entity_action_coords_${actionId}`);
         }
       })(req, res, client);
 
@@ -27452,57 +27404,20 @@ Your server is now ready for Tycoons gameplay!`;
         const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
         const safariData = await loadSafariContent();
         const action = safariData[guildId]?.buttons?.[actionId];
+        if (!action) return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Action not found.', flags: InteractionResponseFlags.EPHEMERAL } });
 
-        if (!action) {
-          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Action not found.', flags: InteractionResponseFlags.EPHEMERAL } });
-        }
+        const { buildActionChannelCard, trackPostedChannel } = await import('./customActionUI.js');
+        const channelCard = buildActionChannelCard(action, guildId, actionId);
+        await DiscordRequest(`channels/${selectedChannelId}/messages`, { method: 'POST', body: { flags: (1 << 15), components: [channelCard] } });
 
-        // Build channel card: Container with action info + button
-        const channelCard = {
-          type: 17,
-          accent_color: 0x3498db,
-          components: [
-            { type: 10, content: `## ${action.emoji || '⚡'} ${action.name || action.label || 'Custom Action'}` },
-            { type: 14 },
-            {
-              type: 1,
-              components: [{
-                type: 2,
-                custom_id: action.trigger?.type === 'button_modal'
-                  ? `modal_launcher_${guildId}_${actionId}_${Date.now()}`
-                  : `safari_${guildId}_${actionId}`,
-                label: action.name || action.label || 'Activate',
-                style: (() => {
-                  const styleMap = { 'Primary': 1, 'Secondary': 2, 'Success': 3, 'Danger': 4 };
-                  return styleMap[action.trigger?.button?.style] || action.style || 1;
-                })(),
-                ...(action.emoji ? { emoji: { name: action.emoji } } : {})
-              }]
-            }
-          ]
-        };
-
-        await DiscordRequest(`channels/${selectedChannelId}/messages`, {
-          method: 'POST',
-          body: { flags: (1 << 15), components: [channelCard] }
-        });
-
-        // Track posted channel
-        if (!action.postedChannels) action.postedChannels = [];
-        if (!action.postedChannels.includes(selectedChannelId)) {
-          action.postedChannels.push(selectedChannelId);
+        if (trackPostedChannel(action, selectedChannelId)) {
           await saveSafariContent(safariData);
           console.log(`📌 Tracked channel ${selectedChannelId} for action ${actionId}`);
         }
 
-        // Return to action editor with success
+        // Return to action editor
         const { createCustomActionEditorUI } = await import('./customActionUI.js');
-        const editorUI = await createCustomActionEditorUI({ guildId, actionId });
-
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: editorUI
-        });
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: await createCustomActionEditorUI({ guildId, actionId }) });
       } catch (error) {
         console.error('Error posting action to channel:', error);
         return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Error posting action. Please try again.', flags: InteractionResponseFlags.EPHEMERAL } });
@@ -27518,25 +27433,11 @@ Your server is now ready for Tycoons gameplay!`;
         handler: async (context) => {
           const actionId = context.customId.replace('action_post_channel_', '');
           const { loadSafariContent } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
-          const action = safariData[context.guildId]?.buttons?.[actionId];
-
+          const action = (await loadSafariContent())[context.guildId]?.buttons?.[actionId];
           if (!action) return { content: '❌ Action not found.' };
 
-          return {
-            flags: (1 << 15),
-            components: [{
-              type: 17,
-              accent_color: 0x3498db,
-              components: [
-                { type: 10, content: `## Post to Channel\n\n**${action.emoji || '⚡'} ${action.name || action.label || 'Custom Action'}**\n\nSelect a channel to post this action button to.` },
-                { type: 14 },
-                { type: 1, components: [{ type: 8, custom_id: `action_post_channel_select_${actionId}`, placeholder: 'Select channel...', channel_types: [0, 5] }] },
-                { type: 14 },
-                { type: 1, components: [{ type: 2, custom_id: `custom_action_editor_${actionId}`, label: '← Back', style: 2 }] }
-              ]
-            }]
-          };
+          const { buildPostToChannelUI } = await import('./customActionUI.js');
+          return buildPostToChannelUI(action, actionId, `action_post_channel_select_${actionId}`, `custom_action_editor_${actionId}`);
         }
       })(req, res, client);
 

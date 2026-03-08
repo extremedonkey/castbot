@@ -1698,6 +1698,78 @@ function getConditionDescription(condition) {
 }
 
 /**
+ * Build the channel card posted when an action is "Posted to Channel"
+ * @param {Object} action - The action data
+ * @param {string} guildId - Guild ID
+ * @param {string} actionId - Action ID
+ * @returns {Object} Components V2 Container
+ */
+export function buildActionChannelCard(action, guildId, actionId) {
+  const styleMap = { 'Primary': 1, 'Secondary': 2, 'Success': 3, 'Danger': 4 };
+  const buttonStyle = styleMap[action.trigger?.button?.style] || action.style || 1;
+  const isModalTrigger = action.trigger?.type === 'button_modal';
+
+  return {
+    type: 17,
+    accent_color: 0x3498db,
+    components: [
+      { type: 10, content: `## ${action.emoji || '⚡'} ${action.name || action.label || 'Custom Action'}` },
+      { type: 14 },
+      {
+        type: 1,
+        components: [{
+          type: 2,
+          custom_id: isModalTrigger
+            ? `modal_launcher_${guildId}_${actionId}_${Date.now()}`
+            : `safari_${guildId}_${actionId}`,
+          label: action.name || action.label || 'Activate',
+          style: buttonStyle,
+          ...(action.emoji ? { emoji: { name: action.emoji } } : {})
+        }]
+      }
+    ]
+  };
+}
+
+/**
+ * Track a channel ID against an action's postedChannels array (deduplicates)
+ * @param {Object} action - The action data (mutated in place)
+ * @param {string} channelId - Channel ID to track
+ * @returns {boolean} true if newly added, false if already tracked
+ */
+export function trackPostedChannel(action, channelId) {
+  if (!action.postedChannels) action.postedChannels = [];
+  if (action.postedChannels.includes(channelId)) return false;
+  action.postedChannels.push(channelId);
+  return true;
+}
+
+/**
+ * Build the "Post to Channel" select UI
+ * @param {Object} action - The action data
+ * @param {string} actionId - Action ID
+ * @param {string} selectCustomId - Custom ID for the channel select
+ * @param {string} backCustomId - Custom ID for the back button
+ * @returns {Object} Components V2 response
+ */
+export function buildPostToChannelUI(action, actionId, selectCustomId, backCustomId) {
+  return {
+    flags: (1 << 15),
+    components: [{
+      type: 17,
+      accent_color: 0x3498db,
+      components: [
+        { type: 10, content: `## Post to Channel\n\n**${action.emoji || '⚡'} ${action.name || action.label || 'Custom Action'}**\n\nSelect a channel to post this action button to.` },
+        { type: 14 },
+        { type: 1, components: [{ type: 8, custom_id: selectCustomId, placeholder: 'Select channel...', channel_types: [0, 5] }] },
+        { type: 14 },
+        { type: 1, components: [{ type: 2, custom_id: backCustomId, label: '← Back', style: 2 }] }
+      ]
+    }]
+  };
+}
+
+/**
  * Create Action Visibility UI (LEAN design)
  * Shows menu visibility, map locations, linked items, and navigation
  */
