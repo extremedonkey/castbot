@@ -42013,6 +42013,7 @@ Your server is now ready for Tycoons gameplay!`;
 
             // Create proper interaction object for the execution
             const interactionData = {
+              client,
               token: req.body.token,
               applicationId: req.body.application_id,
               member: req.body.member,
@@ -42023,7 +42024,8 @@ Your server is now ready for Tycoons gameplay!`;
               guildId,
               matchingAction.id,  // Use the button ID, not the actions array
               userId,
-              interactionData
+              interactionData,
+              client
             );
 
             // Log the player command

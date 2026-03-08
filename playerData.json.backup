@@ -1358,6 +1358,41 @@
               "type": "action",
               "desc": "🔮 Fixed Teleporter\n> • Safari State: init_or_teleport → B5",
               "loc": "Unknown"
+            },
+            {
+              "t": 1772953982790,
+              "type": "movement",
+              "desc": "Moved from B5 to B5"
+            },
+            {
+              "t": 1772953982790,
+              "type": "action",
+              "desc": "🧙‍♀️ Apparate\n> • Safari State: init_or_teleport → B5",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772953982790,
+              "type": "action",
+              "desc": "Command: \"i solemnly swear that i am up to no good\"\n> • Safari State: init_or_teleport → B5",
+              "loc": "global"
+            },
+            {
+              "t": 1772954586900,
+              "type": "action",
+              "desc": "🧙‍♀️ Apparate\n> • Safari State: init_or_teleport → B5",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772954586900,
+              "type": "action",
+              "desc": "Command: \"i solemnly swear that i am up to no good\"\n> • Safari State: init_or_teleport → B5",
+              "loc": "global"
+            },
+            {
+              "t": 1772954639879,
+              "type": "action",
+              "desc": "Command: \"asdasd\"",
+              "loc": "global"
             }
           ],
           "lastInteraction": 1772953405191,
