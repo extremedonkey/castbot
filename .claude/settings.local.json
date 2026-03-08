@@ -92,7 +92,8 @@
       "Bash(npx -y xlsx-cli /home/reece/castbot/temp/challengeNames.xlsx 2>/dev/null || python3 -c \"\nimport openpyxl\nwb = openpyxl.load_workbook\\('/home/reece/castbot/temp/challengeNames.xlsx'\\)\nws = wb.active\nprint\\(f'Sheet: {ws.title}'\\)\nfor row in ws.iter_rows\\(values_only=False\\):\n    vals = [\\(c.column, c.value\\) for c in row if c.value is not None]\n    if vals:\n        print\\(vals\\)\n\")",
       "Bash(npx -y xlsx-cli /home/reece/castbot/temp/challengeNames.xlsx 2>/dev/null | tail -30)",
       "Bash(./scripts/dev/dev-restart-logs.sh -v -tests \"Safari init: centralize getStartingCurrency, internalize coordinate resolution, align isPlayerInitialized check\" 2>&1 | head -80)",
-      "Bash(./scripts/dev/dev-restart-logs.sh -v -tests \"Fix duplicate export for getStartingCurrency\" 2>&1 | head -120)"
+      "Bash(./scripts/dev/dev-restart-logs.sh -v -tests \"Fix duplicate export for getStartingCurrency\" 2>&1 | head -120)",
+      "Bash(./scripts/dev/dev-restart-logs.sh -tests \"Clean restart after concurrent edit\" 2>&1 | tail -30)"
     ],
     "deny": [],
     "ask": []
