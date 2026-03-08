@@ -400,7 +400,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10,
-            content: `> \`Triggers | How does this action get activated?\`\n${getTriggerTypeLabel(triggerType)}`
+            content: `## \`🚀 Triggers\`\n-# How does this action get activated?\n${getTriggerTypeLabel(triggerType)}`
           }],
           accessory: {
             type: 2, // Button
@@ -416,7 +416,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10,
-            content: `> \`Locations | Where can players find this action?\`\n${formatButtonLocations(action, guildItems)}`
+            content: `## \`📍 Locations\`\n-# Where can players find this action?\n${formatButtonLocations(action, guildItems)}`
           }],
           accessory: {
             type: 2,
@@ -432,7 +432,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10,
-            content: `> \`Conditions | What gets checked when it is triggered?\`\n${conditionsDisplay}`
+            content: `## \`🧩 Conditions\`\n-# What gets checked when it is triggered?\n${conditionsDisplay}`
           }],
           accessory: {
             type: 2,
