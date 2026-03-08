@@ -511,7 +511,8 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
               type: 2,
               custom_id: `action_editor_back_${actionId}`,
               label: "← Actions",
-              style: 2
+              style: 2,
+              emoji: { name: "⚡" }
             },
             {
               type: 2,
