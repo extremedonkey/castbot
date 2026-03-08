@@ -3426,6 +3426,14 @@ async function executeManagePlayerState(config, guildId, userId, interaction) {
         const player = playerData[guildId]?.players?.[userId];
         const initialized = isPlayerInitialized(player);
 
+        // Helper: resolve channel link for a coordinate
+        const getChannelLink = async (coord) => {
+            const safariData = await loadSafariContent();
+            const activeMapId = safariData[guildId]?.maps?.active;
+            const channelId = coord && safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord]?.channelId;
+            return channelId ? `<#${channelId}>` : `**${coord}**`;
+        };
+
         // Helper: after initializePlayerOnMap, resolve the actual coordinate + channel link
         const buildInitMessage = async () => {
             const safariData = await loadSafariContent();
@@ -3456,11 +3464,13 @@ async function executeManagePlayerState(config, guildId, userId, interaction) {
                 if (!coordinate) {
                     return { content: '❌ No destination configured for this action.' };
                 }
-                const result = await movePlayer(guildId, userId, coordinate, client, {
+                const teleportResult = await movePlayer(guildId, userId, coordinate, client, {
                     bypassStamina: true,
                     adminMove: true
                 });
-                return { content: result.message };
+                if (!teleportResult.success) return { content: teleportResult.message };
+                const channelLink = await getChannelLink(coordinate);
+                return { content: `📍 You have been teleported to ${channelLink}! Head there to continue exploring.` };
             }
 
             case 'init_or_teleport': {
@@ -3472,11 +3482,13 @@ async function executeManagePlayerState(config, guildId, userId, interaction) {
                     if (!coordinate) {
                         return { content: 'ℹ️ You are already on the map.' };
                     }
-                    const result = await movePlayer(guildId, userId, coordinate, client, {
+                    const iotResult = await movePlayer(guildId, userId, coordinate, client, {
                         bypassStamina: true,
                         adminMove: true
                     });
-                    return { content: result.message };
+                    if (!iotResult.success) return { content: iotResult.message };
+                    const iotLink = await getChannelLink(coordinate);
+                    return { content: `📍 You have been teleported to ${iotLink}! Head there to continue exploring.` };
                 }
             }
 

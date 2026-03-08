@@ -1249,29 +1249,46 @@
           "currency": 55,
           "history": [
             {
-              "t": 1772949573953,
+              "t": 1772950647157,
               "type": "admin",
               "desc": "[ADMIN] Player de-initialized"
             },
             {
-              "t": 1772949699601,
+              "t": 1772950672729,
               "type": "init",
               "desc": "Initialized at B5 with +55 Gil (total: 55)",
               "loc": "B5"
             },
             {
-              "t": 1772949702558,
+              "t": 1772950675655,
               "type": "action",
               "desc": "🚀 Initialize Me\n> • Safari State: initialize → B5",
               "loc": "Unknown"
             },
             {
-              "t": 1772949815063,
+              "t": 1772950722160,
+              "type": "action",
+              "desc": "🚀 Initialize Me\n> • Safari State: initialize → B5",
+              "loc": "B5"
+            },
+            {
+              "t": 1772950732203,
               "type": "movement",
-              "desc": "Moved from B5 to C5"
+              "desc": "Moved from B5 to G1"
+            },
+            {
+              "t": 1772950732203,
+              "type": "action",
+              "desc": "🔮 Teleport to G1\n> • Safari State: teleport → G1",
+              "loc": "B5"
+            },
+            {
+              "t": 1772950840286,
+              "type": "movement",
+              "desc": "Moved from G1 to G2"
             }
           ],
-          "lastInteraction": 1772949572318,
+          "lastInteraction": 1772950645510,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1284,27 +1301,38 @@
           "storeHistory": [],
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "C5",
+              "currentLocation": "G1",
               "exploredCoordinates": [
                 "B5",
-                "C5"
+                "G1",
+                "G2"
               ],
               "itemsFound": [],
               "movementHistory": [
                 {
                   "from": null,
                   "to": "B5",
-                  "timestamp": "2026-03-08T06:01:39.601Z"
+                  "timestamp": "2026-03-08T06:17:52.729Z"
                 },
                 {
                   "from": "B5",
                   "to": "B5",
-                  "timestamp": "2026-03-08T06:01:39.664Z"
+                  "timestamp": "2026-03-08T06:17:52.761Z"
                 },
                 {
                   "from": "B5",
-                  "to": "C5",
-                  "timestamp": "2026-03-08T06:03:30.132Z"
+                  "to": "G1",
+                  "timestamp": "2026-03-08T06:18:47.034Z"
+                },
+                {
+                  "from": "G1",
+                  "to": "G2",
+                  "timestamp": "2026-03-08T06:20:35.923Z"
+                },
+                {
+                  "from": "G2",
+                  "to": "G1",
+                  "timestamp": "2026-03-08T06:21:15.407Z"
                 }
               ],
               "startingLocation": "G1"
@@ -1314,7 +1342,7 @@
             "stamina": {
               "current": 1,
               "maximum": 1,
-              "lastRegeneration": "2026-03-08T06:01:39.600Z",
+              "lastRegeneration": "2026-03-08T06:17:52.728Z",
               "regenConfig": "hourly"
             }
           }
