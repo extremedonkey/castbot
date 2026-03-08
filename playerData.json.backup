@@ -971,6 +971,18 @@
               "type": "action",
               "desc": "What's the Password?\n> • Text: \"🐺🐺🐺🐺\"\n> • Text: \"☠️☠️☠️\"",
               "loc": "button_modal"
+            },
+            {
+              "t": 1772963494347,
+              "type": "action",
+              "desc": "🔒 What's the Password?\n> • Text: \"🐺🐺🐺🐺\"",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772963494347,
+              "type": "action",
+              "desc": "What's the Password?\n> • Text: \"🐺🐺🐺🐺\"\n> • Text: \"☠️☠️☠️\"",
+              "loc": "button_modal"
             }
           ],
           "lastInteraction": 1772945726100,

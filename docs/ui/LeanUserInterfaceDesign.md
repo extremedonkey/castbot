@@ -8,10 +8,10 @@
 const containerComponents = [
   { type: 10, content: `## Menu Title | Key Features` },   // Header (e.g. "## 🦁 Safari | Idol Hunts, Challenges & More")
   { type: 14 },                                            // Separator
-  { type: 10, content: `> **\`📊 Section Name\`**` },     // Section header
+  { type: 10, content: `### \`\`\`📊 Section Name\`\`\`` }, // Section header
   actionRow1.toJSON(),                                     // Buttons (max 5)
   { type: 14 },                                            // Separator between sections
-  { type: 10, content: `> **\`🔧 Next Section\`**` },     // Next section
+  { type: 10, content: `### \`\`\`🔧 Next Section\`\`\`` }, // Next section
   actionRow2.toJSON(),                                     // More buttons
   { type: 14 },                                            // Separator before navigation
   navigationRow.toJSON()                                   // Navigation buttons
@@ -21,7 +21,7 @@ const containerComponents = [
 ## ✅ Section Organization Rules
 - **Group by function**: Analytics together, admin tools together, danger actions together
 - **Progressive disclosure**: Most-used → Least-used → Dangerous
-- **Section headers**: Use `> **\`📊 Section Name\`**` format (backticks for emphasis)
+- **Section headers**: Use `` ### ```📊 Section Name``` `` format (triple backticks for code block emphasis)
 - **Maximum 3-4 sections** per menu to prevent scrolling
 - **5 buttons max** per ActionRow (Discord hard limit)
 - **Button Grouping Patterns**:
@@ -48,7 +48,8 @@ ButtonStyle.Link      // External links only
 ## ✅ Visual Hierarchy
 ```
 ## Title                    // H2 for main title
-> **`📊 Section`**         // Quoted, bold, backticked sections
+### ```📊 Section```       // H3 with triple backtick code block
+-# Subheading              // Small text for descriptions/questions
 Regular button text         // Standard button labels
 -# Credit line             // Small text for credits/notes
 ```
@@ -164,13 +165,13 @@ return {
 ```
 ## 📊 Analytics | Server Stats & Admin Tools
 ━━━━━━━━━━━━━━━━━━━━━━
-> **`📊 Analytics`**
+### ```📊 Analytics```
 [Server List] [Print Logs] [Server Stats]
 ━━━━━━━━━━━━━━━━━━━━━━
-> **`🔧 Admin Tools`**  
+### ```🔧 Admin Tools```
 [Toggle Logs] [Test Roles] [Msg Test]
 ━━━━━━━━━━━━━━━━━━━━━━
-> **`☢️ Danger Zone`**
+### ```☢️ Danger Zone```
 [Nuke Roles] [Emergency Re-Init]
 ━━━━━━━━━━━━━━━━━━━━━━
 [← Menu]

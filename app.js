@@ -917,15 +917,24 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     },
     ...castlistRows, // Multiple castlist rows with pagination
     {
+      type: 14 // Separator after castlist rows
+    },
+    {
       type: 10, // Text Display component
       content: `### \`\`\`✏️ Castlists, Applications and Season Management\`\`\``
     },
     adminRow.toJSON(), // Admin management buttons
     {
+      type: 14 // Separator after admin management row
+    },
+    {
       type: 10, // Text Display component
       content: `### \`\`\`🦁 Idol Hunts, Challenges and Safari\`\`\``
     },
     safariFeatureRow.toJSON(), // Safari feature buttons (Stores, Items, Player Admin, Rounds, Currency)
+    {
+      type: 14 // Separator after Safari features row
+    },
     {
       type: 10, // Text Display component
       content: `### \`\`\`💎 Advanced Features\`\`\``
