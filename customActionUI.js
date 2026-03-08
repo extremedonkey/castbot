@@ -382,7 +382,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10,
-            content: `**Trigger** (How this action gets activated)\n${getTriggerTypeLabel(triggerType)}`
+            content: `> \`Triggers | How does this action get activated?\`\n${getTriggerTypeLabel(triggerType)}`
           }],
           accessory: {
             type: 2, // Button
@@ -398,7 +398,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10,
-            content: `**Conditions** (What gets checked when the player triggers it)\n${conditionsDisplay}`
+            content: `> \`Conditions | What gets checked when it is triggered?\`\n${conditionsDisplay}`
           }],
           accessory: {
             type: 2,
