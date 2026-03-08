@@ -16749,9 +16749,11 @@ Your server is now ready for Tycoons gameplay!`;
               });
             }
             
-            // Add item options (limited to remaining slots after search option)
+            // Add item options (limited to remaining slots after search option), newest first
             const maxItems = itemCount > 10 ? 24 : 25; // Leave room for search option
-            Object.entries(items).slice(0, maxItems).forEach(([itemId, item]) => {
+            Object.entries(items)
+              .sort((a, b) => (b[1].metadata?.createdAt || 0) - (a[1].metadata?.createdAt || 0))
+              .slice(0, maxItems).forEach(([itemId, item]) => {
               const { cleanText, emoji } = parseTextEmoji(`${item.emoji || ''} ${item.name}`, '📦');
               const safeCleanText = cleanText || `${item.emoji || '📦'} ${item.name || 'Unnamed Item'}`;
               itemOptions.push({
@@ -32909,22 +32911,19 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
           
-          // Create item selection dropdown
-          const options = [];
-          for (const [itemId, item] of Object.entries(items)) {
-            const { cleanText, emoji } = parseTextEmoji(item.emoji || '📦', '📦');
-            options.push({
-              label: item.name || 'Unnamed Item',
-              description: item.description?.substring(0, 100) || 'No description',
-              value: itemId,
-              emoji: emoji
+          // Create item selection dropdown (newest first)
+          const options = Object.entries(items)
+            .sort((a, b) => (b[1].metadata?.createdAt || 0) - (a[1].metadata?.createdAt || 0))
+            .slice(0, 25)
+            .map(([itemId, item]) => {
+              const { cleanText, emoji } = parseTextEmoji(item.emoji || '📦', '📦');
+              return {
+                label: item.name || 'Unnamed Item',
+                description: item.description?.substring(0, 100) || 'No description',
+                value: itemId,
+                emoji: emoji
+              };
             });
-          }
-          
-          // Limit to 25 items for Discord's dropdown limit
-          if (options.length > 25) {
-            options.length = 25;
-          }
           
           const selectRow = {
             type: 1, // Action Row
