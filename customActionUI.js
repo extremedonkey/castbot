@@ -414,7 +414,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10,
-            content: `**Button Locations** (Where players can click it)\n${formatButtonLocations(action)}`
+            content: `> \`Locations | Where can players find this action?\`\n${formatButtonLocations(action)}`
           }],
           accessory: {
             type: 2,
