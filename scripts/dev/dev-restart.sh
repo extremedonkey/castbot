@@ -4,21 +4,21 @@
 # Your new "Ctrl+C" - restarts app while preserving ngrok tunnel
 # Includes git safety net (replaces start-and-push.ps1 functionality)
 # 
-# Usage: ./dev-restart.sh [-tests] [commit-message] [custom-discord-message]
+# Usage: ./dev-restart.sh [-skip-tests] [commit-message] [custom-discord-message]
 # Examples:
-#   ./dev-restart.sh "Fix safari buttons"
-#   ./dev-restart.sh "Fix safari buttons" "Safari Add Action button is now working!"
-#   ./dev-restart.sh -tests "Fix safari buttons"   # Run unit tests before restart
+#   ./dev-restart.sh "Fix safari buttons"                    # Runs tests (mandatory)
+#   ./dev-restart.sh "Fix safari buttons" "Safari working!"  # With Discord message
+#   ./dev-restart.sh -skip-tests "Fix safari buttons"        # Skip tests (escape hatch)
 
 set -e  # Exit on any error
 
 echo "=== CastBot Dev Restart ==="
 
-# Parse flags
-RUN_TESTS=false
+# Parse flags — tests are mandatory by default
+RUN_TESTS=true
 while [[ "$1" == -* ]]; do
     case "$1" in
-        -tests) RUN_TESTS=true ;;
+        -skip-tests) RUN_TESTS=false ;;
         *) echo "⚠️  Unknown flag: $1" ;;
     esac
     shift

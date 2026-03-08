@@ -118,14 +118,21 @@ Every feature MUST include comprehensive logging following our logging standards
 - [ ] README/help text updated if needed
 
 ### 8. Testing
-- [ ] Happy path tested manually
+
+**📚 Standards**: [TestingStandards.md](../standards/TestingStandards.md)
+
+#### Unit Tests (Mandatory for new features)
+- [ ] Test file created: `tests/{moduleName}.test.js`
+- [ ] Pure logic replicated inline (no heavy module imports)
+- [ ] Happy path tested
+- [ ] Edge cases tested (null, empty, boundary values)
+- [ ] Error paths tested
+- [ ] All tests passing: `node --test tests/*.test.js`
+- [ ] Coverage scan shows `[🧪 TESTED]`: `node scripts/test-coverage-scan.js`
+
+#### Manual Testing
+- [ ] Happy path tested in Discord
 - [ ] Error scenarios tested
-- [ ] Edge cases tested:
-  - Empty data
-  - Invalid input
-  - Missing permissions
-  - Network failures
-- [ ] Cross-browser tested (if web UI)
 - [ ] Mobile Discord tested
 - [ ] **For UI implementations**: Test UPDATE_MESSAGE responses work correctly
 - [ ] **For select menus**: Validated no malformed emojis (trailing \u200D)

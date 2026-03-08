@@ -213,11 +213,14 @@ const dynamicPatterns = [
 **🔴 CRITICAL: ALWAYS restart development after making code changes!**
 
 ```bash
-# MANDATORY after ANY code change - no exceptions!
+# MANDATORY after ANY code change - runs tests automatically!
 ./scripts/dev/dev-restart.sh "descriptive commit message"
 
 # For significant features, include Discord notification:
 ./scripts/dev/dev-restart.sh "Fix safari logic" "Safari navigation working!"
+
+# Skip tests only in emergencies:
+./scripts/dev/dev-restart.sh -skip-tests "emergency hotfix"
 ```
 
 **⚠️ This is NOT optional - restart after EVERY code change:**
@@ -231,6 +234,34 @@ const dynamicPatterns = [
 - ✅ Good: `./scripts/dev/dev-restart.sh "Add global command button to player menu"`
 
 **🎯 This replaces manual saves - the script commits your changes automatically**
+
+## 🔴 CRITICAL: Unit Tests - MANDATORY FOR NEW FEATURES
+
+**📚 Full Guide**: [docs/standards/TestingStandards.md](docs/standards/TestingStandards.md)
+
+**Tests run automatically** on every `dev-restart.sh` — failures abort the restart.
+
+**Write tests for every new feature.** Test file convention: `tests/{moduleName}.test.js`
+
+```javascript
+// Use node:test (native) — NO external test frameworks
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+
+// Replicate pure logic inline to avoid importing heavy modules
+function myFunction(input) { /* copy from source */ }
+
+describe('Feature — Behavior', () => {
+  it('does the expected thing', () => {
+    assert.equal(myFunction('input'), 'expected');
+  });
+});
+```
+
+**Coverage visibility**: Dev startup logs `[🧪 TESTED]` / `[⚠️ UNTESTED]` per module (like Button Debug system). Run manually: `node scripts/test-coverage-scan.js`
+
+**What to test**: Pure logic, data transforms, matching/filtering, UI builders, state transitions
+**What to skip**: Simple config changes, routing additions, documentation
 
 ## 🚀 Quick Start
 
@@ -430,6 +461,7 @@ General Workflow for new features:
 - **🔌 DISCORD INTERACTION PATTERNS** → [docs/standards/DiscordInteractionPatterns.md](docs/standards/DiscordInteractionPatterns.md)
 - **📝 LOGGING STANDARDS** → [docs/standards/LoggingStandards.md](docs/standards/LoggingStandards.md)
 - **📊 BUTTON INTERACTION LOGGING** → [docs/standards/ButtonInteractionLogging.md](docs/standards/ButtonInteractionLogging.md)
+- **🧪 TESTING STANDARDS** → [docs/standards/TestingStandards.md](docs/standards/TestingStandards.md)
 
 **Discord API References:**
 - **🔐 PERMISSIONS** (100+ usage points) → [docs/standards/DiscordPermissions.md](docs/standards/DiscordPermissions.md) - BigInt permission handling, MANAGE_ROLES patterns

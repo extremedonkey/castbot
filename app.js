@@ -1635,6 +1635,16 @@ client.once('ready', async () => {
   // Start PM2 Error Log Monitoring (Dev & Prod)
   const pm2Logger = getPM2ErrorLogger(client);
   pm2Logger.start();
+
+  // Dev-only: Log test coverage scan
+  if (process.env.PRODUCTION !== 'TRUE') {
+    try {
+      const { logTestCoverage } = await import('./scripts/test-coverage-scan.js');
+      logTestCoverage();
+    } catch (error) {
+      console.log('⚠️ Test coverage scan failed:', error.message);
+    }
+  }
 });
 
 client.on('guildCreate', async (guild) => {
