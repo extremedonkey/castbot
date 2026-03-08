@@ -4007,9 +4007,14 @@ export async function handleDisplayTextSave(guildId, customId, formData) {
     actionConfig.color = color;
   }
   
-  // Preserve existing executeOn value or default to 'true'
+  // Preserve existing executeOn value, check pendingExecuteOn for new outcomes, or default to 'true'
   const existingAction = button.actions?.[actionIndex];
-  const executeOnValue = existingAction?.executeOn || 'true';
+  const pendingKey = `${guildId}_${buttonId}`;
+  const pendingExecuteOn = global.pendingExecuteOn?.get(pendingKey);
+  const executeOnValue = existingAction?.executeOn || pendingExecuteOn || 'true';
+  if (pendingExecuteOn) {
+    global.pendingExecuteOn.delete(pendingKey);
+  }
   
   const action = {
     type: 'display_text',

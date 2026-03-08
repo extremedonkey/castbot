@@ -853,6 +853,28 @@
               "t": 1772946180185,
               "type": "movement",
               "desc": "Moved from A3 to A1"
+            },
+            {
+              "t": 1772952761503,
+              "type": "movement",
+              "desc": "Moved from A1 to B5"
+            },
+            {
+              "t": 1772952761503,
+              "type": "action",
+              "desc": "🕳️ Suspicious Looking Ground\n> • Text: \"There's a trap door hole, you are sent to the ends of the...\"\n> • Safari State: init_or_teleport → B5\n> • Text: \"🪽 You begin plummeting down the trap hole, but the wings...\"",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772952837098,
+              "type": "movement",
+              "desc": "Moved from B5 to B5"
+            },
+            {
+              "t": 1772952837098,
+              "type": "action",
+              "desc": "🕳️ Suspicious Looking Ground\n> • Text: \"There's a trap door hole, you are sent to the ends of the...\"\n> • Safari State: init_or_teleport → B5\n> • Text: \"🪽 You begin plummeting down the trap hole, but the wings...\"",
+              "loc": "Unknown"
             }
           ],
           "lastInteraction": 1772945726100,
@@ -868,10 +890,11 @@
           "storeHistory": [],
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "A1",
+              "currentLocation": "B5",
               "exploredCoordinates": [
                 "A3",
-                "A1"
+                "A1",
+                "B5"
               ],
               "itemsFound": [],
               "movementHistory": [
@@ -889,6 +912,16 @@
                   "from": "A3",
                   "to": "A1",
                   "timestamp": "2026-03-08T05:02:56.429Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "B5",
+                  "timestamp": "2026-03-08T06:52:37.842Z"
+                },
+                {
+                  "from": "B5",
+                  "to": "B5",
+                  "timestamp": "2026-03-08T06:53:54.677Z"
                 }
               ],
               "startingLocation": "A4"
@@ -1246,24 +1279,60 @@
           "1434189625609551984"
         ],
         "safari": {
-          "currency": 0,
+          "currency": 55,
           "history": [
             {
-              "t": 1772951551177,
+              "t": 1772952993544,
               "type": "action",
               "desc": "🛬 Get me out of here!\n> • Safari State: deinitialize → default",
               "loc": "Unknown"
+            },
+            {
+              "t": 1772953177607,
+              "type": "init",
+              "desc": "Initialized at B5 with +55 Gil (total: 55)",
+              "loc": "B5"
             }
           ],
-          "lastInteraction": 1772951549159,
+          "lastInteraction": 1772952991525,
           "achievements": [],
-          "inventory": {},
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
           "cooldowns": {},
           "buttonUses": {},
           "storeHistory": [],
           "mapProgress": {
             "map_7x7_1753981993871": {
+              "currentLocation": "B5",
+              "exploredCoordinates": [
+                "B5"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "B5",
+                  "timestamp": "2026-03-08T06:59:37.607Z"
+                },
+                {
+                  "from": "B5",
+                  "to": "B5",
+                  "timestamp": "2026-03-08T06:59:37.667Z"
+                }
+              ],
               "startingLocation": "G1"
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2026-03-08T06:59:37.607Z",
+              "regenConfig": "hourly"
             }
           }
         }
