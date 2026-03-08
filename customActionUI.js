@@ -769,42 +769,136 @@ function getActionListComponents(actions, actionId, guildItems = {}, guildButton
     return [];
   }
 
-  const components = [];
-
-  actions.forEach((action, index) => {
+  return actions.map((action, index) => {
     // Find the actual index in the full actions array for proper removal
     const actualIndex = allActions ? allActions.findIndex(a => a === action) : index;
+    const summaryText = getActionSummaryPlain(action, index + 1, guildItems, guildButtons);
 
-    // Text Display with full action summary (restored)
-    components.push({
-      type: 10, // Text Display
-      content: getActionSummary(action, index + 1, guildItems, guildButtons)
-    });
+    // Toggle section label depends on current executeOn
+    const currentExecuteOn = action.executeOn || 'true';
+    const toggleLabel = currentExecuteOn === 'true' ? 'Move to Fail Outcomes' : 'Move to Pass Outcomes';
+    const toggleEmoji = currentExecuteOn === 'true' ? '🔴' : '🟢';
+    const toggleDesc = currentExecuteOn === 'true' ? 'Runs on fail instead' : 'Runs on pass instead';
 
-    // Action Row with Up and Edit buttons
-    components.push({
-      type: 1, // Action Row
-      components: [
-        {
-          type: 2, // Up Button
-          custom_id: `custom_action_up_${actionId}_${actualIndex}`,
-          label: '',
-          style: 2, // Secondary
-          emoji: { name: '⬆️' },
-          disabled: actualIndex === 0 // Disable for first action
-        },
-        {
-          type: 2, // Edit Button
-          custom_id: `safari_edit_action_${actionId}_${actualIndex}`,
-          label: 'Edit',
-          style: 2, // Secondary
-          emoji: { name: '📝' }
-        }
-      ]
-    });
+    // Build options array
+    const options = [
+      { label: summaryText, value: 'summary', default: true, emoji: { name: '▫️' } },
+      { label: 'Edit Outcome', value: 'edit', emoji: { name: '✏️' }, description: 'Configure settings' },
+      { label: 'Move Up', value: 'move_up', emoji: { name: '⬆️' }, description: 'Change execution order' },
+      { label: 'Move Down', value: 'move_down', emoji: { name: '⬇️' }, description: 'Change execution order' },
+      { label: '───────────────────', value: 'divider', description: ' ' },
+      { label: toggleLabel, value: 'toggle_section', emoji: { name: toggleEmoji }, description: toggleDesc },
+      { label: 'Delete Outcome', value: 'delete', emoji: { name: '🗑️' }, description: 'Remove from action' }
+    ];
+
+    return {
+      type: 1, // ActionRow
+      components: [{
+        type: 3, // StringSelect
+        custom_id: `outcome_select_${actionId}_${actualIndex}`,
+        options
+      }]
+    };
   });
+}
 
-  return components;
+const MAX_SELECT_LABEL = 100;
+
+/**
+ * Plain-text version of getActionSummary() for use in String Select labels.
+ * No markdown formatting. Always truncated to 100 chars (Discord limit).
+ */
+function getActionSummaryPlain(action, number, guildItems = {}, guildButtons = {}) {
+  let summary;
+
+  switch (action.type) {
+    case 'display_text': {
+      let displayText = action.config?.title || action.config?.content || action.text || 'No text configured';
+      const truncated = displayText.substring(0, 50) + (displayText.length > 50 ? '...' : '');
+      summary = `${number}. Display Text ${truncated}`;
+      break;
+    }
+    case 'give_item': {
+      const itemId = action.config?.itemId || action.itemId;
+      const itemName = guildItems[itemId]?.name || itemId || 'Unknown Item';
+      const qty = action.config?.quantity || action.quantity || 1;
+      const limitText = action.config?.limit?.type ? ` (${action.config.limit.type.replace(/_/g, ' ')})` : '';
+      const op = action.config?.operation === 'remove' ? 'Remove Item' : 'Give Item';
+      summary = `${number}. ${op} ${itemName} x${qty}${limitText}`;
+      break;
+    }
+    case 'give_currency': {
+      const amount = action.config?.amount || action.amount || 0;
+      const displayAmount = amount > 0 ? `+${amount}` : `${amount}`;
+      const limitText = action.config?.limit?.type ? ` (${action.config.limit.type.replace(/_/g, ' ')})` : '';
+      summary = `${number}. Give Currency ${displayAmount}${limitText}`;
+      break;
+    }
+    case 'update_currency':
+      summary = `${number}. Update Currency ${action.amount || 0}`;
+      break;
+    case 'give_role': {
+      const roleId = action.config?.roleId || action.roleId;
+      summary = `${number}. Give Role ${roleId ? `<@&${roleId}>` : 'Not selected'}`;
+      break;
+    }
+    case 'remove_role': {
+      const roleId = action.config?.roleId || action.roleId;
+      summary = `${number}. Remove Role ${roleId ? `<@&${roleId}>` : 'Not selected'}`;
+      break;
+    }
+    case 'follow_up_button':
+    case 'follow_up': {
+      const targetId = action.config?.buttonId || action.buttonId;
+      if (!targetId) {
+        summary = `${number}. Follow-up Action Not configured`;
+      } else {
+        const target = guildButtons[targetId];
+        const targetName = target?.name || target?.label || targetId;
+        summary = `${number}. Follow-up Action ${targetName}`;
+      }
+      break;
+    }
+    case 'create_button':
+      summary = `${number}. Create Button ${action.buttonLabel || ''}`;
+      break;
+    case 'calculate_results': {
+      const scope = action?.config?.scope || 'all_players';
+      summary = `${number}. Calculate Results ${scope === 'single_player' ? 'Single Player' : 'All Players'}`;
+      break;
+    }
+    case 'calculate_attack': {
+      const playerScope = action?.config?.playerScope || 'all_players';
+      const displayMode = action?.config?.displayMode || 'silent';
+      const scopeText = playerScope === 'executing_player' ? 'Executing Player' : 'All Players';
+      const modeText = displayMode === 'display_text' ? 'Display Results' : 'Silent';
+      summary = `${number}. Calculate Attack ${scopeText} | ${modeText}`;
+      break;
+    }
+    case 'modify_attribute': {
+      const attrId = action?.config?.attributeId || 'Unknown';
+      const op = action?.config?.operation || 'add';
+      const amt = action?.config?.amount || 0;
+      const sym = op === 'add' ? '+' : (op === 'subtract' ? '-' : '=');
+      summary = `${number}. Modify Attribute ${attrId} ${sym}${Math.abs(amt)}`;
+      break;
+    }
+    case 'manage_player_state': {
+      const modeLabels = { initialize: 'Init', teleport: 'Teleport', init_or_teleport: 'Init/Teleport', deinitialize: 'De-init' };
+      const mode = modeLabels[action?.config?.mode] || 'Init';
+      const coord = action?.config?.coordinate ? ` → ${action.config.coordinate}` : ' → Default';
+      summary = `${number}. Safari Player State ${mode}${coord}`;
+      break;
+    }
+    default:
+      summary = `${number}. ${action.type ? action.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Unknown'}`;
+  }
+
+  // ALWAYS truncate — user-defined content can be any length
+  if (summary.length > MAX_SELECT_LABEL) {
+    summary = summary.substring(0, MAX_SELECT_LABEL - 1) + '…';
+  }
+  return summary;
 }
 
 /**

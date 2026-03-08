@@ -18948,6 +18948,193 @@ Your server is now ready for Tycoons gameplay!`;
           };
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('outcome_select_')) {
+      return ButtonHandlerFactory.create({
+        id: 'outcome_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const selectedValue = req.body.data.values?.[0];
+          console.log(`🔍 START: outcome_select - user ${context.userId}, value: ${selectedValue}`);
+
+          // Parse actionId and actionIndex from custom_id: outcome_select_{actionId}_{actionIndex}
+          const remaining = context.customId.replace('outcome_select_', '');
+          const parts = remaining.split('_');
+          const actionIndex = parseInt(parts.pop());
+          const actionId = parts.join('_');
+
+          // No-op selections — just re-render the editor
+          if (selectedValue === 'summary' || selectedValue === 'divider') {
+            const { createCustomActionEditorUI } = await import('./customActionUI.js');
+            return await createCustomActionEditorUI({ guildId: context.guildId, actionId });
+          }
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const guildData = allSafariContent[context.guildId] || {};
+          const button = guildData.buttons?.[actionId];
+
+          if (!button || !button.actions?.[actionIndex]) {
+            return { content: '❌ Outcome not found.', ephemeral: true };
+          }
+
+          switch (selectedValue) {
+            case 'edit': {
+              // Delegate to the existing safari_edit_action handler logic
+              // Simulate the custom_id so the edit handler can parse it
+              context.customId = `safari_edit_action_${actionId}_${actionIndex}`;
+              // Re-route by constructing a synthetic request — instead, inline the edit logic
+              const action = button.actions[actionIndex];
+
+              if (action.type === 'give_item') {
+                const itemId = action.config?.itemId || action.itemId;
+                const item = guildData.items?.[itemId];
+                const itemStateKey = `${context.guildId}_${actionId}_${itemId}_${actionIndex}`;
+                dropConfigState.set(itemStateKey, {
+                  limit: action.config?.limit?.type || null,
+                  style: action.config?.style || null,
+                  quantity: action.config?.quantity || action.quantity || 1,
+                  operation: action.config?.operation || 'give',
+                  executeOn: action.executeOn || 'true'
+                });
+                return await showGiveItemConfig(context.guildId, actionId, itemId, item, actionIndex);
+              } else if (action.type === 'give_currency') {
+                const currencyStateKey = `${context.guildId}_${actionId}_currency_${actionIndex}`;
+                dropConfigState.set(currencyStateKey, {
+                  limit: action.config?.limit?.type || null,
+                  style: action.config?.style || null,
+                  amount: action.config?.amount || action.amount || 0,
+                  executeOn: action.executeOn || 'true'
+                });
+                const { getCustomTerms } = await import('./safariManager.js');
+                const customTerms = await getCustomTerms(context.guildId);
+                return await showGiveCurrencyConfig(context.guildId, actionId, actionIndex, customTerms);
+              } else if (action.type === 'follow_up_button') {
+                const targetButtonId = action.config?.buttonId || action.buttonId;
+                if (!targetButtonId) {
+                  return { content: '❌ Follow-up action missing target.', ephemeral: true };
+                }
+                const stateKey = `${context.guildId}_${actionId}_followup_${actionIndex}`;
+                dropConfigState.set(stateKey, {
+                  targetButtonId,
+                  executeOn: action.executeOn || 'true'
+                });
+                return await showFollowUpConfig(context.guildId, actionId, targetButtonId, actionIndex);
+              } else if (action.type === 'display_text') {
+                const { showDisplayTextConfig } = await import('./customActionUI.js');
+                return await showDisplayTextConfig(context.guildId, actionId, actionIndex);
+              } else if (action.type === 'calculate_results') {
+                const { showCalculateResultsConfig } = await import('./customActionUI.js');
+                return await showCalculateResultsConfig(context.guildId, actionId, actionIndex);
+              } else if (action.type === 'calculate_attack') {
+                const { showCalculateAttackConfig } = await import('./customActionUI.js');
+                return await showCalculateAttackConfig(context.guildId, actionId, actionIndex);
+              } else if (action.type === 'modify_attribute') {
+                const { showModifyAttributeConfig } = await import('./customActionUI.js');
+                return await showModifyAttributeConfig(context.guildId, actionId, actionIndex);
+              } else if (action.type === 'manage_player_state') {
+                const { showManagePlayerStateConfig } = await import('./customActionUI.js');
+                return await showManagePlayerStateConfig(context.guildId, actionId, actionIndex);
+              } else if (action.type === 'give_role' || action.type === 'remove_role') {
+                // Show role config inline — same as safari_edit_action handler
+                const currentRoleId = action.config?.roleId || '';
+                const components = [];
+                components.push({
+                  type: 10,
+                  content: `# ${action.type === 'give_role' ? '🎯 Give Role Configuration' : '🚫 Remove Role Configuration'}\n\n**Action:** ${button.label}\n**Type:** ${action.type}\n\n${currentRoleId ? `**Current Role:** <@&${currentRoleId}>` : '**Current Role:** None selected'}\n\nClick the button below to select a role.`
+                });
+                components.push({
+                  type: 1,
+                  components: [{
+                    type: 2,
+                    custom_id: `safari_role_select_${context.guildId}_${actionId}_${actionIndex}`,
+                    label: 'Select Role',
+                    style: 1,
+                    emoji: { name: '👥' }
+                  }, {
+                    type: 2,
+                    custom_id: `safari_remove_action_${actionId}_${actionIndex}`,
+                    label: 'Delete Action',
+                    style: 4,
+                    emoji: { name: '🗑️' }
+                  }]
+                });
+                components.push({ type: 14 });
+                components.push({
+                  type: 1,
+                  components: [{
+                    type: 2,
+                    custom_id: `entity_custom_action_edit_${actionId}`,
+                    label: 'Back to Action Editor',
+                    style: 2,
+                    emoji: { name: '◀️' }
+                  }]
+                });
+                return {
+                  components: [{
+                    type: 17,
+                    accent_color: 0x5865F2,
+                    components
+                  }],
+                  flags: 1 << 15
+                };
+              }
+              // Fallback — unknown type, re-render editor
+              const { createCustomActionEditorUI } = await import('./customActionUI.js');
+              return await createCustomActionEditorUI({ guildId: context.guildId, actionId });
+            }
+
+            case 'move_up': {
+              if (actionIndex > 0) {
+                [button.actions[actionIndex], button.actions[actionIndex - 1]] =
+                  [button.actions[actionIndex - 1], button.actions[actionIndex]];
+                await saveSafariContent(allSafariContent);
+              }
+              const { createCustomActionEditorUI } = await import('./customActionUI.js');
+              return await createCustomActionEditorUI({ guildId: context.guildId, actionId, skipAutoSave: true });
+            }
+
+            case 'move_down': {
+              if (actionIndex < button.actions.length - 1) {
+                [button.actions[actionIndex], button.actions[actionIndex + 1]] =
+                  [button.actions[actionIndex + 1], button.actions[actionIndex]];
+                await saveSafariContent(allSafariContent);
+              }
+              const { createCustomActionEditorUI } = await import('./customActionUI.js');
+              return await createCustomActionEditorUI({ guildId: context.guildId, actionId, skipAutoSave: true });
+            }
+
+            case 'toggle_section': {
+              const current = button.actions[actionIndex].executeOn || 'true';
+              button.actions[actionIndex].executeOn = current === 'true' ? 'false' : 'true';
+              await saveSafariContent(allSafariContent);
+              const { createCustomActionEditorUI } = await import('./customActionUI.js');
+              return await createCustomActionEditorUI({ guildId: context.guildId, actionId, skipAutoSave: true });
+            }
+
+            case 'delete': {
+              button.actions.splice(actionIndex, 1);
+              button.actions.forEach((a, idx) => { a.order = idx + 1; });
+              await saveSafariContent(allSafariContent);
+              try {
+                const { queueActionCoordinateUpdates } = await import('./anchorMessageManager.js');
+                await queueActionCoordinateUpdates(context.guildId, actionId, 'action_removed');
+              } catch (error) {
+                console.error('Error queueing anchor updates:', error);
+              }
+              const { createCustomActionEditorUI } = await import('./customActionUI.js');
+              return await createCustomActionEditorUI({ guildId: context.guildId, actionId });
+            }
+
+            default: {
+              const { createCustomActionEditorUI } = await import('./customActionUI.js');
+              return await createCustomActionEditorUI({ guildId: context.guildId, actionId });
+            }
+          }
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('safari_remove_action_')) {
       return ButtonHandlerFactory.create({
         id: 'safari_remove_action',

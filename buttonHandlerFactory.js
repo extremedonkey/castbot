@@ -996,6 +996,14 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari'
   },
+  'outcome_select_*': {
+    label: 'Outcome Actions',
+    description: 'String select per outcome — edit, reorder, toggle pass/fail, delete',
+    emoji: '▫️',
+    style: 'Secondary',
+    category: 'safari',
+    type: 'select_menu'
+  },
   'safari_remove_action_*': {
     label: 'Remove Outcome',
     description: 'Remove an outcome from an action',

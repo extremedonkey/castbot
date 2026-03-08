@@ -947,6 +947,30 @@
               "type": "action",
               "desc": "What's the Password?\n> • Text: \"🐺🐺🐺🐺\"\n> • Text: \"☠️☠️☠️\"",
               "loc": "button_modal"
+            },
+            {
+              "t": 1772962597740,
+              "type": "action",
+              "desc": "🔒 What's the Password?\n> • Text: \"🐺🐺🐺🐺\"",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772962597740,
+              "type": "action",
+              "desc": "What's the Password?\n> • Text: \"🐺🐺🐺🐺\"\n> • Text: \"☠️☠️☠️\"",
+              "loc": "button_modal"
+            },
+            {
+              "t": 1772963486694,
+              "type": "action",
+              "desc": "🔒 What's the Password?\n> • Text: \"☠️☠️☠️\"",
+              "loc": "Unknown"
+            },
+            {
+              "t": 1772963486694,
+              "type": "action",
+              "desc": "What's the Password?\n> • Text: \"🐺🐺🐺🐺\"\n> • Text: \"☠️☠️☠️\"",
+              "loc": "button_modal"
             }
           ],
           "lastInteraction": 1772945726100,

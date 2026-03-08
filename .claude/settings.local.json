@@ -95,7 +95,8 @@
       "Bash(./scripts/dev/dev-restart-logs.sh -v -tests \"Fix duplicate export for getStartingCurrency\" 2>&1 | head -120)",
       "Bash(./scripts/dev/dev-restart-logs.sh -tests \"Clean restart after concurrent edit\" 2>&1 | tail -30)",
       "Bash(./scripts/dev/dev-restart-logs.sh -v -tests \"Add manage_player_state outcome type: initialize, teleport, init_or_teleport, de-initialize\" 2>&1 | head -60)",
-      "Bash(./scripts/dev/dev-restart-logs.sh -tests \"Fix modal coordinate extraction: Label type 18 uses .component not .components[0]\" 2>&1 | tail -15)"
+      "Bash(./scripts/dev/dev-restart-logs.sh -tests \"Fix modal coordinate extraction: Label type 18 uses .component not .components[0]\" 2>&1 | tail -15)",
+      "Bash(find /home/reece/castbot -maxdepth 3 -type f \\\\\\( -name \"*.test.js\" -o -name \"*.spec.js\" -o -name \"*test*.js\" \\\\\\) ! -path \"*/node_modules/*\" 2>/dev/null | sort)"
     ],
     "deny": [],
     "ask": []
