@@ -414,7 +414,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10,
-            content: `> \`Locations | Where can players find this action?\`\n${formatButtonLocations(action)}`
+            content: `> \`Locations | Where can players find this action?\`\n${formatButtonLocations(action, guildItems)}`
           }],
           accessory: {
             type: 2,
@@ -712,7 +712,7 @@ function formatCoordinateList(coordinates) {
 }
 
 // Build summary of all trigger surfaces for the Action Editor
-function formatButtonLocations(action) {
+function formatButtonLocations(action, guildItems = {}) {
   const parts = [];
 
   // Coordinates
@@ -730,10 +730,17 @@ function formatButtonLocations(action) {
   if (visibility === 'player_menu') parts.push('Player Menu');
   if (visibility === 'crafting_menu') parts.push('Crafting');
 
-  // Linked items
-  const items = action.linkedItems || [];
-  if (items.length > 0) {
-    parts.push(`${items.length} item${items.length > 1 ? 's' : ''}`);
+  // Linked items - show names, truncate if too long
+  const linkedItemIds = action.linkedItems || [];
+  if (linkedItemIds.length > 0) {
+    const names = linkedItemIds
+      .map(id => guildItems[id]?.name || id)
+      .sort();
+    if (names.length <= 3) {
+      parts.push(names.join(', '));
+    } else {
+      parts.push(`${names.slice(0, 2).join(', ')}… +${names.length - 2} items`);
+    }
   }
 
   return parts.length > 0 ? parts.join('; ') : 'No locations';
