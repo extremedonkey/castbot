@@ -452,7 +452,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           const trueActions = allActions.filter(a => !a.executeOn || a.executeOn === 'true');
           const falseActions = allActions.filter(a => a.executeOn === 'false');
           const notAtMax = allActions.length < SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON;
-          const capWarning = !notAtMax ? `\n-# ⚠️ Reached combined ${allActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON} outcome cap; delete one to add more.` : '';
+          const capWarning = !notAtMax ? `\n-# > ⚠️ Reached combined ${allActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON} outcome cap; delete one to add more.` : '';
 
           const components = [];
 
