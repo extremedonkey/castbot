@@ -452,6 +452,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           const trueActions = allActions.filter(a => !a.executeOn || a.executeOn === 'true');
           const falseActions = allActions.filter(a => a.executeOn === 'false');
           const notAtMax = allActions.length < SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON;
+          const capWarning = !notAtMax ? `\n-# ⚠️ Reached combined ${allActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON} outcome cap; delete one to add more.` : '';
 
           const components = [];
 
@@ -459,7 +460,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           components.push({ type: 14 }); // Divider
           components.push({
             type: 10,
-            content: `## \`\`\`🟢 Outcomes (${trueActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player meets all conditions?`
+            content: `## \`\`\`🟢 Outcomes (${trueActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player meets all conditions?${capWarning}`
           });
 
           // Display TRUE outcomes
@@ -482,8 +483,8 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           components.push({
             type: 10,
             content: falseActions.length === 0 && !notAtMax
-              ? `## \`\`\`🔴 Outcomes (0/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player fails conditions?\n*No fail outcomes configured - display generic error message*`
-              : `## \`\`\`🔴 Outcomes (${falseActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player fails conditions?`
+              ? `## \`\`\`🔴 Outcomes (0/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player fails conditions?\n*No fail outcomes configured - display generic error message*${capWarning}`
+              : `## \`\`\`🔴 Outcomes (${falseActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player fails conditions?${capWarning}`
           });
           components.push(...getActionListComponents(falseActions, actionId, guildItems, guildButtons, 'false', allActions));
 
