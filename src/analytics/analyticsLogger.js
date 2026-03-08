@@ -937,6 +937,7 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
       'SAFARI_MOVEMENT': 'mapMovement',
       'SAFARI_ATTACK': 'attacks',
       'SAFARI_CUSTOM_ACTION': 'customActions',
+      'SAFARI_ITEM_USE': 'itemPickups',
       'SAFARI_TEST': 'testMessages'
     };
     
@@ -1027,6 +1028,10 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
         
       case 'SAFARI_ITEM_PICKUP':
         logMessage = `🧰 **ITEM PICKUP** | [${timestamp}] | **${userDisplayName}** (${safariContent.username || userDisplayName}) at ${safariContent.channelId ? `<#${safariContent.channelId}>` : `**${safariContent.location}**${channelDisplay}`}\n> Collected: ${safariContent.itemEmoji} **${safariContent.itemName}** (x${safariContent.quantity})`;
+        break;
+
+      case 'SAFARI_ITEM_USE':
+        logMessage = `⚡ **ITEM USED** | [${timestamp}] | **${userDisplayName}** at **${safariContent.location}**${channelDisplay}\n> Used: ${safariContent.itemEmoji} **${safariContent.itemName}** (x${safariContent.quantity}) → +${safariContent.staminaBoost} stamina (${safariContent.staminaBefore} → ${safariContent.staminaAfter})`;
         break;
         
       case 'SAFARI_CURRENCY':

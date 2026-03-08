@@ -106,6 +106,50 @@ export async function logItemPickup({ guildId, userId, username, displayName, lo
 }
 
 /**
+ * Log an item being used (consumed)
+ * @param {Object} params - Item use parameters
+ * @param {string} params.guildId - Guild ID
+ * @param {string} params.userId - User ID
+ * @param {string} params.username - Username
+ * @param {string} params.displayName - Display name
+ * @param {string} params.location - Map location coordinate
+ * @param {string} params.itemName - Item name
+ * @param {string} params.itemEmoji - Item emoji
+ * @param {number} params.quantity - Quantity used
+ * @param {number} params.staminaBoost - Stamina boost amount
+ * @param {string} params.staminaBefore - Stamina before use (e.g. "904/999")
+ * @param {string} params.staminaAfter - Stamina after use (e.g. "905/999")
+ * @param {string} params.channelName - Channel name
+ */
+export async function logItemUse({ guildId, userId, username, displayName, location, itemName, itemEmoji, quantity, staminaBoost, staminaBefore, staminaAfter, channelName }) {
+  const safariContent = {
+    location,
+    itemName,
+    itemEmoji: itemEmoji || '⚡',
+    quantity,
+    staminaBoost,
+    staminaBefore,
+    staminaAfter,
+    channelName
+  };
+
+  await logInteraction(
+    userId,
+    guildId,
+    'SAFARI_ITEM_USE',
+    `Used ${itemName} x${quantity}`,
+    username,
+    null,
+    null,
+    channelName,
+    displayName,
+    safariContent
+  );
+
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.item, `Used ${formatEmojiForText(itemEmoji) || '⚡'} ${itemName} x${quantity} → +${staminaBoost} stamina`, { loc: location });
+}
+
+/**
  * Log a currency change
  * @param {Object} params - Currency change parameters
  * @param {string} params.guildId - Guild ID

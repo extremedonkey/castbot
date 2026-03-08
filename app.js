@@ -12027,9 +12027,31 @@ Your server is now ready for Tycoons gameplay!`;
           }
           
           await savePlayerData(playerData);
-          
+
           console.log(`✅ SUCCESS: safari_use_item - stamina boosted from ${currentStamina.current}/${currentStamina.max} to ${newStamina.current}/${newStamina.max}`);
-          
+
+          // Log item use to safari log channel
+          try {
+            const { logItemUse } = await import('./safariLogger.js');
+            const location = player.safari?.currentLocation || 'Unknown';
+            await logItemUse({
+              guildId: context.guildId,
+              userId: context.userId,
+              username: player.username || 'Unknown',
+              displayName: player.displayName || player.username || 'Unknown',
+              location,
+              itemName: item.name,
+              itemEmoji: item.emoji || '⚡',
+              quantity: 1,
+              staminaBoost: item.staminaBoost,
+              staminaBefore: `${currentStamina.current}/${currentStamina.max}`,
+              staminaAfter: `${newStamina.current}/${newStamina.max}`,
+              channelName: context.channelName
+            });
+          } catch (logError) {
+            console.error('⚠️ Failed to log item use:', logError.message);
+          }
+
           return {
             content: `✅ **Item Used!**\n\n${item.emoji || '⚡'} You used **${item.name}** and gained **+${item.staminaBoost} stamina**!\n\n⚡ **Stamina:** ${currentStamina.current}/${currentStamina.max} → ${newStamina.current}/${newStamina.max}`,
             flags: InteractionResponseFlags.EPHEMERAL
