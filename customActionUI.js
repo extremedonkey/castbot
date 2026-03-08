@@ -797,13 +797,14 @@ function getActionListComponents(actions, actionId, guildItems = {}, guildButton
     }[action.type] || '▫️';
 
     // Build options array
+    const atMax = allActions && allActions.length >= SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON;
     const options = [
       { label: summaryText, value: 'summary', default: true, emoji: { name: outcomeEmoji } },
       { label: 'Edit Outcome', value: 'edit', emoji: { name: '✏️' }, description: 'Configure settings' },
       { label: 'Move Up', value: 'move_up', emoji: { name: '⬆️' }, description: 'Change execution order' },
       { label: 'Move Down', value: 'move_down', emoji: { name: '⬇️' }, description: 'Change execution order' },
       { label: '───────────────────', value: 'divider', description: ' ' },
-      { label: 'Clone Outcome', value: 'clone', emoji: { name: '📋' }, description: 'Duplicate this outcome' },
+      ...(!atMax ? [{ label: 'Clone Outcome', value: 'clone', emoji: { name: '📋' }, description: 'Duplicate this outcome' }] : []),
       { label: toggleLabel, value: 'toggle_section', emoji: { name: toggleEmoji }, description: toggleDesc },
       { label: 'Delete Outcome', value: 'delete', emoji: { name: '🗑️' }, description: 'Remove from action' }
     ];
