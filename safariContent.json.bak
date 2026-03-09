@@ -4354,7 +4354,8 @@
             "buttons": [
               "baby_item_1772556652755",
               "free_money_321486",
-              "fastmoney_133575"
+              "fastmoney_133575",
+              "all_the_items_754771"
             ],
             "hiddenCommands": {},
             "navigation": {
@@ -11217,7 +11218,9 @@
               "amount": 100,
               "limit": {
                 "type": "once_per_player",
-                "claimedBy": []
+                "claimedBy": [
+                  "391415444084490240"
+                ]
               }
             },
             "executeOn": "true"
@@ -11237,6 +11240,49 @@
           "type": "button",
           "button": {
             "style": "Danger"
+          }
+        },
+        "coordinates": [
+          "G5"
+        ]
+      },
+      "all_the_items_754771": {
+        "id": "all_the_items_754771",
+        "label": "ALL THE ITEMS",
+        "emoji": "🥸",
+        "style": "Primary",
+        "actions": [
+          {
+            "type": "give_item",
+            "order": 0,
+            "config": {
+              "itemId": "secret_item_2919046",
+              "quantity": 1,
+              "operation": "give",
+              "limit": {
+                "type": "once_per_player",
+                "claimedBy": [
+                  "391415444084490240"
+                ]
+              }
+            },
+            "executeOn": "true"
+          }
+        ],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1773061754771,
+          "lastModified": 1773061754771,
+          "usageCount": 1,
+          "tags": [],
+          "createdVia": "quick_item"
+        },
+        "name": "ALL THE ITEMS",
+        "description": "",
+        "trigger": {
+          "type": "button",
+          "button": {
+            "style": "Primary"
           }
         },
         "coordinates": [

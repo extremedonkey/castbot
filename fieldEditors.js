@@ -719,22 +719,18 @@ function createMapCellFieldModal(entityId, fieldGroupId, group, currentValues) {
                 .setRequired(true)
                 .setMaxLength(1000);
 
-            modal.addComponents(
-                new ActionRowBuilder().addComponents(titleInput),
-                new ActionRowBuilder().addComponents(descriptionInput)
-            );
-            break;
-        }
-        case 'media': {
             const imageInput = new TextInputBuilder()
                 .setCustomId('image')
-                .setLabel('Image URL (optional)')
+                .setLabel('Image URL (leave empty to remove)')
                 .setStyle(TextInputStyle.Short)
                 .setValue(currentValues.baseContent?.image || '')
                 .setRequired(false)
-                .setMaxLength(500);
+                .setMaxLength(500)
+                .setPlaceholder('https://example.com/image.png');
 
             modal.addComponents(
+                new ActionRowBuilder().addComponents(titleInput),
+                new ActionRowBuilder().addComponents(descriptionInput),
                 new ActionRowBuilder().addComponents(imageInput)
             );
             break;

@@ -1061,6 +1061,30 @@
               "type": "action",
               "desc": "Fire and Forget\n> • Text: \"dsfdfes\"",
               "loc": "Unknown"
+            },
+            {
+              "t": 1773061142147,
+              "type": "currency",
+              "desc": "Gained 100 Gil from Button: fastmoney_133575",
+              "loc": "B5"
+            },
+            {
+              "t": 1773061142147,
+              "type": "action",
+              "desc": "💴 FASTMONEY\n> • Currency: +100",
+              "loc": "G5"
+            },
+            {
+              "t": 1773061766913,
+              "type": "item",
+              "desc": "Picked up 🕵️ Secret Item 2 x1",
+              "loc": "B5"
+            },
+            {
+              "t": 1773061766913,
+              "type": "action",
+              "desc": "🥸 ALL THE ITEMS\n> • Give Item: 🕵️ Secret Item 2 (x1)",
+              "loc": "G5"
             }
           ],
           "lastInteraction": 1773061139758,
@@ -1077,6 +1101,10 @@
               "numAttacksAvailable": 1
             },
             "levitating_wings_688811": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "secret_item_2919046": {
               "quantity": 1,
               "numAttacksAvailable": 0
             }

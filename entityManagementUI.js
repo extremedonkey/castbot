@@ -621,8 +621,7 @@ export function getFieldGroups(entityType) {
             };
         case 'map_cell':
             return {
-                info: { label: 'Location Info', emoji: '📝', fields: ['title', 'description'] },
-                media: { label: 'Media', emoji: '🖼️', fields: ['image'] },
+                info: { label: 'Location Info', emoji: '🖼️', fields: ['title', 'description', 'image'] },
                 stores: { label: 'Stores', emoji: '🏪', fields: ['stores'] }
             };
         default:
