@@ -3,18 +3,31 @@
 # Rejects commits that ADD new legacy button handlers to app.js.
 # Legacy = `} else if (custom_id` NOT followed by ButtonHandlerFactory.create within 3 lines.
 #
-# If this hook blocks your commit, use ButtonHandlerFactory.create() instead.
 # See: docs/enablers/ButtonHandlerFactory.md
 # See: CLAUDE.md "Button Handler Factory" section
 
-BASELINE=209  # Legacy handler count as of 2026-03-09. Only goes DOWN.
+BASELINE=207  # Legacy handler count as of 2026-03-09. Only goes DOWN.
+
+# ── Auto-sync: keep installed hook in sync with source ──
+SOURCE_HOOK="scripts/hooks/pre-commit"
+INSTALLED_HOOK=".git/hooks/pre-commit"
+if [ -f "$SOURCE_HOOK" ] && [ -f "$INSTALLED_HOOK" ]; then
+  SOURCE_BASELINE=$(grep '^BASELINE=' "$SOURCE_HOOK" | head -1)
+  INSTALLED_BASELINE=$(grep '^BASELINE=' "$INSTALLED_HOOK" | head -1)
+  if [ "$SOURCE_BASELINE" != "$INSTALLED_BASELINE" ]; then
+    # Source was updated but installed copy is stale — sync it
+    cp "$SOURCE_HOOK" "$INSTALLED_HOOK" && chmod +x "$INSTALLED_HOOK"
+    # Re-exec with the updated hook
+    exec "$INSTALLED_HOOK" "$@"
+  fi
+fi
 
 # Skip if app.js isn't being committed
 if ! git diff --cached --name-only | grep -q '^app\.js$'; then
   exit 0
 fi
 
-# Count legacy handlers in the staged version of app.js
+# ── Check 1: Legacy handler count (must not go UP) ──
 LEGACY_COUNT=$(git show :app.js | awk '
 /} else if \(custom_id/ && !/^[[:space:]]*\/\// {
   handler_line = NR;
@@ -30,20 +43,68 @@ handler_line && NR == handler_line + 3 {
 END { print legacy_count }
 ')
 
+BLOCKED=0
+
 if [ "$LEGACY_COUNT" -gt "$BASELINE" ]; then
   echo ""
   echo "🗿 THE MOAI SPEAKS."
   echo ""
-  echo "  You added a new legacy handler to app.js."
+  echo "  You added $((LEGACY_COUNT - BASELINE)) new legacy handler(s) to app.js."
   echo "  Legacy handlers: $LEGACY_COUNT (baseline: $BASELINE)"
-  echo "  New legacy handlers: $((LEGACY_COUNT - BASELINE))"
   echo ""
-  echo "  Use ButtonHandlerFactory.create() instead."
-  echo "  See: docs/enablers/ButtonHandlerFactory.md"
+  echo "  ┌─────────────────────────────────────────────────────┐"
+  echo "  │ HOW TO FIX — wrap your handler in the factory:      │"
+  echo "  │                                                     │"
+  echo "  │  } else if (custom_id === 'my_button') {            │"
+  echo "  │    return ButtonHandlerFactory.create({              │"
+  echo "  │      id: 'my_button',                               │"
+  echo "  │      updateMessage: true,                           │"
+  echo "  │      handler: async (context) => {                  │"
+  echo "  │        const { guildId, userId } = context;         │"
+  echo "  │        return { content: 'Done!' };                 │"
+  echo "  │      }                                              │"
+  echo "  │    })(req, res, client);                            │"
+  echo "  │  }                                                  │"
+  echo "  │                                                     │"
+  echo "  │ For modals: return { type: MODAL, data: {...} }     │"
+  echo "  │ from the factory handler — it supports modal        │"
+  echo "  │ responses too!                                      │"
+  echo "  │                                                     │"
+  echo "  │ Docs: docs/enablers/ButtonHandlerFactory.md         │"
+  echo "  └─────────────────────────────────────────────────────┘"
   echo ""
-  echo "  If you migrated legacy handlers AND added new ones,"
-  echo "  update BASELINE in scripts/hooks/pre-commit."
+  echo "  DO NOT change the BASELINE to bypass this hook."
+  echo "  The baseline only goes DOWN when legacy handlers are migrated."
   echo ""
+  BLOCKED=1
+fi
+
+# ── Check 2: No new ActionRow+TextInput in modals (use Label type 18) ──
+# Only check newly added lines (+ lines in the diff)
+NEW_LEGACY_MODALS=$(git diff --cached -- app.js | grep '^+' | grep -v '^+++' | \
+  grep -c 'type: 1.*components.*type: 4\|type: 1, *$' 2>/dev/null || echo 0)
+
+# Only warn if there are new ActionRow patterns wrapping TextInputs
+if [ "$NEW_LEGACY_MODALS" -gt 0 ]; then
+  # Check if these are actually ActionRow+TextInput combos (not just ActionRow+Button)
+  ACTUAL_LEGACY=$(git diff --cached -- app.js | grep '^+' | grep -v '^+++' | \
+    grep -c 'type: 1.*components.*\[.*{.*type: 4' 2>/dev/null || echo 0)
+  if [ "$ACTUAL_LEGACY" -gt 0 ]; then
+    echo ""
+    echo "🗿 THE MOAI ALSO NOTICES..."
+    echo ""
+    echo "  You're using ActionRow + TextInput (type 1 + type 4) in modals."
+    echo "  Use Label wrappers (type 18) instead — they support descriptions."
+    echo ""
+    echo "  Old: { type: 1, components: [{ type: 4, ... }] }"
+    echo "  New: { type: 18, label: '...', description: '...', component: { type: 4, ... } }"
+    echo ""
+    echo "  (This is a warning — commit is not blocked for this.)"
+    echo ""
+  fi
+fi
+
+if [ "$BLOCKED" -eq 1 ]; then
   exit 1
 fi
 

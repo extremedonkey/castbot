@@ -7042,11 +7042,32 @@ To fix this:
               custom_id: `modal_attr_edit_${attrId}`,
               title: `✏️ Edit ${attr.name}`,
               components: [
-                { type: 1, components: [{ type: 4, custom_id: 'attr_name', label: 'Attribute Name', style: 1, value: attr.name, min_length: 1, max_length: 30, required: true }] },
-                { type: 1, components: [{ type: 4, custom_id: 'attr_emoji', label: 'Emoji', style: 1, value: attr.emoji, min_length: 1, max_length: 10, required: true }] },
-                { type: 1, components: [{ type: 4, custom_id: 'attr_type', label: 'Type (resource or stat)', style: 1, value: isResource ? 'resource' : 'stat', min_length: 4, max_length: 8, required: true }] },
-                { type: 1, components: [{ type: 4, custom_id: 'attr_max_value', label: 'Default Max/Value', style: 1, value: String(isResource ? (attr.defaultMax || 100) : (attr.defaultValue || 100)), min_length: 1, max_length: 6, required: true }] },
-                { type: 1, components: [{ type: 4, custom_id: 'attr_regen_minutes', label: 'Regeneration (minutes, 0 for none)', style: 1, value: String(attr.regeneration?.intervalMinutes || 0), min_length: 1, max_length: 5, required: false }] }
+                {
+                  type: 18, label: 'Attribute Name',
+                  component: { type: 4, custom_id: 'attr_name', style: 1, value: attr.name, min_length: 1, max_length: 30, required: true }
+                },
+                {
+                  type: 18, label: 'Emoji',
+                  component: { type: 4, custom_id: 'attr_emoji', style: 1, value: attr.emoji, min_length: 1, max_length: 10, required: true }
+                },
+                {
+                  type: 18, label: 'Type', description: 'Resource has max value and can regenerate. Stat is a single value.',
+                  component: {
+                    type: 21, custom_id: 'attr_type', required: true,
+                    options: [
+                      { label: 'Resource', value: 'resource', description: 'Has max value, can regenerate (HP, Mana)', default: isResource },
+                      { label: 'Stat', value: 'stat', description: 'Single value, no regeneration (Strength, Luck)', default: !isResource }
+                    ]
+                  }
+                },
+                {
+                  type: 18, label: 'Default Max/Value',
+                  component: { type: 4, custom_id: 'attr_max_value', style: 1, value: String(isResource ? (attr.defaultMax || 100) : (attr.defaultValue || 100)), min_length: 1, max_length: 6, required: true }
+                },
+                {
+                  type: 18, label: 'Regeneration (minutes, 0 for none)', description: 'Only applies to resource type attributes',
+                  component: { type: 4, custom_id: 'attr_regen_minutes', style: 1, value: String(attr.regeneration?.intervalMinutes || 0), min_length: 1, max_length: 5, required: false }
+                }
               ]
             }
           };
@@ -35590,33 +35611,22 @@ Your server is now ready for Tycoons gameplay!`;
           const { guildId, components: modalComponents } = context;
           const attrId = custom_id.replace('modal_attr_edit_', '');
 
-          // Extract form values
-          const getFieldValue = (fieldId) => {
-            for (const row of modalComponents) {
-              for (const comp of row.components) {
-                if (comp.custom_id === fieldId) return comp.value;
-              }
-            }
-            return null;
+          // Extract form values from Label-wrapped components
+          // Label submissions: { type: 21, custom_id, value } for Radio, { type: 4, custom_id, value } for TextInput
+          const getModalValue = (comp) => {
+            if (!comp?.component) return null;
+            if (Array.isArray(comp.component.values)) return comp.component.values[0] || null;
+            const val = comp.component.value;
+            return typeof val === 'string' ? val.trim() || null : val ?? null;
           };
 
-          const attrName = getFieldValue('attr_name');
-          const attrEmoji = getFieldValue('attr_emoji');
-          const attrType = getFieldValue('attr_type')?.toLowerCase();
-          const attrMaxValue = parseInt(getFieldValue('attr_max_value')) || 100;
-          const attrRegenMinutes = parseInt(getFieldValue('attr_regen_minutes')) || 0;
+          const attrName = getModalValue(modalComponents[0]);
+          const attrEmoji = getModalValue(modalComponents[1]);
+          const attrType = getModalValue(modalComponents[2])?.toLowerCase();
+          const attrMaxValue = parseInt(getModalValue(modalComponents[3])) || 100;
+          const attrRegenMinutes = parseInt(getModalValue(modalComponents[4])) || 0;
 
           console.log(`📊 Editing attribute '${attrId}': ${attrName} (${attrType}) for guild ${guildId}`);
-
-          if (attrType !== 'resource' && attrType !== 'stat') {
-            return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
-              { type: 10, content: '## ❌ Invalid Type' },
-              { type: 14 },
-              { type: 10, content: 'Type must be **resource** or **stat**.\n\n• **Resource**: Has max value, can regenerate (like HP, Mana)\n• **Stat**: Single value, no regeneration (like Strength, Luck)' },
-              { type: 14 },
-              { type: 1, components: [{ type: 2, custom_id: 'attr_manage_existing', label: '← Back', style: 2 }] }
-            ]}]};
-          }
 
           const { updateAttributeDefinition } = await import('./safariManager.js');
           const { ATTRIBUTE_CATEGORIES, REGENERATION_TYPES } = await import('./config/attributeDefaults.js');

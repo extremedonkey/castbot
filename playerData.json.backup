@@ -1085,6 +1085,12 @@
               "type": "action",
               "desc": "🥸 ALL THE ITEMS\n> • Give Item: 🕵️ Secret Item 2 (x1)",
               "loc": "G5"
+            },
+            {
+              "t": 1773061771840,
+              "type": "action",
+              "desc": "🥸 ALL THE ITEMS\n> • Give Item: 🕵️ Secret Item 2 (x1)",
+              "loc": "G5"
             }
           ],
           "lastInteraction": 1773061139758,
