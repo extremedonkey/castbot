@@ -520,7 +520,8 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
               custom_id: `action_post_channel_${actionId}`,
               label: "Post to Channel",
               style: 2,
-              emoji: { name: "#️⃣" }
+              emoji: { name: "#️⃣" },
+              disabled: triggerType === 'modal'
             },
             {
               type: 2,
@@ -1786,6 +1787,7 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
   const linkedItems = action.linkedItems || [];
   const items = guildData.items || {};
   const isTriggerButton = action.trigger?.type === 'button' || action.trigger?.type === 'button_modal';
+  const isTextCommand = action.trigger?.type === 'modal';
 
   // Migrate legacy showInInventory to menuVisibility if needed
   let menuVisibility = action.menuVisibility;
@@ -1812,7 +1814,8 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
     components: [{
       type: 3, // String Select
       custom_id: `menu_visibility_select_${actionId}`,
-      placeholder: 'Select where this action appears...',
+      placeholder: isTextCommand ? '🚫 Not supported with Text Commands' : 'Select where this action appears...',
+      disabled: isTextCommand,
       min_values: 1,
       max_values: 1,
       options: [
@@ -2002,7 +2005,8 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
       custom_id: `entity_action_post_channel_${actionId}`,
       label: "Post",
       style: 2,
-      emoji: { name: "#️⃣" }
+      emoji: { name: "#️⃣" },
+      disabled: isTextCommand
     }
   ];
 
