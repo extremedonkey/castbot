@@ -4353,7 +4353,8 @@
             },
             "buttons": [
               "baby_item_1772556652755",
-              "free_money_321486"
+              "free_money_321486",
+              "fastmoney_133575"
             ],
             "hiddenCommands": {},
             "navigation": {
@@ -10422,6 +10423,20 @@
               }
             },
             "executeOn": "true"
+          },
+          {
+            "type": "give_item",
+            "order": 2,
+            "config": {
+              "itemId": "levitating_wings_688811",
+              "quantity": 1,
+              "operation": "give",
+              "limit": {
+                "type": "once_per_player",
+                "claimedBy": []
+              }
+            },
+            "executeOn": "true"
           }
         ],
         "trigger": {
@@ -10429,7 +10444,7 @@
         },
         "metadata": {
           "createdBy": "391415444084490240",
-          "lastModified": 1772558094873,
+          "lastModified": 1773060974491,
           "usageCount": 5
         },
         "conditions": {
@@ -11185,6 +11200,45 @@
         },
         "name": "Free Money",
         "description": "",
+        "coordinates": [
+          "G5"
+        ]
+      },
+      "fastmoney_133575": {
+        "id": "fastmoney_133575",
+        "label": "FASTMONEY",
+        "emoji": "💴",
+        "style": "Danger",
+        "actions": [
+          {
+            "type": "give_currency",
+            "order": 0,
+            "config": {
+              "amount": 100,
+              "limit": {
+                "type": "once_per_player",
+                "claimedBy": []
+              }
+            },
+            "executeOn": "true"
+          }
+        ],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1773061133575,
+          "lastModified": 1773061133575,
+          "usageCount": 1,
+          "tags": [],
+          "createdVia": "quick_currency"
+        },
+        "name": "FASTMONEY",
+        "description": "",
+        "trigger": {
+          "type": "button",
+          "button": {
+            "style": "Danger"
+          }
+        },
         "coordinates": [
           "G5"
         ]

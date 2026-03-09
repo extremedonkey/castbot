@@ -836,7 +836,7 @@
           "1442029382339268770"
         ],
         "safari": {
-          "currency": 55,
+          "currency": 155,
           "history": [
             {
               "t": 1772945727611,
@@ -1063,13 +1063,19 @@
               "loc": "Unknown"
             }
           ],
-          "lastInteraction": 1772945726100,
+          "lastInteraction": 1773061139758,
           "achievements": [],
           "inventory": {
-            "nurturer_361363": 1,
+            "nurturer_361363": {
+              "quantity": 1,
+              "numAttacksAvailable": 1
+            },
             "territory_forager_404120": 1,
             "nest_guardian_461600": 1,
-            "raider_499497": 1,
+            "raider_499497": {
+              "quantity": 1,
+              "numAttacksAvailable": 1
+            },
             "levitating_wings_688811": {
               "quantity": 1,
               "numAttacksAvailable": 0

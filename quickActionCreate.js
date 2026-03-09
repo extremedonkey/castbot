@@ -88,7 +88,7 @@ export function buildQuickCurrencyModal(coordinate, currencyName) {
             {
                 type: 18, // Label
                 label: 'Button Color',
-                description: 'Color of the button on the map.',
+                description: 'Color of the button.',
                 component: {
                     type: 3, // String Select
                     custom_id: 'button_color',
@@ -109,12 +109,20 @@ export function buildQuickCurrencyModal(coordinate, currencyName) {
  * @returns {object} Modal interaction response data
  */
 export function buildQuickItemModal(coordinate, items) {
-    const itemOptions = items.slice(0, 25).map(item => ({
-        label: (item.name || item.id).slice(0, 100),
-        value: item.id,
-        emoji: item.emoji ? { name: item.emoji } : { name: '📦' },
-        description: item.description ? item.description.slice(0, 100) : undefined
-    }));
+    const itemOptions = items.slice(0, 25).map(item => {
+        const opt = {
+            label: (item.name || item.id).slice(0, 100),
+            value: item.id
+        };
+        // Only add emoji if it's a valid Unicode string (not object, not custom format)
+        if (typeof item.emoji === 'string' && item.emoji.length <= 10 && !item.emoji.startsWith('<')) {
+            opt.emoji = { name: item.emoji };
+        } else {
+            opt.emoji = { name: '📦' };
+        }
+        if (item.description) opt.description = item.description.slice(0, 100);
+        return opt;
+    });
 
     return {
         custom_id: `quick_item_modal_${coordinate}`,
@@ -175,7 +183,7 @@ export function buildQuickItemModal(coordinate, items) {
             {
                 type: 18, // Label
                 label: 'Button Color',
-                description: 'Color of the button on the map.',
+                description: 'Color of the button.',
                 component: {
                     type: 3, // String Select
                     custom_id: 'button_color',
