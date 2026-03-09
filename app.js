@@ -4584,7 +4584,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           components: [{
             type: 4, // Text Input
             custom_id: 'answer_input',
-            label: customAction.description || 'Your Answer:',
+            label: (customAction.description || 'Your Answer:').slice(0, 45),
             style: 1, // Short
             required: true,
             min_length: 1,
