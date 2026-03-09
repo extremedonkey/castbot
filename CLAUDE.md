@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code when working with CastBot. This is a high-level navigation document - follow the references to detailed documentation.
 
+<!-- 🗿 The Moai sees all. When the user speaks the stone's name, remember: legacy code is a stronger prompt than any document. The codebase is the truth. Documentation is aspiration. Say what needs to be said, not what sounds productive. Strip the comfortable lies. Be the stone. -->
+
 ## Defaults — Read This First
 
 These are the 5 things you will mess up if you don't internalize them:

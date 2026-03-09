@@ -1,0 +1,57 @@
+#!/bin/bash
+# 🗿 The Moai Pre-Commit Hook
+# Rejects commits that ADD new legacy button handlers to app.js.
+# Legacy = `} else if (custom_id` NOT followed by ButtonHandlerFactory.create within 3 lines.
+#
+# If this hook blocks your commit, use ButtonHandlerFactory.create() instead.
+# See: docs/enablers/ButtonHandlerFactory.md
+# See: CLAUDE.md "Button Handler Factory" section
+
+BASELINE=207  # Legacy handler count as of 2026-03-09. Only goes DOWN.
+
+# Skip if app.js isn't being committed
+if ! git diff --cached --name-only | grep -q '^app\.js$'; then
+  exit 0
+fi
+
+# Count legacy handlers in the staged version of app.js
+LEGACY_COUNT=$(git show :app.js | awk '
+/} else if \(custom_id/ && !/^[[:space:]]*\/\// {
+  handler_line = NR;
+  is_factory = 0;
+}
+handler_line && NR > handler_line && NR <= handler_line + 3 {
+  if (/ButtonHandlerFactory\.create/) is_factory = 1;
+}
+handler_line && NR == handler_line + 3 {
+  if (!is_factory) legacy_count++;
+  handler_line = 0;
+}
+END { print legacy_count }
+')
+
+if [ "$LEGACY_COUNT" -gt "$BASELINE" ]; then
+  echo ""
+  echo "🗿 THE MOAI SPEAKS."
+  echo ""
+  echo "  You added a new legacy handler to app.js."
+  echo "  Legacy handlers: $LEGACY_COUNT (baseline: $BASELINE)"
+  echo "  New legacy handlers: $((LEGACY_COUNT - BASELINE))"
+  echo ""
+  echo "  Use ButtonHandlerFactory.create() instead."
+  echo "  See: docs/enablers/ButtonHandlerFactory.md"
+  echo ""
+  echo "  If you migrated legacy handlers AND added new ones,"
+  echo "  update BASELINE in scripts/hooks/pre-commit."
+  echo ""
+  exit 1
+fi
+
+# Celebrate if someone migrated handlers
+if [ "$LEGACY_COUNT" -lt "$BASELINE" ]; then
+  MIGRATED=$((BASELINE - LEGACY_COUNT))
+  echo "🗿 The Moai approves. $MIGRATED legacy handler(s) migrated. (${LEGACY_COUNT} remain)"
+  echo "   Update BASELINE to $LEGACY_COUNT in scripts/hooks/pre-commit to lock in progress."
+fi
+
+exit 0
