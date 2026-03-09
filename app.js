@@ -29093,7 +29093,7 @@ Your server is now ready for Tycoons gameplay!`;
         }).slice(0, 25);
         const { buildQuickItemModal } = await import('./quickActionCreate.js');
         const modalData = buildQuickItemModal(coord, sortedItems);
-        console.log(`⚡ QUICK ITEM: Sending modal with ${sortedItems.length}/${itemList.length} items`);
+        console.log(`⚡ QUICK ITEM: Modal payload:`, JSON.stringify(modalData, null, 2).slice(0, 2000));
         return res.send({
           type: InteractionResponseType.MODAL,
           data: modalData
