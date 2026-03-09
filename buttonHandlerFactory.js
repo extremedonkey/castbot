@@ -582,6 +582,15 @@ export const BUTTON_REGISTRY = {
     category: 'attributes',
     parent: 'attr_manage_existing'
   },
+  'attr_edit_*': {
+    label: 'Edit Attribute',
+    description: 'Open modal to edit a specific attribute (wildcard pattern)',
+    emoji: '✏️',
+    style: 'Primary',
+    category: 'attributes',
+    requiresModal: true,
+    parent: 'attr_manage_existing'
+  },
   'attr_delete_*': {
     label: 'Delete Attribute',
     description: 'Delete a specific attribute (wildcard pattern)',

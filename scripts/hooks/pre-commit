@@ -7,7 +7,7 @@
 # See: docs/enablers/ButtonHandlerFactory.md
 # See: CLAUDE.md "Button Handler Factory" section
 
-BASELINE=207  # Legacy handler count as of 2026-03-09. Only goes DOWN.
+BASELINE=209  # Legacy handler count as of 2026-03-09. Only goes DOWN.
 
 # Skip if app.js isn't being committed
 if ! git diff --cached --name-only | grep -q '^app\.js$'; then

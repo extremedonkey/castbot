@@ -6991,8 +6991,15 @@ To fix this:
                   components: [
                     {
                       type: 2,
+                      custom_id: `attr_edit_${selectedAttrId}`,
+                      label: 'Edit',
+                      style: 1, // Primary
+                      emoji: { name: '✏️' }
+                    },
+                    {
+                      type: 2,
                       custom_id: `attr_delete_${selectedAttrId}`,
-                      label: 'Delete Attribute',
+                      label: 'Delete',
                       style: 4, // Danger (Red)
                       emoji: { name: '🗑️' }
                     },
@@ -7006,6 +7013,42 @@ To fix this:
                 }
               ]
             }]
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('attr_edit_')) {
+      // Open modal to edit existing attribute
+      return ButtonHandlerFactory.create({
+        id: 'attr_edit',
+        updateMessage: true,
+        handler: async (context) => {
+          const { guildId } = context;
+          const attrId = custom_id.replace('attr_edit_', '');
+          const { getAttributeDefinitions } = await import('./safariManager.js');
+          const attributes = await getAttributeDefinitions(guildId);
+          const attr = attributes[attrId];
+
+          if (!attr) {
+            return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
+              { type: 10, content: '❌ Attribute not found.' },
+              { type: 1, components: [{ type: 2, custom_id: 'attr_manage_existing', label: '← Back', style: 2 }] }
+            ]}]};
+          }
+
+          const isResource = attr.category === 'resource';
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: `modal_attr_edit_${attrId}`,
+              title: `✏️ Edit ${attr.name}`,
+              components: [
+                { type: 1, components: [{ type: 4, custom_id: 'attr_name', label: 'Attribute Name', style: 1, value: attr.name, min_length: 1, max_length: 30, required: true }] },
+                { type: 1, components: [{ type: 4, custom_id: 'attr_emoji', label: 'Emoji', style: 1, value: attr.emoji, min_length: 1, max_length: 10, required: true }] },
+                { type: 1, components: [{ type: 4, custom_id: 'attr_type', label: 'Type (resource or stat)', style: 1, value: isResource ? 'resource' : 'stat', min_length: 4, max_length: 8, required: true }] },
+                { type: 1, components: [{ type: 4, custom_id: 'attr_max_value', label: 'Default Max/Value', style: 1, value: String(isResource ? (attr.defaultMax || 100) : (attr.defaultValue || 100)), min_length: 1, max_length: 6, required: true }] },
+                { type: 1, components: [{ type: 4, custom_id: 'attr_regen_minutes', label: 'Regeneration (minutes, 0 for none)', style: 1, value: String(attr.regeneration?.intervalMinutes || 0), min_length: 1, max_length: 5, required: false }] }
+              ]
+            }
           };
         }
       })(req, res, client);
@@ -35537,6 +35580,77 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+
+    } else if (custom_id.startsWith('modal_attr_edit_')) {
+      // Handle attribute edit modal
+      return ButtonHandlerFactory.create({
+        id: 'modal_attr_edit',
+        ephemeral: true,
+        handler: async (context) => {
+          const { guildId, components: modalComponents } = context;
+          const attrId = custom_id.replace('modal_attr_edit_', '');
+
+          // Extract form values
+          const getFieldValue = (fieldId) => {
+            for (const row of modalComponents) {
+              for (const comp of row.components) {
+                if (comp.custom_id === fieldId) return comp.value;
+              }
+            }
+            return null;
+          };
+
+          const attrName = getFieldValue('attr_name');
+          const attrEmoji = getFieldValue('attr_emoji');
+          const attrType = getFieldValue('attr_type')?.toLowerCase();
+          const attrMaxValue = parseInt(getFieldValue('attr_max_value')) || 100;
+          const attrRegenMinutes = parseInt(getFieldValue('attr_regen_minutes')) || 0;
+
+          console.log(`📊 Editing attribute '${attrId}': ${attrName} (${attrType}) for guild ${guildId}`);
+
+          if (attrType !== 'resource' && attrType !== 'stat') {
+            return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
+              { type: 10, content: '## ❌ Invalid Type' },
+              { type: 14 },
+              { type: 10, content: 'Type must be **resource** or **stat**.\n\n• **Resource**: Has max value, can regenerate (like HP, Mana)\n• **Stat**: Single value, no regeneration (like Strength, Luck)' },
+              { type: 14 },
+              { type: 1, components: [{ type: 2, custom_id: 'attr_manage_existing', label: '← Back', style: 2 }] }
+            ]}]};
+          }
+
+          const { updateAttributeDefinition } = await import('./safariManager.js');
+          const { ATTRIBUTE_CATEGORIES, REGENERATION_TYPES } = await import('./config/attributeDefaults.js');
+
+          const updates = {
+            name: attrName,
+            emoji: attrEmoji,
+            category: attrType === 'resource' ? ATTRIBUTE_CATEGORIES.RESOURCE : ATTRIBUTE_CATEGORIES.STAT
+          };
+
+          if (attrType === 'resource') {
+            updates.defaultMax = attrMaxValue;
+            updates.defaultCurrent = attrMaxValue;
+            updates.regeneration = {
+              type: attrRegenMinutes > 0 ? REGENERATION_TYPES.FULL_RESET : REGENERATION_TYPES.NONE,
+              intervalMinutes: attrRegenMinutes || 60,
+              amount: 'max'
+            };
+          } else {
+            updates.defaultValue = attrMaxValue;
+            updates.regeneration = { type: REGENERATION_TYPES.NONE };
+          }
+
+          const updated = await updateAttributeDefinition(guildId, attrId, updates);
+
+          return { components: [{ type: 17, accent_color: 0x27ae60, components: [
+            { type: 10, content: '## ✅ Attribute Updated!' },
+            { type: 14 },
+            { type: 10, content: `**${updated.emoji} ${updated.name}** has been updated!\n\n• Type: ${updated.category === 'resource' ? 'Resource' : 'Stat'}\n• Default Value: ${updated.defaultMax || updated.defaultValue}${updated.regeneration?.type !== 'none' ? `\n• Regeneration: ${updated.regeneration?.intervalMinutes} minutes` : ''}` },
+            { type: 14 },
+            { type: 1, components: [{ type: 2, custom_id: 'attr_manage_existing', label: '← Back to Attributes', style: 2 }] }
+          ]}]};
+        }
+      })(req, res, client);
 
     } else if (custom_id.startsWith('modal_admin_set_attr_')) {
       // Handle admin attribute modification modal
