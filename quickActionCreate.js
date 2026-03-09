@@ -114,8 +114,8 @@ export function buildQuickItemModal(coordinate, items) {
             label: (item.name || item.id).slice(0, 100),
             value: item.id
         };
-        // Only add emoji if it's a valid Unicode string (not object, not custom format)
-        if (typeof item.emoji === 'string' && item.emoji.length <= 10 && !item.emoji.startsWith('<')) {
+        // Only add emoji if it's a non-empty valid Unicode string (not object, not custom format)
+        if (typeof item.emoji === 'string' && item.emoji.length > 0 && item.emoji.length <= 10 && !item.emoji.startsWith('<')) {
             opt.emoji = { name: item.emoji };
         } else {
             opt.emoji = { name: '📦' };
