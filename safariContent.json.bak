@@ -4346,13 +4346,14 @@
           "G5": {
             "channelId": "1400526960647471165",
             "baseContent": {
-              "title": "📍 Location G5",
-              "description": "You are at grid location G5. This area hasn't been configured yet.",
-              "image": null,
+              "title": "📍 Location G5aa",
+              "description": "You are at grid location G5. This area hasn't been configured yet.aa",
+              "image": "",
               "clues": []
             },
             "buttons": [
-              "baby_item_1772556652755"
+              "baby_item_1772556652755",
+              "free_money_321486"
             ],
             "hiddenCommands": {},
             "navigation": {
@@ -4379,7 +4380,7 @@
             "fogMapUrl": "https://cdn.discordapp.com/attachments/1428244815983677551/1428245579716362330/g5_fogmap_updated.png?ex=68f1ccd9&is=68f07b59&hm=717f343c0610d7c30006344e1588fc964aa4bb295ddee8d66097102bd66e9b2e&",
             "anchorMessageId": "1400527711826350243",
             "metadata": {
-              "lastModified": 1763961252721
+              "lastModified": 1773060191639
             }
           },
           "A6": {
@@ -11132,10 +11133,60 @@
         "metadata": {
           "createdBy": "391415444084490240",
           "lastModified": 1773054230024,
-          "usageCount": 3
+          "usageCount": 4
         },
         "postedChannels": [
           "1337754151655833694"
+        ]
+      },
+      "not_what_i_was_expec_248718": {
+        "id": "not_what_i_was_expec_248718",
+        "label": "Not what i was expecting",
+        "emoji": "📦",
+        "style": "Primary",
+        "actions": [],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1773060248718,
+          "lastModified": 1773060248718,
+          "usageCount": 0,
+          "tags": [],
+          "createdVia": "quick_item"
+        },
+        "name": "Not what i was expecting",
+        "description": ""
+      },
+      "free_money_321486": {
+        "id": "free_money_321486",
+        "label": "Free Money",
+        "emoji": "💴",
+        "style": "Primary",
+        "actions": [
+          {
+            "type": "give_currency",
+            "order": 0,
+            "config": {
+              "amount": 111,
+              "limit": {
+                "type": "once_per_player",
+                "claimedBy": []
+              }
+            },
+            "executeOn": "true"
+          }
+        ],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1773060321486,
+          "lastModified": 1773060321486,
+          "usageCount": 0,
+          "tags": [],
+          "createdVia": "quick_currency"
+        },
+        "name": "Free Money",
+        "description": "",
+        "coordinates": [
+          "G5"
         ]
       }
     },

@@ -29069,117 +29069,30 @@ Your server is now ready for Tycoons gameplay!`;
         return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Error opening Quick Currency modal.', flags: InteractionResponseFlags.EPHEMERAL } });
       }
 
-    } else if (custom_id.startsWith('quick_item_') && !custom_id.startsWith('quick_item_modal_') && !custom_id.startsWith('quick_item_select_')) {
-      // Quick Item button — show modal
+    } else if (custom_id.startsWith('quick_item_') && !custom_id.startsWith('quick_item_modal_')) {
+      // Quick Item button — show modal with item list
       const coord = custom_id.replace('quick_item_', '');
       try {
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        const guildId = req.body.guild_id;
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const items = safariData[guildId]?.items || {};
+        const itemList = Object.entries(items).map(([id, item]) => ({
+          id, name: item.name, emoji: item.emoji, description: item.description
+        }));
+        if (itemList.length === 0) {
+          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ No items exist yet. Create items first via **Actions** → **Give Item** outcome.', flags: InteractionResponseFlags.EPHEMERAL } });
+        }
         const { buildQuickItemModal } = await import('./quickActionCreate.js');
         return res.send({
           type: InteractionResponseType.MODAL,
-          data: buildQuickItemModal(coord)
+          data: buildQuickItemModal(coord, itemList)
         });
       } catch (error) {
         console.error('Error showing quick item modal:', error);
         return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Error opening Quick Item modal.', flags: InteractionResponseFlags.EPHEMERAL } });
       }
-
-    } else if (custom_id.startsWith('quick_item_select_')) {
-      // Quick Item — item selected from dropdown
-      return ButtonHandlerFactory.create({
-        id: 'quick_item_select',
-        updateMessage: true,
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        handler: async (context) => {
-          const actionId = context.customId.replace('quick_item_select_', '');
-          const itemId = context.values[0];
-          const { handleQuickItemSelect } = await import('./quickActionCreate.js');
-          return await handleQuickItemSelect(context.guildId, actionId, itemId);
-        }
-      })(req, res, client);
-
-    } else if (custom_id.startsWith('quick_limit_')) {
-      // Quick Create — usage limit changed
-      return ButtonHandlerFactory.create({
-        id: 'quick_limit',
-        updateMessage: true,
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        handler: async (context) => {
-          const parts = context.customId.replace('quick_limit_', '').split('_');
-          const coordinate = parts.pop();
-          const actionId = parts.join('_');
-          const limitType = context.values[0];
-          const { handleQuickLimitChange } = await import('./quickActionCreate.js');
-          return await handleQuickLimitChange(context.guildId, actionId, coordinate, limitType);
-        }
-      })(req, res, client);
-
-    } else if (custom_id.startsWith('quick_color_')) {
-      // Quick Create — button color changed
-      return ButtonHandlerFactory.create({
-        id: 'quick_color',
-        updateMessage: true,
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        handler: async (context) => {
-          const parts = context.customId.replace('quick_color_', '').split('_');
-          const coordinate = parts.pop();
-          const actionId = parts.join('_');
-          const style = context.values[0];
-          const { handleQuickColorChange } = await import('./quickActionCreate.js');
-          return await handleQuickColorChange(context.guildId, actionId, coordinate, style);
-        }
-      })(req, res, client);
-
-    } else if (custom_id.startsWith('quick_edit_')) {
-      // Quick Create — open Action Editor
-      return ButtonHandlerFactory.create({
-        id: 'quick_edit',
-        updateMessage: true,
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        handler: async (context) => {
-          const parts = context.customId.replace('quick_edit_', '').split('_');
-          const coordinate = parts.pop();
-          const actionId = parts.join('_');
-          const { createCustomActionEditorUI } = await import('./customActionUI.js');
-          return await createCustomActionEditorUI({ guildId: context.guildId, actionId, coordinate });
-        }
-      })(req, res, client);
-
-    } else if (custom_id.startsWith('quick_done_')) {
-      // Quick Create — done, return to location actions
-      return ButtonHandlerFactory.create({
-        id: 'quick_done',
-        updateMessage: true,
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        handler: async (context) => {
-          const coord = context.customId.replace('quick_done_', '');
-          const { createEntityManagementUI } = await import('./entityManagementUI.js');
-          return await createEntityManagementUI({ entityType: 'map_cell', guildId: context.guildId, selectedId: coord, mode: 'edit' });
-        }
-      })(req, res, client);
-
-    } else if (custom_id.startsWith('quick_cancel_')) {
-      // Quick Item — cancel and delete pending action
-      return ButtonHandlerFactory.create({
-        id: 'quick_cancel',
-        updateMessage: true,
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        handler: async (context) => {
-          const parts = context.customId.replace('quick_cancel_', '').split('_');
-          const coordinate = parts.pop();
-          const actionId = parts.join('_');
-          const { handleQuickCancel } = await import('./quickActionCreate.js');
-          await handleQuickCancel(context.guildId, actionId, coordinate);
-          const { createEntityManagementUI } = await import('./entityManagementUI.js');
-          return await createEntityManagementUI({ entityType: 'map_cell', guildId: context.guildId, selectedId: coordinate, mode: 'edit' });
-        }
-      })(req, res, client);
 
     } else if (custom_id.startsWith('map_location_display_')) {
       // Handle Location button display (shows anchor message content)
@@ -42020,18 +41933,12 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
 
-        const getModalVal = (comp) => (comp?.component?.value ?? comp?.components?.[0]?.value)?.trim() || null;
-        const buttonName = getModalVal(components[0]);
-        const amount = getModalVal(components[1]);
-        const emojiInput = getModalVal(components[2]);
-
-        if (!buttonName) {
-          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Button name is required.', flags: InteractionResponseFlags.EPHEMERAL } });
-        }
-
         const { handleQuickCurrencySubmit } = await import('./quickActionCreate.js');
-        const result = await handleQuickCurrencySubmit(guildId, userId, coordinate, buttonName, amount, emojiInput);
-        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { ...result, flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL } });
+        const result = await handleQuickCurrencySubmit(guildId, userId, coordinate, components);
+        if (result.error) {
+          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ ${result.error}`, flags: InteractionResponseFlags.EPHEMERAL } });
+        }
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...result, flags: (1 << 15) } });
       } catch (error) {
         console.error('Error handling quick currency modal:', error);
         return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Error: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL } });
@@ -42044,17 +41951,12 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
 
-        const getModalVal = (comp) => (comp?.component?.value ?? comp?.components?.[0]?.value)?.trim() || null;
-        const buttonName = getModalVal(components[0]);
-        const emojiInput = getModalVal(components[1]);
-
-        if (!buttonName) {
-          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Button name is required.', flags: InteractionResponseFlags.EPHEMERAL } });
-        }
-
         const { handleQuickItemSubmit } = await import('./quickActionCreate.js');
-        const result = await handleQuickItemSubmit(guildId, userId, coordinate, buttonName, emojiInput);
-        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { ...result, flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL } });
+        const result = await handleQuickItemSubmit(guildId, userId, coordinate, components);
+        if (result.error) {
+          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ ${result.error}`, flags: InteractionResponseFlags.EPHEMERAL } });
+        }
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...result, flags: (1 << 15) } });
       } catch (error) {
         console.error('Error handling quick item modal:', error);
         return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Error: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL } });

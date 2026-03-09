@@ -468,16 +468,16 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
                     {
                         type: 2, // Button
                         style: 2,
-                        label: 'Quick Item',
-                        custom_id: `quick_item_${entityId}`,
-                        emoji: { name: '📦' }
+                        label: currencyLabel,
+                        custom_id: `quick_currency_${entityId}`,
+                        emoji: { name: '⚡' }
                     },
                     {
                         type: 2, // Button
                         style: 2,
-                        label: currencyLabel,
-                        custom_id: `quick_currency_${entityId}`,
-                        emoji: { name: '🪙' }
+                        label: 'Quick Item',
+                        custom_id: `quick_item_${entityId}`,
+                        emoji: { name: '⚡' }
                     }
                 ]
             });
@@ -623,8 +623,7 @@ export function getFieldGroups(entityType) {
             return {
                 info: { label: 'Location Info', emoji: '📝', fields: ['title', 'description'] },
                 media: { label: 'Media', emoji: '🖼️', fields: ['image'] },
-                stores: { label: 'Stores', emoji: '🏪', fields: ['stores'] },
-                items: { label: 'Drops', emoji: '🧰', fields: ['itemDrops', 'currencyDrops'] }
+                stores: { label: 'Stores', emoji: '🏪', fields: ['stores'] }
             };
         default:
             return {};
