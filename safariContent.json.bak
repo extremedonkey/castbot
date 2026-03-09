@@ -4348,7 +4348,7 @@
             "baseContent": {
               "title": "asdsad",
               "description": "dasdadsasdasdasdsa",
-              "image": "https://cdn.discordapp.com/attachments/1400526960647471165/1480545701116248179/image.png?ex=69b01122&is=69aebfa2&hm=fd0a1d8240b3b64fc74f97554810b201a168b05535b23138fc9977d2400a5e82&",
+              "image": "",
               "clues": []
             },
             "buttons": [
@@ -4382,7 +4382,7 @@
             "fogMapUrl": "https://cdn.discordapp.com/attachments/1428244815983677551/1428245579716362330/g5_fogmap_updated.png?ex=68f1ccd9&is=68f07b59&hm=717f343c0610d7c30006344e1588fc964aa4bb295ddee8d66097102bd66e9b2e&",
             "anchorMessageId": "1400527711826350243",
             "metadata": {
-              "lastModified": 1773062080223
+              "lastModified": 1773062103504
             }
           },
           "A6": {
