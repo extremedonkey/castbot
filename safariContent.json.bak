@@ -11052,7 +11052,7 @@
           }
         ],
         "trigger": {
-          "type": "button",
+          "type": "modal",
           "button": {
             "label": "What's the Password?",
             "emoji": "🔒",
@@ -11091,6 +11091,51 @@
         ],
         "postedChannels": [
           "1480206476244156627"
+        ]
+      },
+      "fire_and_forget_1773054211118": {
+        "name": "Fire and Forget",
+        "label": "Fire and Forget",
+        "description": "",
+        "emoji": null,
+        "style": 1,
+        "coordinates": [],
+        "linkedItems": [],
+        "actions": [
+          {
+            "type": "display_text",
+            "order": 0,
+            "config": {
+              "title": "sdfdsf",
+              "content": "dsfdfes",
+              "image": ""
+            },
+            "executeOn": "true"
+          }
+        ],
+        "trigger": {
+          "type": "schedule",
+          "modal": {
+            "keywords": [],
+            "caseSensitive": false
+          },
+          "button": {
+            "label": "Fire and Forget",
+            "emoji": "🔐",
+            "style": "Primary"
+          },
+          "phrases": [],
+          "schedule": {
+            "channelId": "1337754151655833694"
+          }
+        },
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "lastModified": 1773054230024,
+          "usageCount": 3
+        },
+        "postedChannels": [
+          "1337754151655833694"
         ]
       }
     },

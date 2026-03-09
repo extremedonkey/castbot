@@ -20913,6 +20913,15 @@ Your server is now ready for Tycoons gameplay!`;
               button.trigger.schedule = {
                 channelId: null
               };
+              // Scheduled actions can't be posted as buttons or shown in menus — reset these
+              if (button.menuVisibility && button.menuVisibility !== 'none') {
+                console.log(`🔄 Resetting menuVisibility from '${button.menuVisibility}' to 'none' (incompatible with Schedule trigger)`);
+                button.menuVisibility = 'none';
+              }
+              if (button.postedChannels?.length > 0) {
+                console.log(`🔄 Clearing ${button.postedChannels.length} posted channels (incompatible with Schedule trigger)`);
+                button.postedChannels = [];
+              }
               break;
           }
 
