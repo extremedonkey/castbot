@@ -9183,10 +9183,12 @@ async function updateAttributeDefinition(guildId, attributeId, updates) {
 
     const attribute = safariData[guildId].attributeDefinitions[attributeId];
 
-    // Apply updates (but preserve id and isCustom)
+    // Apply updates (but preserve id and isCustom, merge nested objects)
     const updatedAttribute = {
         ...attribute,
         ...updates,
+        display: { ...attribute.display, ...updates.display },
+        regeneration: { ...attribute.regeneration, ...updates.regeneration },
         id: attributeId,
         isCustom: attribute.isCustom,
         updatedAt: Date.now()

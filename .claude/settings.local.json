@@ -157,7 +157,8 @@
       "Bash(while *)",
       "Bash(while:*)",
       "Bash(if *)",
-      "Bash(if:*)"
+      "Bash(if:*)",
+      "Bash(ls -la /home/reece/castbot/.git/index.lock 2>/dev/null && echo \"Lock exists - checking if stale\" && fuser /home/reece/castbot/.git/index.lock 2>/dev/null || echo \"No process holding it\")"
     ],
     "deny": []
   },

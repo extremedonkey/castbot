@@ -7065,8 +7065,8 @@ To fix this:
                   component: { type: 4, custom_id: 'attr_max_value', style: 1, value: String(isResource ? (attr.defaultMax || 100) : (attr.defaultValue || 100)), min_length: 1, max_length: 6, required: true }
                 },
                 {
-                  type: 18, label: 'Regeneration (minutes, 0 for none)', description: 'Only applies to resource type attributes',
-                  component: { type: 4, custom_id: 'attr_regen_minutes', style: 1, value: String(attr.regeneration?.intervalMinutes || 0), min_length: 1, max_length: 5, required: false }
+                  type: 18, label: 'Show in Player Menu', description: 'Uncheck to hide this attribute from the player /menu',
+                  component: { type: 23, custom_id: 'attr_show_in_menu', default: attr.display?.showInMenu !== false }
                 }
               ]
             }
@@ -35624,38 +35624,34 @@ Your server is now ready for Tycoons gameplay!`;
           const attrEmoji = getModalValue(modalComponents[1]);
           const attrType = getModalValue(modalComponents[2])?.toLowerCase();
           const attrMaxValue = parseInt(getModalValue(modalComponents[3])) || 100;
-          const attrRegenMinutes = parseInt(getModalValue(modalComponents[4])) || 0;
+          const showInMenu = getModalValue(modalComponents[4]);
 
-          console.log(`📊 Editing attribute '${attrId}': ${attrName} (${attrType}) for guild ${guildId}`);
+          console.log(`📊 Editing attribute '${attrId}': ${attrName} (${attrType}), showInMenu: ${showInMenu} for guild ${guildId}`);
 
           const { updateAttributeDefinition } = await import('./safariManager.js');
-          const { ATTRIBUTE_CATEGORIES, REGENERATION_TYPES } = await import('./config/attributeDefaults.js');
+          const { ATTRIBUTE_CATEGORIES } = await import('./config/attributeDefaults.js');
 
           const updates = {
             name: attrName,
             emoji: attrEmoji,
-            category: attrType === 'resource' ? ATTRIBUTE_CATEGORIES.RESOURCE : ATTRIBUTE_CATEGORIES.STAT
+            category: attrType === 'resource' ? ATTRIBUTE_CATEGORIES.RESOURCE : ATTRIBUTE_CATEGORIES.STAT,
+            display: { showInMenu: showInMenu === true }
           };
 
           if (attrType === 'resource') {
             updates.defaultMax = attrMaxValue;
             updates.defaultCurrent = attrMaxValue;
-            updates.regeneration = {
-              type: attrRegenMinutes > 0 ? REGENERATION_TYPES.FULL_RESET : REGENERATION_TYPES.NONE,
-              intervalMinutes: attrRegenMinutes || 60,
-              amount: 'max'
-            };
           } else {
             updates.defaultValue = attrMaxValue;
-            updates.regeneration = { type: REGENERATION_TYPES.NONE };
           }
 
           const updated = await updateAttributeDefinition(guildId, attrId, updates);
+          const visLabel = updated.display?.showInMenu !== false ? 'Visible' : 'Hidden';
 
           return { components: [{ type: 17, accent_color: 0x27ae60, components: [
             { type: 10, content: '## ✅ Attribute Updated!' },
             { type: 14 },
-            { type: 10, content: `**${updated.emoji} ${updated.name}** has been updated!\n\n• Type: ${updated.category === 'resource' ? 'Resource' : 'Stat'}\n• Default Value: ${updated.defaultMax || updated.defaultValue}${updated.regeneration?.type !== 'none' ? `\n• Regeneration: ${updated.regeneration?.intervalMinutes} minutes` : ''}` },
+            { type: 10, content: `**${updated.emoji} ${updated.name}** has been updated!\n\n• Type: ${updated.category === 'resource' ? 'Resource' : 'Stat'}\n• Default Value: ${updated.defaultMax || updated.defaultValue}\n• Player Menu: ${visLabel}` },
             { type: 14 },
             { type: 1, components: [{ type: 2, custom_id: 'attr_manage_existing', label: '← Back to Attributes', style: 2 }] }
           ]}]};
