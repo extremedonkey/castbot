@@ -804,12 +804,9 @@ async function grantDefaultItems(playerData, guildId, userId) {
                 continue;
             }
             
-            // Add 1x of each default item
-            if (!inventory[itemId]) {
-                inventory[itemId] = 1;
-            } else {
-                inventory[itemId] += 1;
-            }
+            // Add 1x of each default item (always use object format)
+            const currentQty = getItemQuantity(inventory[itemId]);
+            setItemQuantity(inventory, itemId, currentQty + 1, 0);
             itemsGranted++;
         }
         
@@ -3629,7 +3626,7 @@ async function buyItem(guildId, storeId, itemId, userId) {
         
         // Check max quantity if limited
         if (item.maxQuantity > 0) {
-            const currentQuantity = (await getPlayerInventory(guildId, userId))[itemId] || 0;
+            const currentQuantity = getItemQuantity((await getPlayerInventory(guildId, userId))[itemId]);
             if (currentQuantity >= item.maxQuantity) {
                 return {
                     content: `❌ You already have the maximum quantity (${item.maxQuantity}) of this item.`,
@@ -9684,7 +9681,7 @@ async function evaluateSingleCondition(condition, player, context) {
             }
             
         case 'item':
-            const itemQuantity = player.safari?.inventory?.[condition.itemId]?.quantity || 0;
+            const itemQuantity = getItemQuantity(player.safari?.inventory?.[condition.itemId]);
             const hasItem = itemQuantity > 0;
             return condition.operator === 'has' ? hasItem : !hasItem;
             

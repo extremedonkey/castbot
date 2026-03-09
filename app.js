@@ -29849,7 +29849,9 @@ Your server is now ready for Tycoons gameplay!`;
           const guildPlayerData = playerData[context.guildId]?.players?.[context.userId]?.safari || {};
           
           if (!guildPlayerData.inventory) guildPlayerData.inventory = {};
-          guildPlayerData.inventory[drop.itemId] = (guildPlayerData.inventory[drop.itemId] || 0) + 1;
+          const { getItemQuantity, setItemQuantity } = await import('./safariManager.js');
+          const currentQty = getItemQuantity(guildPlayerData.inventory[drop.itemId]);
+          setItemQuantity(guildPlayerData.inventory, drop.itemId, currentQty + 1, 0);
           
           // Save the data
           if (!playerData[context.guildId]) playerData[context.guildId] = { players: {} };
