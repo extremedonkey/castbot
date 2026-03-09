@@ -561,11 +561,15 @@ export function createDefaultItemSelect(itemId, currentValue = 'No') {
 export function parseModalSubmission(modalData, fieldGroupId) {
     const fields = {};
     
-    // Extract values from components
+    // Extract values from components (supports both Label and ActionRow wrappers)
     for (const row of modalData.components || []) {
-        for (const component of row.components || []) {
+        // Label (type 18): single component in row.component
+        // ActionRow (type 1): array in row.components
+        const componentList = row.component ? [row.component] : (row.components || []);
+        for (const component of componentList) {
             const fieldId = component.custom_id;
-            const value = component.value;
+            // TextInput: component.value, String Select: component.values[0]
+            const value = Array.isArray(component.values) ? component.values[0] : component.value;
             
             // Parse and validate based on field type
             switch (fieldId) {
@@ -696,67 +700,97 @@ export function validateFields(fields, entityType) {
  * Create modal for map cell field editing
  */
 function createMapCellFieldModal(entityId, fieldGroupId, group, currentValues) {
-    const modal = new ModalBuilder()
-        .setCustomId(`entity_modal_submit_map_cell_${entityId}_${fieldGroupId}`)
-        .setTitle(`Edit ${group.label}`);
+    const customId = `entity_modal_submit_map_cell_${entityId}_${fieldGroupId}`;
+    const title = `Edit ${group.label}`;
 
-    // Define fields based on field group
+    // Use Label-wrapped components (modern pattern) for map cell modals
     switch (fieldGroupId) {
         case 'info': {
-            const titleInput = new TextInputBuilder()
-                .setCustomId('title')
-                .setLabel('Location Title')
-                .setStyle(TextInputStyle.Short)
-                .setValue(currentValues.baseContent?.title || '')
-                .setRequired(true)
-                .setMaxLength(100);
-
-            const descriptionInput = new TextInputBuilder()
-                .setCustomId('description')
-                .setLabel('Location Description')
-                .setStyle(TextInputStyle.Paragraph)
-                .setValue(currentValues.baseContent?.description || '')
-                .setRequired(true)
-                .setMaxLength(1000);
-
-            const imageInput = new TextInputBuilder()
-                .setCustomId('image')
-                .setLabel('Image URL (leave empty to remove)')
-                .setStyle(TextInputStyle.Short)
-                .setValue(currentValues.baseContent?.image || '')
-                .setRequired(false)
-                .setMaxLength(500)
-                .setPlaceholder('https://example.com/image.png');
-
-            modal.addComponents(
-                new ActionRowBuilder().addComponents(titleInput),
-                new ActionRowBuilder().addComponents(descriptionInput),
-                new ActionRowBuilder().addComponents(imageInput)
-            );
-            break;
+            return {
+                type: InteractionResponseType.MODAL,
+                data: {
+                    custom_id: customId,
+                    title,
+                    components: [
+                        {
+                            type: 18, // Label
+                            label: 'Location Title',
+                            description: 'The name shown at the top of this location.',
+                            component: {
+                                type: 4, // Text Input
+                                custom_id: 'title',
+                                style: 1, // Short
+                                value: currentValues.baseContent?.title || '',
+                                required: true,
+                                max_length: 100
+                            }
+                        },
+                        {
+                            type: 18, // Label
+                            label: 'Location Description',
+                            description: 'Flavour text players see when they visit. Supports markdown.',
+                            component: {
+                                type: 4, // Text Input
+                                custom_id: 'description',
+                                style: 2, // Paragraph
+                                value: currentValues.baseContent?.description || '',
+                                required: true,
+                                max_length: 1000
+                            }
+                        },
+                        {
+                            type: 18, // Label
+                            label: 'Image URL',
+                            description: 'Image shown on the anchor message. Leave empty to remove.',
+                            component: {
+                                type: 4, // Text Input
+                                custom_id: 'image',
+                                style: 1, // Short
+                                value: currentValues.baseContent?.image || '',
+                                required: false,
+                                max_length: 500,
+                                placeholder: 'https://example.com/image.png'
+                            }
+                        }
+                    ]
+                }
+            };
         }
         case 'interaction': {
-            // Note: Safari buttons will be handled differently (not in modal)
             const buttonsText = currentValues.buttons ? currentValues.buttons.join(', ') : '';
-            
-            const buttonsInput = new TextInputBuilder()
-                .setCustomId('buttons')
-                .setLabel('Safari Button IDs (comma separated)')
-                .setStyle(TextInputStyle.Paragraph)
-                .setValue(buttonsText)
-                .setRequired(false)
-                .setMaxLength(500)
-                .setPlaceholder('button_id_1, button_id_2, button_id_3');
-
-            modal.addComponents(
-                new ActionRowBuilder().addComponents(buttonsInput)
-            );
-            break;
+            return {
+                type: InteractionResponseType.MODAL,
+                data: {
+                    custom_id: customId,
+                    title,
+                    components: [
+                        {
+                            type: 18, // Label
+                            label: 'Action IDs',
+                            description: 'Comma-separated list of action IDs assigned to this location.',
+                            component: {
+                                type: 4, // Text Input
+                                custom_id: 'buttons',
+                                style: 2, // Paragraph
+                                value: buttonsText,
+                                required: false,
+                                max_length: 500,
+                                placeholder: 'action_id_1, action_id_2, action_id_3'
+                            }
+                        }
+                    ]
+                }
+            };
+        }
+        default: {
+            // Fallback for any other field groups using legacy ModalBuilder
+            const modal = new ModalBuilder()
+                .setCustomId(customId)
+                .setTitle(title);
+            return {
+                type: InteractionResponseType.MODAL,
+                data: modal
+            };
         }
     }
-
-    return {
-        type: InteractionResponseType.MODAL,
-        data: modal
-    };
 }
