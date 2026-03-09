@@ -1084,6 +1084,66 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari'
   },
+  // Quick Create buttons
+  'quick_currency_*': {
+    label: 'Quick Currency',
+    description: 'Quick-create a give currency action at a location',
+    emoji: '🪙',
+    style: 'Secondary',
+    category: 'safari_quick_create',
+    requiresModal: true
+  },
+  'quick_item_*': {
+    label: 'Quick Item',
+    description: 'Quick-create a give item action at a location',
+    emoji: '📦',
+    style: 'Secondary',
+    category: 'safari_quick_create',
+    requiresModal: true
+  },
+  'quick_item_select_*': {
+    label: 'Quick Item Select',
+    description: 'Select item for quick item action',
+    emoji: '📦',
+    style: 'Secondary',
+    category: 'safari_quick_create',
+    parent: 'quick_item_*'
+  },
+  'quick_limit_*': {
+    label: 'Quick Limit',
+    description: 'Set usage limit for quick-created action',
+    emoji: '👤',
+    style: 'Secondary',
+    category: 'safari_quick_create'
+  },
+  'quick_color_*': {
+    label: 'Quick Color',
+    description: 'Set button color for quick-created action',
+    emoji: '🎨',
+    style: 'Secondary',
+    category: 'safari_quick_create'
+  },
+  'quick_edit_*': {
+    label: 'Open Action Editor',
+    description: 'Open full action editor for quick-created action',
+    emoji: '✏️',
+    style: 'Secondary',
+    category: 'safari_quick_create'
+  },
+  'quick_done_*': {
+    label: 'Done',
+    description: 'Return to location actions after quick create',
+    emoji: '✅',
+    style: 'Primary',
+    category: 'safari_quick_create'
+  },
+  'quick_cancel_*': {
+    label: 'Cancel',
+    description: 'Cancel quick item creation and delete pending action',
+    emoji: '❌',
+    style: 'Danger',
+    category: 'safari_quick_create'
+  },
   'safari_location_editor': {
     label: 'Location Editor',
     description: 'Open map location editor interface',

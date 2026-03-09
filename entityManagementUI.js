@@ -446,9 +446,48 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
     const components = [
         { type: 14 }, // Separator
         ...createFieldGroupButtons(entityType, entityId, activeFieldGroup),
-        { type: 14 }, // Separator
     ];
-    
+
+    // Add Quick Create row for map cells (Actions + Quick Item + Quick Currency)
+    if (entityType === 'map_cell' && guildId) {
+        try {
+            const { getCustomTerms } = await import('./safariManager.js');
+            const customTerms = await getCustomTerms(guildId);
+            const currencyLabel = `Quick ${(customTerms.currencyName || 'Currency').slice(0, 14)}`;
+
+            components.push({
+                type: 1, // ActionRow
+                components: [
+                    {
+                        type: 2, // Button
+                        style: activeFieldGroup === 'interaction' ? 1 : 2,
+                        label: 'Actions',
+                        custom_id: `entity_field_group_map_cell_${entityId}_interaction`,
+                        emoji: { name: '⚡' }
+                    },
+                    {
+                        type: 2, // Button
+                        style: 2,
+                        label: 'Quick Item',
+                        custom_id: `quick_item_${entityId}`,
+                        emoji: { name: '📦' }
+                    },
+                    {
+                        type: 2, // Button
+                        style: 2,
+                        label: currencyLabel,
+                        custom_id: `quick_currency_${entityId}`,
+                        emoji: { name: '🪙' }
+                    }
+                ]
+            });
+        } catch (error) {
+            console.error('Error building Quick Create row:', error);
+        }
+    }
+
+    components.push({ type: 14 }); // Separator
+
     // Check for modal trigger actions if this is a map cell
     let hasModalTriggers = false;
     if (entityType === 'map_cell' && guildId) {
@@ -584,9 +623,8 @@ export function getFieldGroups(entityType) {
             return {
                 info: { label: 'Location Info', emoji: '📝', fields: ['title', 'description'] },
                 media: { label: 'Media', emoji: '🖼️', fields: ['image'] },
-                interaction: { label: 'Custom Actions', emoji: '⚡', fields: ['buttons'] },
                 stores: { label: 'Stores', emoji: '🏪', fields: ['stores'] },
-                items: { label: 'Manage Drops', emoji: '🧰', fields: ['itemDrops', 'currencyDrops'] }
+                items: { label: 'Drops', emoji: '🧰', fields: ['itemDrops', 'currencyDrops'] }
             };
         default:
             return {};
