@@ -20888,12 +20888,15 @@ Your server is now ready for Tycoons gameplay!`;
                 keywords: [],
                 caseSensitive: false
               };
-              break;
-            case 'select':
-              button.trigger.select = {
-                placeholder: 'Select an option',
-                options: []
-              };
+              // Text Commands can't be posted as buttons or shown in menus — reset these
+              if (button.menuVisibility && button.menuVisibility !== 'none') {
+                console.log(`🔄 Resetting menuVisibility from '${button.menuVisibility}' to 'none' (incompatible with Command trigger)`);
+                button.menuVisibility = 'none';
+              }
+              if (button.postedChannels?.length > 0) {
+                console.log(`🔄 Clearing ${button.postedChannels.length} posted channels (incompatible with Command trigger)`);
+                button.postedChannels = [];
+              }
               break;
             case 'button_modal':
               button.trigger.button = {

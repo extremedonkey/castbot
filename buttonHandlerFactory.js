@@ -2660,7 +2660,7 @@ export const BUTTON_REGISTRY = {
   'player_enter_command_*': {
     label: 'Enter Command',
     description: 'Enter a text command at this location',
-    emoji: '⌨️',
+    emoji: '🕹️',
     style: 'Secondary',
     category: 'safari_player'
   },

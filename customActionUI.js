@@ -1112,9 +1112,8 @@ function ensureActionStructure(action) {
 function getTriggerTypeLabel(type) {
   const labels = {
     button: '🖱️ Button Click',
-    modal: '⌨️ Text Command',
+    modal: '🕹️ Command',
     button_modal: '🔐 Button + Secret Code',
-    select: '📋 Select Menu',
     schedule: '⏰ Scheduled Action'
   };
   return labels[type] || '❓ Unknown';
@@ -1132,9 +1131,13 @@ function getTriggerDescription(trigger) {
         return `Command Phrases: None`;
       }
       return `Command Phrases: *${phrases.join(', ')}*`;
-    case 'select':
-      const optionCount = trigger.select?.options?.length || 0;
-      return `${optionCount} option${optionCount !== 1 ? 's' : ''}`;
+    case 'button_modal': {
+      const bmPhrases = trigger.phrases || [];
+      if (bmPhrases.length === 0) {
+        return `Secret Code Phrases: None`;
+      }
+      return `Secret Code Phrases: *${bmPhrases.join(', ')}*`;
+    }
     case 'schedule': {
       const channelId = trigger.schedule?.channelId;
       return channelId ? `Channel: <#${channelId}>` : 'No channel selected';
@@ -1247,10 +1250,10 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
             default: action.trigger?.type === 'button'
           },
           {
-            label: "Text Command",
+            label: "Command",
             value: "modal",
-            description: "Player enters pre-programmed command from host.",
-            emoji: { name: "⌨️" },
+            description: "Player types a command via Enter Command button.",
+            emoji: { name: "🕹️" },
             default: action.trigger?.type === 'modal'
           },
           {
@@ -1259,13 +1262,6 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
             description: "Player clicks button, then enters a secret code.",
             emoji: { name: "🔐" },
             default: action.trigger?.type === 'button_modal'
-          },
-          {
-            label: "Select Menu",
-            value: "select",
-            description: "Player selects from options",
-            emoji: { name: "📋" },
-            default: action.trigger?.type === 'select'
           },
           {
             label: "Scheduled Action",
@@ -1282,7 +1278,12 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
   // Add trigger-specific configuration based on current type
   if (action.trigger?.type === 'modal') {
     components.push({ type: 14 }); // Separator
-    
+
+    components.push({
+      type: 10,
+      content: `**Command**\nPlayer types a command phrase via the 🕹️ Enter Command button on map locations or player menu. Works like Carl-bot ?commands in idol hunts — players must know the exact phrase to trigger the action.`
+    });
+
     // Show current phrases if any
     const phrases = action.trigger?.phrases || [];
     if (phrases.length > 0) {
@@ -1395,7 +1396,7 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
 
     components.push({
       type: 10,
-      content: `**Button + Secret Code**\nPlayer clicks a button, then a modal pops up asking for a secret code. If they enter the correct phrase, pass outcomes run. If wrong, fail outcomes run.\n\nChange Button Text and Emoji from main Custom Action Editor screen > Action Info button.`
+      content: `**Button + Secret Code**\nPlayer clicks a button, then a modal pops up asking for a secret code. If they enter the correct phrase, pass outcomes run. If wrong, fail outcomes run.\n\nCan be placed on map locations, player menu, or crafting menu. Change Button Text and Emoji from Action Editor > Action Info.`
     });
 
     const currentStyle = action.trigger?.button?.style || 'Primary';
@@ -1491,12 +1492,6 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
     });
     components.push(previewRow.toJSON());
     components.push(buttonRow.toJSON());
-  } else if (action.trigger?.type === 'select') {
-    components.push({ type: 14 });
-    components.push({
-      type: 10,
-      content: `### Select Menu Configuration:\n*Not yet implemented*`
-    });
   } else if (action.trigger?.type === 'schedule') {
     components.push({ type: 14 }); // Separator
 
