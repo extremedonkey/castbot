@@ -29084,10 +29084,16 @@ Your server is now ready for Tycoons gameplay!`;
         if (itemList.length === 0) {
           return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ No items exist yet. Create items first via **Actions** → **Give Item** outcome.', flags: InteractionResponseFlags.EPHEMERAL } });
         }
+        // Sort by most recently created (newest first), limit to 25
+        const sortedItems = itemList.sort((a, b) => {
+          // Items with numeric suffixes in IDs are newer (higher = newer)
+          const aNum = parseInt(a.id.match(/_(\d+)$/)?.[1] || '0');
+          const bNum = parseInt(b.id.match(/_(\d+)$/)?.[1] || '0');
+          return bNum - aNum;
+        }).slice(0, 25);
         const { buildQuickItemModal } = await import('./quickActionCreate.js');
-        const modalData = buildQuickItemModal(coord, itemList);
-        console.log(`⚡ QUICK ITEM: Sending modal with ${itemList.length} items, ${modalData.components.length} components`);
-        console.log(`⚡ QUICK ITEM: Component types: ${modalData.components.map(c => `${c.label}(type ${c.component?.type})`).join(', ')}`);
+        const modalData = buildQuickItemModal(coord, sortedItems);
+        console.log(`⚡ QUICK ITEM: Sending modal with ${sortedItems.length}/${itemList.length} items`);
         return res.send({
           type: InteractionResponseType.MODAL,
           data: modalData
