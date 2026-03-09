@@ -1539,6 +1539,14 @@ scheduler.registerAction('execute_custom_action', async (payload, schedulerClien
 client.once('ready', async () => {
   console.log('Discord client is ready!');
 
+  // Record restart timestamp for health monitoring
+  try {
+    const { recordRestart } = await import('./src/monitoring/restartTracker.js');
+    await recordRestart();
+  } catch (err) {
+    console.error('Failed to record restart:', err.message);
+  }
+
   // Set Discord client reference for analytics logging
   setDiscordClient(client);
 
@@ -10603,7 +10611,7 @@ Your server is now ready for Tycoons gameplay!`;
             // Collect metrics
             const metrics = await monitor.collectMetrics();
             const scores = monitor.calculateHealthScores(metrics);
-            const formatted = monitor.formatForDiscord(metrics, scores);
+            const formatted = await monitor.formatForDiscord(metrics, scores);
 
             // Get monitoring status
             const status = monitor.getStatus();

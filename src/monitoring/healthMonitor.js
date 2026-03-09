@@ -8,6 +8,7 @@ import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { getBotEmoji } from '../../botEmojis.js';
+import { getRestartHistory } from './restartTracker.js';
 
 const execAsync = promisify(exec);
 
@@ -236,7 +237,7 @@ export class HealthMonitor {
   /**
    * Format metrics for Discord display
    */
-  formatForDiscord(metrics, scores) {
+  async formatForDiscord(metrics, scores) {
     // Determine health status and color
     let healthStatus, healthColor;
     if (scores.overall >= 90) {
@@ -272,14 +273,14 @@ export class HealthMonitor {
       healthStatus,
       healthColor,
       alerts,
-      content: this.buildDiscordContent(metrics, scores, healthStatus, alerts)
+      content: await this.buildDiscordContent(metrics, scores, healthStatus, alerts)
     };
   }
 
   /**
    * Build Discord message content
    */
-  buildDiscordContent(metrics, scores, healthStatus, alerts) {
+  async buildDiscordContent(metrics, scores, healthStatus, alerts) {
     // Add user ping if CRITICAL only (score < 50)
     const healthLine = scores.overall >= 50 ?
       `**Health Score**: ${scores.overall}/100 ${healthStatus}` :
@@ -320,6 +321,30 @@ export class HealthMonitor {
           content: `## ⚠️ Alerts\n\n${alerts.join('\n')}`
         }
       );
+    }
+
+    // Last 5 restarts in GMT+8
+    try {
+      const restarts = await getRestartHistory(5);
+      if (restarts.length > 0) {
+        const lines = restarts.map((r, i) => {
+          const d = new Date(r.timestamp);
+          // Format in GMT+8
+          const gmt8 = new Date(d.getTime() + 8 * 3600000);
+          const dateStr = gmt8.toISOString().replace('T', ' ').slice(0, 19);
+          const relative = `<t:${Math.floor(r.timestamp / 1000)}:R>`;
+          return `${i + 1}. ${dateStr}  (${relative})`;
+        });
+        components.push(
+          { type: 14 },
+          {
+            type: 10,
+            content: `## 🔄 Last ${restarts.length} Restart${restarts.length === 1 ? '' : 's'} (GMT+8)\n\`\`\`\n${lines.join('\n')}\n\`\`\``
+          }
+        );
+      }
+    } catch (err) {
+      // Non-critical — skip silently
     }
 
     return components;
@@ -409,7 +434,7 @@ export class HealthMonitor {
       // Collect metrics
       const metrics = await this.collectMetrics();
       const scores = this.calculateHealthScores(metrics);
-      const formatted = this.formatForDiscord(metrics, scores);
+      const formatted = await this.formatForDiscord(metrics, scores);
 
       // Post to Discord channel
       await this.postToChannel(channelId, guildId, formatted);
