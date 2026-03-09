@@ -1550,6 +1550,17 @@
               "type": "action",
               "desc": "🔎 Inspect the ground\n> • Text: \"There's something there that looks like it might be usefu...\"\n> • Give Item: 📜 Teleport Scroll (x1)",
               "loc": "Unknown"
+            },
+            {
+              "t": 1772983462037,
+              "type": "movement",
+              "desc": "Moved from B5 to B5"
+            },
+            {
+              "t": 1772983462037,
+              "type": "action",
+              "desc": "🔮 Fixed Teleporter\n> • Safari State: init_or_teleport → B5",
+              "loc": "Unknown"
             }
           ],
           "lastInteraction": 1772983379093,
