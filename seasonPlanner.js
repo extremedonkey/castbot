@@ -74,19 +74,21 @@ export function generateSeasonRounds(totalPlayers, numSwaps, ftcPlayers) {
     roundNo++;
   }
 
-  // F1 Reunion
-  rounds[`r${roundNo}`] = {
-    seasonRoundNo: roundNo,
-    fNumber: 1,
-    exiledPlayers: 0,
-    marooningDays: 0,
-    challengeIDs: {},
-    tribalCouncilIDs: {},
-    ftcRound: false,
-    swapRound: false,
-    mergeRound: false,
-    juryStart: false
-  };
+  // F1 Reunion — only if FTC isn't already at F1
+  if (ftcPlayers > 1) {
+    rounds[`r${roundNo}`] = {
+      seasonRoundNo: roundNo,
+      fNumber: 1,
+      exiledPlayers: 0,
+      marooningDays: 0,
+      challengeIDs: {},
+      tribalCouncilIDs: {},
+      ftcRound: false,
+      swapRound: false,
+      mergeRound: false,
+      juryStart: false
+    };
+  }
 
   return rounds;
 }

@@ -49,18 +49,20 @@ function generateSeasonRounds(totalPlayers, numSwaps, ftcPlayers) {
     roundNo++;
   }
 
-  rounds[`r${roundNo}`] = {
-    seasonRoundNo: roundNo,
-    fNumber: 1,
-    exiledPlayers: 0,
-    marooningDays: 0,
-    challengeIDs: {},
-    tribalCouncilIDs: {},
-    ftcRound: false,
-    swapRound: false,
-    mergeRound: false,
-    juryStart: false
-  };
+  if (ftcPlayers > 1) {
+    rounds[`r${roundNo}`] = {
+      seasonRoundNo: roundNo,
+      fNumber: 1,
+      exiledPlayers: 0,
+      marooningDays: 0,
+      challengeIDs: {},
+      tribalCouncilIDs: {},
+      ftcRound: false,
+      swapRound: false,
+      mergeRound: false,
+      juryStart: false
+    };
+  }
 
   return rounds;
 }
@@ -175,6 +177,15 @@ describe('generateSeasonRounds — full round generation', () => {
     const count = Object.keys(rounds).length;
     // F20 down to F2 = 19 rounds + F1 reunion = 20
     assert.equal(count, 20);
+  });
+
+  it('no duplicate reunion when FTC is F1', () => {
+    const rounds = generateSeasonRounds(11, 0, 1);
+    const f1Rounds = Object.values(rounds).filter(r => r.fNumber === 1);
+    assert.equal(f1Rounds.length, 1, 'Should only have one F1 round');
+    assert.equal(f1Rounds[0].ftcRound, true, 'F1 should be the FTC round');
+    // Total: F11 down to F1 = 11 rounds, no separate reunion
+    assert.equal(Object.keys(rounds).length, 11);
   });
 
   it('first round has marooning', () => {
