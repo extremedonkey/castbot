@@ -12118,7 +12118,8 @@ Your server is now ready for Tycoons gameplay!`;
               staminaBoost: item.staminaBoost,
               staminaBefore: `${currentStamina.current}/${currentStamina.max}`,
               staminaAfter: `${newStamina.current}/${newStamina.max}`,
-              channelName: context.channelName
+              channelName: context.channelName,
+              staminaSnapshot: newStamina.snapshot || null
             });
           } catch (logError) {
             console.error('⚠️ Failed to log item use:', logError.message);
@@ -12306,6 +12307,28 @@ Your server is now ready for Tycoons gameplay!`;
           }
 
           await savePlayerData(playerData);
+
+          // Log item use to safari log channel
+          try {
+            const { logItemUse } = await import('./safariLogger.js');
+            const location = player.safari?.currentLocation || 'Unknown';
+            await logItemUse({
+              guildId,
+              userId,
+              username: player.username || 'Unknown',
+              displayName: player.displayName || player.username || 'Unknown',
+              location,
+              itemName: item.name,
+              itemEmoji: item.emoji || '⚡',
+              quantity: 1,
+              staminaBoost: item.staminaBoost,
+              staminaBefore: `${currentStamina.current}/${currentStamina.max}`,
+              staminaAfter: `${newStamina.current}/${newStamina.max}`,
+              staminaSnapshot: newStamina.snapshot || null
+            });
+          } catch (logError) {
+            console.error('⚠️ Failed to log multi-use item use:', logError.message);
+          }
 
           // Post stamina result as follow-up
           await createFollowupMessage(token, {
@@ -12590,7 +12613,8 @@ Your server is now ready for Tycoons gameplay!`;
               buttonActions: true,
               mapMovement: true,
               attacks: true,
-              customActions: true
+              customActions: true,
+              staminaChanges: true
             }
           };
           
@@ -12655,7 +12679,8 @@ Your server is now ready for Tycoons gameplay!`;
               buttonActions: '🎯 Safari Actions',
               mapMovement: '🗺️ Map Movement',
               attacks: '⚔️ Attack Queue',
-              customActions: '⌨️ Custom Actions'
+              customActions: '⌨️ Custom Actions',
+              staminaChanges: '⚡ Stamina Changes'
             };
             
             for (const [type, enabled] of Object.entries(logSettings.logTypes || {})) {
@@ -13043,11 +13068,12 @@ Your server is now ready for Tycoons gameplay!`;
                 buttonActions: true,
                 mapMovement: true,
                 attacks: true,
-                customActions: true
+                customActions: true,
+                staminaChanges: true
               }
             };
           }
-          
+
           // Toggle the enabled state
           const wasEnabled = safariData[context.guildId].safariLogSettings.enabled;
           safariData[context.guildId].safariLogSettings.enabled = !wasEnabled;
@@ -13120,7 +13146,8 @@ Your server is now ready for Tycoons gameplay!`;
               buttonActions: '🎯 Safari Actions',
               mapMovement: '🗺️ Map Movement',
               attacks: '⚔️ Attack Queue',
-              customActions: '⌨️ Custom Actions'
+              customActions: '⌨️ Custom Actions',
+              staminaChanges: '⚡ Stamina Changes'
             };
             
             for (const [type, enabled] of Object.entries(updatedLogSettings.logTypes || {})) {
@@ -13214,7 +13241,8 @@ Your server is now ready for Tycoons gameplay!`;
             storeTransactions: true,
             buttonActions: true,
             mapMovement: true,
-            attacks: true
+            attacks: true,
+            staminaChanges: true
           };
           
           const { StringSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
@@ -13228,7 +13256,8 @@ Your server is now ready for Tycoons gameplay!`;
             { label: 'Safari Actions', value: 'buttonActions', emoji: '🎯', description: 'Log Safari button interactions' },
             { label: 'Map Movement', value: 'mapMovement', emoji: '🗺️', description: 'Log player movement on the map' },
             { label: 'Attack Queue', value: 'attacks', emoji: '⚔️', description: 'Log attack queue activities' },
-            { label: 'Custom Actions', value: 'customActions', emoji: '⌨️', description: 'Log custom buttons and player commands' }
+            { label: 'Custom Actions', value: 'customActions', emoji: '⌨️', description: 'Log custom buttons and player commands' },
+            { label: 'Stamina Changes', value: 'staminaChanges', emoji: '⚡', description: 'Log stamina usage, regen, and boosts' }
           ];
           
           // Set which options are currently selected
@@ -13365,11 +13394,12 @@ Your server is now ready for Tycoons gameplay!`;
                 buttonActions: true,
                 mapMovement: true,
                 attacks: true,
-                customActions: true
+                customActions: true,
+                staminaChanges: true
               }
             };
           }
-          
+
           // Update the log channel
           safariData[context.guildId].safariLogSettings.logChannelId = selectedChannelId;
           
@@ -13441,7 +13471,8 @@ Your server is now ready for Tycoons gameplay!`;
               buttonActions: '🎯 Safari Actions',
               mapMovement: '🗺️ Map Movement',
               attacks: '⚔️ Attack Queue',
-              customActions: '⌨️ Custom Actions'
+              customActions: '⌨️ Custom Actions',
+              staminaChanges: '⚡ Stamina Changes'
             };
             
             for (const [type, enabled] of Object.entries(updatedLogSettings.logTypes || {})) {
@@ -13506,13 +13537,14 @@ Your server is now ready for Tycoons gameplay!`;
                 buttonActions: true,
                 mapMovement: true,
                 attacks: true,
-                customActions: true
+                customActions: true,
+                staminaChanges: true
               }
             };
           }
-          
+
           // Update log types based on selection
-          const allTypes = ['whispers', 'itemPickups', 'currencyChanges', 'storeTransactions', 'buttonActions', 'mapMovement', 'attacks', 'customActions'];
+          const allTypes = ['whispers', 'itemPickups', 'currencyChanges', 'storeTransactions', 'buttonActions', 'mapMovement', 'attacks', 'customActions', 'staminaChanges'];
           for (const type of allTypes) {
             safariData[context.guildId].safariLogSettings.logTypes[type] = selectedTypes.includes(type);
           }
@@ -13585,7 +13617,8 @@ Your server is now ready for Tycoons gameplay!`;
               buttonActions: '🎯 Safari Actions',
               mapMovement: '🗺️ Map Movement',
               attacks: '⚔️ Attack Queue',
-              customActions: '⌨️ Custom Actions'
+              customActions: '⌨️ Custom Actions',
+              staminaChanges: '⚡ Stamina Changes'
             };
             
             for (const [type, enabled] of Object.entries(updatedLogSettings.logTypes || {})) {

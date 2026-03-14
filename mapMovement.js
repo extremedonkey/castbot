@@ -217,32 +217,34 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
     }
     
     // Use stamina (unless bypassed)
+    let staminaSnapshot = null;
     if (!bypassStamina) {
         const pointsResult = await usePoints(guildId, entityId, 'stamina', movementCost);
         if (!pointsResult.success) {
-            return { 
-                success: false, 
-                message: pointsResult.message 
+            return {
+                success: false,
+                message: pointsResult.message
             };
         }
+        staminaSnapshot = pointsResult.snapshot || null;
     }
-    
+
     // Update location first
     await setPlayerLocation(guildId, userId, newCoordinate);
-    
+
     // Grant permissions to new channel BEFORE removing old
     if (client && oldCoordinate !== newCoordinate) {
         // First grant access to new channel
         await grantNewChannelPermissions(guildId, userId, newCoordinate, client);
-        
+
         // Then remove old channel permissions
         await removeOldChannelPermissions(guildId, userId, oldCoordinate, client);
     }
-    
-    const message = adminMove 
+
+    const message = adminMove
         ? `📍 You have been moved by the Production team to **${newCoordinate}**!`
         : `You move to ${newCoordinate}!`;
-    
+
     // Log player movement to Safari Log
     try {
         const { logPlayerMovement } = await import('./safariLogger.js');
@@ -254,7 +256,8 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
             username: playerData[guildId]?.players?.[userId]?.username || 'Unknown Player',
             displayName: playerData[guildId]?.players?.[userId]?.displayName || null,
             fromLocation: oldCoordinate,
-            toLocation: newCoordinate
+            toLocation: newCoordinate,
+            staminaSnapshot
         });
     } catch (logError) {
         console.error('Failed to log player movement:', logError);

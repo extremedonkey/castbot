@@ -411,6 +411,9 @@ export async function usePoints(guildId, entityId, pointType, amount) {
         return { success: false, message: "Insufficient points", points };
     }
 
+    // Capture before state for snapshot
+    const beforeCurrent = points.current;
+
     const now = Date.now();
 
     // Phase 2: Track individual charges if available
@@ -435,7 +438,11 @@ export async function usePoints(guildId, entityId, pointType, amount) {
     safariData[guildId].entityPoints[entityId][pointType] = points;
     await saveSafariContent(safariData);
 
-    return { success: true, points };
+    // Build snapshot for logging
+    const regenTime = await getTimeUntilRegeneration(guildId, entityId, pointType);
+    const snapshot = createStaminaSnapshot(beforeCurrent, points.current, points.max, regenTime);
+
+    return { success: true, points, snapshot };
 }
 
 // Check if entity has enough points
@@ -540,6 +547,10 @@ export async function setEntityPoints(guildId, entityId, pointType, current, max
     checkAttributeTriggers(guildId, entityId, pointType, previousCurrent, previousMax, points.current, points.max).catch(err => {
         console.error('Error checking attribute triggers:', err);
     });
+
+    // Build snapshot for logging
+    const regenTime = await getTimeUntilRegeneration(guildId, entityId, pointType);
+    points.snapshot = createStaminaSnapshot(previousCurrent, points.current, points.max, regenTime);
 
     return points;
 }
@@ -685,22 +696,29 @@ async function executeAttributeTrigger(guildId, entityId, trigger, context) {
 // Add bonus points that can exceed max (for consumable items)
 export async function addBonusPoints(guildId, entityId, pointType, amount) {
     const safariData = await loadSafariContent();
-    
+
     // Ensure entity points exist
     if (!safariData[guildId]?.entityPoints?.[entityId]?.[pointType]) {
         await initializeEntityPoints(guildId, entityId, [pointType]);
         return await getEntityPoints(guildId, entityId, pointType);
     }
-    
+
     const points = safariData[guildId].entityPoints[entityId][pointType];
-    
+
+    // Capture before state for snapshot
+    const beforeCurrent = points.current;
+
     // Add bonus points (can exceed max) - does NOT reset regen timer
     // so consumable items don't punish players by restarting their cooldown
     points.current = Math.max(0, points.current + amount);
-    
+
     safariData[guildId].entityPoints[entityId][pointType] = points;
     await saveSafariContent(safariData);
-    
+
+    // Build snapshot for logging
+    const regenTime = await getTimeUntilRegeneration(guildId, entityId, pointType);
+    points.snapshot = createStaminaSnapshot(beforeCurrent, points.current, points.max, regenTime);
+
     return points;
 }
 
@@ -767,4 +785,31 @@ export async function getPointsDisplay(guildId, entityId, pointType) {
             display: `${config.emoji} ${points.current}/${points.max} ${config.displayName}`
         };
     }
+}
+
+// --- Stamina Snapshot Helpers ---
+
+/**
+ * Create a snapshot of a stamina/points change for logging.
+ * @param {number} before - Current value before change
+ * @param {number} after - Current value after change
+ * @param {number} max - Effective max (base + permanent boosts)
+ * @param {string} regenTime - Time until regen ("12h 0m", "Ready!", "Full")
+ * @returns {Object} Snapshot object
+ */
+export function createStaminaSnapshot(before, after, max, regenTime) {
+    return { before, after, max, regenTime };
+}
+
+/**
+ * Format a stamina snapshot as a compact tag for log messages.
+ * Example: "(⚡1/1 → 0/1 ♻️12hr)"
+ * @param {Object} snapshot - From createStaminaSnapshot()
+ * @returns {string} Formatted tag, or empty string if no snapshot
+ */
+export function formatStaminaTag(snapshot) {
+    if (!snapshot) return '';
+    const regen = (snapshot.regenTime === 'Full' || snapshot.regenTime === 'Ready!')
+        ? '' : ` ♻️${snapshot.regenTime}`;
+    return `(⚡${snapshot.before}/${snapshot.max} → ${snapshot.after}/${snapshot.max}${regen})`;
 }

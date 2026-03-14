@@ -1030,9 +1030,16 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
         logMessage = `🧰 **ITEM PICKUP** | [${timestamp}] | **${userDisplayName}** (${safariContent.username || userDisplayName}) at ${safariContent.channelId ? `<#${safariContent.channelId}>` : `**${safariContent.location}**${channelDisplay}`}\n> Collected: ${safariContent.itemEmoji} **${safariContent.itemName}** (x${safariContent.quantity})`;
         break;
 
-      case 'SAFARI_ITEM_USE':
-        logMessage = `⚡ **ITEM USED** | [${timestamp}] | **${userDisplayName}** at **${safariContent.location}**${channelDisplay}\n> Used: ${safariContent.itemEmoji} **${safariContent.itemName}** (x${safariContent.quantity}) → +${safariContent.staminaBoost} stamina (${safariContent.staminaBefore} → ${safariContent.staminaAfter})`;
+      case 'SAFARI_ITEM_USE': {
+        let itemUseStaminaTag = '';
+        if (safariContent.staminaSnapshot) {
+          const s = safariContent.staminaSnapshot;
+          const regen = (s.regenTime === 'Full' || s.regenTime === 'Ready!') ? '' : ` ♻️${s.regenTime}`;
+          itemUseStaminaTag = ` (⚡${s.before}/${s.max} → ${s.after}/${s.max}${regen})`;
+        }
+        logMessage = `⚡ **ITEM USED** | [${timestamp}] | **${userDisplayName}** at **${safariContent.location}**${channelDisplay}\n> Used: ${safariContent.itemEmoji} **${safariContent.itemName}** (x${safariContent.quantity}) → +${safariContent.staminaBoost} stamina${itemUseStaminaTag || ` (${safariContent.staminaBefore} → ${safariContent.staminaAfter})`}`;
         break;
+      }
         
       case 'SAFARI_CURRENCY':
         const changeType = safariContent.amount > 0 ? 'Gained' : 'Lost';
@@ -1047,11 +1054,18 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
         logMessage = `🎯 **SAFARI ACTION** | [${timestamp}] | **${userDisplayName}** at **${safariContent.location}**${channelDisplay}\n> Clicked: "${safariContent.buttonLabel}" - ${safariContent.result}`;
         break;
         
-      case 'SAFARI_MOVEMENT':
+      case 'SAFARI_MOVEMENT': {
         const fromChannelDisplay = safariContent.fromChannelName ? ` (#${safariContent.fromChannelName})` : '';
         const toChannelDisplay = safariContent.toChannelName ? ` (#${safariContent.toChannelName})` : '';
-        logMessage = `🗺️ **MOVEMENT** | [${timestamp}] | **${userDisplayName}** moved from **${safariContent.fromLocation}**${fromChannelDisplay} to **${safariContent.toLocation}**${toChannelDisplay}`;
+        let movementStaminaTag = '';
+        if (safariContent.staminaSnapshot) {
+          const s = safariContent.staminaSnapshot;
+          const regen = (s.regenTime === 'Full' || s.regenTime === 'Ready!') ? '' : ` ♻️${s.regenTime}`;
+          movementStaminaTag = ` (⚡${s.before}/${s.max} → ${s.after}/${s.max}${regen})`;
+        }
+        logMessage = `🗺️ **MOVEMENT** | [${timestamp}] | **${userDisplayName}** moved from **${safariContent.fromLocation}**${fromChannelDisplay} to **${safariContent.toLocation}**${toChannelDisplay}${movementStaminaTag}`;
         break;
+      }
         
       case 'SAFARI_ATTACK':
         // Extract round number from the result string if available

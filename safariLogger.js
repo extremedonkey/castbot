@@ -120,8 +120,12 @@ export async function logItemPickup({ guildId, userId, username, displayName, lo
  * @param {string} params.staminaBefore - Stamina before use (e.g. "904/999")
  * @param {string} params.staminaAfter - Stamina after use (e.g. "905/999")
  * @param {string} params.channelName - Channel name
+ * @param {Object} [params.staminaSnapshot] - Stamina change snapshot { before, after, max, regenTime }
  */
-export async function logItemUse({ guildId, userId, username, displayName, location, itemName, itemEmoji, quantity, staminaBoost, staminaBefore, staminaAfter, channelName }) {
+export async function logItemUse({ guildId, userId, username, displayName, location, itemName, itemEmoji, quantity, staminaBoost, staminaBefore, staminaAfter, channelName, staminaSnapshot }) {
+  const { formatStaminaTag } = await import('./pointsManager.js');
+  const staminaTag = formatStaminaTag(staminaSnapshot);
+
   const safariContent = {
     location,
     itemName,
@@ -130,14 +134,15 @@ export async function logItemUse({ guildId, userId, username, displayName, locat
     staminaBoost,
     staminaBefore,
     staminaAfter,
-    channelName
+    channelName,
+    staminaSnapshot
   };
 
   await logInteraction(
     userId,
     guildId,
     'SAFARI_ITEM_USE',
-    `Used ${itemName} x${quantity}`,
+    `Used ${itemName} x${quantity}${staminaTag ? ' ' + staminaTag : ''}`,
     username,
     null,
     null,
@@ -146,7 +151,14 @@ export async function logItemUse({ guildId, userId, username, displayName, locat
     safariContent
   );
 
-  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.item, `Used ${formatEmojiForText(itemEmoji) || '⚡'} ${itemName} x${quantity} → +${staminaBoost} stamina`, { loc: location });
+  const activityOpts = { loc: location };
+  if (staminaSnapshot) {
+    activityOpts.stamina = `${staminaSnapshot.after}/${staminaSnapshot.max}`;
+    if (staminaSnapshot.regenTime && staminaSnapshot.regenTime !== 'Full' && staminaSnapshot.regenTime !== 'Ready!') {
+      activityOpts.cd = staminaSnapshot.regenTime;
+    }
+  }
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.item, `Used ${formatEmojiForText(itemEmoji) || '⚡'} ${itemName} x${quantity} → +${staminaBoost} stamina${staminaTag ? ' ' + staminaTag : ''}`, activityOpts);
 }
 
 /**
@@ -283,19 +295,24 @@ export async function logSafariButton({ guildId, userId, username, displayName, 
  * @param {string} params.fromLocation - Starting location
  * @param {string} params.toLocation - Destination location
  * @param {string} params.channelName - Channel name
+ * @param {Object} [params.staminaSnapshot] - Stamina change snapshot { before, after, max, regenTime }
  */
-export async function logPlayerMovement({ guildId, userId, username, displayName, fromLocation, toLocation, channelName }) {
+export async function logPlayerMovement({ guildId, userId, username, displayName, fromLocation, toLocation, channelName, staminaSnapshot }) {
+  const { formatStaminaTag } = await import('./pointsManager.js');
+  const staminaTag = formatStaminaTag(staminaSnapshot);
+
   const safariContent = {
     fromLocation,
     toLocation,
-    channelName
+    channelName,
+    staminaSnapshot
   };
-  
+
   await logInteraction(
     userId,
     guildId,
     'SAFARI_MOVEMENT',
-    `Moved from ${fromLocation} to ${toLocation}`,
+    `Moved from ${fromLocation} to ${toLocation}${staminaTag ? ' ' + staminaTag : ''}`,
     username,
     null,
     null,
@@ -304,7 +321,14 @@ export async function logPlayerMovement({ guildId, userId, username, displayName
     safariContent
   );
 
-  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.movement, `Moved from ${fromLocation} to ${toLocation}`);
+  const activityOpts = {};
+  if (staminaSnapshot) {
+    activityOpts.stamina = `${staminaSnapshot.after}/${staminaSnapshot.max}`;
+    if (staminaSnapshot.regenTime && staminaSnapshot.regenTime !== 'Full' && staminaSnapshot.regenTime !== 'Ready!') {
+      activityOpts.cd = staminaSnapshot.regenTime;
+    }
+  }
+  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.movement, `Moved from ${fromLocation} to ${toLocation}${staminaTag ? ' ' + staminaTag : ''}`, activityOpts);
 }
 
 /**
