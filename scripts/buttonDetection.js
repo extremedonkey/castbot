@@ -43,9 +43,9 @@ const SAFE_TEST_BUTTONS = {
     style: 2, // Secondary (grey)
     priority: 3
   },
-  'analytics': {
-    custom_id: 'analytics_admin',  // The actual Analytics menu button
-    label: '🧮 Analytics',
+  'data': {
+    custom_id: 'data_admin',  // The actual Data menu button
+    label: '🧮 Data',
     style: 2, // Secondary (grey)
     priority: 4
   },

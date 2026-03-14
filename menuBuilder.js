@@ -100,7 +100,7 @@ export class MenuBuilder {
     if (isReece) {
       infoRow.push(
         { type: 2, custom_id: 'reeces_stuff', label: "Reece's Stuff", style: 4, emoji: { name: '🐧' } },
-        { type: 2, custom_id: 'analytics_admin', label: 'Analytics', style: 4, emoji: { name: '🧮' } }
+        { type: 2, custom_id: 'data_admin', label: 'Data', style: 4, emoji: { name: '🧮' } }
       );
     }
     infoRow.push(
@@ -134,11 +134,11 @@ export class MenuBuilder {
       {
         type: 1,
         components: [
+          { type: 2, custom_id: 'reeces_season_planner_mockup', label: 'Season Planner', style: 1, emoji: { name: '📝' } },
           { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
           { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } },
           { type: 2, custom_id: 'richcard_demo', label: 'Rich Card', style: 1, emoji: { name: '🎴' } },
-          { type: 2, custom_id: 'prod_guide_0', label: 'Prod Guide', style: 1, emoji: { name: '🛠️' } },
-          { type: 2, custom_id: 'reeces_radio_mockup', label: 'Radio PoC (Mockup)', style: 1, emoji: { name: '📻' } }
+          { type: 2, custom_id: 'prod_guide_0', label: 'Prod Guide', style: 1, emoji: { name: '🛠️' } }
         ]
       },
       { type: 10, content: `### \`\`\`🔧 Admin Tools\`\`\`` },
@@ -148,8 +148,7 @@ export class MenuBuilder {
           { type: 2, custom_id: 'test_role_hierarchy', label: 'Check Roles', style: 2, emoji: { name: '🔰' } },
           { type: 2, custom_id: 'admin_populate_logs', label: 'Populate Logs', style: 2, emoji: { name: '📜' } },
           { type: 2, custom_id: 'admin_backfill_channel_logs', label: 'Backfill Channel', style: 2, emoji: { name: '📡' } },
-          { type: 2, custom_id: 'emergency_app_reinit', label: 'App Re-Init', style: 4, emoji: { name: '🚨' } },
-          { type: 2, custom_id: 'restart_bot', label: 'Restart Bot', style: 4, emoji: { name: '🔄' } }
+          { type: 2, custom_id: 'emergency_app_reinit', label: 'App Re-Init', style: 4, emoji: { name: '🚨' } }
         ]
       },
       { type: 10, content: `### \`\`\`📼 Legacy\`\`\`` },
@@ -158,7 +157,8 @@ export class MenuBuilder {
         components: [
           { type: 2, custom_id: 'prod_manage_tribes_legacy_debug', label: 'Tribes (Legacy)', style: 2, emoji: { name: '🔥' } },
           { type: 2, custom_id: 'prod_live_analytics', label: 'Print Logs', style: 2, emoji: { name: '⚠️' } },
-          { type: 2, custom_id: 'prod_toggle_live_analytics', label: 'Toggle Logs', style: 2, emoji: { name: '🔃' } }
+          { type: 2, custom_id: 'prod_toggle_live_analytics', label: 'Toggle Logs', style: 2, emoji: { name: '🔃' } },
+          { type: 2, custom_id: 'reeces_radio_mockup', label: 'Radio PoC (Mockup)', style: 2, emoji: { name: '📻' } }
         ]
       },
       { type: 14 },

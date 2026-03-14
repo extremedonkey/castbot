@@ -1058,7 +1058,12 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setCustomId('safaricontent_export_all')
       .setLabel('All safariContent')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💿')
+      .setEmoji('💿'),
+    new ButtonBuilder()
+      .setCustomId('restart_bot')
+      .setLabel('Restart Bot')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('🔄')
   ];
 
   // Danger Zone section buttons
@@ -1110,15 +1115,15 @@ async function createReeceStuffMenu(guildId, channelId = null) {
 
   // Build container components with section headers
   const containerComponents = [
-    { type: 10, content: `## 🧮 CastBot | Analytics` },
+    { type: 10, content: `## 🧮 CastBot | Data` },
     { type: 14 },
     { type: 10, content: `### \`\`\`📊 Analytics\`\`\`` },
     analyticsRow.toJSON(),
     { type: 14 },
-    { type: 10, content: `### \`\`\`📦 Data Actions\`\`\`` },
+    { type: 10, content: `### \`\`\`📦 Data Management\`\`\`` },
     dataActionsRow.toJSON(),
     { type: 14 },
-    { type: 10, content: `### \`\`\`💾 Export Data\`\`\`` },
+    { type: 10, content: `### \`\`\`💾 Data Actions\`\`\`` },
     exportDataRow.toJSON(),
     { type: 14 },
     { type: 10, content: `### \`\`\`☢️ Danger Zone\`\`\`` },
@@ -1134,7 +1139,7 @@ async function createReeceStuffMenu(guildId, channelId = null) {
   };
 
   const { countComponents } = await import('./utils.js');
-  countComponents([reeceMenuContainer], { verbosity: "summary", label: "Analytics Admin" });
+  countComponents([reeceMenuContainer], { verbosity: "full", label: "Data" });
 
   return {
     flags: (1 << 15),
@@ -9010,7 +9015,7 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'nuke_player_data_cancel') {
-      // Cancel the data nuke operation - return to analytics_admin
+      // Cancel the data nuke operation - return to data_admin
       return ButtonHandlerFactory.create({
         id: 'nuke_player_data_cancel',
         updateMessage: true,
@@ -9045,7 +9050,7 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'nuke_safari_content_cancel') {
-      // Cancel the Safari data nuke operation - return to analytics_admin
+      // Cancel the Safari data nuke operation - return to data_admin
       return ButtonHandlerFactory.create({
         id: 'nuke_safari_content_cancel',
         updateMessage: true,
@@ -10058,28 +10063,28 @@ To fix this:
     //       };
     //     }
     //   })(req, res, client);
-    } else if (custom_id === 'analytics_admin') {
-      // Handle Analytics admin menu - special admin features (MIGRATED TO FACTORY)
+    } else if (custom_id === 'data_admin') {
+      // Handle Data admin menu - special admin features (MIGRATED TO FACTORY)
       // Access check BEFORE factory — prevents Components V2 flag mismatch crash on public messages (e.g. restart notification)
       if (req.body.member?.user?.id !== '391415444084490240') {
-        console.log(`❌ ACCESS DENIED: analytics_admin - user ${req.body.member?.user?.id} not authorized`);
+        console.log(`❌ ACCESS DENIED: data_admin - user ${req.body.member?.user?.id} not authorized`);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: { content: '❌ Access denied. This feature is restricted.', flags: InteractionResponseFlags.EPHEMERAL }
         });
       }
       return ButtonHandlerFactory.create({
-        id: 'analytics_admin',
+        id: 'data_admin',
         updateMessage: true,  // Button clicks always update (per CLAUDE.md)
         deferred: true,       // Required: loads 933KB playerData + safariContent + Discord API calls
         handler: async (context) => {
-          console.log(`🔍 START: analytics_admin - user ${context.userId}`);
-          MenuBuilder.trackLegacyMenu('analytics_admin', 'Analytics and admin tools menu');
+          console.log(`🔍 START: data_admin - user ${context.userId}`);
+          MenuBuilder.trackLegacyMenu('data_admin', 'Data and admin tools menu');
 
-          // Create Reece Stuff submenu (loads playerData.json 933KB + safariContent.json)
+          // Create Data admin submenu (loads playerData.json 933KB + safariContent.json)
           const reeceMenuData = await createReeceStuffMenu(context.guildId, context.channelId);
 
-          console.log(`✅ SUCCESS: analytics_admin - completed`);
+          console.log(`✅ SUCCESS: data_admin - completed`);
           return {
             ...reeceMenuData,
             ephemeral: true
@@ -10738,8 +10743,8 @@ Your server is now ready for Tycoons gameplay!`;
 
             // Add back, refresh, and schedule buttons
             const backButton = new ButtonBuilder()
-              .setCustomId('analytics_admin')
-              .setLabel('← Analytics')
+              .setCustomId('data_admin')
+              .setLabel('← Data')
               .setStyle(ButtonStyle.Secondary);
 
             const refreshButton = new ButtonBuilder()
@@ -11041,8 +11046,8 @@ Your server is now ready for Tycoons gameplay!`;
             type: 1,
             components: [{
               type: 2,
-              custom_id: 'analytics_admin',
-              label: '← Analytics',
+              custom_id: 'data_admin',
+              label: '← Data',
               style: 2
             }, {
               type: 2,
@@ -11112,8 +11117,8 @@ Your server is now ready for Tycoons gameplay!`;
               type: 1,
               components: [{
                 type: 2,
-                custom_id: 'analytics_admin',
-                label: '← Analytics',
+                custom_id: 'data_admin',
+                label: '← Data',
                 style: 2
               }]
             }
@@ -11267,8 +11272,8 @@ Your server is now ready for Tycoons gameplay!`;
                   type: 1,
                   components: [{
                     type: 2,
-                    custom_id: 'analytics_admin',
-                    label: '← Analytics',
+                    custom_id: 'data_admin',
+                    label: '← Data',
                     style: 2
                   }, {
                     type: 2,
@@ -11322,7 +11327,7 @@ Your server is now ready for Tycoons gameplay!`;
                 type: 1,
                 components: [
                   { type: 2, custom_id: 'restart_bot_confirm', label: 'Yes, Restart Now', style: 4, emoji: { name: '🔄' } },
-                  { type: 2, custom_id: 'reeces_stuff', label: '← Cancel', style: 2 }
+                  { type: 2, custom_id: 'data_admin', label: '← Cancel', style: 2 }
                 ]
               }
             ]
@@ -11583,7 +11588,7 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id === 'nuke_roles_cancel') {
-      // Cancel the roles nuke operation - return to analytics_admin
+      // Cancel the roles nuke operation - return to data_admin
       return ButtonHandlerFactory.create({
         id: 'nuke_roles_cancel',
         updateMessage: true,
@@ -13992,7 +13997,7 @@ Your server is now ready for Tycoons gameplay!`;
         const token = req.body.token;
         const userId = req.body.member.user.id;
 
-        // Security check - only allow specific Discord ID (same as analytics_admin)
+        // Security check - only allow specific Discord ID (same as data_admin)
         if (userId !== '391415444084490240') {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -14110,7 +14115,7 @@ Your server is now ready for Tycoons gameplay!`;
         const channelId = req.body.channel_id;
         const userId = member.user.id;
 
-        // Security check - only allow specific Discord ID (same as analytics_admin)
+        // Security check - only allow specific Discord ID (same as data_admin)
         if (userId !== '391415444084490240') {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -28767,7 +28772,7 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
       
     } else if (custom_id === 'map_delete_cancel') {
-      // Handle cancelled map deletion - return to analytics_admin
+      // Handle cancelled map deletion - return to data_admin
       return ButtonHandlerFactory.create({
         id: 'map_delete_cancel',
         requiresPermission: PermissionFlagsBits.ManageRoles,

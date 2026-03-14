@@ -22,13 +22,13 @@ import { DiscordRequest } from './utils.js';
  * Enables natural language identification of buttons and menus
  */
 export const BUTTON_REGISTRY = {
-  // === ANALYTICS ADMIN MENU ===
-  'analytics_admin': {
-    label: 'Analytics',
-    description: 'Analytics and admin dashboard (Reece-only)',
+  // === DATA ADMIN MENU ===
+  'data_admin': {
+    label: 'Data',
+    description: 'Data and admin dashboard (Reece-only)',
     emoji: '🧮',
     style: 'Danger',
-    menu: 'analytics_admin',
+    menu: 'data_admin',
     parent: 'castbot_tools',
     restrictedUser: '391415444084490240',
     category: 'admin'
@@ -40,7 +40,7 @@ export const BUTTON_REGISTRY = {
     description: 'Upload all tips images to Discord CDN for current environment',
     emoji: '💡',
     style: 'Secondary',
-    parent: 'analytics_admin',
+    parent: 'data_admin',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -49,7 +49,7 @@ export const BUTTON_REGISTRY = {
     description: 'Export entire playerData.json across all servers',
     emoji: '💿',
     style: 'Secondary',
-    parent: 'analytics_admin',
+    parent: 'data_admin',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -58,7 +58,7 @@ export const BUTTON_REGISTRY = {
     description: 'Export playerData for current guild only',
     emoji: '💿',
     style: 'Secondary',
-    parent: 'analytics_admin',
+    parent: 'data_admin',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -67,7 +67,7 @@ export const BUTTON_REGISTRY = {
     description: 'Export entire safariContent.json across all servers',
     emoji: '💿',
     style: 'Secondary',
-    parent: 'analytics_admin',
+    parent: 'data_admin',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -76,7 +76,7 @@ export const BUTTON_REGISTRY = {
     description: 'Import playerData from a file for current guild',
     emoji: '📥',
     style: 'Secondary',
-    parent: 'analytics_admin',
+    parent: 'data_admin',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -125,7 +125,7 @@ export const BUTTON_REGISTRY = {
     parent: 'reeces_stuff',
     restrictedUser: '391415444084490240',
     requiresModal: true,
-    category: 'experimental'
+    category: 'legacy'
   },
   'safari_guide_*': {
     label: 'Guide',
@@ -202,7 +202,7 @@ export const BUTTON_REGISTRY = {
     description: 'Display server usage statistics',
     emoji: '📈',
     style: 'Secondary',
-    parent: 'analytics_admin',
+    parent: 'data_admin',
     restrictedUser: '391415444084490240',
     category: 'analytics'
   },
@@ -211,7 +211,7 @@ export const BUTTON_REGISTRY = {
     description: 'Real-time production health monitoring dashboard',
     emoji: '🌈',
     style: 'Secondary',
-    parent: 'analytics_admin',
+    parent: 'data_admin',
     restrictedUser: '391415444084490240',
     category: 'analytics'
   },
@@ -240,7 +240,7 @@ export const BUTTON_REGISTRY = {
     description: 'Select and delete all channels in a Discord category',
     emoji: '🧹',
     style: 'Danger',
-    parent: 'analytics_admin',
+    parent: 'data_admin',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -276,7 +276,7 @@ export const BUTTON_REGISTRY = {
     description: 'Restart CastBot process (PM2 auto-restarts in prod)',
     emoji: '🔄',
     style: 'Danger',
-    parent: 'reeces_stuff',
+    parent: 'data_admin',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -303,7 +303,7 @@ export const BUTTON_REGISTRY = {
     description: 'Manage Daylight Saving Time states for timezones',
     emoji: '🌍',
     style: 'Secondary',
-    parent: 'analytics_admin',
+    parent: 'data_admin',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -322,7 +322,7 @@ export const BUTTON_REGISTRY = {
     description: 'List all servers the bot is installed in with details',
     emoji: '🌐',
     style: 'Secondary',
-    parent: 'analytics_admin',
+    parent: 'data_admin',
     restrictedUser: '391415444084490240',
     category: 'analytics'
   },
@@ -340,7 +340,7 @@ export const BUTTON_REGISTRY = {
     description: 'Remove all roles from server (DANGEROUS)',
     emoji: '💥',
     style: 'Danger',
-    parent: 'analytics_admin',
+    parent: 'data_admin',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -349,7 +349,7 @@ export const BUTTON_REGISTRY = {
     description: 'Emergency re-initialization of season applications',
     emoji: '🚨',
     style: 'Danger',
-    parent: 'analytics_admin',
+    parent: 'data_admin',
     restrictedUser: '391415444084490240',
     category: 'emergency'
   },
@@ -358,7 +358,7 @@ export const BUTTON_REGISTRY = {
     description: 'Clear all guild data from playerData.json (DANGER ZONE)',
     emoji: '☢️',
     style: 'Danger',
-    parent: 'analytics_admin',
+    parent: 'data_admin',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -383,7 +383,7 @@ export const BUTTON_REGISTRY = {
     description: 'Clear all guild Safari data from safariContent.json (DANGER ZONE)',
     emoji: '☢️',
     style: 'Danger',
-    parent: 'analytics_admin',
+    parent: 'data_admin',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },

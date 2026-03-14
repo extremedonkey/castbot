@@ -54,10 +54,10 @@ const BACK_BUTTON_CONFIG = {
     description: 'Return to Safari advanced configuration menu'
   },
 
-  'analytics_admin': {
-    label: '← Analytics',
+  'data_admin': {
+    label: '← Data',
     emoji: '🧮',
-    description: 'Return to Analytics menu (Reece only)'
+    description: 'Return to Data menu (Reece only)'
   },
 
   'castbot_tools': {
