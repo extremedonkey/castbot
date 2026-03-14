@@ -136,10 +136,13 @@ export class BackupService {
       });
     }
 
+    // Next backup Discord timestamp
+    const nextUnix = Math.floor((Date.now() + this.intervalMs) / 1000);
+
     components.push({ type: 14 });
     components.push({
       type: 10,
-      content: `${stats}\n\n-# ${env} | ${trigger} | ${this.formatSize(totalSize)} total | next: ${this.formatDuration(this.intervalMs)}`,
+      content: `${stats}\n\n-# ${env} | ${trigger} | ${this.formatSize(totalSize)} total | next: <t:${nextUnix}:R>`,
     });
 
     return {
