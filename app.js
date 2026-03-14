@@ -7479,15 +7479,15 @@ To fix this:
           return { components: [container] };
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('stamina_guide_')) {
-      // Stamina Guide — paginated player-friendly guide
+    } else if (custom_id.startsWith('stamina_guide_') || custom_id.startsWith('safari_guide_')) {
+      // Safari Guide — paginated player-friendly guide
       return ButtonHandlerFactory.create({
-        id: 'stamina_guide',
+        id: 'safari_guide',
         updateMessage: true,
         handler: async (context) => {
-          const { buildStaminaGuidePage } = await import('./staminaGuide.js');
+          const { buildSafariGuidePage } = await import('./staminaGuide.js');
           const page = parseInt(context.customId.split('_')[2]) || 0;
-          return buildStaminaGuidePage(page);
+          return buildSafariGuidePage(page);
         }
       })(req, res, client);
     } else if (custom_id === 'reeces_season_planner_mockup' || custom_id.startsWith('stress_page_')) {

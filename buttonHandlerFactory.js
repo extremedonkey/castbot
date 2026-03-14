@@ -127,9 +127,17 @@ export const BUTTON_REGISTRY = {
     requiresModal: true,
     category: 'experimental'
   },
+  'safari_guide_*': {
+    label: 'Guide',
+    description: 'Paginated player-friendly Safari guide (stamina, items, regen)',
+    emoji: '🦁',
+    style: 'Secondary',
+    parent: 'prod_player_menu',
+    category: 'player_management'
+  },
   'stamina_guide_*': {
     label: 'Stamina Guide',
-    description: 'Paginated player-friendly guide to stamina mechanics',
+    description: 'Paginated stamina guide (legacy entry from Reece\'s Stuff)',
     emoji: '⚡',
     style: 'Primary',
     parent: 'reeces_stuff',

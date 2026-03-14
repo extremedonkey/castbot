@@ -959,13 +959,22 @@ export async function createPlayerManagementUI(options) {
       if (isInitializedForLogs || mode === PlayerManagementMode.ADMIN) {
         finalComponents.push({
           type: 1, // ActionRow
-          components: [{
-            type: 2, // Button
-            style: 2, // Secondary
-            label: 'Logs',
-            custom_id: 'player_view_logs',
-            emoji: { name: '📜' }
-          }]
+          components: [
+            {
+              type: 2, // Button
+              style: 2, // Secondary
+              label: 'Logs',
+              custom_id: 'player_view_logs',
+              emoji: { name: '📜' }
+            },
+            {
+              type: 2, // Button
+              style: 2, // Secondary
+              label: 'Guide',
+              custom_id: 'safari_guide_0',
+              emoji: { name: '🦁' }
+            }
+          ]
         });
       }
     }
