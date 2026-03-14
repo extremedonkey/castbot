@@ -11497,6 +11497,7 @@ Your server is now ready for Tycoons gameplay!`;
                 const tzInfo = dstState[tzData.timezoneId];
                 dstTimezones.push({
                   timezoneId: tzData.timezoneId,
+                  currentAbbrev: tzInfo.isDST ? (tzInfo.dstAbbrev || tzData.timezoneId) : (tzInfo.standardAbbrev || tzData.timezoneId),
                   currentState: tzInfo.isDST ? 'Daylight' : 'Standard',
                   currentOffset: tzInfo.currentOffset,
                   displayName: tzInfo.displayName,
@@ -11516,7 +11517,7 @@ Your server is now ready for Tycoons gameplay!`;
 
           // Create dropdown options for each timezone
           const options = dstTimezones.map(tz => ({
-            label: `${tz.timezoneId}: ${tz.displayName}`,
+            label: `${tz.currentAbbrev}: ${tz.displayName}`,
             value: tz.timezoneId,
             description: `Currently: ${tz.currentState} (UTC${tz.currentOffset >= 0 ? '+' : ''}${tz.currentOffset})`,
             emoji: { name: tz.currentState === 'Daylight' ? '☀️' : '❄️' }
