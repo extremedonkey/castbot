@@ -7,19 +7,33 @@
  */
 
 const PAGES = [
-  // Page 0: Overview
+  // Page 0: Welcome & How to Play
   {
     title: '🦁 Safari Guide',
-    subtitle: '-# Your guide to Safari mechanics',
+    subtitle: '-# How Safari works — start here',
     content: [
-      `Welcome! This guide explains how the core systems work — stamina, items, regeneration, and more.`,
-      `### \`\`\`⚡ Stamina\`\`\``,
-      `Every time you move on the map, it costs **1 stamina**. When you run out, you'll need to wait for it to regenerate before you can move again.\n\n**Current / Max** — Your stamina is shown as \`⚡ 3/5\`, meaning 3 available out of 5 maximum.\n\n**Over Max** — Consumable items can push you *above* your max. If your max is 1 and you use a stamina potion, you might have \`⚡ 3/1\`. This is normal!`,
+      `Welcome! Safari is a grid-based exploration game. Each location on the map is its own Discord channel — you occupy one at a time, exploring what's there before moving on.`,
+      `### \`\`\`🗺️ The Map & Navigation\`\`\``,
+      `The map is a grid of locations you can move through horizontally, vertically, and diagonally. Click **🗺️ Navigate** in your location channel to see compass directions and move.\n\nWhen you arrive somewhere, other players in that channel will see you. To hide your arrival message, click 🗺️ Navigate — the announcement disappears and you'll see your movement controls privately.`,
+      `### \`\`\`📍 Location Actions\`\`\``,
+      `Each channel has an **⚓ Anchor Message** at the top showing your location, a description, and buttons for things you can do there. All interactions are **private** — other players won't see what you clicked or what happened.`,
+      `### \`\`\`📋 Player Menu\`\`\``,
+      `Type **\`/menu\`** anywhere to access:\n• **🗺️ Navigate** — Movement controls (also available in location channels)\n• **⚓ Location** — View the anchor message privately\n• **⛵ Inventory** — See your items (usable items show a button)\n• **📜 Logs** — Your activity history\n• **🦁 Guide** — You're reading it!`
+    ]
+  },
+  // Page 1: Stamina & Movement
+  {
+    title: '⚡ Stamina & Movement',
+    subtitle: '-# What limits your exploration',
+    content: [
+      `Every move costs **1 stamina**. When you run out, you'll need to wait for it to regenerate before you can move again. Your host sets the regen time — it could be hours or minutes.`,
+      `### \`\`\`⚡ Reading Your Stamina\`\`\``,
+      `Your stamina is shown as \`⚡ 3/5\` — meaning **3 available** out of **5 maximum**.\n\n**Over Max** — Some items can push you *above* your max. \`⚡ 3/1\` means 3 moves available even though your max is 1. This is normal!\n\nThe regen timer starts from your **last** move. If you moved at 9:00 PM and regen is 12 hours, you can move again at 9:00 AM.`,
       `### \`\`\`📊 Activity Log\`\`\``,
       `-# Tap **📜 Logs** in your player menu to see your activity history.\n\nWhen you move or use items, your log shows a stamina tag:\n\`(⚡1/1 → 0/1 ♻️12hr)\`\n\n**⚡1/1** = before (1 of 1) **→ 0/1** = after **♻️12hr** = time until regen\n\nIf you're at or above max, the ♻️ timer is hidden.`
     ]
   },
-  // Page 1: Regeneration
+  // Page 2: Regeneration
   {
     title: '♻️ Regeneration',
     subtitle: '-# How stamina comes back',
@@ -31,16 +45,18 @@ const PAGES = [
       `Some hosts set up attributes (like HP or Mana) that regenerate gradually — gaining a fixed amount every interval instead of resetting to max.\n\n**Example** (HP, +10 every 30min):\n\`\`\`\n❤️ 60/100  →  30min  →  ❤️ 70/100  →  30min  →  ❤️ 80/100\n\`\`\``
     ]
   },
-  // Page 2: Items & Boosts
+  // Page 3: Items & Strategy
   {
-    title: '🧪 Items & Boosts',
-    subtitle: '-# Consumables, permanent items, and going over max',
+    title: '🧪 Items & Strategy',
+    subtitle: '-# Consumables, permanent items, and smart stamina usage',
     content: [
       `Items can affect your stamina in two ways: **consumable boosts** (temporary) and **permanent boosts** (as long as you own the item).`,
       `### \`\`\`🍎 Consumable Items\`\`\``,
       `Using a consumable stamina item **adds** to your current stamina and **consumes** the item. It can push you above your max.\n\n**Example** — Energy Drink (+2 stamina):\n\`\`\`\n⚡ 0/1  →  use Energy Drink  →  ⚡ 2/1\n\`\`\`\n-# Consumables do NOT reset your regen timer. If you were 5 minutes from a natural regen, it still happens.\n\n-# Over-max stamina works normally — each move costs 1, so \`2/1\` means 2 moves available.`,
       `### \`\`\`🐎 Permanent Items\`\`\``,
-      `Some non-consumable items (like a Horse) increase your **maximum** stamina permanently while you own them. Each bonus point regenerates on its own independent timer.\n\n**Example** — Horse (+3 max stamina):\n\`\`\`\nBase:  ⚡ 1/1\nWith Horse: ⚡ 1/4  (max went from 1 → 4)\n\`\`\`\n-# If you lose the item, your max goes back down. Charges regen individually — you might see \`⚡ 2/4\` while some charges are still on cooldown.`
+      `Some non-consumable items (like a Horse) increase your **maximum** stamina permanently while you own them. Each bonus point regenerates on its own independent timer.\n\n**Example** — Horse (+3 max stamina):\n\`\`\`\nBase:  ⚡ 1/1\nWith Horse: ⚡ 1/4  (max went from 1 → 4)\n\`\`\`\n-# If you lose the item, your max goes back down. Charges regen individually — you might see \`⚡ 2/4\` while some charges are still on cooldown.`,
+      `### \`\`\`💡 Optimal Stamina Usage\`\`\``,
+      `If you have a consumable stamina item, **don't use it immediately**. Wait for your natural regen to fire first, use that stamina, *then* pop the consumable. This minimises wasted cooldown time.\n\n**Example** (regen: 12hr):\n\`\`\`\n⚡ 0/1 → wait 12hr → ⚡ 1/1 → move → ⚡ 0/1\n  → use consumable → ⚡ 1/1 → move → ⚡ 0/1\n\`\`\`\n-# If you use the consumable *before* your natural regen, you waste whatever time was left on the timer.`
     ]
   },
 ];

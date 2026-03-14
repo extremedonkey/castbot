@@ -837,7 +837,13 @@
         ],
         "safari": {
           "currency": 0,
-          "history": [],
+          "history": [
+            {
+              "t": 1773507106355,
+              "type": "admin",
+              "desc": "[ADMIN] Player de-initialized"
+            }
+          ],
           "lastInteraction": 1773507104717,
           "achievements": [],
           "inventory": {},

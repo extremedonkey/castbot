@@ -289,7 +289,8 @@ tail -f /tmp/castbot-dev.log               # View logs (NOT PM2 in dev!)
 2. **Dry run first**: `npm run deploy-remote-wsl-dry` (SAFE - no permission needed)
 3. **Get permission** from user before actual deployment
 4. **Deploy**: `npm run deploy-remote-wsl` (pulls from GitHub, restarts PM2)
-5. **Check logs**: `npm run logs-prod` to verify successful deployment
+5. **Never run deployment commands in the background** — always use foreground Bash so output streams in real-time and SSH issues are visible immediately
+6. **Check logs**: `npm run logs-prod` to verify successful deployment
 
 **✅ APPROVED PM2 COMMANDS:**
 - `pm2 restart castbot-pm` - Safe, preserves environment
