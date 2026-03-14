@@ -71,7 +71,7 @@ If `git check-ignore` prints nothing, it's not ignored. If `git ls-files` prints
 
 ### Tier 2: Important (loss = inconvenient, recoverable)
 
-**Files:** `scheduledJobs.json`
+**Files:** `scheduledJobs.json`, `dstState.json`
 
 **Protection required:**
 - Discord channel backup (daily)
@@ -79,9 +79,9 @@ If `git check-ignore` prints nothing, it's not ignored. If `git ls-files` prints
 
 ### Tier 3: Ephemeral (loss = no impact)
 
-**Files:** `dstState.json`, `restartHistory.json`, `messageHistory.json`
+**Files:** `restartHistory.json`, `messageHistory.json`
 
-**Protection required:** None. All regenerated on startup or next use. Just keep them gitignored so deploys don't clobber prod state.
+**Protection required:** None. Regenerated on startup or next use. Just keep them gitignored so deploys don't clobber prod state.
 
 ## Active Backup Layers
 

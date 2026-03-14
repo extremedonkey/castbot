@@ -19,6 +19,7 @@ const BACKUP_FILES = [
   { name: 'playerData.json', emoji: '👥', critical: true },
   { name: 'safariContent.json', emoji: '🦁', critical: true },
   { name: 'scheduledJobs.json', emoji: '⏰', critical: false },
+  { name: 'dstState.json', emoji: '🕐', critical: false },
 ];
 
 // Default config
