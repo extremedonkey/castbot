@@ -206,13 +206,19 @@ export function parseStartDate(dateStr) {
  * @returns {Object} Modal interaction response data
  */
 export function buildSeasonPlannerModal(existing = null) {
-  // Format start date for pre-fill: Unix timestamp → mm/dd/yyyy
+  // Format start date for pre-fill: Unix timestamp → mm/dd/yyyy, or today for create mode
   let startDateValue = null;
   if (existing?.estimatedStartDate) {
     const d = new Date(existing.estimatedStartDate);
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     startDateValue = `${mm}/${dd}/${d.getFullYear()}`;
+  } else if (!existing?.configId) {
+    // Create mode: default to today
+    const now = new Date();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    startDateValue = `${mm}/${dd}/${now.getFullYear()}`;
   }
 
   return {
