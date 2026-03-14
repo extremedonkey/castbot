@@ -7479,6 +7479,17 @@ To fix this:
           return { components: [container] };
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('stamina_guide_')) {
+      // Stamina Guide — paginated player-friendly guide
+      return ButtonHandlerFactory.create({
+        id: 'stamina_guide',
+        updateMessage: true,
+        handler: async (context) => {
+          const { buildStaminaGuidePage } = await import('./staminaGuide.js');
+          const page = parseInt(context.customId.split('_')[2]) || 0;
+          return buildStaminaGuidePage(page);
+        }
+      })(req, res, client);
     } else if (custom_id === 'reeces_season_planner_mockup' || custom_id.startsWith('stress_page_')) {
       // Season Planner (Mockup) — UI prototype, not a real feature. See docs/ui/UIPrototyping.md
       return ButtonHandlerFactory.create({

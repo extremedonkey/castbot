@@ -661,14 +661,14 @@
     "serverName": "CastBot",
     "icon": "https://cdn.discordapp.com/icons/1331657596087566398/e2bd30d98992c902b50e047bf284ef64.webp",
     "ownerId": "391415444084490240",
-    "memberCount": 43,
+    "memberCount": 44,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1737562311909,
-    "lastUpdated": 1772797712555,
+    "lastUpdated": 1773497487034,
     "players": {
       "233762709932474370": {
         "emojiCode": "<:Geo:1396856830281388144>",
@@ -1091,6 +1091,12 @@
               "type": "action",
               "desc": "🥸 ALL THE ITEMS\n> • Give Item: 🕵️ Secret Item 2 (x1)",
               "loc": "G5"
+            },
+            {
+              "t": 1773500513032,
+              "type": "movement",
+              "desc": "Moved from B5 to C4 (⚡7/1 → 6/1)",
+              "stamina": "6/1"
             }
           ],
           "lastInteraction": 1773061139758,
@@ -1120,11 +1126,12 @@
           "storeHistory": [],
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "B5",
+              "currentLocation": "C4",
               "exploredCoordinates": [
                 "A3",
                 "A1",
-                "B5"
+                "B5",
+                "C4"
               ],
               "itemsFound": [],
               "movementHistory": [
@@ -1152,6 +1159,11 @@
                   "from": "B5",
                   "to": "B5",
                   "timestamp": "2026-03-08T06:53:54.677Z"
+                },
+                {
+                  "from": "B5",
+                  "to": "C4",
+                  "timestamp": "2026-03-14T15:01:49.390Z"
                 }
               ],
               "startingLocation": "A4"
@@ -3936,14 +3948,14 @@
     "serverName": "EpochORG S6: Buccaneers",
     "icon": "https://cdn.discordapp.com/icons/1266913708123361303/c6692f2c83b69e4de2cce0c5806380ac.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 60,
+    "memberCount": 61,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1722126166135,
-    "lastUpdated": 1772113653245,
+    "lastUpdated": 1773497485864,
     "players": {},
     "tribes": {
       "1267501924639571988": {
@@ -12365,7 +12377,7 @@
           "storeHistory": [],
           "mapProgress": {
             "map_10x10_1772437113475": {
-              "currentLocation": "B4",
+              "currentLocation": "B3",
               "exploredCoordinates": [
                 "A1",
                 "B2",
@@ -12398,6 +12410,11 @@
                   "from": "B3",
                   "to": "B4",
                   "timestamp": "2026-03-02T13:17:23.824Z"
+                },
+                {
+                  "from": "B4",
+                  "to": "B3",
+                  "timestamp": "2026-03-14T15:06:19.299Z"
                 }
               ]
             }

@@ -127,6 +127,14 @@ export const BUTTON_REGISTRY = {
     requiresModal: true,
     category: 'experimental'
   },
+  'stamina_guide_*': {
+    label: 'Stamina Guide',
+    description: 'Paginated player-friendly guide to stamina mechanics',
+    emoji: '⚡',
+    style: 'Primary',
+    parent: 'reeces_stuff',
+    category: 'experimental'
+  },
   'richcard_demo': {
     label: 'Rich Card',
     description: 'Rich Card UI reference implementation demo',

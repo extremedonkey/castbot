@@ -30,7 +30,7 @@ Every menu follows this skeleton:
 const containerComponents = [
   { type: 10, content: `## Icon Title | Subtitle` },   // Header
   { type: 14 },                                          // Separator
-  { type: 10, content: `> **\`📊 Section Name\`**` },   // Section header
+  { type: 10, content: `### ```📊 Section Name```` },   // Section header
   actionRow.toJSON(),                                     // Buttons (max 5 per row)
   { type: 14 },                                          // Separator between sections
   navigationRow.toJSON()                                  // Navigation buttons
@@ -40,7 +40,7 @@ const containerComponents = [
 ### Section Organization Rules
 - **Group by function**: Analytics together, admin tools together, danger actions together
 - **Progressive disclosure**: Most-used → Least-used → Dangerous
-- **Section headers**: Use `> **\`📊 Section Name\`**` format
+- **Section headers**: Use `### ```📊 Section Name```` format
 - **Maximum 3-4 sections** per menu
 - **5 buttons max** per ActionRow (Discord hard limit)
 

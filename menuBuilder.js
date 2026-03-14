@@ -137,7 +137,7 @@ export class MenuBuilder {
           { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
           { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } },
           { type: 2, custom_id: 'richcard_demo', label: 'Rich Card', style: 1, emoji: { name: '🎴' } },
-          { type: 2, custom_id: 'reeces_season_planner_mockup', label: 'Season Planner (Mockup)', style: 1, emoji: { name: '📝' } },
+          { type: 2, custom_id: 'stamina_guide_0', label: 'Stamina Guide', style: 1, emoji: { name: '⚡' } },
           { type: 2, custom_id: 'reeces_radio_mockup', label: 'Radio PoC (Mockup)', style: 1, emoji: { name: '📻' } }
         ]
       },
