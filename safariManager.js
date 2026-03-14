@@ -461,41 +461,18 @@ async function loadSafariContent() {
  * Save safari content data
  */
 async function saveSafariContent(data) {
-    try {
-        const json = JSON.stringify(data, null, 2);
-
-        // Size validation: prevent wipe by refusing to save suspiciously small data
-        // A healthy safariContent.json is typically >100KB. An empty/near-empty save
-        // indicates corrupted in-memory state (e.g., ensureSafariContentFile returned {}).
-        const MIN_SAFE_SIZE = 1000; // 1KB minimum
-        let existingSize = 0;
-        try {
-            const stat = await fs.stat(SAFARI_CONTENT_FILE);
-            existingSize = stat.size;
-        } catch { /* file doesn't exist yet, that's ok */ }
-
-        if (existingSize > MIN_SAFE_SIZE && json.length < MIN_SAFE_SIZE) {
-            console.error(`🔴 CRITICAL: Refusing to save safariContent.json — new data is ${json.length} bytes but existing file is ${existingSize} bytes. This looks like a data wipe.`);
-            return;
-        }
-
-        // Atomic write: write to temp file, then rename (rename is atomic on Linux)
-        const tempFile = SAFARI_CONTENT_FILE + '.tmp';
-        await fs.writeFile(tempFile, json);
-        // Create rolling backup before overwriting (keeps last known-good copy)
-        try {
-            await fs.access(SAFARI_CONTENT_FILE);
-            await fs.copyFile(SAFARI_CONTENT_FILE, SAFARI_CONTENT_FILE + '.bak');
-        } catch { /* no existing file to backup */ }
-        await fs.rename(tempFile, SAFARI_CONTENT_FILE);
-
-        console.log('✅ Safari content saved successfully');
-        // Clear cache after save to ensure fresh data on next read
-        safariRequestCache.clear();
-    } catch (error) {
-        console.error('Error saving safari content:', error);
-        throw error;
-    }
+    const { atomicSave } = await import('./atomicSave.js');
+    return atomicSave(SAFARI_CONTENT_FILE, data, {
+        minSize: 1000,
+        label: 'safariContent',
+        validate: (d) => {
+            const guildCount = Object.keys(d).filter(k => /^\d+$/.test(k)).length;
+            return guildCount >= 1
+                ? { ok: true }
+                : { ok: false, reason: `no guild data found` };
+        },
+        onSaved: () => safariRequestCache.clear(),
+    });
 }
 
 /**

@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { atomicSave } from './atomicSave.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,21 +12,24 @@ const requestCache = new Map();
 let cacheHits = 0;
 let cacheMisses = 0;
 
-// Write mutex — prevents concurrent saves from corrupting the .tmp file
-let _saveQueue = Promise.resolve();
-
 /**
  * Wrap a load-modify-save cycle so only one runs at a time.
- * Subsequent callers wait for the previous save to finish, then run with fresh data.
+ * Uses atomicSave's built-in mutex for write serialization.
  * @param {Function} fn - async function receiving no args, expected to load/save internally
  */
 export function withStorageLock(fn) {
+    // atomicSave handles the mutex internally, but callers of withStorageLock
+    // may do load-modify-save cycles that need the whole cycle serialized.
+    // Keep the local mutex for those callers.
     let resolve;
     const next = new Promise(r => { resolve = r; });
     const prev = _saveQueue;
     _saveQueue = next;
     return prev.then(fn).finally(resolve);
 }
+
+// Local mutex for withStorageLock (atomicSave has its own for writes)
+let _saveQueue = Promise.resolve();
 
 // Clear the request cache (called at start of each Discord interaction)
 export function clearRequestCache() {
@@ -170,64 +174,17 @@ export async function loadPlayerData(guildId, { forceFresh = false } = {}) {
 }
 
 export async function savePlayerData(data) {
-    // Serialize file I/O through the write mutex to prevent concurrent .tmp file races
-    return withStorageLock(() => _savePlayerDataUnsafe(data));
-}
-
-async function _savePlayerDataUnsafe(data) {
-    // PRIORITY 1: Add 7 layers of safety to prevent data loss
-
-    // 1. SIZE VALIDATION - Refuse if suspiciously small
-    const dataStr = JSON.stringify(data, null, 2);
-    if (dataStr.length < 50000) {
-        console.error('🚨 REFUSING to save suspiciously small playerData:', dataStr.length, 'bytes');
-        console.error('🚨 Expected >50KB (normal is 168KB), got', dataStr.length, 'bytes');
-        console.error('🚨 Dumping attempted save to playerData.json.REJECTED for analysis');
-        await fs.writeFile(STORAGE_FILE + '.REJECTED', dataStr);
-        throw new Error(`Data validation failed - file too small (${dataStr.length} bytes < 50KB threshold)`);
-    }
-
-    // 2. STRUCTURE VALIDATION - Ensure we have enough guilds
-    const guildCount = Object.keys(data).filter(k => k.match(/^\d+$/)).length;
-    if (guildCount < 10) {
-        console.error('🚨 REFUSING to save - only', guildCount, 'guilds (expected 15+)');
-        console.error('🚨 This indicates corrupted or incomplete data structure');
-        console.error('🚨 Dumping attempted save to playerData.json.REJECTED for analysis');
-        await fs.writeFile(STORAGE_FILE + '.REJECTED', dataStr);
-        throw new Error(`Data validation failed - only ${guildCount} guilds (expected 15+)`);
-    }
-
-    // 3. BACKUP BEFORE WRITE - Keep .backup copy for recovery
-    const backupPath = STORAGE_FILE + '.backup';
-    try {
-        const fileExists = await fs.access(STORAGE_FILE).then(() => true).catch(() => false);
-        if (fileExists) {
-            await fs.copyFile(STORAGE_FILE, backupPath);
-            console.log('✅ Backup created:', backupPath);
-        }
-    } catch (error) {
-        console.error('⚠️ Backup failed:', error.message);
-        // Continue anyway - better to save than lose in-memory changes
-    }
-
-    // 4. ATOMIC WRITE - Write to temp file first (prevents partial writes)
-    const tempPath = STORAGE_FILE + '.tmp';
-    await fs.writeFile(tempPath, dataStr);
-
-    // 5. VERIFY TEMP FILE - Check it before committing
-    const tempStats = await fs.stat(tempPath);
-    if (tempStats.size < 50000) {
-        await fs.unlink(tempPath);
-        throw new Error(`Temp file verification failed - too small (${tempStats.size} bytes)`);
-    }
-
-    // 6. ATOMIC RENAME - This is atomic on most filesystems (prevents corruption)
-    await fs.rename(tempPath, STORAGE_FILE);
-
-    // 7. CLEAR CACHE - Only after successful write
-    requestCache.clear();
-
-    console.log(`✅ Saved playerData.json (${dataStr.length} bytes, ${guildCount} guilds)`);
+    return atomicSave(STORAGE_FILE, data, {
+        minSize: 50000,
+        label: 'playerData',
+        validate: (d) => {
+            const guildCount = Object.keys(d).filter(k => /^\d+$/.test(k)).length;
+            return guildCount >= 10
+                ? { ok: true }
+                : { ok: false, reason: `only ${guildCount} guilds (expected 10+)` };
+        },
+        onSaved: () => requestCache.clear(),
+    });
 }
 
 export async function updatePlayer(guildId, playerId, data) {
