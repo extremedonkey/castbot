@@ -16,9 +16,9 @@ const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 
 // Files to back up (relative to project root)
 const BACKUP_FILES = [
-  { name: 'playerData.json', critical: true },
-  { name: 'safariContent.json', critical: true },
-  { name: 'scheduledJobs.json', critical: false },
+  { name: 'playerData.json', emoji: '👥', critical: true },
+  { name: 'safariContent.json', emoji: '🦁', critical: true },
+  { name: 'scheduledJobs.json', emoji: '⏰', critical: false },
 ];
 
 // Default config
@@ -81,7 +81,7 @@ export class BackupService {
         try {
           const content = await fs.readFile(filePath, 'utf8');
           const size = Buffer.byteLength(content, 'utf8');
-          files.push({ name: fileDef.name, content, size, critical: fileDef.critical });
+          files.push({ name: fileDef.name, emoji: fileDef.emoji, content, size, critical: fileDef.critical });
           totalSize += size;
         } catch (err) {
           if (fileDef.critical) {
@@ -93,22 +93,16 @@ export class BackupService {
       }
 
       // Build stats
-      const stats = await this.buildStats(files);
+      const stats = this.buildStats(files);
       const timestamp = this.formatTimestamp();
       const isProduction = process.env.PRODUCTION === 'TRUE';
       const env = isProduction ? 'PROD' : 'DEV';
 
-      // Build message
-      const message = [
-        `📦 **Backup — ${timestamp}** [${env}] (${trigger})`,
-        '',
-        ...files.map(f => `\`${f.name}\` — ${this.formatSize(f.size)}`),
-        '',
-        stats,
-      ].join('\n');
+      // Build Components V2 container
+      const container = this.buildContainer(files, stats, timestamp, env, trigger, totalSize);
 
       // Post via REST API with file attachments
-      await this.postBackup(message, files);
+      await this.postBackup(container, files);
 
       this.lastBackupTime = new Date();
       this.backupCount++;
@@ -120,7 +114,28 @@ export class BackupService {
     }
   }
 
-  async buildStats(files) {
+  buildContainer(files, stats, timestamp, env, trigger, totalSize) {
+    // File listing with sizes
+    const fileLines = files.map(f =>
+      `${f.emoji} \`${f.name}\` — **${this.formatSize(f.size)}**`
+    ).join('\n');
+
+    const components = [
+      { type: 10, content: `## 📦 Backup | ${timestamp}` },
+      { type: 14 },
+      { type: 10, content: `### \`\`\`📁 Files\`\`\`\n${fileLines}` },
+      { type: 14 },
+      { type: 10, content: `### \`\`\`📊 Stats\`\`\`\n${stats}\n\n-# ${env} | ${trigger} | ${this.formatSize(totalSize)} total | next: ${this.formatDuration(this.intervalMs)}` },
+    ];
+
+    return {
+      type: 17,
+      accent_color: 0x3498DB,
+      components,
+    };
+  }
+
+  buildStats(files) {
     const parts = [];
 
     // playerData stats
@@ -135,7 +150,7 @@ export class BackupService {
             totalPlayers += Object.keys(pd[gId].players).length;
           }
         }
-        parts.push(`Guilds: ${guilds} | Players: ${totalPlayers}`);
+        parts.push(`**Guilds:** ${guilds} | **Players:** ${totalPlayers}`);
       } catch { /* ignore parse errors */ }
     }
 
@@ -145,35 +160,33 @@ export class BackupService {
       try {
         const sc = JSON.parse(scFile.content);
         const safariGuilds = Object.keys(sc).filter(k => /^\d+$/.test(k)).length;
-        parts.push(`Safari configs: ${safariGuilds}`);
+        parts.push(`**Safari configs:** ${safariGuilds}`);
       } catch { /* ignore */ }
     }
 
-    return parts.join(' | ');
+    return parts.join('\n');
   }
 
-  async postBackup(message, files) {
-    // Use the form-data npm package (same as working export handlers)
+  async postBackup(container, files) {
     const FormDataLib = (await import('form-data')).default;
     const form = new FormDataLib();
 
-    form.append('payload_json', JSON.stringify({ content: message }));
+    // payload_json: Components V2 message with file attachment references
+    form.append('payload_json', JSON.stringify({
+      flags: (1 << 15), // IS_COMPONENTS_V2
+      components: [container],
+      attachments: files.map((f, i) => ({ id: i, filename: this.timestampedName(f.name) })),
+    }));
 
+    // Attach files
     for (let i = 0; i < files.length; i++) {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      const ext = path.extname(files[i].name);
-      const base = path.basename(files[i].name, ext);
-      const filename = `${base}-${timestamp}${ext}`;
-
       form.append(`files[${i}]`, Buffer.from(files[i].content, 'utf8'), {
-        filename,
+        filename: this.timestampedName(files[i].name),
         contentType: 'application/json',
       });
     }
 
     const url = `https://discord.com/api/v10/channels/${this.channelId}/messages`;
-
-    // Use node-fetch (not native fetch) — matches working export pattern exactly
     const nodeFetch = (await import('node-fetch')).default;
     const response = await nodeFetch(url, {
       method: 'POST',
@@ -188,6 +201,13 @@ export class BackupService {
       const body = await response.text();
       throw new Error(`Discord API ${response.status}: ${body}`);
     }
+  }
+
+  timestampedName(name) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const ext = path.extname(name);
+    const base = path.basename(name, ext);
+    return `${base}-${timestamp}${ext}`;
   }
 
   formatTimestamp() {
