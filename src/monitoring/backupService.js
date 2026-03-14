@@ -98,6 +98,14 @@ export class BackupService {
       const isProduction = process.env.PRODUCTION === 'TRUE';
       const env = isProduction ? 'PROD' : 'DEV';
 
+      // Generate timestamped filenames once (so container refs match uploads)
+      const fileTimestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      for (const f of files) {
+        const ext = path.extname(f.name);
+        const base = path.basename(f.name, ext);
+        f.uploadName = `${base}-${fileTimestamp}${ext}`;
+      }
+
       // Build Components V2 container
       const container = this.buildContainer(files, stats, timestamp, env, trigger, totalSize);
 
@@ -115,18 +123,24 @@ export class BackupService {
   }
 
   buildContainer(files, stats, timestamp, env, trigger, totalSize) {
-    // File listing with sizes
-    const fileLines = files.map(f =>
-      `${f.emoji} \`${f.name}\` — **${this.formatSize(f.size)}**`
-    ).join('\n');
-
     const components = [
       { type: 10, content: `## 📦 Backup | ${timestamp}` },
       { type: 14 },
-      { type: 10, content: `### \`\`\`📁 Files\`\`\`\n${fileLines}` },
-      { type: 14 },
-      { type: 10, content: `### \`\`\`📊 Stats\`\`\`\n${stats}\n\n-# ${env} | ${trigger} | ${this.formatSize(totalSize)} total | next: ${this.formatDuration(this.intervalMs)}` },
     ];
+
+    // File components (type 13) — renders download links via attachment:// protocol
+    for (const f of files) {
+      components.push({
+        type: 13,
+        file: { url: `attachment://${f.uploadName}` },
+      });
+    }
+
+    components.push({ type: 14 });
+    components.push({
+      type: 10,
+      content: `${stats}\n\n-# ${env} | ${trigger} | ${this.formatSize(totalSize)} total | next: ${this.formatDuration(this.intervalMs)}`,
+    });
 
     return {
       type: 17,
@@ -175,13 +189,13 @@ export class BackupService {
     form.append('payload_json', JSON.stringify({
       flags: (1 << 15), // IS_COMPONENTS_V2
       components: [container],
-      attachments: files.map((f, i) => ({ id: i, filename: this.timestampedName(f.name) })),
+      attachments: files.map((f, i) => ({ id: i, filename: f.uploadName })),
     }));
 
     // Attach files
     for (let i = 0; i < files.length; i++) {
       form.append(`files[${i}]`, Buffer.from(files[i].content, 'utf8'), {
-        filename: this.timestampedName(files[i].name),
+        filename: files[i].uploadName,
         contentType: 'application/json',
       });
     }
@@ -201,13 +215,6 @@ export class BackupService {
       const body = await response.text();
       throw new Error(`Discord API ${response.status}: ${body}`);
     }
-  }
-
-  timestampedName(name) {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const ext = path.extname(name);
-    const base = path.basename(name, ext);
-    return `${base}-${timestamp}${ext}`;
   }
 
   formatTimestamp() {
