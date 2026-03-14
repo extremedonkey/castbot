@@ -22,15 +22,19 @@ function getSwapFNumbers(totalPlayers, numSwaps) {
   return swaps;
 }
 
-function getMergeFNumber(totalPlayers) {
+function getMergeFNumber(totalPlayers, swapFNumbers = []) {
   const target = Math.round(totalPlayers * 0.58);
-  return Math.max(10, Math.min(12, target));
+  let merge = Math.max(10, Math.min(12, target));
+  while (swapFNumbers.includes(merge) && merge > 2) {
+    merge--;
+  }
+  return merge;
 }
 
 function generateSeasonRounds(totalPlayers, numSwaps, ftcPlayers) {
   const rounds = {};
   const swapFNumbers = getSwapFNumbers(totalPlayers, numSwaps);
-  const mergeFNumber = getMergeFNumber(totalPlayers);
+  const mergeFNumber = getMergeFNumber(totalPlayers, swapFNumbers);
 
   let roundNo = 1;
   for (let f = totalPlayers; f >= ftcPlayers; f--) {
@@ -105,8 +109,8 @@ function validatePlannerFields(fields) {
 
 function getRoundDuration(round) {
   if (round.fNumber === 1) return 1;
-  if (round.ftcRound) return 2;
-  if (round.marooningDays > 0) return 3;
+  if (round.ftcRound) return (round.speechDays ?? 1) + (round.votesDays ?? 1);
+  if (round.marooningDays > 0) return round.marooningDays + 2;
   if (round.swapRound || round.mergeRound) return 3;
   return 2;
 }
@@ -161,6 +165,17 @@ describe('getMergeFNumber — merge placement', () => {
 
   it('clamps to F12 for large seasons', () => {
     assert.equal(getMergeFNumber(24), 12); // 24 * 0.58 = 14 → clamped to 12
+  });
+
+  it('avoids collision with swap at F10 (12 players)', () => {
+    // 12 players: merge target = 10, but swap is also at F10
+    const swaps = getSwapFNumbers(12, 1); // [10]
+    assert.equal(getMergeFNumber(12, swaps), 9); // shifted down to F9
+  });
+
+  it('avoids collision with swap at F10 (14 players, 2 swaps)', () => {
+    const swaps = getSwapFNumbers(14, 2); // [12, 10]
+    assert.equal(getMergeFNumber(14, swaps), 9); // F10 taken by swap, shift to F9
   });
 });
 
@@ -238,6 +253,21 @@ describe('generateSeasonRounds — full round generation', () => {
     }
     // Last jump: F3 → F1 (reunion, skipping F2)
     assert.equal(fNumbers[fNumbers.length - 1], 1);
+  });
+
+  it('no round has both swap and merge', () => {
+    // 12 players, 1 swap previously caused collision at F10
+    const rounds = generateSeasonRounds(12, 1, 2);
+    for (const [id, r] of Object.entries(rounds)) {
+      assert.ok(!(r.swapRound && r.mergeRound), `${id} (F${r.fNumber}) has both swap AND merge`);
+    }
+  });
+
+  it('no round has both swap and merge (14 players, 2 swaps)', () => {
+    const rounds = generateSeasonRounds(14, 2, 2);
+    for (const [id, r] of Object.entries(rounds)) {
+      assert.ok(!(r.swapRound && r.mergeRound), `${id} (F${r.fNumber}) has both swap AND merge`);
+    }
   });
 
   it('round IDs are r1, r2, r3...', () => {
@@ -328,12 +358,21 @@ describe('getRoundDuration — round duration calculation', () => {
     assert.equal(getRoundDuration({ fNumber: 1 }), 1);
   });
 
-  it('FTC is 2 days', () => {
+  it('FTC defaults to 2 days', () => {
     assert.equal(getRoundDuration({ fNumber: 3, ftcRound: true, marooningDays: 0 }), 2);
   });
 
-  it('marooning round is 3 days', () => {
+  it('FTC with custom speech/vote days', () => {
+    assert.equal(getRoundDuration({ fNumber: 3, ftcRound: true, marooningDays: 0, speechDays: 2, votesDays: 1 }), 3);
+    assert.equal(getRoundDuration({ fNumber: 3, ftcRound: true, marooningDays: 0, speechDays: 1, votesDays: 0 }), 1);
+  });
+
+  it('marooning round defaults to 3 days', () => {
     assert.equal(getRoundDuration({ fNumber: 18, marooningDays: 1, ftcRound: false }), 3);
+  });
+
+  it('marooning with 2-day event is 4 days', () => {
+    assert.equal(getRoundDuration({ fNumber: 18, marooningDays: 2, ftcRound: false }), 4);
   });
 
   it('swap round is 3 days', () => {

@@ -38,9 +38,19 @@ export function getSwapFNumbers(totalPlayers, numSwaps) {
  * Determine merge F-number (~55-60% through the game, clamped F10-F12).
  * e.g., 18 players → F10, 20 players → F12
  */
-export function getMergeFNumber(totalPlayers) {
+/**
+ * Determine merge F-number (~55-60% through the game, clamped F10-F12).
+ * Avoids collision with swap F-numbers.
+ */
+export function getMergeFNumber(totalPlayers, swapFNumbers = []) {
   const target = Math.round(totalPlayers * 0.58);
-  return Math.max(10, Math.min(12, target));
+  let merge = Math.max(10, Math.min(12, target));
+
+  // Avoid collision with swaps — shift merge down until clear
+  while (swapFNumbers.includes(merge) && merge > 2) {
+    merge--;
+  }
+  return merge;
 }
 
 /**
@@ -53,7 +63,7 @@ export function getMergeFNumber(totalPlayers) {
 export function generateSeasonRounds(totalPlayers, numSwaps, ftcPlayers) {
   const rounds = {};
   const swapFNumbers = getSwapFNumbers(totalPlayers, numSwaps);
-  const mergeFNumber = getMergeFNumber(totalPlayers);
+  const mergeFNumber = getMergeFNumber(totalPlayers, swapFNumbers);
 
   let roundNo = 1;
 
@@ -108,7 +118,7 @@ export function generateSeasonRounds(totalPlayers, numSwaps, ftcPlayers) {
 export function getRoundDuration(round) {
   if (round.fNumber === 1) return 1;                                          // Reunion
   if (round.ftcRound) {                                                       // FTC: configurable
-    return (round.speechDays || 1) + (round.votesDays || 1);
+    return (round.speechDays ?? 1) + (round.votesDays ?? 1);
   }
   if (round.marooningDays > 0) return round.marooningDays + 2;                // Marooning + challenge + tribal
   if (round.swapRound || round.mergeRound) return 3;                          // Event + challenge + tribal
@@ -398,11 +408,9 @@ function buildRoundOptions(round, dates) {
 
   // Determine round type and summary label
   if (f === 1) {
-    // Reunion
+    // Reunion — no editable actions
     return [
       { label: `F1 ${DOT} ${dates.event} ${DOT} Reunion`, value: 'summary', default: true, emoji: { name: '🎉' } },
-      { label: '───────────────────', value: 'divider', description: ' ' },
-      { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' } },
     ];
   }
 
