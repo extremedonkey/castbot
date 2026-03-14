@@ -158,7 +158,7 @@ export async function canPlayerMove(guildId, userId) {
 
 // Execute player movement
 export async function movePlayer(guildId, userId, newCoordinate, client, options = {}) {
-    const { bypassStamina = false, adminMove = false } = options;
+    const { bypassStamina = false, adminMove = false, member = null } = options;
     const entityId = `player_${userId}`;
     const safariData = await loadSafariContent();
     const movementCost = safariData[guildId]?.pointsConfig?.movementCost?.stamina || 1;
@@ -250,11 +250,15 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
         const { logPlayerMovement } = await import('./safariLogger.js');
         const playerData = await loadPlayerData();
 
+        // Prefer fresh Discord member data from interaction context, fall back to playerData
+        const freshUsername = member?.user?.username || playerData[guildId]?.players?.[userId]?.username || 'Unknown Player';
+        const freshDisplayName = member?.nick || member?.user?.global_name || playerData[guildId]?.players?.[userId]?.displayName || null;
+
         await logPlayerMovement({
             guildId,
             userId,
-            username: playerData[guildId]?.players?.[userId]?.username || 'Unknown Player',
-            displayName: playerData[guildId]?.players?.[userId]?.displayName || null,
+            username: freshUsername,
+            displayName: freshDisplayName,
             fromLocation: oldCoordinate,
             toLocation: newCoordinate,
             staminaSnapshot

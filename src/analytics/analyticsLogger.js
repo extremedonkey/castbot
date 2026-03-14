@@ -507,6 +507,9 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
         console.log(`📊 DEBUG: All Safari Log conditions met, calling postToSafariLog`);
       }
       try {
+        // Forward already-resolved identity so postToSafariLog doesn't need a redundant API fetch
+        if (username && username !== 'Unknown Player') safariContent._resolvedUsername = username;
+        if (displayName) safariContent._resolvedDisplayName = displayName;
         await postToSafariLog(guildId, userId, action, details, safariContent);
         if (shouldLog('VERBOSE')) {
           console.log(`📊 DEBUG: postToSafariLog completed successfully`);
@@ -970,14 +973,17 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
       return;
     }
 
-    // Get user display name (use display name instead of mention)
-    let userDisplayName = userId; // Fallback to userId
-    try {
-      const guild = await discordClient.guilds.fetch(guildId);
-      const member = await guild.members.fetch(userId);
-      userDisplayName = member.displayName || member.user.username || userId;
-    } catch (error) {
-      console.log(`🔍 Safari Log Debug: Could not fetch member display name, using userId`);
+    // Get user display name — prefer already-resolved identity from logInteraction, fall back to API fetch
+    let userDisplayName = safariContent._resolvedDisplayName || safariContent._resolvedUsername || null;
+    if (!userDisplayName) {
+      try {
+        const guild = await discordClient.guilds.fetch(guildId);
+        const member = await guild.members.fetch(userId);
+        userDisplayName = member.displayName || member.user.username || userId;
+      } catch (error) {
+        console.log(`🔍 Safari Log Debug: Could not fetch member display name, using userId`);
+        userDisplayName = userId;
+      }
     }
 
     // Get channel name for enhanced location display
