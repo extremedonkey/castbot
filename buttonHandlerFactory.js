@@ -143,6 +143,14 @@ export const BUTTON_REGISTRY = {
     parent: 'reeces_stuff',
     category: 'experimental'
   },
+  'prod_guide_*': {
+    label: 'Prod Guide',
+    description: 'Host-facing production guide (stamina config, logging, admin tools)',
+    emoji: '🛠️',
+    style: 'Primary',
+    parent: 'reeces_stuff',
+    category: 'experimental'
+  },
   'richcard_demo': {
     label: 'Rich Card',
     description: 'Rich Card UI reference implementation demo',

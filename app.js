@@ -7490,6 +7490,17 @@ To fix this:
           return buildSafariGuidePage(page);
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('prod_guide_')) {
+      // Prod Guide — host-facing guide (Reece's Stuff)
+      return ButtonHandlerFactory.create({
+        id: 'prod_guide',
+        updateMessage: true,
+        handler: async (context) => {
+          const { buildProdGuidePage } = await import('./staminaGuide.js');
+          const page = parseInt(context.customId.split('_')[2]) || 0;
+          return buildProdGuidePage(page);
+        }
+      })(req, res, client);
     } else if (custom_id === 'reeces_season_planner_mockup' || custom_id.startsWith('stress_page_')) {
       // Season Planner (Mockup) — UI prototype, not a real feature. See docs/ui/UIPrototyping.md
       return ButtonHandlerFactory.create({

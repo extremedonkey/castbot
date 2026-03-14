@@ -1,7 +1,9 @@
 /**
  * Safari Guide — Paginated player-friendly guide.
  * Accessible from player menu (🦁 Guide button next to 📜 Logs).
- * Also kept in Reece's Stuff for testing.
+ *
+ * Prod Guide — Host-facing guide (configuration, logging, admin tools).
+ * Accessible from Reece's Stuff menu.
  */
 
 const PAGES = [
@@ -41,9 +43,16 @@ const PAGES = [
       `Some non-consumable items (like a Horse) increase your **maximum** stamina permanently while you own them. Each bonus point regenerates on its own independent timer.\n\n**Example** — Horse (+3 max stamina):\n\`\`\`\nBase:  ⚡ 1/1\nWith Horse: ⚡ 1/4  (max went from 1 → 4)\n\`\`\`\n-# If you lose the item, your max goes back down. Charges regen individually — you might see \`⚡ 2/4\` while some charges are still on cooldown.`
     ]
   },
-  // Page 3: For Hosts
+];
+
+/**
+ * Prod Guide — Host-facing pages (Reece's Stuff only).
+ * Separated from the player-facing Safari Guide.
+ */
+const PROD_PAGES = [
+  // Page 0: Stamina Configuration & Logging
   {
-    title: '🛠️ For Hosts',
+    title: '🛠️ Stamina — For Hosts',
     subtitle: '-# Configuring and monitoring stamina',
     content: [
       `As a host, you control stamina settings per-server and can monitor all stamina changes across three log systems.`,
@@ -86,6 +95,47 @@ export function buildSafariGuidePage(page = 0) {
     components: [{
       type: 17,
       accent_color: 0xf39c12,
+      components
+    }]
+  };
+}
+
+/**
+ * Build a single page of the Prod Guide (host-facing).
+ * @param {number} page - Page index (0-based)
+ * @returns {Object} Components V2 response
+ */
+export function buildProdGuidePage(page = 0) {
+  if (page < 0 || page >= PROD_PAGES.length) page = 0;
+
+  const current = PROD_PAGES[page];
+
+  const navButtons = [
+    { type: 2, custom_id: 'reeces_stuff', label: '← Reece\'s Stuff', style: 2 }
+  ];
+
+  // Only show pagination when there are multiple pages
+  if (PROD_PAGES.length > 1) {
+    navButtons.push(
+      { type: 2, custom_id: `prod_guide_${page - 1}`, label: '◀ Previous', style: 2, disabled: page === 0 },
+      { type: 2, custom_id: `prod_guide_${page + 1}`, label: 'Next ▶', style: 2, disabled: page >= PROD_PAGES.length - 1 },
+      { type: 2, custom_id: 'prod_guide_counter', label: `${page + 1} / ${PROD_PAGES.length}`, style: 2, disabled: true }
+    );
+  }
+
+  const components = [
+    { type: 10, content: `## ${current.title}` },
+    { type: 10, content: current.subtitle },
+    { type: 14 },
+    ...current.content.map(text => ({ type: 10, content: text })),
+    { type: 14 },
+    { type: 1, components: navButtons }
+  ];
+
+  return {
+    components: [{
+      type: 17,
+      accent_color: 0xe74c3c,
       components
     }]
   };
