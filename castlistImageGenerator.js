@@ -256,12 +256,18 @@ function calculateLayout(tribeDataList) {
   // Track the Y position for each column
   const columnY = new Array(COLUMN_COUNT).fill(0);
 
+  // Center single-tribe castlists instead of leaving an empty column
+  const singleTribe = tribeDataList.length === 1;
+  const centerOffset = singleTribe ? Math.floor((CANVAS_WIDTH - COLUMN_WIDTH) / 2) : 0;
+
   const elements = []; // { type: 'tribe_header'|'player_card', column, x, y, data }
 
   for (const tribe of tribeDataList) {
     // Find the shortest column to place this tribe
     const col = columnY.indexOf(Math.min(...columnY));
-    const colX = MARGIN + col * (COLUMN_WIDTH + COLUMN_GAP);
+    const colX = singleTribe
+      ? centerOffset
+      : MARGIN + col * (COLUMN_WIDTH + COLUMN_GAP);
 
     // Tribe header
     elements.push({
