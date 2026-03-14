@@ -153,8 +153,9 @@ export class BackupService {
   }
 
   async postBackup(message, files) {
-    // Use native FormData (Node 18+) — works reliably with fetch()
-    const form = new FormData();
+    // Use the form-data npm package (same as working export handlers)
+    const FormDataLib = (await import('form-data')).default;
+    const form = new FormDataLib();
 
     form.append('payload_json', JSON.stringify({ content: message }));
 
@@ -164,15 +165,21 @@ export class BackupService {
       const base = path.basename(files[i].name, ext);
       const filename = `${base}-${timestamp}${ext}`;
 
-      const blob = new Blob([files[i].content], { type: 'application/json' });
-      form.append(`files[${i}]`, blob, filename);
+      form.append(`files[${i}]`, Buffer.from(files[i].content, 'utf8'), {
+        filename,
+        contentType: 'application/json',
+      });
     }
 
     const url = `https://discord.com/api/v10/channels/${this.channelId}/messages`;
-    const response = await fetch(url, {
+
+    // Use node-fetch (not native fetch) — matches working export pattern exactly
+    const nodeFetch = (await import('node-fetch')).default;
+    const response = await nodeFetch(url, {
       method: 'POST',
       headers: {
         Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+        ...form.getHeaders(),
       },
       body: form,
     });
