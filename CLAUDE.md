@@ -105,6 +105,10 @@ const count = countComponents([container], { enableLogging: false });
 
 **ALL new buttons MUST use ButtonHandlerFactory pattern - NO EXCEPTIONS!**
 
+**⚠️ Modal SUBMIT handlers are different** — they live in the `MODAL_SUBMIT` section of app.js and legitimately use `res.send()` directly. The pre-commit hook excludes this section. Don't confuse:
+- **Buttons that TRIGGER modals** → use factory with `requiresModal: true`
+- **Modal SUBMIT handlers** → use `res.send()` in the MODAL_SUBMIT section (this is correct, not legacy)
+
 **🚨 QUICK CHECK BEFORE CREATING ANY BUTTON:**
 1. **Search ButtonHandlerRegistry.md** - Check if button already exists
 2. **Search for similar buttons**: `grep -A20 "similar_feature" app.js`
@@ -141,7 +145,7 @@ const count = countComponents([container], { enableLogging: false });
 
 **❌ WRONG - Legacy Pattern (DO NOT COPY):**
 ```javascript
-// DON'T COPY THIS - 164 legacy handlers still exist but are being migrated
+// DON'T COPY THIS - 125 legacy handlers still exist but are being migrated
 } else if (custom_id === 'bad_example') {
   try {
     const guildId = req.body.guild_id;
