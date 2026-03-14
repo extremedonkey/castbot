@@ -1644,6 +1644,18 @@ client.once('ready', async () => {
   const pm2Logger = getPM2ErrorLogger(client);
   pm2Logger.start();
 
+  // Start automated Discord channel backups
+  try {
+    const { getBackupService } = await import('./src/monitoring/backupService.js');
+    const backupService = getBackupService(client);
+    const isProduction = process.env.PRODUCTION === 'TRUE';
+    backupService.start({
+      intervalMs: isProduction ? 24 * 60 * 60 * 1000 : 5 * 60 * 1000, // 24h prod, 5m dev
+    });
+  } catch (err) {
+    console.error('📦 [BACKUP] Failed to start backup service:', err.message);
+  }
+
   // Dev-only: Log test coverage scan
   if (process.env.PRODUCTION !== 'TRUE') {
     try {

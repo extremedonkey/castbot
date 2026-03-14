@@ -2199,7 +2199,7 @@
         },
         "mana": {
           "current": 60,
-          "max": 60,
+          "max": 55,
           "lastRegeneration": 1768020709636,
           "lastUse": 1767962328188,
           "charges": [
@@ -10567,7 +10567,7 @@
         "metadata": {
           "createdBy": "391415444084490240",
           "lastModified": 1772950344857,
-          "usageCount": 8
+          "usageCount": 9
         },
         "menuVisibility": "player_menu"
       },
