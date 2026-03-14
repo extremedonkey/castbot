@@ -34,9 +34,11 @@ export class BackupService {
     this.client = client;
     this.channelId = DEFAULT_CHANNEL_ID;
     this.intervalMs = DEFAULT_INTERVAL_MS;
+    this.targetHourUTC = null; // null = use intervalMs, number = anchor to specific UTC hour daily
     this.intervalHandle = null;
     this.startupTimeout = null;
     this.lastBackupTime = null;
+    this.nextBackupTime = null;
     this.backupCount = 0;
   }
 
@@ -49,22 +51,45 @@ export class BackupService {
   start(options = {}) {
     if (options.channelId) this.channelId = options.channelId;
     if (options.intervalMs) this.intervalMs = options.intervalMs;
+    if (options.targetHourUTC !== undefined) this.targetHourUTC = options.targetHourUTC;
 
-    console.log(`📦 [BACKUP] Starting backup service — interval: ${this.formatDuration(this.intervalMs)}, channel: ${this.channelId}`);
+    console.log(`📦 [BACKUP] Starting backup service — interval: ${this.formatDuration(this.intervalMs)}, channel: ${this.channelId}${this.targetHourUTC !== null ? `, daily at ${this.targetHourUTC}:00 UTC` : ''}`);
 
-    // First backup after startup delay
+    // Always run a startup backup after delay
     this.startupTimeout = setTimeout(() => {
       this.runBackup('startup');
-      // Then recurring
-      this.intervalHandle = setInterval(() => {
-        this.runBackup('scheduled');
-      }, this.intervalMs);
+      this.scheduleNext();
     }, STARTUP_DELAY_MS);
+  }
+
+  scheduleNext() {
+    if (this.targetHourUTC !== null) {
+      // Anchor to specific time of day
+      const now = new Date();
+      const next = new Date(now);
+      next.setUTCHours(this.targetHourUTC, 0, 0, 0);
+      if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
+      const msUntilNext = next.getTime() - now.getTime();
+      this.nextBackupTime = next;
+
+      this.intervalHandle = setTimeout(() => {
+        this.runBackup('scheduled');
+        // After firing, schedule next day
+        this.scheduleNext();
+      }, msUntilNext);
+    } else {
+      // Simple interval (dev mode)
+      this.nextBackupTime = new Date(Date.now() + this.intervalMs);
+      this.intervalHandle = setTimeout(() => {
+        this.runBackup('scheduled');
+        this.scheduleNext();
+      }, this.intervalMs);
+    }
   }
 
   stop() {
     if (this.startupTimeout) clearTimeout(this.startupTimeout);
-    if (this.intervalHandle) clearInterval(this.intervalHandle);
+    if (this.intervalHandle) clearTimeout(this.intervalHandle);
     this.startupTimeout = null;
     this.intervalHandle = null;
     console.log('📦 [BACKUP] Service stopped');
@@ -138,7 +163,8 @@ export class BackupService {
     }
 
     // Next backup Discord timestamp
-    const nextUnix = Math.floor((Date.now() + this.intervalMs) / 1000);
+    const nextTime = this.nextBackupTime || new Date(Date.now() + this.intervalMs);
+    const nextUnix = Math.floor(nextTime.getTime() / 1000);
 
     components.push({ type: 14 });
     components.push({

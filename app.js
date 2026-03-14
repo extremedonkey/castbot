@@ -1651,6 +1651,7 @@ client.once('ready', async () => {
     const isProduction = process.env.PRODUCTION === 'TRUE';
     backupService.start({
       intervalMs: isProduction ? 24 * 60 * 60 * 1000 : 5 * 60 * 1000, // 24h prod, 5m dev
+      targetHourUTC: isProduction ? 10 : null, // Prod: 10:00 UTC = 6PM AWST daily. Dev: simple interval
     });
   } catch (err) {
     console.error('📦 [BACKUP] Failed to start backup service:', err.message);
