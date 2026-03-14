@@ -13,7 +13,7 @@ const PAGES = [
       `### \`\`\`🔑 Key Concepts\`\`\``,
       `**Current / Max** — Your stamina is shown as \`⚡ 3/5\`, meaning 3 available out of 5 maximum.\n\n**Regeneration** — When your stamina hits 0, a cooldown timer starts. After the timer expires, your stamina resets to full. The host sets how long this takes (e.g. 12 hours).\n\n**Over Max** — Consumable items can push you *above* your max. If your max is 1 and you use a stamina potion, you might have \`⚡ 3/1\`. This is normal!`,
       `### \`\`\`📊 Log Format\`\`\``,
-      `-# When you move or use items, your activity log shows:\n\`(⚡1/1 → 0/1 ♻️12hr)\`\n\n**⚡1/1** = stamina before (1 out of 1)\n**→ 0/1** = stamina after (0 out of 1)\n**♻️12hr** = time until regen\n\nIf you're at or above max, the ♻️ timer is hidden.`
+      `-# To see your stamina log, use **\`/menu\`** and tap the **📜 Logs** button.\n\nWhen you move or use items, your activity log shows:\n\`(⚡1/1 → 0/1 ♻️12hr)\`\n\n**⚡1/1** = stamina before (1 out of 1)\n**→ 0/1** = stamina after (0 out of 1)\n**♻️12hr** = time until regen\n\nIf you're at or above max, the ♻️ timer is hidden.`
     ]
   },
   // Page 1: Regeneration Deep Dive
@@ -76,7 +76,7 @@ export function buildStaminaGuidePage(page = 0) {
         { type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 },
         { type: 2, custom_id: `stamina_guide_${page - 1}`, label: '◀ Previous', style: 2, disabled: page === 0 },
         { type: 2, custom_id: `stamina_guide_${page + 1}`, label: 'Next ▶', style: 2, disabled: page >= PAGES.length - 1 },
-        { type: 2, custom_id: 'stamina_guide_0', label: `${page + 1} / ${PAGES.length}`, style: 2, disabled: true }
+        { type: 2, custom_id: 'stamina_guide_counter', label: `${page + 1} / ${PAGES.length}`, style: 2, disabled: true }
       ]
     }
   ];
