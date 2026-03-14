@@ -7,14 +7,24 @@ node_modules/
 .env-prod
 .ngrok.yml
 
-# Data files
+# Data files (critical)
 playerData.json
+safariContent.json
+
+# Rolling backups
 playerData.json.backup
 playerData.json.REJECTED
-safariContent.json
 safariContent.json.bak
-img/tips/tips.json
+backups/
+
+# Runtime state
 scheduledJobs.json
+dstState.json
+restartHistory.json
+messageHistory.json
+
+# Other data
+img/tips/tips.json
 data_*.json
 
 # System files
