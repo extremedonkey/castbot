@@ -6,7 +6,7 @@
 # See: docs/enablers/ButtonHandlerFactory.md
 # See: CLAUDE.md "Button Handler Factory" section
 
-BASELINE=207  # Legacy handler count as of 2026-03-09. Only goes DOWN.
+BASELINE=125  # Legacy handler count as of 2026-03-15. Excludes MODAL_SUBMIT section (82 modal handlers). Only goes DOWN.
 
 # ── Auto-sync: keep installed hook in sync with source ──
 SOURCE_HOOK="scripts/hooks/pre-commit"
@@ -28,8 +28,12 @@ if ! git diff --cached --name-only | grep -q '^app\.js$'; then
 fi
 
 # ── Check 1: Legacy handler count (must not go UP) ──
+# Counts `} else if (custom_id` blocks NOT followed by ButtonHandlerFactory.create within 3 lines.
+# Skips the MODAL_SUBMIT section — modal submit handlers legitimately use res.send() directly.
 LEGACY_COUNT=$(git show :app.js | awk '
-/} else if \(custom_id/ && !/^[[:space:]]*\/\// {
+/type === InteractionType\.MODAL_SUBMIT/ { in_modal_submit = 1 }
+in_modal_submit && /^  \}$/ { in_modal_submit = 0 }
+/} else if \(custom_id/ && !/^[[:space:]]*\/\// && !in_modal_submit {
   handler_line = NR;
   is_factory = 0;
 }

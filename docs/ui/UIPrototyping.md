@@ -134,6 +134,17 @@ The mockup's component structure, pagination logic, and navigation patterns carr
 | [Season Planner](SeasonPlannerUIPrototype.md) | `selectStressTest.js` | `reeces_season_planner_mockup` | 37/40 (2 pages, 12 selects each) |
 | Rich Card Demo | inline in `app.js` | `richcard_demo` | ~15/40 |
 
+## Modal Standards for Prototypes
+
+When a mockup includes modals (create/edit forms), follow the **Modal Pre-Population Standard** from [LeanUserInterfaceDesign.md](LeanUserInterfaceDesign.md#-modal-pre-population-standard):
+
+- **Create mode**: Empty fields with `placeholder` text showing examples
+- **Edit mode**: Pre-populated fields with `value` set from stored data
+- **Modal title**: Reflects the action — "Create New X" vs "Edit X"
+- **Data conversion**: Numbers → `String(n)`, timestamps → formatted dates, booleans → strings
+
+Mockups should demonstrate both modes even if handlers are no-ops — the modal structure carries forward to production unchanged.
+
 ## Related Documentation
 
 - **[LeanUserInterfaceDesign.md](LeanUserInterfaceDesign.md)** — Visual standards all mockups must follow

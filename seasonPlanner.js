@@ -204,9 +204,18 @@ export function parseStartDate(dateStr) {
  * @returns {Object} Modal interaction response data
  */
 export function buildSeasonPlannerModal(existing = null) {
+  // Format start date for pre-fill: Unix timestamp → mm/dd/yyyy
+  let startDateValue = null;
+  if (existing?.estimatedStartDate) {
+    const d = new Date(existing.estimatedStartDate);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    startDateValue = `${mm}/${dd}/${d.getFullYear()}`;
+  }
+
   return {
-    custom_id: existing ? `planner_setup_modal:${existing.configId}` : 'planner_create_modal',
-    title: existing ? 'Set Up Season Planner' : 'Create New Season',
+    custom_id: existing?.configId ? `planner_setup_modal:${existing.configId}` : 'planner_create_modal',
+    title: existing?.configId ? 'Edit Season' : 'Create New Season',
     components: [
       {
         type: 18,
@@ -226,6 +235,7 @@ export function buildSeasonPlannerModal(existing = null) {
           type: 4, custom_id: 'est_players', style: 1,
           placeholder: '18',
           required: true, max_length: 2, min_length: 1,
+          ...(existing?.estimatedTotalPlayers ? { value: String(existing.estimatedTotalPlayers) } : {})
         }
       },
       {
@@ -236,6 +246,7 @@ export function buildSeasonPlannerModal(existing = null) {
           type: 4, custom_id: 'est_swaps', style: 1,
           placeholder: '2',
           required: true, max_length: 1, min_length: 1,
+          ...(existing?.estimatedSwaps != null ? { value: String(existing.estimatedSwaps) } : {})
         }
       },
       {
@@ -246,6 +257,7 @@ export function buildSeasonPlannerModal(existing = null) {
           type: 4, custom_id: 'est_ftc', style: 1,
           placeholder: '3',
           required: true, max_length: 1, min_length: 1,
+          ...(existing?.estimatedFTCPlayers ? { value: String(existing.estimatedFTCPlayers) } : {})
         }
       },
       {
@@ -256,6 +268,7 @@ export function buildSeasonPlannerModal(existing = null) {
           type: 4, custom_id: 'est_start_date', style: 1,
           placeholder: '03/07/2026',
           required: true,
+          ...(startDateValue ? { value: startDateValue } : {})
         }
       },
     ]

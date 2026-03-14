@@ -260,6 +260,58 @@ const container = {
 
 ---
 
+## 📝 Modal Pre-Population Standard
+
+**CRITICAL: Edit modals MUST pre-populate all fields with existing data.**
+
+When a user clicks "Edit" on something they've already configured, the modal must show their current values — not empty fields or placeholders. Empty fields force users to re-enter data they've already set, which is confusing and error-prone.
+
+### Rules
+- **Always pass existing data** to the modal builder when editing (not just when creating)
+- **Use `value` property** on TextInput (type 4) to pre-fill — `placeholder` is only for empty/new fields
+- **Convert stored types** to strings for display (numbers → `String(n)`, timestamps → formatted date)
+- **Handle nulls gracefully** — only spread `value` when data exists: `...(existing?.field ? { value: existing.field } : {})`
+- **Title should reflect mode** — "Edit Season" not "Create New Season" when editing
+
+### Template
+```javascript
+function buildMyModal(existing = null) {
+  return {
+    custom_id: existing?.id ? `my_edit_modal:${existing.id}` : 'my_create_modal',
+    title: existing?.id ? 'Edit Thing' : 'Create Thing',
+    components: [{
+      type: 18, // Label
+      label: 'Name',
+      component: {
+        type: 4, custom_id: 'name', style: 1,
+        placeholder: 'Enter a name...',           // Shown when empty (create mode)
+        required: true,
+        ...(existing?.name ? { value: existing.name } : {})  // Pre-fill when editing
+      }
+    }]
+  };
+}
+```
+
+### Common Conversion Patterns
+```javascript
+// Number → string for text input
+...(existing?.count != null ? { value: String(existing.count) } : {})
+
+// Unix timestamp → mm/dd/yyyy
+if (existing?.timestamp) {
+  const d = new Date(existing.timestamp);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  value = `${mm}/${dd}/${d.getFullYear()}`;
+}
+
+// Boolean → "true"/"false" (rare — prefer checkboxes)
+...(existing?.flag != null ? { value: String(existing.flag) } : {})
+```
+
+---
+
 ## 🎴 Rich Card Pattern
 
 **Use when**: Displaying player-facing visual content — location descriptions, story text, item showcases, announcements, or any content that has a title, body text, optional image, and optional accent color.

@@ -7632,6 +7632,10 @@ To fix this:
           return { type: 9, data: buildSeasonPlannerModal({
             configId,
             seasonName: config?.seasonName,
+            estimatedTotalPlayers: config?.estimatedTotalPlayers,
+            estimatedSwaps: config?.estimatedSwaps,
+            estimatedFTCPlayers: config?.estimatedFTCPlayers,
+            estimatedStartDate: config?.estimatedStartDate,
           })};
         }
       })(req, res, client);

@@ -69,7 +69,7 @@ Don't sugarcoat. Don't pad with compliments. Structure your report as:
 **The Vibe:** One sentence on overall health.
 
 **Door Count:**
-- Legacy handlers: X (baseline: 207, pre-commit hook blocks increases)
+- Legacy handlers: X (baseline: 125, pre-commit hook blocks increases)
 - Fat handlers (>20 lines): X
 - Missing awaits: X
 - Old modal patterns: X
