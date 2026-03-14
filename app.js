@@ -7640,21 +7640,44 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_round_')) {
-      // Season Planner — round select (no-op for now, shows what was selected)
+      // Season Planner — round select action routing
       return ButtonHandlerFactory.create({
-        id: 'planner_round_select',
-        updateMessage: true,
+        id: 'planner_round_action',
+        requiresModal: true,
         handler: async (context) => {
-          const selected = req.body.data.values?.[0] || 'nothing';
-          // Extract configId from custom_id: planner_round_{roundId}_{configId}
+          const selectedValue = req.body.data.values?.[0];
+
+          // No-op actions: summary, divider, edit_challenge (deferred to Challenges spec)
+          if (!selectedValue || selectedValue === 'summary' || selectedValue === 'divider') {
+            return { type: 6 }; // DEFERRED_UPDATE_MESSAGE — silent acknowledge
+          }
+          if (selectedValue === 'edit_challenge') {
+            return { type: 6 }; // Challenge editing deferred — future spec
+          }
+
+          // Parse roundId and configId from custom_id: planner_round_{roundId}_{configId}
           const afterPrefix = custom_id.replace('planner_round_', '');
           const firstUnderscore = afterPrefix.indexOf('_');
+          const roundId = afterPrefix.substring(0, firstUnderscore);
           const configId = afterPrefix.substring(firstUnderscore + 1);
-          return { components: [{ type: 17, accent_color: 0x9b59b6, components: [
-            { type: 10, content: `## 📝 Season Planner\nYou selected **${selected}**.\n\n-# Round editing coming soon.` },
-            { type: 14 },
-            { type: 1, components: [{ type: 2, custom_id: `planner_page_0_${configId}`, label: '← Back', style: 2 }] }
-          ]}]};
+
+          // Load round data for pre-population
+          const { loadPlayerData } = await import('./storage.js');
+          const { buildRoundModal } = await import('./seasonPlanner.js');
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[configId];
+          const round = playerData[context.guildId]?.seasonRounds?.[config?.seasonId]?.[roundId];
+
+          if (!round) {
+            return { type: 6 }; // Can't find round — silent fail
+          }
+
+          const modalData = buildRoundModal(selectedValue, round, roundId, configId);
+          if (!modalData) {
+            return { type: 6 }; // Unknown action — silent fail
+          }
+
+          return { type: 9, data: modalData };
         }
       })(req, res, client);
     } else if (custom_id.startsWith('stress_page_')) {
@@ -35479,6 +35502,47 @@ Your server is now ready for Tycoons gameplay!`;
           const seasonRounds = playerData[guildId].seasonRounds[seasonId];
           const startDate = new Date(config.estimatedStartDate);
           return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0);
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('planner_modal:')) {
+      // Season Planner — round edit modal submit
+      // Format: planner_modal:{action}:{roundId}:{configId}
+      return ButtonHandlerFactory.create({
+        id: 'planner_round_edit_submit',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = custom_id.split(':');
+          if (parts.length < 4) return { content: '❌ Invalid modal format' };
+          const action = parts[1];
+          const roundId = parts[2];
+          const configId = parts.slice(3).join(':'); // configId may contain colons (unlikely but safe)
+
+          const { extractModalFields, processRoundEdit, buildPlannerView } = await import('./seasonPlanner.js');
+          const { loadPlayerData } = await import('./storage.js');
+
+          const fields = extractModalFields(components);
+          const result = await processRoundEdit(context.guildId, action, roundId, configId, fields);
+
+          if (!result.success) {
+            return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
+              { type: 10, content: `## ❌ Error\n${result.error}` },
+              { type: 14 },
+              { type: 1, components: [{ type: 2, custom_id: `planner_page_0_${configId}`, label: '← Back', style: 2 }] }
+            ]}]};
+          }
+
+          // Reload data and show updated planner view
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[configId];
+          const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config?.seasonId];
+          if (!config || !seasonRounds) return { content: '❌ Season data not found' };
+
+          const startDate = new Date(config.estimatedStartDate);
+          // Navigate to the page containing the edited round
+          const roundNo = seasonRounds[roundId]?.seasonRoundNo || 1;
+          const page = Math.floor((roundNo - 1) / 12);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page);
         }
       })(req, res, client);
 

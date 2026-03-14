@@ -104,11 +104,13 @@ export function generateSeasonRounds(totalPlayers, numSwaps, ftcPlayers) {
  * - Standard: 2 days (challenge + tribal)
  */
 export function getRoundDuration(round) {
-  if (round.fNumber === 1) return 1;                        // Reunion
-  if (round.ftcRound) return 2;                             // FTC: speeches + votes
-  if (round.marooningDays > 0) return 3;                    // Marooning round
-  if (round.swapRound || round.mergeRound) return 3;        // Event round
-  return 2;                                                 // Standard
+  if (round.fNumber === 1) return 1;                                          // Reunion
+  if (round.ftcRound) {                                                       // FTC: configurable
+    return (round.speechDays || 1) + (round.votesDays || 1);
+  }
+  if (round.marooningDays > 0) return round.marooningDays + 2;                // Marooning + challenge + tribal
+  if (round.swapRound || round.mergeRound) return 3;                          // Event + challenge + tribal
+  return 2;                                                                   // Standard: challenge + tribal
 }
 
 /**
@@ -408,8 +410,10 @@ function buildRoundOptions(round, dates) {
     ];
   }
 
-  const challengeName = `Challenge ${round.seasonRoundNo} (TBC)`;
-  const host = 'TBC';
+  const challengeName = round.challengeName || `Challenge ${round.seasonRoundNo} (TBC)`;
+  const host = round.host || 'TBC';
+  const elims = round.eliminations ?? 1;
+  const elimText = elims === 0 ? 'no elim' : elims === 1 ? '1 elim' : `${elims} elims`;
 
   if (round.marooningDays > 0) {
     // Marooning round
@@ -418,7 +422,7 @@ function buildRoundOptions(round, dates) {
       { label, value: 'summary', default: true, emoji: { name: '🏝️' } },
       { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' }, description: dates.event },
       { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${dates.challenge} ${DOT} ${host}` },
-      { label: `Edit F${f} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${dates.tribal} ${DOT} ${host}` },
+      { label: `Edit F${f} Tribal (${elimText})`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${dates.tribal} ${DOT} ${host}` },
       { label: '───────────────────', value: 'divider', description: ' ' },
       { label: 'Add Swap / Merge', value: 'swap_merge', emoji: { name: '🔀' } },
       { label: 'Manage Final Tribal Council', value: 'ftc', emoji: { name: '⚖️' } },
@@ -427,14 +431,14 @@ function buildRoundOptions(round, dates) {
 
   if (round.swapRound || round.mergeRound) {
     // Event round (swap or merge)
-    const eventLabel = round.swapRound ? 'Swap' : 'Merge';
+    const eventLabel = round.eventLabel || (round.swapRound ? 'Swap' : 'Merge');
     const eventEmoji = '🔀';
     const label = `F${f} ${DOT} ${dates.event} ${DOT} ${eventLabel} ${DOT} ${challengeName}`;
     return [
       { label, value: 'summary', default: true, emoji: { name: eventEmoji } },
       { label: `Manage ${eventLabel}`, value: 'manage_event', emoji: { name: '🔀' }, description: dates.event },
       { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${dates.challenge} ${DOT} ${host}` },
-      { label: `Edit F${f} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${dates.tribal} ${DOT} ${host}` },
+      { label: `Edit F${f} Tribal (${elimText})`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${dates.tribal} ${DOT} ${host}` },
       { label: '───────────────────', value: 'divider', description: ' ' },
       { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' } },
       { label: 'Manage Final Tribal Council', value: 'ftc', emoji: { name: '⚖️' } },
@@ -446,7 +450,7 @@ function buildRoundOptions(round, dates) {
   return [
     { label, value: 'summary', default: true, emoji: { name: '▫️' } },
     { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${dates.challenge} ${DOT} ${host}` },
-    { label: `Edit F${f} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${dates.tribal} ${DOT} ${host}` },
+    { label: `Edit F${f} Tribal (${elimText})`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${dates.tribal} ${DOT} ${host}` },
     { label: '───────────────────', value: 'divider', description: ' ' },
     { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' } },
     { label: 'Add Swap / Merge', value: 'swap_merge', emoji: { name: '🔀' } },
@@ -615,4 +619,368 @@ export async function setupPlannerForExistingSeason(guildId, configId, data) {
   console.log(`✅ Season Planner: Set up "${data.seasonName}" (${configId}) with ${Object.keys(rounds).length} rounds`);
 
   return { seasonId: config.seasonId };
+}
+
+// ─────────────────────────────────────────────
+// Round Editing Modals
+// ─────────────────────────────────────────────
+
+/**
+ * Build a round-editing modal based on the selected action.
+ * @param {string} action - The select value (edit_tribal, marooning, swap_merge, etc.)
+ * @param {Object} round - The round data from seasonRounds
+ * @param {string} roundId - e.g., "r3"
+ * @param {string} configId - applicationConfigs key
+ * @returns {Object|null} Modal data object, or null for no-op actions
+ */
+export function buildRoundModal(action, round, roundId, configId) {
+  const modalId = `planner_modal:${action}:${roundId}:${configId}`;
+  const f = round.fNumber;
+
+  switch (action) {
+    case 'edit_tribal':
+      return {
+        custom_id: modalId,
+        title: `Edit F${f} Tribal Council`,
+        components: [
+          {
+            type: 18,
+            label: 'Eliminations',
+            description: 'How many players are eliminated this round (0 = no elimination)',
+            component: {
+              type: 4, custom_id: 'eliminations', style: 1,
+              placeholder: '1',
+              required: true, max_length: 1, min_length: 1,
+              value: String(round.eliminations || 1)
+            }
+          },
+          {
+            type: 18,
+            label: 'Notes',
+            description: 'Optional notes for this tribal (e.g., "double tribal", "rock draw")',
+            component: {
+              type: 4, custom_id: 'notes', style: 2,
+              placeholder: 'Any special notes...',
+              required: false, max_length: 200,
+              ...(round.tribalNotes ? { value: round.tribalNotes } : {})
+            }
+          }
+        ]
+      };
+
+    case 'marooning':
+      return {
+        custom_id: modalId,
+        title: `Manage Marooning & Exile — F${f}`,
+        components: [
+          {
+            type: 18,
+            label: 'Marooning Days',
+            description: 'Duration of marooning event (1 for round 1, 0 for others)',
+            component: {
+              type: 4, custom_id: 'marooning_days', style: 1,
+              placeholder: '1',
+              required: true, max_length: 1, min_length: 1,
+              value: String(round.marooningDays)
+            }
+          },
+          {
+            type: 18,
+            label: 'Exiled Players',
+            description: 'Players in exile (eliminated but could return via twist)',
+            component: {
+              type: 4, custom_id: 'exiled_players', style: 1,
+              placeholder: '0',
+              required: true, max_length: 2, min_length: 1,
+              value: String(round.exiledPlayers)
+            }
+          }
+        ]
+      };
+
+    case 'swap_merge':
+      return {
+        custom_id: modalId,
+        title: `Add Event — F${f}`,
+        components: [
+          {
+            type: 18,
+            label: 'Event Type',
+            description: 'Choose the type of event',
+            component: {
+              type: 21, // Radio Group
+              custom_id: 'event_type',
+              required: true,
+              options: [
+                { label: 'Tribe Swap', value: 'swap', description: 'Shuffle players between tribes' },
+                { label: 'Tribe Merge', value: 'merge', description: 'Combine all tribes into one' }
+              ]
+            }
+          },
+          {
+            type: 18,
+            label: 'Event Label',
+            description: 'Display name for this event (e.g., "Swap 1", "Merge")',
+            component: {
+              type: 4, custom_id: 'event_label', style: 1,
+              placeholder: 'Swap 1',
+              required: true, max_length: 20,
+            }
+          }
+        ]
+      };
+
+    case 'manage_event': {
+      const eventType = round.swapRound ? 'Swap' : 'Merge';
+      return {
+        custom_id: modalId,
+        title: `Manage ${eventType} — F${f}`,
+        components: [
+          {
+            type: 18,
+            label: 'Event Label',
+            description: 'Display name for this event',
+            component: {
+              type: 4, custom_id: 'event_label', style: 1,
+              placeholder: eventType,
+              required: true, max_length: 20,
+              value: round.eventLabel || eventType
+            }
+          },
+          {
+            type: 18,
+            label: `Remove this ${eventType}?`,
+            description: 'Check to remove the event from this round (reduces round to 2 days)',
+            component: {
+              type: 23, // Checkbox
+              custom_id: 'remove_event',
+              default: false
+            }
+          }
+        ]
+      };
+    }
+
+    case 'ftc':
+      return {
+        custom_id: modalId,
+        title: 'Manage Final Tribal Council',
+        components: [
+          {
+            type: 18,
+            label: 'FTC Players',
+            description: "How many players in FTC — enter '2' for Final 2, '3' for Final 3",
+            component: {
+              type: 4, custom_id: 'ftc_players', style: 1,
+              placeholder: '3',
+              required: true, max_length: 1, min_length: 1,
+              value: String(f)
+            }
+          },
+          {
+            type: 18,
+            label: 'Notes',
+            description: 'Optional notes (e.g., "live FTC", "pre-recorded")',
+            component: {
+              type: 4, custom_id: 'notes', style: 2,
+              placeholder: 'Any special notes...',
+              required: false, max_length: 200,
+              ...(round.ftcNotes ? { value: round.ftcNotes } : {})
+            }
+          }
+        ]
+      };
+
+    case 'ftc_speeches':
+      return {
+        custom_id: modalId,
+        title: `Speech Writing — F${f}`,
+        components: [
+          {
+            type: 18,
+            label: 'Duration (days)',
+            description: 'How many days for speech writing',
+            component: {
+              type: 4, custom_id: 'duration', style: 1,
+              placeholder: '1',
+              required: true, max_length: 1, min_length: 1,
+              value: String(round.speechDays || 1)
+            }
+          },
+          {
+            type: 18,
+            label: 'Notes',
+            description: 'Optional notes for speech writing phase',
+            component: {
+              type: 4, custom_id: 'notes', style: 2,
+              placeholder: 'Any special notes...',
+              required: false, max_length: 200,
+              ...(round.speechNotes ? { value: round.speechNotes } : {})
+            }
+          }
+        ]
+      };
+
+    case 'ftc_votes':
+      return {
+        custom_id: modalId,
+        title: `Questioning & Votes — F${f}`,
+        components: [
+          {
+            type: 18,
+            label: 'Duration (days)',
+            description: 'How many days for Q&A and voting (0 if concurrent with speeches)',
+            component: {
+              type: 4, custom_id: 'duration', style: 1,
+              placeholder: '1',
+              required: true, max_length: 1, min_length: 1,
+              value: String(round.votesDays || 1)
+            }
+          },
+          {
+            type: 18,
+            label: 'Notes',
+            description: 'Optional notes for Q&A/votes phase',
+            component: {
+              type: 4, custom_id: 'notes', style: 2,
+              placeholder: 'Any special notes...',
+              required: false, max_length: 200,
+              ...(round.votesNotes ? { value: round.votesNotes } : {})
+            }
+          }
+        ]
+      };
+
+    default:
+      return null;
+  }
+}
+
+// ─────────────────────────────────────────────
+// Round Edit Processing
+// ─────────────────────────────────────────────
+
+/**
+ * Extract modal fields from Discord's component structure.
+ * Handles both Label (type 18) and legacy ActionRow patterns.
+ */
+export function extractModalFields(components) {
+  const fields = {};
+  for (const comp of (components || [])) {
+    if (comp.component && comp.component.custom_id) {
+      // Label-wrapped component (type 18)
+      fields[comp.component.custom_id] = comp.component.value;
+    } else if (comp.components) {
+      // Legacy ActionRow pattern
+      for (const c of comp.components) {
+        if (c.custom_id) fields[c.custom_id] = c.value;
+      }
+    }
+  }
+  return fields;
+}
+
+/**
+ * Process a round edit modal submission and save changes.
+ * @param {string} guildId
+ * @param {string} action - edit_tribal, marooning, swap_merge, manage_event, ftc, ftc_speeches, ftc_votes
+ * @param {string} roundId - e.g., "r3"
+ * @param {string} configId - applicationConfigs key
+ * @param {Object} fields - Extracted modal fields
+ * @returns {{ success: boolean, error?: string }}
+ */
+export async function processRoundEdit(guildId, action, roundId, configId, fields) {
+  const playerData = await loadPlayerData();
+  const config = playerData[guildId]?.applicationConfigs?.[configId];
+  if (!config) return { success: false, error: 'Season not found' };
+
+  const seasonRounds = playerData[guildId]?.seasonRounds?.[config.seasonId];
+  if (!seasonRounds) return { success: false, error: 'No planner data found' };
+
+  const round = seasonRounds[roundId];
+  if (!round) return { success: false, error: `Round ${roundId} not found` };
+
+  switch (action) {
+    case 'edit_tribal': {
+      const elims = parseInt(fields.eliminations);
+      if (isNaN(elims) || elims < 0) return { success: false, error: 'Eliminations must be ≥ 0' };
+      round.eliminations = elims;
+      round.tribalNotes = fields.notes || '';
+      break;
+    }
+
+    case 'marooning': {
+      const days = parseInt(fields.marooning_days);
+      const exiled = parseInt(fields.exiled_players);
+      if (isNaN(days) || days < 0) return { success: false, error: 'Marooning days must be ≥ 0' };
+      if (isNaN(exiled) || exiled < 0) return { success: false, error: 'Exiled players must be ≥ 0' };
+      round.marooningDays = days;
+      round.exiledPlayers = exiled;
+      break;
+    }
+
+    case 'swap_merge': {
+      const eventType = fields.event_type;
+      if (!eventType || !['swap', 'merge'].includes(eventType)) {
+        return { success: false, error: 'Must select Swap or Merge' };
+      }
+      round.swapRound = (eventType === 'swap');
+      round.mergeRound = (eventType === 'merge');
+      round.eventLabel = fields.event_label || (eventType === 'swap' ? 'Swap' : 'Merge');
+      break;
+    }
+
+    case 'manage_event': {
+      if (fields.remove_event === true || fields.remove_event === 'true') {
+        round.swapRound = false;
+        round.mergeRound = false;
+        round.eventLabel = '';
+        console.log(`📝 Season Planner: Removed event from ${roundId} (F${round.fNumber})`);
+      } else {
+        round.eventLabel = fields.event_label || '';
+      }
+      break;
+    }
+
+    case 'ftc': {
+      const ftcPlayers = parseInt(fields.ftc_players);
+      if (isNaN(ftcPlayers) || ftcPlayers < 1) return { success: false, error: 'FTC players must be > 0' };
+      // Clear FTC flag from all rounds, set on the correct one
+      for (const r of Object.values(seasonRounds)) {
+        if (r.ftcRound) r.ftcRound = false;
+      }
+      // Find the round with matching fNumber
+      const targetRound = Object.values(seasonRounds).find(r => r.fNumber === ftcPlayers);
+      if (targetRound) {
+        targetRound.ftcRound = true;
+        targetRound.ftcNotes = fields.notes || '';
+      } else {
+        return { success: false, error: `No round found for F${ftcPlayers}` };
+      }
+      break;
+    }
+
+    case 'ftc_speeches': {
+      const days = parseInt(fields.duration);
+      if (isNaN(days) || days < 0) return { success: false, error: 'Duration must be ≥ 0' };
+      round.speechDays = days;
+      round.speechNotes = fields.notes || '';
+      break;
+    }
+
+    case 'ftc_votes': {
+      const days = parseInt(fields.duration);
+      if (isNaN(days) || days < 0) return { success: false, error: 'Duration must be ≥ 0' };
+      round.votesDays = days;
+      round.votesNotes = fields.notes || '';
+      break;
+    }
+
+    default:
+      return { success: false, error: `Unknown action: ${action}` };
+  }
+
+  await savePlayerData(playerData);
+  console.log(`📝 Season Planner: ${action} updated for ${roundId} (F${round.fNumber})`);
+  return { success: true };
 }
