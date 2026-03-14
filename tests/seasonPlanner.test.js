@@ -108,8 +108,8 @@ function validatePlannerFields(fields) {
 }
 
 function getRoundDuration(round) {
+  if (round.ftcRound) return Math.max(1, (round.speechDays ?? 1) + (round.votesDays ?? 1));
   if (round.fNumber === 1) return 1;
-  if (round.ftcRound) return (round.speechDays ?? 1) + (round.votesDays ?? 1);
   if (round.marooningDays > 0) return round.marooningDays + 2;
   if (round.swapRound || round.mergeRound) return 3;
   return 2;
@@ -365,6 +365,16 @@ describe('getRoundDuration — round duration calculation', () => {
   it('FTC with custom speech/vote days', () => {
     assert.equal(getRoundDuration({ fNumber: 3, ftcRound: true, marooningDays: 0, speechDays: 2, votesDays: 1 }), 3);
     assert.equal(getRoundDuration({ fNumber: 3, ftcRound: true, marooningDays: 0, speechDays: 1, votesDays: 0 }), 1);
+  });
+
+  it('FTC at F1 gets FTC duration, not reunion 1-day', () => {
+    // FTC check must take priority over reunion (fNumber===1) check
+    assert.equal(getRoundDuration({ fNumber: 1, ftcRound: true }), 2); // speeches(1) + votes(1)
+    assert.equal(getRoundDuration({ fNumber: 1, ftcRound: true, speechDays: 2, votesDays: 1 }), 3);
+  });
+
+  it('FTC minimum 1 day even with 0+0', () => {
+    assert.equal(getRoundDuration({ fNumber: 3, ftcRound: true, speechDays: 0, votesDays: 0 }), 1);
   });
 
   it('marooning round defaults to 3 days', () => {

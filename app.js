@@ -7680,6 +7680,15 @@ To fix this:
           return { type: 9, data: modalData };
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('planner_schedule_') || custom_id.startsWith('planner_apps_') || custom_id.startsWith('planner_ranking_') || custom_id.startsWith('planner_tribes_')) {
+      // Season Planner — toolbar buttons (not yet implemented)
+      return ButtonHandlerFactory.create({
+        id: 'planner_toolbar_noop',
+        updateMessage: true,
+        handler: async () => {
+          return { type: 6 }; // Silent acknowledge — feature not yet implemented
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('stress_page_')) {
       // Legacy mockup page navigation — redirect to planner selector
       return ButtonHandlerFactory.create({

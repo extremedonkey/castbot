@@ -136,6 +136,42 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
+  'planner_schedule_*': {
+    label: 'Schedule',
+    description: 'Season schedule view (not yet implemented)',
+    emoji: '📅',
+    style: 'Secondary',
+    parent: 'reeces_season_planner_mockup',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
+  'planner_apps_*': {
+    label: 'Apps',
+    description: 'Season applications (not yet implemented)',
+    emoji: '📝',
+    style: 'Secondary',
+    parent: 'reeces_season_planner_mockup',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
+  'planner_ranking_*': {
+    label: 'Ranking',
+    description: 'Cast ranking (not yet implemented)',
+    emoji: '🏆',
+    style: 'Secondary',
+    parent: 'reeces_season_planner_mockup',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
+  'planner_tribes_*': {
+    label: 'Tribes',
+    description: 'Tribe management (not yet implemented)',
+    emoji: '🔥',
+    style: 'Secondary',
+    parent: 'reeces_season_planner_mockup',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
   'stress_page_*': {
     label: 'Legacy Planner Page',
     description: 'Legacy mockup pagination — redirects to planner selector',

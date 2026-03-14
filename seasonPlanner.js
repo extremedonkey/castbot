@@ -116,10 +116,12 @@ export function generateSeasonRounds(totalPlayers, numSwaps, ftcPlayers) {
  * - Standard: 2 days (challenge + tribal)
  */
 export function getRoundDuration(round) {
-  if (round.fNumber === 1) return 1;                                          // Reunion
+  // FTC checked BEFORE reunion — FTC at F1 should get speeches+votes, not 1-day reunion treatment
   if (round.ftcRound) {                                                       // FTC: configurable
-    return (round.speechDays ?? 1) + (round.votesDays ?? 1);
+    const duration = (round.speechDays ?? 1) + (round.votesDays ?? 1);
+    return Math.max(1, duration);                                             // Minimum 1 day
   }
+  if (round.fNumber === 1) return 1;                                          // Reunion
   if (round.marooningDays > 0) return round.marooningDays + 2;                // Marooning + challenge + tribal
   if (round.swapRound || round.mergeRound) return 3;                          // Event + challenge + tribal
   return 2;                                                                   // Standard: challenge + tribal
@@ -144,15 +146,17 @@ export function calculateRoundDates(rounds, startDate) {
 
     const roundDates = { startOffset: currentDay };
 
-    if (round.fNumber === 1) {
-      // Reunion: single day
-      roundDates.event = formatDate(roundStart);
-    } else if (round.ftcRound) {
-      // FTC: speeches day 0, votes day 1
+    // FTC checked BEFORE reunion — FTC at F1 should get speeches+votes dates
+    if (round.ftcRound) {
+      // FTC: speeches from day 0, votes offset by speechDays
+      const speechDays = round.speechDays ?? 1;
       roundDates.speeches = formatDate(roundStart);
       const votesDate = new Date(roundStart);
-      votesDate.setDate(votesDate.getDate() + 1);
+      votesDate.setDate(votesDate.getDate() + speechDays);
       roundDates.votes = formatDate(votesDate);
+    } else if (round.fNumber === 1) {
+      // Reunion: single day
+      roundDates.event = formatDate(roundStart);
     } else if (round.marooningDays > 0) {
       // Marooning: event day 0, challenge day 1, tribal day 2
       roundDates.event = formatDate(roundStart);
@@ -426,7 +430,8 @@ function buildRoundOptions(round, dates) {
     ];
   }
 
-  const challengeName = round.challengeName || `Challenge ${round.seasonRoundNo} (TBC)`;
+  const rawChallengeName = round.challengeName || `Challenge ${round.seasonRoundNo} (TBC)`;
+  const challengeName = rawChallengeName.length > 50 ? rawChallengeName.substring(0, 47) + '...' : rawChallengeName;
   const host = round.host || 'TBC';
   const elims = round.eliminations ?? 1;
   const elimText = elims === 0 ? 'no elim' : elims === 1 ? '1 elim' : `${elims} elims`;
