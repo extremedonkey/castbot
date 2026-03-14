@@ -162,7 +162,8 @@
       "WebFetch(domain:i.ibb.co)",
       "Bash(/tmp/player_menu_analysis.txt:*)",
       "Read(//tmp/**)",
-      "Bash(for f:*)"
+      "Bash(for f:*)",
+      "Bash(git log:*)"
     ],
     "deny": []
   },

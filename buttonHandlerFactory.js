@@ -81,41 +81,87 @@ export const BUTTON_REGISTRY = {
     category: 'admin'
   },
   'reeces_season_planner_mockup': {
-    label: 'Season Planner (Mockup)',
-    description: 'UI mockup: Season Planner with paginated string selects. Not a real feature.',
+    label: 'Season Planner',
+    description: 'Season Planner — plan rounds, swaps, merge, FTC for a season',
     emoji: '📝',
     style: 'Primary',
     parent: 'reeces_stuff',
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
-  'stress_page_*': {
+  'planner_select_season': {
+    label: 'Season Select',
+    description: 'Select a season to plan or create new',
+    emoji: '📅',
+    style: 'String Select',
+    parent: 'reeces_season_planner_mockup',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
+  'planner_page_*': {
     label: 'Planner Page',
-    description: 'Pagination for Season Planner mockup',
+    description: 'Pagination for Season Planner rounds view',
     emoji: '📄',
     style: 'Secondary',
     parent: 'reeces_season_planner_mockup',
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
-  'stress_select_*': {
-    label: 'Planner Select',
-    description: 'No-op select handler for Season Planner mockup',
+  'planner_round_*': {
+    label: 'Round Select',
+    description: 'Select a round action in Season Planner',
     emoji: '📝',
-    style: 'Secondary',
+    style: 'String Select',
     parent: 'reeces_season_planner_mockup',
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
-  'stress_edit_season': {
+  'planner_edit_*': {
     label: 'Edit Season',
-    description: 'Opens Edit Season modal in Season Planner mockup',
+    description: 'Edit season details in Season Planner',
     emoji: '✏️',
     style: 'Secondary',
     parent: 'reeces_season_planner_mockup',
     requiresModal: true,
     restrictedUser: '391415444084490240',
     category: 'experimental'
+  },
+  'planner_force_setup_*': {
+    label: 'Set Up Planner',
+    description: 'Set up planner data for existing season',
+    emoji: '📅',
+    style: 'Primary',
+    parent: 'reeces_season_planner_mockup',
+    requiresModal: true,
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
+  'stress_page_*': {
+    label: 'Legacy Planner Page',
+    description: 'Legacy mockup pagination — redirects to planner selector',
+    emoji: '📄',
+    style: 'Secondary',
+    parent: 'reeces_season_planner_mockup',
+    restrictedUser: '391415444084490240',
+    category: 'legacy'
+  },
+  'stress_select_*': {
+    label: 'Legacy Planner Select',
+    description: 'Legacy mockup select — redirects to planner selector',
+    emoji: '📝',
+    style: 'Secondary',
+    parent: 'reeces_season_planner_mockup',
+    restrictedUser: '391415444084490240',
+    category: 'legacy'
+  },
+  'stress_edit_season': {
+    label: 'Legacy Edit Season',
+    description: 'Legacy mockup edit — redirects to planner selector',
+    emoji: '✏️',
+    style: 'Secondary',
+    parent: 'reeces_season_planner_mockup',
+    restrictedUser: '391415444084490240',
+    category: 'legacy'
   },
   'reeces_radio_mockup': {
     label: 'Radio PoC (Mockup)',

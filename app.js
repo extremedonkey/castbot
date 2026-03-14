@@ -7519,44 +7519,171 @@ To fix this:
           return buildProdGuidePage(page);
         }
       })(req, res, client);
-    } else if (custom_id === 'reeces_season_planner_mockup' || custom_id.startsWith('stress_page_')) {
-      // Season Planner (Mockup) — UI prototype, not a real feature. See docs/ui/UIPrototyping.md
+    } else if (custom_id === 'reeces_season_planner_mockup') {
+      // Season Planner — entry point: show season selector
       return ButtonHandlerFactory.create({
         id: 'reeces_season_planner_mockup',
         updateMessage: true,
+        deferred: true,
         handler: async (context) => {
-          const { buildSelectStressPage } = await import('./selectStressTest.js');
-          const page = custom_id.startsWith('stress_page_') ? parseInt(custom_id.split('_')[2]) : 0;
-          return buildSelectStressPage(page);
+          const { buildPlannerSelector } = await import('./seasonPlanner.js');
+          return buildPlannerSelector(context.guildId);
+        }
+      })(req, res, client);
+    } else if (custom_id === 'planner_select_season') {
+      // Season Planner — season selected from dropdown
+      return ButtonHandlerFactory.create({
+        id: 'planner_select_season',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const selectedValue = req.body.data.values?.[0];
+          if (selectedValue === 'planner_create_new') {
+            // Can't show modal from deferred — show a create prompt instead
+            return { components: [{ type: 17, accent_color: 0x9b59b6, components: [
+              { type: 10, content: '## 📝 Create New Season\nClick below to set up your new season.' },
+              { type: 14 },
+              { type: 1, components: [
+                { type: 2, custom_id: 'planner_force_setup_new', label: 'Create Season', style: 1, emoji: { name: '➕' } },
+                { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Back', style: 2 }
+              ]}
+            ]}]};
+          }
+
+          const { loadPlayerData } = await import('./storage.js');
+          const { buildPlannerView } = await import('./seasonPlanner.js');
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[selectedValue];
+          if (!config) {
+            return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
+              { type: 10, content: '## ❌ Season not found' },
+              { type: 14 },
+              { type: 1, components: [{ type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Back', style: 2 }] }
+            ]}]};
+          }
+
+          const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId];
+          if (!seasonRounds) {
+            // Existing season without planner data — prompt setup
+            return { components: [{ type: 17, accent_color: 0xf39c12, components: [
+              { type: 10, content: `## ⚠️ Set Up Season Planner\n**${config.seasonName}** was created without planner data.\nClick below to configure round structure.` },
+              { type: 14 },
+              { type: 1, components: [
+                { type: 2, custom_id: `planner_force_setup_${selectedValue}`, label: 'Set Up Planner', style: 1, emoji: { name: '📅' } },
+                { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Back', style: 2 }
+              ]}
+            ]}]};
+          }
+
+          const startDate = new Date(config.estimatedStartDate);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, selectedValue, 0);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('planner_force_setup_')) {
+      // Season Planner — setup modal for new or existing season
+      const configId = custom_id.replace('planner_force_setup_', '');
+      return ButtonHandlerFactory.create({
+        id: 'planner_force_setup',
+        requiresModal: true,
+        handler: async (context) => {
+          const { buildSeasonPlannerModal } = await import('./seasonPlanner.js');
+          if (configId === 'new') {
+            return { type: 9, data: buildSeasonPlannerModal() };
+          }
+          const { loadPlayerData } = await import('./storage.js');
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[configId];
+          return { type: 9, data: buildSeasonPlannerModal({ configId, seasonName: config?.seasonName }) };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('planner_page_')) {
+      // Season Planner — page navigation
+      // Format: planner_page_{pageNum}_{configId}
+      const parts = custom_id.replace('planner_page_', '').split('_');
+      const page = parseInt(parts[0]);
+      const configId = parts.slice(1).join('_');
+      return ButtonHandlerFactory.create({
+        id: 'planner_page',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { loadPlayerData } = await import('./storage.js');
+          const { buildPlannerView } = await import('./seasonPlanner.js');
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[configId];
+          if (!config) return { content: '❌ Season not found' };
+          const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId];
+          if (!seasonRounds) return { content: '❌ No planner data found' };
+          const startDate = new Date(config.estimatedStartDate);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('planner_edit_')) {
+      // Season Planner — edit season modal
+      const configId = custom_id.replace('planner_edit_', '');
+      return ButtonHandlerFactory.create({
+        id: 'planner_edit',
+        requiresModal: true,
+        handler: async (context) => {
+          const { loadPlayerData } = await import('./storage.js');
+          const { buildSeasonPlannerModal } = await import('./seasonPlanner.js');
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[configId];
+          return { type: 9, data: buildSeasonPlannerModal({
+            configId,
+            seasonName: config?.seasonName,
+          })};
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('planner_round_')) {
+      // Season Planner — round select (no-op for now, shows what was selected)
+      return ButtonHandlerFactory.create({
+        id: 'planner_round_select',
+        updateMessage: true,
+        handler: async (context) => {
+          const selected = req.body.data.values?.[0] || 'nothing';
+          // Extract configId from custom_id: planner_round_{roundId}_{configId}
+          const afterPrefix = custom_id.replace('planner_round_', '');
+          const firstUnderscore = afterPrefix.indexOf('_');
+          const configId = afterPrefix.substring(firstUnderscore + 1);
+          return { components: [{ type: 17, accent_color: 0x9b59b6, components: [
+            { type: 10, content: `## 📝 Season Planner\nYou selected **${selected}**.\n\n-# Round editing coming soon.` },
+            { type: 14 },
+            { type: 1, components: [{ type: 2, custom_id: `planner_page_0_${configId}`, label: '← Back', style: 2 }] }
+          ]}]};
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('stress_page_')) {
+      // Legacy mockup page navigation — redirect to planner selector
+      return ButtonHandlerFactory.create({
+        id: 'stress_page_legacy',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { buildPlannerSelector } = await import('./seasonPlanner.js');
+          return buildPlannerSelector(context.guildId);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('stress_select_')) {
-      // Season Planner (Mockup) — no-op select handler. See docs/ui/UIPrototyping.md
+      // Legacy mockup select — redirect to planner selector
       return ButtonHandlerFactory.create({
-        id: 'stress_select_noop',
+        id: 'stress_select_legacy',
         updateMessage: true,
+        deferred: true,
         handler: async (context) => {
-          const selectName = custom_id.replace('stress_select_', '');
-          const selected = req.body.data.values?.[0] || 'nothing';
-          const page = req.body.message?.components?.[0]?.components?.some(c => c.content?.includes('Page 2')) ? 1 : 0;
-          return { components: [{
-            type: 17, accent_color: 0x9b59b6,
-            components: [
-              { type: 10, content: `## 📝 Season Planner (Mockup)\nYou picked **${selected}** from the **${selectName}** select.\n\n-# This is a UI mockup — go back to see all selects.` },
-              { type: 14 },
-              { type: 1, components: [{ type: 2, custom_id: `stress_page_${page}`, label: '← Back', style: 2 }] }
-            ]
-          }]};
+          const { buildPlannerSelector } = await import('./seasonPlanner.js');
+          return buildPlannerSelector(context.guildId);
         }
       })(req, res, client);
     } else if (custom_id === 'stress_edit_season') {
-      // Season Planner (Mockup) — Edit Season modal. See docs/ui/UIPrototyping.md
+      // Legacy mockup edit — redirect to planner selector
       return ButtonHandlerFactory.create({
         id: 'stress_edit_season',
-        requiresModal: true,
-        handler: async () => {
-          const { buildEditSeasonModal } = await import('./selectStressTest.js');
-          return buildEditSeasonModal();
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { buildPlannerSelector } = await import('./seasonPlanner.js');
+          return buildPlannerSelector(context.guildId);
         }
       })(req, res, client);
     } else if (custom_id === 'reeces_radio_mockup') {
@@ -35297,24 +35424,73 @@ Your server is now ready for Tycoons gameplay!`;
       const { handleCheckboxSubmit } = await import('./poc/checkboxGroupPoc.js');
       return handleCheckboxSubmit(data, res);
 
-    } else if (custom_id === 'stress_edit_season_modal') {
-      // Season Planner (Mockup) — Edit Season modal submit. See docs/ui/UIPrototyping.md
-      const { handleEditSeasonSubmit } = await import('./selectStressTest.js');
-      const fields = {};
-      for (const comp of (components || [])) {
-        if (comp.components) {
-          for (const c of comp.components) {
-            if (c.custom_id) fields[c.custom_id] = c.value;
+    } else if (custom_id === 'planner_create_modal' || custom_id.startsWith('planner_setup_modal:')) {
+      // Season Planner — create or setup modal submit
+      return ButtonHandlerFactory.create({
+        id: 'planner_modal_submit',
+        updateMessage: true,
+        handler: async (context) => {
+          const { validatePlannerFields, createPlannerSeason, setupPlannerForExistingSeason, buildPlannerView } = await import('./seasonPlanner.js');
+          const { loadPlayerData } = await import('./storage.js');
+
+          // Extract fields from Label components
+          const fields = {};
+          for (const comp of (components || [])) {
+            if (comp.component && comp.component.custom_id) {
+              fields[comp.component.custom_id] = comp.component.value;
+            } else if (comp.components) {
+              for (const c of comp.components) {
+                if (c.custom_id) fields[c.custom_id] = c.value;
+              }
+            }
           }
-        } else if (comp.component && comp.component.custom_id) {
-          fields[comp.component.custom_id] = comp.component.value;
+
+          const validation = validatePlannerFields(fields);
+          if (!validation.valid) {
+            return {
+              components: [{ type: 17, accent_color: 0xe74c3c, components: [
+                { type: 10, content: `## ❌ Validation Errors\n${validation.errors.map(e => `- ${e}`).join('\n')}` },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Try Again', style: 2 }] }
+              ]}]
+            };
+          }
+
+          const guildId = context.guildId;
+          const userId = context.userId;
+          let configId, seasonId;
+
+          if (custom_id.startsWith('planner_setup_modal:')) {
+            configId = custom_id.split(':')[1];
+            const result = await setupPlannerForExistingSeason(guildId, configId, validation.data);
+            seasonId = result.seasonId;
+          } else {
+            const result = await createPlannerSeason(guildId, userId, validation.data);
+            configId = result.configId;
+            seasonId = result.seasonId;
+          }
+
+          const playerData = await loadPlayerData();
+          const config = playerData[guildId].applicationConfigs[configId];
+          const seasonRounds = playerData[guildId].seasonRounds[seasonId];
+          const startDate = new Date(config.estimatedStartDate);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0);
         }
-      }
-      const result = handleEditSeasonSubmit(fields);
-      return res.send({
-        type: InteractionResponseType.UPDATE_MESSAGE,
-        data: result
-      });
+      })(req, res, client);
+
+    } else if (custom_id === 'stress_edit_season_modal') {
+      // Legacy mockup modal — handle gracefully
+      return ButtonHandlerFactory.create({
+        id: 'stress_edit_season_modal_legacy',
+        updateMessage: true,
+        handler: async () => {
+          return { components: [{ type: 17, accent_color: 0x9b59b6, components: [
+            { type: 10, content: '📝 Season Planner has been upgraded! Use the new Season Planner button.' },
+            { type: 14 },
+            { type: 1, components: [{ type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Season Planner', style: 2 }] }
+          ]}]};
+        }
+      })(req, res, client);
 
     } else if (custom_id === 'richcard_demo_save') {
       // Rich Card demo — modal save handler using extractRichCardValues + buildRichCardContainer
