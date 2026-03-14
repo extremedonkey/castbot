@@ -153,7 +153,7 @@ export class BackupService {
   }
 
   async postBackup(message, files) {
-    const FormData = (await import('form-data')).default;
+    // Use native FormData (Node 18+) — works reliably with fetch()
     const form = new FormData();
 
     form.append('payload_json', JSON.stringify({ content: message }));
@@ -164,10 +164,8 @@ export class BackupService {
       const base = path.basename(files[i].name, ext);
       const filename = `${base}-${timestamp}${ext}`;
 
-      form.append(`files[${i}]`, Buffer.from(files[i].content, 'utf8'), {
-        filename,
-        contentType: 'application/json',
-      });
+      const blob = new Blob([files[i].content], { type: 'application/json' });
+      form.append(`files[${i}]`, blob, filename);
     }
 
     const url = `https://discord.com/api/v10/channels/${this.channelId}/messages`;
@@ -175,7 +173,6 @@ export class BackupService {
       method: 'POST',
       headers: {
         Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
-        ...form.getHeaders(),
       },
       body: form,
     });
