@@ -177,9 +177,26 @@ Full spec already in `docs/02-implementation-wip/not-started/00-BackupOptions.md
 - Verify `.backup` files are fresh post-deploy
 - Verify Discord backup service posting correctly
 
-### Phase 6: Backup strategy doc (this file → features doc)
+### Phase 6: CLAUDE.md — new JSON file checklist
 
-Move this RaP to `docs/03-features/` once implementation complete. Reference in CLAUDE.md.
+Add a lean section to CLAUDE.md that enforces the standard when any new `.json` data file is introduced. Proposed text:
+
+```markdown
+## 💾 Data File Standards
+
+**When creating a new `.json` data file:**
+1. **Gitignore it** — data/runtime files must not be tracked (`playerData.json`, not `package.json`)
+2. **Use `atomicSave`** for writes — never raw `fs.writeFile` on data files
+3. **Add to backup service** — add entry to `BACKUP_FILES` in `src/monitoring/backupService.js`
+4. **Classify its tier** — see [Backup Strategy](docs/01-RaP/0948_20260315_BackupStrategy_Analysis.md)
+   - **Tier 1** (critical): needs atomicSave + rotating backups + Discord backup
+   - **Tier 2** (important): needs Discord backup, regenerable on restart
+   - **Tier 3** (ephemeral): just gitignore it, no backup needed
+```
+
+### Phase 7: Backup strategy doc (this file → features doc)
+
+Move this RaP to `docs/03-features/` once implementation complete. Update CLAUDE.md link.
 
 ## Prod File Sizes (2026-03-15)
 
