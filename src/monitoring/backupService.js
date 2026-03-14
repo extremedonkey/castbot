@@ -156,10 +156,7 @@ export class BackupService {
     const FormData = (await import('form-data')).default;
     const form = new FormData();
 
-    // payload_json must have explicit content type or form-data sets it wrong
-    form.append('payload_json', JSON.stringify({ content: message }), {
-      contentType: 'application/json',
-    });
+    form.append('payload_json', JSON.stringify({ content: message }));
 
     for (let i = 0; i < files.length; i++) {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
