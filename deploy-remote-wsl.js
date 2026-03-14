@@ -243,6 +243,24 @@ async function deployToProduction() {
                 }
             }
             
+            // Step 3b: Restore runtime data files that git rm --cached may have deleted
+            // These files are gitignored but git pull deletes them when they transition
+            // from tracked → untracked. The backup was created in Step 2.
+            logSection('Step 3b: Restore Runtime Data Files', 'risk-medium');
+            log('Checking for runtime files deleted by git pull...', 'info');
+            const runtimeFiles = ['dstState.json', 'scheduledJobs.json', 'restartHistory.json', 'messageHistory.json'];
+            for (const file of runtimeFiles) {
+                try {
+                    await execSSH(
+                        `cd ${REMOTE_PATH} && test -f ${file} && echo "EXISTS" || (test -f ../castbot-backup-*//${file} && cp $(ls -t ../castbot-backup-*/${file} | head -1) ${file} && echo "RESTORED from backup" || echo "NOT FOUND in backup either")`,
+                        `Checking ${file}`,
+                        'risk-low'
+                    );
+                } catch {
+                    log(`⚠️ Could not restore ${file} — check manually after deploy`, 'warning');
+                }
+            }
+
             // Step 4: Install dependencies
             logSection('Step 4: Install Dependencies', 'risk-medium');
             log('RISK: Medium - Dependency issues could prevent startup', 'risk-medium');
