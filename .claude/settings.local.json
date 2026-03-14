@@ -161,7 +161,8 @@
       "Bash(ls -la /home/reece/castbot/.git/index.lock 2>/dev/null && echo \"Lock exists - checking if stale\" && fuser /home/reece/castbot/.git/index.lock 2>/dev/null || echo \"No process holding it\")",
       "WebFetch(domain:i.ibb.co)",
       "Bash(/tmp/player_menu_analysis.txt:*)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(for f:*)"
     ],
     "deny": []
   },
