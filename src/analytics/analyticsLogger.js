@@ -269,6 +269,10 @@ async function logInteraction(userId, guildId, action, details, username, guildN
     // Append to log file
     fs.appendFileSync(ANALYTICS_LOG_FILE, logEntry);
     
+    // Forward already-resolved identity to safariContent for postToSafariLog
+    if (safariContent && username && username !== 'Unknown Player') safariContent._resolvedUsername = username;
+    if (safariContent && displayName) safariContent._resolvedDisplayName = displayName;
+
     // Try Discord logging (non-blocking)
     console.log(`📊 DEBUG: About to call postToDiscordLogs - action: ${action}, safariContent exists: ${!!safariContent}, guildId: ${guildId}`);
     await postToDiscordLogs(logEntry.trim(), userId, action, details, components, guildId, safariContent);
@@ -507,9 +511,6 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
         console.log(`📊 DEBUG: All Safari Log conditions met, calling postToSafariLog`);
       }
       try {
-        // Forward already-resolved identity so postToSafariLog doesn't need a redundant API fetch
-        if (username && username !== 'Unknown Player') safariContent._resolvedUsername = username;
-        if (displayName) safariContent._resolvedDisplayName = displayName;
         await postToSafariLog(guildId, userId, action, details, safariContent);
         if (shouldLog('VERBOSE')) {
           console.log(`📊 DEBUG: postToSafariLog completed successfully`);
