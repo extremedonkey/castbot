@@ -953,9 +953,11 @@ export async function createPlayerManagementUI(options) {
       }
     }
 
-    // Add Activity Log button for initialized players (or admin mode)
+    // Add Activity Log + Guide buttons for initialized players (or admin mode)
     if (!hideBottomButtons) {
-      const isInitializedForLogs = playerData[guildId]?.players?.[userId]?.safari !== undefined;
+      const safariObj = playerData[guildId]?.players?.[userId]?.safari;
+      const isInitializedForLogs = safariObj !== undefined && safariObj !== null;
+      console.log(`🦁 Guide/Logs visibility: userId=${userId}, safari=${typeof safariObj}, isInitialized=${isInitializedForLogs}, mode=${mode}`);
       if (isInitializedForLogs || mode === PlayerManagementMode.ADMIN) {
         finalComponents.push({
           type: 1, // ActionRow

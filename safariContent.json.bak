@@ -38058,10 +38058,10 @@
       },
       "player_391415444084490240": {
         "stamina": {
-          "current": 1,
+          "current": 0,
           "max": 1,
           "lastRegeneration": 1773500773775,
-          "lastUse": 1772457443800
+          "lastUse": 1773500779271
         }
       }
     }
