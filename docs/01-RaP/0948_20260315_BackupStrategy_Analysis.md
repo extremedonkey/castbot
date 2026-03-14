@@ -28,6 +28,31 @@ We have 6+ JSON files, 4 different backup mechanisms, 2 different save implement
 5. **No backup verification** — rolling backups are never checked for valid JSON
 6. **No documented recovery procedures** — multiple backup sources, no decision tree
 
+## Gitignore Gotcha: "Ignored but still tracked"
+
+**Adding a file to `.gitignore` does NOT untrack it if git is already tracking it.** This silently breaks backup files on deploy — `git pull` overwrites the prod runtime copy with a stale dev copy.
+
+**How it happened:** `safariContent.json.bak` was added to `.gitignore` but had been committed previously. Every deploy's `git pull` replaced prod's rolling backup (2.0 MB, 31 guilds) with dev's copy (1.3 MB, 12 guilds). The rolling backup was worthless for months.
+
+**The fix is always two steps:**
+```bash
+# 1. Add to .gitignore
+echo "myfile.json" >> .gitignore
+
+# 2. Untrack it (keeps the local file, removes from git)
+git rm --cached myfile.json
+```
+
+**Verification:**
+```bash
+git check-ignore myfile.json  # Should print the filename
+git ls-files -- myfile.json   # Should print nothing
+```
+
+If `git check-ignore` prints nothing, it's not ignored. If `git ls-files` prints something, it's still tracked. Both must pass.
+
+**Standard:** Use wildcards in `.gitignore` for backup extensions (`*.json.backup`, `*.json.REJECTED`, `*.json.bak`) so new data files are automatically covered.
+
 ## Protection Tiers
 
 ### Tier 1: Critical (data loss = users affected)
