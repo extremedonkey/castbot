@@ -9,7 +9,10 @@ node_modules/
 
 # Data files
 playerData.json
+playerData.json.backup
+playerData.json.REJECTED
 safariContent.json
+safariContent.json.bak
 img/tips/tips.json
 scheduledJobs.json
 data_*.json
