@@ -49,3 +49,4 @@ castbot-key.pem
 
 # Secrets
 .env.local
+challengeLibrary.json

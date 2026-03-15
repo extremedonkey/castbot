@@ -8039,6 +8039,121 @@ To fix this:
           return buildChallengeScreen(context.guildId, challengeId);
         }
       })(req, res, client);
+    } else if (custom_id === 'library_home') {
+      // Challenge Library — home screen
+      return ButtonHandlerFactory.create({
+        id: 'library_home',
+        updateMessage: true,
+        handler: async (context) => {
+          const { buildLibraryHome } = await import('./challengeManager.js');
+          return buildLibraryHome(context.userId);
+        }
+      })(req, res, client);
+    } else if (custom_id === 'library_select') {
+      // Challenge Library — browse selection
+      return ButtonHandlerFactory.create({
+        id: 'library_select',
+        updateMessage: true,
+        handler: async (context) => {
+          const selectedValue = req.body.data.values?.[0];
+          if (selectedValue === 'none') return { type: 6 };
+          if (selectedValue === 'library_search') {
+            // Show search prompt button (can't modal from deferred)
+            return { components: [{ type: 17, accent_color: 0x9b59b6, components: [
+              { type: 10, content: '## 🔍 Search Challenge Library' },
+              { type: 14 },
+              { type: 1, components: [
+                { type: 2, custom_id: 'library_search_btn', label: 'Enter Search', style: 1, emoji: { name: '🔍' } },
+                { type: 2, custom_id: 'library_home', label: '← Back', style: 2 }
+              ]}
+            ]}]};
+          }
+          if (selectedValue === 'library_most_imported' || selectedValue === 'library_recent') {
+            // Just show home with different sort (MVP: same screen)
+            const { buildLibraryHome } = await import('./challengeManager.js');
+            return buildLibraryHome(context.userId);
+          }
+          // Show challenge detail
+          const { buildLibraryDetail } = await import('./challengeManager.js');
+          return buildLibraryDetail(selectedValue, context.userId);
+        }
+      })(req, res, client);
+    } else if (custom_id === 'library_search_btn') {
+      // Challenge Library — search modal trigger
+      return ButtonHandlerFactory.create({
+        id: 'library_search_btn',
+        requiresModal: true,
+        handler: async () => {
+          return { type: 9, data: {
+            custom_id: 'library_search_modal',
+            title: 'Search Challenge Library',
+            components: [{
+              type: 18,
+              label: 'Search Term',
+              description: 'Search by title, description, author, or tags',
+              component: { type: 4, custom_id: 'search_term', style: 1, placeholder: 'e.g., "Tycoons" or "economic"', required: true, max_length: 50 }
+            }]
+          }};
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('library_rate_')) {
+      // Challenge Library — rate a challenge
+      return ButtonHandlerFactory.create({
+        id: 'library_rate',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = custom_id.replace('library_rate_', '').split('_');
+          const rating = parseInt(parts[0]);
+          const templateId = parts.slice(1).join('_');
+          const { rateChallenge, buildLibraryDetail } = await import('./challengeManager.js');
+          await rateChallenge(templateId, context.userId, rating);
+          return buildLibraryDetail(templateId, context.userId);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('library_import_')) {
+      // Challenge Library — import a challenge
+      const templateId = custom_id.replace('library_import_', '');
+      return ButtonHandlerFactory.create({
+        id: 'library_import',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { importChallenge, buildLibraryDetail } = await import('./challengeManager.js');
+          const challengeId = await importChallenge(context.guildId, context.userId, templateId);
+          if (!challengeId) return { content: '❌ Challenge not found or unpublished' };
+          return { components: [{ type: 17, accent_color: 0x27ae60, components: [
+            { type: 10, content: `## ✅ Challenge Imported!\n\nThe challenge has been added to your server's challenges. You can now edit it, link it to a round, or post it to a channel.` },
+            { type: 14 },
+            { type: 1, components: [
+              { type: 2, custom_id: 'challenge_screen', label: '← My Challenges', style: 2 },
+              { type: 2, custom_id: 'library_home', label: '← Library', style: 2 },
+            ]}
+          ]}]};
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('library_unpublish_')) {
+      // Challenge Library — unpublish
+      const templateId = custom_id.replace('library_unpublish_', '');
+      return ButtonHandlerFactory.create({
+        id: 'library_unpublish',
+        updateMessage: true,
+        handler: async (context) => {
+          const { unpublishChallenge, buildLibraryHome } = await import('./challengeManager.js');
+          await unpublishChallenge(templateId);
+          return buildLibraryHome(context.userId);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('challenge_publish_')) {
+      // Challenges — publish to library modal
+      const challengeId = custom_id.replace('challenge_publish_', '');
+      return ButtonHandlerFactory.create({
+        id: 'challenge_publish',
+        requiresModal: true,
+        handler: async () => {
+          const { buildPublishModal } = await import('./challengeManager.js');
+          return buildPublishModal(challengeId);
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('challenge_post_select_')) {
       // Challenges — channel selected, post the challenge
       const challengeId = custom_id.replace('challenge_post_select_', '');
@@ -35925,6 +36040,58 @@ Your server is now ready for Tycoons gameplay!`;
       // Checkbox Group PoC — See poc/checkboxGroupPoc.js
       const { handleCheckboxSubmit } = await import('./poc/checkboxGroupPoc.js');
       return handleCheckboxSubmit(data, res);
+
+    } else if (custom_id.startsWith('library_publish_modal:')) {
+      // Challenge Library — publish modal submit
+      return ButtonHandlerFactory.create({
+        id: 'library_publish_submit',
+        updateMessage: true,
+        handler: async (context) => {
+          const challengeId = custom_id.split(':')[1];
+          const { publishChallenge, buildChallengeScreen } = await import('./challengeManager.js');
+
+          // Extract tags (checkbox group) and text fields
+          let tags = [];
+          let playerCount = '';
+          let estimatedRounds = '';
+          for (const comp of (components || [])) {
+            const inner = comp.component || comp.components?.[0];
+            if (inner?.custom_id === 'tags') tags = inner.values || [];
+            if (inner?.custom_id === 'player_count') playerCount = inner.value || '';
+            if (inner?.custom_id === 'estimated_rounds') estimatedRounds = inner.value || '';
+          }
+
+          // Resolve author info
+          const guild = await client.guilds.fetch(context.guildId);
+          const member = await guild.members.fetch(context.userId);
+          const authorInfo = {
+            userId: context.userId,
+            username: member.displayName || member.user.username,
+            serverName: guild.name,
+          };
+
+          await publishChallenge(context.guildId, challengeId, { tags, playerCount, estimatedRounds }, authorInfo);
+          return buildChallengeScreen(context.guildId, challengeId);
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'library_search_modal') {
+      // Challenge Library — search modal submit
+      return ButtonHandlerFactory.create({
+        id: 'library_search_submit',
+        updateMessage: true,
+        handler: async (context) => {
+          const { extractModalFields } = await import('./seasonPlanner.js');
+          const fields = extractModalFields(components);
+          const searchTerm = fields.search_term || '';
+
+          // Filter library and show results
+          const { buildLibraryHome } = await import('./challengeManager.js');
+          // TODO: pass search term to buildLibraryHome for filtered results
+          // For now, show home (search filtering is a Phase 2 refinement)
+          return buildLibraryHome(context.userId);
+        }
+      })(req, res, client);
 
     } else if (custom_id === 'challenge_search_modal') {
       // Challenges — search modal submit

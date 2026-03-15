@@ -199,6 +199,65 @@ export const BUTTON_REGISTRY = {
     parent: 'challenge_screen',
     category: 'challenges'
   },
+  // === CHALLENGE LIBRARY ===
+  'library_home': {
+    label: 'Challenge Library',
+    description: 'Community challenge library — browse and share',
+    emoji: '📚',
+    style: 'Secondary',
+    parent: 'challenge_screen',
+    category: 'challenges'
+  },
+  'library_select': {
+    label: 'Library Browse',
+    description: 'Browse library challenges',
+    emoji: '📚',
+    style: 'String Select',
+    parent: 'library_home',
+    category: 'challenges'
+  },
+  'library_search_btn': {
+    label: 'Search Library',
+    description: 'Search the challenge library',
+    emoji: '🔍',
+    style: 'Primary',
+    parent: 'library_home',
+    requiresModal: true,
+    category: 'challenges'
+  },
+  'library_rate_*': {
+    label: 'Rate',
+    description: 'Rate a library challenge',
+    emoji: '⭐',
+    style: 'Secondary',
+    parent: 'library_home',
+    category: 'challenges'
+  },
+  'library_import_*': {
+    label: 'Import',
+    description: 'Import a library challenge to your server',
+    emoji: '📥',
+    style: 'Success',
+    parent: 'library_home',
+    category: 'challenges'
+  },
+  'library_unpublish_*': {
+    label: 'Unpublish',
+    description: 'Remove your challenge from the library',
+    emoji: '🗑️',
+    style: 'Danger',
+    parent: 'library_home',
+    category: 'challenges'
+  },
+  'challenge_publish_*': {
+    label: 'Publish',
+    description: 'Publish challenge to community library',
+    emoji: '📤',
+    style: 'Secondary',
+    parent: 'challenge_screen',
+    requiresModal: true,
+    category: 'challenges'
+  },
   'planner_ideas_*': {
     label: 'Ideas',
     description: 'Edit free-form season ideas and brainstorming notes',
