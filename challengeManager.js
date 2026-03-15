@@ -208,7 +208,7 @@ export function buildChallengeModal(challengeId = null, existing = null) {
   const customId = challengeId ? `challenge_modal_edit:${challengeId}` : 'challenge_modal_create';
   const title = challengeId ? 'Edit Challenge' : 'Create Challenge';
 
-  return buildRichCardModal({
+  const modal = buildRichCardModal({
     customId,
     modalTitle: title,
     values: existing ? {
@@ -224,6 +224,24 @@ export function buildChallengeModal(challengeId = null, existing = null) {
       image: { label: 'Image URL', placeholder: 'https://...', description: 'Link to a challenge image (upload to Discord first)' },
     },
   });
+
+  // Add Prepping Host User Select as 5th component (same pattern as Season Planner edit)
+  modal.data.components.push({
+    type: 18,
+    label: 'Prepping Host',
+    description: 'Who is planning / preparing this challenge',
+    component: {
+      type: 5, // User Select
+      custom_id: 'prepping_host',
+      placeholder: 'Select host...',
+      required: false,
+      min_values: 0,
+      max_values: 1,
+      ...(existing?.creationHost ? { default_values: [{ id: existing.creationHost, type: 'user' }] } : {})
+    }
+  });
+
+  return modal;
 }
 
 /**

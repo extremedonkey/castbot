@@ -7869,12 +7869,14 @@ To fix this:
           return { type: 6 };
         }
       })(req, res, client);
-    } else if (custom_id === 'challenge_screen') {
+    } else if (custom_id === 'challenge_screen' || custom_id === 'challenge_screen_new') {
       // Challenges — main management screen
+      // challenge_screen_new: ephemeral from restart notification; challenge_screen: update from prod menu
       return ButtonHandlerFactory.create({
         id: 'challenge_screen',
-        updateMessage: true,
+        updateMessage: custom_id === 'challenge_screen',
         deferred: true,
+        ephemeral: custom_id === 'challenge_screen_new',
         handler: async (context) => {
           const { buildChallengeScreen } = await import('./challengeManager.js');
           return buildChallengeScreen(context.guildId);
@@ -35970,6 +35972,15 @@ Your server is now ready for Tycoons gameplay!`;
           const { extractRichCardValues } = await import('./richCardUI.js');
           const { createChallenge, updateChallenge, buildChallengeScreen } = await import('./challengeManager.js');
           const values = extractRichCardValues(data);
+
+          // Extract Prepping Host from User Select (Label-wrapped)
+          for (const comp of (components || [])) {
+            const inner = comp.component || comp.components?.[0];
+            if (inner?.custom_id === 'prepping_host') {
+              values.creationHost = inner.values?.[0] || inner.value || null;
+              break;
+            }
+          }
 
           if (custom_id.startsWith('challenge_modal_edit:')) {
             const challengeId = custom_id.split(':')[1];

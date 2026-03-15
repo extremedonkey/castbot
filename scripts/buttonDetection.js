@@ -80,7 +80,7 @@ const SAFE_TEST_BUTTONS = {
     priority: 3
   },
   'challenges': {
-    custom_id: 'challenge_screen',
+    custom_id: 'challenge_screen_new',
     label: '🏃 Challenges',
     style: 1, // Primary (blue)
     priority: 2
