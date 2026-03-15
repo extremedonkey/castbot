@@ -1088,9 +1088,12 @@ export async function processRoundEdit(guildId, action, roundId, configId, field
       round.eliminations = elims;
 
       const duration = fields.tribal_duration;
-      if (duration === 'custom') {
-        const customDays = parseInt(fields.custom_days);
-        round.tribalDays = (!isNaN(customDays) && customDays >= 2) ? customDays : 2;
+      const customDays = fields.custom_days?.trim() ? parseInt(fields.custom_days) : null;
+
+      if (duration === 'custom' || customDays != null) {
+        // Custom days field takes priority — accepts 0, 1, 2+ as shortcuts
+        const days = customDays ?? 2;
+        round.tribalDays = (!isNaN(days) && days >= 0) ? days : 1;
       } else {
         round.tribalDays = parseInt(duration) || 0;
       }
@@ -1099,14 +1102,17 @@ export async function processRoundEdit(guildId, action, roundId, configId, field
 
     case 'marooning': {
       const duration = fields.event_duration;
+      const customDays = fields.custom_days?.trim() ? parseInt(fields.custom_days) : null;
+
       if (duration === 'none') {
         round.hasMarooning = false;
         round.marooningDays = 0;
-      } else if (duration === 'custom') {
-        const customDays = parseInt(fields.custom_days);
-        if (isNaN(customDays) || customDays < 2) return { success: false, error: 'Custom days must be 2 or more' };
-        round.hasMarooning = true;
-        round.marooningDays = customDays;
+      } else if (duration === 'custom' || customDays != null) {
+        // Custom days field takes priority — accepts 0, 1, 2+ as shortcuts
+        const days = customDays ?? 2;
+        if (isNaN(days) || days < 0) return { success: false, error: 'Days must be 0 or more' };
+        round.hasMarooning = days > 0 || duration !== 'none';
+        round.marooningDays = days;
       } else {
         round.hasMarooning = true;
         round.marooningDays = parseInt(duration) || 0;
