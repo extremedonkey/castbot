@@ -2241,9 +2241,9 @@ export const BUTTON_REGISTRY = {
   },
 
   // === ENTITY MANAGEMENT SYSTEM ===
-  'entity_select': {
+  'entity_select_*': {
     label: 'Entity Selection',
-    description: 'Handle entity selection from dropdown',
+    description: 'Handle entity selection from dropdown (seasons, items, stores, etc.)',
     emoji: '📋',
     style: 'Primary',
     category: 'entity_management'
