@@ -3,7 +3,8 @@
  * Generates visual schedule representations for Season Planner
  *
  * Concepts:
- * Month Calendar — calendar grid with round activities per day
+ * 1. Vertical Timeline (Schedule) — round-by-round list with event markers, dates, duration
+ * 2. Month Calendar — calendar grid with round activities per day
  */
 
 import sharp from 'sharp';
@@ -136,6 +137,82 @@ function getDayActivities(round) {
     { activity: 'challenge', label: shortChallenge || 'Challenge' },
     { activity: 'tribal', label: 'Tribal' },
   ];
+}
+
+// ═══════════════════════════════════════════
+// Month Calendar (enhanced with activities)
+// ═══════════════════════════════════════════
+
+// ═══════════════════════════════════════════
+// Vertical Timeline (Schedule)
+// ═══════════════════════════════════════════
+
+export async function generateVerticalTimeline(seasonName, rounds, startDate) {
+  const sortedIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
+  const dates = calcDates(rounds, startDate);
+
+  const MARGIN = 40;
+  const ROW_H = 52;
+  const HEADER_H = 80;
+  const WIDTH = 700;
+  const LINE_X = 80;
+  const HEIGHT = HEADER_H + sortedIds.length * ROW_H + MARGIN;
+
+  const composites = [];
+
+  // Title
+  composites.push({
+    input: Buffer.from(`<svg width="${WIDTH}" height="${HEADER_H}" xmlns="http://www.w3.org/2000/svg">
+      <text x="${WIDTH / 2}" y="35" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="bold" fill="${TEXT_PRI}">${escapeXml(stripEmoji(seasonName))} — Schedule</text>
+      <text x="${WIDTH / 2}" y="58" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="${TEXT_MUT}">${sortedIds.length} rounds | ${dates._totalDays} days | ${formatDate(startDate)} start</text>
+      <line x1="${MARGIN}" y1="${HEADER_H - 2}" x2="${WIDTH - MARGIN}" y2="${HEADER_H - 2}" stroke="${SEPARATOR}" stroke-width="1"/>
+    </svg>`),
+    top: 0, left: 0
+  });
+
+  // Timeline rows
+  for (let i = 0; i < sortedIds.length; i++) {
+    const id = sortedIds[i];
+    const round = rounds[id];
+    const type = getRoundType(round);
+    const color = TYPE_COLORS[type];
+    const y = HEADER_H + i * ROW_H;
+    const dateInfo = dates[id];
+    const dur = getRoundDuration(round);
+    const elims = round.eliminations ?? 1;
+
+    let label;
+    if (type === 'reunion') label = 'Reunion';
+    else if (type === 'ftc') label = 'Final Tribal';
+    else if (type === 'marooning') label = 'Marooning';
+    else if (type === 'swap') label = round.eventLabel || 'Swap';
+    else if (type === 'merge') label = round.eventLabel || 'Merge';
+    else label = round.challengeName ? stripEmoji(round.challengeName) : `Challenge ${round.seasonRoundNo}`;
+    label = escapeXml(label.length > 30 ? label.substring(0, 27) + '...' : label);
+
+    const dateStr = formatDate(dateInfo.date);
+    const isLast = i === sortedIds.length - 1;
+
+    composites.push({
+      input: Buffer.from(`<svg width="${WIDTH}" height="${ROW_H}" xmlns="http://www.w3.org/2000/svg">
+        ${!isLast ? `<line x1="${LINE_X}" y1="20" x2="${LINE_X}" y2="${ROW_H}" stroke="${SEPARATOR}" stroke-width="2"/>` : ''}
+        <circle cx="${LINE_X}" cy="20" r="8" fill="${color}"/>
+        <circle cx="${LINE_X}" cy="20" r="4" fill="${BG}"/>
+        <text x="20" y="25" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="${TEXT_SEC}">F${round.fNumber}</text>
+        <text x="${LINE_X + 20}" y="18" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="${TEXT_PRI}">${label}</text>
+        <text x="${LINE_X + 20}" y="35" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="${TEXT_SEC}">${dateStr} · ${dur}d${type !== 'reunion' && type !== 'ftc' ? ` · ${elims} elim` : ''}</text>
+        <rect x="${WIDTH - 100}" y="8" width="60" height="22" rx="11" ry="11" fill="${color}" fill-opacity="0.2"/>
+        <text x="${WIDTH - 70}" y="24" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="bold" fill="${color}">${type.toUpperCase()}</text>
+      </svg>`),
+      top: y, left: 0
+    });
+  }
+
+  const canvas = sharp({
+    create: { width: WIDTH, height: HEIGHT, channels: 4, background: { r: 26, g: 26, b: 46, alpha: 1 } }
+  });
+
+  return canvas.composite(composites).png({ quality: 90 }).toBuffer();
 }
 
 // ═══════════════════════════════════════════
