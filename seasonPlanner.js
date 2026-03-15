@@ -401,7 +401,7 @@ const SELECTS_PER_PAGE = 10;
  * @param {number} page - 0-indexed page
  * @returns {Object} Components V2 response
  */
-export function buildPlannerView(seasonName, rounds, startDate, configId, page = 0, ideas = '') {
+export function buildPlannerView(seasonName, rounds, startDate, configId, page = 0, ideas = '', challenges = {}) {
   const roundIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
   const totalPages = Math.ceil(roundIds.length / SELECTS_PER_PAGE);
   if (page < 0 || page >= totalPages) page = 0;
@@ -416,7 +416,7 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
     const skipInfo = skippedMap.get(id);
     const options = skipInfo
       ? [{ label: `F${round.fNumber} ${DOT} Skipped (F${skipInfo.skippedBy} eliminates ${skipInfo.elimCount})`, value: 'summary', default: true, emoji: { name: '⏭️' } }]
-      : buildRoundOptions(round, roundDates);
+      : buildRoundOptions(round, roundDates, challenges);
 
     return {
       type: 1,
@@ -469,7 +469,7 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
 /**
  * Build string select options for a single round.
  */
-function buildRoundOptions(round, dates) {
+function buildRoundOptions(round, dates, challenges = {}) {
   const f = round.fNumber;
 
   // Determine round type and summary label
@@ -492,7 +492,9 @@ function buildRoundOptions(round, dates) {
     ];
   }
 
-  const rawChallengeName = round.challengeName || `Challenge ${round.seasonRoundNo} (TBC)`;
+  // Derive challenge name: linked challenge title > stored name > default
+  const linkedChallenge = round.challengeIDs?.primary ? challenges[round.challengeIDs.primary] : null;
+  const rawChallengeName = linkedChallenge?.title || round.challengeName || `Challenge ${round.seasonRoundNo} (TBC)`;
   const challengeName = rawChallengeName.length > 50 ? rawChallengeName.substring(0, 47) + '...' : rawChallengeName;
   const host = round.host || 'TBC';
   const elims = round.eliminations ?? 1;
@@ -668,8 +670,31 @@ export async function createPlannerSeason(guildId, userId, data) {
   const rounds = generateSeasonRounds(data.estimatedTotalPlayers, data.estimatedSwaps, data.estimatedFTCPlayers);
   playerData[guildId].seasonRounds[seasonId] = rounds;
 
+  // Bulk-create challenges for each round and link them
+  if (!playerData[guildId].challenges) playerData[guildId].challenges = {};
+  for (const [roundId, round] of Object.entries(rounds)) {
+    if (round.fNumber === 1) continue; // Skip reunion — no challenge
+    const chalId = `challenge_${crypto.randomUUID().replace(/-/g, '').substring(0, 12)}`;
+    const chalTitle = round.ftcRound
+      ? `Challenge ${round.seasonRoundNo} (FTC Speech)`
+      : `Challenge ${round.seasonRoundNo} (TBC)`;
+    playerData[guildId].challenges[chalId] = {
+      title: chalTitle,
+      description: '',
+      image: '',
+      accentColor: 0x5865F2,
+      creationHost: userId,
+      runningHost: null,
+      seasonId,
+      createdAt: Date.now(),
+      lastUpdated: Date.now(),
+    };
+    round.challengeIDs = { primary: chalId };
+  }
+
   await savePlayerData(playerData);
-  console.log(`✅ Season Planner: Created "${data.seasonName}" (${configId}) with ${Object.keys(rounds).length} rounds`);
+  const chalCount = Object.keys(rounds).length - (data.estimatedFTCPlayers > 1 ? 1 : 0);
+  console.log(`✅ Season Planner: Created "${data.seasonName}" (${configId}) with ${Object.keys(rounds).length} rounds and ${chalCount} challenges`);
 
   return { configId, seasonId };
 }
@@ -704,8 +729,31 @@ export async function setupPlannerForExistingSeason(guildId, configId, data) {
   const rounds = generateSeasonRounds(data.estimatedTotalPlayers, data.estimatedSwaps, data.estimatedFTCPlayers);
   playerData[guildId].seasonRounds[config.seasonId] = rounds;
 
+  // Bulk-create challenges for each round and link them
+  if (!playerData[guildId].challenges) playerData[guildId].challenges = {};
+  const { default: crypto } = await import('crypto');
+  for (const [roundId, round] of Object.entries(rounds)) {
+    if (round.fNumber === 1) continue;
+    const chalId = `challenge_${crypto.randomUUID().replace(/-/g, '').substring(0, 12)}`;
+    const chalTitle = round.ftcRound
+      ? `Challenge ${round.seasonRoundNo} (FTC Speech)`
+      : `Challenge ${round.seasonRoundNo} (TBC)`;
+    playerData[guildId].challenges[chalId] = {
+      title: chalTitle,
+      description: '',
+      image: '',
+      accentColor: 0x5865F2,
+      creationHost: config.createdBy || null,
+      runningHost: null,
+      seasonId: config.seasonId,
+      createdAt: Date.now(),
+      lastUpdated: Date.now(),
+    };
+    round.challengeIDs = { primary: chalId };
+  }
+
   await savePlayerData(playerData);
-  console.log(`✅ Season Planner: Set up "${data.seasonName}" (${configId}) with ${Object.keys(rounds).length} rounds`);
+  console.log(`✅ Season Planner: Set up "${data.seasonName}" (${configId}) with ${Object.keys(rounds).length} rounds + challenges`);
 
   return { seasonId: config.seasonId };
 }

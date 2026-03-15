@@ -120,9 +120,10 @@ function calcDates(rounds, startDate) {
  * Determine what activity happens on each day of a round.
  * Returns an array of { activity, label } for each day.
  */
-function getDayActivities(round) {
+function getDayActivities(round, challenges = {}) {
   const type = getRoundType(round);
-  const challengeName = round.challengeName ? stripEmoji(round.challengeName) : null;
+  const linkedChal = round.challengeIDs?.primary ? challenges[round.challengeIDs.primary] : null;
+  const challengeName = linkedChal?.title ? stripEmoji(linkedChal.title) : (round.challengeName ? stripEmoji(round.challengeName) : null);
   const shortChallenge = challengeName ? (challengeName.length > 12 ? challengeName.substring(0, 10) + '..' : challengeName) : null;
 
   if (type === 'reunion') {
@@ -195,7 +196,8 @@ function getScheduleColumns(round, roundStartDate) {
   const type = getRoundType(round);
   const elims = round.eliminations ?? 1;
   const elimText = elims === 0 ? 'no elim' : elims === 1 ? '1 elim' : `${elims} elims`;
-  const challengeName = round.challengeName ? stripEmoji(round.challengeName) : `Challenge ${round.seasonRoundNo}`;
+  const linkedChal2 = round.challengeIDs?.primary ? challenges[round.challengeIDs.primary] : null;
+  const challengeName = linkedChal2?.title ? stripEmoji(linkedChal2.title) : (round.challengeName ? stripEmoji(round.challengeName) : `Challenge ${round.seasonRoundNo}`);
   const shortChallenge = challengeName.length > 22 ? challengeName.substring(0, 19) + '...' : challengeName;
 
   const d0 = formatDate(roundStartDate);
@@ -261,7 +263,7 @@ function getScheduleColumns(round, roundStartDate) {
   ];
 }
 
-export async function generateVerticalTimeline(seasonName, rounds, startDate) {
+export async function generateVerticalTimeline(seasonName, rounds, startDate, challenges = {}) {
   const allIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
   const dates = calcDates(rounds, startDate);
   const sortedIds = allIds.filter(id => !dates[id]?.skipped);
@@ -357,7 +359,7 @@ export async function generateVerticalTimeline(seasonName, rounds, startDate) {
 // Month Calendar (enhanced with activities)
 // ═══════════════════════════════════════════
 
-export async function generateMonthCalendar(seasonName, rounds, startDate) {
+export async function generateMonthCalendar(seasonName, rounds, startDate, challenges = {}) {
   const dates = calcDates(rounds, startDate);
   const sortedIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo)
     .filter(id => !dates[id]?.skipped);
@@ -392,7 +394,7 @@ export async function generateMonthCalendar(seasonName, rounds, startDate) {
   for (const id of sortedIds) {
     const round = rounds[id];
     const dateInfo = dates[id];
-    const activities = getDayActivities(round);
+    const activities = getDayActivities(round, challenges);
     for (let day = 0; day < activities.length; day++) {
       const rd = new Date(dateInfo.date);
       rd.setDate(rd.getDate() + day);

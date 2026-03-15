@@ -7581,7 +7581,7 @@ To fix this:
           }
 
           const startDate = new Date(config.estimatedStartDate);
-          const view = buildPlannerView(config.seasonName, seasonRounds, startDate, selectedValue, 0, config.seasonIdeas);
+          const view = buildPlannerView(config.seasonName, seasonRounds, startDate, selectedValue, 0, config.seasonIdeas, playerData[context.guildId]?.challenges);
           return { type: IRT.UPDATE_MESSAGE, data: view };
         }
       })(req, res, client);
@@ -7621,7 +7621,7 @@ To fix this:
           const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId];
           if (!seasonRounds) return { content: '❌ No planner data found' };
           const startDate = new Date(config.estimatedStartDate);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_edit_')) {
@@ -7657,15 +7657,50 @@ To fix this:
           if (!selectedValue || selectedValue === 'summary' || selectedValue === 'divider') {
             return { type: 6 }; // DEFERRED_UPDATE_MESSAGE — silent acknowledge
           }
-          if (selectedValue === 'edit_challenge') {
-            return { type: 6 }; // Challenge editing deferred — future spec
-          }
-
           // Parse roundId and configId from custom_id: planner_round_{roundId}_{configId}
           const afterPrefix = custom_id.replace('planner_round_', '');
           const firstUnderscore = afterPrefix.indexOf('_');
           const roundId = afterPrefix.substring(0, firstUnderscore);
           const configId = afterPrefix.substring(firstUnderscore + 1);
+
+          if (selectedValue === 'edit_challenge') {
+            // Show quick-edit modal for challenge name + prepping host
+            const { loadPlayerData } = await import('./storage.js');
+            const playerData = await loadPlayerData();
+            const config = playerData[context.guildId]?.applicationConfigs?.[configId];
+            const round = playerData[context.guildId]?.seasonRounds?.[config?.seasonId]?.[roundId];
+            const linkedChalId = round?.challengeIDs?.primary;
+            const challenge = linkedChalId ? playerData[context.guildId]?.challenges?.[linkedChalId] : null;
+
+            return { type: 9, data: {
+              custom_id: `planner_challenge_edit:${roundId}:${configId}`,
+              title: `Edit F${round?.fNumber || '?'} Challenge`,
+              components: [
+                {
+                  type: 18,
+                  label: 'Challenge Name',
+                  description: 'Title shown in the season planner and schedule',
+                  component: {
+                    type: 4, custom_id: 'challenge_name', style: 1,
+                    placeholder: 'e.g., "Tycoons of the Nile"',
+                    required: true, max_length: 100,
+                    ...(challenge?.title ? { value: challenge.title } : {})
+                  }
+                },
+                {
+                  type: 18,
+                  label: 'Prepping Host',
+                  description: 'Who is planning / preparing this challenge (enter name or @mention)',
+                  component: {
+                    type: 4, custom_id: 'prepping_host', style: 1,
+                    placeholder: 'Host name',
+                    required: false, max_length: 50,
+                    ...(challenge?.creationHost ? { value: `<@${challenge.creationHost}>` } : {})
+                  }
+                }
+              ]
+            }};
+          }
 
           // Load round data for pre-population
           const { loadPlayerData } = await import('./storage.js');
@@ -7765,7 +7800,8 @@ To fix this:
           const startDate = new Date(config.estimatedStartDate);
           const seasonName = config.seasonName;
 
-          const schedule = await generateVerticalTimeline(seasonName, seasonRounds, startDate);
+          const challenges = playerData[context.guildId]?.challenges || {};
+          const schedule = await generateVerticalTimeline(seasonName, seasonRounds, startDate, challenges);
 
           const channelId = req.body.channel?.id || req.body.channel_id;
           const channel = await context.client.channels.fetch(channelId);
@@ -7774,7 +7810,7 @@ To fix this:
           console.log(`📋 Season Planner: Posted schedule for "${seasonName}"`);
 
           const { buildPlannerView } = await import('./seasonPlanner.js');
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_calendar_')) {
@@ -7798,7 +7834,8 @@ To fix this:
           const startDate = new Date(config.estimatedStartDate);
           const seasonName = config.seasonName;
 
-          const calendar = await generateMonthCalendar(seasonName, seasonRounds, startDate);
+          const challenges = playerData[context.guildId]?.challenges || {};
+          const calendar = await generateMonthCalendar(seasonName, seasonRounds, startDate, challenges);
 
           const channelId = req.body.channel?.id || req.body.channel_id;
           const channel = await context.client.channels.fetch(channelId);
@@ -7807,7 +7844,7 @@ To fix this:
           console.log(`📅 Season Planner: Posted calendar for "${seasonName}"`);
 
           const { buildPlannerView } = await import('./seasonPlanner.js');
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_tribes_')) {
@@ -35749,6 +35786,45 @@ Your server is now ready for Tycoons gameplay!`;
       const { handleCheckboxSubmit } = await import('./poc/checkboxGroupPoc.js');
       return handleCheckboxSubmit(data, res);
 
+    } else if (custom_id.startsWith('planner_challenge_edit:')) {
+      // Season Planner — quick-edit challenge name + host from round select
+      return ButtonHandlerFactory.create({
+        id: 'planner_challenge_edit',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = custom_id.split(':');
+          const roundId = parts[1];
+          const configId = parts.slice(2).join(':');
+          const { extractModalFields, buildPlannerView } = await import('./seasonPlanner.js');
+          const { loadPlayerData, savePlayerData } = await import('./storage.js');
+          const fields = extractModalFields(components);
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[configId];
+          if (!config) return { content: '❌ Season not found' };
+          const round = playerData[context.guildId]?.seasonRounds?.[config.seasonId]?.[roundId];
+          if (!round) return { content: '❌ Round not found' };
+
+          const linkedChalId = round.challengeIDs?.primary;
+          if (linkedChalId && playerData[context.guildId]?.challenges?.[linkedChalId]) {
+            const challenge = playerData[context.guildId].challenges[linkedChalId];
+            challenge.title = fields.challenge_name || challenge.title;
+            // Parse host mention <@userId> or plain text
+            if (fields.prepping_host) {
+              const mentionMatch = fields.prepping_host.match(/<@!?(\d+)>/);
+              challenge.creationHost = mentionMatch ? mentionMatch[1] : fields.prepping_host;
+            }
+            challenge.lastUpdated = Date.now();
+          }
+
+          await savePlayerData(playerData);
+          const seasonRounds = playerData[context.guildId].seasonRounds[config.seasonId];
+          const startDate = new Date(config.estimatedStartDate);
+          const roundNo = round.seasonRoundNo;
+          const page = Math.floor((roundNo - 1) / 10);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges);
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'challenge_modal_create' || custom_id.startsWith('challenge_modal_edit:')) {
       // Challenges — create or edit modal submit
       return ButtonHandlerFactory.create({
@@ -35793,7 +35869,7 @@ Your server is now ready for Tycoons gameplay!`;
 
           const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId];
           const startDate = new Date(config.estimatedStartDate);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges);
         }
       })(req, res, client);
 
@@ -35847,7 +35923,7 @@ Your server is now ready for Tycoons gameplay!`;
           const config = playerData[guildId].applicationConfigs[configId];
           const seasonRounds = playerData[guildId].seasonRounds[seasonId];
           const startDate = new Date(config.estimatedStartDate);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[guildId]?.challenges);
         }
       })(req, res, client);
 
@@ -35888,7 +35964,7 @@ Your server is now ready for Tycoons gameplay!`;
           // Navigate to the page containing the edited round
           const roundNo = seasonRounds[roundId]?.seasonRoundNo || 1;
           const page = Math.floor((roundNo - 1) / 12);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges);
         }
       })(req, res, client);
 
