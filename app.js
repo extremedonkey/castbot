@@ -7539,49 +7539,45 @@ To fix this:
       // Season Planner — season selected from dropdown
       return ButtonHandlerFactory.create({
         id: 'planner_select_season',
-        updateMessage: true,
-        deferred: true,
+        requiresModal: true, // Non-deferred: allows modal for "create new", UPDATE_MESSAGE for existing
         handler: async (context) => {
           const selectedValue = req.body.data.values?.[0];
+
           if (selectedValue === 'planner_create_new') {
-            // Can't show modal from deferred — show a create prompt instead
-            return { components: [{ type: 17, accent_color: 0x9b59b6, components: [
-              { type: 10, content: '## 📝 Create New Season\nClick below to set up your new season.' },
-              { type: 14 },
-              { type: 1, components: [
-                { type: 2, custom_id: 'planner_force_setup_new', label: 'Create Season', style: 1, emoji: { name: '➕' } },
-                { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Back', style: 2 }
-              ]}
-            ]}]};
+            // Show create modal directly
+            const { buildSeasonPlannerModal } = await import('./seasonPlanner.js');
+            return { type: 9, data: buildSeasonPlannerModal() };
           }
 
+          // Existing season — wrap in UPDATE_MESSAGE since requiresModal sends raw
+          const { InteractionResponseType: IRT } = await import('discord-interactions');
           const { loadPlayerData } = await import('./storage.js');
           const { buildPlannerView } = await import('./seasonPlanner.js');
           const playerData = await loadPlayerData();
           const config = playerData[context.guildId]?.applicationConfigs?.[selectedValue];
           if (!config) {
-            return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
+            return { type: IRT.UPDATE_MESSAGE, data: { components: [{ type: 17, accent_color: 0xe74c3c, components: [
               { type: 10, content: '## ❌ Season not found' },
               { type: 14 },
               { type: 1, components: [{ type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Back', style: 2 }] }
-            ]}]};
+            ]}]}};
           }
 
           const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId];
           if (!seasonRounds) {
-            // Existing season without planner data — prompt setup
-            return { components: [{ type: 17, accent_color: 0xf39c12, components: [
+            return { type: IRT.UPDATE_MESSAGE, data: { components: [{ type: 17, accent_color: 0xf39c12, components: [
               { type: 10, content: `## ⚠️ Set Up Season Planner\n**${config.seasonName}** was created without planner data.\nClick below to configure round structure.` },
               { type: 14 },
               { type: 1, components: [
                 { type: 2, custom_id: `planner_force_setup_${selectedValue}`, label: 'Set Up Planner', style: 1, emoji: { name: '📅' } },
                 { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Back', style: 2 }
               ]}
-            ]}]};
+            ]}]}};
           }
 
           const startDate = new Date(config.estimatedStartDate);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, selectedValue, 0);
+          const view = buildPlannerView(config.seasonName, seasonRounds, startDate, selectedValue, 0);
+          return { type: IRT.UPDATE_MESSAGE, data: view };
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_force_setup_')) {

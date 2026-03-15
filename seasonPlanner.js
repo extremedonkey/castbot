@@ -375,7 +375,7 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
   });
 
   const navButtons = [
-    { type: 2, custom_id: 'reeces_season_planner_mockup', label: "← Season Planner", style: 2 },
+    { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Seasons', style: 2 },
     { type: 2, custom_id: `planner_page_${page - 1}_${configId}`, label: '◀ Previous', style: 2, disabled: page === 0 },
     { type: 2, custom_id: `planner_page_${page + 1}_${configId}`, label: 'Next ▶', style: 2, disabled: page >= totalPages - 1 },
   ];
@@ -531,7 +531,7 @@ export async function buildPlannerSelector(guildId) {
       }]},
       { type: 14 },
       { type: 1, components: [
-        { type: 2, custom_id: 'reeces_stuff', label: "← Reece's Stuff", style: 2 }
+        { type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 }
       ]}
     ]
   };
