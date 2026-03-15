@@ -29,10 +29,6 @@ export function buildCheckboxModal() {
       title: 'Radio Group PoC',
       components: [
         {
-          type: 10,
-          content: '### Pick ONE favourite Survivor location\n\nThis is a proof-of-concept for the Radio Group component (Type 21).'
-        },
-        {
           type: 18,
           label: 'Survivor Location',
           description: 'Choose one',
@@ -40,7 +36,35 @@ export function buildCheckboxModal() {
             type: 21,
             custom_id: 'radio_location',
             required: true,
-            options: LOCATIONS.slice(0, 8) // Radio max 10, testing with 8
+            options: LOCATIONS.slice(0, 4)
+          }
+        },
+        {
+          type: 18,
+          label: 'Custom Days (only if Multiple Days selected)',
+          description: 'How many days',
+          component: {
+            type: 4,
+            custom_id: 'custom_days',
+            style: 1,
+            placeholder: '2',
+            required: false,
+            max_length: 1,
+          }
+        },
+        {
+          type: 18,
+          label: 'Exiled Players',
+          description: 'Players in exile',
+          component: {
+            type: 4,
+            custom_id: 'exiled_players',
+            style: 1,
+            placeholder: '0',
+            required: true,
+            max_length: 2,
+            min_length: 1,
+            value: '0'
           }
         }
       ]
