@@ -212,8 +212,8 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null, 
   components.push(
     { type: 14 },
     { type: 1, components: [
-      { type: 2, custom_id: 'library_home', label: 'Challenge Library', style: 2, emoji: { name: '📚' } },
       { type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 },
+      { type: 2, custom_id: 'library_home', label: 'Challenge Library', style: 2, emoji: { name: '📚' } },
     ]}
   );
 
@@ -638,14 +638,14 @@ export function buildLibraryDetail(templateId, userId) {
     });
   }
 
-  // Action buttons
+  // Action buttons — back FIRST per LEAN standard
   const actionButtons = [
+    { type: 2, custom_id: 'library_home', label: '← Library', style: 2 },
     { type: 2, custom_id: `library_import_${templateId}`, label: 'Import', style: 3, emoji: { name: '📥' } },
   ];
   if (isAuthor) {
     actionButtons.push({ type: 2, custom_id: `library_unpublish_${templateId}`, label: 'Unpublish', style: 4, emoji: { name: '🗑️' } });
   }
-  actionButtons.push({ type: 2, custom_id: 'library_home', label: '← Library', style: 2 });
 
   components.push({ type: 1, components: actionButtons });
 

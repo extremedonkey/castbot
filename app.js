@@ -7953,8 +7953,8 @@ To fix this:
               { type: 10, content: '## 🔍 Search Rounds\nUse the button below to search.' },
               { type: 14 },
               { type: 1, components: [
-                { type: 2, custom_id: `challenge_round_search_${challengeId}`, label: 'Enter Search', style: 1, emoji: { name: '🔍' } },
-                { type: 2, custom_id: `challenge_round_${challengeId}`, label: '← Back', style: 2 }
+                { type: 2, custom_id: `challenge_round_${challengeId}`, label: '← Back', style: 2 },
+                { type: 2, custom_id: `challenge_round_search_${challengeId}`, label: 'Enter Search', style: 1, emoji: { name: '🔍' } }
               ]}
             ]}]};
           }
@@ -8063,8 +8063,8 @@ To fix this:
               { type: 10, content: '## 🔍 Search Challenge Library' },
               { type: 14 },
               { type: 1, components: [
-                { type: 2, custom_id: 'library_search_btn', label: 'Enter Search', style: 1, emoji: { name: '🔍' } },
-                { type: 2, custom_id: 'library_home', label: '← Back', style: 2 }
+                { type: 2, custom_id: 'library_home', label: '← Back', style: 2 },
+                { type: 2, custom_id: 'library_search_btn', label: 'Enter Search', style: 1, emoji: { name: '🔍' } }
               ]}
             ]}]};
           }
@@ -8220,8 +8220,8 @@ To fix this:
             { type: 10, content: `## ⚠️ Delete Challenge?\n**${challenge.title}**\n\nThis will unlink it from any rounds. This cannot be undone.` },
             { type: 14 },
             { type: 1, components: [
+              { type: 2, custom_id: 'challenge_screen', label: 'Cancel', style: 2, emoji: { name: '❌' } },
               { type: 2, custom_id: `challenge_delete_confirm_${challengeId}`, label: 'Yes, Delete', style: 4, emoji: { name: '🗑️' } },
-              { type: 2, custom_id: 'challenge_screen', label: '← Cancel', style: 2 },
             ]}
           ]}]};
         }
