@@ -93,7 +93,7 @@ const PROD_PAGES = [
       `### \`\`\`💱 Transferring Currency Between Players\`\`\``,
       `There's no direct transfer button — adjust both players manually:\n\n**Sending player:** \`/menu\` → **🧭 Player Admin** → Select → **🪙 Edit Gil** → Subtract the amount\n**Receiving player:** Same steps → Add the amount`,
       `### \`\`\`⚡ Setting a Player's Stamina\`\`\``,
-      `\`/menu\` → **🧭 Player Admin** → Select player → **✏️ Set Stamina**\n\nYou'll see their current stamina and regen timer. Type a new value to override it.\n\n-# This is useful if something went wrong or you want to give a player bonus moves.`
+      `\`/menu\` → **🧭 Player Admin** → Select player → **⚡ Stamina**\n\nYou'll see their current stamina and regen timer. Type a new value to override it.\n\n-# This is useful if something went wrong or you want to give a player bonus moves.`
     ]
   },
   // Page 2: Stamina Settings
@@ -105,9 +105,7 @@ const PROD_PAGES = [
       `### \`\`\`⚙️ The Settings\`\`\``,
       `• **Starting Stamina** — What new players begin with\n• **Max Stamina** — How many moves a player can store up (before items)\n• **Regen Time** — How long until stamina regenerates\n• **Regen Amount** — How much comes back each cycle. Leave blank for "full reset to max". Set a number to give a specific amount (can exceed max!)`,
       `### \`\`\`♻️ How Regeneration Works\`\`\``,
-      `When a player moves, they spend 1 stamina. Once they're below max, a cooldown starts. After the regen time elapses, they get stamina back.\n\n**Full Reset** (default): All stamina restores to max at once.\n**Custom Amount**: e.g. "5 per cycle" — the player gets +5 each cooldown, even if max is 1. This lets you give players multiple moves per cycle.\n\n-# The regen timer shows everywhere: navigation screen, player admin, and all three log systems.`,
-      `### \`\`\`🏷️ Reading the Regen Timer\`\`\``,
-      `\`♻️MAX\` — fully charged, ready to move\n\`♻️12h 0m\` — hours and minutes until next regen\n\`♻️45m\` — under an hour\n\`♻️30s\` — under a minute`
+      `When a player moves, they spend 1 stamina. Once they're below max, a cooldown starts. After the regen time elapses, they get stamina back.\n\n**Full Reset** (default): All stamina restores to max at once.\n**Custom Amount**: e.g. "5 per cycle" — the player gets +5 each cooldown, even if max is 1. This lets you give players multiple moves per cycle.\n\nThe regen timer shows everywhere stamina appears: \`♻️MAX\` means fully charged, \`♻️2h 15m\` shows time until next regen.`
     ]
   },
   // Page 3: Items & Advanced Stamina
