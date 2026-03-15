@@ -346,6 +346,18 @@ export async function generateMonthCalendar(seasonName, rounds, startDate) {
     }
   }
 
+  // Filter out months with no round activity
+  const activeMonths = months.filter(({ year, month }) => {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    for (let day = 1; day <= daysInMonth; day++) {
+      if (dateLookup[`${year}-${month}-${day}`]) return true;
+    }
+    return false;
+  });
+
+  // Recalculate height with filtered months
+  const actualHeight = TITLE_H + activeMonths.length * monthHeight + LEGEND_H + MARGIN;
+
   // Title
   composites.push({
     input: Buffer.from(`<svg width="${WIDTH}" height="${TITLE_H}" xmlns="http://www.w3.org/2000/svg">
@@ -355,8 +367,8 @@ export async function generateMonthCalendar(seasonName, rounds, startDate) {
     top: 0, left: 0
   });
 
-  for (let mi = 0; mi < months.length; mi++) {
-    const { year, month } = months[mi];
+  for (let mi = 0; mi < activeMonths.length; mi++) {
+    const { year, month } = activeMonths[mi];
     const baseY = TITLE_H + mi * monthHeight;
 
     // Month header
@@ -419,7 +431,7 @@ export async function generateMonthCalendar(seasonName, rounds, startDate) {
   }
 
   // Legend
-  const legendY = HEIGHT - LEGEND_H;
+  const legendY = actualHeight - LEGEND_H;
   const legendItems = [
     { label: 'Marooning', color: ACTIVITY_COLORS.marooning },
     { label: 'Challenge', color: ACTIVITY_COLORS.challenge },
@@ -439,7 +451,7 @@ export async function generateMonthCalendar(seasonName, rounds, startDate) {
   });
 
   const canvas = sharp({
-    create: { width: WIDTH, height: HEIGHT, channels: 4, background: { r: 26, g: 26, b: 46, alpha: 1 } }
+    create: { width: WIDTH, height: actualHeight, channels: 4, background: { r: 26, g: 26, b: 46, alpha: 1 } }
   });
 
   return canvas.composite(composites).png({ quality: 90 }).toBuffer();
