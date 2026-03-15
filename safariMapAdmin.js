@@ -600,44 +600,55 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate, client
 
 /**
  * Set stamina for player
+ * @param {string} guildId
+ * @param {string} userId
+ * @param {number} amount - Current stamina to set
+ * @param {number|null} maxAmount - Max stamina (base, before item boosts). Null = keep existing.
  */
-export async function setPlayerStamina(guildId, userId, amount) {
+export async function setPlayerStamina(guildId, userId, amount, maxAmount = null) {
   // Use the new entity points system that the movement system uses
   const entityId = `player_${userId}`;
-  
+
   // Special test mode: 99 sets stamina to a very high value for unlimited testing
   if (amount === 99) {
     await setEntityPoints(guildId, entityId, 'stamina', 999, 999);
+  } else if (maxAmount !== null) {
+    // Set both current and max (base max — item boosts are added on top by getEntityPoints)
+    // allowOverMax: true so admin can set current above max (like granting bonus stamina)
+    await setEntityPoints(guildId, entityId, 'stamina', amount, maxAmount, true);
   } else {
     // Set current stamina, keeping existing max
     await setEntityPoints(guildId, entityId, 'stamina', amount);
   }
-  
+
   // Also update the old system for backwards compatibility
   const playerData = await loadPlayerData();
   const player = playerData[guildId]?.players?.[userId];
   let staminaResult = { current: amount, maximum: player?.safari?.points?.stamina?.maximum || 1 };
-  
+
   if (player?.safari?.points?.stamina) {
     const stamina = player.safari.points.stamina;
     if (amount === 99) {
       stamina.current = 999;
       stamina.maximum = 999;
     } else {
-      stamina.current = Math.max(0, Math.min(amount, stamina.maximum));
+      if (maxAmount !== null) stamina.maximum = maxAmount;
+      stamina.current = amount;
     }
     stamina.lastRegeneration = new Date().toISOString();
     staminaResult = stamina;
     await savePlayerData(playerData);
   }
-  
-  logger.info('MAP_ADMIN', 'Stamina set for player', { 
-    guildId, 
-    userId, 
+
+  logger.info('MAP_ADMIN', 'Stamina set for player', {
+    guildId,
+    userId,
     amount,
-    newStamina: staminaResult.current 
+    maxAmount,
+    newStamina: staminaResult.current,
+    newMax: staminaResult.maximum
   });
-  
+
   return staminaResult;
 }
 
@@ -736,18 +747,29 @@ export async function createStartingInfoModal(userId, currentStartingLocation = 
 export async function createStaminaModal(userId, guildId) {
   // Look up current stamina from entityPoints (authoritative source)
   let currentStamina = '';
+  let playerMax = '';
   let serverMax = '?';
+  let itemBoost = 0;
   try {
-    const { getEntityPoints } = await import('./pointsManager.js');
+    const { getEntityPoints, calculatePermanentStaminaBoost: calcBoost } = await import('./pointsManager.js');
     const { getStaminaConfig } = await import('./safariManager.js');
     const entityId = `player_${userId}`;
     const stamina = await getEntityPoints(guildId, entityId, 'stamina');
-    if (stamina) currentStamina = String(stamina.current);
+    if (stamina) {
+      currentStamina = String(stamina.current);
+      // stamina.max is effectiveMax (base + items), we need the base
+      itemBoost = await calcBoost(guildId, entityId);
+      playerMax = String(stamina.max - itemBoost);
+    }
     const config = await getStaminaConfig(guildId);
     serverMax = String(config.maxStamina);
   } catch (e) {
     console.error('Stamina modal lookup error:', e.message);
   }
+
+  const maxLabel = itemBoost > 0
+    ? `Max stamina (base only — items add +${itemBoost} on top)`
+    : 'Max stamina';
 
   return {
     custom_id: `map_admin_stamina_modal_${userId}`,
@@ -755,17 +777,30 @@ export async function createStaminaModal(userId, guildId) {
     components: [
       {
         type: 10, // Text Display
-        content: `Sets the player's **current** stamina (the numerator).\nServer max is **${serverMax}**. Values above max are allowed (like consumable boosts).\nUse **99** for unlimited test mode.`
+        content: `**Current** = how much stamina the player has right now.\n**Max** = the denominator (base capacity, before item boosts).\nServer default max is **${serverMax}**. Use **99** for unlimited test mode.`
       },
       {
         type: 18, // Label
-        label: 'Current stamina to set',
+        label: 'Current stamina',
         component: {
           type: 4, // Text Input
           custom_id: 'amount',
           style: 1, // Short
-          placeholder: `Server max: ${serverMax}`,
+          placeholder: `e.g. ${serverMax}`,
           value: currentStamina,
+          required: true,
+          max_length: 3
+        }
+      },
+      {
+        type: 18, // Label
+        label: maxLabel,
+        component: {
+          type: 4, // Text Input
+          custom_id: 'max_stamina',
+          style: 1, // Short
+          placeholder: `Server default: ${serverMax}`,
+          value: playerMax,
           required: true,
           max_length: 3
         }

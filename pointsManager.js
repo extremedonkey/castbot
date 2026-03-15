@@ -12,7 +12,7 @@ import { loadPlayerData } from './storage.js';
  */
 
 // Calculate permanent stamina boost from non-consumable items
-async function calculatePermanentStaminaBoost(guildId, entityId) {
+export async function calculatePermanentStaminaBoost(guildId, entityId) {
     if (!entityId.startsWith('player_')) return 0;
 
     const playerId = entityId.replace('player_', '');

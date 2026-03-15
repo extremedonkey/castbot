@@ -40240,18 +40240,29 @@ Your server is now ready for Tycoons gameplay!`;
       // Handle stamina set submission
       const targetUserId = custom_id.split('_').pop();
       const guildId = req.body.guild_id;
-      // Label-wrapped component: components[0].component.value (not ActionRow .components[0])
-      const rawValue = components[0]?.component?.value ?? components[0]?.components?.[0]?.value;
-      const amount = parseInt(rawValue?.trim());
+      // Label-wrapped components: components[0].component.value for current, components[1] for max
+      const getModalVal = (comp) => comp?.component?.value ?? comp?.components?.[0]?.value;
+      const amount = parseInt(getModalVal(components[0])?.trim());
+      const maxRaw = getModalVal(components[1])?.trim();
+      const maxAmount = maxRaw ? parseInt(maxRaw) : null;
 
-      console.log(`🛡️ Processing stamina set to ${amount} for user ${targetUserId}`);
+      console.log(`🛡️ Processing stamina set: current=${amount}, max=${maxAmount} for user ${targetUserId}`);
 
       // Validate amount immediately
       if (isNaN(amount) || amount < 0 || amount > 999) {
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Invalid amount. Please enter a number between 0 and 999.',
+            content: '❌ Invalid current stamina. Please enter a number between 0 and 999.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      if (maxAmount !== null && (isNaN(maxAmount) || maxAmount < 1 || maxAmount > 999)) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Invalid max stamina. Please enter a number between 1 and 999.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -40270,7 +40281,7 @@ Your server is now ready for Tycoons gameplay!`;
         try {
           const { setPlayerStamina, createMapAdminUI } = await import('./safariMapAdmin.js');
 
-          await setPlayerStamina(guildId, targetUserId, amount);
+          await setPlayerStamina(guildId, targetUserId, amount, maxAmount);
 
           // Create updated UI
           const ui = await createMapAdminUI({
