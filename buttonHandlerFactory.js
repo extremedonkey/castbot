@@ -216,6 +216,15 @@ export const BUTTON_REGISTRY = {
     parent: 'reeces_stuff',
     category: 'experimental'
   },
+  'safari_config_group_*': {
+    label: 'Config Group',
+    description: 'Safari settings field group modal (Currency, Events, Rounds)',
+    emoji: '⚙️',
+    style: 'Secondary',
+    parent: 'safari_customize_terms',
+    category: 'safari',
+    requiresModal: true
+  },
   'prod_guide_*': {
     label: 'Guide',
     description: 'Host-facing production guide (stamina config, logging, admin tools)',

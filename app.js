@@ -12960,41 +12960,27 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
     } else if (custom_id.startsWith('safari_config_group_')) {
       // Handle field group button clicks - Currency, Events, Rounds
-      try {
-        const guildId = req.body.guild_id;
-        const member = req.body.member;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to customize Safari terms.')) return;
-        
-        // Extract group key from custom_id (safari_config_group_currency -> currency)
-        const groupKey = custom_id.replace('safari_config_group_', '');
-        
-        console.log(`⚙️ DEBUG: Opening field group modal for ${groupKey}`);
-        
-        // Get current custom terms
-        const { getCustomTerms } = await import('./safariManager.js');
-        const currentTerms = await getCustomTerms(guildId);
-        
-        // Create field group modal
-        const { createFieldGroupModal } = await import('./safariConfigUI.js');
-        const modal = await createFieldGroupModal(groupKey, currentTerms);
-        
-        return res.send({
-          type: InteractionResponseType.MODAL,
-          data: modal.toJSON()
-        });
-        
-      } catch (error) {
-        console.error('Error in safari_config_group handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error opening customization modal. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      return ButtonHandlerFactory.create({
+        id: 'safari_config_group',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        requiresModal: true,
+        handler: async (context) => {
+          const groupKey = context.customId.replace('safari_config_group_', '');
+          console.log(`⚙️ DEBUG: Opening field group modal for ${groupKey}`);
+
+          const { getCustomTerms } = await import('./safariManager.js');
+          const currentTerms = await getCustomTerms(context.guildId);
+
+          const { createFieldGroupModal } = await import('./safariConfigUI.js');
+          const modal = await createFieldGroupModal(groupKey, currentTerms);
+
+          return {
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'stamina_location_config') {
       // Handle per-server stamina & location configuration button
       return ButtonHandlerFactory.create({

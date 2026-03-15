@@ -316,6 +316,7 @@ async function createCurrentSettingsDisplay(guildId, config) {
     const inventoryName = config.inventoryName || 'Inventory';
     const inventoryEmoji = config.inventoryEmoji || '🧰';
 
+    // --- Currency & Inventory ---
     let display = `**🪙 Currency & Inventory**\n`;
     display += `• Currency Name: ${currencyName}\n`;
     display += `• Currency Emoji: ${currencyEmoji}\n`;
@@ -323,6 +324,30 @@ async function createCurrentSettingsDisplay(guildId, config) {
     display += `• Inventory Emoji: ${inventoryEmoji}\n`;
     display += `• Default Starting Currency: ${config.defaultStartingCurrencyValue ?? 100}\n\n`;
 
+    // --- Stamina Settings (2nd, after Currency) ---
+    const { getStaminaConfig } = await import('./safariManager.js');
+    const staminaConfig = await getStaminaConfig(guildId);
+
+    const regenMinutes = staminaConfig.regenerationMinutes;
+    let regenTimeDisplay = `${regenMinutes} minutes`;
+    if (regenMinutes >= 60) {
+        const hours = Math.floor(regenMinutes / 60);
+        const mins = regenMinutes % 60;
+        regenTimeDisplay = mins > 0
+            ? `${regenMinutes} minutes (${hours}h ${mins}m)`
+            : `${regenMinutes} minutes (${hours} hours)`;
+    }
+
+    const regenAmountDisplay = staminaConfig.regenerationAmount != null
+        ? `${staminaConfig.regenerationAmount} per cycle`
+        : 'Full reset (to max)';
+    display += `**⚡ Stamina Settings**\n`;
+    display += `• Starting Stamina: ${staminaConfig.startingStamina}\n`;
+    display += `• Max Stamina: ${staminaConfig.maxStamina}\n`;
+    display += `• ♻️ Regeneration Time: ${regenTimeDisplay}\n`;
+    display += `• Regeneration Amount: ${regenAmountDisplay}\n\n`;
+
+    // --- Events ---
     if (config.goodEventName || config.badEventName || config.goodEventEmoji || config.badEventEmoji) {
         display += `**☄️ Events**\n`;
         if (config.goodEventName) {
@@ -340,11 +365,12 @@ async function createCurrentSettingsDisplay(guildId, config) {
         display += `\n`;
     }
 
+    // --- Rounds & Location ---
     if (config.round1GoodProbability !== undefined ||
         config.round2GoodProbability !== undefined ||
         config.round3GoodProbability !== undefined) {
         const totalRounds = config.totalRounds || 3;
-        display += `**🎲 Rounds** (${totalRounds} total)\n`;
+        display += `**🎲 Rounds & Location** (${totalRounds} total)\n`;
         if (config.round1GoodProbability !== undefined) {
             const goodPercent = config.round1GoodProbability;
             const badPercent = 100 - goodPercent;
@@ -360,27 +386,14 @@ async function createCurrentSettingsDisplay(guildId, config) {
             const badPercent = 100 - goodPercent;
             display += `• Round 3: Good ${goodPercent}% | Bad ${badPercent}%\n`;
         }
+        display += `• Default Starting Coordinate: ${config.defaultStartingCoordinate || 'A1'}\n`;
         display += `\n`;
     }
 
-    // Add Stamina Settings (per-server with .env fallback)
-    const { getStaminaConfig } = await import('./safariManager.js');
-    const staminaConfig = await getStaminaConfig(guildId);
-
-    const regenAmountDisplay = staminaConfig.regenerationAmount != null
-        ? `${staminaConfig.regenerationAmount} per cycle`
-        : 'Full reset (to max)';
-    display += `**⚡ Stamina Settings**\n`;
-    display += `• Starting Stamina: ${staminaConfig.startingStamina}\n`;
-    display += `• Max Stamina: ${staminaConfig.maxStamina}\n`;
-    display += `• Regeneration Time: ${staminaConfig.regenerationMinutes} minutes\n`;
-    display += `• Regeneration Amount: ${regenAmountDisplay}\n`;
-    display += `• Default Starting Coordinate: ${staminaConfig.defaultStartingCoordinate} *(see Rounds)*\n\n`;
-
-    // Add Player Menu Settings
+    // --- Player Menu ---
     const enableGlobalCommands = config.enableGlobalCommands !== false;
     const inventoryVisibilityMode = config.inventoryVisibilityMode || 'always';
-    const showCustomCastlists = config.showCustomCastlists !== false; // Default true
+    const showCustomCastlists = config.showCustomCastlists !== false;
     const globalStoresVisibilityMode = config.globalStoresVisibilityMode || 'always';
     const visibilityModeLabels = {
         'always': 'Always Show',
@@ -394,7 +407,7 @@ async function createCurrentSettingsDisplay(guildId, config) {
     display += `• Global Stores Button: ${visibilityModeLabels[globalStoresVisibilityMode]}\n`;
     display += `• Custom Castlists: ${showCustomCastlists ? '✅ Show All' : '📋 Default Only'}\n\n`;
 
-    // Add Safari Log Status
+    // --- Safari Log ---
     const { loadSafariContent } = await import('./safariManager.js');
     const safariData = await loadSafariContent();
     const logSettings = safariData[guildId]?.safariLogSettings || { enabled: false };
