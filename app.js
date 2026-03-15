@@ -7889,13 +7889,34 @@ To fix this:
         requiresModal: true,
         handler: async (context) => {
           const selectedValue = req.body.data.values?.[0];
+          const { InteractionResponseType: IRT } = await import('discord-interactions');
+          const { buildChallengeScreen, buildChallengeModal } = await import('./challengeManager.js');
+
           if (selectedValue === 'challenge_create_new') {
-            const { buildChallengeModal } = await import('./challengeManager.js');
-            return buildChallengeModal(); // Already returns { type: 9, data: {...} }
+            return buildChallengeModal();
+          }
+          if (selectedValue === 'challenge_search') {
+            // Show search modal
+            return { type: 9, data: {
+              custom_id: 'challenge_search_modal',
+              title: 'Search Challenges',
+              components: [{
+                type: 18,
+                label: 'Search Term',
+                description: 'Search by title, description, or season name',
+                component: {
+                  type: 4, custom_id: 'search_term', style: 1,
+                  placeholder: 'e.g., "Tycoons" or "Pokevivor"',
+                  required: true, max_length: 50,
+                }
+              }]
+            }};
+          }
+          if (selectedValue === 'challenge_back_to_all') {
+            const view = await buildChallengeScreen(context.guildId);
+            return { type: IRT.UPDATE_MESSAGE, data: view };
           }
           // Show selected challenge
-          const { InteractionResponseType: IRT } = await import('discord-interactions');
-          const { buildChallengeScreen } = await import('./challengeManager.js');
           const view = await buildChallengeScreen(context.guildId, selectedValue);
           return { type: IRT.UPDATE_MESSAGE, data: view };
         }
@@ -35903,6 +35924,19 @@ Your server is now ready for Tycoons gameplay!`;
       // Checkbox Group PoC — See poc/checkboxGroupPoc.js
       const { handleCheckboxSubmit } = await import('./poc/checkboxGroupPoc.js');
       return handleCheckboxSubmit(data, res);
+
+    } else if (custom_id === 'challenge_search_modal') {
+      // Challenges — search modal submit
+      return ButtonHandlerFactory.create({
+        id: 'challenge_search_submit',
+        updateMessage: true,
+        handler: async (context) => {
+          const { extractModalFields } = await import('./seasonPlanner.js');
+          const { buildChallengeScreen } = await import('./challengeManager.js');
+          const fields = extractModalFields(components);
+          return buildChallengeScreen(context.guildId, null, fields.search_term || '');
+        }
+      })(req, res, client);
 
     } else if (custom_id.startsWith('challenge_round_search_modal:')) {
       // Challenges — round search modal submit

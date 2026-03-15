@@ -102,24 +102,49 @@ export async function deleteChallenge(guildId, challengeId) {
 /**
  * Build the challenge management screen.
  */
-export async function buildChallengeScreen(guildId, selectedChallengeId = null) {
+export async function buildChallengeScreen(guildId, selectedChallengeId = null, searchTerm = '') {
   const playerData = await loadPlayerData();
   const challenges = playerData[guildId]?.challenges || {};
-  const entries = Object.entries(challenges);
-
-  // Build select options
-  const options = [
-    { label: 'Create New Challenge', value: 'challenge_create_new', emoji: { name: '➕' }, description: 'Create a new challenge from scratch' },
-  ];
-
-  // Sort by title
-  entries.sort(([, a], [, b]) => (a.title || '').localeCompare(b.title || ''));
+  let entries = Object.entries(challenges);
 
   // Look up season names for descriptions
   const configs = playerData[guildId]?.applicationConfigs || {};
   const seasonNames = {};
   for (const config of Object.values(configs)) {
     if (config.seasonId && config.seasonName) seasonNames[config.seasonId] = config.seasonName;
+  }
+
+  // Filter by search term
+  if (searchTerm) {
+    const term = searchTerm.toLowerCase();
+    entries = entries.filter(([, ch]) => {
+      const matchTitle = (ch.title || '').toLowerCase().includes(term);
+      const matchDesc = (ch.description || '').toLowerCase().includes(term);
+      const matchSeason = ch.seasonId && seasonNames[ch.seasonId]?.toLowerCase().includes(term);
+      return matchTitle || matchDesc || matchSeason;
+    });
+  }
+
+  // Sort by title
+  entries.sort(([, a], [, b]) => (a.title || '').localeCompare(b.title || ''));
+
+  // Build select options
+  const options = [];
+
+  // Search + back options
+  if (searchTerm) {
+    options.push({ label: '🔙 Back to all', value: 'challenge_back_to_all', description: 'Return to full list' });
+  } else {
+    options.push({ label: 'Create New Challenge', value: 'challenge_create_new', emoji: { name: '➕' }, description: 'Create a new challenge from scratch' });
+  }
+
+  // Always show search when >10 challenges or when actively searching
+  if (Object.keys(challenges).length > 10 || searchTerm) {
+    options.push({
+      label: '🔍 Search Challenges', value: 'challenge_search',
+      description: searchTerm ? `Searching: "${searchTerm}"` : 'Search by title, description, or season',
+      emoji: { name: '🔍' }
+    });
   }
 
   for (const [id, challenge] of entries) {
