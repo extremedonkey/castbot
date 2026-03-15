@@ -728,6 +728,16 @@ export function buildRoundModal(action, round, roundId, configId) {
       else if (hasMar && mDays === 1) currentOption = '1';
       else if (hasMar && mDays > 1) currentOption = 'custom';
 
+      // Only set default:true on the selected option — omit default entirely for others
+      const marOptions = [
+        { label: 'No Marooning', value: 'none', description: 'Remove marooning from this round' },
+        { label: 'Same Day as Challenge (0d)', value: '0', description: 'Marooning + challenge happen on the same day' },
+        { label: 'Separate Day (1d)', value: '1', description: 'Marooning gets its own full day' },
+        { label: 'Multiple Days', value: 'custom', description: 'Enter custom days below' },
+      ];
+      const selectedMar = marOptions.find(o => o.value === currentOption);
+      if (selectedMar) selectedMar.default = true;
+
       return {
         custom_id: modalId,
         title: `Manage Marooning — F${f}`,
@@ -740,12 +750,7 @@ export function buildRoundModal(action, round, roundId, configId) {
               type: 21, // Radio Group
               custom_id: 'event_duration',
               required: true,
-              options: [
-                { label: 'No Marooning', value: 'none', description: 'Remove marooning from this round', default: currentOption === 'none' },
-                { label: 'Same Day as Challenge (0d)', value: '0', description: 'Marooning + challenge happen on the same day', default: currentOption === '0' },
-                { label: 'Separate Day (1d)', value: '1', description: 'Marooning gets its own full day', default: currentOption === '1' },
-                { label: 'Multiple Days', value: 'custom', description: 'Enter custom days below', default: currentOption === 'custom' },
-              ]
+              options: marOptions
             }
           },
           {
@@ -839,6 +844,15 @@ export function buildRoundModal(action, round, roundId, configId) {
       if (eDays === 0) currentOption = '0';
       else if (eDays > 1) currentOption = 'custom';
 
+      const manageOptions = [
+        { label: `Remove ${eventType}`, value: 'none', description: 'Remove this event from the round' },
+        { label: 'Same Day as Challenge (0d)', value: '0', description: 'Event + challenge happen on the same day' },
+        { label: 'Separate Day (1d)', value: '1', description: 'Event gets its own day (break day)' },
+        { label: 'Multiple Days', value: 'custom', description: 'Enter custom days below' },
+      ];
+      const selectedManage = manageOptions.find(o => o.value === currentOption);
+      if (selectedManage) selectedManage.default = true;
+
       return {
         custom_id: modalId,
         title: `Manage ${eventType} — F${f}`,
@@ -851,12 +865,7 @@ export function buildRoundModal(action, round, roundId, configId) {
               type: 21, // Radio Group
               custom_id: 'event_duration',
               required: true,
-              options: [
-                { label: `Remove ${eventType}`, value: 'none', description: 'Remove this event from the round' },
-                { label: 'Same Day as Challenge (0d)', value: '0', description: 'Event + challenge happen on the same day', default: currentOption === '0' },
-                { label: 'Separate Day (1d)', value: '1', description: 'Event gets its own day (break day)', default: currentOption === '1' },
-                { label: 'Multiple Days', value: 'custom', description: 'Enter custom days below', default: currentOption === 'custom' },
-              ]
+              options: manageOptions
             }
           },
           {
