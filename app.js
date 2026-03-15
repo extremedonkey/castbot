@@ -901,7 +901,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       components: [
         {
           type: 10, // Text Display
-          content: `> **🚀 Major New Castlist features!** Alumni lists, swaps and more!`
+          content: `> **📅 Season Planner & Challenges** are here!`
         }
       ],
       accessory: {
