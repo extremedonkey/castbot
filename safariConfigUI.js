@@ -254,51 +254,87 @@ async function createCurrentSettingsDisplay(guildId, config) {
     const inventoryName = config.inventoryName || 'Inventory';
     const inventoryEmoji = config.inventoryEmoji || '🧰';
 
-    // --- Stamina ---
+    // --- Currency & Inventory ---
+    let display = `**🪙 Currency & Inventory**\n`;
+    display += `• Currency Name: ${currencyName}\n`;
+    display += `• Currency Emoji: ${currencyEmoji}\n`;
+    display += `• Inventory Name: ${inventoryName}\n`;
+    display += `• Inventory Emoji: ${inventoryEmoji}\n`;
+    display += `• Default Starting Currency: ${config.defaultStartingCurrencyValue ?? 100}\n\n`;
+
+    // --- Stamina Settings ---
     const { getStaminaConfig } = await import('./safariManager.js');
     const staminaConfig = await getStaminaConfig(guildId);
+
     const regenMinutes = staminaConfig.regenerationMinutes;
-    let regenTimeDisplay = `${regenMinutes}min`;
+    let regenTimeDisplay = `${regenMinutes} minutes`;
     if (regenMinutes >= 60) {
         const hours = Math.floor(regenMinutes / 60);
         const mins = regenMinutes % 60;
-        regenTimeDisplay = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+        regenTimeDisplay = mins > 0
+            ? `${regenMinutes} minutes (${hours}h ${mins}m)`
+            : `${regenMinutes} minutes (${hours} hours)`;
     }
+
     const regenAmountDisplay = staminaConfig.regenerationAmount != null
-        ? `+${staminaConfig.regenerationAmount}` : 'full reset';
+        ? `${staminaConfig.regenerationAmount} per cycle`
+        : 'Full reset (to max)';
+    display += `**⚡ Stamina Settings**\n`;
+    display += `• Starting Stamina: ${staminaConfig.startingStamina}\n`;
+    display += `• Max Stamina: ${staminaConfig.maxStamina}\n`;
+    display += `• ♻️ Regeneration Time: ${regenTimeDisplay}\n`;
+    display += `• Regeneration Amount: ${regenAmountDisplay}\n\n`;
 
     // --- Events ---
-    const goodEvent = config.goodEventName || 'Good Event';
-    const badEvent = config.badEventName || 'Bad Event';
-    const goodEmoji = config.goodEventEmoji || '☀️';
-    const badEmoji = config.badEventEmoji || '☄️';
+    if (config.goodEventName || config.badEventName || config.goodEventEmoji || config.badEventEmoji) {
+        display += `**☄️ Events**\n`;
+        if (config.goodEventName) display += `• Good Event Name: ${config.goodEventName}\n`;
+        if (config.goodEventEmoji) display += `• Good Event Emoji: ${config.goodEventEmoji}\n`;
+        if (config.badEventName) display += `• Bad Event Name: ${config.badEventName}\n`;
+        if (config.badEventEmoji) display += `• Bad Event Emoji: ${config.badEventEmoji}\n`;
+        display += `\n`;
+    }
 
-    // --- Rounds ---
-    const totalRounds = config.totalRounds || 3;
-    const r1 = config.round1GoodProbability ?? 75;
-    const r2 = config.round2GoodProbability ?? 50;
-    const r3 = config.round3GoodProbability ?? 25;
+    // --- Rounds & Location ---
+    if (config.round1GoodProbability !== undefined ||
+        config.round2GoodProbability !== undefined ||
+        config.round3GoodProbability !== undefined) {
+        const totalRounds = config.totalRounds || 3;
+        display += `**🎲 Rounds & Location** (${totalRounds} total)\n`;
+        if (config.round1GoodProbability !== undefined) {
+            display += `• Round 1: Good ${config.round1GoodProbability}% | Bad ${100 - config.round1GoodProbability}%\n`;
+        }
+        if (config.round2GoodProbability !== undefined) {
+            display += `• Round 2: Good ${config.round2GoodProbability}% | Bad ${100 - config.round2GoodProbability}%\n`;
+        }
+        if (config.round3GoodProbability !== undefined) {
+            display += `• Round 3: Good ${config.round3GoodProbability}% | Bad ${100 - config.round3GoodProbability}%\n`;
+        }
+        display += `• Default Starting Coordinate: ${config.defaultStartingCoordinate || 'A1'}\n`;
+        display += `\n`;
+    }
 
     // --- Player Menu ---
-    const commands = config.enableGlobalCommands !== false ? '✅' : '❌';
-    const visShort = { 'always': 'Always', 'initialized_only': 'Post-Init', 'standard': 'Post-Round 1', 'never': 'Hidden' };
-    const invMode = visShort[config.inventoryVisibilityMode || 'always'];
-    const storeMode = visShort[config.globalStoresVisibilityMode || 'always'];
-    const castlists = config.showCustomCastlists !== false ? '✅' : '❌';
+    const enableGlobalCommands = config.enableGlobalCommands !== false;
+    const visibilityModeLabels = {
+        'always': 'Always Show',
+        'initialized_only': 'After Initialization Only',
+        'standard': 'After 1st Initialize + 1st Round',
+        'never': 'Never Show'
+    };
+    display += `**🕹️ Player Menu**\n`;
+    display += `• Global Commands Button: ${enableGlobalCommands ? '✅ Enabled' : '❌ Disabled'}\n`;
+    display += `• Inventory Button: ${visibilityModeLabels[config.inventoryVisibilityMode || 'always']}\n`;
+    display += `• Global Stores Button: ${visibilityModeLabels[config.globalStoresVisibilityMode || 'always']}\n`;
+    display += `• Custom Castlists: ${config.showCustomCastlists !== false ? '✅ Show All' : '📋 Default Only'}\n\n`;
 
     // --- Safari Log ---
     const { loadSafariContent } = await import('./safariManager.js');
     const safariData = await loadSafariContent();
-    const logEnabled = safariData[guildId]?.safariLogSettings?.enabled ?? false;
+    const logSettings = safariData[guildId]?.safariLogSettings || { enabled: false };
 
-    // Compact LEAN display — one line per section
-    let display = '';
-    display += `🪙 **${currencyName}** ${currencyEmoji} | **${inventoryName}** ${inventoryEmoji} | Start: ${config.defaultStartingCurrencyValue ?? 100}\n`;
-    display += `⚡ Start: ${staminaConfig.startingStamina} | Max: ${staminaConfig.maxStamina} | ♻️ ${regenTimeDisplay} (${regenAmountDisplay})\n`;
-    display += `☄️ ${goodEmoji} ${goodEvent} / ${badEmoji} ${badEvent}\n`;
-    display += `🎲 ${totalRounds} rounds (${r1}/${r2}/${r3}%) | Start: ${config.defaultStartingCoordinate || 'A1'}\n`;
-    display += `🕹️ Commands ${commands} | Inventory: ${invMode} | Stores: ${storeMode} | Castlists ${castlists}\n`;
-    display += `📊 Logs: ${logEnabled ? '🟢 Enabled' : '🔴 Disabled'}`;
+    display += `**📊 Safari Log**\n`;
+    display += `• Status: ${logSettings.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
 
     return display;
 }
