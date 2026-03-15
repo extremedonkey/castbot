@@ -767,21 +767,18 @@ export async function createStaminaModal(userId, guildId) {
     console.error('Stamina modal lookup error:', e.message);
   }
 
-  const maxLabel = itemBoost > 0
-    ? `Max stamina (base only — items add +${itemBoost} on top)`
-    : 'Max stamina';
+  const maxDescription = itemBoost > 0
+    ? `Base capacity before item boosts. Items currently add +${itemBoost} on top. Server default: ${serverMax}`
+    : `Base capacity (the denominator). Server default: ${serverMax}`;
 
   return {
     custom_id: `map_admin_stamina_modal_${userId}`,
     title: 'Set Player Stamina',
     components: [
       {
-        type: 10, // Text Display
-        content: `**Current** = how much stamina the player has right now.\n**Max** = the denominator (base capacity, before item boosts).\nServer default max is **${serverMax}**. Use **99** for unlimited test mode.`
-      },
-      {
         type: 18, // Label
         label: 'Current stamina',
+        description: `How much stamina the player has right now. Use 99 for unlimited test mode.`,
         component: {
           type: 4, // Text Input
           custom_id: 'amount',
@@ -794,7 +791,8 @@ export async function createStaminaModal(userId, guildId) {
       },
       {
         type: 18, // Label
-        label: maxLabel,
+        label: 'Max stamina',
+        description: maxDescription,
         component: {
           type: 4, // Text Input
           custom_id: 'max_stamina',
