@@ -376,8 +376,8 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
 
   const navButtons = [
     { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Seasons', style: 2 },
-    { type: 2, custom_id: `planner_page_${page - 1}_${configId}`, label: '◀ Previous', style: 2, disabled: page === 0 },
-    { type: 2, custom_id: `planner_page_${page + 1}_${configId}`, label: 'Next ▶', style: 2, disabled: page >= totalPages - 1 },
+    { type: 2, custom_id: `planner_page_${page - 1}_${configId}`, label: '◀', style: 2, disabled: page === 0 },
+    { type: 2, custom_id: `planner_page_${page + 1}_${configId}`, label: '▶', style: 2, disabled: page >= totalPages - 1 },
   ];
 
   const container = {
