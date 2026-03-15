@@ -7586,7 +7586,7 @@ To fix this:
           }
 
           const startDate = new Date(config.estimatedStartDate);
-          const view = buildPlannerView(config.seasonName, seasonRounds, startDate, selectedValue, 0);
+          const view = buildPlannerView(config.seasonName, seasonRounds, startDate, selectedValue, 0, config.seasonIdeas);
           return { type: IRT.UPDATE_MESSAGE, data: view };
         }
       })(req, res, client);
@@ -7626,7 +7626,7 @@ To fix this:
           const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId];
           if (!seasonRounds) return { content: '❌ No planner data found' };
           const startDate = new Date(config.estimatedStartDate);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_edit_')) {
@@ -7691,6 +7691,37 @@ To fix this:
           return { type: 9, data: modalData };
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('planner_ideas_')) {
+      // Season Planner → Ideas: open modal to edit free-form ideas
+      const configId = custom_id.replace('planner_ideas_', '');
+      return ButtonHandlerFactory.create({
+        id: 'planner_ideas',
+        requiresModal: true,
+        handler: async (context) => {
+          const { loadPlayerData } = await import('./storage.js');
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[configId];
+          const currentIdeas = config?.seasonIdeas || '';
+          return {
+            type: 9,
+            data: {
+              custom_id: `planner_ideas_save:${configId}`,
+              title: 'Season Ideas',
+              components: [{
+                type: 18,
+                label: 'Ideas',
+                description: 'Brainstorm themes, twists, challenges — free-form notes',
+                component: {
+                  type: 4, custom_id: 'ideas_text', style: 2,
+                  placeholder: 'Themes, twists, challenge ideas...',
+                  required: false, max_length: 4000,
+                  ...(currentIdeas ? { value: currentIdeas } : {})
+                }
+              }]
+            }
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('planner_apps_')) {
       // Season Planner → Apps: navigate to buildQuestionManagementUI for this season
       const configId = custom_id.replace('planner_apps_', '');
@@ -7748,7 +7779,7 @@ To fix this:
           console.log(`📋 Season Planner: Posted schedule for "${seasonName}"`);
 
           const { buildPlannerView } = await import('./seasonPlanner.js');
-          return buildPlannerView(seasonName, seasonRounds, startDate, configId, 0);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_calendar_')) {
@@ -7781,7 +7812,7 @@ To fix this:
           console.log(`📅 Season Planner: Posted calendar for "${seasonName}"`);
 
           const { buildPlannerView } = await import('./seasonPlanner.js');
-          return buildPlannerView(seasonName, seasonRounds, startDate, configId, 0);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_tribes_')) {
@@ -35686,7 +35717,7 @@ Your server is now ready for Tycoons gameplay!`;
           // Navigate to the page containing the edited round
           const roundNo = seasonRounds[roundId]?.seasonRoundNo || 1;
           const page = Math.floor((roundNo - 1) / 12);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas);
         }
       })(req, res, client);
 

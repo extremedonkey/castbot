@@ -329,17 +329,20 @@ export class HealthMonitor {
       if (restarts.length > 0) {
         const lines = restarts.map((r, i) => {
           const d = new Date(r.timestamp);
-          // Format in GMT+8
           const gmt8 = new Date(d.getTime() + 8 * 3600000);
           const dateStr = gmt8.toISOString().replace('T', ' ').slice(0, 19);
-          const relative = `<t:${Math.floor(r.timestamp / 1000)}:R>`;
-          return `${i + 1}. ${dateStr}  (${relative})`;
+          const unixSec = Math.floor(r.timestamp / 1000);
+          return `<t:${unixSec}:f> — <t:${unixSec}:R>`;
         });
         components.push(
           { type: 14 },
           {
             type: 10,
-            content: `## 🔄 Last ${restarts.length} Restart${restarts.length === 1 ? '' : 's'} (GMT+8)\n${lines.join('\n')}`
+            content: `## 🔄 Last ${restarts.length} Restart${restarts.length === 1 ? '' : 's'}`
+          },
+          {
+            type: 10,
+            content: lines.join('\n')
           }
         );
       }
