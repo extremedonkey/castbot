@@ -755,7 +755,7 @@ export function buildRoundModal(action, round, roundId, configId) {
             component: {
               type: 4, custom_id: 'custom_days', style: 1,
               placeholder: '2',
-              required: false, max_length: 1, min_length: 1,
+              required: false, max_length: 1,
               ...(mDays > 1 ? { value: String(mDays) } : {})
             }
           },
@@ -825,7 +825,7 @@ export function buildRoundModal(action, round, roundId, configId) {
             component: {
               type: 4, custom_id: 'custom_days', style: 1,
               placeholder: '2',
-              required: false, max_length: 1, min_length: 1,
+              required: false, max_length: 1,
             }
           }
         ]
@@ -866,7 +866,7 @@ export function buildRoundModal(action, round, roundId, configId) {
             component: {
               type: 4, custom_id: 'custom_days', style: 1,
               placeholder: '2',
-              required: false, max_length: 1, min_length: 1,
+              required: false, max_length: 1,
               ...(eDays > 1 ? { value: String(eDays) } : {})
             }
           },
