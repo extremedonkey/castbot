@@ -104,9 +104,10 @@ async function createPlayerViewUI(guildId, userId) {
   const currentLocation = playerMapData?.currentLocation || 'Not on map';
   let stamina = { current: 0, maximum: 0 };
   try {
-    const { getEntityPoints } = await import('./pointsManager.js');
+    const { getEntityPoints, getTimeUntilRegeneration } = await import('./pointsManager.js');
     const entityStamina = await getEntityPoints(guildId, `player_${userId}`, 'stamina');
     if (entityStamina) stamina = { current: entityStamina.current, maximum: entityStamina.max };
+    const regenTime = await getTimeUntilRegeneration(guildId, `player_${userId}`, 'stamina');
   } catch {
     stamina = safari.points?.stamina || { current: 0, maximum: 0 };
   }
@@ -149,7 +150,8 @@ async function createPlayerViewUI(guildId, userId) {
     // Show map-specific info if available
     if (activeMap && playerMapData) {
       statusText += `\n📍 **Current Location:** ${currentLocation}\n`;
-      statusText += `⚡ **Stamina:** ${stamina.current}/${stamina.maximum}\n`;
+      const regenDisplay = (regenTime === 'Full' || regenTime === 'Ready!') ? 'MAX' : regenTime;
+      statusText += `⚡ **Stamina:** ${stamina.current}/${stamina.maximum} (♻️ ${regenDisplay})\n`;
       statusText += `🗺️ **Explored Cells:** ${exploredCount}\n`;
 
       if (lastMove) {
