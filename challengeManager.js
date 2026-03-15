@@ -127,7 +127,7 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null) 
   }
 
   const components = [
-    { type: 10, content: '## 🏃 Challenges' },
+    { type: 10, content: '# 🏃 Challenges' },
     { type: 14 },
     { type: 1, components: [{
       type: 3,
@@ -143,9 +143,11 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null) 
     components.push({ type: 14 });
 
     // RichCard preview
-    const previewContent = ch.description || '-# No description';
-    const hostText = ch.creationHost ? `\n-# Host: <@${ch.creationHost}>` : '';
-    components.push({ type: 10, content: `### ${ch.title || 'Untitled'}${hostText}\n${previewContent}` });
+    const hostText = ch.creationHost ? `-# Host: <@${ch.creationHost}>` : '';
+    components.push({ type: 10, content: `# ${ch.title || 'Untitled'}\n${hostText}` });
+    if (ch.description) {
+      components.push({ type: 10, content: ch.description });
+    }
 
     if (ch.image) {
       try {
@@ -201,10 +203,10 @@ export function buildChallengeModal(challengeId = null, existing = null) {
       image: existing.image || '',
     } : {},
     fields: {
-      title: { label: 'Challenge Title', placeholder: 'e.g., "Tycoons of the Nile"', required: true },
-      content: { label: 'Description / Rules', placeholder: 'Challenge rules, instructions, flavor text...', required: false, maxLength: 4000 },
-      color: { label: 'Accent Color (optional)', placeholder: '#e74c3c' },
-      image: { label: 'Image URL (optional)', placeholder: 'https://...' },
+      title: { label: 'Challenge Title', placeholder: 'e.g., "Tycoons of the Nile"', required: true, description: 'The name players will see' },
+      content: { label: 'Challenge Writeup', placeholder: 'Challenge rules, instructions, flavor text...', required: false, maxLength: 4000, description: 'Rules, instructions, and flavor text (supports markdown)' },
+      color: { label: 'Accent Color', placeholder: '#e74c3c', description: 'Hex color code for the card accent bar' },
+      image: { label: 'Image URL', placeholder: 'https://...', description: 'Link to a challenge image (upload to Discord first)' },
     },
   });
 }

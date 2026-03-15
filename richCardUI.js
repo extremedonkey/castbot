@@ -105,6 +105,7 @@ export function buildRichCardModal({
     const overrides = fields[def.id];
     if (overrides) {
       if (overrides.label !== undefined)       def.label       = overrides.label;
+      if (overrides.description !== undefined) def.description = overrides.description;
       if (overrides.placeholder !== undefined) def.placeholder = overrides.placeholder;
       if (overrides.required !== undefined)    def.required    = overrides.required;
       if (overrides.maxLength !== undefined)   def.maxLength   = overrides.maxLength;
@@ -140,7 +141,9 @@ export function buildRichCardModal({
         placeholder: def.placeholder,
       };
       if (val) textInput.value = val;
-      return { type: 18, label: def.label, component: textInput };
+      const labelComp = { type: 18, label: def.label, component: textInput };
+      if (def.description) labelComp.description = def.description;
+      return labelComp;
     }
 
     // Legacy ActionRow + TextInput style (discord.js ModalBuilder compatible)
