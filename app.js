@@ -7680,7 +7680,22 @@ To fix this:
           return { type: 9, data: modalData };
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('planner_schedule_') || custom_id.startsWith('planner_apps_') || custom_id.startsWith('planner_ranking_') || custom_id.startsWith('planner_tribes_')) {
+    } else if (custom_id.startsWith('planner_apps_')) {
+      // Season Planner → Apps: navigate to buildQuestionManagementUI for this season
+      const configId = custom_id.replace('planner_apps_', '');
+      return ButtonHandlerFactory.create({
+        id: 'planner_apps',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { loadPlayerData } = await import('./storage.js');
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[configId];
+          if (!config) return { content: '❌ Season not found' };
+          return buildQuestionManagementUI(config, configId, 0);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('planner_schedule_') || custom_id.startsWith('planner_tribes_')) {
       // Season Planner — toolbar buttons (not yet implemented)
       return ButtonHandlerFactory.create({
         id: 'planner_toolbar_noop',

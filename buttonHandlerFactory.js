@@ -154,15 +154,6 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
-  'planner_ranking_*': {
-    label: 'Ranking',
-    description: 'Cast ranking (not yet implemented)',
-    emoji: '🏆',
-    style: 'Secondary',
-    parent: 'reeces_season_planner_mockup',
-    restrictedUser: '391415444084490240',
-    category: 'experimental'
-  },
   'planner_tribes_*': {
     label: 'Tribes',
     description: 'Tribe management (not yet implemented)',
