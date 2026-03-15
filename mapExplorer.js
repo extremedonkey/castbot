@@ -373,7 +373,7 @@ async function createMapGrid(guild, userId) {
         stores: {},
         items: {},
         safariConfig: {
-          currencyName: "coins",
+          currencyName: "Coins",
           inventoryName: "Inventory",
           currencyEmoji: "🪙"
         }
@@ -1215,7 +1215,7 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
         stores: {},
         items: {},
         safariConfig: {
-          currencyName: "coins",
+          currencyName: "Coins",
           inventoryName: "Inventory",
           currencyEmoji: "🪙"
         }

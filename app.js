@@ -25293,7 +25293,7 @@ Your server is now ready for Tycoons gameplay!`;
                 coordData.currencyDrops.forEach((drop, index) => {
                   const config = safariData[context.guildId]?.safariConfig || {};
                   const currencyEmoji = config.currencyEmoji || '🪙';
-                  const currencyName = config.currencyName || 'coins';
+                  const currencyName = config.currencyName || 'Coins';
                   
                   components.push({
                     type: 9, // Section
@@ -30350,7 +30350,7 @@ Your server is now ready for Tycoons gameplay!`;
             // Get currency config
             const config = safariData[context.guildId]?.safariConfig || {};
             const currencyEmoji = config.currencyEmoji || '🪙';
-            const currencyName = config.currencyName || 'coins';
+            const currencyName = config.currencyName || 'Coins';
             
             console.log(`✅ SUCCESS: map_currency_drop_config - showing config for drop ${dropIndex} at ${coord}`);
             
@@ -30540,7 +30540,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Get config for display names
           const config = safariData[context.guildId]?.safariConfig || {};
-          const currencyName = config.currencyName || 'coins';
+          const currencyName = config.currencyName || 'Coins';
           const currencyEmoji = config.currencyEmoji || '🪙';
           
           return {
@@ -30581,7 +30581,7 @@ Your server is now ready for Tycoons gameplay!`;
           // Show updated configuration
           const config = safariData[context.guildId]?.safariConfig || {};
           const currencyEmoji = config.currencyEmoji || '🪙';
-          const currencyName = config.currencyName || 'coins';
+          const currencyName = config.currencyName || 'Coins';
           const dropConfig = coordData.currencyDrops[dropIndex];
           
           return {
@@ -30711,7 +30711,7 @@ Your server is now ready for Tycoons gameplay!`;
           // Show updated configuration
           const config = safariData[context.guildId]?.safariConfig || {};
           const currencyEmoji = config.currencyEmoji || '🪙';
-          const currencyName = config.currencyName || 'coins';
+          const currencyName = config.currencyName || 'Coins';
           const dropConfig = coordData.currencyDrops[dropIndex];
           
           return {
@@ -32338,7 +32338,7 @@ Your server is now ready for Tycoons gameplay!`;
           const priorityRoles = safariData[guildId]?.priorityRoles || [];
           const customTerms = safariData[guildId]?.safariConfig?.customTerms || {};
           const currencyEmoji = customTerms.currencyEmoji || '🪙';
-          const currencyName = customTerms.currencyName || 'coins';
+          const currencyName = customTerms.currencyName || 'Coins';
 
           // Get all initialized players (those with safari data)
           const initializedPlayers = [];
@@ -41750,7 +41750,7 @@ Your server is now ready for Tycoons gameplay!`;
         let round1Good = null, round2Good = null, round3Good = null;
         let goodEventName = 'Clear Skies', badEventName = 'Meteor Strike';
         let goodEventEmoji = '☀️', badEventEmoji = '☄️';
-        let currencyName = 'coins', currencyEmoji = '🪙';
+        let currencyName = 'Coins', currencyEmoji = '🪙';
         
         try {
           // Parse game settings (probabilities)
@@ -41786,7 +41786,7 @@ Your server is now ready for Tycoons gameplay!`;
           // Parse currency settings
           if (currencySettings && currencySettings.trim() !== '') {
             const currency = parseCommaSeparated(currencySettings, 2, 'Currency Settings');
-            currencyName = currency[0] || 'coins';
+            currencyName = currency[0] || 'Coins';
             currencyEmoji = currency[1] || '🪙';
           }
           

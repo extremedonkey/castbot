@@ -499,7 +499,7 @@ async function ensureGuildSafariData(guildId, safariData) {
             items: {},
             attributeDefinitions: {},  // Custom attribute types for this server
             safariConfig: {
-                currencyName: "coins",
+                currencyName: "Coins",
                 inventoryName: "Inventory",
                 currencyEmoji: "🪙"
             }
@@ -531,7 +531,7 @@ async function ensureGuildSafariData(guildId, safariData) {
             items: {},
             attributeDefinitions: {},  // Custom attribute types for this server
             safariConfig: {
-                currencyName: "coins",
+                currencyName: "Coins",
                 inventoryName: "Inventory",
                 currencyEmoji: "🪙"
             }
@@ -8698,7 +8698,7 @@ async function createPlayerResultCard(player, roundData, customTerms, items, att
     try {
         const { isGoodEvent, eventName, eventEmoji } = roundData;
         const currencyEmoji = customTerms.currencyEmoji || '🪙';
-        const currencyName = customTerms.currencyName || 'coins';
+        const currencyName = customTerms.currencyName || 'Coins';
         
         // Start with player name and emoji
         let content = `## > \`${getPlayerEmoji(player.playerName)} ${player.playerName}\`\n`;
@@ -8777,7 +8777,7 @@ async function createPlayerResultCard(player, roundData, customTerms, items, att
 function formatIncomeBreakdown(player, items, isGoodEvent, eventName, eventEmoji, customTerms) {
     try {
         const currencyEmoji = customTerms.currencyEmoji || '🪙';
-        const currencyName = customTerms.currencyName || 'coins';
+        const currencyName = customTerms.currencyName || 'Coins';
         
         let content = `### \`2. Plus: Income from round\`\n`;
         content += `${eventEmoji} ${eventName}\n\n`;
