@@ -333,13 +333,13 @@ export class HealthMonitor {
           const gmt8 = new Date(d.getTime() + 8 * 3600000);
           const dateStr = gmt8.toISOString().replace('T', ' ').slice(0, 19);
           const relative = `<t:${Math.floor(r.timestamp / 1000)}:R>`;
-          return `${i + 1}. ${dateStr}  (${relative})`;
+          return `> ${i + 1}. ${dateStr}  (${relative})`;
         });
         components.push(
           { type: 14 },
           {
             type: 10,
-            content: `## 🔄 Last ${restarts.length} Restart${restarts.length === 1 ? '' : 's'} (GMT+8)\n\`\`\`\n${lines.join('\n')}\n\`\`\``
+            content: `## 🔄 Last ${restarts.length} Restart${restarts.length === 1 ? '' : 's'} (GMT+8)\n${lines.join('\n')}`
           }
         );
       }
