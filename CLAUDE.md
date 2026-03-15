@@ -406,7 +406,7 @@ Bot not responding?
 1. **Gitignore AND untrack** — add to `.gitignore` then `git rm --cached <file>` (gitignore alone won't untrack an already-committed file — deploys will silently overwrite prod copies)
 2. **Use `atomicSave()`** for writes — never raw `fs.writeFile` on data files (`import { atomicSave } from './atomicSave.js'`)
 3. **Add to backup service** — add entry to `BACKUP_FILES` in `src/monitoring/backupService.js`
-4. **Classify its tier** — see [Backup Strategy](docs/01-RaP/0948_20260315_BackupStrategy_Analysis.md)
+4. **Classify its tier** — see [Backup Strategy](docs/03-features/BackupStrategy.md)
    - **Tier 1** (critical): `atomicSave` with `minSize` + `validate` + Discord backup
    - **Tier 2** (important): Discord backup, regenerable on restart
    - **Tier 3** (ephemeral): just gitignore, no backup needed
