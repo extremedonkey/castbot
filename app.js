@@ -12278,7 +12278,8 @@ Your server is now ready for Tycoons gameplay!`;
           const { loadPlayerData, savePlayerData } = await import('./storage.js');
           const { loadSafariContent } = await import('./safariManager.js');
           const { addBonusPoints, getEntityPoints } = await import('./pointsManager.js');
-          
+          const { getPlayerLocation } = await import('./mapMovement.js');
+
           const playerData = await loadPlayerData();
           const safariData = await loadSafariContent();
           
@@ -12338,12 +12339,15 @@ Your server is now ready for Tycoons gameplay!`;
           // Log item use to safari log channel
           try {
             const { logItemUse } = await import('./safariLogger.js');
-            const location = player.safari?.currentLocation || 'Unknown';
+            const playerLoc = await getPlayerLocation(context.guildId, context.userId);
+            const location = playerLoc?.currentCoordinate || 'Unknown';
+            const username = context.member?.user?.username || player.username || 'Unknown';
+            const displayName = context.member?.nick || context.member?.user?.global_name || player.displayName || username;
             await logItemUse({
               guildId: context.guildId,
               userId: context.userId,
-              username: player.username || 'Unknown',
-              displayName: player.displayName || player.username || 'Unknown',
+              username,
+              displayName,
               location,
               itemName: item.name,
               itemEmoji: item.emoji || '⚡',
@@ -12511,6 +12515,7 @@ Your server is now ready for Tycoons gameplay!`;
           const { loadPlayerData, savePlayerData } = await import('./storage.js');
           const { loadSafariContent, createPlayerInventoryDisplay } = await import('./safariManager.js');
           const { addBonusPoints, getEntityPoints } = await import('./pointsManager.js');
+          const { getPlayerLocation } = await import('./mapMovement.js');
 
           const playerData = await loadPlayerData();
           const safariData = await loadSafariContent();
@@ -12544,12 +12549,15 @@ Your server is now ready for Tycoons gameplay!`;
           // Log item use to safari log channel
           try {
             const { logItemUse } = await import('./safariLogger.js');
-            const location = player.safari?.currentLocation || 'Unknown';
+            const playerLoc = await getPlayerLocation(guildId, userId);
+            const location = playerLoc?.currentCoordinate || 'Unknown';
+            const logUsername = member?.user?.username || player.username || 'Unknown';
+            const logDisplayName = member?.nick || member?.user?.global_name || player.displayName || logUsername;
             await logItemUse({
               guildId,
               userId,
-              username: player.username || 'Unknown',
-              displayName: player.displayName || player.username || 'Unknown',
+              username: logUsername,
+              displayName: logDisplayName,
               location,
               itemName: item.name,
               itemEmoji: item.emoji || '⚡',
@@ -12557,6 +12565,7 @@ Your server is now ready for Tycoons gameplay!`;
               staminaBoost: item.staminaBoost,
               staminaBefore: `${currentStamina.current}/${currentStamina.max}`,
               staminaAfter: `${newStamina.current}/${newStamina.max}`,
+              channelName: client?.channels?.cache?.get(req.body.channel_id)?.name || 'Unknown',
               staminaSnapshot: newStamina.snapshot || null
             });
           } catch (logError) {
