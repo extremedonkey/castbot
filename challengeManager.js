@@ -203,7 +203,7 @@ export function buildChallengeModal(challengeId = null, existing = null) {
     fields: {
       title: { label: 'Challenge Title', placeholder: 'e.g., "Tycoons of the Nile"', required: true },
       content: { label: 'Description / Rules', placeholder: 'Challenge rules, instructions, flavor text...', required: false, maxLength: 4000 },
-      color: { label: 'Accent Color (optional)', placeholder: '#e74c3c or red' },
+      color: { label: 'Accent Color (optional)', placeholder: '#e74c3c' },
       image: { label: 'Image URL (optional)', placeholder: 'https://...' },
     },
   });

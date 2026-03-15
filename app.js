@@ -7862,14 +7862,15 @@ To fix this:
           return buildChallengeModal(challengeId, challenge); // Already returns { type: 9, data: {...} }
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('challenge_post_')) {
-      // Challenges — post challenge card to channel
-      const challengeId = custom_id.replace('challenge_post_', '');
+    } else if (custom_id.startsWith('challenge_post_select_')) {
+      // Challenges — channel selected, post the challenge
+      const challengeId = custom_id.replace('challenge_post_select_', '');
       return ButtonHandlerFactory.create({
-        id: 'challenge_post',
+        id: 'challenge_post_send',
         updateMessage: true,
         deferred: true,
         handler: async (context) => {
+          const selectedChannelId = req.body.data.values?.[0];
           const { loadPlayerData } = await import('./storage.js');
           const { buildChallengePost, buildChallengeScreen } = await import('./challengeManager.js');
           const playerData = await loadPlayerData();
@@ -7877,15 +7878,39 @@ To fix this:
           if (!challenge) return { content: '❌ Challenge not found' };
 
           const post = buildChallengePost(challenge);
-          const channelId = req.body.channel?.id || req.body.channel_id;
-          const { DiscordRequest } = await import('./utils.js');
-          await DiscordRequest(`channels/${channelId}/messages`, {
+          await DiscordRequest(`channels/${selectedChannelId}/messages`, {
             method: 'POST',
             body: { components: [post], flags: (1 << 15) }
           });
 
-          console.log(`📤 Challenge: Posted "${challenge.title}" to channel`);
+          console.log(`📤 Challenge: Posted "${challenge.title}" to <#${selectedChannelId}>`);
           return buildChallengeScreen(context.guildId, challengeId);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('challenge_post_') && !custom_id.startsWith('challenge_post_select_')) {
+      // Challenges — show channel select for posting
+      const challengeId = custom_id.replace('challenge_post_', '');
+      return ButtonHandlerFactory.create({
+        id: 'challenge_post',
+        updateMessage: true,
+        handler: async (context) => {
+          const { loadPlayerData } = await import('./storage.js');
+          const playerData = await loadPlayerData();
+          const challenge = playerData[context.guildId]?.challenges?.[challengeId];
+          if (!challenge) return { content: '❌ Challenge not found' };
+          return { components: [{ type: 17, accent_color: challenge.accentColor || 0x5865F2, components: [
+            { type: 10, content: `## 📤 Post Challenge\n**${challenge.title}**\n\nSelect a channel to post this challenge to:` },
+            { type: 14 },
+            { type: 1, components: [{
+              type: 8, // Channel Select
+              custom_id: `challenge_post_select_${challengeId}`,
+              placeholder: 'Select a channel...',
+            }]},
+            { type: 14 },
+            { type: 1, components: [
+              { type: 2, custom_id: 'challenge_screen', label: '← Cancel', style: 2 }
+            ]}
+          ]}]};
         }
       })(req, res, client);
     } else if (custom_id.startsWith('challenge_delete_') && !custom_id.startsWith('challenge_delete_confirm_')) {
