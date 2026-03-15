@@ -69,16 +69,21 @@ export function generateSeasonRounds(totalPlayers, numSwaps, ftcPlayers) {
 
   // Playable rounds: F{totalPlayers} down to F{ftcPlayers}
   for (let f = totalPlayers; f >= ftcPlayers; f--) {
+    const isMarooning = (roundNo === 1);
+    const isSwap = swapFNumbers.includes(f);
+    const isMerge = (f === mergeFNumber);
     rounds[`r${roundNo}`] = {
       seasonRoundNo: roundNo,
       fNumber: f,
       exiledPlayers: 0,
-      marooningDays: (roundNo === 1) ? 1 : 0,
+      hasMarooning: isMarooning,
+      marooningDays: isMarooning ? 1 : 0,
+      eventDays: (isSwap || isMerge) ? 1 : 0,
       challengeIDs: {},
       tribalCouncilIDs: {},
       ftcRound: (f === ftcPlayers),
-      swapRound: swapFNumbers.includes(f),
-      mergeRound: (f === mergeFNumber),
+      swapRound: isSwap,
+      mergeRound: isMerge,
       juryStart: false
     };
     roundNo++;
@@ -122,8 +127,10 @@ export function getRoundDuration(round) {
     return Math.max(1, duration);                                             // Minimum 1 day
   }
   if (round.fNumber === 1) return 1;                                          // Reunion
-  if (round.marooningDays > 0) return round.marooningDays + 2;                // Marooning + challenge + tribal
-  if (round.swapRound || round.mergeRound) return 3;                          // Event + challenge + tribal
+  // hasMarooning: backwards compat — old data uses marooningDays > 0
+  const hasMarooning = round.hasMarooning ?? (round.marooningDays > 0);
+  if (hasMarooning) return (round.marooningDays ?? 1) + 2;                    // Marooning(0-N) + challenge + tribal
+  if (round.swapRound || round.mergeRound) return (round.eventDays ?? 1) + 2; // Event(0-1) + challenge + tribal
   return 2;                                                                   // Standard: challenge + tribal
 }
 
@@ -146,35 +153,55 @@ export function calculateRoundDates(rounds, startDate) {
 
     const roundDates = { startOffset: currentDay };
 
-    // FTC checked BEFORE reunion — FTC at F1 should get speeches+votes dates
+    const hasMarooning = round.hasMarooning ?? (round.marooningDays > 0);
+    const mDays = round.marooningDays ?? 1;
+    const eDays = round.eventDays ?? 1;
+
+    // FTC checked BEFORE reunion
     if (round.ftcRound) {
-      // FTC: speeches from day 0, votes offset by speechDays
       const speechDays = round.speechDays ?? 1;
       roundDates.speeches = formatDate(roundStart);
       const votesDate = new Date(roundStart);
       votesDate.setDate(votesDate.getDate() + speechDays);
       roundDates.votes = formatDate(votesDate);
     } else if (round.fNumber === 1) {
-      // Reunion: single day
       roundDates.event = formatDate(roundStart);
-    } else if (round.marooningDays > 0) {
-      // Marooning: event day 0, challenge day 1, tribal day 2
-      roundDates.event = formatDate(roundStart);
-      const challengeDate = new Date(roundStart);
-      challengeDate.setDate(challengeDate.getDate() + 1);
-      roundDates.challenge = formatDate(challengeDate);
-      const tribalDate = new Date(roundStart);
-      tribalDate.setDate(tribalDate.getDate() + 2);
-      roundDates.tribal = formatDate(tribalDate);
+    } else if (hasMarooning) {
+      if (mDays === 0) {
+        // Marooning + challenge same day, tribal next day
+        roundDates.event = formatDate(roundStart); // combined
+        roundDates.challenge = formatDate(roundStart); // same date
+        const tribalDate = new Date(roundStart);
+        tribalDate.setDate(tribalDate.getDate() + 1);
+        roundDates.tribal = formatDate(tribalDate);
+      } else {
+        // Marooning day 0, challenge day mDays, tribal day mDays+1
+        roundDates.event = formatDate(roundStart);
+        const challengeDate = new Date(roundStart);
+        challengeDate.setDate(challengeDate.getDate() + mDays);
+        roundDates.challenge = formatDate(challengeDate);
+        const tribalDate = new Date(roundStart);
+        tribalDate.setDate(tribalDate.getDate() + mDays + 1);
+        roundDates.tribal = formatDate(tribalDate);
+      }
     } else if (round.swapRound || round.mergeRound) {
-      // Event round: event day 0, challenge day 1, tribal day 2
-      roundDates.event = formatDate(roundStart);
-      const challengeDate = new Date(roundStart);
-      challengeDate.setDate(challengeDate.getDate() + 1);
-      roundDates.challenge = formatDate(challengeDate);
-      const tribalDate = new Date(roundStart);
-      tribalDate.setDate(tribalDate.getDate() + 2);
-      roundDates.tribal = formatDate(tribalDate);
+      if (eDays === 0) {
+        // Event + challenge same day, tribal next day
+        roundDates.event = formatDate(roundStart);
+        roundDates.challenge = formatDate(roundStart); // same date
+        const tribalDate = new Date(roundStart);
+        tribalDate.setDate(tribalDate.getDate() + 1);
+        roundDates.tribal = formatDate(tribalDate);
+      } else {
+        // Event day 0, challenge day eDays, tribal day eDays+1
+        roundDates.event = formatDate(roundStart);
+        const challengeDate = new Date(roundStart);
+        challengeDate.setDate(challengeDate.getDate() + eDays);
+        roundDates.challenge = formatDate(challengeDate);
+        const tribalDate = new Date(roundStart);
+        tribalDate.setDate(tribalDate.getDate() + eDays + 1);
+        roundDates.tribal = formatDate(tribalDate);
+      }
     } else {
       // Standard: challenge day 0, tribal day 1
       roundDates.challenge = formatDate(roundStart);
@@ -439,7 +466,8 @@ function buildRoundOptions(round, dates) {
   const elims = round.eliminations ?? 1;
   const elimText = elims === 0 ? 'no elim' : elims === 1 ? '1 elim' : `${elims} elims`;
 
-  if (round.marooningDays > 0) {
+  const hasMarooning = round.hasMarooning ?? (round.marooningDays > 0);
+  if (hasMarooning) {
     // Marooning round
     const label = `F${f} ${DOT} ${dates.event} ${DOT} Marooning ${DOT} ${challengeName}`;
     return [
@@ -692,20 +720,31 @@ export function buildRoundModal(action, round, roundId, configId) {
         ]
       };
 
-    case 'marooning':
+    case 'marooning': {
+      const hasMar = round.hasMarooning ?? (round.marooningDays > 0);
+      const mDays = round.marooningDays ?? 1;
+      // Determine which radio option is currently selected
+      let currentMarOption = 'none';
+      if (hasMar && mDays === 0) currentMarOption = '0';
+      else if (hasMar) currentMarOption = '1';
+
       return {
         custom_id: modalId,
-        title: `Manage Marooning & Exile — F${f}`,
+        title: `Manage Marooning — F${f}`,
         components: [
           {
             type: 18,
-            label: 'Marooning Days',
-            description: 'Duration of marooning event (1 for round 1, 0 for others)',
+            label: 'Marooning Configuration',
+            description: 'Whether marooning happens and how many days it takes',
             component: {
-              type: 4, custom_id: 'marooning_days', style: 1,
-              placeholder: '1',
-              required: true, max_length: 1, min_length: 1,
-              value: String(round.marooningDays)
+              type: 21, // Radio Group
+              custom_id: 'marooning_config',
+              required: true,
+              options: [
+                { label: 'No Marooning', value: 'none', description: 'Remove marooning from this round', default: currentMarOption === 'none' },
+                { label: 'Same Day as Challenge (0d)', value: '0', description: 'Marooning + challenge happen on the same day', default: currentMarOption === '0' },
+                { label: 'Separate Day (1d)', value: '1', description: 'Marooning gets its own full day', default: currentMarOption === '1' },
+              ]
             }
           },
           {
@@ -721,6 +760,7 @@ export function buildRoundModal(action, round, roundId, configId) {
           }
         ]
       };
+    }
 
     case 'swap_merge':
       return {
@@ -750,12 +790,27 @@ export function buildRoundModal(action, round, roundId, configId) {
               placeholder: 'Swap 1',
               required: true, max_length: 20,
             }
+          },
+          {
+            type: 18,
+            label: 'Event Timing',
+            description: 'How the event fits into the round schedule',
+            component: {
+              type: 21, // Radio Group
+              custom_id: 'event_timing',
+              required: true,
+              options: [
+                { label: 'Separate Day (break day)', value: '1', description: 'Event gets its own day before challenge', default: true },
+                { label: 'Same Day as Challenge', value: '0', description: 'Event + challenge happen on the same day' },
+              ]
+            }
           }
         ]
       };
 
     case 'manage_event': {
       const eventType = round.swapRound ? 'Swap' : 'Merge';
+      const currentEventDays = round.eventDays ?? 1;
       return {
         custom_id: modalId,
         title: `Manage ${eventType} — F${f}`,
@@ -773,8 +828,22 @@ export function buildRoundModal(action, round, roundId, configId) {
           },
           {
             type: 18,
+            label: 'Event Timing',
+            description: 'How the event fits into the round schedule',
+            component: {
+              type: 21, // Radio Group
+              custom_id: 'event_timing',
+              required: true,
+              options: [
+                { label: 'Separate Day (break day)', value: '1', description: 'Event gets its own day before challenge', default: currentEventDays >= 1 },
+                { label: 'Same Day as Challenge', value: '0', description: 'Event + challenge happen on the same day', default: currentEventDays === 0 },
+              ]
+            }
+          },
+          {
+            type: 18,
             label: `Remove this ${eventType}?`,
-            description: 'Check to remove the event from this round (reduces round to 2 days)',
+            description: 'Check to remove the event from this round',
             component: {
               type: 23, // Checkbox
               custom_id: 'remove_event',
@@ -934,11 +1003,16 @@ export async function processRoundEdit(guildId, action, roundId, configId, field
     }
 
     case 'marooning': {
-      const days = parseInt(fields.marooning_days);
+      const config = fields.marooning_config;
       const exiled = parseInt(fields.exiled_players);
-      if (isNaN(days) || days < 0) return { success: false, error: 'Marooning days must be ≥ 0' };
       if (isNaN(exiled) || exiled < 0) return { success: false, error: 'Exiled players must be ≥ 0' };
-      round.marooningDays = days;
+      if (config === 'none') {
+        round.hasMarooning = false;
+        round.marooningDays = 0;
+      } else {
+        round.hasMarooning = true;
+        round.marooningDays = parseInt(config) || 0;
+      }
       round.exiledPlayers = exiled;
       break;
     }
@@ -951,6 +1025,7 @@ export async function processRoundEdit(guildId, action, roundId, configId, field
       round.swapRound = (eventType === 'swap');
       round.mergeRound = (eventType === 'merge');
       round.eventLabel = fields.event_label || (eventType === 'swap' ? 'Swap' : 'Merge');
+      round.eventDays = parseInt(fields.event_timing) || 0;
       break;
     }
 
@@ -959,9 +1034,11 @@ export async function processRoundEdit(guildId, action, roundId, configId, field
         round.swapRound = false;
         round.mergeRound = false;
         round.eventLabel = '';
+        round.eventDays = 0;
         console.log(`📝 Season Planner: Removed event from ${roundId} (F${round.fNumber})`);
       } else {
         round.eventLabel = fields.event_label || '';
+        round.eventDays = parseInt(fields.event_timing) ?? 1;
       }
       break;
     }

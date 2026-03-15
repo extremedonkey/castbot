@@ -51,7 +51,8 @@ function stripEmoji(str) {
 function getRoundType(round) {
   if (round.ftcRound) return 'ftc';
   if (round.fNumber === 1) return 'reunion';
-  if (round.marooningDays > 0) return 'marooning';
+  const hasMarooning = round.hasMarooning ?? (round.marooningDays > 0);
+  if (hasMarooning) return 'marooning';
   if (round.swapRound) return 'swap';
   if (round.mergeRound) return 'merge';
   return 'standard';
@@ -60,8 +61,9 @@ function getRoundType(round) {
 function getRoundDuration(round) {
   if (round.ftcRound) return Math.max(1, (round.speechDays ?? 1) + (round.votesDays ?? 1));
   if (round.fNumber === 1) return 1;
-  if (round.marooningDays > 0) return round.marooningDays + 2;
-  if (round.swapRound || round.mergeRound) return 3;
+  const hasMarooning = round.hasMarooning ?? (round.marooningDays > 0);
+  if (hasMarooning) return (round.marooningDays ?? 1) + 2;
+  if (round.swapRound || round.mergeRound) return (round.eventDays ?? 1) + 2;
   return 2;
 }
 
@@ -117,6 +119,14 @@ function getDayActivities(round) {
   }
 
   if (type === 'marooning') {
+    const mDays = round.marooningDays ?? 1;
+    if (mDays === 0) {
+      // Marooning + challenge same day
+      return [
+        { activity: 'marooning', label: 'Mar + Chall' },
+        { activity: 'tribal', label: 'Tribal' },
+      ];
+    }
     const days = [{ activity: 'marooning', label: 'Marooning' }];
     days.push({ activity: 'challenge', label: shortChallenge || 'Challenge' });
     days.push({ activity: 'tribal', label: 'Tribal' });
@@ -124,7 +134,15 @@ function getDayActivities(round) {
   }
 
   if (type === 'swap' || type === 'merge') {
+    const eDays = round.eventDays ?? 1;
     const eventLabel = round.eventLabel || (type === 'swap' ? 'Swap' : 'Merge');
+    if (eDays === 0) {
+      // Event + challenge same day
+      return [
+        { activity: type, label: `${eventLabel} + Chall` },
+        { activity: 'tribal', label: 'Tribal' },
+      ];
+    }
     return [
       { activity: type, label: eventLabel },
       { activity: 'challenge', label: shortChallenge || 'Challenge' },
@@ -180,19 +198,39 @@ function getScheduleColumns(round, roundStartDate) {
   }
 
   if (type === 'marooning') {
+    const mDays = round.marooningDays ?? 1;
+    if (mDays === 0) {
+      // Marooning + challenge same day
+      return [
+        { title: 'Marooning + Challenge', date: d0 },
+        { title: `F${f} Tribal`, date: `${d1} · ${elimText}` },
+      ];
+    }
+    const challDate = new Date(roundStartDate); challDate.setDate(challDate.getDate() + mDays);
+    const tribDate = new Date(roundStartDate); tribDate.setDate(tribDate.getDate() + mDays + 1);
     return [
       { title: 'Marooning', date: d0 },
-      { title: shortChallenge, date: d1 },
-      { title: `F${f} Tribal`, date: `${d2} · ${elimText}` },
+      { title: shortChallenge, date: formatDate(challDate) },
+      { title: `F${f} Tribal`, date: `${formatDate(tribDate)} · ${elimText}` },
     ];
   }
 
   if (type === 'swap' || type === 'merge') {
+    const eDays = round.eventDays ?? 1;
     const eventLabel = round.eventLabel || (type === 'swap' ? 'Swap' : 'Merge');
+    if (eDays === 0) {
+      // Event + challenge same day
+      return [
+        { title: `${eventLabel} + Challenge`, date: d0 },
+        { title: `F${f} Tribal`, date: `${d1} · ${elimText}` },
+      ];
+    }
+    const challDate = new Date(roundStartDate); challDate.setDate(challDate.getDate() + eDays);
+    const tribDate = new Date(roundStartDate); tribDate.setDate(tribDate.getDate() + eDays + 1);
     return [
       { title: eventLabel, date: d0 },
-      { title: shortChallenge, date: d1 },
-      { title: `F${f} Tribal`, date: `${d2} · ${elimText}` },
+      { title: shortChallenge, date: formatDate(challDate) },
+      { title: `F${f} Tribal`, date: `${formatDate(tribDate)} · ${elimText}` },
     ];
   }
 

@@ -110,8 +110,9 @@ function validatePlannerFields(fields) {
 function getRoundDuration(round) {
   if (round.ftcRound) return Math.max(1, (round.speechDays ?? 1) + (round.votesDays ?? 1));
   if (round.fNumber === 1) return 1;
-  if (round.marooningDays > 0) return round.marooningDays + 2;
-  if (round.swapRound || round.mergeRound) return 3;
+  const hasMarooning = round.hasMarooning ?? (round.marooningDays > 0);
+  if (hasMarooning) return (round.marooningDays ?? 1) + 2;
+  if (round.swapRound || round.mergeRound) return (round.eventDays ?? 1) + 2;
   return 2;
 }
 
@@ -382,7 +383,19 @@ describe('getRoundDuration — round duration calculation', () => {
   });
 
   it('marooning with 2-day event is 4 days', () => {
-    assert.equal(getRoundDuration({ fNumber: 18, marooningDays: 2, ftcRound: false }), 4);
+    assert.equal(getRoundDuration({ fNumber: 18, marooningDays: 2, ftcRound: false, hasMarooning: true }), 4);
+  });
+
+  it('marooning 0-day (same day as challenge) is 2 days', () => {
+    assert.equal(getRoundDuration({ fNumber: 18, marooningDays: 0, hasMarooning: true, ftcRound: false }), 2);
+  });
+
+  it('swap with 0 eventDays is 2 days', () => {
+    assert.equal(getRoundDuration({ fNumber: 16, swapRound: true, eventDays: 0, marooningDays: 0, ftcRound: false }), 2);
+  });
+
+  it('swap with 1 eventDay is 3 days (default)', () => {
+    assert.equal(getRoundDuration({ fNumber: 16, swapRound: true, eventDays: 1, marooningDays: 0, ftcRound: false }), 3);
   });
 
   it('swap round is 3 days', () => {
