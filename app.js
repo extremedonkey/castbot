@@ -850,22 +850,13 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // safari_rounds_menu moved to adminButtons row (relabeled to "Challenges")
   // prod_safari_menu removed - buttons distributed to Production Menu and Map Explorer
 
-  // Add Tools, Settings, Tycoons, Donate
+  // Add Tools, Tycoons, Donate
   advancedFeaturesButtons.push(
     new ButtonBuilder()
       .setCustomId('castbot_tools')
       .setLabel('Tools')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🪛'),
-    new ButtonBuilder()
-      .setCustomId('castbot_settings')
-      .setLabel('Settings')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⚙️'),
-  );
-
-  // Tycoons + Donate in own row to stay under 5-button limit
-  const bottomRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('safari_rounds_menu')
       .setLabel('Tycoons')
@@ -955,7 +946,6 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       content: `### \`\`\`💎 Advanced Features\`\`\``
     },
     advancedFeaturesRow.toJSON(),
-    bottomRow.toJSON(),
     {
       type: 14 // Separator before credit
     },
