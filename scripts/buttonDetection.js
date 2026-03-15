@@ -80,7 +80,7 @@ const SAFE_TEST_BUTTONS = {
     priority: 3
   },
   'challenges': {
-    custom_id: 'safari_rounds_menu',
+    custom_id: 'challenge_screen',
     label: '🏃 Challenges',
     style: 1, // Primary (blue)
     priority: 2
