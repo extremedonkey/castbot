@@ -754,13 +754,13 @@ export function buildRoundModal(action, round, roundId, configId) {
           },
           {
             type: 18,
-            label: 'Exiled Players',
-            description: 'Players in exile (eliminated but could return via twist)',
+            label: 'Custom Days (only if Multiple Days selected)',
+            description: 'How many days the marooning spans (e.g., 2 for a 2-day marooning)',
             component: {
-              type: 4, custom_id: 'exiled_players', style: 1,
-              placeholder: '0',
-              required: true, max_length: 2, min_length: 1,
-              value: String(round.exiledPlayers)
+              type: 4, custom_id: 'custom_days', style: 1,
+              placeholder: '2',
+              required: false, max_length: 1,
+              ...(mDays > 1 ? { value: String(mDays) } : {})
             }
           }
         ]
@@ -1008,16 +1008,18 @@ export async function processRoundEdit(guildId, action, roundId, configId, field
 
     case 'marooning': {
       const duration = fields.event_duration;
-      const exiled = parseInt(fields.exiled_players);
-      if (isNaN(exiled) || exiled < 0) return { success: false, error: 'Exiled players must be ≥ 0' };
       if (duration === 'none') {
         round.hasMarooning = false;
         round.marooningDays = 0;
+      } else if (duration === 'custom') {
+        const customDays = parseInt(fields.custom_days);
+        if (isNaN(customDays) || customDays < 2) return { success: false, error: 'Custom days must be 2 or more' };
+        round.hasMarooning = true;
+        round.marooningDays = customDays;
       } else {
         round.hasMarooning = true;
         round.marooningDays = parseInt(duration) || 0;
       }
-      round.exiledPlayers = exiled;
       break;
     }
 
