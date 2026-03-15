@@ -62,9 +62,10 @@ function getRoundDuration(round) {
   if (round.ftcRound) return Math.max(1, (round.speechDays ?? 1) + (round.votesDays ?? 1));
   if (round.fNumber === 1) return 1;
   const hasMarooning = round.hasMarooning ?? (round.marooningDays > 0);
-  if (hasMarooning) return (round.marooningDays ?? 1) + 2;
-  if (round.swapRound || round.mergeRound) return (round.eventDays ?? 1) + 2;
-  return 2;
+  const tribalDays = round.tribalDays ?? 1;
+  if (hasMarooning) return (round.marooningDays ?? 1) + 1 + tribalDays;
+  if (round.swapRound || round.mergeRound) return (round.eventDays ?? 1) + 1 + tribalDays;
+  return 1 + tribalDays;
 }
 
 function formatDateShort(date) {

@@ -129,9 +129,10 @@ export function getRoundDuration(round) {
   if (round.fNumber === 1) return 1;                                          // Reunion
   // hasMarooning: backwards compat — old data uses marooningDays > 0
   const hasMarooning = round.hasMarooning ?? (round.marooningDays > 0);
-  if (hasMarooning) return (round.marooningDays ?? 1) + 2;                    // Marooning(0-N) + challenge + tribal
-  if (round.swapRound || round.mergeRound) return (round.eventDays ?? 1) + 2; // Event(0-1) + challenge + tribal
-  return 2;                                                                   // Standard: challenge + tribal
+  const tribalDays = round.tribalDays ?? 1;
+  if (hasMarooning) return (round.marooningDays ?? 1) + 1 + tribalDays;       // Marooning + challenge(1) + tribal
+  if (round.swapRound || round.mergeRound) return (round.eventDays ?? 1) + 1 + tribalDays; // Event + challenge(1) + tribal
+  return 1 + tribalDays;                                                      // challenge(1) + tribal
 }
 
 /**
@@ -156,6 +157,7 @@ export function calculateRoundDates(rounds, startDate) {
     const hasMarooning = round.hasMarooning ?? (round.marooningDays > 0);
     const mDays = round.marooningDays ?? 1;
     const eDays = round.eventDays ?? 1;
+    const tDays = round.tribalDays ?? 1;
 
     // FTC checked BEFORE reunion
     if (round.ftcRound) {
@@ -167,46 +169,29 @@ export function calculateRoundDates(rounds, startDate) {
     } else if (round.fNumber === 1) {
       roundDates.event = formatDate(roundStart);
     } else if (hasMarooning) {
-      if (mDays === 0) {
-        // Marooning + challenge same day, tribal next day
-        roundDates.event = formatDate(roundStart); // combined
-        roundDates.challenge = formatDate(roundStart); // same date
-        const tribalDate = new Date(roundStart);
-        tribalDate.setDate(tribalDate.getDate() + 1);
-        roundDates.tribal = formatDate(tribalDate);
-      } else {
-        // Marooning day 0, challenge day mDays, tribal day mDays+1
-        roundDates.event = formatDate(roundStart);
-        const challengeDate = new Date(roundStart);
-        challengeDate.setDate(challengeDate.getDate() + mDays);
-        roundDates.challenge = formatDate(challengeDate);
-        const tribalDate = new Date(roundStart);
-        tribalDate.setDate(tribalDate.getDate() + mDays + 1);
-        roundDates.tribal = formatDate(tribalDate);
-      }
+      const challOffset = mDays; // 0 = same day, 1+ = after marooning
+      roundDates.event = formatDate(roundStart);
+      const challengeDate = new Date(roundStart);
+      challengeDate.setDate(challengeDate.getDate() + challOffset);
+      roundDates.challenge = formatDate(challengeDate);
+      const tribalDate = new Date(challengeDate);
+      tribalDate.setDate(tribalDate.getDate() + tDays); // 0 = same day as challenge (live), 1 = next day
+      roundDates.tribal = formatDate(tribalDate);
     } else if (round.swapRound || round.mergeRound) {
-      if (eDays === 0) {
-        // Event + challenge same day, tribal next day
-        roundDates.event = formatDate(roundStart);
-        roundDates.challenge = formatDate(roundStart); // same date
-        const tribalDate = new Date(roundStart);
-        tribalDate.setDate(tribalDate.getDate() + 1);
-        roundDates.tribal = formatDate(tribalDate);
-      } else {
-        // Event day 0, challenge day eDays, tribal day eDays+1
-        roundDates.event = formatDate(roundStart);
-        const challengeDate = new Date(roundStart);
-        challengeDate.setDate(challengeDate.getDate() + eDays);
-        roundDates.challenge = formatDate(challengeDate);
-        const tribalDate = new Date(roundStart);
-        tribalDate.setDate(tribalDate.getDate() + eDays + 1);
-        roundDates.tribal = formatDate(tribalDate);
+      const challOffset = eDays; // 0 = same day, 1+ = after event
+      roundDates.event = formatDate(roundStart);
+      const challengeDate = new Date(roundStart);
+      challengeDate.setDate(challengeDate.getDate() + challOffset);
+      roundDates.challenge = formatDate(challengeDate);
+      const tribalDate = new Date(challengeDate);
+      tribalDate.setDate(tribalDate.getDate() + tDays);
+      roundDates.tribal = formatDate(tribalDate);
       }
     } else {
-      // Standard: challenge day 0, tribal day 1
+      // Standard: challenge day 0, tribal offset by tribalDays
       roundDates.challenge = formatDate(roundStart);
       const tribalDate = new Date(roundStart);
-      tribalDate.setDate(tribalDate.getDate() + 1);
+      tribalDate.setDate(tribalDate.getDate() + tDays); // 0 = live tribal (same day), 1 = next day
       roundDates.tribal = formatDate(tribalDate);
     }
 
@@ -690,35 +675,48 @@ export function buildRoundModal(action, round, roundId, configId) {
   const f = round.fNumber;
 
   switch (action) {
-    case 'edit_tribal':
+    case 'edit_tribal': {
+      const tribalDays = round.tribalDays ?? 1;
+      let currentTribalOption = '1';
+      if (tribalDays === 0) currentTribalOption = '0';
+      else if (tribalDays > 1) currentTribalOption = 'custom';
+
+      const tribalOptions = [
+        { label: 'Same Day as Challenge (0d)', value: '0', description: 'Challenge + tribal happen on the same day (live tribal)' },
+        { label: 'Separate Day (1d)', value: '1', description: 'Tribal gets its own day after challenge' },
+        { label: 'Multiple Days', value: 'custom', description: 'Enter custom days below' },
+      ];
+      const selectedTribal = tribalOptions.find(o => o.value === currentTribalOption);
+      if (selectedTribal) selectedTribal.default = true;
+
       return {
         custom_id: modalId,
         title: `Edit F${f} Tribal Council`,
         components: [
           {
             type: 18,
-            label: 'Eliminations',
-            description: 'How many players are eliminated this round (0 = no elimination)',
+            label: 'Tribal Duration',
+            description: 'How the tribal fits into the round schedule',
             component: {
-              type: 4, custom_id: 'eliminations', style: 1,
-              placeholder: '1',
-              required: true, max_length: 1, min_length: 1,
-              value: String(round.eliminations || 1)
+              type: 21, // Radio Group
+              custom_id: 'tribal_duration',
+              options: tribalOptions
             }
           },
           {
             type: 18,
-            label: 'Notes',
-            description: 'Optional notes for this tribal (e.g., "double tribal", "rock draw")',
+            label: 'Eliminations',
+            description: 'How many players eliminated (0 = no elim, 2 = double tribal)',
             component: {
-              type: 4, custom_id: 'notes', style: 2,
-              placeholder: 'Any special notes...',
-              required: false, max_length: 200,
-              ...(round.tribalNotes ? { value: round.tribalNotes } : {})
+              type: 4, custom_id: 'eliminations', style: 1,
+              placeholder: '1',
+              required: true, max_length: 1, min_length: 1,
+              value: String(round.eliminations ?? 1)
             }
           }
         ]
       };
+    }
 
     case 'marooning': {
       const hasMar = round.hasMarooning ?? (round.marooningDays > 0);
@@ -1002,7 +1000,14 @@ export async function processRoundEdit(guildId, action, roundId, configId, field
       const elims = parseInt(fields.eliminations);
       if (isNaN(elims) || elims < 0) return { success: false, error: 'Eliminations must be ≥ 0' };
       round.eliminations = elims;
-      round.tribalNotes = fields.notes || '';
+
+      const duration = fields.tribal_duration;
+      if (duration === 'custom') {
+        const customDays = parseInt(fields.custom_days);
+        round.tribalDays = (!isNaN(customDays) && customDays >= 2) ? customDays : 2;
+      } else {
+        round.tribalDays = parseInt(duration) || 0;
+      }
       break;
     }
 

@@ -111,9 +111,10 @@ function getRoundDuration(round) {
   if (round.ftcRound) return Math.max(1, (round.speechDays ?? 1) + (round.votesDays ?? 1));
   if (round.fNumber === 1) return 1;
   const hasMarooning = round.hasMarooning ?? (round.marooningDays > 0);
-  if (hasMarooning) return (round.marooningDays ?? 1) + 2;
-  if (round.swapRound || round.mergeRound) return (round.eventDays ?? 1) + 2;
-  return 2;
+  const tribalDays = round.tribalDays ?? 1;
+  if (hasMarooning) return (round.marooningDays ?? 1) + 1 + tribalDays;
+  if (round.swapRound || round.mergeRound) return (round.eventDays ?? 1) + 1 + tribalDays;
+  return 1 + tribalDays;
 }
 
 // ─────────────────────────────────────────────
@@ -396,6 +397,14 @@ describe('getRoundDuration — round duration calculation', () => {
 
   it('swap with 1 eventDay is 3 days (default)', () => {
     assert.equal(getRoundDuration({ fNumber: 16, swapRound: true, eventDays: 1, marooningDays: 0, ftcRound: false }), 3);
+  });
+
+  it('live tribal (0-day tribal) reduces standard round to 1 day', () => {
+    assert.equal(getRoundDuration({ fNumber: 15, marooningDays: 0, ftcRound: false, tribalDays: 0 }), 1);
+  });
+
+  it('live tribal on swap round is 2 days', () => {
+    assert.equal(getRoundDuration({ fNumber: 16, swapRound: true, eventDays: 1, marooningDays: 0, ftcRound: false, tribalDays: 0 }), 2);
   });
 
   it('swap round is 3 days', () => {
