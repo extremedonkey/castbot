@@ -577,6 +577,7 @@ export async function setEntityPoints(guildId, entityId, pointType, current, max
     // Store previous values for trigger detection
     const previousCurrent = points.current;
     const previousMax = points.max;
+    const regenTimeBefore = await getTimeUntilRegeneration(guildId, entityId, pointType);
 
     points.current = Math.max(0, current); // Never go below 0
 
@@ -613,7 +614,7 @@ export async function setEntityPoints(guildId, entityId, pointType, current, max
 
     // Build snapshot for logging
     const regenTime = await getTimeUntilRegeneration(guildId, entityId, pointType);
-    points.snapshot = createStaminaSnapshot(previousCurrent, points.current, points.max, regenTime);
+    points.snapshot = createStaminaSnapshot(previousCurrent, points.current, points.max, regenTime, regenTimeBefore);
 
     return points;
 }

@@ -3,15 +3,19 @@ import assert from 'node:assert/strict';
 
 // Replicate pure logic inline to avoid importing heavy modules
 
-function createStaminaSnapshot(before, after, max, regenTime) {
-    return { before, after, max, regenTime };
+function createStaminaSnapshot(before, after, max, regenTime, regenTimeBefore = null) {
+    return { before, after, max, regenTime, regenTimeBefore };
 }
 
 function formatStaminaTag(snapshot) {
     if (!snapshot) return '';
-    const regen = (snapshot.regenTime === 'Full' || snapshot.regenTime === 'Ready!')
-        ? ' ♻️MAX' : ` ♻️${snapshot.regenTime}`;
-    return `(⚡${snapshot.before}/${snapshot.max} → ${snapshot.after}/${snapshot.max}${regen})`;
+    const formatRegen = (t) => (!t || t === 'Full' || t === 'Ready!') ? '♻️MAX' : `♻️${t}`;
+    const regenAfter = formatRegen(snapshot.regenTime);
+    const regenBefore = snapshot.regenTimeBefore ? formatRegen(snapshot.regenTimeBefore) : null;
+    const beforePart = regenBefore && regenBefore !== regenAfter
+        ? `⚡${snapshot.before}/${snapshot.max} ${regenBefore}`
+        : `⚡${snapshot.before}/${snapshot.max}`;
+    return `(${beforePart} → ${snapshot.after}/${snapshot.max} ${regenAfter})`;
 }
 
 // Replicate Phase 1 regen logic inline for testing
@@ -45,7 +49,7 @@ function calculatePhase1Regen(pointData, config, now) {
 describe('createStaminaSnapshot', () => {
     it('creates snapshot with all fields', () => {
         const snap = createStaminaSnapshot(1, 0, 1, '12h 0m');
-        assert.deepEqual(snap, { before: 1, after: 0, max: 1, regenTime: '12h 0m' });
+        assert.deepEqual(snap, { before: 1, after: 0, max: 1, regenTime: '12h 0m', regenTimeBefore: null });
     });
 
     it('handles over-max from consumables', () => {
@@ -61,7 +65,17 @@ describe('formatStaminaTag', () => {
         assert.equal(formatStaminaTag(snap), '(⚡1/1 → 0/1 ♻️12h 0m)');
     });
 
-    it('formats consumable boost (over max, ready)', () => {
+    it('formats consumable boost with before regen different from after', () => {
+        const snap = createStaminaSnapshot(0, 1, 1, 'Full', '6h 12m');
+        assert.equal(formatStaminaTag(snap), '(⚡0/1 ♻️6h 12m → 1/1 ♻️MAX)');
+    });
+
+    it('omits before regen when same as after', () => {
+        const snap = createStaminaSnapshot(1, 1, 2, 'Full', 'Full');
+        assert.equal(formatStaminaTag(snap), '(⚡1/2 → 1/2 ♻️MAX)');
+    });
+
+    it('omits before regen when null', () => {
         const snap = createStaminaSnapshot(0, 2, 1, 'Ready!');
         assert.equal(formatStaminaTag(snap), '(⚡0/1 → 2/1 ♻️MAX)');
     });
@@ -89,6 +103,11 @@ describe('formatStaminaTag', () => {
     it('formats minutes-only regen time', () => {
         const snap = createStaminaSnapshot(1, 0, 1, '45m');
         assert.equal(formatStaminaTag(snap), '(⚡1/1 → 0/1 ♻️45m)');
+    });
+
+    it('shows before regen when movement starts cooldown', () => {
+        const snap = createStaminaSnapshot(1, 0, 1, '12h 0m', 'Full');
+        assert.equal(formatStaminaTag(snap), '(⚡1/1 ♻️MAX → 0/1 ♻️12h 0m)');
     });
 });
 
