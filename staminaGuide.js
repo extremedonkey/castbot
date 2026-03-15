@@ -74,6 +74,8 @@ const PROD_PAGES = [
       `This guide covers everything you need to run a Safari game — from setting up players to managing stamina and tracking activity.`,
       `### \`\`\`🚀 Starting the Game\`\`\``,
       `**For all players at once (recommended):**\n\`/menu\` → **🗺️ Map Explorer** → **🦁 Start Safari** → Select players → Start\n\n**For a single player:**\n\`/menu\` → **🧭 Player Admin** → Select player → **Initialize Player**\n\n-# Make sure you've set starting locations first (see below).`,
+      `### \`\`\`🪙 Setting Starting Currency\`\`\``,
+      `New players start with a default amount of currency. Set this in **Settings → 🪙 Currency & Inventory** → **Default Starting Currency**.`,
       `### \`\`\`🚩 Setting Starting Locations\`\`\``,
       `**Server default:** Set in **Settings → 🎲 Rounds & Location** — all new players spawn here.\n\n**Per-player override:** \`/menu\` → **🧭 Player Admin** → Select player → **🚩 Starting Info** → Type in the coordinate.\n\nWhen the game starts, each player lands at their assigned square (or the server default if none is set).`,
       `### \`\`\`📍 Moving a Player Manually\`\`\``,
@@ -87,11 +89,11 @@ const PROD_PAGES = [
     content: [
       `Use **🧭 Player Admin** (not 🧑‍🤝‍🧑 Players) for all player management tasks.`,
       `### \`\`\`🪙 Giving Currency\`\`\``,
-      `\`/menu\` → **🧭 Player Admin** → Select player → **🪙 Edit Gil**\n\nThis shows their current balance. Type a new amount to set it.\n\n-# We recommend Player Admin over the \`/menu\` → Currency option — Player Admin is more reliable and shows the full picture.`,
+      `\`/menu\` → **🧭 Player Admin** → Select player → **🪙 Edit Currency**\n\nThis shows their current balance. Type a new amount to set it.\n\n-# We recommend Player Admin over the \`/menu\` → Currency option — Player Admin is more reliable and shows the full picture.`,
       `### \`\`\`📦 Giving Items\`\`\``,
       `\`/menu\` → **🧭 Player Admin** → Select player → **📦 Edit Item**\n\n1. Search for the item\n2. Set the quantity to give them\n3. Let them know — they can check via \`/menu\` → Inventory`,
       `### \`\`\`💱 Transferring Currency Between Players\`\`\``,
-      `There's no direct transfer button — adjust both players manually:\n\n**Sending player:** \`/menu\` → **🧭 Player Admin** → Select → **🪙 Edit Gil** → Subtract the amount\n**Receiving player:** Same steps → Add the amount`,
+      `There's no direct transfer button — adjust both players manually:\n\n**Sending player:** \`/menu\` → **🧭 Player Admin** → Select → **🪙 Edit Currency** → Subtract the amount\n**Receiving player:** Same steps → Add the amount`,
       `### \`\`\`⚡ Setting a Player's Stamina\`\`\``,
       `\`/menu\` → **🧭 Player Admin** → Select player → **⚡ Stamina**\n\nYou'll see their current stamina and regen timer. Type a new value to override it.\n\n-# This is useful if something went wrong or you want to give a player bonus moves.`
     ]
@@ -187,21 +189,26 @@ export function buildProdGuidePage(page = 0) {
   const current = PROD_PAGES[page];
 
   const navButtons = [
-    { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2 }
+    { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2 },
+    { type: 2, custom_id: `prod_guide_${page - 1}`, label: '◀', style: 2, disabled: page === 0 },
+    { type: 2, custom_id: `prod_guide_${page + 1}`, label: '▶', style: 2, disabled: page >= PROD_PAGES.length - 1 }
   ];
 
-  // Only show pagination when there are multiple pages
-  if (PROD_PAGES.length > 1) {
-    navButtons.push(
-      { type: 2, custom_id: `prod_guide_${page - 1}`, label: '◀ Previous', style: 2, disabled: page === 0 },
-      { type: 2, custom_id: `prod_guide_${page + 1}`, label: 'Next ▶', style: 2, disabled: page >= PROD_PAGES.length - 1 },
-      { type: 2, custom_id: 'prod_guide_counter', label: `${page + 1} / ${PROD_PAGES.length}`, style: 2, disabled: true }
-    );
-  }
-
   const components = [
-    { type: 10, content: `## ${current.title}` },
-    { type: 10, content: current.subtitle },
+    // Header as Section with page counter accessory button
+    {
+      type: 9, // Section
+      components: [
+        { type: 10, content: `## ${current.title}\n${current.subtitle}` }
+      ],
+      accessory: {
+        type: 2, // Button
+        custom_id: 'prod_guide_counter',
+        label: `${page + 1} / ${PROD_PAGES.length}`,
+        style: 2,
+        disabled: true
+      }
+    },
     { type: 14 },
     ...current.content.map(text => ({ type: 10, content: text })),
     { type: 14 },
