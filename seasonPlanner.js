@@ -738,6 +738,7 @@ export function buildRoundModal(action, round, roundId, configId) {
       const selectedMar = marOptions.find(o => o.value === currentOption);
       if (selectedMar) selectedMar.default = true;
 
+      // TEMP: Radio groups may not work from select interactions — using text input fallback
       return {
         custom_id: modalId,
         title: `Manage Marooning - F${f}`,
@@ -745,23 +746,12 @@ export function buildRoundModal(action, round, roundId, configId) {
           {
             type: 18,
             label: 'Marooning Duration',
-            description: 'How this event fits into the round schedule',
+            description: 'none = remove, 0 = same day as challenge, 1 = separate day, 2+ = multiple days',
             component: {
-              type: 21, // Radio Group
-              custom_id: 'event_duration',
-              required: true,
-              options: marOptions
-            }
-          },
-          {
-            type: 18,
-            label: 'Custom Days (only if Multiple Days selected above)',
-            description: 'How many days the marooning event spans (e.g., 2 for a 2-day marooning)',
-            component: {
-              type: 4, custom_id: 'custom_days', style: 1,
-              placeholder: '2',
-              required: false, max_length: 1,
-              ...(mDays > 1 ? { value: String(mDays) } : {})
+              type: 4, custom_id: 'event_duration', style: 1,
+              placeholder: 'none, 0, 1, or 2+',
+              required: true, max_length: 4,
+              value: currentOption === 'custom' ? String(mDays) : currentOption
             }
           },
           {
@@ -906,7 +896,7 @@ export function buildRoundModal(action, round, roundId, configId) {
             component: {
               type: 4, custom_id: 'ftc_players', style: 1,
               placeholder: '3',
-              required: true, max_length: 1, min_length: 1,
+              required: true, max_length: 2, min_length: 1,
               value: String(f)
             }
           },
