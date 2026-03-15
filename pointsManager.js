@@ -325,7 +325,7 @@ async function calculateRegenerationWithCharges(pointData, config, guildId, enti
         }
 
         let availableCharges = 0;
-        let regeneratedAny = false;
+        let newlyRegenerated = 0;
 
         for (let i = 0; i < newData.charges.length; i++) {
             if (!newData.charges[i]) {
@@ -335,19 +335,29 @@ async function calculateRegenerationWithCharges(pointData, config, guildId, enti
                 // Charge has regenerated
                 newData.charges[i] = null;
                 availableCharges++;
-                regeneratedAny = true;
+                newlyRegenerated++;
                 console.log(`🐎⚡ Charge ${i + 1} regenerated for ${entityId}`);
             }
         }
 
-        // Only INCREASE current when charges regenerate - never decrease (preserves consumable bonuses)
-        // usePoints() handles decreasing current when stamina is used
-        if (availableCharges > newData.current) {
+        // Apply regenAmount per newly regenerated charge (default: +1 per charge)
+        const regenAmount = (config.regeneration.amount === 'max' || !config.regeneration.amount)
+            ? 1 : config.regeneration.amount;
+
+        if (newlyRegenerated > 0) {
+            const beforeCurrent = newData.current;
+            newData.current += newlyRegenerated * regenAmount;
+            newData.max = effectiveMax;
+            newData.lastRegeneration = now;
+            hasChanged = true;
+            console.log(`🐎⚡ Charges regenerated: ${newlyRegenerated} charge(s) x${regenAmount} = +${newlyRegenerated * regenAmount} stamina (${beforeCurrent} → ${newData.current})`);
+        } else if (availableCharges > newData.current) {
+            // Edge case: charges available but current is lower (e.g. data inconsistency)
             newData.current = availableCharges;
             newData.max = effectiveMax;
             newData.lastRegeneration = now;
             hasChanged = true;
-            console.log(`🐎⚡ Charges regenerated: ${newData.current} available`);
+            console.log(`🐎⚡ Charges sync: ${newData.current} available`);
         } else if (newData.max !== effectiveMax) {
             // Still update max if it changed (e.g., player got new permanent item)
             console.log(`⚠️ STAMINA CONFIG MISMATCH (charges): stored max=${newData.max} → ${effectiveMax}, current=${newData.current}`);
