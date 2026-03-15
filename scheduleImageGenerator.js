@@ -80,13 +80,32 @@ function formatDate(date) {
 }
 
 /**
- * Calculate round start dates
+ * Calculate which rounds are skipped (multi-elimination).
+ */
+function getSkippedRounds(rounds) {
+  const skipped = new Set();
+  const sortedIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
+  for (let i = 0; i < sortedIds.length; i++) {
+    const elims = rounds[sortedIds[i]].eliminations ?? 1;
+    if (elims > 1) {
+      for (let skip = 1; skip < elims && (i + skip) < sortedIds.length; skip++) {
+        skipped.add(sortedIds[i + skip]);
+      }
+    }
+  }
+  return skipped;
+}
+
+/**
+ * Calculate round start dates (skips rounds with 0 duration from multi-elims)
  */
 function calcDates(rounds, startDate) {
   const sortedIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
+  const skipped = getSkippedRounds(rounds);
   const result = {};
   let dayOffset = 0;
   for (const id of sortedIds) {
+    if (skipped.has(id)) { result[id] = { date: new Date(startDate), offset: dayOffset, skipped: true }; continue; }
     const round = rounds[id];
     const d = new Date(startDate);
     d.setDate(d.getDate() + dayOffset);
@@ -243,8 +262,9 @@ function getScheduleColumns(round, roundStartDate) {
 }
 
 export async function generateVerticalTimeline(seasonName, rounds, startDate) {
-  const sortedIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
+  const allIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
   const dates = calcDates(rounds, startDate);
+  const sortedIds = allIds.filter(id => !dates[id]?.skipped);
 
   // Layout constants
   const MARGIN = 20;
@@ -339,7 +359,8 @@ export async function generateVerticalTimeline(seasonName, rounds, startDate) {
 
 export async function generateMonthCalendar(seasonName, rounds, startDate) {
   const dates = calcDates(rounds, startDate);
-  const sortedIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
+  const sortedIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo)
+    .filter(id => !dates[id]?.skipped);
 
   const endDate = new Date(startDate);
   endDate.setDate(endDate.getDate() + dates._totalDays);

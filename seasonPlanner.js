@@ -141,13 +141,20 @@ export function getRoundDuration(round) {
  * @param {Date} startDate - Season start date
  * @returns {Object} Map of roundId → { startDay, dates: { event?, challenge?, tribal? } }
  */
-export function calculateRoundDates(rounds, startDate) {
+export function calculateRoundDates(rounds, startDate, skippedMap = null) {
   const roundIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
   const dates = {};
   let currentDay = 0; // offset from startDate
 
   for (const id of roundIds) {
     const round = rounds[id];
+
+    // Skipped rounds get 0 duration and no dates
+    if (skippedMap?.has(id)) {
+      dates[id] = { startOffset: currentDay, skipped: true };
+      continue; // No duration added — next round starts at same day
+    }
+
     const duration = getRoundDuration(round);
     const roundStart = new Date(startDate);
     roundStart.setDate(roundStart.getDate() + currentDay);
@@ -347,10 +354,43 @@ export function validatePlannerFields(fields) {
 }
 
 // ─────────────────────────────────────────────
+// Skipped Round Detection
+// ─────────────────────────────────────────────
+
+/**
+ * Calculate which rounds are skipped due to multi-eliminations.
+ * If round X has N eliminations, the next N-1 rounds are skipped.
+ * @param {Object} rounds - seasonRounds object
+ * @returns {Map<string, { skippedBy: number, elimCount: number }>} roundId → skip info
+ */
+export function getSkippedRounds(rounds) {
+  const skipped = new Map();
+  const sortedIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
+
+  for (let i = 0; i < sortedIds.length; i++) {
+    const id = sortedIds[i];
+    const round = rounds[id];
+    const elims = round.eliminations ?? 1;
+    if (elims > 1) {
+      // Skip the next (elims - 1) rounds
+      for (let skip = 1; skip < elims && (i + skip) < sortedIds.length; skip++) {
+        const skippedId = sortedIds[i + skip];
+        skipped.set(skippedId, {
+          skippedBy: round.fNumber,
+          elimCount: elims
+        });
+      }
+    }
+  }
+
+  return skipped;
+}
+
+// ─────────────────────────────────────────────
 // Season Planner View — Dynamic round display
 // ─────────────────────────────────────────────
 
-const SELECTS_PER_PAGE = 11;
+const SELECTS_PER_PAGE = 10;
 
 /**
  * Build the Season Planner view for a real season.
@@ -366,13 +406,17 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
   const totalPages = Math.ceil(roundIds.length / SELECTS_PER_PAGE);
   if (page < 0 || page >= totalPages) page = 0;
 
-  const dates = calculateRoundDates(rounds, startDate);
+  const skippedMap = getSkippedRounds(rounds);
+  const dates = calculateRoundDates(rounds, startDate, skippedMap);
   const pageRoundIds = roundIds.slice(page * SELECTS_PER_PAGE, (page + 1) * SELECTS_PER_PAGE);
 
   const selectRows = pageRoundIds.map(id => {
     const round = rounds[id];
     const roundDates = dates[id];
-    const options = buildRoundOptions(round, roundDates);
+    const skipInfo = skippedMap.get(id);
+    const options = skipInfo
+      ? [{ label: `F${round.fNumber} ${DOT} Skipped (F${skipInfo.skippedBy} eliminates ${skipInfo.elimCount})`, value: 'summary', default: true, emoji: { name: '⏭️' } }]
+      : buildRoundOptions(round, roundDates);
 
     return {
       type: 1,
@@ -462,6 +506,7 @@ function buildRoundOptions(round, dates) {
       { label: '───────────────────', value: 'divider', description: ' ' },
       { label: 'Add Swap / Merge', value: 'swap_merge', emoji: { name: '🔀' } },
       { label: 'Manage Final Tribal Council', value: 'ftc', emoji: { name: '⚖️' } },
+      { label: 'Swap Events With Another Round', value: 'swap_round', emoji: { name: '↔️' } },
     ];
   }
 
@@ -478,6 +523,7 @@ function buildRoundOptions(round, dates) {
       { label: '───────────────────', value: 'divider', description: ' ' },
       { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' } },
       { label: 'Manage Final Tribal Council', value: 'ftc', emoji: { name: '⚖️' } },
+      { label: 'Swap Events With Another Round', value: 'swap_round', emoji: { name: '↔️' } },
     ];
   }
 
@@ -491,6 +537,7 @@ function buildRoundOptions(round, dates) {
     { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' } },
     { label: 'Add Swap / Merge', value: 'swap_merge', emoji: { name: '🔀' } },
     { label: 'Manage Final Tribal Council', value: 'ftc', emoji: { name: '⚖️' } },
+    { label: 'Swap Events With Another Round', value: 'swap_round', emoji: { name: '↔️' } },
   ];
 }
 
@@ -967,6 +1014,24 @@ export function buildRoundModal(action, round, roundId, configId) {
         ]
       };
 
+    case 'swap_round':
+      return {
+        custom_id: modalId,
+        title: `Swap F${f} Events`,
+        components: [
+          {
+            type: 18,
+            label: 'Swap with F-number',
+            description: `Enter the F-number to swap all events with (e.g., ${f > 5 ? f - 3 : f + 3})`,
+            component: {
+              type: 4, custom_id: 'target_f', style: 1,
+              placeholder: String(f > 5 ? f - 3 : f + 3),
+              required: true, max_length: 2, min_length: 1,
+            }
+          }
+        ]
+      };
+
     default:
       return null;
   }
@@ -1109,6 +1174,34 @@ export async function processRoundEdit(guildId, action, roundId, configId, field
       if (isNaN(days) || days < 0) return { success: false, error: 'Duration must be ≥ 0' };
       round.votesDays = days;
       round.votesNotes = fields.notes || '';
+      break;
+    }
+
+    case 'swap_round': {
+      const targetF = parseInt(fields.target_f);
+      if (isNaN(targetF) || targetF < 1) return { success: false, error: 'Enter a valid F-number' };
+      if (targetF === round.fNumber) return { success: false, error: 'Cannot swap a round with itself' };
+
+      // Find the target round by F-number
+      const targetEntry = Object.entries(seasonRounds).find(([_, r]) => r.fNumber === targetF);
+      if (!targetEntry) return { success: false, error: `No round found for F${targetF}` };
+      const targetRound = targetEntry[1];
+
+      // Swap all event data — keep fNumber and seasonRoundNo fixed
+      const swapFields = [
+        'hasMarooning', 'marooningDays', 'eventDays', 'tribalDays',
+        'swapRound', 'mergeRound', 'eventLabel', 'ftcRound',
+        'eliminations', 'exiledPlayers', 'challengeIDs', 'tribalCouncilIDs',
+        'challengeName', 'host', 'juryStart',
+        'tribalNotes', 'ftcNotes', 'speechDays', 'votesDays', 'speechNotes', 'votesNotes'
+      ];
+      for (const field of swapFields) {
+        const temp = round[field];
+        round[field] = targetRound[field];
+        targetRound[field] = temp;
+      }
+
+      console.log(`↔️ Season Planner: Swapped F${round.fNumber} ↔ F${targetF} events`);
       break;
     }
 
