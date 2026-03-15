@@ -7582,7 +7582,8 @@ To fix this:
 
           const startDate = new Date(config.estimatedStartDate);
           const view = buildPlannerView(config.seasonName, seasonRounds, startDate, selectedValue, 0, config.seasonIdeas, playerData[context.guildId]?.challenges);
-          return { type: IRT.UPDATE_MESSAGE, data: view };
+          // Send as NEW non-ephemeral message so hosts can share the planner view
+          return { type: IRT.CHANNEL_MESSAGE_WITH_SOURCE, data: { ...view, flags: (1 << 15) } };
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_force_setup_')) {

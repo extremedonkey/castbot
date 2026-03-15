@@ -448,7 +448,7 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
         { type: 2, custom_id: `planner_tribes_${configId}`, label: 'Tribes', style: 2, emoji: { name: '🔥' } },
       ]},
       { type: 14 },
-      { type: 10, content: `### 💡 Season Concepts / Ideas\n${ideas || 'Free-form section to brainstorm season themes, twists and challenges before assigning to rounds.'}` },
+      { type: 10, content: `### 💡 Season Concepts / Ideas\n${ideas || '*Click the 💡 Ideas button above to use this free-form section to brainstorm season themes, twists and challenges before assigning to rounds.*'}` },
       { type: 14 },
       ...selectRows,
       { type: 1, components: [
