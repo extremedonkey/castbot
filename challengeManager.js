@@ -144,7 +144,8 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null) 
 
     // RichCard preview
     const hostText = ch.creationHost ? `-# Host: <@${ch.creationHost}>` : '';
-    components.push({ type: 10, content: `# ${ch.title || 'Untitled'}\n${hostText}` });
+    const titleText = (ch.title || 'Untitled').startsWith('#') ? ch.title : `# ${ch.title}`;
+    components.push({ type: 10, content: `${titleText}\n${hostText}` });
     if (ch.description) {
       components.push({ type: 10, content: ch.description });
     }
