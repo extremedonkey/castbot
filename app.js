@@ -33159,15 +33159,16 @@ Your server is now ready for Tycoons gameplay!`;
       // Show stamina grant modal
       try {
         const targetUserId = custom_id.split('_').pop();
-        
+        const guildId = req.body.guild_id;
+
         const { createStaminaModal } = await import('./safariMapAdmin.js');
-        const modal = await createStaminaModal(targetUserId);
-        
+        const modal = await createStaminaModal(targetUserId, guildId);
+
         return res.send({
           type: InteractionResponseType.MODAL,
-          data: modal.toJSON()
+          data: modal
         });
-        
+
       } catch (error) {
         console.error('Error showing stamina modal:', error);
         return res.send({
@@ -40239,16 +40240,18 @@ Your server is now ready for Tycoons gameplay!`;
       // Handle stamina set submission
       const targetUserId = custom_id.split('_').pop();
       const guildId = req.body.guild_id;
-      const amount = parseInt(components[0].components[0].value?.trim());
+      // Label-wrapped component: components[0].component.value (not ActionRow .components[0])
+      const rawValue = components[0]?.component?.value ?? components[0]?.components?.[0]?.value;
+      const amount = parseInt(rawValue?.trim());
 
       console.log(`🛡️ Processing stamina set to ${amount} for user ${targetUserId}`);
 
       // Validate amount immediately
-      if (isNaN(amount) || amount < 0 || (amount > 10 && amount !== 99)) {
+      if (isNaN(amount) || amount < 0 || amount > 999) {
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Invalid amount. Please enter a number between 0 and 10 (or 99 for test mode).',
+            content: '❌ Invalid amount. Please enter a number between 0 and 999.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

@@ -730,27 +730,48 @@ export async function createStartingInfoModal(userId, currentStartingLocation = 
 
 /**
  * Create stamina grant modal
+ * @param {string} userId - Target player's user ID
+ * @param {string} guildId - Guild ID (for looking up current stamina and config)
  */
-export async function createStaminaModal(userId) {
-  const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
-  
-  const modal = new ModalBuilder()
-    .setCustomId(`map_admin_stamina_modal_${userId}`)
-    .setTitle('Set Player Stamina');
-  
-  const staminaInput = new TextInputBuilder()
-    .setCustomId('amount')
-    .setLabel('Stamina Amount (0-10, or 99 for test mode)')
-    .setStyle(TextInputStyle.Short)
-    .setPlaceholder('5')
-    .setRequired(true)
-    .setMaxLength(2);
-  
-  modal.addComponents(
-    new ActionRowBuilder().addComponents(staminaInput)
-  );
-  
-  return modal;
+export async function createStaminaModal(userId, guildId) {
+  // Look up current stamina from entityPoints (authoritative source)
+  let currentStamina = '';
+  let serverMax = '?';
+  try {
+    const { getEntityPoints } = await import('./pointsManager.js');
+    const { getStaminaConfig } = await import('./safariManager.js');
+    const entityId = `player_${userId}`;
+    const stamina = await getEntityPoints(guildId, entityId, 'stamina');
+    if (stamina) currentStamina = String(stamina.current);
+    const config = await getStaminaConfig(guildId);
+    serverMax = String(config.maxStamina);
+  } catch (e) {
+    console.error('Stamina modal lookup error:', e.message);
+  }
+
+  return {
+    custom_id: `map_admin_stamina_modal_${userId}`,
+    title: 'Set Player Stamina',
+    components: [
+      {
+        type: 10, // Text Display
+        content: `Sets the player's **current** stamina (the numerator).\nServer max is **${serverMax}**. Values above max are allowed (like consumable boosts).\nUse **99** for unlimited test mode.`
+      },
+      {
+        type: 18, // Label
+        label: 'Current stamina to set',
+        component: {
+          type: 4, // Text Input
+          custom_id: 'amount',
+          style: 1, // Short
+          placeholder: `Server max: ${serverMax}`,
+          value: currentStamina,
+          required: true,
+          max_length: 3
+        }
+      }
+    ]
+  };
 }
 
 /**

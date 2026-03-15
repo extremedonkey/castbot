@@ -351,6 +351,12 @@ async function calculateRegenerationWithCharges(pointData, config, guildId, enti
         }
     } else {
         // Phase 1: Simple full reset with permanent boost
+
+        // Diagnostic: log when stored max doesn't match server config
+        if (newData.max !== effectiveMax) {
+            console.log(`⚠️ STAMINA CONFIG MISMATCH: stored max=${newData.max}, server config effectiveMax=${effectiveMax} (config.defaultMax=${config.defaultMax}, permanentBoost=${config.permanentBoost || 0}), current=${newData.current}`);
+        }
+
         if (config.regeneration.type === 'full_reset') {
             const timeSinceUse = now - newData.lastUse;
 
