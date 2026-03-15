@@ -100,9 +100,16 @@ async function createPlayerViewUI(guildId, userId) {
   const activeMap = activeMapId ? safariData[guildId]?.maps?.[activeMapId] : null;
   const playerMapData = activeMapId ? mapProgress[activeMapId] : null;
 
-  // Get current location and stamina
+  // Get current location and stamina (use getEntityPoints for authoritative values)
   const currentLocation = playerMapData?.currentLocation || 'Not on map';
-  const stamina = safari.points?.stamina || { current: 0, maximum: 0 };
+  let stamina = { current: 0, maximum: 0 };
+  try {
+    const { getEntityPoints } = await import('./pointsManager.js');
+    const entityStamina = await getEntityPoints(guildId, `player_${userId}`, 'stamina');
+    if (entityStamina) stamina = { current: entityStamina.current, maximum: entityStamina.max };
+  } catch {
+    stamina = safari.points?.stamina || { current: 0, maximum: 0 };
+  }
   const exploredCount = playerMapData?.exploredCoordinates?.length || 0;
   const lastMove = playerMapData?.movementHistory?.slice(-1)[0];
 

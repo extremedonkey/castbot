@@ -346,8 +346,14 @@ async function calculateRegenerationWithCharges(pointData, config, guildId, enti
             console.log(`🐎⚡ Charges regenerated: ${newData.current} available`);
         } else if (newData.max !== effectiveMax) {
             // Still update max if it changed (e.g., player got new permanent item)
+            console.log(`⚠️ STAMINA CONFIG MISMATCH (charges): stored max=${newData.max} → ${effectiveMax}, current=${newData.current}`);
             newData.max = effectiveMax;
             hasChanged = true;
+        }
+
+        // Diagnostic: warn if current exceeds effective max (e.g., config changed mid-round)
+        if (newData.current > effectiveMax) {
+            console.log(`⚠️ STAMINA OVER-MAX: current=${newData.current} > effectiveMax=${effectiveMax} for ${entityId} — will display as ${newData.current}/${effectiveMax}`);
         }
     } else {
         // Phase 1: Simple full reset with permanent boost
