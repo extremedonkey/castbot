@@ -81,6 +81,8 @@ describe('Phrase Matching', () => {
 
 **Trade-off:** Tests can drift from actual code. When modifying a function that has extracted test copies, update both places.
 
+**Gotcha:** Never `import` modules that have global state (singletons, promise chains, write mutexes). The `node:test` runner shares state across test files — a global mutex from one import will leak into other test files and cause `Unable to deserialize cloned data` errors. Always replicate the logic inline instead.
+
 ## Test Structure
 
 ```javascript

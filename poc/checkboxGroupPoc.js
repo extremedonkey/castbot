@@ -40,7 +40,7 @@ export function buildCheckboxModal() {
             type: 21,
             custom_id: 'radio_location',
             required: true,
-            options: LOCATIONS.slice(0, 5) // Radio max 10, use 5 for test
+            options: LOCATIONS.slice(0, 8) // Radio max 10, testing with 8
           }
         }
       ]
