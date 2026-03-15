@@ -236,7 +236,7 @@ export async function getEntityPoints(guildId, entityId, pointType) {
             regeneration: {
                 type: "full_reset",
                 interval: staminaConfig.regenerationMinutes * 60000, // Convert minutes to milliseconds
-                amount: "max"
+                amount: staminaConfig.regenerationAmount ?? "max"
             },
             visibility: "hidden",
             permanentBoost: permanentBoost  // Add permanent boost to config
@@ -360,7 +360,7 @@ async function calculateRegenerationWithCharges(pointData, config, guildId, enti
             console.log(`⚠️ STAMINA OVER-MAX: current=${newData.current} > effectiveMax=${effectiveMax} for ${entityId} — will display as ${newData.current}/${effectiveMax}`);
         }
     } else {
-        // Phase 1: Simple full reset with permanent boost
+        // Phase 1: Amount-aware regeneration with continuous ticking
 
         // Diagnostic: log when stored max doesn't match server config
         if (newData.max !== effectiveMax) {
@@ -368,16 +368,35 @@ async function calculateRegenerationWithCharges(pointData, config, guildId, enti
         }
 
         if (config.regeneration.type === 'full_reset') {
-            const timeSinceUse = now - newData.lastUse;
+            const regenAmount = (config.regeneration.amount === 'max' || !config.regeneration.amount)
+                ? effectiveMax
+                : config.regeneration.amount;
 
-            if (timeSinceUse >= config.regeneration.interval && newData.current < effectiveMax) {
-                newData.current = effectiveMax;
+            // Use lastRegeneration for continuous ticking, fall back to lastUse for migration
+            const regenTimestamp = newData.lastRegeneration || newData.lastUse;
+            const timeSinceRegen = now - regenTimestamp;
+            const periods = Math.floor(timeSinceRegen / config.regeneration.interval);
+
+            if (periods > 0 && newData.current < effectiveMax) {
+                const beforeCurrent = newData.current;
+
+                // Apply regen period by period, stopping when current >= max
+                // Each period adds the FULL regen amount (never capped/partial)
+                let appliedPeriods = 0;
+                for (let p = 0; p < periods && newData.current < effectiveMax; p++) {
+                    newData.current += regenAmount;
+                    appliedPeriods++;
+                }
+
                 newData.max = effectiveMax;
-                newData.lastRegeneration = now;
+                // Preserve fractional period for accuracy
+                newData.lastRegeneration = regenTimestamp + (appliedPeriods * config.regeneration.interval);
                 hasChanged = true;
 
+                console.log(`⚡ Stamina regenerated for ${entityId}: ${beforeCurrent}/${effectiveMax} → ${newData.current}/${effectiveMax} (+${regenAmount} x${appliedPeriods} periods)`);
+
                 if (config.permanentBoost > 0) {
-                    console.log(`🐎⚡ Stamina regenerated with +${config.permanentBoost} permanent boost`);
+                    console.log(`🐎⚡ Includes +${config.permanentBoost} permanent boost to max`);
                 }
             }
         }
@@ -526,7 +545,11 @@ export async function getTimeUntilRegeneration(guildId, entityId, pointType) {
     if (hours > 0) {
         return `${hours}h ${minutes}m`;
     }
-    return `${minutes}m`;
+    if (minutes > 0) {
+        return `${minutes}m`;
+    }
+    const seconds = Math.floor(remaining / 1000);
+    return `${seconds}s`;
 }
 
 // Admin function to set points directly

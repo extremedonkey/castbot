@@ -9126,12 +9126,15 @@ export async function getStaminaConfig(guildId) {
             ? safariConfig.staminaRegenerationMinutes
             : parseInt(process.env.STAMINA_REGEN_MINUTES || '3'),
 
+        // null = "max" (legacy full reset behavior), number = specific amount per cooldown
+        regenerationAmount: safariConfig.staminaRegenerationAmount ?? null,
+
         defaultStartingCoordinate: customTerms.defaultStartingCoordinate || 'A1'
     };
 
     // Debug logging to show config source (helps diagnose issues)
     const source = safariConfig.startingStamina !== undefined ? 'safariConfig' : '.env';
-    console.log(`⚡ Stamina config for guild ${guildId}: source=${source}, starting=${config.startingStamina}, max=${config.maxStamina}, regen=${config.regenerationMinutes}min, coordinate=${config.defaultStartingCoordinate}`);
+    console.log(`⚡ Stamina config for guild ${guildId}: source=${source}, starting=${config.startingStamina}, max=${config.maxStamina}, regen=${config.regenerationMinutes}min, regenAmount=${config.regenerationAmount ?? 'max'}, coordinate=${config.defaultStartingCoordinate}`);
 
     return config;
 }

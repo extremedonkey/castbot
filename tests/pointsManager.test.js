@@ -14,6 +14,34 @@ function formatStaminaTag(snapshot) {
     return `(⚡${snapshot.before}/${snapshot.max} → ${snapshot.after}/${snapshot.max}${regen})`;
 }
 
+// Replicate Phase 1 regen logic inline for testing
+function calculatePhase1Regen(pointData, config, now) {
+    let hasChanged = false;
+    let newData = { ...pointData };
+    const effectiveMax = config.defaultMax + (config.permanentBoost || 0);
+
+    const regenAmount = (config.regeneration.amount === 'max' || !config.regeneration.amount)
+        ? effectiveMax
+        : config.regeneration.amount;
+
+    const regenTimestamp = newData.lastRegeneration || newData.lastUse;
+    const timeSinceRegen = now - regenTimestamp;
+    const periods = Math.floor(timeSinceRegen / config.regeneration.interval);
+
+    if (periods > 0 && newData.current < effectiveMax) {
+        let appliedPeriods = 0;
+        for (let p = 0; p < periods && newData.current < effectiveMax; p++) {
+            newData.current += regenAmount;
+            appliedPeriods++;
+        }
+        newData.max = effectiveMax;
+        newData.lastRegeneration = regenTimestamp + (appliedPeriods * config.regeneration.interval);
+        hasChanged = true;
+    }
+
+    return { data: newData, hasChanged };
+}
+
 describe('createStaminaSnapshot', () => {
     it('creates snapshot with all fields', () => {
         const snap = createStaminaSnapshot(1, 0, 1, '12h 0m');

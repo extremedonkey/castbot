@@ -13059,7 +13059,7 @@ Your server is now ready for Tycoons gameplay!`;
               {
                 type: 18, // Label
                 label: 'Regeneration Time (minutes)',
-                description: 'Time to regenerate 1 stamina (1-1440)',
+                description: 'Time between each stamina regeneration (1-1440)',
                 component: {
                   type: 4, // Text Input
                   custom_id: 'regen_minutes',
@@ -13069,6 +13069,23 @@ Your server is now ready for Tycoons gameplay!`;
                   placeholder: currentConfig.regenerationMinutes.toString(),
                   value: currentConfig.regenerationMinutes.toString(),
                   required: true
+                }
+              },
+
+              // Label 4: Regeneration Amount
+              {
+                type: 18, // Label
+                label: 'Regeneration Amount',
+                description: 'How much stamina regenerates each cooldown. Leave blank = full reset to max. Can exceed max stamina.',
+                component: {
+                  type: 4, // Text Input
+                  custom_id: 'regen_amount',
+                  style: 1, // Short
+                  min_length: 0,
+                  max_length: 2,
+                  placeholder: 'Blank = full reset',
+                  value: currentConfig.regenerationAmount?.toString() || '',
+                  required: false
                 }
               }
             ]
@@ -41999,11 +42016,14 @@ Your server is now ready for Tycoons gameplay!`;
         const startingStaminaValue = components[1]?.component?.value;
         const maxStaminaValue = components[2]?.component?.value;
         const regenMinutesValue = components[3]?.component?.value;
+        const regenAmountValue = components[4]?.component?.value?.trim();
 
         // Parse values
         const startingStamina = parseInt(startingStaminaValue);
         const maxStamina = parseInt(maxStaminaValue);
         const regenMinutes = parseInt(regenMinutesValue);
+        // Empty or 0 = null (full reset to max), otherwise specific amount
+        const regenAmount = (!regenAmountValue || regenAmountValue === '0') ? null : parseInt(regenAmountValue);
 
         // Validation Chain
         const errors = [];
@@ -42025,6 +42045,11 @@ Your server is now ready for Tycoons gameplay!`;
           errors.push(`Regen Time must be 1-1440 minutes (got "${regenMinutesValue}")`);
         }
 
+        // 4. Regen Amount (null = max, or 1-99)
+        if (regenAmount !== null && (isNaN(regenAmount) || regenAmount < 1 || regenAmount > 99)) {
+          errors.push(`Regen Amount must be 1-99 or blank for full reset (got "${regenAmountValue}")`);
+        }
+
         // If errors, show ephemeral error message
         if (errors.length > 0) {
           console.log(`❌ Validation errors in stamina & location config: ${errors.join('; ')}`);
@@ -42037,7 +42062,7 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
 
-        console.log(`⚡ DEBUG: Updating stamina config for guild ${guildId} - Starting: ${startingStamina}, Max: ${maxStamina}, Regen: ${regenMinutes}min`);
+        console.log(`⚡ DEBUG: Updating stamina config for guild ${guildId} - Starting: ${startingStamina}, Max: ${maxStamina}, Regen: ${regenMinutes}min, RegenAmount: ${regenAmount ?? 'max'}`);
 
         // Save to safariConfig (per-server configuration)
         const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
@@ -42049,6 +42074,13 @@ Your server is now ready for Tycoons gameplay!`;
         safariData[guildId].safariConfig.startingStamina = startingStamina;
         safariData[guildId].safariConfig.maxStamina = maxStamina;
         safariData[guildId].safariConfig.staminaRegenerationMinutes = regenMinutes;
+
+        // null = full reset to max (legacy), number = specific amount
+        if (regenAmount !== null) {
+          safariData[guildId].safariConfig.staminaRegenerationAmount = regenAmount;
+        } else {
+          delete safariData[guildId].safariConfig.staminaRegenerationAmount;
+        }
 
         await saveSafariContent(safariData);
 
