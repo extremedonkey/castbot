@@ -186,7 +186,6 @@ export function calculateRoundDates(rounds, startDate) {
       const tribalDate = new Date(challengeDate);
       tribalDate.setDate(tribalDate.getDate() + tDays);
       roundDates.tribal = formatDate(tribalDate);
-      }
     } else {
       // Standard: challenge day 0, tribal offset by tribalDays
       roundDates.challenge = formatDate(roundStart);
