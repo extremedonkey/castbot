@@ -738,7 +738,6 @@ export function buildRoundModal(action, round, roundId, configId) {
       const selectedMar = marOptions.find(o => o.value === currentOption);
       if (selectedMar) selectedMar.default = true;
 
-      // TEMP: Radio groups may not work from select interactions — using text input fallback
       return {
         custom_id: modalId,
         title: `Manage Marooning - F${f}`,
@@ -746,12 +745,11 @@ export function buildRoundModal(action, round, roundId, configId) {
           {
             type: 18,
             label: 'Marooning Duration',
-            description: 'none = remove, 0 = same day as challenge, 1 = separate day, 2+ = multiple days',
+            description: 'How this event fits into the round schedule',
             component: {
-              type: 4, custom_id: 'event_duration', style: 1,
-              placeholder: 'none, 0, 1, or 2+',
-              required: true, max_length: 4,
-              value: currentOption === 'custom' ? String(mDays) : currentOption
+              type: 21, // Radio Group
+              custom_id: 'event_duration',
+              options: marOptions
             }
           },
           {
@@ -805,22 +803,10 @@ export function buildRoundModal(action, round, roundId, configId) {
             component: {
               type: 21, // Radio Group
               custom_id: 'event_duration',
-              required: true,
               options: [
                 { label: 'Same Day as Challenge (0d)', value: '0', description: 'Event + challenge happen on the same day' },
                 { label: 'Separate Day (1d)', value: '1', description: 'Event gets its own day (break day)', default: true },
-                { label: 'Multiple Days', value: 'custom', description: 'Enter custom days below' },
               ]
-            }
-          },
-          {
-            type: 18,
-            label: 'Custom Days (only if Multiple Days selected above)',
-            description: 'How many days the event spans (e.g., 2 for a 2-day swap)',
-            component: {
-              type: 4, custom_id: 'custom_days', style: 1,
-              placeholder: '2',
-              required: false, max_length: 1,
             }
           }
         ]
@@ -854,19 +840,7 @@ export function buildRoundModal(action, round, roundId, configId) {
             component: {
               type: 21, // Radio Group
               custom_id: 'event_duration',
-              required: true,
               options: manageOptions
-            }
-          },
-          {
-            type: 18,
-            label: 'Custom Days (only if Multiple Days selected above)',
-            description: 'How many days the event spans (e.g., 2 for a 2-day event)',
-            component: {
-              type: 4, custom_id: 'custom_days', style: 1,
-              placeholder: '2',
-              required: false, max_length: 1,
-              ...(eDays > 1 ? { value: String(eDays) } : {})
             }
           },
           {
@@ -1039,11 +1013,6 @@ export async function processRoundEdit(guildId, action, roundId, configId, field
       if (duration === 'none') {
         round.hasMarooning = false;
         round.marooningDays = 0;
-      } else if (duration === 'custom') {
-        const customDays = parseInt(fields.custom_days);
-        if (isNaN(customDays) || customDays < 2) return { success: false, error: 'Custom days must be ≥ 2' };
-        round.hasMarooning = true;
-        round.marooningDays = customDays;
       } else {
         round.hasMarooning = true;
         round.marooningDays = parseInt(duration) || 0;
@@ -1060,15 +1029,7 @@ export async function processRoundEdit(guildId, action, roundId, configId, field
       round.swapRound = (eventType === 'swap');
       round.mergeRound = (eventType === 'merge');
       round.eventLabel = fields.event_label || (eventType === 'swap' ? 'Swap' : 'Merge');
-
-      const duration = fields.event_duration;
-      if (duration === 'custom') {
-        const customDays = parseInt(fields.custom_days);
-        if (isNaN(customDays) || customDays < 2) return { success: false, error: 'Custom days must be ≥ 2' };
-        round.eventDays = customDays;
-      } else {
-        round.eventDays = parseInt(duration) || 0;
-      }
+      round.eventDays = parseInt(fields.event_duration) || 0;
       break;
     }
 
@@ -1082,13 +1043,7 @@ export async function processRoundEdit(guildId, action, roundId, configId, field
         console.log(`📝 Season Planner: Removed event from ${roundId} (F${round.fNumber})`);
       } else {
         round.eventLabel = fields.event_label || '';
-        if (duration === 'custom') {
-          const customDays = parseInt(fields.custom_days);
-          if (isNaN(customDays) || customDays < 2) return { success: false, error: 'Custom days must be ≥ 2' };
-          round.eventDays = customDays;
-        } else {
-          round.eventDays = parseInt(duration) || 0;
-        }
+        round.eventDays = parseInt(duration) || 0;
       }
       break;
     }
