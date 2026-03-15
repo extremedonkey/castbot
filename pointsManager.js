@@ -458,6 +458,7 @@ export async function usePoints(guildId, entityId, pointType, amount) {
 
     // Capture before state for snapshot
     const beforeCurrent = points.current;
+    const regenTimeBefore = await getTimeUntilRegeneration(guildId, entityId, pointType);
 
     const now = Date.now();
 
@@ -485,7 +486,7 @@ export async function usePoints(guildId, entityId, pointType, amount) {
 
     // Build snapshot for logging
     const regenTime = await getTimeUntilRegeneration(guildId, entityId, pointType);
-    const snapshot = createStaminaSnapshot(beforeCurrent, points.current, points.max, regenTime);
+    const snapshot = createStaminaSnapshot(beforeCurrent, points.current, points.max, regenTime, regenTimeBefore);
 
     return { success: true, points, snapshot };
 }
@@ -769,6 +770,7 @@ export async function addBonusPoints(guildId, entityId, pointType, amount) {
 
     // Capture before state for snapshot
     const beforeCurrent = points.current;
+    const regenTimeBefore = await getTimeUntilRegeneration(guildId, entityId, pointType);
 
     // Add bonus points (can exceed max) - does NOT reset regen timer
     // so consumable items don't punish players by restarting their cooldown
@@ -779,7 +781,7 @@ export async function addBonusPoints(guildId, entityId, pointType, amount) {
 
     // Build snapshot for logging
     const regenTime = await getTimeUntilRegeneration(guildId, entityId, pointType);
-    points.snapshot = createStaminaSnapshot(beforeCurrent, points.current, points.max, regenTime);
+    points.snapshot = createStaminaSnapshot(beforeCurrent, points.current, points.max, regenTime, regenTimeBefore);
 
     return points;
 }
@@ -859,8 +861,8 @@ export async function getPointsDisplay(guildId, entityId, pointType) {
  * @param {string} regenTime - Time until regen ("12h 0m", "Ready!", "Full")
  * @returns {Object} Snapshot object
  */
-export function createStaminaSnapshot(before, after, max, regenTime) {
-    return { before, after, max, regenTime };
+export function createStaminaSnapshot(before, after, max, regenTime, regenTimeBefore = null) {
+    return { before, after, max, regenTime, regenTimeBefore };
 }
 
 /**
@@ -871,7 +873,12 @@ export function createStaminaSnapshot(before, after, max, regenTime) {
  */
 export function formatStaminaTag(snapshot) {
     if (!snapshot) return '';
-    const regen = (snapshot.regenTime === 'Full' || snapshot.regenTime === 'Ready!')
-        ? ' ♻️MAX' : ` ♻️${snapshot.regenTime}`;
-    return `(⚡${snapshot.before}/${snapshot.max} → ${snapshot.after}/${snapshot.max}${regen})`;
+    const formatRegen = (t) => (!t || t === 'Full' || t === 'Ready!') ? '♻️MAX' : `♻️${t}`;
+    const regenAfter = formatRegen(snapshot.regenTime);
+    // Show before regen if available and different from after
+    const regenBefore = snapshot.regenTimeBefore ? formatRegen(snapshot.regenTimeBefore) : null;
+    const beforePart = regenBefore && regenBefore !== regenAfter
+        ? `⚡${snapshot.before}/${snapshot.max} ${regenBefore}`
+        : `⚡${snapshot.before}/${snapshot.max}`;
+    return `(${beforePart} → ${snapshot.after}/${snapshot.max} ${regenAfter})`;
 }

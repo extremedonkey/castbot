@@ -159,7 +159,7 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null) 
       { type: 14 },
       { type: 1, components: [
         { type: 2, custom_id: `challenge_edit_${selectedChallengeId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
-        { type: 2, custom_id: `challenge_post_${selectedChallengeId}`, label: 'Post to Channel', style: 1, emoji: { name: '📤' } },
+        { type: 2, custom_id: `challenge_post_${selectedChallengeId}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
         { type: 2, custom_id: `challenge_delete_${selectedChallengeId}`, label: 'Delete', style: 4, emoji: { name: '🗑️' } },
       ]}
     );
