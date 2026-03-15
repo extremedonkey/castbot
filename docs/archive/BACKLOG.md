@@ -61,7 +61,7 @@ This is a living requirements backlog for CastBot features and improvements, ord
 **Risk Level:** Medium - Requires careful migration and testing
 
 ### Remove Deprecated Safari Customize Terms Modal Handler
-**Description:** Remove commented-out legacy safari_customize_terms_modal handler after confirming new Components V2 field group interface works properly
+**Description:** Remove commented-out legacy castbot_settings_modal handler after confirming new Components V2 field group interface works properly
 **Location:** app.js lines ~12867-13013 (legacy modal handler is commented out)
 **Context:** The legacy single-modal approach has been replaced by a Components V2 interface with grouped field editing (safari_config_modal_*)
 **Acceptance Criteria:**

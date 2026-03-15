@@ -47,7 +47,7 @@ Found **4 major blocks** and **1 minor block** of commented-out code totaling 36
 
 ---
 
-### BLOCK 2: safari_customize_terms_modal Handler (SECOND LARGEST)
+### BLOCK 2: castbot_settings_modal Handler (SECOND LARGEST)
 **Lines:** 32569-32712 (144 lines, 39.2% of commented code)
 **Type:** Multi-line comment block (`/* */`)
 **Context:** Modal interaction handler inside main interactions route
@@ -59,7 +59,7 @@ Found **4 major blocks** and **1 minor block** of commented-out code totaling 36
 
 **Status Marker:**
 ```javascript
-// LEGACY HANDLER - COMMENTED OUT: safari_customize_terms_modal
+// LEGACY HANDLER - COMMENTED OUT: castbot_settings_modal
 // This modal handler has been replaced by the new Components V2 field group interface
 // Remove after confirming new system works properly
 ```
@@ -150,7 +150,7 @@ Found **4 major blocks** and **1 minor block** of commented-out code totaling 36
 | Block | Lines | % of Total | Type | Safety |
 |-------|-------|------------|------|--------|
 | handleSetTribe function | 151 | 41.1% | Multi-line | ✅ Safe |
-| safari_customize_terms_modal | 144 | 39.2% | Multi-line | ⚠️ Verify first |
+| castbot_settings_modal | 144 | 39.2% | Multi-line | ⚠️ Verify first |
 | map_create handler | 61 | 16.6% | Single-line | ✅ Safe |
 | Legacy map button | 6 | 1.6% | Single-line | ✅ Safe |
 | Placement docs | 5 | 1.4% | Single-line | ❌ Keep |
@@ -180,7 +180,7 @@ Found **4 major blocks** and **1 minor block** of commented-out code totaling 36
 
 ### Pending Verification
 
-4. **Remove Block 2 (safari_customize_terms_modal)** - Line 32569-32712
+4. **Remove Block 2 (castbot_settings_modal)** - Line 32569-32712
    - Action: Verify with user that Components V2 field group interface has been working in production
    - If confirmed, remove: Line 32566-32712 (includes marker comments)
    - Saves: ~147 lines
@@ -214,7 +214,7 @@ These are single-line markers with no accompanying commented code blocks. They s
 - [ ] **Remove Block 1:** handleSetTribe function (lines 1735-1887)
 - [ ] **Remove Block 3:** map_create handler (lines 21954-22014)
 - [ ] **Remove Block 4:** Legacy map button (lines 21874-21879)
-- [ ] **Remove Block 2:** safari_customize_terms_modal (lines 32566-32712) - After confirmation
+- [ ] **Remove Block 2:** castbot_settings_modal (lines 32566-32712) - After confirmation
 - [ ] **Test:** Run dev environment after removal
 - [ ] **Commit:** Create commit documenting cleanup
 

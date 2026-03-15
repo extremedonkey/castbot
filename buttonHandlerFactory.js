@@ -221,7 +221,7 @@ export const BUTTON_REGISTRY = {
     description: 'Safari settings field group modal (Currency, Events, Rounds)',
     emoji: '⚙️',
     style: 'Secondary',
-    parent: 'safari_customize_terms',
+    parent: 'castbot_settings',
     category: 'safari',
     requiresModal: true
   },
@@ -230,7 +230,7 @@ export const BUTTON_REGISTRY = {
     description: 'Host-facing production guide (stamina config, logging, admin tools)',
     emoji: '🦁',
     style: 'Secondary',
-    parent: 'safari_customize_terms',
+    parent: 'castbot_settings',
     category: 'safari'
   },
   'richcard_demo': {
@@ -1300,19 +1300,19 @@ export const BUTTON_REGISTRY = {
     style: 'Success',
     category: 'safari'
   },
-  'safari_customize_terms': {
-    label: '⚙️ Customize Safari',
-    description: 'Customize Safari terminology and settings',
+  'castbot_settings': {
+    label: 'Settings',
+    description: 'CastBot settings — currency, stamina, events, rounds, player menu, logs',
     emoji: '⚙️',
     style: 'Primary',
-    category: 'safari'
+    category: 'settings'
   },
   'castbot_roles_security': {
     label: 'Roles & Security',
     description: 'Configure which roles have full CastBot access',
     emoji: '🔐',
     style: 'Secondary',
-    parent: 'safari_customize_terms',
+    parent: 'castbot_settings',
     category: 'settings'
   },
   'castbot_roles_security_select': {
@@ -1336,7 +1336,7 @@ export const BUTTON_REGISTRY = {
     description: 'Configure CastBot Logs channel and settings',
     emoji: '🪵',
     style: 'Secondary',
-    parent: 'safari_customize_terms',
+    parent: 'castbot_settings',
     category: 'safari'
   },
   'safari_config_reset_defaults': {
@@ -1344,7 +1344,7 @@ export const BUTTON_REGISTRY = {
     description: 'Reset all Safari customizations to default values',
     emoji: '🔄',
     style: 'Danger',
-    parent: 'safari_customize_terms',
+    parent: 'castbot_settings',
     category: 'safari'
   },
   'safari_log_toggle': {

@@ -187,7 +187,7 @@ export function buildProdGuidePage(page = 0) {
   const current = PROD_PAGES[page];
 
   const navButtons = [
-    { type: 2, custom_id: 'safari_customize_terms', label: '← Settings', style: 2 }
+    { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2 }
   ];
 
   // Only show pagination when there are multiple pages

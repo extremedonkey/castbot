@@ -49,7 +49,7 @@ export async function createRolesSecurityUI(guildId) {
                 components: [
                     {
                         type: 2,
-                        custom_id: 'safari_customize_terms',
+                        custom_id: 'castbot_settings',
                         label: '← Back to Settings',
                         style: 2
                     },
@@ -113,93 +113,31 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
     // Get current settings display
     const currentSettingsDisplay = await createCurrentSettingsDisplay(guildId, currentConfig);
 
-    // Create Components V2 Container
+    // Create Components V2 Container — LEAN design
     const containerComponents = [
+        { type: 10, content: `## ⚙️ CastBot Settings` },
+        { type: 10, content: currentSettingsDisplay },
+        { type: 14 },
+        { type: 10, content: `### \`\`\`🦁 Safari & Game Settings\`\`\`` },
+        { type: 1, components: fieldGroupButtons },
+        { type: 14 },
+        { type: 10, content: `### \`\`\`⚙️ Global Settings\`\`\`` },
         {
-            type: 10, // Text Display component
-            content: `## ⚙️ CastBot Settings\n\nPersonalize your experience with custom terminology, event names, and game mechanics.\n\n**Current Settings:**`
-        },
-        {
-            type: 10, // Text Display component
-            content: currentSettingsDisplay
-        },
-        {
-            type: 14 // Separator
-        },
-        {
-            type: 10, // Text Display component
-            content: `> \`🦁 Idol Hunts, Challenges and Safari Settings\``
-        },
-        {
-            type: 1, // Action Row
-            components: fieldGroupButtons
-        },
-        {
-            type: 14 // Separator
-        },
-        {
-            type: 10, // Text Display component
-            content: `> \`⚙️ Global CastBot Settings\``
-        },
-        {
-            type: 1, // Action Row
+            type: 1,
             components: [
-                {
-                    type: 2, // Button
-                    custom_id: 'castbot_roles_security',
-                    label: 'Roles & Security',
-                    style: 2, // Secondary
-                    emoji: { name: '🔐' }
-                },
-                {
-                    type: 2, // Button
-                    custom_id: 'safari_configure_log',
-                    label: 'Logs',
-                    style: 2, // Secondary
-                    emoji: { name: '📊' }
-                },
-                {
-                    type: 2, // Button
-                    custom_id: 'safari_export_data',
-                    label: 'Export',
-                    style: 2, // Secondary (grey)
-                    emoji: { name: '⚙️' }
-                },
-                {
-                    type: 2, // Button
-                    custom_id: 'safari_import_data',
-                    label: 'Import',
-                    style: 2, // Secondary (grey)
-                    emoji: { name: '⚙️' }
-                },
-                {
-                    type: 2, // Button
-                    custom_id: 'safari_config_reset_defaults',
-                    label: 'Reset',
-                    style: 4, // Danger
-                    emoji: { name: '🔄' }
-                }
+                { type: 2, custom_id: 'castbot_roles_security', label: 'Roles & Security', style: 2, emoji: { name: '🔐' } },
+                { type: 2, custom_id: 'safari_configure_log', label: 'Logs', style: 2, emoji: { name: '📊' } },
+                { type: 2, custom_id: 'safari_export_data', label: 'Export', style: 2, emoji: { name: '📤' } },
+                { type: 2, custom_id: 'safari_import_data', label: 'Import', style: 2, emoji: { name: '📥' } },
+                { type: 2, custom_id: 'safari_config_reset_defaults', label: 'Reset', style: 4, emoji: { name: '🔄' } }
             ]
         },
+        { type: 14 },
         {
-            type: 14 // Separator
-        },
-        {
-            type: 1, // Action Row
+            type: 1,
             components: [
-                {
-                    type: 2, // Button
-                    custom_id: 'prod_production_menu',
-                    label: '← Back',
-                    style: 2 // Secondary
-                },
-                {
-                    type: 2, // Button
-                    custom_id: 'prod_guide_0',
-                    label: 'Guide',
-                    style: 2, // Secondary (grey)
-                    emoji: { name: '🦁' }
-                }
+                { type: 2, custom_id: 'prod_production_menu', label: '← Back', style: 2 },
+                { type: 2, custom_id: 'prod_guide_0', label: 'Guide', style: 2, emoji: { name: '🦁' } }
             ]
         }
     ];
@@ -447,7 +385,7 @@ export function createResetConfirmationUI() {
             components: [
                 {
                     type: 2, // Button
-                    custom_id: 'safari_customize_terms',
+                    custom_id: 'castbot_settings',
                     label: 'Cancel',
                     style: 2, // Secondary
                     emoji: { name: '❌' }

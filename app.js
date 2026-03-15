@@ -858,7 +858,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🪛'),
     new ButtonBuilder()
-      .setCustomId('safari_customize_terms')
+      .setCustomId('castbot_settings')
       .setLabel('Settings')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('⚙️'),
@@ -12797,10 +12797,10 @@ Your server is now ready for Tycoons gameplay!`;
           return response;
         }
       })(req, res, client);
-    } else if (custom_id === 'safari_customize_terms') {
+    } else if (custom_id === 'castbot_settings') {
       // Handle "⚙️ Customize Terms" button - NEW Components V2 Interface (MIGRATED TO FACTORY)
       return ButtonHandlerFactory.create({
-        id: 'safari_customize_terms',
+        id: 'castbot_settings',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         updateMessage: true,
@@ -12820,7 +12820,7 @@ Your server is now ready for Tycoons gameplay!`;
           countComponents(interfaceData.components, {
             enableLogging: true,
             verbosity: "full",
-            label: "Settings Menu (safari_customize_terms)"
+            label: "Settings Menu (castbot_settings)"
           });
 
           return interfaceData;
@@ -12938,7 +12938,7 @@ Your server is now ready for Tycoons gameplay!`;
 
           // Create back button
           const backButton = new ButtonBuilder()
-            .setCustomId('safari_customize_terms')
+            .setCustomId('castbot_settings')
             .setLabel('← Safari Settings')
             .setStyle(2) // Secondary
             .setEmoji('⚙️');
@@ -13408,7 +13408,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Create back button
           const backButton = new ButtonBuilder()
-            .setCustomId('safari_customize_terms')
+            .setCustomId('castbot_settings')
             .setLabel('← Safari Settings')
             .setStyle(2) // Secondary
             .setEmoji('⚙️');
@@ -13733,7 +13733,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Create back button
           const backButton = new ButtonBuilder()
-            .setCustomId('safari_customize_terms')
+            .setCustomId('castbot_settings')
             .setLabel('← Safari Settings')
             .setStyle(2) // Secondary
             .setEmoji('⚙️');
@@ -13879,7 +13879,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Create back button
           const backButton = new ButtonBuilder()
-            .setCustomId('safari_customize_terms')
+            .setCustomId('castbot_settings')
             .setLabel('← Safari Settings')
             .setStyle(2) // Secondary
             .setEmoji('⚙️');
@@ -41724,11 +41724,11 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    // LEGACY HANDLER - COMMENTED OUT: safari_customize_terms_modal
+    // LEGACY HANDLER - COMMENTED OUT: castbot_settings_modal
     // This modal handler has been replaced by the new Components V2 field group interface
     // Remove after confirming new system works properly
     /*
-    } else if (custom_id === 'safari_customize_terms_modal') {
+    } else if (custom_id === 'castbot_settings_modal') {
       // Handle Safari terms customization modal - LEGACY IMPLEMENTATION
       try {
         const member = req.body.member;

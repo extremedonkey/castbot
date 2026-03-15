@@ -49,8 +49,8 @@
 
   5. 💻 Technical Implementation
 
-  - Modal Handler: safari_customize_terms (app.js:~5501)
-  - Modal Submission: safari_customize_terms_modal (app.js:~12591)
+  - Modal Handler: castbot_settings (app.js:~5501)
+  - Modal Submission: castbot_settings_modal (app.js:~12591)
   - Validation: 30 character limits, required fields, fallback handling
   - Error Handling: Comprehensive error recovery and user feedback
 

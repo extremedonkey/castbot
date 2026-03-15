@@ -44,7 +44,7 @@ This file maintains a list of button handlers, their custom_ids, labels, and app
 | `safari_view_buttons` | 📊 View All Buttons | app.js:~4983 | Direct handler | ✅ Active |
 | `safari_my_inventory` | 🪺 My [Inventory] | app.js:~5390 | Direct handler | ✅ Active |
 | `safari_player_inventory` | 🥚 My Nest | app.js:~5456 | Direct handler | ✅ Active |
-| `safari_customize_terms` | ⚙️ Customize Terms | app.js:~5679 | Direct handler | ✅ Active (Components V2) |
+| `castbot_settings` | ⚙️ Customize Terms | app.js:~5679 | Direct handler | ✅ Active (Components V2) |
 | `safari_config_group_*` | Field Group Buttons | app.js:~5713 | Pattern handler | ✅ Active |
 | `safari_config_reset_defaults` | 🔄 Reset to Defaults | app.js:~5750 | Direct handler | ✅ Active |
 | `safari_config_confirm_reset` | ⚠️ Confirm Reset | app.js:~5779 | Direct handler | ✅ Active |
@@ -134,7 +134,7 @@ This file maintains a list of button handlers, their custom_ids, labels, and app
 ### **Modal Submission Handlers**
 | Custom ID | Purpose | Location | Handler Type | Status |
 |-----------|---------|----------|--------------|--------|
-| `safari_customize_terms_modal` | Custom Terms Modal | app.js:~12591 | Modal handler | ✅ Active |
+| `castbot_settings_modal` | Custom Terms Modal | app.js:~12591 | Modal handler | ✅ Active |
 | `safari_item_qty_modal_*` | Item Quantity Modal | app.js:~12976 | Modal handler | ✅ Active |
 | `map_grid_edit_modal_*` | Map Grid Content Edit Modal | app.js:~15702 | Modal handler | ✅ Active |
 | `safari_test_button_*` | Test Button | app.js:~6603 | Pattern handler | ✅ Active |
@@ -177,7 +177,7 @@ This file maintains a list of button handlers, their custom_ids, labels, and app
 | `safari_store_modal` | Create New Store | app.js:~13467 | Modal handler | ✅ Active |
 | `safari_store_edit_modal_*` | Edit Store Details | app.js:~13524 | Pattern modal handler | ✅ Active |
 | `safari_item_modal` | Create New Item | app.js:~13609 | Modal handler | ✅ Active |
-| `safari_customize_terms_modal` | Customize Currency Terms | app.js:~12867 | Modal handler | ❌ Deprecated (Components V2) |
+| `castbot_settings_modal` | Customize Currency Terms | app.js:~12867 | Modal handler | ❌ Deprecated (Components V2) |
 | `safari_config_modal_*` | Field Group Modals | app.js:~13014 | Pattern handler | ✅ Active |
 | `safari_export_modal` | Export Safari Data | app.js:~13277 | Modal handler | ✅ Active |
 | `safari_import_modal` | Import Safari Data | app.js:~13287 | Modal handler | ✅ Active |
