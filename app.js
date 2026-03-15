@@ -7675,6 +7675,8 @@ To fix this:
           }
 
           const modalData = buildRoundModal(selectedValue, round, roundId, configId);
+          console.log(`📝 MODAL DEBUG: action=${selectedValue}, roundId=${roundId}, components=${modalData?.components?.length}, payload=${JSON.stringify(modalData).length} bytes`);
+          console.log(`📝 MODAL DEBUG: Full payload:\n${JSON.stringify(modalData, null, 2)}`);
           if (!modalData) {
             return { type: 6 }; // Unknown action — silent fail
           }
