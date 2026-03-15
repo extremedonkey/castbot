@@ -191,24 +191,13 @@ export function buildProdGuidePage(page = 0) {
   const navButtons = [
     { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2 },
     { type: 2, custom_id: `prod_guide_${page - 1}`, label: '◀', style: 2, disabled: page === 0 },
+    { type: 2, custom_id: 'prod_guide_counter', label: `${page + 1} / ${PROD_PAGES.length}`, style: 2, disabled: true },
     { type: 2, custom_id: `prod_guide_${page + 1}`, label: '▶', style: 2, disabled: page >= PROD_PAGES.length - 1 }
   ];
 
   const components = [
-    // Header as Section with page counter accessory button
-    {
-      type: 9, // Section
-      components: [
-        { type: 10, content: `## ${current.title}\n${current.subtitle}` }
-      ],
-      accessory: {
-        type: 2, // Button
-        custom_id: 'prod_guide_counter',
-        label: `${page + 1} / ${PROD_PAGES.length}`,
-        style: 2,
-        disabled: true
-      }
-    },
+    { type: 10, content: `## ${current.title}` },
+    { type: 10, content: current.subtitle },
     { type: 14 },
     ...current.content.map(text => ({ type: 10, content: text })),
     { type: 14 },
