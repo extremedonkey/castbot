@@ -1025,8 +1025,8 @@ export function buildRoundModal(action, round, roundId, configId) {
             description: `Enter the F-number to swap all events with (e.g., ${f > 5 ? f - 3 : f + 3})`,
             component: {
               type: 4, custom_id: 'target_f', style: 1,
-              placeholder: String(f > 5 ? f - 3 : f + 3),
-              required: true, max_length: 2, min_length: 1,
+              placeholder: `F${f > 5 ? f - 3 : f + 3}`,
+              required: true, max_length: 4, min_length: 1,
             }
           }
         ]
@@ -1184,8 +1184,10 @@ export async function processRoundEdit(guildId, action, roundId, configId, field
     }
 
     case 'swap_round': {
-      const targetF = parseInt(fields.target_f);
-      if (isNaN(targetF) || targetF < 1) return { success: false, error: 'Enter a valid F-number' };
+      // Accept formats: 13, F13, f13, F-13, f-13
+      const cleanedInput = String(fields.target_f).replace(/^[Ff]-?/, '');
+      const targetF = parseInt(cleanedInput);
+      if (isNaN(targetF) || targetF < 1) return { success: false, error: 'Enter a valid F-number (e.g., 13 or F13)' };
       if (targetF === round.fNumber) return { success: false, error: 'Cannot swap a round with itself' };
 
       // Find the target round by F-number
