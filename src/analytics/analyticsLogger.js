@@ -7,6 +7,17 @@ const ANALYTICS_LOG_FILE = './logs/user-analytics.log';
 // Server name cache to eliminate 739KB file reads per interaction
 const serverNameCache = new Map();
 
+// BUTTON_REGISTRY cache — loaded lazily on first use for button label resolution
+let _buttonRegistryCache = null;
+async function ensureButtonRegistry() {
+  if (!_buttonRegistryCache) {
+    try {
+      const { BUTTON_REGISTRY } = await import('../../buttonHandlerFactory.js');
+      _buttonRegistryCache = BUTTON_REGISTRY;
+    } catch (e) { /* unavailable */ }
+  }
+}
+
 // Button label mappings for common buttons that may not be extractable from components
 const BUTTON_LABEL_MAP = {
   // Production menu buttons
@@ -169,6 +180,25 @@ function getButtonLabel(customId, components) {
     return '📋 Select Menu Interaction';
   }
   
+  // Fall back to BUTTON_REGISTRY (has labels/emojis for all registered buttons)
+  if (_buttonRegistryCache) {
+    for (const registryKey of Object.keys(_buttonRegistryCache)) {
+      if (registryKey.endsWith('_*')) {
+        const basePattern = registryKey.slice(0, -2);
+        if (customId.startsWith(basePattern + '_') || customId.startsWith(basePattern + '|')) {
+          const entry = _buttonRegistryCache[registryKey];
+          const suffix = customId.slice(basePattern.length + 1);
+          // Extract readable suffix — coordinate (A1-Z99) or trim long IDs
+          const coordMatch = suffix.match(/([A-Z]\d{1,2})$/);
+          const detail = coordMatch ? coordMatch[1] : (suffix.length > 20 ? '' : suffix);
+          const emoji = entry.emoji || '';
+          const label = entry.label || basePattern;
+          return detail ? `${emoji} ${label} (${detail})` : `${emoji} ${label}`;
+        }
+      }
+    }
+  }
+
   // Fallback - return "Unknown" for button clicks, custom_id for everything else
   return 'Unknown';
 }
@@ -217,6 +247,7 @@ async function logInteraction(userId, guildId, action, details, username, guildN
     
     // If it's a button click, try to get human-readable label with fallback mapping
     if (action === 'BUTTON_CLICK') {
+      await ensureButtonRegistry();
       const humanLabel = getButtonLabel(details, components);
       // Format as "ButtonName (command)" if we have a mapped label
       if (humanLabel !== 'Unknown' && humanLabel !== details) {
