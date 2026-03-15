@@ -740,7 +740,7 @@ export function buildRoundModal(action, round, roundId, configId) {
 
       return {
         custom_id: modalId,
-        title: `Manage Marooning — F${f}`,
+        title: `Manage Marooning - F${f}`,
         components: [
           {
             type: 18,
@@ -782,7 +782,7 @@ export function buildRoundModal(action, round, roundId, configId) {
     case 'swap_merge': {
       return {
         custom_id: modalId,
-        title: `Add Event — F${f}`,
+        title: `Add Event - F${f}`,
         components: [
           {
             type: 18,
@@ -855,7 +855,7 @@ export function buildRoundModal(action, round, roundId, configId) {
 
       return {
         custom_id: modalId,
-        title: `Manage ${eventType} — F${f}`,
+        title: `Manage ${eventType} - F${f}`,
         components: [
           {
             type: 18,
@@ -927,7 +927,7 @@ export function buildRoundModal(action, round, roundId, configId) {
     case 'ftc_speeches':
       return {
         custom_id: modalId,
-        title: `Speech Writing — F${f}`,
+        title: `Speech Writing - F${f}`,
         components: [
           {
             type: 18,
@@ -957,7 +957,7 @@ export function buildRoundModal(action, round, roundId, configId) {
     case 'ftc_votes':
       return {
         custom_id: modalId,
-        title: `Questioning & Votes — F${f}`,
+        title: `Questioning & Votes - F${f}`,
         components: [
           {
             type: 18,
