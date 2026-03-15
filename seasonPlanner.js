@@ -339,7 +339,7 @@ export function validatePlannerFields(fields) {
 // Season Planner View — Dynamic round display
 // ─────────────────────────────────────────────
 
-const SELECTS_PER_PAGE = 12;
+const SELECTS_PER_PAGE = 11;
 
 /**
  * Build the Season Planner view for a real season.
@@ -387,12 +387,15 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
       { type: 14 },
       { type: 1, components: [
         { type: 2, custom_id: `planner_edit_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
-        { type: 2, custom_id: `planner_schedule_${configId}`, label: 'Schedule', style: 2, emoji: { name: '📅' } },
         { type: 2, custom_id: `planner_apps_${configId}`, label: 'Apps', style: 2, emoji: { name: '📝' } },
         { type: 2, custom_id: `season_app_ranking_${configId}`, label: 'Ranking', style: 2, emoji: { name: '🏆' } },
         { type: 2, custom_id: `planner_tribes_${configId}`, label: 'Tribes', style: 2, emoji: { name: '🔥' } },
       ]},
       ...selectRows,
+      { type: 1, components: [
+        { type: 2, custom_id: `planner_schedule_${configId}`, label: 'Schedule', style: 2, emoji: { name: '📋' } },
+        { type: 2, custom_id: `planner_calendar_${configId}`, label: 'Calendar', style: 2, emoji: { name: '📅' } },
+      ]},
       { type: 14 },
       { type: 1, components: navButtons },
     ]

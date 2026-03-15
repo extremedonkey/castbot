@@ -7718,7 +7718,7 @@ To fix this:
         deferred: true,
         handler: async (context) => {
           const { loadPlayerData } = await import('./storage.js');
-          const { generateVerticalTimeline, generateMonthCalendar } = await import('./scheduleImageGenerator.js');
+          const { generateVerticalTimeline } = await import('./scheduleImageGenerator.js');
           const { AttachmentBuilder } = await import('discord.js');
 
           const playerData = await loadPlayerData();
@@ -7730,18 +7730,46 @@ To fix this:
           const startDate = new Date(config.estimatedStartDate);
           const seasonName = config.seasonName;
 
-          const [schedule, calendar] = await Promise.all([
-            generateVerticalTimeline(seasonName, seasonRounds, startDate),
-            generateMonthCalendar(seasonName, seasonRounds, startDate),
-          ]);
+          const schedule = await generateVerticalTimeline(seasonName, seasonRounds, startDate);
 
           const channelId = req.body.channel?.id || req.body.channel_id;
           const channel = await context.client.channels.fetch(channelId);
-
           await channel.send({ files: [new AttachmentBuilder(schedule, { name: 'schedule.png' })] });
+
+          console.log(`📋 Season Planner: Posted schedule for "${seasonName}"`);
+
+          const { buildPlannerView } = await import('./seasonPlanner.js');
+          return buildPlannerView(seasonName, seasonRounds, startDate, configId, 0);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('planner_calendar_')) {
+      // Season Planner — generate and post calendar image
+      const configId = custom_id.replace('planner_calendar_', '');
+      return ButtonHandlerFactory.create({
+        id: 'planner_calendar',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { loadPlayerData } = await import('./storage.js');
+          const { generateMonthCalendar } = await import('./scheduleImageGenerator.js');
+          const { AttachmentBuilder } = await import('discord.js');
+
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[configId];
+          if (!config) return { content: '❌ Season not found' };
+          const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId];
+          if (!seasonRounds) return { content: '❌ No planner data' };
+
+          const startDate = new Date(config.estimatedStartDate);
+          const seasonName = config.seasonName;
+
+          const calendar = await generateMonthCalendar(seasonName, seasonRounds, startDate);
+
+          const channelId = req.body.channel?.id || req.body.channel_id;
+          const channel = await context.client.channels.fetch(channelId);
           await channel.send({ files: [new AttachmentBuilder(calendar, { name: 'calendar.png' })] });
 
-          console.log(`📅 Season Planner: Posted schedule + calendar for "${seasonName}"`);
+          console.log(`📅 Season Planner: Posted calendar for "${seasonName}"`);
 
           const { buildPlannerView } = await import('./seasonPlanner.js');
           return buildPlannerView(seasonName, seasonRounds, startDate, configId, 0);

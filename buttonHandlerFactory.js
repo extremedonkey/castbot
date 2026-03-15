@@ -138,7 +138,16 @@ export const BUTTON_REGISTRY = {
   },
   'planner_schedule_*': {
     label: 'Schedule',
-    description: 'Season schedule view (not yet implemented)',
+    description: 'Post schedule timeline image to channel',
+    emoji: '📋',
+    style: 'Secondary',
+    parent: 'reeces_season_planner_mockup',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
+  'planner_calendar_*': {
+    label: 'Calendar',
+    description: 'Post calendar image to channel',
     emoji: '📅',
     style: 'Secondary',
     parent: 'reeces_season_planner_mockup',
