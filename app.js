@@ -787,13 +787,8 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setCustomId('admin_manage_player')
       .setLabel('Players')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🧑‍🤝‍🧑'),
-    new ButtonBuilder()
-      .setCustomId('safari_rounds_menu')
-      .setLabel('Challenges')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🏃‍♀️')
-    // Donate moved to Advanced Features row
+      .setEmoji('🧑‍🤝‍🧑')
+    // Challenges moved to Safari row, Donate moved to Advanced Features row
   );
   
   // Live Analytics button moved to Reece Stuff submenu
@@ -818,15 +813,16 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🧭'),
     new ButtonBuilder()
+      .setCustomId('safari_rounds_menu')
+      .setLabel('Challenges')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🏃‍♀️'),
+    new ButtonBuilder()
       .setCustomId('safari_manage_currency')
       .setLabel('Currency')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💰'),
-    new ButtonBuilder()
-      .setCustomId('safari_customize_terms')
-      .setLabel('Settings')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⚙️')
+      .setEmoji('💰')
+    // Settings moved to Advanced Features row
   ];
 
   const safariFeatureRow = new ActionRowBuilder().addComponents(safariFeatureButtons);
@@ -854,13 +850,18 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // safari_rounds_menu moved to adminButtons row (relabeled to "Challenges")
   // prod_safari_menu removed - buttons distributed to Production Menu and Map Explorer
 
-  // Add Tools button (renamed from Initial Setup, contains Setup/Availability/Help)
+  // Add Tools, Settings, Donate
   advancedFeaturesButtons.push(
     new ButtonBuilder()
       .setCustomId('castbot_tools')
       .setLabel('Tools')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🪛'),
+    new ButtonBuilder()
+      .setCustomId('safari_customize_terms')
+      .setLabel('Settings')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('⚙️'),
     new ButtonBuilder()
       .setCustomId('prod_donate')
       .setLabel('Donate')
