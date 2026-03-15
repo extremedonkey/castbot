@@ -556,6 +556,19 @@ export async function setEntityPoints(guildId, entityId, pointType, current, max
 
     points.lastRegeneration = Date.now();
 
+    // Sync charges array with new current value (prevents Phase 2 from overriding admin-set values)
+    if (points.charges) {
+        const now = Date.now();
+        for (let i = 0; i < points.charges.length; i++) {
+            if (i < points.current) {
+                points.charges[i] = null;  // Available (matches current)
+            } else {
+                points.charges[i] = points.charges[i] || now;  // Used (preserve existing timestamp, or set to now)
+            }
+        }
+        console.log(`🐎 Synced charges array: ${points.current} available, ${points.charges.length - points.current} used`);
+    }
+
     safariData[guildId].entityPoints[entityId][pointType] = points;
     await saveSafariContent(safariData);
 

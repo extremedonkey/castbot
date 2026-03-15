@@ -211,67 +211,49 @@ Instead of regenerating 1 charge per expired slot, regenerate up to `regenAmount
 
 When both are active (player with permanent items + regenAmount configured): each charge still regenerates individually, but the amount per charge could be 1. This is fine — Phase 2 is already "1 per charge per interval" which is the granular model. The burst model (regenAmount > 1) is Phase 1's job.
 
-### Decision #3: Timer behavior — lastUse vs continuous ticking
+### Decision #3: Timer behavior — continuous ticking until `current >= max`
 
-**Current Phase 1**: Timer starts from `lastUse`. If player never uses stamina, the timer from initialization eventually fires and resets to max, then **stops**. No continuous ticking.
+**Current Phase 1**: Timer starts from `lastUse`. If player never uses stamina, the timer fires once (resets to max) then stops.
 
-**With regenAmount < max**: Should the timer continue ticking after a regen event?
+**With regenAmount**: Timer must **continue ticking** after each regen event, applying the full amount each time, until `current >= max` (the pause rule).
 
 ```
 Player at 0/8, regenAmount = 3, cooldown = 30min
 
 T+0:   0/8 (used stamina, lastUse = now)
-T+30:  3/8 (regen fires... then what?)
-T+60:  6/8? or still 3/8?
-T+90:  8/8? or still 3/8?
+T+30:  3/8 (regen fires, +3, still < 8 → timer continues)
+T+60:  6/8 (regen fires, +3, still < 8 → timer continues)
+T+90:  9/8 (regen fires, +3, now ≥ 8 → timer PAUSES)
 ```
 
-| Option | Behavior | Implementation |
-|--------|----------|----------------|
-| **A: Single fire, wait for next use** | 0/8 → 3/8, then paused until stamina used again | Use `lastUse` as trigger (current behavior) |
-| **B: Continuous ticking until full** | 0/8 → 3/8 → 6/8 → 8/8 over 3 intervals | Use `lastRegeneration` as trigger, keep ticking |
-
-**Recommended: Option B — Continuous ticking**
-
-Why: This is the intuitive expectation. "Every 30 minutes, you get 3 stamina" means it keeps happening until you're full. Option A would mean a player at 0/8 with regen=3 only ever gets 3 stamina back, then has to use and lose stamina before getting more — bizarre.
-
-**Implementation**: After regen fires:
-1. Update `lastRegeneration = now` (or to the exact regen moment for accuracy)
-2. Keep the timer running (`lastUse` stays as-is)
-3. On next access: check `timeSinceLastRegen >= interval` instead of `timeSinceUse`
-4. Stop when `current >= effectiveMax` (for normal amounts) or `current >= max` (for over-max amounts)
-
-**Critical detail**: Must calculate multiple elapsed periods in one access. If player is offline 3 hours with 30min regen, we should apply 6 regen events, not just 1.
+**Implementation**: After regen fires, update `lastRegeneration` timestamp. On next access, check `timeSinceLastRegen >= interval`. Must calculate **multiple elapsed periods** in one access (player offline 3 hours with 30min regen = 6 regen events applied at once).
 
 ```javascript
-const timeSinceRegen = now - (newData.lastRegeneration || newData.lastUse);
+const regenTimestamp = newData.lastRegeneration || newData.lastUse;
+const timeSinceRegen = now - regenTimestamp;
 const periods = Math.floor(timeSinceRegen / config.regeneration.interval);
 
 if (periods > 0 && newData.current < effectiveMax) {
-    const regenAmount = config.regeneration.amount === 'max' ? effectiveMax : config.regeneration.amount;
-    const totalRegen = periods * regenAmount;
-    newData.current = Math.min(effectiveMax, newData.current + totalRegen);
+    const regenAmount = (config.regeneration.amount === 'max' || !config.regeneration.amount)
+        ? effectiveMax : config.regeneration.amount;
+
+    // Apply regen period by period, stopping when current >= max
+    let appliedPeriods = 0;
+    for (let p = 0; p < periods && newData.current < effectiveMax; p++) {
+        newData.current += regenAmount;  // Full amount, no cap
+        appliedPeriods++;
+    }
+
     // Preserve fractional period for accuracy
-    newData.lastRegeneration = now - (timeSinceRegen % config.regeneration.interval);
+    newData.lastRegeneration = regenTimestamp + (appliedPeriods * config.regeneration.interval);
+    newData.max = effectiveMax;
     hasChanged = true;
 }
 ```
 
-Wait — but this changes behavior for existing servers using the default regen amount (which is "max"). Currently Phase 1 does a single full reset. With continuous ticking + amount=max, it would still reset to max on first tick and then stop (since current = max). **Same outcome, different mechanism.** Safe.
+**Backward compatible**: Existing servers use amount="max". First tick sets current=max, loop stops immediately (max ≥ max). Same outcome as current full_reset, different mechanism.
 
-### Decision #4: Over-max + continuous ticking interaction
-
-If regenAmount=5 and max=1:
-
-```
-T+0:   0/1 (used stamina)
-T+30:  5/1 (regen fires, +5)
-T+60:  10/1? or 5/1?
-```
-
-**With Decision #1 (Option B: pause at ≥ max)**: After reaching 5/1, current (5) ≥ max (1), so regen pauses. Player must use stamina to drop below 1 before regen fires again.
-
-**This is the correct behavior.** The burst model means: "you get one burst when depleted, use it up, then get another." Not "infinite stamina accumulation."
+**Over-max + continuous ticking**: If regenAmount=5, max=1: first tick → 5/1 (≥ max), loop stops. No infinite accumulation. Player must spend stamina to drop below max before regen resumes.
 
 ### Decision #5: Backward compatibility for `amount: "max"`
 
@@ -356,42 +338,16 @@ const timeSinceRegen = now - regenTimestamp;
 const periods = Math.floor(timeSinceRegen / config.regeneration.interval);
 
 if (periods > 0 && newData.current < effectiveMax) {
-    const totalRegen = periods * regenAmount;
-    const newCurrent = Math.min(
-        regenAmount > effectiveMax ? newData.current + totalRegen : effectiveMax,
-        newData.current + totalRegen
-    );
-    newData.current = regenAmount > effectiveMax
-        ? newData.current + regenAmount  // Over-max: add exactly one burst (don't multiply)
-        : Math.min(effectiveMax, newData.current + totalRegen);
-    newData.max = effectiveMax;
-    newData.lastRegeneration = now - (timeSinceRegen % config.regeneration.interval);
-    hasChanged = true;
-}
-```
-
-Actually, let me simplify. The over-max case needs special handling:
-
-```javascript
-const regenAmount = (config.regeneration.amount === 'max' || !config.regeneration.amount)
-    ? effectiveMax
-    : config.regeneration.amount;
-
-const regenTimestamp = newData.lastRegeneration || newData.lastUse;
-const timeSinceRegen = now - regenTimestamp;
-const periods = Math.floor(timeSinceRegen / config.regeneration.interval);
-
-if (periods > 0 && newData.current < effectiveMax) {
-    if (regenAmount >= effectiveMax) {
-        // Over-max or full reset: single burst, cap behavior from Decision #1
-        newData.current = newData.current + regenAmount;
-    } else {
-        // Partial regen: multiple periods, cap at max
-        newData.current = Math.min(effectiveMax, newData.current + (periods * regenAmount));
+    // Apply regen period by period, stopping when current >= max
+    // Each period adds the FULL regen amount (never capped/partial)
+    let appliedPeriods = 0;
+    for (let p = 0; p < periods && newData.current < effectiveMax; p++) {
+        newData.current += regenAmount;
+        appliedPeriods++;
     }
     newData.max = effectiveMax;
-    // Preserve fractional period
-    newData.lastRegeneration = now - (timeSinceRegen % config.regeneration.interval);
+    // Preserve fractional period for accuracy
+    newData.lastRegeneration = regenTimestamp + (appliedPeriods * config.regeneration.interval);
     hasChanged = true;
 }
 ```
@@ -439,10 +395,10 @@ console.log(`⚡ Stamina config updated: ... regenAmount=${regenAmount || 'max'}
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | Backward compatibility | Low — `null` defaults to "max" | All existing servers unchanged |
-| Infinite accumulation | Medium — regenAmount > max could grow forever | Guard: pause when `current >= effectiveMax` |
+| Over-max accumulation | Low — intended behavior | Regen pauses when `current >= max` (denominator), prevents infinite growth while idle |
 | Phase 2 confusion | Low — Phase 2 ignores regenAmount | Document clearly, log when both active |
-| Multiple-period calculation | Medium — offline player gets burst | `Math.min` with cap prevents overshoot |
-| Modal component limit | Low — adding 1 component (now 5 total) | Discord modal limit is 5 top-level components; Text Display + 4 Labels = 5 ✅ |
+| Multi-period catchup | Low — offline player gets multiple bursts | Loop stops at `current >= max`, so bounded |
+| Modal component limit | Low — adding 1 component (now 5 total) | Discord modal limit is 5 top-level components; Text Display + 4 Labels = 5 |
 | `lastRegeneration` migration | Low — may not exist on old data | Fallback to `lastUse` |
 
 ---
