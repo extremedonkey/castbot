@@ -31808,9 +31808,27 @@ Your server is now ready for Tycoons gameplay!`;
 
           // Re-read to get the resolved coordinate for the response message
           const updatedPlayerData = await loadPlayerData();
-          const resolvedCoordinate = updatedPlayerData[context.guildId]?.players?.[context.userId]?.safari?.mapProgress?.[activeMapId]?.currentLocation || 'A1';
+          const updatedPlayer = updatedPlayerData[context.guildId]?.players?.[context.userId];
+          const resolvedCoordinate = updatedPlayer?.safari?.mapProgress?.[activeMapId]?.currentLocation || 'A1';
           const mapData = safariData[context.guildId].maps[activeMapId];
           const channelId = mapData.coordinates[resolvedCoordinate]?.channelId;
+
+          // Log init to Safari Log + Live Discord Logging (activity log already handled inside initializePlayerOnMap)
+          try {
+            const { logPlayerInitialization } = await import('./safariLogger.js');
+            const { createStaminaSnapshot } = await import('./pointsManager.js');
+            const { getCustomTerms } = await import('./safariManager.js');
+            const customTerms = await getCustomTerms(context.guildId);
+            const staminaData = updatedPlayer?.safari?.points?.stamina;
+            const staminaSnapshot = staminaData ? createStaminaSnapshot(0, staminaData.current, staminaData.maximum, 'Ready!') : null;
+            const username = context.member?.user?.username || context.userId;
+            const displayName = context.member?.nick || context.member?.user?.global_name || null;
+            await logPlayerInitialization({
+              guildId: context.guildId, userId: context.userId, username, displayName,
+              coordinate: resolvedCoordinate, currency: updatedPlayer?.safari?.currency || 0,
+              currencyName: customTerms.currencyName, staminaSnapshot
+            });
+          } catch (e) { console.error('Init logging error:', e); }
 
           console.log(`✅ SUCCESS: safari_map_init_player - player initialized at ${resolvedCoordinate}`);
           return {

@@ -163,7 +163,8 @@
       "Bash(/tmp/player_menu_analysis.txt:*)",
       "Read(//tmp/**)",
       "Bash(for f:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Skill(sharp)"
     ],
     "deny": []
   },

@@ -341,18 +341,25 @@ export async function logPlayerMovement({ guildId, userId, username, displayName
  * @param {string} params.coordinate - Starting coordinate
  * @param {number} params.currency - Starting currency amount
  * @param {string} params.currencyName - Custom currency name
+ * @param {Object} [params.staminaSnapshot] - Stamina snapshot { before, after, max, regenTime }
  */
-export async function logPlayerInitialization({ guildId, userId, username, displayName, coordinate, currency, currencyName }) {
+export async function logPlayerInitialization({ guildId, userId, username, displayName, coordinate, currency, currencyName, staminaSnapshot }) {
+  const { formatStaminaTag } = await import('./pointsManager.js');
+  const staminaTag = formatStaminaTag(staminaSnapshot);
+
   const safariContent = {
     toLocation: coordinate,
-    fromLocation: null
+    fromLocation: null,
+    staminaSnapshot
   };
+
+  const desc = `Initialized at ${coordinate} with ${currency} ${currencyName}${staminaTag ? ' ' + staminaTag : ''}`;
 
   await logInteraction(
     userId,
     guildId,
     'SAFARI_MOVEMENT',
-    `Initialized at ${coordinate} with ${currency} ${currencyName}`,
+    desc,
     username,
     null,
     null,
@@ -361,7 +368,8 @@ export async function logPlayerInitialization({ guildId, userId, username, displ
     safariContent
   );
 
-  addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.init, `Initialized at ${coordinate} with ${currency} ${currencyName}`);
+  // Activity log entry is written by initializePlayerOnMap() (atomic with player data save)
+  // so we do NOT duplicate it here — this function handles Safari Log + Live Discord Logging only
 }
 
 /**

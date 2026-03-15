@@ -413,9 +413,15 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = null, 
   try {
     const { addActivityEntry, ACTIVITY_TYPES } = await import('./activityLogger.js');
     const { getCustomTerms } = await import('./safariManager.js');
+    const { formatStaminaTag, createStaminaSnapshot } = await import('./pointsManager.js');
     const customTerms = await getCustomTerms(guildId);
     const totalCurrency = playerData[guildId].players[userId].safari.currency;
-    addActivityEntry(playerData, guildId, userId, ACTIVITY_TYPES.init, `Initialized at ${coordinate} with +${defaultCurrency} ${customTerms.currencyName} (total: ${totalCurrency})`, { loc: coordinate });
+    const staminaInfo = player.safari.points?.stamina;
+    const snapshot = staminaInfo ? createStaminaSnapshot(0, staminaInfo.current, staminaInfo.maximum, 'Ready!') : null;
+    const staminaTag = formatStaminaTag(snapshot);
+    const activityOpts = { loc: coordinate };
+    if (snapshot) activityOpts.stamina = `${snapshot.after}/${snapshot.max}`;
+    addActivityEntry(playerData, guildId, userId, ACTIVITY_TYPES.init, `Initialized at ${coordinate} with +${defaultCurrency} ${customTerms.currencyName} (total: ${totalCurrency})${staminaTag ? ' ' + staminaTag : ''}`, activityOpts);
   } catch (e) { console.error('Activity log error (init):', e); }
 
   await savePlayerData(playerData);
@@ -1029,11 +1035,17 @@ export async function bulkInitializePlayers(guildId, userIds, client) {
         }
       } catch { /* member not found */ }
 
-      // Log initialization
+      // Log initialization with stamina snapshot
       const { logPlayerInitialization } = await import('./safariLogger.js');
+      const { createStaminaSnapshot } = await import('./pointsManager.js');
+      const staminaData = updatedPlayer?.safari?.points?.stamina;
+      const staminaSnapshot = staminaData
+        ? createStaminaSnapshot(0, staminaData.current, staminaData.maximum, 'Ready!')
+        : null;
       await logPlayerInitialization({
         guildId, userId, username, displayName,
-        coordinate, currency, currencyName: customTerms.currencyName
+        coordinate, currency, currencyName: customTerms.currencyName,
+        staminaSnapshot
       });
 
       results.push({ userId, displayName, success: true, coordinate, currency, itemCount });

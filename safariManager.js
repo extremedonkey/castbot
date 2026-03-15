@@ -3492,6 +3492,31 @@ async function executeManagePlayerState(config, guildId, userId, interaction) {
                 const { initializePlayerOnMap } = await import('./safariMapAdmin.js');
                 await initializePlayerOnMap(guildId, userId, coordinate || null, client);
 
+                // Log init to Safari Log + Live Discord Logging
+                try {
+                    const { loadPlayerData } = await import('./storage.js');
+                    const initPd = await loadPlayerData();
+                    const initPlayer = initPd[guildId]?.players?.[userId];
+                    const initSd = await loadSafariContent();
+                    const initMapId = initSd[guildId]?.maps?.active;
+                    const initCoord = initMapId ? initPlayer?.safari?.mapProgress?.[initMapId]?.currentLocation : null;
+                    const { logPlayerInitialization } = await import('./safariLogger.js');
+                    const { createStaminaSnapshot } = await import('./pointsManager.js');
+                    const customTerms = await getCustomTerms(guildId);
+                    const staminaData = initPlayer?.safari?.points?.stamina;
+                    const staminaSnapshot = staminaData ? createStaminaSnapshot(0, staminaData.current, staminaData.maximum, 'Ready!') : null;
+                    let initUsername = userId, initDisplayName = null;
+                    try {
+                        const guild = client?.guilds?.cache?.get(guildId);
+                        if (guild) { const m = await guild.members.fetch(userId); initUsername = m.user.username; initDisplayName = m.displayName; }
+                    } catch {}
+                    await logPlayerInitialization({
+                        guildId, userId, username: initUsername, displayName: initDisplayName,
+                        coordinate: initCoord || coordinate || 'A1', currency: initPlayer?.safari?.currency || 0,
+                        currencyName: customTerms.currencyName, staminaSnapshot
+                    });
+                } catch (e) { console.error('Init logging error (action):', e); }
+
                 return { content: await buildInitMessage() };
             }
 
@@ -3515,6 +3540,32 @@ async function executeManagePlayerState(config, guildId, userId, interaction) {
                 if (!initialized) {
                     const { initializePlayerOnMap } = await import('./safariMapAdmin.js');
                     await initializePlayerOnMap(guildId, userId, coordinate || null, client);
+
+                    // Log init to Safari Log + Live Discord Logging
+                    try {
+                        const { loadPlayerData } = await import('./storage.js');
+                        const iotPd = await loadPlayerData();
+                        const iotPlayer = iotPd[guildId]?.players?.[userId];
+                        const iotSd = await loadSafariContent();
+                        const iotMapId = iotSd[guildId]?.maps?.active;
+                        const iotCoord = iotMapId ? iotPlayer?.safari?.mapProgress?.[iotMapId]?.currentLocation : null;
+                        const { logPlayerInitialization } = await import('./safariLogger.js');
+                        const { createStaminaSnapshot } = await import('./pointsManager.js');
+                        const customTerms2 = await getCustomTerms(guildId);
+                        const iotStamina = iotPlayer?.safari?.points?.stamina;
+                        const iotSnapshot = iotStamina ? createStaminaSnapshot(0, iotStamina.current, iotStamina.maximum, 'Ready!') : null;
+                        let iotUsername = userId, iotDisplayName = null;
+                        try {
+                            const guild2 = client?.guilds?.cache?.get(guildId);
+                            if (guild2) { const m2 = await guild2.members.fetch(userId); iotUsername = m2.user.username; iotDisplayName = m2.displayName; }
+                        } catch {}
+                        await logPlayerInitialization({
+                            guildId, userId, username: iotUsername, displayName: iotDisplayName,
+                            coordinate: iotCoord || coordinate || 'A1', currency: iotPlayer?.safari?.currency || 0,
+                            currencyName: customTerms2.currencyName, staminaSnapshot: iotSnapshot
+                        });
+                    } catch (e) { console.error('Init logging error (init_or_teleport):', e); }
+
                     return { content: await buildInitMessage() };
                 } else {
                     if (!coordinate) {

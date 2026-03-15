@@ -44,8 +44,10 @@ Safari Interaction → safariLogger.js → analyticsLogger.js → Discord Channe
 ✅ **Admin Configuration** - Complete UI for managing log settings
 ✅ **Rate Limiting Fix** - Safari logs processed independently of analytics
 ✅ **Channel Context** - Location coordinates with channel names (#a1)
-✅ **Button Label Resolution** - Shows actual button names and emojis
+✅ **Button Label Resolution** - Shows actual button names and emojis (including BUTTON_REGISTRY fallback for wildcard patterns)
 ✅ **Test Message Support** - Admin testing functionality
+✅ **Stamina Change Logging** - Before/after stamina tags on movement, initialization, consumable use, and action outcomes
+✅ **Stamina Changes Toggle** - `staminaChanges` log type toggle for Safari Log (hosts can control independently)
 
 ## Configuration
 
@@ -67,7 +69,8 @@ Safari Interaction → safariLogger.js → analyticsLogger.js → Discord Channe
         "mapMovement": true,
         "attacks": true,
         "customActions": true,
-        "testMessages": true
+        "testMessages": true,
+        "staminaChanges": true
       },
       "formatting": {
         "accentColor": 0x9B59B6,
@@ -93,8 +96,14 @@ Safari Interaction → safariLogger.js → analyticsLogger.js → Discord Channe
 ## Log Types
 
 ### 1. Player Movement (SAFARI_MOVEMENT)
-**Triggers:** When players move between map coordinates
-**Format:** `🗺️ **MOVEMENT** | [time] | @user moved from **A1** (#a1) to **B2** (#b2)`
+**Triggers:** When players move between map coordinates, or when players are initialized on the map
+**Format:** `🗺️ **MOVEMENT** | [time] | @user moved from **A1** (#a1) to **B2** (#b2) (⚡1/1 → 0/1 ♻️12hr)`
+
+**Stamina Tags:** Movement and initialization events include a stamina snapshot showing before/after state:
+- Movement: `(⚡1/1 → 0/1 ♻️12hr)` — consumed 1 stamina, next regen in 12 hours
+- Initialization: `(⚡0/1 → 1/1)` — started with 1/1 stamina (Ready, no regen tag)
+
+**Initialization sub-type:** When `fromLocation` is null, the event is a player initialization rather than a movement. Activity log shows these with the 🚀 Init type.
 
 ### 2. Custom Actions (SAFARI_CUSTOM_ACTION)
 **Triggers:** Safari button interactions and player commands
@@ -124,6 +133,81 @@ Safari Interaction → safariLogger.js → analyticsLogger.js → Discord Channe
 ### 7. Test Messages (SAFARI_TEST)
 **Triggers:** Admin test button
 **Format:** `🧪 **TEST MESSAGE** | [time] | @admin from safari-config`
+
+## Stamina Change Logging
+
+### Overview
+
+Every stamina change — consumption, initialization, boosts, admin overrides — is logged across all three logging systems with a before/after stamina tag.
+
+### Stamina Tag Format
+
+```
+(⚡{before}/{max} → {after}/{max} ♻️{regenTime})
+```
+
+| Event | Example Tag |
+|-------|-------------|
+| Movement (cost 1) | `(⚡1/1 → 0/1 ♻️12hr)` |
+| Initialization | `(⚡0/1 → 1/1)` |
+| Consumable use (+2) | `(⚡0/1 → 2/1)` |
+| Action outcome (-2) | `(⚡3/3 → 1/3 ♻️2hr)` |
+| Admin set to 5 | `(⚡1/1 → 5/1)` |
+
+When stamina is full or just regenerated, the `♻️` regen countdown is omitted.
+
+### Three Logging Systems
+
+| System | Audience | Where Stamina Appears |
+|--------|----------|-----------------------|
+| **Live Discord Logging** | Bot owner | Appended to SAFARI_MOVEMENT log details |
+| **Safari Log** | Host (per-server) | Appended to movement/init format string |
+| **Player Activity Log** | Player (self) | Inline `` `⚡0/1` `` and `` `cd: 12hr` `` tags |
+
+### Implementation Architecture
+
+```
+Stamina Change Event
+  ↓
+pointsManager.js — createStaminaSnapshot(before, after, max, regenTime)
+  ↓
+safariLogger.js — logPlayerMovement() / logPlayerInitialization()
+  ↓
+analyticsLogger.js — logInteraction() → postToSafariLog() + postToDiscordLogs()
+  +
+activityLogger.js — addActivityEntryAndSave() with { stamina, cd } opts
+```
+
+**Key files:**
+- `pointsManager.js` — `createStaminaSnapshot()`, `formatStaminaTag()` — snapshot creation and formatting
+- `safariLogger.js` — Orchestrates logging calls, formats stamina tags into descriptions
+- `src/analytics/analyticsLogger.js` — SAFARI_MOVEMENT case reads `safariContent.staminaSnapshot`
+- `activityLogger.js` — `formatActivityEntry()` renders `entry.stamina` and `entry.cd` inline
+
+### Stamina Changes Toggle
+
+Hosts can control stamina logging independently via the `staminaChanges` toggle in Safari Log Configuration:
+
+```json
+"logTypes": {
+  "mapMovement": true,
+  "staminaChanges": true,
+  ...
+}
+```
+
+### All Stamina Change Paths
+
+| Path | Source File | Logged? |
+|------|-----------|---------|
+| Map movement | `mapMovement.js:movePlayer()` | ✅ All 3 systems via `logPlayerMovement()` |
+| Player self-init | `app.js:safari_map_init_player` | ✅ All 3 systems via `logPlayerInitialization()` |
+| Bulk init | `safariMapAdmin.js:bulkInitializePlayers()` | ✅ All 3 systems via `logPlayerInitialization()` |
+| Custom Action init | `safariManager.js:MANAGE_PLAYER_STATE` | ✅ All 3 systems via `logPlayerInitialization()` |
+| Consumable item use | `app.js:safari_use_item_*` | ✅ All 3 systems via `logItemUse()` |
+| Action outcome (MODIFY_POINTS) | `safariManager.js:executeModifyPoints()` | ✅ All 3 systems |
+| Passive regen | `pointsManager.js:calculateRegeneration()` | Console only (silent — computed on demand) |
+| Permanent item boost (max change) | `pointsManager.js:calculatePermanentStaminaBoost()` | Console only |
 
 ## Technical Implementation
 
@@ -410,7 +494,8 @@ console.log(`🔍 Safari Log Debug: Message sent successfully to Safari Log chan
 5. Test with "Send Test Message"
 
 ### Log Format Examples
-- **Movement:** `🗺️ **MOVEMENT** | [08:32 PM] | @user moved from **A1** (#a1) to **B2** (#b2)`
+- **Movement:** `🗺️ **MOVEMENT** | [08:32 PM] | @user moved from **A1** (#a1) to **B2** (#b2) (⚡1/1 → 0/1 ♻️12hr)`
+- **Initialization:** `🗺️ **MOVEMENT** | [08:32 PM] | @user moved from **null** to **D3** (⚡0/1 → 1/1)`
 - **Custom Action:** `🎯 **CUSTOM ACTION** | [08:32 PM] | @user at **A1** (#a1)\n> Button: 🍆 Moi MVP (moi_mvp_401745)`
 - **Whisper:** `🤫 **WHISPER** | [08:32 PM] | @sender → @recipient at **A1** (#a1)\n> Message content`
 
