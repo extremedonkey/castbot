@@ -250,19 +250,29 @@ export async function generateVerticalTimeline(seasonName, rounds, startDate) {
 
     // Build SVG parts
     let svgParts = '';
+    const isSpecial = type !== 'standard';
+
+    // Background highlight for special rounds
+    if (isSpecial) {
+      svgParts += `<rect x="0" y="0" width="${WIDTH}" height="${ROW_H}" fill="${color}" fill-opacity="0.06"/>`;
+      svgParts += `<rect x="0" y="0" width="3" height="${ROW_H}" fill="${color}" fill-opacity="0.5"/>`;
+    }
 
     // Col1: color dot + F-number (bold) + duration (muted, below)
     svgParts += `<circle cx="${COL1_X + 6}" cy="16" r="5" fill="${color}"/>`;
-    svgParts += `<text x="${COL1_X + 18}" y="18" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" fill="${TEXT_PRI}">F${round.fNumber}</text>`;
+    svgParts += `<text x="${COL1_X + 18}" y="18" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" fill="${isSpecial ? color : TEXT_PRI}">F${round.fNumber}</text>`;
     svgParts += `<text x="${COL1_X + 18}" y="34" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="${TEXT_MUT}">${dur}d</text>`;
 
     // Day columns
     for (let c = 0; c < cols.length; c++) {
       const col = cols[c];
       const cx = colXs[c];
-      const titleColor = c === cols.length - 1 && col.title.includes('Tribal') ? TYPE_COLORS.ftc : color;
 
-      svgParts += `<text x="${cx}" y="18" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" fill="${TEXT_PRI}">${escapeXml(col.title)}</text>`;
+      // First column of special rounds gets the type color for the title
+      const isEventCol = isSpecial && c === 0;
+      const titleFill = isEventCol ? color : TEXT_PRI;
+
+      svgParts += `<text x="${cx}" y="18" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" fill="${titleFill}">${escapeXml(col.title)}</text>`;
       svgParts += `<text x="${cx}" y="34" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="${TEXT_SEC}">${escapeXml(col.date)}</text>`;
     }
 
