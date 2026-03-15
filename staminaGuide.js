@@ -124,16 +124,18 @@ const PROD_PAGES = [
   },
   // Page 4: Logging & Monitoring
   {
-    title: '📊 Logging & Monitoring',
-    subtitle: '-# Page 5: Tracking stamina changes and player activity',
+    title: '📊 Safari Log',
+    subtitle: '-# Page 5: Setting up and using your server log',
     content: [
-      `Every stamina change is tracked across three log systems. Each shows a **stamina tag** so you can see exactly what happened.`,
-      `### \`\`\`🏷️ The Stamina Tag\`\`\``,
-      `\`(⚡before/max → after/max ♻️timer)\`\n\n| What happened | Tag |\n|---|---|\n| Player moved | \`(⚡1/1 → 0/1 ♻️12h 0m)\` |\n| Used consumable (+4) | \`(⚡1/1 → 5/1 ♻️MAX)\` |\n| Admin set stamina | \`(⚡1/1 → 3/1 ♻️MAX)\` |`,
-      `### \`\`\`📡 Three Log Systems\`\`\``,
-      `**Live Discord Logging** — Global audit trail across all servers. Goes to your \`#🪵logs\` channel.\n\n**🦁 Safari Log** — Per-server log channel. Toggle event types in **Settings → 📊 Logs → ⚙️ Configure Log Types**.\n\n**📜 Player Activity Log** — Personal history each player sees in \`/menu\` → Logs. Always on, max 200 entries.`,
-      `### \`\`\`🧭 Player Admin Screen\`\`\``,
-      `The Player Admin shows full stamina state with regen countdown:\n\`\`\`\n⚡ Stamina: 3/5 (♻️ 2h 15m)\n\`\`\`\n\nUse **✏️ Set Stamina** to override values. Changes are logged across all three systems.`
+      `The **Safari Log** is a per-server activity feed that posts game events to a Discord channel in real time. It's the best way to monitor what your players are doing without watching every channel.`,
+      `### \`\`\`🔧 Setting It Up\`\`\``,
+      `1. Go to **Settings → 📊 Logs**\n2. Click **🟢 Enable Safari Log**\n3. Click **📝 Set Log Channel** and choose the channel\n4. Click **⚙️ Configure Log Types** to choose what gets logged\n\n-# We recommend a private channel only hosts can see — players don't need to see the log.`,
+      `### \`\`\`📋 What Gets Logged\`\`\``,
+      `Toggle each event type on or off:\n• **🗺️ Map Movement** — who moved where, with stamina cost\n• **📦 Item Pickups** — items found and consumables used\n• **🪙 Currency Changes** — gold earned/spent\n• **🏪 Store Transactions** — store purchases\n• **⚔️ Attacks** — combat results\n• **⚡ Actions** — custom action triggers and outcomes\n• **🤫 Whispers** — whisper messages sent\n• **🔘 Button Actions** — button clicks in location channels`,
+      `### \`\`\`🏷️ Reading the Stamina Tag\`\`\``,
+      `Movement and item logs include a stamina tag:\n\`(⚡1/1 → 0/1 ♻️12h 0m)\`\n\n**⚡1/1** = stamina before the action\n**→ 0/1** = stamina after\n**♻️12h 0m** = time until next regen (\`♻️MAX\` = fully charged)\n\nThis tells you at a glance how much stamina a player had and when they'll be able to move again.`,
+      `### \`\`\`📜 Player Activity Log\`\`\``,
+      `Each player also has their own **personal activity log** they can view via \`/menu\` → **📜 Logs**. This is always on (max 200 entries) and shows their own movements, item uses, and stamina changes. You don't need to configure anything — it works automatically.`
     ]
   }
 ];
