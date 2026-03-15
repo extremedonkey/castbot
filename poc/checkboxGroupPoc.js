@@ -26,23 +26,21 @@ export function buildCheckboxModal() {
     type: 9,
     data: {
       custom_id: 'reeces_radio_mockup_submit',
-      title: 'Checkbox Group PoC',
+      title: 'Radio Group PoC',
       components: [
         {
           type: 10,
-          content: '### Pick your favourite Survivor locations\n\nThis is a proof-of-concept for the Checkbox Group component (Type 22). Select up to 10.'
+          content: '### Pick ONE favourite Survivor location\n\nThis is a proof-of-concept for the Radio Group component (Type 21).'
         },
         {
           type: 18,
-          label: 'Survivor Locations',
-          description: 'Choose as many as you like (1-10)',
+          label: 'Survivor Location',
+          description: 'Choose one',
           component: {
-            type: 22,
-            custom_id: 'checkbox_locations',
+            type: 21,
+            custom_id: 'radio_location',
             required: true,
-            min_values: 1,
-            max_values: 10,
-            options: LOCATIONS
+            options: LOCATIONS.slice(0, 5) // Radio max 10, use 5 for test
           }
         }
       ]
