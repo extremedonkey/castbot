@@ -3,8 +3,7 @@
  * Generates visual schedule representations for Season Planner
  *
  * Concepts:
- * 1. Month Calendar — calendar grid with round activities per day
- * 2. Countdown Strip — compact horizontal strip with F-numbers and milestones
+ * Month Calendar — calendar grid with round activities per day
  */
 
 import sharp from 'sharp';
@@ -290,84 +289,3 @@ export async function generateMonthCalendar(seasonName, rounds, startDate) {
   return canvas.composite(composites).png({ quality: 90 }).toBuffer();
 }
 
-// ═══════════════════════════════════════════
-// Countdown Strip
-// ═══════════════════════════════════════════
-
-export async function generateCountdownStrip(seasonName, rounds, startDate) {
-  const sortedIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
-  const dates = calcDates(rounds, startDate);
-
-  const MARGIN = 30;
-  const HEADER_H = 60;
-  const STRIP_H = 60;
-  const NODE_R = 16;
-  const WIDTH = MARGIN * 2 + sortedIds.length * 48;
-  const HEIGHT = HEADER_H + STRIP_H + 80;
-
-  const composites = [];
-  const nodeSpacing = (WIDTH - MARGIN * 2) / (sortedIds.length - 1 || 1);
-
-  // Title
-  composites.push({
-    input: Buffer.from(`<svg width="${WIDTH}" height="${HEADER_H}" xmlns="http://www.w3.org/2000/svg">
-      <text x="${WIDTH / 2}" y="28" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="bold" fill="${TEXT_PRI}">${escapeXml(stripEmoji(seasonName))} — Countdown</text>
-      <text x="${WIDTH / 2}" y="48" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="12" fill="${TEXT_MUT}">F${rounds[sortedIds[0]].fNumber} to F${rounds[sortedIds[sortedIds.length - 1]].fNumber} | ${dates._totalDays} days</text>
-    </svg>`),
-    top: 0, left: 0
-  });
-
-  // Horizontal line
-  const lineY = HEADER_H + STRIP_H / 2;
-  composites.push({
-    input: Buffer.from(`<svg width="${WIDTH}" height="4" xmlns="http://www.w3.org/2000/svg">
-      <rect x="${MARGIN}" y="0" width="${WIDTH - MARGIN * 2}" height="4" rx="2" fill="${SEPARATOR}"/>
-    </svg>`),
-    top: lineY - 2, left: 0
-  });
-
-  // Nodes
-  for (let i = 0; i < sortedIds.length; i++) {
-    const id = sortedIds[i];
-    const round = rounds[id];
-    const type = getRoundType(round);
-    const color = TYPE_COLORS[type];
-    const cx = MARGIN + i * nodeSpacing;
-    const isEvent = type !== 'standard';
-
-    composites.push({
-      input: Buffer.from(`<svg width="${NODE_R * 2 + 4}" height="${NODE_R * 2 + 4}" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="${NODE_R + 2}" cy="${NODE_R + 2}" r="${isEvent ? NODE_R : 8}" fill="${color}" fill-opacity="${isEvent ? 1 : 0.6}"/>
-        ${isEvent ? `<circle cx="${NODE_R + 2}" cy="${NODE_R + 2}" r="${NODE_R - 4}" fill="${BG}"/>` : ''}
-      </svg>`),
-      top: lineY - NODE_R - 2,
-      left: Math.round(cx - NODE_R - 2)
-    });
-
-    const labelY = i % 2 === 0 ? lineY + NODE_R + 8 : lineY + NODE_R + 22;
-    composites.push({
-      input: Buffer.from(`<svg width="60" height="20" xmlns="http://www.w3.org/2000/svg">
-        <text x="30" y="14" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${isEvent ? 11 : 9}" font-weight="${isEvent ? 'bold' : 'normal'}" fill="${isEvent ? color : TEXT_MUT}">F${round.fNumber}</text>
-      </svg>`),
-      top: labelY,
-      left: Math.round(cx - 30)
-    });
-
-    if (isEvent) {
-      const eventLabel = type === 'reunion' ? 'END' : type === 'ftc' ? 'FTC' : type === 'marooning' ? 'START' : (round.eventLabel || type).toUpperCase();
-      composites.push({
-        input: Buffer.from(`<svg width="60" height="16" xmlns="http://www.w3.org/2000/svg">
-          <text x="30" y="12" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="8" font-weight="bold" fill="${color}">${escapeXml(stripEmoji(eventLabel))}</text>
-        </svg>`),
-        top: lineY - NODE_R - 18,
-        left: Math.round(cx - 30)
-      });
-    }
-  }
-
-  const canvas = sharp({
-    create: { width: WIDTH, height: HEIGHT, channels: 4, background: { r: 26, g: 26, b: 46, alpha: 1 } }
-  });
-
-  return canvas.composite(composites).png({ quality: 90 }).toBuffer();
-}

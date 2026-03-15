@@ -7718,7 +7718,7 @@ To fix this:
         deferred: true,
         handler: async (context) => {
           const { loadPlayerData } = await import('./storage.js');
-          const { generateMonthCalendar, generateCountdownStrip } = await import('./scheduleImageGenerator.js');
+          const { generateMonthCalendar } = await import('./scheduleImageGenerator.js');
           const { AttachmentBuilder } = await import('discord.js');
 
           const playerData = await loadPlayerData();
@@ -7730,18 +7730,14 @@ To fix this:
           const startDate = new Date(config.estimatedStartDate);
           const seasonName = config.seasonName;
 
-          const [calendar, countdown] = await Promise.all([
-            generateMonthCalendar(seasonName, seasonRounds, startDate),
-            generateCountdownStrip(seasonName, seasonRounds, startDate),
-          ]);
+          const calendar = await generateMonthCalendar(seasonName, seasonRounds, startDate);
 
           const channelId = req.body.channel?.id || req.body.channel_id;
           const channel = await context.client.channels.fetch(channelId);
 
-          await channel.send({ files: [new AttachmentBuilder(countdown, { name: 'schedule_countdown.png' })] });
           await channel.send({ files: [new AttachmentBuilder(calendar, { name: 'schedule_calendar.png' })] });
 
-          console.log(`📅 Season Planner: Posted 2 schedule images for "${seasonName}"`);
+          console.log(`📅 Season Planner: Posted schedule calendar for "${seasonName}"`);
 
           const { buildPlannerView } = await import('./seasonPlanner.js');
           return buildPlannerView(seasonName, seasonRounds, startDate, configId, 0);
