@@ -116,6 +116,15 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
+  'planner_ideas_*': {
+    label: 'Ideas',
+    description: 'Edit free-form season ideas and brainstorming notes',
+    emoji: '💡',
+    style: 'Secondary',
+    parent: 'reeces_season_planner_mockup',
+    requiresModal: true,
+    category: 'experimental'
+  },
   'planner_edit_*': {
     label: 'Edit Season',
     description: 'Edit season details in Season Planner',

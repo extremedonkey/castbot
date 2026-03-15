@@ -35626,6 +35626,33 @@ Your server is now ready for Tycoons gameplay!`;
       const { handleCheckboxSubmit } = await import('./poc/checkboxGroupPoc.js');
       return handleCheckboxSubmit(data, res);
 
+    } else if (custom_id.startsWith('planner_ideas_save:')) {
+      // Season Planner — save ideas modal submit
+      return ButtonHandlerFactory.create({
+        id: 'planner_ideas_save',
+        updateMessage: true,
+        handler: async (context) => {
+          const configId = custom_id.split(':')[1];
+          const { extractModalFields, buildPlannerView } = await import('./seasonPlanner.js');
+          const { loadPlayerData, savePlayerData } = await import('./storage.js');
+
+          const fields = extractModalFields(components);
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[configId];
+          if (!config) return { content: '❌ Season not found' };
+
+          config.seasonIdeas = fields.ideas_text || '';
+          config.lastUpdated = Date.now();
+          await savePlayerData(playerData);
+
+          console.log(`💡 Season Planner: Ideas updated for "${config.seasonName}"`);
+
+          const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId];
+          const startDate = new Date(config.estimatedStartDate);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas);
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'planner_create_modal' || custom_id.startsWith('planner_setup_modal:')) {
       // Season Planner — create or setup modal submit
       return ButtonHandlerFactory.create({
