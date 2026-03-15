@@ -191,7 +191,7 @@ function getDayActivities(round, challenges = {}) {
  * Get the columnar breakdown for a round.
  * Returns array of { title, date } objects (1-4 columns depending on round type).
  */
-function getScheduleColumns(round, roundStartDate) {
+function getScheduleColumns(round, roundStartDate, challenges = {}) {
   const f = round.fNumber;
   const type = getRoundType(round);
   const elims = round.eliminations ?? 1;
@@ -303,7 +303,7 @@ export async function generateVerticalTimeline(seasonName, rounds, startDate, ch
     const y = HEADER_H + i * ROW_H;
     const dateInfo = dates[id];
     const dur = getRoundDuration(round);
-    const cols = getScheduleColumns(round, dateInfo.date);
+    const cols = getScheduleColumns(round, dateInfo.date, challenges);
     const isLast = i === sortedIds.length - 1;
 
     // Column positions
