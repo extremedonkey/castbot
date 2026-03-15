@@ -115,12 +115,25 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null) 
   // Sort by title
   entries.sort(([, a], [, b]) => (a.title || '').localeCompare(b.title || ''));
 
+  // Look up season names for descriptions
+  const configs = playerData[guildId]?.applicationConfigs || {};
+  const seasonNames = {};
+  for (const config of Object.values(configs)) {
+    if (config.seasonId && config.seasonName) seasonNames[config.seasonId] = config.seasonName;
+  }
+
   for (const [id, challenge] of entries) {
     if (options.length >= 25) break;
     const label = (challenge.title || 'Untitled').substring(0, 100);
+    const seasonLabel = challenge.seasonId && seasonNames[challenge.seasonId]
+      ? seasonNames[challenge.seasonId].substring(0, 50)
+      : '';
+    const desc = seasonLabel
+      ? `${seasonLabel}`.substring(0, 100)
+      : (challenge.description?.substring(0, 100) || 'No description');
     options.push({
       label, value: id,
-      description: challenge.description?.substring(0, 100) || 'No description',
+      description: desc,
       emoji: { name: '🏃' },
       ...(id === selectedChallengeId ? { default: true } : {})
     });

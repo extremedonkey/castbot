@@ -500,11 +500,16 @@ function buildRoundOptions(round, dates, challenges = {}) {
   const elims = round.eliminations ?? 1;
   const elimText = elims === 0 ? 'no elim' : elims === 1 ? '1 elim' : `${elims} elims`;
 
+  // "Go to Challenge" option — only if linked
+  const linkedChalId = round.challengeIDs?.primary;
+  const goToChallenge = linkedChalId
+    ? { label: `Go to ${challengeName}`, value: `go_challenge_${linkedChalId}`, emoji: { name: '🏃' } }
+    : null;
+
   const hasMarooning = round.hasMarooning ?? (round.marooningDays > 0);
   if (hasMarooning) {
-    // Marooning round
     const label = `F${f} ${DOT} ${dates.event} ${DOT} Marooning ${DOT} ${challengeName}`;
-    return [
+    const opts = [
       { label, value: 'summary', default: true, emoji: { name: '🏝️' } },
       { label: 'Manage Marooning & Exile', value: 'marooning', emoji: { name: '🏝️' }, description: dates.event },
       { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${dates.challenge} ${DOT} ${host}` },
@@ -514,15 +519,15 @@ function buildRoundOptions(round, dates, challenges = {}) {
       { label: 'Manage Final Tribal Council', value: 'ftc', emoji: { name: '⚖️' } },
       { label: 'Swap Events With Another Round', value: 'swap_round', emoji: { name: '↔️' } },
     ];
+    if (goToChallenge) opts.push(goToChallenge);
+    return opts;
   }
 
   if (round.swapRound || round.mergeRound) {
-    // Event round (swap or merge)
     const eventLabel = round.eventLabel || (round.swapRound ? 'Swap' : 'Merge');
-    const eventEmoji = '🔀';
     const label = `F${f} ${DOT} ${dates.event} ${DOT} ${eventLabel} ${DOT} ${challengeName}`;
-    return [
-      { label, value: 'summary', default: true, emoji: { name: eventEmoji } },
+    const opts = [
+      { label, value: 'summary', default: true, emoji: { name: '🔀' } },
       { label: `Manage ${eventLabel}`, value: 'manage_event', emoji: { name: '🔀' }, description: dates.event },
       { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${dates.challenge} ${DOT} ${host}` },
       { label: `Edit F${f} Tribal (${elimText})`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${dates.tribal} ${DOT} ${host}` },
@@ -531,11 +536,13 @@ function buildRoundOptions(round, dates, challenges = {}) {
       { label: 'Manage Final Tribal Council', value: 'ftc', emoji: { name: '⚖️' } },
       { label: 'Swap Events With Another Round', value: 'swap_round', emoji: { name: '↔️' } },
     ];
+    if (goToChallenge) opts.push(goToChallenge);
+    return opts;
   }
 
   // Standard round
   const label = `F${f} ${DOT} ${dates.challenge} ${DOT} ${challengeName}`;
-  return [
+  const opts = [
     { label, value: 'summary', default: true, emoji: { name: '▫️' } },
     { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${dates.challenge} ${DOT} ${host}` },
     { label: `Edit F${f} Tribal (${elimText})`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${dates.tribal} ${DOT} ${host}` },
@@ -545,6 +552,8 @@ function buildRoundOptions(round, dates, challenges = {}) {
     { label: 'Manage Final Tribal Council', value: 'ftc', emoji: { name: '⚖️' } },
     { label: 'Swap Events With Another Round', value: 'swap_round', emoji: { name: '↔️' } },
   ];
+  if (goToChallenge) opts.push(goToChallenge);
+  return opts;
 }
 
 // ─────────────────────────────────────────────

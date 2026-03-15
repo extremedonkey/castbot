@@ -7653,9 +7653,19 @@ To fix this:
         handler: async (context) => {
           const selectedValue = req.body.data.values?.[0];
 
-          // No-op actions: summary, divider, edit_challenge (deferred to Challenges spec)
+          // No-op actions: summary, divider
           if (!selectedValue || selectedValue === 'summary' || selectedValue === 'divider') {
             return { type: 6 }; // DEFERRED_UPDATE_MESSAGE — silent acknowledge
+          }
+
+          // Go to Challenge — open challenge management as new ephemeral message
+          if (selectedValue.startsWith('go_challenge_')) {
+            const chalId = selectedValue.replace('go_challenge_', '');
+            const { buildChallengeScreen } = await import('./challengeManager.js');
+            const view = await buildChallengeScreen(context.guildId, chalId);
+            // Send as NEW ephemeral message (not update) so planner stays open
+            const { InteractionResponseType: IRT, InteractionResponseFlags: IRF } = await import('discord-interactions');
+            return { type: IRT.CHANNEL_MESSAGE_WITH_SOURCE, data: { ...view, flags: (1 << 15) | IRF.EPHEMERAL } };
           }
           // Parse roundId and configId from custom_id: planner_round_{roundId}_{configId}
           const afterPrefix = custom_id.replace('planner_round_', '');
@@ -7690,12 +7700,15 @@ To fix this:
                 {
                   type: 18,
                   label: 'Prepping Host',
-                  description: 'Who is planning / preparing this challenge (enter name or @mention)',
+                  description: 'Who is planning / preparing this challenge',
                   component: {
-                    type: 4, custom_id: 'prepping_host', style: 1,
-                    placeholder: 'Host name',
-                    required: false, max_length: 50,
-                    ...(challenge?.creationHost ? { value: `<@${challenge.creationHost}>` } : {})
+                    type: 5, // User Select
+                    custom_id: 'prepping_host',
+                    placeholder: 'Select host...',
+                    required: false,
+                    min_values: 0,
+                    max_values: 1,
+                    ...(challenge?.creationHost ? { default_values: [{ id: challenge.creationHost, type: 'user' }] } : {})
                   }
                 }
               ]
@@ -35808,10 +35821,16 @@ Your server is now ready for Tycoons gameplay!`;
           if (linkedChalId && playerData[context.guildId]?.challenges?.[linkedChalId]) {
             const challenge = playerData[context.guildId].challenges[linkedChalId];
             challenge.title = fields.challenge_name || challenge.title;
-            // Parse host mention <@userId> or plain text
-            if (fields.prepping_host) {
-              const mentionMatch = fields.prepping_host.match(/<@!?(\d+)>/);
-              challenge.creationHost = mentionMatch ? mentionMatch[1] : fields.prepping_host;
+            // User Select returns value (userId) or null
+            // Extract from Label-wrapped User Select: component.value or component.values[0]
+            for (const comp of (components || [])) {
+              const inner = comp.component || comp.components?.[0];
+              if (inner?.custom_id === 'prepping_host') {
+                const userId = inner.values?.[0] || inner.value || null;
+                if (userId) challenge.creationHost = userId;
+                else challenge.creationHost = null; // Cleared
+                break;
+              }
             }
             challenge.lastUpdated = Date.now();
           }
