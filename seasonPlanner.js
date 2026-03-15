@@ -401,7 +401,7 @@ const SELECTS_PER_PAGE = 10;
  * @param {number} page - 0-indexed page
  * @returns {Object} Components V2 response
  */
-export function buildPlannerView(seasonName, rounds, startDate, configId, page = 0) {
+export function buildPlannerView(seasonName, rounds, startDate, configId, page = 0, ideas = '') {
   const roundIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
   const totalPages = Math.ceil(roundIds.length / SELECTS_PER_PAGE);
   if (page < 0 || page >= totalPages) page = 0;
@@ -446,6 +446,11 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
         { type: 2, custom_id: `season_app_ranking_${configId}`, label: 'Ranking', style: 2, emoji: { name: '🏆' } },
         { type: 2, custom_id: `planner_tribes_${configId}`, label: 'Tribes', style: 2, emoji: { name: '🔥' } },
       ]},
+      {
+        type: 9, // Section with accessory
+        components: [{ type: 10, content: `### ✏️ Ideas\n${ideas || '-# No ideas yet'}` }],
+        accessory: { type: 2, custom_id: `planner_ideas_${configId}`, label: 'Ideas', style: 2, emoji: { name: '💡' } }
+      },
       ...selectRows,
       { type: 1, components: [
         { type: 2, custom_id: `planner_schedule_${configId}`, label: 'Schedule', style: 2, emoji: { name: '📋' } },
@@ -657,6 +662,7 @@ export async function createPlannerSeason(guildId, userId, data) {
     estimatedSwaps: data.estimatedSwaps,
     estimatedFTCPlayers: data.estimatedFTCPlayers,
     currentSeasonRoundID: 1,
+    seasonIdeas: 'Free-form section to brainstorm season themes, twists and challenges before assigning to rounds.',
   };
 
   // Generate rounds
@@ -692,6 +698,7 @@ export async function setupPlannerForExistingSeason(guildId, configId, data) {
   config.estimatedSwaps = data.estimatedSwaps;
   config.estimatedFTCPlayers = data.estimatedFTCPlayers;
   config.currentSeasonRoundID = config.currentSeasonRoundID || 1;
+  config.seasonIdeas = config.seasonIdeas || 'Free-form section to brainstorm season themes, twists and challenges before assigning to rounds.';
   config.lastUpdated = Date.now();
 
   // Generate rounds

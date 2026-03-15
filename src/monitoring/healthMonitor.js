@@ -353,12 +353,21 @@ export class HealthMonitor {
   /**
    * Start interval monitoring with bulletproof error handling
    */
-  start(hours, channelId, guildId) {
+  async start(hours, channelId, guildId) {
     try {
       // Stop any existing interval
       this.stop();
 
       if (hours <= 0) {
+        // Clear persisted config
+        try {
+          const { loadPlayerData, savePlayerData } = await import('../../storage.js');
+          const pd = await loadPlayerData();
+          if (pd.environmentConfig?.healthMonitor) {
+            delete pd.environmentConfig.healthMonitor;
+            await savePlayerData(pd);
+          }
+        } catch { /* non-fatal */ }
         console.log('[HealthMonitor] ⏹️ Monitoring disabled (hours: 0)');
         return { success: true, message: 'Monitoring disabled' };
       }
@@ -398,11 +407,40 @@ export class HealthMonitor {
         }
       }, 5000);
 
+      // Persist config so monitoring survives restarts
+      try {
+        const { loadPlayerData, savePlayerData } = await import('../../storage.js');
+        const pd = await loadPlayerData();
+        if (!pd.environmentConfig) pd.environmentConfig = {};
+        pd.environmentConfig.healthMonitor = { hours, channelId, guildId };
+        await savePlayerData(pd);
+        console.log(`[HealthMonitor] 💾 Config persisted (${hours}h, channel ${channelId})`);
+      } catch (err) {
+        console.error('[HealthMonitor] Failed to persist config (non-fatal):', err.message);
+      }
+
       console.log(`[HealthMonitor] ✅ Started monitoring every ${hours} hours to channel ${channelId}`);
       return { success: true, message: `Monitoring every ${hours} hours` };
     } catch (error) {
       console.error('[HealthMonitor] Start error:', error.message);
       return { success: false, message: 'Failed to start monitoring' };
+    }
+  }
+
+  /**
+   * Restore monitoring from persisted config (called at startup)
+   */
+  async restoreFromConfig() {
+    try {
+      const { loadPlayerData } = await import('../../storage.js');
+      const pd = await loadPlayerData();
+      const config = pd.environmentConfig?.healthMonitor;
+      if (config?.hours && config?.channelId) {
+        console.log(`[HealthMonitor] 🔄 Restoring monitoring: ${config.hours}h to channel ${config.channelId}`);
+        this.start(config.hours, config.channelId, config.guildId);
+      }
+    } catch (err) {
+      console.error('[HealthMonitor] Failed to restore config (non-fatal):', err.message);
     }
   }
 

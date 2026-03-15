@@ -1668,6 +1668,15 @@ client.once('ready', async () => {
     console.error('📦 [BACKUP] Failed to start backup service:', err.message);
   }
 
+  // Restore health monitor if previously configured
+  try {
+    const { getHealthMonitor } = await import('./src/monitoring/healthMonitor.js');
+    const monitor = getHealthMonitor(client);
+    await monitor.restoreFromConfig();
+  } catch (err) {
+    console.error('[HealthMonitor] Failed to restore:', err.message);
+  }
+
   // Dev-only: Log test coverage scan
   if (process.env.PRODUCTION !== 'TRUE') {
     try {
