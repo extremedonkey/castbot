@@ -507,8 +507,8 @@ export async function buildPlannerSelector(guildId) {
     });
   }
 
-  // Add "Create New" option
-  options.push({
+  // Add "Create New" at the top
+  options.unshift({
     label: 'Create New Season',
     value: 'planner_create_new',
     description: 'Start planning a new season from scratch',
