@@ -217,12 +217,12 @@ export const BUTTON_REGISTRY = {
     category: 'experimental'
   },
   'prod_guide_*': {
-    label: 'Prod Guide',
+    label: 'Guide',
     description: 'Host-facing production guide (stamina config, logging, admin tools)',
-    emoji: '🛠️',
-    style: 'Primary',
-    parent: 'reeces_stuff',
-    category: 'experimental'
+    emoji: '🦁',
+    style: 'Secondary',
+    parent: 'safari_customize_terms',
+    category: 'safari'
   },
   'richcard_demo': {
     label: 'Rich Card',

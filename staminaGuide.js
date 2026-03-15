@@ -3,7 +3,7 @@
  * Accessible from player menu (🦁 Guide button next to 📜 Logs).
  *
  * Prod Guide — Host-facing guide (configuration, logging, admin tools).
- * Accessible from Reece's Stuff menu.
+ * Accessible from Settings menu (🦁 Guide button next to ← Back).
  */
 
 const PAGES = [
@@ -30,7 +30,7 @@ const PAGES = [
       `### \`\`\`⚡ Reading Your Stamina\`\`\``,
       `Your stamina is shown as \`⚡ 3/5\` — meaning **3 available** out of **5 maximum**.\n\n**Over Max** — Some items can push you *above* your max. \`⚡ 3/1\` means 3 moves available even though your max is 1. This is normal!\n\nThe regen timer starts from your **last** move. If you moved at 9:00 PM and regen is 12 hours, you can move again at 9:00 AM.`,
       `### \`\`\`📊 Activity Log\`\`\``,
-      `-# Tap **📜 Logs** in your player menu to see your activity history.\n\nWhen you move or use items, your log shows a stamina tag:\n\`(⚡1/1 → 0/1 ♻️12hr)\`\n\n**⚡1/1** = before (1 of 1) **→ 0/1** = after **♻️12hr** = time until regen\n\nIf you're at or above max, the ♻️ timer is hidden.`
+      `-# Tap **📜 Logs** in your player menu to see your activity history.\n\nWhen you move or use items, your log shows a stamina tag:\n\`(⚡1/1 → 0/1 ♻️12hr)\`\n\n**⚡1/1** = before (1 of 1) **→ 0/1** = after **♻️12hr** = time until regen\n\nWhen you're at or above max, you'll see \`♻️MAX\`.`
     ]
   },
   // Page 2: Regeneration
@@ -62,20 +62,80 @@ const PAGES = [
 ];
 
 /**
- * Prod Guide — Host-facing pages (Reece's Stuff only).
- * Separated from the player-facing Safari Guide.
+ * Prod Guide — Host-facing pages (Settings menu).
+ * Comprehensive stamina system reference for hosts.
  */
 const PROD_PAGES = [
-  // Page 0: Stamina Configuration & Logging
+  // Page 0: Overview & Configuration
   {
-    title: '🛠️ Stamina — For Hosts',
-    subtitle: '-# Configuring and monitoring stamina',
+    title: '🦁 Host Guide — Stamina System',
+    subtitle: '-# Page 1: Configuration & basics',
     content: [
-      `As a host, you control stamina settings per-server and can monitor all stamina changes across three log systems.`,
-      `### \`\`\`⚙️ Configuration\`\`\``,
-      `Set stamina via **\`/menu\` → Safari Settings → Stamina**:\n• **Max Stamina** — How many moves before regen (default: 1)\n• **Regen Time** — Minutes until full reset (default: 3)\n• **Starting Stamina** — What new players start with`,
-      `### \`\`\`📊 Three Log Systems\`\`\``,
-      `Every stamina change now shows a **stamina tag** with before/after state:\n\n**Live Discord Logging** (\`#🪵logs\`)\nGlobal audit trail — every server, every event.\n\`\`\`\n[1:21PM] | Nic in Server | SAFARI_MOVEMENT | Moved C3→C4 (⚡1/1 → 0/1 ♻️12hr)\n\`\`\`\n\n**Safari Log** (per-server channel)\nHost-facing, toggled per event type. Enable **Stamina Changes** in log types config.\n\`\`\`\n🗺️ MOVEMENT | [1:21PM] | Nic moved from C3 to C4 (⚡1/1 → 0/1 ♻️12hr)\n\`\`\`\n\n**Player Activity Log** (in-game)\nPersonal history with stamina inline:\n\`\`\`\n9 hours ago 🗺️ Movement — Moved C3 to C4 (⚡1/1 → 0/1 ♻️12hr) ⚡0/1 cd: 12hr\n\`\`\``
+      `This guide covers the full stamina system — how it works under the hood, what each setting does, and how the two regeneration phases interact with items.`,
+      `### \`\`\`⚙️ Stamina Settings\`\`\``,
+      `Configure via **Settings → ⚡ Stamina Settings**:\n• **Max Stamina** — Base capacity before items (default: 1)\n• **Regen Minutes** — Cooldown per regen cycle (default: 3)\n• **Regen Amount** — How much stamina each regen cycle restores (default: max). Set to a number for incremental regen, or leave as "max" for full reset\n• **Starting Stamina** — What new players begin with\n• **Default Starting Location** — Where new players spawn`,
+      `### \`\`\`⚡ How Stamina Works\`\`\``,
+      `Every move costs **1 stamina**. Stamina is stored per-player in \`entityPoints\` as:\n\`\`\`\n{ current: 3, max: 5, lastUse: <timestamp>,\n  lastRegeneration: <timestamp> }\n\`\`\`\n\n**current** — available stamina right now\n**max** — base capacity (your config + permanent item boosts)\n**lastUse** — when a charge was last consumed\n**lastRegeneration** — when regen last ticked (for continuous regen)`,
+      `### \`\`\`♻️ Regen Timer Display\`\`\``,
+      `The regen timer appears everywhere stamina is shown:\n• \`♻️MAX\` — all charges ready, nothing on cooldown\n• \`♻️12h 0m\` — hours and minutes remaining\n• \`♻️45m\` — minutes only (under 1 hour)\n• \`♻️30s\` — seconds (under 1 minute)`
+    ]
+  },
+  // Page 1: Phase 1 vs Phase 2 Regeneration
+  {
+    title: '🔄 Regeneration Phases',
+    subtitle: '-# Page 2: Phase 1 (standard) vs Phase 2 (permanent items)',
+    content: [
+      `The stamina system has **two regeneration modes** that activate automatically based on whether a player owns permanent stamina items.`,
+      `### \`\`\`📗 Phase 1 — Standard Players\`\`\``,
+      `Players **without** permanent stamina items use Phase 1. Regen is simple:\n\n1. Player uses stamina → \`lastUse\` updated\n2. Timer counts from \`lastRegeneration\` (or \`lastUse\` for migration)\n3. Each elapsed interval adds **Regen Amount** to current\n4. Stops when current reaches max\n\n**Example** (max: 1, regen: 720min, amount: max):\n\`\`\`\n⚡ 1/1 → move → ⚡ 0/1 → 12hr → ⚡ 1/1\n\`\`\`\n\n**Example** (max: 1, regen: 2min, amount: 5):\n\`\`\`\n⚡ 1/1 → move → ⚡ 0/1 → 2min → ⚡ 5/1\n\`\`\`\n-# When Regen Amount > Max, stamina goes **over max** on regen. This is intentional — the player gets bonus moves every cycle.`,
+      `### \`\`\`📘 Phase 2 — Players with Permanent Items\`\`\``,
+      `Players who own **non-consumable** stamina items (e.g. Horse +1) automatically upgrade to Phase 2. Each stamina point becomes an independent **charge** with its own cooldown:\n\`\`\`\ncharges: [null, null, 1770491700356]\n           ↑       ↑         ↑\n        ready   ready   on cooldown\n\`\`\`\n\n**null** = charge is available\n**timestamp** = charge is on cooldown (regens when \`now - timestamp ≥ interval\`)\n\nWhen a charge regenerates, it adds the **Regen Amount** (not just +1). So with regen amount 5 and 1 charge regenerating: +5 stamina.`,
+      `### \`\`\`🔀 Phase Switching\`\`\``,
+      `Phase is determined **on every stamina check** by scanning the player's inventory for non-consumable items with \`staminaBoost\`. If found → Phase 2. If not → Phase 1.\n\n-# Players seamlessly switch phases if they gain or lose permanent items. No manual intervention needed.`
+    ]
+  },
+  // Page 2: Items & Over-Max
+  {
+    title: '🧪 Items & Over-Max Stamina',
+    subtitle: '-# Page 3: Consumables, permanent items, and edge cases',
+    content: [
+      `Items interact with stamina in two distinct ways. Understanding the difference is key to game balance.`,
+      `### \`\`\`🍎 Consumable Items\`\`\``,
+      `Consumable items with \`staminaBoost\` add stamina **on use** and are removed from inventory.\n\n**Key behaviors:**\n• Stamina can go **above max** (e.g. 5/1 = 5 moves with max 1)\n• Does **NOT** reset the regen timer — purely additive\n• Moving on bonus stamina (above max) does **NOT** start a cooldown\n• Only consuming a natural charge triggers a cooldown\n\n-# This is critical with long cooldowns. A player 5 minutes from regen who uses a consumable still gets their natural regen in 5 minutes.`,
+      `### \`\`\`🐎 Permanent Items\`\`\``,
+      `Non-consumable items with \`staminaBoost\` increase the player's **max** stamina permanently:\n\n**Example** — Horse (\`staminaBoost: 1, consumable: "No"\`):\n\`\`\`\nBase max: 1 → With Horse: max 2\ncharges: [null, null]  (2 independent charges)\n\`\`\`\n\n**Stacking:** Multiple items stack additively.\nHorse (+1) + Boots (+1) = max 3 (1 base + 2 boost)\n\n**Losing items:** If removed from inventory, max decreases on next stamina check. Charges array auto-trims.`,
+      `### \`\`\`⚠️ Over-Max Scenarios\`\`\``,
+      `Stamina can exceed max in these cases:\n• **Consumable use** — \`addBonusPoints()\` allows over-max\n• **Regen Amount > Max** — Phase 1 regen can push above max\n• **Admin set** — Admin can set any value\n\nOver-max stamina does **not** regenerate — regen only activates when \`current < max\`. The player must spend down to below max before natural regen kicks in.\n\n-# The Player Admin screen shows over-max as e.g. \`⚡ 5/1 (♻️ MAX)\` — MAX because all charges are ready even though current > max.`
+    ]
+  },
+  // Page 3: Logging & Monitoring
+  {
+    title: '📊 Logging & Monitoring',
+    subtitle: '-# Page 4: Three log systems and the stamina tag',
+    content: [
+      `Every stamina change appears across three independent log systems with a consistent **stamina tag** format.`,
+      `### \`\`\`🏷️ The Stamina Tag\`\`\``,
+      `\`(⚡before/max → after/max ♻️timer)\`\n\n| Event | Tag |\n|---|---|\n| Movement (cost 1) | \`(⚡1/1 → 0/1 ♻️12h 0m)\` |\n| Consumable (+4) | \`(⚡1/1 → 5/1 ♻️MAX)\` |\n| Regen (amount: 5) | \`(⚡0/1 → 5/1 ♻️MAX)\` |\n| Admin set to 3 | \`(⚡1/1 → 3/1 ♻️MAX)\` |`,
+      `### \`\`\`📡 Live Discord Logging\`\`\``,
+      `-# Global audit trail — every server, every event. Goes to your \`#🪵logs\` channel.\n\n\`\`\`\n[1:21PM] | Nic in Server | SAFARI_MOVEMENT |\nMoved C3→C4 (⚡1/1 → 0/1 ♻️12h 0m)\n\`\`\``,
+      `### \`\`\`🦁 Safari Log\`\`\``,
+      `-# Per-server log channel. Hosts toggle event types via **Settings → 📊 Logs → ⚙️ Configure Log Types**.\n\n\`\`\`\n🗺️ MOVEMENT | [1:21PM] | Nic moved from C3 to C4\n(⚡1/1 → 0/1 ♻️12h 0m)\n\`\`\`\n\`\`\`\n⚡ ITEM USED | [1:42PM] | Nic at F6 (#f6)\nUsed: 🧪 Potion (x1) → +4 stamina (⚡1/1 → 5/1 ♻️MAX)\n\`\`\``,
+      `### \`\`\`📜 Player Activity Log\`\`\``,
+      `-# In-game personal history (max 200 entries). Players access via **📜 Logs** in \`/menu\`.\n\n\`\`\`\n9h ago 🗺️ Movement — Moved C3→C4\n(⚡1/1 → 0/1 ♻️12h 0m) ⚡0/1 cd: 12h 0m\n\`\`\`\n\n-# The activity log also shows stamina and cooldown as separate fields for quick scanning.`
+    ]
+  },
+  // Page 4: Admin Tools & Troubleshooting
+  {
+    title: '🛠️ Admin Tools',
+    subtitle: '-# Page 5: Player Admin, diagnostics, and common issues',
+    content: [
+      `The **Player Admin** screen (Production Menu → 🧭 Player Admin) shows full stamina state including regen countdown.`,
+      `### \`\`\`🧭 Player Admin Screen\`\`\``,
+      `After selecting a player, you'll see:\n\`\`\`\n⚡ Stamina: 3/5 (♻️ 2h 15m)\n\`\`\`\n\nThe ✏️ **Set Stamina** button lets you override a player's current stamina to any value. This:\n• Sets \`current\` to the new value\n• Syncs the charges array (Phase 2 players)\n• Resets \`lastRegeneration\` to now\n• Logs the change to all three log systems`,
+      `### \`\`\`🔍 Diagnostic Logs\`\`\``,
+      `Watch for these in your console/PM2 logs:\n\n**⚠️ STAMINA OVER-MAX** — Player's current exceeds max. Normal for consumable use and regen amount > max.\n\n**⚠️ STAMINA CONFIG MISMATCH** — Stored max doesn't match server config. Happens when you change Max Stamina in settings. Auto-corrects on next regen.\n\n**🐎⚡ Charge N regenerated** — Phase 2 charge came off cooldown.\n\n**⚡ Stamina regenerated** — Phase 1 regen fired with before/after values.`,
+      `### \`\`\`❓ Common Issues\`\`\``,
+      `**"Player shows 1/1 but I set regen amount to 5"**\nCheck if the player has a \`charges\` array (Phase 2). Previously, Phase 2 ignored regen amount — this is now fixed. If issue persists, use Admin Set to reset their stamina.\n\n**"Stamina isn't regenerating"**\nRegen only fires when \`current < max\`. If a player is at or above max (including via consumables), no regen occurs.\n\n**"Timer shows MAX but player has 0 stamina"**\nThe timer is "Ready!" when the cooldown has elapsed. The regen fires on the next stamina check (movement, navigate, etc.) — not in the background.`
     ]
   }
 ];
@@ -127,7 +187,7 @@ export function buildProdGuidePage(page = 0) {
   const current = PROD_PAGES[page];
 
   const navButtons = [
-    { type: 2, custom_id: 'reeces_stuff', label: '← Reece\'s Stuff', style: 2 }
+    { type: 2, custom_id: 'safari_customize_terms', label: '← Settings', style: 2 }
   ];
 
   // Only show pagination when there are multiple pages
@@ -157,5 +217,5 @@ export function buildProdGuidePage(page = 0) {
   };
 }
 
-// Keep old export name for Reece's Stuff backward compatibility
+// Keep old export name for backward compatibility
 export const buildStaminaGuidePage = buildSafariGuidePage;

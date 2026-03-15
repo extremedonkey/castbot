@@ -137,8 +137,7 @@ export class MenuBuilder {
           { type: 2, custom_id: 'reeces_season_planner_mockup', label: 'Season Planner', style: 1, emoji: { name: '📝' } },
           { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
           { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } },
-          { type: 2, custom_id: 'richcard_demo', label: 'Rich Card', style: 1, emoji: { name: '🎴' } },
-          { type: 2, custom_id: 'prod_guide_0', label: 'Prod Guide', style: 1, emoji: { name: '🛠️' } }
+          { type: 2, custom_id: 'richcard_demo', label: 'Rich Card', style: 1, emoji: { name: '🎴' } }
         ]
       },
       { type: 10, content: `### \`\`\`🔧 Admin Tools\`\`\`` },
