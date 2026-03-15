@@ -7695,6 +7695,18 @@ To fix this:
           return buildQuestionManagementUI(config, configId, 0);
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('planner_ranking_')) {
+      // Legacy fallback: old planner messages had planner_ranking_ buttons, now using season_app_ranking_ directly
+      // Redirect to the season selector so the message re-renders with the correct button IDs
+      return ButtonHandlerFactory.create({
+        id: 'planner_ranking_legacy',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { buildPlannerSelector } = await import('./seasonPlanner.js');
+          return buildPlannerSelector(context.guildId);
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('planner_schedule_') || custom_id.startsWith('planner_tribes_')) {
       // Season Planner — toolbar buttons (not yet implemented)
       return ButtonHandlerFactory.create({
