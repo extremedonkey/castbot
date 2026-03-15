@@ -826,6 +826,6 @@ export function createStaminaSnapshot(before, after, max, regenTime) {
 export function formatStaminaTag(snapshot) {
     if (!snapshot) return '';
     const regen = (snapshot.regenTime === 'Full' || snapshot.regenTime === 'Ready!')
-        ? '' : ` ♻️${snapshot.regenTime}`;
+        ? ' ♻️MAX' : ` ♻️${snapshot.regenTime}`;
     return `(⚡${snapshot.before}/${snapshot.max} → ${snapshot.after}/${snapshot.max}${regen})`;
 }

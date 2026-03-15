@@ -75,10 +75,10 @@ Worse, stamina regeneration happens **silently** — it's calculated on-demand w
 | Event | Stamina Tag |
 |-------|-------------|
 | Movement (cost 1) | `(⚡1/1 → 0/1 ♻️12hr)` |
-| Consumable use (+2) | `(⚡0/1 → 2/1 ♻️Ready)` |
-| Permanent item equip | `(⚡1/1 → 1/2 ♻️Ready)` |
-| Passive regen | `(⚡0/1 → 1/1 ♻️Ready)` |
-| Admin set to 5 | `(⚡1/1 → 5/1 ♻️Ready)` |
+| Consumable use (+2) | `(⚡0/1 → 2/1 ♻️MAX)` |
+| Permanent item equip | `(⚡1/1 → 1/2 ♻️MAX)` |
+| Passive regen | `(⚡0/1 → 1/1 ♻️MAX)` |
+| Admin set to 5 | `(⚡1/1 → 5/1 ♻️MAX)` |
 | Action outcome (-2) | `(⚡3/3 → 1/3 ♻️2hr)` |
 
 **Additional info to consider showing:**

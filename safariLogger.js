@@ -154,9 +154,8 @@ export async function logItemUse({ guildId, userId, username, displayName, locat
   const activityOpts = { loc: location };
   if (staminaSnapshot) {
     activityOpts.stamina = `${staminaSnapshot.after}/${staminaSnapshot.max}`;
-    if (staminaSnapshot.regenTime && staminaSnapshot.regenTime !== 'Full' && staminaSnapshot.regenTime !== 'Ready!') {
-      activityOpts.cd = staminaSnapshot.regenTime;
-    }
+    activityOpts.cd = (staminaSnapshot.regenTime === 'Full' || staminaSnapshot.regenTime === 'Ready!')
+      ? 'MAX' : staminaSnapshot.regenTime;
   }
   addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.item, `Used ${formatEmojiForText(itemEmoji) || '⚡'} ${itemName} x${quantity} → +${staminaBoost} stamina${staminaTag ? ' ' + staminaTag : ''}`, activityOpts);
 }
@@ -324,9 +323,8 @@ export async function logPlayerMovement({ guildId, userId, username, displayName
   const activityOpts = {};
   if (staminaSnapshot) {
     activityOpts.stamina = `${staminaSnapshot.after}/${staminaSnapshot.max}`;
-    if (staminaSnapshot.regenTime && staminaSnapshot.regenTime !== 'Full' && staminaSnapshot.regenTime !== 'Ready!') {
-      activityOpts.cd = staminaSnapshot.regenTime;
-    }
+    activityOpts.cd = (staminaSnapshot.regenTime === 'Full' || staminaSnapshot.regenTime === 'Ready!')
+      ? 'MAX' : staminaSnapshot.regenTime;
   }
   addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.movement, `Moved from ${fromLocation} to ${toLocation}${staminaTag ? ' ' + staminaTag : ''}`, activityOpts);
 }

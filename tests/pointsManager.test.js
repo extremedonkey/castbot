@@ -10,7 +10,7 @@ function createStaminaSnapshot(before, after, max, regenTime) {
 function formatStaminaTag(snapshot) {
     if (!snapshot) return '';
     const regen = (snapshot.regenTime === 'Full' || snapshot.regenTime === 'Ready!')
-        ? '' : ` ♻️${snapshot.regenTime}`;
+        ? ' ♻️MAX' : ` ♻️${snapshot.regenTime}`;
     return `(⚡${snapshot.before}/${snapshot.max} → ${snapshot.after}/${snapshot.max}${regen})`;
 }
 
@@ -35,12 +35,12 @@ describe('formatStaminaTag', () => {
 
     it('formats consumable boost (over max, ready)', () => {
         const snap = createStaminaSnapshot(0, 2, 1, 'Ready!');
-        assert.equal(formatStaminaTag(snap), '(⚡0/1 → 2/1)');
+        assert.equal(formatStaminaTag(snap), '(⚡0/1 → 2/1 ♻️MAX)');
     });
 
-    it('formats full regen (no regen suffix)', () => {
+    it('formats full regen with MAX suffix', () => {
         const snap = createStaminaSnapshot(0, 1, 1, 'Full');
-        assert.equal(formatStaminaTag(snap), '(⚡0/1 → 1/1)');
+        assert.equal(formatStaminaTag(snap), '(⚡0/1 → 1/1 ♻️MAX)');
     });
 
     it('formats high stamina values', () => {
@@ -50,7 +50,7 @@ describe('formatStaminaTag', () => {
 
     it('formats permanent boost max change', () => {
         const snap = createStaminaSnapshot(1, 1, 2, 'Full');
-        assert.equal(formatStaminaTag(snap), '(⚡1/2 → 1/2)');
+        assert.equal(formatStaminaTag(snap), '(⚡1/2 → 1/2 ♻️MAX)');
     });
 
     it('returns empty string for null snapshot', () => {
