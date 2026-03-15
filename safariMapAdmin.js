@@ -762,14 +762,16 @@ export async function createStaminaModal(userId, guildId) {
     const { getStaminaConfig } = await import('./safariManager.js');
     const entityId = `player_${userId}`;
     const stamina = await getEntityPoints(guildId, entityId, 'stamina');
-    if (stamina) {
-      currentStamina = String(stamina.current);
-      // stamina.max is effectiveMax (base + items), we need the base
-      itemBoost = await calcBoost(guildId, entityId);
-      playerMax = String(stamina.max - itemBoost);
-    }
     const config = await getStaminaConfig(guildId);
     serverMax = String(config.maxStamina);
+    if (stamina) {
+      currentStamina = String(stamina.current);
+      // Use stamina.max from getEntityPoints (authoritative, includes server config sync)
+      // Subtract item boosts to get the base max (what the admin should edit)
+      itemBoost = await calcBoost(guildId, entityId);
+      const baseMax = config.maxStamina; // Server config is the true base — not stamina.max which may be stale
+      playerMax = String(baseMax);
+    }
   } catch (e) {
     console.error('Stamina modal lookup error:', e.message);
   }
