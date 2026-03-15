@@ -770,6 +770,17 @@ export function buildRoundModal(action, round, roundId, configId) {
               required: false, max_length: 1,
               ...(mDays > 1 ? { value: String(mDays) } : {})
             }
+          },
+          {
+            type: 18,
+            label: 'Exiled Players',
+            description: 'Players in exile (eliminated but could return via twist)',
+            component: {
+              type: 4, custom_id: 'exiled_players', style: 1,
+              placeholder: '0',
+              required: false, max_length: 2,
+              value: String(round.exiledPlayers)
+            }
           }
         ]
       };
@@ -1035,6 +1046,8 @@ export async function processRoundEdit(guildId, action, roundId, configId, field
         round.hasMarooning = true;
         round.marooningDays = parseInt(duration) || 0;
       }
+      const exiled = parseInt(fields.exiled_players);
+      if (!isNaN(exiled) && exiled >= 0) round.exiledPlayers = exiled;
       break;
     }
 
