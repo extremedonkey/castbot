@@ -103,11 +103,12 @@ async function createPlayerViewUI(guildId, userId) {
   // Get current location and stamina (use getEntityPoints for authoritative values)
   const currentLocation = playerMapData?.currentLocation || 'Not on map';
   let stamina = { current: 0, maximum: 0 };
+  let regenTime = 'MAX';
   try {
     const { getEntityPoints, getTimeUntilRegeneration } = await import('./pointsManager.js');
     const entityStamina = await getEntityPoints(guildId, `player_${userId}`, 'stamina');
     if (entityStamina) stamina = { current: entityStamina.current, maximum: entityStamina.max };
-    const regenTime = await getTimeUntilRegeneration(guildId, `player_${userId}`, 'stamina');
+    regenTime = await getTimeUntilRegeneration(guildId, `player_${userId}`, 'stamina');
   } catch {
     stamina = safari.points?.stamina || { current: 0, maximum: 0 };
   }

@@ -100,9 +100,16 @@ for (let i = 0; i < newData.charges.length; i++) {
 |-----|----------|-------------|-------------|------------------|-------------------|
 | 8 | 30min | 1 | 0/8 | 1/8 | 2/8 |
 | 8 | 30min | 3 | 0/8 | 3/8 | 6/8 |
-| 8 | 30min | 8 | 0/8 | 8/8 | 8/8 (paused) |
-| 1 | 30min | 1 | 0/1 | 1/1 | 1/1 (paused) |
-| 1 | 30min | 5 | 0/1 | 5/1 | 10/1 ← **over-max!** |
+| 8 | 30min | 3 | 6/8 | 9/8 | 12/8 (paused, ≥ max) |
+| 8 | 30min | 8 | 0/8 | 8/8 | 8/8 (paused, ≥ max) |
+| 1 | 30min | 1 | 0/1 | 1/1 | 1/1 (paused, ≥ max) |
+| 1 | 30min | 5 | 0/1 | 5/1 | 5/1 (paused, ≥ max) |
+
+### Core Rule: Regen adds the FULL amount, NEVER partial
+
+**Regen fires when `current < max`.** When it fires, it adds the **full regen amount** — never capped, never reduced. The result can exceed max. This is intentional.
+
+**Pause rule**: Once `current >= max`, the cooldown timer pauses. Player must spend stamina to drop below max before regen fires again.
 
 ### Over-Max Scenarios (Regen Amount > Max)
 
@@ -111,18 +118,20 @@ This is the user's explicit use case: max=1, regen=5.
 | State | Event | Result | Notes |
 |-------|-------|--------|-------|
 | 0/1 | Cooldown fires | 5/1 | Over-max, intentional |
-| 5/1 | Uses 1 stamina | 4/1 | Still over-max |
-| 4/1 | Cooldown fires? | **Decision needed** | See Design Decision #1 |
-| 1/1 | Cooldown fires? | **Decision needed** | See Design Decision #2 |
+| 5/1 | Timer check | 5/1 (paused) | 5 ≥ 1, timer paused |
+| 5/1 | Uses 1 stamina | 4/1 | Still ≥ max, timer stays paused |
+| 4/1 | Uses 4 stamina | 0/1 | Below max, timer restarts |
+| 0/1 | Cooldown fires | 5/1 | Burst again |
 
-### Cap-at-Max Scenario (Regen Amount < Max)
+### Regen Amount < Max (Continuous Ticking, No Cap)
 
 | Max | Regen | State | After Cooldown | Notes |
 |-----|-------|-------|---------------|-------|
-| 8 | 3 | 0/8 | 3/8 | Normal partial regen |
-| 8 | 3 | 6/8 | 8/8 (capped) | `min(6+3, 8) = 8`, not 9 |
-| 8 | 3 | 7/8 | 8/8 (capped) | Wastes 2 of the 3, fine |
-| 8 | 3 | 8/8 | 8/8 (paused) | No regen needed |
+| 8 | 3 | 0/8 | 3/8 | +3, still below max → timer continues |
+| 8 | 3 | 3/8 | 6/8 | +3, still below max → timer continues |
+| 8 | 3 | 6/8 | 9/8 | +3, now ≥ max → **timer pauses** |
+| 8 | 3 | 9/8 | 9/8 (paused) | Must use stamina to drop below 8 |
+| 8 | 3 | 7/8 | 10/8 | +3 applied in full (NOT capped to 8) |
 
 ### Mid-Round Config Change Scenarios
 
@@ -130,9 +139,9 @@ Host changes regen amount from 1 → 5 mid-round:
 
 | Player State | Time to Cooldown | What Happens |
 |---|---|---|
-| 3/8, 2min left | Config changes | Next regen: +5 instead of +1 → **8/8** (capped) |
-| 0/1, 28min left | Config changes | Next regen: +5 instead of +1 → **5/1** (over-max) |
-| 8/8, no cooldown | Config changes | Nothing — cooldown paused, no regen event pending |
+| 3/8, 2min left | Config changes | Next regen: +5 instead of +1 → **8/8** (≥ max, pauses) |
+| 0/1, 28min left | Config changes | Next regen: +5 instead of +1 → **5/1** (over-max, pauses) |
+| 8/8, no cooldown | Config changes | Nothing — cooldown already paused (≥ max) |
 
 **Immediate effect is guaranteed** because:
 1. Config is read from `safariConfig` on every `getEntityPoints()` call
@@ -143,44 +152,29 @@ Host changes regen amount from 1 → 5 mid-round:
 
 ## 🔑 Design Decisions
 
-### Decision #1: Should regen fire when current > max? (OVER-MAX REGEN)
+### Decision #1: When does regen fire? When does it pause?
 
-**Scenario**: Player has 5/1 stamina (from previous regen), cooldown elapses. Should they get +5 more → 10/1?
-
-| Option | Behavior | Pros | Cons |
-|--------|----------|------|------|
-| **A: Always regen** | 5/1 → 10/1 → 15/1... | Simple, predictable | Stamina grows unbounded if player doesn't move |
-| **B: Pause when ≥ max** | 5/1 → paused | Prevents runaway accumulation | Player who sits idle gets same stamina as active player |
-| **C: Pause when ≥ regenAmount** | 5/1 → paused (since 5 ≥ 5) | Balances: you get one burst, must use before next | Slightly harder to explain |
-
-**Recommended: Option C — Pause when current ≥ regenAmount**
-
-Why: This creates the "burst" model the user described. Player gets a burst of stamina, must use at least some before the next burst arrives. It prevents infinite accumulation while still allowing over-max play.
+**Rule: Regen fires when `current < max` (the denominator). Always adds the FULL regen amount. Never caps the result.**
 
 ```
 Regen Amount = 5, Max = 1
 
-0/1 → cooldown → 5/1 (regen fires, 0 < 5)
-5/1 → uses 2   → 3/1
-3/1 → cooldown  → 3/1 (paused, 3 ≥ 5? No! → 8/1)
+0/1 → cooldown → 5/1 (fires: 0 < 1, adds full 5)
+5/1 → paused (5 ≥ 1)
+5/1 → uses 5   → 0/1 (below max, timer restarts)
+0/1 → cooldown → 5/1 (fires again)
 ```
 
-Wait — Option C gets weird with partial use. Let me reconsider.
-
-**Actually Recommended: Option B — Pause when current ≥ max**
-
-Why: Simplest mental model. "Regen only fires when you're below your denominator." Over-max stamina from regen is a **one-time burst** that depletes as you use it. Once you're back below max, the timer restarts.
-
 ```
-Regen Amount = 5, Max = 1
+Regen Amount = 3, Max = 8
 
-0/1 → cooldown → 5/1 (regen fires, 0 < 1)
-5/1 → uses 1   → 4/1 (still ≥ max, timer paused)
-4/1 → uses 4   → 0/1 (below max, timer starts)
-0/1 → cooldown → 5/1 (regen fires again)
+0/8 → cooldown → 3/8 (fires: 0 < 8, adds full 3)
+3/8 → cooldown → 6/8 (fires: 3 < 8, adds full 3)
+6/8 → cooldown → 9/8 (fires: 6 < 8, adds full 3 — NOT capped to 8)
+9/8 → paused (9 ≥ 8)
 ```
 
-This matches the existing `current < effectiveMax` guard in Phase 1 (line 373). **Zero behavior change for existing servers** — they all use regen amount = max, so the guard was already doing this.
+This matches the existing `current < effectiveMax` guard in Phase 1 (line 373). **Zero behavior change for existing servers** — they all use regen amount = max, so regen fires once (0 → max) and pauses (max ≥ max).
 
 ### Decision #2: Phase 1 vs Phase 2 — which path handles regen amount?
 
