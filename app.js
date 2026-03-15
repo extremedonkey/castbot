@@ -7878,15 +7878,18 @@ To fix this:
 
           const post = buildChallengePost(challenge);
           const channelId = req.body.channel?.id || req.body.channel_id;
-          const channel = await context.client.channels.fetch(channelId);
-          await channel.send({ components: [post] });
+          const { DiscordRequest } = await import('./utils.js');
+          await DiscordRequest(`channels/${channelId}/messages`, {
+            method: 'POST',
+            body: { components: [post], flags: (1 << 15) }
+          });
 
           console.log(`📤 Challenge: Posted "${challenge.title}" to channel`);
           return buildChallengeScreen(context.guildId, challengeId);
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('challenge_delete_')) {
-      // Challenges — delete confirmation
+    } else if (custom_id.startsWith('challenge_delete_') && !custom_id.startsWith('challenge_delete_confirm_')) {
+      // Challenges — delete confirmation prompt
       const challengeId = custom_id.replace('challenge_delete_', '');
       return ButtonHandlerFactory.create({
         id: 'challenge_delete',
