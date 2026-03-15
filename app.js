@@ -7839,7 +7839,7 @@ To fix this:
           const selectedValue = req.body.data.values?.[0];
           if (selectedValue === 'challenge_create_new') {
             const { buildChallengeModal } = await import('./challengeManager.js');
-            return { type: 9, data: buildChallengeModal() };
+            return buildChallengeModal(); // Already returns { type: 9, data: {...} }
           }
           // Show selected challenge
           const { InteractionResponseType: IRT } = await import('discord-interactions');
@@ -7859,7 +7859,7 @@ To fix this:
           const { buildChallengeModal } = await import('./challengeManager.js');
           const playerData = await loadPlayerData();
           const challenge = playerData[context.guildId]?.challenges?.[challengeId];
-          return { type: 9, data: buildChallengeModal(challengeId, challenge) };
+          return buildChallengeModal(challengeId, challenge); // Already returns { type: 9, data: {...} }
         }
       })(req, res, client);
     } else if (custom_id.startsWith('challenge_post_')) {
