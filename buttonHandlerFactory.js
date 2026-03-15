@@ -166,6 +166,39 @@ export const BUTTON_REGISTRY = {
     parent: 'challenge_screen',
     category: 'challenges'
   },
+  'challenge_round_*': {
+    label: 'Round',
+    description: 'Link challenge to a season round',
+    emoji: '🔥',
+    style: 'Secondary',
+    parent: 'challenge_screen',
+    category: 'challenges'
+  },
+  'challenge_round_select_*': {
+    label: 'Round Select',
+    description: 'Select a round to link challenge to',
+    emoji: '🔥',
+    style: 'String Select',
+    parent: 'challenge_screen',
+    category: 'challenges'
+  },
+  'challenge_round_search_*': {
+    label: 'Search Rounds',
+    description: 'Search rounds by name, season, or F-number',
+    emoji: '🔍',
+    style: 'Secondary',
+    parent: 'challenge_screen',
+    requiresModal: true,
+    category: 'challenges'
+  },
+  'challenge_select_nav_*': {
+    label: 'Back',
+    description: 'Return to challenge detail from round selector',
+    emoji: '←',
+    style: 'Secondary',
+    parent: 'challenge_screen',
+    category: 'challenges'
+  },
   'planner_ideas_*': {
     label: 'Ideas',
     description: 'Edit free-form season ideas and brainstorming notes',

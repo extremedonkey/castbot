@@ -7912,6 +7912,109 @@ To fix this:
           return buildChallengeModal(challengeId, challenge); // Already returns { type: 9, data: {...} }
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('challenge_round_select_')) {
+      // Challenges — round selected from round selector
+      const challengeId = custom_id.replace('challenge_round_select_', '');
+      return ButtonHandlerFactory.create({
+        id: 'challenge_round_link',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const selectedValue = req.body.data.values?.[0];
+
+          // Search
+          if (selectedValue === 'search_rounds') {
+            // Can't show modal from deferred — show prompt
+            return { components: [{ type: 17, accent_color: 0x5865F2, components: [
+              { type: 10, content: '## 🔍 Search Rounds\nUse the button below to search.' },
+              { type: 14 },
+              { type: 1, components: [
+                { type: 2, custom_id: `challenge_round_search_${challengeId}`, label: 'Enter Search', style: 1, emoji: { name: '🔍' } },
+                { type: 2, custom_id: `challenge_round_${challengeId}`, label: '← Back', style: 2 }
+              ]}
+            ]}]};
+          }
+          if (selectedValue === 'back_to_all') {
+            const { buildRoundSelector } = await import('./challengeManager.js');
+            return buildRoundSelector(context.guildId, challengeId);
+          }
+          if (selectedValue === 'none') return { type: 6 };
+
+          // Link challenge to selected round
+          const [seasonId, roundId] = selectedValue.split(':');
+          const { loadPlayerData, savePlayerData } = await import('./storage.js');
+          const { buildChallengeScreen } = await import('./challengeManager.js');
+          const playerData = await loadPlayerData();
+
+          const round = playerData[context.guildId]?.seasonRounds?.[seasonId]?.[roundId];
+          if (!round) return { content: '❌ Round not found' };
+
+          // Unlink this challenge from any other round first
+          for (const sid of Object.keys(playerData[context.guildId]?.seasonRounds || {})) {
+            for (const r of Object.values(playerData[context.guildId].seasonRounds[sid])) {
+              if (r.challengeIDs?.primary === challengeId) {
+                r.challengeIDs = {};
+              }
+            }
+          }
+
+          // Link to the selected round
+          round.challengeIDs = { primary: challengeId };
+          await savePlayerData(playerData);
+
+          const challenge = playerData[context.guildId]?.challenges?.[challengeId];
+          console.log(`🔗 Challenge: Linked "${challenge?.title}" to F${round.fNumber} (${roundId})`);
+
+          return buildChallengeScreen(context.guildId, challengeId);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('challenge_round_search_')) {
+      // Challenges — search modal for rounds
+      const challengeId = custom_id.replace('challenge_round_search_', '');
+      return ButtonHandlerFactory.create({
+        id: 'challenge_round_search',
+        requiresModal: true,
+        handler: async () => {
+          return { type: 9, data: {
+            custom_id: `challenge_round_search_modal:${challengeId}`,
+            title: 'Search Rounds',
+            components: [{
+              type: 18,
+              label: 'Search Term',
+              description: 'Search by round name, season name, or F-number',
+              component: {
+                type: 4, custom_id: 'search_term', style: 1,
+                placeholder: 'e.g., "Pokevivor" or "F16"',
+                required: true, max_length: 50,
+              }
+            }]
+          }};
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('challenge_round_') && !custom_id.startsWith('challenge_round_select_') && !custom_id.startsWith('challenge_round_search_')) {
+      // Challenges — show round selector
+      const challengeId = custom_id.replace('challenge_round_', '');
+      return ButtonHandlerFactory.create({
+        id: 'challenge_round_picker',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { buildRoundSelector } = await import('./challengeManager.js');
+          return buildRoundSelector(context.guildId, challengeId);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('challenge_select_nav_')) {
+      // Challenges — back from round selector to challenge screen
+      const challengeId = custom_id.replace('challenge_select_nav_', '');
+      return ButtonHandlerFactory.create({
+        id: 'challenge_select_nav',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { buildChallengeScreen } = await import('./challengeManager.js');
+          return buildChallengeScreen(context.guildId, challengeId);
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('challenge_post_select_')) {
       // Challenges — channel selected, post the challenge
       const challengeId = custom_id.replace('challenge_post_select_', '');
@@ -35798,6 +35901,20 @@ Your server is now ready for Tycoons gameplay!`;
       // Checkbox Group PoC — See poc/checkboxGroupPoc.js
       const { handleCheckboxSubmit } = await import('./poc/checkboxGroupPoc.js');
       return handleCheckboxSubmit(data, res);
+
+    } else if (custom_id.startsWith('challenge_round_search_modal:')) {
+      // Challenges — round search modal submit
+      return ButtonHandlerFactory.create({
+        id: 'challenge_round_search_submit',
+        updateMessage: true,
+        handler: async (context) => {
+          const challengeId = custom_id.split(':')[1];
+          const { extractModalFields } = await import('./seasonPlanner.js');
+          const { buildRoundSelector } = await import('./challengeManager.js');
+          const fields = extractModalFields(components);
+          return buildRoundSelector(context.guildId, challengeId, fields.search_term || '');
+        }
+      })(req, res, client);
 
     } else if (custom_id.startsWith('planner_challenge_edit:')) {
       // Season Planner — quick-edit challenge name + host from round select

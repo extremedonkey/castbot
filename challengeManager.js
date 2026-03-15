@@ -175,6 +175,7 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null) 
       { type: 14 },
       { type: 1, components: [
         { type: 2, custom_id: `challenge_edit_${selectedChallengeId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
+        { type: 2, custom_id: `challenge_round_${selectedChallengeId}`, label: 'Round', style: 2, emoji: { name: '🔥' } },
         { type: 2, custom_id: `challenge_post_${selectedChallengeId}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
         { type: 2, custom_id: `challenge_delete_${selectedChallengeId}`, label: 'Delete', style: 4, emoji: { name: '🗑️' } },
       ]}
@@ -223,6 +224,100 @@ export function buildChallengeModal(challengeId = null, existing = null) {
       image: { label: 'Image URL', placeholder: 'https://...', description: 'Link to a challenge image (upload to Discord first)' },
     },
   });
+}
+
+/**
+ * Build the round selector screen for linking a challenge to a round.
+ * Follows entity-edit pattern with search support.
+ */
+export async function buildRoundSelector(guildId, challengeId, searchTerm = '') {
+  const playerData = await loadPlayerData();
+  const challenge = playerData[guildId]?.challenges?.[challengeId];
+  if (!challenge) return { components: [{ type: 17, components: [{ type: 10, content: '❌ Challenge not found' }] }] };
+
+  const configs = playerData[guildId]?.applicationConfigs || {};
+  const allRounds = playerData[guildId]?.seasonRounds || {};
+  const challenges = playerData[guildId]?.challenges || {};
+
+  // Collect all rounds across all seasons with their season names
+  const roundOptions = [];
+
+  for (const [configId, config] of Object.entries(configs)) {
+    if (!config.seasonId || !allRounds[config.seasonId]) continue;
+    const seasonName = config.seasonName || 'Unknown Season';
+    const rounds = allRounds[config.seasonId];
+
+    for (const [roundId, round] of Object.entries(rounds)) {
+      if (round.fNumber === 1) continue; // Skip reunion
+
+      const linkedChalTitle = round.challengeIDs?.primary && challenges[round.challengeIDs.primary]
+        ? challenges[round.challengeIDs.primary].title
+        : null;
+      const label = `F${round.fNumber} - ${linkedChalTitle || `Round ${round.seasonRoundNo}`}`;
+      const isLinkedHere = round.challengeIDs?.primary === challengeId;
+
+      // Search filter
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        const matchLabel = label.toLowerCase().includes(term);
+        const matchSeason = seasonName.toLowerCase().includes(term);
+        const matchF = `f${round.fNumber}`.includes(term);
+        if (!matchLabel && !matchSeason && !matchF) continue;
+      }
+
+      roundOptions.push({
+        label: label.substring(0, 100),
+        value: `${config.seasonId}:${roundId}`,
+        description: `${seasonName}${isLinkedHere ? ' (currently linked)' : ''}`.substring(0, 100),
+        emoji: { name: isLinkedHere ? '✅' : '🔥' },
+        ...(isLinkedHere ? { default: true } : {})
+      });
+    }
+  }
+
+  // Sort by season name then round number
+  roundOptions.sort((a, b) => a.description.localeCompare(b.description) || a.label.localeCompare(b.label));
+
+  // Build options with search
+  const options = [];
+  if (roundOptions.length > 10 || searchTerm) {
+    options.push({ label: '🔍 Search Rounds', value: 'search_rounds', description: searchTerm ? `Searching: "${searchTerm}"` : 'Search by round, season, or F-number', emoji: { name: '🔍' } });
+  }
+  if (searchTerm) {
+    options.push({ label: '🔙 Back to all', value: 'back_to_all', description: 'Return to full list' });
+  }
+
+  // Cap at 25
+  for (const opt of roundOptions) {
+    if (options.length >= 25) break;
+    options.push(opt);
+  }
+
+  if (options.length === 0) {
+    options.push({ label: 'No rounds found', value: 'none', description: searchTerm ? 'Try a different search' : 'Create a season first' });
+  }
+
+  const chalTitle = (challenge.title || 'Untitled').substring(0, 50);
+  const container = {
+    type: 17, accent_color: challenge.accentColor || DEFAULT_ACCENT,
+    components: [
+      { type: 10, content: `## 🔥 Link to Round\n-# Assign **${chalTitle}** to a season round` },
+      { type: 14 },
+      { type: 1, components: [{
+        type: 3,
+        custom_id: `challenge_round_select_${challengeId}`,
+        placeholder: searchTerm ? `Results for "${searchTerm}"...` : 'Select a round...',
+        options
+      }]},
+      { type: 14 },
+      { type: 1, components: [
+        { type: 2, custom_id: `challenge_select_nav_${challengeId}`, label: '← Back', style: 2 }
+      ]}
+    ]
+  };
+
+  countComponents([container], { verbosity: "summary", label: "Round Selector" });
+  return { components: [container] };
 }
 
 /**
