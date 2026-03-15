@@ -144,18 +144,81 @@ function getDayActivities(round) {
 // ═══════════════════════════════════════════
 
 // ═══════════════════════════════════════════
-// Vertical Timeline (Schedule)
+// Vertical Timeline (Schedule) — 4-column layout
+// Col1: F-number + duration | Col2: Day 1 event + date | Col3: Day 2 event + date | Col4: Day 3 event + date (if applicable)
 // ═══════════════════════════════════════════
+
+/**
+ * Get the columnar breakdown for a round.
+ * Returns array of { title, date } objects (1-4 columns depending on round type).
+ */
+function getScheduleColumns(round, roundStartDate) {
+  const f = round.fNumber;
+  const type = getRoundType(round);
+  const elims = round.eliminations ?? 1;
+  const elimText = elims === 0 ? 'no elim' : elims === 1 ? '1 elim' : `${elims} elims`;
+  const challengeName = round.challengeName ? stripEmoji(round.challengeName) : `Challenge ${round.seasonRoundNo}`;
+  const shortChallenge = challengeName.length > 22 ? challengeName.substring(0, 19) + '...' : challengeName;
+
+  const d0 = formatDate(roundStartDate);
+  const day1 = new Date(roundStartDate); day1.setDate(day1.getDate() + 1);
+  const d1 = formatDate(day1);
+  const day2 = new Date(roundStartDate); day2.setDate(day2.getDate() + 2);
+  const d2 = formatDate(day2);
+
+  if (type === 'reunion') {
+    return [{ title: 'Reunion', date: d0 }];
+  }
+
+  if (type === 'ftc') {
+    const speechDays = round.speechDays ?? 1;
+    const votesStart = new Date(roundStartDate); votesStart.setDate(votesStart.getDate() + speechDays);
+    return [
+      { title: 'Speeches', date: d0 },
+      { title: 'Q&A / Votes', date: formatDate(votesStart) },
+    ];
+  }
+
+  if (type === 'marooning') {
+    return [
+      { title: 'Marooning', date: d0 },
+      { title: shortChallenge, date: d1 },
+      { title: `F${f} Tribal`, date: `${d2} · ${elimText}` },
+    ];
+  }
+
+  if (type === 'swap' || type === 'merge') {
+    const eventLabel = round.eventLabel || (type === 'swap' ? 'Swap' : 'Merge');
+    return [
+      { title: eventLabel, date: d0 },
+      { title: shortChallenge, date: d1 },
+      { title: `F${f} Tribal`, date: `${d2} · ${elimText}` },
+    ];
+  }
+
+  // Standard (2 days): challenge + tribal
+  return [
+    { title: shortChallenge, date: d0 },
+    { title: `F${f} Tribal`, date: `${d1} · ${elimText}` },
+  ];
+}
 
 export async function generateVerticalTimeline(seasonName, rounds, startDate) {
   const sortedIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
   const dates = calcDates(rounds, startDate);
 
-  const MARGIN = 40;
+  // Layout constants
+  const MARGIN = 20;
   const ROW_H = 52;
   const HEADER_H = 80;
-  const WIDTH = 700;
-  const LINE_X = 80;
+  const COL1_X = MARGIN;       // F-number column
+  const COL1_W = 55;
+  const COL2_X = COL1_X + COL1_W + 20;  // Day 1 (gap after F-number)
+  const COL_W = 175;           // Width per day column
+  const COL_GAP = 12;
+  const COL3_X = COL2_X + COL_W + COL_GAP;  // Day 2
+  const COL4_X = COL3_X + COL_W + COL_GAP;  // Day 3
+  const WIDTH = COL4_X + COL_W + MARGIN;
   const HEIGHT = HEADER_H + sortedIds.length * ROW_H + MARGIN;
 
   const composites = [];
@@ -170,7 +233,7 @@ export async function generateVerticalTimeline(seasonName, rounds, startDate) {
     top: 0, left: 0
   });
 
-  // Timeline rows
+  // Rows
   for (let i = 0; i < sortedIds.length; i++) {
     const id = sortedIds[i];
     const round = rounds[id];
@@ -179,31 +242,37 @@ export async function generateVerticalTimeline(seasonName, rounds, startDate) {
     const y = HEADER_H + i * ROW_H;
     const dateInfo = dates[id];
     const dur = getRoundDuration(round);
-    const elims = round.eliminations ?? 1;
-
-    let label;
-    if (type === 'reunion') label = 'Reunion';
-    else if (type === 'ftc') label = 'Final Tribal';
-    else if (type === 'marooning') label = 'Marooning';
-    else if (type === 'swap') label = round.eventLabel || 'Swap';
-    else if (type === 'merge') label = round.eventLabel || 'Merge';
-    else label = round.challengeName ? stripEmoji(round.challengeName) : `Challenge ${round.seasonRoundNo}`;
-    label = escapeXml(label.length > 30 ? label.substring(0, 27) + '...' : label);
-
-    const dateStr = formatDate(dateInfo.date);
+    const cols = getScheduleColumns(round, dateInfo.date);
     const isLast = i === sortedIds.length - 1;
 
+    // Column positions
+    const colXs = [COL2_X, COL3_X, COL4_X];
+
+    // Build SVG parts
+    let svgParts = '';
+
+    // Col1: color dot + F-number (bold) + duration (muted, below)
+    svgParts += `<circle cx="${COL1_X + 6}" cy="16" r="5" fill="${color}"/>`;
+    svgParts += `<text x="${COL1_X + 18}" y="18" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" fill="${TEXT_PRI}">F${round.fNumber}</text>`;
+    svgParts += `<text x="${COL1_X + 18}" y="34" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="${TEXT_MUT}">${dur}d</text>`;
+
+    // Day columns
+    for (let c = 0; c < cols.length; c++) {
+      const col = cols[c];
+      const cx = colXs[c];
+      const titleColor = c === cols.length - 1 && col.title.includes('Tribal') ? TYPE_COLORS.ftc : color;
+
+      svgParts += `<text x="${cx}" y="18" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="bold" fill="${TEXT_PRI}">${escapeXml(col.title)}</text>`;
+      svgParts += `<text x="${cx}" y="34" font-family="Arial, Helvetica, sans-serif" font-size="10" fill="${TEXT_SEC}">${escapeXml(col.date)}</text>`;
+    }
+
+    // Subtle row separator
+    if (!isLast) {
+      svgParts += `<line x1="${COL2_X}" y1="${ROW_H - 1}" x2="${WIDTH - MARGIN}" y2="${ROW_H - 1}" stroke="${SEPARATOR}" stroke-width="0.5" stroke-opacity="0.3"/>`;
+    }
+
     composites.push({
-      input: Buffer.from(`<svg width="${WIDTH}" height="${ROW_H}" xmlns="http://www.w3.org/2000/svg">
-        ${!isLast ? `<line x1="${LINE_X}" y1="20" x2="${LINE_X}" y2="${ROW_H}" stroke="${SEPARATOR}" stroke-width="2"/>` : ''}
-        <circle cx="${LINE_X}" cy="20" r="8" fill="${color}"/>
-        <circle cx="${LINE_X}" cy="20" r="4" fill="${BG}"/>
-        <text x="20" y="25" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="bold" fill="${TEXT_SEC}">F${round.fNumber}</text>
-        <text x="${LINE_X + 20}" y="18" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="bold" fill="${TEXT_PRI}">${label}</text>
-        <text x="${LINE_X + 20}" y="35" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="${TEXT_SEC}">${dateStr} · ${dur}d${type !== 'reunion' && type !== 'ftc' ? ` · ${elims} elim` : ''}</text>
-        <rect x="${WIDTH - 100}" y="8" width="60" height="22" rx="11" ry="11" fill="${color}" fill-opacity="0.2"/>
-        <text x="${WIDTH - 70}" y="24" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="bold" fill="${color}">${type.toUpperCase()}</text>
-      </svg>`),
+      input: Buffer.from(`<svg width="${WIDTH}" height="${ROW_H}" xmlns="http://www.w3.org/2000/svg">${svgParts}</svg>`),
       top: y, left: 0
     });
   }
