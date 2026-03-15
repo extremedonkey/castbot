@@ -82,7 +82,8 @@ export class MenuBuilder {
         components: [
           { type: 2, custom_id: 'prod_setup_wizard', label: 'Setup Wizard', style: 1, emoji: { name: '🧙' } },
           { type: 2, custom_id: 'attribute_management', label: 'Attributes', style: 2, emoji: { name: '📊' } },
-          { type: 2, custom_id: 'prod_create_emojis', label: 'Player Emojis', style: 2, emoji: { name: '😀' } }
+          { type: 2, custom_id: 'prod_create_emojis', label: 'Player Emojis', style: 2, emoji: { name: '😀' } },
+          { type: 2, custom_id: 'safari_rounds_menu', label: 'Tycoons', style: 2, emoji: { name: '💎' } }
         ]
       },
       { type: 10, content: `### \`\`\`💜 Roles & Availability\`\`\`` },
