@@ -704,6 +704,17 @@ export function buildRoundModal(action, round, roundId, configId) {
           },
           {
             type: 18,
+            label: 'Custom Days (only if Multiple Days selected)',
+            description: 'How many days the tribal spans (e.g., 2 for a 2-day tribal)',
+            component: {
+              type: 4, custom_id: 'custom_days', style: 1,
+              placeholder: '2',
+              required: false, max_length: 1,
+              ...(tribalDays > 1 ? { value: String(tribalDays) } : {})
+            }
+          },
+          {
+            type: 18,
             label: 'Eliminations',
             description: 'How many players eliminated (0 = no elim, 2 = double tribal)',
             component: {
