@@ -343,7 +343,8 @@ async function createCurrentSettingsDisplay(guildId, config) {
     if (config.round1GoodProbability !== undefined ||
         config.round2GoodProbability !== undefined ||
         config.round3GoodProbability !== undefined) {
-        display += `**🎲 Round Harvest Probabilities**\n`;
+        const totalRounds = config.totalRounds || 3;
+        display += `**🎲 Rounds** (${totalRounds} total)\n`;
         if (config.round1GoodProbability !== undefined) {
             const goodPercent = config.round1GoodProbability;
             const badPercent = 100 - goodPercent;
@@ -366,17 +367,22 @@ async function createCurrentSettingsDisplay(guildId, config) {
     const { getStaminaConfig } = await import('./safariManager.js');
     const staminaConfig = await getStaminaConfig(guildId);
 
+    const regenAmountDisplay = staminaConfig.regenerationAmount != null
+        ? `${staminaConfig.regenerationAmount} per cycle`
+        : 'Full reset (to max)';
     display += `**⚡ Stamina Settings**\n`;
     display += `• Starting Stamina: ${staminaConfig.startingStamina}\n`;
     display += `• Max Stamina: ${staminaConfig.maxStamina}\n`;
     display += `• Regeneration Time: ${staminaConfig.regenerationMinutes} minutes\n`;
+    display += `• Regeneration Amount: ${regenAmountDisplay}\n`;
     display += `• Default Starting Coordinate: ${staminaConfig.defaultStartingCoordinate} *(see Rounds)*\n\n`;
 
     // Add Player Menu Settings
     const enableGlobalCommands = config.enableGlobalCommands !== false;
     const inventoryVisibilityMode = config.inventoryVisibilityMode || 'always';
     const showCustomCastlists = config.showCustomCastlists !== false; // Default true
-    const inventoryModeLabels = {
+    const globalStoresVisibilityMode = config.globalStoresVisibilityMode || 'always';
+    const visibilityModeLabels = {
         'always': 'Always Show',
         'initialized_only': 'After Initialization Only',
         'standard': 'After 1st Initialize + 1st Round',
@@ -384,7 +390,8 @@ async function createCurrentSettingsDisplay(guildId, config) {
     };
     display += `**🕹️ Player Menu**\n`;
     display += `• Global Commands Button: ${enableGlobalCommands ? '✅ Enabled' : '❌ Disabled'}\n`;
-    display += `• Inventory Button: ${inventoryModeLabels[inventoryVisibilityMode]}\n`;
+    display += `• Inventory Button: ${visibilityModeLabels[inventoryVisibilityMode]}\n`;
+    display += `• Global Stores Button: ${visibilityModeLabels[globalStoresVisibilityMode]}\n`;
     display += `• Custom Castlists: ${showCustomCastlists ? '✅ Show All' : '📋 Default Only'}\n\n`;
 
     // Add Safari Log Status
