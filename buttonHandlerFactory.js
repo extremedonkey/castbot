@@ -116,6 +116,56 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
+  // === CHALLENGES ===
+  'challenge_screen': {
+    label: 'Challenges',
+    description: 'Challenge management screen',
+    emoji: '🏃',
+    style: 'Secondary',
+    parent: 'castbot_tools',
+    category: 'challenges'
+  },
+  'challenge_select': {
+    label: 'Challenge Select',
+    description: 'Select or create a challenge',
+    emoji: '🏃',
+    style: 'String Select',
+    parent: 'challenge_screen',
+    category: 'challenges'
+  },
+  'challenge_edit_*': {
+    label: 'Edit Challenge',
+    description: 'Edit challenge details',
+    emoji: '✏️',
+    style: 'Secondary',
+    parent: 'challenge_screen',
+    requiresModal: true,
+    category: 'challenges'
+  },
+  'challenge_post_*': {
+    label: 'Post to Channel',
+    description: 'Post challenge card as a public message',
+    emoji: '📤',
+    style: 'Primary',
+    parent: 'challenge_screen',
+    category: 'challenges'
+  },
+  'challenge_delete_*': {
+    label: 'Delete Challenge',
+    description: 'Delete a challenge',
+    emoji: '🗑️',
+    style: 'Danger',
+    parent: 'challenge_screen',
+    category: 'challenges'
+  },
+  'challenge_delete_confirm_*': {
+    label: 'Confirm Delete',
+    description: 'Confirm challenge deletion',
+    emoji: '🗑️',
+    style: 'Danger',
+    parent: 'challenge_screen',
+    category: 'challenges'
+  },
   'planner_ideas_*': {
     label: 'Ideas',
     description: 'Edit free-form season ideas and brainstorming notes',

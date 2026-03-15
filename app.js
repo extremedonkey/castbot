@@ -813,7 +813,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🧭'),
     new ButtonBuilder()
-      .setCustomId('safari_rounds_menu')
+      .setCustomId('challenge_screen')
       .setLabel('Challenges')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🏃‍♀️'),
@@ -850,7 +850,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // safari_rounds_menu moved to adminButtons row (relabeled to "Challenges")
   // prod_safari_menu removed - buttons distributed to Production Menu and Map Explorer
 
-  // Add Tools, Settings, Donate
+  // Add Tools, Settings, Tycoons, Donate
   advancedFeaturesButtons.push(
     new ButtonBuilder()
       .setCustomId('castbot_tools')
@@ -862,6 +862,15 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setLabel('Settings')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('⚙️'),
+  );
+
+  // Tycoons + Donate in own row to stay under 5-button limit
+  const bottomRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('safari_rounds_menu')
+      .setLabel('Tycoons')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('💎'),
     new ButtonBuilder()
       .setCustomId('prod_donate')
       .setLabel('Donate')
@@ -945,7 +954,8 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       type: 10, // Text Display component
       content: `### \`\`\`💎 Advanced Features\`\`\``
     },
-    advancedFeaturesRow.toJSON(), // Safari + Analytics + Tools (single row)
+    advancedFeaturesRow.toJSON(),
+    bottomRow.toJSON(),
     {
       type: 14 // Separator before credit
     },
@@ -7822,6 +7832,106 @@ To fix this:
         updateMessage: true,
         handler: async () => {
           return { type: 6 };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'challenge_screen') {
+      // Challenges — main management screen
+      return ButtonHandlerFactory.create({
+        id: 'challenge_screen',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { buildChallengeScreen } = await import('./challengeManager.js');
+          return buildChallengeScreen(context.guildId);
+        }
+      })(req, res, client);
+    } else if (custom_id === 'challenge_select') {
+      // Challenges — challenge selected from dropdown
+      return ButtonHandlerFactory.create({
+        id: 'challenge_select',
+        requiresModal: true,
+        handler: async (context) => {
+          const selectedValue = req.body.data.values?.[0];
+          if (selectedValue === 'challenge_create_new') {
+            const { buildChallengeModal } = await import('./challengeManager.js');
+            return { type: 9, data: buildChallengeModal() };
+          }
+          // Show selected challenge
+          const { InteractionResponseType: IRT } = await import('discord-interactions');
+          const { buildChallengeScreen } = await import('./challengeManager.js');
+          const view = await buildChallengeScreen(context.guildId, selectedValue);
+          return { type: IRT.UPDATE_MESSAGE, data: view };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('challenge_edit_')) {
+      // Challenges — edit existing challenge
+      const challengeId = custom_id.replace('challenge_edit_', '');
+      return ButtonHandlerFactory.create({
+        id: 'challenge_edit',
+        requiresModal: true,
+        handler: async (context) => {
+          const { loadPlayerData } = await import('./storage.js');
+          const { buildChallengeModal } = await import('./challengeManager.js');
+          const playerData = await loadPlayerData();
+          const challenge = playerData[context.guildId]?.challenges?.[challengeId];
+          return { type: 9, data: buildChallengeModal(challengeId, challenge) };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('challenge_post_')) {
+      // Challenges — post challenge card to channel
+      const challengeId = custom_id.replace('challenge_post_', '');
+      return ButtonHandlerFactory.create({
+        id: 'challenge_post',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { loadPlayerData } = await import('./storage.js');
+          const { buildChallengePost, buildChallengeScreen } = await import('./challengeManager.js');
+          const playerData = await loadPlayerData();
+          const challenge = playerData[context.guildId]?.challenges?.[challengeId];
+          if (!challenge) return { content: '❌ Challenge not found' };
+
+          const post = buildChallengePost(challenge);
+          const channelId = req.body.channel?.id || req.body.channel_id;
+          const channel = await context.client.channels.fetch(channelId);
+          await channel.send({ components: [post] });
+
+          console.log(`📤 Challenge: Posted "${challenge.title}" to channel`);
+          return buildChallengeScreen(context.guildId, challengeId);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('challenge_delete_')) {
+      // Challenges — delete confirmation
+      const challengeId = custom_id.replace('challenge_delete_', '');
+      return ButtonHandlerFactory.create({
+        id: 'challenge_delete',
+        updateMessage: true,
+        handler: async (context) => {
+          const { loadPlayerData } = await import('./storage.js');
+          const playerData = await loadPlayerData();
+          const challenge = playerData[context.guildId]?.challenges?.[challengeId];
+          if (!challenge) return { content: '❌ Challenge not found' };
+          return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
+            { type: 10, content: `## ⚠️ Delete Challenge?\n**${challenge.title}**\n\nThis will unlink it from any rounds. This cannot be undone.` },
+            { type: 14 },
+            { type: 1, components: [
+              { type: 2, custom_id: `challenge_delete_confirm_${challengeId}`, label: 'Yes, Delete', style: 4, emoji: { name: '🗑️' } },
+              { type: 2, custom_id: 'challenge_screen', label: '← Cancel', style: 2 },
+            ]}
+          ]}]};
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('challenge_delete_confirm_')) {
+      // Challenges — confirmed delete
+      const challengeId = custom_id.replace('challenge_delete_confirm_', '');
+      return ButtonHandlerFactory.create({
+        id: 'challenge_delete_confirm',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { deleteChallenge, buildChallengeScreen } = await import('./challengeManager.js');
+          await deleteChallenge(context.guildId, challengeId);
+          return buildChallengeScreen(context.guildId);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('stress_page_')) {
@@ -35625,6 +35735,27 @@ Your server is now ready for Tycoons gameplay!`;
       // Checkbox Group PoC — See poc/checkboxGroupPoc.js
       const { handleCheckboxSubmit } = await import('./poc/checkboxGroupPoc.js');
       return handleCheckboxSubmit(data, res);
+
+    } else if (custom_id === 'challenge_modal_create' || custom_id.startsWith('challenge_modal_edit:')) {
+      // Challenges — create or edit modal submit
+      return ButtonHandlerFactory.create({
+        id: 'challenge_modal_submit',
+        updateMessage: true,
+        handler: async (context) => {
+          const { extractRichCardValues } = await import('./richCardUI.js');
+          const { createChallenge, updateChallenge, buildChallengeScreen } = await import('./challengeManager.js');
+          const values = extractRichCardValues(data);
+
+          if (custom_id.startsWith('challenge_modal_edit:')) {
+            const challengeId = custom_id.split(':')[1];
+            await updateChallenge(context.guildId, challengeId, values);
+            return buildChallengeScreen(context.guildId, challengeId);
+          } else {
+            const challengeId = await createChallenge(context.guildId, context.userId, values);
+            return buildChallengeScreen(context.guildId, challengeId);
+          }
+        }
+      })(req, res, client);
 
     } else if (custom_id.startsWith('planner_ideas_save:')) {
       // Season Planner — save ideas modal submit

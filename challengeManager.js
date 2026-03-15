@@ -1,0 +1,226 @@
+/**
+ * Challenge Manager — CRUD operations and UI for Season Challenges
+ *
+ * A Challenge is a content card (title, description, image, hosts) that
+ * optionally links to a Season Planner round via challengeIDs.
+ *
+ * Spec: docs/01-RaP/0945_20260316_Challenges_Analysis.md
+ */
+
+import { loadPlayerData, savePlayerData } from './storage.js';
+import { buildRichCardModal, extractRichCardValues, buildRichCardContainer, parseAccentColor } from './richCardUI.js';
+import { countComponents } from './utils.js';
+
+const DEFAULT_ACCENT = 0x5865F2; // Discord blurple
+
+// ─────────────────────────────────────────────
+// CRUD Operations
+// ─────────────────────────────────────────────
+
+/**
+ * Create a new challenge.
+ */
+export async function createChallenge(guildId, userId, data) {
+  const { default: crypto } = await import('crypto');
+  const playerData = await loadPlayerData();
+
+  if (!playerData[guildId]) playerData[guildId] = {};
+  if (!playerData[guildId].challenges) playerData[guildId].challenges = {};
+
+  const challengeId = `challenge_${crypto.randomUUID().replace(/-/g, '').substring(0, 12)}`;
+
+  playerData[guildId].challenges[challengeId] = {
+    title: data.title || 'Untitled Challenge',
+    description: data.content || '',
+    image: data.image || '',
+    accentColor: parseAccentColor(data.color) || DEFAULT_ACCENT,
+    creationHost: data.creationHost || userId,
+    runningHost: data.runningHost || null,
+    seasonId: data.seasonId || null,
+    createdAt: Date.now(),
+    lastUpdated: Date.now(),
+  };
+
+  await savePlayerData(playerData);
+  console.log(`🏃 Challenge: Created "${data.title}" (${challengeId})`);
+  return challengeId;
+}
+
+/**
+ * Update an existing challenge.
+ */
+export async function updateChallenge(guildId, challengeId, data) {
+  const playerData = await loadPlayerData();
+  const challenge = playerData[guildId]?.challenges?.[challengeId];
+  if (!challenge) return false;
+
+  if (data.title !== undefined) challenge.title = data.title;
+  if (data.content !== undefined) challenge.description = data.content;
+  if (data.image !== undefined) challenge.image = data.image;
+  if (data.color !== undefined) challenge.accentColor = parseAccentColor(data.color) || challenge.accentColor;
+  if (data.creationHost !== undefined) challenge.creationHost = data.creationHost;
+  if (data.runningHost !== undefined) challenge.runningHost = data.runningHost;
+  challenge.lastUpdated = Date.now();
+
+  await savePlayerData(playerData);
+  console.log(`🏃 Challenge: Updated "${challenge.title}" (${challengeId})`);
+  return true;
+}
+
+/**
+ * Delete a challenge and unlink from any rounds.
+ */
+export async function deleteChallenge(guildId, challengeId) {
+  const playerData = await loadPlayerData();
+  if (!playerData[guildId]?.challenges?.[challengeId]) return false;
+
+  const title = playerData[guildId].challenges[challengeId].title;
+  delete playerData[guildId].challenges[challengeId];
+
+  // Unlink from any rounds that reference this challenge
+  const seasonRounds = playerData[guildId]?.seasonRounds;
+  if (seasonRounds) {
+    for (const seasonId of Object.keys(seasonRounds)) {
+      for (const round of Object.values(seasonRounds[seasonId])) {
+        if (round.challengeIDs?.primary === challengeId) {
+          round.challengeIDs = {};
+          round.challengeName = '';
+        }
+      }
+    }
+  }
+
+  await savePlayerData(playerData);
+  console.log(`🏃 Challenge: Deleted "${title}" (${challengeId})`);
+  return true;
+}
+
+// ─────────────────────────────────────────────
+// UI Builders
+// ─────────────────────────────────────────────
+
+/**
+ * Build the challenge management screen.
+ */
+export async function buildChallengeScreen(guildId, selectedChallengeId = null) {
+  const playerData = await loadPlayerData();
+  const challenges = playerData[guildId]?.challenges || {};
+  const entries = Object.entries(challenges);
+
+  // Build select options
+  const options = [
+    { label: 'Create New Challenge', value: 'challenge_create_new', emoji: { name: '➕' }, description: 'Create a new challenge from scratch' },
+  ];
+
+  // Sort by title
+  entries.sort(([, a], [, b]) => (a.title || '').localeCompare(b.title || ''));
+
+  for (const [id, challenge] of entries) {
+    if (options.length >= 25) break;
+    const label = (challenge.title || 'Untitled').substring(0, 100);
+    options.push({
+      label, value: id,
+      description: challenge.description?.substring(0, 100) || 'No description',
+      emoji: { name: '🏃' },
+      ...(id === selectedChallengeId ? { default: true } : {})
+    });
+  }
+
+  const components = [
+    { type: 10, content: '## 🏃 Challenges' },
+    { type: 14 },
+    { type: 1, components: [{
+      type: 3,
+      custom_id: 'challenge_select',
+      placeholder: 'Select or create a challenge...',
+      options
+    }]},
+  ];
+
+  // If a challenge is selected, show its preview
+  if (selectedChallengeId && challenges[selectedChallengeId]) {
+    const ch = challenges[selectedChallengeId];
+    components.push({ type: 14 });
+
+    // RichCard preview
+    const previewContent = ch.description || '-# No description';
+    const hostText = ch.creationHost ? `\n-# Host: <@${ch.creationHost}>` : '';
+    components.push({ type: 10, content: `### ${ch.title || 'Untitled'}${hostText}\n${previewContent}` });
+
+    if (ch.image) {
+      try {
+        new URL(ch.image);
+        components.push({ type: 12, items: [{ media: { url: ch.image }, description: ch.title || 'Challenge' }] });
+      } catch { /* invalid URL, skip */ }
+    }
+
+    // Action buttons
+    components.push(
+      { type: 14 },
+      { type: 1, components: [
+        { type: 2, custom_id: `challenge_edit_${selectedChallengeId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
+        { type: 2, custom_id: `challenge_post_${selectedChallengeId}`, label: 'Post to Channel', style: 1, emoji: { name: '📤' } },
+        { type: 2, custom_id: `challenge_delete_${selectedChallengeId}`, label: 'Delete', style: 4, emoji: { name: '🗑️' } },
+      ]}
+    );
+  }
+
+  // Back button
+  components.push(
+    { type: 14 },
+    { type: 1, components: [{ type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 }] }
+  );
+
+  const container = {
+    type: 17,
+    accent_color: selectedChallengeId && challenges[selectedChallengeId]
+      ? (challenges[selectedChallengeId].accentColor || DEFAULT_ACCENT)
+      : DEFAULT_ACCENT,
+    components
+  };
+
+  countComponents([container], { verbosity: "summary", label: "Challenges" });
+
+  return { components: [container] };
+}
+
+/**
+ * Build the create/edit challenge modal.
+ */
+export function buildChallengeModal(challengeId = null, existing = null) {
+  const customId = challengeId ? `challenge_modal_edit:${challengeId}` : 'challenge_modal_create';
+  const title = challengeId ? 'Edit Challenge' : 'Create Challenge';
+
+  return buildRichCardModal({
+    customId,
+    modalTitle: title,
+    values: existing ? {
+      title: existing.title || '',
+      content: existing.description || '',
+      color: existing.accentColor ? `#${existing.accentColor.toString(16).padStart(6, '0')}` : '',
+      image: existing.image || '',
+    } : {},
+    fields: {
+      title: { label: 'Challenge Title', placeholder: 'e.g., "Tycoons of the Nile"', required: true },
+      content: { label: 'Description / Rules', placeholder: 'Challenge rules, instructions, flavor text...', required: false, maxLength: 4000 },
+      color: { label: 'Accent Color (optional)', placeholder: '#e74c3c or red' },
+      image: { label: 'Image URL (optional)', placeholder: 'https://...' },
+    },
+  });
+}
+
+/**
+ * Build the richCard container for posting a challenge to a channel.
+ */
+export function buildChallengePost(challenge) {
+  return buildRichCardContainer({
+    title: challenge.title,
+    content: challenge.description,
+    color: challenge.accentColor,
+    image: challenge.image,
+    extraComponents: challenge.creationHost ? [
+      { type: 14 },
+      { type: 10, content: `-# Challenge by <@${challenge.creationHost}>` },
+    ] : [],
+  });
+}

@@ -170,37 +170,90 @@ RichCard rendered as a public Components V2 message:
 2. Host display in round string select descriptions
 3. Host filtering in challenge list
 
-### Phase 4: Challenge Variables (Backlog — old Tycoons mechanics)
+### Phase 4: Actions ↔ Challenges Integration (Backlog — the big vision)
 
-1. Dice Rolls configuration per challenge
-2. Events (good/bad probability)
-3. Action linkage (Custom Actions per challenge)
-4. Per-round variable overrides
-5. Community library (import/export)
+The ultimate goal: **combine the Actions Engine with Challenges** so hosts can assign Custom Actions that automate challenge gameplay. This replaces the manual spreadsheet labor that hosts currently do.
+
+**Architecture**: Many-to-many association between challenges and actions.
+
+```javascript
+// In challenge data:
+"actionIds": ["action_abc", "action_def"]  // linked Custom Actions
+
+// Each action can be reused across challenges
+// Actions already support: give/take items, currency, conditions, schedules
+```
+
+**What this enables:**
+- A "Tycoons" challenge links to actions for: dice roll, yield calculation, attack resolution
+- A "Forbidden Island" challenge links to actions for: map movement, item pickup
+- A "Democracy" challenge links to a single voting action
+- Actions are reusable — "Give Currency" action works in any challenge
+
+**Current state:** The existing Tycoons (`safari_rounds_menu`) is a hardcoded challenge with hardcoded actions (processRoundResults, calculateRoundProbability, processAttackQueue). The Action Editor already supports most of these as configurable outcomes. The gap is the linking layer.
+
+**Backlog items under this phase:**
+1. Challenge → Action association UI (multi-select from existing actions)
+2. "Run Challenge" button that executes linked actions in sequence
+3. Dice Rolls / probability configuration (currently hardcoded as good/bad events)
+4. Per-round variable overrides (challenge variables scoped to a round)
+5. Results posting (auto-format results as a public message)
+6. Community library (export challenge + its actions as a template, import on another server)
+
+### Phase 5: Placements Integration (Far Future)
+
+Link round completions to player placements:
+
+```javascript
+// When a player is eliminated at F18:
+playerData[guildId].applications[appId].placement = 18;
+// "Final 18" — the round they were eliminated in
+```
+
+Placements are correlated with rounds via F-number. Season Planner's `currentSeasonRoundID` advances as the season progresses, and the eliminated player gets the F-number as their placement.
 
 ---
 
-## 6. Relationship to Existing Systems
+## 6. Key Architectural Decisions
+
+### Challenges are standalone (soft dependency on rounds)
+
+Challenges **do not require** a round to exist. A host can create challenges without any season or round setup. The round linkage is optional — `challengeIDs.primary` on a round points to a challenge, but the challenge doesn't point back (no `roundId` on the challenge). This means:
+- Challenges work as a standalone content planning tool
+- Rounds can optionally pull in challenge data
+- A challenge can exist unassigned (planned but not scheduled)
+- Deleting a round doesn't delete the challenge
+
+### Entity Edit Framework for challenge management
+
+The challenge list screen uses Entity Edit Framework (`entityManagementUI.js`) for:
+- **Search**: Critical for servers with 25+ challenges (bypasses Discord's 25-option select limit)
+- **CRUD pattern**: Consistent with stores, items, actions
+- **Scalability**: Handles hundreds of challenges via search/filter
+
+### Relationship to Existing Systems
 
 | System | Relationship |
 |---|---|
-| **Season Planner** | Rounds link to challenges via `challengeIDs.primary`. Challenge name/host shown in round selects and schedule images |
+| **Season Planner** | Rounds optionally link to challenges via `challengeIDs.primary`. Challenge name/host shown in round selects and schedule images |
 | **richCardUI.js** | Challenge create/edit uses `buildRichCardModal`, preview uses `buildRichCardContainer` |
-| **Entity Edit Framework** | Challenge management screen follows entity select + detail pattern |
-| **Custom Actions** | Future: challenges can trigger actions. Not MVP |
-| **Safari Rounds (Tycoons)** | Old system stays as-is, renamed to Tycoons. Challenges is the new, decoupled replacement |
+| **Entity Edit Framework** | Challenge list screen uses entity select + search for 25+ challenges |
+| **Custom Actions** | Future: many-to-many association. Challenges link to actions that automate gameplay |
+| **Safari Rounds (Tycoons)** | Old hardcoded system stays as-is, renamed to Tycoons. Challenges is the decoupled replacement |
+| **Placements** | Future: round F-number = player placement on elimination |
 
 ---
 
 ## 7. What NOT to Build (Yet)
 
-- Challenge rounds/sub-rounds (1:many actions per challenge)
+- Challenge → Action association (Phase 4)
+- "Run Challenge" automated execution
 - Probability/dice roll configuration
 - Good/bad event types
 - Per-round variable overrides
 - Community library import/export
 - Tribal Council entity (far future)
-- Placement tracking (separate feature)
+- Placement tracking (Phase 5)
 
 ---
 
@@ -208,10 +261,11 @@ RichCard rendered as a public Components V2 message:
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Challenge count exceeds 25 (string select limit) | Medium | Pagination or search, same as season selector |
+| Challenge count exceeds 25 (string select limit) | Medium | Entity Edit Framework with search |
 | richCard modal at 5-field limit | Low | Host assignment as separate flow if needed |
 | Challenge data bloats playerData.json | Low | ~500 bytes per challenge, negligible |
 | Tycoons rename breaks existing buttons | Low | Keep handler ID `safari_rounds_menu`, just change label |
+| Action association complexity | Low | Many-to-many is just an array of IDs, no schema changes needed |
 
 ---
 
