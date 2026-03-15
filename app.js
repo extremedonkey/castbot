@@ -767,8 +767,13 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setEmoji('📋')
   );
 
-  // Add Season Applications (moved from Advanced Features, changed to Secondary)
+  // Season Planner + Season Applications
   adminButtons.push(
+    new ButtonBuilder()
+      .setCustomId('reeces_season_planner_mockup')
+      .setLabel('Season Planner')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('📅'),
     new ButtonBuilder()
       .setCustomId('season_management_menu')
       .setLabel('Apps')
@@ -787,13 +792,8 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setCustomId('safari_rounds_menu')
       .setLabel('Challenges')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🏃‍♀️'),
-    new ButtonBuilder()
-      .setCustomId('prod_donate')
-      .setLabel('Donate')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('☕')
-    // Tribes moved to Reece's Stuff menu (reeces_stuff) - see menuBuilder.js
+      .setEmoji('🏃‍♀️')
+    // Donate moved to Advanced Features row
   );
   
   // Live Analytics button moved to Reece Stuff submenu
@@ -854,13 +854,18 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // safari_rounds_menu moved to adminButtons row (relabeled to "Challenges")
   // prod_safari_menu removed - buttons distributed to Production Menu and Map Explorer
 
-  // Add Tools button (renamed from Initial Setup, contains Setup/Availability/Help) - third/fourth in row depending on Analytics
+  // Add Tools button (renamed from Initial Setup, contains Setup/Availability/Help)
   advancedFeaturesButtons.push(
     new ButtonBuilder()
       .setCustomId('castbot_tools')
       .setLabel('Tools')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🪛')
+      .setEmoji('🪛'),
+    new ButtonBuilder()
+      .setCustomId('prod_donate')
+      .setLabel('Donate')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('☕')
   );
 
   const advancedFeaturesRow = new ActionRowBuilder().addComponents(advancedFeaturesButtons);
