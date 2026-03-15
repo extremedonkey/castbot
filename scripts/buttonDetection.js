@@ -79,6 +79,12 @@ const SAFE_TEST_BUTTONS = {
     style: 1, // Primary (blue)
     priority: 3
   },
+  'challenges': {
+    custom_id: 'safari_rounds_menu',
+    label: '🏃 Challenges',
+    style: 1, // Primary (blue)
+    priority: 2
+  },
   'menu': {
     custom_id: 'viral_menu',
     label: '📋 Prod Menu',
@@ -157,6 +163,13 @@ const FEATURE_PATTERNS = {
   richcard: [
     /richcard/i,
     /rich.?card/i
+  ],
+  challenges: [
+    /challenge/i,
+    /challengeManager/i,
+    /safari_rounds/,
+    /challenge_select/,
+    /challenge_edit/
   ],
   experimental: [
     /reeces_stuff/i,
