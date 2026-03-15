@@ -378,6 +378,7 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
     { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Seasons', style: 2 },
     { type: 2, custom_id: `planner_page_${page - 1}_${configId}`, label: '◀', style: 2, disabled: page === 0 },
     { type: 2, custom_id: `planner_page_${page + 1}_${configId}`, label: '▶', style: 2, disabled: page >= totalPages - 1 },
+    { type: 2, custom_id: `planner_schedule_${configId}`, label: 'Schedule', style: 2, emoji: { name: '📅' } },
   ];
 
   const container = {
@@ -387,7 +388,6 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
       { type: 14 },
       { type: 1, components: [
         { type: 2, custom_id: `planner_edit_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
-        { type: 2, custom_id: `planner_schedule_${configId}`, label: 'Schedule', style: 2, emoji: { name: '📅' } },
         { type: 2, custom_id: `planner_apps_${configId}`, label: 'Apps', style: 2, emoji: { name: '📝' } },
         { type: 2, custom_id: `season_app_ranking_${configId}`, label: 'Ranking', style: 2, emoji: { name: '🏆' } },
         { type: 2, custom_id: `planner_tribes_${configId}`, label: 'Tribes', style: 2, emoji: { name: '🔥' } },
