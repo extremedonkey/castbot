@@ -7709,13 +7709,55 @@ To fix this:
           return buildPlannerSelector(context.guildId);
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('planner_schedule_') || custom_id.startsWith('planner_tribes_')) {
-      // Season Planner — toolbar buttons (not yet implemented)
+    } else if (custom_id.startsWith('planner_schedule_')) {
+      // Season Planner — generate and post 4 schedule images to channel
+      const configId = custom_id.replace('planner_schedule_', '');
+      return ButtonHandlerFactory.create({
+        id: 'planner_schedule',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { loadPlayerData } = await import('./storage.js');
+          const { generateVerticalTimeline, generateMonthCalendar, generateGanttChart, generateCountdownStrip } = await import('./scheduleImageGenerator.js');
+          const { AttachmentBuilder } = await import('discord.js');
+
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[configId];
+          if (!config) return { content: '❌ Season not found' };
+          const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId];
+          if (!seasonRounds) return { content: '❌ No planner data' };
+
+          const startDate = new Date(config.estimatedStartDate);
+          const seasonName = config.seasonName;
+
+          const [timeline, calendar, gantt, countdown] = await Promise.all([
+            generateVerticalTimeline(seasonName, seasonRounds, startDate),
+            generateMonthCalendar(seasonName, seasonRounds, startDate),
+            generateGanttChart(seasonName, seasonRounds, startDate),
+            generateCountdownStrip(seasonName, seasonRounds, startDate),
+          ]);
+
+          const channelId = req.body.channel?.id || req.body.channel_id;
+          const channel = await context.client.channels.fetch(channelId);
+
+          await channel.send({ files: [new AttachmentBuilder(timeline, { name: 'schedule_timeline.png' })] });
+          await channel.send({ files: [new AttachmentBuilder(calendar, { name: 'schedule_calendar.png' })] });
+          await channel.send({ files: [new AttachmentBuilder(gantt, { name: 'schedule_gantt.png' })] });
+          await channel.send({ files: [new AttachmentBuilder(countdown, { name: 'schedule_countdown.png' })] });
+
+          console.log(`📅 Season Planner: Posted 4 schedule images for "${seasonName}"`);
+
+          const { buildPlannerView } = await import('./seasonPlanner.js');
+          return buildPlannerView(seasonName, seasonRounds, startDate, configId, 0);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('planner_tribes_')) {
+      // Season Planner — tribes (not yet implemented)
       return ButtonHandlerFactory.create({
         id: 'planner_toolbar_noop',
         updateMessage: true,
         handler: async () => {
-          return { type: 6 }; // Silent acknowledge — feature not yet implemented
+          return { type: 6 };
         }
       })(req, res, client);
     } else if (custom_id.startsWith('stress_page_')) {
