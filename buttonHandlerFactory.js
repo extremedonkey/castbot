@@ -4018,6 +4018,11 @@ export class ButtonHandlerFactory {
    * @returns {Function} Handler function
    */
   static create(config) {
+    // Auto-register in BUTTON_REGISTRY if not already present (prevents false [🪨 LEGACY] flags)
+    if (config.id && !BUTTON_REGISTRY[config.id] && !BUTTON_REGISTRY[config.id + '_*']) {
+      BUTTON_REGISTRY[config.id + '_*'] = { label: config.id, autoRegistered: true };
+    }
+
     return async (req, res, client) => {
       try {
         // 1. Extract context
