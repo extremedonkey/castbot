@@ -1999,9 +1999,22 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
             }
         }
 
-        // Prepend probability display if present
+        // Insert probability display AFTER opening outcomes but BEFORE pass/fail outcomes
         if (button._probabilityDisplay?.components) {
-            bundledComponents.unshift(...button._probabilityDisplay.components, { type: 14 });
+            // Find where opening outcomes end (they're first in the bundle)
+            // Opening outcomes have already been added to bundledComponents
+            // Insert probability display after them
+            const openingCount = alwaysOutcomes.length;
+            // Each outcome typically adds ~2-3 components (text + separator)
+            // Find the first separator after opening outcomes as insertion point
+            let insertIndex = 0;
+            let separatorsSeen = 0;
+            for (let idx = 0; idx < bundledComponents.length; idx++) {
+                if (bundledComponents[idx].type === 14) separatorsSeen++;
+                if (separatorsSeen >= openingCount) { insertIndex = idx + 1; break; }
+            }
+            if (insertIndex === 0 && openingCount === 0) insertIndex = 0;
+            bundledComponents.splice(insertIndex, 0, ...button._probabilityDisplay.components, { type: 14 });
         }
 
         // Build the final bundled response with optional accent color
