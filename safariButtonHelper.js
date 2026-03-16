@@ -156,8 +156,9 @@ export async function createSafariButtonComponents(buttonIds, guildId) {
       console.warn(`⚠️ Rejected invalid emoji for button ${buttonId}: "${button.emoji}"`);
     }
     
-    // button_modal triggers use modal_launcher_ prefix so they show a modal on click
-    const customId = triggerType === 'button_modal'
+    // button_modal and button_input triggers use modal_launcher_ prefix so they show a modal on click
+    const isModalTrigger = triggerType === 'button_modal' || triggerType === 'button_input';
+    const customId = isModalTrigger
       ? `modal_launcher_${guildId}_${buttonId}_${Date.now()}`
       : `safari_${guildId}_${buttonId}_${Date.now()}`;
 
