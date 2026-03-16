@@ -25,6 +25,11 @@ messageHistory.json
 
 # Other data
 img/tips/tips.json
+img/*/map_*.png
+img/*/map_*.jpg
+img/*/temp_*.png
+img/*/*.png
+img/*/*.jpg
 data_*.json
 
 # System files
