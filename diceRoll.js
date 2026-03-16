@@ -171,6 +171,29 @@ export function buildProbabilityResultDisplay(result, config = {}, mode = 'proba
 
   if (mode === 'silent') return null;
 
+  // D20 mode — theatrical D&D presentation of the probability result
+  if (mode === 'd20') {
+    // Convert the probability roll into a d20 narrative
+    // Map the 0-100 roll to 1-20 range for display
+    const fakeNatural = Math.max(1, Math.min(20, Math.round((rolled / 100) * 20)));
+    const dc = Math.max(1, Math.min(20, Math.round(21 - (threshold / 5))));
+    const isCritSuccess = fakeNatural === 20;
+    const isCritFail = fakeNatural === 1;
+
+    // The ACTUAL pass/fail comes from the probability condition, not the d20
+    const d20Result = {
+      naturalRoll: fakeNatural,
+      modifier: 0,
+      modifiedRoll: fakeNatural,
+      passThreshold: dc,
+      passed, // Use the real probability result
+      isCritSuccess: isCritSuccess && passed, // Only crit if actually passed
+      isCritFail: isCritFail && !passed,      // Only fumble if actually failed
+      timestamp: Date.now(),
+    };
+    return buildD20ResultDisplay(d20Result, config);
+  }
+
   if (mode === 'probability_only') {
     // Compact dice roll card
     return {

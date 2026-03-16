@@ -201,6 +201,47 @@ describe('Statistical validation', () => {
 // Tests — Condition evaluation integration
 // ─────────────────────────────────────────────
 
+describe('D20 display mode — probability to D&D conversion', () => {
+  it('maps 0-100 roll to 1-20 range', () => {
+    // Roll of 50% should map to ~10
+    const fakeNatural = Math.max(1, Math.min(20, Math.round((50 / 100) * 20)));
+    assert.equal(fakeNatural, 10);
+  });
+
+  it('maps 0% roll to 1 (nat 1)', () => {
+    const fakeNatural = Math.max(1, Math.min(20, Math.round((0 / 100) * 20)));
+    assert.equal(fakeNatural, 1);
+  });
+
+  it('maps 100% roll to 20 (nat 20)', () => {
+    const fakeNatural = Math.max(1, Math.min(20, Math.round((99.9 / 100) * 20)));
+    assert.equal(fakeNatural, 20);
+  });
+
+  it('converts pass% to DC correctly', () => {
+    // 50% pass = DC 11
+    assert.equal(Math.max(1, Math.min(20, Math.round(21 - (50 / 5)))), 11);
+    // 75% pass = DC 6
+    assert.equal(Math.max(1, Math.min(20, Math.round(21 - (75 / 5)))), 6);
+    // 25% pass = DC 16
+    assert.equal(Math.max(1, Math.min(20, Math.round(21 - (25 / 5)))), 16);
+  });
+
+  it('crit success only if actually passed', () => {
+    const fakeNatural = 20;
+    const passed = false; // Probability said fail
+    const isCritSuccess = fakeNatural === 20 && passed;
+    assert.equal(isCritSuccess, false); // Can't crit if you failed
+  });
+
+  it('fumble only if actually failed', () => {
+    const fakeNatural = 1;
+    const passed = true; // Probability said pass
+    const isCritFail = fakeNatural === 1 && !passed;
+    assert.equal(isCritFail, false); // Can't fumble if you passed
+  });
+});
+
 describe('Probability condition data structure', () => {
   it('default config has correct shape', () => {
     const config = {

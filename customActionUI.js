@@ -2519,6 +2519,7 @@ export async function showConditionEditor({ res, actionId, conditionIndex, guild
             { label: 'Probability + Display Text', value: 'probability_text', emoji: { name: '📊' }, description: 'Shows dice roll result + pass/fail card', default: displayMode === 'probability_text' },
             { label: 'Display Text Only', value: 'text_only', emoji: { name: '📊' }, description: 'Shows only the pass/fail result card', default: displayMode === 'text_only' },
             { label: 'Probability Only', value: 'probability_only', emoji: { name: '🎲' }, description: 'Compact diceroll % result with pass/fail', default: displayMode === 'probability_only' },
+            { label: 'D20 Dice Roll', value: 'd20', emoji: { name: '🐉' }, description: 'D&D-style d20 roll with crits, fumbles & flavor text', default: displayMode === 'd20' },
             { label: 'Silent', value: 'silent', emoji: { name: '🔇' }, description: 'No output — result captured in logs only', default: displayMode === 'silent' },
           ]
         }]});
