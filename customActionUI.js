@@ -2381,6 +2381,13 @@ function getConditionSummary(condition, items = {}) {
       return `🎲 ${passPercent}% chance of pass`;
     }
 
+    case 'd20_roll': {
+      const dc = condition.config?.dc ?? 11;
+      const mod = condition.config?.modifier ?? 0;
+      const modText = mod !== 0 ? ` (${mod >= 0 ? '+' : ''}${mod})` : '';
+      return `🐉 D20 vs DC ${dc}${modText}`;
+    }
+
     default:
       return `Unknown condition type: ${condition.type}`;
   }
@@ -2467,6 +2474,13 @@ export async function showConditionEditor({ res, actionId, conditionIndex, guild
             description: "Randomises chance of pass / fail outcome",
             emoji: { name: '🎲' },
             default: condition.type === 'random_probability'
+          },
+          {
+            label: 'D20 Dice Roll',
+            value: 'd20_roll',
+            description: "D&D-style d20 roll with DC, modifiers, crits & fumbles",
+            emoji: { name: '🐉' },
+            default: condition.type === 'd20_roll'
           }
         ]
       }]
@@ -2548,6 +2562,77 @@ export async function showConditionEditor({ res, actionId, conditionIndex, guild
         if (failResult.title || failResult.description) {
           components.push({ type: 10, content: `📊 **Fail Result Text**\n${failResult.title || ''}\n${failResult.description || ''}` });
         }
+        if (failResult.image) {
+          try { new URL(failResult.image); components.push({ type: 12, items: [{ media: { url: failResult.image } }] }); } catch { /* skip */ }
+        }
+        break;
+      }
+      case 'd20_roll': {
+        const config = condition.config || {};
+        const dc = config.dc ?? 11;
+        const modifier = config.modifier ?? 0;
+        const displayMode = config.displayMode || 'full_d20';
+        const passResult = config.passResult || { title: '☀️ Good Fortune!', description: 'The dice favor you today.' };
+        const failResult = config.failResult || { title: '🌧️ Bad Luck!', description: 'The odds were not in your favor.' };
+
+        // Success chance: (21 - DC) / 20 * 100, clamped
+        const successChance = Math.max(0, Math.min(100, Math.round(((21 - dc + modifier) / 20) * 100)));
+        const dcLabels = { 5: 'Very Easy', 10: 'Easy', 11: 'Medium', 15: 'Hard', 20: 'Very Hard' };
+        const dcLabel = dcLabels[dc] || (dc <= 5 ? 'Trivial' : dc >= 20 ? 'Nearly Impossible' : 'Custom');
+        const modText = modifier !== 0 ? ` (${modifier >= 0 ? '+' : ''}${modifier})` : '';
+
+        components.push({ type: 10, content: `Roll a d20 against a Difficulty Class (DC) to determine pass or fail.\nNatural 20 always passes. Natural 1 always fails.` });
+        components.push({ type: 14 });
+
+        // DC section
+        components.push({
+          type: 9,
+          components: [{ type: 10, content: `**⚔️ Difficulty Class**\nDC ${dc} (${dcLabel}) — ${successChance}% chance of success` }],
+          accessory: { type: 2, custom_id: `d20_set_dc_${actionId}_${conditionIndex}`, label: '⚔️ Set DC', style: 2 }
+        });
+
+        // Modifier section
+        components.push({
+          type: 9,
+          components: [{ type: 10, content: `**🎯 Modifier**\n${modifier >= 0 ? '+' : ''}${modifier}${modText === '' ? ' — No bonus or penalty' : ''}` }],
+          accessory: { type: 2, custom_id: `d20_set_mod_${actionId}_${conditionIndex}`, label: '🎯 Set', style: 2 }
+        });
+        components.push({ type: 14 });
+
+        // Display mode
+        components.push({ type: 10, content: '**Display Mode**' });
+        components.push({ type: 1, components: [{
+          type: 3,
+          custom_id: `d20_display_mode_${actionId}_${conditionIndex}`,
+          placeholder: 'Select display mode...',
+          options: [
+            { label: 'Full D&D Experience', value: 'full_d20', emoji: { name: '🐉' }, description: 'Dramatic roll + flavor text + result card', default: displayMode === 'full_d20' },
+            { label: 'D20 + Display Text', value: 'd20_text', emoji: { name: '📊' }, description: 'Roll result + pass/fail card', default: displayMode === 'd20_text' },
+            { label: 'Roll Only', value: 'd20_compact', emoji: { name: '🎲' }, description: 'Compact: "🎲 14 vs DC 11 — PASS"', default: displayMode === 'd20_compact' },
+            { label: 'Silent', value: 'silent', emoji: { name: '🔇' }, description: 'No output — result in logs only', default: displayMode === 'silent' },
+          ]
+        }]});
+        components.push({ type: 14 });
+
+        // Pass result
+        components.push({
+          type: 9,
+          components: [{ type: 10, content: `**🟢 On Success** (DC met or exceeded)\n${passResult.title || ''}` }],
+          accessory: { type: 2, custom_id: `d20_set_pass_${actionId}_${conditionIndex}`, label: '🟢 Set', style: 2 }
+        });
+        if (passResult.description) components.push({ type: 10, content: passResult.description });
+        if (passResult.image) {
+          try { new URL(passResult.image); components.push({ type: 12, items: [{ media: { url: passResult.image } }] }); } catch { /* skip */ }
+        }
+        components.push({ type: 14 });
+
+        // Fail result
+        components.push({
+          type: 9,
+          components: [{ type: 10, content: `**🔴 On Failure** (below DC)\n${failResult.title || ''}` }],
+          accessory: { type: 2, custom_id: `d20_set_fail_${actionId}_${conditionIndex}`, label: '🔴 Set', style: 2 }
+        });
+        if (failResult.description) components.push({ type: 10, content: failResult.description });
         if (failResult.image) {
           try { new URL(failResult.image); components.push({ type: 12, items: [{ media: { url: failResult.image } }] }); } catch { /* skip */ }
         }

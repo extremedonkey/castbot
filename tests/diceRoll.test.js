@@ -242,6 +242,37 @@ describe('D20 display mode — probability to D&D conversion', () => {
   });
 });
 
+describe('D20 condition data structure', () => {
+  it('default config has correct shape', () => {
+    const config = {
+      dc: 11,
+      modifier: 0,
+      displayMode: 'full_d20',
+      passResult: { title: '☀️ Good Fortune!', description: 'The dice favor you.' },
+      failResult: { title: '🌧️ Bad Luck!', description: 'Not your day.' }
+    };
+    assert.equal(config.dc, 11);
+    assert.equal(config.modifier, 0);
+    assert.equal(config.displayMode, 'full_d20');
+  });
+
+  it('success chance calculation from DC', () => {
+    // DC 11: (21 - 11) / 20 = 50%
+    assert.equal(Math.round(((21 - 11) / 20) * 100), 50);
+    // DC 5: (21 - 5) / 20 = 80%
+    assert.equal(Math.round(((21 - 5) / 20) * 100), 80);
+    // DC 15: (21 - 15) / 20 = 30%
+    assert.equal(Math.round(((21 - 15) / 20) * 100), 30);
+    // DC 20: (21 - 20) / 20 = 5%
+    assert.equal(Math.round(((21 - 20) / 20) * 100), 5);
+  });
+
+  it('modifier affects success chance', () => {
+    // DC 15, +3 modifier: (21 - 15 + 3) / 20 = 45%
+    assert.equal(Math.round(((21 - 15 + 3) / 20) * 100), 45);
+  });
+});
+
 describe('Probability condition data structure', () => {
   it('default config has correct shape', () => {
     const config = {

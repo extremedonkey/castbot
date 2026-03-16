@@ -1594,7 +1594,7 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
         
         // Note: Safari button logging is now handled by the comprehensive custom action logging at the end of executeButtonActions
         
-        // Generate probability display if a random_probability condition was evaluated
+        // Generate probability/D20 display if a condition was evaluated
         if (button._lastProbabilityRoll && button.conditions) {
             const probCondition = button.conditions.find(c => c.type === 'random_probability');
             if (probCondition && probCondition.config?.displayMode !== 'silent') {
@@ -1604,9 +1604,28 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                     probCondition.config || {},
                     probCondition.config?.displayMode || 'probability_text'
                 );
-                if (probDisplay) {
-                    // Store for prepending to response later
-                    button._probabilityDisplay = probDisplay;
+                if (probDisplay) button._probabilityDisplay = probDisplay;
+            }
+        }
+
+        // D20 display — separate from probability
+        if (conditionContext?._lastD20Roll && button.conditions) {
+            const d20Condition = button.conditions.find(c => c.type === 'd20_roll');
+            if (d20Condition && d20Condition.config?.displayMode !== 'silent') {
+                const { buildD20ResultDisplay } = await import('./diceRoll.js');
+                const mode = d20Condition.config?.displayMode || 'full_d20';
+                const d20Result = conditionContext._lastD20Roll;
+
+                if (mode === 'd20_compact') {
+                    // Compact display
+                    const modText = d20Result.modifier ? ` + ${d20Result.modifier} = ${d20Result.modifiedRoll}` : '';
+                    const emoji = d20Result.passed ? '🟢' : '🔴';
+                    button._probabilityDisplay = {
+                        type: 17, accent_color: 0x2a2a4a,
+                        components: [{ type: 10, content: `🎲 **${d20Result.naturalRoll}**${modText} vs DC **${d20Result.passThreshold}** — ${emoji} **${d20Result.passed ? 'PASS' : 'FAIL'}**` }]
+                    };
+                } else if (mode === 'd20_text' || mode === 'full_d20') {
+                    button._probabilityDisplay = buildD20ResultDisplay(d20Result, d20Condition.config || {});
                 }
             }
         }
@@ -10011,6 +10030,20 @@ async function evaluateSingleCondition(condition, player, context) {
             }
         }
 
+        case 'd20_roll': {
+            const { rollD20 } = await import('./diceRoll.js');
+            const dc = condition.config?.dc ?? 11;
+            const modifier = condition.config?.modifier ?? 0;
+            const result = rollD20(dc, modifier);
+
+            if (!context._probabilityRolls) context._probabilityRolls = [];
+            context._probabilityRolls.push(result);
+            context._lastD20Roll = result;
+
+            console.log(`🐉 D20: Rolled ${result.naturalRoll}${modifier ? ` + ${modifier} = ${result.modifiedRoll}` : ''} vs DC ${dc} → ${result.passed ? 'PASS' : 'FAIL'}${result.isCritSuccess ? ' (NAT 20!)' : ''}${result.isCritFail ? ' (NAT 1!)' : ''}`);
+            return result.passed;
+        }
+
         case 'random_probability': {
             const { rollProbability } = await import('./diceRoll.js');
             const passPercent = condition.config?.passPercent ?? 50;
@@ -10084,6 +10117,12 @@ function getConditionSummary(condition) {
         case 'random_probability': {
             const passPercent = condition.config?.passPercent ?? 50;
             return `🎲 ${passPercent}% chance of pass`;
+        }
+        case 'd20_roll': {
+            const dc = condition.config?.dc ?? 11;
+            const mod = condition.config?.modifier ?? 0;
+            const modText = mod !== 0 ? ` (${mod >= 0 ? '+' : ''}${mod})` : '';
+            return `🐉 D20 vs DC ${dc}${modText}`;
         }
         default:
             return 'Unknown condition';

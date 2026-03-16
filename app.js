@@ -25213,6 +25213,139 @@ Your server is now ready for Tycoons gameplay!`;
     // ==================== ENTITY MANAGEMENT HANDLERS ====================
     // New entity management system for Safari items, stores, and buttons
     
+    } else if (custom_id.startsWith('d20_set_dc_')) {
+      // D20 — set DC modal
+      return ButtonHandlerFactory.create({
+        id: 'd20_set_dc',
+        requiresModal: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = custom_id.replace('d20_set_dc_', '').split('_');
+          const conditionIndex = parseInt(parts.pop());
+          const actionId = parts.join('_');
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const condition = safariData[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          const currentDC = condition?.config?.dc ?? 11;
+
+          return { type: 9, data: {
+            custom_id: `d20_dc_modal_${actionId}_${conditionIndex}`,
+            title: '⚔️ Set Difficulty Class',
+            components: [
+              {
+                type: 18,
+                label: 'Difficulty Preset',
+                description: 'Choose a standard DC or select Custom',
+                component: {
+                  type: 21, // Radio Group
+                  custom_id: 'dc_preset',
+                  options: [
+                    { label: 'DC 5 — Very Easy (80%)', value: '5', default: currentDC === 5 },
+                    { label: 'DC 10 — Easy (55%)', value: '10', default: currentDC === 10 },
+                    { label: 'DC 11 — Medium (50%)', value: '11', default: currentDC === 11 },
+                    { label: 'DC 15 — Hard (30%)', value: '15', default: currentDC === 15 },
+                    { label: 'DC 20 — Very Hard (5%)', value: '20', default: currentDC === 20 },
+                    { label: 'Custom DC', value: 'custom', default: ![5,10,11,15,20].includes(currentDC) },
+                  ]
+                }
+              },
+              {
+                type: 18,
+                label: 'Custom DC (only if Custom selected)',
+                description: 'Enter a DC value between 1 and 20',
+                component: {
+                  type: 4, custom_id: 'custom_dc', style: 1,
+                  placeholder: '13',
+                  required: false, max_length: 2,
+                  ...([5,10,11,15,20].includes(currentDC) ? {} : { value: String(currentDC) })
+                }
+              }
+            ]
+          }};
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('d20_set_mod_')) {
+      // D20 — set modifier modal
+      return ButtonHandlerFactory.create({
+        id: 'd20_set_mod',
+        requiresModal: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = custom_id.replace('d20_set_mod_', '').split('_');
+          const conditionIndex = parseInt(parts.pop());
+          const actionId = parts.join('_');
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const condition = safariData[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+
+          return { type: 9, data: {
+            custom_id: `d20_mod_modal_${actionId}_${conditionIndex}`,
+            title: '🎯 Set Roll Modifier',
+            components: [{
+              type: 18,
+              label: 'Modifier',
+              description: 'Bonus (+) or penalty (-) applied to the roll. E.g., +3, -2, 0',
+              component: {
+                type: 4, custom_id: 'modifier', style: 1,
+                placeholder: '0',
+                required: true, max_length: 3,
+                value: String(condition?.config?.modifier ?? 0)
+              }
+            }]
+          }};
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('d20_set_pass_') || custom_id.startsWith('d20_set_fail_')) {
+      // D20 — set pass/fail result card (reuse probability modal pattern)
+      return ButtonHandlerFactory.create({
+        id: 'd20_set_result',
+        requiresModal: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const isPass = custom_id.startsWith('d20_set_pass_');
+          const parts = custom_id.replace(isPass ? 'd20_set_pass_' : 'd20_set_fail_', '').split('_');
+          const conditionIndex = parseInt(parts.pop());
+          const actionId = parts.join('_');
+          const { loadSafariContent } = await import('./safariManager.js');
+          const { buildProbabilityModal } = await import('./diceRoll.js');
+          const safariData = await loadSafariContent();
+          const condition = safariData[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          // Reuse probability modal but with d20-specific custom_id
+          const modal = buildProbabilityModal(actionId, conditionIndex, isPass ? 'pass' : 'fail', condition?.config || {});
+          modal.data.custom_id = `d20_result_modal_${isPass ? 'pass' : 'fail'}_${actionId}_${conditionIndex}`;
+          modal.data.title = isPass ? '🟢 Success Result' : '🔴 Failure Result';
+          // Remove the probability % field (first component) — D20 uses DC not %
+          modal.data.components = modal.data.components.filter(c => c.component?.custom_id !== 'probability');
+          return modal;
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('d20_display_mode_')) {
+      // D20 — display mode changed
+      return ButtonHandlerFactory.create({
+        id: 'd20_display_mode',
+        updateMessage: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = custom_id.replace('d20_display_mode_', '').split('_');
+          const conditionIndex = parseInt(parts.pop());
+          const actionId = parts.join('_');
+          const mode = req.body.data.values?.[0];
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const action = safariData[context.guildId]?.buttons?.[actionId];
+          if (!action?.conditions?.[conditionIndex]) return { content: '❌ Condition not found' };
+          if (!action.conditions[conditionIndex].config) action.conditions[conditionIndex].config = {};
+          action.conditions[conditionIndex].config.displayMode = mode;
+          await saveSafariContent(safariData);
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage: 0 });
+          return;
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('prob_set_pass_') || custom_id.startsWith('prob_set_fail_')) {
       // Random Probability — open set probability modal
       return ButtonHandlerFactory.create({
@@ -25355,6 +25488,19 @@ Your server is now ready for Tycoons gameplay!`;
                 comparison: 'gte',
                 value: 0,
                 includeItemBonuses: false
+              };
+              delete condition.operator;
+              delete condition.value;
+              delete condition.itemId;
+              delete condition.roleId;
+              break;
+            case 'd20_roll':
+              condition.config = {
+                dc: 11,
+                modifier: 0,
+                displayMode: 'full_d20',
+                passResult: { title: '☀️ Good Fortune!', description: 'The dice favor you today, adventurer.', accentColor: 0x4ade80 },
+                failResult: { title: '🌧️ Bad Luck!', description: 'The odds were not in your favor.', accentColor: 0xe74c3c }
               };
               delete condition.operator;
               delete condition.value;
@@ -36176,6 +36322,99 @@ Your server is now ready for Tycoons gameplay!`;
           const { buildChallengeScreen } = await import('./challengeManager.js');
           const fields = extractModalFields(components);
           return buildChallengeScreen(context.guildId, null, fields.search_term || '');
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('d20_dc_modal_')) {
+      // D20 — DC modal submit
+      return ButtonHandlerFactory.create({
+        id: 'd20_dc_submit',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = custom_id.replace('d20_dc_modal_', '').split('_');
+          const conditionIndex = parseInt(parts.pop());
+          const actionId = parts.join('_');
+          const { extractModalFields } = await import('./seasonPlanner.js');
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const fields = extractModalFields(components);
+          const safariData = await loadSafariContent();
+          const condition = safariData[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          if (!condition) return { content: '❌ Condition not found' };
+          if (!condition.config) condition.config = {};
+
+          const preset = fields.dc_preset;
+          if (preset === 'custom') {
+            condition.config.dc = Math.max(1, Math.min(20, parseInt(fields.custom_dc) || 11));
+          } else {
+            condition.config.dc = parseInt(preset) || 11;
+          }
+
+          await saveSafariContent(safariData);
+          console.log(`🐉 D20: Set DC to ${condition.config.dc} for ${actionId}`);
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage: 0 });
+          return;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('d20_mod_modal_')) {
+      // D20 — modifier modal submit
+      return ButtonHandlerFactory.create({
+        id: 'd20_mod_submit',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = custom_id.replace('d20_mod_modal_', '').split('_');
+          const conditionIndex = parseInt(parts.pop());
+          const actionId = parts.join('_');
+          const { extractModalFields } = await import('./seasonPlanner.js');
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const fields = extractModalFields(components);
+          const safariData = await loadSafariContent();
+          const condition = safariData[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          if (!condition) return { content: '❌ Condition not found' };
+          if (!condition.config) condition.config = {};
+          condition.config.modifier = parseInt(fields.modifier) || 0;
+          await saveSafariContent(safariData);
+          console.log(`🐉 D20: Set modifier to ${condition.config.modifier} for ${actionId}`);
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage: 0 });
+          return;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('d20_result_modal_')) {
+      // D20 — pass/fail result card modal submit
+      return ButtonHandlerFactory.create({
+        id: 'd20_result_submit',
+        updateMessage: true,
+        handler: async (context) => {
+          const afterPrefix = custom_id.replace('d20_result_modal_', '');
+          const side = afterPrefix.startsWith('pass_') ? 'pass' : 'fail';
+          const remaining = afterPrefix.replace(side + '_', '');
+          const parts = remaining.split('_');
+          const conditionIndex = parseInt(parts.pop());
+          const actionId = parts.join('_');
+          const { extractModalFields } = await import('./seasonPlanner.js');
+          const { parseAccentColor } = await import('./richCardUI.js');
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const fields = extractModalFields(components);
+          const safariData = await loadSafariContent();
+          const condition = safariData[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          if (!condition) return { content: '❌ Condition not found' };
+          if (!condition.config) condition.config = {};
+          const key = side === 'pass' ? 'passResult' : 'failResult';
+          if (!condition.config[key]) condition.config[key] = {};
+          condition.config[key].title = fields.result_title || '';
+          condition.config[key].description = fields.result_description || '';
+          condition.config[key].image = fields.result_image || '';
+          if (fields.accent_color) {
+            const parsed = parseAccentColor(fields.accent_color);
+            if (parsed !== null) condition.config[key].accentColor = parsed;
+          }
+          await saveSafariContent(safariData);
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage: 0 });
+          return;
         }
       })(req, res, client);
 
