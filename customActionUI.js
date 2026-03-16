@@ -3271,27 +3271,29 @@ export async function showDisplayTextConfig(guildId, buttonId, actionIndex) {
       components: [
         {
           type: 10, // Text Display
-          content: `## 📝 Display Text Configuration\n${isEdit ? 'Editing' : 'Creating'} text display action`
+          content: (() => {
+            const effectiveExecuteOn = action?.executeOn || global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true';
+            const sectionEmoji = effectiveExecuteOn === 'always' ? '🔵' : effectiveExecuteOn === 'false' ? '🔴' : '🟢';
+            return `## 📝 Display Text Configuration ${sectionEmoji}\n${isEdit ? 'Editing' : 'Creating'} text display outcome`;
+          })()
         },
-        
+
         { type: 14 }, // Separator
-        
+
         // Text preview
         {
           type: 10,
           content: `### Preview\n${previewText}`
         },
-        
+
         // Image preview (if image URL is configured)
         ...(() => {
           const imageUrl = action?.config?.image || action?.image;
           if (imageUrl && imageUrl.trim() !== '') {
             try {
-              // Basic URL validation - check if it looks like a URL
               new URL(imageUrl);
-              
               return [{
-                type: 12, // Media Gallery
+                type: 12,
                 items: [{
                   media: { url: imageUrl },
                   description: action?.config?.title || action?.title || 'Display Text Image',
@@ -3299,51 +3301,15 @@ export async function showDisplayTextConfig(guildId, buttonId, actionIndex) {
                 }]
               }];
             } catch (error) {
-              // Invalid URL - show error message instead
               return [{
-                type: 10, // Text Display
+                type: 10,
                 content: `⚠️ **Invalid Image URL**: ${imageUrl.substring(0, 50)}${imageUrl.length > 50 ? '...' : ''}`
               }];
             }
           }
           return [];
         })(),
-        
-        { type: 14 }, // Separator
-        
-        // Execution Condition section
-        {
-          type: 10,
-          content: '### Execution Condition\nWhen should this action be triggered?'
-        },
-        {
-          type: 1, // Action Row
-          components: [{
-            type: 3, // String Select
-            custom_id: `safari_display_text_execute_on_${buttonId}_${actionIndex}`,
-            placeholder: 'Select when to execute...',
-            options: (() => {
-              const effectiveExecuteOn = action?.executeOn || global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true';
-              return [
-                {
-                  label: 'Outcome runs when player passes conditions',
-                  value: 'true',
-                  description: 'Only execute when conditions are met',
-                  emoji: { name: '🟢' },
-                  default: effectiveExecuteOn === 'true'
-                },
-                {
-                  label: 'Outcome runs when player fails conditions',
-                  value: 'false',
-                  description: 'Only execute when conditions are NOT met',
-                  emoji: { name: '🔴' },
-                  default: effectiveExecuteOn === 'false'
-                }
-              ];
-            })()
-          }]
-        },
-        
+
         { type: 14 }, // Separator
         
         // Action buttons
