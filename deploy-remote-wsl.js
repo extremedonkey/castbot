@@ -201,6 +201,50 @@ async function deployToProduction() {
                 'risk-low'
             );
             
+            // 🗿 DEPLOYMENT SAFETY CHECK: Has this been tested on dev first?
+            // Compares prod HEAD to latest origin/main. If there's a big gap,
+            // the agent probably skipped dev testing and went straight to prod.
+            if (!DRY_RUN) {
+                try {
+                    const prodHead = await execSSH(
+                        `cd ${REMOTE_PATH} && git rev-parse HEAD`,
+                        'Getting prod commit hash',
+                        'risk-low'
+                    );
+                    const prodCommit = prodHead.stdout.trim();
+
+                    // Check how many commits are ahead on origin/main
+                    const commitGap = await execSSH(
+                        `cd ${REMOTE_PATH} && git rev-list --count ${prodCommit}..origin/main`,
+                        'Counting commits to deploy',
+                        'risk-low'
+                    );
+                    const gapCount = parseInt(commitGap.stdout.trim()) || 0;
+
+                    if (gapCount > 10 && !args.includes('--confirmed')) {
+                        console.log('');
+                        console.log('🗿 THE MOAI SPEAKS.');
+                        console.log('');
+                        console.log(`   ${gapCount} commits are about to hit production.`);
+                        console.log('   That is a LOT of changes.');
+                        console.log('');
+                        console.log('   Have you:');
+                        console.log('   ✅ Tested on dev?');
+                        console.log('   ✅ Got explicit permission from Reece to deploy?');
+                        console.log('   ✅ Checked for breaking changes?');
+                        console.log('');
+                        console.log('   REMINDER: One authorization = one deployment.');
+                        console.log('   DO NOT auto-deploy without being told "deploy to prod".');
+                        console.log('');
+                        console.log('   To proceed, re-run with: npm run deploy-remote-wsl -- --confirmed');
+                        console.log('');
+                        process.exit(1);
+                    }
+                } catch {
+                    // Non-fatal — continue with deploy
+                }
+            }
+
             // Show what we're about to merge (safety check)
             log('Checking merge preview...', 'info');
             const mergePreview = await execSSH(
