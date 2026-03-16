@@ -1110,11 +1110,21 @@ async function updateMapImage(guild, userId, mapUrl) {
           left: 0
         }
       ])
-      .png()
+      .png({ compressionLevel: 9, palette: true })
       .toFile(outputPath);
-    
+
+    // If grid output still too large, re-encode as JPEG
+    const updateFileStats = await fs.stat(outputPath);
+    if (updateFileStats.size > 7 * 1024 * 1024) {
+      console.log(`⚠️ Updated map image ${(updateFileStats.size / 1024 / 1024).toFixed(1)}MB — re-encoding as JPEG`);
+      const jpegPath = outputPath.replace('.png', '.jpg');
+      await sharp(outputPath).jpeg({ quality: 85 }).toFile(jpegPath);
+      await fs.unlink(outputPath);
+      outputPath = jpegPath;
+    }
+
     progressMessages.push('✅ Generated updated map with grid overlay');
-    
+
     // Upload the updated map to Discord
     progressMessages.push('📤 Uploading updated map to Discord...');
     const uploadResult = await uploadImageToDiscord(guild, outputPath, `${activeMapId}_updated.png`);
@@ -1974,10 +1984,10 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridSi
       return originalImageUrl;
     }
 
-    // Step 6: Composite all overlays onto the original image
+    // Step 6: Composite all overlays onto the original image (JPEG for smaller output)
     const overlaidImage = await sharp(imageBuffer)
       .composite(overlays)
-      .png()
+      .jpeg({ quality: 85 })
       .toBuffer();
 
     // Step 7: Save to temporary file
@@ -1986,7 +1996,7 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridSi
       await fs.mkdir(tempDir, { recursive: true });
     }
 
-    const tempFilePath = path.join(tempDir, `map_overlay_${guildId}_${Date.now()}.png`);
+    const tempFilePath = path.join(tempDir, `map_overlay_${guildId}_${Date.now()}.jpg`);
     await sharp(overlaidImage).toFile(tempFilePath);
 
     console.log(`💾 Saved overlaid image to: ${tempFilePath}`);
