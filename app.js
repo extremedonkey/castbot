@@ -25213,6 +25213,54 @@ Your server is now ready for Tycoons gameplay!`;
     // ==================== ENTITY MANAGEMENT HANDLERS ====================
     // New entity management system for Safari items, stores, and buttons
     
+    } else if (custom_id.startsWith('prob_set_pass_') || custom_id.startsWith('prob_set_fail_')) {
+      // Random Probability — open set probability modal
+      return ButtonHandlerFactory.create({
+        id: 'prob_set_modal',
+        requiresModal: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const isPass = custom_id.startsWith('prob_set_pass_');
+          const parts = custom_id.replace(isPass ? 'prob_set_pass_' : 'prob_set_fail_', '').split('_');
+          const conditionIndex = parseInt(parts.pop());
+          const actionId = parts.join('_');
+
+          const { loadSafariContent } = await import('./safariManager.js');
+          const { buildProbabilityModal } = await import('./diceRoll.js');
+          const safariData = await loadSafariContent();
+          const action = safariData[context.guildId]?.buttons?.[actionId];
+          const condition = action?.conditions?.[conditionIndex];
+
+          return buildProbabilityModal(actionId, conditionIndex, isPass ? 'pass' : 'fail', condition?.config || {});
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('prob_display_mode_')) {
+      // Random Probability — display mode selection
+      return ButtonHandlerFactory.create({
+        id: 'prob_display_mode',
+        updateMessage: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = custom_id.replace('prob_display_mode_', '').split('_');
+          const conditionIndex = parseInt(parts.pop());
+          const actionId = parts.join('_');
+          const mode = req.body.data.values?.[0];
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const action = safariData[context.guildId]?.buttons?.[actionId];
+          if (!action?.conditions?.[conditionIndex]) return { content: '❌ Condition not found' };
+
+          if (!action.conditions[conditionIndex].config) action.conditions[conditionIndex].config = {};
+          action.conditions[conditionIndex].config.displayMode = mode;
+          await saveSafariContent(safariData);
+
+          const { createConditionEditorUI } = await import('./customActionUI.js');
+          return await createConditionEditorUI(context.guildId, actionId, conditionIndex, 0);
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('condition_type_select_')) {
       // Handle condition type selector
       return ButtonHandlerFactory.create({
@@ -36115,6 +36163,61 @@ Your server is now ready for Tycoons gameplay!`;
           const { buildChallengeScreen } = await import('./challengeManager.js');
           const fields = extractModalFields(components);
           return buildChallengeScreen(context.guildId, null, fields.search_term || '');
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('prob_modal_')) {
+      // Random Probability — set probability modal submit
+      return ButtonHandlerFactory.create({
+        id: 'prob_modal_submit',
+        updateMessage: true,
+        handler: async (context) => {
+          // Format: prob_modal_{pass|fail}_{actionId}_{conditionIndex}
+          const afterPrefix = custom_id.replace('prob_modal_', '');
+          const side = afterPrefix.startsWith('pass_') ? 'pass' : 'fail';
+          const remaining = afterPrefix.replace(side + '_', '');
+          const parts = remaining.split('_');
+          const conditionIndex = parseInt(parts.pop());
+          const actionId = parts.join('_');
+
+          const { extractModalFields } = await import('./seasonPlanner.js');
+          const { parseAccentColor } = await import('./richCardUI.js');
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const fields = extractModalFields(components);
+
+          const safariData = await loadSafariContent();
+          const action = safariData[context.guildId]?.buttons?.[actionId];
+          if (!action?.conditions?.[conditionIndex]) return { content: '❌ Condition not found' };
+
+          if (!action.conditions[conditionIndex].config) action.conditions[conditionIndex].config = {};
+          const config = action.conditions[conditionIndex].config;
+
+          // Parse probability (strip % sign if present)
+          const rawPercent = String(fields.probability || '50').replace('%', '').trim();
+          const percent = Math.max(0, Math.min(100, parseFloat(rawPercent) || 50));
+
+          if (side === 'pass') {
+            config.passPercent = percent;
+          } else {
+            // If setting fail, pass = 100 - fail
+            config.passPercent = Math.round((100 - percent) * 100) / 100;
+          }
+
+          // Save result card
+          const resultKey = side === 'pass' ? 'passResult' : 'failResult';
+          if (!config[resultKey]) config[resultKey] = {};
+          config[resultKey].title = fields.result_title || '';
+          config[resultKey].description = fields.result_description || '';
+          if (fields.accent_color) {
+            const parsed = parseAccentColor(fields.accent_color);
+            if (parsed !== null) config[resultKey].accentColor = parsed;
+          }
+
+          await saveSafariContent(safariData);
+          console.log(`🎲 Probability: Set ${side} to ${side === 'pass' ? config.passPercent : percent}% for ${actionId}`);
+
+          const { createConditionEditorUI } = await import('./customActionUI.js');
+          return await createConditionEditorUI(context.guildId, actionId, conditionIndex, 0);
         }
       })(req, res, client);
 

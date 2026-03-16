@@ -1232,6 +1232,11 @@ async function formatConditionsDisplay(conditions, guildItems = {}) {
       case 'at_coordinate':
         summary = `📍 At Location: ${condition.coordinate || '?'}`;
         break;
+      case 'random_probability': {
+        const passPercent = condition.config?.passPercent ?? 50;
+        summary = `🎲 ${passPercent}% chance of pass`;
+        break;
+      }
       default:
         summary = `${condition.type || 'Unknown condition'}`;
     }
@@ -2450,6 +2455,13 @@ export async function showConditionEditor({ res, actionId, conditionIndex, guild
             description: "Check multiple attributes (all/any >= value, total >= value)",
             emoji: { name: '📈' },
             default: condition.type === 'multi_attribute_check'
+          },
+          {
+            label: 'Random Probability',
+            value: 'random_probability',
+            description: "Randomises chance of pass / fail outcome",
+            emoji: { name: '🎲' },
+            default: condition.type === 'random_probability'
           }
         ]
       }]
@@ -2480,6 +2492,20 @@ export async function showConditionEditor({ res, actionId, conditionIndex, guild
       case 'multi_attribute_check':
         components.push(...await createMultiAttributeCheckUI(condition, actionId, conditionIndex, currentPage, guildId));
         break;
+      case 'random_probability': {
+        const { buildD20ConfigUI } = await import('./diceRoll.js');
+        const configUI = buildD20ConfigUI(actionId, conditionIndex, condition.config || {});
+        // Extract the inner components (skip the outer container since we're inside one)
+        const innerComponents = configUI.components[0]?.components || [];
+        // Skip the title (we already have "Condition Editor") and the back button (we have our own)
+        const filtered = innerComponents.filter(c =>
+          c.type !== 10 || (!c.content?.startsWith('## 🎲') && !c.content?.startsWith('When the'))
+        ).filter(c =>
+          !(c.type === 1 && c.components?.[0]?.custom_id?.startsWith('condition_manager_'))
+        );
+        components.push(...filtered);
+        break;
+      }
     }
   }
   

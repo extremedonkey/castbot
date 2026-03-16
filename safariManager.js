@@ -1568,13 +1568,20 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
             // Use forceFresh to ensure we read latest data from disk
             // This prevents race conditions when buttons are clicked rapidly
             const playerData = await loadPlayerData(null, { forceFresh: true });
-            conditionsResult = await evaluateConditions(button.conditions, {
+            const conditionContext = {
                 playerData,
                 guildId,
                 userId,
                 member: interaction.member
-            });
-            
+            };
+            conditionsResult = await evaluateConditions(button.conditions, conditionContext);
+
+            // Store probability roll result on the button for outcome access
+            if (conditionContext._lastProbabilityRoll) {
+                button._lastProbabilityRoll = conditionContext._lastProbabilityRoll;
+                console.log(`🎲 Probability roll stored: ${conditionContext._lastProbabilityRoll.rolled.toFixed(2)}% (${conditionContext._lastProbabilityRoll.passed ? 'PASS' : 'FAIL'})`);
+            }
+
             console.log(`📊 Conditions evaluated to: ${conditionsResult} for action ${buttonId}`);
         }
         
@@ -9969,6 +9976,21 @@ async function evaluateSingleCondition(condition, player, context) {
             }
         }
 
+        case 'random_probability': {
+            const { rollProbability } = await import('./diceRoll.js');
+            const passPercent = condition.config?.passPercent ?? 50;
+            const result = rollProbability(passPercent);
+
+            // Store roll result on the action context for downstream outcomes (e.g., calculate_results)
+            if (!context._probabilityRolls) context._probabilityRolls = [];
+            context._probabilityRolls.push(result);
+            // Also store as last roll for easy access
+            context._lastProbabilityRoll = result;
+
+            console.log(`🎲 Probability: Rolled ${result.rolled.toFixed(2)}% vs threshold ${passPercent}% → ${result.passed ? 'PASS' : 'FAIL'}`);
+            return result.passed;
+        }
+
         default:
             console.error(`Unknown condition type: ${condition.type}`);
             return false;
@@ -10023,6 +10045,10 @@ function getConditionSummary(condition) {
             const attrList = attributes.length > 2 ? `${attributes.length} attrs` : attributes.join(', ');
             const itemBonus = includeItemBonuses ? ' (+items)' : '';
             return `${modeLabel}(${attrList}) ${compSymbol} ${value}${itemBonus}`;
+        }
+        case 'random_probability': {
+            const passPercent = condition.config?.passPercent ?? 50;
+            return `🎲 ${passPercent}% chance of pass`;
         }
         default:
             return 'Unknown condition';
