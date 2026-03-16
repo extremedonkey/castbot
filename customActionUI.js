@@ -429,24 +429,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           }
         },
 
-        // Conditions Section (below Locations, above Outcomes)
-        { type: 10, content: `## \`\`\`🧩 Conditions\`\`\`` },
-        {
-          type: 9, // Section
-          components: [{
-            type: 10,
-            content: `-# What gets checked when it is triggered?\n${conditionsDisplay}`
-          }],
-          accessory: {
-            type: 2,
-            custom_id: `condition_manager_${actionId}_0`,
-            label: "Manage",
-            style: 2,
-            emoji: { name: "🧩" }
-          }
-        },
-
-        // Split actions into ALWAYS, TRUE, and FALSE arrays
+        // Opening Outcomes + Conditions + Pass/Fail Outcomes — in execution order
         ...(() => {
           const allActions = action.actions || [];
           const alwaysActions = allActions.filter(a => a.executeOn === 'always');
@@ -457,13 +440,11 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
 
           const components = [];
 
-          // OPENING Outcomes Section (always runs, before conditions)
-          components.push({ type: 14 }); // Divider
+          // 1. OPENING Outcomes Section (always runs first)
+          components.push({ type: 14 });
           components.push({
             type: 10,
-            content: alwaysActions.length === 0
-              ? `### \`\`\`🔵 Opening Outcomes (0/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What always happens when this action triggers?${capWarning}`
-              : `### \`\`\`🔵 Opening Outcomes (${alwaysActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What always happens when this action triggers?${capWarning}`
+            content: `### \`\`\`🔵 Opening Outcomes (${alwaysActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What always happens when this action triggers?${capWarning}`
           });
           components.push(...getActionListComponents(alwaysActions, actionId, guildItems, guildButtons, 'always', allActions));
           if (notAtMax) {
@@ -478,7 +459,26 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
             });
           }
 
-          // TRUE Outcomes Section
+          // 2. Conditions Section (evaluated after opening outcomes)
+          components.push(
+            { type: 10, content: `### \`\`\`🧩 Conditions\`\`\`` },
+            {
+              type: 9,
+              components: [{
+                type: 10,
+                content: `-# What gets checked when it is triggered?\n${conditionsDisplay}`
+              }],
+              accessory: {
+                type: 2,
+                custom_id: `condition_manager_${actionId}_0`,
+                label: "Manage",
+                style: 2,
+                emoji: { name: "🧩" }
+              }
+            }
+          );
+
+          // 3. Pass Outcomes Section
           components.push({
             type: 10,
             content: `### \`\`\`🟢 Pass Outcomes (${trueActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player passes conditions?${capWarning}`
