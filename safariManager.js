@@ -1545,10 +1545,10 @@ async function sendFollowUpMessages(token, responses) {
 /**
  * Execute all outcomes for an action (legacy name: "button" = action entity, "actions" = outcomes)
  */
-async function executeButtonActions(guildId, buttonId, userId, interaction, client, forceConditionsFail = false) {
+async function executeButtonActions(guildId, buttonId, userId, interaction, client, forceConditionsFail = false, triggerInput = null) {
     try {
         console.log(`🚀 DEBUG: Executing outcomes for action ${buttonId} by user ${userId}`);
-        
+
         const button = await getCustomButton(guildId, buttonId);
         if (!button) {
             return {
@@ -1557,9 +1557,16 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
             };
         }
         
+        // Store trigger input for {triggerInput} variable substitution in outcomes
+        if (triggerInput) {
+            button._triggerInput = triggerInput;
+            console.log(`⌨️ Trigger input stored: "${triggerInput}"`);
+        }
+
         // Check conditions if they exist
         let conditionsResult = true; // Default to true if no conditions
-        
+        let conditionContext = null;
+
         // For modal triggers with wrong input, force conditions to fail
         if (forceConditionsFail) {
             conditionsResult = false;
@@ -1568,7 +1575,7 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
             // Use forceFresh to ensure we read latest data from disk
             // This prevents race conditions when buttons are clicked rapidly
             const playerData = await loadPlayerData(null, { forceFresh: true });
-            const conditionContext = {
+            conditionContext = {
                 playerData,
                 guildId,
                 userId,

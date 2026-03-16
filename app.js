@@ -4603,27 +4603,35 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         });
       }
 
-      // Build modal using Player Command pattern
+      const triggerType = customAction.trigger?.type;
+      const isUserInput = triggerType === 'button_input';
+
+      // Build modal — button_input uses custom label/placeholder, button_modal uses phrase input
       const modal = {
-        title: (customAction.name || customAction.label || 'Enter Answer').slice(0, 45),
+        title: (customAction.name || customAction.label || (isUserInput ? 'Enter Input' : 'Enter Answer')).slice(0, 45),
         custom_id: `modal_answer_${guildId}_${actionId}_${Date.now()}`,
         components: [{
-          type: 1, // Action Row
-          components: [{
+          type: 18, // Label wrapper
+          label: isUserInput
+            ? (customAction.trigger?.inputLabel || 'Your Input').slice(0, 45)
+            : (customAction.description || 'Your Answer:').slice(0, 45),
+          ...(isUserInput && customAction.trigger?.inputDescription ? { description: customAction.trigger.inputDescription } : {}),
+          component: {
             type: 4, // Text Input
             custom_id: 'answer_input',
-            label: (customAction.description || 'Your Answer:').slice(0, 45),
             style: 1, // Short
             required: true,
             min_length: 1,
             max_length: 100,
-            placeholder: 'Type your answer here...'
-          }]
+            placeholder: isUserInput
+              ? (customAction.trigger?.inputPlaceholder || 'Type here...')
+              : 'Type your answer here...'
+          }
         }]
       };
 
       // Return MODAL response (type 9)
-      console.log(`🎯 Showing modal for ${actionId} with title: ${modal.title}`);
+      console.log(`🎯 Showing ${isUserInput ? 'input' : 'phrase'} modal for ${actionId} with title: ${modal.title}`);
       return res.send({
         type: InteractionResponseType.MODAL,
         data: modal
@@ -21782,6 +21790,19 @@ Your server is now ready for Tycoons gameplay!`;
               // Preserve existing phrases if switching from modal
               if (!button.trigger.phrases) {
                 button.trigger.phrases = [];
+              }
+              break;
+            case 'button_input':
+              button.trigger.button = {
+                label: button.label || button.name || 'Click Me',
+                emoji: button.emoji || '⌨️',
+                style: 'Primary'
+              };
+              if (!button.trigger.inputLabel) {
+                button.trigger.inputLabel = 'Your Input';
+              }
+              if (!button.trigger.inputPlaceholder) {
+                button.trigger.inputPlaceholder = 'Type here...';
               }
               break;
             case 'schedule':
@@ -44289,11 +44310,21 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
 
-        // Check if answer matches any phrase (case-insensitive)
-        const phrases = customAction.trigger?.phrases || [];
-        const isCorrect = phrases.some(phrase =>
-          phrase.toLowerCase().trim() === userAnswer.toLowerCase().trim()
-        );
+        const triggerType = customAction.trigger?.type;
+        const isUserInput = triggerType === 'button_input';
+
+        // For button_input: no phrase check, always execute pass outcomes
+        // For button_modal: check phrase match
+        let isCorrect;
+        if (isUserInput) {
+          isCorrect = true; // No gate — input flows straight through
+          console.log(`⌨️ User input captured: "${userAnswer}" for action ${actionId}`);
+        } else {
+          const phrases = customAction.trigger?.phrases || [];
+          isCorrect = phrases.some(phrase =>
+            phrase.toLowerCase().trim() === userAnswer.toLowerCase().trim()
+          );
+        }
 
         // Build interaction context for executeButtonActions
         const interactionData = {
@@ -44308,11 +44339,16 @@ Your server is now ready for Tycoons gameplay!`;
         };
 
         if (isCorrect) {
-          console.log(`✅ Correct code for ${actionId} — executing pass outcomes`);
+          console.log(`✅ ${isUserInput ? 'Input captured' : 'Correct code'} for ${actionId} — executing pass outcomes`);
+
+          // Store user input for {triggerInput} variable substitution in outcomes
+          if (isUserInput && userAnswer) {
+            customAction._triggerInput = userAnswer;
+          }
 
           // Execute normally — conditions will be evaluated, executeOn:'true' outcomes run if conditions pass
           const result = await executeButtonActions(
-            guildId, actionId, userId, interactionData, client
+            guildId, actionId, userId, interactionData, client, false, userAnswer
           );
 
           await DiscordRequest(`webhooks/${req.body.application_id}/${req.body.token}/messages/@original`, {

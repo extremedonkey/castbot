@@ -1291,6 +1291,13 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
             default: action.trigger?.type === 'button_modal'
           },
           {
+            label: "Button + User Input",
+            value: "button_input",
+            description: "Player clicks button, types input. Use {triggerInput} in outcomes.",
+            emoji: { name: "⌨️" },
+            default: action.trigger?.type === 'button_input'
+          },
+          {
             label: "Scheduled Action",
             value: "schedule",
             description: "Action runs automatically at a set time.",
@@ -1519,6 +1526,69 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
     });
     components.push(previewRow.toJSON());
     components.push(buttonRow.toJSON());
+  } else if (action.trigger?.type === 'button_input') {
+    // Button + User Input: captures player text, available as {triggerInput} in outcomes
+    components.push({ type: 14 });
+
+    const inputLabel = action.trigger?.inputLabel || 'Your Input';
+    const inputPlaceholder = action.trigger?.inputPlaceholder || 'Type here...';
+
+    components.push({
+      type: 10,
+      content: `**⌨️ Button + User Input**\nPlayer clicks a button, types something, and their input flows into outcomes.\n\nUse **{triggerInput}** in any Display Text outcome to show what they typed.\n\n-# Input Label: **${inputLabel}**\n-# Placeholder: *${inputPlaceholder}*`
+    });
+
+    const currentStyle = action.trigger?.button?.style || 'Primary';
+
+    // Button style selector (shared with button_modal)
+    components.push({
+      type: 1,
+      components: [{
+        type: 3,
+        custom_id: `custom_action_button_style_${actionId}`,
+        placeholder: "Select button color/style",
+        options: [
+          { label: 'Primary (Blue)', value: 'Primary', emoji: { name: '🔵' }, default: currentStyle === 'Primary' },
+          { label: 'Secondary (Gray)', value: 'Secondary', emoji: { name: '⚪' }, default: currentStyle === 'Secondary' },
+          { label: 'Success (Green)', value: 'Success', emoji: { name: '🟢' }, default: currentStyle === 'Success' },
+          { label: 'Danger (Red)', value: 'Danger', emoji: { name: '🔴' }, default: currentStyle === 'Danger' }
+        ]
+      }]
+    });
+
+    components.push({ type: 14 });
+
+    // Configure input label button
+    const configButton = new ButtonBuilder()
+      .setCustomId(`configure_input_label_${actionId}`)
+      .setLabel('Configure Input')
+      .setEmoji('⌨️')
+      .setStyle(2);
+
+    // Preview button
+    const previewButton = new ButtonBuilder()
+      .setCustomId(`button_preview_${actionId}`)
+      .setLabel(action.name || action.trigger?.button?.label || action.label || 'Click Me')
+      .setStyle(getButtonStyleNumber(currentStyle))
+      .setDisabled(false);
+
+    const emoji = action.emoji || action.trigger?.button?.emoji;
+    if (emoji) {
+      previewButton.setEmoji(emoji);
+    }
+
+    const backButton = new ButtonBuilder()
+      .setCustomId(`custom_action_editor_${actionId}`)
+      .setLabel('⬅ Back')
+      .setEmoji('⚡')
+      .setStyle(2);
+
+    components.push({
+      type: 10,
+      content: `**Button Preview**`
+    });
+    components.push(new ActionRowBuilder().addComponents([previewButton]).toJSON());
+    components.push(new ActionRowBuilder().addComponents([backButton, configButton]).toJSON());
   } else if (action.trigger?.type === 'schedule') {
     components.push({ type: 14 }); // Separator
 
@@ -1599,7 +1669,7 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
   }
 
   // Add back button for all trigger types (except modal and button_modal which already have one)
-  if (action.trigger?.type !== 'modal' && action.trigger?.type !== 'button_modal') {
+  if (action.trigger?.type !== 'modal' && action.trigger?.type !== 'button_modal' && action.trigger?.type !== 'button_input') {
     const backButton = new ButtonBuilder()
       .setCustomId(`custom_action_editor_${actionId}`)
       .setLabel('⬅ Back')
@@ -1808,7 +1878,7 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
   const coordinates = action.coordinates || [];
   const linkedItems = action.linkedItems || [];
   const items = guildData.items || {};
-  const isTriggerButton = action.trigger?.type === 'button' || action.trigger?.type === 'button_modal';
+  const isTriggerButton = action.trigger?.type === 'button' || action.trigger?.type === 'button_modal' || action.trigger?.type === 'button_input';
   const isTextCommand = action.trigger?.type === 'modal';
   const isScheduled = action.trigger?.type === 'schedule';
   const isNonPostable = isTextCommand || isScheduled;
