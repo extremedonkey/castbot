@@ -50,7 +50,21 @@ Previous map images were ~1-2MB at lower resolution. The 3238x4532 image (14.6 m
 
 ### Why PM2 didn't auto-restart
 
-PM2's `startup` command may not have been configured after the last Lightsail reboot. The dump file existed but PM2 wasn't registered as a systemd service. `pm2 resurrect` worked but required manual SSH intervention.
+**PM2 startup was NEVER configured.** Investigation confirmed:
+- `pm2 startup` output says "To setup the Startup Script, copy/paste the following command" — it was never run
+- No `/etc/systemd/system/pm2-bitnami.service` exists
+- No `@reboot` crontab entry
+- The dump file (`/home/bitnami/.pm2/dump.pm2`) exists and is valid — `pm2 resurrect` works — but nothing triggers it on boot
+
+**Fix required (run on prod):**
+```bash
+sudo env PATH=$PATH:/opt/bitnami/node/bin /opt/bitnami/node/lib/node_modules/pm2/bin/pm2 startup systemd -u bitnami --hp /home/bitnami
+pm2 save
+```
+
+### Additional: Fog map cascade (49 × 16MB)
+
+The fog-of-war system generates one fog map per grid cell. For a 7×7 grid, that's 49 fog maps. Each was being generated as uncompressed PNG from the full 3398×4692 canvas — potentially 8-16MB each. 49 uploads at 16MB = 784MB attempted through Discord's API. This cascade likely exhausted both RAM and swap, causing the OOM condition.
 
 ---
 
@@ -99,7 +113,7 @@ PM2's `startup` command may not have been configured after the last Lightsail re
 | Output compression | PNG compression + JPEG fallback | ✅ Fixed |
 | Upload pre-check | Size check before Discord upload | ✅ Fixed |
 | Original image format | Keep as JPEG, don't convert to PNG | ✅ Fixed |
-| PM2 auto-restart | Verify startup systemd service | TODO |
+| PM2 auto-restart | Run `pm2 startup` + `pm2 save` on prod | **TODO — requires sudo on prod** |
 | Memory monitoring | Health monitor alerts when memory >85% | Already exists |
 | Disk cleanup | Clean up failed map images | ✅ Done (64MB freed) |
 
