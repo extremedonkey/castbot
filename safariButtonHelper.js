@@ -127,9 +127,9 @@ export async function createSafariButtonComponents(buttonIds, guildId) {
       continue;
     }
     
-    // Skip non-button triggers (modal, select, etc.) — but allow button_modal (hybrid)
+    // Skip non-button triggers (modal, select, etc.) — but allow button_modal and button_input (hybrid)
     const triggerType = button.trigger?.type || 'button'; // Default to button for legacy
-    if (triggerType !== 'button' && triggerType !== 'button_modal') {
+    if (triggerType !== 'button' && triggerType !== 'button_modal' && triggerType !== 'button_input') {
       console.log(`🔍 Skipping non-button action ${buttonId} with trigger type: ${triggerType}`);
       continue;
     }
