@@ -2505,8 +2505,8 @@ export async function showConditionEditor({ res, actionId, conditionIndex, guild
         const passResult = config.passResult || { title: '🟢 Success!', description: 'The dice rolled in your favor.' };
         const failResult = config.failResult || { title: '🔴 Failure!', description: 'The odds were not in your favor.' };
 
-        // Explanation text
-        components.push({ type: 10, content: `When the ⚡ Action is executed, randomise the chance of this condition passing or failing.\n\nIf multiple different types of conditions are set, random probability will evaluate alongside those conditions.\n\n> __Example__\n> Condition #1: Player must have \`🗡️ Sword of 1000 Truths\`\n> Condition #2: Player has a 75% chance of a 🟢 Pass Outcome\n> -# In the example above, the Fail Outcomes will always run if the player does not have the Sword of 1000 Truths.\n> -# But even if the player has the item, they still have a 1 in 4 shot of failing due to the random probability.` });
+        // Explanation text — no double newlines
+        components.push({ type: 10, content: `When the \`⚡ Action\` is executed, randomise the chance of this condition passing or failing.\nIf multiple different types of conditions are set, random probability will evaluate alongside those conditions.\n> __Example__\n> Condition #1: Player must have \`🗡️ Sword of 1000 Truths\`\n> Condition #2: Player has a 75% chance of a 🟢 Pass Outcome\n> -# In the example above, the Fail Outcomes will always run if the player does not have the Sword of 1000 Truths.\n> -# But even if the player has the item, they still have a 1 in 4 shot of failing due to the random probability.` });
         components.push({ type: 14 });
 
         // Display mode
@@ -2518,13 +2518,13 @@ export async function showConditionEditor({ res, actionId, conditionIndex, guild
           options: [
             { label: 'Probability + Display Text', value: 'probability_text', emoji: { name: '📊' }, description: 'Shows dice roll result + pass/fail card', default: displayMode === 'probability_text' },
             { label: 'Display Text Only', value: 'text_only', emoji: { name: '📊' }, description: 'Shows only the pass/fail result card', default: displayMode === 'text_only' },
-            { label: 'Probability Only', value: 'probability_only', emoji: { name: '🎲' }, description: 'Compact card with roll % and result', default: displayMode === 'probability_only' },
+            { label: 'Probability Only', value: 'probability_only', emoji: { name: '🎲' }, description: 'Compact diceroll % result with pass/fail', default: displayMode === 'probability_only' },
             { label: 'Silent', value: 'silent', emoji: { name: '🔇' }, description: 'No output — result captured in logs only', default: displayMode === 'silent' },
           ]
         }]});
         components.push({ type: 14 });
 
-        // Pass probability section
+        // Pass probability section with richCard preview
         components.push({
           type: 9,
           components: [{ type: 10, content: `**🟢 Probability of Pass outcome**\n${passPercent}%` }],
@@ -2533,9 +2533,12 @@ export async function showConditionEditor({ res, actionId, conditionIndex, guild
         if (passResult.title || passResult.description) {
           components.push({ type: 10, content: `📊 **Pass Result Text**\n${passResult.title || ''}\n${passResult.description || ''}` });
         }
+        if (passResult.image) {
+          try { new URL(passResult.image); components.push({ type: 12, items: [{ media: { url: passResult.image } }] }); } catch { /* skip */ }
+        }
         components.push({ type: 14 });
 
-        // Fail probability section
+        // Fail probability section with richCard preview
         components.push({
           type: 9,
           components: [{ type: 10, content: `**🔴 Probability of Fail outcome**\n${failPercent}%` }],
@@ -2543,6 +2546,9 @@ export async function showConditionEditor({ res, actionId, conditionIndex, guild
         });
         if (failResult.title || failResult.description) {
           components.push({ type: 10, content: `📊 **Fail Result Text**\n${failResult.title || ''}\n${failResult.description || ''}` });
+        }
+        if (failResult.image) {
+          try { new URL(failResult.image); components.push({ type: 12, items: [{ media: { url: failResult.image } }] }); } catch { /* skip */ }
         }
         break;
       }

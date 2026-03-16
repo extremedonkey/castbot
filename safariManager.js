@@ -1594,6 +1594,23 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
         
         // Note: Safari button logging is now handled by the comprehensive custom action logging at the end of executeButtonActions
         
+        // Generate probability display if a random_probability condition was evaluated
+        if (button._lastProbabilityRoll && button.conditions) {
+            const probCondition = button.conditions.find(c => c.type === 'random_probability');
+            if (probCondition && probCondition.config?.displayMode !== 'silent') {
+                const { buildProbabilityResultDisplay } = await import('./diceRoll.js');
+                const probDisplay = buildProbabilityResultDisplay(
+                    button._lastProbabilityRoll,
+                    probCondition.config || {},
+                    probCondition.config?.displayMode || 'probability_text'
+                );
+                if (probDisplay) {
+                    // Store for prepending to response later
+                    button._probabilityDisplay = probDisplay;
+                }
+            }
+        }
+
         // Filter actions: always outcomes run first, then conditional pass/fail
         const conditionsResultString = conditionsResult ? 'true' : 'false';
         const alwaysOutcomes = button.actions.filter(action => action.executeOn === 'always');
@@ -1980,6 +1997,11 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                     bundledComponents.push({ type: 14 }); // Separator
                 }
             }
+        }
+
+        // Prepend probability display if present
+        if (button._probabilityDisplay?.components) {
+            bundledComponents.unshift(...button._probabilityDisplay.components, { type: 14 });
         }
 
         // Build the final bundled response with optional accent color

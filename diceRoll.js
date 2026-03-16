@@ -344,6 +344,19 @@ export function buildProbabilityModal(actionId, conditionIndex, side = 'pass', c
             ...(resultConfig.image ? { value: resultConfig.image } : {})
           }
         },
+        {
+          type: 18,
+          label: 'Accent Color',
+          description: 'Hex color for the result card border',
+          component: {
+            type: 4, custom_id: 'accent_color', style: 1,
+            placeholder: isPass ? '#4ade80' : '#e74c3c',
+            required: false, max_length: 10,
+            value: resultConfig.accentColor
+              ? `#${resultConfig.accentColor.toString(16).padStart(6, '0')}`
+              : (isPass ? '#4ade80' : '#e74c3c')
+          }
+        },
       ]
     }
   };

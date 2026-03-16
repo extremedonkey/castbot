@@ -36222,8 +36222,13 @@ Your server is now ready for Tycoons gameplay!`;
           config[resultKey].title = fields.result_title || '';
           config[resultKey].description = fields.result_description || '';
           config[resultKey].image = fields.result_image || '';
-          // Default accent color: green for pass, red for fail
-          config[resultKey].accentColor = side === 'pass' ? 0x4ade80 : 0xe74c3c;
+          if (fields.accent_color) {
+            const parsed = parseAccentColor(fields.accent_color);
+            if (parsed !== null) config[resultKey].accentColor = parsed;
+          } else {
+            // Default accent color: green for pass, red for fail
+            config[resultKey].accentColor = side === 'pass' ? 0x4ade80 : 0xe74c3c;
+          }
 
           await saveSafariContent(safariData);
           console.log(`🎲 Probability: Set ${side} to ${side === 'pass' ? config.passPercent : percent}% for ${actionId}`);
