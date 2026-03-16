@@ -2376,6 +2376,11 @@ function getConditionSummary(condition, items = {}) {
       return `📈 ${modeLabel}(${attrDisplay}) ${compSymbol} ${value}${itemBonus}`;
     }
 
+    case 'random_probability': {
+      const passPercent = condition.config?.passPercent ?? 50;
+      return `🎲 ${passPercent}% chance of pass`;
+    }
+
     default:
       return `Unknown condition type: ${condition.type}`;
   }

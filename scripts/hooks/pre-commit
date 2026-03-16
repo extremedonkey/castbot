@@ -112,6 +112,31 @@ if [ "$BLOCKED" -eq 1 ]; then
   exit 1
 fi
 
+# ── Check 3: New JS modules should have tests (warning, not blocking) ──
+# Checks if any new .js files are being committed without a matching tests/*.test.js
+NEW_JS_FILES=$(git diff --cached --name-only --diff-filter=A | grep '^\w.*\.js$' | grep -v '^tests/' | grep -v 'node_modules' | grep -v '^scripts/' | grep -v '^poc/' | grep -v '^temp/' | grep -v '^docs/')
+if [ -n "$NEW_JS_FILES" ]; then
+  UNTESTED_FILES=""
+  for jsfile in $NEW_JS_FILES; do
+    basename=$(basename "$jsfile" .js)
+    if [ ! -f "tests/${basename}.test.js" ] && ! git diff --cached --name-only | grep -q "tests/${basename}.test.js"; then
+      UNTESTED_FILES="$UNTESTED_FILES  - $jsfile (expected: tests/${basename}.test.js)\n"
+    fi
+  done
+  if [ -n "$UNTESTED_FILES" ]; then
+    echo ""
+    echo "🗿 THE MOAI NOTICES UNTESTED CODE..."
+    echo ""
+    echo "  New module(s) without test files:"
+    echo -e "$UNTESTED_FILES"
+    echo "  CLAUDE.md says: 'Write tests for every new feature.'"
+    echo "  Tests run on every dev-restart — untested code is unverified code."
+    echo ""
+    echo "  (This is a warning — commit is not blocked for this.)"
+    echo ""
+  fi
+fi
+
 # Celebrate if someone migrated handlers
 if [ "$LEGACY_COUNT" -lt "$BASELINE" ]; then
   MIGRATED=$((BASELINE - LEGACY_COUNT))
