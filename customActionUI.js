@@ -1237,6 +1237,13 @@ async function formatConditionsDisplay(conditions, guildItems = {}) {
         summary = `🎲 ${passPercent}% chance of pass`;
         break;
       }
+      case 'd20_roll': {
+        const dc = condition.config?.dc ?? 11;
+        const mod = condition.config?.modifier ?? 0;
+        const modText = mod !== 0 ? ` (${mod >= 0 ? '+' : ''}${mod})` : '';
+        summary = `🐉 D20 vs DC ${dc}${modText}`;
+        break;
+      }
       default:
         summary = `${condition.type || 'Unknown condition'}`;
     }

@@ -703,7 +703,7 @@ export async function createPlayerManagementUI(options) {
               const craftingActions = Object.values(allButtons).filter(action => {
                 const visibility = action.menuVisibility || 'none';
                 const tt = action.trigger?.type || 'button';
-                return visibility === 'crafting_menu' && (tt === 'button' || tt === 'button_modal');
+                return visibility === 'crafting_menu' && (tt === 'button' || tt === 'button_modal' || tt === 'button_input');
               });
 
               if (craftingActions.length > 0) {
@@ -844,7 +844,7 @@ export async function createPlayerManagementUI(options) {
           .filter(([actionId, action]) => {
             const visibility = action.menuVisibility || (action.showInInventory ? 'player_menu' : 'none');
             const triggerType = action.trigger?.type || 'button';
-            return visibility === 'player_menu' && (triggerType === 'button' || triggerType === 'button_modal');
+            return visibility === 'player_menu' && (triggerType === 'button' || triggerType === 'button_modal' || triggerType === 'button_input');
           })
           .map(([actionId, action]) => ({ ...action, actionId }));
 
@@ -895,7 +895,8 @@ export async function createPlayerManagementUI(options) {
                   type: 1, // ActionRow
                   components: rowActions.map(action => {
                     // button_modal triggers use modal_launcher_ prefix so they show a modal on click
-                    const buttonCustomId = action.trigger?.type === 'button_modal'
+                    const isModalTrigger = action.trigger?.type === 'button_modal' || action.trigger?.type === 'button_input';
+                    const buttonCustomId = isModalTrigger
                       ? `modal_launcher_${guildId}_${action.actionId}_${Date.now()}`
                       : `safari_${guildId}_${action.actionId}`;
                     const button = {

@@ -858,24 +858,32 @@ async function updateCurrency(guildId, userId, amount, context = {}) {
 /**
  * Execute display text action
  */
-async function executeDisplayText(config, interaction) {
+async function executeDisplayText(config, interaction, parentAction = null) {
     console.log('📄 DEBUG: Executing display text action');
-    console.log('📄 DEBUG: Display text config:', JSON.stringify(config, null, 2));
-    
+
+    // Variable substitution — replace {tokens} with runtime values
+    let title = config.title || '';
+    let content = config.content || '';
+
+    if (parentAction?._triggerInput) {
+        title = title.replaceAll('{triggerInput}', parentAction._triggerInput);
+        content = content.replaceAll('{triggerInput}', parentAction._triggerInput);
+    }
+
     const components = [];
-    
+
     // Add title if provided
-    if (config.title) {
+    if (title) {
         components.push({
             type: 10, // Text Display
-            content: `# ${config.title}`
+            content: `# ${title}`
         });
     }
-    
+
     // Add main content
     components.push({
         type: 10, // Text Display
-        content: config.content
+        content: content
     });
     
     // Add Media Gallery if image is provided
@@ -1317,7 +1325,7 @@ async function executeFollowUpButton(config, guildId, interaction) {
     }
 
     // Detect if target needs a modal (modal or button_modal trigger type)
-    const isModalTriggered = followUpButton.trigger?.type === 'modal' || followUpButton.trigger?.type === 'button_modal';
+    const isModalTriggered = followUpButton.trigger?.type === 'modal' || followUpButton.trigger?.type === 'button_modal' || followUpButton.trigger?.type === 'button_input';
     console.log(`🎭 Follow-up target ${followUpButton.id} is modal-triggered: ${isModalTriggered}`);
 
     // Create appropriate custom_id based on trigger type
@@ -1676,7 +1684,7 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
             switch (action.type) {
                 case ACTION_TYPES.DISPLAY_TEXT:
                 case 'display_text': // Legacy support
-                    result = await executeDisplayText(action.config, interaction);
+                    result = await executeDisplayText(action.config, interaction, button);
                     
                     // Collect ALL consecutive follow-up buttons to bundle
                     const followUpButtons = [];
@@ -4698,7 +4706,7 @@ async function createCraftingMenuUI(guildId, userId) {
             .filter(([actionId, action]) => {
                 const visibility = action.menuVisibility || 'none';
                 const triggerType = action.trigger?.type || 'button';
-                return visibility === 'crafting_menu' && (triggerType === 'button' || triggerType === 'button_modal');
+                return visibility === 'crafting_menu' && (triggerType === 'button' || triggerType === 'button_modal' || triggerType === 'button_input');
             })
             .map(([actionId, action]) => ({ ...action, actionId })); // Add actionId to the object
 
@@ -4757,8 +4765,9 @@ async function createCraftingMenuUI(guildId, userId) {
                 const actionRow = {
                     type: 1, // ActionRow
                     components: rowActions.map(action => {
-                        // button_modal triggers use modal_launcher_ prefix so they show a modal on click
-                        const buttonCustomId = action.trigger?.type === 'button_modal'
+                        // button_modal and button_input triggers use modal_launcher_ prefix so they show a modal on click
+                        const isModalTrigger = action.trigger?.type === 'button_modal' || action.trigger?.type === 'button_input';
+                        const buttonCustomId = isModalTrigger
                             ? `modal_launcher_${guildId}_${action.actionId}_${Date.now()}`
                             : `safari_${guildId}_${action.actionId}`;
                         const button = {

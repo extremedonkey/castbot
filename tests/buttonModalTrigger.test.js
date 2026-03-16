@@ -71,7 +71,16 @@ function getButtonCustomIdPrefix(triggerType) {
 }
 
 function shouldRenderAsButton(triggerType) {
-  return triggerType === 'button' || triggerType === 'button_modal';
+  return triggerType === 'button' || triggerType === 'button_modal' || triggerType === 'button_input';
+}
+
+// Variable substitution for display_text outcomes
+function substituteVariables(text, parentAction) {
+  if (!text) return text;
+  if (parentAction?._triggerInput) {
+    text = text.replaceAll('{triggerInput}', parentAction._triggerInput);
+  }
+  return text;
 }
 
 // ===========================================================================

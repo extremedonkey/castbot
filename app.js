@@ -12912,7 +12912,7 @@ Your server is now ready for Tycoons gameplay!`;
         const checkSafariData = await loadSafariForCheck();
         const checkLinkedActions = getLinkedForCheck(guildId, itemId, checkSafariData);
 
-        if (checkLinkedActions.length > 0 && checkLinkedActions[0].trigger?.type === 'button_modal') {
+        if (checkLinkedActions.length > 0 && (checkLinkedActions[0].trigger?.type === 'button_modal' || checkLinkedActions[0].trigger?.type === 'button_input')) {
           const action = checkLinkedActions[0];
           console.log(`🔐 Linked item ${itemId} triggers button_modal action ${action.id} — showing modal`);
 
@@ -13121,7 +13121,7 @@ Your server is now ready for Tycoons gameplay!`;
 
           // Check if action is button_modal — can't show modal after defer, so post a launcher button
           const checkAction = await getCustomButton(guildId, actionId);
-          if (checkAction?.trigger?.type === 'button_modal') {
+          if (checkAction?.trigger?.type === 'button_modal' || checkAction?.trigger?.type === 'button_input') {
             console.log(`🔐 Multi-use item selected button_modal action ${actionId} — posting launcher button`);
             await createFollowupMessage(token, {
               components: [{
@@ -29157,6 +29157,51 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
       
+    } else if (custom_id.startsWith('configure_input_label_')) {
+      // Configure input label/placeholder for button_input trigger
+      return ButtonHandlerFactory.create({
+        id: 'configure_input_label',
+        requiresModal: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const actionId = context.customId.replace('configure_input_label_', '');
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const action = safariData[context.guildId]?.buttons?.[actionId];
+          if (!action) return { type: 4, data: { content: '❌ Action not found.' } };
+
+          return {
+            type: 9,
+            data: {
+              custom_id: `input_label_config_${actionId}`,
+              title: 'Configure User Input',
+              components: [
+                {
+                  type: 18, label: 'Input Label',
+                  description: 'What the player sees above the text field',
+                  component: {
+                    type: 4, custom_id: 'input_label', style: 1,
+                    required: true, max_length: 45,
+                    value: action.trigger?.inputLabel || 'Your Input',
+                    placeholder: 'e.g., "How much do you want to bet?"'
+                  }
+                },
+                {
+                  type: 18, label: 'Placeholder Text',
+                  description: 'Grey hint text inside the empty field',
+                  component: {
+                    type: 4, custom_id: 'input_placeholder', style: 1,
+                    required: false, max_length: 100,
+                    value: action.trigger?.inputPlaceholder || '',
+                    placeholder: 'e.g., "Enter a number..."'
+                  }
+                }
+              ]
+            }
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('entity_edit_modal_')) {
       // Show modal for editing fields (legacy handler - should not be used)
       try {
@@ -43848,6 +43893,30 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id.startsWith('input_label_config_')) {
+      // Handle input label configuration modal submit
+      const actionId = custom_id.replace('input_label_config_', '');
+      const fields = {};
+      for (const comp of (components || [])) {
+        if (comp.component?.custom_id) fields[comp.component.custom_id] = comp.component.value;
+        else if (comp.components) for (const c of comp.components) { if (c.custom_id) fields[c.custom_id] = c.value; }
+      }
+
+      const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+      const safariData = await loadSafariContent();
+      const guildId = req.body.guild_id;
+      const action = safariData[guildId]?.buttons?.[actionId];
+      if (action?.trigger) {
+        action.trigger.inputLabel = (fields.input_label || 'Your Input').trim();
+        action.trigger.inputPlaceholder = (fields.input_placeholder || '').trim();
+        await saveSafariContent(safariData);
+        console.log(`⌨️ Input label updated for ${actionId}: "${action.trigger.inputLabel}"`);
+      }
+
+      const { showConditionEditor } = await import('./customActionUI.js');
+      await showConditionEditor(actionId, guildId, res);
+      return;
+
     } else if (custom_id.startsWith('modal_phrases_config_')) {
       // Handle modal trigger phrase configuration submission
       try {
