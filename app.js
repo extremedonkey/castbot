@@ -25360,6 +25360,18 @@ Your server is now ready for Tycoons gameplay!`;
               delete condition.itemId;
               delete condition.roleId;
               break;
+            case 'random_probability':
+              condition.config = {
+                passPercent: 50,
+                displayMode: 'probability_text',
+                passResult: { title: '🟢 Success!', description: 'The dice rolled in your favor.' },
+                failResult: { title: '🔴 Failure!', description: 'The odds were not in your favor.' }
+              };
+              delete condition.operator;
+              delete condition.value;
+              delete condition.itemId;
+              delete condition.roleId;
+              break;
           }
 
           // Save changes
