@@ -1006,7 +1006,7 @@ async function updateMapImage(guild, userId, mapUrl) {
       const { AttachmentBuilder } = await import('discord.js');
       let storageChannel = guild.channels.cache.find(ch => (ch.name === '🗺️map-storage' || ch.name === 'map-storage') && ch.type === 0);
       if (storageChannel) {
-        const origAttachment = new AttachmentBuilder(imageBuffer, { name: `original_${Date.now()}.png` });
+        const origAttachment = new AttachmentBuilder(imageBuffer, { name: `original_${Date.now()}.jpg` });
         await storageChannel.send({
           content: `🖼️ Original pre-map image for ${guild.name} (updated ${new Date().toISOString().split('T')[0]})`,
           files: [origAttachment]
@@ -1302,15 +1302,28 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
           left: 0
         }
       ])
-      .png()
+      .png({ compressionLevel: 9, palette: true })
       .toFile(outputPath);
-    
+
+    // Check file size — if still too large for Discord (>8MB), re-encode as JPEG
+    const { stat } = await import('fs/promises');
+    const fileStats = await stat(outputPath);
+    if (fileStats.size > 7 * 1024 * 1024) {
+      console.log(`⚠️ Map image ${(fileStats.size / 1024 / 1024).toFixed(1)}MB exceeds 7MB — re-encoding as JPEG`);
+      const jpegPath = outputPath.replace('.png', '.jpg');
+      await sharp(outputPath).jpeg({ quality: 85 }).toFile(jpegPath);
+      await fs.unlink(outputPath);
+      outputPath = jpegPath;
+      const jpegStats = await stat(jpegPath);
+      console.log(`✅ Re-encoded to JPEG: ${(jpegStats.size / 1024 / 1024).toFixed(1)}MB`);
+    }
+
     console.log(`✅ Generated map image: ${outputPath}`);
     progressMessages.push('✅ Generated map with grid overlay');
-    
+
     // Clean up temp file
     await fs.unlink(tempMapPath);
-    
+
     // Create map category
     progressMessages.push('🏗️ Creating map category...');
     
@@ -1331,7 +1344,7 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
           permissionOverwrites: [{ id: guild.roles.everyone.id, deny: ['ViewChannel', 'SendMessages'] }]
         });
       }
-      const origAttachment = new AttachmentBuilder(imageBuffer, { name: `original_${Date.now()}.png` });
+      const origAttachment = new AttachmentBuilder(imageBuffer, { name: `original_${Date.now()}.jpg` });
       await storageChannel.send({
         content: `🖼️ Original pre-map image for ${guild.name} (created ${new Date().toISOString().split('T')[0]})`,
         files: [origAttachment]
