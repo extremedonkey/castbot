@@ -1292,7 +1292,19 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
     
     let progressMessages = [];
     progressMessages.push(`🏗️ Starting map creation with custom image (${gridWidth}x${gridHeight})...`);
-    
+
+    // Memory safety check — refuse to process if server is low on RAM
+    const os = await import('os');
+    const freeMemMB = os.freemem() / (1024 * 1024);
+    const totalMemMB = os.totalmem() / (1024 * 1024);
+    if (freeMemMB < 80) {
+      console.error(`🚨 Low memory: ${freeMemMB.toFixed(0)}MB free of ${totalMemMB.toFixed(0)}MB — refusing map creation`);
+      return {
+        success: false,
+        message: `❌ Server is low on memory (${freeMemMB.toFixed(0)}MB free). Please try again in a few minutes.`
+      };
+    }
+
     // Download the custom map image
     progressMessages.push('📥 Downloading custom map image...');
     const response = await fetch(mapUrl);
