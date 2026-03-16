@@ -43914,8 +43914,8 @@ Your server is now ready for Tycoons gameplay!`;
       }
 
       // Return to trigger config screen (not condition editor — this is trigger config)
-      const { buildTriggerConfigUI } = await import('./customActionUI.js');
-      const triggerUI = await buildTriggerConfigUI(actionId, guildId);
+      const { createTriggerConfigUI } = await import('./customActionUI.js');
+      const triggerUI = await createTriggerConfigUI({ guildId, actionId });
       return res.send({
         type: InteractionResponseType.UPDATE_MESSAGE,
         data: triggerUI
