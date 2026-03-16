@@ -446,9 +446,10 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           }
         },
 
-        // Split actions into TRUE and FALSE arrays, with per-section "Add Outcome" selects
+        // Split actions into ALWAYS, TRUE, and FALSE arrays
         ...(() => {
           const allActions = action.actions || [];
+          const alwaysActions = allActions.filter(a => a.executeOn === 'always');
           const trueActions = allActions.filter(a => !a.executeOn || a.executeOn === 'true');
           const falseActions = allActions.filter(a => a.executeOn === 'false');
           const notAtMax = allActions.length < SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON;
@@ -456,11 +457,31 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
 
           const components = [];
 
-          // TRUE Outcomes Section
+          // OPENING Outcomes Section (always runs, before conditions)
           components.push({ type: 14 }); // Divider
           components.push({
             type: 10,
-            content: `## \`\`\`🟢 Outcomes (${trueActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player meets all conditions?${capWarning}`
+            content: alwaysActions.length === 0
+              ? `### \`\`\`🔵 Opening Outcomes (0/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What always happens when this action triggers?${capWarning}`
+              : `### \`\`\`🔵 Opening Outcomes (${alwaysActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What always happens when this action triggers?${capWarning}`
+          });
+          components.push(...getActionListComponents(alwaysActions, actionId, guildItems, guildButtons, 'always', allActions));
+          if (notAtMax) {
+            components.push({
+              type: 1,
+              components: [{
+                type: 3,
+                custom_id: `safari_action_type_select_${actionId}_always`,
+                placeholder: '🔵 Click here to add an Opening Outcome..',
+                options: OUTCOME_TYPE_OPTIONS
+              }]
+            });
+          }
+
+          // TRUE Outcomes Section
+          components.push({
+            type: 10,
+            content: `### \`\`\`🟢 Pass Outcomes (${trueActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player passes conditions?${capWarning}`
           });
 
           // Display TRUE outcomes
@@ -483,8 +504,8 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           components.push({
             type: 10,
             content: falseActions.length === 0 && !notAtMax
-              ? `## \`\`\`🔴 Outcomes (0/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player fails conditions?\n*No fail outcomes configured - display generic error message*${capWarning}`
-              : `## \`\`\`🔴 Outcomes (${falseActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player fails conditions?${capWarning}`
+              ? `### \`\`\`🔴 Fail Outcomes (0/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player fails conditions?\n*No fail outcomes — displays generic error message*${capWarning}`
+              : `### \`\`\`🔴 Fail Outcomes (${falseActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player fails conditions?${capWarning}`
           });
           components.push(...getActionListComponents(falseActions, actionId, guildItems, guildButtons, 'false', allActions));
 
@@ -792,11 +813,12 @@ function getActionListComponents(actions, actionId, guildItems = {}, guildButton
     const actualIndex = allActions ? allActions.findIndex(a => a === action) : index;
     const summaryText = getActionSummaryPlain(action, index + 1, guildItems, guildButtons);
 
-    // Toggle section label depends on current executeOn
+    // Move options — cycle through sections
     const currentExecuteOn = action.executeOn || 'true';
-    const toggleLabel = currentExecuteOn === 'true' ? 'Move to Fail Outcomes' : 'Move to Pass Outcomes';
-    const toggleEmoji = currentExecuteOn === 'true' ? '🔴' : '🟢';
-    const toggleDesc = currentExecuteOn === 'true' ? 'Runs on fail instead' : 'Runs on pass instead';
+    const moveOptions = [];
+    if (currentExecuteOn !== 'always') moveOptions.push({ label: 'Move to Opening Outcomes', value: 'move_to_always', emoji: { name: '🔵' }, description: 'Always runs when triggered' });
+    if (currentExecuteOn !== 'true') moveOptions.push({ label: 'Move to Pass Outcomes', value: 'move_to_true', emoji: { name: '🟢' }, description: 'Runs when conditions pass' });
+    if (currentExecuteOn !== 'false') moveOptions.push({ label: 'Move to Fail Outcomes', value: 'move_to_false', emoji: { name: '🔴' }, description: 'Runs when conditions fail' });
 
     // Match emoji to outcome type (same as OUTCOME_TYPE_OPTIONS)
     const outcomeEmoji = {
@@ -814,7 +836,7 @@ function getActionListComponents(actions, actionId, guildItems = {}, guildButton
       { label: 'Move Down', value: 'move_down', emoji: { name: '⬇️' }, description: 'Change execution order' },
       { label: '───────────────────', value: 'divider', description: ' ' },
       ...(!atMax ? [{ label: 'Clone Outcome', value: 'clone', emoji: { name: '📋' }, description: 'Duplicate this outcome' }] : []),
-      { label: toggleLabel, value: 'toggle_section', emoji: { name: toggleEmoji }, description: toggleDesc },
+      ...moveOptions,
       { label: 'Delete Outcome', value: 'delete', emoji: { name: '🗑️' }, description: 'Remove from action' }
     ];
 

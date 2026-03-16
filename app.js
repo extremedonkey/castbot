@@ -17626,10 +17626,10 @@ Your server is now ready for Tycoons gameplay!`;
           console.log(`🔍 START: safari_action_type_select - user ${context.userId}`);
 
           // Extract action ID, executeOn suffix, and selected outcome type
-          // Custom ID format: safari_action_type_select_{actionId}_true or _false
+          // Custom ID format: safari_action_type_select_{actionId}_true or _false or _always
           const fullId = context.customId.replace('safari_action_type_select_', '');
-          const executeOn = fullId.endsWith('_false') ? 'false' : 'true';
-          const buttonId = fullId.replace(/_(?:true|false)$/, '');
+          const executeOn = fullId.endsWith('_false') ? 'false' : fullId.endsWith('_always') ? 'always' : 'true';
+          const buttonId = fullId.replace(/_(?:true|false|always)$/, '');
           const actionType = req.body.data.values[0];
 
           // Store intended executeOn for downstream handlers (item select, role select, etc.)
@@ -19984,11 +19984,23 @@ Your server is now ready for Tycoons gameplay!`;
             }
 
             case 'toggle_section': {
+              // Legacy toggle — cycle true→false→true
               const current = button.actions[actionIndex].executeOn || 'true';
               button.actions[actionIndex].executeOn = current === 'true' ? 'false' : 'true';
               await saveSafariContent(allSafariContent);
               const { createCustomActionEditorUI } = await import('./customActionUI.js');
               return await createCustomActionEditorUI({ guildId: context.guildId, actionId, skipAutoSave: true });
+            }
+
+            case 'move_to_always':
+            case 'move_to_true':
+            case 'move_to_false': {
+              const targetSection = selectedValue.replace('move_to_', '');
+              button.actions[actionIndex].executeOn = targetSection;
+              await saveSafariContent(allSafariContent);
+              console.log(`🔀 Moved outcome ${actionIndex} to ${targetSection} section in ${actionId}`);
+              const { createCustomActionEditorUI: editorUI } = await import('./customActionUI.js');
+              return await editorUI({ guildId: context.guildId, actionId, skipAutoSave: true });
             }
 
             case 'delete': {

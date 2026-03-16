@@ -1587,15 +1587,16 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
         
         // Note: Safari button logging is now handled by the comprehensive custom action logging at the end of executeButtonActions
         
-        // Filter actions based on executeOn property and conditions result
+        // Filter actions: always outcomes run first, then conditional pass/fail
         const conditionsResultString = conditionsResult ? 'true' : 'false';
-        const actionsToExecute = button.actions.filter(action => {
-            // Default executeOn to 'true' for backwards compatibility
+        const alwaysOutcomes = button.actions.filter(action => action.executeOn === 'always');
+        const conditionalOutcomes = button.actions.filter(action => {
             const executeOn = action.executeOn || 'true';
             return executeOn === conditionsResultString;
         });
-        
-        console.log(`🎯 Executing ${actionsToExecute.length} outcomes where executeOn='${conditionsResultString}'`);
+        const actionsToExecute = [...alwaysOutcomes, ...conditionalOutcomes];
+
+        console.log(`🎯 Executing ${actionsToExecute.length} outcomes (${alwaysOutcomes.length} opening + ${conditionalOutcomes.length} ${conditionsResultString})`);
         
         // If no actions match the condition result, return a message
         if (actionsToExecute.length === 0) {
