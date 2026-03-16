@@ -1136,6 +1136,7 @@ function getTriggerTypeLabel(type) {
     button: '🖱️ Button Click',
     modal: '🕹️ Command',
     button_modal: '🔐 Button + Secret Code',
+    button_input: '⌨️ Button + User Input',
     schedule: '⏰ Scheduled Action'
   };
   return labels[type] || '❓ Unknown';
@@ -1159,6 +1160,10 @@ function getTriggerDescription(trigger) {
         return `Secret Code Phrases: None`;
       }
       return `Secret Code Phrases: *${bmPhrases.join(', ')}*`;
+    }
+    case 'button_input': {
+      const inputLabel = trigger.inputLabel || 'Your Input';
+      return `Input Label: *${inputLabel}*\nUse **{triggerInput}** in Display Text outcomes`;
     }
     case 'schedule': {
       const channelId = trigger.schedule?.channelId;
