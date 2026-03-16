@@ -126,10 +126,10 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
       }
     }
 
-    // Add action count info
-    const actionCount = action.actions?.length || 0;
-    if (actionCount > 0) {
-      description += ` • ${actionCount} action${actionCount !== 1 ? 's' : ''}`;
+    // Add outcome count info
+    const outcomeCount = action.actions?.length || 0;
+    if (outcomeCount > 0) {
+      description += ` • ${outcomeCount} outcome${outcomeCount !== 1 ? 's' : ''}`;
     }
 
     const option = {
@@ -248,10 +248,10 @@ export async function createCloneSourceSelectionUI({ guildId, coordinate = null,
     // Build description showing what will be cloned
     let description = '';
 
-    // Show action count
-    const actionCount = action.actions?.length || 0;
-    if (actionCount > 0) {
-      description += `${actionCount} action${actionCount !== 1 ? 's' : ''}`;
+    // Show outcome count
+    const outcomeCount = action.actions?.length || 0;
+    if (outcomeCount > 0) {
+      description += `${outcomeCount} outcome${outcomeCount !== 1 ? 's' : ''}`;
     }
 
     // Show condition count
