@@ -4176,6 +4176,16 @@ export class ButtonHandlerFactory {
 
     return async (req, res, client) => {
       try {
+        // 0. Runtime auto-register: if custom_id doesn't match any registry entry, register its prefix
+        const runtimeCustomId = req.body?.data?.custom_id;
+        if (runtimeCustomId && !BUTTON_REGISTRY[runtimeCustomId]) {
+          // Extract base prefix (everything before the last numeric/dynamic segment)
+          const basePrefix = runtimeCustomId.replace(/_[a-f0-9]{10,}.*$|_\d+$/, '');
+          if (basePrefix && !BUTTON_REGISTRY[basePrefix + '_*']) {
+            BUTTON_REGISTRY[basePrefix + '_*'] = { label: config.id || basePrefix, autoRegistered: true, requiresModal: config.requiresModal };
+          }
+        }
+
         // 1. Extract context
         const context = extractButtonContext(req);
         
