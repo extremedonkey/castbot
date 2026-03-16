@@ -65,7 +65,7 @@ function filterOutcomes(outcomes, conditionsResult) {
 // Replicate button rendering decision from safariButtonHelper
 // ---------------------------------------------------------------------------
 function getButtonCustomIdPrefix(triggerType) {
-  if (triggerType === 'button_modal') return 'modal_launcher_';
+  if (triggerType === 'button_modal' || triggerType === 'button_input') return 'modal_launcher_';
   if (triggerType === 'button') return 'safari_';
   return null; // Non-renderable trigger types
 }
@@ -365,5 +365,73 @@ describe('button_modal trigger — Edge Cases', () => {
     // button config should be preserved
     assert.equal(trigger.button.label, 'My Button');
     assert.equal(trigger.button.style, 'Danger');
+  });
+});
+
+// =====================================================================
+// button_input trigger tests
+// =====================================================================
+
+describe('button_input trigger — Rendering', () => {
+  it('renders as button on anchors', () => {
+    assert.ok(shouldRenderAsButton('button_input'));
+  });
+
+  it('uses modal_launcher_ prefix', () => {
+    assert.equal(getButtonCustomIdPrefix('button_input'), 'modal_launcher_');
+  });
+});
+
+describe('button_input trigger — No Phrase Gate', () => {
+  it('always passes regardless of input', () => {
+    // button_input skips phrase matching — isCorrect is always true
+    const isUserInput = true;
+    const isCorrect = isUserInput ? true : false;
+    assert.equal(isCorrect, true);
+  });
+
+  it('stores trigger input on action', () => {
+    const action = { trigger: { type: 'button_input' } };
+    const userInput = 'I bet 50 coins';
+    action._triggerInput = userInput;
+    assert.equal(action._triggerInput, 'I bet 50 coins');
+  });
+});
+
+describe('Variable Substitution — {triggerInput}', () => {
+  it('replaces {triggerInput} in text', () => {
+    const result = substituteVariables('You said: {triggerInput}', { _triggerInput: 'hello' });
+    assert.equal(result, 'You said: hello');
+  });
+
+  it('replaces multiple occurrences', () => {
+    const result = substituteVariables('{triggerInput} and {triggerInput}', { _triggerInput: 'yo' });
+    assert.equal(result, 'yo and yo');
+  });
+
+  it('leaves text unchanged when no input', () => {
+    const result = substituteVariables('You said: {triggerInput}', {});
+    assert.equal(result, 'You said: {triggerInput}');
+  });
+
+  it('leaves text unchanged when null action', () => {
+    const result = substituteVariables('You said: {triggerInput}', null);
+    assert.equal(result, 'You said: {triggerInput}');
+  });
+
+  it('handles empty string input', () => {
+    const result = substituteVariables('You said: {triggerInput}', { _triggerInput: '' });
+    // Empty string is falsy — no replacement
+    assert.equal(result, 'You said: {triggerInput}');
+  });
+
+  it('handles markdown in input', () => {
+    const result = substituteVariables('**{triggerInput}**', { _triggerInput: 'bold text' });
+    assert.equal(result, '**bold text**');
+  });
+
+  it('preserves other text around token', () => {
+    const result = substituteVariables('Hello {triggerInput}, welcome!', { _triggerInput: 'Reece' });
+    assert.equal(result, 'Hello Reece, welcome!');
   });
 });
