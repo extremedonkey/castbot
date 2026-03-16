@@ -2498,17 +2498,52 @@ export async function showConditionEditor({ res, actionId, conditionIndex, guild
         components.push(...await createMultiAttributeCheckUI(condition, actionId, conditionIndex, currentPage, guildId));
         break;
       case 'random_probability': {
-        const { buildD20ConfigUI } = await import('./diceRoll.js');
-        const configUI = buildD20ConfigUI(actionId, conditionIndex, condition.config || {});
-        // Extract the inner components (skip the outer container since we're inside one)
-        const innerComponents = configUI.components[0]?.components || [];
-        // Skip the title (we already have "Condition Editor") and the back button (we have our own)
-        const filtered = innerComponents.filter(c =>
-          c.type !== 10 || (!c.content?.startsWith('## 🎲') && !c.content?.startsWith('When the'))
-        ).filter(c =>
-          !(c.type === 1 && c.components?.[0]?.custom_id?.startsWith('condition_manager_'))
-        );
-        components.push(...filtered);
+        const config = condition.config || {};
+        const passPercent = config.passPercent ?? 50;
+        const failPercent = Math.round((100 - passPercent) * 100) / 100;
+        const displayMode = config.displayMode || 'probability_text';
+        const passResult = config.passResult || { title: '🟢 Success!', description: 'The dice rolled in your favor.' };
+        const failResult = config.failResult || { title: '🔴 Failure!', description: 'The odds were not in your favor.' };
+
+        // Explanation text
+        components.push({ type: 10, content: `When the ⚡ Action is executed, randomise the chance of this condition passing or failing.\n\nIf multiple different types of conditions are set, random probability will evaluate alongside those conditions.\n\n> __Example__\n> Condition #1: Player must have \`🗡️ Sword of 1000 Truths\`\n> Condition #2: Player has a 75% chance of a 🟢 Pass Outcome\n> -# In the example above, the Fail Outcomes will always run if the player does not have the Sword of 1000 Truths.\n> -# But even if the player has the item, they still have a 1 in 4 shot of failing due to the random probability.` });
+        components.push({ type: 14 });
+
+        // Display mode
+        components.push({ type: 10, content: '**Display Mode**\nHow should probability results be displayed?' });
+        components.push({ type: 1, components: [{
+          type: 3,
+          custom_id: `prob_display_mode_${actionId}_${conditionIndex}`,
+          placeholder: 'Select display mode...',
+          options: [
+            { label: 'Probability + Display Text', value: 'probability_text', emoji: { name: '📊' }, description: 'Shows dice roll result + pass/fail card', default: displayMode === 'probability_text' },
+            { label: 'Display Text Only', value: 'text_only', emoji: { name: '📊' }, description: 'Shows only the pass/fail result card', default: displayMode === 'text_only' },
+            { label: 'Probability Only', value: 'probability_only', emoji: { name: '🎲' }, description: 'Compact card with roll % and result', default: displayMode === 'probability_only' },
+            { label: 'Silent', value: 'silent', emoji: { name: '🔇' }, description: 'No output — result captured in logs only', default: displayMode === 'silent' },
+          ]
+        }]});
+        components.push({ type: 14 });
+
+        // Pass probability section
+        components.push({
+          type: 9,
+          components: [{ type: 10, content: `**🟢 Probability of Pass outcome**\n${passPercent}%` }],
+          accessory: { type: 2, custom_id: `prob_set_pass_${actionId}_${conditionIndex}`, label: '🟢 Set', style: 2 }
+        });
+        if (passResult.title || passResult.description) {
+          components.push({ type: 10, content: `📊 **Pass Result Text**\n${passResult.title || ''}\n${passResult.description || ''}` });
+        }
+        components.push({ type: 14 });
+
+        // Fail probability section
+        components.push({
+          type: 9,
+          components: [{ type: 10, content: `**🔴 Probability of Fail outcome**\n${failPercent}%` }],
+          accessory: { type: 2, custom_id: `prob_set_fail_${actionId}_${conditionIndex}`, label: '🔴 Set', style: 2 }
+        });
+        if (failResult.title || failResult.description) {
+          components.push({ type: 10, content: `📊 **Fail Result Text**\n${failResult.title || ''}\n${failResult.description || ''}` });
+        }
         break;
       }
     }

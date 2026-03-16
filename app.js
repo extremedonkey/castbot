@@ -25257,8 +25257,9 @@ Your server is now ready for Tycoons gameplay!`;
           action.conditions[conditionIndex].config.displayMode = mode;
           await saveSafariContent(safariData);
 
-          const { createConditionEditorUI } = await import('./customActionUI.js');
-          return await createConditionEditorUI(context.guildId, actionId, conditionIndex, 0);
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage: 0 });
+          return; // showConditionEditor sends response directly
         }
       })(req, res, client);
     } else if (custom_id.startsWith('condition_type_select_')) {
@@ -36220,16 +36221,16 @@ Your server is now ready for Tycoons gameplay!`;
           if (!config[resultKey]) config[resultKey] = {};
           config[resultKey].title = fields.result_title || '';
           config[resultKey].description = fields.result_description || '';
-          if (fields.accent_color) {
-            const parsed = parseAccentColor(fields.accent_color);
-            if (parsed !== null) config[resultKey].accentColor = parsed;
-          }
+          config[resultKey].image = fields.result_image || '';
+          // Default accent color: green for pass, red for fail
+          config[resultKey].accentColor = side === 'pass' ? 0x4ade80 : 0xe74c3c;
 
           await saveSafariContent(safariData);
           console.log(`🎲 Probability: Set ${side} to ${side === 'pass' ? config.passPercent : percent}% for ${actionId}`);
 
-          const { createConditionEditorUI } = await import('./customActionUI.js');
-          return await createConditionEditorUI(context.guildId, actionId, conditionIndex, 0);
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage: 0 });
+          return; // showConditionEditor sends response directly
         }
       })(req, res, client);
 

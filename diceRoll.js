@@ -335,13 +335,13 @@ export function buildProbabilityModal(actionId, conditionIndex, side = 'pass', c
         },
         {
           type: 18,
-          label: 'Accent Color (optional)',
-          description: 'Hex color for the result card',
+          label: 'Image URL (optional)',
+          description: 'Image shown in the result card',
           component: {
-            type: 4, custom_id: 'accent_color', style: 1,
-            placeholder: isPass ? '#4ade80' : '#e74c3c',
-            required: false, max_length: 10,
-            ...(resultConfig.accentColor ? { value: `#${resultConfig.accentColor.toString(16).padStart(6, '0')}` } : {})
+            type: 4, custom_id: 'result_image', style: 1,
+            placeholder: 'https://...',
+            required: false, max_length: 500,
+            ...(resultConfig.image ? { value: resultConfig.image } : {})
           }
         },
       ]
