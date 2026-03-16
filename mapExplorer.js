@@ -111,6 +111,26 @@ export async function uploadImageToDiscord(guild, imagePath, filename) {
       });
     }
     
+    // Check file size before uploading — Discord limit is 8MB (non-boosted) / 25MB (level 2)
+    const { stat } = await import('fs/promises');
+    const fileStats = await stat(imagePath);
+    const fileSizeMB = fileStats.size / (1024 * 1024);
+
+    if (fileSizeMB > 24) {
+      throw new Error(`Map image too large for Discord upload (${fileSizeMB.toFixed(1)}MB > 24MB limit). Try a smaller source image.`);
+    }
+
+    // If over 7MB, compress to JPEG first
+    if (fileSizeMB > 7) {
+      console.log(`⚠️ Map image ${fileSizeMB.toFixed(1)}MB — compressing to JPEG before upload`);
+      const compressedPath = imagePath.replace(/\.(png|jpg|jpeg)$/i, '_compressed.jpg');
+      await sharp(imagePath).jpeg({ quality: 85 }).toFile(compressedPath);
+      const compressedStats = await stat(compressedPath);
+      console.log(`✅ Compressed: ${fileSizeMB.toFixed(1)}MB → ${(compressedStats.size / (1024 * 1024)).toFixed(1)}MB`);
+      imagePath = compressedPath;
+      filename = filename.replace(/\.png$/i, '.jpg');
+    }
+
     // Create attachment and send to storage channel
     const attachment = new AttachmentBuilder(imagePath, { name: filename });
     const message = await storageChannel.send({
@@ -996,17 +1016,42 @@ async function updateMapImage(guild, userId, mapUrl) {
     }
     
     const imageBuffer = Buffer.from(await response.arrayBuffer());
+    const downloadSizeMB = imageBuffer.length / (1024 * 1024);
+    console.log(`📥 Downloaded image: ${downloadSizeMB.toFixed(1)}MB`);
+
+    // Reject extremely large source images (>15MB raw = will produce huge grid output)
+    if (downloadSizeMB > 15) {
+      throw new Error(`Source image too large (${downloadSizeMB.toFixed(1)}MB). Please use an image under 15MB. Tip: compress it or reduce dimensions before uploading to Discord.`);
+    }
 
     // Get image metadata to validate dimensions
     const metadata = await sharp(imageBuffer).metadata();
-    progressMessages.push(`✅ Image downloaded: ${metadata.width}x${metadata.height} pixels`);
+    const megapixels = (metadata.width * metadata.height) / 1_000_000;
+    progressMessages.push(`✅ Image downloaded: ${metadata.width}x${metadata.height} (${megapixels.toFixed(1)}MP, ${downloadSizeMB.toFixed(1)}MB)`);
+
+    // Warn on very high resolution — downscale if over 8MP to prevent massive grid output
+    let processedBuffer = imageBuffer;
+    if (megapixels > 8) {
+      console.log(`⚠️ Image is ${megapixels.toFixed(1)}MP — downscaling to prevent oversized grid output`);
+      const scale = Math.sqrt(8 / megapixels);
+      const newWidth = Math.round(metadata.width * scale);
+      const newHeight = Math.round(metadata.height * scale);
+      processedBuffer = await sharp(imageBuffer)
+        .resize(newWidth, newHeight, { fit: 'inside' })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+      console.log(`✅ Downscaled: ${metadata.width}x${metadata.height} → ${newWidth}x${newHeight}`);
+      progressMessages.push(`📐 Image downscaled to ${newWidth}x${newHeight} (was ${metadata.width}x${metadata.height})`);
+    }
 
     // Post original pre-grid image to map-storage for reference/fallback
     try {
       const { AttachmentBuilder } = await import('discord.js');
       let storageChannel = guild.channels.cache.find(ch => (ch.name === '🗺️map-storage' || ch.name === 'map-storage') && ch.type === 0);
       if (storageChannel) {
-        const origAttachment = new AttachmentBuilder(imageBuffer, { name: `original_${Date.now()}.jpg` });
+        // Upload as JPEG to avoid PNG size explosion
+        const origJpeg = megapixels > 8 ? processedBuffer : await sharp(imageBuffer).jpeg({ quality: 90 }).toBuffer();
+        const origAttachment = new AttachmentBuilder(origJpeg, { name: `original_${Date.now()}.jpg` });
         await storageChannel.send({
           content: `🖼️ Original pre-map image for ${guild.name} (updated ${new Date().toISOString().split('T')[0]})`,
           files: [origAttachment]
@@ -1020,7 +1065,7 @@ async function updateMapImage(guild, userId, mapUrl) {
     // Create a temporary file for the new map
     const tempMapPath = path.join(__dirname, 'img', guild.id, `temp_${Date.now()}.png`);
     await fs.mkdir(path.dirname(tempMapPath), { recursive: true });
-    await sharp(imageBuffer).toFile(tempMapPath);
+    await sharp(processedBuffer).toFile(tempMapPath);
 
     // Initialize grid system with the new map
     const gridSystem = new MapGridSystem(tempMapPath, {
@@ -1246,22 +1291,48 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
     }
     
     const imageBuffer = Buffer.from(await response.arrayBuffer());
-    
+    const downloadSizeMB = imageBuffer.length / (1024 * 1024);
+    console.log(`📥 Downloaded image: ${downloadSizeMB.toFixed(1)}MB`);
+
+    // Reject extremely large source images
+    if (downloadSizeMB > 15) {
+      return {
+        success: false,
+        message: `❌ Source image too large (${downloadSizeMB.toFixed(1)}MB). Please use an image under 15MB. Tip: compress it or reduce dimensions before uploading to Discord.`
+      };
+    }
+
     // Validate it's an image
     const metadata = await sharp(imageBuffer).metadata();
-    progressMessages.push(`✅ Image downloaded: ${metadata.width}x${metadata.height} pixels`);
-    
+    const megapixels = (metadata.width * metadata.height) / 1_000_000;
+    progressMessages.push(`✅ Image downloaded: ${metadata.width}x${metadata.height} (${megapixels.toFixed(1)}MP, ${downloadSizeMB.toFixed(1)}MB)`);
+
+    // Downscale if over 8MP to prevent oversized grid output
+    let processedBuffer = imageBuffer;
+    if (megapixels > 8) {
+      console.log(`⚠️ Image is ${megapixels.toFixed(1)}MP — downscaling to prevent oversized grid output`);
+      const scale = Math.sqrt(8 / megapixels);
+      const newWidth = Math.round(metadata.width * scale);
+      const newHeight = Math.round(metadata.height * scale);
+      processedBuffer = await sharp(imageBuffer)
+        .resize(newWidth, newHeight, { fit: 'inside' })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+      console.log(`✅ Downscaled: ${metadata.width}x${metadata.height} → ${newWidth}x${newHeight}`);
+      progressMessages.push(`📐 Image downscaled to ${newWidth}x${newHeight} (was ${metadata.width}x${metadata.height})`);
+    }
+
     // Generate map data
     const timestamp = Date.now();
     const mapId = `map_${gridWidth}x${gridHeight}_${timestamp}`;
-    
+
     // Create directory for guild images if it doesn't exist
     const guildDir = path.join(__dirname, 'img', guild.id);
     await fs.mkdir(guildDir, { recursive: true });
-    
+
     // Save the custom image temporarily
     const tempMapPath = path.join(guildDir, `temp_${timestamp}.png`);
-    await sharp(imageBuffer).toFile(tempMapPath);
+    await sharp(processedBuffer).toFile(tempMapPath);
     
     // Generate map with grid overlay
     const outputPath = path.join(guildDir, `${mapId}.png`);
@@ -1344,7 +1415,9 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
           permissionOverwrites: [{ id: guild.roles.everyone.id, deny: ['ViewChannel', 'SendMessages'] }]
         });
       }
-      const origAttachment = new AttachmentBuilder(imageBuffer, { name: `original_${Date.now()}.jpg` });
+      // Upload as JPEG to avoid PNG size explosion
+      const origJpeg = megapixels > 8 ? processedBuffer : await sharp(imageBuffer).jpeg({ quality: 90 }).toBuffer();
+      const origAttachment = new AttachmentBuilder(origJpeg, { name: `original_${Date.now()}.jpg` });
       await storageChannel.send({
         content: `🖼️ Original pre-map image for ${guild.name} (created ${new Date().toISOString().split('T')[0]})`,
         files: [origAttachment]
@@ -1355,7 +1428,8 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
     }
 
     // Upload grid image to Discord (storage channel already exists)
-    const uploadResult = await uploadImageToDiscord(guild, outputPath, `${mapId}.png`);
+    const uploadFilename = outputPath.endsWith('.jpg') ? `${mapId}.jpg` : `${mapId}.png`;
+    const uploadResult = await uploadImageToDiscord(guild, outputPath, uploadFilename);
     const discordImageUrl = uploadResult.url || uploadResult;
     console.log(`📤 Map image uploaded to Discord CDN: ${discordImageUrl}`);
     progressMessages.push('✅ Grid map image uploaded to Discord CDN');
