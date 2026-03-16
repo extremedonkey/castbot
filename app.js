@@ -43913,9 +43913,13 @@ Your server is now ready for Tycoons gameplay!`;
         console.log(`⌨️ Input label updated for ${actionId}: "${action.trigger.inputLabel}"`);
       }
 
-      const { showConditionEditor } = await import('./customActionUI.js');
-      await showConditionEditor(actionId, guildId, res);
-      return;
+      // Return to trigger config screen (not condition editor — this is trigger config)
+      const { buildTriggerConfigUI } = await import('./customActionUI.js');
+      const triggerUI = await buildTriggerConfigUI(actionId, guildId);
+      return res.send({
+        type: InteractionResponseType.UPDATE_MESSAGE,
+        data: triggerUI
+      });
 
     } else if (custom_id.startsWith('modal_phrases_config_')) {
       // Handle modal trigger phrase configuration submission
