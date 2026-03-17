@@ -548,15 +548,112 @@ All select menus MUST be wrapped in Label component when used in modals:
 
 **Note**: Checkbox cannot be set as `required`. Use a Checkbox Group with 1 option + `required: true` if you need mandatory acknowledgment.
 
+#### File Upload (Type 19) - NEW!
+- **Purpose**: Allow users to upload files within modals
+- **Availability**: Modals only, MUST be wrapped in Label component
+- **Limits**: 0-10 files per component (`min_values`, `max_values`)
+- **File size**: Based on user's upload limit in that channel
+- **Key difference from File (Type 13)**: File is bot→user (display attachments). File Upload is user→bot (receive uploads).
+
+```javascript
+// Modal with File Upload
+{
+  type: 9, // MODAL interaction response
+  data: {
+    custom_id: "import_modal",
+    title: "Import Safari Data",
+    components: [
+      {
+        type: 18, // Label (required wrapper)
+        label: "File Upload",
+        description: "Upload your Safari export JSON file",
+        component: {
+          type: 19, // File Upload
+          custom_id: "file_upload",
+          min_values: 1,
+          max_values: 1,
+          required: true
+        }
+      }
+    ]
+  }
+}
+```
+
+**File Upload Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| type | integer | `19` for file upload |
+| id? | integer | Optional identifier for component |
+| custom_id | string | ID for the file upload; 1-100 characters |
+| min_values? | integer | Minimum files that must be uploaded (default 1); min 0, max 10 |
+| max_values? | integer | Maximum files that can be uploaded (default 1); max 10 |
+| required? | boolean | Whether files must be uploaded to submit the modal (default `true`) |
+
+**File Upload Interaction Response Structure:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| type | integer | `19` for File Upload |
+| id | integer | Unique identifier for the component |
+| custom_id | string | Developer-defined identifier; 1-100 characters |
+| values | array of snowflakes | IDs of uploaded files found in `resolved.attachments` |
+
+```javascript
+// In modal submit handler, the interaction data looks like:
+{
+  type: 5, // InteractionType.MODAL_SUBMIT
+  data: {
+    custom_id: "import_modal",
+    components: [
+      {
+        custom_id: "file_upload",
+        id: 2,
+        type: 19,
+        values: ["111111111111111111"] // Attachment snowflake IDs
+      }
+    ],
+    resolved: {
+      attachments: {
+        "111111111111111111": {
+          id: "111111111111111111",
+          filename: "safari_export.json",
+          size: 48291,
+          url: "https://cdn.discordapp.com/...",
+          content_type: "application/json"
+        }
+      }
+    }
+  }
+}
+
+// Access uploaded file:
+const attachmentId = component.values[0];
+const attachment = req.body.data.resolved.attachments[attachmentId];
+const response = await fetch(attachment.url);
+const jsonData = await response.json();
+```
+
+**Why this matters for CastBot**: File Upload (Type 19) delivers files via the interaction webhook (HTTP), NOT the gateway. This means it requires **NO privileged intents** — making it the solution for replacing `createMessageCollector` patterns that currently require `MessageContent` intent. See [RaP 0940: Privileged Intents Analysis](../01-RaP/0940_20260317_PrivilegedIntents_Analysis.md).
+
 ## MessageContent Intent & File Uploads
 
-**🚨 IMPORTANT**: The File component (Type 13) is for **sending** files to users, NOT for **receiving** file uploads from users. It does not replace the `MessageContent` gateway intent.
+**🚨 IMPORTANT**: The File component (Type 13) is for **sending** files to users, NOT for **receiving** file uploads from users. The **File Upload** component (Type 19) is the correct way to receive files — see above.
 
 **Current Safari Import Problem:**
 The Safari import uses `channel.createMessageCollector()` to wait for user file uploads. This requires `MessageContent` intent because Discord strips the `attachments` field from user messages without it. Discord **denied** our `MessageContent` intent application (Nov 2025), which blocks scaling past 100 servers.
 
-**Solution: Slash Command Attachment Option**
-Discord slash commands support an `ATTACHMENT` option type (type 11) that delivers files through the interaction webhook — completely bypassing the gateway and requiring NO privileged intents:
+**Solutions (two options):**
+
+**Option A: Modal File Upload (Type 19) — Preferred**
+Use a modal with File Upload component. Files arrive via interaction webhook, no gateway intents needed:
+```javascript
+// See File Upload (Type 19) section above for full example
+```
+
+**Option B: Slash Command Attachment Option (Type 11)**
+Discord slash commands support an `ATTACHMENT` option type (type 11) that delivers files through the interaction webhook:
 
 ```javascript
 // Register command with attachment option
@@ -576,9 +673,9 @@ Discord slash commands support an `ATTACHMENT` option type (type 11) that delive
 // attachment.url, attachment.filename, attachment.size, attachment.content_type
 ```
 
-**Why this works**: Interaction payloads (slash commands, modals, buttons) are sent via HTTP webhook, not the gateway. They include full data regardless of gateway intents.
+**Why both work**: Interaction payloads (slash commands, modals, buttons) are sent via HTTP webhook, not the gateway. They include full data regardless of gateway intents.
 
-**Migration plan**: Replace the `safari_import_data` message collector pattern with a `/import` slash command (or add an attachment option to existing `/menu` subcommand).
+**Migration plan**: Replace the `safari_import_data` and `playerdata_import` message collector patterns with modal File Upload (Type 19) or slash command ATTACHMENT option. Full analysis: [RaP 0940: Privileged Intents Analysis](../01-RaP/0940_20260317_PrivilegedIntents_Analysis.md).
 
 ## Common Patterns in CastBot
 

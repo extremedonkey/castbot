@@ -1,0 +1,310 @@
+# Privileged Intents Analysis — The 100-Server Wall
+
+## Original Context
+
+> discord has an annoying 100 server limit unless you've verified you aren't using a thing called priviledged intents.. which i was told unequivocally by an agent that i wasn't.. so i was like sure.. remove the declaration.. nek minnit.. safari import breaks.. (and all other json imports).. and then im like.. ok but doesn't discord have a new file upload widget (link) and its like no.. thats for hosts TO provide files to download.. and then i check the link later and i was right.. so we could go after that to try and kill the use of priviledged intents so i dont have to do a heap of annoying paperwork and get encryption at rest working on the off chance someone hacks my rando bot on the outer edges of the internet to steal not very secret data..
+
+## 🤔 The Problem
+
+CastBot can't scale past **100 servers** because Discord requires bot verification for bots in 76+ guilds, and verification requires declaring which **privileged intents** you use. Discord has strict requirements around privileged intents — you must justify them, and for `MessageContent` specifically, Discord **denied our application** (November 2025).
+
+The alternative to getting approved is to simply **not use privileged intents** — which would bypass the verification paperwork, encryption-at-rest requirements, and the whole compliance dance for a hobby bot that doesn't store sensitive user data.
+
+### What Are Privileged Intents?
+
+Discord gates three gateway intents behind approval for bots in 76+ servers:
+
+| Intent | What It Does | CastBot Uses It? |
+|--------|-------------|-----------------|
+| `GuildMembers` | Receive member join/leave events, access full member list via gateway | **YES — 169+ code locations** |
+| `MessageContent` | Read content/attachments of user-sent messages via gateway | **YES — 2 code locations** |
+| `GuildPresences` | See online/offline/idle status of members | **No** |
+
+### The Incident
+
+An AI agent was asked whether CastBot uses privileged intents. It said **no**. So the intent declarations were removed. Immediately:
+- Safari import broke (uses `createMessageCollector` to receive user-uploaded JSON files)
+- PlayerData import broke (same pattern)
+- The `message.attachments` field came back empty on user messages — Discord strips it without `MessageContent` intent
+
+The declarations were restored, but the 100-server wall remains.
+
+## 📊 Current Intent Configuration
+
+```javascript
+// app.js:1390-1396
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,                 // ✅ Standard
+    GatewayIntentBits.GuildMembers,            // ⚠️ PRIVILEGED — 169+ uses
+    GatewayIntentBits.GuildMessages,           // ✅ Standard
+    GatewayIntentBits.GuildMessageReactions,   // ✅ Standard
+    GatewayIntentBits.MessageContent           // ⚠️ PRIVILEGED — 2 uses (file imports)
+  ]
+});
+```
+
+---
+
+## 🔍 INTENT #1: MessageContent — CAN BE ELIMINATED
+
+### Where It's Used (2 locations)
+
+Both are identical patterns — admin-only JSON file import via message collector:
+
+#### A. PlayerData Import (`app.js:14893-15052`)
+Handler: `playerdata_import`
+```javascript
+const filter = m => m.author.id === userId && m.attachments.size > 0;
+const collector = channel.createMessageCollector({ filter, time: 60000, max: 1 });
+collector.on('collect', async (message) => {
+  const attachment = message.attachments.first(); // ← Requires MessageContent intent
+  // Download JSON, validate, import playerData
+});
+```
+
+#### B. Safari Data Import (`app.js:15073-15250+`)
+Handler: `safari_import_data`
+```javascript
+const filter = m => m.author.id === userId && m.attachments.size > 0;
+const collector = channel.createMessageCollector({ filter, time: 60000, max: 1 });
+collector.on('collect', async (message) => {
+  const attachment = message.attachments.first(); // ← Requires MessageContent intent
+  // Download JSON, validate, import Safari config
+});
+```
+
+### Why Only These Break
+
+Other `message.attachments` reads in the codebase read from **bot-sent messages** (the bot reading its own uploads back), which don't need `MessageContent` intent:
+- `mapExplorer.js:143` — bot uploads image to storage channel, reads back its own attachment URL
+- `tipsGalleryManager.js:178` — bot uploads tip images, reads back CDN URL
+- `app.js:1830` — same pattern for tip storage
+- `activityLogger.js:667` — REST API message fetch (not gateway)
+- `mapExplorer.js:1835` — REST API message fetch
+
+### Solutions to Eliminate MessageContent
+
+#### Option A: Modal File Upload (Type 19) — PREFERRED
+
+Discord added a **File Upload** component (Type 19) for modals. This is exactly what Reece suspected existed — a proper file upload widget. It delivers files via the interaction webhook (HTTP), completely bypassing the gateway.
+
+```javascript
+// Button click opens modal with file upload
+{
+  type: 9, // MODAL
+  data: {
+    custom_id: "safari_import_modal",
+    title: "Import Safari Data",
+    components: [{
+      type: 18, // Label
+      label: "Safari Export File",
+      description: "Upload the JSON file exported from another server",
+      component: {
+        type: 19, // File Upload
+        custom_id: "import_file",
+        min_values: 1,
+        max_values: 1,
+        required: true
+      }
+    }]
+  }
+}
+
+// Modal submit handler receives:
+// component.values = ["attachment_snowflake_id"]
+// req.body.data.resolved.attachments["attachment_snowflake_id"] = {
+//   id, filename, size, url, content_type
+// }
+```
+
+**Advantages:**
+- No gateway intent needed — interaction webhook delivers file data
+- Better UX — modal is a guided flow, not "post a file in chat"
+- Supports 1-10 files per upload
+- File size based on user's channel upload limit
+- Consistent with CastBot's modal-first architecture
+
+**Reference:** [Discord File Upload Docs](https://docs.discord.com/developers/components/reference#file-upload), [ComponentsV2.md — File Upload (Type 19)](../standards/ComponentsV2.md)
+
+#### Option B: Slash Command ATTACHMENT Option (Type 11)
+
+Already documented in ComponentsV2.md. Use `/import` command with attachment parameter:
+
+```javascript
+{
+  name: 'import',
+  description: 'Import Safari data from JSON file',
+  options: [{
+    name: 'file',
+    type: 11, // ATTACHMENT
+    required: true
+  }]
+}
+```
+
+**Less preferred** because it requires a new slash command rather than fitting into the existing button/modal flow.
+
+### Migration Effort: LOW
+
+Only 2 handlers need changing. Both follow the same pattern. The replacement is straightforward:
+1. Change import buttons from "post file in chat" to "open modal with File Upload"
+2. Move file processing logic from `collector.on('collect')` to modal submit handler
+3. Access file via `req.body.data.resolved.attachments` instead of `message.attachments.first()`
+4. Remove `MessageContent` from intent declaration
+
+---
+
+## 🔍 INTENT #2: GuildMembers — DEEPLY EMBEDDED, NEEDS INVESTIGATION
+
+### Reece's Concern
+
+> "i feel like we could be using it extensively"
+
+Correct. **169+ code locations** across 15+ files use `GuildMembers` intent functionality.
+
+### What GuildMembers Intent Enables
+
+Without this intent:
+- `guild.members.fetch()` — **may still work** (REST API fallback)
+- `guild.members.cache` — **will be mostly empty** (no gateway events populate it)
+- `guild.memberCount` — **may still work** (populated by `Guilds` intent)
+- Member join/leave events — **will not fire**
+
+**Critical distinction**: `guild.members.fetch(userId)` makes a REST API call — this works **without** the `GuildMembers` intent. But `guild.members.cache` being empty means any code that reads from cache first (before fetching) will silently get empty results.
+
+### Complete Usage Map
+
+#### Tier 1: CRITICAL — Would Break Core Features
+
+| File | Uses | What It Does |
+|------|------|-------------|
+| **app.js** | 47 | Permission checking, admin operations, castlist member fetch, timezone roles |
+| **castlistDataAccess.js** | 6 | Populates member cache before rendering castlist player names |
+| **castlistHub.js** | 3 | Uses `guild.members.list()` (REST API — may survive) |
+| **roleManager.js** | 11 | Timezone role consolidation fetches ALL members, role assignment |
+
+#### Tier 2: IMPORTANT — Safari & Player Features
+
+| File | Uses | What It Does |
+|------|------|-------------|
+| **safariManager.js** | 7 | Member display names for Safari logs, validation |
+| **castRankingManager.js** | 5 | Ranking display, member verification |
+| **playerManagement.js** | 3 | Pronoun roles, timezone, age management |
+| **whisperManager.js** | 4 | DM sending, member lookup |
+| **playerCardMenu.js** | 3 | Player card rendering |
+| **playerLocationManager.js** | 2 | Location display with member names |
+
+#### Tier 3: SUPPORTING — Analytics & Monitoring
+
+| File | Uses | What It Does |
+|------|------|-------------|
+| **activityLogger.js** | 2 | Member names in activity logs |
+| **discordMessenger.js** | 1 | REST API call (would survive) |
+| **mapMovement.js** | 1 | Player name in movement logs |
+| **safariDeinitialization.js** | 1 | Member name in deinit logs |
+| **analyticsLogger.js** | 1 | Member name in analytics |
+
+#### Utility Module: memberFetchUtils.js
+
+CastBot already has a dedicated utility for member fetching. This module could be the centralisation point if we need to migrate away from gateway-based member cache.
+
+### Key Patterns That Would Break
+
+```javascript
+// Pattern 1: Cache ratio check (app.js:10243-10259)
+const cacheRatio = guild.members.cache.size / guild.memberCount;
+if (cacheRatio < 0.8) {
+  await guild.members.fetch({ timeout: 10000 }); // Fetches ALL members via gateway
+}
+// WITHOUT GuildMembers: cache is always near-empty, fetch() may not work as expected
+
+// Pattern 2: Fetch all members for role operations (roleManager.js:959-963)
+await guild.members.fetch({ time: 30_000 });
+console.log(`✅ Guild members fetched (${guild.members.cache.size} members cached)`);
+// WITHOUT GuildMembers: This pattern relies on gateway OP 8 (Request Guild Members)
+
+// Pattern 3: Individual member fetch (used everywhere)
+const member = await guild.members.fetch(userId);
+const displayName = member.displayName;
+// This one might survive — individual fetch can use REST API
+```
+
+### Can GuildMembers Be Eliminated?
+
+**Maybe, but it's a much bigger project.** Key questions:
+
+1. **Does `guild.members.fetch(userId)` work without the intent?** — Likely YES (REST API). Need to verify.
+2. **Does `guild.members.fetch()` (all members) work without the intent?** — Likely NO. This uses gateway OP 8 which requires the intent.
+3. **What breaks if member cache is always empty?** — Any code checking `cache.size`, `cache.filter()`, `cache.find()` before doing a REST fetch.
+
+**The safe path**: Replace all `guild.members.fetch()` (bulk) calls with `guild.members.list({ limit: 1000 })` (REST API) which doesn't need the intent. Replace cache reads with explicit REST fetches. This is a significant refactor touching 15+ files.
+
+---
+
+## 💡 Recommended Plan
+
+### Phase 1: Kill MessageContent Intent (LOW EFFORT, HIGH IMPACT)
+
+**Effort**: ~2-3 hours
+**Impact**: Removes 1 of 2 privileged intents
+
+1. Add File Upload (Type 19) modal for Safari import
+2. Add File Upload (Type 19) modal for PlayerData import
+3. Move file processing from `collector.on('collect')` to modal submit handler
+4. Remove `GatewayIntentBits.MessageContent` from client config
+5. Test imports work via modal
+6. Remove the old `createMessageCollector` code
+
+### Phase 2: Audit GuildMembers Usage (RESEARCH)
+
+**Effort**: ~4-6 hours research
+**Impact**: Determines if we can remove the second privileged intent
+
+1. Test what happens when `GuildMembers` is removed in dev
+2. Document which features break vs survive
+3. Verify `guild.members.fetch(userId)` works via REST without intent
+4. Identify all bulk member fetch patterns that need migration
+5. Create migration plan if feasible
+
+### Phase 3: Migrate GuildMembers (if feasible) (HIGH EFFORT)
+
+**Effort**: ~2-3 days
+**Impact**: Removes ALL privileged intents — no verification needed
+
+1. Replace `guild.members.fetch()` bulk calls with `guild.members.list()` REST API
+2. Replace cache reads with explicit individual REST fetches
+3. Add caching layer in `memberFetchUtils.js` to avoid hammering REST API
+4. Remove `GatewayIntentBits.GuildMembers` from client config
+5. Verify all 169+ usage points work correctly
+
+### If Both Intents Are Removed
+
+- No privileged intents = no verification needed
+- No paperwork
+- No encryption-at-rest requirement
+- No 100-server wall
+- Bot can scale freely
+
+---
+
+## ⚠️ Risk Assessment
+
+| Risk | Severity | Mitigation |
+|------|----------|-----------|
+| File Upload (Type 19) is new — could have bugs | Medium | Test thoroughly in dev, keep old code commented until verified |
+| GuildMembers removal breaks member name resolution | High | Phase 2 research before committing |
+| REST API rate limits on individual member fetches | Medium | Centralize through memberFetchUtils.js with caching |
+| `guild.members.list()` has 1000 member limit | Low | CastBot's largest servers are well under 1000 |
+| Some Discord.js methods silently require GuildMembers | High | Phase 2 testing will surface these |
+
+---
+
+## 📎 Related Documents
+
+- [ComponentsV2.md — File Upload (Type 19)](../standards/ComponentsV2.md) — Component reference
+- [ComponentsV2.md — MessageContent Intent & File Uploads](../standards/ComponentsV2.md#messagecontent-intent--file-uploads) — Current documentation
+- [SafariImportExport.md](../03-features/SafariImportExport.md) — Import system that needs migration
+- [Discord File Upload Reference](https://docs.discord.com/developers/components/reference#file-upload) — Official docs
+- [castlistCrashIssues_cache.md](../incidents/castlistCrashIssues_cache.md) — Documents current intent config
+- [RaP 0943: Challenge Actions](0943_20260316_ChallengeActions_Analysis.md) — Already noted "no MessageContent needed" for button-based design
