@@ -45925,8 +45925,22 @@ Your server is now ready for Tycoons gameplay!`;
           result = await createMapGridWithCustomImage(guild, userId, mapUrl, mapColumns, mapRows);
         }
         
-        // Rebuild Map Explorer UI with the new image
+        // Check if map creation/update failed
         const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        if (result && !result.success) {
+          console.log(`❌ Map operation failed: ${result.message}`);
+          await fetch(followupUrl, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: result.message,
+              flags: InteractionResponseFlags.EPHEMERAL
+            })
+          });
+          return;
+        }
+
+        // Rebuild Map Explorer UI with the new image
         try {
           const { buildMapExplorerResponse } = await import('./mapExplorer.js');
           const mapExplorerUI = await buildMapExplorerResponse(guildId, userId, client, true);
