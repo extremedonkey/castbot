@@ -148,7 +148,8 @@ export class MenuBuilder {
           { type: 2, custom_id: 'test_role_hierarchy', label: 'Check Roles', style: 2, emoji: { name: '🔰' } },
           { type: 2, custom_id: 'admin_populate_logs', label: 'Populate Logs', style: 2, emoji: { name: '📜' } },
           { type: 2, custom_id: 'admin_backfill_channel_logs', label: 'Backfill Channel', style: 2, emoji: { name: '📡' } },
-          { type: 2, custom_id: 'emergency_app_reinit', label: 'App Re-Init', style: 4, emoji: { name: '🚨' } }
+          { type: 2, custom_id: 'emergency_app_reinit', label: 'App Re-Init', style: 4, emoji: { name: '🚨' } },
+          { type: 2, custom_id: 'file_import_safari', label: 'Import', style: 1, emoji: { name: '📥' } }
         ]
       },
       { type: 10, content: `### \`\`\`📼 Legacy\`\`\`` },

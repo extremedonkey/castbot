@@ -350,6 +350,16 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'legacy'
   },
+  'file_import_safari': {
+    label: 'Import',
+    description: 'Import Safari data via File Upload modal (Type 19) — no MessageContent intent needed',
+    emoji: '📥',
+    style: 'Primary',
+    parent: 'reeces_stuff',
+    restrictedUser: '391415444084490240',
+    requiresModal: true,
+    category: 'admin'
+  },
   'reeces_radio_mockup': {
     label: 'Radio PoC (Mockup)',
     description: 'UI mockup: Radio Group (Type 21) in modal with 10 options. Not a real feature.',

@@ -8369,6 +8369,18 @@ To fix this:
           return buildPlannerSelector(context.guildId);
         }
       })(req, res, client);
+    } else if (custom_id === 'file_import_safari') {
+      // File Import — opens modal with File Upload (Type 19) for Safari import
+      // See RaP 0940 — replaces legacy createMessageCollector pattern
+      return ButtonHandlerFactory.create({
+        id: 'file_import_safari',
+        requiresModal: true,
+        handler: async (context) => {
+          const { buildFileImportModal } = await import('./src/fileImportHandler.js');
+          return buildFileImportModal('safari', context.guildId);
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'reeces_radio_mockup') {
       // Checkbox Group PoC (Mockup) — tests Type 22 checkbox group in modal. See poc/checkboxGroupPoc.js
       return ButtonHandlerFactory.create({
@@ -36410,7 +36422,28 @@ Your server is now ready for Tycoons gameplay!`;
     const { custom_id, components } = data;
     console.log(`🔍 DEBUG: MODAL_SUBMIT received - custom_id: ${custom_id}`);
     
-    if (custom_id === 'reeces_radio_mockup_submit') {
+    if (custom_id.startsWith('file_import_submit:')) {
+      // File Import modal submit — processes uploaded JSON file
+      // Format: file_import_submit:{importType}:{guildId}
+      return ButtonHandlerFactory.create({
+        id: 'file_import_submit',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          const [, importType, guildId] = custom_id.split(':');
+          const { processFileImport } = await import('./src/fileImportHandler.js');
+          return await processFileImport({
+            importType,
+            guildId,
+            userId: context.userId,
+            resolved: data.resolved,
+            components: data.components,
+            client
+          });
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'reeces_radio_mockup_submit') {
       // Checkbox Group PoC — See poc/checkboxGroupPoc.js
       const { handleCheckboxSubmit } = await import('./poc/checkboxGroupPoc.js');
       return handleCheckboxSubmit(data, res);
