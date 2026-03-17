@@ -934,6 +934,12 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
           emoji: { name: '📈' },
           label: 'Refresh',
           custom_id: 'prod_server_usage_stats'
+        }, {
+          type: 2, // Button
+          style: 2, // Secondary
+          emoji: { name: '🌐' },
+          label: 'All Servers',
+          custom_id: 'prod_all_servers'
         }]
       }
     };
