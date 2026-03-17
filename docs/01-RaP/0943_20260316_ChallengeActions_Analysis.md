@@ -196,34 +196,64 @@ This is the "playable challenge template" — the killer feature for the communi
 
 ---
 
-## 7. Implementation Phases
+## 7. Design Decisions (updated 2026-03-17)
 
-### Phase 1: Linking UI (MVP)
+### Button prefix: NOT `safari_`
+
+Challenge actions are not map-bound. Using `safari_{guildId}_{actionId}` is technically functional (the execution engine doesn't care about prefix) but misleading in logs and couples challenges to the Safari feature namespace.
+
+**Decision:** Use `challenge_{guildId}_{actionId}_{timestamp}` for challenge-posted action buttons. For modal triggers (`button_modal`, `button_input`), use `modal_launcher_{guildId}_{actionId}_{timestamp}` (already universal).
+
+This also future-proofs for **custom anchors** — standalone interactive messages not tied to map coordinates. A challenge post with action buttons IS an anchor, just not a map one.
+
+### Button over text command
+
+The original spec referenced text commands (`?buy-lottery-ticket 3`). With `button_input` trigger type now built (RaP 0941), player input flows through buttons instead. Player clicks → types input → outcomes use `{triggerInput}`.
+
+**Benefit:** No `MessageContent` privileged intent needed. Buttons work via interactions (webhook), text commands require gateway intent.
+
+### Host vs Player action types (future)
+
+Some actions are host-driven ("Start Challenge", "Reveal Results") and some are player-driven ("Buy Ticket", "Submit Answer"). For MVP, no distinction — all linked actions show as buttons. Future: `actionRole: 'host' | 'player' | 'both'` on the link, with player menu integration gating by challenge active status.
+
+---
+
+## 8. Implementation Phases
+
+### Phase 1: Linking UI (MVP) — TONIGHT
 
 1. Add `actionIds: []` to challenge data model
-2. "⚡ Actions" button on challenge screen
-3. Action selector (toggle-link from existing actions)
-4. Display linked actions on challenge detail
-5. "Post to Channel" includes linked action buttons
+2. "⚡ Actions" button on challenge detail screen
+3. Action selector (toggle-link from existing actions, search if >25)
+4. Display linked actions count/names on challenge detail
+5. "Post to Channel" includes linked action buttons with `challenge_` prefix
 
-### Phase 2: Player Experience
+### Phase 2: Player Menu Integration
 
-1. Channel-scoped text commands (only active in challenge channel)
-2. Challenge status (active/paused/completed) — gates action execution
-3. Per-challenge leaderboard (aggregate player results)
+1. Challenge section in player `/menu` — shows current active challenge
+2. String select for available challenge actions (only when challenge is active)
+3. Challenge status: `active` / `paused` / `completed` — gates player action visibility
+4. Host controls: activate/deactivate challenge from challenge detail screen
 
-### Phase 3: Action Templates in Library
+### Phase 3: Custom Anchors (Reusability)
+
+1. Decouple "anchor message with action buttons" from map coordinates
+2. Challenge posts, game lobby messages, event channels — all become "anchors"
+3. Shared anchor rendering: `buildAnchorMessage(title, description, image, actionIds, guildId)`
+4. Refresh mechanism for non-map anchors (same as `safari_refresh_anchors`)
+
+### Phase 4: Action Templates in Library
 
 1. Export action configs with published challenges
 2. Import creates both challenge + actions
 3. Template validation (referenced items/currency exist)
 4. "Playable" badge on library challenges with action templates
 
-### Phase 4: New Outcome Types
+### Phase 5: Advanced
 
-1. `calculate_probability` — configurable dice roll with good/bad events
-2. `leaderboard_update` — track scores per challenge
-3. `round_results` — aggregate and display all players' round outcomes
+1. Host vs Player action roles on links
+2. Per-challenge leaderboard (aggregate player results)
+3. `round_results` outcome — aggregate and display all players' round outcomes
 4. `timed_action` — auto-execute after duration (replace schedule triggers)
 
 ---
@@ -242,7 +272,33 @@ This is the "playable challenge template" — the killer feature for the communi
 
 ---
 
-## 9. Risk Assessment
+## 10. Real-World Example: Hurley's Lotto Sweepstakes
+
+A host wants to run a lottery challenge where players buy tickets and get random payouts.
+
+**Today (manual, external tools):**
+- Players type `?buy-lottery-ticket 3` in a channel
+- External bot randomises payout
+- Players manually track their money
+- Host manually collects results
+
+**With Challenge Actions (Phase 1 + existing features):**
+1. Host creates challenge "Hurley's Lotto Sweepstakes" with writeup
+2. Host creates Action "Buy Tickets" with:
+   - Trigger: `button_input` (label: "How many tickets?")
+   - Condition: `has_currency` (min: 100 × `{triggerInput}` — Phase 2)
+   - Condition: `random_probability` (50% chance of payout)
+   - Pass outcome: `display_text` ("Winner! You bought {triggerInput} tickets and won!")
+   - Fail outcome: `display_text` ("Bad luck! {triggerInput} tickets, $0 payout")
+3. Host links Action to Challenge
+4. Host posts Challenge to channel → button appears
+5. Players click, type number, get instant result — all tracked by CastBot
+
+**Phase 1 limitation:** Currency amounts are fixed, not dynamic from `{triggerInput}`. Player self-reports earnings. Phase 2 adds `{triggerInput}` in give_currency for full automation.
+
+---
+
+## 11. Risk Assessment
 
 | Risk | Impact | Mitigation |
 |---|---|---|

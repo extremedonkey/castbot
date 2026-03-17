@@ -37,6 +37,7 @@ export async function createChallenge(guildId, userId, data) {
     creationHost: data.creationHost || userId,
     runningHost: data.runningHost || null,
     seasonId: data.seasonId || null,
+    actionIds: [],
     createdAt: Date.now(),
     lastUpdated: Date.now(),
   };
@@ -195,13 +196,22 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null, 
       } catch { /* invalid URL, skip */ }
     }
 
+    // Show linked actions count
+    const linkedActions = challenge.actionIds || [];
+    if (linkedActions.length > 0) {
+      components.push({ type: 10, content: `-# ⚡ ${linkedActions.length} action${linkedActions.length === 1 ? '' : 's'} linked` });
+    }
+
     // Action buttons
     components.push(
       { type: 14 },
       { type: 1, components: [
         { type: 2, custom_id: `challenge_edit_${selectedChallengeId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
         { type: 2, custom_id: `challenge_round_${selectedChallengeId}`, label: 'Round', style: 2, emoji: { name: '🔥' } },
+        { type: 2, custom_id: `challenge_actions_${selectedChallengeId}`, label: 'Actions', style: linkedActions.length > 0 ? 1 : 2, emoji: { name: '⚡' } },
         { type: 2, custom_id: `challenge_post_${selectedChallengeId}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
+      ]},
+      { type: 1, components: [
         { type: 2, custom_id: `challenge_publish_${selectedChallengeId}`, label: 'Publish', style: 2, emoji: { name: '📤' } },
         { type: 2, custom_id: `challenge_delete_${selectedChallengeId}`, label: 'Delete', style: 4, emoji: { name: '🗑️' } },
       ]}
@@ -712,17 +722,154 @@ export function buildPublishModal(challengeId) {
 }
 
 /**
- * Build the richCard container for posting a challenge to a channel.
+ * Build the action selector screen for linking actions to a challenge.
  */
-export function buildChallengePost(challenge) {
+export async function buildActionSelector(guildId, challengeId) {
+  const playerData = await loadPlayerData();
+  const challenge = playerData[guildId]?.challenges?.[challengeId];
+  if (!challenge) return { components: [{ type: 17, components: [{ type: 10, content: '❌ Challenge not found' }] }] };
+
+  const { loadSafariContent } = await import('./safariManager.js');
+  const safariData = await loadSafariContent();
+  const actions = safariData[guildId]?.buttons || {};
+  const linkedIds = challenge.actionIds || [];
+
+  // Build options from existing actions
+  const options = [];
+  for (const [actionId, action] of Object.entries(actions)) {
+    const isLinked = linkedIds.includes(actionId);
+    const name = (action.name || action.label || actionId).substring(0, 80);
+    const triggerType = action.trigger?.type || 'button';
+    const emoji = isLinked ? '✅' : (action.emoji || '⚡');
+
+    options.push({
+      label: `${isLinked ? '(linked) ' : ''}${name}`.substring(0, 100),
+      value: actionId,
+      description: `${triggerType} trigger${isLinked ? ' — click to unlink' : ''}`.substring(0, 100),
+      emoji: { name: typeof emoji === 'string' ? emoji : '⚡' },
+      ...(isLinked ? { default: true } : {})
+    });
+  }
+
+  // Sort: linked first, then alphabetical
+  options.sort((a, b) => {
+    const aLinked = a.label.startsWith('(linked)') ? 0 : 1;
+    const bLinked = b.label.startsWith('(linked)') ? 0 : 1;
+    return aLinked - bLinked || a.label.localeCompare(b.label);
+  });
+
+  const chalTitle = (challenge.title || 'Untitled').substring(0, 50);
+
+  if (options.length === 0) {
+    return { components: [{ type: 17, accent_color: challenge.accentColor || DEFAULT_ACCENT, components: [
+      { type: 10, content: `## ⚡ Link Actions\n-# **${chalTitle}**\n\nNo Custom Actions found. Create actions first via **⚡ Actions** in the Production Menu.` },
+      { type: 14 },
+      { type: 1, components: [
+        { type: 2, custom_id: `challenge_select_nav_${challengeId}`, label: '← Back', style: 2 }
+      ]}
+    ]}]};
+  }
+
+  const container = {
+    type: 17, accent_color: challenge.accentColor || DEFAULT_ACCENT,
+    components: [
+      { type: 10, content: `## ⚡ Link Actions\n-# Select actions players can use during **${chalTitle}**\n-# Selecting a linked action will unlink it` },
+      { type: 14 },
+      { type: 1, components: [{
+        type: 3,
+        custom_id: `challenge_action_toggle_${challengeId}`,
+        placeholder: linkedIds.length > 0 ? `${linkedIds.length} action${linkedIds.length === 1 ? '' : 's'} linked` : 'Select an action to link...',
+        options: options.slice(0, 25),
+      }]},
+      { type: 14 },
+      { type: 1, components: [
+        { type: 2, custom_id: `challenge_select_nav_${challengeId}`, label: '← Back', style: 2 }
+      ]}
+    ]
+  };
+
+  countComponents([container], { verbosity: "summary", label: "Action Selector" });
+  return { components: [container] };
+}
+
+/**
+ * Toggle-link an action to/from a challenge.
+ */
+export async function toggleChallengeAction(guildId, challengeId, actionId) {
+  const playerData = await loadPlayerData();
+  const challenge = playerData[guildId]?.challenges?.[challengeId];
+  if (!challenge) return { linked: false, error: 'Challenge not found' };
+
+  if (!challenge.actionIds) challenge.actionIds = [];
+
+  const idx = challenge.actionIds.indexOf(actionId);
+  if (idx >= 0) {
+    challenge.actionIds.splice(idx, 1);
+    await savePlayerData(playerData);
+    console.log(`⚡ Challenge: Unlinked action ${actionId} from ${challengeId}`);
+    return { linked: false, actionId };
+  } else {
+    challenge.actionIds.push(actionId);
+    await savePlayerData(playerData);
+    console.log(`⚡ Challenge: Linked action ${actionId} to ${challengeId}`);
+    return { linked: true, actionId };
+  }
+}
+
+/**
+ * Build the richCard container for posting a challenge to a channel.
+ * Includes linked action buttons if any.
+ */
+export function buildChallengePost(challenge, guildId = null, safariData = null) {
+  const extraComponents = [];
+
+  // Add linked action buttons
+  if (guildId && challenge.actionIds?.length > 0 && safariData) {
+    const actionButtons = [];
+    for (const actionId of challenge.actionIds) {
+      const action = safariData[guildId]?.buttons?.[actionId];
+      if (!action) continue;
+
+      const triggerType = action.trigger?.type || 'button';
+      const isModalTrigger = triggerType === 'button_modal' || triggerType === 'button_input';
+      const buttonCustomId = isModalTrigger
+        ? `modal_launcher_${guildId}_${actionId}_${Date.now()}`
+        : `challenge_${guildId}_${actionId}_${Date.now()}`;
+
+      const label = (action.name || action.trigger?.button?.label || action.label || 'Action').substring(0, 80);
+      const emoji = action.emoji || action.trigger?.button?.emoji;
+      const style = action.trigger?.button?.style || 'Primary';
+      const styleMap = { Primary: 1, Secondary: 2, Success: 3, Danger: 4 };
+
+      const button = {
+        type: 2,
+        custom_id: buttonCustomId,
+        label,
+        style: styleMap[style] || 1,
+      };
+      if (emoji) button.emoji = { name: emoji };
+      actionButtons.push(button);
+
+      if (actionButtons.length >= 5) break; // Max 5 per row
+    }
+
+    if (actionButtons.length > 0) {
+      extraComponents.push({ type: 14 });
+      extraComponents.push({ type: 1, components: actionButtons });
+    }
+  }
+
+  // Add credit line
+  if (challenge.creationHost) {
+    extraComponents.push({ type: 14 });
+    extraComponents.push({ type: 10, content: `-# Challenge by <@${challenge.creationHost}>` });
+  }
+
   return buildRichCardContainer({
     title: challenge.title,
     content: challenge.description,
     color: challenge.accentColor,
     image: challenge.image,
-    extraComponents: challenge.creationHost ? [
-      { type: 14 },
-      { type: 10, content: `-# Challenge by <@${challenge.creationHost}>` },
-    ] : [],
+    extraComponents,
   });
 }

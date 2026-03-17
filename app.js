@@ -4644,7 +4644,22 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     }
 
     // Handle safari dynamic buttons (format: safari_guildId_buttonId_timestamp)
-    if (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4 &&
+    // Challenge action buttons use challenge_ prefix but execute through the same engine
+    if ((custom_id.startsWith('challenge_') && custom_id.split('_').length >= 4 &&
+        !custom_id.startsWith('challenge_screen') &&
+        !custom_id.startsWith('challenge_select') &&
+        !custom_id.startsWith('challenge_edit_') &&
+        !custom_id.startsWith('challenge_round') &&
+        !custom_id.startsWith('challenge_post') &&
+        !custom_id.startsWith('challenge_delete') &&
+        !custom_id.startsWith('challenge_publish') &&
+        !custom_id.startsWith('challenge_modal') &&
+        !custom_id.startsWith('challenge_actions_') &&
+        !custom_id.startsWith('challenge_action_toggle_') &&
+        !custom_id.startsWith('challenge_search') &&
+        !custom_id.startsWith('challenge_library') &&
+        !custom_id.startsWith('challenge_import')) ||
+    (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4 &&
         !custom_id.startsWith('safari_add_action_') &&
         !custom_id.startsWith('safari_finish_button_') &&
         !custom_id.startsWith('safari_action_modal_') &&
@@ -4738,7 +4753,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_start') &&
         !custom_id.startsWith('safari_remove_') &&
         !custom_id.startsWith('safari_map_admin') &&
-        !custom_id.startsWith('safari_post_channel_')) {
+        !custom_id.startsWith('safari_post_channel_'))) {
       // Check if this Custom Action contains calculate_results actions that need deferred handling
       const parts = custom_id.split('_');
       const guildId = parts[1];
@@ -8178,11 +8193,14 @@ To fix this:
           const selectedChannelId = req.body.data.values?.[0];
           const { loadPlayerData } = await import('./storage.js');
           const { buildChallengePost, buildChallengeScreen } = await import('./challengeManager.js');
+          const { loadSafariContent } = await import('./safariManager.js');
           const playerData = await loadPlayerData();
           const challenge = playerData[context.guildId]?.challenges?.[challengeId];
           if (!challenge) return { content: '❌ Challenge not found' };
 
-          const post = buildChallengePost(challenge);
+          // Pass guildId + safariData so linked action buttons are included
+          const safariData = challenge.actionIds?.length > 0 ? await loadSafariContent() : null;
+          const post = buildChallengePost(challenge, context.guildId, safariData);
           await DiscordRequest(`channels/${selectedChannelId}/messages`, {
             method: 'POST',
             body: { components: [post], flags: (1 << 15) }
@@ -8216,6 +8234,33 @@ To fix this:
               { type: 2, custom_id: 'challenge_screen', label: '← Cancel', style: 2 }
             ]}
           ]}]};
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('challenge_actions_')) {
+      // Challenges — show action selector for linking
+      const challengeId = custom_id.replace('challenge_actions_', '');
+      return ButtonHandlerFactory.create({
+        id: 'challenge_actions',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { buildActionSelector } = await import('./challengeManager.js');
+          return buildActionSelector(context.guildId, challengeId);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('challenge_action_toggle_')) {
+      // Challenges — toggle action link
+      const challengeId = custom_id.replace('challenge_action_toggle_', '');
+      return ButtonHandlerFactory.create({
+        id: 'challenge_action_toggle',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const selectedActionId = req.body.data.values?.[0];
+          if (!selectedActionId) return { content: '❌ No action selected' };
+          const { toggleChallengeAction, buildActionSelector } = await import('./challengeManager.js');
+          await toggleChallengeAction(context.guildId, challengeId, selectedActionId);
+          return buildActionSelector(context.guildId, challengeId);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('challenge_delete_') && !custom_id.startsWith('challenge_delete_confirm_')) {

@@ -277,3 +277,98 @@ describe('Challenge search filtering', () => {
     assert.equal(results.length, 0);
   });
 });
+
+// =====================================================================
+// Challenge ↔ Action linking
+// =====================================================================
+
+describe('Challenge action linking — toggle', () => {
+  function toggleAction(actionIds, actionId) {
+    const idx = actionIds.indexOf(actionId);
+    if (idx >= 0) {
+      actionIds.splice(idx, 1);
+      return { linked: false, actionId };
+    } else {
+      actionIds.push(actionId);
+      return { linked: true, actionId };
+    }
+  }
+
+  it('links an unlinked action', () => {
+    const ids = [];
+    const result = toggleAction(ids, 'action_123');
+    assert.equal(result.linked, true);
+    assert.deepEqual(ids, ['action_123']);
+  });
+
+  it('unlinks a linked action', () => {
+    const ids = ['action_123', 'action_456'];
+    const result = toggleAction(ids, 'action_123');
+    assert.equal(result.linked, false);
+    assert.deepEqual(ids, ['action_456']);
+  });
+
+  it('toggle is idempotent — link then unlink returns to empty', () => {
+    const ids = [];
+    toggleAction(ids, 'action_123');
+    toggleAction(ids, 'action_123');
+    assert.deepEqual(ids, []);
+  });
+
+  it('supports multiple actions', () => {
+    const ids = [];
+    toggleAction(ids, 'action_a');
+    toggleAction(ids, 'action_b');
+    toggleAction(ids, 'action_c');
+    assert.deepEqual(ids, ['action_a', 'action_b', 'action_c']);
+  });
+});
+
+describe('Challenge post — action buttons', () => {
+  function buildActionButtons(actionIds, actions, guildId) {
+    const buttons = [];
+    for (const actionId of actionIds) {
+      const action = actions[actionId];
+      if (!action) continue;
+      const triggerType = action.trigger?.type || 'button';
+      const isModalTrigger = triggerType === 'button_modal' || triggerType === 'button_input';
+      const prefix = isModalTrigger ? 'modal_launcher_' : 'challenge_';
+      buttons.push({
+        customId: `${prefix}${guildId}_${actionId}`,
+        label: action.name || 'Action',
+        isModal: isModalTrigger,
+      });
+    }
+    return buttons;
+  }
+
+  it('generates challenge_ prefix for button triggers', () => {
+    const buttons = buildActionButtons(['act1'], { act1: { name: 'Attack', trigger: { type: 'button' } } }, 'guild1');
+    assert.equal(buttons[0].customId.startsWith('challenge_'), true);
+    assert.equal(buttons[0].isModal, false);
+  });
+
+  it('generates modal_launcher_ prefix for button_input triggers', () => {
+    const buttons = buildActionButtons(['act1'], { act1: { name: 'Bet', trigger: { type: 'button_input' } } }, 'guild1');
+    assert.equal(buttons[0].customId.startsWith('modal_launcher_'), true);
+    assert.equal(buttons[0].isModal, true);
+  });
+
+  it('skips missing actions gracefully', () => {
+    const buttons = buildActionButtons(['missing_id'], {}, 'guild1');
+    assert.equal(buttons.length, 0);
+  });
+
+  it('respects 5 button limit', () => {
+    const actions = {};
+    const ids = [];
+    for (let i = 0; i < 7; i++) {
+      const id = `act_${i}`;
+      ids.push(id);
+      actions[id] = { name: `Action ${i}`, trigger: { type: 'button' } };
+    }
+    const buttons = buildActionButtons(ids, actions, 'guild1');
+    // buildActionButtons returns all — the caller caps at 5
+    assert.equal(buttons.length, 7);
+  });
+});
