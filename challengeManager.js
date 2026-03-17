@@ -197,7 +197,7 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null, 
     }
 
     // Show linked actions count
-    const linkedActions = challenge.actionIds || [];
+    const linkedActions = ch.actionIds || [];
     if (linkedActions.length > 0) {
       components.push({ type: 10, content: `-# ⚡ ${linkedActions.length} action${linkedActions.length === 1 ? '' : 's'} linked` });
     }
