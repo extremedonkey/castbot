@@ -970,29 +970,37 @@ async function executeGiveCurrency(config, userId, guildId, interaction, buttonI
     
     // Check usage limits
     if (config.limit && config.limit.type !== 'unlimited') {
-        const safariData = await loadSafariContent();
-        const claimedBy = config.limit.claimedBy || [];
-        
-        if (config.limit.type === 'once_per_player' && claimedBy.includes(userId)) {
-            return {
-                flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
-                components: [{
-                    type: 17, // Container
+        const claimedBy = config.limit.claimedBy;
+
+        // Normalize claimedBy to check actual claims, not just truthiness
+        // (empty arrays [] and empty strings '' are truthy but mean "no claims")
+        const hasClaims = Array.isArray(claimedBy) ? claimedBy.length > 0
+            : typeof claimedBy === 'string' ? claimedBy.length > 0
+            : false;
+
+        if (config.limit.type === 'once_per_player') {
+            const claimedList = Array.isArray(claimedBy) ? claimedBy : (claimedBy ? [claimedBy] : []);
+            if (claimedList.includes(userId)) {
+                return {
+                    flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
                     components: [{
-                        type: 10, // Text Display
-                        content: `❌ You have already claimed this ${customTerms.currencyName} reward!`
+                        type: 17,
+                        components: [{
+                            type: 10,
+                            content: `❌ You have already claimed this ${customTerms.currencyName} reward!`
+                        }]
                     }]
-                }]
-            };
+                };
+            }
         }
 
-        if (config.limit.type === 'once_globally' && claimedBy) {
+        if (config.limit.type === 'once_globally' && hasClaims) {
             return {
-                flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+                flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
                 components: [{
-                    type: 17, // Container
+                    type: 17,
                     components: [{
-                        type: 10, // Text Display
+                        type: 10,
                         content: `❌ This ${customTerms.currencyName} reward has already been claimed!`
                     }]
                 }]
