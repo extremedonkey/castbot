@@ -724,7 +724,7 @@ export function buildPublishModal(challengeId) {
 /**
  * Build the action selector screen for linking actions to a challenge.
  */
-export async function buildActionSelector(guildId, challengeId) {
+export async function buildActionSelector(guildId, challengeId, searchTerm = '') {
   const playerData = await loadPlayerData();
   const challenge = playerData[guildId]?.challenges?.[challengeId];
   if (!challenge) return { components: [{ type: 17, components: [{ type: 10, content: '❌ Challenge not found' }] }] };
@@ -734,29 +734,59 @@ export async function buildActionSelector(guildId, challengeId) {
   const actions = safariData[guildId]?.buttons || {};
   const linkedIds = challenge.actionIds || [];
 
-  // Build options from existing actions
-  const options = [];
-  for (const [actionId, action] of Object.entries(actions)) {
-    const isLinked = linkedIds.includes(actionId);
-    const name = (action.name || action.label || actionId).substring(0, 80);
-    const triggerType = action.trigger?.type || 'button';
-    const emoji = isLinked ? '✅' : (action.emoji || '⚡');
+  // Build options from existing actions — same visual pattern as global action selector
+  const allEntries = Object.entries(actions)
+    .filter(([id, a]) => {
+      if (!searchTerm) return true;
+      const term = searchTerm.toLowerCase();
+      const name = (a.name || a.label || id).toLowerCase();
+      return name.includes(term);
+    })
+    .map(([id, a]) => ({ id, action: a, isLinked: linkedIds.includes(id) }))
+    .sort((a, b) => {
+      // Linked first, then by last modified (newest first)
+      if (a.isLinked !== b.isLinked) return a.isLinked ? -1 : 1;
+      const aTime = a.action.metadata?.lastModified || 0;
+      const bTime = b.action.metadata?.lastModified || 0;
+      return bTime - aTime;
+    });
 
+  const options = [];
+
+  // Search option
+  if (Object.keys(actions).length > 10 || searchTerm) {
     options.push({
-      label: `${isLinked ? '(linked) ' : ''}${name}`.substring(0, 100),
-      value: actionId,
-      description: `${triggerType} trigger${isLinked ? ' — click to unlink' : ''}`.substring(0, 100),
-      emoji: { name: typeof emoji === 'string' ? emoji : '⚡' },
-      ...(isLinked ? { default: true } : {})
+      label: '🔍 Search Actions',
+      value: 'search_actions',
+      description: searchTerm ? `Searching: "${searchTerm}"` : 'Search through all actions',
+      emoji: { name: '🔍' }
+    });
+  }
+  if (searchTerm) {
+    options.push({
+      label: '🔙 Back to all',
+      value: 'back_to_all',
+      description: 'Return to full action list'
     });
   }
 
-  // Sort: linked first, then alphabetical
-  options.sort((a, b) => {
-    const aLinked = a.label.startsWith('(linked)') ? 0 : 1;
-    const bLinked = b.label.startsWith('(linked)') ? 0 : 1;
-    return aLinked - bLinked || a.label.localeCompare(b.label);
-  });
+  for (const { id, action, isLinked } of allEntries) {
+    if (options.length >= 25) break;
+    const name = (action.name || action.label || id).substring(0, 80);
+    const triggerType = action.trigger?.type || 'button';
+    const triggerLabels = { button: '🖱️ Button', button_modal: '🔐 Secret Code', button_input: '⌨️ User Input', modal: '🕹️ Command', schedule: '⏰ Scheduled' };
+    const triggerLabel = triggerLabels[triggerType] || triggerType;
+
+    // Use action's configured emoji, checkmark for linked
+    const actionEmoji = action.emoji || action.trigger?.button?.emoji || '⚡';
+
+    options.push({
+      label: `${isLinked ? '✅ ' : ''}${name}`.substring(0, 100),
+      value: id,
+      description: `${triggerLabel}${isLinked ? ' — select to unlink' : ' — select to link'}`.substring(0, 100),
+      emoji: { name: typeof actionEmoji === 'string' ? actionEmoji : '⚡' },
+    });
+  }
 
   const chalTitle = (challenge.title || 'Untitled').substring(0, 50);
 

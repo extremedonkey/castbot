@@ -8249,17 +8249,56 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id.startsWith('challenge_action_toggle_')) {
-      // Challenges — toggle action link
+      // Challenges — toggle action link or search
       const challengeId = custom_id.replace('challenge_action_toggle_', '');
+      const selectedValue = req.body.data.values?.[0];
+
+      if (selectedValue === 'search_actions') {
+        // Show search modal
+        return ButtonHandlerFactory.create({
+          id: 'challenge_action_search',
+          requiresModal: true,
+          handler: async () => ({
+            type: 9,
+            data: {
+              custom_id: `challenge_action_search_modal_${challengeId}`,
+              title: 'Search Actions',
+              components: [{
+                type: 18, label: 'Search Term',
+                description: 'Search by action name',
+                component: {
+                  type: 4, custom_id: 'search_term', style: 1,
+                  required: true, max_length: 50,
+                  placeholder: 'Type action name...'
+                }
+              }]
+            }
+          })
+        })(req, res, client);
+      }
+
+      if (selectedValue === 'back_to_all') {
+        // Clear search, show all
+        return ButtonHandlerFactory.create({
+          id: 'challenge_action_back',
+          updateMessage: true,
+          deferred: true,
+          handler: async (context) => {
+            const { buildActionSelector } = await import('./challengeManager.js');
+            return buildActionSelector(context.guildId, challengeId);
+          }
+        })(req, res, client);
+      }
+
+      // Toggle link
       return ButtonHandlerFactory.create({
         id: 'challenge_action_toggle',
         updateMessage: true,
         deferred: true,
         handler: async (context) => {
-          const selectedActionId = req.body.data.values?.[0];
-          if (!selectedActionId) return { content: '❌ No action selected' };
+          if (!selectedValue) return { content: '❌ No action selected' };
           const { toggleChallengeAction, buildActionSelector } = await import('./challengeManager.js');
-          await toggleChallengeAction(context.guildId, challengeId, selectedActionId);
+          await toggleChallengeAction(context.guildId, challengeId, selectedValue);
           return buildActionSelector(context.guildId, challengeId);
         }
       })(req, res, client);
@@ -43943,6 +43982,14 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id.startsWith('challenge_action_search_modal_')) {
+      // Challenge action search modal submit
+      const challengeId = custom_id.replace('challenge_action_search_modal_', '');
+      const searchTerm = components[0]?.component?.value || components[0]?.components?.[0]?.value || '';
+      const { buildActionSelector } = await import('./challengeManager.js');
+      const result = await buildActionSelector(req.body.guild_id, challengeId, searchTerm.trim());
+      return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: result });
+
     } else if (custom_id.startsWith('input_label_config_')) {
       // Handle input label configuration modal submit
       const actionId = custom_id.replace('input_label_config_', '');
