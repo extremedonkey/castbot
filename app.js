@@ -19124,6 +19124,94 @@ Your server is now ready for Tycoons gameplay!`;
           return await showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('safari_view_claims_')) {
+      // View claims data for an outcome (give_item, give_currency, etc.)
+      return ButtonHandlerFactory.create({
+        id: 'safari_view_claims',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const fullString = context.customId.replace('safari_view_claims_', '');
+          const lastUnderscore = fullString.lastIndexOf('_');
+          const actionIndex = parseInt(fullString.substring(lastUnderscore + 1));
+          const buttonId = fullString.substring(0, lastUnderscore);
+
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+          const action = button?.actions?.[actionIndex];
+
+          if (!action?.config?.limit) {
+            return { components: [{ type: 17, accent_color: 0x3498DB, components: [
+              { type: 10, content: '## 📥 Claims\n-# No claim limit configured for this outcome' },
+              { type: 14 },
+              { type: 1, components: [
+                { type: 2, custom_id: `custom_action_editor_${buttonId}`, label: '← Back', style: 2, emoji: { name: '⚡' } }
+              ]}
+            ]}]};
+          }
+
+          const limit = action.config.limit;
+          const limitType = limit.type || 'unlimited';
+          const claimedBy = limit.claimedBy;
+
+          // Build claim status
+          const components = [
+            { type: 10, content: `## 📥 Claims | ${button.name || buttonId}` },
+            { type: 14 },
+          ];
+
+          // Limit type explanation
+          const limitLabels = {
+            unlimited: '♾️ **Unlimited** — no claim restrictions',
+            once_per_player: '👤 **Once Per Player** — each player can claim once',
+            once_globally: '🌍 **Once Globally** — first player to claim gets it, nobody else can'
+          };
+          components.push({ type: 10, content: `### \`\`\`📋 Limit Type\`\`\`\n${limitLabels[limitType] || limitType}` });
+
+          // Item info
+          const items = safariData[context.guildId]?.items || {};
+          const itemName = items[action.config.itemId]?.name || action.config.itemId || 'Unknown Item';
+          const itemEmoji = items[action.config.itemId]?.emoji || '📦';
+          const quantity = action.config.quantity || 1;
+          components.push({ type: 10, content: `-# ${itemEmoji} ${quantity}x ${itemName} | Outcome #${actionIndex + 1}` });
+
+          components.push({ type: 14 });
+
+          // Claim data
+          if (limitType === 'unlimited') {
+            components.push({ type: 10, content: `### \`\`\`📊 Status\`\`\`\n✅ No restrictions — all players can claim freely` });
+          } else if (limitType === 'once_globally') {
+            if (typeof claimedBy === 'string' && claimedBy.length > 0) {
+              components.push({ type: 10, content: `### \`\`\`📊 Status\`\`\`\n🔒 **Claimed** by <@${claimedBy}>\n-# This outcome is locked. No other players can claim it.\n-# Use **🔄 Reset Claims** to unlock.` });
+            } else {
+              components.push({ type: 10, content: `### \`\`\`📊 Status\`\`\`\n🔓 **Available** — waiting for the first player to claim\n-# Once claimed, no other player will be able to claim this outcome.` });
+            }
+          } else if (limitType === 'once_per_player') {
+            const claimedArray = Array.isArray(claimedBy) ? claimedBy : (claimedBy ? [claimedBy] : []);
+            if (claimedArray.length === 0) {
+              components.push({ type: 10, content: `### \`\`\`📊 Status\`\`\`\n🔓 **No claims yet** — all players can still claim\n-# Each player gets one claim. After claiming, they cannot claim again.` });
+            } else {
+              const playerList = claimedArray.map((id, i) => `${i + 1}. <@${id}>`).join('\n');
+              components.push({ type: 10, content: `### \`\`\`📊 Status\`\`\`\n📋 **${claimedArray.length} player${claimedArray.length === 1 ? '' : 's'}** claimed:\n${playerList}\n\n-# These players cannot claim again. Other players can still claim.` });
+            }
+          }
+
+          // Navigation
+          components.push(
+            { type: 14 },
+            { type: 1, components: [
+              { type: 2, custom_id: `custom_action_editor_${buttonId}`, label: '← Back', style: 2, emoji: { name: '⚡' } },
+              { type: 2, custom_id: `safari_modify_attr_reset_${buttonId}_${actionIndex}`, label: 'Reset Claims', style: 2, emoji: { name: '🔄' } }
+            ]}
+          );
+
+          const container = { type: 17, accent_color: 0x3498DB, components };
+          const { countComponents } = await import('./utils.js');
+          countComponents([container], { verbosity: "summary", label: "Claims Viewer" });
+          return { components: [container] };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_item_save_')) {
       // Handle save and finish for give_item
       return ButtonHandlerFactory.create({

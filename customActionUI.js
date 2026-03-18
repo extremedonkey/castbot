@@ -4418,13 +4418,21 @@ export async function showModifyAttributeConfig(guildId, buttonId, actionIndex) 
               style: 2, // Secondary
               emoji: { name: '⚡' }
             },
-            // Only show Reset Claims if a limit is configured
-            ...(currentLimit !== 'unlimited' ? [{
-              type: 2, // Button
+            // Only show Reset Claims and View Claims if a limit is configured
+            ...(currentLimit !== 'unlimited' ? [
+            {
+              type: 2,
               custom_id: `safari_modify_attr_reset_${buttonId}_${actionIndex}`,
               label: 'Reset Claims',
-              style: 2, // Secondary
+              style: 2,
               emoji: { name: '🔄' }
+            },
+            {
+              type: 2,
+              custom_id: `safari_view_claims_${buttonId}_${actionIndex}`,
+              label: 'Claims',
+              style: 2,
+              emoji: { name: '📥' }
             }] : []),
             {
               type: 2, // Button
