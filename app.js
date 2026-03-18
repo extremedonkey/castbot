@@ -47190,6 +47190,13 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
             },
             {
               type: 2, // Button
+              custom_id: `safari_view_claims_${buttonId}_${actionIndex}`,
+              label: 'Claims',
+              style: 2,
+              emoji: { name: '📥' }
+            },
+            {
+              type: 2, // Button
               custom_id: `safari_remove_action_${buttonId}_${actionIndex}`,
               label: 'Delete Action',
               style: 4, // Danger (red)
