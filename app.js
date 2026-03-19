@@ -160,111 +160,101 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
     };
   }
 
-  const questionsPerPage = 5;
+  const questionsPerPage = 10;
   const totalPages = Math.max(1, Math.ceil(config.questions.length / questionsPerPage));
   const startIndex = currentPage * questionsPerPage;
   const endIndex = Math.min(startIndex + questionsPerPage, config.questions.length);
-  
+
   const refreshedComponents = [];
-  
+
   // Title with pagination info
-  const pageInfo = config.questions.length <= questionsPerPage
-    ? ''
-    : ` \`Page ${currentPage + 1}/${totalPages}\``;
+  const pageInfo = config.questions.length > questionsPerPage
+    ? ` \`Page ${currentPage + 1}/${totalPages}\``
+    : '';
 
   refreshedComponents.push({
-    type: 10, // Text Display
+    type: 10,
     content: `## :pencil: Season Applications | Manage Season Casting\n### :question: Manage Questions (${config.seasonName})${pageInfo}`
   });
-  
+
+  refreshedComponents.push({ type: 14 });
+
   if (config.questions.length === 0) {
     refreshedComponents.push({
-      type: 10, // Text Display
-      content: '*No questions defined yet*'
+      type: 10,
+      content: '*No questions defined yet. Click **✨ New Question** below to add one.*'
     });
   } else {
-    // Show only questions for current page
+    // String select per question (2 components each: ActionRow + StringSelect)
     for (let i = startIndex; i < endIndex; i++) {
       const question = config.questions[i];
-      const maxTitleLength = 50;
-      const displayTitle = question.questionTitle.length > maxTitleLength 
-        ? question.questionTitle.substring(0, maxTitleLength) + '...'
-        : question.questionTitle;
-      
-      const isLastQuestionInEditor = i === config.questions.length - 1;
+      const displayTitle = (question.questionTitle || 'Untitled').substring(0, 80);
+      const answerType = question.questionStyle === 2 ? 'Paragraph' : 'Short answer';
+      const typeEmoji = question.questionStyle === 2 ? '📄' : '📝';
+      const isFirst = i === 0;
+      const isLast = i === config.questions.length - 1;
+      const qLabel = isLast ? 'Last Question' : `Q${i + 1}`;
+
+      const options = [
+        {
+          label: `${qLabel}. ${displayTitle}`.substring(0, 100),
+          value: 'summary',
+          description: answerType,
+          emoji: { name: typeEmoji },
+          default: true
+        },
+        {
+          label: 'Edit Question',
+          value: 'edit',
+          description: 'Modify question text and type',
+          emoji: { name: '✏️' }
+        }
+      ];
+
+      if (!isFirst) {
+        options.push({
+          label: 'Move Up',
+          value: 'move_up',
+          emoji: { name: '⬆️' }
+        });
+      }
+      if (!isLast) {
+        options.push({
+          label: 'Move Down',
+          value: 'move_down',
+          emoji: { name: '⬇️' }
+        });
+      }
+
+      // Divider then delete
+      options.push(
+        { label: '───────────────────', value: 'divider', description: ' ' },
+        { label: 'Delete Question', value: 'delete', description: 'Remove permanently', emoji: { name: '🗑️' } }
+      );
+
       refreshedComponents.push({
-        type: 10, // Text Display
-        content: `**${isLastQuestionInEditor ? 'Last Question' : `Q${i + 1}.`}** ${displayTitle}`
+        type: 1,
+        components: [{
+          type: 3, // String Select
+          custom_id: `question_select_${configId}_${i}`,
+          options
+        }]
       });
-      
-      const questionRow = {
-        type: 1, // Action Row
-        components: [
-          {
-            type: 2, // Button
-            custom_id: `season_question_edit_${configId}_${i}_${currentPage}`,
-            label: 'Edit',
-            style: 2, // Secondary
-            emoji: { name: '✏️' }
-          },
-          {
-            type: 2, // Button
-            custom_id: `season_question_up_${configId}_${i}_${currentPage}`,
-            label: ' ',
-            style: 2, // Secondary
-            emoji: { name: '⬆️' },
-            disabled: i === 0
-          },
-          {
-            type: 2, // Button
-            custom_id: `season_question_down_${configId}_${i}_${currentPage}`,
-            label: ' ',
-            style: 2, // Secondary
-            emoji: { name: '⬇️' },
-            disabled: i === config.questions.length - 1
-          },
-          {
-            type: 2, // Button
-            custom_id: `season_question_delete_${configId}_${i}_${currentPage}`,
-            label: 'Delete',
-            style: 4, // Danger
-            emoji: { name: '🗑️' }
-          }
-        ]
-      };
-      
-      refreshedComponents.push(questionRow);
     }
   }
-  
-  const managementRow = {
-    type: 1, // Action Row
+
+  refreshedComponents.push({ type: 14 });
+
+  // Management buttons
+  refreshedComponents.push({
+    type: 1,
     components: [
-      {
-        type: 2, // Button
-        custom_id: `season_new_question_${configId}_${currentPage}`,
-        label: 'New Question',
-        style: 2, // Secondary
-        emoji: { name: '✨' }
-      },
-      {
-        type: 2, // Button
-        custom_id: `season_post_button_${configId}_${currentPage}`,
-        label: 'Post to Channel',
-        style: 2, // Secondary
-        emoji: { name: '#️⃣' }
-      },
-      {
-        type: 2, // Button
-        custom_id: `season_app_ranking_${configId}`,
-        label: 'Cast Ranking',
-        style: 2, // Secondary
-        emoji: { name: '🏆' }
-      }
+      { type: 2, custom_id: `season_new_question_${configId}_${currentPage}`, label: 'New Question', style: 2, emoji: { name: '✨' } },
+      { type: 2, custom_id: `season_post_button_${configId}_${currentPage}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
+      { type: 2, custom_id: `season_app_ranking_${configId}`, label: 'Cast Ranking', style: 2, emoji: { name: '🏆' } },
+      { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit Season', style: 2, emoji: { name: '✏️' } }
     ]
-  };
-  
-  refreshedComponents.push(managementRow);
+  });
   
   const refreshedContainer = {
     type: 17, // Container
@@ -8627,7 +8617,76 @@ To fix this:
           return await sendProductionSubmenuResponse(res, channelId, [seasonManagementContainer], shouldUpdateMessage);
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('question_select_')) {
+      // Unified question select handler — replaces individual edit/delete/move buttons
+      return ButtonHandlerFactory.create({
+        id: 'question_select',
+        updateMessage: true,
+        handler: async (context) => {
+          const selectedValue = req.body.data.values?.[0];
+          const afterPrefix = context.customId.replace('question_select_', '');
+          const lastUnderscore = afterPrefix.lastIndexOf('_');
+          const questionIndex = parseInt(afterPrefix.substring(lastUnderscore + 1));
+          const qConfigId = afterPrefix.substring(0, lastUnderscore);
+
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[qConfigId];
+          if (!config) return { content: '❌ Season not found' };
+
+          if (selectedValue === 'edit') {
+            // Show edit modal — return modal response
+            const question = config.questions[questionIndex];
+            if (!question) return { content: '❌ Question not found' };
+            const currentPage = Math.floor(questionIndex / 10);
+            return res.send({
+              type: InteractionResponseType.MODAL,
+              data: {
+                custom_id: `season_question_save_${qConfigId}_${questionIndex}_${currentPage}`,
+                title: `Edit Question ${questionIndex + 1}`,
+                components: [
+                  { type: 18, label: 'Question Text', component: {
+                    type: 4, custom_id: 'question_title', style: question.questionStyle || 1,
+                    required: true, max_length: 200, value: question.questionTitle,
+                    placeholder: 'Enter your question...'
+                  }},
+                  { type: 18, label: 'Answer Type', description: 'Short = one line, Paragraph = multi-line', component: {
+                    type: 3, custom_id: 'question_style',
+                    options: [
+                      { label: 'Short Answer', value: '1', emoji: { name: '📝' }, default: (question.questionStyle || 1) === 1 },
+                      { label: 'Paragraph', value: '2', emoji: { name: '📄' }, default: question.questionStyle === 2 }
+                    ]
+                  }}
+                ]
+              }
+            });
+          }
+
+          if (selectedValue === 'move_up' || selectedValue === 'move_down') {
+            const swapIndex = selectedValue === 'move_up' ? questionIndex - 1 : questionIndex + 1;
+            if (swapIndex >= 0 && swapIndex < config.questions.length) {
+              [config.questions[questionIndex], config.questions[swapIndex]] = [config.questions[swapIndex], config.questions[questionIndex]];
+              await savePlayerData(playerData);
+              console.log(`↕️ Question ${questionIndex} swapped with ${swapIndex} in ${qConfigId}`);
+            }
+            const currentPage = Math.floor((selectedValue === 'move_down' ? swapIndex : questionIndex) / 10);
+            return await buildQuestionManagementUI(config, qConfigId, currentPage);
+          }
+
+          if (selectedValue === 'delete') {
+            const deleted = config.questions.splice(questionIndex, 1);
+            await savePlayerData(playerData);
+            console.log(`🗑️ Deleted question ${questionIndex} from ${qConfigId}: "${deleted[0]?.questionTitle}"`);
+            const currentPage = Math.min(Math.floor(questionIndex / 10), Math.max(0, Math.ceil(config.questions.length / 10) - 1));
+            return await buildQuestionManagementUI(config, qConfigId, currentPage);
+          }
+
+          // summary, divider, or unknown — re-render same page
+          const currentPage = Math.floor(questionIndex / 10);
+          return await buildQuestionManagementUI(config, qConfigId, currentPage);
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('season_question_up_')) {
+      // Legacy button handler — kept for backwards compatibility with stale messages
       return ButtonHandlerFactory.create({
         id: 'season_question_up',
         requiresPermission: PermissionFlagsBits.ManageRoles,
