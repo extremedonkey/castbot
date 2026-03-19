@@ -8644,21 +8644,20 @@ To fix this:
           return {
             type: 9,
             data: {
-              custom_id: `season_new_question_modal_${qConfigId}`,
+              custom_id: `season_new_question_modal_${qConfigId}_0`,
               title: 'New Question',
               components: [
                 { type: 18, label: 'Question Title', description: 'Short label shown above the answer field', component: {
                   type: 4, custom_id: 'questionTitle', style: 1,
                   required: true, max_length: 100, placeholder: 'e.g., Why do you want to play?'
                 }},
-                { type: 18, label: 'Question Text', description: 'Full question text applicants will see', component: {
-                  type: 4, custom_id: 'questionText', style: 2,
+                { type: 18, label: 'Question Text', description: 'The full question applicants will answer', component: {
+                  type: 4, custom_id: 'questionText', style: questionStyle,
                   required: true, max_length: 1000, placeholder: 'Enter the full question...'
                 }},
-                { type: 18, label: 'Answer Type', description: `Selected: ${selectedType === 'paragraph' ? 'Paragraph (multi-line)' : 'Short Answer (one line)'}`, component: {
-                  type: 4, custom_id: 'questionStyle', style: 1,
-                  required: true, max_length: 1, value: String(questionStyle),
-                  placeholder: '1 or 2'
+                { type: 18, label: 'Image URL (Optional)', description: 'Link to an image to display with this question', component: {
+                  type: 4, custom_id: 'imageURL', style: 1,
+                  required: false, max_length: 500, placeholder: 'https://...'
                 }}
               ]
             }
