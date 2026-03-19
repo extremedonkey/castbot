@@ -243,13 +243,26 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
     }
   }
 
+  // "Add new question" select (same pattern as outcome add selects)
+  refreshedComponents.push({
+    type: 1,
+    components: [{
+      type: 3,
+      custom_id: `question_add_${configId}`,
+      placeholder: '✨ Click here to add a new question...',
+      options: [
+        { label: 'Short Answer', value: 'short', description: 'Single line text response', emoji: { name: '📝' } },
+        { label: 'Paragraph', value: 'paragraph', description: 'Multi-line text response', emoji: { name: '📄' } },
+      ]
+    }]
+  });
+
   refreshedComponents.push({ type: 14 });
 
   // Management buttons
   refreshedComponents.push({
     type: 1,
     components: [
-      { type: 2, custom_id: `season_new_question_${configId}_${currentPage}`, label: 'New Question', style: 2, emoji: { name: '✨' } },
       { type: 2, custom_id: `season_post_button_${configId}_${currentPage}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
       { type: 2, custom_id: `season_app_ranking_${configId}`, label: 'Cast Ranking', style: 2, emoji: { name: '🏆' } },
       { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit Season', style: 2, emoji: { name: '✏️' } }
@@ -8617,6 +8630,39 @@ To fix this:
           // summary, divider, or unknown — re-render same page
           const currentPage = Math.floor(questionIndex / 10);
           return await buildQuestionManagementUI(config, qConfigId, currentPage);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('question_add_')) {
+      // Add new question via type select
+      return ButtonHandlerFactory.create({
+        id: 'question_add',
+        requiresModal: true,
+        handler: async (context) => {
+          const selectedType = req.body.data.values?.[0];
+          const qConfigId = context.customId.replace('question_add_', '');
+          const questionStyle = selectedType === 'paragraph' ? 2 : 1;
+          return {
+            type: 9,
+            data: {
+              custom_id: `season_new_question_modal_${qConfigId}`,
+              title: 'New Question',
+              components: [
+                { type: 18, label: 'Question Title', description: 'Short label shown above the answer field', component: {
+                  type: 4, custom_id: 'questionTitle', style: 1,
+                  required: true, max_length: 100, placeholder: 'e.g., Why do you want to play?'
+                }},
+                { type: 18, label: 'Question Text', description: 'Full question text applicants will see', component: {
+                  type: 4, custom_id: 'questionText', style: 2,
+                  required: true, max_length: 1000, placeholder: 'Enter the full question...'
+                }},
+                { type: 18, label: 'Answer Type', description: `Selected: ${selectedType === 'paragraph' ? 'Paragraph (multi-line)' : 'Short Answer (one line)'}`, component: {
+                  type: 4, custom_id: 'questionStyle', style: 1,
+                  required: true, max_length: 1, value: String(questionStyle),
+                  placeholder: '1 or 2'
+                }}
+              ]
+            }
+          };
         }
       })(req, res, client);
     } else if (custom_id.startsWith('season_question_up_')) {
