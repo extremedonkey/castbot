@@ -256,101 +256,39 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
     ]
   });
   
-  const refreshedContainer = {
-    type: 17, // Container
-    accent_color: 0xf39c12,
-    components: refreshedComponents
-  };
-  
-  // Create navigation buttons below the container (Components V2 format)
-  const navComponents = [];
-  
+  // Navigation row (inside the container)
   if (config.questions.length > questionsPerPage) {
     const prevDisabled = currentPage === 0;
     const nextDisabled = currentPage === totalPages - 1;
-    
-    const navRow = {
-      type: 1, // Action Row
+    refreshedComponents.push({
+      type: 1,
       components: [
-        {
-          type: 2, // Button
-          custom_id: `season_nav_prev_${configId}_${currentPage}`,
-          label: "◀ Previous",
-          style: prevDisabled ? 2 : 1, // Secondary : Primary
-          disabled: prevDisabled
-        },
-        {
-          type: 2, // Button
-          custom_id: `season_nav_next_${configId}_${currentPage}`,
-          label: "Next ▶",
-          style: nextDisabled ? 2 : 1, // Secondary : Primary
-          disabled: nextDisabled
-        },
-        // Delete Season button commented out - castlists can now link to seasons
-        // Uncomment when we implement proper cascade handling
-        // {
-        //   type: 2, // Button
-        //   custom_id: `season_delete_${configId}`,
-        //   label: "Delete Season",
-        //   style: 4, // Danger
-        //   emoji: { name: '🗑️' }
-        // }
-        {
-          type: 2, // Button
-          custom_id: `season_edit_info_${configId}`,
-          label: "Edit Season",
-          style: 2, // Secondary
-          emoji: { name: '✏️' }
-        }
+        { type: 2, custom_id: `season_management_menu`, label: '← Back', style: 2 },
+        { type: 2, custom_id: `season_nav_prev_${configId}_${currentPage}`, label: '◀', style: prevDisabled ? 2 : 1, disabled: prevDisabled },
+        { type: 2, custom_id: `season_nav_next_${configId}_${currentPage}`, label: '▶', style: nextDisabled ? 2 : 1, disabled: nextDisabled },
       ]
-    };
-    navComponents.push(navRow);
+    });
   } else {
-    // If 5 or fewer questions, show disabled navigation buttons for consistency
-    const navRow = {
-      type: 1, // Action Row
+    refreshedComponents.push({
+      type: 1,
       components: [
-        {
-          type: 2, // Button
-          custom_id: `season_nav_prev_${configId}_${currentPage}`,
-          label: "◀ Previous",
-          style: 2, // Secondary
-          disabled: true
-        },
-        {
-          type: 2, // Button
-          custom_id: `season_nav_next_${configId}_${currentPage}`,
-          label: "Next ▶",
-          style: 2, // Secondary
-          disabled: true
-        },
-        // Delete Season button commented out - castlists can now link to seasons
-        // {
-        //   type: 2, // Button
-        //   custom_id: `season_delete_${configId}`,
-        //   label: "Delete Season",
-        //   style: 4, // Danger
-        //   emoji: { name: '🗑️' }
-        // }
-        {
-          type: 2, // Button
-          custom_id: `season_edit_info_${configId}`,
-          label: "Edit Season",
-          style: 2, // Secondary
-          emoji: { name: '✏️' }
-        }
+        { type: 2, custom_id: `season_management_menu`, label: '← Back', style: 2 },
       ]
-    };
-    navComponents.push(navRow);
+    });
   }
+
+  const refreshedContainer = {
+    type: 17,
+    accent_color: 0xf39c12,
+    components: refreshedComponents
+  };
 
   // Component count logging
   const { countComponents } = await import('./utils.js');
-  countComponents([refreshedContainer, ...navComponents], { verbosity: "full", label: "Season Questions" });
+  countComponents([refreshedContainer], { verbosity: "full", label: "Season Questions" });
 
-  // Return just the components (for ButtonHandlerFactory)
   return {
-    components: [refreshedContainer, ...navComponents]
+    components: [refreshedContainer]
   };
 }
 
