@@ -356,7 +356,7 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   // Component count logging
   const { countComponents } = await import('./utils.js');
-  countComponents([refreshedContainer, ...navComponents], { verbosity: "summary", label: "Season Questions" });
+  countComponents([refreshedContainer, ...navComponents], { verbosity: "full", label: "Season Questions" });
 
   // Return just the components (for ButtonHandlerFactory)
   return {
