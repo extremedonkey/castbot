@@ -8579,20 +8579,16 @@ To fix this:
             return res.send({
               type: InteractionResponseType.MODAL,
               data: {
-                custom_id: `season_question_save_${qConfigId}_${questionIndex}_${currentPage}`,
-                title: `Edit Question ${questionIndex + 1}`,
+                custom_id: `season_edit_question_modal_${qConfigId}_${questionIndex}`,
+                title: 'Edit Question',
                 components: [
-                  { type: 18, label: 'Question Text', component: {
-                    type: 4, custom_id: 'question_title', style: question.questionStyle || 1,
-                    required: true, max_length: 200, value: question.questionTitle,
-                    placeholder: 'Enter your question...'
+                  { type: 18, label: 'Question Title', description: 'Short, descriptive title for this question', component: {
+                    type: 4, custom_id: 'questionTitle', style: 1,
+                    required: true, max_length: 100, value: question.questionTitle || '',
                   }},
-                  { type: 18, label: 'Answer Type', description: 'Short = one line, Paragraph = multi-line', component: {
-                    type: 3, custom_id: 'question_style',
-                    options: [
-                      { label: 'Short Answer', value: '1', emoji: { name: '📝' }, default: (question.questionStyle || 1) === 1 },
-                      { label: 'Paragraph', value: '2', emoji: { name: '📄' }, default: question.questionStyle === 2 }
-                    ]
+                  { type: 18, label: 'Question Text', description: 'The full question applicants will answer', component: {
+                    type: 4, custom_id: 'questionText', style: 2,
+                    required: true, max_length: 1000, value: question.questionText || '',
                   }}
                 ]
               }
