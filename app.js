@@ -8882,7 +8882,7 @@ To fix this:
           await savePlayerData(playerData);
           
           // Calculate the correct page to show after deletion
-          const questionsPerPage = 5;
+          const questionsPerPage = 10;
           const totalPages = Math.max(1, Math.ceil(config.questions.length / questionsPerPage));
           
           // If we're on a page that no longer exists, go to the last valid page
@@ -9206,7 +9206,7 @@ To fix this:
             };
           }
           
-          const questionsPerPage = 5;
+          const questionsPerPage = 10;
           const totalPages = Math.ceil(config.questions.length / questionsPerPage);
           const newPage = Math.min(totalPages - 1, currentPage + 1);
           console.log(`✅ SUCCESS: season_nav_next - navigated to page ${newPage}`);
@@ -40259,9 +40259,9 @@ Your server is now ready for Tycoons gameplay!`;
         config.questions.push(newQuestion);
         await savePlayerData(playerData);
         
-        // Calculate the page for the new question (last page)
-        const questionsPerPage = 5;
-        const newQuestionPage = Math.floor((config.questions.length - 1) / questionsPerPage);
+        // Calculate the page for the new question (stay on current page, not jump to last)
+        const questionsPerPage = 10;
+        const newQuestionPage = Math.min(currentPage, Math.floor((config.questions.length - 1) / questionsPerPage));
         
         // Refresh the UI on the page containing the new question
         return refreshQuestionManagementUI(res, config, configId, newQuestionPage);
@@ -40318,7 +40318,7 @@ Your server is now ready for Tycoons gameplay!`;
         await savePlayerData(playerData);
         
         // Calculate current page based on question index (5 questions per page)
-        const questionsPerPage = 5;
+        const questionsPerPage = 10;
         const currentPage = Math.floor(questionIndex / questionsPerPage);
         
         // Refresh the UI
