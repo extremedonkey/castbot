@@ -92,6 +92,18 @@ return {
 - **Total components**: Stay under 40 components per container (Discord limit per ComponentsV2.md)
 - **Component Budget**: With separators and text, typically ~20-25 usable slots
 
+## 📊 Component Count Logging (MANDATORY)
+**Every menu/screen MUST log its component count.** This catches 40-component limit violations before they hit production.
+
+```javascript
+const { countComponents } = await import('./utils.js');
+countComponents([container], { verbosity: "summary", label: "Menu Name" });
+```
+
+**Output**: `✅ Menu Name: 38/40 components`
+
+Add this before the `return` statement in every function that builds a UI response. See `validateComponentLimit()` for a throwing variant that aborts if over 40.
+
 ## 🔙 Navigation Standards
 - **Back Button Format**:
   - **To Main Menu**: `← Menu` (arrow + "Menu", **NO emoji**)

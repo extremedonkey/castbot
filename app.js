@@ -148,7 +148,7 @@ import { shouldLog } from './src/utils/logConfig.js';
  * @param {number} currentPage - Current page number
  * @returns {Object} Components data structure (no response wrapper)
  */
-function buildQuestionManagementUI(config, configId, currentPage = 0) {
+async function buildQuestionManagementUI(config, configId, currentPage = 0) {
   console.log(`🔧 DEBUG: buildQuestionManagementUI called with configId: ${configId}, currentPage: ${currentPage}`);
 
   // Validate required parameters
@@ -354,6 +354,10 @@ function buildQuestionManagementUI(config, configId, currentPage = 0) {
     navComponents.push(navRow);
   }
 
+  // Component count logging
+  const { countComponents } = await import('./utils.js');
+  countComponents([refreshedContainer, ...navComponents], { verbosity: "summary", label: "Season Questions" });
+
   // Return just the components (for ButtonHandlerFactory)
   return {
     components: [refreshedContainer, ...navComponents]
@@ -368,7 +372,7 @@ function buildQuestionManagementUI(config, configId, currentPage = 0) {
  * @param {number} currentPage - Current page number
  */
 async function refreshQuestionManagementUI(res, config, configId, currentPage = 0) {
-  const responseData = buildQuestionManagementUI(config, configId, currentPage);
+  const responseData = await buildQuestionManagementUI(config, configId, currentPage);
 
   return res.send({
     type: InteractionResponseType.UPDATE_MESSAGE,
@@ -7806,7 +7810,7 @@ To fix this:
           const playerData = await loadPlayerData();
           const config = playerData[context.guildId]?.applicationConfigs?.[configId];
           if (!config) return { content: '❌ Season not found' };
-          return buildQuestionManagementUI(config, configId, 0);
+          return await buildQuestionManagementUI(config, configId, 0);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_ranking_')) {
@@ -8966,7 +8970,7 @@ To fix this:
           
           console.log(`✅ SUCCESS: season_delete_cancel - returning to manage questions for ${config.seasonName}`);
           // Return to the manage questions interface (use helper for ButtonHandlerFactory)
-          return buildQuestionManagementUI(config, configId, 1);
+          return await buildQuestionManagementUI(config, configId, 1);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('season_edit_info_')) {
