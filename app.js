@@ -13717,7 +13717,7 @@ Your server is now ready for Tycoons gameplay!`;
               {
                 type: 18, // Label
                 label: 'Regeneration Time (minutes)',
-                description: 'Time between each stamina regeneration (1-1440)',
+                description: 'Minutes between regen (e.g. 60=1hr, 720=12hr, 1440=24hr)',
                 component: {
                   type: 4, // Text Input
                   custom_id: 'regen_minutes',
@@ -43418,9 +43418,9 @@ Your server is now ready for Tycoons gameplay!`;
           errors.push(`Max Stamina (${maxStamina}) must be >= Starting Stamina (${startingStamina})`);
         }
 
-        // 3. Regen Minutes (1-1440 = max 1 day)
-        if (isNaN(regenMinutes) || regenMinutes < 1 || regenMinutes > 1440) {
-          errors.push(`Regen Time must be 1-1440 minutes (got "${regenMinutesValue}")`);
+        // 3. Regen Minutes (1-99999 = no practical cap)
+        if (isNaN(regenMinutes) || regenMinutes < 1 || regenMinutes > 99999) {
+          errors.push(`Regen Time must be 1-99999 minutes (got "${regenMinutesValue}")`);
         }
 
         // 4. Regen Amount (null = max, or 1-99)
