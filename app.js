@@ -991,7 +991,17 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setCustomId('playerdata_import')
       .setLabel('Import Server')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📥')
+      .setEmoji('📥'),
+    new ButtonBuilder()
+      .setCustomId('file_import_safari')
+      .setLabel('Import Safari')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🦁'),
+    new ButtonBuilder()
+      .setCustomId('file_import_seasonquestions')
+      .setLabel('Import Questions')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('📝')
   ];
 
   // Export Data section buttons
@@ -1011,6 +1021,11 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setLabel('All safariContent')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('💿'),
+    new ButtonBuilder()
+      .setCustomId('file_export_seasonquestions')
+      .setLabel('Export Questions')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('📝'),
     new ButtonBuilder()
       .setCustomId('restart_bot')
       .setLabel('Restart Bot')
@@ -1072,10 +1087,10 @@ async function createReeceStuffMenu(guildId, channelId = null) {
     { type: 10, content: `### \`\`\`📊 Analytics\`\`\`` },
     analyticsRow.toJSON(),
     { type: 14 },
-    { type: 10, content: `### \`\`\`📦 Data Management\`\`\`` },
+    { type: 10, content: `### \`\`\`📥 Import & Tools\`\`\`` },
     dataActionsRow.toJSON(),
     { type: 14 },
-    { type: 10, content: `### \`\`\`💾 Data Actions\`\`\`` },
+    { type: 10, content: `### \`\`\`📤 Export & Actions\`\`\`` },
     exportDataRow.toJSON(),
     { type: 14 },
     { type: 10, content: `### \`\`\`☢️ Danger Zone\`\`\`` },

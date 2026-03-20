@@ -351,11 +351,11 @@ export const BUTTON_REGISTRY = {
     category: 'legacy'
   },
   'file_import_safari': {
-    label: 'Import',
+    label: 'Import Safari',
     description: 'Import Safari data via File Upload modal (Type 19) — no MessageContent intent needed',
-    emoji: '📥',
-    style: 'Primary',
-    parent: 'reeces_stuff',
+    emoji: '🦁',
+    style: 'Secondary',
+    parent: 'data_admin',
     restrictedUser: '391415444084490240',
     requiresModal: true,
     category: 'admin'
@@ -363,9 +363,9 @@ export const BUTTON_REGISTRY = {
   'file_import_seasonquestions': {
     label: 'Import Questions',
     description: 'Import season application questions from exported JSON file',
-    emoji: '📥',
-    style: 'Primary',
-    parent: 'reeces_stuff',
+    emoji: '📝',
+    style: 'Secondary',
+    parent: 'data_admin',
     restrictedUser: '391415444084490240',
     requiresModal: true,
     category: 'admin'
@@ -373,9 +373,9 @@ export const BUTTON_REGISTRY = {
   'file_export_seasonquestions': {
     label: 'Export Questions',
     description: 'Export all season application questions as JSON file for reuse',
-    emoji: '📤',
+    emoji: '📝',
     style: 'Secondary',
-    parent: 'reeces_stuff',
+    parent: 'data_admin',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
