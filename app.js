@@ -251,7 +251,7 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
       if (question.questionType === 'dnc') {
         // DNC question — limited options (no Edit, no Duplicate)
         options = [
-          { label: `🚫 ${qLabel}. Do not cast list`, value: 'summary', description: 'Allows applicant to identify people they don\'t wish to play with', emoji: { name: '🚫' }, default: true }
+          { label: `${qLabel}. Do not cast list`, value: 'summary', description: 'Allows applicant to identify people they don\'t wish to play with', emoji: { name: '🚷' }, default: true }
         ];
         if (!isFirstRegular) options.push({ label: 'Move Up', value: 'move_up', emoji: { name: '⬆️' } });
         if (!isLastRegular) options.push({ label: 'Move Down', value: 'move_down', emoji: { name: '⬇️' } });
@@ -301,7 +301,7 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
       options: [
         { label: 'Short Answer', value: 'short', description: 'Single line text response', emoji: { name: '📝' } },
         { label: 'Paragraph', value: 'paragraph', description: 'Multi-line text response', emoji: { name: '📄' } },
-        { label: 'Do Not Cast', value: 'dnc', description: 'Allows the applicant to identify people they don\'t wish to play with', emoji: { name: '🚫' } },
+        { label: 'Do Not Cast', value: 'dnc', description: 'Allows the applicant to identify people they don\'t wish to play with', emoji: { name: '🚷' } },
       ]
     }]
   });
@@ -459,7 +459,7 @@ function buildDncPreview(questionIndex, totalQuestions) {
         { type: 10, content: `-# 🔎 Preview — this is what the player will see:` },
         { type: 10, content: `## Q${questionIndex + 1}. Do Not Cast List\n\nIs there anyone in the community that is on your **"DO NOT PLAY"** list and, if so, why? We will do our best to accommodate everyone.\n\nClick the button below to enter your list.` },
         { type: 14 },
-        { type: 1, components: [{ type: 2, custom_id: 'preview_dnc_disabled', label: 'Edit DNC List', style: 2, emoji: { name: '🚫' }, disabled: true }] }
+        { type: 1, components: [{ type: 2, custom_id: 'preview_dnc_disabled', label: 'Edit DNC List', style: 2, emoji: { name: '🚷' }, disabled: true }] }
       ]
     }],
     flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
@@ -480,7 +480,7 @@ async function showDncQuestion(res, config, channelId, questionIndex) {
     {
       type: 1,
       components: [
-        { type: 2, custom_id: `app_dnc_edit_${channelId}_${questionIndex}`, label: 'Edit DNC List', style: 1, emoji: { name: '🚫' } }
+        { type: 2, custom_id: `app_dnc_edit_${channelId}_${questionIndex}`, label: 'Edit DNC List', style: 1, emoji: { name: '🚷' } }
       ]
     }
   ];

@@ -412,7 +412,7 @@ export const BUTTON_REGISTRY = {
   'app_dnc_edit_*': {
     label: 'Edit DNC List',
     description: 'Opens modal for applicant to enter Do Not Cast list',
-    emoji: '🚫',
+    emoji: '🚷',
     style: 'Primary',
     requiresModal: true,
     category: 'seasons'
