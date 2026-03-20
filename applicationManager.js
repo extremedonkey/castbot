@@ -8,9 +8,6 @@ import {
     StringSelectMenuBuilder,
     ChannelSelectMenuBuilder,
     RoleSelectMenuBuilder,
-    ModalBuilder,
-    TextInputBuilder,
-    TextInputStyle
 } from 'discord.js';
 import { InteractionResponseFlags } from 'discord-interactions';
 import { loadPlayerData, savePlayerData } from './storage.js';
@@ -77,46 +74,55 @@ async function saveApplicationConfig(guildId, configId, config) {
 /**
  * Create the application button modal for configuration
  */
-function createApplicationButtonModal() {
-    const modal = new ModalBuilder()
-        .setCustomId('application_button_modal')
-        .setTitle('Create Application Button');
-
-    // Button text input
-    const buttonTextInput = new TextInputBuilder()
-        .setCustomId('button_text')
-        .setLabel('Button Text')
-        .setPlaceholder('e.g., "Apply to Season 3!"')
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true)
-        .setMaxLength(80);
-
-    // Explanatory text input
-    const explanatoryTextInput = new TextInputBuilder()
-        .setCustomId('explanatory_text')
-        .setLabel('Explanatory Text')
-        .setPlaceholder('Give your applicants some information about the season. This will display above the apply button.')
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(false)
-        .setMaxLength(2000);
-
-    // Channel name format input
-    const channelFormatInput = new TextInputBuilder()
-        .setCustomId('channel_format')
-        .setLabel('Channel Name Format')
-        .setPlaceholder('📝%name%-app')
-        .setValue('📝%name%-app')
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true)
-        .setMaxLength(50);
-
-    const firstRow = new ActionRowBuilder().addComponents(buttonTextInput);
-    const secondRow = new ActionRowBuilder().addComponents(explanatoryTextInput);
-    const thirdRow = new ActionRowBuilder().addComponents(channelFormatInput);
-
-    modal.addComponents(firstRow, secondRow, thirdRow);
-
-    return modal;
+function createApplicationButtonModal(existingConfig = null) {
+    return {
+        custom_id: 'application_button_modal',
+        title: 'Create Application Button',
+        components: [
+            {
+                type: 18, // Label
+                label: 'Post Title',
+                description: 'This will appear as the title in the post',
+                component: {
+                    type: 4, // TextInput
+                    custom_id: 'button_text',
+                    style: 1, // Short
+                    required: true,
+                    max_length: 80,
+                    placeholder: 'e.g., "Apply to Season 3!"',
+                    ...(existingConfig?.buttonText ? { value: existingConfig.buttonText } : {})
+                }
+            },
+            {
+                type: 18, // Label
+                label: 'Post Description',
+                description: 'Information about the season, displayed above the apply button',
+                component: {
+                    type: 4, // TextInput
+                    custom_id: 'explanatory_text',
+                    style: 2, // Paragraph
+                    required: false,
+                    max_length: 2000,
+                    placeholder: 'Give your applicants some information about the season...',
+                    ...(existingConfig?.explanatoryText ? { value: existingConfig.explanatoryText } : {})
+                }
+            },
+            {
+                type: 18, // Label
+                label: 'Channel Name Format',
+                description: '%name% is replaced with the applicant\'s display name',
+                component: {
+                    type: 4, // TextInput
+                    custom_id: 'channel_format',
+                    style: 1, // Short
+                    required: true,
+                    max_length: 50,
+                    placeholder: '📝%name%-app',
+                    value: existingConfig?.channelFormat || '📝%name%-app'
+                }
+            }
+        ]
+    };
 }
 
 /**
@@ -554,11 +560,11 @@ async function createApplicationSetupContainer(tempConfig, configId, categories,
  */
 async function handleApplicationButtonModalSubmit(interactionBody, guild) {
     try {
-        // Extract data from modal components
+        // Extract data from modal components (Label type 18 wraps each input)
         const components = interactionBody.data.components;
-        const buttonText = components[0].components[0].value;
-        const explanatoryText = components[1].components[0].value || '';
-        const channelFormat = components[2].components[0].value;
+        const buttonText = components[0].component?.value || components[0].components?.[0]?.value;
+        const explanatoryText = components[1].component?.value || components[1].components?.[0]?.value || '';
+        const channelFormat = components[2].component?.value || components[2].components?.[0]?.value;
 
         // Validate channel format
         if (!channelFormat.includes('%name%')) {

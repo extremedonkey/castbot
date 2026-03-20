@@ -3587,10 +3587,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     
     // Create and show the application button configuration modal
     const modal = createApplicationButtonModal();
-    
+
     return res.send({
       type: InteractionResponseType.MODAL,
-      data: modal.toJSON()
+      data: modal
     });
 
   } catch (error) {
@@ -9507,33 +9507,25 @@ To fix this:
           if (!req.body.guild_state) req.body.guild_state = {};
           req.body.guild_state.applicationConfigId = configId;
           
-          // Show the standard application button modal
-          const modal = createApplicationButtonModal();
+          // Show the application button modal pre-filled with existing config
+          const modal = createApplicationButtonModal(existingConfig);
 
           // Update modal title with season name (Discord limit: 45 chars)
           const seasonName = existingConfig.seasonName || 'Season';
           const titlePrefix = 'Apply to ';
           const maxTitleLength = 45;
           const maxSeasonNameLength = maxTitleLength - titlePrefix.length;
-
           let truncatedSeasonName = seasonName;
           if (truncatedSeasonName.length > maxSeasonNameLength) {
             truncatedSeasonName = truncatedSeasonName.substring(0, maxSeasonNameLength - 2) + '..';
           }
+          modal.title = `${titlePrefix}${truncatedSeasonName}`;
+          modal.custom_id = `application_button_modal_${configId}`;
 
-          modal.setTitle(`${titlePrefix}${truncatedSeasonName}`);
-
-          // Pre-fill the modal with existing values if available
-          modal.components[0].components[0].setValue(existingConfig.buttonText || '');
-          modal.components[1].components[0].setValue(existingConfig.explanatoryText || '');
-
-          // Modify the custom_id to indicate this is for an existing config
-          modal.setCustomId(`application_button_modal_${configId}`);
-          
           console.log(`✅ SUCCESS: season_post_button_config - modal created`);
           return {
             type: InteractionResponseType.MODAL,
-            data: modal.toJSON()
+            data: modal
           };
         }
       })(req, res, client);
