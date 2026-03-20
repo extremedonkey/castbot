@@ -165,6 +165,9 @@ async function processSeasonQuestionsImport(guildId, jsonContent) {
     return buildErrorResponse('Invalid format: expected `{ "questions": [...] }` structure.');
   }
 
+  // Filter out special question types before validation
+  importData.questions = importData.questions.filter(q => !q.questionType || q.questionType === 'text');
+
   if (importData.questions.length === 0) {
     return buildErrorResponse('No questions found in the file.');
   }
@@ -273,9 +276,16 @@ async function processSingleSeasonQuestionsImport(guildId, jsonContent, configId
   }
 
   // Accept flat questions array or wrapped in { questions: [] }
-  const questions = importData.questions || (Array.isArray(importData) ? importData : null);
-  if (!questions || !Array.isArray(questions) || questions.length === 0) {
+  const rawQuestions = importData.questions || (Array.isArray(importData) ? importData : null);
+  if (!rawQuestions || !Array.isArray(rawQuestions) || rawQuestions.length === 0) {
     return buildErrorResponse('No questions found. Expected `{ "questions": [...] }` or a questions array.', 'sq_single');
+  }
+
+  // Filter out special question types (completion, DNC) — these are auto-generated
+  const questions = rawQuestions.filter(q => !q.questionType || q.questionType === 'text');
+
+  if (questions.length === 0) {
+    return buildErrorResponse('No importable questions found (special types like completion/DNC are skipped).', 'sq_single');
   }
 
   for (let i = 0; i < questions.length; i++) {
@@ -361,13 +371,15 @@ export async function exportSeasonQuestions(guildId) {
     configs: configsWithQuestions.map(([id, cfg]) => ({
       configId: id,
       seasonName: cfg.buttonText || cfg.seasonName || id,
-      questions: cfg.questions.map(q => ({
-        questionTitle: q.questionTitle,
-        questionText: q.questionText,
-        questionStyle: q.questionStyle || 2,
-        imageURL: q.imageURL || '',
-        order: q.order
-      }))
+      questions: cfg.questions
+        .filter(q => !q.questionType || q.questionType === 'text')
+        .map(q => ({
+          questionTitle: q.questionTitle,
+          questionText: q.questionText,
+          questionStyle: q.questionStyle || 2,
+          imageURL: q.imageURL || '',
+          order: q.order
+        }))
     }))
   };
 
@@ -403,9 +415,13 @@ export async function exportSingleSeasonQuestions(guildId, configId) {
   if (!config) return { error: 'Season configuration not found.' };
   if (!config.questions?.length) return { error: 'No questions to export.' };
 
+  // Only export regular text questions (skip completion, DNC, and other special types)
+  const regularQuestions = config.questions.filter(q => !q.questionType || q.questionType === 'text');
+  if (regularQuestions.length === 0) return { error: 'No exportable questions found.' };
+
   const exportData = {
     exportedAt: new Date().toISOString(),
-    questions: config.questions.map(q => ({
+    questions: regularQuestions.map(q => ({
       questionTitle: q.questionTitle,
       questionText: q.questionText,
       questionStyle: q.questionStyle || 2,
