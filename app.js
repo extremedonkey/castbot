@@ -8963,29 +8963,33 @@ To fix this:
         if (!config) return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Season not found', flags: InteractionResponseFlags.EPHEMERAL } });
         const completion = config.questions?.find(q => q.questionType === 'completion') || config.questions?.[config.questions.length - 1];
         const completionIdx = config.questions.findIndex(q => q.questionType === 'completion');
-        console.log(`🏁 Completion edit modal: idx=${completionIdx}, title="${completion?.questionTitle}"`);
-        console.log(`🏁 DEBUG: res.headersSent=${res.headersSent}, sending modal type 9`);
-        const modalResult = res.send({
+        const actualIdx = completionIdx >= 0 ? completionIdx : config.questions.length - 1;
+        console.log(`🏁 Completion edit modal: idx=${actualIdx}, title="${completion?.questionTitle}"`);
+        // Use EXACT same modal structure as working question_select edit (line 9060)
+        return res.send({
           type: InteractionResponseType.MODAL,
           data: {
-            custom_id: `season_edit_question_modal_${completionConfigId}_${completionIdx >= 0 ? completionIdx : config.questions.length - 1}`,
-            title: 'Edit Completion Message',
+            custom_id: `season_edit_question_modal_${completionConfigId}_${actualIdx}`,
+            title: 'Edit Question',
             components: [
-              { type: 18, label: 'Completion Message Title', description: 'Displayed when the applicant submits their application', component: {
+              { type: 18, label: 'Question Title', description: 'Short label shown above the answer field', component: {
                 type: 4, custom_id: 'questionTitle', style: 1,
                 required: true, max_length: 100, value: completion?.questionTitle || '',
-                placeholder: 'Thank you for applying to the season!'
+                placeholder: 'e.g., Why do you want to play?'
               }},
-              { type: 18, label: 'Completion Text', description: 'Message displayed to the user once their application is submitted', component: {
+              { type: 18, label: 'Question Text', description: 'The full question applicants will answer', component: {
                 type: 4, custom_id: 'questionText', style: 2,
                 required: true, max_length: 1000, value: completion?.questionText || '',
-                placeholder: 'Include information such as next steps on casting process, casting decision dates and marooning / season start dates.'
+                placeholder: 'Enter the full question...'
+              }},
+              { type: 18, label: 'Image URL (Optional)', description: 'Link to an image to display with this question', component: {
+                type: 4, custom_id: 'imageURL', style: 1,
+                required: false, max_length: 500, value: '',
+                placeholder: 'https://...'
               }}
             ]
           }
         });
-        console.log(`🏁 DEBUG: Modal sent, res.headersSent=${res.headersSent}`);
-        return modalResult;
       }
 
       // Non-edit actions (preview, summary) go through factory with updateMessage
