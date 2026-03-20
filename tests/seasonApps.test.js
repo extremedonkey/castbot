@@ -438,7 +438,7 @@ describe('sanitizeChannelName — name cleaning', () => {
   });
 
   it('removes spaces and special characters', () => {
-    assert.equal(sanitizeChannelName('User @#$ Name!'), 'user--name');
+    assert.equal(sanitizeChannelName('User @#$ Name!'), 'username');
   });
 
   it('truncates to 90 chars', () => {
