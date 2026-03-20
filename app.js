@@ -8995,8 +8995,8 @@ To fix this:
           if (selectedValue === 'edit') {
             const completionIdx = config.questions.findIndex(q => q.questionType === 'completion');
             console.log(`🏁 Completion edit: idx=${completionIdx}, title="${completion.questionTitle}"`);
-            // Return modal object — factory's sendResponse handles type:9 directly
-            return {
+            // Send modal directly — can't return modal from a deferred handler (updateMessage: true sends deferred first)
+            return res.send({
               type: InteractionResponseType.MODAL,
               data: {
                 custom_id: `season_edit_question_modal_${qConfigId}_${completionIdx}`,
@@ -9014,7 +9014,7 @@ To fix this:
                   }}
                 ]
               }
-            };
+            });
           }
 
           // summary — re-render
