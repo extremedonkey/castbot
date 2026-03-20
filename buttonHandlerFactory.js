@@ -394,6 +394,13 @@ export const BUTTON_REGISTRY = {
     requiresModal: true,
     category: 'seasons'
   },
+  'apply_*': {
+    label: 'Apply',
+    description: 'Season application — creates private channel for applicant to answer questions',
+    emoji: '📝',
+    style: 'Primary',
+    category: 'seasons'
+  },
   'reeces_radio_mockup': {
     label: 'Radio PoC (Mockup)',
     description: 'UI mockup: Radio Group (Type 21) in modal with 10 options. Not a real feature.',

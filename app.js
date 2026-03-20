@@ -35865,70 +35865,38 @@ Your server is now ready for Tycoons gameplay!`;
       });
 
     } else if (custom_id.startsWith('apply_')) {
-      try {
-        console.log('Processing apply button click:', custom_id);
-        
-        const configId = custom_id.replace('apply_', '');
-        const guildId = req.body.guild_id;
-        const userId = req.body.member.user.id;
-        const userDisplayName = req.body.member.nick || req.body.member.user.username;
-        
-        const guild = await client.guilds.fetch(guildId);
-        const member = await guild.members.fetch(userId);
-        
-        // Get the application configuration
-        console.log('Looking for application config:', configId, 'in guild:', guildId);
-        const config = await getApplicationConfig(guildId, configId);
-        console.log('Found config:', config ? 'Yes' : 'No');
-        
-        if (!config) {
-          console.error(`Application config not found: ${configId} in guild: ${guildId}`);
-          
-          // Debug: List all available configs
-          const playerData = await loadPlayerData();
-          const allConfigs = playerData[guildId]?.applicationConfigs || {};
-          console.log('Available configs:', Object.keys(allConfigs));
-          
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: 'Application button configuration not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Create the application channel
-        const result = await createApplicationChannel(guild, member, config, configId);
-        
-        if (!result.success) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: result.error,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `✅ Your application channel has been created: ${result.channel}`,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
+      // Season application — creates private channel for applicant
+      return ButtonHandlerFactory.create({
+        id: 'apply',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          const configId = context.customId.replace('apply_', '');
+          const { guildId, userId } = context;
 
-      } catch (error) {
-        console.error('Error in apply button handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error processing application request.',
-            flags: InteractionResponseFlags.EPHEMERAL
+          console.log(`Processing apply button click: ${context.customId}`);
+
+          const guild = await client.guilds.fetch(guildId);
+          const member = await guild.members.fetch(userId);
+
+          console.log(`Looking for application config: ${configId} in guild: ${guildId}`);
+          const config = await getApplicationConfig(guildId, configId);
+          console.log(`Found config: ${config ? 'Yes' : 'No'}`);
+
+          if (!config) {
+            console.error(`Application config not found: ${configId} in guild: ${guildId}`);
+            return { content: 'Application button configuration not found.' };
           }
-        });
-      }
+
+          const result = await createApplicationChannel(guild, member, config, configId);
+
+          if (!result.success) {
+            return { content: result.error };
+          }
+
+          return { content: `✅ Your application channel has been created: ${result.channel}` };
+        }
+      })(req, res, client);
     } else if (custom_id === 'select_target_channel' || custom_id === 'select_application_category' || custom_id === 'select_button_style' || custom_id === 'select_production_role' ||
                custom_id.startsWith('select_target_channel_') || custom_id.startsWith('select_application_category_') || custom_id.startsWith('select_button_style_') || custom_id.startsWith('select_production_role_')) {
       return ButtonHandlerFactory.create({
