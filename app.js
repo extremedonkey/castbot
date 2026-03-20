@@ -8959,8 +8959,21 @@ To fix this:
           const config = playerData[context.guildId]?.applicationConfigs?.[qConfigId];
           if (!config) return { content: '❌ Season not found' };
 
-          const completion = config.questions.find(q => q.questionType === 'completion');
-          if (!completion) return { content: '❌ Completion message not found' };
+          // Auto-create completion for old seasons that don't have one (persists on first interaction)
+          let completion = config.questions.find(q => q.questionType === 'completion');
+          if (!completion) {
+            const crypto = await import('crypto');
+            completion = {
+              id: `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`,
+              questionType: 'completion',
+              questionTitle: 'Thank you for applying to the season!',
+              questionText: 'Include information such as next steps on casting process, casting decision dates and marooning / season start dates.',
+              createdAt: Date.now()
+            };
+            config.questions.push(completion);
+            await savePlayerData(playerData);
+            console.log(`🏁 Auto-created and saved completion question for ${qConfigId}`);
+          }
 
           if (selectedValue === 'preview') {
             return buildQuestionPreview(completion, config.questions.length - 1, config.questions.length);
