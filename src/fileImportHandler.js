@@ -297,7 +297,7 @@ async function processSingleSeasonQuestionsImport(guildId, jsonContent, configId
 
   for (const q of questions) {
     const questionId = `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`;
-    config.questions.push({
+    const newQ = {
       id: questionId,
       order: config.questions.length + 1,
       questionTitle: q.questionTitle,
@@ -305,7 +305,14 @@ async function processSingleSeasonQuestionsImport(guildId, jsonContent, configId
       questionStyle: q.questionStyle || 2,
       imageURL: q.imageURL || '',
       createdAt: Date.now()
-    });
+    };
+    // Insert before completion question if one exists
+    const completionIdx = config.questions.findIndex(qn => qn.questionType === 'completion');
+    if (completionIdx >= 0) {
+      config.questions.splice(completionIdx, 0, newQ);
+    } else {
+      config.questions.push(newQ);
+    }
   }
 
   config.lastUpdated = Date.now();
