@@ -382,8 +382,10 @@ async function calculateRegenerationWithCharges(pointData, config, guildId, enti
                 ? effectiveMax
                 : config.regeneration.amount;
 
-            // Use lastRegeneration for continuous ticking, fall back to lastUse for migration
-            const regenTimestamp = newData.lastRegeneration || newData.lastUse;
+            // For full_reset: anchor regen to lastUse (when player last spent stamina)
+            // NOT lastRegeneration — that goes stale when player sits at MAX
+            // (lastRegeneration is only needed for continuous ticking in Phase 2 charges)
+            const regenTimestamp = newData.lastUse || newData.lastRegeneration;
             const timeSinceRegen = now - regenTimestamp;
             const periods = Math.floor(timeSinceRegen / config.regeneration.interval);
 
