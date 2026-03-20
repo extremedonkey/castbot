@@ -226,9 +226,10 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
         });
       }
 
-      // Divider then delete
+      // Divider then clone/delete
       options.push(
         { label: '───────────────────', value: 'divider', description: ' ' },
+        { label: 'Duplicate', value: 'duplicate', description: 'Clone this question', emoji: { name: '📋' } },
         { label: 'Delete Question', value: 'delete', description: 'Remove permanently', emoji: { name: '🗑️' } }
       );
 
@@ -8701,6 +8702,24 @@ To fix this:
             await savePlayerData(playerData);
             console.log(`🗑️ Deleted question ${questionIndex} from ${qConfigId}: "${deleted[0]?.questionTitle}"`);
             const currentPage = Math.min(Math.floor(questionIndex / 10), Math.max(0, Math.ceil(config.questions.length / 10) - 1));
+            return await buildQuestionManagementUI(config, qConfigId, currentPage);
+          }
+
+          if (selectedValue === 'duplicate') {
+            const original = config.questions[questionIndex];
+            if (!original) return { content: '❌ Question not found' };
+            const crypto = await import('crypto');
+            const cloned = {
+              ...JSON.parse(JSON.stringify(original)),
+              id: `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`,
+              order: config.questions.length,
+              createdAt: Date.now()
+            };
+            config.questions.splice(questionIndex + 1, 0, cloned);
+            config.questions.forEach((q, idx) => { q.order = idx + 1; });
+            await savePlayerData(playerData);
+            console.log(`📋 Duplicated question ${questionIndex} in ${qConfigId}: "${original.questionTitle}"`);
+            const currentPage = Math.floor((questionIndex + 1) / 10);
             return await buildQuestionManagementUI(config, qConfigId, currentPage);
           }
 
