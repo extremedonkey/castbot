@@ -480,7 +480,7 @@ async function showDncQuestion(res, config, channelId, questionIndex) {
     {
       type: 1,
       components: [
-        { type: 2, custom_id: `app_dnc_edit_${channelId}_${questionIndex}`, label: 'Edit DNC List', style: 1, emoji: { name: '🚷' } }
+        { type: 2, custom_id: `app_dnc_edit_${channelId}_${questionIndex}`, label: 'Edit DNC List', style: 2, emoji: { name: '✏️' } }
       ]
     }
   ];
