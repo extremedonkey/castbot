@@ -8964,7 +8964,8 @@ To fix this:
         const completion = config.questions?.find(q => q.questionType === 'completion') || config.questions?.[config.questions.length - 1];
         const completionIdx = config.questions.findIndex(q => q.questionType === 'completion');
         console.log(`🏁 Completion edit modal: idx=${completionIdx}, title="${completion?.questionTitle}"`);
-        return res.send({
+        console.log(`🏁 DEBUG: res.headersSent=${res.headersSent}, sending modal type 9`);
+        const modalResult = res.send({
           type: InteractionResponseType.MODAL,
           data: {
             custom_id: `season_edit_question_modal_${completionConfigId}_${completionIdx >= 0 ? completionIdx : config.questions.length - 1}`,
@@ -8983,6 +8984,8 @@ To fix this:
             ]
           }
         });
+        console.log(`🏁 DEBUG: Modal sent, res.headersSent=${res.headersSent}`);
+        return modalResult;
       }
 
       // Non-edit actions (preview, summary) go through factory with updateMessage
