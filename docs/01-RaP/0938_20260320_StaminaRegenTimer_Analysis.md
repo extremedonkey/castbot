@@ -1,147 +1,85 @@
 # Stamina Regen Timer Bug — Display vs Actual Regen Mismatch
 
 > **RaP #0938** | 2026-03-20
-> **Status**: Analysis complete, fix identified
+> **Status**: Fix deployed to prod (2026-03-20). Unit tests and guide updates pending.
 > **Severity**: Medium — stamina regens earlier than displayed timer shows
-> **Affected servers**: Any server using consumable stamina items with ≥12h regen
+> **Affected servers**: Any server using `full_reset` regen mode (all current servers)
 
 ---
 
-## 1. The Bug
+## 1. The Bug (ELI5)
 
-**Two different timestamps control stamina regen, and they disagree.**
+The regen timer doesn't restart properly when a player moves after being at MAX for a while.
 
-| What | Timestamp used | Updated when |
-|---|---|---|
-| **Display timer** (`getTimeUntilRegeneration`) | `lastUse` | Player spends stamina |
-| **Actual regen** (`calculateRegenerationWithCharges`) | `lastRegeneration` (falls back to `lastUse`) | Regen fires |
+- Player's last regen was at 3AM → they sleep → wake up at 9AM (at MAX for 6 hours)
+- Player moves at 9AM → display says "wait 12h" (until 9PM)
+- But the internal timer is anchored to 3AM → regen actually fires at 3PM (6 hours early)
+- The longer a player sits at MAX before moving, the worse the cheat
 
-`lastRegeneration` only advances when regen actually fires. If the player is at MAX for hours/days, it goes stale. When the player finally spends stamina, `lastUse` resets to NOW but `lastRegeneration` is still hours/days old. The display shows "12h" (from `lastUse`), but the actual regen fires based on stale `lastRegeneration` — potentially instantly.
+**Root cause:** Two different timestamps control regen, and they disagree:
+
+| What | Timestamp | Updated when | Used by |
+|---|---|---|---|
+| `lastUse` | When player last spent stamina | `usePoints()` | Display timer ✅ |
+| `lastRegeneration` | When regen last fired | `calculateRegen()` | **Actual regen** ⚠️ |
+
+`lastRegeneration` goes stale when player sits at MAX. `lastUse` stays current.
 
 ---
 
-## 2. Test Cases (Expected vs Actual)
+## 2. Test Cases
 
-### Test Case 0: Competitive Idol Hunt — "3 moves in 12h01m" exploit
+### Test Case 0: The Overnight Exploit (Most Common)
 
-**Setup:** 1/1 MAX. Key (+1 stamina). 12h regen. Player regened to MAX at 8:58AM (2 min ago). `lastRegeneration = 8:58AM`.
+**Setup:** 1/1 MAX, 12h regen, no items needed to reproduce.
 
-The player wants to move as fast as possible. They move, use key, move again immediately.
+- 2:48AM: Player makes last move of the night → 0/1
+- 3:00AM: Regen fires → 1/1 MAX. `lastRegen = 3AM`. Player sleeps.
+- 3AM–9AM: Sleeping at MAX for 6 hours. `lastRegen` stays at 3AM.
+- 9:00AM: **Move** → 0/1. Display: ♻️12h. `lastRegen` still 3AM (6h stale).
+- 9:01AM: Regen engine checks: `3AM + 12h = 3PM`. Still 6h away. No regen yet.
+- **3:00PM: REGEN FIRES** — 12h from `lastRegen` (3AM), not from move (9AM).
 
-```
-TIME          ACTION                    STAMINA   lastUse     lastRegen     DISPLAY     ACTUAL REGEN
-───────────────────────────────────────────────────────────────────────────────────────────────────────
-9:00:00 AM    Move #1                   1→0/1     9:00:00     8:58:00       ♻️12h 00m   anchor: 8:58AM
-9:00:05 AM    Use Key (+1)              0→1/1     9:00:00     8:58:00       ♻️MAX        —
-9:00:10 AM    Move #2                   1→0/1     9:00:10     8:58:00       ♻️11h 59m   anchor: 8:58AM
-                                                                                         8:58AM+12h = 8:58PM
+**Got:** Next move available at 3PM (6h wait).
+**Expected:** Next move available at 9PM (12h wait).
+**Cheated:** 6 hours of free time from sleeping at MAX.
 
-              Player expects to wait until ~9PM for move #3...
+### Test Case 1: Move → Consumable → Move (With Key)
 
-8:58:00 PM    Player checks stamina     0/1       9:00:10     8:58:00       ♻️2m 00s     —
-              Regen calc: timeSince = 12h 00m 00s
-              periods = floor(12h / 12h) = 1
-              current < max? YES
-              → REGEN FIRES! 0→1/1
-              lastRegen = 8:58AM + 12h = 8:58PM
+**Setup:** 1/1 MAX, key (+1 stamina), 12h regen. `lastRegen = 9AM` (just regened).
 
-8:58:00 PM    Move #3!                  1→0/1     8:58:00PM   8:58:00PM     ♻️12h 00m   —
+- 9:05AM: Move → 0/1. `lastUse = 9:05`. `lastRegen = 9:00` (5m stale).
+- 10:05AM: Use key → 1/1. No timer changes. ✅
+- 10:10AM: Move → 0/1. `lastUse = 10:10`. `lastRegen` still 9:00.
+- Display: ♻️10h 55m (from `lastUse` 10:10 → 10:05PM). ✅
+- **9:00PM: REGEN FIRES** — 12h from `lastRegen` (9AM), not from `lastUse` (10:10AM).
 
-TOTAL: 3 moves in 11h 58m 00s (expected: 12h 00m 10s minimum)
-CHEATED: ~2 minutes early
-```
+**Got:** Regen at 9:00PM. **Expected:** 9:05PM (or 10:10PM depending on design).
+**Difference:** 5 minutes early in this case. Small, but demonstrates the drift.
 
-**Worse case — player was MAX for 6 hours before playing:**
+### Test Case 2: Extended Idle → Instant Regen (Nuclear Case)
 
-```
-TIME          ACTION                    STAMINA   lastUse     lastRegen     DISPLAY     ACTUAL REGEN
-───────────────────────────────────────────────────────────────────────────────────────────────────────
-3:00 AM       Regen fired               0→1/1     prev day    3:00 AM       ♻️MAX        —
-              (player sleeping)
+**Setup:** Player regened to 1/1 at Tuesday 9AM. Doesn't play until Thursday.
 
-9:00:00 AM    Move #1                   1→0/1     9:00:00     3:00 AM       ♻️12h 00m   anchor: 3AM!
-9:00:05 AM    Use Key (+1)              0→1/1     9:00:00     3:00 AM       ♻️MAX        —
-9:00:10 AM    Move #2                   1→0/1     9:00:10     3:00 AM       ♻️11h 59m   anchor: 3AM!
+- Tue 9AM: Regen fires → 1/1. `lastRegen = Tue 9AM`.
+- Wed: Not playing. `lastRegen` stays Tue 9AM (24h+ stale).
+- Thu 11AM: Move → 0/1. `lastUse = Thu 11AM`. Display: ♻️12h.
+- Thu 11:01AM: Regen engine checks: `Tue 9AM + 12h = Tue 9PM`. Already 38h ago! `periods = floor(50h/12h) = 4`. **REGEN FIRES INSTANTLY.**
 
-              Regen calc at 9:01AM:
-              timeSince = 9:01AM - 3:00AM = 6h 01m
-              periods = 0 (need 12h)
-              No regen yet. OK so far...
+**Got:** Stamina back in 1 minute.
+**Expected:** 12 hour wait.
 
-3:00:00 PM    Regen calc:
-              timeSince = 3PM - 3AM = 12h
-              periods = 1 → REGEN FIRES!
-              Player gets move #3 at 3PM instead of 9PM
+### Test Case 3: Consumable Right Before Natural Regen
 
-TOTAL: 3 moves in 6h 00m (expected: 12h 00m 10s)
-CHEATED: 6 HOURS early
-```
+**Setup:** 1/1 MAX at 9AM, key, 12h regen.
 
-**The cheat scales with idle time at MAX.** A player who was MAX for 11h 59m before their first move gets their third move in ~1 minute.
+- 11AM: Move → 0/1. `lastUse = 11AM`. `lastRegen = 9AM`.
+- 9PM: Use key → 1/1. No timer changes.
+- 10PM: Move → 0/1. `lastUse = 10PM`. `lastRegen` still 9AM.
+- 10:01PM: Regen calc: `9AM + 12h = 9PM`. Already passed! **REGEN FIRES INSTANTLY.**
 
-### Test Case 1: Move → Wait → Consumable → Move (Your Scenario 1)
-
-**Starting state:** 1/1 MAX at 9:00AM. Key in inventory (+1 stamina). 12h regen.
-**Assume:** `lastRegeneration` was set at previous regen, let's say 9:00AM (just regened).
-
-```
-TIME        ACTION              CURRENT   lastUse    lastRegen    DISPLAY TIMER    ACTUAL REGEN AT
-─────────────────────────────────────────────────────────────────────────────────────────────────────
-9:00 AM     At MAX              1/1       old        9:00 AM      ♻️MAX            —
-9:05 AM     Move                0/1       9:05 AM    9:00 AM      ♻️12h 00m        ← uses lastUse ✅
-                                                                                   ← actual uses lastRegen: 9AM+12h = 9PM ⚠️
-10:05 AM    Use key (+1)        1/1       9:05 AM    9:00 AM      ♻️MAX            —
-10:10 AM    Move                0/1       10:10 AM   9:00 AM      ♻️10h 55m        ← uses lastUse ✅
-                                                                                   ← actual: 9AM+12h = 9PM still ⚠️
-9:00 PM     Regen check         → 1/1     10:10 AM   9:00 PM      ♻️MAX            Regen fires at 9PM (lastRegen)
-```
-
-**Expected by user:** Regen at 9:05PM (12h from first move at 9:05AM). Timer shows "10h 55m" at 10:10AM.
-**Actual:** Regen at 9:00PM (12h from `lastRegeneration` at 9:00AM). Display shows "10h 55m" from `lastUse`.
-**Difference:** 5 minutes early. Small in this case, but grows with time at MAX.
-
-### Test Case 2: Long gap at MAX → Move (The Real Problem)
-
-**Starting state:** Player regened to 1/1 at Tuesday 9:00AM. Doesn't play until Thursday.
-
-```
-TIME              ACTION            CURRENT   lastUse      lastRegen      DISPLAY    ACTUAL
-──────────────────────────────────────────────────────────────────────────────────────────────
-Tue 9:00 AM       Regen fires       1/1       Mon 9PM      Tue 9:00 AM    ♻️MAX      —
-Wed (not playing) —                 1/1       Mon 9PM      Tue 9:00 AM    ♻️MAX      —
-Thu 11:00 AM      Move              0/1       Thu 11AM     Tue 9:00 AM    ♻️12h 00m  ⚠️ WRONG!
-Thu 11:01 AM      Check stamina     →         —            —              ♻️11h 59m  —
-                  Regen calc:       regenTimestamp = Tue 9AM
-                                    timeSince = 50h 01m
-                                    periods = floor(50h / 12h) = 4
-                                    current < max? 0 < 1 = YES
-                                    REGEN FIRES IMMEDIATELY → 1/1
-                                    lastRegen = Tue9AM + 12h = Tue9PM
-
-Thu 11:01 AM      Player is 1/1!    1/1       Thu 11AM     Tue 9:00 PM    ♻️MAX      —
-```
-
-**Expected:** Player moves at Thu 11AM, waits 12h until Thu 11PM.
-**Actual:** Player moves at Thu 11AM, gets stamina back in ~1 minute.
-
-### Test Case 3: Consumable use right before natural regen (Your Scenario 2)
-
-```
-TIME          ACTION              CURRENT   lastUse    lastRegen    DISPLAY       ACTUAL
-──────────────────────────────────────────────────────────────────────────────────────────
-9:00 AM       At MAX              1/1       old        9:00 AM      ♻️MAX         —
-11:00 AM      Move                0/1       11:00 AM   9:00 AM      ♻️12h 00m     9AM+12h=9PM ⚠️
-9:00 PM       Use key (+1)        1/1       11:00 AM   9:00 AM      ♻️MAX         —
-10:00 PM      Move                0/1       10:00 PM   9:00 AM      ♻️12h 00m     9AM+12h=9PM
-                                                                                   Already passed! ⚠️
-10:01 PM      Check stamina       → REGEN!  1/1        10:00 PM     ♻️MAX         —
-              Regen calc: timeSince = 13h 01m, periods = 1 → fires immediately
-```
-
-**Expected by user:** Move at 10PM, wait until 11PM (old timer from 11AM move). Show "1h 00m".
-**Actual:** Regen fires immediately because `lastRegeneration` is 13h stale.
-
-**User's expectation is subtly different from mine:** User wants the original 11PM timer to persist through the consumable use AND the subsequent move. The timer shouldn't reset when spending consumable-granted stamina — it should only reset when spending "natural" stamina... but that's impossible to distinguish at the `usePoints` level since stamina is fungible.
+**Got:** Stamina back in 1 minute after 10PM move.
+**Expected:** Wait until at least 11PM (old timer from 11AM move) or 10AM next day (new 12h from 10PM move).
 
 ---
 
@@ -155,7 +93,7 @@ flowchart TD
 
     C --> C1[current -= 1]
     C --> C2[lastUse = NOW]
-    C --> C3["lastRegeneration unchanged ⚠️"]
+    C --> C3["lastRegeneration unchanged ⚠️ BUG"]
 
     D --> D1[current += boost]
     D --> D2["lastUse unchanged ✅"]
@@ -177,122 +115,200 @@ flowchart TD
     style F5 fill:#51cf66
 ```
 
-## 4. Timer Flow Diagram
+## 4. Timer Flow — Overnight Exploit
 
 ```mermaid
 sequenceDiagram
     participant P as Player
     participant UP as usePoints()
-    participant AB as addBonusPoints()
     participant RC as calculateRegen()
     participant DT as getTimeUntilRegen()
 
-    Note over P: 1/1 MAX, lastRegen = T-24h (stale!)
+    Note over P: Tue 3AM: Regen fires → 1/1 MAX<br/>lastRegen = Tue 3AM
 
-    P->>UP: Move (spend 1)
-    UP->>UP: current = 0, lastUse = NOW
-    UP-->>UP: lastRegeneration NOT updated ⚠️
+    Note over P: Player sleeps Tue 3AM → Tue 9AM<br/>6 hours at MAX, lastRegen going stale...
+
+    P->>UP: Tue 9AM: Move (spend 1)
+    UP->>UP: current = 0, lastUse = 9AM
+    UP-->>UP: lastRegen still Tue 3AM ⚠️
 
     P->>DT: Check timer
-    DT-->>P: lastUse + 12h = "12h 00m" ✅
+    DT-->>P: lastUse(9AM) + 12h = "12h 00m" ✅
 
-    P->>AB: Use Key (+1)
-    AB->>AB: current = 1 (no timer changes)
+    Note over P: Player expects regen at 9PM...
 
-    P->>UP: Move (spend 1)
-    UP->>UP: current = 0, lastUse = NOW
+    P->>RC: Tue 3PM: Check stamina
+    RC->>RC: regenTimestamp = lastRegen = 3AM
+    RC->>RC: timeSince = 12h, periods = 1
+    RC->>RC: current(0) < max(1) → YES
+    RC-->>P: REGEN FIRES! 1/1 MAX ❌
 
-    P->>RC: Next stamina check
-    RC->>RC: regenTimestamp = lastRegen (T-24h!)
-    RC->>RC: timeSince = 24h+, periods = 2
-    RC->>RC: current < max → REGEN FIRES!
-    RC-->>P: 1/1 MAX (instantly!) ❌
+    Note over P: Got regen at 3PM (6h early!)<br/>Display said 9PM but engine used 3AM anchor
+```
 
-    Note over P: Expected 12h wait, got instant regen
+## 5. Timer Flow — Post-Fix
+
+```mermaid
+sequenceDiagram
+    participant P as Player
+    participant UP as usePoints()
+    participant RC as calculateRegen()
+    participant DT as getTimeUntilRegen()
+
+    Note over P: Tue 3AM: Regen fires → 1/1 MAX<br/>lastRegen = Tue 3AM
+
+    Note over P: Player sleeps 6 hours...
+
+    P->>UP: Tue 9AM: Move (spend 1)
+    UP->>UP: current = 0, lastUse = 9AM
+
+    P->>DT: Check timer
+    DT-->>P: lastUse(9AM) + 12h = "12h 00m" ✅
+
+    P->>RC: Tue 3PM: Check stamina
+    RC->>RC: regenTimestamp = lastUse = 9AM ← FIX!
+    RC->>RC: timeSince = 6h, periods = 0
+    RC-->>P: No regen yet. ✅
+
+    P->>RC: Tue 9PM: Check stamina
+    RC->>RC: regenTimestamp = lastUse = 9AM
+    RC->>RC: timeSince = 12h, periods = 1
+    RC-->>P: REGEN FIRES! 1/1 MAX ✅
+
+    Note over P: Regen at 9PM — matches display ✅
 ```
 
 ---
 
-## 5. Root Cause
-
-**`usePoints()` updates `lastUse` but NOT `lastRegeneration`.** The regen engine reads `lastRegeneration` preferentially. Over time at MAX, `lastRegeneration` goes stale. The longer the player sits at MAX, the bigger the discrepancy.
+## 6. Root Cause (Code)
 
 ```javascript
-// usePoints() - line 477-482
+// pointsManager.js — calculateRegenerationWithCharges()
+// BEFORE FIX:
+const regenTimestamp = newData.lastRegeneration || newData.lastUse;
+// ↑ Prefers lastRegeneration, which goes stale when player is at MAX
+
+// AFTER FIX:
+const regenTimestamp = newData.lastUse || newData.lastRegeneration;
+// ↑ Prefers lastUse, which is always current (set on every move)
+```
+
+```javascript
+// pointsManager.js — usePoints()
 points.current -= amount;
 if (!points.charges || chargesUsed > 0) {
-    points.lastUse = now;   // ← UPDATED ✅
+    points.lastUse = now;   // ← Always updated on move ✅
 }
-// lastRegeneration = ???   // ← NOT UPDATED ⚠️
-
-// calculateRegenerationWithCharges() - line 386
-const regenTimestamp = newData.lastRegeneration || newData.lastUse;
-// ↑ Prefers lastRegeneration, which could be days old
+// lastRegeneration is NOT updated here — only when regen fires
+// This is fine now because the regen engine prefers lastUse
 ```
-
----
-
-## 6. The Fix
-
-**One line in `usePoints()`:** When spending stamina, also reset `lastRegeneration` to NOW.
 
 ```javascript
-// In usePoints(), after line 481:
-points.lastUse = now;
-points.lastRegeneration = now;  // ← ADD THIS
+// pointsManager.js — getTimeUntilRegeneration()
+// Display timer (ALWAYS used lastUse — was already correct):
+nextRegenTime = pointData.lastUse + config.regeneration.interval;
 ```
 
-This ensures:
-1. Display timer and actual regen use the same anchor point
-2. Stale `lastRegeneration` can't cause instant regen
-3. Consumable `addBonusPoints` still doesn't touch either timer (correct)
-4. Works for both `full_reset` and continuous ticking modes
+---
 
-**Risk:** Low. `lastRegeneration` being more recent can only DELAY regen (never fire early). The worst case is a player who rapidly moves might see slightly different timer values, but they'll always be accurate.
+## 7. The Fix (Applied)
+
+**One line change in `calculateRegenerationWithCharges()`:** Swap `lastRegeneration || lastUse` to `lastUse || lastRegeneration`.
+
+For `full_reset` mode (all current servers), the regen timer now anchors to `lastUse` (when the player last moved), matching the display timer exactly. `lastRegeneration` is kept as fallback for edge cases where `lastUse` doesn't exist.
+
+**What changed:**
+- Regen engine and display timer now use the same anchor (`lastUse`)
+- Stale `lastRegeneration` from idle time at MAX no longer causes early regen
+- Consumable items still don't touch any timer (correct)
+
+**What didn't change:**
+- `addBonusPoints()` — still doesn't modify timers (consumables work the same)
+- `usePoints()` — still sets `lastUse = now` on every move
+- Phase 2 charges path — uses per-charge timestamps, not affected by this fix
+- Display timer — was already using `lastUse`, no change needed
+
+**Deployed:** 2026-03-20 to both dev and prod.
 
 ---
 
-## 7. Consumable Items — How They SHOULD Work
+## 8. Do We Need Two Timer Fields?
 
-Per user requirements:
+**Short answer: No, not for `full_reset` mode.**
 
-> "Consumable stamina items shouldn't touch cooldowns"
+- `lastUse` = when player last spent stamina. Display uses this. Now regen uses this too.
+- `lastRegeneration` = when regen last fired. Was needed for continuous ticking mode (`regenAmount = 5 per cycle`) where regen fires multiple times. No server currently uses this mode.
 
-| Action | Current | Timer | Correct? |
+For `full_reset`, there's only one regen event per spend cycle. `lastUse` is all you need. `lastRegeneration` is vestigial for this mode but kept for backwards compatibility and the continuous ticking path.
+
+---
+
+## 9. Consumable Items — How They Work
+
+Per user requirements: *"Consumable stamina items shouldn't touch cooldowns."*
+
+| Action | Stamina | Timer | Code path |
 |---|---|---|---|
-| Move (spend natural stamina) | -1 | Resets to 12h from NOW | ✅ |
-| Use consumable (+1) | +1 | NO CHANGE to timer | ✅ |
-| Move (spend consumable stamina) | -1 | Timer from original move still counting | ✅ per user |
+| Move (spend stamina) | -1 | `lastUse = NOW` | `usePoints()` |
+| Use consumable (+1) | +1 | **NO CHANGE** | `addBonusPoints()` |
 
-**The subtlety:** Stamina is fungible — there's no way to distinguish "natural" stamina from "consumable" stamina once it's in the pool. The user's expectation that the timer persists through a consumable-use-then-move cycle is satisfied by NOT resetting `lastRegeneration` on consumable use (which `addBonusPoints` already does correctly).
+**Stamina is fungible.** Once a consumable adds +1, there's no distinction between "natural" and "consumable" stamina. When the player moves next, the timer resets from that move regardless of where the stamina came from.
 
-The fix (resetting `lastRegeneration` on spend) means the timer restarts from every move. This differs slightly from the user's Scenario 2 expectation where the old 11PM timer persists through the second move. But it's the SAFER behavior — it prevents instant regen, which is the actual bug being reported.
-
----
-
-## 8. Permanent / Horse Items — NOT ADDRESSED (Future Task)
-
-Permanent items use the Phase 2 charges system (`points.charges[]`) where each charge has its own regen timer. This is a different code path (`calculateRegenerationWithCharges` lines 313-366) and may have its own edge cases.
-
-**TODO:** Audit the charges system for similar timestamp drift issues.
+**Design decision (acknowledged):** If a player uses a consumable and moves, the timer resets from the move. The user originally expected the old timer to persist through consumable-granted moves, but since stamina is fungible, this is impossible without tracking stamina sources — not worth the complexity.
 
 ---
 
-## 9. Implementation Plan
+## 10. Regen Cap Removed
 
-- [ ] **Fix:** Add `points.lastRegeneration = now` to `usePoints()`
-- [ ] **Unit tests:** Create `tests/staminaRegen.test.js` with the 3 test cases above (replicate pure regen logic inline)
-- [ ] **Update Player Guide** (`staminaGuide.js`): Clarify that using a consumable does NOT reset the regen timer, but moving always does
-- [ ] **Update Prod Guide** (`staminaGuide.js` PROD_PAGES): Add host-facing explanation of the timer system
-- [ ] **Future task:** Audit permanent item (charges) system for similar timestamp issues
-- [ ] **Future task:** Consider whether consumable-granted stamina should behave differently from natural stamina when spent (currently fungible)
+**Previous:** Modal validation capped regen time at 1440 minutes (24h).
+**Now:** Cap raised to 99999 minutes (~69 days). No practical reason to limit.
+**Label updated:** `Minutes between regen (e.g. 60=1hr, 720=12hr, 1440=24hr)`
+
+Changing regen time mid-game takes effect immediately — the interval is read from server config on every stamina check, not stored per player. Players mid-cooldown will see their remaining time change.
 
 ---
 
-## 10. Verification
+## 11. Permanent / Horse Items — NOT ADDRESSED
 
-After applying the fix, verify with this specific prod scenario:
+Permanent items use the Phase 2 charges system (`points.charges[]`) where each charge has its own timestamp. This is a separate code path (`calculateRegenerationWithCharges` lines 313-366) that doesn't use `lastRegeneration` — each charge stores its own use-time.
 
-1. SSH to prod, check a player's `lastRegeneration` vs `lastUse` timestamps
-2. If `lastRegeneration` is significantly older than `lastUse`, the bug was active
-3. After fix: both should be approximately equal after any move
+**Task #10:** Audit the charges system for similar drift issues. The per-charge timestamps SHOULD be immune to the stale-timer bug since they're set individually on each spend. But edge cases around charge array resizing (adding/removing permanent items) may exist.
+
+---
+
+## 12. Implementation Status
+
+| Item | Status |
+|---|---|
+| Fix: swap `lastRegeneration || lastUse` to `lastUse || lastRegeneration` | ✅ Deployed to prod |
+| Fix: remove 1440min regen cap | ✅ Deployed to dev |
+| Fix: add hour examples to regen label | ✅ Deployed to dev |
+| Unit tests for regen scenarios | ❌ TODO — `tests/staminaRegen.test.js` |
+| Update Player Guide (staminaGuide.js) | ❌ TODO — clarify timer behavior with consumables |
+| Update Prod Guide (PROD_PAGES) | ❌ TODO — host-facing timer explanation |
+| Audit charges system (Task #10) | ❌ TODO — separate investigation |
+
+---
+
+## 13. Verification
+
+After deploying the fix, verify on prod:
+
+```bash
+ssh -i ~/.ssh/castbot-key.pem bitnami@13.238.148.170 "cd /opt/bitnami/projects/castbot && node -e \"
+const fs = require('fs');
+const data = JSON.parse(fs.readFileSync('safariContent.json', 'utf8'));
+const ep = data['1452871600494870538']?.entityPoints || {};
+Object.entries(ep).forEach(([k, v]) => {
+  if (v.stamina) {
+    const lu = new Date(v.stamina.lastUse).toISOString();
+    const lr = new Date(v.stamina.lastRegeneration).toISOString();
+    const drift = Math.abs(v.stamina.lastUse - v.stamina.lastRegeneration) / 60000;
+    console.log(k + ': lastUse=' + lu + ' lastRegen=' + lr + ' drift=' + drift.toFixed(0) + 'min');
+  }
+});
+\""
+```
+
+**Before fix:** Players with large drift values (hours/days) were getting instant regen.
+**After fix:** Drift doesn't matter — regen engine uses `lastUse`, not `lastRegeneration`.
