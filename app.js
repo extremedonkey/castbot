@@ -162,14 +162,20 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   // Auto-inject completion question for old seasons that don't have one
   if (!config.questions.find(q => q.questionType === 'completion')) {
-    const crypto = await import('crypto');
-    config.questions.push({
-      id: `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`,
-      questionType: 'completion',
-      questionTitle: 'Thank you for applying to the season!',
-      questionText: 'Include information such as next steps on casting process, casting decision dates and marooning / season start dates.',
-      createdAt: Date.now()
-    });
+    if (config.questions.length > 0) {
+      // Convert the last question to completion (old seasons treated the last question as completion)
+      config.questions[config.questions.length - 1].questionType = 'completion';
+    } else {
+      // Empty season — add a default completion
+      const crypto = await import('crypto');
+      config.questions.push({
+        id: `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`,
+        questionType: 'completion',
+        questionTitle: 'Thank you for applying to the season!',
+        questionText: 'Include information such as next steps on casting process, casting decision dates and marooning / season start dates.',
+        createdAt: Date.now()
+      });
+    }
   }
 
   // Separate regular questions from completion question
@@ -8950,30 +8956,36 @@ To fix this:
       // Completion message select handler — preview, edit, or summary (single factory call)
       return ButtonHandlerFactory.create({
         id: 'question_completion_select',
-        updateMessage: req.body.data.values?.[0] === 'summary',
+        updateMessage: true,
         ephemeral: req.body.data.values?.[0] === 'preview',
         handler: async (context) => {
           const selectedValue = req.body.data.values?.[0];
           const qConfigId = context.customId.replace('question_completion_select_', '');
-          console.log(`🏁 Completion select: value=${selectedValue}, configId=${qConfigId}`);
+          console.log(`🏁 Completion select: value=${selectedValue}, configId=${qConfigId}, guildId=${context.guildId}`);
           const playerData = await loadPlayerData();
           const config = playerData[context.guildId]?.applicationConfigs?.[qConfigId];
           if (!config) return { content: '❌ Season not found' };
 
-          // Auto-create completion for old seasons that don't have one (persists on first interaction)
+          // Auto-convert last question to completion for old seasons (persists on first interaction)
           let completion = config.questions.find(q => q.questionType === 'completion');
           if (!completion) {
-            const crypto = await import('crypto');
-            completion = {
-              id: `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`,
-              questionType: 'completion',
-              questionTitle: 'Thank you for applying to the season!',
-              questionText: 'Include information such as next steps on casting process, casting decision dates and marooning / season start dates.',
-              createdAt: Date.now()
-            };
-            config.questions.push(completion);
+            if (config.questions.length > 0) {
+              // Convert last question (old seasons used last question as completion)
+              completion = config.questions[config.questions.length - 1];
+              completion.questionType = 'completion';
+            } else {
+              const crypto = await import('crypto');
+              completion = {
+                id: `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`,
+                questionType: 'completion',
+                questionTitle: 'Thank you for applying to the season!',
+                questionText: 'Include information such as next steps on casting process, casting decision dates and marooning / season start dates.',
+                createdAt: Date.now()
+              };
+              config.questions.push(completion);
+            }
             await savePlayerData(playerData);
-            console.log(`🏁 Auto-created and saved completion question for ${qConfigId}`);
+            console.log(`🏁 Auto-converted last question to completion for ${qConfigId}`);
           }
 
           if (selectedValue === 'preview') {
