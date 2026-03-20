@@ -8953,14 +8953,46 @@ To fix this:
       })(req, res, client);
 
     } else if (custom_id.startsWith('question_completion_select_')) {
-      // Completion message select handler — preview, edit, or summary (single factory call)
+      // Completion edit needs modal — handle BEFORE factory (which defers/updates)
+      const completionSelectedValue = req.body.data.values?.[0];
+      const completionConfigId = custom_id.replace('question_completion_select_', '');
+
+      if (completionSelectedValue === 'edit') {
+        const playerData = await loadPlayerData();
+        const config = playerData[req.body.guild_id]?.applicationConfigs?.[completionConfigId];
+        if (!config) return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Season not found', flags: InteractionResponseFlags.EPHEMERAL } });
+        const completion = config.questions?.find(q => q.questionType === 'completion') || config.questions?.[config.questions.length - 1];
+        const completionIdx = config.questions.findIndex(q => q.questionType === 'completion');
+        console.log(`🏁 Completion edit modal: idx=${completionIdx}, title="${completion?.questionTitle}"`);
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: {
+            custom_id: `season_edit_question_modal_${completionConfigId}_${completionIdx >= 0 ? completionIdx : config.questions.length - 1}`,
+            title: 'Edit Completion Message',
+            components: [
+              { type: 18, label: 'Completion Message Title', description: 'Displayed when the applicant submits their application', component: {
+                type: 4, custom_id: 'questionTitle', style: 1,
+                required: true, max_length: 100, value: completion?.questionTitle || '',
+                placeholder: 'Thank you for applying to the season!'
+              }},
+              { type: 18, label: 'Completion Text', description: 'Message displayed to the user once their application is submitted', component: {
+                type: 4, custom_id: 'questionText', style: 2,
+                required: true, max_length: 1000, value: completion?.questionText || '',
+                placeholder: 'Include information such as next steps on casting process, casting decision dates and marooning / season start dates.'
+              }}
+            ]
+          }
+        });
+      }
+
+      // Non-edit actions (preview, summary) go through factory with updateMessage
       return ButtonHandlerFactory.create({
         id: 'question_completion_select',
         updateMessage: true,
-        ephemeral: req.body.data.values?.[0] === 'preview',
+        ephemeral: completionSelectedValue === 'preview',
         handler: async (context) => {
-          const selectedValue = req.body.data.values?.[0];
-          const qConfigId = context.customId.replace('question_completion_select_', '');
+          const selectedValue = completionSelectedValue;
+          const qConfigId = completionConfigId;
           console.log(`🏁 Completion select: value=${selectedValue}, configId=${qConfigId}, guildId=${context.guildId}`);
           const playerData = await loadPlayerData();
           const config = playerData[context.guildId]?.applicationConfigs?.[qConfigId];
@@ -8992,29 +9024,9 @@ To fix this:
             return buildQuestionPreview(completion, config.questions.length - 1, config.questions.length);
           }
 
+          // 'edit' case handled before factory — should never reach here
           if (selectedValue === 'edit') {
-            const completionIdx = config.questions.findIndex(q => q.questionType === 'completion');
-            console.log(`🏁 Completion edit: idx=${completionIdx}, title="${completion.questionTitle}"`);
-            // Send modal directly — can't return modal from a deferred handler (updateMessage: true sends deferred first)
-            return res.send({
-              type: InteractionResponseType.MODAL,
-              data: {
-                custom_id: `season_edit_question_modal_${qConfigId}_${completionIdx}`,
-                title: 'Edit Completion Message',
-                components: [
-                  { type: 18, label: 'Completion Message Title', description: 'Displayed when the applicant submits their application', component: {
-                    type: 4, custom_id: 'questionTitle', style: 1,
-                    required: true, max_length: 100, value: completion.questionTitle || '',
-                    placeholder: 'Thank you for applying to the season!'
-                  }},
-                  { type: 18, label: 'Completion Text', description: 'Message displayed to the user once their application is submitted', component: {
-                    type: 4, custom_id: 'questionText', style: 2,
-                    required: true, max_length: 1000, value: completion.questionText || '',
-                    placeholder: 'Include information such as next steps on casting process, casting decision dates and marooning / season start dates.'
-                  }}
-                ]
-              }
-            });
+            return { content: '❌ Please try again.', ephemeral: true };
           }
 
           // summary — re-render
