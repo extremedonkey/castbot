@@ -457,7 +457,7 @@ function buildDncPreview(questionIndex, totalQuestions) {
       accent_color: 0xe74c3c,
       components: [
         { type: 10, content: `-# 🔎 Preview — this is what the player will see:` },
-        { type: 10, content: `## Q${questionIndex + 1}. Do Not Cast List\n\nIs there anyone in the community that is on your **"DO NOT PLAY"** list and, if so, why? We will do our best to accommodate everyone.\n\nClick the button below to enter your list.` },
+        { type: 10, content: `## Q${questionIndex + 1}. Do Not Cast List\n\nIs there anyone in the community that you will not play with, and if so, why?\n\nClick the button below to enter your list.` },
         { type: 14 },
         { type: 1, components: [{ type: 2, custom_id: 'preview_dnc_disabled', label: 'Edit DNC List', style: 2, emoji: { name: '🚷' }, disabled: true }] }
       ]
@@ -474,7 +474,7 @@ async function showDncQuestion(res, config, channelId, questionIndex) {
   const questionComponents = [
     {
       type: 10,
-      content: `## Q${questionIndex + 1}. Do Not Cast List\n\nIs there anyone in the community that is on your **"DO NOT PLAY"** list and, if so, why? We will do our best to accommodate everyone.`
+      content: `## Q${questionIndex + 1}. Do Not Cast List\n\nIs there anyone in the community that you will not play with, and if so, why?`
     },
     { type: 14 },
     {
@@ -24503,7 +24503,7 @@ Your server is now ready for Tycoons gameplay!`;
                     style: 2,
                     required: false,
                     max_length: 1000,
-                    placeholder: 'List player names and reasons, one per line...',
+                    placeholder: 'List player, username and reasons, one per line...',
                     ...(existingDnc ? { value: existingDnc } : {})
                   }
                 }
@@ -40827,7 +40827,7 @@ Your server is now ready for Tycoons gameplay!`;
         const isSecondToLast = config ? questionIndex === config.questions.length - 2 : false;
 
         const components = [
-          { type: 10, content: `## Q${questionIndex + 1}. Do Not Cast List\n\nIs there anyone in the community that is on your **"DO NOT PLAY"** list and, if so, why? We will do our best to accommodate everyone.` },
+          { type: 10, content: `## Q${questionIndex + 1}. Do Not Cast List\n\nIs there anyone in the community that you will not play with, and if so, why?` },
           { type: 14 },
           { type: 10, content: dncText ? `**Your DNC list:**\n${dncText}` : `-# *No players listed — you can add some with the button below.*` },
           { type: 14 },
