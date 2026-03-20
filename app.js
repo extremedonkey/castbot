@@ -174,7 +174,7 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   refreshedComponents.push({
     type: 10,
-    content: `## :pencil: Season Applications | Manage Season Casting`
+    content: `## :pencil: Season Applications\n## ${config.seasonName}`
   });
 
   // Export/Import buttons below H1
@@ -190,7 +190,7 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   refreshedComponents.push({
     type: 10,
-    content: `### :question: Manage Questions (${config.seasonName})${pageInfo}`
+    content: `### :question: Questions${pageInfo}`
   });
 
   // Special "Player Setup" component — always shown on page 1
