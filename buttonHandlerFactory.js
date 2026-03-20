@@ -401,6 +401,13 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'seasons'
   },
+  'question_completion_select_*': {
+    label: 'App Completed Message',
+    description: 'Edit the completion message shown when an application is submitted',
+    emoji: '🏁',
+    style: 'Secondary',
+    category: 'seasons'
+  },
   'apply_*': {
     label: 'Apply',
     description: 'Season application — creates private channel for applicant to answer questions',

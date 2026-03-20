@@ -160,21 +160,28 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
     };
   }
 
-  const questionsPerPage = 10;
-  const totalPages = Math.max(1, Math.ceil(config.questions.length / questionsPerPage));
+  // Separate regular questions from completion question
+  const regularQuestions = config.questions
+    .map((q, i) => ({ question: q, arrayIndex: i }))
+    .filter(({ question }) => question.questionType !== 'completion');
+  const completionQuestion = config.questions.find(q => q.questionType === 'completion');
+  const completionIndex = config.questions.findIndex(q => q.questionType === 'completion');
+
+  const questionsPerPage = 8;
+  const totalPages = Math.max(1, Math.ceil(regularQuestions.length / questionsPerPage));
   const startIndex = currentPage * questionsPerPage;
-  const endIndex = Math.min(startIndex + questionsPerPage, config.questions.length);
+  const endIndex = Math.min(startIndex + questionsPerPage, regularQuestions.length);
 
   const refreshedComponents = [];
 
   // Title with pagination info
-  const pageInfo = config.questions.length > questionsPerPage
+  const pageInfo = regularQuestions.length > questionsPerPage
     ? ` \`Page ${currentPage + 1}/${totalPages}\``
     : '';
 
   refreshedComponents.push({
     type: 10,
-    content: `## :pencil: Season Applications\n## ${config.seasonName}`
+    content: `## :pencil: Season Applications\n### ${config.seasonName}`
   });
 
   // Export/Import buttons below H1
@@ -213,21 +220,16 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
     });
   }
 
-  if (config.questions.length === 0) {
-    refreshedComponents.push({
-      type: 10,
-      content: '*No questions defined yet. Click **✨ New Question** below to add one.*'
-    });
-  } else {
-    // String select per question (2 components each: ActionRow + StringSelect)
-    for (let i = startIndex; i < endIndex; i++) {
-      const question = config.questions[i];
+  // Regular questions (excluding completion)
+  if (regularQuestions.length > 0) {
+    for (let pageIdx = startIndex; pageIdx < endIndex; pageIdx++) {
+      const { question, arrayIndex } = regularQuestions[pageIdx];
       const displayTitle = (question.questionTitle || 'Untitled').substring(0, 80);
       const answerType = question.questionStyle === 2 ? 'Paragraph' : 'Short answer';
       const typeEmoji = question.questionStyle === 2 ? '📄' : '📝';
-      const isFirst = i === 0;
-      const isLast = i === config.questions.length - 1;
-      const qLabel = isLast ? 'Last Question' : `Q${i + 1}`;
+      const isFirstRegular = pageIdx === 0;
+      const isLastRegular = pageIdx === regularQuestions.length - 1;
+      const qLabel = `Q${pageIdx + 1}`;
 
       const options = [
         {
@@ -245,14 +247,14 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
         }
       ];
 
-      if (!isFirst) {
+      if (!isFirstRegular) {
         options.push({
           label: 'Move Up',
           value: 'move_up',
           emoji: { name: '⬆️' }
         });
       }
-      if (!isLast) {
+      if (!isLastRegular) {
         options.push({
           label: 'Move Down',
           value: 'move_down',
@@ -271,14 +273,14 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
         type: 1,
         components: [{
           type: 3, // String Select
-          custom_id: `question_select_${configId}_${i}`,
+          custom_id: `question_select_${configId}_${arrayIndex}`,
           options
         }]
       });
     }
   }
 
-  // "Add new question" select (same pattern as outcome add selects)
+  // "Add new question" select — always 2nd from bottom
   refreshedComponents.push({
     type: 1,
     components: [{
@@ -291,6 +293,33 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
       ]
     }]
   });
+
+  // Completion message select — always last
+  if (completionQuestion) {
+    const completionTitle = (completionQuestion.questionTitle || 'App Completed Message').substring(0, 80);
+    refreshedComponents.push({
+      type: 1,
+      components: [{
+        type: 3,
+        custom_id: `question_completion_select_${configId}`,
+        options: [
+          {
+            label: completionTitle,
+            value: 'summary',
+            description: 'App Completed Message',
+            emoji: { name: '🏁' },
+            default: true
+          },
+          {
+            label: 'Edit App Completed Message',
+            value: 'edit',
+            description: 'Show key information such as next steps for casting and season start dates',
+            emoji: { name: '✏️' }
+          }
+        ]
+      }]
+    });
+  }
 
   refreshedComponents.push({ type: 14 });
 
@@ -305,7 +334,7 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
   });
 
   // Navigation row
-  if (config.questions.length > questionsPerPage) {
+  if (regularQuestions.length > questionsPerPage) {
     const prevDisabled = currentPage === 0;
     const nextDisabled = currentPage === totalPages - 1;
     refreshedComponents.push({
@@ -8777,6 +8806,49 @@ To fix this:
         }
       })(req, res, client);
 
+    } else if (custom_id.startsWith('question_completion_select_')) {
+      // Completion message select handler — edit the app completed message
+      return ButtonHandlerFactory.create({
+        id: 'question_completion_select',
+        updateMessage: true,
+        handler: async (context) => {
+          const selectedValue = req.body.data.values?.[0];
+          const qConfigId = context.customId.replace('question_completion_select_', '');
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[qConfigId];
+          if (!config) return { content: '❌ Season not found' };
+
+          if (selectedValue === 'edit') {
+            const completionIdx = config.questions.findIndex(q => q.questionType === 'completion');
+            if (completionIdx === -1) return { content: '❌ Completion message not found' };
+            const completion = config.questions[completionIdx];
+
+            return res.send({
+              type: InteractionResponseType.MODAL,
+              data: {
+                custom_id: `season_edit_question_modal_${qConfigId}_${completionIdx}`,
+                title: 'Edit Completion Message',
+                components: [
+                  { type: 18, label: 'Completion Message Title', description: 'Displayed when the applicant submits their application', component: {
+                    type: 4, custom_id: 'questionTitle', style: 1,
+                    required: true, max_length: 100, value: completion.questionTitle || '',
+                    placeholder: 'Thank you for applying to the season!'
+                  }},
+                  { type: 18, label: 'Completion Text', description: 'Message displayed to the user once their application is submitted', component: {
+                    type: 4, custom_id: 'questionText', style: 2,
+                    required: true, max_length: 1000, value: completion.questionText || '',
+                    placeholder: 'Include information such as next steps on casting process, casting decision dates and marooning / season start dates.'
+                  }}
+                ]
+              }
+            });
+          }
+
+          // summary — re-render same page
+          return await buildQuestionManagementUI(config, qConfigId, 0);
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('question_select_')) {
       // Unified question select handler — replaces individual edit/delete/move buttons
       return ButtonHandlerFactory.create({
@@ -8819,12 +8891,15 @@ To fix this:
 
           if (selectedValue === 'move_up' || selectedValue === 'move_down') {
             const swapIndex = selectedValue === 'move_up' ? questionIndex - 1 : questionIndex + 1;
-            if (swapIndex >= 0 && swapIndex < config.questions.length) {
+            // Guard: don't swap with completion question
+            if (swapIndex >= 0 && swapIndex < config.questions.length && config.questions[swapIndex]?.questionType !== 'completion') {
               [config.questions[questionIndex], config.questions[swapIndex]] = [config.questions[swapIndex], config.questions[questionIndex]];
               await savePlayerData(playerData);
               console.log(`↕️ Question ${questionIndex} swapped with ${swapIndex} in ${qConfigId}`);
             }
-            const currentPage = Math.floor((selectedValue === 'move_down' ? swapIndex : questionIndex) / 10);
+            const regularCount = config.questions.filter(q => q.questionType !== 'completion').length;
+            const regularIdx = config.questions.filter((q, idx) => idx <= (selectedValue === 'move_down' ? swapIndex : questionIndex) && q.questionType !== 'completion').length - 1;
+            const currentPage = Math.floor(Math.max(0, regularIdx) / 8);
             return await buildQuestionManagementUI(config, qConfigId, currentPage);
           }
 
@@ -8832,7 +8907,8 @@ To fix this:
             const deleted = config.questions.splice(questionIndex, 1);
             await savePlayerData(playerData);
             console.log(`🗑️ Deleted question ${questionIndex} from ${qConfigId}: "${deleted[0]?.questionTitle}"`);
-            const currentPage = Math.min(Math.floor(questionIndex / 10), Math.max(0, Math.ceil(config.questions.length / 10) - 1));
+            const regularCount = config.questions.filter(q => q.questionType !== 'completion').length;
+            const currentPage = Math.min(Math.floor(questionIndex / 8), Math.max(0, Math.ceil(regularCount / 8) - 1));
             return await buildQuestionManagementUI(config, qConfigId, currentPage);
           }
 
@@ -8850,12 +8926,13 @@ To fix this:
             config.questions.forEach((q, idx) => { q.order = idx + 1; });
             await savePlayerData(playerData);
             console.log(`📋 Duplicated question ${questionIndex} in ${qConfigId}: "${original.questionTitle}"`);
-            const currentPage = Math.floor((questionIndex + 1) / 10);
+            const currentPage = Math.floor((questionIndex + 1) / 8);
             return await buildQuestionManagementUI(config, qConfigId, currentPage);
           }
 
           // summary, divider, or unknown — re-render same page
-          const currentPage = Math.floor(questionIndex / 10);
+          const regularIdx = config.questions.filter((q, idx) => idx <= questionIndex && q.questionType !== 'completion').length - 1;
+          const currentPage = Math.floor(Math.max(0, regularIdx) / 8);
           return await buildQuestionManagementUI(config, qConfigId, currentPage);
         }
       })(req, res, client);
@@ -9433,8 +9510,9 @@ To fix this:
             };
           }
           
-          const questionsPerPage = 10;
-          const totalPages = Math.ceil(config.questions.length / questionsPerPage);
+          const questionsPerPage = 8;
+          const regularCount = config.questions.filter(q => q.questionType !== 'completion').length;
+          const totalPages = Math.ceil(regularCount / questionsPerPage);
           const newPage = Math.min(totalPages - 1, currentPage + 1);
           console.log(`✅ SUCCESS: season_nav_next - navigated to page ${newPage}`);
           return refreshQuestionManagementUI(res, config, configId, newPage);
@@ -40377,7 +40455,23 @@ Your server is now ready for Tycoons gameplay!`;
             lastUpdated: Date.now(),
             seasonId: seasonId,
             seasonName: seasonName,
-            questions: []
+            questions: [
+              {
+                id: `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`,
+                order: 1,
+                questionTitle: 'Click here to add first question',
+                questionText: 'Edit this question or add more using the menu below.',
+                questionStyle: 1,
+                createdAt: Date.now()
+              },
+              {
+                id: `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`,
+                questionType: 'completion',
+                questionTitle: 'Thank you for applying to the season!',
+                questionText: 'Include information such as next steps on casting process, casting decision dates and marooning / season start dates.',
+                createdAt: Date.now()
+              }
+            ]
           };
 
           await savePlayerData(playerData);
@@ -40446,12 +40540,19 @@ Your server is now ready for Tycoons gameplay!`;
           createdAt: Date.now()
         };
         
-        config.questions.push(newQuestion);
+        // Insert before completion question if one exists
+        const completionIdx = config.questions.findIndex(q => q.questionType === 'completion');
+        if (completionIdx >= 0) {
+          config.questions.splice(completionIdx, 0, newQuestion);
+        } else {
+          config.questions.push(newQuestion);
+        }
         await savePlayerData(playerData);
-        
+
         // Calculate the page for the new question (stay on current page, not jump to last)
-        const questionsPerPage = 10;
-        const newQuestionPage = Math.min(currentPage, Math.floor((config.questions.length - 1) / questionsPerPage));
+        const regularCount = config.questions.filter(q => q.questionType !== 'completion').length;
+        const questionsPerPage = 8;
+        const newQuestionPage = Math.min(currentPage, Math.floor((regularCount - 1) / questionsPerPage));
         
         // Refresh the UI on the page containing the new question
         return refreshQuestionManagementUI(res, config, configId, newQuestionPage);
