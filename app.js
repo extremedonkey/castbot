@@ -8955,6 +8955,7 @@ To fix this:
         handler: async (context) => {
           const selectedValue = req.body.data.values?.[0];
           const qConfigId = context.customId.replace('question_completion_select_', '');
+          console.log(`🏁 Completion select: value=${selectedValue}, configId=${qConfigId}`);
           const playerData = await loadPlayerData();
           const config = playerData[context.guildId]?.applicationConfigs?.[qConfigId];
           if (!config) return { content: '❌ Season not found' };
@@ -8981,6 +8982,7 @@ To fix this:
 
           if (selectedValue === 'edit') {
             const completionIdx = config.questions.findIndex(q => q.questionType === 'completion');
+            console.log(`🏁 Completion edit: idx=${completionIdx}, title="${completion.questionTitle}"`);
             // Send modal directly (same pattern as regular question edit)
             return res.send({
               type: InteractionResponseType.MODAL,
