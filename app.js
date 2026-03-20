@@ -160,6 +160,18 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
     };
   }
 
+  // Auto-inject completion question for old seasons that don't have one
+  if (!config.questions.find(q => q.questionType === 'completion')) {
+    const crypto = await import('crypto');
+    config.questions.push({
+      id: `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`,
+      questionType: 'completion',
+      questionTitle: 'Thank you for applying to the season!',
+      questionText: 'Include information such as next steps on casting process, casting decision dates and marooning / season start dates.',
+      createdAt: Date.now()
+    });
+  }
+
   // Separate regular questions from completion question
   const regularQuestions = config.questions
     .map((q, i) => ({ question: q, arrayIndex: i }))
@@ -296,7 +308,7 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   // Completion message select — always last
   if (completionQuestion) {
-    const completionTitle = (completionQuestion.questionTitle || 'App Completed Message').substring(0, 80);
+    const completionDesc = (completionQuestion.questionTitle || 'Thank you for applying!').substring(0, 100);
     refreshedComponents.push({
       type: 1,
       components: [{
@@ -304,9 +316,9 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
         custom_id: `question_completion_select_${configId}`,
         options: [
           {
-            label: completionTitle,
+            label: 'App Completed Message',
             value: 'summary',
-            description: 'App Completed Message',
+            description: completionDesc,
             emoji: { name: '🏁' },
             default: true
           },
@@ -8807,23 +8819,25 @@ To fix this:
       })(req, res, client);
 
     } else if (custom_id.startsWith('question_completion_select_')) {
-      // Completion message select handler — edit the app completed message
-      return ButtonHandlerFactory.create({
-        id: 'question_completion_select',
-        updateMessage: true,
-        handler: async (context) => {
-          const selectedValue = req.body.data.values?.[0];
-          const qConfigId = context.customId.replace('question_completion_select_', '');
-          const playerData = await loadPlayerData();
-          const config = playerData[context.guildId]?.applicationConfigs?.[qConfigId];
-          if (!config) return { content: '❌ Season not found' };
+      // Completion message select handler — edit or summary
+      const selectedValue = req.body.data.values?.[0];
 
-          if (selectedValue === 'edit') {
+      if (selectedValue === 'edit') {
+        // Edit completion — show modal (requiresModal pattern)
+        return ButtonHandlerFactory.create({
+          id: 'question_completion_select',
+          requiresModal: true,
+          handler: async (context) => {
+            const qConfigId = context.customId.replace('question_completion_select_', '');
+            const playerData = await loadPlayerData();
+            const config = playerData[context.guildId]?.applicationConfigs?.[qConfigId];
+            if (!config) return { content: '❌ Season not found' };
+
             const completionIdx = config.questions.findIndex(q => q.questionType === 'completion');
             if (completionIdx === -1) return { content: '❌ Completion message not found' };
             const completion = config.questions[completionIdx];
 
-            return res.send({
+            return {
               type: InteractionResponseType.MODAL,
               data: {
                 custom_id: `season_edit_question_modal_${qConfigId}_${completionIdx}`,
@@ -8841,10 +8855,20 @@ To fix this:
                   }}
                 ]
               }
-            });
+            };
           }
+        })(req, res, client);
+      }
 
-          // summary — re-render same page
+      // summary — re-render same page
+      return ButtonHandlerFactory.create({
+        id: 'question_completion_select',
+        updateMessage: true,
+        handler: async (context) => {
+          const qConfigId = context.customId.replace('question_completion_select_', '');
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[qConfigId];
+          if (!config) return { content: '❌ Season not found' };
           return await buildQuestionManagementUI(config, qConfigId, 0);
         }
       })(req, res, client);

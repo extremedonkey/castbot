@@ -406,6 +406,7 @@ export const BUTTON_REGISTRY = {
     description: 'Edit the completion message shown when an application is submitted',
     emoji: '🏁',
     style: 'Secondary',
+    requiresModal: true,
     category: 'seasons'
   },
   'apply_*': {
