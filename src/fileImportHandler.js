@@ -172,53 +172,80 @@ async function processSeasonQuestionsImport(guildId, jsonContent) {
 
   const playerData = await loadPlayerData();
   if (!playerData[guildId]) {
-    return buildErrorResponse('No guild data found. Run /menu first.');
+    playerData[guildId] = { players: {}, tribes: {}, timezones: {}, pronounRoleIDs: [] };
+  }
+  if (!playerData[guildId].applicationConfigs) {
+    playerData[guildId].applicationConfigs = {};
   }
 
-  // Find the target config — use the one specified in the import, or the first non-temp config
-  const configs = playerData[guildId].applicationConfigs || {};
-  let targetConfigId = importData.targetConfigId;
+  const configs = playerData[guildId].applicationConfigs;
+  const crypto = await import('crypto');
+  const summaryLines = [];
+  let totalImported = 0;
 
-  if (!targetConfigId) {
-    // Find the first non-temp config
-    targetConfigId = Object.keys(configs).find(id => !id.startsWith('temp_'));
-  }
+  // Determine import source: per-config grouping (from export) or flat questions array
+  const configsToImport = importData.configs?.length > 0
+    ? importData.configs
+    : [{ seasonName: 'Imported Questions', questions: importData.questions }];
 
-  if (!targetConfigId || !configs[targetConfigId]) {
-    return buildErrorResponse('No season application config found. Create a season first, then import questions.');
-  }
+  for (const sourceConfig of configsToImport) {
+    const seasonName = sourceConfig.seasonName || 'Imported Questions';
+    const questions = sourceConfig.questions || [];
+    if (questions.length === 0) continue;
 
-  const config = configs[targetConfigId];
-  if (!config.questions) config.questions = [];
+    // Find existing config by season name, or create new one
+    let targetConfigId = Object.keys(configs).find(id =>
+      !id.startsWith('temp_') &&
+      (configs[id].buttonText === seasonName || configs[id].seasonName === seasonName)
+    );
 
-  const existingCount = config.questions.length;
-  let imported = 0;
+    let action;
+    if (targetConfigId) {
+      action = 'updated';
+    } else {
+      // Create new application config
+      targetConfigId = `config_${Date.now()}_imported`;
+      configs[targetConfigId] = {
+        buttonText: seasonName,
+        seasonName: seasonName,
+        questions: [],
+        createdAt: Date.now(),
+        lastUpdated: Date.now()
+      };
+      action = 'created';
+    }
 
-  for (const q of importData.questions) {
-    const crypto = await import('crypto');
-    const questionId = `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`;
-    config.questions.push({
-      id: questionId,
-      order: config.questions.length + 1,
-      questionTitle: q.questionTitle,
-      questionText: q.questionText,
-      questionStyle: q.questionStyle || 2, // Default to paragraph
-      imageURL: q.imageURL || '',
-      createdAt: Date.now()
-    });
-    imported++;
+    const config = configs[targetConfigId];
+    if (!config.questions) config.questions = [];
+    const existingCount = config.questions.length;
+
+    for (const q of questions) {
+      const questionId = `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`;
+      config.questions.push({
+        id: questionId,
+        order: config.questions.length + 1,
+        questionTitle: q.questionTitle,
+        questionText: q.questionText,
+        questionStyle: q.questionStyle || 2,
+        imageURL: q.imageURL || '',
+        createdAt: Date.now()
+      });
+      totalImported++;
+    }
+
+    config.lastUpdated = Date.now();
+    const countNote = existingCount > 0 ? ` (was ${existingCount}, now ${config.questions.length})` : '';
+    summaryLines.push(`📝 **${seasonName}** — ${action}, ${questions.length} questions loaded${countNote}`);
+    console.log(`✅ [FileImport] Season "${seasonName}" ${action}: ${questions.length} questions → ${targetConfigId}`);
   }
 
   await savePlayerData(playerData);
 
-  const seasonName = config.buttonText || config.seasonName || targetConfigId;
-  console.log(`✅ [FileImport] Season questions import: ${imported} questions → "${seasonName}" (${targetConfigId})`);
-
   return buildSuccessResponse(
     'Season Questions Imported',
-    `📋 **${imported} questions** imported into **${seasonName}**\n` +
-    `📊 Total questions now: ${config.questions.length} (was ${existingCount})\n\n` +
-    `-# Questions were appended — reorder from the Question Management screen if needed.`
+    `📋 **${totalImported} questions** imported into **${configsToImport.length} season(s)**\n\n` +
+    summaryLines.join('\n') +
+    `\n\n-# Questions were appended — reorder from the Question Management screen if needed.`
   );
 }
 
