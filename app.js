@@ -188,7 +188,7 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   // Title with pagination info
   const pageInfo = regularQuestions.length > questionsPerPage
-    ? ` \`Page ${currentPage + 1}/${totalPages}\``
+    ? ` (Pg ${currentPage + 1}/${totalPages})`
     : '';
 
   refreshedComponents.push({
@@ -226,6 +226,12 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
             description: 'Mandatory - used to generate castlist for successful applicants after the season starts.',
             emoji: { name: '💜' },
             default: true
+          },
+          {
+            label: 'Preview',
+            value: 'preview',
+            description: 'See what the player will see',
+            emoji: { name: '🔎' }
           }
         ]
       }]
@@ -274,11 +280,12 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
         });
       }
 
-      // Divider then clone/delete
+      // Divider then clone/delete/preview
       options.push(
         { label: '───────────────────', value: 'divider', description: ' ' },
         { label: 'Duplicate', value: 'duplicate', description: 'Clone this question', emoji: { name: '📋' } },
-        { label: 'Delete Question', value: 'delete', description: 'Remove permanently', emoji: { name: '🗑️' } }
+        { label: 'Delete Question', value: 'delete', description: 'Remove permanently', emoji: { name: '🗑️' } },
+        { label: 'Preview', value: 'preview', description: 'See what the player will see', emoji: { name: '🔎' } }
       );
 
       refreshedComponents.push({
@@ -327,6 +334,12 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
             value: 'edit',
             description: 'Show key information such as next steps for casting and season start dates',
             emoji: { name: '✏️' }
+          },
+          {
+            label: 'Preview',
+            value: 'preview',
+            description: 'See what the player will see',
+            emoji: { name: '🔎' }
           }
         ]
       }]
@@ -388,6 +401,61 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
  * @param {string} configId - Configuration ID
  * @param {number} currentPage - Current page number
  */
+
+// Build a preview of what the player will see for a question
+function buildQuestionPreview(question, questionIndex, totalQuestions) {
+  const isCompletion = question.questionType === 'completion';
+  const isLastQuestion = isCompletion || questionIndex === totalQuestions - 1;
+
+  const previewComponents = [
+    {
+      type: 10,
+      content: `-# 🔎 Preview — this is what the player will see:`
+    },
+    {
+      type: 10,
+      content: `## ${isLastQuestion ? '' : `Q${questionIndex + 1}. `}${question.questionTitle}\n\n${question.questionText}`
+    }
+  ];
+
+  if (question.imageURL && question.imageURL.trim()) {
+    previewComponents.push({
+      type: 12,
+      items: [{ media: { url: question.imageURL.trim() } }]
+    });
+  }
+
+  return {
+    components: [{
+      type: 17,
+      accent_color: isCompletion ? 0x2ecc71 : 0x3498db,
+      components: previewComponents
+    }],
+    flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+  };
+}
+
+// Preview for Player Setup — shows the welcome message the player sees
+function buildPlayerSetupPreview() {
+  return {
+    components: [{
+      type: 17,
+      accent_color: 0x3498db,
+      components: [
+        {
+          type: 10,
+          content: `-# 🔎 Preview — this is what the player will see:`
+        },
+        {
+          type: 10,
+          content: `## 🚀 Get Started with Your Application\n\nWelcome! This is your private application channel.\n\nTo get your application started, please set up your basic information:\n\n• **Pronouns** - Let us know your preferred pronouns\n• **Timezone** - Help other players understand your availability\n• **Age** - Set how old you are`
+        }
+      ]
+    }],
+    flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+  };
+}
+
 async function refreshQuestionManagementUI(res, config, configId, currentPage = 0) {
   const responseData = await buildQuestionManagementUI(config, configId, currentPage);
 
@@ -8805,11 +8873,13 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id.startsWith('question_special_player_setup_')) {
-      // Special "Player Setup" select — no-op for now, just re-renders the page
+      // Special "Player Setup" select — summary re-renders, preview shows welcome
       return ButtonHandlerFactory.create({
         id: 'question_special_player_setup',
-        updateMessage: true,
+        updateMessage: req.body.data.values?.[0] !== 'preview',
+        ephemeral: req.body.data.values?.[0] === 'preview',
         handler: async (context) => {
+          if (req.body.data.values?.[0] === 'preview') return buildPlayerSetupPreview();
           const qConfigId = context.customId.replace('question_special_player_setup_', '');
           const playerData = await loadPlayerData();
           const config = playerData[context.guildId]?.applicationConfigs?.[qConfigId];
@@ -8819,24 +8889,27 @@ To fix this:
       })(req, res, client);
 
     } else if (custom_id.startsWith('question_completion_select_')) {
-      // Completion message select handler — edit or summary
-      const selectedValue = req.body.data.values?.[0];
+      // Completion message select handler — preview, edit, or summary (single factory call)
+      return ButtonHandlerFactory.create({
+        id: 'question_completion_select',
+        updateMessage: req.body.data.values?.[0] === 'summary',
+        ephemeral: req.body.data.values?.[0] === 'preview',
+        handler: async (context) => {
+          const selectedValue = req.body.data.values?.[0];
+          const qConfigId = context.customId.replace('question_completion_select_', '');
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[qConfigId];
+          if (!config) return { content: '❌ Season not found' };
 
-      if (selectedValue === 'edit') {
-        // Edit completion — show modal (requiresModal pattern)
-        return ButtonHandlerFactory.create({
-          id: 'question_completion_select',
-          requiresModal: true,
-          handler: async (context) => {
-            const qConfigId = context.customId.replace('question_completion_select_', '');
-            const playerData = await loadPlayerData();
-            const config = playerData[context.guildId]?.applicationConfigs?.[qConfigId];
-            if (!config) return { content: '❌ Season not found' };
+          const completion = config.questions.find(q => q.questionType === 'completion');
+          if (!completion) return { content: '❌ Completion message not found' };
 
+          if (selectedValue === 'preview') {
+            return buildQuestionPreview(completion, config.questions.length - 1, config.questions.length);
+          }
+
+          if (selectedValue === 'edit') {
             const completionIdx = config.questions.findIndex(q => q.questionType === 'completion');
-            if (completionIdx === -1) return { content: '❌ Completion message not found' };
-            const completion = config.questions[completionIdx];
-
             return {
               type: InteractionResponseType.MODAL,
               data: {
@@ -8857,18 +8930,8 @@ To fix this:
               }
             };
           }
-        })(req, res, client);
-      }
 
-      // summary — re-render same page
-      return ButtonHandlerFactory.create({
-        id: 'question_completion_select',
-        updateMessage: true,
-        handler: async (context) => {
-          const qConfigId = context.customId.replace('question_completion_select_', '');
-          const playerData = await loadPlayerData();
-          const config = playerData[context.guildId]?.applicationConfigs?.[qConfigId];
-          if (!config) return { content: '❌ Season not found' };
+          // summary — re-render
           return await buildQuestionManagementUI(config, qConfigId, 0);
         }
       })(req, res, client);
@@ -8890,27 +8953,40 @@ To fix this:
           if (!config) return { content: '❌ Season not found' };
 
           if (selectedValue === 'edit') {
-            // Show edit modal — return modal response
+            // Show edit modal — matches create modal fields
             const question = config.questions[questionIndex];
             if (!question) return { content: '❌ Question not found' };
-            const currentPage = Math.floor(questionIndex / 10);
             return res.send({
               type: InteractionResponseType.MODAL,
               data: {
                 custom_id: `season_edit_question_modal_${qConfigId}_${questionIndex}`,
                 title: 'Edit Question',
                 components: [
-                  { type: 18, label: 'Question Title', description: 'Short, descriptive title for this question', component: {
+                  { type: 18, label: 'Question Title', description: 'Short label shown above the answer field', component: {
                     type: 4, custom_id: 'questionTitle', style: 1,
                     required: true, max_length: 100, value: question.questionTitle || '',
+                    placeholder: 'e.g., Why do you want to play?'
                   }},
                   { type: 18, label: 'Question Text', description: 'The full question applicants will answer', component: {
-                    type: 4, custom_id: 'questionText', style: 2,
+                    type: 4, custom_id: 'questionText', style: question.questionStyle || 2,
                     required: true, max_length: 1000, value: question.questionText || '',
+                    placeholder: 'Enter the full question...'
+                  }},
+                  { type: 18, label: 'Image URL (Optional)', description: 'Link to an image to display with this question', component: {
+                    type: 4, custom_id: 'imageURL', style: 1,
+                    required: false, max_length: 500, value: question.imageURL || '',
+                    placeholder: 'https://...'
                   }}
                 ]
               }
             });
+          }
+
+          if (selectedValue === 'preview') {
+            // Preview question — show what the player would see
+            const question = config.questions[questionIndex];
+            if (!question) return { content: '❌ Question not found' };
+            return buildQuestionPreview(question, questionIndex, config.questions.length);
           }
 
           if (selectedValue === 'move_up' || selectedValue === 'move_down') {

@@ -22,7 +22,7 @@ function calculatePagination(regularCount, currentPage, questionsPerPage = 8) {
 
 function formatPageInfo(regularCount, currentPage, totalPages, questionsPerPage = 8) {
   return regularCount > questionsPerPage
-    ? ` \`Page ${currentPage + 1}/${totalPages}\``
+    ? ` (Pg ${currentPage + 1}/${totalPages})`
     : '';
 }
 
@@ -256,8 +256,8 @@ describe('calculatePagination — page boundaries', () => {
 
 describe('formatPageInfo — page indicator string', () => {
   it('shows page info when multi-page', () => {
-    assert.equal(formatPageInfo(20, 0, 3), ' `Page 1/3`');
-    assert.equal(formatPageInfo(20, 2, 3), ' `Page 3/3`');
+    assert.equal(formatPageInfo(20, 0, 3), ' (Pg 1/3)');
+    assert.equal(formatPageInfo(20, 2, 3), ' (Pg 3/3)');
   });
 
   it('empty string for single page', () => {

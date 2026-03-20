@@ -6,7 +6,7 @@
 # See: docs/enablers/ButtonHandlerFactory.md
 # See: CLAUDE.md "Button Handler Factory" section
 
-BASELINE=125  # Legacy handler count as of 2026-03-15. Excludes MODAL_SUBMIT section (82 modal handlers). Only goes DOWN.
+BASELINE=124  # Legacy handler count as of 2026-03-20 (apply_ migrated). Excludes MODAL_SUBMIT section (82 modal handlers). Only goes DOWN.
 
 # ── Auto-sync: keep installed hook in sync with source ──
 SOURCE_HOOK="scripts/hooks/pre-commit"
