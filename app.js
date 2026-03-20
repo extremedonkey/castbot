@@ -196,7 +196,9 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
     content: `## :pencil: Season Applications\n### ${config.seasonName}`
   });
 
-  // Export/Import buttons below H1
+  refreshedComponents.push({ type: 14 });
+
+  // Export/Import buttons
   refreshedComponents.push({
     type: 1,
     components: [
@@ -204,8 +206,6 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
       { type: 2, custom_id: `season_import_questions_${configId}`, label: 'Import Questions', style: 2, emoji: { name: '📥' } }
     ]
   });
-
-  refreshedComponents.push({ type: 14 });
 
   refreshedComponents.push({
     type: 10,
@@ -223,7 +223,7 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
           {
             label: 'Pronouns, Timezone and Age',
             value: 'summary',
-            description: 'Mandatory. If cast for the season, appears in the castlist.',
+            description: 'Mandatory - used to generate castlist for successful applicants after the season starts.',
             emoji: { name: '💜' },
             default: true
           }
