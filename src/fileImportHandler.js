@@ -33,7 +33,7 @@ export function buildFileImportModal(importType, guildId, configId = null) {
       label: 'Questions Export File',
       description: 'Upload a season questions JSON file exported from another season',
     },
-    seasonquestions_single: {
+    sq_single: {
       title: 'Import Questions',
       label: 'Questions File',
       description: 'Upload a questions JSON file to load into this season',
@@ -113,7 +113,7 @@ export async function processFileImport({ importType, guildId, userId, resolved,
     return buildErrorResponse('PlayerData import not yet implemented via File Upload.');
   } else if (importType === 'seasonquestions') {
     return await processSeasonQuestionsImport(guildId, jsonContent);
-  } else if (importType === 'seasonquestions_single') {
+  } else if (importType === 'sq_single') {
     return await processSingleSeasonQuestionsImport(guildId, jsonContent, configId);
   }
 
@@ -260,7 +260,7 @@ async function processSeasonQuestionsImport(guildId, jsonContent) {
 
 async function processSingleSeasonQuestionsImport(guildId, jsonContent, configId) {
   if (!configId) {
-    return buildErrorResponse('Missing config ID for single-season import.', 'seasonquestions_single');
+    return buildErrorResponse('Missing config ID for single-season import.', 'sq_single');
   }
 
   const { loadPlayerData, savePlayerData } = await import('../storage.js');
@@ -269,26 +269,26 @@ async function processSingleSeasonQuestionsImport(guildId, jsonContent, configId
   try {
     importData = JSON.parse(jsonContent);
   } catch {
-    return buildErrorResponse('Invalid JSON file. Could not parse.', 'seasonquestions_single');
+    return buildErrorResponse('Invalid JSON file. Could not parse.', 'sq_single');
   }
 
   // Accept flat questions array or wrapped in { questions: [] }
   const questions = importData.questions || (Array.isArray(importData) ? importData : null);
   if (!questions || !Array.isArray(questions) || questions.length === 0) {
-    return buildErrorResponse('No questions found. Expected `{ "questions": [...] }` or a questions array.', 'seasonquestions_single');
+    return buildErrorResponse('No questions found. Expected `{ "questions": [...] }` or a questions array.', 'sq_single');
   }
 
   for (let i = 0; i < questions.length; i++) {
     const q = questions[i];
     if (!q.questionTitle || !q.questionText) {
-      return buildErrorResponse(`Question ${i + 1} is missing required fields (questionTitle, questionText).`, 'seasonquestions_single');
+      return buildErrorResponse(`Question ${i + 1} is missing required fields (questionTitle, questionText).`, 'sq_single');
     }
   }
 
   const playerData = await loadPlayerData();
   const config = playerData[guildId]?.applicationConfigs?.[configId];
   if (!config) {
-    return buildErrorResponse('Season configuration not found.', 'seasonquestions_single');
+    return buildErrorResponse('Season configuration not found.', 'sq_single');
   }
 
   if (!config.questions) config.questions = [];

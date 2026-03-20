@@ -8352,7 +8352,7 @@ To fix this:
         handler: async (context) => {
           const configId = context.customId.replace('season_import_questions_', '');
           const { buildFileImportModal } = await import('./src/fileImportHandler.js');
-          return buildFileImportModal('seasonquestions_single', context.guildId, configId);
+          return buildFileImportModal('sq_single', context.guildId, configId);
         }
       })(req, res, client);
 
@@ -8381,12 +8381,25 @@ To fix this:
             };
           }
 
-          // Send file as follow-up (deferred update can't carry files)
-          const followUpUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${context.token}`;
+          // Update deferred response with plain content (NOT Components V2)
+          const applicationId = req.body.application_id;
+          const editUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${context.token}/messages/@original`;
+          await fetch(editUrl, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: `📤 **${result.count} questions** exported.`,
+              flags: 64
+            })
+          });
+
+          // Send file as follow-up (plain context, no Components V2)
+          const followUpUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${context.token}`;
           const FormData = (await import('form-data')).default;
           const form = new FormData();
           form.append('payload_json', JSON.stringify({
-            flags: InteractionResponseFlags.EPHEMERAL
+            content: `📤 **${result.count} questions** exported.\n\nDownload the attached JSON file.`,
+            flags: 64
           }));
           form.append('files[0]', Buffer.from(result.json, 'utf8'), {
             filename: result.filename,
@@ -8394,18 +8407,7 @@ To fix this:
           });
           await fetch(followUpUrl, { method: 'POST', headers: form.getHeaders(), body: form });
 
-          // Return success UI to update deferred message
-          return {
-            components: [{
-              type: 17, accent_color: 0x2ecc71,
-              components: [
-                { type: 10, content: `## 📤 Questions Exported` },
-                { type: 14 },
-                { type: 10, content: `**${result.count} questions** exported.\n\nFile attached below.` },
-              ]
-            }],
-            flags: 1 << 15
-          };
+          return null; // Already handled manually
         }
       })(req, res, client);
 
@@ -8460,14 +8462,29 @@ To fix this:
             };
           }
 
-          console.log(`📤 [FileExport] ${result.count} questions exported, sending file as follow-up...`);
+          console.log(`📤 [FileExport] ${result.count} questions exported, sending file via webhook...`);
 
-          // Send file as a separate follow-up message (deferred update can't carry files)
-          // Ephemeral flag only (64) — must NOT include IS_COMPONENTS_V2 (32768) for file-only follow-ups
-          const followUpUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${context.token}`;
+          // Update the deferred response with a plain content message (NOT Components V2)
+          // Then send the file as a follow-up — matching the safari_export_data pattern
+          const applicationId = req.body.application_id;
+          const editUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${context.token}/messages/@original`;
+          await fetch(editUrl, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: `📤 **Season Questions Exported** — **${result.count} questions** from: ${result.seasonName}`,
+              flags: 64
+            })
+          });
+
+          // Send file as follow-up (plain context, no Components V2 inheritance)
+          const followUpUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${context.token}`;
           const FormData = (await import('form-data')).default;
           const form = new FormData();
-          form.append('payload_json', JSON.stringify({ flags: 64 }));
+          form.append('payload_json', JSON.stringify({
+            content: `📤 **${result.count} questions** exported.\n\nDownload the attached JSON file.`,
+            flags: 64
+          }));
           form.append('files[0]', Buffer.from(result.json, 'utf8'), {
             filename: result.filename,
             contentType: 'application/json'
@@ -8479,21 +8496,8 @@ To fix this:
             body: form
           });
 
-          // Return the UI update for the deferred response (original message)
-          return {
-            components: [{
-              type: 17,
-              accent_color: 0x2ecc71,
-              components: [
-                { type: 10, content: `## 📤 Season Questions Exported` },
-                { type: 14 },
-                { type: 10, content: `**${result.count} questions** from: ${result.seasonName}\n\nFile attached below.` },
-                { type: 14 },
-                { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }] }
-              ]
-            }],
-            flags: 1 << 15
-          };
+          // Return null — we already handled the response manually
+          return null;
         }
       })(req, res, client);
 
