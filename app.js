@@ -8372,7 +8372,6 @@ To fix this:
           const FormData = (await import('form-data')).default;
           const form = new FormData();
           form.append('payload_json', JSON.stringify({
-            content: `📎 **${result.filename}**`,
             flags: InteractionResponseFlags.EPHEMERAL
           }));
           form.append('files[0]', Buffer.from(result.json, 'utf8'), {
