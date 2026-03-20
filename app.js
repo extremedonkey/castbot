@@ -9014,7 +9014,7 @@ To fix this:
                   }}
                 ]
               }
-            });
+            };
           }
 
           // summary — re-render
