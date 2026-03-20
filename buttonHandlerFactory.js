@@ -409,6 +409,14 @@ export const BUTTON_REGISTRY = {
     requiresModal: true,
     category: 'seasons'
   },
+  'app_dnc_edit_*': {
+    label: 'Edit DNC List',
+    description: 'Opens modal for applicant to enter Do Not Cast list',
+    emoji: '🚫',
+    style: 'Primary',
+    requiresModal: true,
+    category: 'seasons'
+  },
   'apply_*': {
     label: 'Apply',
     description: 'Season application — creates private channel for applicant to answer questions',

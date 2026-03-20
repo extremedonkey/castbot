@@ -242,51 +242,43 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
   if (regularQuestions.length > 0) {
     for (let pageIdx = startIndex; pageIdx < endIndex; pageIdx++) {
       const { question, arrayIndex } = regularQuestions[pageIdx];
-      const displayTitle = (question.questionTitle || 'Untitled').substring(0, 80);
-      const answerType = question.questionStyle === 2 ? 'Paragraph' : 'Short answer';
-      const typeEmoji = question.questionStyle === 2 ? '📄' : '📝';
       const isFirstRegular = pageIdx === 0;
       const isLastRegular = pageIdx === regularQuestions.length - 1;
       const qLabel = `Q${pageIdx + 1}`;
 
-      const options = [
-        {
-          label: `${qLabel}. ${displayTitle}`.substring(0, 100),
-          value: 'summary',
-          description: answerType,
-          emoji: { name: typeEmoji },
-          default: true
-        },
-        {
-          label: 'Edit Question',
-          value: 'edit',
-          description: 'Modify question text and type',
-          emoji: { name: '✏️' }
-        }
-      ];
+      let options;
 
-      if (!isFirstRegular) {
-        options.push({
-          label: 'Move Up',
-          value: 'move_up',
-          emoji: { name: '⬆️' }
-        });
-      }
-      if (!isLastRegular) {
-        options.push({
-          label: 'Move Down',
-          value: 'move_down',
-          emoji: { name: '⬇️' }
-        });
-      }
+      if (question.questionType === 'dnc') {
+        // DNC question — limited options (no Edit, no Duplicate)
+        options = [
+          { label: `🚫 ${qLabel}. Do not cast list`, value: 'summary', description: 'Allows applicant to identify people they don\'t wish to play with', emoji: { name: '🚫' }, default: true }
+        ];
+        if (!isFirstRegular) options.push({ label: 'Move Up', value: 'move_up', emoji: { name: '⬆️' } });
+        if (!isLastRegular) options.push({ label: 'Move Down', value: 'move_down', emoji: { name: '⬇️' } });
+        options.push(
+          { label: '───────────────────', value: 'divider', description: ' ' },
+          { label: 'Delete Question', value: 'delete', description: 'Remove permanently', emoji: { name: '🗑️' } },
+          { label: 'Preview', value: 'preview', description: 'See what the player will see', emoji: { name: '🔎' } }
+        );
+      } else {
+        // Regular text question
+        const displayTitle = (question.questionTitle || 'Untitled').substring(0, 80);
+        const answerType = question.questionStyle === 2 ? 'Paragraph' : 'Short answer';
+        const typeEmoji = question.questionStyle === 2 ? '📄' : '📝';
 
-      // Divider then clone/delete/preview
-      options.push(
-        { label: '───────────────────', value: 'divider', description: ' ' },
-        { label: 'Duplicate', value: 'duplicate', description: 'Clone this question', emoji: { name: '📋' } },
-        { label: 'Delete Question', value: 'delete', description: 'Remove permanently', emoji: { name: '🗑️' } },
-        { label: 'Preview', value: 'preview', description: 'See what the player will see', emoji: { name: '🔎' } }
-      );
+        options = [
+          { label: `${qLabel}. ${displayTitle}`.substring(0, 100), value: 'summary', description: answerType, emoji: { name: typeEmoji }, default: true },
+          { label: 'Edit Question', value: 'edit', description: 'Modify question text and type', emoji: { name: '✏️' } }
+        ];
+        if (!isFirstRegular) options.push({ label: 'Move Up', value: 'move_up', emoji: { name: '⬆️' } });
+        if (!isLastRegular) options.push({ label: 'Move Down', value: 'move_down', emoji: { name: '⬇️' } });
+        options.push(
+          { label: '───────────────────', value: 'divider', description: ' ' },
+          { label: 'Duplicate', value: 'duplicate', description: 'Clone this question', emoji: { name: '📋' } },
+          { label: 'Delete Question', value: 'delete', description: 'Remove permanently', emoji: { name: '🗑️' } },
+          { label: 'Preview', value: 'preview', description: 'See what the player will see', emoji: { name: '🔎' } }
+        );
+      }
 
       refreshedComponents.push({
         type: 1,
@@ -309,6 +301,7 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
       options: [
         { label: 'Short Answer', value: 'short', description: 'Single line text response', emoji: { name: '📝' } },
         { label: 'Paragraph', value: 'paragraph', description: 'Multi-line text response', emoji: { name: '📄' } },
+        { label: 'Do Not Cast', value: 'dnc', description: 'Allows the applicant to identify people they don\'t wish to play with', emoji: { name: '🚫' } },
       ]
     }]
   });
@@ -456,6 +449,66 @@ function buildPlayerSetupPreview() {
   };
 }
 
+// Preview for DNC question
+function buildDncPreview(questionIndex, totalQuestions) {
+  return {
+    components: [{
+      type: 17,
+      accent_color: 0xe74c3c,
+      components: [
+        { type: 10, content: `-# 🔎 Preview — this is what the player will see:` },
+        { type: 10, content: `## Q${questionIndex + 1}. Do Not Cast List\n\nIs there anyone in the community that is on your **"DO NOT PLAY"** list and, if so, why? We will do our best to accommodate everyone.\n\nClick the button below to enter your list.` },
+        { type: 14 },
+        { type: 1, components: [{ type: 2, custom_id: 'preview_dnc_disabled', label: 'Edit DNC List', style: 2, emoji: { name: '🚫' }, disabled: true }] }
+      ]
+    }],
+    flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+  };
+}
+
+// Show DNC question during the player application flow
+async function showDncQuestion(res, config, channelId, questionIndex) {
+  const isLastQuestion = questionIndex === config.questions.length - 1;
+  const isSecondToLast = questionIndex === config.questions.length - 2;
+
+  const questionComponents = [
+    {
+      type: 10,
+      content: `## Q${questionIndex + 1}. Do Not Cast List\n\nIs there anyone in the community that is on your **"DO NOT PLAY"** list and, if so, why? We will do our best to accommodate everyone.`
+    },
+    { type: 14 },
+    {
+      type: 1,
+      components: [
+        { type: 2, custom_id: `app_dnc_edit_${channelId}_${questionIndex}`, label: 'Edit DNC List', style: 1, emoji: { name: '🚫' } }
+      ]
+    }
+  ];
+
+  // Navigation button (same as regular questions)
+  if (!isLastQuestion) {
+    questionComponents.push({ type: 14 });
+    const navButton = new ButtonBuilder()
+      .setCustomId(`app_next_question_${channelId}_${questionIndex}`)
+      .setLabel(isSecondToLast ? 'Complete Application' : 'Next Question')
+      .setStyle(isSecondToLast ? ButtonStyle.Success : ButtonStyle.Secondary)
+      .setEmoji(isSecondToLast ? '✅' : '➡️');
+    questionComponents.push(new ActionRowBuilder().addComponents(navButton).toJSON());
+  }
+
+  return res.send({
+    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+    data: {
+      flags: (1 << 15),
+      components: [{
+        type: 17,
+        accent_color: 0xe74c3c,
+        components: questionComponents
+      }]
+    }
+  });
+}
+
 async function refreshQuestionManagementUI(res, config, configId, currentPage = 0) {
   const responseData = await buildQuestionManagementUI(config, configId, currentPage);
 
@@ -479,6 +532,11 @@ async function showApplicationQuestion(res, config, channelId, questionIndex) {
         flags: InteractionResponseFlags.EPHEMERAL
       }
     });
+  }
+
+  // DNC question — uses its own renderer
+  if (question.questionType === 'dnc') {
+    return showDncQuestion(res, config, channelId, questionIndex);
   }
   
   const isLastQuestion = questionIndex === config.questions.length - 1;
@@ -8987,6 +9045,7 @@ To fix this:
             // Preview question — show what the player would see
             const question = config.questions[questionIndex];
             if (!question) return { content: '❌ Question not found' };
+            if (question.questionType === 'dnc') return buildDncPreview(questionIndex, config.questions.length);
             return buildQuestionPreview(question, questionIndex, config.questions.length);
           }
 
@@ -9037,6 +9096,41 @@ To fix this:
           return await buildQuestionManagementUI(config, qConfigId, currentPage);
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('question_add_') && req.body.data.values?.[0] === 'dnc') {
+      // Add DNC question directly (no modal needed)
+      return ButtonHandlerFactory.create({
+        id: 'question_add_dnc',
+        updateMessage: true,
+        handler: async (context) => {
+          const qConfigId = context.customId.replace('question_add_', '');
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[qConfigId];
+          if (!config) return { content: '❌ Season not found' };
+          if (!config.questions) config.questions = [];
+
+          if (config.questions.find(q => q.questionType === 'dnc')) {
+            return await buildQuestionManagementUI(config, qConfigId, 0);
+          }
+
+          const crypto = await import('crypto');
+          const dncQuestion = {
+            id: `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`,
+            questionType: 'dnc',
+            createdAt: Date.now()
+          };
+
+          const completionIdx = config.questions.findIndex(q => q.questionType === 'completion');
+          if (completionIdx >= 0) {
+            config.questions.splice(completionIdx, 0, dncQuestion);
+          } else {
+            config.questions.push(dncQuestion);
+          }
+          await savePlayerData(playerData);
+          console.log(`🚫 Added DNC question to ${qConfigId}`);
+          return await buildQuestionManagementUI(config, qConfigId, 0);
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('question_add_')) {
       // Add new question via type select
       return ButtonHandlerFactory.create({
@@ -24379,6 +24473,46 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id.startsWith('app_dnc_edit_')) {
+      // DNC edit button — opens modal for the applicant to enter their DNC list
+      return ButtonHandlerFactory.create({
+        id: 'app_dnc_edit',
+        requiresModal: true,
+        handler: async (context) => {
+          const remaining = context.customId.replace('app_dnc_edit_', '');
+          const lastUnderscore = remaining.lastIndexOf('_');
+          const channelId = remaining.substring(0, lastUnderscore);
+          const questionIndex = remaining.substring(lastUnderscore + 1);
+
+          const playerData = await loadPlayerData();
+          const existingDnc = playerData[context.guildId]?.applications?.[channelId]?.dncList || '';
+
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: `app_dnc_modal_${channelId}_${questionIndex}`,
+              title: 'Do Not Cast List',
+              components: [
+                {
+                  type: 18,
+                  label: 'Players you prefer not to be cast with',
+                  description: 'This is confidential — only hosts will see this',
+                  component: {
+                    type: 4,
+                    custom_id: 'dncList',
+                    style: 2,
+                    required: false,
+                    max_length: 1000,
+                    placeholder: 'List player names and reasons, one per line...',
+                    ...(existingDnc ? { value: existingDnc } : {})
+                  }
+                }
+              ]
+            }
+          };
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('app_continue_')) {
       // Handle "Move on to main questions" button click in application channels
       try {
@@ -40668,6 +40802,70 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id.startsWith('app_dnc_modal_')) {
+      // DNC modal submit — save DNC list and update the message
+      try {
+        const remaining = custom_id.replace('app_dnc_modal_', '');
+        const lastUnderscore = remaining.lastIndexOf('_');
+        const channelId = remaining.substring(0, lastUnderscore);
+        const questionIndex = parseInt(remaining.substring(lastUnderscore + 1));
+        const guildId = req.body.guild_id;
+
+        const dncText = req.body.data.components?.[0]?.component?.value || req.body.data.components?.[0]?.components?.[0]?.value || '';
+
+        const playerData = await loadPlayerData();
+        if (playerData[guildId]?.applications?.[channelId]) {
+          playerData[guildId].applications[channelId].dncList = dncText;
+          await savePlayerData(playerData);
+          console.log(`🚫 DNC list saved for channel ${channelId}: ${dncText.length} chars`);
+        }
+
+        // Re-render the DNC question with the saved text
+        const application = playerData[guildId]?.applications?.[channelId];
+        const config = application ? await getApplicationConfig(guildId, application.configId) : null;
+        const isLastQuestion = config ? questionIndex === config.questions.length - 1 : false;
+        const isSecondToLast = config ? questionIndex === config.questions.length - 2 : false;
+
+        const components = [
+          { type: 10, content: `## Q${questionIndex + 1}. Do Not Cast List\n\nIs there anyone in the community that is on your **"DO NOT PLAY"** list and, if so, why? We will do our best to accommodate everyone.` },
+          { type: 14 },
+          { type: 10, content: dncText ? `**Your DNC list:**\n${dncText}` : `-# *No players listed — you can add some with the button below.*` },
+          { type: 14 },
+          { type: 1, components: [{ type: 2, custom_id: `app_dnc_edit_${channelId}_${questionIndex}`, label: 'Edit DNC List', style: 2, emoji: { name: '✏️' } }] }
+        ];
+
+        if (!isLastQuestion) {
+          components.push({ type: 14 });
+          components.push({
+            type: 1,
+            components: [{
+              type: 2,
+              custom_id: `app_next_question_${channelId}_${questionIndex}`,
+              label: isSecondToLast ? 'Complete Application' : 'Next Question',
+              style: isSecondToLast ? 3 : 2,
+              emoji: { name: isSecondToLast ? '✅' : '➡️' }
+            }]
+          });
+        }
+
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            components: [{
+              type: 17,
+              accent_color: 0xe74c3c,
+              components
+            }]
+          }
+        });
+      } catch (error) {
+        console.error('Error in app_dnc_modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: '❌ Error saving DNC list.', flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
+
     } else if (custom_id.startsWith('season_edit_question_modal_')) {
       // Handle question edit
       try {
