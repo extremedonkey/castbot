@@ -394,6 +394,13 @@ export const BUTTON_REGISTRY = {
     requiresModal: true,
     category: 'seasons'
   },
+  'question_special_player_setup_*': {
+    label: 'Player Setup',
+    description: 'Special question component: Pronouns, Timezone, Age (no-op placeholder)',
+    emoji: '💜',
+    style: 'Secondary',
+    category: 'seasons'
+  },
   'apply_*': {
     label: 'Apply',
     description: 'Season application — creates private channel for applicant to answer questions',

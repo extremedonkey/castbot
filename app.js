@@ -193,6 +193,26 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
     content: `### :question: Manage Questions (${config.seasonName})${pageInfo}`
   });
 
+  // Special "Player Setup" component — always shown on page 1
+  if (currentPage === 0) {
+    refreshedComponents.push({
+      type: 1,
+      components: [{
+        type: 3, // String Select
+        custom_id: `question_special_player_setup_${configId}`,
+        options: [
+          {
+            label: 'Pronouns, Timezone and Age',
+            value: 'summary',
+            description: 'Mandatory. If cast for the season, appears in the castlist.',
+            emoji: { name: '💜' },
+            default: true
+          }
+        ]
+      }]
+    });
+  }
+
   if (config.questions.length === 0) {
     refreshedComponents.push({
       type: 10,
@@ -8743,6 +8763,20 @@ To fix this:
           return await sendProductionSubmenuResponse(res, channelId, [seasonManagementContainer], shouldUpdateMessage);
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('question_special_player_setup_')) {
+      // Special "Player Setup" select — no-op for now, just re-renders the page
+      return ButtonHandlerFactory.create({
+        id: 'question_special_player_setup',
+        updateMessage: true,
+        handler: async (context) => {
+          const qConfigId = context.customId.replace('question_special_player_setup_', '');
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[qConfigId];
+          if (!config) return { content: '❌ Season not found' };
+          return await buildQuestionManagementUI(config, qConfigId, 0);
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('question_select_')) {
       // Unified question select handler — replaces individual edit/delete/move buttons
       return ButtonHandlerFactory.create({
