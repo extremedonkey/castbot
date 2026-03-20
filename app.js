@@ -209,7 +209,7 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   refreshedComponents.push({
     type: 10,
-    content: `### :question: Questions${pageInfo}`
+    content: `### \`\`\`❓ Application Questions\`\`\`${pageInfo}`
   });
 
   // Special "Player Setup" component — always shown on page 1
