@@ -177,13 +177,12 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
     content: `## :pencil: Season Applications | Manage Season Casting`
   });
 
-  // Season action buttons (Post, Ranking, Edit) below H1
+  // Export/Import buttons below H1
   refreshedComponents.push({
     type: 1,
     components: [
-      { type: 2, custom_id: `season_post_button_${configId}_${currentPage}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
-      { type: 2, custom_id: `season_app_ranking_${configId}`, label: 'Cast Ranking', style: 2, emoji: { name: '🏆' } },
-      { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit Season', style: 2, emoji: { name: '✏️' } }
+      { type: 2, custom_id: `season_export_questions_${configId}`, label: 'Export Questions', style: 2, emoji: { name: '📤' } },
+      { type: 2, custom_id: `season_import_questions_${configId}`, label: 'Import Questions', style: 2, emoji: { name: '📥' } }
     ]
   });
 
@@ -275,12 +274,13 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   refreshedComponents.push({ type: 14 });
 
-  // Export/Import buttons
+  // Season action buttons (Post, Ranking, Edit) above nav
   refreshedComponents.push({
     type: 1,
     components: [
-      { type: 2, custom_id: `season_export_questions_${configId}`, label: 'Export Questions', style: 2, emoji: { name: '📤' } },
-      { type: 2, custom_id: `season_import_questions_${configId}`, label: 'Import Questions', style: 2, emoji: { name: '📥' } }
+      { type: 2, custom_id: `season_post_button_${configId}_${currentPage}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
+      { type: 2, custom_id: `season_app_ranking_${configId}`, label: 'Cast Ranking', style: 2, emoji: { name: '🏆' } },
+      { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit Season', style: 2, emoji: { name: '✏️' } }
     ]
   });
 
