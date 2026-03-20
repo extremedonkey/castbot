@@ -8995,8 +8995,8 @@ To fix this:
           if (selectedValue === 'edit') {
             const completionIdx = config.questions.findIndex(q => q.questionType === 'completion');
             console.log(`🏁 Completion edit: idx=${completionIdx}, title="${completion.questionTitle}"`);
-            // Send modal directly (same pattern as regular question edit)
-            return res.send({
+            // Return modal object — factory's sendResponse handles type:9 directly
+            return {
               type: InteractionResponseType.MODAL,
               data: {
                 custom_id: `season_edit_question_modal_${qConfigId}_${completionIdx}`,
