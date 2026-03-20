@@ -40483,7 +40483,7 @@ Your server is now ready for Tycoons gameplay!`;
               {
                 id: `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`,
                 order: 1,
-                questionTitle: 'Click here to add first question',
+                questionTitle: 'Click here to set first question',
                 questionText: 'Edit this question or add more using the menu below.',
                 questionStyle: 1,
                 createdAt: Date.now()
@@ -40603,12 +40603,12 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         const components = req.body.data.components;
 
-        // Parse values from Label components (Type 18)
-        // Label structure: components[i].component.value (singular 'component')
-        const questionTitle = components[0].component.value;
-        const questionText = components[1].component.value;
-        const imageURL = components[2].component.value;
-        
+        // Parse values — supports Label (Type 18) and legacy ActionRow formats
+        // Edit modal has 2 fields (title, text), completion edit also 2
+        const questionTitle = components[0]?.component?.value || components[0]?.components?.[0]?.value;
+        const questionText = components[1]?.component?.value || components[1]?.components?.[0]?.value;
+        const imageURL = components[2]?.component?.value || components[2]?.components?.[0]?.value || '';
+
         // Load player data
         const playerData = await loadPlayerData();
         const config = playerData[guildId]?.applicationConfigs?.[configId];
