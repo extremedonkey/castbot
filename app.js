@@ -8326,6 +8326,77 @@ To fix this:
         }
       })(req, res, client);
 
+    } else if (custom_id === 'file_import_seasonquestions') {
+      // Season Questions Import — opens modal with File Upload (Type 19)
+      return ButtonHandlerFactory.create({
+        id: 'file_import_seasonquestions',
+        requiresModal: true,
+        handler: async (context) => {
+          const { buildFileImportModal } = await import('./src/fileImportHandler.js');
+          return buildFileImportModal('seasonquestions', context.guildId);
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'file_export_seasonquestions') {
+      // Season Questions Export — exports all season app questions as JSON file
+      return ButtonHandlerFactory.create({
+        id: 'file_export_seasonquestions',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          const { exportSeasonQuestions } = await import('./src/fileImportHandler.js');
+          const result = await exportSeasonQuestions(context.guildId);
+
+          if (result.error) {
+            return {
+              components: [{
+                type: 17,
+                accent_color: 0xe74c3c,
+                components: [
+                  { type: 10, content: `## ❌ Export Failed` },
+                  { type: 14 },
+                  { type: 10, content: result.error },
+                  { type: 14 },
+                  { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }] }
+                ]
+              }],
+              flags: 1 << 15
+            };
+          }
+
+          // Send file as follow-up via webhook
+          const FormData = (await import('form-data')).default;
+          const form = new FormData();
+          form.append('payload_json', JSON.stringify({
+            components: [{
+              type: 17,
+              accent_color: 0x2ecc71,
+              components: [
+                { type: 10, content: `## 📤 Season Questions Exported` },
+                { type: 14 },
+                { type: 10, content: `**${result.count} questions** from: ${result.seasonName}\n\nDownload the attached JSON file.` },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }] }
+              ]
+            }],
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+          }));
+          form.append('files[0]', Buffer.from(result.json, 'utf8'), {
+            filename: result.filename,
+            contentType: 'application/json'
+          });
+
+          const followUpUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${context.token}`;
+          await fetch(followUpUrl, {
+            method: 'POST',
+            headers: form.getHeaders(),
+            body: form
+          });
+
+          return null; // Already sent via webhook
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'reeces_radio_mockup') {
       // Checkbox Group PoC (Mockup) — tests Type 22 checkbox group in modal. See poc/checkboxGroupPoc.js
       return ButtonHandlerFactory.create({

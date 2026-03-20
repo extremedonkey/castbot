@@ -360,6 +360,25 @@ export const BUTTON_REGISTRY = {
     requiresModal: true,
     category: 'admin'
   },
+  'file_import_seasonquestions': {
+    label: 'Import Questions',
+    description: 'Import season application questions from exported JSON file',
+    emoji: '📥',
+    style: 'Primary',
+    parent: 'reeces_stuff',
+    restrictedUser: '391415444084490240',
+    requiresModal: true,
+    category: 'admin'
+  },
+  'file_export_seasonquestions': {
+    label: 'Export Questions',
+    description: 'Export all season application questions as JSON file for reuse',
+    emoji: '📤',
+    style: 'Secondary',
+    parent: 'reeces_stuff',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
   'reeces_radio_mockup': {
     label: 'Radio PoC (Mockup)',
     description: 'UI mockup: Radio Group (Type 21) in modal with 10 options. Not a real feature.',

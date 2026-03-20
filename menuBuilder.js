@@ -152,6 +152,14 @@ export class MenuBuilder {
           { type: 2, custom_id: 'file_import_safari', label: 'Import', style: 1, emoji: { name: '📥' } }
         ]
       },
+      { type: 10, content: `### \`\`\`📝 Season Apps\`\`\`` },
+      {
+        type: 1,
+        components: [
+          { type: 2, custom_id: 'file_export_seasonquestions', label: 'Export Questions', style: 2, emoji: { name: '📤' } },
+          { type: 2, custom_id: 'file_import_seasonquestions', label: 'Import Questions', style: 1, emoji: { name: '📥' } }
+        ]
+      },
       { type: 10, content: `### \`\`\`📼 Legacy\`\`\`` },
       {
         type: 1,
