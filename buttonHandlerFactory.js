@@ -379,6 +379,21 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
+  'season_export_questions_*': {
+    label: 'Export Questions',
+    description: 'Export questions from a single season config as flat JSON',
+    emoji: '📤',
+    style: 'Secondary',
+    category: 'seasons'
+  },
+  'season_import_questions_*': {
+    label: 'Import Questions',
+    description: 'Import questions into a single season config via File Upload modal',
+    emoji: '📥',
+    style: 'Secondary',
+    requiresModal: true,
+    category: 'seasons'
+  },
   'reeces_radio_mockup': {
     label: 'Radio PoC (Mockup)',
     description: 'UI mockup: Radio Group (Type 21) in modal with 10 options. Not a real feature.',

@@ -174,10 +174,25 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   refreshedComponents.push({
     type: 10,
-    content: `## :pencil: Season Applications | Manage Season Casting\n### :question: Manage Questions (${config.seasonName})${pageInfo}`
+    content: `## :pencil: Season Applications | Manage Season Casting`
   });
 
   refreshedComponents.push({ type: 14 });
+
+  // Season action buttons (Post, Ranking, Edit) below H1
+  refreshedComponents.push({
+    type: 1,
+    components: [
+      { type: 2, custom_id: `season_post_button_${configId}_${currentPage}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
+      { type: 2, custom_id: `season_app_ranking_${configId}`, label: 'Cast Ranking', style: 2, emoji: { name: '🏆' } },
+      { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit Season', style: 2, emoji: { name: '✏️' } }
+    ]
+  });
+
+  refreshedComponents.push({
+    type: 10,
+    content: `### :question: Manage Questions (${config.seasonName})${pageInfo}`
+  });
 
   if (config.questions.length === 0) {
     refreshedComponents.push({
@@ -260,17 +275,16 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   refreshedComponents.push({ type: 14 });
 
-  // Management buttons
+  // Export/Import buttons
   refreshedComponents.push({
     type: 1,
     components: [
-      { type: 2, custom_id: `season_post_button_${configId}_${currentPage}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
-      { type: 2, custom_id: `season_app_ranking_${configId}`, label: 'Cast Ranking', style: 2, emoji: { name: '🏆' } },
-      { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit Season', style: 2, emoji: { name: '✏️' } }
+      { type: 2, custom_id: `season_export_questions_${configId}`, label: 'Export Questions', style: 2, emoji: { name: '📤' } },
+      { type: 2, custom_id: `season_import_questions_${configId}`, label: 'Import Questions', style: 2, emoji: { name: '📥' } }
     ]
   });
-  
-  // Navigation row (inside the container)
+
+  // Navigation row
   if (config.questions.length > questionsPerPage) {
     const prevDisabled = currentPage === 0;
     const nextDisabled = currentPage === totalPages - 1;
@@ -8330,6 +8344,71 @@ To fix this:
           return buildPlannerSelector(context.guildId);
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('season_import_questions_')) {
+      // Per-season question import — opens File Upload modal, loads flat questions into this config
+      return ButtonHandlerFactory.create({
+        id: 'season_import_questions',
+        requiresModal: true,
+        handler: async (context) => {
+          const configId = context.customId.replace('season_import_questions_', '');
+          const { buildFileImportModal } = await import('./src/fileImportHandler.js');
+          return buildFileImportModal('seasonquestions_single', context.guildId, configId);
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('season_export_questions_')) {
+      // Per-season question export — exports flat questions array from this config
+      return ButtonHandlerFactory.create({
+        id: 'season_export_questions',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          const configId = context.customId.replace('season_export_questions_', '');
+          const { exportSingleSeasonQuestions } = await import('./src/fileImportHandler.js');
+          const result = await exportSingleSeasonQuestions(context.guildId, configId);
+
+          if (result.error) {
+            return {
+              components: [{
+                type: 17, accent_color: 0xe74c3c,
+                components: [
+                  { type: 10, content: `## ❌ Export Failed` },
+                  { type: 14 },
+                  { type: 10, content: result.error },
+                ]
+              }],
+              flags: 1 << 15
+            };
+          }
+
+          // Send file as follow-up (deferred update can't carry files)
+          const followUpUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${context.token}`;
+          const FormData = (await import('form-data')).default;
+          const form = new FormData();
+          form.append('payload_json', JSON.stringify({
+            flags: InteractionResponseFlags.EPHEMERAL
+          }));
+          form.append('files[0]', Buffer.from(result.json, 'utf8'), {
+            filename: result.filename,
+            contentType: 'application/json'
+          });
+          await fetch(followUpUrl, { method: 'POST', headers: form.getHeaders(), body: form });
+
+          // Return success UI to update deferred message
+          return {
+            components: [{
+              type: 17, accent_color: 0x2ecc71,
+              components: [
+                { type: 10, content: `## 📤 Questions Exported` },
+                { type: 14 },
+                { type: 10, content: `**${result.count} questions** exported.\n\nFile attached below.` },
+              ]
+            }],
+            flags: 1 << 15
+          };
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'file_import_safari') {
       // File Import — opens modal with File Upload (Type 19) for Safari import
       // See RaP 0940 — replaces legacy createMessageCollector pattern
@@ -8384,12 +8463,11 @@ To fix this:
           console.log(`📤 [FileExport] ${result.count} questions exported, sending file as follow-up...`);
 
           // Send file as a separate follow-up message (deferred update can't carry files)
+          // Ephemeral flag only (64) — must NOT include IS_COMPONENTS_V2 (32768) for file-only follow-ups
           const followUpUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${context.token}`;
           const FormData = (await import('form-data')).default;
           const form = new FormData();
-          form.append('payload_json', JSON.stringify({
-            flags: InteractionResponseFlags.EPHEMERAL
-          }));
+          form.append('payload_json', JSON.stringify({ flags: 64 }));
           form.append('files[0]', Buffer.from(result.json, 'utf8'), {
             filename: result.filename,
             contentType: 'application/json'
@@ -36665,13 +36743,15 @@ Your server is now ready for Tycoons gameplay!`;
     
     if (custom_id.startsWith('file_import_submit:')) {
       // File Import modal submit — processes uploaded JSON file
-      // Format: file_import_submit:{importType}:{guildId}
+      // Format: file_import_submit:{importType}:{guildId}[:{configId}]
       return ButtonHandlerFactory.create({
         id: 'file_import_submit',
         deferred: true,
         ephemeral: true,
         handler: async (context) => {
-          const [, importType, guildId] = custom_id.split(':');
+          const parts = custom_id.split(':');
+          const [, importType, guildId] = parts;
+          const configId = parts[3] || null; // Optional configId for single-season import
           const { processFileImport } = await import('./src/fileImportHandler.js');
           return await processFileImport({
             importType,
@@ -36679,7 +36759,8 @@ Your server is now ready for Tycoons gameplay!`;
             userId: context.userId,
             resolved: data.resolved,
             components: data.components,
-            client
+            client,
+            configId
           });
         }
       })(req, res, client);

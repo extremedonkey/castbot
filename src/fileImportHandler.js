@@ -16,7 +16,7 @@
  * @param {string} guildId - Guild ID (embedded in custom_id for modal submit)
  * @returns {Object} Modal interaction response (type 9)
  */
-export function buildFileImportModal(importType, guildId) {
+export function buildFileImportModal(importType, guildId, configId = null) {
   const configs = {
     safari: {
       title: 'Import Safari Data',
@@ -32,6 +32,11 @@ export function buildFileImportModal(importType, guildId) {
       title: 'Import Season Questions',
       label: 'Questions Export File',
       description: 'Upload a season questions JSON file exported from another season',
+    },
+    seasonquestions_single: {
+      title: 'Import Questions',
+      label: 'Questions File',
+      description: 'Upload a questions JSON file to load into this season',
     }
   };
 
@@ -41,7 +46,7 @@ export function buildFileImportModal(importType, guildId) {
   return {
     type: 9, // MODAL
     data: {
-      custom_id: `file_import_submit:${importType}:${guildId}`,
+      custom_id: `file_import_submit:${importType}:${guildId}${configId ? `:${configId}` : ''}`,
       title: config.title,
       components: [
         {
@@ -72,7 +77,7 @@ export function buildFileImportModal(importType, guildId) {
  * @param {Object} params.client - Discord client
  * @returns {Object} Components V2 response
  */
-export async function processFileImport({ importType, guildId, userId, resolved, components, client }) {
+export async function processFileImport({ importType, guildId, userId, resolved, components, client, configId }) {
   // Extract attachment ID from file upload component
   const fileComponent = findFileUploadComponent(components);
   if (!fileComponent || !fileComponent.values?.length) {
@@ -108,6 +113,8 @@ export async function processFileImport({ importType, guildId, userId, resolved,
     return buildErrorResponse('PlayerData import not yet implemented via File Upload.');
   } else if (importType === 'seasonquestions') {
     return await processSeasonQuestionsImport(guildId, jsonContent);
+  } else if (importType === 'seasonquestions_single') {
+    return await processSingleSeasonQuestionsImport(guildId, jsonContent, configId);
   }
 
   return buildErrorResponse(`Unknown import type: ${importType}`);
@@ -249,6 +256,72 @@ async function processSeasonQuestionsImport(guildId, jsonContent) {
   );
 }
 
+// --- Single Season Questions Import (per-config, flat questions) ---
+
+async function processSingleSeasonQuestionsImport(guildId, jsonContent, configId) {
+  if (!configId) {
+    return buildErrorResponse('Missing config ID for single-season import.', 'seasonquestions_single');
+  }
+
+  const { loadPlayerData, savePlayerData } = await import('../storage.js');
+
+  let importData;
+  try {
+    importData = JSON.parse(jsonContent);
+  } catch {
+    return buildErrorResponse('Invalid JSON file. Could not parse.', 'seasonquestions_single');
+  }
+
+  // Accept flat questions array or wrapped in { questions: [] }
+  const questions = importData.questions || (Array.isArray(importData) ? importData : null);
+  if (!questions || !Array.isArray(questions) || questions.length === 0) {
+    return buildErrorResponse('No questions found. Expected `{ "questions": [...] }` or a questions array.', 'seasonquestions_single');
+  }
+
+  for (let i = 0; i < questions.length; i++) {
+    const q = questions[i];
+    if (!q.questionTitle || !q.questionText) {
+      return buildErrorResponse(`Question ${i + 1} is missing required fields (questionTitle, questionText).`, 'seasonquestions_single');
+    }
+  }
+
+  const playerData = await loadPlayerData();
+  const config = playerData[guildId]?.applicationConfigs?.[configId];
+  if (!config) {
+    return buildErrorResponse('Season configuration not found.', 'seasonquestions_single');
+  }
+
+  if (!config.questions) config.questions = [];
+  const existingCount = config.questions.length;
+  const crypto = await import('crypto');
+
+  for (const q of questions) {
+    const questionId = `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`;
+    config.questions.push({
+      id: questionId,
+      order: config.questions.length + 1,
+      questionTitle: q.questionTitle,
+      questionText: q.questionText,
+      questionStyle: q.questionStyle || 2,
+      imageURL: q.imageURL || '',
+      createdAt: Date.now()
+    });
+  }
+
+  config.lastUpdated = Date.now();
+  await savePlayerData(playerData);
+
+  const seasonName = config.buttonText || config.seasonName || configId;
+  console.log(`✅ [FileImport] Single-season import: ${questions.length} questions → "${seasonName}" (${configId})`);
+
+  return buildSuccessResponse(
+    'Questions Imported',
+    `📋 **${questions.length} questions** imported into **${seasonName}**\n` +
+    `📊 Total questions now: ${config.questions.length} (was ${existingCount})\n\n` +
+    `-# Questions were appended — reorder from the Question Management screen if needed.`
+  );
+}
+
 // --- Season Questions Export ---
 
 /**
@@ -303,6 +376,41 @@ export async function exportSeasonQuestions(guildId) {
     filename: `season-questions-${guildId}-${timestamp}.json`,
     seasonName: seasonNames,
     count: totalCount
+  };
+}
+
+// --- Single Season Questions Export (flat, no season association) ---
+
+/**
+ * Export questions from a single config as a flat, season-agnostic array
+ * @param {string} guildId
+ * @param {string} configId
+ * @returns {Object} { json, filename, count } or { error }
+ */
+export async function exportSingleSeasonQuestions(guildId, configId) {
+  const { loadPlayerData } = await import('../storage.js');
+  const playerData = await loadPlayerData();
+
+  const config = playerData[guildId]?.applicationConfigs?.[configId];
+  if (!config) return { error: 'Season configuration not found.' };
+  if (!config.questions?.length) return { error: 'No questions to export.' };
+
+  const exportData = {
+    exportedAt: new Date().toISOString(),
+    questions: config.questions.map(q => ({
+      questionTitle: q.questionTitle,
+      questionText: q.questionText,
+      questionStyle: q.questionStyle || 2,
+      imageURL: q.imageURL || '',
+      order: q.order
+    }))
+  };
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  return {
+    json: JSON.stringify(exportData, null, 2),
+    filename: `questions-${timestamp}.json`,
+    count: exportData.questions.length
   };
 }
 
