@@ -177,8 +177,6 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
     content: `## :pencil: Season Applications | Manage Season Casting`
   });
 
-  refreshedComponents.push({ type: 14 });
-
   // Season action buttons (Post, Ranking, Edit) below H1
   refreshedComponents.push({
     type: 1,
@@ -188,6 +186,8 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
       { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit Season', style: 2, emoji: { name: '✏️' } }
     ]
   });
+
+  refreshedComponents.push({ type: 14 });
 
   refreshedComponents.push({
     type: 10,
