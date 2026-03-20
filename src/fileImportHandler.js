@@ -318,7 +318,8 @@ async function processSingleSeasonQuestionsImport(guildId, jsonContent, configId
     'Questions Imported',
     `📋 **${questions.length} questions** imported into **${seasonName}**\n` +
     `📊 Total questions now: ${config.questions.length} (was ${existingCount})\n\n` +
-    `-# Questions were appended — reorder from the Question Management screen if needed.`
+    `-# Questions were appended — reorder from the Question Management screen if needed.`,
+    'sq_single'
   );
 }
 
@@ -416,7 +417,15 @@ export async function exportSingleSeasonQuestions(guildId, configId) {
 
 // --- UI Builders ---
 
-function buildSuccessResponse(title, details) {
+function getBackButton(importType) {
+  // sq_single comes from season management, everything else from data_admin
+  if (importType === 'sq_single') {
+    return { type: 2, custom_id: 'season_management_menu', label: '← Seasons', style: 2 };
+  }
+  return { type: 2, custom_id: 'data_admin', label: '← Data', style: 2 };
+}
+
+function buildSuccessResponse(title, details, importType = 'safari') {
   return {
     components: [{
       type: 17, // Container
@@ -426,7 +435,7 @@ function buildSuccessResponse(title, details) {
         { type: 14 },
         { type: 10, content: details },
         { type: 14 },
-        { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }] }
+        { type: 1, components: [getBackButton(importType)] }
       ]
     }],
     flags: 1 << 15 // IS_COMPONENTS_V2
@@ -434,7 +443,19 @@ function buildSuccessResponse(title, details) {
 }
 
 function buildErrorResponse(message, importType = 'safari') {
-  const retryId = importType === 'seasonquestions' ? 'file_import_seasonquestions' : 'file_import_safari';
+  const retryIds = {
+    seasonquestions: 'file_import_seasonquestions',
+    sq_single: 'season_management_menu', // No retry for single — go back to pick config
+    safari: 'file_import_safari'
+  };
+  const retryId = retryIds[importType] || 'file_import_safari';
+  const showRetry = importType !== 'sq_single';
+  const buttons = [];
+  if (showRetry) {
+    buttons.push({ type: 2, custom_id: retryId, label: 'Try Again', style: 1, emoji: { name: '🔄' } });
+  }
+  buttons.push(getBackButton(importType));
+
   return {
     components: [{
       type: 17, // Container
@@ -444,10 +465,7 @@ function buildErrorResponse(message, importType = 'safari') {
         { type: 14 },
         { type: 10, content: message },
         { type: 14 },
-        { type: 1, components: [
-          { type: 2, custom_id: retryId, label: 'Try Again', style: 1, emoji: { name: '🔄' } },
-          { type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }
-        ]}
+        { type: 1, components: buttons }
       ]
     }],
     flags: 1 << 15 // IS_COMPONENTS_V2
