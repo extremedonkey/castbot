@@ -8910,7 +8910,8 @@ To fix this:
 
           if (selectedValue === 'edit') {
             const completionIdx = config.questions.findIndex(q => q.questionType === 'completion');
-            return {
+            // Send modal directly (same pattern as regular question edit)
+            return res.send({
               type: InteractionResponseType.MODAL,
               data: {
                 custom_id: `season_edit_question_modal_${qConfigId}_${completionIdx}`,
@@ -8928,7 +8929,7 @@ To fix this:
                   }}
                 ]
               }
-            };
+            });
           }
 
           // summary — re-render
