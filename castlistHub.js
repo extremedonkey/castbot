@@ -217,15 +217,44 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       const tribeRoleIds = await castlistManager.getTribesUsingCastlist(guildId, castlist.id);
 
       // Load full tribe objects from playerData
-      const tribes = [];
+      const allTribes = [];
       for (const roleId of tribeRoleIds) {
         const tribeData = playerData[guildId]?.tribes?.[roleId];
         if (tribeData) {
-          tribes.push({
+          allTribes.push({
             roleId,
             ...tribeData
           });
         }
+      }
+
+      // Detect orphaned tribes (role deleted from Discord) BEFORE building any UI
+      const guild = allTribes.length > 0 ? await client.guilds.fetch(guildId) : null;
+      const orphanedRoleIds = [];
+      const tribes = [];
+      for (const tribe of allTribes) {
+        const role = guild ? await guild.roles.fetch(tribe.roleId).catch(() => null) : null;
+        if (!role) {
+          orphanedRoleIds.push(tribe.roleId);
+          console.log(`[TRIBES] Orphaned tribe detected: role ${tribe.roleId} deleted from Discord, auto-removing`);
+        } else {
+          tribes.push({ ...tribe, _role: role });
+        }
+      }
+
+      // Auto-remove orphaned tribes from playerData
+      if (orphanedRoleIds.length > 0) {
+        const { loadPlayerData, savePlayerData } = await import('./storage.js');
+        const pd = await loadPlayerData();
+        for (const roleId of orphanedRoleIds) {
+          if (pd[guildId]?.tribes?.[roleId]?.castlistIds) {
+            pd[guildId].tribes[roleId].castlistIds = pd[guildId].tribes[roleId].castlistIds.filter(id => id !== castlist.id);
+            if (pd[guildId].tribes[roleId].castlistIds.length === 0) {
+              delete pd[guildId].tribes[roleId];
+            }
+          }
+        }
+        await savePlayerData(pd);
       }
 
       // Component budget safety check
@@ -262,20 +291,14 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
         });
       }
 
-      // Fetch guild once for all tribes
-      const guild = tribes.length > 0 ? await client.guilds.fetch(guildId) : null;
-
       // OPTIONAL: Fetch guild members for player name display
       // Skip for fast operations like tribe edit modal (emoji/color changes)
       if (guild && !skipMemberFetch) {
         try {
-          // Use REST API (guild.members.list) instead of Gateway OP 8 (guild.members.fetch)
-          // Gateway fetch is unreliable and can hang 90+ seconds; REST is fast and predictable
           await guild.members.list({ limit: 1000 });
           console.log(`[TRIBES] Successfully listed ${guild.members.cache.size} members (REST)`);
         } catch (fetchError) {
           console.warn(`[TRIBES] Member list failed (continuing with cache): ${fetchError.message}`);
-          // Continue with cached data - don't block the operation
         }
       } else if (skipMemberFetch) {
         console.log(`[TRIBES] Skipping member fetch for fast operation (using ${guild?.members.cache.size || 0} cached)`);
@@ -284,51 +307,24 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
       // Import utility functions for formatting
       const { formatPlayerList } = await import('./utils/tribeDataUtils.js');
 
-      // Handle zero-tribe state
-      if (tribes.length === 0) {
+      // Show orphan warning if any were cleaned up
+      if (orphanedRoleIds.length > 0) {
         container.components.push({
-          type: 10, // Text Display
+          type: 10,
+          content: `⚠️ **Deleted Discord Role${orphanedRoleIds.length > 1 ? 's' : ''}:** CastBot found ${orphanedRoleIds.length} tribe${orphanedRoleIds.length > 1 ? 's' : ''} linked to deleted roles and removed ${orphanedRoleIds.length > 1 ? 'them' : 'it'} automatically. Re-add any tribes to the castlist above.`
+        });
+      }
+
+      // Handle zero-tribe state
+      if (tribes.length === 0 && orphanedRoleIds.length === 0) {
+        container.components.push({
+          type: 10,
           content: `-# *No tribes assigned to this castlist yet. Use the role selector above to add tribes.*`
         });
       }
 
-      // Detect orphaned tribes (role deleted from Discord) and auto-clean
-      const orphanedRoleIds = [];
-      const validTribes = [];
-      for (const tribe of tribes) {
-        const role = guild ? await guild.roles.fetch(tribe.roleId).catch(() => null) : null;
-        if (!role) {
-          orphanedRoleIds.push(tribe.roleId);
-          console.log(`[TRIBES] Orphaned tribe detected: role ${tribe.roleId} deleted from Discord, auto-removing`);
-        } else {
-          validTribes.push({ ...tribe, _role: role });
-        }
-      }
-
-      // Auto-remove orphaned tribes from playerData
-      if (orphanedRoleIds.length > 0) {
-        const { loadPlayerData, savePlayerData } = await import('./storage.js');
-        const pd = await loadPlayerData();
-        for (const roleId of orphanedRoleIds) {
-          // Remove castlist association
-          if (pd[guildId]?.tribes?.[roleId]?.castlistIds) {
-            pd[guildId].tribes[roleId].castlistIds = pd[guildId].tribes[roleId].castlistIds.filter(id => id !== castlist.id);
-            // If no castlists left, remove the tribe entirely
-            if (pd[guildId].tribes[roleId].castlistIds.length === 0) {
-              delete pd[guildId].tribes[roleId];
-            }
-          }
-        }
-        await savePlayerData(pd);
-
-        container.components.push({
-          type: 10,
-          content: `⚠️ **Deleted Discord Role${orphanedRoleIds.length > 1 ? 's' : ''}:** CastBot attempted to load ${orphanedRoleIds.length} tribe${orphanedRoleIds.length > 1 ? 's' : ''} (role ID${orphanedRoleIds.length > 1 ? 's' : ''}: ${orphanedRoleIds.join(', ')}), but the role${orphanedRoleIds.length > 1 ? 's appear' : ' appears'} to have been deleted from your server. The role${orphanedRoleIds.length > 1 ? 's have' : ' has'} been removed from CastBot — re-add any tribes to the castlist above.`
-        });
-      }
-
       // Section for each valid tribe with Edit button accessory
-      for (const tribe of validTribes) {
+      for (const tribe of tribes) {
         const role = tribe._role;
         const roleName = role.name;
 
