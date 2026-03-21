@@ -10441,7 +10441,7 @@ To fix this:
             mode: 'list',
             selectedCastlistId: 'default',
             skipMemberFetch: false
-          });
+          }, context.client);
         }
       })(req, res, client);
 
@@ -10458,8 +10458,8 @@ To fix this:
           const { createCastlistHub } = await import('./castlistHub.js');
           const hubData = await createCastlistHub(context.guildId, {
             mode: 'list',
-            skipMemberFetch: false  // Fetch members for accurate initial display
-          });
+            skipMemberFetch: false
+          }, context.client);
 
           console.log(`✅ SUCCESS: castlist_hub_main - showing hub`);
           return hubData;
@@ -10478,8 +10478,8 @@ To fix this:
           const { createCastlistHub } = await import('./castlistHub.js');
           const hubData = await createCastlistHub(context.guildId, {
             mode: 'list',
-            skipMemberFetch: false  // Fetch members for accurate initial display
-          });
+            skipMemberFetch: false
+          }, context.client);
 
           console.log(`✅ SUCCESS: castlist_hub_main_new - showing hub as NEW ephemeral message`);
 
