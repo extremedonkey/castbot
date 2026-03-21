@@ -9738,7 +9738,7 @@ async function evaluateConditions(conditions, context) {
     const player = playerData[guildId]?.players?.[userId];
     
     if (!player) {
-        console.error(`Player ${userId} not found for condition evaluation`);
+        console.log(`[CONDITION] Player ${userId} not found for condition evaluation (may not be initialized)`);
         return false;
     }
     

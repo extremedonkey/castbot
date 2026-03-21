@@ -8,6 +8,10 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Mutex to prevent concurrent Sharp map renders (OOM prevention — see Incident 02)
+let mapRenderInProgress = false;
+let mapRenderQueue = 0;
+
 // Import MapGridSystem from scripts
 import MapGridSystem from './scripts/map-tests/mapGridSystem.js';
 
@@ -322,6 +326,14 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
  * @returns {Buffer} Image buffer of the fog of war map
  */
 async function createFogOfWarMap(fullMapPath, gridSystem, visibleCoord, allCoordinates) {
+  // Concurrent render protection — only one fog map at a time (see Incident 02)
+  if (mapRenderInProgress) {
+    mapRenderQueue++;
+    console.log(`[MAP] ⏳ Fog render queued (${mapRenderQueue} waiting) — skipping concurrent render for ${visibleCoord}`);
+    return null; // Caller should handle null (show cached/stale map)
+  }
+  mapRenderInProgress = true;
+
   try {
     // Start with the full map
     let mapImage = sharp(fullMapPath);
@@ -361,10 +373,16 @@ async function createFogOfWarMap(fullMapPath, gridSystem, visibleCoord, allCoord
       .toBuffer();
     
     return foggedMapBuffer;
-    
+
   } catch (error) {
     console.error(`❌ Error creating fog of war map for ${visibleCoord}:`, error);
     throw error;
+  } finally {
+    mapRenderInProgress = false;
+    if (mapRenderQueue > 0) {
+      console.log(`[MAP] ✅ Render complete — ${mapRenderQueue} queued request(s) were skipped`);
+      mapRenderQueue = 0;
+    }
   }
 }
 
