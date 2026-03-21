@@ -494,15 +494,19 @@ async function showDncQuestion(res, config, channelId, questionIndex) {
     }
   ];
 
-  // Navigation button (same as regular questions)
+  // Navigation section (same as regular questions)
   if (!isLastQuestion) {
     questionComponents.push({ type: 14 });
-    const navButton = new ButtonBuilder()
-      .setCustomId(`app_next_question_${channelId}_${questionIndex}`)
-      .setLabel(isSecondToLast ? 'Complete Application' : 'Next Question')
-      .setStyle(isSecondToLast ? ButtonStyle.Success : ButtonStyle.Secondary)
-      .setEmoji(isSecondToLast ? '✅' : '➡️');
-    questionComponents.push(new ActionRowBuilder().addComponents(navButton).toJSON());
+    questionComponents.push({
+      type: 9, // Section
+      components: [{ type: 10, content: isSecondToLast ? '-# ✅ Ready? Submit your application' : '-# 💬 Type your answer in the channel, then tap Next' }],
+      accessory: {
+        type: 2,
+        custom_id: `app_next_question_${channelId}_${questionIndex}`,
+        label: isSecondToLast ? 'Complete' : 'Next',
+        style: isSecondToLast ? 3 : 2
+      }
+    });
   }
 
   return res.send({
@@ -572,20 +576,19 @@ async function showApplicationQuestion(res, config, channelId, questionIndex) {
     });
   }
   
-  // Add navigation button(s) - but not for the last question
+  // Add navigation section - but not for the last question
   if (!isLastQuestion) {
+    questionComponents.push({ type: 14 });
     questionComponents.push({
-      type: 14 // Separator
+      type: 9, // Section
+      components: [{ type: 10, content: isSecondToLast ? '-# ✅ Ready? Submit your application' : '-# 💬 Type your answer in the channel, then tap Next' }],
+      accessory: {
+        type: 2,
+        custom_id: `app_next_question_${channelId}_${questionIndex}`,
+        label: isSecondToLast ? 'Complete' : 'Next',
+        style: isSecondToLast ? 3 : 2
+      }
     });
-    // Regular navigation button
-    const navButton = new ButtonBuilder()
-      .setCustomId(`app_next_question_${channelId}_${questionIndex}`)
-      .setLabel(isSecondToLast ? 'Complete Application' : `Next Question`)
-      .setStyle(isSecondToLast ? ButtonStyle.Success : ButtonStyle.Secondary) // Green for Complete Application, grey for Next
-      .setEmoji(isSecondToLast ? '✅' : '➡️');
-    
-    const navRow = new ActionRowBuilder().addComponents(navButton);
-    questionComponents.push(navRow.toJSON());
   }
   
   
@@ -40886,14 +40889,14 @@ Your server is now ready for Tycoons gameplay!`;
         if (!isLastQuestion) {
           components.push({ type: 14 });
           components.push({
-            type: 1,
-            components: [{
+            type: 9, // Section
+            components: [{ type: 10, content: isSecondToLast ? '-# ✅ Ready? Submit your application' : '-# 💬 Type your answer in the channel, then tap Next' }],
+            accessory: {
               type: 2,
               custom_id: `app_next_question_${channelId}_${questionIndex}`,
-              label: isSecondToLast ? 'Complete Application' : 'Next Question',
-              style: isSecondToLast ? 3 : 2,
-              emoji: { name: isSecondToLast ? '✅' : '➡️' }
-            }]
+              label: isSecondToLast ? 'Complete' : 'Next',
+              style: isSecondToLast ? 3 : 2
+            }
           });
         }
 
