@@ -207,12 +207,13 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   refreshedComponents.push({ type: 14 });
 
-  // Export/Import buttons
+  // Season action buttons (Post, Ranking, Edit)
   refreshedComponents.push({
     type: 1,
     components: [
-      { type: 2, custom_id: `season_export_questions_${configId}`, label: 'Export Questions', style: 2, emoji: { name: '📤' } },
-      { type: 2, custom_id: `season_import_questions_${configId}`, label: 'Import Questions', style: 2, emoji: { name: '📥' } }
+      { type: 2, custom_id: `season_post_button_${configId}_${currentPage}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
+      { type: 2, custom_id: `season_app_ranking_${configId}`, label: 'Cast Ranking', style: 2, emoji: { name: '🏆' } },
+      { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit Season', style: 2, emoji: { name: '✏️' } }
     ]
   });
 
@@ -350,36 +351,21 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   refreshedComponents.push({ type: 14 });
 
-  // Season action buttons (Post, Ranking, Edit) above nav
-  refreshedComponents.push({
-    type: 1,
-    components: [
-      { type: 2, custom_id: `season_post_button_${configId}_${currentPage}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
-      { type: 2, custom_id: `season_app_ranking_${configId}`, label: 'Cast Ranking', style: 2, emoji: { name: '🏆' } },
-      { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit Season', style: 2, emoji: { name: '✏️' } }
-    ]
-  });
-
-  // Navigation row
+  // Bottom row: Export, Import, Back (+ pagination if needed)
+  const bottomButtons = [
+    { type: 2, custom_id: `season_export_questions_${configId}`, label: 'Export', style: 2, emoji: { name: '📤' } },
+    { type: 2, custom_id: `season_import_questions_${configId}`, label: 'Import', style: 2, emoji: { name: '📥' } },
+    { type: 2, custom_id: `season_management_menu`, label: '← Back', style: 2 },
+  ];
   if (regularQuestions.length > questionsPerPage) {
     const prevDisabled = currentPage === 0;
     const nextDisabled = currentPage === totalPages - 1;
-    refreshedComponents.push({
-      type: 1,
-      components: [
-        { type: 2, custom_id: `season_management_menu`, label: '← Back', style: 2 },
-        { type: 2, custom_id: `season_nav_prev_${configId}_${currentPage}`, label: '◀', style: prevDisabled ? 2 : 1, disabled: prevDisabled },
-        { type: 2, custom_id: `season_nav_next_${configId}_${currentPage}`, label: '▶', style: nextDisabled ? 2 : 1, disabled: nextDisabled },
-      ]
-    });
-  } else {
-    refreshedComponents.push({
-      type: 1,
-      components: [
-        { type: 2, custom_id: `season_management_menu`, label: '← Back', style: 2 },
-      ]
-    });
+    bottomButtons.push(
+      { type: 2, custom_id: `season_nav_prev_${configId}_${currentPage}`, label: '◀', style: prevDisabled ? 2 : 1, disabled: prevDisabled },
+      { type: 2, custom_id: `season_nav_next_${configId}_${currentPage}`, label: '▶', style: nextDisabled ? 2 : 1, disabled: nextDisabled },
+    );
   }
+  refreshedComponents.push({ type: 1, components: bottomButtons });
 
   const refreshedContainer = {
     type: 17,
