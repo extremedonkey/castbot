@@ -273,12 +273,11 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
       } else {
         // Regular text question
         const displayTitle = (question.questionTitle || 'Untitled').substring(0, 80);
-        const answerType = question.questionStyle === 2 ? 'Paragraph' : 'Short answer';
-        const typeEmoji = question.questionStyle === 2 ? '📄' : '📝';
+        const questionPreview = (question.questionText || '').substring(0, 50) + ((question.questionText || '').length > 50 ? '..' : '');
 
         options = [
-          { label: `${qLabel}. ${displayTitle}`.substring(0, 100), value: 'summary', description: answerType, emoji: { name: typeEmoji }, default: true },
-          { label: 'Edit Question', value: 'edit', description: 'Modify question text and type', emoji: { name: '✏️' } }
+          { label: `${qLabel}. ${displayTitle}`.substring(0, 100), value: 'summary', description: questionPreview || 'No question text', emoji: { name: '📝' }, default: true },
+          { label: 'Edit Question', value: 'edit', description: 'Modify question title and text', emoji: { name: '✏️' } }
         ];
         if (!isFirstRegular) options.push({ label: 'Move Up', value: 'move_up', emoji: { name: '⬆️' } });
         if (!isLastRegular) options.push({ label: 'Move Down', value: 'move_down', emoji: { name: '⬇️' } });
@@ -311,8 +310,7 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
       custom_id: `question_add_${configId}`,
       placeholder: '✨ Click here to add a new question...',
       options: [
-        { label: 'Short Answer', value: 'short', description: 'Single line text response', emoji: { name: '📝' } },
-        { label: 'Paragraph', value: 'paragraph', description: 'Multi-line text response', emoji: { name: '📄' } },
+        { label: 'Add Question', value: 'paragraph', description: 'Text response question', emoji: { name: '📝' } },
         { label: 'Do Not Cast', value: 'dnc', description: 'Allows the applicant to identify people they don\'t wish to play with', emoji: { name: '🚷' } },
       ]
     }]
@@ -9180,9 +9178,8 @@ To fix this:
         id: 'question_add',
         requiresModal: true,
         handler: async (context) => {
-          const selectedType = req.body.data.values?.[0];
           const qConfigId = context.customId.replace('question_add_', '');
-          const questionStyle = selectedType === 'paragraph' ? 2 : 1;
+          const questionStyle = 2; // Always paragraph
           return {
             type: 9,
             data: {
