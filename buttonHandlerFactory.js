@@ -1184,49 +1184,56 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'castlist'
   },
-  'castlist_view': {
+  'castlist_view_*': {
     label: 'View',
     description: 'View and post castlist to channel',
     emoji: '👁️',
     style: 'Secondary',
     category: 'castlist'
   },
-  'castlist_edit_info': {
+  'castlist_edit_info_*': {
     label: 'Edit Info',
     description: 'Edit castlist name and emoji',
     emoji: '✏️',
     style: 'Secondary',
     category: 'castlist'
   },
-  'castlist_add_tribe': {
-    label: 'Add Tribe',
+  'castlist_placements_*': {
+    label: 'Tribes & Placements',
+    description: 'Edit player placements in castlist',
+    emoji: '🔥',
+    style: 'Primary',
+    category: 'castlist'
+  },
+  'castlist_add_tribe_*': {
+    label: 'New Tribe',
     description: 'Add or remove tribes from castlist',
     emoji: '🏕️',
     style: 'Secondary',
     category: 'castlist'
   },
-  'castlist_order': {
+  'castlist_order_*': {
     label: 'Order',
     description: 'Change castlist sort order',
     emoji: '🔄',
     style: 'Secondary',
     category: 'castlist'
   },
-  'castlist_delete': {
+  'castlist_delete_*': {
     label: 'Delete Castlist',
     description: 'Shows confirmation dialog for castlist deletion',
     emoji: '🗑️',
     style: 'Danger',
     category: 'castlist'
   },
-  'castlist_delete_confirm': {
+  'castlist_delete_confirm_*': {
     label: 'Confirm Delete Castlist',
     description: 'Confirms deletion of a castlist after warning',
     emoji: '🗑️',
     style: 'Danger',
     category: 'castlist'
   },
-  'castlist_swap_merge': {
+  'castlist_swap_merge_*': {
     label: 'Swap/Merge Tribes',
     description: 'Create dramatic tribe swap with automatic role assignment and archival',
     emoji: '🔀',
@@ -1248,14 +1255,14 @@ export const BUTTON_REGISTRY = {
     style: 'Success',
     category: 'castlist'
   },
-  'castlist_sort': {
+  'castlist_sort_*': {
     label: 'Sort Strategy',
     description: 'Select castlist sort strategy',
     emoji: '🔄',
     style: 'Secondary',
     category: 'castlist'
   },
-  'castlist_tribe_select': {
+  'castlist_tribe_select_*': {
     label: 'Tribe Select',
     description: 'Select tribes for castlist',
     emoji: '🏕️',
