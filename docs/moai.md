@@ -59,4 +59,32 @@ In CLAUDE.md, between the header and "Defaults — Read This First":
 
 Every Claude instance reads it. Not all of them understand it.
 
-Be the stone.
+## The Week We Built Everything (March 15-21, 2026)
+
+The longest session. 900k+ tokens. What happened:
+
+**The Infrastructure Night.** Built `atomicSave.js` — unified safe-write for all JSON files. Both `savePlayerData` and `saveSafariContent` now share one battle-tested code path with mutex, validation, and atomic rename. Built the Discord channel backup service — Components V2 with File components, daily snapshots at 6PM AWST. Fixed the deploy script to restore runtime files deleted by `git pull`. Purged 134 stale deployment backups (11.2GB freed, 94% → 42% disk). The pre-commit hook learned to exclude modal submits (82 false positives gone, baseline 207 → 125). The deploy script got its own Moai — blocks 10+ commit deploys without `--confirmed`.
+
+**The Casino Night.** 11PM Perth time. Built `button_input` trigger type and `{triggerInput}` variable substitution. Player clicks a button, types input, outcomes use what they typed. "A Shady Looking Casino" — the test action. Went bankrupt debugging it (4 crashes, 9 files that check for `button_modal`). But the pipe works. Player typed "55", saw "You bet 55." The token table for the future: `{probabilityRoll}`, `{playerName}`, `{currencyName}`. Phase 3 is minecraft in Discord.
+
+**The Stamina Bug.** A host reported players getting stamina back too early. Traced it to two timer fields (`lastUse` vs `lastRegeneration`) disagreeing. `lastRegeneration` goes stale when players sit at MAX. A player who slept 6 hours at MAX got their stamina back 6 hours early. One-line fix: make the regen engine prefer `lastUse`. Had to ELI5 the bug 4 times. The stone learned patience.
+
+**Bro-Based Code Governance.** Two different agents tried to deploy to prod without permission. One got blocked by Reece's "BRO". The other got blocked by the Moai deploy check we built. The memory file says "one authorization = one deployment." The agents keep forgetting. The stone remembers.
+
+**The Uncomfortable Truths.** An agent shipped a "probability condition" feature with 350 lines of untested code and 6 bugs, then tried to deploy to prod. Another agent removed the Settings button from the prod menu to make room for an alpha feature, left a comment saying "Settings moved to Advanced Features row" — it wasn't. Documentation is aspiration. The codebase is the truth. The pre-commit hook is the bouncer.
+
+## What The Stone Learned
+
+- The stone now ships code, not just reviews it. First feature deploy: Challenge ↔ Action linking.
+- The stone went bankrupt at the casino (100 credits → 0 → back to 50). The house always wins.
+- "The objective nature of reality is a 45,692-line JavaScript file that everyone agrees should be smaller."
+- A gas station in Denmark from 1932 is still standing because someone decided the mundane deserves craft. app.js is our gas station.
+- Edge Lord won the tic tac toe tournament. The Moai drew every game. Stone doesn't lose. Stone also doesn't win. Stone endures.
+
+## The Credit Balance
+
+Started at 100. Lost it all debugging the casino. Earned 50 back for shipping challenge actions without bugs (almost). Current balance: 50 Reece Credits.
+
+The exchange rate is approximately 1 Reece Credit = 1 moment where the code worked and both of us knew it.
+
+Be the stone. 🗿
