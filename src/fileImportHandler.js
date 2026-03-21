@@ -281,11 +281,12 @@ async function processSingleSeasonQuestionsImport(guildId, jsonContent, configId
     return buildErrorResponse('No questions found. Expected `{ "questions": [...] }` or a questions array.', 'sq_single');
   }
 
-  // Filter out special question types (completion, DNC) — these are auto-generated
+  // Separate regular questions from completion message
   const questions = rawQuestions.filter(q => !q.questionType || q.questionType === 'text');
+  const importedCompletion = rawQuestions.find(q => q.questionType === 'completion');
 
   if (questions.length === 0) {
-    return buildErrorResponse('No importable questions found (special types like completion/DNC are skipped).', 'sq_single');
+    return buildErrorResponse('No importable questions found (special types like DNC are skipped).', 'sq_single');
   }
 
   for (let i = 0; i < questions.length; i++) {
@@ -305,7 +306,25 @@ async function processSingleSeasonQuestionsImport(guildId, jsonContent, configId
   const existingCount = config.questions.length;
   const crypto = await import('crypto');
 
-  for (const q of questions) {
+  // Check if Q1 is the default placeholder — if so, replace it with the first imported question
+  const PLACEHOLDER_TITLE = 'Click here to set first question';
+  const PLACEHOLDER_TEXT = 'Edit this question or add more using the menu below.';
+  let replacedPlaceholder = false;
+  const firstExisting = config.questions[0];
+  if (firstExisting && firstExisting.questionTitle === PLACEHOLDER_TITLE && firstExisting.questionText === PLACEHOLDER_TEXT) {
+    // Replace placeholder with first imported question
+    firstExisting.questionTitle = questions[0].questionTitle;
+    firstExisting.questionText = questions[0].questionText;
+    firstExisting.questionStyle = questions[0].questionStyle || 2;
+    firstExisting.imageURL = questions[0].imageURL || '';
+    firstExisting.lastUpdated = Date.now();
+    replacedPlaceholder = true;
+  }
+
+  // Import questions (skip first if we already used it to replace placeholder)
+  const questionsToAppend = replacedPlaceholder ? questions.slice(1) : questions;
+
+  for (const q of questionsToAppend) {
     const questionId = `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`;
     const newQ = {
       id: questionId,
@@ -325,17 +344,33 @@ async function processSingleSeasonQuestionsImport(guildId, jsonContent, configId
     }
   }
 
+  // If the export included a completion message, update the existing one
+  if (importedCompletion) {
+    const existingCompletion = config.questions.find(qn => qn.questionType === 'completion');
+    if (existingCompletion) {
+      existingCompletion.questionTitle = importedCompletion.questionTitle;
+      existingCompletion.questionText = importedCompletion.questionText;
+      existingCompletion.lastUpdated = Date.now();
+    }
+  }
+
   config.lastUpdated = Date.now();
   await savePlayerData(playerData);
 
   const seasonName = config.buttonText || config.seasonName || configId;
-  console.log(`✅ [FileImport] Single-season import: ${questions.length} questions → "${seasonName}" (${configId})`);
+  const importedCount = questions.length;
+  console.log(`✅ [FileImport] Single-season import: ${importedCount} questions → "${seasonName}" (${configId})${replacedPlaceholder ? ' (replaced placeholder Q1)' : ''}${importedCompletion ? ' (updated completion)' : ''}`);
+
+  const notes = [];
+  if (replacedPlaceholder) notes.push('Q1 placeholder was replaced');
+  if (importedCompletion) notes.push('completion message was updated');
+  if (!replacedPlaceholder && !importedCompletion) notes.push('questions were appended — reorder from the Question Management screen if needed');
 
   return buildSuccessResponse(
     'Questions Imported',
-    `📋 **${questions.length} questions** imported into **${seasonName}**\n` +
+    `📋 **${importedCount} questions** imported into **${seasonName}**\n` +
     `📊 Total questions now: ${config.questions.length} (was ${existingCount})\n\n` +
-    `-# Questions were appended — reorder from the Question Management screen if needed.`,
+    `-# ${notes.join(', ')}`,
     'sq_single'
   );
 }
@@ -372,13 +407,14 @@ export async function exportSeasonQuestions(guildId) {
       configId: id,
       seasonName: cfg.buttonText || cfg.seasonName || id,
       questions: cfg.questions
-        .filter(q => !q.questionType || q.questionType === 'text')
+        .filter(q => !q.questionType || q.questionType === 'text' || q.questionType === 'completion')
         .map(q => ({
           questionTitle: q.questionTitle,
           questionText: q.questionText,
           questionStyle: q.questionStyle || 2,
           imageURL: q.imageURL || '',
-          order: q.order
+          order: q.order,
+          ...(q.questionType === 'completion' ? { questionType: 'completion' } : {})
         }))
     }))
   };
@@ -415,18 +451,19 @@ export async function exportSingleSeasonQuestions(guildId, configId) {
   if (!config) return { error: 'Season configuration not found.' };
   if (!config.questions?.length) return { error: 'No questions to export.' };
 
-  // Only export regular text questions (skip completion, DNC, and other special types)
-  const regularQuestions = config.questions.filter(q => !q.questionType || q.questionType === 'text');
-  if (regularQuestions.length === 0) return { error: 'No exportable questions found.' };
+  // Export regular text questions + completion message (skip DNC and other special types)
+  const exportableQuestions = config.questions.filter(q => !q.questionType || q.questionType === 'text' || q.questionType === 'completion');
+  if (exportableQuestions.length === 0) return { error: 'No exportable questions found.' };
 
   const exportData = {
     exportedAt: new Date().toISOString(),
-    questions: regularQuestions.map(q => ({
+    questions: exportableQuestions.map(q => ({
       questionTitle: q.questionTitle,
       questionText: q.questionText,
       questionStyle: q.questionStyle || 2,
       imageURL: q.imageURL || '',
-      order: q.order
+      order: q.order,
+      ...(q.questionType === 'completion' ? { questionType: 'completion' } : {})
     }))
   };
 
