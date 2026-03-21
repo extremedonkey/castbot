@@ -2613,8 +2613,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         await DiscordRequest(endpoint, {
           method: 'PATCH',
           body: {
-            content: `No tribes found for castlist: ${castlistIdentifier}. Please add tribes via Production Menu.`,
-            flags: InteractionResponseFlags.EPHEMERAL
+            components: [{
+              type: 17, accent_color: 0xe74c3c,
+              components: [
+                { type: 10, content: `## 🏕️ Castlist: ${castlistIdentifier}\n\nNo tribes found. Tribe roles may have been deleted from the server, or no tribes have been added yet.` },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, custom_id: 'castlist_hub', label: 'Castlist Hub', style: 1, emoji: { name: '📋' } }
+                ]}
+              ]
+            }],
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
           }
         });
         return;
@@ -5234,8 +5243,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           await DiscordRequest(endpoint, {
             method: 'PATCH',
             body: {
-              content: `No tribes found for castlist: ${requestedCastlist}`,
-              flags: 1 << 6  // Ephemeral flag
+              components: [{
+                type: 17, accent_color: 0xe74c3c,
+                components: [
+                  { type: 10, content: `## 🏕️ Castlist: ${requestedCastlist}\n\nNo tribes found. Tribe roles may have been deleted from the server, or no tribes have been added yet.` },
+                  { type: 14 },
+                  { type: 1, components: [
+                    { type: 2, custom_id: 'castlist_hub', label: 'Castlist Hub', style: 1, emoji: { name: '📋' } }
+                  ]}
+                ]
+              }],
+              flags: (1 << 15) | (1 << 6)
             }
           });
           return;
@@ -36620,12 +36638,20 @@ Your server is now ready for Tycoons gameplay!`;
         const validTribes = await getTribesForCastlist(guildId, castlistId, client);
 
         if (validTribes.length === 0) {
-          // No tribes found - update message to show error
+          // No tribes found - update stale message with friendly error
           await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`, {
             method: 'PATCH',
             body: {
-              content: `No tribes found for castlist: ${castlistId}`,
-              components: []
+              components: [{
+                type: 17, accent_color: 0xe74c3c,
+                components: [
+                  { type: 10, content: `## 🏕️ Castlist: ${castlistId}\n\nNo tribes found. Tribe roles may have been deleted from the server, or no tribes have been added yet.` },
+                  { type: 14 },
+                  { type: 1, components: [
+                    { type: 2, custom_id: 'castlist_hub', label: 'Castlist Hub', style: 1, emoji: { name: '📋' } }
+                  ]}
+                ]
+              }]
             }
           });
           return;
@@ -36659,7 +36685,7 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Validate bounds - handle missing/deleted tribes gracefully
         if (newTribeIndex < 0 || newTribeIndex >= orderedTribes.length) {
-          console.warn(`Invalid tribe index ${newTribeIndex} for ${orderedTribes.length} tribes (server: ${guildId}), resetting to 0`);
+          console.log(`[TRIBES] Invalid tribe index ${newTribeIndex} for ${orderedTribes.length} tribes (server: ${guildId}), resetting to 0`);
           newTribeIndex = 0;
           newTribePage = 0;
           
@@ -36692,13 +36718,16 @@ Your server is now ready for Tycoons gameplay!`;
         await DiscordRequest(endpoint, {
           method: 'PATCH',
           body: {
-            flags: 1 << 15, // Keep IS_COMPONENTS_V2 flag
-            components: [
-              {
-                type: 10, // Text Display
-                content: `# Error\nError navigating castlist: ${errorMessage}`
-              }
-            ]
+            components: [{
+              type: 17, accent_color: 0xe74c3c,
+              components: [
+                { type: 10, content: `## ❌ Navigation Error\n\n${errorMessage}` },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, custom_id: 'castlist_hub', label: 'Castlist Hub', style: 1, emoji: { name: '📋' } }
+                ]}
+              ]
+            }]
           }
         });
       }

@@ -134,7 +134,7 @@ export async function getTribesForCastlist(guildId, castlistIdentifier, client) 
       }
       const role = await guild.roles.fetch(roleId);
       if (!role) {
-        console.warn(`[TRIBES] Role ${roleId} not found in Discord`);
+        console.log(`[TRIBES] Role ${roleId} not found in Discord (likely deleted by host)`);
         continue;
       }
       if (isVerbose) {
