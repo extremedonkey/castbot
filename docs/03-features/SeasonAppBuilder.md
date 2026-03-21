@@ -19,8 +19,6 @@ This document serves as the source of truth for the Season Application Builder f
 
 ### Current Implementation Status
 
-The Season Application Builder has been significantly enhanced with **Phase 1 complete**. It now includes:
-
 **✅ COMPLETED - Phase 1 (January 2025):**
 - **Season Management System**: Create and manage seasons with unique IDs and questions
 - **Dynamic Question Builder**: Add, edit, reorder, and delete application questions
@@ -28,11 +26,24 @@ The Season Application Builder has been significantly enhanced with **Phase 1 co
 - **Redesigned Creation UX**: Container-based interface with manual submission
 - **Migration System**: Automatic conversion of legacy configs to season-based structure
 
-**🔄 NEXT PRIORITY:**
-- **Discord Components V2 Limits**: Need replacement solution for seasons with many questions (>6-8 questions hit component limits)
-  - Current issue: Individual question management buttons exceed Discord's container component limits
-  - Proposed solutions pending design discussion
-  - Affects: Question management interface for seasons with extensive question sets
+**✅ COMPLETED - Phase 2: String Select Migration (March 2026):**
+- **String Select per question** — replaced 4-button rows (Edit/Delete/MoveUp/MoveDown) with single string select per question. Options: Summary (default), Edit, Move Up/Down, Duplicate, Delete, Preview. Reduced from 6 → 2 components per question.
+- **Pagination constant** — `QUESTIONS_PER_PAGE = 8` defined once at top of app.js, used everywhere. Supports ~15 questions per page.
+- **Special question types** — Player Setup (pronouns/age/timezone, non-deletable), Do Not Cast (DNC), Completion Message. Each has type-specific select options.
+- **"Click to add" select** — replaced New Question button with string select offering Short Answer, Paragraph, or DNC question types.
+- **Completion message editing** — fixed modal-from-select interaction (modals can't be sent from `updateMessage` factory handlers; completion edit handled before factory).
+- **Import/Export** — questions can be exported as JSON and imported into other seasons. Completion and DNC questions are filtered from exports.
+- **Question ordering fix** — `arrayIndex` maps to actual `config.questions[]` position, not display position. Completion questions can't be swapped with regular questions.
+
+**Related Analysis Docs:**
+- [RaP 0939: String Select Migration](../01-RaP/0939_20260320_SeasonAppsStringSelect_Analysis.md) — component budget analysis
+- [RaP 0937: Special Question Components](../01-RaP/0937_20260320_SpecialQuestionComponents_Analysis.md) — Player Setup, DNC, Completion architecture
+- [RaP 0936: Question Ordering](../01-RaP/0936_20260321_QuestionOrdering_Analysis.md) — why ordering kept breaking + proposed solutions
+
+**🔄 KNOWN ISSUES / FUTURE WORK:**
+- **Question ordering fragility** — the `config.questions[]` flat array serves storage, display, and type hierarchy simultaneously. Special types (completion, DNC) mixed with regular questions causes index confusion. RaP 0936 proposes separating into type-specific sub-arrays.
+- **`QUESTIONS_PER_PAGE` only covers admin UI** — applicant-facing flow uses different pagination.
+- **No question type validation on import** — imported questions could have invalid types.
 
 ### Access Path
 
@@ -195,13 +206,8 @@ The Season Application Builder has been significantly enhanced with **Phase 1 co
 
 ### Known Limitations
 
-**⚠️ Discord Components V2 Limits:**
-Seasons with many questions (>6-8) exceed Discord's component limits when displaying individual question management buttons. This causes the interface to fail for seasons like "Power Grab Season 5" with 8+ questions.
-
-**Proposed Solutions (Pending):**
-- Compact display with dropdown selection instead of individual buttons
-- Pagination system for question management
-- Alternative UI patterns to work within Discord limits
+**✅ RESOLVED — Discord Components V2 Limits (March 2026):**
+String select migration reduced per-question component cost from 6 to 2. With `QUESTIONS_PER_PAGE = 8` and ~7 fixed components (header, separators, buttons, nav), supports up to 16 questions per page. Pagination handles larger sets.
 
 ## Migration Strategy: Bridging Current and Future Designs
 
