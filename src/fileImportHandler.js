@@ -281,8 +281,12 @@ async function processSingleSeasonQuestionsImport(guildId, jsonContent, configId
     return buildErrorResponse('No questions found. Expected `{ "questions": [...] }` or a questions array.', 'sq_single');
   }
 
-  // Separate regular questions from completion message
-  const questions = rawQuestions.filter(q => !q.questionType || q.questionType === 'text');
+  // Separate regular questions from completion message, skip placeholder Q1 from source
+  const PLACEHOLDER_TITLE = 'Click here to set first question';
+  const questions = rawQuestions.filter(q => {
+    if (q.questionTitle === PLACEHOLDER_TITLE) return false; // Skip placeholder from old exports
+    return !q.questionType || q.questionType === 'text';
+  });
   const importedCompletion = rawQuestions.find(q => q.questionType === 'completion');
 
   if (questions.length === 0) {
@@ -307,7 +311,6 @@ async function processSingleSeasonQuestionsImport(guildId, jsonContent, configId
   const crypto = await import('crypto');
 
   // Check if Q1 is the default placeholder — if so, replace it with the first imported question
-  const PLACEHOLDER_TITLE = 'Click here to set first question';
   const PLACEHOLDER_TEXT = 'Edit this question or add more using the menu below.';
   let replacedPlaceholder = false;
   const firstExisting = config.questions[0];
