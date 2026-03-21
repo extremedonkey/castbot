@@ -301,8 +301,10 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
     }
   }
 
-  // "Add new question" select — always 2nd from bottom
-  refreshedComponents.push({
+  // "Add new question" and completion — only on last page
+  const isLastPage = currentPage === totalPages - 1;
+
+  if (isLastPage) refreshedComponents.push({
     type: 1,
     components: [{
       type: 3,
@@ -316,8 +318,8 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
     }]
   });
 
-  // Completion message select — always last
-  if (completionQuestion) {
+  // Completion message select — last page only
+  if (isLastPage && completionQuestion) {
     const completionDesc = (completionQuestion.questionTitle || 'Thank you for applying!').substring(0, 100);
     refreshedComponents.push({
       type: 1,
