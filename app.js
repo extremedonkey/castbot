@@ -8990,7 +8990,7 @@ To fix this:
               }},
               { type: 18, label: 'Image URL (Optional)', description: 'Link to an image to display with this question', component: {
                 type: 4, custom_id: 'imageURL', style: 1,
-                required: false, max_length: 500, value: '',
+                required: false, max_length: 500, value: completion?.imageURL || '',
                 placeholder: 'https://...'
               }}
             ]
@@ -8998,51 +8998,49 @@ To fix this:
         });
       }
 
-      // Non-edit actions (preview, summary) go through factory with updateMessage
+      // Preview — send as new ephemeral message (don't replace season management UI)
+      if (completionSelectedValue === 'preview') {
+        const playerData = await loadPlayerData();
+        const config = playerData[req.body.guild_id]?.applicationConfigs?.[completionConfigId];
+        if (!config) return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Season not found', flags: InteractionResponseFlags.EPHEMERAL } });
+
+        // Auto-convert last question to completion for old seasons
+        let completion = config.questions.find(q => q.questionType === 'completion');
+        if (!completion) {
+          if (config.questions.length > 0) {
+            completion = config.questions[config.questions.length - 1];
+            completion.questionType = 'completion';
+          } else {
+            const crypto = await import('crypto');
+            completion = {
+              id: `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`,
+              questionType: 'completion',
+              questionTitle: 'Thank you for applying to the season!',
+              questionText: 'Include information such as next steps on casting process, casting decision dates and marooning / season start dates.',
+              createdAt: Date.now()
+            };
+            config.questions.push(completion);
+          }
+          await savePlayerData(playerData);
+        }
+
+        const preview = buildQuestionPreview(completion, config.questions.length - 1, config.questions.length);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { ...preview, flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL }
+        });
+      }
+
+      // Summary/back — re-render management UI via factory
       return ButtonHandlerFactory.create({
         id: 'question_completion_select',
         updateMessage: true,
-        ephemeral: completionSelectedValue === 'preview',
         handler: async (context) => {
-          const selectedValue = completionSelectedValue;
           const qConfigId = completionConfigId;
-          console.log(`🏁 Completion select: value=${selectedValue}, configId=${qConfigId}, guildId=${context.guildId}`);
+          console.log(`🏁 Completion select: value=${completionSelectedValue}, configId=${qConfigId}, guildId=${context.guildId}`);
           const playerData = await loadPlayerData();
           const config = playerData[context.guildId]?.applicationConfigs?.[qConfigId];
           if (!config) return { content: '❌ Season not found' };
-
-          // Auto-convert last question to completion for old seasons (persists on first interaction)
-          let completion = config.questions.find(q => q.questionType === 'completion');
-          if (!completion) {
-            if (config.questions.length > 0) {
-              // Convert last question (old seasons used last question as completion)
-              completion = config.questions[config.questions.length - 1];
-              completion.questionType = 'completion';
-            } else {
-              const crypto = await import('crypto');
-              completion = {
-                id: `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`,
-                questionType: 'completion',
-                questionTitle: 'Thank you for applying to the season!',
-                questionText: 'Include information such as next steps on casting process, casting decision dates and marooning / season start dates.',
-                createdAt: Date.now()
-              };
-              config.questions.push(completion);
-            }
-            await savePlayerData(playerData);
-            console.log(`🏁 Auto-converted last question to completion for ${qConfigId}`);
-          }
-
-          if (selectedValue === 'preview') {
-            return buildQuestionPreview(completion, config.questions.length - 1, config.questions.length);
-          }
-
-          // 'edit' case handled before factory — should never reach here
-          if (selectedValue === 'edit') {
-            return { content: '❌ Please try again.', ephemeral: true };
-          }
-
-          // summary — re-render
           return await buildQuestionManagementUI(config, qConfigId, 0);
         }
       })(req, res, client);
@@ -9094,11 +9092,16 @@ To fix this:
           }
 
           if (selectedValue === 'preview') {
-            // Preview question — show what the player would see
+            // Preview question — send as new ephemeral message (don't replace management UI)
             const question = config.questions[questionIndex];
             if (!question) return { content: '❌ Question not found' };
-            if (question.questionType === 'dnc') return buildDncPreview(questionIndex, config.questions.length);
-            return buildQuestionPreview(question, questionIndex, config.questions.length);
+            const preview = question.questionType === 'dnc'
+              ? buildDncPreview(questionIndex, config.questions.length)
+              : buildQuestionPreview(question, questionIndex, config.questions.length);
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: { ...preview, flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL }
+            });
           }
 
           if (selectedValue === 'move_up' || selectedValue === 'move_down') {

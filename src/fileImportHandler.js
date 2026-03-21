@@ -407,7 +407,10 @@ export async function exportSeasonQuestions(guildId) {
       configId: id,
       seasonName: cfg.buttonText || cfg.seasonName || id,
       questions: cfg.questions
-        .filter(q => !q.questionType || q.questionType === 'text' || q.questionType === 'completion')
+        .filter(q => {
+          if (q.questionTitle === 'Click here to set first question') return false;
+          return !q.questionType || q.questionType === 'text' || q.questionType === 'completion';
+        })
         .map(q => ({
           questionTitle: q.questionTitle,
           questionText: q.questionText,
@@ -451,8 +454,13 @@ export async function exportSingleSeasonQuestions(guildId, configId) {
   if (!config) return { error: 'Season configuration not found.' };
   if (!config.questions?.length) return { error: 'No questions to export.' };
 
-  // Export regular text questions + completion message (skip DNC and other special types)
-  const exportableQuestions = config.questions.filter(q => !q.questionType || q.questionType === 'text' || q.questionType === 'completion');
+  // Export regular text questions + completion message (skip DNC, other special types, and placeholder Q1)
+  const PLACEHOLDER_TITLE = 'Click here to set first question';
+  const exportableQuestions = config.questions.filter(q => {
+    if (q.questionTitle === PLACEHOLDER_TITLE) return false; // Skip placeholder
+    if (q.questionType === 'completion' || q.questionType === 'text' || !q.questionType) return true;
+    return false; // Skip DNC etc
+  });
   if (exportableQuestions.length === 0) return { error: 'No exportable questions found.' };
 
   const exportData = {
