@@ -47,7 +47,7 @@ function calculateComponentsForTribe(playerCount, includeSeparators = true) {
  * @param {Array} tribes - Array of tribe data with member counts
  * @returns {string} Scenario type: "ideal", "no-separators", or "multi-page"
  */
-function determineDisplayScenario(tribes) {
+export function determineDisplayScenario(tribes) {
     // Simplified: Use multi-page for tribes with 9+ players, otherwise ideal
     const needsPagination = tribes.some(tribe => tribe.memberCount >= 9);
     
@@ -133,7 +133,7 @@ export function createNavigationState(tribes, scenario, currentTribeIndex = 0, c
  * @param {string} castlistName - Name of the castlist ("default" triggers user-first)
  * @returns {Array} Reordered tribes
  */
-function reorderTribes(tribes, userId = null, strategy = "default", castlistName = "default") {
+export function reorderTribes(tribes, userId = null, strategy = "default", castlistName = "default") {
     switch(strategy) {
         case "user-first":
             if (!userId || castlistName !== "default") {

@@ -36596,146 +36596,24 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id.startsWith('castlist2_nav_')) {
-      // Handle new castlist2 navigation system
-      try {
-        const user = req.body.member?.user || req.body.user;
-        console.log(`Processing castlist2 navigation: ${custom_id} | User: ${user?.username || 'Unknown'}#${user?.discriminator || '0000'} (${user?.id || 'Unknown ID'})`);
-        
-        // Parse new format: castlist2_nav_${action}_${tribeIndex}_${tribePage}_${castlistName}_${displayMode}
-        // Example: castlist2_nav_next_page_0_0_default_view
-        // Example: castlist2_nav_next_page_0_0_legacyList_edit
-        // We need to be careful because action can contain underscores (next_page, last_tribe, etc.)
+      // Castlist navigation — migrated to factory (Phase 1, RaP 0935)
+      const { parseCastlistNavigation } = await import('./castlistDisplay.js');
+      const navContext = parseCastlistNavigation(custom_id);
 
-        // Remove the 'castlist2_nav_' prefix
-        const withoutPrefix = custom_id.substring('castlist2_nav_'.length);
-        const parts = withoutPrefix.split('_');
-
-        // Format: action_{tribeIndex}_{tribePage}_{castlistId}_{displayMode}
-        // CRITICAL: castlistId has underscores! Use position-based parsing
-
-        if (parts.length < 5) {
-          throw new Error('Invalid navigation custom_id format - needs at least 5 parts');
-        }
-
-        // Position-based parsing (actions are always 2 parts: next_page, last_tribe, etc.)
-        // parts[0-1]: action (2 parts)
-        // parts[2]: tribeIndex
-        // parts[3]: tribePage
-        // parts[4 to length-2]: castlistId (may have underscores!)
-        // parts[length-1]: displayMode
-
-        const displayMode = parts[parts.length - 1] || 'view';
-        const action = `${parts[0]}_${parts[1]}`;  // Actions are always 2 parts
-        const currentTribeIndex = parseInt(parts[2]);
-        const currentTribePage = parseInt(parts[3]);
-        const castlistId = parts.slice(4, parts.length - 1).join('_');
-
-        console.log('Parsed navigation:', { action, currentTribeIndex, currentTribePage, castlistId, displayMode, user: `${user?.username}#${user?.discriminator} (${user?.id})` });
-        
-        // Ignore disabled buttons
-        if (action.startsWith('disabled_')) {
-          return res.send({
-            type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
-          });
-        }
-        
-        // Send deferred response
-        res.send({
-          type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
-        });
-        
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-
-        // ✅ NEW: Use unified data access (eliminates 39 lines of duplicate code)
-        const { getTribesForCastlist } = await import('./castlistDataAccess.js');
-        const validTribes = await getTribesForCastlist(guildId, castlistId, client);
-
-        if (validTribes.length === 0) {
-          // No tribes found - update stale message with friendly error
-          await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`, {
-            method: 'PATCH',
-            body: {
-              components: [buildNoTribesContainer()]
-            }
-          });
-          return;
-        }
-
-        // Pre-load playerData for sorting context
-        const playerData = await loadPlayerData();
-        const orderedTribes = reorderTribes(validTribes, req.body.member.user.id, "user-first", castlistId);  // FIX: Use castlistId
-        const scenario = determineDisplayScenario(orderedTribes);
-        
-        // Calculate new navigation position
-        let newTribeIndex = currentTribeIndex;
-        let newTribePage = currentTribePage;
-        
-        switch(action) {
-          case 'next_page':
-            newTribePage++;
-            break;
-          case 'last_page':
-            newTribePage--;
-            break;
-          case 'next_tribe':
-            newTribeIndex++;
-            newTribePage = 0; // Reset to first page of new tribe
-            break;
-          case 'last_tribe':
-            newTribeIndex--;
-            newTribePage = 0; // Reset to first page of new tribe
-            break;
-        }
-        
-        // Validate bounds - handle missing/deleted tribes gracefully
-        if (newTribeIndex < 0 || newTribeIndex >= orderedTribes.length) {
-          console.log(`[TRIBES] Invalid tribe index ${newTribeIndex} for ${orderedTribes.length} tribes (server: ${guildId}), resetting to 0`);
-          newTribeIndex = 0;
-          newTribePage = 0;
-          
-          // If no valid tribes exist at all, show error
-          if (orderedTribes.length === 0) {
-            throw new Error('No valid tribes found - all roles may have been deleted');
-          }
-        }
-
-        // Create new navigation state
-        const navigationState = createNavigationState(orderedTribes, scenario, newTribeIndex, newTribePage, guild, { playerData, guildId });
-
-        // Get castlist name for display (same pattern as show_castlist2 handler)
-        const castlistEntity = playerData[guildId]?.castlistConfigs?.[castlistId];
-        const castlistName = castlistEntity?.name || castlistId;
-
-        // Send updated response (preserve displayMode for edit mode navigation)
-        await sendCastlist2Response(req, guild, orderedTribes, castlistId, navigationState, req.body.member, req.body.channel_id, displayMode, castlistName, { playerData, guildId });
-
-        console.log(`Successfully navigated to tribe ${newTribeIndex + 1}, page ${newTribePage + 1} in ${displayMode} mode`);
-
-      } catch (error) {
-        console.error('Error handling castlist2 navigation:', error);
-        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-
-        // Sanitize error message (Cloudflare HTML pages can be >10KB)
-        const { sanitizeErrorMessage } = await import('./utils.js');
-        const errorMessage = sanitizeErrorMessage(error);
-
-        await DiscordRequest(endpoint, {
-          method: 'PATCH',
-          body: {
-            components: [{
-              type: 17, accent_color: 0xe74c3c,
-              components: [
-                { type: 10, content: `## ❌ Navigation Error\n\n${errorMessage}` },
-                { type: 14 },
-                { type: 1, components: [
-                  { type: 2, custom_id: 'castlist_hub', label: 'Castlist Hub', style: 1, emoji: { name: '📋' } }
-                ]}
-              ]
-            }]
-          }
-        });
+      // Disabled buttons — acknowledge silently without deferring
+      if (navContext.action.startsWith('disabled_')) {
+        return res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
       }
+
+      return ButtonHandlerFactory.create({
+        id: 'castlist2_nav',
+        deferred: true,
+        updateMessage: true,
+        handler: async (context) => {
+          const { handleCastlistNavigation } = await import('./castlistDisplay.js');
+          return handleCastlistNavigation(context, navContext, buildNoTribesContainer);
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('castlist2_tribe_prev_') || custom_id.startsWith('castlist2_tribe_next_')) {
       // Handle castlist2 tribe navigation buttons
       try {

@@ -376,3 +376,102 @@ describe('Role deletion resilience — data layer', () => {
     assert.equal(result.length, 0);
   });
 });
+
+// ── parseCastlistNavigation (Phase 1 migration) ──
+
+// Replicate the pure parsing function inline
+function parseCastlistNavigation(customId) {
+  const withoutPrefix = customId.substring('castlist2_nav_'.length);
+  const parts = withoutPrefix.split('_');
+  if (parts.length < 5) throw new Error('Invalid navigation custom_id format - needs at least 5 parts');
+  return {
+    action: `${parts[0]}_${parts[1]}`,
+    currentTribeIndex: parseInt(parts[2]),
+    currentTribePage: parseInt(parts[3]),
+    castlistId: parts.slice(4, parts.length - 1).join('_'),
+    displayMode: parts[parts.length - 1] || 'view'
+  };
+}
+
+describe('parseCastlistNavigation — basic patterns', () => {
+  it('parses next_tribe with default castlist', () => {
+    const result = parseCastlistNavigation('castlist2_nav_next_tribe_0_0_default_view');
+    assert.equal(result.action, 'next_tribe');
+    assert.equal(result.currentTribeIndex, 0);
+    assert.equal(result.currentTribePage, 0);
+    assert.equal(result.castlistId, 'default');
+    assert.equal(result.displayMode, 'view');
+  });
+
+  it('parses last_tribe with default castlist', () => {
+    const result = parseCastlistNavigation('castlist2_nav_last_tribe_1_0_default_view');
+    assert.equal(result.action, 'last_tribe');
+    assert.equal(result.currentTribeIndex, 1);
+  });
+
+  it('parses next_page', () => {
+    const result = parseCastlistNavigation('castlist2_nav_next_page_2_1_default_view');
+    assert.equal(result.action, 'next_page');
+    assert.equal(result.currentTribeIndex, 2);
+    assert.equal(result.currentTribePage, 1);
+  });
+
+  it('parses last_page', () => {
+    const result = parseCastlistNavigation('castlist2_nav_last_page_0_3_default_edit');
+    assert.equal(result.action, 'last_page');
+    assert.equal(result.currentTribePage, 3);
+    assert.equal(result.displayMode, 'edit');
+  });
+});
+
+describe('parseCastlistNavigation — complex castlist IDs', () => {
+  it('handles castlistId with underscores', () => {
+    const result = parseCastlistNavigation('castlist2_nav_next_tribe_0_0_castlist_1759638936214_system_view');
+    assert.equal(result.castlistId, 'castlist_1759638936214_system');
+    assert.equal(result.displayMode, 'view');
+  });
+
+  it('handles castlistId with multiple underscores', () => {
+    const result = parseCastlistNavigation('castlist2_nav_next_page_1_2_castlist_1774084672193_custom_edit');
+    assert.equal(result.castlistId, 'castlist_1774084672193_custom');
+    assert.equal(result.displayMode, 'edit');
+    assert.equal(result.currentTribeIndex, 1);
+    assert.equal(result.currentTribePage, 2);
+  });
+
+  it('handles legacy string castlist names', () => {
+    const result = parseCastlistNavigation('castlist2_nav_next_tribe_0_0_Season13_view');
+    assert.equal(result.castlistId, 'Season13');
+  });
+
+  it('handles virtual castlist IDs', () => {
+    const result = parseCastlistNavigation('castlist2_nav_last_tribe_3_0_virtual_U2Vhc29uIDEz_view');
+    assert.equal(result.castlistId, 'virtual_U2Vhc29uIDEz');
+  });
+});
+
+describe('parseCastlistNavigation — disabled buttons', () => {
+  it('parses disabled_prev action', () => {
+    const result = parseCastlistNavigation('castlist2_nav_disabled_prev_0_0_default_view');
+    assert.equal(result.action, 'disabled_prev');
+    assert.ok(result.action.startsWith('disabled_'));
+  });
+
+  it('parses disabled_next action', () => {
+    const result = parseCastlistNavigation('castlist2_nav_disabled_next_2_0_default_view');
+    assert.equal(result.action, 'disabled_next');
+  });
+});
+
+describe('parseCastlistNavigation — error handling', () => {
+  it('throws on too few parts', () => {
+    assert.throws(() => parseCastlistNavigation('castlist2_nav_next_tribe'), {
+      message: /at least 5 parts/
+    });
+  });
+
+  it('handles NaN tribe index gracefully', () => {
+    const result = parseCastlistNavigation('castlist2_nav_next_tribe_abc_0_default_view');
+    assert.ok(isNaN(result.currentTribeIndex));
+  });
+});

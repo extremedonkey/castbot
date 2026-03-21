@@ -805,6 +805,15 @@ export const BUTTON_REGISTRY = {
     parent: 'castlist_hub_main'
   },
 
+  'castlist2_nav_*': {
+    label: 'Castlist Navigation',
+    description: 'Navigate between tribes and pages in castlist display',
+    emoji: '🧭',
+    style: 'Secondary',
+    category: 'castlist',
+    parent: 'show_castlist2'
+  },
+
   // Navigation
   'prod_menu_back': {
     label: '← Menu',
