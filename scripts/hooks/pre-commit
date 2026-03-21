@@ -86,13 +86,13 @@ fi
 # ── Check 2: No new ActionRow+TextInput in modals (use Label type 18) ──
 # Only check newly added lines (+ lines in the diff)
 NEW_LEGACY_MODALS=$(git diff --cached -- app.js | grep '^+' | grep -v '^+++' | \
-  grep -c 'type: 1.*components.*type: 4\|type: 1, *$' 2>/dev/null || echo 0)
+  grep -c 'type: 1.*components.*type: 4\|type: 1, *$' 2>/dev/null) || NEW_LEGACY_MODALS=0
 
 # Only warn if there are new ActionRow patterns wrapping TextInputs
 if [ "$NEW_LEGACY_MODALS" -gt 0 ]; then
   # Check if these are actually ActionRow+TextInput combos (not just ActionRow+Button)
   ACTUAL_LEGACY=$(git diff --cached -- app.js | grep '^+' | grep -v '^+++' | \
-    grep -c 'type: 1.*components.*\[.*{.*type: 4' 2>/dev/null || echo 0)
+    grep -c 'type: 1.*components.*\[.*{.*type: 4' 2>/dev/null) || ACTUAL_LEGACY=0
   if [ "$ACTUAL_LEGACY" -gt 0 ]; then
     echo ""
     echo "🗿 THE MOAI ALSO NOTICES..."
