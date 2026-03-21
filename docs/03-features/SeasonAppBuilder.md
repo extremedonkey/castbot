@@ -144,15 +144,24 @@ This document serves as the source of truth for the Season Application Builder f
         {
           "id": "question_30c92b66a8364840",
           "order": 1,
-          "questionTitle": "Welcome",
-          "questionText": "Welcome to your application...",
+          "questionTitle": "Tell us about yourself",
+          "questionText": "Share your interests and why you want to play...",
+          "questionStyle": 2,        // 1=Short, 2=Paragraph
+          "imageURL": "",            // Optional image
           "createdAt": 1751550297411
         },
         {
-          "id": "question_16591fb65b054d5b", 
-          "order": 2,
-          "questionTitle": "Name & Location",
-          "questionText": "Please confirm your information...",
+          "id": "question_dnc001",
+          "questionType": "dnc",     // Special type: Do Not Cast
+          "questionTitle": "Do not cast list",
+          "questionText": "Identify people you don't wish to play with",
+          "createdAt": 1751550324378
+        },
+        {
+          "id": "question_completion001",
+          "questionType": "completion",  // Special type: always last, non-deletable
+          "questionTitle": "Thank you for applying!",
+          "questionText": "We'll review your application and get back to you.",
           "createdAt": 1751550324378
         }
       ]
@@ -424,9 +433,17 @@ This migration strategy ensures a smooth transition while maintaining system sta
 
 ## Architecture & Patterns
 
-### Overview
+> **⚠️ IMPORTANT:** The modular architecture below (seasonManager.js, seasonEntityManager.js, etc.) was PROPOSED but NEVER IMPLEMENTED. The actual implementation lives entirely in:
+> - `app.js` — `buildQuestionManagementUI()` function (~line 151) + all handlers
+> - `applicationManager.js` — application creation flow + setup container
+> - `playerData.json` — `applicationConfigs[configId].questions[]` array
+>
+> No separate season modules exist. The entity framework integration was never built.
 
-The Season Application Builder leverages CastBot's proven entity management patterns from the Safari system, ensuring consistency, reusability, and maintainability. This architecture provides a familiar interface for admins while minimizing code duplication.
+### Overview (Proposed vs Actual)
+
+**Proposed:** Leverages CastBot's entity management patterns from Safari with separate modules.
+**Actual:** Single `buildQuestionManagementUI()` function in app.js renders the admin UI. Question CRUD is handled by inline handlers (`question_select_`, `question_add_`, `question_completion_select_`). Data is a flat `questions[]` array on each applicationConfig.
 
 ### Entity Management Integration
 
