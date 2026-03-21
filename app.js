@@ -5208,138 +5208,19 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
       })(req, res, client);
     } else if (custom_id.startsWith('show_castlist2') || (req.body.data && req.body.data.custom_id && req.body.data.custom_id.startsWith('show_castlist2'))) {
-      // Handle show_castlist2 - reuse existing logic but decode virtual IDs
-      let requestedCastlist = 'unknown'; // Hoist for error handler access
-      try {
-        const currentCustomId = req.body.data?.custom_id?.startsWith('show_castlist2') ? req.body.data.custom_id : custom_id;
+      // Castlist display — migrated to factory (Phase 2, RaP 0935)
+      const currentCustomId = req.body.data?.custom_id?.startsWith('show_castlist2') ? req.body.data.custom_id : custom_id;
+      const { parseShowCastlist } = await import('./castlistDisplay.js');
+      const { castlistId, displayMode } = await parseShowCastlist(currentCustomId);
 
-        // Extract castlist ID and display mode
-        // Check if it ends with _edit specifically
-        const displayMode = currentCustomId.endsWith('_edit') ? 'edit' : 'view';
-
-        // Extract castlist ID
-        if (displayMode === 'edit') {
-          // Remove the _edit suffix
-          const withoutEdit = currentCustomId.slice(0, -5); // Remove '_edit'
-          requestedCastlist = withoutEdit.replace('show_castlist2_', '') || 'default';
-        } else {
-          // No edit suffix, extract everything after show_castlist2_
-          requestedCastlist = currentCustomId.replace('show_castlist2_', '') || 'default';
+      return ButtonHandlerFactory.create({
+        id: 'show_castlist2',
+        deferred: true,
+        handler: async (context) => {
+          const { displayCastlist } = await import('./castlistDisplay.js');
+          return displayCastlist(context, castlistId, displayMode, buildNoTribesContainer, canSendMessagesInChannel);
         }
-
-        // Decode virtual castlist ID if needed
-        const { castlistVirtualAdapter } = await import('./castlistVirtualAdapter.js');
-        requestedCastlist = castlistVirtualAdapter.decodeVirtualId(requestedCastlist);
-
-        console.log('Processing show_castlist2 for:', requestedCastlist, 'in mode:', displayMode);
-
-        // ✅ CRITICAL: Send deferred response IMMEDIATELY for large guilds (prevents 3-second timeout)
-        res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
-        console.log('[CASTLIST] Sent deferred response');
-
-        const guildId = req.body.guild_id;
-        const userId = req.body.member?.user?.id || req.body.user?.id;
-        const channelId = req.body.channel_id || null;
-        const member = req.body.member || null;
-        const guild = await client.guilds.fetch(guildId);
-
-        // ✅ NEW: Single unified call via Virtual Adapter (replaces 145 lines of inline filtering)
-        const { getTribesForCastlist } = await import('./castlistDataAccess.js');
-        const allTribes = await getTribesForCastlist(guildId, requestedCastlist, client);
-
-        if (allTribes.length === 0) {
-          const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-          await DiscordRequest(endpoint, {
-            method: 'PATCH',
-            body: {
-              components: [buildNoTribesContainer()],
-              flags: (1 << 15) | (1 << 6)
-            }
-          });
-          return;
-        }
-
-        // Import necessary functions
-        const { loadPlayerData } = await import('./storage.js');
-        const { determineDisplayScenario, createNavigationState, reorderTribes } = await import('./castlistV2.js');
-
-        const playerData = await loadPlayerData();
-
-        // Reorder tribes for display - apply user-first for default castlist
-        // This fixes the pagination bug where initial display used different ordering than navigation
-        const orderingStrategy = requestedCastlist === 'default' ? 'user-first' : 'default';
-        const tribes = reorderTribes(allTribes, userId, orderingStrategy, requestedCastlist);
-
-        // Check permissions if in channel
-        if (channelId && member) {
-          try {
-            const memberObj = await guild.members.fetch(userId);
-            const channel = await client.channels.fetch(channelId);
-            const permissions = channel?.permissionsFor(memberObj);
-            if (!permissions?.has('SendMessages')) {
-              return res.send({
-                type: 4,
-                data: {
-                  content: 'You do not have permission to send messages in this channel.',
-                  flags: 1 << 6  // Ephemeral flag
-                }
-              });
-            }
-          } catch (error) {
-            console.error('Error checking channel permissions:', error);
-          }
-        }
-
-        // Calculate components for all tribes
-        const scenario = determineDisplayScenario(tribes);
-        const navigationState = createNavigationState(tribes, scenario, 0, 0, guild, { playerData, guildId });
-
-        // Send castlist as a NEW message to the channel
-        const memberObj = member ? await guild.members.fetch(userId) : null;
-
-        // Build the response data using the new helper function
-        // Create permission checker for ephemeral flag handling
-        const permissionChecker = memberObj && channelId ?
-          async (m, c) => await canSendMessagesInChannel(m, c, client) :
-          null;
-
-        // Get castlist name for display (Virtual Adapter already resolved this)
-        const castlistEntity = playerData[guildId]?.castlistConfigs?.[requestedCastlist];
-        const castlistName = castlistEntity?.name || requestedCastlist;
-
-        // Pass ID for lookups, name for display
-        const responseData = await buildCastlist2ResponseData(guild, tribes, requestedCastlist, navigationState, memberObj, channelId, permissionChecker, displayMode, castlistName, { playerData, guildId });
-
-        // Post castlist via webhook follow-up (deferred response already sent)
-        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-        await DiscordRequest(endpoint, {
-          method: 'PATCH',
-          body: responseData
-        });
-        console.log('[CASTLIST] Sent castlist via webhook follow-up');
-        return; // Already sent via webhook
-      } catch (error) {
-        console.error('❌ [CASTLIST] Error in show_castlist2 handler:', error);
-        console.error('  Castlist:', requestedCastlist);
-        console.error('  Stack:', error.stack);
-
-        // Send error via webhook follow-up
-        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-        await DiscordRequest(endpoint, {
-          method: 'PATCH',
-          body: {
-            flags: (1 << 6), // EPHEMERAL - error only visible to clicker
-            components: [{
-              type: 17, // Container
-              components: [{
-                type: 10, // TextDisplay
-                content: `# ❌ Error Loading Castlist\n\n**Castlist**: ${requestedCastlist || 'unknown'}\n**Error**: ${error.message}\n\nThis castlist may have data issues. Please contact an admin.`
-              }]
-            }]
-          }
-        });
-        return; // Already sent via webhook
-      }
+      })(req, res, client);
     } else if (custom_id.startsWith('rank_')) {
       // Handle ranking button clicks - USING CAST RANKING MANAGER
       return ButtonHandlerFactory.create({

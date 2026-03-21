@@ -805,6 +805,14 @@ export const BUTTON_REGISTRY = {
     parent: 'castlist_hub_main'
   },
 
+  'show_castlist2_*': {
+    label: 'Show Castlist',
+    description: 'Display castlist with tribes and player cards',
+    emoji: '📋',
+    style: 'Primary',
+    category: 'castlist',
+    parent: 'viral_menu'
+  },
   'castlist2_nav_*': {
     label: 'Castlist Navigation',
     description: 'Navigate between tribes and pages in castlist display',
@@ -4342,9 +4350,15 @@ export class ButtonHandlerFactory {
         if (config.deferred && !res.headersSent) {
           // For deferred responses, update via webhook
           try {
+            const { sanitizeErrorMessage } = await import('./utils.js');
+            const errorMessage = sanitizeErrorMessage(error);
             return updateDeferredResponse(context.token, {
-              content: '❌ An error occurred. Please try again.',
-              ephemeral: true
+              components: [{
+                type: 17, accent_color: 0xe74c3c,
+                components: [
+                  { type: 10, content: `## ❌ Error\n\n${errorMessage}` }
+                ]
+              }]
             });
           } catch (webhookError) {
             console.error(`Failed to update deferred response for ${config.id}:`, webhookError);
