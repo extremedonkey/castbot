@@ -143,6 +143,24 @@ import { shouldLog } from './src/utils/logConfig.js';
 // Season App question pagination — single source of truth
 const QUESTIONS_PER_PAGE = 8;
 
+// Shared "no tribes" onboarding container — used by /castlist, show_castlist2, and nav error paths
+function buildNoTribesContainer() {
+  return {
+    type: 17, accent_color: 0x3498db,
+    components: [
+      { type: 10, content: `## 🏕️ No tribes added to Castlist yet` },
+      { type: 14 },
+      { type: 10, content: `### \`\`\`🎬 Prod Team Member?\`\`\`` },
+      {
+        type: 9,
+        components: [{ type: 10, content: `Head to the Castlist Hub and add your first tribes.\n- If you're just testing CastBot out, try add your Production team role as a tribe to see how it works\n- If marooning hasn't happened yet, you can safely add the tribe roles now and players will appear in the castlist as soon as you add their tribe roles\n- If it's after marooning, simply add the current tribe roles to the castlist from the Castlist Hub!` }],
+        accessory: { type: 2, custom_id: 'castlist_hub', label: 'Castlist Hub', style: 1, emoji: { name: '🏕️' } }
+      },
+      { type: 10, content: `### \`\`\`🍿 Spectator / Player?\`\`\`\nPing Production and ask them to follow the instructions above to set the castlist up! :)` }
+    ]
+  };
+}
+
 // Helper function to refresh question management UI
 /**
  * Build question management UI data (for ButtonHandlerFactory handlers)
@@ -2613,16 +2631,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         await DiscordRequest(endpoint, {
           method: 'PATCH',
           body: {
-            components: [{
-              type: 17, accent_color: 0xe74c3c,
-              components: [
-                { type: 10, content: `## 🏕️ Castlist: ${castlistIdentifier}\n\nNo tribes found. Tribe roles may have been deleted from the server, or no tribes have been added yet.` },
-                { type: 14 },
-                { type: 1, components: [
-                  { type: 2, custom_id: 'castlist_hub', label: 'Castlist Hub', style: 1, emoji: { name: '📋' } }
-                ]}
-              ]
-            }],
+            components: [buildNoTribesContainer()],
             flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -5243,20 +5252,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           await DiscordRequest(endpoint, {
             method: 'PATCH',
             body: {
-              components: [{
-                type: 17, accent_color: 0x3498db,
-                components: [
-                  { type: 10, content: `## 🏕️ No tribes added to Castlist yet` },
-                  { type: 14 },
-                  { type: 10, content: `### \`\`\`🎬 Prod Team Member?\`\`\`` },
-                  {
-                    type: 9, // Section
-                    components: [{ type: 10, content: `Head to the Castlist Hub and add your first tribes.\n- If you're just testing CastBot out, try add your Production team role as a tribe to see how it works\n- If marooning hasn't happened yet, you can safely add the tribe roles now and players will appear in the castlist as soon as you add their tribe roles\n- If it's after marooning, simply add the current tribe roles to the castlist from the Castlist Hub!` }],
-                    accessory: { type: 2, custom_id: 'castlist_hub', label: 'Castlist Hub', style: 1, emoji: { name: '🏕️' } }
-                  },
-                  { type: 10, content: `### \`\`\`🍿 Spectator / Player?\`\`\`\nPing Production and ask them to follow the instructions above to set the castlist up! :)` }
-                ]
-              }],
+              components: [buildNoTribesContainer()],
               flags: (1 << 15) | (1 << 6)
             }
           });
@@ -10667,6 +10663,9 @@ To fix this:
             return { components: [container] };
           } catch (error) {
             console.error(`[COMPACT-CASTLIST] Generation failed:`, error);
+            if (error.message?.includes('No tribes found')) {
+              return { components: [buildNoTribesContainer()] };
+            }
             const container = {
               type: 17, accent_color: 0xe74c3c,
               components: [
@@ -11015,14 +11014,8 @@ To fix this:
           return await DiscordRequest(endpoint, {
             method: 'PATCH',
             body: {
-              components: [{
-                type: 17, // Container
-                components: [{
-                  type: 10, // Text Display
-                  content: `❌ No tribes found for castlist: ${castlistName}`
-                }]
-              }],
-              flags: (1 << 15) // IS_COMPONENTS_V2
+              components: [buildNoTribesContainer()],
+              flags: (1 << 15)
             }
           });
         }
@@ -36663,16 +36656,7 @@ Your server is now ready for Tycoons gameplay!`;
           await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`, {
             method: 'PATCH',
             body: {
-              components: [{
-                type: 17, accent_color: 0xe74c3c,
-                components: [
-                  { type: 10, content: `## 🏕️ Castlist: ${castlistId}\n\nNo tribes found. Tribe roles may have been deleted from the server, or no tribes have been added yet.` },
-                  { type: 14 },
-                  { type: 1, components: [
-                    { type: 2, custom_id: 'castlist_hub', label: 'Castlist Hub', style: 1, emoji: { name: '📋' } }
-                  ]}
-                ]
-              }]
+              components: [buildNoTribesContainer()]
             }
           });
           return;
