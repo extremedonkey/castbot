@@ -5244,13 +5244,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             method: 'PATCH',
             body: {
               components: [{
-                type: 17, accent_color: 0xe74c3c,
+                type: 17, accent_color: 0x3498db,
                 components: [
-                  { type: 10, content: `## 🏕️ Castlist: ${requestedCastlist}\n\nNo tribes found. Tribe roles may have been deleted from the server, or no tribes have been added yet.` },
+                  { type: 10, content: `## 🏕️ No tribes added to Castlist yet` },
                   { type: 14 },
-                  { type: 1, components: [
-                    { type: 2, custom_id: 'castlist_hub', label: 'Castlist Hub', style: 1, emoji: { name: '📋' } }
-                  ]}
+                  {
+                    type: 9, // Section
+                    components: [{ type: 10, content: `### \`\`\`🎬 Prod Team Member?\`\`\`\nHead to the Castlist Hub and add your first tribes.\n- If you're just testing CastBot out, try add your Production team role as a tribe to see how it works\n- If marooning hasn't happened yet, you can safely add the tribe roles now and players will appear in the castlist as soon as you add their tribe roles\n- If it's after marooning, simply add the current tribe roles to the castlist from the Castlist Hub!` }],
+                    accessory: { type: 2, custom_id: 'castlist_hub', label: 'Castlist Hub', style: 1, emoji: { name: '🏕️' } }
+                  }
                 ]
               }],
               flags: (1 << 15) | (1 << 6)
@@ -10547,6 +10549,23 @@ To fix this:
           return menuData;
         }
       })(req, res, client);
+    } else if (custom_id === 'castlist_hub') {
+      // Castlist Hub shortcut (from error states) — opens hub as new ephemeral with default pre-selected
+      return ButtonHandlerFactory.create({
+        id: 'castlist_hub',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        ephemeral: true,
+        handler: async (context) => {
+          const { createCastlistHub } = await import('./castlistHub.js');
+          return await createCastlistHub(context.guildId, {
+            mode: 'list',
+            selectedCastlistId: 'default',
+            skipMemberFetch: false
+          });
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'castlist_hub_main') {
       // Handle Castlist Hub main menu - Available to all production team members
       return ButtonHandlerFactory.create({

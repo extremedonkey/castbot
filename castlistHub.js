@@ -206,7 +206,7 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
         accessory: {
           type: 2, // Button
           custom_id: `tribe_add_button|${castlist.id}`,
-          label: 'Add Tribe',
+          label: 'New Tribe',
           style: 2, // Secondary
           emoji: { name: '🏕️' }
         }
@@ -250,7 +250,7 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
             type: 6, // Role Select
             custom_id: `castlist_tribe_select_${castlist.id}`,
             placeholder: tribes.length > 0
-              ? 'Add or remove tribes...'
+              ? 'Add or remove tribes from existing Discord roles...'
               : 'Select roles to add as tribes...',
             min_values: 0, // CRITICAL: Allow deselecting all (enables remove)
             max_values: maxTribeLimit, // ENFORCED: Component budget limit
@@ -292,14 +292,48 @@ export async function createCastlistHub(guildId, options = {}, client = null) {
         });
       }
 
-      // Section for each existing tribe with Edit button accessory
+      // Detect orphaned tribes (role deleted from Discord) and auto-clean
+      const orphanedRoleIds = [];
+      const validTribes = [];
       for (const tribe of tribes) {
-        // Get role name from Discord
         const role = guild ? await guild.roles.fetch(tribe.roleId).catch(() => null) : null;
-        const roleName = role?.name || tribe.roleId;
+        if (!role) {
+          orphanedRoleIds.push(tribe.roleId);
+          console.log(`[TRIBES] Orphaned tribe detected: role ${tribe.roleId} deleted from Discord, auto-removing`);
+        } else {
+          validTribes.push({ ...tribe, _role: role });
+        }
+      }
+
+      // Auto-remove orphaned tribes from playerData
+      if (orphanedRoleIds.length > 0) {
+        const { loadPlayerData, savePlayerData } = await import('./storage.js');
+        const pd = await loadPlayerData();
+        for (const roleId of orphanedRoleIds) {
+          // Remove castlist association
+          if (pd[guildId]?.tribes?.[roleId]?.castlistIds) {
+            pd[guildId].tribes[roleId].castlistIds = pd[guildId].tribes[roleId].castlistIds.filter(id => id !== castlist.id);
+            // If no castlists left, remove the tribe entirely
+            if (pd[guildId].tribes[roleId].castlistIds.length === 0) {
+              delete pd[guildId].tribes[roleId];
+            }
+          }
+        }
+        await savePlayerData(pd);
+
+        container.components.push({
+          type: 10,
+          content: `⚠️ **Deleted Discord Role${orphanedRoleIds.length > 1 ? 's' : ''}:** CastBot attempted to load ${orphanedRoleIds.length} tribe${orphanedRoleIds.length > 1 ? 's' : ''} (role ID${orphanedRoleIds.length > 1 ? 's' : ''}: ${orphanedRoleIds.join(', ')}), but the role${orphanedRoleIds.length > 1 ? 's appear' : ' appears'} to have been deleted from your server. The role${orphanedRoleIds.length > 1 ? 's have' : ' has'} been removed from CastBot — re-add any tribes to the castlist above.`
+        });
+      }
+
+      // Section for each valid tribe with Edit button accessory
+      for (const tribe of validTribes) {
+        const role = tribe._role;
+        const roleName = role.name;
 
         // Get members with this role (if available from cache)
-        const members = role ? Array.from(role.members.values()) : [];
+        const members = Array.from(role.members.values());
 
         // IMPORTANT: When skipMemberFetch is true, role.members only has CACHED members
         // This is often just 1 person (you) even if the tribe has 12+ members!
