@@ -140,6 +140,9 @@ import {
 } from './mapExplorer.js';
 import { shouldLog } from './src/utils/logConfig.js';
 
+// Season App question pagination — single source of truth
+const QUESTIONS_PER_PAGE = 8;
+
 // Helper function to refresh question management UI
 /**
  * Build question management UI data (for ButtonHandlerFactory handlers)
@@ -185,7 +188,7 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
   const completionQuestion = config.questions.find(q => q.questionType === 'completion');
   const completionIndex = config.questions.findIndex(q => q.questionType === 'completion');
 
-  const questionsPerPage = 8;
+  const questionsPerPage = QUESTIONS_PER_PAGE;
   const totalPages = Math.max(1, Math.ceil(regularQuestions.length / questionsPerPage));
   const startIndex = currentPage * questionsPerPage;
   const endIndex = Math.min(startIndex + questionsPerPage, regularQuestions.length);
@@ -9105,7 +9108,7 @@ To fix this:
             }
             const regularCount = config.questions.filter(q => q.questionType !== 'completion').length;
             const regularIdx = config.questions.filter((q, idx) => idx <= (selectedValue === 'move_down' ? swapIndex : questionIndex) && q.questionType !== 'completion').length - 1;
-            const currentPage = Math.floor(Math.max(0, regularIdx) / 8);
+            const currentPage = Math.floor(Math.max(0, regularIdx) / QUESTIONS_PER_PAGE);
             return await buildQuestionManagementUI(config, qConfigId, currentPage);
           }
 
@@ -9114,7 +9117,7 @@ To fix this:
             await savePlayerData(playerData);
             console.log(`🗑️ Deleted question ${questionIndex} from ${qConfigId}: "${deleted[0]?.questionTitle}"`);
             const regularCount = config.questions.filter(q => q.questionType !== 'completion').length;
-            const currentPage = Math.min(Math.floor(questionIndex / 8), Math.max(0, Math.ceil(regularCount / 8) - 1));
+            const currentPage = Math.min(Math.floor(questionIndex / QUESTIONS_PER_PAGE), Math.max(0, Math.ceil(regularCount / QUESTIONS_PER_PAGE) - 1));
             return await buildQuestionManagementUI(config, qConfigId, currentPage);
           }
 
@@ -9132,13 +9135,13 @@ To fix this:
             config.questions.forEach((q, idx) => { q.order = idx + 1; });
             await savePlayerData(playerData);
             console.log(`📋 Duplicated question ${questionIndex} in ${qConfigId}: "${original.questionTitle}"`);
-            const currentPage = Math.floor((questionIndex + 1) / 8);
+            const currentPage = Math.floor((questionIndex + 1) / QUESTIONS_PER_PAGE);
             return await buildQuestionManagementUI(config, qConfigId, currentPage);
           }
 
           // summary, divider, or unknown — re-render same page
           const regularIdx = config.questions.filter((q, idx) => idx <= questionIndex && q.questionType !== 'completion').length - 1;
-          const currentPage = Math.floor(Math.max(0, regularIdx) / 8);
+          const currentPage = Math.floor(Math.max(0, regularIdx) / QUESTIONS_PER_PAGE);
           return await buildQuestionManagementUI(config, qConfigId, currentPage);
         }
       })(req, res, client);
@@ -9427,7 +9430,7 @@ To fix this:
           await savePlayerData(playerData);
           
           // Calculate the correct page to show after deletion
-          const questionsPerPage = 10;
+          const questionsPerPage = QUESTIONS_PER_PAGE;
           const totalPages = Math.max(1, Math.ceil(config.questions.length / questionsPerPage));
           
           // If we're on a page that no longer exists, go to the last valid page
@@ -9751,7 +9754,7 @@ To fix this:
             };
           }
           
-          const questionsPerPage = 8;
+          const questionsPerPage = QUESTIONS_PER_PAGE;
           const regularCount = config.questions.filter(q => q.questionType !== 'completion').length;
           const totalPages = Math.ceil(regularCount / questionsPerPage);
           const newPage = Math.min(totalPages - 1, currentPage + 1);
@@ -40832,7 +40835,7 @@ Your server is now ready for Tycoons gameplay!`;
 
         // Calculate the page for the new question (stay on current page, not jump to last)
         const regularCount = config.questions.filter(q => q.questionType !== 'completion').length;
-        const questionsPerPage = 8;
+        const questionsPerPage = QUESTIONS_PER_PAGE;
         const newQuestionPage = Math.min(currentPage, Math.floor((regularCount - 1) / questionsPerPage));
         
         // Refresh the UI on the page containing the new question
