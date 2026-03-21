@@ -503,7 +503,7 @@ async function showDncQuestion(res, config, channelId, questionIndex) {
     questionComponents.push({ type: 14 });
     questionComponents.push({
       type: 9, // Section
-      components: [{ type: 10, content: isSecondToLast ? '-# ✅ Ready? Submit your application' : ' ' }],
+      components: [{ type: 10, content: isSecondToLast ? '-# ✅ Ready? Submit your application' : '\u200b' }],
       accessory: {
         type: 2,
         custom_id: `app_next_question_${channelId}_${questionIndex}`,
@@ -40671,7 +40671,7 @@ Your server is now ready for Tycoons gameplay!`;
           components.push({ type: 14 });
           components.push({
             type: 9, // Section
-            components: [{ type: 10, content: isSecondToLast ? '-# ✅ Ready? Submit your application' : ' ' }],
+            components: [{ type: 10, content: isSecondToLast ? '-# ✅ Ready? Submit your application' : '\u200b' }],
             accessory: {
               type: 2,
               custom_id: `app_next_question_${channelId}_${questionIndex}`,
