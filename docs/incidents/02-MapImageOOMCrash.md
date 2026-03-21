@@ -1,11 +1,12 @@
-# Incident 02: Production OOM Crash — Map Image Memory Exhaustion
+# Incident 02: Production OOM Crash — Memory Exhaustion
 
 **Date**: 2026-03-20 (Friday)
 **Duration**: ~62 minutes (16:58 — 18:00 AWST)
 **Severity**: P1 — Full production outage, all 140+ servers affected
 **Detected by**: Reece (on phone, hosting work event)
-**Root Cause**: Rapid Safari map image generation exhausted 447MB server RAM
+**Root Cause**: Memory exhaustion on 447MB server (exact trigger unclear — see analysis)
 **Recovery**: Manual SSH intervention from phone (AWS Console restart did NOT recover)
+**Compounding Factor**: PM2 startup not configured — instance reboot didn't restart the bot
 
 ## Timeline (AWST = UTC+8)
 
@@ -26,17 +27,24 @@
 
 ## Root Cause Analysis
 
-### Primary: Memory Exhaustion from Map Image Generation
+### Primary: Memory Exhaustion (Exact Trigger Unknown)
 
-The production server is an AWS Lightsail instance with **447MB total RAM**. Each Sharp map image generation consumes ~30-50MB temporarily. Oreo's rapid clicking generated **44 map_update requests** in the March 20 log, many of which would have been concurrent.
+The production server is an AWS Lightsail instance with **447MB total RAM**. The bot's baseline memory footprint (Node.js + Discord.js + playerData 2.9MB JSON) is ~250MB, leaving only ~200MB headroom.
 
-With the bot already using ~250MB baseline, 3-4 concurrent map renders would push the server past its physical memory limit, triggering the Linux OOM killer which terminates the Node.js process.
-
-**Evidence**:
-- `🚨 Low memory: 70MB free of 448MB — refusing map creation` — memory guard caught ONE request, but previous requests had already consumed the RAM
-- 44 `map_update` calls in the log (some concurrent based on timestamps)
+**What we know**:
+- `🚨 Low memory: 70MB free of 448MB — refusing map creation` — memory guard fired, server was critically low
 - PM2 restart history shows 7+ restarts in rapid succession (crash loop)
 - Each restart loads playerData (2.9MB JSON parse) + Discord.js client — consuming ~250MB before any user interaction
+- A Safari player (Oreo) was actively playing around the crash time, but player navigation does NOT generate Sharp images (fog maps are pre-generated at map creation time)
+- The 44 `map_update` log entries were from a different server (dev), not the crash path
+
+**Possible causes (unconfirmed)**:
+- Discord.js member/message cache accumulation over days of uptime (140+ guilds)
+- Memory leak in a long-running operation
+- Multiple concurrent heavy operations (castlist image gen + Safari + backup service)
+- Node.js GC pressure from 2.9MB playerData being loaded/parsed repeatedly
+
+**What we DON'T know**: The PM2 error log was rotated, so the actual fatal error that triggered the OOM kill is lost. Future incidents should be caught by PM2 max-memory-restart (see fixes below).
 
 ### Secondary: AWS Restart Didn't Recover
 
@@ -80,27 +88,14 @@ pm2 save
 
 When memory exceeds 350MB, PM2 gracefully restarts instead of waiting for OOM killer.
 
-### Fix 3: Concurrent Map Generation Queue
+### Fix 3: Investigate Memory Profile
 
-Add a semaphore/mutex to limit concurrent Sharp operations to 1 at a time. This is the highest-leverage code fix — it prevents the memory spike that caused the crash.
+The root cause is unclear. Next steps:
+- Monitor memory usage over time (`pm2 monit` or add periodic memory logging)
+- Check if Discord.js cache grows unbounded across 140+ guilds
+- Consider `--max-old-space-size=350` Node.js flag to cap heap
 
-```javascript
-// In mapExplorer.js or a shared utility
-let mapRenderInProgress = false;
-
-export async function generateMapImage(...args) {
-  if (mapRenderInProgress) {
-    console.log('[MAP] Skipping concurrent render — another in progress');
-    return null; // or return cached image
-  }
-  mapRenderInProgress = true;
-  try {
-    // ... existing Sharp logic ...
-  } finally {
-    mapRenderInProgress = false;
-  }
-}
-```
+**NOTE**: Player Safari navigation does NOT trigger Sharp rendering. Fog maps are pre-generated at map creation time. The mutex approach was considered but is not the right fix for this incident.
 
 ## Future Resilience Improvements
 
@@ -108,8 +103,8 @@ export async function generateMapImage(...args) {
 |---|---|---|---|
 | PM2 startup systemd service | 5 min (prod SSH) | Prevents AWS restart failure | P0 — do NOW |
 | PM2 max-memory-restart | 1 min (prod SSH) | Graceful restart before OOM | P0 — do NOW |
-| Map render mutex/semaphore | 30 min | Prevents concurrent Sharp OOM | P1 — this session |
-| Per-user interaction rate limit | 2 hours | Prevents rapid-fire abuse | P2 — next session |
+| Memory profiling / monitoring | 1 hour | Identify actual leak source | P1 — next session |
+| Per-user interaction rate limit | 2 hours | Prevents rapid-fire abuse | P2 — future |
 | Server RAM upgrade (1GB) | $5/mo | Doubles headroom | P2 — evaluate |
 | Health check endpoint | 1 hour | Auto-detect unhealthy state | P3 — future |
 | Discord alert on PM2 crash | 30 min | Immediate notification | P2 — next session |
