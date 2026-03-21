@@ -1087,9 +1087,7 @@ function limitAndSortCastlists(allCastlists, maxCustomCastlists = 4) {
 
 export {
     calculateComponentsForTribe,
-    determineDisplayScenario,
     calculateTribePages,
-    reorderTribes,
     createPlayerCard,
     createTribeSection,
     createNavigationButtons,
