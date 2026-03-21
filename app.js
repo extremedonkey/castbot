@@ -498,12 +498,12 @@ async function showDncQuestion(res, config, channelId, questionIndex) {
     }
   ];
 
-  // Navigation section (same as regular questions)
+  // Navigation section (DNC uses modal, not channel typing — no instruction text)
   if (!isLastQuestion) {
     questionComponents.push({ type: 14 });
     questionComponents.push({
       type: 9, // Section
-      components: [{ type: 10, content: isSecondToLast ? '-# ✅ Ready? Submit your application' : '> 👇 Type answer below and click next' }],
+      components: [{ type: 10, content: isSecondToLast ? '-# ✅ Ready? Submit your application' : ' ' }],
       accessory: {
         type: 2,
         custom_id: `app_next_question_${channelId}_${questionIndex}`,
@@ -40671,7 +40671,7 @@ Your server is now ready for Tycoons gameplay!`;
           components.push({ type: 14 });
           components.push({
             type: 9, // Section
-            components: [{ type: 10, content: isSecondToLast ? '-# ✅ Ready? Submit your application' : '> 👇 Type answer below and click next' }],
+            components: [{ type: 10, content: isSecondToLast ? '-# ✅ Ready? Submit your application' : ' ' }],
             accessory: {
               type: 2,
               custom_id: `app_next_question_${channelId}_${questionIndex}`,
