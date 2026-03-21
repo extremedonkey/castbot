@@ -4289,7 +4289,12 @@ export class ButtonHandlerFactory {
           // CRITICAL: Modal responses cannot be sent as UPDATE_MESSAGE
           const isModal = result.type === InteractionResponseType.MODAL;
           const shouldUpdateMessage = config.updateMessage && !isModal;
-          
+
+          // Inject ephemeral flag from config into result data
+          if (config.ephemeral && !shouldUpdateMessage && !isModal) {
+            result.ephemeral = true;
+          }
+
           console.log(`🔍 ButtonHandlerFactory sending response for ${config.id}, updateMessage: ${shouldUpdateMessage}, isModal: ${isModal}`);
           return sendResponse(res, result, shouldUpdateMessage);
         }
