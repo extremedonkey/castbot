@@ -5252,7 +5252,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                     type: 9, // Section
                     components: [{ type: 10, content: `### \`\`\`🎬 Prod Team Member?\`\`\`\nHead to the Castlist Hub and add your first tribes.\n- If you're just testing CastBot out, try add your Production team role as a tribe to see how it works\n- If marooning hasn't happened yet, you can safely add the tribe roles now and players will appear in the castlist as soon as you add their tribe roles\n- If it's after marooning, simply add the current tribe roles to the castlist from the Castlist Hub!` }],
                     accessory: { type: 2, custom_id: 'castlist_hub', label: 'Castlist Hub', style: 1, emoji: { name: '🏕️' } }
-                  }
+                  },
+                  { type: 10, content: `### \`\`\`🍿 Spectator / Player?\`\`\`\nPing Production and ask them to follow the instructions above to set the castlist up! :)` }
                 ]
               }],
               flags: (1 << 15) | (1 << 6)
