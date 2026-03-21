@@ -353,9 +353,9 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   // Bottom row: Export, Import, Back (+ pagination if needed)
   const bottomButtons = [
+    { type: 2, custom_id: `season_management_menu`, label: '←', style: 2 },
     { type: 2, custom_id: `season_export_questions_${configId}`, label: 'Export', style: 2, emoji: { name: '📤' } },
     { type: 2, custom_id: `season_import_questions_${configId}`, label: 'Import', style: 2, emoji: { name: '📥' } },
-    { type: 2, custom_id: `season_management_menu`, label: '← Back', style: 2 },
   ];
   if (regularQuestions.length > questionsPerPage) {
     const prevDisabled = currentPage === 0;
