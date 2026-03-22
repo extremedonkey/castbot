@@ -5216,6 +5216,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       return ButtonHandlerFactory.create({
         id: 'show_castlist2',
         deferred: true,
+        ephemeral: false, // Castlist is public — visible to all users in the channel
         handler: async (context) => {
           const { displayCastlist } = await import('./castlistDisplay.js');
           return displayCastlist(context, castlistId, displayMode, buildNoTribesContainer, canSendMessagesInChannel);
