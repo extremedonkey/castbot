@@ -10841,7 +10841,7 @@ To fix this:
             const channelId = req.body.channel?.id || req.body.channel_id;
             const channel = await context.client.channels.fetch(channelId);
             await channel.send({
-              content: '📸 **Compact Castlist**',
+              content: '',
               files: [attachment]
             });
 
