@@ -4170,13 +4170,13 @@ export function sendResponse(res, data, updateMessage = false) {
 
   // If the response already has a type set (like MODAL), send it directly
   if (data.type) {
-    console.log(`📝 Sending ${data.type} response directly`);
+    console.log(`📝 Sending ${data.type} response directly [📝 MODAL]`);
     return res.send(data);
   }
-  
+
   // For UPDATE_MESSAGE responses
   if (updateMessage) {
-    console.log('📝 Sending UPDATE_MESSAGE response (no flags - Discord requirement)');
+    console.log(`📝 [⚡ IMMEDIATE-UPDATE]${data.ephemeral ? ' [🔒 EPHEMERAL]' : ''} — UPDATE_MESSAGE (no flags)`);
     // CRITICAL: UPDATE_MESSAGE cannot have flags - Discord will reject the interaction
     // Always strip flags and ephemeral for UPDATE_MESSAGE responses
     const { flags, ephemeral, ...cleanData } = data;
@@ -4201,9 +4201,11 @@ export function sendResponse(res, data, updateMessage = false) {
   // CRITICAL: Always add IS_COMPONENTS_V2 flag when components are present
   if (data.components && data.components.length > 0) {
     flags |= (1 << 15); // IS_COMPONENTS_V2
-    console.log('🎯 Added IS_COMPONENTS_V2 flag for components response');
   }
-  
+
+  const visTag = (flags & InteractionResponseFlags.EPHEMERAL) ? ' [🔒 EPHEMERAL]' : ' [👁️ PUBLIC]';
+  console.log(`📝 [⚡ IMMEDIATE-NEW]${visTag} — CHANNEL_MESSAGE_WITH_SOURCE`);
+
   return res.send({
     type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
     data: {
@@ -4222,13 +4224,16 @@ export function sendResponse(res, data, updateMessage = false) {
 export async function sendDeferredResponse(res, ephemeral = true, updateMessage = false) {
   // For button/select interactions that update existing messages, use DEFERRED_UPDATE_MESSAGE
   if (updateMessage) {
+    console.log(`📝 [🔄 DEFERRED-UPDATE] — silent ACK, will PATCH @original`);
     return res.send({
       type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE,
-      data: {} // No data needed for deferred update
+      data: {}
     });
   }
 
   // For new messages (slash commands), use DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+  const visTag = ephemeral ? ' [🔒 EPHEMERAL]' : ' [👁️ PUBLIC]';
+  console.log(`📝 [🔄 DEFERRED-NEW]${visTag} — "thinking...", will PATCH @original`);
   return res.send({
     type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
     data: {
@@ -4247,8 +4252,7 @@ export async function updateDeferredResponse(token, data) {
 
   // Simplified logging - just show key info
   const isComponentsV2 = data.components?.[0]?.type === 17;
-  const contentPreview = data.content ? `"${data.content.substring(0, 50)}..."` : 'no content';
-  console.log(`🔍 updateDeferredResponse: ${isComponentsV2 ? 'Components V2' : 'Standard'} response, ${contentPreview}`);
+  console.log(`📝 [🔗 WEBHOOK-PATCH] — updating @original${isComponentsV2 ? ' (Components V2)' : ''}`);
 
   // Transform Components V2 container structure for webhook PATCH
   const webhookData = {
@@ -4304,8 +4308,7 @@ export async function createFollowupMessage(token, data) {
   const endpoint = `webhooks/${process.env.APP_ID}/${token}`;
 
   const isComponentsV2 = data.components?.[0]?.type === 17;
-  const contentPreview = data.content ? `"${data.content.substring(0, 50)}..."` : 'no content';
-  console.log(`🆕 createFollowupMessage: ${isComponentsV2 ? 'Components V2' : 'Standard'} follow-up, ${contentPreview}`);
+  console.log(`📝 [🔗 WEBHOOK-POST] — new follow-up message${isComponentsV2 ? ' (Components V2)' : ''}`);
 
   // Transform Components V2 container structure for webhook POST
   const webhookData = {
@@ -4359,6 +4362,12 @@ export class ButtonHandlerFactory {
    * @returns {Function} Handler function
    */
   static create(config) {
+    // followUp: true is an alias for deferred + new follow-up message (not PATCH @original)
+    if (config.followUp) {
+      config.deferred = true;
+      config.updateMessage = false;
+    }
+
     // Auto-register in BUTTON_REGISTRY if not already present (prevents false [🪨 LEGACY] flags)
     if (config.id && !BUTTON_REGISTRY[config.id] && !BUTTON_REGISTRY[config.id + '_*']) {
       BUTTON_REGISTRY[config.id + '_*'] = { label: config.id, autoRegistered: true };
@@ -4471,4 +4480,7 @@ export class ButtonHandlerFactory {
   }
 }
 
+// CIF — ComponentInteractionFactory (the accurate name)
+// ButtonHandlerFactory is kept for backwards compatibility
+export { ButtonHandlerFactory as ComponentInteractionFactory };
 export default ButtonHandlerFactory;

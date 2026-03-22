@@ -688,10 +688,28 @@ Action → Event published → Subscribers notified
 
 ---
 
+## 🏭 Implementation: ComponentInteractionFactory (CIF)
+
+**All patterns described in this document are implemented by `ComponentInteractionFactory`** (exported from `buttonHandlerFactory.js`). You don't need to manually implement these patterns — use CIF and set the right config:
+
+| This Doc's Pattern | CIF Config |
+|---|---|
+| `[⚡ IMMEDIATE-NEW]` | Default (no `deferred`, no `updateMessage`) |
+| `[⚡ IMMEDIATE-UPDATE]` | `updateMessage: true` |
+| `[🔄 DEFERRED-NEW]` | `deferred: true` |
+| `[🔄 DEFERRED-UPDATE]` | `deferred: true, updateMessage: true` |
+| `[🔗 WEBHOOK-POST]` | `followUp: true` (alias for `deferred: true, updateMessage: false`) |
+| `[📝 MODAL]` | Return `{ type: 9, data: {...} }` from handler |
+| `[🔒 EPHEMERAL]` | `ephemeral: true` |
+
+CIF automatically emits these pattern tags in logs, so you'll see them without any extra work.
+
+See: [RaP 0933 — CIF Evolution Plan](../01-RaP/0933_20260323_ComponentInteractionFactory_Analysis.md)
+
 ## 🔗 Related Documentation
 
 - **[DiscordInteractionAPI.md](../standards/DiscordInteractionAPI.md)** - Complete API reference
-- **[ButtonHandlerFactory.md](../enablers/ButtonHandlerFactory.md)** - Button patterns
+- **[ButtonHandlerFactory.md](../enablers/ButtonHandlerFactory.md)** - CIF implementation docs (historically named ButtonHandlerFactory)
 - **[ButtonInteractionLogging.md](../standards/ButtonInteractionLogging.md)** - Button logging details
 - **[RaP 0976](../../01-RaP/0976_20251116_Analytics_Nonblocking_Optimization.md)** - Why timing matters
 

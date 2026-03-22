@@ -137,6 +137,21 @@ if [ -n "$NEW_JS_FILES" ]; then
   fi
 fi
 
+# ── Check 4: updateDeferredResponse wrong arg count (common agent mistake) ──
+WRONG_DEFERRED_ARGS=$(git diff --cached -- '*.js' | grep '^+' | grep -v '^+++' | \
+  grep -c 'updateDeferredResponse(req\.body') || WRONG_DEFERRED_ARGS=0
+if [ "$WRONG_DEFERRED_ARGS" -gt 0 ]; then
+  echo ""
+  echo "🗿 THE MOAI NOTICES A COMMON MISTAKE..."
+  echo ""
+  echo "  updateDeferredResponse takes 2 args: (token, data)"
+  echo "  NOT 3 args: (req.body.application_id, token, data)"
+  echo "  The app ID comes from process.env.APP_ID automatically."
+  echo ""
+  echo "  (This is a warning — commit is not blocked for this.)"
+  echo ""
+fi
+
 # Celebrate if someone migrated handlers
 if [ "$LEGACY_COUNT" -lt "$BASELINE" ]; then
   MIGRATED=$((BASELINE - LEGACY_COUNT))
