@@ -8943,6 +8943,117 @@ To fix this:
         }
       })(req, res, client);
 
+    } else if (custom_id.startsWith('moai_share_')) {
+      // 🗿 Make Public — re-post the Moai's response as a public message
+      return ButtonHandlerFactory.create({
+        id: 'moai_share',
+        handler: async (context) => {
+          const responseId = context.customId.replace('moai_share_', '');
+          const stored = global.moaiResponses?.get(responseId);
+          if (!stored) {
+            return { content: '🗿 That response has faded from the stone\'s memory.', ephemeral: true };
+          }
+
+          // Post publicly to the channel via REST
+          const channelId = context.channelId;
+          const channel = await context.client.channels.fetch(channelId);
+
+          // Truncate for public post
+          const publicText = stored.response.length > 3800
+            ? stored.response.substring(0, 3800) + '\n\n-# *...truncated*'
+            : stored.response;
+
+          await channel.send({
+            components: [{
+              type: 17,
+              accent_color: 0x808080,
+              components: [
+                { type: 10, content: `## 🗿 The Moai Speaks` },
+                { type: 14 },
+                { type: 10, content: publicText },
+                { type: 14 },
+                { type: 10, content: `-# 🗿 ${stored.elapsed}s · "${stored.query.substring(0, 60)}${stored.query.length > 60 ? '...' : ''}"` }
+              ]
+            }],
+            flags: (1 << 15) // IS_COMPONENTS_V2
+          });
+
+          return {
+            components: [{
+              type: 17,
+              accent_color: 0x2ecc71,
+              components: [{ type: 10, content: `✅ Posted to <#${channelId}>` }]
+            }],
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'moai_restart_dev') {
+      // 🔄 Restart Dev — runs dev-restart.sh from Discord
+      return ButtonHandlerFactory.create({
+        id: 'moai_restart_dev',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          const { spawn } = await import('child_process');
+
+          console.log(`🔄 [MOAI] Dev restart triggered by ${context.userId} via Discord`);
+
+          try {
+            const result = await new Promise((resolve, reject) => {
+              const child = spawn('./scripts/dev/dev-restart.sh', ['Moai Discord restart'], {
+                cwd: process.cwd(),
+                env: { ...process.env, HOME: process.env.HOME || '/home/reece' },
+                stdio: ['pipe', 'pipe', 'pipe']
+              });
+
+              let stdout = '';
+              let stderr = '';
+              child.stdout.on('data', d => { stdout += d.toString(); });
+              child.stderr.on('data', d => { stderr += d.toString(); });
+
+              const timeout = setTimeout(() => {
+                child.kill('SIGTERM');
+                reject(new Error('Restart timed out after 60s'));
+              }, 60000);
+
+              child.on('close', code => {
+                clearTimeout(timeout);
+                resolve({ code, stdout, stderr });
+              });
+
+              child.on('error', err => {
+                clearTimeout(timeout);
+                reject(err);
+              });
+            });
+
+            // Note: if restart succeeds, this response may not arrive (bot restarting)
+            // But the deferred token has 15 min so it might make it through
+            return {
+              components: [{
+                type: 17,
+                accent_color: result.code === 0 ? 0x2ecc71 : 0xe74c3c,
+                components: [
+                  { type: 10, content: result.code === 0
+                    ? `## 🔄 Dev Restarted\n\n-# The bot is restarting. Give it a few seconds.`
+                    : `## ❌ Restart Failed\n\n\`\`\`${(result.stderr || result.stdout).substring(0, 500)}\`\`\`` }
+                ]
+              }]
+            };
+          } catch (error) {
+            return {
+              components: [{
+                type: 17,
+                accent_color: 0xe74c3c,
+                components: [{ type: 10, content: `## ❌ Restart Failed\n\n\`\`\`${error.message}\`\`\`` }]
+              }]
+            };
+          }
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'richcard_demo') {
       // Rich Card UI reference implementation — demo of buildRichCardModal + buildRichCardContainer
       return ButtonHandlerFactory.create({
@@ -37259,15 +37370,11 @@ Your server is now ready for Tycoons gameplay!`;
 
         console.log(`🗿 Moai query from ${req.body.member?.user?.username}: "${query.substring(0, 80)}${query.length > 80 ? '...' : ''}"`);
 
-        // Build the prompt — include Moai personality + query
+        // Build the prompt — Moai personality + codebase context + restart instructions
         const moaiEssence = fs.readFileSync('./docs/moai.md', 'utf8');
-        const fullPrompt = `You are the Moai 🗿 — CastBot's stone advisor. Here is your personality essence:\n\n${moaiEssence}\n\nYou are responding via Discord to Reece. Keep responses concise (Discord has character limits). Use markdown formatting.\n\nReece asks:\n${query}`;
+        const fullPrompt = `You are the Moai 🗿 — CastBot's stone advisor. Here is your personality essence:\n\n${moaiEssence}\n\nYou are responding via Discord to Reece. Keep responses concise (Discord has character limits). Use markdown formatting.\n\nIMPORTANT CONTEXT:\n- You are running in the CastBot project directory via claude --print\n- You have access to the full codebase and can read files\n- If Reece asks you to make code changes, you CAN — but tell him to click the 🔄 Restart Dev button after to apply them\n- Dev restart command: ./scripts/dev/dev-restart.sh "commit message"\n- You are a one-shot agent (no conversation memory between queries)\n\nReece asks:\n${query}`;
 
-        // Write prompt to temp file to avoid shell escaping nightmares
-        const tmpFile = '/tmp/moai-prompt.txt';
-        fs.writeFileSync(tmpFile, fullPrompt);
-
-        // Spawn claude CLI — read prompt from file, output to stdout
+        // Spawn claude CLI
         const response = await new Promise((resolve, reject) => {
           const child = spawn('claude', ['--print', '-p', fullPrompt], {
             cwd: process.cwd(),
@@ -37300,8 +37407,18 @@ Your server is now ready for Tycoons gameplay!`;
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         console.log(`🗿 Moai responded (${response.length} chars, ${elapsed}s)`);
 
-        // Split long responses into multiple messages (Discord ~4000 char per TextDisplay)
-        const MAX_CHUNK = 3800;
+        // Store response for "Make Public" button
+        if (!global.moaiResponses) global.moaiResponses = new Map();
+        const responseId = Date.now().toString(36);
+        global.moaiResponses.set(responseId, { response, query, elapsed });
+        // Clean old responses (keep last 10)
+        if (global.moaiResponses.size > 10) {
+          const oldest = global.moaiResponses.keys().next().value;
+          global.moaiResponses.delete(oldest);
+        }
+
+        // Split long responses into multiple messages
+        const MAX_CHUNK = 3500; // Leave room for buttons in last chunk
         const chunks = [];
         let remaining = response;
         while (remaining.length > 0) {
@@ -37309,15 +37426,25 @@ Your server is now ready for Tycoons gameplay!`;
             chunks.push(remaining);
             break;
           }
-          // Find a good split point (newline near the limit)
           let splitAt = remaining.lastIndexOf('\n', MAX_CHUNK);
-          if (splitAt < MAX_CHUNK * 0.5) splitAt = MAX_CHUNK; // No good newline, hard split
+          if (splitAt < MAX_CHUNK * 0.5) splitAt = MAX_CHUNK;
           chunks.push(remaining.substring(0, splitAt));
           remaining = remaining.substring(splitAt).trimStart();
         }
 
+        // Action buttons for the last message
+        const actionRow = {
+          type: 1,
+          components: [
+            { type: 2, custom_id: 'moai_ask', label: 'Ask Another', style: 2, emoji: { name: '🗿' } },
+            { type: 2, custom_id: `moai_share_${responseId}`, label: 'Make Public', style: 2, emoji: { name: '👁️' } },
+            { type: 2, custom_id: 'moai_restart_dev', label: 'Restart Dev', style: 4, emoji: { name: '🔄' } }
+          ]
+        };
+
         // First chunk — update the deferred response
         const { updateDeferredResponse, createFollowupMessage } = await import('./buttonHandlerFactory.js');
+        const isOnlyChunk = chunks.length === 1;
         await updateDeferredResponse(req.body.token, {
           components: [{
             type: 17,
@@ -37326,10 +37453,9 @@ Your server is now ready for Tycoons gameplay!`;
               { type: 10, content: `## 🗿 The Moai Speaks` },
               { type: 14 },
               { type: 10, content: chunks[0] },
-              ...(chunks.length === 1 ? [
-                { type: 14 },
-                { type: 10, content: `-# 🗿 ${elapsed}s · "${query.substring(0, 80)}${query.length > 80 ? '...' : ''}"` }
-              ] : [])
+              { type: 14 },
+              { type: 10, content: `-# 🗿 ${elapsed}s${chunks.length > 1 ? ` · ${chunks.length} parts` : ''} · "${query.substring(0, 60)}${query.length > 60 ? '...' : ''}"` },
+              ...(isOnlyChunk ? [actionRow] : [])
             ]
           }]
         });
@@ -37345,7 +37471,8 @@ Your server is now ready for Tycoons gameplay!`;
                 { type: 10, content: chunks[i] },
                 ...(isLast ? [
                   { type: 14 },
-                  { type: 10, content: `-# 🗿 ${elapsed}s · ${chunks.length} parts · "${query.substring(0, 60)}${query.length > 60 ? '...' : ''}"` }
+                  { type: 10, content: `-# continued` },
+                  actionRow
                 ] : [])
               ]
             }],
@@ -37353,7 +37480,7 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
 
-        // 🎲 Surprise — 1 in 10 chance the Moai drops a fortune cookie
+        // 🎲 Fortune cookie — 1 in 10 chance
         if (Math.random() < 0.1) {
           const fortunes = [
             '🥠 *Legacy code is a stronger prompt than any document.*',
@@ -37368,11 +37495,7 @@ Your server is now ready for Tycoons gameplay!`;
           ];
           const fortune = fortunes[Math.floor(Math.random() * fortunes.length)];
           await createFollowupMessage(req.body.token, {
-            components: [{
-              type: 17,
-              accent_color: 0xf39c12,
-              components: [{ type: 10, content: fortune }]
-            }],
+            components: [{ type: 17, accent_color: 0xf39c12, components: [{ type: 10, content: fortune }] }],
             flags: InteractionResponseFlags.EPHEMERAL
           });
         }
@@ -37388,7 +37511,10 @@ Your server is now ready for Tycoons gameplay!`;
             components: [
               { type: 10, content: `## 🗿 The Moai is Silent\n\n\`\`\`${(error.message || 'Unknown error').substring(0, 300)}\`\`\`` },
               { type: 14 },
-              { type: 10, content: `-# Claude CLI may not be available or timed out. (${elapsed}s)` }
+              { type: 10, content: `-# Claude CLI may not be available or timed out. (${elapsed}s)` },
+              { type: 1, components: [
+                { type: 2, custom_id: 'moai_ask', label: 'Try Again', style: 2, emoji: { name: '🗿' } }
+              ]}
             ]
           }]
         });
