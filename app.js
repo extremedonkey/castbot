@@ -7781,27 +7781,27 @@ To fix this:
       })(req, res, client);
 
     } else if (custom_id.startsWith('cr_channel_select_')) {
-      // Channel selected — post the panel
+      // Channel selected — post the panel (heavy: REST + reactions, needs deferred)
       return ButtonHandlerFactory.create({
         id: 'cr_channel_select',
         updateMessage: true,
+        deferred: true,
         handler: async (context) => {
           const reactId = context.customId.replace('cr_channel_select_', '');
           const channelId = req.body.data.values?.[0];
+
+          const { postPanelToChannel, buildPanelDetailUI } = await import('./customReacts.js');
+
           if (!channelId) {
-            const { buildPanelDetailUI } = await import('./customReacts.js');
             const guild = await client.guilds.fetch(context.guildId);
             return await buildPanelDetailUI(context.guildId, reactId, guild);
           }
 
-          const { postPanelToChannel, buildPanelDetailUI } = await import('./customReacts.js');
           const result = await postPanelToChannel(context.guildId, reactId, channelId, client);
-
           const guild = await client.guilds.fetch(context.guildId);
           const detailUI = await buildPanelDetailUI(context.guildId, reactId, guild);
 
           if (result.success) {
-            // Prepend success message
             detailUI.components[0].components.splice(1, 0,
               { type: 10, content: `✅ Panel posted to <#${channelId}>!` }
             );
@@ -47197,7 +47197,7 @@ Your server is now ready for Tycoons gameplay!`;
         }
 
         if (!panelName) {
-          await updateDeferredResponse(req.body.application_id, token, {
+          await updateDeferredResponse(token, {
             components: [{ type: 17, accent_color: 0xe74c3c, components: [
               { type: 10, content: '❌ Panel name is required.' }
             ]}],
@@ -47219,7 +47219,7 @@ Your server is now ready for Tycoons gameplay!`;
 
         const guild = await client.guilds.fetch(guildId);
         const detailUI = await buildPanelDetailUI(guildId, reactId, guild);
-        await updateDeferredResponse(req.body.application_id, token, {
+        await updateDeferredResponse(token, {
           ...detailUI,
           flags: (1 << 15)
         });
@@ -47251,7 +47251,7 @@ Your server is now ready for Tycoons gameplay!`;
         }
 
         if (!emoji || !label) {
-          await updateDeferredResponse(req.body.application_id, token, {
+          await updateDeferredResponse(token, {
             components: [{ type: 17, accent_color: 0xe74c3c, components: [
               { type: 10, content: '❌ Both emoji and label are required.' }
             ]}],
@@ -47271,7 +47271,7 @@ Your server is now ready for Tycoons gameplay!`;
         await addMappingToPanel(guildId, reactId, { emoji, roleId, label, roleName, color });
 
         const detailUI = await buildPanelDetailUI(guildId, reactId, guild);
-        await updateDeferredResponse(req.body.application_id, token, {
+        await updateDeferredResponse(token, {
           ...detailUI,
           flags: (1 << 15)
         });
@@ -47317,7 +47317,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guild = await client.guilds.fetch(guildId);
         const page = Math.floor(mappingIdx / 7);
         const detailUI = await buildPanelDetailUI(guildId, reactId, guild, page);
-        await updateDeferredResponse(req.body.application_id, token, {
+        await updateDeferredResponse(token, {
           ...detailUI,
           flags: (1 << 15)
         });
@@ -47348,7 +47348,7 @@ Your server is now ready for Tycoons gameplay!`;
         }
 
         if (!roleName || !emoji) {
-          await updateDeferredResponse(req.body.application_id, token, {
+          await updateDeferredResponse(token, {
             components: [{ type: 17, accent_color: 0xe74c3c, components: [
               { type: 10, content: '❌ Role name and emoji are required.' }
             ]}],
@@ -47388,7 +47388,7 @@ Your server is now ready for Tycoons gameplay!`;
         });
 
         const detailUI = await buildPanelDetailUI(guildId, reactId, guild);
-        await updateDeferredResponse(req.body.application_id, token, {
+        await updateDeferredResponse(token, {
           ...detailUI,
           flags: (1 << 15)
         });

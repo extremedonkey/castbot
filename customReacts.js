@@ -269,7 +269,7 @@ export async function buildPanelDetailUI(guildId, reactId, guild, page = 0) {
   }
 
   if (mappings.length > 0) {
-    navButtons.push({ type: 2, custom_id: `cr_post_channel_${reactId}`, label: 'Post to Channel', style: 1, emoji: { name: '📨' } });
+    navButtons.push({ type: 2, custom_id: `cr_post_channel_${reactId}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } });
   }
 
   components.push({ type: 1, components: navButtons });
