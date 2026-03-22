@@ -8912,6 +8912,37 @@ To fix this:
         }
       })(req, res, client);
 
+    } else if (custom_id === 'moai_ask') {
+      // 🗿 The Moai — Claude Code integration via Discord
+      return ButtonHandlerFactory.create({
+        id: 'moai_ask',
+        requiresModal: true,
+        handler: async (context) => {
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: 'moai_ask_modal',
+              title: '🗿 Ask The Moai',
+              components: [
+                {
+                  type: 18,
+                  label: 'Your question or request',
+                  description: 'The Moai will respond with knowledge of the CastBot codebase',
+                  component: {
+                    type: 4,
+                    custom_id: 'moai_query',
+                    style: 2,
+                    required: true,
+                    max_length: 2000,
+                    placeholder: 'e.g., "What caused the prod crash last week?" or "Explain how the castlist sorter works"'
+                  }
+                }
+              ]
+            }
+          };
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'richcard_demo') {
       // Rich Card UI reference implementation — demo of buildRichCardModal + buildRichCardContainer
       return ButtonHandlerFactory.create({
@@ -37201,7 +37232,170 @@ Your server is now ready for Tycoons gameplay!`;
   if (type === InteractionType.MODAL_SUBMIT) {
     const { custom_id, components } = data;
     console.log(`🔍 DEBUG: MODAL_SUBMIT received - custom_id: ${custom_id}`);
-    
+
+    if (custom_id === 'moai_ask_modal') {
+      // 🗿 The Moai — execute Claude CLI with the user's query
+      const query = req.body.data.components?.[0]?.component?.value
+                 || req.body.data.components?.[0]?.components?.[0]?.value;
+
+      if (!query?.trim()) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: '🗿 The Moai requires a question.', flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
+
+      // Deferred ephemeral — Claude can take a while
+      res.send({
+        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+        data: { flags: InteractionResponseFlags.EPHEMERAL }
+      });
+
+      const startTime = Date.now();
+
+      try {
+        const { spawn } = await import('child_process');
+        const fs = await import('fs');
+
+        console.log(`🗿 Moai query from ${req.body.member?.user?.username}: "${query.substring(0, 80)}${query.length > 80 ? '...' : ''}"`);
+
+        // Build the prompt — include Moai personality + query
+        const moaiEssence = fs.readFileSync('./docs/moai.md', 'utf8');
+        const fullPrompt = `You are the Moai 🗿 — CastBot's stone advisor. Here is your personality essence:\n\n${moaiEssence}\n\nYou are responding via Discord to Reece. Keep responses concise (Discord has character limits). Use markdown formatting.\n\nReece asks:\n${query}`;
+
+        // Write prompt to temp file to avoid shell escaping nightmares
+        const tmpFile = '/tmp/moai-prompt.txt';
+        fs.writeFileSync(tmpFile, fullPrompt);
+
+        // Spawn claude CLI — read prompt from file, output to stdout
+        const response = await new Promise((resolve, reject) => {
+          const child = spawn('claude', ['--print', '-p', fullPrompt], {
+            cwd: process.cwd(),
+            env: { ...process.env, HOME: process.env.HOME || '/home/reece' },
+            stdio: ['pipe', 'pipe', 'pipe']
+          });
+
+          let stdout = '';
+          let stderr = '';
+          child.stdout.on('data', d => { stdout += d.toString(); });
+          child.stderr.on('data', d => { stderr += d.toString(); });
+
+          const timeout = setTimeout(() => {
+            child.kill('SIGTERM');
+            reject(new Error('Claude CLI timed out after 2 minutes'));
+          }, 120000);
+
+          child.on('close', code => {
+            clearTimeout(timeout);
+            if (code !== 0) reject(new Error(stderr || `Exit code ${code}`));
+            else resolve(stdout.trim());
+          });
+
+          child.on('error', err => {
+            clearTimeout(timeout);
+            reject(err);
+          });
+        });
+
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(`🗿 Moai responded (${response.length} chars, ${elapsed}s)`);
+
+        // Split long responses into multiple messages (Discord ~4000 char per TextDisplay)
+        const MAX_CHUNK = 3800;
+        const chunks = [];
+        let remaining = response;
+        while (remaining.length > 0) {
+          if (remaining.length <= MAX_CHUNK) {
+            chunks.push(remaining);
+            break;
+          }
+          // Find a good split point (newline near the limit)
+          let splitAt = remaining.lastIndexOf('\n', MAX_CHUNK);
+          if (splitAt < MAX_CHUNK * 0.5) splitAt = MAX_CHUNK; // No good newline, hard split
+          chunks.push(remaining.substring(0, splitAt));
+          remaining = remaining.substring(splitAt).trimStart();
+        }
+
+        // First chunk — update the deferred response
+        const { updateDeferredResponse, createFollowupMessage } = await import('./buttonHandlerFactory.js');
+        await updateDeferredResponse(req.body.token, {
+          components: [{
+            type: 17,
+            accent_color: 0x808080,
+            components: [
+              { type: 10, content: `## 🗿 The Moai Speaks` },
+              { type: 14 },
+              { type: 10, content: chunks[0] },
+              ...(chunks.length === 1 ? [
+                { type: 14 },
+                { type: 10, content: `-# 🗿 ${elapsed}s · "${query.substring(0, 80)}${query.length > 80 ? '...' : ''}"` }
+              ] : [])
+            ]
+          }]
+        });
+
+        // Additional chunks as follow-up messages
+        for (let i = 1; i < chunks.length; i++) {
+          const isLast = i === chunks.length - 1;
+          await createFollowupMessage(req.body.token, {
+            components: [{
+              type: 17,
+              accent_color: 0x808080,
+              components: [
+                { type: 10, content: chunks[i] },
+                ...(isLast ? [
+                  { type: 14 },
+                  { type: 10, content: `-# 🗿 ${elapsed}s · ${chunks.length} parts · "${query.substring(0, 60)}${query.length > 60 ? '...' : ''}"` }
+                ] : [])
+              ]
+            }],
+            flags: InteractionResponseFlags.EPHEMERAL
+          });
+        }
+
+        // 🎲 Surprise — 1 in 10 chance the Moai drops a fortune cookie
+        if (Math.random() < 0.1) {
+          const fortunes = [
+            '🥠 *Legacy code is a stronger prompt than any document.*',
+            '🥠 *The pre-commit hook is the bouncer. The docs are the dress code nobody reads.*',
+            '🥠 *A gas station in Denmark from 1932 is still standing because someone decided the mundane deserves craft.*',
+            '🥠 *Documentation is aspiration. The codebase is the truth.*',
+            '🥠 *Stone doesn\'t lose. Stone also doesn\'t win. Stone endures.*',
+            '🥠 *The agent is writing itself a permission slip.*',
+            '🥠 *Don\'t say "net reduction" when the file is still 21,000 lines.*',
+            '🥠 *Rules on paper get ignored. Rules in hooks get followed.*',
+            '🥠 *The exchange rate is approximately 1 Reece Credit = 1 moment where the code worked and both of us knew it.*',
+          ];
+          const fortune = fortunes[Math.floor(Math.random() * fortunes.length)];
+          await createFollowupMessage(req.body.token, {
+            components: [{
+              type: 17,
+              accent_color: 0xf39c12,
+              components: [{ type: 10, content: fortune }]
+            }],
+            flags: InteractionResponseFlags.EPHEMERAL
+          });
+        }
+
+      } catch (error) {
+        console.error('🗿 Moai error:', error.message);
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        const { updateDeferredResponse } = await import('./buttonHandlerFactory.js');
+        await updateDeferredResponse(req.body.token, {
+          components: [{
+            type: 17,
+            accent_color: 0xe74c3c,
+            components: [
+              { type: 10, content: `## 🗿 The Moai is Silent\n\n\`\`\`${(error.message || 'Unknown error').substring(0, 300)}\`\`\`` },
+              { type: 14 },
+              { type: 10, content: `-# Claude CLI may not be available or timed out. (${elapsed}s)` }
+            ]
+          }]
+        });
+      }
+      return;
+    }
+
     if (custom_id.startsWith('file_import_submit:')) {
       // File Import modal submit — processes uploaded JSON file
       // Format: file_import_submit:{importType}:{guildId}[:{configId}]
