@@ -37384,19 +37384,43 @@ Your server is now ready for Tycoons gameplay!`;
           child.stdout.on('data', d => { stdout += d.toString(); });
           child.stderr.on('data', d => { stderr += d.toString(); });
 
+          // Progress update at 2 minutes — let user know we're still thinking
+          const progressTimer = setTimeout(async () => {
+            try {
+              const { updateDeferredResponse } = await import('./buttonHandlerFactory.js');
+              await updateDeferredResponse(req.body.token, {
+                components: [{
+                  type: 17,
+                  accent_color: 0x808080,
+                  components: [
+                    { type: 10, content: `## 🗿 The Moai is Thinking...\n\nTaking longer than usual. Still carving the response from stone...` },
+                    { type: 14 },
+                    { type: 10, content: `-# ⏳ 2 minutes elapsed — "${query.substring(0, 80)}${query.length > 80 ? '...' : ''}"` }
+                  ]
+                }]
+              });
+              console.log('🗿 Moai progress update sent (2 min mark)');
+            } catch (e) {
+              console.error('🗿 Failed to send progress update:', e.message);
+            }
+          }, 120000);
+
+          // Hard kill at 4 minutes
           const timeout = setTimeout(() => {
             child.kill('SIGTERM');
-            reject(new Error('Claude CLI timed out after 2 minutes'));
-          }, 120000);
+            reject(new Error('Claude CLI timed out after 4 minutes'));
+          }, 240000);
 
           child.on('close', code => {
             clearTimeout(timeout);
+            clearTimeout(progressTimer);
             if (code !== 0) reject(new Error(stderr || `Exit code ${code}`));
             else resolve(stdout.trim());
           });
 
           child.on('error', err => {
             clearTimeout(timeout);
+            clearTimeout(progressTimer);
             reject(err);
           });
         });
