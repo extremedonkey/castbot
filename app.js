@@ -8961,7 +8961,7 @@ To fix this:
             ? stored.response.substring(0, 3800) + '\n\n-# *...truncated*'
             : stored.response;
 
-          await DiscordRequest(`channels/${channelId}/messages`, {
+          const publicMsg = await DiscordRequest(`channels/${channelId}/messages`, {
             method: 'POST',
             body: {
               components: [{
@@ -8972,7 +8972,11 @@ To fix this:
                   { type: 14 },
                   { type: 10, content: publicText },
                   { type: 14 },
-                  { type: 10, content: `-# 🗿 ${stored.elapsed}s · "${stored.query.substring(0, 60)}${stored.query.length > 60 ? '...' : ''}"` }
+                  { type: 10, content: `-# 🗿 ${stored.elapsed}s · "${stored.query.substring(0, 60)}${stored.query.length > 60 ? '...' : ''}"` },
+                  { type: 1, components: [
+                    { type: 2, custom_id: 'moai_ask', label: 'Ask Another', style: 2, emoji: { name: '🗿' } },
+                    { type: 2, custom_id: 'moai_restart_dev', label: 'Restart Dev', style: 4, emoji: { name: '🔄' } }
+                  ]}
                 ]
               }],
               flags: (1 << 15)
@@ -37357,10 +37361,10 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
 
-      // Deferred ephemeral — Claude can take a while
+      // Deferred PUBLIC — responses persist in channel history (ephemeral disappears on app restart)
       res.send({
         type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-        data: { flags: InteractionResponseFlags.EPHEMERAL }
+        data: {}
       });
 
       const startTime = Date.now();
@@ -37438,7 +37442,6 @@ Your server is now ready for Tycoons gameplay!`;
           type: 1,
           components: [
             { type: 2, custom_id: 'moai_ask', label: 'Ask Another', style: 2, emoji: { name: '🗿' } },
-            { type: 2, custom_id: `moai_share_${responseId}`, label: 'Make Public', style: 2, emoji: { name: '👁️' } },
             { type: 2, custom_id: 'moai_restart_dev', label: 'Restart Dev', style: 4, emoji: { name: '🔄' } }
           ]
         };
