@@ -8877,21 +8877,36 @@ To fix this:
         }
       })(req, res, client);
 
-    } else if (custom_id === 'moai_ask') {
+    } else if (custom_id === 'moai_ask' || custom_id.startsWith('moai_ask_ctx_')) {
       // 🗿 The Moai — Claude Code integration via Discord
       return ButtonHandlerFactory.create({
         id: 'moai_ask',
         requiresModal: true,
         handler: async (context) => {
+          const prevResponseId = custom_id.startsWith('moai_ask_ctx_') ? custom_id.replace('moai_ask_ctx_', '') : null;
+          const prevContext = prevResponseId ? global.moaiResponses?.get(prevResponseId) : null;
           return {
             type: InteractionResponseType.MODAL,
             data: {
-              custom_id: 'moai_ask_modal',
+              custom_id: prevResponseId ? `moai_ask_modal_${prevResponseId}` : 'moai_ask_modal',
               title: '🗿 Ask The Moai',
               components: [
+                ...(prevContext ? [{
+                  type: 18,
+                  label: 'Previous conversation (context for the Moai)',
+                  component: {
+                    type: 4,
+                    custom_id: 'moai_prev_context',
+                    style: 2,
+                    required: false,
+                    max_length: 1000,
+                    value: `Q: ${prevContext.query.substring(0, 200)}\nA: ${prevContext.response.substring(0, 700)}`,
+                    placeholder: 'Edit or clear this if not relevant'
+                  }
+                }] : []),
                 {
                   type: 18,
-                  label: 'Your question or request',
+                  label: prevContext ? 'Follow-up question or new topic' : 'Your question or request',
                   description: 'The Moai will respond with knowledge of the CastBot codebase',
                   component: {
                     type: 4,
@@ -8899,7 +8914,9 @@ To fix this:
                     style: 2,
                     required: true,
                     max_length: 2000,
-                    placeholder: 'e.g., "What caused the prod crash last week?" or "Explain how the castlist sorter works"'
+                    placeholder: prevContext
+                      ? 'e.g., "Can you explain that further?" or "Now do the same for safari"'
+                      : 'e.g., "What caused the prod crash last week?" or "Explain how the castlist sorter works"'
                   }
                 }
               ]
@@ -8934,12 +8951,13 @@ To fix this:
                 accent_color: 0x808080,
                 components: [
                   { type: 10, content: `## 🗿 The Moai Speaks` },
+                  { type: 10, content: `-# "${stored.query.substring(0, 120)}${stored.query.length > 120 ? '...' : ''}"` },
                   { type: 14 },
                   { type: 10, content: publicText },
                   { type: 14 },
-                  { type: 10, content: `-# 🗿 ${stored.elapsed}s · "${stored.query.substring(0, 60)}${stored.query.length > 60 ? '...' : ''}"` },
+                  { type: 10, content: `-# 🗿 ${stored.elapsed}s` },
                   { type: 1, components: [
-                    { type: 2, custom_id: 'moai_ask', label: 'Ask Another', style: 2, emoji: { name: '🗿' } },
+                    { type: 2, custom_id: `moai_ask_ctx_${responseId}`, label: 'Ask Another', style: 2, emoji: { name: '🗿' } },
                     { type: 2, custom_id: 'moai_restart_dev', label: 'Restart Dev', style: 4, emoji: { name: '🔄' } }
                   ]}
                 ]
@@ -8964,7 +8982,6 @@ To fix this:
       return ButtonHandlerFactory.create({
         id: 'moai_restart_dev',
         deferred: true,
-        ephemeral: true,
         handler: async (context) => {
           const { spawn } = await import('child_process');
 
@@ -37314,10 +37331,17 @@ Your server is now ready for Tycoons gameplay!`;
     const { custom_id, components } = data;
     console.log(`🔍 DEBUG: MODAL_SUBMIT received - custom_id: ${custom_id}`);
 
-    if (custom_id === 'moai_ask_modal') {
+    if (custom_id === 'moai_ask_modal' || custom_id.startsWith('moai_ask_modal_')) {
       // 🗿 The Moai — execute Claude CLI with the user's query
-      const query = req.body.data.components?.[0]?.component?.value
-                 || req.body.data.components?.[0]?.components?.[0]?.value;
+      // Extract previous context from modal fields (if "Ask Another" with context)
+      const modalComponents = req.body.data.components || [];
+      let query = null;
+      let prevContextText = null;
+      for (const comp of modalComponents) {
+        const inner = comp?.component || comp?.components?.[0];
+        if (inner?.custom_id === 'moai_query') query = inner.value;
+        if (inner?.custom_id === 'moai_prev_context') prevContextText = inner.value;
+      }
 
       if (!query?.trim()) {
         return res.send({
@@ -37342,7 +37366,10 @@ Your server is now ready for Tycoons gameplay!`;
 
         // Build the prompt — Moai personality + codebase context + restart instructions
         const moaiEssence = fs.readFileSync('./docs/moai.md', 'utf8');
-        const fullPrompt = `You are the Moai 🗿 — CastBot's stone advisor. Here is your personality essence:\n\n${moaiEssence}\n\nYou are responding via Discord to Reece. Keep responses concise (Discord has character limits). Use markdown formatting.\n\nIMPORTANT CONTEXT:\n- You are running in the CastBot project directory via claude --print\n- You have access to the full codebase and can read files\n- If Reece asks you to make code changes, you CAN — but tell him to click the 🔄 Restart Dev button after to apply them\n- Dev restart command: ./scripts/dev/dev-restart.sh "commit message"\n- You are a one-shot agent (no conversation memory between queries)\n\nReece asks:\n${query}`;
+        const prevSection = prevContextText?.trim()
+          ? `\n\nPREVIOUS CONVERSATION (context from the last Moai interaction — use this to inform your response):\n${prevContextText}\n\n---\n`
+          : '';
+        const fullPrompt = `You are the Moai 🗿 — CastBot's stone advisor. Here is your personality essence:\n\n${moaiEssence}\n\nYou are responding via Discord to Reece. Keep responses concise (Discord has character limits). Use markdown formatting.\n\nIMPORTANT CONTEXT:\n- You are running in the CastBot project directory via claude --print\n- You have access to the full codebase and can read files\n- If Reece asks you to make code changes, you CAN — but tell him to click the 🔄 Restart Dev button after to apply them\n- Dev restart command: ./scripts/dev/dev-restart.sh "commit message"\n- You are a one-shot agent (no conversation memory between queries)${prevSection ? ' BUT you have context from the previous question below' : ''}${prevSection}\n\nReece asks:\n${query}`;
 
         // Spawn claude CLI
         const response = await new Promise((resolve, reject) => {
@@ -37406,7 +37433,7 @@ Your server is now ready for Tycoons gameplay!`;
         const actionRow = {
           type: 1,
           components: [
-            { type: 2, custom_id: 'moai_ask', label: 'Ask Another', style: 2, emoji: { name: '🗿' } },
+            { type: 2, custom_id: `moai_ask_ctx_${responseId}`, label: 'Ask Another', style: 2, emoji: { name: '🗿' } },
             { type: 2, custom_id: 'moai_restart_dev', label: 'Restart Dev', style: 4, emoji: { name: '🔄' } }
           ]
         };
@@ -37420,10 +37447,11 @@ Your server is now ready for Tycoons gameplay!`;
             accent_color: 0x808080,
             components: [
               { type: 10, content: `## 🗿 The Moai Speaks` },
+              { type: 10, content: `-# "${query.substring(0, 120)}${query.length > 120 ? '...' : ''}"` },
               { type: 14 },
               { type: 10, content: chunks[0] },
               { type: 14 },
-              { type: 10, content: `-# 🗿 ${elapsed}s${chunks.length > 1 ? ` · ${chunks.length} parts` : ''} · "${query.substring(0, 60)}${query.length > 60 ? '...' : ''}"` },
+              { type: 10, content: `-# 🗿 ${elapsed}s${chunks.length > 1 ? ` · ${chunks.length} parts` : ''}` },
               ...(isOnlyChunk ? [actionRow] : [])
             ]
           }]
@@ -37464,8 +37492,7 @@ Your server is now ready for Tycoons gameplay!`;
           ];
           const fortune = fortunes[Math.floor(Math.random() * fortunes.length)];
           await createFollowupMessage(req.body.token, {
-            components: [{ type: 17, accent_color: 0xf39c12, components: [{ type: 10, content: fortune }] }],
-            flags: InteractionResponseFlags.EPHEMERAL
+            components: [{ type: 17, accent_color: 0xf39c12, components: [{ type: 10, content: fortune }] }]
           });
         }
 
