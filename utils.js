@@ -30,7 +30,21 @@ export async function DiscordRequest(endpoint, options) {
         error.includes('Invalid Webhook Token') ||
         error.includes('"code": 10015') || 
         error.includes('"code": 50027')) {
-      console.log(`⏰ DEBUG: Webhook interaction failed (${endpoint}) - likely expired or invalid token`);
+      // Extract interaction ID from token for debugging (token format: base64 of "interaction:snowflakeId:...")
+      let interactionAge = '';
+      try {
+        const tokenPart = endpoint.split('/')[2]; // The base64 token
+        if (tokenPart) {
+          const decoded = Buffer.from(tokenPart, 'base64').toString('utf8');
+          const interactionId = decoded.split(':')[1];
+          if (interactionId) {
+            const timestamp = Number(BigInt(interactionId) >> 22n) + 1420070400000;
+            const ageSeconds = Math.round((Date.now() - timestamp) / 1000);
+            interactionAge = ` (interaction age: ${ageSeconds}s${ageSeconds > 900 ? ' — token expired, 15min limit' : ''})`;
+          }
+        }
+      } catch { /* ignore decode errors */ }
+      console.log(`⏰ [WEBHOOK] Token expired or invalid${interactionAge} — interaction response will not be updated`);
       return null; // Return null instead of throwing error
     }
     
