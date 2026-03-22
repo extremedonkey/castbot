@@ -3,18 +3,13 @@
  * Shared utilities for managing tribe data across legacy and new castlist systems
  */
 
-/**
- * Format Discord role color to hex string
- * @param {number} color - Discord color integer
- * @returns {string} Hex color string in format #RRGGBB
- */
-export function formatRoleColor(color) {
-  if (!color || color === 0) return '#000000';
+// Re-export shared color utilities for backwards compatibility
+export { formatRoleColor, validateHexColor, COLOR_PRESETS, hexToColorInt } from './colorUtils.js';
+// Backwards-compatible alias
+import { COLOR_PRESETS as _COLOR_PRESETS } from './colorUtils.js';
+export const TRIBE_COLOR_PRESETS = _COLOR_PRESETS;
 
-  // Convert integer to hex and pad with zeros
-  const hex = color.toString(16).padStart(6, '0');
-  return `#${hex}`;
-}
+import { formatRoleColor } from './colorUtils.js';
 
 /**
  * Populate default tribe data with all required fields
@@ -126,33 +121,6 @@ export const SORT_STRATEGIES = {
   'rankings':        { label: 'Rankings', emoji: '📈', description: 'Sort by ranking score' }
 };
 
-/**
- * Tribe color presets - mirrors Discord's role color picker palette.
- * Used by tribe edit modal StringSelect for quick color selection.
- * Last entry 'custom' is a sentinel for freeform hex input.
- */
-export const TRIBE_COLOR_PRESETS = [
-  { value: '#1ABC9C', label: 'Teal',        emoji: '🩵' },
-  { value: '#2ECC71', label: 'Green',       emoji: '🟢' },
-  { value: '#3498DB', label: 'Blue',        emoji: '🔵' },
-  { value: '#9B59B6', label: 'Purple',      emoji: '🟣' },
-  { value: '#E91E63', label: 'Pink',        emoji: '🩷' },
-  { value: '#F1C40F', label: 'Yellow',      emoji: '🟡' },
-  { value: '#E67E22', label: 'Orange',      emoji: '🟠' },
-  { value: '#E74C3C', label: 'Red',         emoji: '🔴' },
-  { value: '#95A5A6', label: 'Light Grey',  emoji: '⚪' },
-  { value: '#607D8B', label: 'Blue Grey',   emoji: '🔘' },
-  { value: '#11806A', label: 'Dark Teal',   emoji: '🌲' },
-  { value: '#1F8B4C', label: 'Dark Green',  emoji: '🌿' },
-  { value: '#206694', label: 'Dark Blue',   emoji: '🫐' },
-  { value: '#71368A', label: 'Dark Purple', emoji: '🍇' },
-  { value: '#AD1457', label: 'Dark Pink',   emoji: '🌺' },
-  { value: '#C27C0E', label: 'Dark Gold',   emoji: '🥇' },
-  { value: '#A84300', label: 'Dark Orange', emoji: '🍂' },
-  { value: '#992D22', label: 'Dark Red',    emoji: '🧱' },
-  { value: '#FFFFFF', label: 'White',       emoji: '⬜' },
-  { value: 'custom',  label: 'Custom...',  emoji: '🎨' },
-];
 
 /**
  * Get sort strategy display name
@@ -163,26 +131,3 @@ export function getSortStrategyName(strategy) {
   return SORT_STRATEGIES[strategy]?.label || 'Default';
 }
 
-/**
- * Validate and format hex color (with or without #)
- * @param {string} color - Color string to validate
- * @returns {string|null} Formatted color or null if invalid
- */
-export function validateHexColor(color) {
-  if (!color) return null;
-
-  // Remove # if present
-  const hex = color.replace('#', '').trim();
-
-  // Validate hex format (3 or 6 characters)
-  if (!/^[0-9A-Fa-f]{3}$|^[0-9A-Fa-f]{6}$/.test(hex)) {
-    return null;
-  }
-
-  // Expand 3-char to 6-char if needed
-  const fullHex = hex.length === 3
-    ? hex.split('').map(c => c + c).join('')
-    : hex;
-
-  return `#${fullHex.toUpperCase()}`;
-}

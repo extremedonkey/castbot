@@ -7393,106 +7393,53 @@ To fix this:
           const { guildId, channelId, client } = context;
           const guild = await client.guilds.fetch(guildId);
 
-          const managementRow1 = new ActionRowBuilder()
-            .addComponents(
-              new ButtonBuilder()
-                .setCustomId('prod_view_timezones')
-                .setLabel('View Timezones')
-                .setStyle(ButtonStyle.Primary)
-                .setEmoji('🌍'),
-              new ButtonBuilder()
-                .setCustomId('prod_edit_timezones')
-                .setLabel('Bulk Modify (no offset)')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('⏲️'),
-              new ButtonBuilder()
-                .setCustomId('prod_add_timezone')
-                .setLabel('Custom Timezone')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('🗺️'),
-              new ButtonBuilder()
-                .setCustomId('prod_timezone_react')
-                .setLabel('Post React for Timezones')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('👍')
-            );
+          // Post React for Roles row (all grey)
+          const postReactRow = {
+            type: 1,
+            components: [
+              { type: 2, custom_id: 'cr_list', label: 'Custom Reacts', style: 2, emoji: { name: '🧩' } },
+              { type: 2, custom_id: 'prod_pronoun_react', label: 'Pronouns', style: 2, emoji: { name: '💜' } },
+              { type: 2, custom_id: 'prod_timezone_react', label: 'Timezones', style: 2, emoji: { name: '🗺️' } },
+              { type: 2, custom_id: 'prod_ban_react', label: 'Bans', style: 2, emoji: { name: '🎯' } },
+            ]
+          };
 
-          const managementRow2 = new ActionRowBuilder()
-            .addComponents(
-              new ButtonBuilder()
-                .setCustomId('prod_view_pronouns')
-                .setLabel('View Pronouns')
-                .setStyle(ButtonStyle.Primary)
-                .setEmoji('💜'),
-              new ButtonBuilder()
-                .setCustomId('prod_edit_pronouns')
-                .setLabel('Edit Pronouns')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('💙'),
-              new ButtonBuilder()
-                .setCustomId('prod_pronoun_react')
-                .setLabel('Post React for Pronouns')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('👍')
-            );
+          // Timezone management row
+          const timezoneRow = {
+            type: 1,
+            components: [
+              { type: 2, custom_id: 'prod_view_timezones', label: 'View Timezones', style: 2, emoji: { name: '🌍' } },
+              { type: 2, custom_id: 'prod_edit_timezones', label: 'Bulk Modify', style: 2, emoji: { name: '⏲️' } },
+              { type: 2, custom_id: 'prod_add_timezone', label: 'Custom Timezone', style: 2, emoji: { name: '🗺️' } },
+            ]
+          };
 
-          const otherRow = new ActionRowBuilder()
-            .addComponents(
-              new ButtonBuilder()
-                .setCustomId('prod_ban_react')
-                .setLabel('Post React for Ban')
-                .setStyle(ButtonStyle.Danger)
-                .setEmoji('🎯')
-            );
-
-          // Create Components V2 Container with LEAN design
-          const backRow = new ActionRowBuilder()
-            .addComponents(
-              new ButtonBuilder()
-                .setCustomId('castbot_tools')
-                .setLabel('← Tools')
-                .setStyle(ButtonStyle.Secondary)
-            );
-
-          const reactionRolesComponents = [
-            {
-              type: 10, // Text Display component
-              content: `## 🎯 Reaction Roles | Role Management\n\nManage reaction-based role assignment. Post reaction panels for Timezones, Pronouns, or deploy Ban traps to catch spam bots.`
-            },
-            {
-              type: 14 // Separator
-            },
-            {
-              type: 10, // Text Display component
-              content: `> **\`🌍 Timezone Management\`**`
-            },
-            managementRow1.toJSON(),
-            {
-              type: 14 // Separator
-            },
-            {
-              type: 10, // Text Display component
-              content: `> **\`💜 Pronoun Management\`**`
-            },
-            managementRow2.toJSON(),
-            {
-              type: 14 // Separator
-            },
-            {
-              type: 10, // Text Display component
-              content: `> **\`🎯 Other\`**`
-            },
-            otherRow.toJSON(),
-            {
-              type: 14 // Separator before navigation
-            },
-            backRow.toJSON()
-          ];
+          // Pronoun management row
+          const pronounRow = {
+            type: 1,
+            components: [
+              { type: 2, custom_id: 'prod_view_pronouns', label: 'View Pronouns', style: 2, emoji: { name: '💜' } },
+              { type: 2, custom_id: 'prod_edit_pronouns', label: 'Edit Pronouns', style: 2, emoji: { name: '💙' } },
+            ]
+          };
 
           const reactionRolesContainer = {
-            type: 17, // Container component
-            accent_color: 0x9B59B6, // Purple accent color
-            components: reactionRolesComponents
+            type: 17,
+            accent_color: 0x9B59B6,
+            components: [
+              { type: 10, content: '## 🎯 Reaction Roles | Role Management\n\nManage reaction-based role assignment.' },
+              { type: 14 },
+              { type: 10, content: '### ```🎭 Post React for Roles```' },
+              postReactRow,
+              { type: 14 },
+              { type: 10, content: '### ```🌍 Timezone Management```' },
+              timezoneRow,
+              { type: 14 },
+              { type: 10, content: '### ```💜 Pronoun Management```' },
+              pronounRow,
+              { type: 14 },
+              { type: 1, components: [{ type: 2, custom_id: 'castbot_tools', label: '← Tools', style: 2 }] }
+            ]
           };
 
           return {
@@ -7500,6 +7447,374 @@ To fix this:
           };
         }
       })(req, res, client);
+    // ═══════════════════════════════════════════════════════════════
+    // CUSTOM REACTS — Generalized reaction role panels
+    // ═══════════════════════════════════════════════════════════════
+
+    } else if (custom_id === 'cr_list') {
+      // Show Custom Reacts list view
+      return ButtonHandlerFactory.create({
+        id: 'cr_list',
+        updateMessage: true,
+        handler: async (context) => {
+          const { buildCustomReactsListUI } = await import('./customReacts.js');
+          return await buildCustomReactsListUI(context.guildId);
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'cr_add_panel') {
+      // "Create New Panel" — show modal for panel name
+      return ButtonHandlerFactory.create({
+        id: 'cr_add_panel',
+        requiresModal: true,
+        handler: async () => {
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: 'cr_create_panel_modal',
+              title: 'Create Reaction Panel',
+              components: [
+                {
+                  type: 18,
+                  label: 'Panel Name',
+                  description: 'A name for this reaction role panel (e.g. "Notifications")',
+                  component: {
+                    type: 4,
+                    custom_id: 'panel_name',
+                    style: 1,
+                    min_length: 1,
+                    max_length: 50,
+                    placeholder: 'e.g. Heart Squad',
+                    required: true
+                  }
+                }
+              ]
+            }
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('cr_panel_select_')) {
+      // Panel list item — route by selected action
+      return ButtonHandlerFactory.create({
+        id: 'cr_panel_select',
+        updateMessage: true,
+        handler: async (context) => {
+          const reactId = context.customId.replace('cr_panel_select_', '');
+          const action = req.body.data.values?.[0];
+
+          if (action === 'edit' || action === 'summary') {
+            const { buildPanelDetailUI } = await import('./customReacts.js');
+            const guild = await client.guilds.fetch(context.guildId);
+            return await buildPanelDetailUI(context.guildId, reactId, guild);
+          }
+          if (action === 'post') {
+            const { buildPostToChannelUI } = await import('./customReacts.js');
+            return buildPostToChannelUI(reactId);
+          }
+          if (action === 'delete') {
+            const { getCustomReact, buildDeleteConfirmUI } = await import('./customReacts.js');
+            const panel = await getCustomReact(context.guildId, reactId);
+            return buildDeleteConfirmUI(reactId, panel?.name || 'Unknown');
+          }
+          // divider — just re-render list
+          const { buildCustomReactsListUI } = await import('./customReacts.js');
+          return await buildCustomReactsListUI(context.guildId);
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('cr_delete_confirm_')) {
+      // Confirm delete panel
+      return ButtonHandlerFactory.create({
+        id: 'cr_delete_confirm',
+        updateMessage: true,
+        handler: async (context) => {
+          const reactId = context.customId.replace('cr_delete_confirm_', '');
+          const { deleteCustomReact, buildCustomReactsListUI } = await import('./customReacts.js');
+          await deleteCustomReact(context.guildId, reactId);
+          return await buildCustomReactsListUI(context.guildId);
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('cr_detail_page_')) {
+      // Panel detail pagination
+      return ButtonHandlerFactory.create({
+        id: 'cr_detail_page',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = context.customId.replace('cr_detail_page_', '');
+          const lastUnderscore = parts.lastIndexOf('_');
+          const reactId = parts.substring(0, lastUnderscore);
+          const page = parseInt(parts.substring(lastUnderscore + 1)) || 0;
+          const { buildPanelDetailUI } = await import('./customReacts.js');
+          const guild = await client.guilds.fetch(context.guildId);
+          return await buildPanelDetailUI(context.guildId, reactId, guild, page);
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('cr_mapping_select_')) {
+      // Mapping action in detail view
+      return ButtonHandlerFactory.create({
+        id: 'cr_mapping_select',
+        updateMessage: true,
+        handler: async (context) => {
+          const afterPrefix = context.customId.replace('cr_mapping_select_', '');
+          const lastUnderscore = afterPrefix.lastIndexOf('_');
+          const reactId = afterPrefix.substring(0, lastUnderscore);
+          const mappingIdx = parseInt(afterPrefix.substring(lastUnderscore + 1));
+          const action = req.body.data.values?.[0];
+
+          const { buildPanelDetailUI, swapMappings, removeMappingFromPanel } = await import('./customReacts.js');
+          const guild = await client.guilds.fetch(context.guildId);
+
+          if (action === 'move_up') {
+            await swapMappings(context.guildId, reactId, mappingIdx, mappingIdx - 1);
+          } else if (action === 'move_down') {
+            await swapMappings(context.guildId, reactId, mappingIdx, mappingIdx + 1);
+          } else if (action === 'remove') {
+            await removeMappingFromPanel(context.guildId, reactId, mappingIdx);
+          } else if (action === 'edit') {
+            // Show edit modal for this mapping
+            const { getCustomReact } = await import('./customReacts.js');
+            const panel = await getCustomReact(context.guildId, reactId);
+            const mapping = panel?.mappings?.[mappingIdx];
+            if (mapping) {
+              return {
+                type: InteractionResponseType.MODAL,
+                data: {
+                  custom_id: `cr_edit_mapping_modal_${reactId}_${mappingIdx}`,
+                  title: 'Edit Reaction Role',
+                  components: [
+                    {
+                      type: 18,
+                      label: 'Emoji',
+                      description: 'Paste a single emoji',
+                      component: { type: 4, custom_id: 'emoji', style: 1, max_length: 20, required: true, value: mapping.emoji }
+                    },
+                    {
+                      type: 18,
+                      label: 'Display Label',
+                      description: 'Label shown in the reaction panel',
+                      component: { type: 4, custom_id: 'label', style: 1, max_length: 100, required: true, value: mapping.label }
+                    }
+                  ]
+                }
+              };
+            }
+          }
+          // Re-render detail view (for summary, divider, or after mutation)
+          const currentPage = Math.floor(mappingIdx / 7);
+          return await buildPanelDetailUI(context.guildId, reactId, guild, currentPage);
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('cr_add_mapping_')) {
+      // "Add Reaction Role" select — route to add existing or create new
+      return ButtonHandlerFactory.create({
+        id: 'cr_add_mapping',
+        updateMessage: true,
+        handler: async (context) => {
+          const reactId = context.customId.replace('cr_add_mapping_', '');
+          const action = req.body.data.values?.[0];
+
+          if (action === 'add_existing') {
+            const { buildAddExistingRoleUI } = await import('./customReacts.js');
+            return buildAddExistingRoleUI(reactId);
+          }
+          if (action === 'create_role') {
+            // Show create role modal with color presets
+            const { COLOR_PRESETS } = await import('./utils/colorUtils.js');
+            return {
+              type: InteractionResponseType.MODAL,
+              data: {
+                custom_id: `cr_create_role_modal_${reactId}`,
+                title: 'Create Reaction Role',
+                components: [
+                  {
+                    type: 18,
+                    label: 'Role Name',
+                    component: { type: 4, custom_id: 'role_name', style: 1, max_length: 100, required: true, placeholder: 'e.g. Heart Squad' }
+                  },
+                  {
+                    type: 18,
+                    label: 'Emoji',
+                    description: 'Paste a single emoji for the reaction',
+                    component: { type: 4, custom_id: 'emoji', style: 1, max_length: 20, required: true, placeholder: 'e.g. 💗' }
+                  },
+                  {
+                    type: 18,
+                    label: 'Color',
+                    component: {
+                      type: 3,
+                      custom_id: 'color_preset',
+                      options: COLOR_PRESETS.map(p => ({
+                        label: p.label,
+                        value: p.value,
+                        emoji: { name: p.emoji },
+                        ...(p.value === '#3498DB' ? { default: true } : {})
+                      })),
+                      required: false
+                    }
+                  },
+                  {
+                    type: 18,
+                    label: 'Custom Color (if "Custom..." selected)',
+                    description: 'Enter hex color like #FF0000',
+                    component: { type: 4, custom_id: 'color_custom', style: 1, max_length: 7, required: false, placeholder: '#RRGGBB' }
+                  }
+                ]
+              }
+            };
+          }
+          // Fallback
+          const { buildPanelDetailUI } = await import('./customReacts.js');
+          const guild = await client.guilds.fetch(context.guildId);
+          return await buildPanelDetailUI(context.guildId, reactId, guild);
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('cr_role_select_')) {
+      // Role select for "Add Existing Role" — show emoji/label modal
+      return ButtonHandlerFactory.create({
+        id: 'cr_role_select',
+        requiresModal: true,
+        handler: async (context) => {
+          const reactId = context.customId.replace('cr_role_select_', '');
+          const roleId = req.body.data.values?.[0];
+          if (!roleId) {
+            const { buildPanelDetailUI } = await import('./customReacts.js');
+            const guild = await client.guilds.fetch(context.guildId);
+            return await buildPanelDetailUI(context.guildId, reactId, guild);
+          }
+
+          // Fetch role to get name and check permissions
+          const guild = await client.guilds.fetch(context.guildId);
+          const role = await guild.roles.fetch(roleId);
+          const roleName = role?.name || 'Unknown Role';
+
+          // Check for dangerous permissions
+          const { checkDangerousPermissions, buildDangerousPermWarningUI } = await import('./customReacts.js');
+          const permCheck = checkDangerousPermissions(role);
+          if (permCheck.dangerous) {
+            // Store pending data and show warning — user must confirm via cr_confirm_dangerous
+            // Encode a default emoji and label for the confirmation flow
+            return buildDangerousPermWarningUI(reactId, roleId, roleName, permCheck.permNames, '⭐', roleName);
+          }
+
+          // Show emoji/label modal
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: `cr_add_role_modal_${reactId}_${roleId}`,
+              title: 'Add Reaction Role',
+              components: [
+                {
+                  type: 18,
+                  label: 'Emoji',
+                  description: 'Paste a single emoji for the reaction',
+                  component: { type: 4, custom_id: 'emoji', style: 1, max_length: 20, required: true, placeholder: 'e.g. 💗' }
+                },
+                {
+                  type: 18,
+                  label: 'Display Label',
+                  description: 'Label shown in the reaction panel',
+                  component: { type: 4, custom_id: 'label', style: 1, max_length: 100, required: true, value: roleName }
+                }
+              ]
+            }
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('cr_confirm_dangerous_')) {
+      // Confirm adding a dangerous-permission role — show emoji/label modal
+      return ButtonHandlerFactory.create({
+        id: 'cr_confirm_dangerous',
+        requiresModal: true,
+        handler: async (context) => {
+          // Format: cr_confirm_dangerous_{reactId}_{roleId}_{emoji}_{label}
+          const parts = context.customId.replace('cr_confirm_dangerous_', '');
+          const firstUnderscore = parts.indexOf('_');
+          const reactId = parts.substring(0, firstUnderscore);
+          const rest = parts.substring(firstUnderscore + 1);
+          const secondUnderscore = rest.indexOf('_');
+          const roleId = rest.substring(0, secondUnderscore);
+          const rest2 = rest.substring(secondUnderscore + 1);
+          const thirdUnderscore = rest2.indexOf('_');
+          const emoji = decodeURIComponent(rest2.substring(0, thirdUnderscore));
+          const label = decodeURIComponent(rest2.substring(thirdUnderscore + 1));
+
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: `cr_add_role_modal_${reactId}_${roleId}`,
+              title: 'Add Reaction Role',
+              components: [
+                {
+                  type: 18,
+                  label: 'Emoji',
+                  description: 'Paste a single emoji for the reaction',
+                  component: { type: 4, custom_id: 'emoji', style: 1, max_length: 20, required: true, value: emoji !== '⭐' ? emoji : '', placeholder: 'e.g. 💗' }
+                },
+                {
+                  type: 18,
+                  label: 'Display Label',
+                  description: 'Label shown in the reaction panel',
+                  component: { type: 4, custom_id: 'label', style: 1, max_length: 100, required: true, value: label }
+                }
+              ]
+            }
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('cr_post_channel_')) {
+      // Show channel select for posting a panel
+      return ButtonHandlerFactory.create({
+        id: 'cr_post_channel',
+        updateMessage: true,
+        handler: async (context) => {
+          const reactId = context.customId.replace('cr_post_channel_', '');
+          const { buildPostToChannelUI } = await import('./customReacts.js');
+          return buildPostToChannelUI(reactId);
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('cr_channel_select_')) {
+      // Channel selected — post the panel
+      return ButtonHandlerFactory.create({
+        id: 'cr_channel_select',
+        updateMessage: true,
+        handler: async (context) => {
+          const reactId = context.customId.replace('cr_channel_select_', '');
+          const channelId = req.body.data.values?.[0];
+          if (!channelId) {
+            const { buildPanelDetailUI } = await import('./customReacts.js');
+            const guild = await client.guilds.fetch(context.guildId);
+            return await buildPanelDetailUI(context.guildId, reactId, guild);
+          }
+
+          const { postPanelToChannel, buildPanelDetailUI } = await import('./customReacts.js');
+          const result = await postPanelToChannel(context.guildId, reactId, channelId, client);
+
+          const guild = await client.guilds.fetch(context.guildId);
+          const detailUI = await buildPanelDetailUI(context.guildId, reactId, guild);
+
+          if (result.success) {
+            // Prepend success message
+            detailUI.components[0].components.splice(1, 0,
+              { type: 10, content: `✅ Panel posted to <#${channelId}>!` }
+            );
+          } else {
+            detailUI.components[0].components.splice(1, 0,
+              { type: 10, content: `❌ Failed to post: ${result.error}` }
+            );
+          }
+
+          return detailUI;
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'prod_availability') {
       // Show availability management menu
       return ButtonHandlerFactory.create({
@@ -46858,6 +47173,228 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
 
+    // ═══════════════════════════════════════════════════════════════
+    // CUSTOM REACTS — Modal Submit Handlers
+    // ═══════════════════════════════════════════════════════════════
+
+    } else if (custom_id === 'cr_create_panel_modal') {
+      // Create a new custom react panel
+      const token = req.body.token;
+      res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id;
+        const components = req.body.data.components || [];
+
+        // Extract panel name from Label-wrapped component
+        let panelName = '';
+        for (const row of components) {
+          if (row?.type === 18 && row?.component?.custom_id === 'panel_name') {
+            panelName = (row.component.value || '').trim();
+          }
+        }
+
+        if (!panelName) {
+          await updateDeferredResponse(req.body.application_id, token, {
+            components: [{ type: 17, accent_color: 0xe74c3c, components: [
+              { type: 10, content: '❌ Panel name is required.' }
+            ]}],
+            flags: (1 << 15)
+          });
+          return;
+        }
+
+        const { generateReactId, saveCustomReact, buildPanelDetailUI } = await import('./customReacts.js');
+        const reactId = generateReactId(userId);
+        await saveCustomReact(guildId, reactId, {
+          id: reactId,
+          name: panelName,
+          mappings: [],
+          postedMessages: [],
+          createdAt: Date.now(),
+          createdBy: userId
+        });
+
+        const guild = await client.guilds.fetch(guildId);
+        const detailUI = await buildPanelDetailUI(guildId, reactId, guild);
+        await updateDeferredResponse(req.body.application_id, token, {
+          ...detailUI,
+          flags: (1 << 15)
+        });
+      } catch (error) {
+        console.error('Error in cr_create_panel_modal:', error);
+      }
+
+    } else if (custom_id.startsWith('cr_add_role_modal_')) {
+      // Add an existing role to a panel (after emoji/label modal)
+      const token = req.body.token;
+      res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+
+      try {
+        const guildId = req.body.guild_id;
+        const parts = custom_id.replace('cr_add_role_modal_', '');
+        const lastUnderscore = parts.lastIndexOf('_');
+        const reactId = parts.substring(0, lastUnderscore);
+        const roleId = parts.substring(lastUnderscore + 1);
+
+        const components = req.body.data.components || [];
+        let emoji = '', label = '';
+        for (const row of components) {
+          if (row?.type === 18 && row?.component?.custom_id === 'emoji') {
+            emoji = (row.component.value || '').trim();
+          }
+          if (row?.type === 18 && row?.component?.custom_id === 'label') {
+            label = (row.component.value || '').trim();
+          }
+        }
+
+        if (!emoji || !label) {
+          await updateDeferredResponse(req.body.application_id, token, {
+            components: [{ type: 17, accent_color: 0xe74c3c, components: [
+              { type: 10, content: '❌ Both emoji and label are required.' }
+            ]}],
+            flags: (1 << 15)
+          });
+          return;
+        }
+
+        // Get role name and color from Discord
+        const guild = await client.guilds.fetch(guildId);
+        const role = await guild.roles.fetch(roleId).catch(() => null);
+        const roleName = role?.name || 'Unknown Role';
+        const { formatRoleColor } = await import('./utils/colorUtils.js');
+        const color = role ? formatRoleColor(role.color) : '#000000';
+
+        const { addMappingToPanel, buildPanelDetailUI } = await import('./customReacts.js');
+        await addMappingToPanel(guildId, reactId, { emoji, roleId, label, roleName, color });
+
+        const detailUI = await buildPanelDetailUI(guildId, reactId, guild);
+        await updateDeferredResponse(req.body.application_id, token, {
+          ...detailUI,
+          flags: (1 << 15)
+        });
+      } catch (error) {
+        console.error('Error in cr_add_role_modal:', error);
+      }
+
+    } else if (custom_id.startsWith('cr_edit_mapping_modal_')) {
+      // Edit an existing mapping's emoji/label
+      const token = req.body.token;
+      res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+
+      try {
+        const guildId = req.body.guild_id;
+        const parts = custom_id.replace('cr_edit_mapping_modal_', '');
+        const lastUnderscore = parts.lastIndexOf('_');
+        const reactId = parts.substring(0, lastUnderscore);
+        const mappingIdx = parseInt(parts.substring(lastUnderscore + 1));
+
+        const components = req.body.data.components || [];
+        let emoji = '', label = '';
+        for (const row of components) {
+          if (row?.type === 18 && row?.component?.custom_id === 'emoji') {
+            emoji = (row.component.value || '').trim();
+          }
+          if (row?.type === 18 && row?.component?.custom_id === 'label') {
+            label = (row.component.value || '').trim();
+          }
+        }
+
+        if (emoji || label) {
+          const { loadPlayerData, savePlayerData } = await import('./storage.js');
+          const pd = await loadPlayerData();
+          const panel = pd[guildId]?.customReacts?.[reactId];
+          if (panel?.mappings?.[mappingIdx]) {
+            if (emoji) panel.mappings[mappingIdx].emoji = emoji;
+            if (label) panel.mappings[mappingIdx].label = label;
+            await savePlayerData(pd);
+          }
+        }
+
+        const { buildPanelDetailUI } = await import('./customReacts.js');
+        const guild = await client.guilds.fetch(guildId);
+        const page = Math.floor(mappingIdx / 7);
+        const detailUI = await buildPanelDetailUI(guildId, reactId, guild, page);
+        await updateDeferredResponse(req.body.application_id, token, {
+          ...detailUI,
+          flags: (1 << 15)
+        });
+      } catch (error) {
+        console.error('Error in cr_edit_mapping_modal:', error);
+      }
+
+    } else if (custom_id.startsWith('cr_create_role_modal_')) {
+      // Create a new Discord role and add it to the panel
+      const token = req.body.token;
+      res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+
+      try {
+        const guildId = req.body.guild_id;
+        const reactId = custom_id.replace('cr_create_role_modal_', '');
+
+        const components = req.body.data.components || [];
+        let roleName = '', emoji = '', colorPreset = '', colorCustom = '';
+        for (const row of components) {
+          if (row?.type === 18) {
+            const cid = row.component?.custom_id;
+            const val = row.component?.value ?? row.component?.values ?? '';
+            if (cid === 'role_name') roleName = (typeof val === 'string' ? val : '').trim();
+            if (cid === 'emoji') emoji = (typeof val === 'string' ? val : '').trim();
+            if (cid === 'color_preset') colorPreset = Array.isArray(val) ? val[0] : (val || '');
+            if (cid === 'color_custom') colorCustom = (typeof val === 'string' ? val : '').trim();
+          }
+        }
+
+        if (!roleName || !emoji) {
+          await updateDeferredResponse(req.body.application_id, token, {
+            components: [{ type: 17, accent_color: 0xe74c3c, components: [
+              { type: 10, content: '❌ Role name and emoji are required.' }
+            ]}],
+            flags: (1 << 15)
+          });
+          return;
+        }
+
+        // Resolve color
+        const { validateHexColor, hexToColorInt } = await import('./utils/colorUtils.js');
+        let processedColor = null;
+        if (colorPreset === 'custom' && colorCustom) {
+          processedColor = validateHexColor(colorCustom);
+        } else if (colorPreset && colorPreset !== 'custom') {
+          processedColor = colorPreset.toUpperCase();
+        }
+        const colorInt = processedColor ? hexToColorInt(processedColor) : 0;
+
+        // Create Discord role
+        const guild = await client.guilds.fetch(guildId);
+        const role = await guild.roles.create({
+          name: roleName,
+          color: colorInt,
+          reason: 'CastBot Custom React role creation'
+        });
+        console.log(`🧩 Created role "${roleName}" (${role.id}) for custom react`);
+
+        // Add mapping to panel
+        const { addMappingToPanel, buildPanelDetailUI } = await import('./customReacts.js');
+        const { formatRoleColor } = await import('./utils/colorUtils.js');
+        await addMappingToPanel(guildId, reactId, {
+          emoji,
+          roleId: role.id,
+          label: roleName,
+          roleName: roleName,
+          color: processedColor || formatRoleColor(role.color)
+        });
+
+        const detailUI = await buildPanelDetailUI(guildId, reactId, guild);
+        await updateDeferredResponse(req.body.application_id, token, {
+          ...detailUI,
+          flags: (1 << 15)
+        });
+      } catch (error) {
+        console.error('Error in cr_create_role_modal:', error);
+      }
+
     } else {
       console.log(`⚠️ DEBUG: Unhandled MODAL_SUBMIT custom_id: ${custom_id}`);
     }
@@ -47185,9 +47722,10 @@ client.on('messageReactionAdd', async (reaction, user) => {
         await member.roles.add(roleId);
         console.log(`Set timezone role ${roleId} for user ${user.tag}`);
       } else {
-        // Regular pronoun role - just add it
+        // Additive role assignment (pronouns, custom reacts)
         await member.roles.add(roleId);
-        console.log(`Added pronoun role ${roleId} to user ${user.tag}`);
+        const source = roleMapping.reactId ? 'custom react' : 'pronoun';
+        console.log(`Added ${source} role ${roleId} to user ${user.tag}`);
       }
     } catch (error) {
       console.error('Error in role/ban action:', error);

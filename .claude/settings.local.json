@@ -164,7 +164,8 @@
       "Read(//tmp/**)",
       "Bash(for f:*)",
       "Bash(git log:*)",
-      "Skill(sharp)"
+      "Skill(sharp)",
+      "Skill(update-config)"
     ],
     "deny": []
   },

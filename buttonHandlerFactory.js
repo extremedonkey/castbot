@@ -1037,12 +1037,12 @@ export const BUTTON_REGISTRY = {
     label: 'View Timezones',
     description: 'Display all configured timezone roles with UTC offsets',
     emoji: '🌍',
-    style: 'Primary',
+    style: 'Secondary',
     category: 'reaction_roles',
     parent: 'prod_manage_pronouns_timezones'
   },
   'prod_edit_timezones': {
-    label: 'Bulk Modify (no offset)',
+    label: 'Bulk Modify',
     description: 'Add/remove timezone roles without setting UTC offsets',
     emoji: '⏲️',
     style: 'Secondary',
@@ -1050,7 +1050,7 @@ export const BUTTON_REGISTRY = {
     parent: 'prod_manage_pronouns_timezones'
   },
   'prod_add_timezone': {
-    label: 'Add Timezone (incl. Offset)',
+    label: 'Custom Timezone',
     description: 'Add timezone role with UTC offset configuration',
     emoji: '🗺️',
     style: 'Secondary',
@@ -1061,7 +1061,7 @@ export const BUTTON_REGISTRY = {
     label: 'View Pronouns',
     description: 'Display all configured pronoun roles',
     emoji: '💜',
-    style: 'Primary',
+    style: 'Secondary',
     category: 'reaction_roles',
     parent: 'prod_manage_pronouns_timezones'
   },
@@ -1074,12 +1074,104 @@ export const BUTTON_REGISTRY = {
     parent: 'prod_manage_pronouns_timezones'
   },
   'prod_ban_react': {
-    label: 'Post React for Ban',
+    label: 'Bans',
     description: 'Post a honeypot reaction message that auto-bans bots who react',
     emoji: '🎯',
-    style: 'Danger',
+    style: 'Secondary',
     category: 'reaction_roles',
     parent: 'prod_manage_pronouns_timezones'
+  },
+
+  // === CUSTOM REACTS ===
+  'cr_list': {
+    label: 'Custom Reacts',
+    description: 'View and manage custom reaction role panels',
+    emoji: '🧩',
+    style: 'Secondary',
+    category: 'reaction_roles',
+    parent: 'prod_manage_pronouns_timezones'
+  },
+  'cr_add_panel': {
+    label: 'Create New Panel',
+    description: 'Create a new custom reaction role panel',
+    emoji: '➕',
+    style: 'Secondary',
+    category: 'custom_reacts',
+    parent: 'cr_list'
+  },
+  'cr_panel_select_*': {
+    label: 'Panel Action',
+    description: 'Select action for a custom react panel (edit, post, delete)',
+    emoji: '🧩',
+    style: 'Secondary',
+    category: 'custom_reacts',
+    parent: 'cr_list'
+  },
+  'cr_delete_confirm_*': {
+    label: 'Confirm Delete',
+    description: 'Confirm deletion of a custom react panel',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'custom_reacts',
+    parent: 'cr_list'
+  },
+  'cr_detail_page_*': {
+    label: 'Panel Detail',
+    description: 'View/paginate custom react panel details',
+    emoji: '🧩',
+    style: 'Secondary',
+    category: 'custom_reacts',
+    parent: 'cr_list'
+  },
+  'cr_mapping_select_*': {
+    label: 'Mapping Action',
+    description: 'Select action for a reaction role mapping (edit, move, remove)',
+    emoji: '🎯',
+    style: 'Secondary',
+    category: 'custom_reacts',
+    parent: 'cr_list'
+  },
+  'cr_add_mapping_*': {
+    label: 'Add Reaction Role',
+    description: 'Add a reaction role to a custom react panel',
+    emoji: '➕',
+    style: 'Secondary',
+    category: 'custom_reacts',
+    parent: 'cr_list'
+  },
+  'cr_role_select_*': {
+    label: 'Select Role',
+    description: 'Select a Discord role to add as a reaction role',
+    emoji: '🏷️',
+    style: 'Secondary',
+    category: 'custom_reacts',
+    parent: 'cr_list',
+    requiresModal: true
+  },
+  'cr_confirm_dangerous_*': {
+    label: 'Confirm Dangerous Role',
+    description: 'Confirm adding a role with elevated permissions',
+    emoji: '⚠️',
+    style: 'Danger',
+    category: 'custom_reacts',
+    parent: 'cr_list',
+    requiresModal: true
+  },
+  'cr_post_channel_*': {
+    label: 'Post to Channel',
+    description: 'Select channel to post a custom react panel',
+    emoji: '📨',
+    style: 'Primary',
+    category: 'custom_reacts',
+    parent: 'cr_list'
+  },
+  'cr_channel_select_*': {
+    label: 'Channel Select',
+    description: 'Channel selected for posting a custom react panel',
+    emoji: '📨',
+    style: 'Secondary',
+    category: 'custom_reacts',
+    parent: 'cr_list'
   },
 
   // === TRIBE MANAGEMENT ===

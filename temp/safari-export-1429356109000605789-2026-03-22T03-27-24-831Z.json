@@ -1,0 +1,3339 @@
+{
+ "stores": {
+  "blacksmith_210261": {
+   "id": "blacksmith_210261",
+   "name": "Blacksmith",
+   "emoji": "🔨",
+   "description": "Sells a variety of Blacksmith goods.",
+   "items": [
+    {
+     "itemId": "broken_sword_958651",
+     "price": 500,
+     "addedAt": 1755010052237,
+     "stock": 0
+    },
+    {
+     "itemId": "broken_axe_270025",
+     "price": 500,
+     "addedAt": 1755010331218
+    }
+   ],
+   "settings": {
+    "storeownerText": "Welcome to the best blacksmith in town!"
+   }
+  },
+  "traveling_southern_m_334046": {
+   "id": "traveling_southern_m_334046",
+   "name": "Traveling Southern Merchant",
+   "emoji": "🛒",
+   "description": null,
+   "items": [
+    {
+     "itemId": "chest_key_985297",
+     "price": 50,
+     "addedAt": 1755644367325
+    }
+   ],
+   "settings": {
+    "storeownerText": "Need Anything?"
+   }
+  },
+  "the_new_store_304423": {
+   "id": "the_new_store_304423",
+   "name": "The New Store",
+   "emoji": "✨",
+   "description": "Where all the best new stuff occurs",
+   "items": [],
+   "settings": {
+    "storeownerText": "Good to see ya!"
+   }
+  }
+ },
+ "items": {
+  "bait_530852": {
+   "id": "bait_530852",
+   "name": "Bait",
+   "description": "A wiggly little worm that's sure to attract some fish if you tried to catch one!",
+   "emoji": "🎣",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "rainbow_fish_094546": {
+   "id": "rainbow_fish_094546",
+   "name": "Rainbow Fish",
+   "description": "Rare fish, highly sought after for it's unique uses and cooking benefits!!",
+   "emoji": "🎣",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "mixed_herb_seeds_210637": {
+   "id": "mixed_herb_seeds_210637",
+   "name": "Mixed Herb Seeds",
+   "description": "A mixed bag of seeds to plant different herbs!",
+   "emoji": ":leaves:",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "bone_meal_508480": {
+   "id": "bone_meal_508480",
+   "name": "Bone Meal",
+   "description": "A useful helper in cultivation of plants!",
+   "emoji": ":bone:",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "fruit_of_life_237279": {
+   "id": "fruit_of_life_237279",
+   "name": "Fruit of Life",
+   "description": "It's rare to harvest a real Fruit of Life. It's said they may help those of weaker heart come to health quicker!",
+   "emoji": "🎣",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "bundle_o_bait_517568": {
+   "id": "bundle_o_bait_517568",
+   "name": "Bundle 'o bait",
+   "description": "It's worms!",
+   "emoji": "🎣",
+   "category": "General",
+   "basePrice": 100,
+   "maxQuantity": -1,
+   "goodOutcomeValue": null,
+   "badOutcomeValue": null,
+   "consumable": "No"
+  },
+  "fishing_rod_611320": {
+   "id": "fishing_rod_611320",
+   "name": "Fishing Rod",
+   "description": "It looks kinda crappy...",
+   "emoji": "🎣",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "snapped_writing_quil_692526": {
+   "id": "snapped_writing_quil_692526",
+   "name": "Snapped Writing Quill",
+   "description": "This appears to be a very nice writing quill, and seems to have the letter S etched into the side. Did somebody accidentally leave this behind?",
+   "emoji": "🖊️",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "dorothea_s_notes_034794": {
+   "id": "dorothea_s_notes_034794",
+   "name": "Dorothea's Notes",
+   "description": "Dorothea's seminar notes for Sylvain",
+   "emoji": "📜",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "tomato_seeds_135867": {
+   "id": "tomato_seeds_135867",
+   "name": "Tomato Seeds",
+   "description": "Tomato seeds good enough to plant",
+   "emoji": "🍅",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "tomato_644667": {
+   "id": "tomato_644667",
+   "name": "Tomato",
+   "description": "Good enough to eat",
+   "emoji": "🍅",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "teutates_herring_455537": {
+   "id": "teutates_herring_455537",
+   "name": "Teutates Herring",
+   "description": "You caught a Herring!\nBloop Bloop!",
+   "emoji": "🐟",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "garreg_mach_meat_pie_560402": {
+   "id": "garreg_mach_meat_pie_560402",
+   "name": "Garreg Mach Meat Pie",
+   "description": "It smells delicious",
+   "emoji": "🥧",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "wild_game_338433": {
+   "id": "wild_game_338433",
+   "name": "Wild Game",
+   "description": "",
+   "emoji": "🥩",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "bone_336883": {
+   "id": "bone_336883",
+   "name": "Bone",
+   "description": "It's a bone! It's probably not human",
+   "emoji": "🦴",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "pitcher_plant_023666": {
+   "id": "pitcher_plant_023666",
+   "name": "Pitcher Plant",
+   "description": "This gift is particularly appreciated by people who like flowers.",
+   "emoji": "🌼",
+   "category": "General",
+   "basePrice": 25,
+   "maxQuantity": -1,
+   "goodOutcomeValue": null,
+   "badOutcomeValue": null,
+   "consumable": "No"
+  },
+  "cabbage_670049": {
+   "id": "cabbage_670049",
+   "name": "Cabbage",
+   "description": "It's cabbage! Yummy",
+   "emoji": "🥬",
+   "category": "General",
+   "basePrice": 25,
+   "maxQuantity": -1,
+   "goodOutcomeValue": null,
+   "badOutcomeValue": null,
+   "consumable": "No"
+  },
+  "blutgang_736868": {
+   "id": "blutgang_736868",
+   "name": "Blutgang",
+   "description": "A Hero's Relic linked to the Crest of The Beast",
+   "emoji": "🗡️",
+   "category": "General",
+   "basePrice": 200000,
+   "maxQuantity": -1,
+   "goodOutcomeValue": null,
+   "badOutcomeValue": null,
+   "consumable": "No"
+  },
+  "lance_of_ruin_070248": {
+   "id": "lance_of_ruin_070248",
+   "name": "Lance of Ruin",
+   "description": "A Heros's Relic that can be wielded by someone with a Crest of Gautier",
+   "emoji": "🗡️",
+   "category": "General",
+   "basePrice": 100000,
+   "maxQuantity": -1,
+   "goodOutcomeValue": null,
+   "badOutcomeValue": null,
+   "consumable": "No"
+  },
+  "hilda_agrees_163673": {
+   "id": "hilda_agrees_163673",
+   "name": "Hilda Agrees",
+   "description": "Hilda agrees to fight in the tournament",
+   "emoji": "🪓",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "raphael_agrees_228161": {
+   "id": "raphael_agrees_228161",
+   "name": "Raphael Agrees",
+   "description": "Raphael Agrees to fight in the tournament",
+   "emoji": "🤛",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "ingrid_agrees_274757": {
+   "id": "ingrid_agrees_274757",
+   "name": "Ingrid Agrees",
+   "description": "Ingrid Agrees to fight in the tournament",
+   "emoji": "🦄",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "petra_agrees_315876": {
+   "id": "petra_agrees_315876",
+   "name": "Petra Agrees",
+   "description": "Petra agrees to fight in the tournament",
+   "emoji": "🏹",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "ask_to_fight_342654": {
+   "id": "ask_to_fight_342654",
+   "name": "Ask to Fight",
+   "description": "",
+   "emoji": "🏹",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "loog_and_the_maiden__074053": {
+   "id": "loog_and_the_maiden__074053",
+   "name": "Loog and the Maiden of the Wind",
+   "description": "This book is very worn and well loved. Multiple pages are ear-marked. This book is clearly loved by someone here.",
+   "emoji": "📕",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "loog_and_the_maiden__113396": {
+   "id": "loog_and_the_maiden__113396",
+   "name": "DONT USE - Loog and the Maiden of the Wind",
+   "description": "This book is well loved. Despite having multiple ear marked pages and wear and tear, the spine is not broken. This book clearly means a lot to someone here.",
+   "emoji": "📕",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "loog_and_the_maiden__027798": {
+   "id": "loog_and_the_maiden__027798",
+   "name": "DONT USE - Loog and the Maiden of the Wind",
+   "description": "Despite having multiple ear marked pages and wear and tear, the spine is not broken. This book clearly means a lot to someone here.",
+   "emoji": "📕",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "mercedes_books_218537": {
+   "id": "mercedes_books_218537",
+   "name": "Mercedes' Books",
+   "description": "Mercedes' books that Hilda borrowed",
+   "emoji": "📚",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "crest_of_saint_cethl_388665": {
+   "id": "crest_of_saint_cethl_388665",
+   "name": "Crest of Saint Cethleann",
+   "description": "",
+   "emoji": "🛡️",
+   "category": "General",
+   "basePrice": 100000,
+   "maxQuantity": -1,
+   "goodOutcomeValue": null,
+   "badOutcomeValue": null,
+   "consumable": "No"
+  },
+  "ashe_s_bookmark_965658": {
+   "id": "ashe_s_bookmark_965658",
+   "name": "Ashe's Bookmark",
+   "description": "This looks important...\nPing Production if you have this.",
+   "emoji": "📜",
+   "category": "General",
+   "basePrice": 100000,
+   "maxQuantity": -1,
+   "goodOutcomeValue": null,
+   "badOutcomeValue": null,
+   "consumable": "No"
+  },
+  "hilda_s_hairbrush_274818": {
+   "id": "hilda_s_hairbrush_274818",
+   "name": "Hilda's Hairbrush",
+   "description": "",
+   "emoji": "🩷",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "freikugel_690620": {
+   "id": "freikugel_690620",
+   "name": "Freikugel",
+   "description": "Please ping production when you recieve this item!",
+   "emoji": "🪓",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "rose_175997": {
+   "id": "rose_175997",
+   "name": "Rose",
+   "description": "A beautiful, blooming rose",
+   "emoji": "🌹",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "aegis_shield_548891": {
+   "id": "aegis_shield_548891",
+   "name": "Aegis Shield",
+   "description": "",
+   "emoji": "🛡️",
+   "category": "General",
+   "basePrice": 400,
+   "maxQuantity": -1,
+   "goodOutcomeValue": null,
+   "badOutcomeValue": null,
+   "consumable": "No"
+  },
+  "aegis_shield_594987": {
+   "id": "aegis_shield_594987",
+   "name": "Aegis Shield",
+   "description": "",
+   "emoji": "🛡️",
+   "category": "General",
+   "basePrice": 400,
+   "maxQuantity": -1,
+   "goodOutcomeValue": null,
+   "badOutcomeValue": null,
+   "consumable": "No"
+  },
+  "broken_sword_958651": {
+   "id": "broken_sword_958651",
+   "name": "Broken Sword",
+   "description": "Its a regular steel sword, but appears to be broken in several spots",
+   "emoji": "🗡️",
+   "category": "General",
+   "basePrice": 500,
+   "maxQuantity": -1,
+   "goodOutcomeValue": null,
+   "badOutcomeValue": null,
+   "consumable": "No"
+  },
+  "broken_axe_270025": {
+   "id": "broken_axe_270025",
+   "name": "Broken Axe",
+   "description": "A regular steel axe, but it appears to be broken",
+   "emoji": "🪓",
+   "category": "General",
+   "basePrice": 500,
+   "maxQuantity": -1,
+   "goodOutcomeValue": null,
+   "badOutcomeValue": null,
+   "consumable": "No"
+  },
+  "mint_leaves_635072": {
+   "id": "mint_leaves_635072",
+   "name": "Mint Leaves",
+   "description": "",
+   "emoji": "🍃",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "special_potion_of_st_420197": {
+   "id": "special_potion_of_st_420197",
+   "name": "Special Potion of Stamina",
+   "description": "Gives one stamina!",
+   "emoji": "🧪",
+   "category": "General",
+   "basePrice": 10,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "spiral_of_echoes_350510": {
+   "id": "spiral_of_echoes_350510",
+   "name": "Dragon Sign",
+   "description": "If a unit has a Dragon Sign in their inventory, then said unit will gain the effects of that Dragon Sign's Crest, as if the unit naturally has said Crest. If the unit already has a Crest, both their natural Crest and the Dragon Sign can activate. Having a Dragon Sign item also allows Crest-less units to use any of the Heroes' Relics without taking damage.",
+   "emoji": "🌀",
+   "category": "General",
+   "basePrice": 0,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "tide_sigil_moonlit_s_393514": {
+   "id": "tide_sigil_moonlit_s_393514",
+   "name": "Moonlit Scale",
+   "description": "A silvery scale, slick with sea sheen, reflecting light in moonlike hues. Said to have fallen from a sacred sea beast glimpsed once in a century. When placed in water, it hums with quiet power, drawing tides in unnatural rhythm.",
+   "emoji": "🐚",
+   "category": "General",
+   "basePrice": 0,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "emberbrand_relic_485500": {
+   "id": "emberbrand_relic_485500",
+   "name": "Crest Stone",
+   "description": "Originally, Crest Stones were the hearts of dragons that lived in ancient times; being their hearts, they naturally contained much of their power and allowed them to take on their dragon forms. Crest Stones are the main source of power for the legendary Heroes' Relics.",
+   "emoji": "🔥",
+   "category": "General",
+   "basePrice": 0,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "aymr_795754": {
+   "id": "aymr_795754",
+   "name": "Aymr",
+   "description": "A savage, relic-class battle axe forged with otherworldly design—its pale, asymmetrical head curves like a serrated nautilus shell, studded with vicious spikes and anchored to a cold, industrial haft.",
+   "emoji": "🪓",
+   "category": "General",
+   "basePrice": 999,
+   "maxQuantity": -1,
+   "goodOutcomeValue": null,
+   "badOutcomeValue": null,
+   "consumable": "No"
+  },
+  "_898695": {
+   "id": "_898695",
+   "name": "Sword of the Creator",
+   "description": "An ancient, sinew-wrapped relic sword fused with divine sinew and old-world craftsmanship—its bone-pale blade coils with spinal ridges, ending in a jagged spine, while its hilt curves into clawed talons that seem half-organic, half-forged. Said to be carved from the spine of a fallen god, it awakens only in the hands of those who bear the Crest of Flames.",
+   "emoji": "🗡️",
+   "category": "General",
+   "basePrice": 999,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "princess_doll_412073": {
+   "id": "princess_doll_412073",
+   "name": "Princess Doll",
+   "description": "A doll that was hidden in a leather bag for magic tools. It probably belongs to someone who secretly loves dolls.",
+   "emoji": "",
+   "category": "General",
+   "basePrice": 0,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "lily_645388": {
+   "id": "lily_645388",
+   "name": "Lily",
+   "description": "A beautiful lily",
+   "emoji": "",
+   "category": "General",
+   "basePrice": 0,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "chest_key_985297": {
+   "id": "chest_key_985297",
+   "name": "Chest Key",
+   "description": "",
+   "emoji": "",
+   "category": "General",
+   "basePrice": 50,
+   "maxQuantity": -1,
+   "goodOutcomeValue": null,
+   "badOutcomeValue": null,
+   "consumable": "No"
+  },
+  "vulneary_110605": {
+   "id": "vulneary_110605",
+   "name": "Vulneary",
+   "description": "Heal some stamina",
+   "emoji": "<:vulneary:1408475196112764998>",
+   "category": "General",
+   "basePrice": 15,
+   "maxQuantity": -1,
+   "consumable": "Yes"
+  }
+ },
+ "safariConfig": {
+  "currencyName": "Gold",
+  "currencyEmoji": "🪙",
+  "inventoryName": "Backpack",
+  "inventoryEmoji": "🎒",
+  "defaultStartingCurrencyValue": 9999,
+  "round1GoodProbability": 75,
+  "round2GoodProbability": 50,
+  "round3GoodProbability": 25,
+  "staminaRegenerationMinutes": 720,
+  "maxStamina": 99
+ },
+ "maps": {
+  "active": "map_7x7_1760856528332",
+  "map_7x7_1760856528332": {
+   "id": "map_7x7_1760856528332",
+   "name": "Adventure Island",
+   "gridSize": 7,
+   "coordinates": {
+    "A1": {
+     "baseContent": {
+      "title": "📍 Location A1",
+      "description": "You are at grid location A1. This area hasn't been configured yet.",
+      "image": "",
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "B1": {
+     "baseContent": {
+      "title": "📍 Location B1",
+      "description": "You are at grid location B1. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "C1": {
+     "baseContent": {
+      "title": "📍 Location C1",
+      "description": "You are at grid location C1. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "D1": {
+     "baseContent": {
+      "title": "📍 Location D1",
+      "description": "You are at grid location D1. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "E1": {
+     "baseContent": {
+      "title": "📍 Location E1",
+      "description": "You are at grid location E1. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "F1": {
+     "baseContent": {
+      "title": "🌾 F1 | Tailtean Plains",
+      "description": "> Once the stage for the decisive battle that ended the War of Heroes, the Tailtean Plains stretch far into the horizon, their golden grasses whispering with echoes of ancient triumphs and terrible losses. The land is quiet now, almost reverent, but the weight of history clings to the air like morning fog.\n\nTattered banners still flutter from broken pikes embedded deep in the soil. It's said that during the war, the skies above Tailtean wept fire and the ground turned red with spilled blood. Some say if you listen closely, you can hear phantom war cries carried by the wind.\n\nA circle of standing stones crowns a small rise to the east. A single white flower blooms at the center. A rare Tailtean lily.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [
+      "inspect_lily_818601",
+      "visit_stones_590695"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "G1": {
+     "baseContent": {
+      "title": "🏔️ G1 | Duscur Foothills",
+      "description": "> The air grows thin and wild as you reach the northernmost edge of the monastery’s lands. Here lie the Duscur Foothills, cloaked in perpetual shadow beneath the looming silhouettes of mountains that stretch beyond the horizon. Sparse trees cling to life amid the jagged rock and shale, their roots twisting through the cracks like fingers grasping at memory.\n\nA chill mist rolls down from the peaks, curling low around your boots. Somewhere in the distance, the cry of a hawk echoes sharply through the silence, followed by the rumble of unseen stone shifting—was it just a landslide, or something more deliberate?\n\nShattered cairns and half-buried remnants of old campsites dot the trail, vestiges of scouts and exiles who dared tread too far into the borderlands of Duscur. A broken spear is planted in the earth beside a weathered creststone shard, its meaning lost to time.\nSomewhere near, a small cave mouth gapes in the hillside. A flicker of movement—then stillness. Are you being watched?",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [
+      "inspect_hawk_117877",
+      "talk_to_ingrid_641697",
+      "inspect_boulder_755909"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "A2": {
+     "baseContent": {
+      "title": "📍 Location A2",
+      "description": "You are at grid location A2. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "B2": {
+     "baseContent": {
+      "title": "📍 Location B2",
+      "description": "You are at grid location B2. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [
+      "visit_stones_590695"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "C2": {
+     "baseContent": {
+      "title": "📍 Location C2",
+      "description": "You are at grid location C2. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "D2": {
+     "baseContent": {
+      "title": "📍 Location D2",
+      "description": "You are at grid location D2. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "E2": {
+     "baseContent": {
+      "title": "📍 Location E2",
+      "description": "You are at grid location E2. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "F2": {
+     "baseContent": {
+      "title": "🏞️ F2 | Remire Village",
+      "description": "> Once a quiet farming village nestled along the kingdom’s southern border, Remire bears the scars of the tragedy that unfolded there years ago—a horror few dare speak of, yet all remember. Though the homes have been rebuilt and the fields re-sown, an uneasy hush clings to the narrow paths and shuttered windows, as if the land itself remains wary of strangers.\n\nIn the heart of the village stands an aging forge, its chimney always puffing, its anvil never quiet. The blacksmith—an old veteran of the Southern Church wars—still plies his trade with a stubborn gleam in his eye. Rows of aged swords and battered axes hang on rusted racks, each one with a story, a scar, or a name etched into the steel. He offers to repair what others might discard, saying, “Old blades still bite hardest—if you treat ’em right.”\n\nLanterns flicker at dusk, casting long shadows across the stone paths, and though many buildings lie hollow, the village endures. Some say it survives out of habit.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [
+      "repair_axe_564066",
+      "repair_sword_600g_973056",
+      "talk_to_dorothea_373763"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "G2": {
+     "baseContent": {
+      "title": "🐾 G2 | Ailell- The Valley of Torment",
+      "description": "> Ailell, the Valley of Torment is a location in the north of the Leicester Alliance, near the border with the Holy Kingdom of Faerghus.\n\nStreams of lava flow and pool throughout the valley, roasting it with extreme heat, and flames can suddenly burst from the ground. Although most people try to avoid Ailell, monks once used it as an ascetic training ground. According to legend, Ailell is a manifestation of the rage of the Goddess, who passed judgment on humanity's corruption and burned the previously forested area with a pillar of light from the heavens.\n\nLava flows past your feet as you step into the Valley and bubbles past you. And in the center of the valley sits a chest.",
+      "image": "https://samurai-gamers.com/wp-content/uploads/2019/07/valley-of-torment-1.png",
+      "clues": []
+     },
+     "buttons": [
+      "inspect_chest_871881"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "A3": {
+     "baseContent": {
+      "title": "📍 Location A3",
+      "description": "You are at grid location A3. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "B3": {
+     "baseContent": {
+      "title": "🌷 B3 | Greenhouse",
+      "description": "The smell of fresh herbs, flowers, fruits and vegetables fills the Greenhouse. It is considerably hotter inside the Greenhouse than the rest of Garreg Mach. Large windows surround the building, allowing in as much natural light as possible for the plants to blossom and bloom.\n\nThe Greenhouse Keeper stands in the middle of the Greenhouse and smiles at you as you enter.",
+      "image": "https://i.ytimg.com/vi/AsvxDMs9Yqo/maxresdefault.jpg",
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "C3": {
+     "baseContent": {
+      "title": "🛏️ C3 | Dormitory",
+      "description": "Tucked away in a quieter wing of Garreg Mach Monastery, the Commoner Dormitories offer simple yet functional living quarters for students. Students lounge on the lawn outside or come and go from their rooms throughout the day - and night.",
+      "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTg_U4uz1WvOjv9tx1NP_0nbQTIGDzEt-_I8w&s",
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "D3": {
+     "baseContent": {
+      "title": "⚔️ D3 Officers Academy",
+      "description": "The Officers Academy has a sprawling grass common area where students relax and enjoy the sun. Some are studying while others relax and enjoy the sun. It is a busy area indeed, and items are scattered about. \n\nAcross from the grassy common area are three large wooden doors.",
+      "image": "https://i.ytimg.com/vi/tDgcBjEMfp8/maxresdefault.jpg",
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "E3": {
+     "baseContent": {
+      "title": "⛪ E3 Cathedral",
+      "description": "Six pillars support the looming ceiling of the Cathedral. To the side, you can hear students practicing with the Choir Coordinator - and someone is certainly off key. An incredibly tall window sits at the end of the Cathedral allowing in the bright sunlight of the day. \n\nTo the side is a small room with the four Saint Statues. You see that Mercedes is praying at one now.",
+      "image": "https://www.gamereactor.es/media/37/dickevorschauvon_2903723.jpg",
+      "clues": []
+     },
+     "buttons": [
+      "talk_to_mercedes_824683"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "F3": {
+     "baseContent": {
+      "title": "🛤️ F3 | Rhodos Coast Road",
+      "description": "> The well-worn road that stretches along the Rhodos Coast is a lifeline connecting Garreg Mach Monastery to the outposts and towns scattered along the eastern coast of Fódlan. Though maintained by Church envoys, the path is not without danger-its twisting bends and craggy passes are ripe for bandit ambushes and monster sightings.\n\nThe Rhodos Coast features a cemetery that is held sacred by the Church of Seiros. In Imperial Year 1180, the Western Church seized the cemetery in a direct provocation of the Central Church.\n\nThe air is tinged with salt and the faint clang of metal...\n\nOn the path sits an overturned merchant cart. Goods spill out onto the road and whoever this cart once belonged to is now nowhere to be seen. Further down you an see Lysithea sitting on a rock, as if she is waiting.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [
+      "talk_to_lysithea_766062",
+      "inspect_cart_116148"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "G3": {
+     "baseContent": {
+      "title": "🏹 G3 | Ancient Battlements",
+      "description": "> You arrive at the Ancient Battlements, where shattered stone ramparts rise from the earth like the ribs of some buried titan. The air is heavy with age and memory—each broken wall and crumbled turret a monument to battles long past. These are the forgotten outposts of Adrestia’s old frontier, once bristling with archers and war cries, now overtaken by creeping moss and the silence of time.\n\nOld banners hang in tatters from weathered poles, their colors bleached by sun and rain. Arrowheads litter the ground, half-buried in dry soil, and deep gouges in the stone hint at violent sieges. A rusted ballista sits overturned, its bolts scattered like bones.\n\nThere’s a cracked stairwell leading downward into a collapsed watchtower. Could something be hidden below? A crow watches from a broken merlon, unmoving.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [
+      "approach_stairwell_813523"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "A4": {
+     "baseContent": {
+      "title": "📍 Location A4",
+      "description": "You are at grid location A4. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "B4": {
+     "baseContent": {
+      "title": "🐟 B4 | Fishing Pond And Dining Hall 🍽️",
+      "description": "Nestled beside the greenhouse and quietly humming with the scent of wet stone and algae, the pond's surface glimmers with the occasional ripple. Nearby, a weathered stone ledge offers a perch for weary students or eager anglers. Looking over the water deep in thought is Ashe.\n\n---------------------------------------------\n\nAcross from the Fishing Pond is the Dining Hall. Students are spready across various tables enjoying the meal of the day and sharing stories. The Head Chef stands near the food, talking to students about cooking tips. At one of the tables, Ingrid is sitting with Caspar enjoying a quick lunch.",
+      "image": "https://cdn.discordapp.com/attachments/1385293170421534800/1399801037828788287/image.png?ex=688a51ce&is=6889004e&hm=af03a432a560d2203d475b6b2ca91cf506a6207b7d302082f19ce5453921af78&",
+      "clues": []
+     },
+     "buttons": [
+      "talk_to_ashe_434041",
+      "talk_to_ingrid_641697",
+      "talk_to_caspar_777257"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "C4": {
+     "baseContent": {
+      "title": "🏛️ C4 Reception Hall",
+      "description": "The Reception Hall has large, looming ceilings with windows that allow the light to shine through onto the tiled floor. Large chandeliers hang above benches where students mingle and discuss the day. Their candles flicker lazily. \n\nPacing through the hallway is Hilda. She seems to be holding something in her hands as she walks.",
+      "image": "https://pbs.twimg.com/media/EPUPOqSUYAE4ebG?format=jpg&name=large",
+      "clues": []
+     },
+     "buttons": [
+      "talk_to_hilda_185707"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "D4": {
+     "baseContent": {
+      "title": "📍 D4 | Knight's Hall",
+      "description": "The Knight’s Hall stands as a testament to discipline and tradition—its stone walls lined with crossed lances, crested shields, and banners from campaigns long past. Polished training dummies and sparring mats fill the center, while the scent of oiled leather and steel hangs in the air.\n\nVeteran knights murmur strategy over maps or hone blades beside the hearth, their armor clinking with every deliberate movement. A sense of quiet readiness permeates the space, as though every figure within could be summoned to battle at a moment’s notice.\n\nFelix stands talking to one of the guards, but his eyes look over when he sees you enter.\n\nOn a table in the corner sits a coin purse... ripe for the taking if someone wants it.",
+      "image": "https://cdn.discordapp.com/attachments/1392074397354823700/1400540677120720958/image.png?ex=688d02a6&is=688bb126&hm=873fb5c26a23447b3a41c4063682e32ac0e3572f041a943c7da609efebf595e4&",
+      "clues": []
+     },
+     "buttons": [
+      "guess_the_secret_cod_515562",
+      "take_coin_purse_355561",
+      "talk_to_felix_047193"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "E4": {
+     "baseContent": {
+      "title": "🌉 E4 | Bridge to Cathedral",
+      "description": "> Stretching across a wide chasm beneath Garreg Mach Monastery, the bridge is a majestic span of pale stone lined with carved balustrades and weather-worn statues of saints and wyverns.\n> \n> Moss creeps up between the flagstones, hinting at the age of the structure, while fluttering banners in House colours catch the wind overhead.\n> \n> Though there are no shifts in elevation, the sheer length of the bridge gives it a feeling of ceremonial grandeur—as though crossing it is a rite in itself. \n\nMarianne looks out across the water, but shifts her attention to you as you approach.",
+      "image": "https://cdn.discordapp.com/attachments/1392074397354823700/1400537028667375770/image.png?ex=688cff40&is=688badc0&hm=c69fce5a97b765418bc569b46ef6a5a322e48ae17c0059190db69e7a560ede93&",
+      "clues": []
+     },
+     "buttons": [
+      "talk_to_marianne_870137"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "F4": {
+     "baseContent": {
+      "title": "🪖 F4 | Gloucester Front",
+      "description": "> Just beyond the fortified eastern wall of Garreg Mach, the rolling highlands give way to a strip of contested earth known informally as the Gloucester Front. Once a peaceful crossroads between the monastery and the lands of the Leicester Alliance, the area now bears signs of quiet militarization—flattened grass from boot drills, hastily erected palisades, and war banners half-lowered in the wind.\n\nHouse Gloucester, ever keen to defend its influence, maintains a guarded watch here, wary of incursions from both imperial forces and internal unrest. Scouts peer from weather-worn towers at the shifting treelines, while armored riders patrol the perimeter with cold precision. The air is sharp with the scent of oil, steel, and anticipation. There are no active battles - yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [
+      "talk_to_sylvain_126134"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "G4": {
+     "baseContent": {
+      "title": "🪓 G4 | Sreng Borderlands",
+      "description": "> You stand on the windswept edge of Garreg Mach’s known world, where the plains begin to crack and rise into the wild reaches of the Sreng Borderlands. Coarse, golden grass whips at your boots, and the soil grows looser, dustier—stamped by the hooves of raiders long passed. The land here feels unsettled, not quite Fódlan and not quite foreign, but something in between.\n\nScrapwood totems and crude stone markers jut from the earth like bones, weathered by time and tension. A distant war horn—faint and uncertain—carries on the breeze. Was it just your imagination? Or is someone watching from the rise?\n\nThe path forks near a leaning post carved with faded Srengish runes. One route climbs toward the cliffs, the other snakes toward the open steppe.\nA bundle of feathers lies scattered in the grass… perhaps a warning. Or a remnant.\n\nSomeone has left a crude map etched into a stone slab. Its markings don’t match any Fódlan chart.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [
+      "inspect_map_012154"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "A5": {
+     "baseContent": {
+      "title": "📍 Location A5",
+      "description": "You are at grid location A5. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "B5": {
+     "baseContent": {
+      "title": "🛒 B5 Marketplace",
+      "description": "The Marketplace is a bustling centre with different vendors to choose from and different wares to purchase. Here, you can get anything from weapons, to herbs and vegetables, to gifts! All for the right price. One student you recognize right as you enter, as you see Petra is looking at some of the vegetables at a stall.\n\nOn the steps to the building Flayn is sitting with her head in her hands.",
+      "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS0S07kNnmOixblLEQws34pCTUO8eQy_Tud0Q&s",
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "stores": [
+      "blacksmith_210261",
+      "traveling_southern_m_334046"
+     ],
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "C5": {
+     "baseContent": {
+      "title": "🚪 C5 Entrance Hall",
+      "description": "The Entrance Hall - the great hub for all comings and goings of Garreg Mach. Here, families and students alike get their first look at inside the monestary. Large blue doors swing open to reveal a tiled floor and pillars supporting the roof - a room large enough that if no one were here, you could hear the echo of a pin drop.\n\nLeaning against one of the walls is Ingrid, who appears to be deeply engrossed in her book. Across from her is Lysithea, who is currently admiring one of the paintings on the walls.",
+      "image": "https://i.ytimg.com/vi/aTnpCBnfzpE/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLDzobESLsNGC0QKmCOMKHNwrIRBVw",
+      "clues": []
+     },
+     "buttons": [
+      "plant_flower_844064"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "D5": {
+     "baseContent": {
+      "title": "🐎 D5 | Stable",
+      "description": "The Stables are ripe with noise and energy as horses neigh and hit against their stables, demanding attention or apples - or both.",
+      "image": "https://media.discordapp.net/attachments/1392074397354823700/1400612264129593367/image.png?ex=688d4551&is=688bf3d1&hm=560cf6ab29b2afc5f09ed31eec9de00389b2a811a3c0538832ff8882c43ab89c&=&format=webp&quality=lossless&width=1719&height=864",
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "E5": {
+     "baseContent": {
+      "title": "⚔️ E5 Training Grounds",
+      "description": "Weapons clash against each other and training dummies as students practice their different skills in the Training Grounds. Arrows fly past, shooting their targets. \n\nCaspar is in the middle of the training grounds mid duel with Felix. Leonie watches on the side, her eyes following the moves of the two fighters carefully.\n\nSeteth stands near the edge of the area pacing. He seems to be deep in thought.",
+      "image": "https://resource.supercheats.com/library/supercheats/740w/2019/1565389915b_tournament1.webp",
+      "clues": []
+     },
+     "buttons": [
+      "talk_to_ferdinand_942281"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "F5": {
+     "baseContent": {
+      "title": "🏹 F5 | Red Canyon Watch",
+      "description": "> The land east of the monastery begins to steepen here, its grasslands giving way to a series of jagged ridges and red-stained cliffs that hint at ancient upheavals. This is the edge of the territory known in legend as the Red Canyon-sacred ground, sealed off by the Church after a cataclysm lost to most histories.\n\nThough the true heart of the canyon lies far deeper and to the south, a small outpost was once established here by the Knights of Seiros to keep vigil over the area. Now, it lies half-forgotten: moss overtakes its broken watchtowers, and scattered relics of its former occupants remain untouched. Birds refuse to nest here.\n\nSome scholars claim the earth remembers what happened in the Red Canyon. Fewer still dare to ask what it’s trying to forget. On one walk wall you see a boulder that appears out of place. As if it's been recently moved.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [
+      "move_boulder_549877"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "G5": {
+     "baseContent": {
+      "title": "🪨 G5 | Fódlan's Throat",
+      "description": "> A steep mountain range runs along the border between Fodlan and Almyra. That mountain range is called Fodlan's Throat. The sturdy fortress built within those mountains is called Fodlan's Locket. It occupies the only safe path through. \n\nUntil recently, Fodlan's Locket - and therefore, Fodlan's throat - was occupied by Almyrian forces. Now it is free for passage once again, but it is not without it's dangers still. \n\nA faint shimmer catches your eye near one of the large boulders of the landscape. At the base of a cliff, the grass seems slightly parted - flattened in a way that suggests more than just the wind.\n\nTall Reeds and Wildflowers sit on the edge of a small pond nearby, blowing softly in the wind. \n\nStanding near the entrance to Fodlan's Locket is Hubert.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [
+      "cave_entrance_grass_802536",
+      "inspect_boulder_755909",
+      "inspect_wildflowers_821631",
+      "tall_reeds_976904",
+      "talk_to_hubert_336626"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "A6": {
+     "baseContent": {
+      "title": "📍 Location A6",
+      "description": "You are at grid location A6. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "B6": {
+     "baseContent": {
+      "title": "📍 Location B6",
+      "description": "You are at grid location B6. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "C6": {
+     "baseContent": {
+      "title": "📍 Location C6",
+      "description": "You are at grid location C6. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "D6": {
+     "baseContent": {
+      "title": "📍 Location D6",
+      "description": "You are at grid location D6. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "E6": {
+     "baseContent": {
+      "title": "📍 Location E6",
+      "description": "You are at grid location E6. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "F6": {
+     "baseContent": {
+      "title": "⛵F6 | Arundel Shores",
+      "description": "> Craggy promontories fall steeply into the sea here at Arundel Shores, where the roaring ocean meets the edge of the Adrestian coast. Once a minor docking point for supplies bound for the noble courts, the bay now lies half-forgotten—salt-worn moorings sag unused, and the remains of a weather-beaten watchtower cling to a rocky outcrop, scarred by storms and neglect.\n\nThe winds carry the pungent spray of the sea and the echo of distant gull calls. Driftwood heaps in crescent shapes against the shore, and a half-buried crest-bearing helm bears silent testament to a past skirmish or perhaps a failed sea rescue. Tide pools reflect mottled skies and tell of hidden life beneath the surface—bright barnacles, glinting shells, and a lone silver starfish nestled among stone.\n\nSomething in the water shifts.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "G6": {
+     "baseContent": {
+      "title": "🌋 G6 | Valley of Torment",
+      "description": "> You stand at the edge of a forsaken expanse where life has long since fled. The air here is thick with heat and heavy silence, broken only by the occasional crack of shifting stone or the deep, guttural groan of the scorched earth below.\n\nThe ground is a jagged tapestry of blackened rock, scorched orange clay, and crimson ash—warped and blistered from some ancient calamity. Faint wisps of sulfurous smoke drift up from unseen fissures, and the scent of brimstone clings to every breath.\n\nOnce verdant and alive, the land now glows faintly with ember-veined rock, casting a dim, eerie light even at dusk. Twisted remnants of trees, long petrified by flame, stand like charred sentinels watching over a grave of memories.\n\nIn the distance, skeletal ruins pierce the haze—structures once proud now broken and half-swallowed by the earth. Here, the world feels thinner, as though something beneath it still stirs.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "A7": {
+     "baseContent": {
+      "title": "📍 Location A7",
+      "description": "You are at grid location A7. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "B7": {
+     "baseContent": {
+      "title": "📍 Location B7",
+      "description": "You are at grid location B7. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "C7": {
+     "baseContent": {
+      "title": "📍 Location C7",
+      "description": "You are at grid location C7. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "D7": {
+     "baseContent": {
+      "title": "📍 Location D7",
+      "description": "You are at grid location D7. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "E7": {
+     "baseContent": {
+      "title": "📍 Location E7",
+      "description": "You are at grid location E7. This area hasn't been configured yet.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "F7": {
+     "baseContent": {
+      "title": "🌊F7 | Rhodos Coast",
+      "description": "> A stretch of wind-swept cliffs that plunges sharply into the restless sea, the Rhodos Coast marks the outer edge of Fódlan's eastern realm. Salt hangs heavy in the air, carried by fierce gusts that churn the water into frothy eddies. Offshore, jagged rocks break the surf—silent sentinels born of ancient upheaval.\n\nCoast-hogged paths wind along crumbling ridges, where moss-covered stone keeps its grip. Ancient statues—worn by spray and time—dot the coastline, icons to a sea deity once revered by sailors. A lone ship’s wheel lies half-buried in the sand, as though washed ashore from a forgotten wreck. A gull drifts overhead, staking claim to abandoned driftwood and barnacle-encrusted hull fragments.\n\nUnderfoot, the pebbled beach is littered with fragments of pottery and bits of crest-bearing rings—lost in the tides, now silent relics telling stories of smugglers or exiled noble households. At the water’s edge, a carved seashell glows faintly blue.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "G7": {
+     "baseContent": {
+      "title": "⚓ G7 | Seaward Expanse",
+      "description": "> As you reach the southeasternmost edge of Garreg Mach's borders, the world opens wide into the Seaward Expanse—a lonely, windswept promontory where the land surrenders to the infinite shimmer of the ocean. Briny mist clings to the air, and gulls cry overhead as rolling waves batter the jagged rocks below. Sunlight glints off the water’s surface like diamonds. \n\nA stone outcropping juts into the sea, cracked and half-submerged.\n\nYou spot a weathered bottle caught between two tide-slick rocks.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [
+      "inspect_bottle_608227"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    }
+   },
+   "blacklistedCoordinates": [
+    "A1",
+    "B1",
+    "B2",
+    "C1",
+    "D1",
+    "E1",
+    "A2",
+    "B1",
+    "C2",
+    "D2",
+    "E2",
+    "A3",
+    "A4",
+    "A5",
+    "A6",
+    "B6",
+    "C6",
+    "D6",
+    "E6",
+    "A7",
+    "B7",
+    "C7",
+    "D7",
+    "E7"
+   ]
+  }
+ },
+ "customActions": {
+  "enquire_to_see_what__876806": {
+   "id": "enquire_to_see_what__876806",
+   "name": "Enquire to see what he wants..",
+   "label": "Enquire to see what he wants..",
+   "emoji": "❔",
+   "style": 3,
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "Someone's got a crushh....",
+      "content": "> \"Er, you didn’t see me lookin’ her way, did you? It’s just... well, Lady Edelgard passed by here the other day and—ah, never mind.\"\n\n[He clears his throat and hastily holds up a slightly bruised apple.]\n\nFisherman:\n\"Think you could give her this? It’s not much, but it’s... shiny. Like her armor. Tell her it’s from... a friend of the fish.\"\n(He looks away awkwardly.)",
+      "image": "",
+      "color": "00ff00"
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_item",
+     "order": 1,
+     "config": {
+      "itemId": "fruit_of_life_237279",
+      "quantity": 1,
+      "limit": {
+       "type": "once_per_player"
+      }
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Enquire to see what he wants..",
+     "emoji": "❔",
+     "style": 3
+    },
+    "modal": {
+     "keywords": [],
+     "caseSensitive": false
+    }
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "guess_the_secret_cod_515562": {
+   "id": "guess_the_secret_cod_515562",
+   "name": "Guess the secret code",
+   "label": "Guess the secret code",
+   "emoji": "🤫",
+   "style": 1,
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "How did you know that code!!",
+      "content": "The knight is flabbergasted. He reaches for his coin purse...",
+      "image": "",
+      "color": "005555"
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_currency",
+     "order": 1,
+     "config": {
+      "amount": 50,
+      "limit": {
+       "type": "once_per_player"
+      }
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "modal",
+    "button": {
+     "label": "Guess the secret code",
+     "emoji": "🤫",
+     "style": "Primary"
+    },
+    "modal": {
+     "keywords": [],
+     "caseSensitive": false
+    },
+    "phrases": [
+     "The sun rises and the moon sets"
+    ]
+   },
+   "conditions": [
+    {
+     "id": "cond_1753985802719_agzcd",
+     "type": "currency",
+     "operator": "gte",
+     "value": 0,
+     "logic": "AND"
+    }
+   ],
+   "coordinates": [
+    "D4"
+   ],
+   "description": "Gives the player something",
+   "metadata": {
+    "tags": [
+     "Gives the player something"
+    ]
+   }
+  },
+  "take_coin_purse_355561": {
+   "id": "take_coin_purse_355561",
+   "name": "Take Coin Purse",
+   "label": "Take Coin Purse",
+   "emoji": "💰",
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "give_currency",
+     "order": 0,
+     "config": {
+      "amount": 50,
+      "limit": {
+       "type": "once_per_player"
+      }
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Take Coin Purse",
+     "emoji": "💰",
+     "style": "Primary"
+    }
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "D4"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "plant_flower_844064": {
+   "id": "plant_flower_844064",
+   "name": "Plant Flower",
+   "label": "Plant Flower",
+   "emoji": "🌹",
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "Money??",
+      "content": "As you dig in the soil to plant your flower you see... 50 gold?? In the soil?",
+      "image": ""
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_currency",
+     "order": 1,
+     "config": {
+      "amount": 50,
+      "limit": {
+       "type": "once_per_player"
+      }
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "display_text",
+     "order": 2,
+     "config": {
+      "title": "Any other rose would smell as sweet",
+      "content": "Looks like this planter is perfect for a Rose",
+      "image": ""
+     },
+     "executeOn": "false"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Plant Flower",
+     "emoji": "🌹",
+     "style": "Primary"
+    }
+   },
+   "conditions": [
+    {
+     "id": "cond_1755576439094_q633x",
+     "type": "item",
+     "operator": "has",
+     "logic": "AND",
+     "itemId": "rose_175997"
+    }
+   ],
+   "coordinates": [
+    "C5"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "cave_entrance_grass_802536": {
+   "id": "cave_entrance_grass_802536",
+   "name": "Cave Entrance - Grass",
+   "label": "Cave Entrance - Grass",
+   "emoji": "☘️",
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "🌿 You search the grass and...",
+      "content": "> The grass stretches endlessly across the valley—lush, waist-high, and swaying with every gust of wind. There’s no way a single pair of eyes could cover it all. Fortunately, you and your companions know how to fan out like professionals.\n\nMinutes pass. The sun presses overhead. The chirping of insects is all you hear.\n\nThen—you stumble.\n\nYour foot catches on something beneath the green. Not a root, but stone. You brush aside a thick cluster of blades, revealing a rough, uneven patch of ground. Nestled between two half-buried rocks, you find it:\n\nA hole.\n\nBarely wider than your shoulders. Jagged at the edges. And dark. So, so dark.\n\nA faint, cool breeze flows from within. No sound. No light. Just the yawning promise of something vast waiting beneath.",
+      "image": "",
+      "color": "#3D9140"
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "follow_up_button",
+     "order": 1,
+     "config": {
+      "buttonId": "enter_cave_245013"
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "modal",
+    "button": {
+     "label": "Cave Entrance - Grass",
+     "emoji": "☘️",
+     "style": "Primary"
+    },
+    "modal": {
+     "keywords": [],
+     "caseSensitive": false
+    },
+    "phrases": [
+     "inspect grass",
+     "inspect emerald grass",
+     "inspect lush grass",
+     "inspect lush emerald grass",
+     "inspect the grass"
+    ]
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "G5"
+   ],
+   "description": "Cave entrance hidden here",
+   "metadata": {
+    "tags": [
+     "Cave entrance hidden here"
+    ]
+   }
+  },
+  "enter_cave_245013": {
+   "id": "enter_cave_245013",
+   "name": "Enter Cave",
+   "label": "Enter Cave",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "🕳️ The Cave of the Forgotten Seal",
+      "content": "> After combing the waist-high grass of the riverlands, you stumble—literally—upon it: a narrow fissure hidden beneath a tangle of overgrowth, just wide enough for a human to slip through. The ground gives a quiet groan as you descend, sliding between cold stone and roots, until the light of the world above fades behind you.\n\nAnd then… it opens.\n\nYou emerge into a cavern vast enough to swallow sound. The walls ripple outward in sweeping arcs, like the ribs of a long-dead god. The ceiling vanishes into darkness above, broken only by faint trickles of quartz light and the murmur of distant dripping water.\n\nBut something here feels… disturbed.\n\nFootprints disturb the dust. Boot scuffs. A broken lantern. Scraps of cloth snagged on stone. Whatever sanctity this place once held, it’s been trespassed.\n\nAt the far end, two massive gates await—twin discs of slate-gray alloy, fused seamlessly into the rock like the unblinking eyes of some buried titan. They hum faintly with locked power, cold and unmoving.\n\n## 🪓 The Axe Seal\nSet before the first gate stands a broad stone pedestal, waist-high and circular in shape—almost like an altar or offering table, its surface weathered by centuries of still air. Three distinct carvings are chiseled into its face, each recessed slightly into the stone as if awaiting something to be placed within:\n1. A triangular recess, its edges sharp and angular.\n2. A perfect circular depression, smooth and precise.\n3. A deep-set engraving shaped like an exotic axe.\n\n## 🗡️ The Sword Seal\nA stone pedestal stands before the second gate—flat, round, and etched with three distinct recesses:\n1. A triangular recess, its edges sharp and angular.\n2. A perfect circular depression, smooth and precise.\n3. A full-length sword-shaped carving.",
+      "image": "",
+      "color": "#384861"
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "follow_up_button",
+     "order": 1,
+     "config": {
+      "buttonId": "open_gate_907777"
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "follow_up_button",
+     "order": 2,
+     "config": {
+      "buttonId": "sword_pedestal_303719"
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Enter Cave",
+     "emoji": null,
+     "style": "Primary"
+    }
+   },
+   "conditions": [],
+   "coordinates": [],
+   "description": "Prompt for the player to enter the Bandit Cave",
+   "metadata": {
+    "tags": [
+     "Prompt for the player to enter the Bandit Cave"
+    ]
+   }
+  },
+  "open_gate_907777": {
+   "id": "open_gate_907777",
+   "name": "Axe Pedestal",
+   "label": "Axe Pedestal",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "🪓The Axe Pedestal Trembles...",
+      "content": "> As you approach the ancient pedestal, the relics placed in the stone begin to stir—glowing with a pulsing light that syncs with the carvings in the stone.\n\nThe pedestal thrums beneath your fingertips. A deep tone echoes through the chamber, ancient and resonant. One by one, the carvings glow brighter—until a blinding pulse of light surges outward.\n\nAhead, the massive gate groans.\n\nStone grinds against stone as the seal recedes—haltingly at first, then with gathering force. Dust rains from above. A breath of warm, stale air wafts through the widening crack.\n\nAnd beyond that crack… the flicker of torchlight.\n\nThe seal is broken. The path forward lies open.\n\n```# Ping Production\nTo see what awaits you...```",
+      "image": "",
+      "color": "#3BA9B8"
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "display_text",
+     "order": 1,
+     "config": {
+      "title": "🚫 The Mechanism Remains Silent",
+      "content": "> You press your hands to the stone pedestal. For a breathless moment, something stirs beneath the surface—grooves in the carvings catch the light, a faint pulse flickers through the etched channels…\n\nBut then—nothing.\n\nThe glow fades. The pedestal stills. No hum. No turning of stone. No answer.\n\nThe seal does not recognize what you've brought.\nNot yet.\n\nA weight settles into the cavern’s silence, like a door waiting for the right knock—one it has not heard in ages.",
+      "image": "",
+      "color": "#ff0000"
+     },
+     "executeOn": "false"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Axe Pedestal",
+     "emoji": "🔓",
+     "style": "Primary"
+    }
+   },
+   "conditions": [
+    {
+     "id": "cond_1755426914734_cn4qd",
+     "type": "item",
+     "operator": "has",
+     "logic": "AND",
+     "itemId": "emberbrand_relic_485500"
+    },
+    {
+     "id": "cond_1755426940170_xu60l",
+     "type": "item",
+     "operator": "has",
+     "logic": "AND",
+     "itemId": "spiral_of_echoes_350510"
+    },
+    {
+     "id": "cond_1755426962120_0wkoj",
+     "type": "item",
+     "operator": "has",
+     "logic": "AND",
+     "itemId": "aymr_795754"
+    }
+   ],
+   "coordinates": [],
+   "description": "Player tries to enter gate.",
+   "metadata": {
+    "tags": [
+     "Player tries to enter gate."
+    ]
+   }
+  },
+  "inspect_boulder_755909": {
+   "id": "inspect_boulder_755909",
+   "name": "Inspect Boulder",
+   "label": "Inspect Boulder",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "🌿 Beneath the Boulder",
+      "content": "You crouch beside the boulder, brushing aside a curtain of reeds. The grass around it is unnaturally pressed flat—less like wind, more like someone—or something—rested here. As your fingers graze the edge of the stone, something metallic catches the light.\n\nYou pry up a patch of moss, revealing a narrow crevice beneath the boulder. Tucked just out of sight is a small, tarnished pouch. Its drawstring is frayed, but the weight inside is unmistakable. You’ve found a stash of gold—forgotten, or deliberately hidden.",
+      "image": "",
+      "color": "#96895E"
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_currency",
+     "order": 1,
+     "config": {
+      "amount": 50,
+      "limit": {
+       "type": "once_per_player"
+      }
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "modal",
+    "button": {
+     "label": "Inspect Boulder",
+     "emoji": null,
+     "style": "Primary"
+    },
+    "modal": {
+     "keywords": [],
+     "caseSensitive": false
+    },
+    "phrases": [
+     "inspect boulder",
+     "inspect boulders",
+     "inspect large boulder",
+     "inspect larger boulder",
+     "inspect weatherworn boulders"
+    ]
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "G5",
+    "G1"
+   ],
+   "description": "Find some gold",
+   "metadata": {
+    "tags": [
+     "Find some gold"
+    ]
+   }
+  },
+  "inspect_wildflowers_821631": {
+   "id": "inspect_wildflowers_821631",
+   "name": "Inspect Wildflowers",
+   "label": "Inspect Wildflowers",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "You sniff the wildflowers",
+      "content": "They smell really nice!",
+      "image": "",
+      "color": "#FFC0CB"
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "modal",
+    "button": {
+     "label": "Inspect Wildflowers",
+     "emoji": null,
+     "style": "Primary"
+    },
+    "modal": {
+     "keywords": [],
+     "caseSensitive": false
+    },
+    "phrases": [
+     "inspect wildflower",
+     "inspect wildflowers",
+     "inspect flower",
+     "inspect flowers"
+    ]
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "G5"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "tall_reeds_976904": {
+   "id": "tall_reeds_976904",
+   "name": "Tall Reeds",
+   "label": "Tall Reeds",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "🌱 You check the reeds out",
+      "content": "They're fun and springy, but there ain't really much more to them.",
+      "image": "",
+      "color": "#00ff00"
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "modal",
+    "button": {
+     "label": "Tall Reeds",
+     "emoji": null,
+     "style": "Primary"
+    },
+    "modal": {
+     "keywords": [],
+     "caseSensitive": false
+    },
+    "phrases": [
+     "inspect reeds",
+     "inspect tall reeds",
+     "inspect reed",
+     "inspect tall reed"
+    ]
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "G5"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "repair_axe_564066": {
+   "id": "repair_axe_564066",
+   "name": "Repair Axe (600g)",
+   "label": "Repair Axe",
+   "emoji": null,
+   "style": 3,
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "🪓 The Old Man’s Forge – Axe Repair",
+      "content": "*You place a battered, broken axe on the old man’s anvil, along with a pouch of coins.*\n\n**You:** “Can this be repaired?”\n\n**Old Man** *(squinting, fingers tracing the cracks)*:  \n“Hah. This isn’t just any axe, is it? Crest-forged steel. Warped now, but the old pulse’s still there.”\n\n> *He rummages beneath his bench and retrieves a dull, scale-like shard, etched faintly with glyphs. It hums softly, reacting to the weapon before him.*\n\n**Old Man:**  \n“Found this years ago, hidden in a bundle of relic scrap. Almost threw it out—until I saw it respond to your blade. These two were meant to meet.”\n\n> *The forge flares. Sparks rise. Hammer meets metal in rhythmic strikes. Hours pass before he finally lifts it again—recast, deadly, and humming with buried wrath.*\n\n**Old Man:**  \n“There. Not quite the same… sharper, maybe. Heavier. It remembers war. Just hope you’re the one it listens to.”\n\n**You:** “Thank you.”\n\n**Old Man:**  \n“Don’t thank me. Thank whoever forged it the first time, long before we had names for this kind of thing.”\n\n```Note: The old man returns the remnants of your broken axe—they remain in your inventory, though their purpose is spent. The reforging has drawn out all that mattered. You now carry the restored weapon… and what’s left of the past.```",
+      "image": "",
+      "color": "#00ff00"
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_item",
+     "order": 1,
+     "config": {
+      "itemId": "aymr_795754",
+      "quantity": 1,
+      "limit": {
+       "type": "unlimited"
+      }
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_currency",
+     "order": 2,
+     "config": {
+      "amount": -600,
+      "limit": {
+       "type": "unlimited"
+      }
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "display_text",
+     "order": 3,
+     "config": {
+      "title": "🪓 The Old Man’s Forge – Failed Axe Repair",
+      "content": "> *You approach the anvil, hands reaching instinctively for something... only to come up short.*\n\n**Old Man** *(not looking up, but somehow knowing)*:  \n“Mm. Something’s missing.”\n\n> *He sighs, placing a hand gently on the anvil’s edge—almost reverent.*\n\n**Old Man:**  \n“No spark. No weight. If there’s no offering, the forge won’t answer. It’s waited too long to waste heat on half-measures.”\n\n> *He turns away, stoking embers that don’t catch.*\n\n**Old Man:**  \n“Come back when you’ve got the right pieces. I’ll be here. The fire never forgets.”",
+      "image": "",
+      "color": "#ff0000"
+     },
+     "executeOn": "false"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Repair Axe",
+     "emoji": null,
+     "style": "Primary"
+    }
+   },
+   "conditions": [
+    {
+     "id": "cond_1755531576455_59ys6",
+     "type": "currency",
+     "operator": "gte",
+     "value": 600,
+     "logic": "AND"
+    },
+    {
+     "id": "cond_1755531655839_virx9",
+     "type": "item",
+     "operator": "has",
+     "logic": "AND",
+     "itemId": "broken_axe_270025"
+    }
+   ],
+   "coordinates": [
+    "F2"
+   ],
+   "description": "Repair axe at Blacksmith.",
+   "metadata": {
+    "tags": [
+     "Repair axe at Blacksmith."
+    ]
+   }
+  },
+  "repair_sword_600g_973056": {
+   "id": "repair_sword_600g_973056",
+   "name": "Repair Sword (600g)",
+   "label": "Repair Sword (600g)",
+   "emoji": null,
+   "style": 3,
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "🗡️ The Old Man’s Forge – Sword Repair",
+      "content": "*You place a splintered, ancient sword on the old man’s anvil, along with a pouch of coins.*\n\n**You:** “Can this be repaired?”\n\n**Old Man** *(narrowing his eyes, running a hand over the warped edge)*:  \n“Well now… this isn’t just iron and luck. You feel that?”  \n*He closes his palm around the hilt. The sword hums faintly in response.*  \n“Still alive, this one. Barely—but the spine’s intact. Just needs to remember what it was.”\n\n> *He pulls open a drawer beneath the bench and produces a long, thin shard—coiled like bone, and glowing with a pale light. It flares faintly as it nears the broken blade.*\n\n**Old Man:**  \n“Kept this sealed for decades. Came from a ruin that reeked of divine magic. Never knew what it wanted… until now.”\n\n> *The forge ignites. Silver sparks shower the stone. You hear ringing—high, harmonic—like a chorus of strings pulling taut. The reforging takes hours, but when it ends, the weapon gleams with buried memory.*\n\n**Old Man:**  \n“There. No mistaking what it is now. That sword’s older than any of us, and twice as stubborn. Be sure you’re its wielder—not its next victim.”\n\n**You:** “Thank you.”\n\n**Old Man:**  \n“Hah. I just shaped what was already there. It was waiting for someone. Looks like it chose.”\n\n```Note: The old man returns the remnants of your broken sword—they remain in your inventory, though their purpose is spent. The reforging has drawn out all that mattered. You now carry the restored weapon… and what’s left of the past.```",
+      "image": "",
+      "color": "#00ff00"
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_item",
+     "order": 1,
+     "config": {
+      "itemId": "_898695",
+      "quantity": 1,
+      "limit": {
+       "type": "unlimited"
+      }
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_currency",
+     "order": 2,
+     "config": {
+      "amount": -600,
+      "limit": {
+       "type": "unlimited"
+      }
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "display_text",
+     "order": 3,
+     "config": {
+      "title": "🗡️ The Old Man’s Forge – Failed Sword Repair",
+      "content": "> *You approach the anvil, something ancient stirring in your grip… but it’s not enough.*\n\n**Old Man** *(not looking up, but somehow knowing)*:  \n“Hm. That won’t do.”\n\n> *He extends a weathered hand, waiting… then slowly lowers it, empty.*\n\n**Old Man:**  \n“Tools like this don’t come to life on wishes alone. Steel’s only part of the price.”\n\n> *His gaze flicks briefly to the forge, where the embers sputter and dim, refusing to catch.*\n\n**Old Man:**  \n“The forge knows what’s missing. And it won’t move for less.”\n\n> *He turns his back, voice already trailing into the smoke.*\n\n**Old Man:**  \n“Return when you carry more than just hope. The blade remembers the difference.”",
+      "image": "",
+      "color": "#ff0000"
+     },
+     "executeOn": "false"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Repair Sword (600g)",
+     "emoji": "🗡️",
+     "style": "Primary"
+    }
+   },
+   "conditions": [
+    {
+     "id": "cond_1755533979723_4gedi",
+     "type": "currency",
+     "operator": "gte",
+     "value": 600,
+     "logic": "AND"
+    },
+    {
+     "id": "cond_1755533998682_hj50n",
+     "type": "item",
+     "operator": "has",
+     "logic": "AND",
+     "itemId": "broken_sword_958651"
+    }
+   ],
+   "coordinates": [
+    "F2"
+   ],
+   "description": "Repair sword at Blacksmith.",
+   "metadata": {
+    "tags": [
+     "Repair sword at Blacksmith."
+    ]
+   }
+  },
+  "sword_pedestal_303719": {
+   "id": "sword_pedestal_303719",
+   "name": "Sword Pedestal",
+   "label": "Sword Pedestal",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "🗡️ The Sword Seal Activates",
+      "content": "As you approach the second pedestal, the relics you’ve placed within begin to shimmer—each glowing in sync with the recesses carved into the stone.\n\nA faint vibration hums beneath your hands. The pedestal responds with a deep, resonant tone—low and steady, as if echoing through the bones of the earth itself. One by one, the recesses ignite with radiant light, culminating in a blinding flash that ripples outward.\n\nAhead, the sealed gate quivers.\n\nStone grinds in protest, then yields. The immense disc recedes with slow, grinding force, releasing a gust of stagnant, warm air. Dust rains from above as the way forward is revealed.\n\nAnd just beyond… the glint of torchlight.\n\nThe seal is broken. The sword’s path lies open.\n\n```# Ping Production\nTo see what lies beyond the seal...```",
+      "image": "",
+      "color": "#00ff00"
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "display_text",
+     "order": 1,
+     "config": {
+      "title": "🚫 The Mechanism Remains Silent",
+      "content": "> You press your hands to the stone pedestal. For a breathless moment, something stirs beneath the surface—grooves in the carvings catch the light, a faint pulse flickers through the etched channels…\n\nBut then—nothing.\n\nThe glow fades. The pedestal stills. No hum. No turning of stone. No answer.\n\nThe seal does not recognize what you've brought.\nNot yet.\n\nA weight settles into the cavern’s silence, like a door waiting for the right knock—one it has not heard in ages.",
+      "image": "",
+      "color": "#ff0000"
+     },
+     "executeOn": "false"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Sword Pedestal",
+     "emoji": "🗡️",
+     "style": "Primary"
+    }
+   },
+   "conditions": [
+    {
+     "id": "cond_1755540376232_90rav",
+     "type": "item",
+     "operator": "has",
+     "logic": "AND",
+     "itemId": "emberbrand_relic_485500"
+    },
+    {
+     "id": "cond_1755540404492_4xhi7",
+     "type": "item",
+     "operator": "has",
+     "logic": "AND",
+     "itemId": "spiral_of_echoes_350510"
+    },
+    {
+     "id": "cond_1755540432692_53u92",
+     "type": "item",
+     "operator": "has",
+     "logic": "AND",
+     "itemId": "_898695"
+    }
+   ],
+   "coordinates": [],
+   "description": "Player tries to use sword pedestal.",
+   "metadata": {
+    "tags": [
+     "Player tries to use sword pedestal."
+    ]
+   }
+  },
+  "talk_to_ashe_434041": {
+   "id": "talk_to_ashe_434041",
+   "name": "Talk to Ashe",
+   "label": "Talk to Ashe",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "\"I've been planting\"",
+      "content": "\"Oh! Hi Professor. You caught me off guard. I'm taking a bit of a break after gardening all day. I just added some soil to the plantar at the entrance hall. I was thinking a Rose would look nice there. All this just... helps me keep my mind off everything.\"",
+      "image": "https://static.wikia.nocookie.net/fireemblem/images/f/f0/Ashe_Portrait_5_Years.png/revision/latest/scale-to-width-down/250?cb=20200624235957"
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Talk to Ashe",
+     "emoji": null,
+     "style": "Primary"
+    }
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "B4"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "talk_to_ingrid_641697": {
+   "id": "talk_to_ingrid_641697",
+   "name": "Talk to Ingrid",
+   "label": "Talk to Ingrid",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "Worried",
+      "content": "\"Hi Professor. I am so thankful the chef stayed after everything that happened. I know most people can't eat when they are stressed, but I can't seem to stop. And now Dorothea is gone to Remire Village to speak to the new blacksmith there.... oh where's the biscuits at?\"",
+      "image": "https://i.redd.it/1q0malrbl6i71.png"
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Talk to Ingrid",
+     "emoji": null,
+     "style": "Primary"
+    }
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "B4",
+    "G1"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "talk_to_caspar_777257": {
+   "id": "talk_to_caspar_777257",
+   "name": "Talk to Caspar",
+   "label": "Talk to Caspar",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "So much",
+      "content": "\"How does she eat so much.. Oh! Sorry Professor. I was just watching Ingrid. I'm trying to fuel up before heading out to Red Canyon. Could be dangerous.\"",
+      "image": "https://static.wikia.nocookie.net/fireemblem/images/3/31/Caspar_Portrait_5_Years.png/revision/latest/scale-to-width-down/250?cb=20200414185912"
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Talk to Caspar",
+     "emoji": null,
+     "style": "Primary"
+    }
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "B4"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "talk_to_felix_047193": {
+   "id": "talk_to_felix_047193",
+   "name": "Talk to Felix",
+   "label": "Talk to Felix",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "\"I'm busy\"",
+      "content": "\"I'm busy, Professor. We are about to go to the Tailtean Plains. There are sightings of Rhea reported there and we have to investigate. If you have the time, you should meet us there. Your... skills would be appreciated.\"",
+      "image": "https://i.redd.it/post-timeskip-felix-with-three-hopes-hairstyle-v0-xeh54fwsu1ca1.png?width=1080&format=png&auto=webp&s=9b609b7f7b7e4f4b4762c35c888d80e636585080"
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Talk to Felix",
+     "emoji": null,
+     "style": "Primary"
+    }
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "D4"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "talk_to_hilda_185707": {
+   "id": "talk_to_hilda_185707",
+   "name": "Talk to Hilda",
+   "label": "Talk to Hilda",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "I'm a little busy",
+      "content": "\"What?\" Hilda snaps at you as you approach. \"I do not have the time for this right now, Professor. I was supposed to meet Lysithea at the Rhodos Coast and give her something, but I do not feel like it! Will you do it for me? It will be worth your while, I swear",
+      "image": "https://i.redd.it/post-timeskip-hilda-with-mariannes-bangs-swap-v0-u0wixl2xy8fa1.png?width=1080&format=png&auto=webp&s=35770892e087675dcdd4b8278dae35e89b83e6d0"
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_item",
+     "order": 1,
+     "config": {
+      "itemId": "princess_doll_412073",
+      "quantity": 1,
+      "limit": {
+       "type": "once_per_player"
+      }
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Talk to Hilda",
+     "emoji": null,
+     "style": "Primary"
+    }
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "C4"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "talk_to_lysithea_766062": {
+   "id": "talk_to_lysithea_766062",
+   "name": "Talk to Lysithea",
+   "label": "Talk to Lysithea",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "\"I'm Waiting\"",
+      "content": "\"Hello Professor. It is nice to see you again. I'm waiting for Hilda to bring me something.\"",
+      "image": "https://assets.fedatamine.com/3h/face_school/538/0.png"
+     },
+     "executeOn": "false"
+    },
+    {
+     "type": "display_text",
+     "order": 1,
+     "config": {
+      "title": "\"Thank you!\"",
+      "content": "\"Oh thank you Professor! I feel so much better heading into battle with this. Here - take this as a thank you. I found it on my walk here and it was calling to me. But now... I think it's calling for you.\"",
+      "image": "https://assets.fedatamine.com/3h/face_school/538/0.png"
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_item",
+     "order": 2,
+     "config": {
+      "itemId": "spiral_of_echoes_350510",
+      "quantity": 1,
+      "limit": {
+       "type": "once_per_player"
+      }
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Talk to Lysithea",
+     "emoji": null,
+     "style": "Primary"
+    }
+   },
+   "conditions": [
+    {
+     "id": "cond_1755578773234_jke7l",
+     "type": "item",
+     "operator": "has",
+     "logic": "AND",
+     "itemId": "princess_doll_412073"
+    }
+   ],
+   "coordinates": [
+    "F3"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "inspect_cart_116148": {
+   "id": "inspect_cart_116148",
+   "name": "Inspect Cart",
+   "label": "Inspect Cart",
+   "emoji": null,
+   "style": 1,
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 1,
+     "config": {
+      "title": "Left in a hurry",
+      "content": "Whoever was the owner of this cart sure left in a hurry. There is still gold inside!",
+      "image": ""
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_currency",
+     "order": 2,
+     "config": {
+      "amount": 75,
+      "limit": {
+       "type": "once_per_player"
+      }
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "modal",
+    "button": {
+     "label": "Inspect Cart",
+     "emoji": null,
+     "style": "Primary"
+    },
+    "modal": {
+     "keywords": [],
+     "caseSensitive": false
+    },
+    "phrases": [
+     "inspect cart",
+     "inspect merchant cart",
+     "Inspect cart",
+     "Inspect merchant cart"
+    ]
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "F3"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "talk_to_dorothea_373763": {
+   "id": "talk_to_dorothea_373763",
+   "name": "Talk to Dorothea",
+   "label": "Talk to Dorothea",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "\"What a trek\"",
+      "content": "\"Well HELLO professor! It's good to see you. I am absolutely exhausted from walking all the way out here to see the Blacksmith. I'm glad I did though - he does fantastic work. If you don't have an axe or sword yet, I would bring one to him. He does fantastic work.\"",
+      "image": "https://i.redd.it/post-timeskip-dorothea-with-three-hopes-hairstyle-and-v0-ldontgfr8zmb1.png?width=1080&format=png&auto=webp&s=dff9bb22c898aafa5d198fea98f18adc24350298"
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Talk to Dorothea",
+     "emoji": null,
+     "style": "Primary"
+    }
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "F2"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "move_boulder_549877": {
+   "id": "move_boulder_549877",
+   "name": "Move Boulder",
+   "label": "Move Boulder",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "",
+      "content": "With every muscle in your body and the force of the goddess behind you, you shove the boulder of the way to reveal a cave entrance in front of you. You walk deep into the cave. Something glows faintly on the ground in front of you. You reach down and pick it up and find you are holding a small coin purse.",
+      "image": ""
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_currency",
+     "order": 1,
+     "config": {
+      "amount": 25,
+      "limit": {
+       "type": "once_per_player"
+      }
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "modal",
+    "button": {
+     "label": "Move Boulder",
+     "emoji": null,
+     "style": "Primary"
+    },
+    "modal": {
+     "keywords": [],
+     "caseSensitive": false
+    },
+    "phrases": [
+     "Move Boulder",
+     "move boulder",
+     "Move boulder"
+    ]
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "F5"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "approach_stairwell_813523": {
+   "id": "approach_stairwell_813523",
+   "name": "Approach Stairwell",
+   "label": "Approach Stairwell",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "Oh...",
+      "content": "You approach the stairwell, taking the first steps deep into the darkness. Light barely peeks through the top of the stairs, enough to dimly light the stairs as you walk. You get only 5 or 6 steps in when you notice something from the corner of you eye. A coin purse sitting on the stairs.",
+      "image": ""
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_currency",
+     "order": 1,
+     "config": {
+      "amount": 100,
+      "limit": {
+       "type": "once_per_player"
+      }
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "modal",
+    "button": {
+     "label": "Approach Stairwell",
+     "emoji": null,
+     "style": "Primary"
+    },
+    "modal": {
+     "keywords": [],
+     "caseSensitive": false
+    },
+    "phrases": [
+     "Approach Stairwell",
+     "approach stairwell",
+     "Approach stairwell"
+    ]
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "G3"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "talk_to_hubert_336626": {
+   "id": "talk_to_hubert_336626",
+   "name": "Talk to Hubert",
+   "label": "Talk to Hubert",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "Inspect Everything",
+      "content": "\"Professor. Always interesting to see you outside the monestary. I am afraid that I am quite busy keeping watch here. You can spend your time looking around. That may be a better use of your time.\"",
+      "image": "https://static.wikia.nocookie.net/vsbattles/images/0/0c/Post-Timsekip_Hubert_.png/revision/latest/scale-to-width-down/300?cb=20200219102741"
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Talk to Hubert",
+     "emoji": null,
+     "style": "Primary"
+    }
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "G5"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "inspect_bottle_608227": {
+   "id": "inspect_bottle_608227",
+   "name": "Inspect Bottle",
+   "label": "Inspect Bottle",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "",
+      "content": "Inside the bottle is a note\n\n*To my Dearest love,\n\nI don't believe I will make it. Use this money to protect our home and our family. I will love you forever.*",
+      "image": ""
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_currency",
+     "order": 1,
+     "config": {
+      "amount": 100,
+      "limit": {
+       "type": "once_per_player"
+      }
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "modal",
+    "button": {
+     "label": "Inspect Bottle",
+     "emoji": null,
+     "style": "Primary"
+    },
+    "modal": {
+     "keywords": [],
+     "caseSensitive": false
+    },
+    "phrases": [
+     "inspect bottle",
+     "Inspect Bottle",
+     "Inspect bottle"
+    ]
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "G7"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "talk_to_mercedes_824683": {
+   "id": "talk_to_mercedes_824683",
+   "name": "Talk to Mercedes",
+   "label": "Talk to Mercedes",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "Is she Okay?",
+      "content": "\"Professor... I know I am not really supposed to discuss Lady Rhea but... I'm worried for her? Do you think she's okay? She's been missing for so long.\"",
+      "image": "https://preview.redd.it/why-timeskip-mercedes-is-cute-and-yall-are-weak-v0-adbhw315flmc1.png?width=369&format=png&auto=webp&s=884d023481e5591e2fe2196079724bb83c48bca7"
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Talk to Mercedes",
+     "emoji": null,
+     "style": "Primary"
+    }
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "E3"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "talk_to_ferdinand_942281": {
+   "id": "talk_to_ferdinand_942281",
+   "name": "Talk to Ferdinand",
+   "label": "Talk to Ferdinand",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "Did you get one",
+      "content": "\"Professor! It's good to see you. I was just working on some of my lance skills before I head out to the Gloucester Front. Have you seen the marketplace lately? Selling a sword and an axe! I know they are broken but... seems pretty important to me. Here - take some money to get one if you haven't yet.\"",
+      "image": "https://static.wikia.nocookie.net/fireemblem/images/2/21/Ferdinand_Portrait_5_Years.png/revision/latest/scale-to-width-down/250?cb=20200414184004"
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_currency",
+     "order": 1,
+     "config": {
+      "amount": 50,
+      "limit": {
+       "type": "once_per_player"
+      }
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Talk to Ferdinand",
+     "emoji": null,
+     "style": "Primary"
+    }
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "E5"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "inspect_lily_818601": {
+   "id": "inspect_lily_818601",
+   "name": "Inspect Lily",
+   "label": "Inspect Lily",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "give_item",
+     "order": 0,
+     "config": {
+      "itemId": "lily_645388",
+      "quantity": 1,
+      "limit": {
+       "type": "once_per_player"
+      }
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "modal",
+    "button": {
+     "label": "Inspect Lily",
+     "emoji": null,
+     "style": "Primary"
+    },
+    "modal": {
+     "keywords": [],
+     "caseSensitive": false
+    },
+    "phrases": [
+     "Inspect lily",
+     "inspect lily",
+     "Inspect Lily",
+     "Inspect tailtean lily"
+    ]
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "F1"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "talk_to_sylvain_126134": {
+   "id": "talk_to_sylvain_126134",
+   "name": "Talk to Sylvain",
+   "label": "Talk to Sylvain",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "A Lily!",
+      "content": "\"Professor is that a Lily you have on you? I've been wanting one for a while now. Do you think I could have it. Here - I'll give you some money in return. It's just... nice to have something pretty to look at out here. Not many girls around, you know.\"",
+      "image": "https://fe3h.noobsaigon.com/sylvain_l@4x-3.png"
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_currency",
+     "order": 1,
+     "config": {
+      "amount": 50,
+      "limit": {
+       "type": "once_per_player"
+      }
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "display_text",
+     "order": 2,
+     "config": {
+      "title": "\"Hey Professor\"",
+      "content": "\"Hey Professor. It's nice to see your face out in these parts. Not exactly anything else nice to look at. You know - I've actually really been wanting to see a Lily. I don't know why, but it's all I can think about.\"",
+      "image": "https://fe3h.noobsaigon.com/sylvain_l@4x-3.png"
+     },
+     "executeOn": "false"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Talk to Sylvain",
+     "emoji": null,
+     "style": "Primary"
+    }
+   },
+   "conditions": [
+    {
+     "id": "cond_1755615134820_jj1l8",
+     "type": "item",
+     "operator": "has",
+     "logic": "AND",
+     "itemId": "lily_645388"
+    }
+   ],
+   "coordinates": [
+    "F4"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "inspect_hawk_117877": {
+   "id": "inspect_hawk_117877",
+   "name": "Inspect Hawk",
+   "label": "Inspect Hawk",
+   "emoji": "🦅",
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "Ancient Timekeeper’s Riddle",
+      "content": "> You lift your gaze. Far above, the hawk circles once, twice—then dives low, cutting through the mist like an arrow of fate. It lands with uncanny precision atop a moss-covered sundial, half-buried in earth and memory.\n\nAs you approach, you notice faint lines carved into the ancient stone—weathered, but unmistakably intentional. The hawk watches you, unmoving, as if guarding something sacred.\n\nInscribed on the sundial’s surface:\n\n> _\"Eight suns from the Prime Meridian I stand,_  \n> _Neither first nor last, but held in balance by the ticking of the old world._  \n> _Your path lies not in shadows, but in the Hall of Hours,_  \n> _where each name bears a **role**, and the Eighth waits for you to claim it.\"_\n\nThe grooves in the stone seem to align with something unseen… as though expecting a name, or a choice, to be made.",
+      "image": "",
+      "color": "#FEE75C"
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "follow_up_button",
+     "order": 1,
+     "config": {
+      "buttonId": "g8_solve_time_riddle_527242"
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "modal",
+    "button": {
+     "label": "Inspect Hawk",
+     "emoji": "🦅",
+     "style": "Primary"
+    },
+    "modal": {
+     "keywords": [],
+     "caseSensitive": false
+    },
+    "phrases": [
+     "inspect hawk",
+     "inspect hawks",
+     "look at hawk",
+     "talk to hawk",
+     "hawk"
+    ]
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "G1"
+   ],
+   "description": "Lands on sundial",
+   "metadata": {
+    "tags": [
+     "Lands on sundial"
+    ]
+   }
+  },
+  "g8_solve_time_riddle_527242": {
+   "id": "g8_solve_time_riddle_527242",
+   "name": "Touch the Sundial",
+   "label": "Touch the Sundial",
+   "emoji": "🕰️",
+   "style": 3,
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "⏳ The Sundial Responds",
+      "content": "As your palm brushes the weathered stone, the grooves glow faintly—aligning not with the sun, but with something older. The hawk cries again, circling once overhead, then vanishes into the clouds.\n\nA compartment slides open with a soft click, revealing a small pouch of aged coins within.",
+      "image": "",
+      "color": "#FEE75C"
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_currency",
+     "order": 1,
+     "config": {
+      "amount": 25,
+      "limit": {
+       "type": "once_per_player"
+      }
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "display_text",
+     "order": 2,
+     "config": {
+      "title": "🕰️ Nothing Happens",
+      "content": "You rest your hand on the sundial’s surface. The carvings remain still—quiet, inert, and cold to the touch. No glow. No sound.\n\nThe hawk watches from above, unmoving.\n\nIt seems something within you… or about you… does not align with the mechanism's ancient design.",
+      "image": "",
+      "color": "#ff0000"
+     },
+     "executeOn": "false"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Touch the Sundial",
+     "emoji": "🕰️",
+     "style": 3
+    },
+    "modal": {
+     "keywords": [],
+     "caseSensitive": false
+    }
+   },
+   "conditions": [
+    {
+     "id": "cond_1755619591089_1si9c",
+     "type": "role",
+     "operator": "has",
+     "logic": "AND",
+     "roleId": "1385293613616988283"
+    }
+   ],
+   "coordinates": [],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "inspect_chest_871881": {
+   "id": "inspect_chest_871881",
+   "name": "Inspect Chest",
+   "label": "Inspect Chest",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "It's locked",
+      "content": "It looks like this chest needs a key",
+      "image": "https://img.game8.co/3247452/4d49bb0d107b842931a9b8bfb277d56b.jpeg/show"
+     },
+     "executeOn": "false"
+    },
+    {
+     "type": "display_text",
+     "order": 1,
+     "config": {
+      "title": "Click",
+      "content": "Using your chest key, the chest clicks open to reveals... something inside.",
+      "image": ""
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_item",
+     "order": 2,
+     "config": {
+      "itemId": "emberbrand_relic_485500",
+      "quantity": 1,
+      "limit": {
+       "type": "once_per_player"
+      }
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "modal",
+    "button": {
+     "label": "Inspect Chest",
+     "emoji": null,
+     "style": "Primary"
+    },
+    "modal": {
+     "keywords": [],
+     "caseSensitive": false
+    },
+    "phrases": [
+     "inspect chest",
+     "Inspect Chest",
+     "Inspect chest"
+    ]
+   },
+   "conditions": [
+    {
+     "id": "cond_1755643022105_isjdp",
+     "type": "item",
+     "operator": "has",
+     "logic": "AND",
+     "itemId": "chest_key_985297"
+    }
+   ],
+   "coordinates": [
+    "G2"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "talk_to_marianne_870137": {
+   "id": "talk_to_marianne_870137",
+   "name": "Talk to Marianne",
+   "label": "Talk to Marianne",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "Hello, Professor",
+      "content": "\"Oh... hel-lo Professor.. I am so sorry if I am in your way. I just... needed some time away. The infimary is becoming a morgue and I needed to... get... away. I stopped by the Blacksmith. He has been selling a lot of weapons lately. He... still has some broken swords. And axes. You... I think you should get one.\"",
+      "image": "https://static.wikia.nocookie.net/p__/images/f/fb/Marianne_Portrait_5_Years.png/revision/latest?cb=20210831034609&path-prefix=protagonist"
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Talk to Marianne",
+     "emoji": null,
+     "style": "Primary"
+    }
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "E4"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "inspect_map_012154": {
+   "id": "inspect_map_012154",
+   "name": "Inspect Map",
+   "label": "Inspect Map",
+   "emoji": null,
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "Inspect map",
+      "content": "Upon closer inspection, it appears to be a child's drawing. Nothing important",
+      "image": ""
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "modal",
+    "button": {
+     "label": "Inspect Map",
+     "emoji": null,
+     "style": "Primary"
+    },
+    "modal": {
+     "keywords": [],
+     "caseSensitive": false
+    },
+    "phrases": [
+     "Inspect map"
+    ]
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "G4"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "visit_stones_590695": {
+   "id": "visit_stones_590695",
+   "name": "Visit Stones",
+   "label": "Visit Stones",
+   "emoji": null,
+   "style": 3,
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "🪨You inspect the rocks",
+      "content": "On the ground, you find a few potions that someone has seemingly dropped..",
+      "image": "",
+      "color": "#00ff00"
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_item",
+     "order": 1,
+     "config": {
+      "itemId": "vulneary_110605",
+      "quantity": 2,
+      "limit": {
+       "type": "once_per_player"
+      }
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "label": "Visit Stones",
+     "emoji": null,
+     "style": "Primary"
+    }
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "F1",
+    "B2"
+   ],
+   "description": "Gives the player a potion.",
+   "metadata": {
+    "tags": [
+     "Gives the player a potion."
+    ]
+   }
+  },
+  "test_codeword_1759584229457": {
+   "name": "Test codeword",
+   "label": "Test codeword",
+   "emoji": "🐨",
+   "style": 1,
+   "actions": [
+    {
+     "type": "give_item",
+     "order": 0,
+     "config": {
+      "itemId": "bait_530852",
+      "quantity": 1,
+      "limit": {
+       "type": "unlimited"
+      }
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "modal",
+    "modal": {
+     "keywords": [],
+     "caseSensitive": false
+    },
+    "phrases": [
+     "hapsecret"
+    ]
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "tycoons_baby_test_1761652554209": {
+   "name": "Tycoons Baby Test",
+   "label": "Tycoons Baby Test",
+   "emoji": "🤱",
+   "style": 1,
+   "actions": [],
+   "trigger": {
+    "type": "button"
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "start_safari_1773990140906": {
+   "name": "Start Safari",
+   "label": "Start Safari",
+   "emoji": "🦁",
+   "style": 1,
+   "actions": [
+    {
+     "type": "manage_player_state",
+     "order": 0,
+     "config": {
+      "mode": "initialize",
+      "coordinate": "D4"
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button"
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "get_prod_1773991728967": {
+   "name": "Get Prod",
+   "label": "Get Prod",
+   "emoji": "👮",
+   "style": 1,
+   "actions": [
+    {
+     "type": "give_role",
+     "order": 0,
+     "config": {
+      "roleId": "1478077671635161139"
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button"
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "lose_prod_1773991832255": {
+   "name": "Lose Prod",
+   "label": "Lose Prod",
+   "emoji": "😿",
+   "style": 1,
+   "actions": [
+    {
+     "type": "remove_role",
+     "order": 0,
+     "config": {
+      "roleId": "1478077671635161139"
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button"
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [],
+   "metadata": {
+    "tags": []
+   }
+  }
+ }
+}
