@@ -6281,111 +6281,76 @@ To fix this:
       // Handle Pass/Fail toggle buttons from restart notifications
       return ButtonHandlerFactory.create({
         id: custom_id,
-        updateMessage: true, // CRITICAL: Updates existing message instead of creating new one
+        updateMessage: true,
         handler: async (context) => {
-          console.log(`🔍 START: ${context.customId} - user ${context.userId}`);
-          
           try {
-            // Discord sends components as array of action rows directly (no Container wrapper in incoming messages)
             const messageComponents = context.message?.components || [];
-            console.log(`🔍 Message has ${messageComponents.length} component row(s)`);
-            
-            // Debug: Log the actual structure
-            if (messageComponents.length > 0) {
-              console.log(`🔍 First component row type: ${messageComponents[0].type}`);
-              console.log(`🔍 Component structure:`, JSON.stringify(messageComponents[0], null, 2));
-            }
-            
-            // Log test result (lightweight, non-blocking) - Nice to have feature
-            try {
-              const isPass = context.customId === 'restart_status_passed';
-              const testResult = {
-                result: isPass ? 'PASSED' : 'FAILED',
-                timestamp: new Date().toISOString(),
-                messageId: context.message?.id,
-                userId: context.userId
-              };
-              
-              // Extract commit info from message content if available
-              const containerContent = messageComponents[0]?.components?.[0]?.content || '';
-              const changeMatch = containerContent.match(/## :gem: Change\n(.+?)(?:\n|$)/);
-              if (changeMatch) {
-                testResult.change = changeMatch[1];
-              }
-              
-              console.log(`📊 TEST RESULT: ${JSON.stringify(testResult)}`);
-            } catch (err) {
-              // Silently continue - this is optional functionality
-            }
-            
-            // Find the Action Row with our buttons
-            // Note: Components V2 messages come with a Container wrapper type 17
-            let actionRow;
-            if (messageComponents[0]?.type === 17) {
-              // It's a Components V2 Container - look inside for the action row
-              const containerComponents = messageComponents[0].components || [];
-              actionRow = containerComponents.find(row => row.type === 1 && row.components?.some(c => 
-                c.custom_id === 'restart_status_passed' || c.custom_id === 'restart_status_failed'
-              ));
-            } else {
-              // Direct action rows (legacy format)
-              actionRow = messageComponents.find(row => row.type === 1 && row.components?.some(c => 
-                c.custom_id === 'restart_status_passed' || c.custom_id === 'restart_status_failed'
-              ));
-            }
-            
-            if (!actionRow) {
-              console.error('❌ Could not find Action Row with Pass/Fail buttons');
-              return {
-                content: '❌ Error: Button configuration issue',
-                ephemeral: true
-              };
-            }
-            
-            const buttons = actionRow.components;
-            const passButtonIndex = buttons.findIndex(b => b.custom_id === 'restart_status_passed');
-            const failButtonIndex = buttons.findIndex(b => b.custom_id === 'restart_status_failed');
-            
-            if (passButtonIndex === -1 || failButtonIndex === -1) {
-              console.error('❌ Could not find Pass/Fail buttons in Action Row');
-              return {
-                content: '❌ Error: Button configuration issue',
-                ephemeral: true
-              };
-            }
-            
-            // Determine which button was clicked and set styles accordingly
             const isPass = context.customId === 'restart_status_passed';
-            
-            // Update button styles based on selection
-            buttons[passButtonIndex].style = isPass ? 3 : 2; // 3=Success(green), 2=Secondary(grey)
-            buttons[failButtonIndex].style = isPass ? 2 : 4; // 4=Danger(red), 2=Secondary(grey)
-            
-            console.log(`✅ SUCCESS: ${context.customId} - toggled to ${isPass ? 'PASS' : 'FAIL'}`);
-            
-            // For UPDATE_MESSAGE with Components V2, we need to preserve the entire Container structure
-            // Update the buttons in place
-            actionRow.components = buttons;
-            
-            // For UPDATE_MESSAGE, we need to return the entire Container
-            // Since Discord sent us a Container, we need to return the same structure
-            if (messageComponents[0]?.type === 17) {
-              // It's a Container - return it with updated buttons
-              return {
-                components: messageComponents // Return the Container with updated action row
-              };
-            } else {
-              // Legacy format - just return the action rows
-              return {
-                components: messageComponents
-              };
+
+            // Build status line with who clicked and when
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            const statusEmoji = isPass ? '✅' : '❌';
+            const statusText = isPass ? 'PASSED' : 'FAILED';
+            const statusLine = `${statusEmoji} **${statusText}** by <@${context.userId}> at \`${timeStr}\``;
+
+            // Extract commit info for logging
+            const containerContent = messageComponents[0]?.components?.[0]?.content || '';
+            const changeMatch = containerContent.match(/## :gem: Change\n(.+?)(?:\n|$)/);
+            const changeName = changeMatch ? changeMatch[1] : 'unknown';
+            console.log(`📊 TEST RESULT: ${statusText} by ${context.userId} for "${changeName}"`);
+
+            // Find the Container and its components
+            if (messageComponents[0]?.type !== 17) {
+              return { content: '❌ Error: Unexpected message format', ephemeral: true };
             }
+
+            const container = messageComponents[0];
+            const containerComponents = container.components || [];
+
+            // Find the Action Row with Pass/Fail buttons
+            const actionRowIndex = containerComponents.findIndex(row => row.type === 1 && row.components?.some(c =>
+              c.custom_id === 'restart_status_passed' || c.custom_id === 'restart_status_failed'
+            ));
+
+            if (actionRowIndex === -1) {
+              return { content: '❌ Error: Button configuration issue', ephemeral: true };
+            }
+
+            const actionRow = containerComponents[actionRowIndex];
+            const buttons = actionRow.components;
+            const passIdx = buttons.findIndex(b => b.custom_id === 'restart_status_passed');
+            const failIdx = buttons.findIndex(b => b.custom_id === 'restart_status_failed');
+
+            if (passIdx === -1 || failIdx === -1) {
+              return { content: '❌ Error: Button configuration issue', ephemeral: true };
+            }
+
+            // Update button styles
+            buttons[passIdx].style = isPass ? 3 : 2;
+            buttons[failIdx].style = isPass ? 2 : 4;
+
+            // Check if there's already a status TextDisplay after the action row
+            // (from a previous click) — replace it instead of stacking
+            const statusIndex = actionRowIndex + 1;
+            const existingStatus = containerComponents[statusIndex];
+            const statusComponent = { type: 10, content: statusLine };
+
+            if (existingStatus?.type === 10 && (existingStatus.content?.includes('**PASSED**') || existingStatus.content?.includes('**FAILED**'))) {
+              // Replace existing status line
+              containerComponents[statusIndex] = statusComponent;
+            } else {
+              // Insert new status line after the action row
+              containerComponents.splice(statusIndex, 0, statusComponent);
+            }
+
+            // Update container accent color based on result
+            container.accent_color = isPass ? 0x2ecc71 : 0xe74c3c; // Green for pass, red for fail
+
+            return { components: messageComponents };
           } catch (error) {
             console.error(`❌ ERROR: ${context.customId} - ${error.message}`);
-            return {
-              content: '❌ Error updating test status',
-              ephemeral: true
-            };
+            return { content: '❌ Error updating test status', ephemeral: true };
           }
         }
       })(req, res, client);
