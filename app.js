@@ -16046,14 +16046,14 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'playerdata_import_cancel') {
-      // Handle playerData import cancellation
-      return res.send({
-        type: InteractionResponseType.UPDATE_MESSAGE,
-        data: {
+      return ButtonHandlerFactory.create({
+        id: 'playerdata_import_cancel',
+        updateMessage: true,
+        handler: async () => ({
           content: '❌ **Import Cancelled**\n\nplayerData import has been cancelled.',
           components: []
-        }
-      });
+        })
+      })(req, res, client);
     } else if (custom_id === 'safari_import_data') {
       // Handle Safari data import with file upload
       try {
