@@ -8954,28 +8954,29 @@ To fix this:
             return { content: '🗿 That response has faded from the stone\'s memory.', ephemeral: true };
           }
 
-          // Post publicly to the channel via REST
+          // Post publicly to the channel via Discord REST API (not discord.js — it can't handle raw Components V2)
           const channelId = context.channelId;
-          const channel = await context.client.channels.fetch(channelId);
 
-          // Truncate for public post
           const publicText = stored.response.length > 3800
             ? stored.response.substring(0, 3800) + '\n\n-# *...truncated*'
             : stored.response;
 
-          await channel.send({
-            components: [{
-              type: 17,
-              accent_color: 0x808080,
-              components: [
-                { type: 10, content: `## 🗿 The Moai Speaks` },
-                { type: 14 },
-                { type: 10, content: publicText },
-                { type: 14 },
-                { type: 10, content: `-# 🗿 ${stored.elapsed}s · "${stored.query.substring(0, 60)}${stored.query.length > 60 ? '...' : ''}"` }
-              ]
-            }],
-            flags: (1 << 15) // IS_COMPONENTS_V2
+          await DiscordRequest(`channels/${channelId}/messages`, {
+            method: 'POST',
+            body: {
+              components: [{
+                type: 17,
+                accent_color: 0x808080,
+                components: [
+                  { type: 10, content: `## 🗿 The Moai Speaks` },
+                  { type: 14 },
+                  { type: 10, content: publicText },
+                  { type: 14 },
+                  { type: 10, content: `-# 🗿 ${stored.elapsed}s · "${stored.query.substring(0, 60)}${stored.query.length > 60 ? '...' : ''}"` }
+                ]
+              }],
+              flags: (1 << 15)
+            }
           });
 
           return {
