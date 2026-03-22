@@ -271,10 +271,10 @@ flowchart TD
 
 ## 🔗 Related Documentation
 
-- [Infrastructure Architecture](../infrastructure/InfrastructureArchitecture.md)
-- [Analytics System](../infrastructure/Analytics.md)
+- [Infrastructure Architecture](../infrastructure-security/InfrastructureArchitecture.md)
+- [Analytics System](../infrastructure-security/Analytics.md)
 - [Cache Management Guide](../features/CacheManagement.md)
-- [Production Monitoring](../infrastructure/ProductionMonitoring.md)
+- [Production Monitoring](../infrastructure-security/ProductionMonitoring.md)
 
 ---
 

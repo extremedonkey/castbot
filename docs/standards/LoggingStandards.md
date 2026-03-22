@@ -5,10 +5,10 @@
 CastBot uses environment-aware logging to provide detailed debugging in development while maintaining performance in production.
 
 **Related Documentation:**
-- **[LoggingConfiguration.md](../infrastructure/LoggingConfiguration.md)** - Control log verbosity levels (MINIMAL/STANDARD/VERBOSE)
+- **[LoggingConfiguration.md](../infrastructure-security/LoggingConfiguration.md)** - Control log verbosity levels (MINIMAL/STANDARD/VERBOSE)
 - **[ButtonInteractionLogging.md](ButtonInteractionLogging.md)** - Button-specific logging patterns
 
-**Quick Tip:** For day-to-day log control (hiding verbose output), see [LoggingConfiguration.md](../infrastructure/LoggingConfiguration.md). This document covers the logging architecture and implementation patterns.
+**Quick Tip:** For day-to-day log control (hiding verbose output), see [LoggingConfiguration.md](../infrastructure-security/LoggingConfiguration.md). This document covers the logging architecture and implementation patterns.
 
 ## Logging Utilities
 

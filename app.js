@@ -10858,10 +10858,11 @@ To fix this:
             };
             return { components: [container] };
           } catch (error) {
-            console.error(`[COMPACT-CASTLIST] Generation failed:`, error);
             if (error.message?.includes('No tribes found')) {
+              console.log(`[COMPACT-CASTLIST] No tribes found — showing onboarding UI`);
               return { components: [buildNoTribesContainer()] };
             }
+            console.error(`[COMPACT-CASTLIST] Generation failed:`, error);
             const container = {
               type: 17, accent_color: 0xe74c3c,
               components: [

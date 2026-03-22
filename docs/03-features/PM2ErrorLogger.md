@@ -265,7 +265,7 @@ let monitoringState = {
 
 ## Monitoring Dashboard Integration
 
-The PM2 Error Logger complements the Ultrathink health monitoring system (see [ProductionMonitoring.md](../infrastructure/ProductionMonitoring.md)):
+The PM2 Error Logger complements the Ultrathink health monitoring system (see [ProductionMonitoring.md](../infrastructure-security/ProductionMonitoring.md)):
 
 - **PM2 Error Logger**: Real-time error detection and alerting (60s interval)
 - **Ultrathink Monitor**: Comprehensive health scoring and metrics
@@ -273,9 +273,9 @@ The PM2 Error Logger complements the Ultrathink health monitoring system (see [P
 
 ## Related Documentation
 
-- [ProductionMonitoring.md](../infrastructure/ProductionMonitoring.md) - Full production monitoring system
+- [ProductionMonitoring.md](../infrastructure-security/ProductionMonitoring.md) - Full production monitoring system
 - [ReactionRoleSystem.md](ReactionRoleSystem.md) - Source of false positive debug logs
-- [InfrastructureArchitecture.md](../infrastructure/InfrastructureArchitecture.md) - PM2 and deployment context
+- [InfrastructureArchitecture.md](../infrastructure-security/InfrastructureArchitecture.md) - PM2 and deployment context
 
 ---
 

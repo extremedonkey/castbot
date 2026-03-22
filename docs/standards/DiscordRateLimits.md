@@ -609,7 +609,7 @@ class EmergencyRateLimit {
 
 - **[Discord Interaction API](DiscordInteractionAPI.md)** - Interaction-specific rate limits
 - **[Discord Webhook Resource](DiscordWebhookResource.md)** - Webhook rate limit patterns
-- **[Production Monitoring](../infrastructure/ProductionMonitoring.md)** - Rate limit monitoring
+- **[Production Monitoring](../infrastructure-security/ProductionMonitoring.md)** - Rate limit monitoring
 
 ## References
 

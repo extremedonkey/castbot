@@ -350,7 +350,7 @@ time curl -X POST https://adapted-deeply-stag.ngrok-free.app/interactions \
 ## 🔗 Related Documentation
 
 ### Core Analytics Documentation
-- **[Analytics.md](../docs/infrastructure/Analytics.md)** - Complete analytics system architecture
+- **[Analytics.md](../infrastructure-security/Analytics.md)** - Complete analytics system architecture
   - Lines 9-16: Analytics Logger overview
   - Lines 29-40: Live Discord logging features
   - Lines 70-84: Server name caching optimization (98% I/O reduction)
@@ -366,7 +366,7 @@ time curl -X POST https://adapted-deeply-stag.ngrok-free.app/interactions \
   - Lines 455-464: Three-layer logging architecture
 
 ### Performance Configuration
-- **[LoggingConfiguration.md](../docs/infrastructure/LoggingConfiguration.md)** - Log verbosity control
+- **[LoggingConfiguration.md](../infrastructure-security/LoggingConfiguration.md)** - Log verbosity control
   - Lines 100-131: **CRITICAL: Static imports required** (dynamic imports = 20-100ms latency)
   - Lines 34-48: Before vs After log reduction (644 → 50 lines)
   - Lines 180-199: Modified files for verbose control

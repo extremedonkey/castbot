@@ -351,7 +351,7 @@ setInterval(() => {
 ## Related Documentation
 
 - [Performance Debugging Guide](../troubleshooting/PerformanceDebugging.md)
-- [Infrastructure Architecture](../infrastructure/InfrastructureArchitecture.md)
+- [Infrastructure Architecture](../infrastructure-security/InfrastructureArchitecture.md)
 - [Request Scoped Caching](../enablers/RequestScopedCaching.md)
 
 ---

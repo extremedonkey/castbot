@@ -318,7 +318,7 @@ Currently, verbose mode is all-or-nothing. For feature-specific debugging:
 
 - **Logging Standards**: [docs/standards/LoggingStandards.md](../standards/LoggingStandards.md)
 - **Button Interaction Logging**: [docs/standards/ButtonInteractionLogging.md](../standards/ButtonInteractionLogging.md)
-- **Production Monitoring**: [docs/infrastructure/ProductionMonitoring.md](ProductionMonitoring.md)
+- **Production Monitoring**: [docs/infrastructure-security/ProductionMonitoring.md](ProductionMonitoring.md)
 
 ---
 

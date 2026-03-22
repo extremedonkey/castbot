@@ -281,7 +281,7 @@ describe('Feature — Behavior', () => {
 tail -f /tmp/castbot-dev.log               # View logs (NOT PM2 in dev!)
 ```
 
-**⚠️ ENVIRONMENT DIFFERENCES**: Dev uses node directly, Prod uses PM2. See [InfrastructureArchitecture.md](docs/infrastructure/InfrastructureArchitecture.md)
+**⚠️ ENVIRONMENT DIFFERENCES**: Dev uses node directly, Prod uses PM2. See [InfrastructureArchitecture.md](docs/infrastructure-security/InfrastructureArchitecture.md)
 
 **🔴 Remember: RESTART after ANY code changes (see mandatory section above)**
 
@@ -320,7 +320,7 @@ npm run deploy-remote-wsl-dry  # Preview changes (SAFE - no permission needed)
 
 ### Production Monitoring
 
-**🎯 Ultrathink Health Monitoring** - Two complementary interfaces (see [ProductionMonitoring.md](docs/infrastructure/ProductionMonitoring.md)):
+**🎯 Ultrathink Health Monitoring** - Two complementary interfaces (see [ProductionMonitoring.md](docs/infrastructure-security/ProductionMonitoring.md)):
 
 **📱 Discord Interface:**
 - **Manual**: `/menu` → Analytics → Ultramonitor button
@@ -390,7 +390,7 @@ Bot not responding?
          └─ Environment issue → Check .env loaded
 ```
 
-**Comprehensive Troubleshooting**: See [InfrastructureArchitecture.md - Troubleshooting](docs/infrastructure/InfrastructureArchitecture.md#troubleshooting) for:
+**Comprehensive Troubleshooting**: See [InfrastructureArchitecture.md - Troubleshooting](docs/infrastructure-security/InfrastructureArchitecture.md#troubleshooting) for:
 - Complete diagnostic checklist (7-step verification)
 - Post-AWS-restart verification procedure
 - Bot-initiated health monitoring (Discord alerts when Apache down)
@@ -433,7 +433,7 @@ General Workflow for new features:
 | `/docs/03-features/` | Completed feature reference | Understanding how something works |
 | `/docs/enablers/` | Reusable frameworks (ButtonHandlerFactory, MenuBuilder, etc.) | Building any new UI or handler |
 | `/docs/standards/` | Discord API patterns, ComponentsV2, logging | Looking up API details or conventions |
-| `/docs/infrastructure/` | Deployment, monitoring, production ops | Deploying or debugging prod |
+| `/docs/infrastructure-security/` | Deployment, monitoring, production ops, permissions & security | Deploying, debugging prod, or understanding security model |
 | `/docs/ui/` | Visual design standards, menu hierarchy | Designing a new menu or screen |
 
 ## 📚 Feature Documentation Index
@@ -461,10 +461,11 @@ General Workflow for new features:
 - **🔄 SAFARI PROGRESS** → [docs/03-features/SafariProgress.md](docs/03-features/SafariProgress.md)
 - **🚀 SAFARI INITIALIZATION** → [docs/03-features/SafariInitialization.md](docs/03-features/SafariInitialization.md) - Player init flow, config resolution, decision trees
 
-**Infrastructure & Deployment:**
-- **🌍 INFRASTRUCTURE ARCHITECTURE** → [docs/infrastructure/InfrastructureArchitecture.md](docs/infrastructure/InfrastructureArchitecture.md)
-- **🎯 PRODUCTION MONITORING** → [docs/infrastructure/ProductionMonitoring.md](docs/infrastructure/ProductionMonitoring.md)
-- **📊 ANALYTICS** → [docs/infrastructure/Analytics.md](docs/infrastructure/Analytics.md)
+**Infrastructure, Deployment & Security:**
+- **🔐 SECURITY ARCHITECTURE** → [docs/infrastructure-security/SecurityArchitecture.md](docs/infrastructure-security/SecurityArchitecture.md) - Permission tiers, enforcement mechanisms, channel permissions, globalRoleAccess
+- **🌍 INFRASTRUCTURE ARCHITECTURE** → [docs/infrastructure-security/InfrastructureArchitecture.md](docs/infrastructure-security/InfrastructureArchitecture.md)
+- **🎯 PRODUCTION MONITORING** → [docs/infrastructure-security/ProductionMonitoring.md](docs/infrastructure-security/ProductionMonitoring.md)
+- **📊 ANALYTICS** → [docs/infrastructure-security/Analytics.md](docs/infrastructure-security/Analytics.md)
 
 **Enablers & Frameworks:**
 - **🔘 BUTTON HANDLER FACTORY** (MANDATORY) → [docs/enablers/ButtonHandlerFactory.md](docs/enablers/ButtonHandlerFactory.md)
