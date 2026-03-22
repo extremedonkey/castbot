@@ -180,16 +180,22 @@ async function sendRestartNotification() {
                                 console.log('🔍 Generating smart deployment buttons...');
                                 const smartButtons = generateDeploymentButtons(filesChanged, commitMessage, isProduction);
                                 
-                                // Always add the channel link button first
+                                // Always add channel link + Moai first
                                 const channelButton = {
-                                    type: 2, // Button
+                                    type: 2,
                                     label: "🧪 #test",
-                                    style: 5, // Link style
+                                    style: 5,
                                     url: `https://discord.com/channels/1331657596087566398/1396134920954450074`
                                 };
-                                
-                                // Combine channel button with smart buttons (max 5 total)
-                                const allButtons = [channelButton, ...smartButtons].slice(0, 5);
+                                const moaiButton = {
+                                    type: 2,
+                                    custom_id: "moai_ask",
+                                    label: "🗿 Moai",
+                                    style: 2
+                                };
+
+                                // Combine fixed buttons with smart buttons (max 5 total)
+                                const allButtons = [channelButton, moaiButton, ...smartButtons].slice(0, 5);
                                 console.log(`🔍 Using ${allButtons.length} buttons: ${allButtons.map(b => b.label).join(', ')}`);
                                 return allButtons;
                                 
@@ -202,6 +208,12 @@ async function sendRestartNotification() {
                                         label: "🧪 #test",
                                         style: 5,
                                         url: `https://discord.com/channels/1331657596087566398/1396134920954450074`
+                                    },
+                                    {
+                                        type: 2,
+                                        custom_id: "moai_ask",
+                                        label: "🗿 Moai",
+                                        style: 2
                                     },
                                     {
                                         type: 2,
