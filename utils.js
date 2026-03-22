@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import fetch from 'node-fetch';
 
-export async function DiscordRequest(endpoint, options) {
+export async function DiscordRequest(endpoint, options, context = null) {
   const url = `https://discord.com/api/v10/${endpoint}`;
   if (options.body) {
     options.body = typeof options.body === 'string'
@@ -44,11 +44,13 @@ export async function DiscordRequest(endpoint, options) {
           }
         }
       } catch { /* ignore decode errors */ }
-      console.log(`⏰ [WEBHOOK] Token expired or invalid${interactionAge} — interaction response will not be updated`);
+      const ctxStr = context ? ` [${context}]` : '';
+      console.log(`⏰ [WEBHOOK] Token expired or invalid${interactionAge}${ctxStr} — interaction response will not be updated`);
       return null; // Return null instead of throwing error
     }
-    
-    throw new Error(error);
+
+    const ctxStr = context ? ` [Context: ${context}]` : '';
+    throw new Error(`${error}${ctxStr}`);
   }
   
   // Handle empty responses

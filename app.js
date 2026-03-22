@@ -4493,7 +4493,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                       body: {
                         components: createMovementNotification(context.guildId, context.userId, result.oldCoordinate, result.newCoordinate, targetChannelId).components
                       }
-                    });
+                    }, `safari_move ${result.oldCoordinate}→${result.newCoordinate} by ${context.userId}`);
                     
                     console.log('✅ Successfully updated original navigation message');
                     
