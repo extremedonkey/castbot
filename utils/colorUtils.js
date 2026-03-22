@@ -38,7 +38,7 @@ export const COLOR_PRESETS = [
  * @returns {string} Hex color string in format #RRGGBB
  */
 export function formatRoleColor(color) {
-  if (!color || color === 0) return '#000000';
+  if (!color || color === 0) return '#1ABC9C'; // Default to Teal (first preset) instead of black
   const hex = color.toString(16).padStart(6, '0');
   return `#${hex}`;
 }
