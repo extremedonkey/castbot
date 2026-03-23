@@ -131,6 +131,13 @@ export class MenuBuilder {
     const components = [
       { type: 10, content: `## ${menuConfig.title}` },
       { type: 14 },
+      { type: 10, content: `### \`\`\`🐱 Bec's Cool Area\`\`\`` },
+      {
+        type: 1,
+        components: [
+          { type: 2, custom_id: 'becs_cool_cats', label: 'Random Cat', style: 1, emoji: { name: '🐱' } }
+        ]
+      },
       { type: 10, content: `### \`\`\`🦠 Experimental\`\`\`` },
       {
         type: 1,

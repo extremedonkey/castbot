@@ -1011,6 +1011,14 @@ export const BUTTON_REGISTRY = {
     parent: 'castbot_tools',
     restrictedUser: '391415444084490240'
   },
+  'becs_cool_cats': {
+    label: 'Random Cat',
+    description: "Bec's Cool Area — shows a random cat picture",
+    emoji: '🐱',
+    style: 'Primary',
+    category: 'experimental',
+    parent: 'reeces_stuff'
+  },
 
   // === PLAYER CARD ===
   'pcard_*': {

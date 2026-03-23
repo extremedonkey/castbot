@@ -8866,6 +8866,32 @@ To fix this:
         }
       })(req, res, client);
 
+    } else if (custom_id === 'becs_cool_cats') {
+      return ButtonHandlerFactory.create({
+        id: 'becs_cool_cats',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const catRes = await fetch('https://api.thecatapi.com/v1/images/search');
+          const [cat] = await catRes.json();
+          const container = {
+            type: 17,
+            accent_color: 0xff69b4,
+            components: [
+              { type: 10, content: `## Bec's Cool Area` },
+              { type: 10, content: `-# Here's a random cat for you!` },
+              { type: 12, items: [{ media: { url: cat.url }, description: 'Random cat' }] },
+              { type: 14 },
+              { type: 1, components: [
+                { type: 2, custom_id: 'becs_cool_cats', label: 'Another Cat', style: 1, emoji: { name: '🐱' } },
+                { type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }
+              ]}
+            ]
+          };
+          return { components: [container] };
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'reeces_radio_mockup') {
       // Checkbox Group PoC (Mockup) — tests Type 22 checkbox group in modal. See poc/checkboxGroupPoc.js
       return ButtonHandlerFactory.create({
