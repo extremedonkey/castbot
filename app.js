@@ -35097,31 +35097,25 @@ Your server is now ready for Tycoons gameplay!`;
           console.log(`📥 CDN URL: ${cdnUrl?.substring(0, 80)}...`);
 
           if (cdnUrl) {
-            // PATCH again to add the link button now that we have the CDN URL
-            const form2 = new FormData();
-            form2.append('files[0]', fileBuffer, { filename, contentType: 'text/html' });
-            form2.append('payload_json', JSON.stringify({
-              content: `📥 **Channel Export: #${channelName}**\n${allMessages.length} messages exported.\n-# Open the HTML file in your browser to view with search + Discord styling.`,
-              components: [{
-                type: 1,
-                components: [
-                  { type: 2, style: 5, label: 'View Log', emoji: { name: '🔗' }, url: `https://htmlpreview.github.io/?${cdnUrl}` }
-                ]
-              }],
-              attachments: [{ id: 0, filename }]
-            }));
-
-            const editResponse = await fetch(webhookUrl, {
+            // PATCH again with just JSON to add the link button (keep existing attachment)
+            const viewUrl = `https://htmlpreview.github.io/?${cdnUrl}`;
+            const editResponse = await DiscordRequest(`webhooks/${appId}/${interactionToken}/messages/@original`, {
               method: 'PATCH',
-              body: form2,
-              headers: form2.getHeaders()
+              body: {
+                content: `📥 **Channel Export: #${channelName}**\n${allMessages.length} messages exported.\n-# Open the HTML file in your browser to view with search + Discord styling.`,
+                components: [{
+                  type: 1,
+                  components: [
+                    { type: 2, style: 5, label: 'View Log', emoji: { name: '🔗' }, url: viewUrl }
+                  ]
+                }]
+              }
             });
 
-            if (editResponse.ok) {
+            if (editResponse) {
               console.log(`✅ Export with View Log button sent: ${filename}`);
             } else {
-              const editErr = await editResponse.text();
-              console.error(`⚠️ View Log button edit failed (file still sent): ${editErr}`);
+              console.error(`⚠️ View Log button edit failed (file still sent)`);
             }
           }
         } catch (error) {
