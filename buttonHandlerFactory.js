@@ -1012,7 +1012,7 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240'
   },
   'becs_cool_cats': {
-    label: 'Random Cat',
+    label: "Bec's Button",
     description: "Bec's Cool Area — shows a random cat picture",
     emoji: '🐱',
     style: 'Primary',

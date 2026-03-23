@@ -135,7 +135,7 @@ export class MenuBuilder {
       {
         type: 1,
         components: [
-          { type: 2, custom_id: 'becs_cool_cats', label: 'Random Cat', style: 1, emoji: { name: '🐱' } }
+          { type: 2, custom_id: 'becs_cool_cats', label: "Bec's Button", style: 1, emoji: { name: '🐱' } }
         ]
       },
       { type: 10, content: `### \`\`\`🦠 Experimental\`\`\`` },
