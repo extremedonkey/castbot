@@ -71,7 +71,7 @@ export class MenuBuilder {
    * @returns {Object} Menu container
    */
   static buildSetupMenu(menuConfig, context) {
-    const isReece = context?.userId === '391415444084490240';
+    const isReece = ['391415444084490240', '1086246253819613274'].includes(context?.userId);
 
     const components = [
       { type: 10, content: `## ${menuConfig.title}` },

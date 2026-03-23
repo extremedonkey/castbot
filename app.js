@@ -7855,9 +7855,9 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'reeces_stuff') {
-      // Reece's Stuff - secret admin tools menu (Reece-only)
+      // Reece's Stuff - secret admin tools menu (Reece + test user)
       // Access check BEFORE factory — prevents Components V2 flag mismatch crash on public messages
-      if (req.body.member?.user?.id !== '391415444084490240') {
+      if (!['391415444084490240', '1086246253819613274'].includes(req.body.member?.user?.id)) {
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: { content: '❌ Access denied.', flags: InteractionResponseFlags.EPHEMERAL }
