@@ -6,19 +6,23 @@
 
 ## 🤔 The Problem
 
-CastBot can't scale past **100 servers** because Discord requires bot verification for bots in 76+ guilds, and verification requires declaring which **privileged intents** you use. Discord has strict requirements around privileged intents — you must justify them, and for `MessageContent` specifically, Discord **denied our application** (November 2025).
+CastBot can't scale past **100 servers** because Discord requires **bot verification** for apps in 100+ guilds. If you use privileged intents, you must **apply for approval at 75+ servers** via a questionnaire on the Developer Portal.
 
-The alternative to getting approved is to simply **not use privileged intents** — which would bypass the verification paperwork, encryption-at-rest requirements, and the whole compliance dance for a hobby bot that doesn't store sensitive user data.
+Discord **denied CastBot's MessageContent application** (November 2025).
+
+The alternative to getting approved is to simply **not use privileged intents** — which dramatically simplifies verification. Per Discord's own docs: *"Verified apps will be able to do most of what they can do on our platform without Privileged Intents."*
 
 ### What Are Privileged Intents?
 
-Discord gates three gateway intents behind approval for bots in 76+ servers:
+Discord gates three intents behind approval. **Under 100 servers, you can use them freely** — just toggle them on in Developer Portal settings. At 75+ servers, a button appears to apply. At 100+, verification is required.
 
 | Intent | What It Does | CastBot Uses It? |
 |--------|-------------|-----------------|
-| `GuildMembers` | Receive member join/leave events, access full member list via gateway | **YES — 169+ code locations** |
-| `MessageContent` | Read content/attachments of user-sent messages via gateway | **YES — 2 code locations** |
-| `GuildPresences` | See online/offline/idle status of members | **No** |
+| `GuildMembers` | Member join/update/leave events + ability to **request guild member lists** | **YES — 169+ code locations** |
+| `MessageContent` | Access to message **content, embeds, attachments, and components** across ALL APIs (not just gateway events) | **YES — 2 code locations** |
+| `GuildPresences` | Online/offline/idle status events | **No** |
+
+**Key clarification from Discord docs:** `MessageContent` is unique — unlike the other two, it doesn't correspond to specific events. It controls access to message content data **across all Discord APIs**, including REST. Without it, user-sent message fields return empty (except DMs with the bot, messages mentioning the bot, and messages the bot sent).
 
 ### The Incident
 
@@ -244,7 +248,9 @@ const displayName = member.displayName;
 
 ## 🚪 The Three Doors Past 100 Servers
 
-Discord requires **bot verification** for apps in 76+ guilds. Verification requires declaring privileged intents. There are three paths through:
+Discord requires **bot verification** for apps in **100+ guilds**. At **75+ servers**, a button appears on the Developer Portal to apply for privileged intents. Under 100 servers, you can use privileged intents freely by just toggling them on — no application needed.
+
+There are three paths through:
 
 ### Door 1: Don't Use Privileged Intents (RECOMMENDED)
 
@@ -253,42 +259,50 @@ If CastBot uses **zero** privileged intents, verification is straightforward —
 **What this means practically:**
 - Remove `MessageContent` intent (2 code locations — easy)
 - Remove `GuildMembers` intent (169+ code locations — big refactor)
-- No encryption-at-rest requirements
-- No data handling justification
+- No encryption requirements beyond standard practice
+- No data handling justification questionnaire
 - Verification becomes a rubber stamp
 
-### Door 2: Get Approved for Privileged Intents
+### Door 2: Apply for Privileged Intent Approval
 
-Apply to Discord for each intent you use. Requirements:
+At 75+ servers, apply from the Developer Portal bot settings page. Discord redirects to a **questionnaire** asking:
+
+1. **Which intents** you're applying for
+2. **Your use case** for those intents
+3. **Data security and privacy questions**
+
+A human reviews the application. Screenshots/video demonstrating how the bot uses the intents are "especially valuable."
 
 **For `MessageContent`:**
-- Must justify **why** your bot needs to read user message content
 - Discord **already denied CastBot's application** (November 2025)
-- Very strict — Discord actively pushes bots away from this intent
+- Very strict — Discord actively pushes bots toward their "Message Content Intent Alternatives"
 - CastBot only uses it for 2 file import handlers, so the justification is weak
 
 **For `GuildMembers`:**
-- Must justify why you need bulk member data or member join/leave events
-- CastBot has a stronger case here (game management, role assignment, castlist rendering)
-- But approval is not guaranteed and adds ongoing compliance burden
+- CastBot has a stronger case (game management, role assignment, castlist rendering, member name display)
+- Approval is not guaranteed but use case is more defensible
 
-**Data handling requirements if approved:**
-- Must comply with Discord Developer Policy on data storage
-- Encrypt stored user data at rest (this is the "encryption at rest" Reece mentioned)
-- Only store data necessary for bot functionality
-- Delete data when no longer needed
-- Respond to user data deletion requests
-- Privacy policy required
+**Data handling requirements if approved (from Best Practices doc):**
+- **Least privilege**: Only request intents you fundamentally need
+- **Individual user data**: Provide clear mechanisms for users to request data deletion
+- **30-day deletion**: Discord's recommended maximum retention for user data
+- **Encrypt PII**: Always encrypt personally identifiable information (email, phone, address)
+  - Note: Discord user IDs and display names are NOT considered PII in this context — PII means email, phone, address etc.
+- **Access control**: Limit who on your team can access server data
+- **Visibility**: Restrict data visibility based on server roles and permissions
+- **Transparency**: Ask yourself "Would users be concerned by how I'm using their data?"
 
 ### Door 3: Prove You Don't Store Sensitive Data
 
-This is a hybrid of Door 1 and Door 2. During verification:
+This is a hybrid of Door 1 and Door 2. During the questionnaire:
 - Declare which intents you use
 - Explain what data you access and why
-- Demonstrate you don't persist sensitive user data (message content, member lists)
+- Demonstrate you don't persist sensitive user data (message content, member PII)
 - If you access privileged data but don't store it → lighter requirements
 
-**CastBot's position:** We DO store player data (playerData.json, safariData.json) but it's game state, not Discord message content or member PII. The distinction matters.
+**CastBot's position:** We DO store player data (playerData.json, safariData.json) but it's game state keyed by Discord user IDs, not message content or PII (no emails, phones, addresses). Discord user IDs alone are not PII per Discord's definition. The "encryption at rest" concern from Reece's original context is likely overstated — it applies to PII specifically, not all stored data.
+
+**The real question for Door 3:** Does storing Discord user IDs mapped to game state (tribes, items, currency) count as "sensitive"? Almost certainly not — it's the same as any game bot storing player saves.
 
 ---
 
@@ -364,17 +378,22 @@ Once privileged intents are minimized (ideally zero):
 
 ## 📊 CastBot Data Storage Audit
 
-For verification, Discord will want to know what user data CastBot stores:
+For the verification questionnaire, Discord will ask about data security and privacy. Here's what CastBot actually stores:
 
-| Data File | Contains | Sensitive? | Encryption Needed? |
-|-----------|----------|-----------|-------------------|
-| `playerData.json` | Discord user IDs → game roles, tribes, pronouns, timezones | **Mild** — user IDs + preferences | Yes if GuildMembers intent kept |
+| Data File | Contains | PII? (email/phone/address) | Encryption Needed? |
+|-----------|----------|---------------------------|-------------------|
+| `playerData.json` | Discord user IDs → game roles, tribes, pronouns, timezones | **No** — user IDs + game preferences only | No (not PII) |
 | `safariData.json` | Game config, stores, items, map data | **No** — game state only | No |
 | `analyticsData.json` | Button click counts, feature usage | **No** — aggregated metrics | No |
-| `activityLog.json` | Player game actions with timestamps | **Mild** — user IDs + game actions | Yes if GuildMembers intent kept |
+| `activityLog.json` | Player game actions with timestamps | **No** — user IDs + game actions | No (not PII) |
 | Backup files | Copies of above | Same as source | Same as source |
 
-**The encryption-at-rest requirement** applies to files containing data obtained via privileged intents. If we eliminate both intents, the data we store (game state keyed by user IDs) may not trigger this requirement — user IDs alone are not privileged intent data.
+**Key insight from the actual Discord docs:** The encryption requirement is specifically about **PII (email, phone, address)** — NOT about Discord user IDs or display names. CastBot stores zero PII. We don't collect emails, phone numbers, or physical addresses. The "encryption at rest" concern from Reece's original context was a bigger worry than necessary.
+
+**What we should still do regardless:**
+- Provide a way for users to request their data be deleted (e.g., a `/deletedata` command or a button)
+- Delete user data within 30 days of request (Discord's recommended maximum)
+- These are best practices even without privileged intents
 
 ---
 
@@ -388,7 +407,7 @@ For verification, Discord will want to know what user data CastBot stores:
 | `guild.members.list()` also needs GuildMembers intent | **High** | Confirmed by Discord docs — need alternative approach |
 | Some Discord.js methods silently require GuildMembers | High | Phase 2 testing will surface these |
 | Verification denied even without privileged intents | Low | Rare — non-privileged verification is mostly automatic |
-| Encryption at rest adds operational complexity | Medium | Only needed if GuildMembers intent is kept |
+| Encryption at rest adds operational complexity | **Low** | Only applies to PII (email/phone/address) — CastBot stores none |
 
 ---
 
