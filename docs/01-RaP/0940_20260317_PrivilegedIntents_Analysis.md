@@ -242,12 +242,62 @@ const displayName = member.displayName;
 
 ---
 
+## 🚪 The Three Doors Past 100 Servers
+
+Discord requires **bot verification** for apps in 76+ guilds. Verification requires declaring privileged intents. There are three paths through:
+
+### Door 1: Don't Use Privileged Intents (RECOMMENDED)
+
+If CastBot uses **zero** privileged intents, verification is straightforward — no justification needed, no compliance dance.
+
+**What this means practically:**
+- Remove `MessageContent` intent (2 code locations — easy)
+- Remove `GuildMembers` intent (169+ code locations — big refactor)
+- No encryption-at-rest requirements
+- No data handling justification
+- Verification becomes a rubber stamp
+
+### Door 2: Get Approved for Privileged Intents
+
+Apply to Discord for each intent you use. Requirements:
+
+**For `MessageContent`:**
+- Must justify **why** your bot needs to read user message content
+- Discord **already denied CastBot's application** (November 2025)
+- Very strict — Discord actively pushes bots away from this intent
+- CastBot only uses it for 2 file import handlers, so the justification is weak
+
+**For `GuildMembers`:**
+- Must justify why you need bulk member data or member join/leave events
+- CastBot has a stronger case here (game management, role assignment, castlist rendering)
+- But approval is not guaranteed and adds ongoing compliance burden
+
+**Data handling requirements if approved:**
+- Must comply with Discord Developer Policy on data storage
+- Encrypt stored user data at rest (this is the "encryption at rest" Reece mentioned)
+- Only store data necessary for bot functionality
+- Delete data when no longer needed
+- Respond to user data deletion requests
+- Privacy policy required
+
+### Door 3: Prove You Don't Store Sensitive Data
+
+This is a hybrid of Door 1 and Door 2. During verification:
+- Declare which intents you use
+- Explain what data you access and why
+- Demonstrate you don't persist sensitive user data (message content, member lists)
+- If you access privileged data but don't store it → lighter requirements
+
+**CastBot's position:** We DO store player data (playerData.json, safariData.json) but it's game state, not Discord message content or member PII. The distinction matters.
+
+---
+
 ## 💡 Recommended Plan
 
 ### Phase 1: Kill MessageContent Intent (LOW EFFORT, HIGH IMPACT)
 
 **Effort**: ~2-3 hours
-**Impact**: Removes 1 of 2 privileged intents
+**Impact**: Removes 1 of 2 privileged intents. Eliminates the intent Discord already denied us for.
 
 1. Add File Upload (Type 19) modal for Safari import
 2. Add File Upload (Type 19) modal for PlayerData import
@@ -267,24 +317,64 @@ const displayName = member.displayName;
 4. Identify all bulk member fetch patterns that need migration
 5. Create migration plan if feasible
 
+**Critical finding from Discord docs:** The `GuildMembers` intent is required even for the **REST API** endpoint `List Guild Members` — it's not just a gateway thing. From the docs: *"Calling the List Guild Members endpoint requires the GUILD_MEMBERS intent enabled—regardless of whether it's passed during Gateway identification."*
+
+This means `guild.members.list()` (REST) also needs the intent. The migration path would need to use individual `guild.members.fetch(userId)` calls (which may work without the intent) or find alternatives.
+
 ### Phase 3: Migrate GuildMembers (if feasible) (HIGH EFFORT)
 
 **Effort**: ~2-3 days
-**Impact**: Removes ALL privileged intents — no verification needed
+**Impact**: Removes ALL privileged intents — Door 1 opens fully
 
-1. Replace `guild.members.fetch()` bulk calls with `guild.members.list()` REST API
-2. Replace cache reads with explicit individual REST fetches
+1. Replace `guild.members.fetch()` bulk calls with targeted individual fetches
+2. Replace `guild.members.cache` reads with explicit REST fetches
 3. Add caching layer in `memberFetchUtils.js` to avoid hammering REST API
 4. Remove `GatewayIntentBits.GuildMembers` from client config
 5. Verify all 169+ usage points work correctly
 
-### If Both Intents Are Removed
+**Key risk:** If individual `guild.members.fetch(userId)` also requires `GuildMembers` intent (needs testing), then Door 1 may not be viable for CastBot's feature set, and we'd need Door 2 (apply for GuildMembers only, with MessageContent already eliminated).
 
-- No privileged intents = no verification needed
-- No paperwork
-- No encryption-at-rest requirement
-- No 100-server wall
-- Bot can scale freely
+### Phase 4: Apply for Verification
+
+Once privileged intents are minimized (ideally zero):
+1. Apply at [Discord Developer Portal](https://discord.com/developers/applications)
+2. Provide bot description, use case, privacy policy
+3. If zero privileged intents → straightforward approval
+4. If GuildMembers still needed → justify with game management use case
+5. Pass 100-server wall
+
+### If Both Intents Are Removed (Door 1)
+
+- No privileged intents = no justification needed
+- No encryption-at-rest requirement for privileged data
+- No data handling compliance dance
+- Verification becomes a formality
+- Bot can scale past 100 servers freely
+- **This is the path of least resistance**
+
+### If Only GuildMembers Remains (Door 2, Partial)
+
+- Must apply for GuildMembers approval
+- Justification: "Game management bot — needs member names for castlist, role assignment, player management"
+- Must have privacy policy
+- Must encrypt stored member data at rest (playerData.json contains Discord user IDs mapped to game state)
+- Stronger case than MessageContent since CastBot genuinely needs member data for core functionality
+
+---
+
+## 📊 CastBot Data Storage Audit
+
+For verification, Discord will want to know what user data CastBot stores:
+
+| Data File | Contains | Sensitive? | Encryption Needed? |
+|-----------|----------|-----------|-------------------|
+| `playerData.json` | Discord user IDs → game roles, tribes, pronouns, timezones | **Mild** — user IDs + preferences | Yes if GuildMembers intent kept |
+| `safariData.json` | Game config, stores, items, map data | **No** — game state only | No |
+| `analyticsData.json` | Button click counts, feature usage | **No** — aggregated metrics | No |
+| `activityLog.json` | Player game actions with timestamps | **Mild** — user IDs + game actions | Yes if GuildMembers intent kept |
+| Backup files | Copies of above | Same as source | Same as source |
+
+**The encryption-at-rest requirement** applies to files containing data obtained via privileged intents. If we eliminate both intents, the data we store (game state keyed by user IDs) may not trigger this requirement — user IDs alone are not privileged intent data.
 
 ---
 
@@ -295,8 +385,36 @@ const displayName = member.displayName;
 | File Upload (Type 19) is new — could have bugs | Medium | Test thoroughly in dev, keep old code commented until verified |
 | GuildMembers removal breaks member name resolution | High | Phase 2 research before committing |
 | REST API rate limits on individual member fetches | Medium | Centralize through memberFetchUtils.js with caching |
-| `guild.members.list()` has 1000 member limit | Low | CastBot's largest servers are well under 1000 |
+| `guild.members.list()` also needs GuildMembers intent | **High** | Confirmed by Discord docs — need alternative approach |
 | Some Discord.js methods silently require GuildMembers | High | Phase 2 testing will surface these |
+| Verification denied even without privileged intents | Low | Rare — non-privileged verification is mostly automatic |
+| Encryption at rest adds operational complexity | Medium | Only needed if GuildMembers intent is kept |
+
+---
+
+## 🔗 Key Finding: REST API ≠ Intent-Free
+
+**From Discord's official Gateway docs (2026):**
+
+> *"Calling the List Guild Members endpoint requires the GUILD_MEMBERS intent enabled—regardless of whether it's passed during Gateway identification."*
+
+This is crucial. The original plan assumed `guild.members.list()` (REST API) would work without the intent. **It won't.** The Phase 3 migration needs to account for this — either:
+- Use individual member fetches (test if these work without intent)
+- Accept we need GuildMembers and apply for it (Door 2)
+- Find creative workarounds (store display names when we receive interactions, since interaction payloads include member data without needing any intent)
+
+**Interaction payloads are the escape hatch:** Every slash command and button interaction includes `req.body.member` with the user's display name, roles, and avatar. CastBot could cache this data from interactions rather than fetching it via the API, reducing or eliminating the need for `GuildMembers` intent.
+
+---
+
+## 📥 Channel Export Feature (Added 2026-03-23)
+
+A channel message export utility was added to Reece's Stuff. This feature:
+- Uses **REST API only** (`GET /channels/{id}/messages`) — no Privileged Intents
+- The `MessageContent` intent is **NOT** required for REST API message fetching (only for Gateway events)
+- Exports as `.txt` file sent back via webhook attachment (stays in Discord ecosystem)
+- Restricted to Reece only (Reece's Stuff access control)
+- Could be generalized for other hosts if CastBot scales past 100 servers
 
 ---
 
@@ -305,6 +423,7 @@ const displayName = member.displayName;
 - [ComponentsV2.md — File Upload (Type 19)](../standards/ComponentsV2.md) — Component reference
 - [ComponentsV2.md — MessageContent Intent & File Uploads](../standards/ComponentsV2.md#messagecontent-intent--file-uploads) — Current documentation
 - [SafariImportExport.md](../03-features/SafariImportExport.md) — Import system that needs migration
+- [Discord Gateway Docs — Privileged Intents](https://docs.discord.com/developers/events/gateway) — Official intent documentation
 - [Discord File Upload Reference](https://docs.discord.com/developers/components/reference#file-upload) — Official docs
 - [castlistCrashIssues_cache.md](../incidents/castlistCrashIssues_cache.md) — Documents current intent config
 - [RaP 0943: Challenge Actions](0943_20260316_ChallengeActions_Analysis.md) — Already noted "no MessageContent needed" for button-based design
