@@ -3888,6 +3888,42 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'admin',
     parent: 'reeces_stuff'
+  },
+
+  // === MOAI (Claude Code Integration) ===
+  'moai_ask': {
+    label: 'Ask Moai',
+    description: 'Open the Moai prompt modal for Claude Code queries',
+    emoji: '🗿',
+    style: 'Secondary',
+    requiresModal: true,
+    category: 'moai',
+    parent: 'reeces_stuff'
+  },
+  'moai_ask_ctx_*': {
+    label: 'Ask Another',
+    description: 'Ask Moai a follow-up question with previous response context',
+    emoji: '🗿',
+    style: 'Secondary',
+    requiresModal: true,
+    category: 'moai',
+    parent: 'moai_ask'
+  },
+  'moai_share_*': {
+    label: 'Share',
+    description: 'Share Moai response publicly in channel',
+    emoji: '📤',
+    style: 'Secondary',
+    category: 'moai',
+    parent: 'moai_ask'
+  },
+  'moai_restart_dev': {
+    label: 'Restart Dev',
+    description: 'Restart CastBot development server via dev-restart.sh',
+    emoji: '🔄',
+    style: 'Danger',
+    category: 'moai',
+    parent: 'moai_ask'
   }
 };
 
