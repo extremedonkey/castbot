@@ -34975,6 +34975,135 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
 
+    // === CHANNEL EXPORT HANDLER ===
+
+    } else if (custom_id === 'export_channel') {
+      // Show channel select for export
+      return ButtonHandlerFactory.create({
+        id: 'export_channel',
+        updateMessage: true,
+        handler: async (context) => {
+          return {
+            components: [{
+              type: 17,
+              accent_color: 0x3498db,
+              components: [
+                { type: 10, content: `## 📥 Export Channel\n\nSelect a channel to export all messages as a text file.\n\n-# Uses REST API only — no Privileged Intents required.` },
+                { type: 14 },
+                { type: 1, components: [{
+                  type: 8, // Channel Select
+                  custom_id: 'export_channel_select',
+                  placeholder: 'Select a channel to export...',
+                  channel_types: [0, 5], // Text + Announcement
+                  min_values: 1,
+                  max_values: 1
+                }]},
+                { type: 14 },
+                { type: 1, components: [{ type: 2, style: 2, label: '← Back', custom_id: 'reeces_stuff' }] }
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'export_channel_select') {
+      // Fetch all messages from selected channel and send as file
+      const selectedChannelId = req.body.data.values?.[0];
+      const interactionToken = req.body.token;
+      const appId = process.env.APP_ID;
+
+      // Defer immediately — this can take a while
+      res.send({
+        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+        data: { flags: InteractionResponseFlags.EPHEMERAL }
+      });
+
+      setTimeout(async () => {
+        try {
+          console.log(`📥 START: export_channel for channel ${selectedChannelId}`);
+          let allMessages = [];
+          let before = null;
+          let batch = 0;
+
+          while (true) {
+            const params = new URLSearchParams({ limit: '100' });
+            if (before) params.set('before', before);
+
+            const messages = await DiscordRequest(`channels/${selectedChannelId}/messages?${params}`, { method: 'GET' });
+            if (!messages || messages.length === 0) break;
+
+            allMessages.push(...messages);
+            before = messages[messages.length - 1].id;
+            batch++;
+            console.log(`  📥 Batch ${batch}: ${messages.length} messages (total: ${allMessages.length})`);
+
+            if (messages.length < 100) break;
+
+            // Respect rate limits — small delay between batches
+            await new Promise(r => setTimeout(r, 300));
+          }
+
+          // Sort oldest first
+          allMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+          // Build readable text
+          const textLines = allMessages.map(m => {
+            const date = new Date(m.timestamp).toISOString().slice(0, 19).replace('T', ' ');
+            const author = m.author?.global_name || m.author?.username || 'Unknown';
+            const content = m.content || (m.embeds?.length ? '[embed]' : (m.components?.length ? '[components]' : '[no content]'));
+            const attachments = m.attachments?.length ? ` [${m.attachments.length} attachment(s)]` : '';
+            return `[${date}] ${author}: ${content}${attachments}`;
+          }).join('\n');
+
+          // Get channel name for filename
+          let channelName = selectedChannelId;
+          try {
+            const channelData = await DiscordRequest(`channels/${selectedChannelId}`, { method: 'GET' });
+            if (channelData?.name) channelName = channelData.name;
+          } catch (e) { /* use ID as fallback */ }
+
+          const filename = `${channelName}-export-${new Date().toISOString().slice(0, 10)}.txt`;
+          const fileBuffer = Buffer.from(textLines, 'utf-8');
+
+          console.log(`📥 Export complete: ${allMessages.length} messages, ${fileBuffer.length} bytes`);
+
+          // Send file via webhook followup with FormData
+          const FormData = (await import('form-data')).default;
+          const fetch = (await import('node-fetch')).default;
+          const form = new FormData();
+
+          form.append('files[0]', fileBuffer, { filename, contentType: 'text/plain' });
+          form.append('payload_json', JSON.stringify({
+            content: `📥 **Channel Export: #${channelName}**\n${allMessages.length} messages exported.`,
+            flags: (1 << 6), // EPHEMERAL
+            attachments: [{ id: 0, filename }]
+          }));
+
+          const webhookUrl = `https://discord.com/api/v10/webhooks/${appId}/${interactionToken}/messages/@original`;
+          const response = await fetch(webhookUrl, {
+            method: 'PATCH',
+            body: form,
+            headers: form.getHeaders()
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ Export webhook failed: ${response.status} ${errorText}`);
+          } else {
+            console.log(`✅ Export file sent: ${filename}`);
+          }
+        } catch (error) {
+          console.error('❌ Channel export failed:', error);
+          try {
+            await updateDeferredResponse(interactionToken, {
+              content: `❌ Export failed: ${error.message}`,
+              flags: (1 << 6)
+            });
+          } catch (e) { /* token may have expired */ }
+        }
+      }, 100);
+      return;
+
     // === END ACTIVITY LOG HANDLERS ===
 
     } else if (custom_id.startsWith('safari_pause_player_')) {

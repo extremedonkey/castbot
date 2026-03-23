@@ -3897,6 +3897,22 @@ export const BUTTON_REGISTRY = {
     category: 'admin',
     parent: 'reeces_stuff'
   },
+  'export_channel': {
+    label: 'Export Channel',
+    description: 'Export all messages from a channel as a text file (REST API only, no Privileged Intents)',
+    emoji: '📥',
+    style: 'Secondary',
+    category: 'admin',
+    parent: 'reeces_stuff'
+  },
+  'export_channel_select': {
+    label: 'Export Channel Select',
+    description: 'Channel select handler for channel export feature',
+    emoji: '📥',
+    style: 'Secondary',
+    category: 'admin',
+    parent: 'export_channel'
+  },
 
   // === MOAI (Claude Code Integration) ===
   'moai_ask': {
