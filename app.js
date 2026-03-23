@@ -35105,7 +35105,7 @@ Your server is now ready for Tycoons gameplay!`;
               components: [{
                 type: 1,
                 components: [
-                  { type: 2, style: 5, label: 'View Log', emoji: { name: '🔗' }, url: cdnUrl }
+                  { type: 2, style: 5, label: 'View Log', emoji: { name: '🔗' }, url: `https://htmlpreview.github.io/?${cdnUrl}` }
                 ]
               }],
               attachments: [{ id: 0, filename }]
