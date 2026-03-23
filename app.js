@@ -35066,14 +35066,7 @@ Your server is now ready for Tycoons gameplay!`;
 
           form.append('files[0]', fileBuffer, { filename, contentType: 'text/html' });
           form.append('payload_json', JSON.stringify({
-            components: [{
-              type: 17,
-              accent_color: 0x3498db,
-              components: [
-                { type: 10, content: `## 📥 Channel Export: #${channelName}\n${allMessages.length} messages exported.\n\n-# Download the HTML file and open in your browser, or click View Log below.` }
-              ]
-            }],
-            flags: (1 << 15), // IS_COMPONENTS_V2
+            content: `📥 **Channel Export: #${channelName}**\n${allMessages.length} messages exported.`,
             attachments: [{ id: 0, filename }]
           }));
 
@@ -35091,7 +35084,15 @@ Your server is now ready for Tycoons gameplay!`;
           }
 
           // Step 2: Read the CDN URL from the response and edit to add View Log button
-          const msgData = await response.json();
+          const responseText = await response.text();
+          let msgData;
+          try {
+            msgData = JSON.parse(responseText);
+          } catch (e) {
+            console.error(`❌ Failed to parse response: ${responseText.substring(0, 200)}`);
+            return;
+          }
+          console.log(`📥 Response attachments: ${JSON.stringify(msgData.attachments?.map(a => ({ filename: a.filename, url: a.url?.substring(0, 60) })))}`);
           const cdnUrl = msgData.attachments?.[0]?.url;
           console.log(`📥 CDN URL: ${cdnUrl?.substring(0, 80)}...`);
 
@@ -35100,19 +35101,13 @@ Your server is now ready for Tycoons gameplay!`;
             const form2 = new FormData();
             form2.append('files[0]', fileBuffer, { filename, contentType: 'text/html' });
             form2.append('payload_json', JSON.stringify({
+              content: `📥 **Channel Export: #${channelName}**\n${allMessages.length} messages exported.\n-# Open the HTML file in your browser to view with search + Discord styling.`,
               components: [{
-                type: 17,
-                accent_color: 0x3498db,
+                type: 1,
                 components: [
-                  { type: 10, content: `## 📥 Channel Export: #${channelName}\n${allMessages.length} messages exported.\n\n-# Download the HTML file and open in your browser, or click View Log below.` },
-                  { type: 14 },
-                  { type: 1, components: [
-                    { type: 2, style: 5, label: 'View Log', emoji: { name: '🔗' }, url: cdnUrl },
-                    { type: 2, style: 2, label: '← Back', custom_id: 'reeces_stuff' }
-                  ]}
+                  { type: 2, style: 5, label: 'View Log', emoji: { name: '🔗' }, url: cdnUrl }
                 ]
               }],
-              flags: (1 << 15),
               attachments: [{ id: 0, filename }]
             }));
 
