@@ -14708,7 +14708,7 @@ Your server is now ready for Tycoons gameplay!`;
               label: store.name,
               value: store.id,
               description: `${store.items?.length || 0} item(s)`,
-              emoji: store.emoji ? { name: store.emoji } : undefined,
+              emoji: store.emoji ? parseTextEmoji(store.emoji, '🏪').emoji : undefined,
               default: currentGlobalStores.includes(store.id)
             }));
 
