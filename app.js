@@ -24873,6 +24873,25 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id.startsWith('app_dnc_edit_')) {
+      // Legacy "Edit DNC List" button — still exists on old application messages
+      // Re-render the DNC question with the new structured UI
+      return ButtonHandlerFactory.create({ id: 'app_dnc_edit',
+        updateMessage: true,
+        handler: async (context) => {
+          const { getDncEntries, buildDncQuestionUI } = await import('./dncManager.js');
+          const remaining = context.customId.replace('app_dnc_edit_', '');
+          const lastUnderscore = remaining.lastIndexOf('_');
+          const channelId = remaining.substring(0, lastUnderscore);
+          const questionIndex = parseInt(remaining.substring(lastUnderscore + 1));
+          const playerData = await loadPlayerData();
+          const application = playerData[context.guildId]?.applications?.[channelId] || {};
+          const config = await getApplicationConfig(context.guildId, application.configId);
+          if (!config) return { content: '❌ Application config not found.' };
+          return { components: [buildDncQuestionUI(config, channelId, questionIndex, application)] };
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('app_dnc_select_')) {
       const selectedValue = req.body.data.values?.[0]; // Per-entry DNC select
       const isModal = selectedValue === 'add' || selectedValue?.startsWith('edit_'), isDelete = selectedValue?.startsWith('delete_');
