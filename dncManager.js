@@ -80,7 +80,7 @@ export function buildDncQuestionUI(config, channelId, questionIndex, application
       type: 1,
       components: [{
         type: 3,
-        custom_id: `app_dnc_select_${channelId}_${questionIndex}`,
+        custom_id: `app_dnc_select_${channelId}_${questionIndex}_${i}`,
         options
       }]
     });
@@ -92,7 +92,7 @@ export function buildDncQuestionUI(config, channelId, questionIndex, application
       type: 1,
       components: [{
         type: 3,
-        custom_id: `app_dnc_select_${channelId}_${questionIndex}`,
+        custom_id: `app_dnc_select_${channelId}_${questionIndex}_add`,
         placeholder: '➕ Click here to add a person to your DNC list...',
         options: [
           { label: 'Add person to DNC list', value: 'add', emoji: { name: '➕' }, description: 'Add someone you prefer not to be cast with' }
@@ -164,7 +164,7 @@ export function buildDncEntryModal(entry, channelId, questionIndex, entryIndex) 
           style: 1,
           required: false,
           max_length: 50,
-          placeholder: 'e.g. extremedonkey',
+          placeholder: 'e.g. coolbuy12',
           ...(isEdit && entry.username ? { value: entry.username } : {})
         }
       },

@@ -24881,10 +24881,12 @@ Your server is now ready for Tycoons gameplay!`;
         updateMessage: !isModal,
         handler: async (context) => {
           const { buildDncEntryModal, getDncEntries, buildDncQuestionUI } = await import('./dncManager.js');
+          // custom_id: app_dnc_select_{channelId}_{questionIndex}_{entryIndex|add}
           const remaining = context.customId.replace('app_dnc_select_', '');
-          const lastUnderscore = remaining.lastIndexOf('_');
-          const channelId = remaining.substring(0, lastUnderscore);
-          const questionIndex = parseInt(remaining.substring(lastUnderscore + 1));
+          const parts = remaining.split('_');
+          parts.pop(); // Remove entryIndex/add suffix
+          const questionIndex = parseInt(parts.pop());
+          const channelId = parts.join('_');
 
           const playerData = await loadPlayerData();
           const application = playerData[context.guildId]?.applications?.[channelId] || {};
