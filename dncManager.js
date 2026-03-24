@@ -86,16 +86,17 @@ export function buildDncQuestionUI(config, channelId, questionIndex, application
     });
   });
 
-  // Add button (if under limit)
+  // "Add person" select (same pattern as question management's "Click here to add...")
   if (entries.length < MAX_DNC_ENTRIES) {
     components.push({
       type: 1,
       components: [{
-        type: 2,
-        custom_id: `app_dnc_add_${channelId}_${questionIndex}`,
-        label: 'Add Person to DNC List',
-        style: 2,
-        emoji: { name: '➕' }
+        type: 3,
+        custom_id: `app_dnc_select_${channelId}_${questionIndex}`,
+        placeholder: '➕ Click here to add a person to your DNC list...',
+        options: [
+          { label: 'Add person to DNC list', value: 'add', emoji: { name: '➕' }, description: 'Add someone you prefer not to be cast with' }
+        ]
       }]
     });
   }

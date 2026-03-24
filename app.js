@@ -24873,24 +24873,9 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id.startsWith('app_dnc_add_')) {
-      // DNC "Add Person" button — opens blank entry modal
-      return ButtonHandlerFactory.create({
-        id: 'app_dnc_add',
-        requiresModal: true,
-        handler: async (context) => {
-          const { buildDncEntryModal } = await import('./dncManager.js');
-          const remaining = context.customId.replace('app_dnc_add_', '');
-          const lastUnderscore = remaining.lastIndexOf('_');
-          const channelId = remaining.substring(0, lastUnderscore);
-          const questionIndex = remaining.substring(lastUnderscore + 1);
-          return { type: InteractionResponseType.MODAL, data: buildDncEntryModal(null, channelId, questionIndex, 'new') };
-        }
-      })(req, res, client);
-
     } else if (custom_id.startsWith('app_dnc_select_')) {
       const selectedValue = req.body.data.values?.[0]; // Per-entry DNC select
-      const isModal = selectedValue?.startsWith('edit_'), isDelete = selectedValue?.startsWith('delete_');
+      const isModal = selectedValue === 'add' || selectedValue?.startsWith('edit_'), isDelete = selectedValue?.startsWith('delete_');
       return ButtonHandlerFactory.create({ id: 'app_dnc_select',
         requiresModal: isModal,
         updateMessage: !isModal,
@@ -24904,8 +24889,13 @@ Your server is now ready for Tycoons gameplay!`;
           const playerData = await loadPlayerData();
           const application = playerData[context.guildId]?.applications?.[channelId] || {};
 
+          // Add — open blank modal
+          if (selectedValue === 'add') {
+            return { type: InteractionResponseType.MODAL, data: buildDncEntryModal(null, channelId, questionIndex, 'new') };
+          }
+
           // Edit — open modal pre-filled
-          if (isModal) {
+          if (selectedValue?.startsWith('edit_')) {
             const entries = getDncEntries(application);
             const entryIndex = parseInt(selectedValue.replace('edit_', ''));
             const entry = entries[entryIndex] || null;
