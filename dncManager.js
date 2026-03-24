@@ -36,74 +36,69 @@ export function getDncEntries(application) {
 
 /**
  * Build the player-facing DNC question UI.
- * Shows a string select with existing entries + "Add person" option.
+ * Uses per-entry string selects (like Action Editor outcomes pattern).
+ * Each entry is its own select with Edit/Delete options.
+ * Max ~8 entries to stay within 40-component limit.
  */
 export function buildDncQuestionUI(config, channelId, questionIndex, application) {
   const entries = getDncEntries(application);
   const isLastQuestion = questionIndex === config.questions.length - 1;
   const isSecondToLast = questionIndex === config.questions.length - 2;
+  const MAX_DNC_ENTRIES = 8; // 8 entries × 2 (ActionRow+Select) = 16 + header/nav = ~24 total
 
   const components = [
     {
       type: 10,
-      content: `## Q${questionIndex + 1}. Do Not Cast List\n\nIs there anyone in the community that you will not play with?`
+      content: `## Q${questionIndex + 1}. Do Not Cast List\n\nIs there anyone in the community that you will not play with?\n-# 🔒 Confidential — only hosts will see this.`
     },
     { type: 14 }
   ];
 
-  // Build the entry select
-  const selectOptions = [];
-
-  entries.forEach((entry, i) => {
-    const issuePreview = entry.issues
-      ? ` — "${entry.issues.substring(0, 35)}${entry.issues.length > 35 ? '...' : ''}"`
-      : '';
-    selectOptions.push({
-      label: `${entry.name}${issuePreview}`.substring(0, 100),
-      value: `edit_${i}`,
-      emoji: { name: '🚷' },
-      description: entry.username ? `@${entry.username}`.substring(0, 100) : 'Click to edit'
-    });
-  });
-
-  if (entries.length > 0 && entries.length < 10) {
-    selectOptions.push({ label: '───────────────────', value: 'divider', description: ' ' });
-  }
-
-  if (entries.length < 10) {
-    selectOptions.push({
-      label: 'Add person to DNC list',
-      value: 'add',
-      emoji: { name: '➕' },
-      description: 'Add someone you prefer not to be cast with'
-    });
-  }
-
-  // If no entries, show empty state text before the select
   if (entries.length === 0) {
     components.push({
       type: 10,
-      content: `-# *No one listed yet. Use the menu below to add someone, or skip to the next question.*`
+      content: `-# *No one listed yet. Click below to add someone, or skip to the next question.*`
     });
   }
 
-  components.push({
-    type: 1,
-    components: [{
-      type: 3, // String Select
-      custom_id: `app_dnc_select_${channelId}_${questionIndex}`,
-      placeholder: entries.length > 0
-        ? `Your DNC list (${entries.length} ${entries.length === 1 ? 'person' : 'people'})`
-        : 'Click to add someone...',
-      options: selectOptions
-    }]
+  // Per-entry string selects (like outcome selects in Action Editor)
+  entries.forEach((entry, i) => {
+    const issuePreview = entry.issues
+      ? ` | ${entry.issues.substring(0, 40)}${entry.issues.length > 40 ? '...' : ''}`
+      : '';
+    const usernameHint = entry.username ? ` (@${entry.username})` : '';
+    const summaryLabel = `${i + 1}. 🚷 ${entry.name}${usernameHint}${issuePreview}`.substring(0, 100);
+
+    const options = [
+      { label: summaryLabel, value: 'summary', description: 'Current entry summary', default: true },
+      { label: 'Edit', value: `edit_${i}`, emoji: { name: '✏️' }, description: 'Edit this DNC entry' },
+      { label: '───────────────────', value: `divider_${i}`, description: ' ' },
+      { label: 'Delete', value: `delete_${i}`, emoji: { name: '🗑️' }, description: 'Remove this entry' }
+    ];
+
+    components.push({
+      type: 1,
+      components: [{
+        type: 3,
+        custom_id: `app_dnc_select_${channelId}_${questionIndex}`,
+        options
+      }]
+    });
   });
 
-  // Confidentiality note
-  components.push({
-    type: 10,
-    content: `-# 🔒 Your DNC list is confidential — only hosts will see it.${entries.length > 0 ? '\n-# To remove an entry, edit it and clear the name field.' : ''}`
-  });
+  // Add button (if under limit)
+  if (entries.length < MAX_DNC_ENTRIES) {
+    components.push({
+      type: 1,
+      components: [{
+        type: 2,
+        custom_id: `app_dnc_add_${channelId}_${questionIndex}`,
+        label: 'Add Person to DNC List',
+        style: 2,
+        emoji: { name: '➕' }
+      }]
+    });
+  }
 
   // Navigation section
   if (!isLastQuestion) {
@@ -179,6 +174,7 @@ export function buildDncEntryModal(entry, channelId, questionIndex, entryIndex) 
         component: {
           type: 5, // User Select
           custom_id: 'dnc_user_select',
+          required: false,
           min_values: 0,
           max_values: 1,
           ...(isEdit && entry.userId ? { default_values: [{ id: entry.userId, type: 'user' }] } : {})

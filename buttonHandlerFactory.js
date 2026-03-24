@@ -418,12 +418,19 @@ export const BUTTON_REGISTRY = {
     requiresModal: true,
     category: 'seasons'
   },
+  'app_dnc_add_*': {
+    label: 'Add DNC Entry',
+    description: 'Opens modal to add a new person to the Do Not Cast list',
+    emoji: '➕',
+    style: 'Secondary',
+    requiresModal: true,
+    category: 'seasons'
+  },
   'app_dnc_select_*': {
     label: 'DNC Entry Select',
-    description: 'Select a DNC entry to edit, or add a new person to the Do Not Cast list',
+    description: 'Per-entry select with Edit and Delete options for DNC list entries',
     emoji: '🚷',
     style: 'Primary',
-    requiresModal: true,
     category: 'seasons'
   },
   'apply_*': {

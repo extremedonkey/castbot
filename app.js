@@ -24873,53 +24873,59 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id.startsWith('app_dnc_select_')) {
-      const selectedValue = req.body.data.values?.[0];
-      return ButtonHandlerFactory.create({ // DNC entry select — add/edit modal or noop
-        id: 'app_dnc_select',
-        requiresModal: selectedValue !== 'divider',
-        updateMessage: selectedValue === 'divider',
+    } else if (custom_id.startsWith('app_dnc_add_')) {
+      // DNC "Add Person" button — opens blank entry modal
+      return ButtonHandlerFactory.create({
+        id: 'app_dnc_add',
+        requiresModal: true,
         handler: async (context) => {
-          // Divider — just re-render current state
-          if (selectedValue === 'divider') {
-            const { getDncEntries, buildDncQuestionUI } = await import('./dncManager.js');
-            const remaining = context.customId.replace('app_dnc_select_', '');
-            const lastUnderscore = remaining.lastIndexOf('_');
-            const channelId = remaining.substring(0, lastUnderscore);
-            const questionIndex = parseInt(remaining.substring(lastUnderscore + 1));
-            const playerData = await loadPlayerData();
-            const application = playerData[context.guildId]?.applications?.[channelId] || {};
+          const { buildDncEntryModal } = await import('./dncManager.js');
+          const remaining = context.customId.replace('app_dnc_add_', '');
+          const lastUnderscore = remaining.lastIndexOf('_');
+          const channelId = remaining.substring(0, lastUnderscore);
+          const questionIndex = remaining.substring(lastUnderscore + 1);
+          return { type: InteractionResponseType.MODAL, data: buildDncEntryModal(null, channelId, questionIndex, 'new') };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('app_dnc_select_')) {
+      const selectedValue = req.body.data.values?.[0]; // Per-entry DNC select
+      const isModal = selectedValue?.startsWith('edit_'), isDelete = selectedValue?.startsWith('delete_');
+      return ButtonHandlerFactory.create({ id: 'app_dnc_select',
+        requiresModal: isModal,
+        updateMessage: !isModal,
+        handler: async (context) => {
+          const { buildDncEntryModal, getDncEntries, buildDncQuestionUI } = await import('./dncManager.js');
+          const remaining = context.customId.replace('app_dnc_select_', '');
+          const lastUnderscore = remaining.lastIndexOf('_');
+          const channelId = remaining.substring(0, lastUnderscore);
+          const questionIndex = parseInt(remaining.substring(lastUnderscore + 1));
+
+          const playerData = await loadPlayerData();
+          const application = playerData[context.guildId]?.applications?.[channelId] || {};
+
+          // Edit — open modal pre-filled
+          if (isModal) {
+            const entries = getDncEntries(application);
+            const entryIndex = parseInt(selectedValue.replace('edit_', ''));
+            const entry = entries[entryIndex] || null;
+            return { type: InteractionResponseType.MODAL, data: buildDncEntryModal(entry, channelId, questionIndex, entryIndex) };
+          }
+
+          // Delete — remove entry and re-render
+          if (isDelete) {
+            if (!application.dncEntries) application.dncEntries = getDncEntries(application);
+            const entryIndex = parseInt(selectedValue.replace('delete_', ''));
+            const removed = application.dncEntries.splice(entryIndex, 1);
+            await savePlayerData(playerData);
+            console.log(`🚫 DNC entry deleted: ${removed[0]?.name}`);
             const config = await getApplicationConfig(context.guildId, application.configId);
             return { components: [buildDncQuestionUI(config, channelId, questionIndex, application)] };
           }
 
-          const { buildDncEntryModal, getDncEntries } = await import('./dncManager.js');
-          const remaining = context.customId.replace('app_dnc_select_', '');
-          const lastUnderscore = remaining.lastIndexOf('_');
-          const channelId = remaining.substring(0, lastUnderscore);
-          const questionIndex = remaining.substring(lastUnderscore + 1);
-
-          const playerData = await loadPlayerData();
-          const application = playerData[context.guildId]?.applications?.[channelId] || {};
-          const entries = getDncEntries(application);
-
-          if (selectedValue === 'add') {
-            return {
-              type: InteractionResponseType.MODAL,
-              data: buildDncEntryModal(null, channelId, questionIndex, 'new')
-            };
-          }
-
-          if (selectedValue.startsWith('edit_')) {
-            const entryIndex = parseInt(selectedValue.replace('edit_', ''));
-            const entry = entries[entryIndex] || null;
-            return {
-              type: InteractionResponseType.MODAL,
-              data: buildDncEntryModal(entry, channelId, questionIndex, entryIndex)
-            };
-          }
-
-          return { content: '❌ Unknown selection' };
+          // Summary or divider — re-render current state (noop visually)
+          const config = await getApplicationConfig(context.guildId, application.configId);
+          return { components: [buildDncQuestionUI(config, channelId, questionIndex, application)] };
         }
       })(req, res, client);
 
