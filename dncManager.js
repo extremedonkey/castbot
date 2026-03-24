@@ -164,7 +164,7 @@ export function buildDncEntryModal(entry, channelId, questionIndex, entryIndex) 
           style: 1,
           required: false,
           max_length: 50,
-          placeholder: 'e.g. coolbuy12',
+          placeholder: 'e.g. coolboy12',
           ...(isEdit && entry.username ? { value: entry.username } : {})
         }
       },
