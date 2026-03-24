@@ -463,65 +463,34 @@ function buildPlayerSetupPreview() {
 }
 
 // Preview for DNC question
-function buildDncPreview(questionIndex, totalQuestions) {
-  return {
-    components: [{
-      type: 17,
-      accent_color: 0xe74c3c,
-      components: [
-        { type: 10, content: `-# 🔎 Preview — this is what the player will see:` },
-        { type: 10, content: `## Q${questionIndex + 1}. Do Not Cast List\n\nIs there anyone in the community that you will not play with, and if so, why?\n\nClick the button below to enter your list.` },
-        { type: 14 },
-        { type: 1, components: [{ type: 2, custom_id: 'preview_dnc_disabled', label: 'Edit DNC List', style: 2, emoji: { name: '🚷' }, disabled: true }] }
-      ]
-    }],
-    flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
-  };
+async function buildDncPreview(questionIndex, totalQuestions) {
+  const { buildDncPreview: _buildPreview } = await import('./dncManager.js');
+  return _buildPreview(questionIndex);
 }
 
 // Show DNC question during the player application flow
 async function showDncQuestion(res, config, channelId, questionIndex) {
-  const isLastQuestion = questionIndex === config.questions.length - 1;
-  const isSecondToLast = questionIndex === config.questions.length - 2;
+  const guildId = config.guildId || Object.keys(config).find(k => k.match(/^\d+$/)) || null;
+  const { buildDncQuestionUI } = await import('./dncManager.js');
 
-  const questionComponents = [
-    {
-      type: 10,
-      content: `## Q${questionIndex + 1}. Do Not Cast List\n\nIs there anyone in the community that you will not play with, and if so, why?`
-    },
-    { type: 14 },
-    {
-      type: 1,
-      components: [
-        { type: 2, custom_id: `app_dnc_edit_${channelId}_${questionIndex}`, label: 'Edit DNC List', style: 2, emoji: { name: '✏️' } }
-      ]
+  // Load application data for existing DNC entries
+  const playerData = await loadPlayerData();
+  // Find guildId from application data by looking up the channelId
+  let resolvedGuildId = guildId;
+  if (!resolvedGuildId) {
+    for (const [gid, gdata] of Object.entries(playerData)) {
+      if (gdata?.applications?.[channelId]) { resolvedGuildId = gid; break; }
     }
-  ];
-
-  // Navigation section (DNC uses modal, not channel typing — no instruction text)
-  if (!isLastQuestion) {
-    questionComponents.push({ type: 14 });
-    questionComponents.push({
-      type: 9, // Section
-      components: [{ type: 10, content: isSecondToLast ? '-# ✅ Ready? Submit your application' : '\u200b' }],
-      accessory: {
-        type: 2,
-        custom_id: `app_next_question_${channelId}_${questionIndex}`,
-        label: isSecondToLast ? 'Complete' : 'Next',
-        style: isSecondToLast ? 3 : 2
-      }
-    });
   }
+  const application = playerData[resolvedGuildId]?.applications?.[channelId] || {};
+
+  const container = buildDncQuestionUI(config, channelId, questionIndex, application);
 
   return res.send({
     type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
     data: {
       flags: (1 << 15),
-      components: [{
-        type: 17,
-        accent_color: 0xe74c3c,
-        components: questionComponents
-      }]
+      components: [container]
     }
   });
 }
@@ -9457,7 +9426,7 @@ To fix this:
             const question = config.questions[questionIndex];
             if (!question) return { content: '❌ Question not found' };
             const preview = question.questionType === 'dnc'
-              ? buildDncPreview(questionIndex, config.questions.length)
+              ? await buildDncPreview(questionIndex, config.questions.length)
               : buildQuestionPreview(question, questionIndex, config.questions.length);
             return res.send({
               type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -24904,43 +24873,53 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id.startsWith('app_dnc_edit_')) {
-      // DNC edit button — opens modal for the applicant to enter their DNC list
-      return ButtonHandlerFactory.create({
-        id: 'app_dnc_edit',
-        requiresModal: true,
+    } else if (custom_id.startsWith('app_dnc_select_')) {
+      const selectedValue = req.body.data.values?.[0];
+      return ButtonHandlerFactory.create({ // DNC entry select — add/edit modal or noop
+        id: 'app_dnc_select',
+        requiresModal: selectedValue !== 'divider',
+        updateMessage: selectedValue === 'divider',
         handler: async (context) => {
-          const remaining = context.customId.replace('app_dnc_edit_', '');
+          // Divider — just re-render current state
+          if (selectedValue === 'divider') {
+            const { getDncEntries, buildDncQuestionUI } = await import('./dncManager.js');
+            const remaining = context.customId.replace('app_dnc_select_', '');
+            const lastUnderscore = remaining.lastIndexOf('_');
+            const channelId = remaining.substring(0, lastUnderscore);
+            const questionIndex = parseInt(remaining.substring(lastUnderscore + 1));
+            const playerData = await loadPlayerData();
+            const application = playerData[context.guildId]?.applications?.[channelId] || {};
+            const config = await getApplicationConfig(context.guildId, application.configId);
+            return { components: [buildDncQuestionUI(config, channelId, questionIndex, application)] };
+          }
+
+          const { buildDncEntryModal, getDncEntries } = await import('./dncManager.js');
+          const remaining = context.customId.replace('app_dnc_select_', '');
           const lastUnderscore = remaining.lastIndexOf('_');
           const channelId = remaining.substring(0, lastUnderscore);
           const questionIndex = remaining.substring(lastUnderscore + 1);
 
           const playerData = await loadPlayerData();
-          const existingDnc = playerData[context.guildId]?.applications?.[channelId]?.dncList || '';
+          const application = playerData[context.guildId]?.applications?.[channelId] || {};
+          const entries = getDncEntries(application);
 
-          return {
-            type: InteractionResponseType.MODAL,
-            data: {
-              custom_id: `app_dnc_modal_${channelId}_${questionIndex}`,
-              title: 'Do Not Cast List',
-              components: [
-                {
-                  type: 18,
-                  label: 'Players you prefer not to be cast with',
-                  description: 'This is confidential — only hosts will see this',
-                  component: {
-                    type: 4,
-                    custom_id: 'dncList',
-                    style: 2,
-                    required: false,
-                    max_length: 1000,
-                    placeholder: 'List player, username and reasons, one per line...',
-                    ...(existingDnc ? { value: existingDnc } : {})
-                  }
-                }
-              ]
-            }
-          };
+          if (selectedValue === 'add') {
+            return {
+              type: InteractionResponseType.MODAL,
+              data: buildDncEntryModal(null, channelId, questionIndex, 'new')
+            };
+          }
+
+          if (selectedValue.startsWith('edit_')) {
+            const entryIndex = parseInt(selectedValue.replace('edit_', ''));
+            const entry = entries[entryIndex] || null;
+            return {
+              type: InteractionResponseType.MODAL,
+              data: buildDncEntryModal(entry, channelId, questionIndex, entryIndex)
+            };
+          }
+
+          return { content: '❌ Unknown selection' };
         }
       })(req, res, client);
 
@@ -41483,67 +41462,61 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id.startsWith('app_dnc_modal_')) {
-      // DNC modal submit — save DNC list and update the message
+    } else if (custom_id.startsWith('app_dnc_entry_modal_')) {
+      // Structured DNC entry modal submit — save/edit/delete entry
       try {
-        const remaining = custom_id.replace('app_dnc_modal_', '');
-        const lastUnderscore = remaining.lastIndexOf('_');
-        const channelId = remaining.substring(0, lastUnderscore);
-        const questionIndex = parseInt(remaining.substring(lastUnderscore + 1));
+        const { parseDncModalSubmit, getDncEntries, buildDncQuestionUI } = await import('./dncManager.js');
+        const remaining = custom_id.replace('app_dnc_entry_modal_', '');
+        // Parse: channelId_questionIndex_entryIndex (entryIndex can be 'new' or a number)
+        const parts = remaining.split('_');
+        const entryIndex = parts.pop(); // 'new' or index
+        const questionIndex = parseInt(parts.pop());
+        const channelId = parts.join('_'); // Channel IDs are snowflakes but rejoin in case
         const guildId = req.body.guild_id;
 
-        const dncText = req.body.data.components?.[0]?.component?.value || req.body.data.components?.[0]?.components?.[0]?.value || '';
-
         const playerData = await loadPlayerData();
-        if (playerData[guildId]?.applications?.[channelId]) {
-          playerData[guildId].applications[channelId].dncList = dncText;
-          await savePlayerData(playerData);
-          console.log(`🚫 DNC list saved for channel ${channelId}: ${dncText.length} chars`);
-        }
-
-        // Re-render the DNC question with the saved text
         const application = playerData[guildId]?.applications?.[channelId];
-        const config = application ? await getApplicationConfig(guildId, application.configId) : null;
-        const isLastQuestion = config ? questionIndex === config.questions.length - 1 : false;
-        const isSecondToLast = config ? questionIndex === config.questions.length - 2 : false;
-
-        const components = [
-          { type: 10, content: `## Q${questionIndex + 1}. Do Not Cast List\n\nIs there anyone in the community that you will not play with, and if so, why?` },
-          { type: 14 },
-          { type: 10, content: dncText ? `**Your DNC list:**\n${dncText}` : `-# *No players listed — you can add some with the button below.*` },
-          { type: 14 },
-          { type: 1, components: [{ type: 2, custom_id: `app_dnc_edit_${channelId}_${questionIndex}`, label: 'Edit DNC List', style: 2, emoji: { name: '✏️' } }] }
-        ];
-
-        if (!isLastQuestion) {
-          components.push({ type: 14 });
-          components.push({
-            type: 9, // Section
-            components: [{ type: 10, content: isSecondToLast ? '-# ✅ Ready? Submit your application' : '\u200b' }],
-            accessory: {
-              type: 2,
-              custom_id: `app_next_question_${channelId}_${questionIndex}`,
-              label: isSecondToLast ? 'Complete' : 'Next',
-              style: isSecondToLast ? 3 : 2
-            }
-          });
+        if (!application) {
+          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Application not found.', flags: InteractionResponseFlags.EPHEMERAL } });
         }
+
+        // Migrate legacy dncList to dncEntries if needed
+        if (!application.dncEntries) {
+          application.dncEntries = getDncEntries(application);
+        }
+
+        const existingEntry = entryIndex !== 'new' ? application.dncEntries[parseInt(entryIndex)] : null;
+        const parsed = parseDncModalSubmit(req.body.data.components, req.body.data.resolved, existingEntry);
+
+        if (parsed === null) {
+          // Name was cleared — delete the entry
+          if (entryIndex !== 'new' && application.dncEntries[parseInt(entryIndex)]) {
+            const removed = application.dncEntries.splice(parseInt(entryIndex), 1);
+            console.log(`🚫 DNC entry deleted for channel ${channelId}: ${removed[0]?.name}`);
+          }
+        } else if (entryIndex === 'new') {
+          application.dncEntries.push(parsed);
+          console.log(`🚫 DNC entry added for channel ${channelId}: ${parsed.name}`);
+        } else {
+          application.dncEntries[parseInt(entryIndex)] = parsed;
+          console.log(`🚫 DNC entry updated for channel ${channelId}: ${parsed.name}`);
+        }
+
+        await savePlayerData(playerData);
+
+        // Re-render the DNC question UI
+        const config = await getApplicationConfig(guildId, application.configId);
+        const container = buildDncQuestionUI(config, channelId, questionIndex, application);
 
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            components: [{
-              type: 17,
-              accent_color: 0xe74c3c,
-              components
-            }]
-          }
+          data: { components: [container] }
         });
       } catch (error) {
-        console.error('Error in app_dnc_modal handler:', error);
+        console.error('Error in app_dnc_entry_modal handler:', error);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: { content: '❌ Error saving DNC list.', flags: InteractionResponseFlags.EPHEMERAL }
+          data: { content: '❌ Error saving DNC entry.', flags: InteractionResponseFlags.EPHEMERAL }
         });
       }
 

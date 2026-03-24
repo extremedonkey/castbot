@@ -245,19 +245,37 @@ export async function generateSeasonAppRankingUI({
     console.log(`🔍 DEBUG: Name Display - Using fallback for left member: ${currentApp.displayName || currentApp.username}`);
   }
   
+  // Build DNC warnings and summary for this applicant
+  const { findDncConflicts, buildDncWarnings, buildDncSummary } = await import('./dncManager.js');
+  const appData = playerData[guildId]?.applications?.[currentApp.channelId] || {};
+  const dncConflicts = findDncConflicts(appData, allApplications, playerData, guildId);
+  const dncWarningText = buildDncWarnings(dncConflicts);
+  const dncSummaryText = buildDncSummary(appData);
+
   // Create Components V2 Container for Cast Ranking interface
   // IMPORTANT: This follows the current layout pattern with navigation above applicant info
+  const applicantInfo = `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${nameDisplay}${demographicInfo}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>\n${dncSummaryText}`;
+
   const containerComponents = [
     {
       type: 10, // Text Display component
       content: `## Cast Ranking - ${seasonName} | ${guild.name}`
     },
     navRow.toJSON(), // Navigation controls above applicant info
-    {
-      type: 10, // Text Display component
-      content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${nameDisplay}${demographicInfo}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
-    }
   ];
+
+  // DNC conflict warnings (above applicant info for visibility)
+  if (dncWarningText) {
+    containerComponents.push({
+      type: 10,
+      content: dncWarningText
+    });
+  }
+
+  containerComponents.push({
+    type: 10, // Text Display component
+    content: applicantInfo
+  });
   
   // Add applicant jump select menu if there are multiple applications
   if (allApplications.length > 1) {

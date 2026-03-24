@@ -166,7 +166,8 @@
       "Bash(git log:*)",
       "Skill(sharp)",
       "Skill(update-config)",
-      "WebFetch(domain:support-dev.discord.com)"
+      "WebFetch(domain:support-dev.discord.com)",
+      "WebFetch(domain:www.reddit.com)"
     ],
     "deny": []
   },
