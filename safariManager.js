@@ -17,7 +17,7 @@ import { DiscordRequest, countComponents, validateComponentLimit } from './utils
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { initializeGuildSafariData } from './safariInitialization.js';
 import { detectBundles, formatActionsWithBundleIndicators } from './safariActionBundler.js';
-import { parseTextEmoji } from './utils/emojiUtils.js';
+import { parseTextEmoji, parseAndValidateEmoji } from './utils/emojiUtils.js';
 import { 
     initializeEntityPoints,
     getEntityPoints,
@@ -2847,9 +2847,9 @@ async function createStoreDisplay(guildId, storeId, userId) {
                 .setStyle(userCurrency >= price ? ButtonStyle.Success : ButtonStyle.Secondary)
                 .setDisabled(userCurrency < price);
             
-            if (item.emoji && item.emoji.length <= 2) {
+            if (item.emoji) {
                 try {
-                    buyButton.setEmoji(item.emoji);
+                    buyButton.setEmoji(parseAndValidateEmoji(item.emoji, '📦').emoji);
                 } catch (error) {
                     console.log(`⚠️ Invalid emoji for item ${item.id}: ${item.emoji}`);
                 }
@@ -2962,7 +2962,7 @@ async function createStoreBrowseDisplay(guildId, storeId, userId, currentPage = 
                     label: `Buy ${item.name}`.slice(0, 80),
                     style: isSoldOut ? 2 : 1,
                     disabled: isSoldOut,
-                    emoji: item.emoji ? (parseTextEmoji(item.emoji)?.emoji || { name: '🛒' }) : { name: '🛒' }
+                    emoji: item.emoji ? parseAndValidateEmoji(item.emoji, '🛒').emoji : { name: '🛒' }
                 }
             });
 

@@ -2851,7 +2851,7 @@ async function createItemConditionUI(condition, actionId, conditionIndex, curren
   ];
   
   // Import emoji parsing utility
-  const { parseTextEmoji } = await import('./utils/emojiUtils.js');
+  const { parseAndValidateEmoji } = await import('./utils/emojiUtils.js');
   
   // ALWAYS add search option first
   const itemOptions = [{
@@ -2865,7 +2865,7 @@ async function createItemConditionUI(condition, actionId, conditionIndex, curren
     .slice(0, 24)
     .forEach(([itemId, item]) => {
       // Use existing emoji parser that handles all formats properly
-      const { cleanText, emoji } = parseTextEmoji(`${item.emoji || ''} ${item.name}`, '📦');
+      const { cleanText, emoji } = parseAndValidateEmoji(`${item.emoji || ''} ${item.name}`, '📦');
       
       itemOptions.push({
         label: cleanText || 'Unnamed Item',
@@ -2881,7 +2881,7 @@ async function createItemConditionUI(condition, actionId, conditionIndex, curren
     const selectedItem = items[condition.itemId];
     if (selectedItem) {
       // Replace last item with the selected item to ensure it shows
-      const { cleanText, emoji } = parseTextEmoji(`${selectedItem.emoji || ''} ${selectedItem.name}`, '📦');
+      const { cleanText, emoji } = parseAndValidateEmoji(`${selectedItem.emoji || ''} ${selectedItem.name}`, '📦');
       itemOptions[Math.min(itemOptions.length, 24)] = {
         label: cleanText || 'Unnamed Item',
         value: condition.itemId,

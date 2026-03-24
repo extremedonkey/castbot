@@ -23,8 +23,14 @@ export async function createSafeEmoji(emojiInput) {
       return undefined;
     }
 
-    // Handle Discord custom emojis (with ID)
+    // Handle Discord custom emojis (with ID) — validate exists in cache
     if (emoji.id) {
+      const { validateComponentEmoji } = await import('./utils/emojiUtils.js');
+      const validated = validateComponentEmoji(emoji, null);
+      if (!validated || !validated.id) {
+        console.log(`⚠️ Custom emoji ${emoji.name}:${emoji.id} not found in cache, skipping`);
+        return undefined;
+      }
       console.log(`✅ Using Discord custom emoji: ${emoji.name} (ID: ${emoji.id}${emoji.animated ? ', animated' : ''})`);
       return {
         name: emoji.name,

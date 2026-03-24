@@ -17,6 +17,7 @@ import { loadSafariContent, getCustomTerms, getAttributeDefinitions } from './sa
 import { createPlayerDisplaySection, createAttributeDisplaySection } from './playerManagement.js';
 import { extractCastlistData } from './castlistV2.js';
 import { countComponents } from './utils.js';
+import { parseAndValidateEmoji } from './utils/emojiUtils.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // CATEGORY DEFINITIONS — Three button rows
@@ -544,7 +545,7 @@ async function buildCardSelect(activeButton, targetMember, playerData, safariDat
           label: (store.name || storeId).slice(0, 100),
           value: storeId.slice(0, 100),
           description: `${itemCount} items available`,
-          emoji: { name: store.emoji || '🏪' }
+          emoji: parseAndValidateEmoji(store.emoji, '🏪').emoji
         });
       }
       if (options.length === 0) return buildDisabledSelect('No valid stores found');

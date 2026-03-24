@@ -7,6 +7,7 @@
  */
 
 import { InteractionResponseType } from 'discord-interactions';
+import { parseAndValidateEmoji } from './utils/emojiUtils.js';
 
 // Shared select options for limit and color
 const LIMIT_OPTIONS = [
@@ -114,12 +115,8 @@ export function buildQuickItemModal(coordinate, items) {
             label: (item.name || item.id).slice(0, 100),
             value: item.id
         };
-        // Only add emoji if it's a non-empty valid Unicode string (not object, not custom format)
-        if (typeof item.emoji === 'string' && item.emoji.length > 0 && item.emoji.length <= 10 && !item.emoji.startsWith('<')) {
-            opt.emoji = { name: item.emoji };
-        } else {
-            opt.emoji = { name: '📦' };
-        }
+        // Use validated emoji parsing (handles Unicode, custom, deleted emojis)
+        opt.emoji = parseAndValidateEmoji(item.emoji, '📦').emoji;
         if (item.description) opt.description = item.description.slice(0, 100);
         return opt;
     });

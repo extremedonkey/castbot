@@ -17603,7 +17603,7 @@ Your server is now ready for Tycoons gameplay!`;
                 custom_id: `safari_store_browse_${guildId}_${storeId}`,
                 label: `Browse ${store.name}`.slice(0, 80),
                 style: 1,
-                emoji: store.emoji ? (parseTextEmoji(store.emoji)?.emoji || { name: '🏪' }) : { name: '🏪' }
+                emoji: store.emoji ? parseAndValidateEmoji(store.emoji, '🏪').emoji : { name: '🏪' }
               }]
             }
           ]
@@ -18759,7 +18759,7 @@ Your server is now ready for Tycoons gameplay!`;
             Object.entries(items)
               .sort((a, b) => (b[1].metadata?.createdAt || 0) - (a[1].metadata?.createdAt || 0))
               .slice(0, maxItems).forEach(([itemId, item]) => {
-              const { cleanText, emoji } = parseTextEmoji(`${item.emoji || ''} ${item.name}`, '📦');
+              const { cleanText, emoji } = parseAndValidateEmoji(`${item.emoji || ''} ${item.name}`, '📦');
               const safeCleanText = cleanText || `${item.emoji || '📦'} ${item.name || 'Unnamed Item'}`;
               itemOptions.push({
                 label: safeCleanText.substring(0, 100),
@@ -35855,7 +35855,7 @@ Your server is now ready for Tycoons gameplay!`;
             .sort((a, b) => (b[1].metadata?.createdAt || 0) - (a[1].metadata?.createdAt || 0))
             .slice(0, 25)
             .map(([itemId, item]) => {
-              const { cleanText, emoji } = parseTextEmoji(item.emoji || '📦', '📦');
+              const { cleanText, emoji } = parseAndValidateEmoji(item.emoji || '📦', '📦');
               return {
                 label: item.name || 'Unnamed Item',
                 description: item.description?.substring(0, 100) || 'No description',
@@ -35974,7 +35974,7 @@ Your server is now ready for Tycoons gameplay!`;
             if (quantity > 0) {
               const item = items[itemId];
               if (item) {
-                const { cleanText, emoji } = parseTextEmoji(item.emoji || '📦', '📦');
+                const { cleanText, emoji } = parseAndValidateEmoji(item.emoji || '📦', '📦');
                 options.push({
                   label: `${item.name} (Qty: ${quantity})`,
                   description: item.description?.substring(0, 100) || 'No description',
@@ -42345,7 +42345,7 @@ Your server is now ready for Tycoons gameplay!`;
         // Add filtered items (limited to remaining slots)
         const maxItems = Object.keys(filteredItems).length > 10 ? 24 : 25;
         Object.entries(filteredItems).slice(0, maxItems).forEach(([itemId, item]) => {
-          const { cleanText, emoji } = parseTextEmoji(`${item.emoji || ''} ${item.name}`, '📦');
+          const { cleanText, emoji } = parseAndValidateEmoji(`${item.emoji || ''} ${item.name}`, '📦');
           const safeCleanText = cleanText || `${item.emoji || '📦'} ${item.name || 'Unnamed Item'}`;
           itemOptions.push({
             label: safeCleanText.substring(0, 100),
@@ -42505,7 +42505,7 @@ Your server is now ready for Tycoons gameplay!`;
         Object.entries(filteredItems)
           .slice(0, 24)
           .forEach(([itemId, item]) => {
-            const { cleanText, emoji } = parseTextEmoji(`${item.emoji || ''} ${item.name}`, '📦');
+            const { cleanText, emoji } = parseAndValidateEmoji(`${item.emoji || ''} ${item.name}`, '📦');
             const safeCleanText = cleanText || `${item.emoji || '📦'} ${item.name || 'Unnamed Item'}`;
             itemOptions.push({
               label: safeCleanText.substring(0, 100),
@@ -43659,7 +43659,7 @@ Your server is now ready for Tycoons gameplay!`;
             .slice(0, maxStoresToShow)
             .forEach(([storeId, store]) => {
               const itemCount = store.items?.length || 0;
-              const { cleanText, emoji } = parseTextEmoji(`${store.emoji || ''} ${store.name}`, '🏪');
+              const { cleanText, emoji } = parseAndValidateEmoji(`${store.emoji || ''} ${store.name}`, '🏪');
               const safeCleanText = cleanText || `${store.emoji || '🏪'} ${store.name || 'Unnamed Store'}`;
               storeOptions.push({
                 label: safeCleanText.slice(0, 100),
@@ -46919,7 +46919,7 @@ Your server is now ready for Tycoons gameplay!`;
                   value: id,
                   label: store.name || id,
                   description: store.description || store.storeownerText,
-                  emoji: store.emoji
+                  emoji: store.emoji ? parseAndValidateEmoji(store.emoji, '🏪').emoji : undefined
                 }));
             }
             break;
