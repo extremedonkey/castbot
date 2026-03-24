@@ -6,7 +6,7 @@
 
 import { StringSelectMenuBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
-import { parseTextEmoji } from './utils/emojiUtils.js';
+import { parseAndValidateEmoji } from './utils/emojiUtils.js';
 
 /**
  * Create reusable store selection UI
@@ -23,7 +23,8 @@ export async function createStoreSelectionUI(options) {
     backButtonId = 'prod_menu_back',
     backButtonLabel = '← Menu',
     backButtonEmoji = null,
-    searchTerm = ''
+    searchTerm = '',
+    client = null
   } = options;
 
   const safariData = await loadSafariContent();
@@ -133,7 +134,7 @@ export async function createStoreSelectionUI(options) {
   // Add stores in priority order
   prioritizedStores.forEach(([storeId, store]) => {
     const itemCount = store.items?.length || 0;
-    const { cleanText, emoji } = parseTextEmoji(`${store.emoji || ''} ${store.name}`, '🏪');
+    const { cleanText, emoji } = parseAndValidateEmoji(`${store.emoji || ''} ${store.name}`, '🏪', client);
     const safeCleanText = cleanText || `${store.emoji || '🏪'} ${store.name || 'Unnamed Store'}`;
 
     // Handle description and visual indicators based on action

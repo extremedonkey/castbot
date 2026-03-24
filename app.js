@@ -628,6 +628,7 @@ import {
   createEmojiForUser,
   parseEmojiCode,
   parseTextEmoji,
+  parseAndValidateEmoji,
   sanitizeEmojiName,
   checkRoleHasEmojis,
   clearEmojisForRole
@@ -1727,6 +1728,10 @@ scheduler.registerAction('execute_custom_action', async (payload, schedulerClien
 // Add these event handlers after client initialization
 client.once('ready', async () => {
   console.log('Discord client is ready!');
+
+  // Set emoji validation client for parseAndValidateEmoji
+  const { setEmojiClient } = await import('./utils/emojiUtils.js');
+  setEmojiClient(client);
 
   // Record restart timestamp for health monitoring
   try {
@@ -14708,7 +14713,7 @@ Your server is now ready for Tycoons gameplay!`;
               label: store.name,
               value: store.id,
               description: `${store.items?.length || 0} item(s)`,
-              emoji: store.emoji ? parseTextEmoji(store.emoji, '🏪').emoji : undefined,
+              emoji: store.emoji ? parseAndValidateEmoji(store.emoji, '🏪').emoji : undefined,
               default: currentGlobalStores.includes(store.id)
             }));
 
@@ -16455,7 +16460,8 @@ Your server is now ready for Tycoons gameplay!`;
           const { createStoreSelectionUI } = await import('./storeSelector.js');
           return await createStoreSelectionUI({
             guildId: context.guildId,
-            action: 'manage_items'
+            action: 'manage_items',
+            client: context.client
           });
         }
       })(req, res, client);
@@ -27130,7 +27136,8 @@ Your server is now ready for Tycoons gameplay!`;
                 guildId: context.guildId,
                 action: 'add_to_location',  // Pass location action to enable sorting
                 entityId: entityId,
-                preSelectedStores: coordStores  // CRITICAL: Pass current stores for sorting
+                preSelectedStores: coordStores,  // CRITICAL: Pass current stores for sorting
+                client: context.client
               });
 
               // Modify the working UI for location behavior
@@ -43540,7 +43547,8 @@ Your server is now ready for Tycoons gameplay!`;
           title: `🏪 Manage Stores at ${entityId}`,
           backButtonId: `entity_view_mode_map_cell_${entityId}`,
           backButtonLabel: '← Back',
-          backButtonEmoji: '📍'
+          backButtonEmoji: '📍',
+          client
         });
 
         // Return Components V2 response
@@ -43762,7 +43770,8 @@ Your server is now ready for Tycoons gameplay!`;
           backButtonId: `entity_view_mode_map_cell_${entityId}`,
           backButtonLabel: '← Back',
           backButtonEmoji: '📍',
-          searchTerm: searchTerm  // Pass search term for filtering
+          searchTerm: searchTerm,  // Pass search term for filtering
+          client
         });
 
         return res.send({

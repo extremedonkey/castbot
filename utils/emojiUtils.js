@@ -3,6 +3,17 @@
 
 import { loadPlayerData, savePlayerData, getPlayer } from '../storage.js';
 
+// Module-level Discord client reference for emoji validation
+let _emojiClient = null;
+
+/**
+ * Set the Discord client for emoji validation. Call once at startup.
+ * @param {Object} client - Discord.js client
+ */
+export function setEmojiClient(client) {
+    _emojiClient = client;
+}
+
 /**
  * Parse emoji code string to extract emoji information
  * @param {string} emojiCode - Discord emoji code like <:name:id> or <a:name:id>
@@ -86,6 +97,47 @@ export function parseTextEmoji(text, fallbackEmoji = '📦') {
             };
         }
     }
+}
+
+/**
+ * Validate a component emoji object — if it's a custom emoji (has id), verify it exists
+ * in the Discord client's cache. Falls back to defaultEmoji if the custom emoji is inaccessible.
+ * Use this at render time to prevent COMPONENT_INVALID_EMOJI errors from deleted/inaccessible emojis.
+ * @param {Object} emoji - Emoji object from parseTextEmoji (e.g. { name: 'pokemart', id: '123', animated: false })
+ * @param {string} fallback - Fallback Unicode emoji (default: '📦')
+ * @param {Object} [client] - Discord.js client for emoji cache validation (optional)
+ * @returns {Object} Safe emoji object for use in Discord components
+ */
+export function validateComponentEmoji(emoji, fallback = '📦', client = null) {
+    if (!emoji) return { name: fallback };
+
+    // Unicode emojis are always safe
+    if (!emoji.id) return emoji;
+
+    // Custom emoji — validate against client emoji cache
+    const effectiveClient = client || _emojiClient;
+    if (effectiveClient?.emojis?.cache) {
+        const exists = effectiveClient.emojis.cache.get(emoji.id);
+        if (!exists) {
+            console.log(`⚠️ [EMOJI] Custom emoji ${emoji.name}:${emoji.id} not found in cache, falling back to ${fallback}`);
+            return { name: fallback };
+        }
+    }
+
+    return emoji;
+}
+
+/**
+ * Parse text emoji AND validate it exists. Convenience wrapper combining parseTextEmoji + validateComponentEmoji.
+ * @param {string} text - Text potentially containing emoji
+ * @param {string} fallback - Fallback Unicode emoji
+ * @param {Object} [client] - Discord.js client for validation
+ * @returns {Object} { cleanText, emoji } with validated emoji
+ */
+export function parseAndValidateEmoji(text, fallback = '📦', client = null) {
+    const result = parseTextEmoji(text, fallback);
+    result.emoji = validateComponentEmoji(result.emoji, fallback, client);
+    return result;
 }
 
 /**

@@ -11,7 +11,7 @@ import {
 import { loadSafariContent, saveSafariContent, getCustomTerms } from './safariManager.js';
 import { EDIT_CONFIGS } from './editFramework.js';
 import { SAFARI_LIMITS } from './config/safariLimits.js';
-import { parseTextEmoji } from './utils/emojiUtils.js';
+import { parseAndValidateEmoji } from './utils/emojiUtils.js';
 
 /**
  * Create item selection UI for map locations
@@ -98,7 +98,7 @@ function createMapItemSelector(items, coordinate, searchTerm) {
     // Add item options
     Object.entries(items).forEach(([id, item]) => {
         const name = item.name || 'Unnamed Item';
-        const { cleanText, emoji: parsedEmoji } = parseTextEmoji(`${item.emoji || '📦'} ${name}`, '📦');
+        const { cleanText, emoji: parsedEmoji } = parseAndValidateEmoji(`${item.emoji || '📦'} ${name}`, '📦');
         const safeCleanText = cleanText || `${item.emoji || '📦'} ${name}`;
         
         options.push({
@@ -150,7 +150,8 @@ export async function createEntityManagementUI(options) {
         activeFieldGroup = null,  // For grouped modal editing
         searchTerm = '',
         mode = 'edit',       // Default to 'edit' mode - no separate view mode
-        userId = null        // Discord user ID for conditional UI elements
+        userId = null,       // Discord user ID for conditional UI elements
+        client = null        // Discord client for emoji validation
     } = options;
     
     // Load entity data
@@ -281,7 +282,7 @@ function createEntitySelector(entities, selectedId, entityType, searchTerm) {
             emoji = entity.emoji || getDefaultEmoji(entityType);
         }
         
-        const { cleanText, emoji: parsedEmoji } = parseTextEmoji(`${emoji} ${name}`, getDefaultEmoji(entityType));
+        const { cleanText, emoji: parsedEmoji } = parseAndValidateEmoji(`${emoji} ${name}`, getDefaultEmoji(entityType));
         const safeCleanText = cleanText || `${emoji} ${name}`;
         options.push({
             label: safeCleanText.substring(0, 100),
@@ -1008,7 +1009,7 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, all
         const maxSearchResults = Math.max(0, Math.min(searchResults.length, discordSlots, maxAddableItems));
         
         searchResults.slice(0, maxSearchResults).forEach(([id, item]) => {
-            const { cleanText, emoji: parsedEmoji } = parseTextEmoji(
+            const { cleanText, emoji: parsedEmoji } = parseAndValidateEmoji(
                 `${item.emoji || '📦'} ${item.name}`, 
                 '📦'
             );
@@ -1040,7 +1041,7 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, all
     
     // Add all stocked items to options with clear labeling
     stockedItemsToShow.forEach(([id, item]) => {
-        const { cleanText, emoji: parsedEmoji } = parseTextEmoji(
+        const { cleanText, emoji: parsedEmoji } = parseAndValidateEmoji(
             `${item.emoji || '📦'} ${item.name}`, 
             '📦'
         );
@@ -1064,7 +1065,7 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, all
         const remainingSlots = Math.max(0, Math.min(25 - options.length, maxAddable));
         
         availableItems.slice(0, remainingSlots).forEach(([id, item]) => {
-            const { cleanText, emoji: parsedEmoji } = parseTextEmoji(
+            const { cleanText, emoji: parsedEmoji } = parseAndValidateEmoji(
                 `${item.emoji || '📦'} ${item.name}`, 
                 '📦'
             );
@@ -1191,7 +1192,7 @@ function createPlayerItemSelector(items, targetUserId, searchTerm, selectedItemI
         const name = item.name || 'Unnamed Item';
         const emoji = item.emoji || '📦';
 
-        const { cleanText, emoji: parsedEmoji } = parseTextEmoji(`${emoji} ${name}`, '📦');
+        const { cleanText, emoji: parsedEmoji } = parseAndValidateEmoji(`${emoji} ${name}`, '📦');
         const safeCleanText = cleanText || `${emoji} ${name}`;
 
         options.push({

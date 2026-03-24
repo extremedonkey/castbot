@@ -16,7 +16,7 @@ import { createPlayerCard, extractCastlistData, createCastlistRows } from './cas
 import { getPlayer, updatePlayer, getGuildPronouns, getGuildTimezones, loadPlayerData } from './storage.js';
 import { hasStoresInGuild, getEligiblePlayersFixed, getCustomTerms, getPlayerAttributes, getAttributeDefinitions, loadSafariContent, MAX_GLOBAL_STORES } from './safariManager.js';
 import { countComponents } from './utils.js';
-import { parseTextEmoji } from './utils/emojiUtils.js';
+import { parseAndValidateEmoji } from './utils/emojiUtils.js';
 import { createBackButton } from './src/ui/backButtonFactory.js';
 import { getTimeUntilRegeneration } from './pointsManager.js';
 
@@ -619,7 +619,7 @@ export async function createPlayerManagementUI(options) {
               .setCustomId(`safari_store_browse_${guildId}_${storeId}`)
               .setLabel(store.name.slice(0, 80))
               .setStyle(ButtonStyle.Secondary)  // Grey style for global stores
-              .setEmoji(parseTextEmoji(store.emoji, '🏪').emoji);
+              .setEmoji(parseAndValidateEmoji(store.emoji, '🏪').emoji);
 
             currentRow.push(button);
 
