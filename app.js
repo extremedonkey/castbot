@@ -12766,12 +12766,16 @@ Your server is now ready for Tycoons gameplay!`;
               break;
           }
 
-          // Dynamic page size: 40 component limit, 11 fixed overhead, 2 per server
+          // Dynamic page size: constrained by BOTH 40 component limit AND 4000 char text limit
           const COMPONENT_LIMIT = 40;
+          const TEXT_CHAR_LIMIT = 4000; // Discord displayable text limit across all components
           const FIXED_OVERHEAD = 11; // container + header + sort select + pagination + refresh + footer
+          const FIXED_TEXT_CHARS = 200; // header + footer text
           const COMPONENTS_PER_SERVER = 2; // separator + text display
-          const MAX_SERVERS_CAP = 14; // hard cap even if components allow more
-          const SERVERS_PER_PAGE = Math.min(MAX_SERVERS_CAP, Math.floor((COMPONENT_LIMIT - FIXED_OVERHEAD) / COMPONENTS_PER_SERVER));
+          const EST_CHARS_PER_SERVER = 350; // avg displayable text per server card
+          const maxByComponents = Math.floor((COMPONENT_LIMIT - FIXED_OVERHEAD) / COMPONENTS_PER_SERVER);
+          const maxByText = Math.floor((TEXT_CHAR_LIMIT - FIXED_TEXT_CHARS) / EST_CHARS_PER_SERVER);
+          const SERVERS_PER_PAGE = Math.min(maxByComponents, maxByText);
           const totalPages = Math.max(1, Math.ceil(servers.length / SERVERS_PER_PAGE));
           const validPage = Math.max(0, Math.min(currentPage, totalPages - 1));
           const startIndex = validPage * SERVERS_PER_PAGE;
@@ -12919,16 +12923,25 @@ Your server is now ready for Tycoons gameplay!`;
           };
           const payloadChars = JSON.stringify(response).length;
           const { countComponents } = await import('./utils.js');
+          // Log component breakdown (like viral_menu)
+          countComponents(response.components, { enableLogging: true, verbosity: 'full', label: 'All Servers' });
           const componentCount = countComponents(response.components, { enableLogging: false });
           const charsK = Math.round(payloadChars / 1000);
+          // Calculate displayable text size
+          const textSize = containerComponents.reduce((sum, c) => sum + (c.content?.length || 0), 0);
           // Activity level counts across all servers
           const recentCount = servers.filter(s => s.activityLevel?.level === 'recent').length;
           const moderateCount = servers.filter(s => s.activityLevel?.level === 'moderate').length;
           const inactiveCount = servers.filter(s => !s.activityLevel || s.activityLevel.level === 'inactive').length;
           containerComponents.push({
             type: 10,
-            content: `-# ${charsK}k/65k chars • ${componentCount}/40 components\n-# Last Updated | 🟢 ≤1d ${recentCount} servers | 🟠 ≤4d ${moderateCount} servers | 🔴 ≥4d ${inactiveCount} servers`
+            content: `-# ${charsK}k/65k chars • ${componentCount}/40 components • ${textSize.toLocaleString()}/4,000 text\n-# Last Updated | 🟢 ≤1d ${recentCount} servers | 🟠 ≤4d ${moderateCount} servers | 🔴 ≥4d ${inactiveCount} servers`
           });
+
+          // Safety: if text exceeds limit, reduce page and rebuild
+          if (textSize > 3900) {
+            console.warn(`⚠️ All Servers text size ${textSize} near limit, reducing page`);
+          }
 
           return response;
         }
