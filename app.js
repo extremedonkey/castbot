@@ -12633,6 +12633,7 @@ Your server is now ready for Tycoons gameplay!`;
         id: custom_id.startsWith('all_servers_page_') ? 'all_servers_page' : custom_id === 'all_servers_sort' ? 'all_servers_sort' : custom_id.startsWith('all_servers_refresh_') ? 'all_servers_page' : 'prod_all_servers',
         deferred: true,
         updateMessage: custom_id !== 'prod_all_servers',
+        ephemeral: false,
         handler: async (context) => {
           if (context.userId !== '391415444084490240') {
             return { content: '❌ Access denied. This feature is restricted.' };
