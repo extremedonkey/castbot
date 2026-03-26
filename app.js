@@ -12855,6 +12855,10 @@ Your server is now ready for Tycoons gameplay!`;
             // Dates
             const createdDate = new Date(server.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
             details += `📅 Created: \`${createdDate}\``;
+            if (server.firstInstalled) {
+              const installedDate = new Date(server.firstInstalled).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+              details += ` • 🤖 Installed: \`${installedDate}\``;
+            }
             if (server.lastUpdated) {
               const updatedDate = new Date(server.lastUpdated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
               details += ` • 🔄 Updated: \`${updatedDate}\``;
