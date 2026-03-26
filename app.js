@@ -12730,10 +12730,12 @@ Your server is now ready for Tycoons gameplay!`;
                 server.activityLevel = stats.activityLevel || { emoji: '🔴', level: 'inactive' };
                 server.totalInteractions = stats.totalInteractions || 0;
                 server.lastActivityEntry = stats.lastActivityEntry || null;
-                // Consistency: active day ratio + trend
+                // Consistency: active day ratio + trend (fair for new installs)
                 const activeDays = Object.keys(stats.dailyActivity || {});
                 server.activeDayCount = activeDays.length;
-                server.activeDayRatio = activeDays.length / ANALYSIS_DAYS;
+                const daysInstalled = server.firstInstalled ? Math.ceil((Date.now() - server.firstInstalled) / (24 * 60 * 60 * 1000)) : ANALYSIS_DAYS;
+                server.analysisDays = Math.min(daysInstalled, ANALYSIS_DAYS);
+                server.activeDayRatio = server.analysisDays > 0 ? activeDays.length / server.analysisDays : 0;
                 // Trend: compare recent half vs older half
                 const recentDays = activeDays.filter(d => d >= midpointStr).length;
                 const olderDays = activeDays.filter(d => d < midpointStr).length;
@@ -12744,6 +12746,7 @@ Your server is now ready for Tycoons gameplay!`;
                 server.totalInteractions = 0;
                 server.lastActivityEntry = null;
                 server.activeDayCount = 0;
+                server.analysisDays = 42;
                 server.activeDayRatio = 0;
                 server.trend = '➡️';
               }
@@ -12756,6 +12759,7 @@ Your server is now ready for Tycoons gameplay!`;
               server.totalInteractions = 0;
               server.lastActivityEntry = null;
               server.activeDayCount = 0;
+              server.analysisDays = 42;
               server.activeDayRatio = 0;
               server.trend = '➡️';
             }
@@ -12903,7 +12907,7 @@ Your server is now ready for Tycoons gameplay!`;
 
             // Guild ID + consistency (small text)
             const pct = Math.round(server.activeDayRatio * 100);
-            details += `\n-# ID: ${server.id} | 📊 ${server.activeDayCount}/42 days (${pct}%) ${server.trend}`;
+            details += `\n-# ID: ${server.id} | 📊 ${server.activeDayCount}/${server.analysisDays || 42} days (${pct}%) ${server.trend}`;
 
             containerComponents.push({ type: 10, content: details });
           }
