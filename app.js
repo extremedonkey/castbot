@@ -12752,7 +12752,12 @@ Your server is now ready for Tycoons gameplay!`;
               break;
           }
 
-          const SERVERS_PER_PAGE = 5;
+          // Dynamic page size: 40 component limit, 11 fixed overhead, 2 per server
+          const COMPONENT_LIMIT = 40;
+          const FIXED_OVERHEAD = 11; // container + header + sort select + pagination + refresh + footer
+          const COMPONENTS_PER_SERVER = 2; // separator + text display
+          const MAX_SERVERS_CAP = 14; // hard cap even if components allow more
+          const SERVERS_PER_PAGE = Math.min(MAX_SERVERS_CAP, Math.floor((COMPONENT_LIMIT - FIXED_OVERHEAD) / COMPONENTS_PER_SERVER));
           const totalPages = Math.max(1, Math.ceil(servers.length / SERVERS_PER_PAGE));
           const validPage = Math.max(0, Math.min(currentPage, totalPages - 1));
           const startIndex = validPage * SERVERS_PER_PAGE;
