@@ -12756,12 +12756,11 @@ Your server is now ready for Tycoons gameplay!`;
 
           const containerComponents = [];
 
-          // Header (character count updated after building page)
-          const headerComponent = {
+          // Header
+          containerComponents.push({
             type: 10,
-            content: '' // placeholder, set after payload is built
-          };
-          containerComponents.push(headerComponent);
+            content: `## 🌐 All Servers | ${servers.length} total`
+          });
 
           // Sort select menu
           containerComponents.push({
@@ -12895,7 +12894,7 @@ Your server is now ready for Tycoons gameplay!`;
             }]
           });
 
-          // Calculate payload size and update header
+          // Build response and calculate stats
           const response = {
             flags: (1 << 15),
             components: [{
@@ -12904,8 +12903,14 @@ Your server is now ready for Tycoons gameplay!`;
               components: containerComponents
             }]
           };
-          const payloadSize = JSON.stringify(response).length;
-          headerComponent.content = `## 🌐 All Servers | ${servers.length} total\nPage ${validPage + 1}/${totalPages} • ${SORT_OPTIONS[currentSort].emoji} ${SORT_OPTIONS[currentSort].label} (${payloadSize.toLocaleString()}/65,536 chars)`;
+          const payloadChars = JSON.stringify(response).length;
+          const { countComponents } = await import('./utils.js');
+          const componentCount = countComponents(response.components, { enableLogging: false });
+          const charsK = Math.round(payloadChars / 1000);
+          containerComponents.push({
+            type: 10,
+            content: `-# ${charsK}k/65k chars • ${componentCount}/40 components`
+          });
 
           return response;
         }
