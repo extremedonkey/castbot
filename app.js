@@ -12652,6 +12652,8 @@ Your server is now ready for Tycoons gameplay!`;
             members_low: { label: 'Lowest member count', emoji: '👤', description: 'Fewest members first' },
             activity_new: { label: 'Most recent activity', emoji: '🟢', description: 'Most recently active first' },
             activity_old: { label: 'Oldest activity', emoji: '🔴', description: 'Least recently active first' },
+            consistency_high: { label: 'Most consistent', emoji: '📊', description: 'Highest active day ratio (42d)' },
+            consistency_low: { label: 'Least consistent', emoji: '📉', description: 'Lowest active day ratio (42d)' },
             created_new: { label: 'Newest server', emoji: '✨', description: 'Most recently created servers' },
             created_old: { label: 'Oldest server', emoji: '🏛️', description: 'Oldest created servers first' }
           };
@@ -12713,6 +12715,11 @@ Your server is now ready for Tycoons gameplay!`;
             const { parseUserAnalyticsLog, calculateServerStats, calculateActivityLevel } = await import('./src/analytics/serverUsageAnalytics.js');
             const logEntries = await parseUserAnalyticsLog();
             const serverStats = calculateServerStats(logEntries, 42);
+            const ANALYSIS_DAYS = 42;
+            const midpointDate = new Date();
+            midpointDate.setDate(midpointDate.getDate() - Math.floor(ANALYSIS_DAYS / 2));
+            const midpointStr = midpointDate.toISOString().split('T')[0];
+
             for (const server of servers) {
               const statsKey = Object.keys(serverStats).find(k => k.includes(server.id));
               if (statsKey) {
@@ -12721,11 +12728,22 @@ Your server is now ready for Tycoons gameplay!`;
                 server.activityLevel = stats.activityLevel || { emoji: '🔴', level: 'inactive' };
                 server.totalInteractions = stats.totalInteractions || 0;
                 server.lastActivityEntry = stats.lastActivityEntry || null;
+                // Consistency: active day ratio + trend
+                const activeDays = Object.keys(stats.dailyActivity || {});
+                server.activeDayCount = activeDays.length;
+                server.activeDayRatio = activeDays.length / ANALYSIS_DAYS;
+                // Trend: compare recent half vs older half
+                const recentDays = activeDays.filter(d => d >= midpointStr).length;
+                const olderDays = activeDays.filter(d => d < midpointStr).length;
+                server.trend = recentDays > olderDays ? '↗️' : recentDays < olderDays ? '↘️' : '➡️';
               } else {
                 server.lastActivity = 0;
                 server.activityLevel = { emoji: '🔴', level: 'inactive' };
                 server.totalInteractions = 0;
                 server.lastActivityEntry = null;
+                server.activeDayCount = 0;
+                server.activeDayRatio = 0;
+                server.trend = '➡️';
               }
             }
           } catch (err) {
@@ -12735,6 +12753,9 @@ Your server is now ready for Tycoons gameplay!`;
               server.activityLevel = { emoji: '🔴', level: 'inactive' };
               server.totalInteractions = 0;
               server.lastActivityEntry = null;
+              server.activeDayCount = 0;
+              server.activeDayRatio = 0;
+              server.trend = '➡️';
             }
           }
 
@@ -12757,6 +12778,12 @@ Your server is now ready for Tycoons gameplay!`;
               break;
             case 'activity_old':
               servers.sort((a, b) => (a.lastActivity || Infinity) - (b.lastActivity || Infinity));
+              break;
+            case 'consistency_high':
+              servers.sort((a, b) => b.activeDayRatio - a.activeDayRatio || (b.totalInteractions - a.totalInteractions));
+              break;
+            case 'consistency_low':
+              servers.sort((a, b) => a.activeDayRatio - b.activeDayRatio || (a.totalInteractions - b.totalInteractions));
               break;
             case 'created_new':
               servers.sort((a, b) => b.createdAt - a.createdAt);
@@ -12862,8 +12889,9 @@ Your server is now ready for Tycoons gameplay!`;
               details += `\n> 🪵 No activity in last 42 days`;
             }
 
-            // Guild ID (small text)
-            details += `\n-# ID: ${server.id}`;
+            // Guild ID + consistency (small text)
+            const pct = Math.round(server.activeDayRatio * 100);
+            details += `\n-# ID: ${server.id} | 📊 ${server.activeDayCount}/42 days (${pct}%) ${server.trend}`;
 
             containerComponents.push({ type: 10, content: details });
           }
