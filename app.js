@@ -12655,7 +12655,9 @@ Your server is now ready for Tycoons gameplay!`;
             consistency_high: { label: 'Most consistent', emoji: '📊', description: 'Highest active day ratio (42d)' },
             consistency_low: { label: 'Least consistent', emoji: '📉', description: 'Lowest active day ratio (42d)' },
             created_new: { label: 'Newest server', emoji: '✨', description: 'Most recently created servers' },
-            created_old: { label: 'Oldest server', emoji: '🏛️', description: 'Oldest created servers first' }
+            created_old: { label: 'Oldest server', emoji: '🏛️', description: 'Oldest created servers first' },
+            name_az: { label: 'Name A–Z', emoji: '🔤', description: 'Alphabetical order' },
+            name_za: { label: 'Name Z–A', emoji: '🔡', description: 'Reverse alphabetical order' }
           };
 
           let currentSort = 'install_new'; // default
@@ -12790,6 +12792,12 @@ Your server is now ready for Tycoons gameplay!`;
               break;
             case 'created_old':
               servers.sort((a, b) => a.createdAt - b.createdAt);
+              break;
+            case 'name_az':
+              servers.sort((a, b) => a.name.localeCompare(b.name));
+              break;
+            case 'name_za':
+              servers.sort((a, b) => b.name.localeCompare(a.name));
               break;
           }
 
