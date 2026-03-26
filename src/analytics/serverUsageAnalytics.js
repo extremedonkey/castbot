@@ -784,9 +784,10 @@ function calculateOptimalServerLimit(rankedServers) {
 /**
  * Parse recent server installs from analytics log
  * @param {number} limit - Number of most recent installs to return (default: 5)
+ * @param {Object} playerData - Optional playerData to enrich unknown owners
  * @returns {Array} Array of recent server installs
  */
-async function parseRecentServerInstalls(limit = 5) {
+async function parseRecentServerInstalls(limit = 5, playerData = null) {
   try {
     if (!fs.existsSync(USER_ANALYTICS_LOG)) {
       return [];
@@ -872,10 +873,25 @@ async function parseRecentServerInstalls(limit = 5) {
     }
     
     // Sort by timestamp (newest first) and return the most recent ones
-    return serverInstalls
+    const results = serverInstalls
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
       .slice(0, limit);
-      
+
+    // Enrich unknown owners from playerData if available
+    if (playerData) {
+      for (const install of results) {
+        if (install.owner.startsWith('Unknown') && install.serverId) {
+          const pd = playerData[install.serverId];
+          if (pd?.ownerInfo) {
+            const name = pd.ownerInfo.globalName || pd.ownerInfo.username;
+            install.owner = `${name} (@${pd.ownerInfo.username})`;
+          }
+        }
+      }
+    }
+
+    return results;
+
   } catch (error) {
     console.error('Error parsing recent server installs:', error);
     return [];
@@ -888,11 +904,11 @@ async function parseRecentServerInstalls(limit = 5) {
  * @param {number} currentPage - Current page number (0-indexed)
  * @returns {Object} Discord Components V2 response data
  */
-async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
+async function formatServerUsageForDiscordV2(summary, currentPage = 0, playerData = null) {
   const { rankedServers, totalInteractions, totalUniqueUsers, activeServers, period, insights } = summary;
-  
-  // Get recent server installs (most recent 5, regardless of time)
-  const recentInstalls = await parseRecentServerInstalls(5);
+
+  // Get recent server installs (most recent 5, enriched with playerData)
+  const recentInstalls = await parseRecentServerInstalls(5, playerData);
   
   // Pagination configuration
   const SERVERS_PER_PAGE = 10; // Fixed number of servers per page

@@ -1737,7 +1737,8 @@ client.once('ready', async () => {
         // Post new server install announcement to Discord analytics channel
         try {
           const { logNewServerInstall } = await import('./src/analytics/analyticsLogger.js');
-          await logNewServerInstall(guild, null); // ownerInfo handled in ensureServerData
+          const pdGuild = playerData[guild.id];
+          await logNewServerInstall(guild, pdGuild?.ownerInfo || null);
         } catch (error) {
           console.error('Error posting server install announcement:', error);
           // Don't break server initialization if announcement fails
@@ -1853,7 +1854,7 @@ client.on('guildCreate', async (guild) => {
   // Log new server install to analytics
   try {
     const { logNewServerInstall } = await import('./src/analytics/analyticsLogger.js');
-    await logNewServerInstall(guild, null);
+    await logNewServerInstall(guild, playerData[guild.id]?.ownerInfo || null);
   } catch (error) {
     console.error(`❌ Failed to log server install for ${guild.name}:`, error);
   }
@@ -12437,7 +12438,9 @@ Your server is now ready for Tycoons gameplay!`;
           console.log('✅ DEBUG: Summary generated, formatting for Discord...');
           
           // Format for Discord display - use Components V2 with page 0
-          const discordResponse = await formatServerUsageForDiscordV2(summary, 0);
+          const { loadPlayerData: loadPD } = await import('./storage.js');
+          const pd = await loadPD();
+          const discordResponse = await formatServerUsageForDiscordV2(summary, 0, pd);
           
           console.log(`✅ DEBUG: Formatted for Discord using Components V2, payload size:`, JSON.stringify(discordResponse).length, 'characters');
           
@@ -12620,8 +12623,10 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Generate fresh summary and display requested page
           const { generateServerUsageSummary, formatServerUsageForDiscordV2 } = await import('./src/analytics/serverUsageAnalytics.js');
+          const { loadPlayerData: loadPD } = await import('./storage.js');
           const summary = await generateServerUsageSummary(42);
-          const discordResponse = await formatServerUsageForDiscordV2(summary, targetPage);
+          const pd = await loadPD();
+          const discordResponse = await formatServerUsageForDiscordV2(summary, targetPage, pd);
           
           console.log(`✅ SUCCESS: server_stats_page - displayed page ${targetPage + 1}`);
           return discordResponse;
