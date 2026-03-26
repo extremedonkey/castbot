@@ -12708,24 +12708,33 @@ Your server is now ready for Tycoons gameplay!`;
             });
           }
 
-          // Load activity data if sorting by activity
-          if (currentSort === 'activity_new' || currentSort === 'activity_old') {
-            try {
-              const { parseUserAnalyticsLog, calculateServerStats } = await import('./src/analytics/serverUsageAnalytics.js');
-              const logEntries = await parseUserAnalyticsLog();
-              const serverStats = calculateServerStats(logEntries, 42);
-              // Merge lastActivity into servers
-              for (const server of servers) {
-                const statsKey = Object.keys(serverStats).find(k => k.includes(server.id));
-                if (statsKey) {
-                  server.lastActivity = serverStats[statsKey].lastActivity || 0;
-                } else {
-                  server.lastActivity = 0;
-                }
+          // Load analytics data for activity indicators and recent interaction display
+          try {
+            const { parseUserAnalyticsLog, calculateServerStats, calculateActivityLevel } = await import('./src/analytics/serverUsageAnalytics.js');
+            const logEntries = await parseUserAnalyticsLog();
+            const serverStats = calculateServerStats(logEntries, 42);
+            for (const server of servers) {
+              const statsKey = Object.keys(serverStats).find(k => k.includes(server.id));
+              if (statsKey) {
+                const stats = serverStats[statsKey];
+                server.lastActivity = stats.lastActivity || 0;
+                server.activityLevel = stats.activityLevel || { emoji: '🔴', level: 'inactive' };
+                server.totalInteractions = stats.totalInteractions || 0;
+                server.lastActivityEntry = stats.lastActivityEntry || null;
+              } else {
+                server.lastActivity = 0;
+                server.activityLevel = { emoji: '🔴', level: 'inactive' };
+                server.totalInteractions = 0;
+                server.lastActivityEntry = null;
               }
-            } catch (err) {
-              console.error('⚠️ Failed to load activity data for sort:', err.message);
-              for (const server of servers) server.lastActivity = 0;
+            }
+          } catch (err) {
+            console.error('⚠️ Failed to load activity data:', err.message);
+            for (const server of servers) {
+              server.lastActivity = 0;
+              server.activityLevel = { emoji: '🔴', level: 'inactive' };
+              server.totalInteractions = 0;
+              server.lastActivityEntry = null;
             }
           }
 
@@ -12798,7 +12807,7 @@ Your server is now ready for Tycoons gameplay!`;
           for (const server of pageServers) {
             containerComponents.push({ type: 14 }); // Separator
 
-            let details = `### ${server.name}\n`;
+            let details = `### ${server.activityLevel?.emoji || '🔴'} ${server.name}\n`;
             details += `👥 **${server.memberCount.toLocaleString()}** members`;
             if (server.verified) details += ' • ✅ Verified';
             if (server.partnered) details += ' • 🤝 Partnered';
@@ -12812,21 +12821,9 @@ Your server is now ready for Tycoons gameplay!`;
               details += `👑 Owner ID: \`${server.ownerId}\`\n`;
             }
 
-            // Description
-            if (server.description) {
-              const desc = server.description.length > 80
-                ? server.description.substring(0, 80) + '...'
-                : server.description;
-              details += `📝 ${desc}\n`;
-            }
-
             // Dates
             const createdDate = new Date(server.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
             details += `📅 Created: \`${createdDate}\``;
-            if (server.firstInstalled) {
-              const installedDate = new Date(server.firstInstalled).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-              details += ` • 🤖 Bot installed: \`${installedDate}\``;
-            }
             if (server.lastUpdated) {
               const updatedDate = new Date(server.lastUpdated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
               details += ` • 🔄 Updated: \`${updatedDate}\``;
@@ -12847,6 +12844,18 @@ Your server is now ready for Tycoons gameplay!`;
               details += `⚙️ ${features.join(' • ')}`;
             } else {
               details += `⚙️ No features configured`;
+            }
+
+            // Recent activity line
+            if (server.lastActivityEntry) {
+              const lastEntry = server.lastActivityEntry;
+              const timestampMatch = lastEntry.rawLine?.match(/^(\[[^\]]+\] \w{3} \d{1,2} \w{3} \d{2})/);
+              const ts = timestampMatch ? timestampMatch[1] : '[Unknown]';
+              const user = lastEntry.user?.displayName || lastEntry.user?.username || 'Unknown';
+              const action = lastEntry.actionDetail?.trim() || '';
+              details += `\n> 🪵 Recent: \`${ts}\` | ${user} | ${action}`;
+            } else {
+              details += `\n> 🪵 No activity in last 42 days`;
             }
 
             // Guild ID (small text)
@@ -12912,9 +12921,13 @@ Your server is now ready for Tycoons gameplay!`;
           const { countComponents } = await import('./utils.js');
           const componentCount = countComponents(response.components, { enableLogging: false });
           const charsK = Math.round(payloadChars / 1000);
+          // Activity level counts across all servers
+          const recentCount = servers.filter(s => s.activityLevel?.level === 'recent').length;
+          const moderateCount = servers.filter(s => s.activityLevel?.level === 'moderate').length;
+          const inactiveCount = servers.filter(s => !s.activityLevel || s.activityLevel.level === 'inactive').length;
           containerComponents.push({
             type: 10,
-            content: `-# ${charsK}k/65k chars • ${componentCount}/40 components`
+            content: `-# ${charsK}k/65k chars • ${componentCount}/40 components\n-# Last Updated | 🟢 ≤1d ${recentCount} servers | 🟠 ≤4d ${moderateCount} servers | 🔴 ≥4d ${inactiveCount} servers`
           });
 
           return response;
