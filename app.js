@@ -12756,11 +12756,12 @@ Your server is now ready for Tycoons gameplay!`;
 
           const containerComponents = [];
 
-          // Header
-          containerComponents.push({
+          // Header (character count updated after building page)
+          const headerComponent = {
             type: 10,
-            content: `## 🌐 All Servers | ${servers.length} total\nPage ${validPage + 1}/${totalPages} • ${SORT_OPTIONS[currentSort].emoji} ${SORT_OPTIONS[currentSort].label}`
-          });
+            content: '' // placeholder, set after payload is built
+          };
+          containerComponents.push(headerComponent);
 
           // Sort select menu
           containerComponents.push({
@@ -12894,7 +12895,8 @@ Your server is now ready for Tycoons gameplay!`;
             }]
           });
 
-          return {
+          // Calculate payload size and update header
+          const response = {
             flags: (1 << 15),
             components: [{
               type: 17,
@@ -12902,6 +12904,10 @@ Your server is now ready for Tycoons gameplay!`;
               components: containerComponents
             }]
           };
+          const payloadSize = JSON.stringify(response).length;
+          headerComponent.content = `## 🌐 All Servers | ${servers.length} total\nPage ${validPage + 1}/${totalPages} • ${SORT_OPTIONS[currentSort].emoji} ${SORT_OPTIONS[currentSort].label} (${payloadSize.toLocaleString()}/65,536 chars)`;
+
+          return response;
         }
       })(req, res, client);
     } else if (custom_id === 'prod_nuke_category') {
