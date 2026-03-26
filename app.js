@@ -12627,21 +12627,46 @@ Your server is now ready for Tycoons gameplay!`;
           return discordResponse;
         }
       })(req, res, client);
-    } else if (custom_id === 'prod_all_servers' || custom_id.startsWith('all_servers_page_')) {
+    } else if (custom_id === 'prod_all_servers' || custom_id.startsWith('all_servers_page_') || custom_id === 'all_servers_sort' || custom_id.startsWith('all_servers_refresh_')) {
       // All Servers listing - shows every guild the bot is installed in
       return ButtonHandlerFactory.create({
-        id: custom_id.startsWith('all_servers_page_') ? 'all_servers_page' : 'prod_all_servers',
+        id: custom_id.startsWith('all_servers_page_') ? 'all_servers_page' : custom_id === 'all_servers_sort' ? 'all_servers_sort' : custom_id.startsWith('all_servers_refresh_') ? 'all_servers_page' : 'prod_all_servers',
         deferred: true,
-        updateMessage: custom_id.startsWith('all_servers_page_'), // Update for pagination, new msg for initial
-        ephemeral: true,
+        updateMessage: custom_id !== 'prod_all_servers',
         handler: async (context) => {
           if (context.userId !== '391415444084490240') {
             return { content: '❌ Access denied. This feature is restricted.' };
           }
 
-          const currentPage = custom_id.startsWith('all_servers_page_')
-            ? parseInt(custom_id.split('_')[3])
-            : 0;
+          // Determine sort type and page
+          const SORT_OPTIONS = {
+            install_new: { label: 'Most recent install', emoji: '🆕', description: 'Newest bot installs first' },
+            install_old: { label: 'Oldest install', emoji: '📜', description: 'Oldest bot installs first' },
+            members_high: { label: 'Highest member count', emoji: '👥', description: 'Most members first' },
+            members_low: { label: 'Lowest member count', emoji: '👤', description: 'Fewest members first' },
+            activity_new: { label: 'Most recent activity', emoji: '🟢', description: 'Most recently active first' },
+            activity_old: { label: 'Oldest activity', emoji: '🔴', description: 'Least recently active first' },
+            created_new: { label: 'Newest server', emoji: '✨', description: 'Most recently created servers' },
+            created_old: { label: 'Oldest server', emoji: '🏛️', description: 'Oldest created servers first' }
+          };
+
+          let currentSort = 'install_new'; // default
+          let currentPage = 0;
+
+          // Parse sort and page from custom_id variant
+          const cid = custom_id;
+          if (cid === 'all_servers_sort') {
+            currentSort = context.values?.[0] || 'install_new';
+          } else if (cid.startsWith('all_servers_page_')) {
+            const parts = cid.split('_');
+            currentPage = parseInt(parts[3]) || 0;
+            currentSort = parts[4] || 'install_new';
+          } else if (cid.startsWith('all_servers_refresh_')) {
+            currentSort = cid.replace('all_servers_refresh_', '') || 'install_new';
+          }
+          // prod_all_servers uses defaults (page 0, install_new)
+
+          if (!SORT_OPTIONS[currentSort]) currentSort = 'install_new';
 
           const { loadPlayerData } = await import('./storage.js');
           const playerData = await loadPlayerData();
@@ -12657,7 +12682,6 @@ Your server is now ready for Tycoons gameplay!`;
               ownerId: guild.ownerId,
               ownerInfo: pd.ownerInfo || null,
               description: guild.description || null,
-              preferredLocale: guild.preferredLocale || 'en-US',
               createdAt: guild.createdTimestamp,
               firstInstalled: pd.firstInstalled || null,
               lastUpdated: pd.lastUpdated || null,
@@ -12673,8 +12697,54 @@ Your server is now ready for Tycoons gameplay!`;
             });
           }
 
-          // Sort by member count descending
-          servers.sort((a, b) => b.memberCount - a.memberCount);
+          // Load activity data if sorting by activity
+          if (currentSort === 'activity_new' || currentSort === 'activity_old') {
+            try {
+              const { parseUserAnalyticsLog, calculateServerStats } = await import('./src/analytics/serverUsageAnalytics.js');
+              const logEntries = await parseUserAnalyticsLog();
+              const serverStats = calculateServerStats(logEntries, 42);
+              // Merge lastActivity into servers
+              for (const server of servers) {
+                const statsKey = Object.keys(serverStats).find(k => k.includes(server.id));
+                if (statsKey) {
+                  server.lastActivity = serverStats[statsKey].lastActivity || 0;
+                } else {
+                  server.lastActivity = 0;
+                }
+              }
+            } catch (err) {
+              console.error('⚠️ Failed to load activity data for sort:', err.message);
+              for (const server of servers) server.lastActivity = 0;
+            }
+          }
+
+          // Sort based on selected option
+          switch (currentSort) {
+            case 'install_new':
+              servers.sort((a, b) => (b.firstInstalled || 0) - (a.firstInstalled || 0));
+              break;
+            case 'install_old':
+              servers.sort((a, b) => (a.firstInstalled || Infinity) - (b.firstInstalled || Infinity));
+              break;
+            case 'members_high':
+              servers.sort((a, b) => b.memberCount - a.memberCount);
+              break;
+            case 'members_low':
+              servers.sort((a, b) => a.memberCount - b.memberCount);
+              break;
+            case 'activity_new':
+              servers.sort((a, b) => (b.lastActivity || 0) - (a.lastActivity || 0));
+              break;
+            case 'activity_old':
+              servers.sort((a, b) => (a.lastActivity || Infinity) - (b.lastActivity || Infinity));
+              break;
+            case 'created_new':
+              servers.sort((a, b) => b.createdAt - a.createdAt);
+              break;
+            case 'created_old':
+              servers.sort((a, b) => a.createdAt - b.createdAt);
+              break;
+          }
 
           const SERVERS_PER_PAGE = 5;
           const totalPages = Math.max(1, Math.ceil(servers.length / SERVERS_PER_PAGE));
@@ -12688,7 +12758,24 @@ Your server is now ready for Tycoons gameplay!`;
           // Header
           containerComponents.push({
             type: 10,
-            content: `## 🌐 All Servers | ${servers.length} total\nPage ${validPage + 1}/${totalPages} • Sorted by member count`
+            content: `## 🌐 All Servers | ${servers.length} total\nPage ${validPage + 1}/${totalPages} • ${SORT_OPTIONS[currentSort].emoji} ${SORT_OPTIONS[currentSort].label}`
+          });
+
+          // Sort select menu
+          containerComponents.push({
+            type: 1,
+            components: [{
+              type: 3,
+              custom_id: 'all_servers_sort',
+              placeholder: `${SORT_OPTIONS[currentSort].emoji} ${SORT_OPTIONS[currentSort].label}`,
+              options: Object.entries(SORT_OPTIONS).map(([value, opt]) => ({
+                label: opt.label,
+                value,
+                emoji: { name: opt.emoji },
+                description: opt.description,
+                default: value === currentSort
+              }))
+            }]
           });
 
           // Render each server
@@ -12709,15 +12796,13 @@ Your server is now ready for Tycoons gameplay!`;
               details += `👑 Owner ID: \`${server.ownerId}\`\n`;
             }
 
-            // Locale & Description
-            details += `🌍 Locale: \`${server.preferredLocale}\``;
+            // Description
             if (server.description) {
               const desc = server.description.length > 80
                 ? server.description.substring(0, 80) + '...'
                 : server.description;
-              details += ` • 📝 ${desc}`;
+              details += `📝 ${desc}\n`;
             }
-            details += '\n';
 
             // Dates
             const createdDate = new Date(server.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -12765,7 +12850,7 @@ Your server is now ready for Tycoons gameplay!`;
                 const end = Math.min((page + 1) * SERVERS_PER_PAGE, servers.length);
                 paginationButtons.push({
                   type: 2,
-                  custom_id: `all_servers_page_${page}`,
+                  custom_id: `all_servers_page_${page}_${currentSort}`,
                   label: `${start}-${end}`,
                   style: page === validPage ? 1 : 2,
                   disabled: page === validPage
@@ -12781,7 +12866,7 @@ Your server is now ready for Tycoons gameplay!`;
                 const end = Math.min((page + 1) * SERVERS_PER_PAGE, servers.length);
                 paginationButtons.push({
                   type: 2,
-                  custom_id: `all_servers_page_${page}`,
+                  custom_id: `all_servers_page_${page}_${currentSort}`,
                   label: `${start}-${end}`,
                   style: page === validPage ? 1 : 2,
                   disabled: page === validPage
@@ -12795,18 +12880,13 @@ Your server is now ready for Tycoons gameplay!`;
             });
           }
 
-          // Back + Refresh buttons
+          // Refresh button
           containerComponents.push({ type: 14 });
           containerComponents.push({
             type: 1,
             components: [{
               type: 2,
-              custom_id: 'data_admin',
-              label: '← Data',
-              style: 2
-            }, {
-              type: 2,
-              custom_id: 'prod_all_servers',
+              custom_id: `all_servers_refresh_${currentSort}`,
               label: 'Refresh',
               style: 2,
               emoji: { name: '🔄' }

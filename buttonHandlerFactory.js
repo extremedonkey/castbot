@@ -658,10 +658,28 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'analytics'
   },
-  'all_servers_page': {
+  'all_servers_page_*': {
     label: 'Server List Page',
     description: 'Paginate through the full server list',
     emoji: '🌐',
+    style: 'Secondary',
+    parent: 'prod_all_servers',
+    restrictedUser: '391415444084490240',
+    category: 'analytics'
+  },
+  'all_servers_sort': {
+    label: 'Sort Servers',
+    description: 'Change sort order of server list',
+    emoji: '🔀',
+    style: 'Secondary',
+    parent: 'prod_all_servers',
+    restrictedUser: '391415444084490240',
+    category: 'analytics'
+  },
+  'all_servers_refresh_*': {
+    label: 'Refresh Server List',
+    description: 'Refresh the server list data',
+    emoji: '🔄',
     style: 'Secondary',
     parent: 'prod_all_servers',
     restrictedUser: '391415444084490240',
