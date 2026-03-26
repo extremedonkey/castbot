@@ -12627,10 +12627,10 @@ Your server is now ready for Tycoons gameplay!`;
           return discordResponse;
         }
       })(req, res, client);
-    } else if (custom_id === 'prod_all_servers' || custom_id.startsWith('all_servers_page_') || custom_id === 'all_servers_sort' || custom_id.startsWith('all_servers_refresh_')) {
+    } else if (custom_id === 'prod_all_servers' || custom_id.startsWith('all_servers_page_') || custom_id === 'all_servers_sort' || custom_id === 'all_servers_nav' || custom_id.startsWith('all_servers_refresh_')) {
       // All Servers listing - shows every guild the bot is installed in
       return ButtonHandlerFactory.create({
-        id: custom_id.startsWith('all_servers_page_') ? 'all_servers_page' : custom_id === 'all_servers_sort' ? 'all_servers_sort' : custom_id.startsWith('all_servers_refresh_') ? 'all_servers_page' : 'prod_all_servers',
+        id: custom_id === 'all_servers_nav' ? 'all_servers_nav' : custom_id.startsWith('all_servers_page_') ? 'all_servers_page' : custom_id === 'all_servers_sort' ? 'all_servers_sort' : custom_id.startsWith('all_servers_refresh_') ? 'all_servers_page' : 'prod_all_servers',
         deferred: true,
         updateMessage: custom_id !== 'prod_all_servers',
         ephemeral: false,
@@ -12658,6 +12658,11 @@ Your server is now ready for Tycoons gameplay!`;
           const cid = custom_id;
           if (cid === 'all_servers_sort') {
             currentSort = context.values?.[0] || 'install_new';
+          } else if (cid === 'all_servers_nav') {
+            // Page select — value is "{page}_{sort}"
+            const val = (context.values?.[0] || '0_install_new').split('_');
+            currentPage = parseInt(val[0]) || 0;
+            currentSort = val.slice(1).join('_') || 'install_new';
           } else if (cid.startsWith('all_servers_page_')) {
             const parts = cid.split('_');
             currentPage = parseInt(parts[3]) || 0;
@@ -12840,44 +12845,34 @@ Your server is now ready for Tycoons gameplay!`;
             containerComponents.push({ type: 10, content: details });
           }
 
-          // Pagination buttons
+          // Pagination select (max 25 options for string select)
           if (totalPages > 1) {
             containerComponents.push({ type: 14 }); // Separator
 
-            const paginationButtons = [];
-            if (totalPages <= 5) {
-              for (let page = 0; page < totalPages; page++) {
-                const start = (page * SERVERS_PER_PAGE) + 1;
-                const end = Math.min((page + 1) * SERVERS_PER_PAGE, servers.length);
-                paginationButtons.push({
-                  type: 2,
-                  custom_id: `all_servers_page_${page}_${currentSort}`,
-                  label: `${start}-${end}`,
-                  style: page === validPage ? 1 : 2,
-                  disabled: page === validPage
-                });
-              }
-            } else {
-              const pagesToShow = new Set([0, totalPages - 1, validPage]);
-              if (validPage > 0) pagesToShow.add(validPage - 1);
-              if (validPage < totalPages - 1) pagesToShow.add(validPage + 1);
-              const sorted = Array.from(pagesToShow).sort((a, b) => a - b).slice(0, 5);
-              for (const page of sorted) {
-                const start = (page * SERVERS_PER_PAGE) + 1;
-                const end = Math.min((page + 1) * SERVERS_PER_PAGE, servers.length);
-                paginationButtons.push({
-                  type: 2,
-                  custom_id: `all_servers_page_${page}_${currentSort}`,
-                  label: `${start}-${end}`,
-                  style: page === validPage ? 1 : 2,
-                  disabled: page === validPage
-                });
-              }
+            const pageOptions = [];
+            for (let page = 0; page < Math.min(totalPages, 25); page++) {
+              const start = (page * SERVERS_PER_PAGE) + 1;
+              const end = Math.min((page + 1) * SERVERS_PER_PAGE, servers.length);
+              // Preview server names for this page
+              const pageSlice = servers.slice(page * SERVERS_PER_PAGE, (page + 1) * SERVERS_PER_PAGE);
+              const namePreview = pageSlice.map(s => s.name).join(', ');
+              const desc = namePreview.length > 100 ? namePreview.substring(0, 97) + '...' : namePreview;
+              pageOptions.push({
+                label: `Servers ${start}–${end}`,
+                value: `${page}_${currentSort}`,
+                description: desc,
+                default: page === validPage
+              });
             }
 
             containerComponents.push({
               type: 1,
-              components: paginationButtons
+              components: [{
+                type: 3,
+                custom_id: 'all_servers_nav',
+                placeholder: `Page ${validPage + 1}/${totalPages}`,
+                options: pageOptions
+              }]
             });
           }
 

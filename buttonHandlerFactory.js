@@ -676,6 +676,15 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'analytics'
   },
+  'all_servers_nav': {
+    label: 'Page Navigation',
+    description: 'Navigate between server list pages',
+    emoji: '📄',
+    style: 'Secondary',
+    parent: 'prod_all_servers',
+    restrictedUser: '391415444084490240',
+    category: 'analytics'
+  },
   'all_servers_refresh_*': {
     label: 'Refresh Server List',
     description: 'Refresh the server list data',
