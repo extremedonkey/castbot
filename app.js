@@ -983,8 +983,19 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // safari_rounds_menu moved to adminButtons row (relabeled to "Challenges")
   // prod_safari_menu removed - buttons distributed to Production Menu and Map Explorer
 
-  // Add Donate, Settings, Tools
+  // Add Enemies button
   advancedFeaturesButtons.push(
+    new ButtonBuilder()
+      .setCustomId('safari_manage_enemies')
+      .setLabel('Enemies')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('👹')
+  );
+
+  const advancedFeaturesRow = new ActionRowBuilder().addComponents(advancedFeaturesButtons);
+
+  // Tools row (Donate, Settings, Tools)
+  const toolsButtons = [
     new ButtonBuilder()
       .setCustomId('prod_donate')
       .setLabel('Donate')
@@ -1000,9 +1011,8 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setLabel('Tools')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🪛')
-  );
-
-  const advancedFeaturesRow = new ActionRowBuilder().addComponents(advancedFeaturesButtons);
+  ];
+  const toolsRow = new ActionRowBuilder().addComponents(toolsButtons);
   
   // Component validation moved to utils.js - use countComponents() or validateComponentLimit()
   
@@ -1079,6 +1089,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       content: `### \`\`\`💎 Advanced\`\`\``
     },
     advancedFeaturesRow.toJSON(),
+    toolsRow.toJSON(),
     {
       type: 14 // Separator before credit
     },
@@ -16551,6 +16562,51 @@ Your server is now ready for Tycoons gameplay!`;
           };
         }
       })(req, res, client);
+    } else if (custom_id === 'safari_manage_enemies') {
+      return ButtonHandlerFactory.create({
+        id: 'safari_manage_enemies',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        deferred: true,
+        handler: async (context) => {
+          console.log(`👹 DEBUG: Enemy management UI opened for guild ${context.guildId}`);
+          const uiResponse = await createEntityManagementUI({
+            entityType: 'enemy',
+            guildId: context.guildId,
+            selectedId: null,
+            activeFieldGroup: null,
+            searchTerm: '',
+            mode: 'edit'
+          });
+          return { ...uiResponse, ephemeral: true };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('entity_turnorder_enemy_')) {
+      return ButtonHandlerFactory.create({
+        id: 'entity_turnorder_enemy',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const enemyId = context.customId.replace('entity_turnorder_enemy_', '');
+          const selectedValue = context.values[0];
+          const { updateEntityFields } = await import('./entityManager.js');
+          await updateEntityFields(context.guildId, 'enemy', enemyId, { turnOrder: selectedValue });
+          console.log(`👹 DEBUG: Enemy ${enemyId} turnOrder set to ${selectedValue}`);
+
+          const uiResponse = await createEntityManagementUI({
+            entityType: 'enemy',
+            guildId: context.guildId,
+            selectedId: enemyId,
+            activeFieldGroup: null,
+            searchTerm: '',
+            mode: 'edit'
+          });
+          return uiResponse;
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'safari_store_create') {
       // MVP2: Create new store interface
       console.log('🏪 DEBUG: safari_store_create handler called');

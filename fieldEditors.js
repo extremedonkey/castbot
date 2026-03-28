@@ -41,6 +41,8 @@ export function createFieldGroupModal(entityType, entityId, fieldGroupId, curren
             return createStoreFieldModal(entityId, fieldGroupId, group, currentValues);
         case 'safari_button':
             return createButtonFieldModal(entityId, fieldGroupId, group, currentValues);
+        case 'enemy':
+            return createEnemyFieldModal(entityId, fieldGroupId, group, currentValues);
         case 'map_cell':
             return createMapCellFieldModal(entityId, fieldGroupId, group, currentValues);
         default:
@@ -491,6 +493,92 @@ function createButtonFieldModal(buttonId, fieldGroupId, group, currentValues) {
 }
 
 /**
+ * Create modal for enemy field editing
+ */
+function createEnemyFieldModal(enemyId, fieldGroupId, group, currentValues) {
+    const components = [];
+
+    // Handle new enemy creation
+    if (enemyId === 'new' && fieldGroupId === 'info') {
+        components.push({
+            type: 1,
+            components: [{ type: 4, custom_id: 'name', label: 'Enemy Name', style: 1, value: '', placeholder: 'Enter enemy name', required: true, max_length: SAFARI_LIMITS.MAX_ENEMY_NAME_LENGTH }]
+        });
+        components.push({
+            type: 1,
+            components: [{ type: 4, custom_id: 'emoji', label: 'Enemy Emoji', style: 1, value: '', placeholder: 'Enter an emoji', required: false, max_length: 100 }]
+        });
+        components.push({
+            type: 1,
+            components: [{ type: 4, custom_id: 'description', label: 'Description', style: 2, value: '', placeholder: 'Describe the enemy', required: false, max_length: SAFARI_LIMITS.MAX_ENEMY_DESCRIPTION_LENGTH }]
+        });
+        components.push({
+            type: 1,
+            components: [{ type: 4, custom_id: 'hp', label: 'HP (Health Points)', style: 1, value: '10', placeholder: '1-9999', required: true, max_length: 4 }]
+        });
+        components.push({
+            type: 1,
+            components: [{ type: 4, custom_id: 'attackValue', label: 'Attack Value', style: 1, value: '1', placeholder: '1-999', required: true, max_length: 3 }]
+        });
+
+        return {
+            type: InteractionResponseType.MODAL,
+            data: {
+                title: 'Create New Enemy',
+                custom_id: `entity_create_modal_enemy_info`,
+                components
+            }
+        };
+    }
+
+    switch (fieldGroupId) {
+        case 'info':
+            components.push({
+                type: 1,
+                components: [{ type: 4, custom_id: 'name', label: 'Enemy Name', style: 1, value: currentValues.name || '', placeholder: 'Enter enemy name', required: true, max_length: SAFARI_LIMITS.MAX_ENEMY_NAME_LENGTH }]
+            });
+            let enemyEmojiValue = currentValues.emoji || '';
+            if (enemyEmojiValue && enemyEmojiValue.includes('�')) {
+                console.warn(`⚠️ Corrupted emoji detected for enemy ${enemyId}, using empty string`);
+                enemyEmojiValue = '';
+            }
+            components.push({
+                type: 1,
+                components: [{ type: 4, custom_id: 'emoji', label: 'Enemy Emoji', style: 1, value: enemyEmojiValue, placeholder: 'Enter an emoji', required: false, max_length: 100 }]
+            });
+            components.push({
+                type: 1,
+                components: [{ type: 4, custom_id: 'description', label: 'Description', style: 2, value: currentValues.description || '', placeholder: 'Describe the enemy', required: false, max_length: SAFARI_LIMITS.MAX_ENEMY_DESCRIPTION_LENGTH }]
+            });
+            components.push({
+                type: 1,
+                components: [{ type: 4, custom_id: 'category', label: 'Category', style: 1, value: currentValues.category || '', placeholder: 'e.g. common, elite, boss', required: false, max_length: 30 }]
+            });
+            break;
+
+        case 'combat':
+            components.push({
+                type: 1,
+                components: [{ type: 4, custom_id: 'hp', label: 'HP (Health Points)', style: 1, value: (currentValues.hp ?? '').toString(), placeholder: '1-9999', required: true, max_length: 4 }]
+            });
+            components.push({
+                type: 1,
+                components: [{ type: 4, custom_id: 'attackValue', label: 'Attack Value', style: 1, value: (currentValues.attackValue ?? '').toString(), placeholder: '1-999', required: true, max_length: 3 }]
+            });
+            break;
+    }
+
+    return {
+        type: InteractionResponseType.MODAL,
+        data: {
+            title: `Edit ${group.label}`,
+            custom_id: `entity_modal_submit_enemy_${enemyId}_${fieldGroupId}`,
+            components
+        }
+    };
+}
+
+/**
  * Create consumable select component for items
  * @param {string} itemId - Item ID
  * @param {string} currentValue - Current consumable value
@@ -579,6 +667,7 @@ export function parseModalSubmission(modalData, fieldGroupId) {
                 case 'attackValue':
                 case 'defenseValue':
                 case 'staminaBoost':
+                case 'hp':
                     // Parse as number, allow empty for optional fields
                     if (value === '' || value === null || value === undefined) {
                         fields[fieldId] = null;
@@ -666,6 +755,18 @@ export function validateFields(fields, entityType) {
                     }
                 }
             });
+            break;
+        case 'enemy':
+            if (fields.hp !== undefined && fields.hp !== null) {
+                if (fields.hp < 1 || fields.hp > 9999) {
+                    errors.push('HP must be between 1 and 9999');
+                }
+            }
+            if (fields.attackValue !== undefined && fields.attackValue !== null) {
+                if (fields.attackValue < 1 || fields.attackValue > 999) {
+                    errors.push('Attack must be between 1 and 999');
+                }
+            }
             break;
         case 'map_cell':
             // Validate map cell fields

@@ -25,6 +25,11 @@ export const SAFARI_LIMITS = {
   MAX_ITEM_DESCRIPTION_LENGTH: 500,
   MAX_ITEM_EFFECTS: 3,
   
+  // Enemy limits
+  MAX_ENEMIES_PER_GUILD: 200,
+  MAX_ENEMY_NAME_LENGTH: 80,
+  MAX_ENEMY_DESCRIPTION_LENGTH: 500,
+
   // General limits
   MAX_TAG_LENGTH: 30,
   MAX_TAGS_PER_ITEM: 5,
@@ -40,7 +45,8 @@ export const EDIT_TYPES = {
   STORE: 'store', 
   ITEM: 'item',
   SAFARI_CONFIG: 'safari_config',
-  MAP_CELL: 'map_cell'
+  MAP_CELL: 'map_cell',
+  ENEMY: 'enemy'
 };
 
 export const BUTTON_STYLES = [

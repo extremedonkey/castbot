@@ -27,6 +27,8 @@ export async function loadEntities(guildId, entityType) {
             return guildData.buttons || {};
         case 'safari_config':
             return guildData.safariConfig || {};
+        case 'enemy':
+            return guildData.enemies || {};
         case 'map_cell':
             const activeMapId = guildData.maps?.active;
             return guildData.maps?.[activeMapId]?.coordinates || {};
@@ -283,6 +285,7 @@ function getEntityPath(entityType) {
         case 'store': return 'stores';
         case 'safari_button': return 'buttons';
         case 'safari_config': return 'safariConfig';
+        case 'enemy': return 'enemies';
         case 'map_cell': return 'maps'; // Special case - handled differently
         default: throw new Error(`Unknown entity type: ${entityType}`);
     }
@@ -300,6 +303,8 @@ function generateEntityId(entityType, entityData) {
         case 'store':
             return generateButtonId(name); // Reuse same ID generation
         case 'safari_button':
+            return generateButtonId(name);
+        case 'enemy':
             return generateButtonId(name);
         default:
             return `${entityType}_${Date.now()}`;
@@ -335,6 +340,14 @@ function applyEntityDefaults(entity, entityType) {
             if (!entity.metadata.usageCount) entity.metadata.usageCount = 0;
             if (!entity.metadata.tags) entity.metadata.tags = [];
             break;
+
+        case 'enemy':
+            // Set enemy defaults
+            if (entity.hp === undefined) entity.hp = 10;
+            if (entity.attackValue === undefined) entity.attackValue = 1;
+            if (!entity.turnOrder) entity.turnOrder = 'player_first';
+            if (entity.category === undefined) entity.category = '';
+            break;
     }
 }
 
@@ -346,6 +359,7 @@ function getEntityLimit(entityType) {
         case 'item': return SAFARI_LIMITS.MAX_ITEMS_PER_GUILD;
         case 'store': return SAFARI_LIMITS.MAX_STORES_PER_GUILD;
         case 'safari_button': return SAFARI_LIMITS.MAX_BUTTONS_PER_GUILD;
+        case 'enemy': return SAFARI_LIMITS.MAX_ENEMIES_PER_GUILD;
         default: return 100;
     }
 }
@@ -371,10 +385,25 @@ async function cleanupEntityReferences(safariData, guildId, entityType, entityId
             for (const button of Object.values(buttons)) {
                 if (button.actions) {
                     for (const action of button.actions) {
-                        if (action.type === 'follow_up_button' && 
+                        if (action.type === 'follow_up_button' &&
                             action.config?.buttonId === entityId) {
                             // Clear the button reference
                             delete action.config.buttonId;
+                        }
+                    }
+                }
+            }
+            break;
+
+        case 'enemy':
+            // Remove enemy references from fight_enemy outcomes in actions
+            const actionButtons = safariData[guildId].buttons || {};
+            for (const button of Object.values(actionButtons)) {
+                if (button.actions) {
+                    for (const action of button.actions) {
+                        if (action.type === 'fight_enemy' &&
+                            action.config?.enemyId === entityId) {
+                            delete action.config.enemyId;
                         }
                     }
                 }

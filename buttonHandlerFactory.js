@@ -1648,6 +1648,19 @@ export const BUTTON_REGISTRY = {
     parent: 'prod_safari_menu',
     category: 'safari'
   },
+  'safari_manage_enemies': {
+    label: '👹 Manage Enemies',
+    description: 'Safari enemy management - create, edit, manage enemies',
+    emoji: '👹',
+    style: 'Secondary',
+    category: 'safari'
+  },
+  'entity_turnorder_enemy_*': {
+    label: 'Enemy Turn Order',
+    description: 'Set enemy turn order for combat',
+    emoji: '🔄',
+    category: 'safari'
+  },
   'safari_manage_items': {
     label: '📦 Manage Items',
     description: 'Safari item management - create, edit, manage items',

@@ -212,6 +212,8 @@ function getEntitiesForType(guildData, entityType) {
             return guildData.stores || {};
         case 'safari_button':
             return guildData.buttons || {};
+        case 'enemy':
+            return guildData.enemies || {};
         case 'map_cell':
             const activeMapId = guildData.maps?.active;
             return guildData.maps?.[activeMapId]?.coordinates || {};
@@ -401,6 +403,22 @@ function createEntityDisplay(entity, entityType, safariConfig) {
             }
             break;
             
+        case 'enemy':
+            if (entity.hp !== undefined) {
+                lines.push(`**❤️ HP**: ${entity.hp}`);
+            }
+            if (entity.attackValue !== undefined) {
+                lines.push(`**⚔️ Attack**: ${entity.attackValue}`);
+            }
+            if (entity.turnOrder) {
+                const turnLabels = { player_first: 'Player First', enemy_first: 'Enemy First', simultaneous: 'Simultaneous' };
+                lines.push(`**🔄 Turn Order**: ${turnLabels[entity.turnOrder] || entity.turnOrder}`);
+            }
+            if (entity.category) {
+                lines.push(`**Category**: ${entity.category}`);
+            }
+            break;
+
         case 'map_cell':
             if (entity.baseContent?.title) {
                 lines.push(`**Title**: ${entity.baseContent.title}`);
@@ -485,6 +503,27 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
         } catch (error) {
             console.error('Error building Quick Create row:', error);
         }
+    }
+
+    // Add turnOrder String Select for enemies
+    if (entityType === 'enemy') {
+        components.push({
+            type: 10,
+            content: '**🔄 Turn Order**'
+        });
+        components.push({
+            type: 1, // ActionRow
+            components: [{
+                type: 3, // String Select
+                custom_id: `entity_turnorder_enemy_${entityId}`,
+                placeholder: 'Select turn order',
+                options: [
+                    { label: 'Player First', value: 'player_first', description: 'Player attacks before the enemy', default: entity.turnOrder === 'player_first' },
+                    { label: 'Enemy First', value: 'enemy_first', description: 'Enemy attacks before the player', default: entity.turnOrder === 'enemy_first' },
+                    { label: 'Simultaneous', value: 'simultaneous', description: 'Both attack at the same time (double KO possible)', default: entity.turnOrder === 'simultaneous' }
+                ]
+            }]
+        });
     }
 
     components.push({ type: 14 }); // Separator
@@ -620,6 +659,11 @@ export function getFieldGroups(entityType) {
                 info: { label: 'Button Info', emoji: '📝', fields: ['label', 'emoji', 'style'] },
                 actions: { label: 'Actions', emoji: '🎯', fields: ['actions'] }
             };
+        case 'enemy':
+            return {
+                info: { label: 'Enemy Info', emoji: '📝', fields: ['name', 'emoji', 'description', 'category'] },
+                combat: { label: 'Combat', emoji: '⚔️', fields: ['hp', 'attackValue'] }
+            };
         case 'map_cell':
             return {
                 info: { label: 'Location Info', emoji: '🖼️', fields: ['title', 'description', 'image'] },
@@ -716,6 +760,7 @@ function getDefaultEmoji(entityType) {
         case 'item': return '📦';
         case 'store': return '🏪';
         case 'safari_button': return '🦁';
+        case 'enemy': return '👹';
         case 'map_cell': return '📍';
         default: return '📋';
     }
@@ -747,6 +792,17 @@ function getEntityDescription(entity, entityType) {
             }
             if (entity.style) {
                 parts.push(entity.style);
+            }
+            break;
+        case 'enemy':
+            if (entity.hp !== undefined) {
+                parts.push(`❤️${entity.hp}`);
+            }
+            if (entity.attackValue !== undefined) {
+                parts.push(`⚔️${entity.attackValue}`);
+            }
+            if (entity.category) {
+                parts.push(entity.category);
             }
             break;
         case 'map_cell':
