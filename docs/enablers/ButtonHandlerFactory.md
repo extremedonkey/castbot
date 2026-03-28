@@ -900,24 +900,26 @@ The button is properly implemented using ButtonHandlerFactory pattern.
 - Review the response structure returned by the handler
 
 #### 📝 MODAL
-The button shows a Discord modal and **cannot use ButtonHandlerFactory by design**.
+The button shows a Discord modal. ButtonHandlerFactory **fully supports** modal responses.
 
 **What this means:**
 - ✅ Button is registered in BUTTON_REGISTRY with `requiresModal: true`
-- ✅ Handler uses direct `res.send({ type: InteractionResponseType.MODAL })` — this is correct
-- ✅ Not technical debt — modals require `type: 9` response which the factory doesn't support
+- ✅ Handler returns `{ type: InteractionResponseType.MODAL, data: {...} }` — factory detects and sends directly
+- ✅ Debug system shows `[📝 MODAL]` instead of `[🪨 LEGACY]`
 
 **Example:**
 ```
 🔍 BUTTON DEBUG: Checking handlers for safari_starting_info_391415444084490240 [📝 MODAL]
 ```
 
-**Why factory can't handle modals:** ButtonHandlerFactory wraps handler returns in message response types (CHANNEL_MESSAGE_WITH_SOURCE, UPDATE_MESSAGE, or DEFERRED_*). Modal responses require `type: InteractionResponseType.MODAL` which is a fundamentally different response shape. The 3-second timeout is not a concern because showing a modal only requires returning a JSON structure — no heavy data loading.
+**How it works:** The factory checks `result.type` — if set (e.g., `InteractionResponseType.MODAL`), it sends the response directly via `res.send()` without wrapping it in message response types (see buttonHandlerFactory.js line 4460). This gives you factory benefits (error handling, logging, permission checks) while correctly routing the modal.
+
+**Key constraint:** `deferred` must NOT be `true` — modals cannot be deferred. If your handler needs to load data before showing the modal, that's fine as long as it completes within 3 seconds.
 
 **What to do:**
-- This is the correct pattern — no migration needed
-- The modal builder function should be in a module (not inline in app.js)
-- The modal submit handler can use ButtonHandlerFactory if it needs deferred processing
+- Use `ButtonHandlerFactory.create({ requiresModal: true })` for new modal-triggering buttons
+- Legacy handlers using direct `res.send()` for modals still work but can be migrated to factory
+- Modal SUBMIT handlers live in the MODAL_SUBMIT section of app.js and use `res.send()` directly (this is correct, not legacy)
 
 #### 🪨 LEGACY
 The button is using the old handler pattern without ButtonHandlerFactory.
