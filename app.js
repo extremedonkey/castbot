@@ -983,19 +983,8 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // safari_rounds_menu moved to adminButtons row (relabeled to "Challenges")
   // prod_safari_menu removed - buttons distributed to Production Menu and Map Explorer
 
-  // Add Enemies button
+  // Add Donate, Settings, Tools
   advancedFeaturesButtons.push(
-    new ButtonBuilder()
-      .setCustomId('safari_manage_enemies')
-      .setLabel('Enemies')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('👹')
-  );
-
-  const advancedFeaturesRow = new ActionRowBuilder().addComponents(advancedFeaturesButtons);
-
-  // Tools row (Donate, Settings, Tools)
-  const toolsButtons = [
     new ButtonBuilder()
       .setCustomId('prod_donate')
       .setLabel('Donate')
@@ -1011,8 +1000,9 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setLabel('Tools')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🪛')
-  ];
-  const toolsRow = new ActionRowBuilder().addComponents(toolsButtons);
+  );
+
+  const advancedFeaturesRow = new ActionRowBuilder().addComponents(advancedFeaturesButtons);
   
   // Component validation moved to utils.js - use countComponents() or validateComponentLimit()
   
@@ -1089,7 +1079,6 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       content: `### \`\`\`💎 Advanced\`\`\``
     },
     advancedFeaturesRow.toJSON(),
-    toolsRow.toJSON(),
     {
       type: 14 // Separator before credit
     },
