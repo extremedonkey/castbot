@@ -566,6 +566,13 @@ function createEnemyFieldModal(enemyId, fieldGroupId, group, currentValues) {
                 components: [{ type: 4, custom_id: 'attackValue', label: 'Attack Value', style: 1, value: (currentValues.attackValue ?? '').toString(), placeholder: '1-999', required: true, max_length: 3 }]
             });
             break;
+
+        case 'appearance':
+            components.push({
+                type: 1,
+                components: [{ type: 4, custom_id: 'image', label: 'Image URL', style: 1, value: currentValues.image || '', placeholder: 'https://example.com/enemy.png', required: false, max_length: 500 }]
+            });
+            break;
     }
 
     return {
@@ -766,6 +773,9 @@ export function validateFields(fields, entityType) {
                 if (fields.attackValue < 1 || fields.attackValue > 999) {
                     errors.push('Attack must be between 1 and 999');
                 }
+            }
+            if (fields.image && fields.image.length > 500) {
+                errors.push('Image URL must be 500 characters or less');
             }
             break;
         case 'map_cell':
