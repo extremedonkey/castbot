@@ -32036,6 +32036,31 @@ Your server is now ready for Tycoons gameplay!`;
         return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Error opening Quick Item modal.', flags: InteractionResponseFlags.EPHEMERAL } });
       }
 
+    } else if (custom_id.startsWith('quick_enemy_') && !custom_id.startsWith('quick_enemy_modal_')) {
+      // Quick Enemy button — show modal with enemy list
+      return ButtonHandlerFactory.create({
+        id: 'quick_enemy',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        requiresModal: true,
+        handler: async (context) => {
+          const coord = context.customId.replace('quick_enemy_', '');
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const enemies = safariData[context.guildId]?.enemies || {};
+          const enemyList = Object.entries(enemies).map(([id, enemy]) => ({
+            id, name: enemy.name, emoji: enemy.emoji, hp: enemy.hp, attackValue: enemy.attackValue
+          }));
+          if (enemyList.length === 0) {
+            return { content: '❌ No enemies exist yet. Create enemies first via **Tools** → **Enemies**.', ephemeral: true };
+          }
+          const sortedEnemies = enemyList.sort((a, b) => (a.name || '').localeCompare(b.name || '')).slice(0, 25);
+          const { buildQuickEnemyModal } = await import('./quickActionCreate.js');
+          const modalData = buildQuickEnemyModal(coord, sortedEnemies);
+          return { type: InteractionResponseType.MODAL, data: modalData };
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('map_location_display_')) {
       // Handle Location button display (shows anchor message content)
       return ButtonHandlerFactory.create({
@@ -45754,6 +45779,24 @@ Your server is now ready for Tycoons gameplay!`;
         return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...result, flags: (1 << 15) } });
       } catch (error) {
         console.error('Error handling quick item modal:', error);
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Error: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL } });
+      }
+
+    } else if (custom_id.startsWith('quick_enemy_modal_')) {
+      try {
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        const coordinate = custom_id.replace('quick_enemy_modal_', '');
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+
+        const { handleQuickEnemySubmit } = await import('./quickActionCreate.js');
+        const result = await handleQuickEnemySubmit(guildId, userId, coordinate, components);
+        if (result.error) {
+          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ ${result.error}`, flags: InteractionResponseFlags.EPHEMERAL } });
+        }
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...result, flags: (1 << 15) } });
+      } catch (error) {
+        console.error('Error handling quick enemy modal:', error);
         return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Error: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL } });
       }
 

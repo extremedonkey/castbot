@@ -1661,6 +1661,13 @@ export const BUTTON_REGISTRY = {
     emoji: '🔄',
     category: 'safari'
   },
+  'quick_enemy_*': {
+    label: 'Quick Enemy',
+    description: 'Quick-create enemy fight action at map location',
+    emoji: '🐙',
+    category: 'safari',
+    requiresModal: true
+  },
   'entity_clone_select_*': {
     label: 'Clone Entity Source',
     description: 'Select source entity to clone',

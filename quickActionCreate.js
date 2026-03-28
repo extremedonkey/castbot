@@ -409,3 +409,129 @@ export async function handleQuickItemSubmit(guildId, userId, coordinate, modalCo
     const { createCustomActionEditorUI } = await import('./customActionUI.js');
     return await createCustomActionEditorUI({ guildId, actionId, coordinate });
 }
+
+/**
+ * Build the Quick Enemy modal — 5 fields
+ * Creates a fight_enemy action at a coordinate in one step.
+ */
+export function buildQuickEnemyModal(coordinate, enemies) {
+    const enemyOptions = enemies.slice(0, 25).map(enemy => {
+        const opt = {
+            label: (enemy.name || enemy.id).slice(0, 100),
+            value: enemy.id,
+            description: `❤️${enemy.hp || 0} ⚔️${enemy.attackValue || 0}`
+        };
+        opt.emoji = parseAndValidateEmoji(enemy.emoji, '🐙').emoji;
+        return opt;
+    });
+
+    return {
+        custom_id: `quick_enemy_modal_${coordinate}`,
+        title: 'Quick Enemy Action',
+        components: [
+            {
+                type: 18, label: 'Button Name',
+                description: 'Label on the button the player clicks.',
+                component: { type: 4, custom_id: 'button_name', style: 1, placeholder: 'e.g., "Fight the Octorok"', required: true, max_length: 80 }
+            },
+            {
+                type: 18, label: 'Enemy to Fight',
+                description: 'Select which enemy the player battles.',
+                component: { type: 3, custom_id: 'enemy_select', placeholder: 'Select enemy...', min_values: 1, max_values: 1, options: enemyOptions }
+            },
+            {
+                type: 18, label: 'Button Emoji (Optional)',
+                description: 'Emoji that appears on the button.',
+                component: { type: 4, custom_id: 'button_emoji', style: 1, placeholder: 'e.g., 🐙', required: false, max_length: 100 }
+            },
+            {
+                type: 18, label: 'Usage Limit',
+                description: 'How many times can players fight this enemy?',
+                component: { type: 3, custom_id: 'usage_limit', placeholder: 'Select usage limit...', min_values: 1, max_values: 1, options: LIMIT_OPTIONS }
+            },
+            {
+                type: 18, label: 'Button Color',
+                description: 'Color of the button.',
+                component: { type: 3, custom_id: 'button_color', placeholder: 'Select button color...', min_values: 1, max_values: 1, options: COLOR_OPTIONS }
+            }
+        ]
+    };
+}
+
+/**
+ * Handle Quick Enemy modal submit — creates a fight_enemy action at the coordinate
+ */
+export async function handleQuickEnemySubmit(guildId, userId, coordinate, modalComponents) {
+    const { createCustomButton, loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+
+    const buttonName = getModalValue(modalComponents[0]);
+    const enemyId = getModalValue(modalComponents[1]);
+    const emojiInput = getModalValue(modalComponents[2]);
+    const limitType = getModalValue(modalComponents[3]) || 'once_per_player';
+    const style = getModalValue(modalComponents[4]) || 'Primary';
+
+    if (!buttonName) return { error: 'Button name is required.' };
+    if (!enemyId) return { error: 'Enemy selection is required.' };
+
+    let buttonEmoji = null;
+    if (emojiInput) {
+        const { createSafeEmoji } = await import('./safariButtonHelper.js');
+        const validated = await createSafeEmoji(emojiInput);
+        if (validated) buttonEmoji = emojiInput;
+    }
+
+    const actionId = await createCustomButton(guildId, {
+        label: buttonName, emoji: buttonEmoji, style, actions: [], tags: []
+    }, userId);
+
+    const safariData = await loadSafariContent();
+    const action = safariData[guildId].buttons[actionId];
+    action.name = buttonName;
+    action.description = '';
+    action.metadata = { ...action.metadata, createdVia: 'quick_enemy' };
+
+    if (!action.trigger) action.trigger = { type: 'button' };
+    if (!action.trigger.button) action.trigger.button = {};
+    action.trigger.button.style = style;
+    action.style = style;
+
+    const enemy = safariData[guildId]?.enemies?.[enemyId];
+    const enemyName = enemy?.name || enemyId;
+
+    action.actions.push({
+        type: 'fight_enemy',
+        order: 0,
+        config: {
+            enemyId,
+            limit: limitType === 'once_per_period'
+                ? { type: 'once_per_period', periodMs: 86400000, claimedBy: {} }
+                : { type: limitType, claimedBy: limitType === 'once_per_player' ? [] : null }
+        },
+        executeOn: 'always'
+    });
+
+    const activeMapId = safariData[guildId]?.maps?.active;
+    if (activeMapId) {
+        const coordData = safariData[guildId].maps[activeMapId].coordinates[coordinate];
+        if (coordData) {
+            if (!coordData.buttons) coordData.buttons = [];
+            if (!coordData.buttons.includes(actionId)) coordData.buttons.push(actionId);
+        }
+        if (!action.coordinates) action.coordinates = [];
+        if (!action.coordinates.includes(coordinate)) action.coordinates.push(coordinate);
+    }
+
+    await saveSafariContent(safariData);
+
+    try {
+        const { afterAddCoordinate } = await import('./anchorMessageIntegration.js');
+        await afterAddCoordinate(guildId, actionId, coordinate);
+    } catch (error) {
+        console.error('Error queueing anchor update after quick enemy:', error);
+    }
+
+    console.log(`⚡ QUICK ENEMY: Created action ${actionId} at ${coordinate} — Fight ${enemyName}`);
+
+    const { createCustomActionEditorUI } = await import('./customActionUI.js');
+    return await createCustomActionEditorUI({ guildId, actionId, coordinate });
+}
