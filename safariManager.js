@@ -9848,61 +9848,76 @@ async function getPlayerAttackValue(guildId, userId) {
  * @returns {Object} Components V2 container
  */
 function buildCombatDisplay(enemy, combatResult, playerName) {
-    const enemyEmoji = enemy.emoji || '👹';
-    const lines = [];
+    const e = enemy.emoji || '👹';
+    const won = combatResult.playerWon;
+    const components = [];
 
-    lines.push(`## ${enemyEmoji} ${enemy.name} battle!`);
-    if (enemy.description) lines.push(enemy.description);
-    lines.push('');
+    // Header
+    components.push({
+        type: 10,
+        content: `## ${e} ${enemy.name} battle!`
+    });
 
-    // Turn narrative
-    for (const turn of combatResult.turns) {
-        lines.push(`**Turn ${turn.number}**`);
+    if (enemy.description) {
+        components.push({ type: 10, content: `-# ${enemy.description}` });
+    }
+
+    components.push({ type: 14 });
+
+    // Turn-by-turn narrative
+    const turnLines = [];
+    let turnsToShow = combatResult.turns;
+    let truncated = false;
+
+    if (turnsToShow.length > 8) {
+        // Show first 2 + last 2, summarize middle
+        const first = turnsToShow.slice(0, 2);
+        const last = turnsToShow.slice(-2);
+        truncated = turnsToShow.length - 4;
+        turnsToShow = [...first, null, ...last]; // null = summary marker
+    }
+
+    for (const turn of turnsToShow) {
+        if (turn === null) {
+            turnLines.push(`-# *...${truncated} more turns of combat...*`);
+            turnLines.push('');
+            continue;
+        }
+        turnLines.push(`### Turn ${turn.number}`);
         for (const event of turn.events) {
             if (event.actor === 'player') {
-                lines.push(`⚔️ ${playerName} attacks ${enemyEmoji} **${enemy.name}** for **${event.damage}** damage (${enemyEmoji} ${event.targetHp}/${event.targetMaxHp})`);
+                turnLines.push(`⚔️ You attack ${e} **${enemy.name}** for **${event.damage}** damage — ${e} ${event.targetHp}/${event.targetMaxHp}`);
             } else {
-                lines.push(`${enemyEmoji} **${enemy.name}** attacks ${playerName} for **${event.damage}** damage (❤️ ${event.targetHp}/${event.targetMaxHp})`);
+                turnLines.push(`${e} **${enemy.name}** attacks you for **${event.damage}** damage — ❤️ ${event.targetHp}/${event.targetMaxHp}`);
             }
         }
-        lines.push('');
+        turnLines.push('');
     }
 
-    // Result
-    if (combatResult.playerWon) {
-        lines.push(`### ✅ Victory! ${enemyEmoji} **${enemy.name}** has been defeated!`);
+    components.push({ type: 10, content: turnLines.join('\n') });
+    components.push({ type: 14 });
+
+    // Result banner
+    if (won) {
+        components.push({
+            type: 10,
+            content: `## ✅ Victory!\n${e} **${enemy.name}** has been defeated!`
+        });
     } else {
-        lines.push(`### 💀 Defeat! You were beaten by ${enemyEmoji} **${enemy.name}**...`);
+        components.push({
+            type: 10,
+            content: `## 💀 Defeat\nYou were beaten by ${e} **${enemy.name}**...`
+        });
     }
 
-    // Truncate if too long
-    let content = lines.join('\n');
-    if (content.length > 3900) {
-        const header = lines.slice(0, 4).join('\n');
-        const lastTurns = combatResult.turns.slice(-2);
-        const footer = lines.slice(-1).join('\n');
-        const middleSummary = `\n*...${combatResult.totalTurns - 2} turns of combat...*\n\n`;
-
-        const lastLines = [];
-        for (const turn of lastTurns) {
-            lastLines.push(`**Turn ${turn.number}**`);
-            for (const event of turn.events) {
-                if (event.actor === 'player') {
-                    lastLines.push(`⚔️ ${playerName} attacks ${enemyEmoji} **${enemy.name}** for **${event.damage}** damage (${enemyEmoji} ${event.targetHp}/${event.targetMaxHp})`);
-                } else {
-                    lastLines.push(`${enemyEmoji} **${enemy.name}** attacks ${playerName} for **${event.damage}** damage (❤️ ${event.targetHp}/${event.targetMaxHp})`);
-                }
-            }
-            lastLines.push('');
-        }
-
-        content = header + middleSummary + lastLines.join('\n') + '\n' + footer;
-    }
+    // Stats summary
+    const statsLine = `💥 **${combatResult.totalTurns}** turns  ❤️ **${combatResult.finalPlayerHp}** HP remaining  ${e} **${combatResult.finalEnemyHp}**/${enemy.hp} HP`;
+    components.push({ type: 10, content: `-# ${statsLine}` });
 
     return {
         type: 17,
-        accent_color: combatResult.playerWon ? 0x57F287 : 0xED4245,
-        components: [{ type: 10, content }]
+        accent_color: won ? 0x57F287 : 0xED4245,
+        components
     };
 }
 
