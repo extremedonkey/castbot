@@ -2000,7 +2000,7 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                 case 'fight_enemy':
                 case ACTION_TYPES.FIGHT_ENEMY:
                     try {
-                        console.log(`👹 DEBUG: Executing fight_enemy action for guild ${guildId}`);
+                        console.log(`🐙 DEBUG: Executing fight_enemy action for guild ${guildId}`);
                         result = await executeFightEnemy(action.config, guildId, userId, interaction, client);
                         // Extract the display container from the fight result
                         if (result?.display) {
@@ -9634,7 +9634,7 @@ async function executeFightEnemy(config, guildId, userId, interaction, client) {
     // Load enemy
     const enemy = safariData[guildId]?.enemies?.[config?.enemyId];
     if (!enemy) {
-        console.error(`👹 Enemy not found: ${config?.enemyId}`);
+        console.error(`🐙 Enemy not found: ${config?.enemyId}`);
         return {
             fightResult: false,
             display: {
@@ -9651,7 +9651,7 @@ async function executeFightEnemy(config, guildId, userId, interaction, client) {
         const { getEntityPoints: getEP } = await import('./pointsManager.js');
         playerHpData = await getEP(guildId, entityId, 'hp');
     } catch (error) {
-        console.error(`👹 Error loading player HP:`, error);
+        console.error(`🐙 Error loading player HP:`, error);
     }
 
     if (!playerHpData || playerHpData.current === undefined) {
@@ -9701,9 +9701,9 @@ async function executeFightEnemy(config, guildId, userId, interaction, client) {
     try {
         const { setEntityPoints: setEP } = await import('./pointsManager.js');
         await setEP(guildId, entityId, 'hp', combatResult.finalPlayerHp, playerHpData.max);
-        console.log(`👹 Player HP updated: ${playerHpData.current} → ${combatResult.finalPlayerHp}/${playerHpData.max}`);
+        console.log(`🐙 Player HP updated: ${playerHpData.current} → ${combatResult.finalPlayerHp}/${playerHpData.max}`);
     } catch (error) {
-        console.error(`👹 Error updating player HP:`, error);
+        console.error(`🐙 Error updating player HP:`, error);
     }
 
     // Consume weapon if consumable
@@ -9722,10 +9722,10 @@ async function executeFightEnemy(config, guildId, userId, interaction, client) {
                     entry.quantity = qty - 1;
                 }
                 await savePlayerData(freshPlayerData);
-                console.log(`👹 Consumed 1x weapon ${attackInfo.itemId} (was consumable)`);
+                console.log(`🐙 Consumed 1x weapon ${attackInfo.itemId} (was consumable)`);
             }
         } catch (error) {
-            console.error(`👹 Error consuming weapon:`, error);
+            console.error(`🐙 Error consuming weapon:`, error);
         }
     }
 
@@ -9739,7 +9739,7 @@ async function executeFightEnemy(config, guildId, userId, interaction, client) {
 
     const display = buildCombatDisplay(enemy, combatResult, playerName);
 
-    console.log(`👹 Combat resolved: ${playerName} vs ${enemy.name} — ${combatResult.playerWon ? 'WIN' : 'LOSE'} in ${combatResult.totalTurns} turns`);
+    console.log(`🐙 Combat resolved: ${playerName} vs ${enemy.name} — ${combatResult.playerWon ? 'WIN' : 'LOSE'} in ${combatResult.totalTurns} turns`);
 
     return {
         fightResult: combatResult.playerWon,
@@ -9848,7 +9848,7 @@ async function getPlayerAttackValue(guildId, userId) {
  * @returns {Object} Components V2 container
  */
 function buildCombatDisplay(enemy, combatResult, playerName) {
-    const e = enemy.emoji || '👹';
+    const e = enemy.emoji || '🐙';
     const won = combatResult.playerWon;
     const components = [];
 

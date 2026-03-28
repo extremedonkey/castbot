@@ -1649,9 +1649,9 @@ export const BUTTON_REGISTRY = {
     category: 'safari'
   },
   'safari_manage_enemies': {
-    label: '👹 Manage Enemies',
+    label: '🐙 Manage Enemies',
     description: 'Safari enemy management - create, edit, manage enemies',
-    emoji: '👹',
+    emoji: '🐙',
     style: 'Secondary',
     category: 'safari'
   },
@@ -1664,19 +1664,19 @@ export const BUTTON_REGISTRY = {
   'safari_fight_enemy_select_*': {
     label: 'Select Enemy',
     description: 'Select enemy for fight outcome',
-    emoji: '👹',
+    emoji: '🐙',
     category: 'custom_actions'
   },
   'safari_fight_enemy_execute_on_*': {
     label: 'Fight Execute On',
     description: 'Set when fight enemy outcome executes',
-    emoji: '👹',
+    emoji: '🐙',
     category: 'custom_actions'
   },
   'safari_fight_enemy_limit_*': {
     label: 'Fight Usage Limit',
     description: 'Set usage limit for fight enemy outcome',
-    emoji: '👹',
+    emoji: '🐙',
     category: 'custom_actions'
   },
   'safari_manage_items': {

@@ -16561,7 +16561,7 @@ Your server is now ready for Tycoons gameplay!`;
         permissionName: 'Manage Roles',
         deferred: true,
         handler: async (context) => {
-          console.log(`👹 DEBUG: Enemy management UI opened for guild ${context.guildId}`);
+          console.log(`🐙 DEBUG: Enemy management UI opened for guild ${context.guildId}`);
           const uiResponse = await createEntityManagementUI({
             entityType: 'enemy',
             guildId: context.guildId,
@@ -16585,7 +16585,7 @@ Your server is now ready for Tycoons gameplay!`;
           const selectedValue = context.values[0];
           const { updateEntityFields } = await import('./entityManager.js');
           await updateEntityFields(context.guildId, 'enemy', enemyId, { turnOrder: selectedValue });
-          console.log(`👹 DEBUG: Enemy ${enemyId} turnOrder set to ${selectedValue}`);
+          console.log(`🐙 DEBUG: Enemy ${enemyId} turnOrder set to ${selectedValue}`);
 
           const uiResponse = await createEntityManagementUI({
             entityType: 'enemy',
@@ -22291,7 +22291,7 @@ Your server is now ready for Tycoons gameplay!`;
           button.metadata.lastModified = Date.now();
           await saveSafariContent(safariData);
 
-          console.log(`👹 Enemy selected: ${enemyId} for ${buttonId}[${actionIndex}]`);
+          console.log(`🐙 Enemy selected: ${enemyId} for ${buttonId}[${actionIndex}]`);
           const { showFightEnemyConfig } = await import('./customActionUI.js');
           return await showFightEnemyConfig(context.guildId, buttonId, actionIndex);
         }
@@ -22321,7 +22321,7 @@ Your server is now ready for Tycoons gameplay!`;
           button.metadata.lastModified = Date.now();
           await saveSafariContent(safariData);
 
-          console.log(`👹 Execute on set to: ${executeOnValue} for ${buttonId}[${actionIndex}]`);
+          console.log(`🐙 Execute on set to: ${executeOnValue} for ${buttonId}[${actionIndex}]`);
           const { showFightEnemyConfig } = await import('./customActionUI.js');
           return await showFightEnemyConfig(context.guildId, buttonId, actionIndex);
         }
@@ -22355,7 +22355,7 @@ Your server is now ready for Tycoons gameplay!`;
           button.metadata.lastModified = Date.now();
           await saveSafariContent(safariData);
 
-          console.log(`👹 Usage limit set to: ${limitValue} for ${buttonId}[${actionIndex}]`);
+          console.log(`🐙 Usage limit set to: ${limitValue} for ${buttonId}[${actionIndex}]`);
           const { showFightEnemyConfig } = await import('./customActionUI.js');
           return await showFightEnemyConfig(context.guildId, buttonId, actionIndex);
         }

@@ -129,7 +129,7 @@ export const EDIT_CONFIGS = {
     displayName: 'Enemy',
     properties: {
       name: { type: 'text', maxLength: SAFARI_LIMITS.MAX_ENEMY_NAME_LENGTH, required: true, label: 'Enemy Name' },
-      emoji: { type: 'text', maxLength: 100, required: false, label: 'Emoji', placeholder: '👹' },
+      emoji: { type: 'text', maxLength: 100, required: false, label: 'Emoji', placeholder: '🐙' },
       description: { type: 'textarea', maxLength: SAFARI_LIMITS.MAX_ENEMY_DESCRIPTION_LENGTH, required: false, label: 'Description' },
       category: { type: 'text', maxLength: 30, required: false, label: 'Category', placeholder: 'common, elite, boss' },
       hp: { type: 'number', min: 1, max: 9999, required: true, label: 'HP' },

@@ -22,7 +22,7 @@ const OUTCOME_TYPE_OPTIONS = [
   { label: 'Calculate Results', value: 'calculate_results', emoji: { name: '🌾' }, description: 'Process harvest/income for all or the triggering player' },
   { label: 'Calculate Attack', value: 'calculate_attack', emoji: { name: '⚔️' }, description: 'Run combat calculations between players or vs environment' },
   { label: 'Safari Player State', value: 'manage_player_state', emoji: { name: '🚀' }, description: 'Initialize, teleport, or de-initialize the triggering player' },
-  { label: 'Fight Enemy', value: 'fight_enemy', emoji: { name: '👹' }, description: 'Battle an enemy — win/lose determines pass/fail outcomes' }
+  { label: 'Fight Enemy', value: 'fight_enemy', emoji: { name: '🐙' }, description: 'Battle an enemy — win/lose determines pass/fail outcomes' }
 ];
 
 /**
@@ -944,7 +944,7 @@ function getActionSummaryPlain(action, number, guildItems = {}, guildButtons = {
     case 'fight_enemy': {
       const fightEnemyId = action?.config?.enemyId;
       const fightEnemy = guildEnemies[fightEnemyId];
-      const fightName = fightEnemy ? `${fightEnemy.emoji || '👹'} ${fightEnemy.name}` : 'Not configured';
+      const fightName = fightEnemy ? `${fightEnemy.emoji || '🐙'} ${fightEnemy.name}` : 'Not configured';
       summary = `${number}. Fight Enemy | ${fightName}`;
       break;
     }
@@ -1087,7 +1087,7 @@ function getActionSummary(action, number, guildItems = {}, guildButtons = {}, is
     }
     case 'fight_enemy': {
       const fightEnemyId2 = action?.config?.enemyId;
-      return `**\`${number}. Fight Enemy\`** 👹 ${fightEnemyId2 || 'Not configured'}`;
+      return `**\`${number}. Fight Enemy\`** 🐙 ${fightEnemyId2 || 'Not configured'}`;
     }
     default:
       return `**${number}. ${action.type || 'Unknown Action'}**`;
@@ -4781,14 +4781,14 @@ export async function showFightEnemyConfig(guildId, buttonId, actionIndex) {
     .sort((a, b) => (a[1].name || '').localeCompare(b[1].name || ''))
     .slice(0, 25)
     .map(([id, enemy]) => ({
-      label: `${enemy.emoji || '👹'} ${enemy.name || 'Unnamed'}`.substring(0, 100),
+      label: `${enemy.emoji || '🐙'} ${enemy.name || 'Unnamed'}`.substring(0, 100),
       value: id,
       description: `❤️${enemy.hp} ⚔️${enemy.attackValue || 0}`.substring(0, 100),
       default: id === currentEnemyId
     }));
 
   const components = [
-    { type: 10, content: '## 👹 Fight Enemy Configuration' },
+    { type: 10, content: '## 🐙 Fight Enemy Configuration' },
     { type: 14 }
   ];
 
@@ -4817,7 +4817,7 @@ export async function showFightEnemyConfig(guildId, buttonId, actionIndex) {
     const turnLabels = { player_first: 'Player First', enemy_first: 'Enemy First', simultaneous: 'Simultaneous' };
     components.push(
       { type: 14 },
-      { type: 10, content: `### ${currentEnemy.emoji || '👹'} ${currentEnemy.name}\n${currentEnemy.description || ''}\n\n❤️ **HP:** ${currentEnemy.hp}  ⚔️ **Attack:** ${currentEnemy.attackValue || 0}  🔄 **Turn Order:** ${turnLabels[currentEnemy.turnOrder] || 'Player First'}` }
+      { type: 10, content: `### ${currentEnemy.emoji || '🐙'} ${currentEnemy.name}\n${currentEnemy.description || ''}\n\n❤️ **HP:** ${currentEnemy.hp}  ⚔️ **Attack:** ${currentEnemy.attackValue || 0}  🔄 **Turn Order:** ${turnLabels[currentEnemy.turnOrder] || 'Player First'}` }
     );
   }
 

@@ -760,7 +760,7 @@ function getDefaultEmoji(entityType) {
         case 'item': return '📦';
         case 'store': return '🏪';
         case 'safari_button': return '🦁';
-        case 'enemy': return '👹';
+        case 'enemy': return '🐙';
         case 'map_cell': return '📍';
         default: return '📋';
     }

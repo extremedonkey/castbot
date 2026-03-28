@@ -55,7 +55,7 @@ function buildCombatDisplay(enemy, combatResult, playerName) {
         type: 17,
         accent_color: won ? 0x57F287 : 0xED4245,
         components: [
-            { type: 10, content: `## ${enemy.emoji || '👹'} ${enemy.name} battle!` },
+            { type: 10, content: `## ${enemy.emoji || '🐙'} ${enemy.name} battle!` },
             // ... turns and result components
             { type: 10, content: won ? 'Victory' : 'Defeat' }
         ]
@@ -280,6 +280,6 @@ describe('buildCombatDisplay', () => {
             turnOrder: 'player_first'
         });
         const display = buildCombatDisplay(noEmoji, combat, 'Reece');
-        assert.ok(display.components[0].content.includes('👹'));
+        assert.ok(display.components[0].content.includes('🐙'));
     });
 });
