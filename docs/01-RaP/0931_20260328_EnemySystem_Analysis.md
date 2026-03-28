@@ -1,7 +1,7 @@
 # 0931 - Enemy System (Entity + Action Outcome)
 
 **Date:** 2026-03-28
-**Status:** PROPOSED
+**Status:** Implemented → [docs/03-features/EnemySystem.md](../03-features/EnemySystem.md)
 **Affects:** Entity Edit Framework, Action System (Outcomes), Attribute System, Items, safariManager.js, customActionUI.js, app.js
 **Supersedes:** `docs/archive/SafariEnemySystem-Superseded.md` (PvE combat system with AI state machines — completely different vision)
 
