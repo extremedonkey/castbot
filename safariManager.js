@@ -1104,16 +1104,13 @@ async function executeGiveCurrency(config, userId, guildId, interaction, buttonI
         }
     }
     
-    // Build message with appropriate wording for positive/negative amounts
-    const defaultMessage = config.amount >= 0
-        ? `You received ${customTerms.currencyName}!`
-        : `You lost ${customTerms.currencyName}!`;
-    let message = config.message || defaultMessage;
-
-    // Add balance info with custom currency terms
+    // Build message
     const sign = config.amount >= 0 ? '+' : '';
-    message += `\n\n${customTerms.currencyEmoji} **${sign}${config.amount} ${customTerms.currencyName}**`;
-    message += `\nYour balance: **${newBalance} ${customTerms.currencyName}**`;
+    const defaultMessage = config.amount >= 0
+        ? `You received some ${customTerms.currencyName}!`
+        : `You lost some ${customTerms.currencyName}!`;
+    const flavorText = config.message || defaultMessage;
+    const message = `${customTerms.currencyEmoji} **${sign}${config.amount} ${customTerms.currencyName}** — ${flavorText}`;
 
     return {
         flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
