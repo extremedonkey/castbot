@@ -9579,6 +9579,164 @@ async function toggleAttributeTrigger(guildId, triggerId) {
     });
 }
 
+// ========== Enemy Combat System ==========
+
+/**
+ * Resolve combat between a player and an enemy (synchronous, all turns at once)
+ * @param {Object} state - { playerHp, playerMaxHp, playerAttack, enemyHp, enemyMaxHp, enemyAttack, turnOrder }
+ * @returns {Object} { playerWon, finalPlayerHp, finalEnemyHp, turns[], totalTurns }
+ */
+function resolveCombat(state) {
+    if (state.playerAttack <= 0) {
+        return { playerWon: false, finalPlayerHp: state.playerHp, finalEnemyHp: state.enemyHp, turns: [], totalTurns: 0 };
+    }
+
+    let playerHp = state.playerHp;
+    let enemyHp = state.enemyHp;
+    const turns = [];
+    const MAX_TURNS = 50;
+
+    for (let turnNumber = 1; turnNumber <= MAX_TURNS && playerHp > 0 && enemyHp > 0; turnNumber++) {
+        const turn = { number: turnNumber, events: [] };
+
+        if (state.turnOrder === 'enemy_first') {
+            // Enemy attacks first
+            playerHp = Math.max(0, playerHp - state.enemyAttack);
+            turn.events.push({ actor: 'enemy', damage: state.enemyAttack, targetHp: playerHp, targetMaxHp: state.playerMaxHp });
+
+            if (playerHp > 0) {
+                enemyHp = Math.max(0, enemyHp - state.playerAttack);
+                turn.events.push({ actor: 'player', damage: state.playerAttack, targetHp: enemyHp, targetMaxHp: state.enemyMaxHp });
+            }
+        } else if (state.turnOrder === 'simultaneous') {
+            // Both attack regardless
+            enemyHp = Math.max(0, enemyHp - state.playerAttack);
+            turn.events.push({ actor: 'player', damage: state.playerAttack, targetHp: enemyHp, targetMaxHp: state.enemyMaxHp });
+
+            playerHp = Math.max(0, playerHp - state.enemyAttack);
+            turn.events.push({ actor: 'enemy', damage: state.enemyAttack, targetHp: playerHp, targetMaxHp: state.playerMaxHp });
+        } else {
+            // player_first (default)
+            enemyHp = Math.max(0, enemyHp - state.playerAttack);
+            turn.events.push({ actor: 'player', damage: state.playerAttack, targetHp: enemyHp, targetMaxHp: state.enemyMaxHp });
+
+            if (enemyHp > 0) {
+                playerHp = Math.max(0, playerHp - state.enemyAttack);
+                turn.events.push({ actor: 'enemy', damage: state.enemyAttack, targetHp: playerHp, targetMaxHp: state.playerMaxHp });
+            }
+        }
+
+        turns.push(turn);
+    }
+
+    return {
+        playerWon: enemyHp <= 0,
+        finalPlayerHp: playerHp,
+        finalEnemyHp: enemyHp,
+        turns,
+        totalTurns: turns.length
+    };
+}
+
+/**
+ * Get the player's best attack value from their inventory
+ * @param {string} guildId
+ * @param {string} userId
+ * @returns {Object} { attack, itemId, isConsumable }
+ */
+async function getPlayerAttackValue(guildId, userId) {
+    const safariData = await loadSafariContent();
+    const pData = await loadPlayerData();
+    const items = safariData[guildId]?.items || {};
+    const inventory = pData?.[guildId]?.players?.[userId]?.safari?.inventory || {};
+
+    let bestAttack = 0;
+    let bestItemId = null;
+    let bestIsConsumable = false;
+
+    for (const [itemId, invEntry] of Object.entries(inventory)) {
+        const quantity = typeof invEntry === 'number' ? invEntry : (invEntry?.quantity || 0);
+        if (quantity <= 0) continue;
+
+        const itemDef = items[itemId];
+        if (!itemDef || !itemDef.attackValue || itemDef.attackValue <= 0) continue;
+
+        if (itemDef.attackValue > bestAttack) {
+            bestAttack = itemDef.attackValue;
+            bestItemId = itemId;
+            bestIsConsumable = itemDef.consumable === 'Yes';
+        }
+    }
+
+    return { attack: bestAttack, itemId: bestItemId, isConsumable: bestIsConsumable };
+}
+
+/**
+ * Build the combat narrative display (Components V2 container)
+ * @param {Object} enemy - Enemy entity definition
+ * @param {Object} combatResult - Result from resolveCombat()
+ * @param {string} playerName - Player display name
+ * @returns {Object} Components V2 container
+ */
+function buildCombatDisplay(enemy, combatResult, playerName) {
+    const enemyEmoji = enemy.emoji || '👹';
+    const lines = [];
+
+    lines.push(`## ${enemyEmoji} ${enemy.name} battle!`);
+    if (enemy.description) lines.push(enemy.description);
+    lines.push('');
+
+    // Turn narrative
+    for (const turn of combatResult.turns) {
+        lines.push(`**Turn ${turn.number}**`);
+        for (const event of turn.events) {
+            if (event.actor === 'player') {
+                lines.push(`⚔️ ${playerName} attacks ${enemyEmoji} **${enemy.name}** for **${event.damage}** damage (${enemyEmoji} ${event.targetHp}/${event.targetMaxHp})`);
+            } else {
+                lines.push(`${enemyEmoji} **${enemy.name}** attacks ${playerName} for **${event.damage}** damage (❤️ ${event.targetHp}/${event.targetMaxHp})`);
+            }
+        }
+        lines.push('');
+    }
+
+    // Result
+    if (combatResult.playerWon) {
+        lines.push(`### ✅ Victory! ${enemyEmoji} **${enemy.name}** has been defeated!`);
+    } else {
+        lines.push(`### 💀 Defeat! You were beaten by ${enemyEmoji} **${enemy.name}**...`);
+    }
+
+    // Truncate if too long
+    let content = lines.join('\n');
+    if (content.length > 3900) {
+        const header = lines.slice(0, 4).join('\n');
+        const lastTurns = combatResult.turns.slice(-2);
+        const footer = lines.slice(-1).join('\n');
+        const middleSummary = `\n*...${combatResult.totalTurns - 2} turns of combat...*\n\n`;
+
+        const lastLines = [];
+        for (const turn of lastTurns) {
+            lastLines.push(`**Turn ${turn.number}**`);
+            for (const event of turn.events) {
+                if (event.actor === 'player') {
+                    lastLines.push(`⚔️ ${playerName} attacks ${enemyEmoji} **${enemy.name}** for **${event.damage}** damage (${enemyEmoji} ${event.targetHp}/${event.targetMaxHp})`);
+                } else {
+                    lastLines.push(`${enemyEmoji} **${enemy.name}** attacks ${playerName} for **${event.damage}** damage (❤️ ${event.targetHp}/${event.targetMaxHp})`);
+                }
+            }
+            lastLines.push('');
+        }
+
+        content = header + middleSummary + lastLines.join('\n') + '\n' + footer;
+    }
+
+    return {
+        type: 17,
+        accent_color: combatResult.playerWon ? 0x57F287 : 0xED4245,
+        components: [{ type: 10, content }]
+    };
+}
+
 export {
     createCustomButton,
     getCustomButton,
@@ -9720,7 +9878,11 @@ export {
     createAttributeTrigger,
     updateAttributeTrigger,
     deleteAttributeTrigger,
-    toggleAttributeTrigger
+    toggleAttributeTrigger,
+    // Enemy Combat System
+    resolveCombat,
+    getPlayerAttackValue,
+    buildCombatDisplay
 };
 
 /**
