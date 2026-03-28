@@ -1211,7 +1211,7 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
                         accent_color: 0xE74C3C,
                         components: [{
                             type: 10,
-                            content: `⏱️ **${itemEmoji} ${quantity}x ${itemName}** — You can only ${actionVerb === 'received' ? 'receive' : 'use'} this every **${formatPeriod(config.limit.periodMs)}**. Wait **${formatPeriod(remainingMs)}**.`
+                            content: `⏱️ **${itemEmoji} ${quantity}x ${itemName}** — You can only ${operation === 'give' ? 'receive' : 'use'} this every **${formatPeriod(config.limit.periodMs)}**. Wait **${formatPeriod(remainingMs)}**.`
                         }]
                     }]
                 };
