@@ -39113,13 +39113,15 @@ Your server is now ready for Tycoons gameplay!`;
 
         console.log(`📊 Updated modify_attribute amount for ${buttonId}[${actionIndex}]: ${newAmount}`);
 
-        // Return updated configuration UI
+        // Return updated configuration UI (UPDATE_MESSAGE to stay on the same ephemeral message)
         const { showModifyAttributeConfig } = await import('./customActionUI.js');
         const updatedConfig = await showModifyAttributeConfig(guildId, buttonId, actionIndex);
 
         return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: updatedConfig
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            components: updatedConfig.components
+          }
         });
       } catch (error) {
         console.error(`❌ Failed to update amount: ${error.message}`);
