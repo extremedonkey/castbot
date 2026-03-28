@@ -2925,7 +2925,30 @@ async function createItemConditionUI(condition, actionId, conditionIndex, curren
       options: itemOptions
     }]
   });
-  
+
+  // Quantity selector
+  const currentQty = condition.quantity || 1;
+  const qtyOptions = [1, 2, 3, 4, 5, 10, 15, 20, 25, 50].map(n => ({
+    label: n === 1 ? 'Any (×1)' : `×${n}`,
+    value: String(n),
+    description: n === 1 ? 'Player has at least 1' : `Player has at least ${n}`,
+    default: currentQty === n
+  }));
+
+  components.push({
+    type: 10,
+    content: '-# Quantity required:'
+  });
+  components.push({
+    type: 1,
+    components: [{
+      type: 3,
+      custom_id: `condition_qty_select_${actionId}_${conditionIndex}_${currentPage}`,
+      placeholder: 'Select required quantity...',
+      options: qtyOptions
+    }]
+  });
+
   return components;
 }
 

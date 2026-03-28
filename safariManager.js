@@ -10242,8 +10242,9 @@ async function evaluateSingleCondition(condition, player, context) {
             
         case 'item':
             const itemQuantity = getItemQuantity(player.safari?.inventory?.[condition.itemId]);
-            const hasItem = itemQuantity > 0;
-            return condition.operator === 'has' ? hasItem : !hasItem;
+            const requiredQty = condition.quantity || 1;
+            const hasEnough = itemQuantity >= requiredQty;
+            return condition.operator === 'has' ? hasEnough : !hasEnough;
             
         case 'role':
             const member = context.member;
@@ -10544,8 +10545,11 @@ function getConditionSummary(condition) {
                 return `Currency = 0`;
             }
             break;
-        case 'item':
-            return `${condition.operator === 'has' ? 'Has' : 'Does not have'} item ${condition.itemId}`;
+        case 'item': {
+            const condQty = condition.quantity || 1;
+            const condQtyStr = condQty > 1 ? ` (×${condQty})` : '';
+            return `${condition.operator === 'has' ? 'Has' : 'Does not have'} item ${condition.itemId}${condQtyStr}`;
+        }
         case 'role':
             return `${condition.operator === 'has' ? 'Has' : 'Does not have'} role ${condition.roleId}`;
         case 'attribute_check': {

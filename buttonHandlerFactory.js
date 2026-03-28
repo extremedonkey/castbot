@@ -1668,6 +1668,12 @@ export const BUTTON_REGISTRY = {
     category: 'safari',
     requiresModal: true
   },
+  'condition_qty_select_*': {
+    label: 'Condition Quantity',
+    description: 'Set required item quantity for has_item condition',
+    emoji: '🔢',
+    category: 'custom_actions'
+  },
   'entity_clone_select_*': {
     label: 'Clone Entity Source',
     description: 'Select source entity to clone',

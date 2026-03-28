@@ -4887,6 +4887,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_modify_attr_amount_') &&
         !custom_id.startsWith('safari_modify_attr_limit_') &&
         !custom_id.startsWith('safari_modify_attr_reset_') &&
+        !custom_id.startsWith('condition_qty_select_') &&
         !custom_id.startsWith('entity_clone_select_') &&
         !custom_id.startsWith('safari_fight_enemy_select_') &&
         !custom_id.startsWith('safari_fight_enemy_execute_on_') &&
@@ -29848,6 +29849,38 @@ Your server is now ready for Tycoons gameplay!`;
         currentPage
       });
       
+    } else if (custom_id.startsWith('condition_qty_select_')) {
+      // Handle quantity selection for item condition
+      return ButtonHandlerFactory.create({
+        id: 'condition_qty_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = context.customId.split('_');
+          parts.shift(); // condition
+          parts.shift(); // qty
+          parts.shift(); // select
+          const currentPage = parseInt(parts.pop() || '0');
+          const conditionIndex = parseInt(parts.pop() || '0');
+          const actionId = parts.join('_');
+          const quantity = parseInt(context.values[0]) || 1;
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+
+          if (!condition) return { content: '❌ Condition not found.', ephemeral: true };
+
+          condition.quantity = quantity;
+          await saveSafariContent(allSafariContent);
+          console.log(`✅ SUCCESS: condition_qty_select - set quantity to ${quantity} for ${actionId}[${conditionIndex}]`);
+
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({ res, actionId, conditionIndex, guildId: context.guildId, currentPage });
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('condition_role_select_')) {
       // Handle role selection for condition
       const selectedRoleId = data.values[0];
