@@ -49485,36 +49485,7 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
             type: 3, // String Select
             custom_id: `safari_item_limit_${buttonId}_${itemId}_${actionIndex}`,
             placeholder: 'Select usage limit...',
-            options: [
-              {
-                label: 'Unlimited',
-                value: 'unlimited',
-                description: 'Can be claimed infinite times',
-                emoji: { name: '♾️' },
-                default: state.limit === 'unlimited'
-              },
-              {
-                label: 'Once Per Player',
-                value: 'once_per_player',
-                description: 'Each player can claim once',
-                emoji: { name: '👤' },
-                default: state.limit === 'once_per_player'
-              },
-              {
-                label: 'Once Globally',
-                value: 'once_globally',
-                description: 'Only one player can claim',
-                emoji: { name: '🌍' },
-                default: state.limit === 'once_globally'
-              },
-              {
-                label: state.limit === 'once_per_period' && state.periodMs ? `Once Per Period (${(await import('./utils/periodUtils.js')).formatPeriod(state.periodMs)})` : 'Once Per Period',
-                value: 'once_per_period',
-                description: 'Each player can claim once per set period',
-                emoji: { name: '⏱️' },
-                default: state.limit === 'once_per_period'
-              }
-            ]
+            options: (await import('./utils/periodUtils.js')).buildLimitOptions({ currentLimit: state.limit, periodMs: state.periodMs })
           }]
         },
 
@@ -49693,36 +49664,7 @@ async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerm
             type: 3, // String Select
             custom_id: `safari_currency_limit_${buttonId}_${actionIndex}`,
             placeholder: 'Select usage limit...',
-            options: [
-              {
-                label: 'Unlimited',
-                value: 'unlimited',
-                description: 'Can be claimed infinite times',
-                emoji: { name: '♾️' },
-                default: state.limit === 'unlimited'
-              },
-              {
-                label: 'Once Per Player',
-                value: 'once_per_player',
-                description: 'Each player can claim once',
-                emoji: { name: '👤' },
-                default: state.limit === 'once_per_player'
-              },
-              {
-                label: 'Once Globally',
-                value: 'once_globally',
-                description: 'Only one player can claim',
-                emoji: { name: '🌍' },
-                default: state.limit === 'once_globally'
-              },
-              {
-                label: state.limit === 'once_per_period' && state.periodMs ? `Once Per Period (${(await import('./utils/periodUtils.js')).formatPeriod(state.periodMs)})` : 'Once Per Period',
-                value: 'once_per_period',
-                description: 'Each player can claim once per set period',
-                emoji: { name: '⏱️' },
-                default: state.limit === 'once_per_period'
-              }
-            ]
+            options: (await import('./utils/periodUtils.js')).buildLimitOptions({ currentLimit: state.limit, periodMs: state.periodMs })
           }]
         },
 

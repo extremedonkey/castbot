@@ -1,13 +1,27 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-// Shared options (replicated from quickActionCreate.js)
-const LIMIT_OPTIONS = [
-    { label: 'Unlimited', value: 'unlimited', emoji: { name: '♾️' }, description: 'No usage limit' },
-    { label: 'Once Per Player', value: 'once_per_player', emoji: { name: '👤' }, description: 'Each player can use once', default: true },
-    { label: 'Once Globally', value: 'once_globally', emoji: { name: '🌍' }, description: 'Only one player total can use' },
-    { label: 'Once Per Period (24h)', value: 'once_per_period', emoji: { name: '⏱️' }, description: 'Cooldown per player (edit to change period)' }
-];
+// Replicate buildLimitOptions inline (same as utils/periodUtils.js)
+function formatPeriodInline(ms) {
+  if (!ms || ms <= 0) return '0m';
+  const days = Math.floor(ms / 86400000);
+  const hours = Math.floor((ms % 86400000) / 3600000);
+  const minutes = Math.floor((ms % 3600000) / 60000);
+  const parts = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (days > 0 || hours > 0) parts.push(`${hours}h`);
+  parts.push(`${minutes}m`);
+  return parts.join(' ');
+}
+function buildLimitOptions({ currentLimit, periodMs } = {}) {
+  return [
+    { label: 'Unlimited', value: 'unlimited', description: 'Can be used infinite times', emoji: { name: '♾️' }, default: currentLimit === 'unlimited' },
+    { label: 'Once Per Player', value: 'once_per_player', description: 'Each player can use once', emoji: { name: '👤' }, default: currentLimit === 'once_per_player' },
+    { label: 'Once Globally', value: 'once_globally', description: 'Only one player total can use', emoji: { name: '🌍' }, default: currentLimit === 'once_globally' },
+    { label: currentLimit === 'once_per_period' && periodMs ? `Once Per Period (${formatPeriodInline(periodMs)})` : 'Once Per Period', value: 'once_per_period', description: 'Cooldown period before player can reuse', emoji: { name: '⏱️' }, default: currentLimit === 'once_per_period' }
+  ];
+}
+const LIMIT_OPTIONS = buildLimitOptions({ currentLimit: 'once_per_player' });
 
 const COLOR_OPTIONS = [
     { label: 'Blue (Primary)', value: 'Primary', emoji: { name: '🔵' }, default: true },
