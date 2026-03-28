@@ -32,7 +32,6 @@ import {
   Options
 } from 'discord.js';
 import { capitalize, DiscordRequest } from './utils.js';
-import { parseTextEmoji } from './utils/emojiUtils.js';
 import { discordLogTags } from './src/utils/discordLogTags.js';  // Educational logging tags
 import { 
   loadPlayerData, 
