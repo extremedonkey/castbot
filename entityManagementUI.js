@@ -501,21 +501,21 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
                         style: 2,
                         label: currencyLabel,
                         custom_id: `quick_currency_${entityId}`,
-                        emoji: { name: '⚡' }
+                        emoji: { name: customTerms.currencyEmoji || '🪙' }
                     },
                     {
                         type: 2, // Button
                         style: 2,
                         label: 'Quick Item',
                         custom_id: `quick_item_${entityId}`,
-                        emoji: { name: '⚡' }
+                        emoji: { name: '📦' }
                     },
                     {
                         type: 2, // Button
                         style: 2,
                         label: 'Quick Enemy',
                         custom_id: `quick_enemy_${entityId}`,
-                        emoji: { name: '⚡' }
+                        emoji: { name: '🐙' }
                     }
                 ]
             });

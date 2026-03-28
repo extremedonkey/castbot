@@ -8,14 +8,10 @@
 
 import { InteractionResponseType } from 'discord-interactions';
 import { parseAndValidateEmoji } from './utils/emojiUtils.js';
+import { buildLimitOptions } from './utils/periodUtils.js';
 
-// Shared select options for limit and color
-const LIMIT_OPTIONS = [
-    { label: 'Unlimited', value: 'unlimited', emoji: { name: '♾️' }, description: 'No usage limit' },
-    { label: 'Once Per Player', value: 'once_per_player', emoji: { name: '👤' }, description: 'Each player can use once', default: true },
-    { label: 'Once Globally', value: 'once_globally', emoji: { name: '🌍' }, description: 'Only one player total can use' },
-    { label: 'Once Per Period (24h)', value: 'once_per_period', emoji: { name: '⏱️' }, description: 'Cooldown per player (edit to change period)' }
-];
+// Quick create defaults: once_per_player is pre-selected
+const LIMIT_OPTIONS = buildLimitOptions({ currentLimit: 'once_per_player' });
 
 const COLOR_OPTIONS = [
     { label: 'Blue (Primary)', value: 'Primary', emoji: { name: '🔵' }, default: true },

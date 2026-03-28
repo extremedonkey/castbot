@@ -5,7 +5,7 @@ import { SAFARI_LIMITS } from './config/safariLimits.js';
 import { loadEntity, updateEntity } from './entityManager.js';
 import { loadSafariContent } from './safariManager.js';
 import { scheduler } from './scheduler.js';
-import { formatPeriod } from './utils/periodUtils.js';
+import { formatPeriod, buildLimitOptions } from './utils/periodUtils.js';
 
 /**
  * Shared outcome type options for the "Add Outcome" select menus.
@@ -4361,36 +4361,7 @@ export async function showModifyAttributeConfig(guildId, buttonId, actionIndex) 
             type: 3, // String Select
             custom_id: `safari_modify_attr_limit_${buttonId}_${actionIndex}`,
             placeholder: 'Select usage limit...',
-            options: [
-              {
-                label: 'Unlimited',
-                value: 'unlimited',
-                description: 'Players can use this repeatedly',
-                emoji: { name: '♾️' },
-                default: currentLimit === 'unlimited'
-              },
-              {
-                label: 'Once per Player',
-                value: 'once_per_player',
-                description: 'Each player can use this once',
-                emoji: { name: '👤' },
-                default: currentLimit === 'once_per_player'
-              },
-              {
-                label: 'Once Globally',
-                value: 'once_globally',
-                description: 'First player to use claims it for everyone',
-                emoji: { name: '🌍' },
-                default: currentLimit === 'once_globally'
-              },
-              {
-                label: currentLimit === 'once_per_period' && action?.config?.limit?.periodMs ? `Once Per Period (${formatPeriod(action.config.limit.periodMs)})` : 'Once Per Period',
-                value: 'once_per_period',
-                description: 'Each player can use once per set period',
-                emoji: { name: '⏱️' },
-                default: currentLimit === 'once_per_period'
-              }
-            ]
+            options: buildLimitOptions({ currentLimit, periodMs: action?.config?.limit?.periodMs })
           }]
         },
 
@@ -4806,12 +4777,7 @@ export async function showFightEnemyConfig(guildId, buttonId, actionIndex) {
         type: 3,
         custom_id: `safari_fight_enemy_limit_${buttonId}_${actionIndex}`,
         placeholder: 'Select usage limit...',
-        options: [
-          { label: 'Unlimited', value: 'unlimited', description: 'Players can fight repeatedly', emoji: { name: '♾️' }, default: currentLimit === 'unlimited' },
-          { label: 'Once per Player', value: 'once_per_player', description: 'Each player can fight once', emoji: { name: '👤' }, default: currentLimit === 'once_per_player' },
-          { label: 'Once Globally', value: 'once_globally', description: 'First player to fight claims it', emoji: { name: '🌍' }, default: currentLimit === 'once_globally' },
-          { label: currentLimit === 'once_per_period' && action?.config?.limit?.periodMs ? `Once Per Period (${formatPeriod(action.config.limit.periodMs)})` : 'Once Per Period', value: 'once_per_period', description: 'Each player can fight once per set period', emoji: { name: '⏱️' }, default: currentLimit === 'once_per_period' }
-        ]
+        options: buildLimitOptions({ currentLimit, periodMs: action?.config?.limit?.periodMs })
       }]
     }
   );
