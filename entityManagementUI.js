@@ -417,6 +417,9 @@ function createEntityDisplay(entity, entityType, safariConfig) {
             if (entity.category) {
                 lines.push(`**Category**: ${entity.category}`);
             }
+            if (entity.image) {
+                lines.push(`**🖼️ Image**: Set`);
+            }
             break;
 
         case 'map_cell':
@@ -662,7 +665,8 @@ export function getFieldGroups(entityType) {
         case 'enemy':
             return {
                 info: { label: 'Enemy Info', emoji: '📝', fields: ['name', 'emoji', 'description', 'category'] },
-                combat: { label: 'Combat', emoji: '⚔️', fields: ['hp', 'attackValue'] }
+                combat: { label: 'Combat', emoji: '⚔️', fields: ['hp', 'attackValue'] },
+                appearance: { label: 'Appearance', emoji: '🖼️', fields: ['image'] }
             };
         case 'map_cell':
             return {
