@@ -3253,6 +3253,20 @@ export const BUTTON_REGISTRY = {
     category: 'safari_management',
     type: 'select_menu'
   },
+  'safari_view_claims_*': {
+    label: 'View Claims',
+    description: 'View claims data for an outcome (give_item, give_currency, etc.)',
+    emoji: '📋',
+    style: 'Secondary',
+    category: 'safari_management'
+  },
+  'custom_action_editor_*': {
+    label: 'Action Editor',
+    description: 'Open or return to the custom action editor',
+    emoji: '⚡',
+    style: 'Secondary',
+    category: 'safari_management'
+  },
   'safari_item_save_*': {
     label: 'Save Item Outcome',
     description: 'Save give_item outcome configuration to action',
