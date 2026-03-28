@@ -3229,6 +3229,30 @@ export const BUTTON_REGISTRY = {
     category: 'safari_management',
     type: 'select_menu'
   },
+  'safari_item_limit_*': {
+    label: 'Item Drop Limit',
+    description: 'Set usage limit for item drop outcome',
+    emoji: '🔢',
+    style: 'Secondary',
+    category: 'safari_management',
+    type: 'select_menu'
+  },
+  'safari_item_operation_*': {
+    label: 'Item Operation',
+    description: 'Select give/take operation for item outcome',
+    emoji: '🔧',
+    style: 'Secondary',
+    category: 'safari_management',
+    type: 'select_menu'
+  },
+  'safari_item_quantity_*': {
+    label: 'Item Quantity',
+    description: 'Set quantity for item outcome',
+    emoji: '📊',
+    style: 'Secondary',
+    category: 'safari_management',
+    type: 'select_menu'
+  },
   'safari_item_save_*': {
     label: 'Save Item Outcome',
     description: 'Save give_item outcome configuration to action',
