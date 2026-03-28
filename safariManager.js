@@ -1016,6 +1016,7 @@ async function executeGiveCurrency(config, userId, guildId, interaction, buttonI
             if (lastUsed && (Date.now() - lastUsed < config.limit.periodMs)) {
                 const { formatPeriod } = await import('./utils/periodUtils.js');
                 const remainingMs = config.limit.periodMs - (Date.now() - lastUsed);
+                const amountStr = config.amount > 0 ? `+${config.amount}` : `${config.amount}`;
                 return {
                     flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
                     components: [{
@@ -1023,7 +1024,7 @@ async function executeGiveCurrency(config, userId, guildId, interaction, buttonI
                         accent_color: 0xE74C3C,
                         components: [{
                             type: 10,
-                            content: `⏱️ You can only use this every **${formatPeriod(config.limit.periodMs)}**. You need to wait **${formatPeriod(remainingMs)}**.`
+                            content: `⏱️ **${customTerms.currencyEmoji || '🪙'} ${amountStr} ${customTerms.currencyName}** — You can only claim this every **${formatPeriod(config.limit.periodMs)}**. Wait **${formatPeriod(remainingMs)}**.`
                         }]
                     }]
                 };
@@ -1210,7 +1211,7 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
                         accent_color: 0xE74C3C,
                         components: [{
                             type: 10,
-                            content: `⏱️ You can only use this every **${formatPeriod(config.limit.periodMs)}**. You need to wait **${formatPeriod(remainingMs)}**.`
+                            content: `⏱️ **${itemEmoji} ${quantity}x ${itemName}** — You can only ${actionVerb === 'received' ? 'receive' : 'use'} this every **${formatPeriod(config.limit.periodMs)}**. Wait **${formatPeriod(remainingMs)}**.`
                         }]
                     }]
                 };
@@ -3492,6 +3493,7 @@ async function executeModifyAttribute(config, guildId, userId, interaction, butt
                 if (lastUsed && (Date.now() - lastUsed < config.limit.periodMs)) {
                     const { formatPeriod } = await import('./utils/periodUtils.js');
                     const remainingMs = config.limit.periodMs - (Date.now() - lastUsed);
+                    const opSymbol = operation === 'add' ? '+' : operation === 'subtract' ? '-' : '=';
                     return {
                         flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
                         components: [{
@@ -3499,7 +3501,7 @@ async function executeModifyAttribute(config, guildId, userId, interaction, butt
                             accent_color: 0xE74C3C,
                             components: [{
                                 type: 10,
-                                content: `⏱️ You can only use this every **${formatPeriod(config.limit.periodMs)}**. You need to wait **${formatPeriod(remainingMs)}**.`
+                                content: `⏱️ **${attributeDef.emoji || '📊'} ${opSymbol}${amount} ${attributeDef.name}** — You can only use this every **${formatPeriod(config.limit.periodMs)}**. Wait **${formatPeriod(remainingMs)}**.`
                             }]
                         }]
                     };
