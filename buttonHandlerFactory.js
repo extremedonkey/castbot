@@ -1673,6 +1673,12 @@ export const BUTTON_REGISTRY = {
     emoji: '👹',
     category: 'custom_actions'
   },
+  'safari_fight_enemy_limit_*': {
+    label: 'Fight Usage Limit',
+    description: 'Set usage limit for fight enemy outcome',
+    emoji: '👹',
+    category: 'custom_actions'
+  },
   'safari_manage_items': {
     label: '📦 Manage Items',
     description: 'Safari item management - create, edit, manage items',

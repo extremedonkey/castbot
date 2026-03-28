@@ -323,6 +323,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
   const guildData = allSafariContent[guildId] || {};
   const guildItems = guildData.items || {};
   const guildButtons = guildData.buttons || {};
+  const guildEnemies = guildData.enemies || {};
   let action = actionId === 'new' ? createDefaultAction() : guildData.buttons?.[actionId];
   
   if (!action) {
@@ -447,7 +448,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
             type: 10,
             content: `### \`\`\`🔵 Opening Outcomes (${alwaysActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What always happens when this action triggers?${capWarning}`
           });
-          components.push(...getActionListComponents(alwaysActions, actionId, guildItems, guildButtons, 'always', allActions));
+          components.push(...getActionListComponents(alwaysActions, actionId, guildItems, guildButtons, 'always', allActions, guildEnemies));
           if (notAtMax) {
             components.push({
               type: 1,
@@ -486,7 +487,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           });
 
           // Display TRUE outcomes
-          components.push(...getActionListComponents(trueActions, actionId, guildItems, guildButtons, 'true', allActions));
+          components.push(...getActionListComponents(trueActions, actionId, guildItems, guildButtons, 'true', allActions, guildEnemies));
 
           // Add Pass Outcome select (if not at max total)
           if (notAtMax) {
@@ -508,7 +509,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
               ? `### \`\`\`🔴 Fail Outcomes (0/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player fails conditions?\n*No fail outcomes — displays generic error message*${capWarning}`
               : `### \`\`\`🔴 Fail Outcomes (${falseActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player fails conditions?${capWarning}`
           });
-          components.push(...getActionListComponents(falseActions, actionId, guildItems, guildButtons, 'false', allActions));
+          components.push(...getActionListComponents(falseActions, actionId, guildItems, guildButtons, 'false', allActions, guildEnemies));
 
           // Add Fail Outcome select (if not at max total)
           if (notAtMax) {
@@ -804,7 +805,7 @@ function formatButtonLocations(action, guildItems = {}) {
   return parts.length > 0 ? parts.join('; ') : 'No locations';
 }
 
-function getActionListComponents(actions, actionId, guildItems = {}, guildButtons = {}, executeOn = 'true', allActions = null) {
+function getActionListComponents(actions, actionId, guildItems = {}, guildButtons = {}, executeOn = 'true', allActions = null, guildEnemies = {}) {
   if (!actions || actions.length === 0) {
     return [];
   }
@@ -812,7 +813,7 @@ function getActionListComponents(actions, actionId, guildItems = {}, guildButton
   return actions.map((action, index) => {
     // Find the actual index in the full actions array for proper removal
     const actualIndex = allActions ? allActions.findIndex(a => a === action) : index;
-    const summaryText = getActionSummaryPlain(action, index + 1, guildItems, guildButtons);
+    const summaryText = getActionSummaryPlain(action, index + 1, guildItems, guildButtons, guildEnemies);
 
     // Move options — cycle through sections
     const currentExecuteOn = action.executeOn || 'true';
@@ -858,7 +859,7 @@ const MAX_SELECT_LABEL = 100;
  * Plain-text version of getActionSummary() for use in String Select labels.
  * No markdown formatting. Always truncated to 100 chars (Discord limit).
  */
-function getActionSummaryPlain(action, number, guildItems = {}, guildButtons = {}) {
+function getActionSummaryPlain(action, number, guildItems = {}, guildButtons = {}, guildEnemies = {}) {
   let summary;
 
   switch (action.type) {
@@ -941,8 +942,10 @@ function getActionSummaryPlain(action, number, guildItems = {}, guildButtons = {
       break;
     }
     case 'fight_enemy': {
-      const enemyId = action?.config?.enemyId;
-      summary = `${number}. Fight Enemy | ${enemyId || 'Not configured'}`;
+      const fightEnemyId = action?.config?.enemyId;
+      const fightEnemy = guildEnemies[fightEnemyId];
+      const fightName = fightEnemy ? `${fightEnemy.emoji || '👹'} ${fightEnemy.name}` : 'Not configured';
+      summary = `${number}. Fight Enemy | ${fightName}`;
       break;
     }
     default:
@@ -1083,8 +1086,8 @@ function getActionSummary(action, number, guildItems = {}, guildButtons = {}, is
       return `**\`${number}. Safari Player State\`** ${stateMode}${stateCoord}`;
     }
     case 'fight_enemy': {
-      const fightEnemyId = action?.config?.enemyId;
-      return `**\`${number}. Fight Enemy\`** 👹 ${fightEnemyId || 'Not configured'}`;
+      const fightEnemyId2 = action?.config?.enemyId;
+      return `**\`${number}. Fight Enemy\`** 👹 ${fightEnemyId2 || 'Not configured'}`;
     }
     default:
       return `**${number}. ${action.type || 'Unknown Action'}**`;
@@ -4817,6 +4820,26 @@ export async function showFightEnemyConfig(guildId, buttonId, actionIndex) {
       { type: 10, content: `### ${currentEnemy.emoji || '👹'} ${currentEnemy.name}\n${currentEnemy.description || ''}\n\n❤️ **HP:** ${currentEnemy.hp}  ⚔️ **Attack:** ${currentEnemy.attackValue || 0}  🔄 **Turn Order:** ${turnLabels[currentEnemy.turnOrder] || 'Player First'}` }
     );
   }
+
+  // Usage Limit select
+  const currentLimit = action?.config?.limit?.type || 'unlimited';
+  components.push(
+    { type: 14 },
+    { type: 10, content: '### Usage Limit\nHow many times can players fight this enemy?' },
+    {
+      type: 1,
+      components: [{
+        type: 3,
+        custom_id: `safari_fight_enemy_limit_${buttonId}_${actionIndex}`,
+        placeholder: 'Select usage limit...',
+        options: [
+          { label: 'Unlimited', value: 'unlimited', description: 'Players can fight repeatedly', emoji: { name: '♾️' }, default: currentLimit === 'unlimited' },
+          { label: 'Once per Player', value: 'once_per_player', description: 'Each player can fight once', emoji: { name: '👤' }, default: currentLimit === 'once_per_player' },
+          { label: 'Once Globally', value: 'once_globally', description: 'First player to fight claims it', emoji: { name: '🌍' }, default: currentLimit === 'once_globally' }
+        ]
+      }]
+    }
+  );
 
   // Execute On select
   components.push(

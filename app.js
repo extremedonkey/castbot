@@ -4889,6 +4889,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_modify_attr_reset_') &&
         !custom_id.startsWith('safari_fight_enemy_select_') &&
         !custom_id.startsWith('safari_fight_enemy_execute_on_') &&
+        !custom_id.startsWith('safari_fight_enemy_limit_') &&
         !custom_id.startsWith('safari_player_state_mode_') &&
         !custom_id.startsWith('safari_player_state_execute_on_') &&
         !custom_id.startsWith('safari_player_state_coord_') &&
@@ -21273,6 +21274,9 @@ Your server is now ready for Tycoons gameplay!`;
               } else if (action.type === 'manage_player_state') {
                 const { showManagePlayerStateConfig } = await import('./customActionUI.js');
                 return await showManagePlayerStateConfig(context.guildId, actionId, actionIndex);
+              } else if (action.type === 'fight_enemy') {
+                const { showFightEnemyConfig } = await import('./customActionUI.js');
+                return await showFightEnemyConfig(context.guildId, actionId, actionIndex);
               } else if (action.type === 'give_role' || action.type === 'remove_role') {
                 // Show role config inline — same as safari_edit_action handler
                 const currentRoleId = action.config?.roleId || '';
@@ -22318,6 +22322,40 @@ Your server is now ready for Tycoons gameplay!`;
           await saveSafariContent(safariData);
 
           console.log(`👹 Execute on set to: ${executeOnValue} for ${buttonId}[${actionIndex}]`);
+          const { showFightEnemyConfig } = await import('./customActionUI.js');
+          return await showFightEnemyConfig(context.guildId, buttonId, actionIndex);
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('safari_fight_enemy_limit_')) {
+      return ButtonHandlerFactory.create({
+        id: 'safari_fight_enemy_limit',
+        updateMessage: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_fight_enemy_limit_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          const limitValue = context.values[0];
+
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+
+          if (!button || !button.actions?.[actionIndex]) {
+            return { content: '❌ Action not found.', ephemeral: true };
+          }
+
+          if (!button.actions[actionIndex].config) button.actions[actionIndex].config = {};
+          button.actions[actionIndex].config.limit = {
+            type: limitValue,
+            claimedBy: limitValue === 'once_per_player' ? [] : null
+          };
+          button.metadata.lastModified = Date.now();
+          await saveSafariContent(safariData);
+
+          console.log(`👹 Usage limit set to: ${limitValue} for ${buttonId}[${actionIndex}]`);
           const { showFightEnemyConfig } = await import('./customActionUI.js');
           return await showFightEnemyConfig(context.guildId, buttonId, actionIndex);
         }
