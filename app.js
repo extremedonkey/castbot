@@ -22397,7 +22397,7 @@ Your server is now ready for Tycoons gameplay!`;
             type: InteractionResponseType.MODAL,
             data: {
               custom_id: `entity_clone_modal_${entityType}_${sourceId}`,
-              title: `Clone ${EDIT_CONFIGS[entityType]?.displayName || 'Entity'}`,
+              title: `Clone ${({ item: 'Item', store: 'Store', safari_button: 'Action', enemy: 'Enemy' })[entityType] || 'Entity'}`,
               components: [
                 {
                   type: 1,
@@ -27478,6 +27478,7 @@ Your server is now ready for Tycoons gameplay!`;
             }
 
             const cloneDefaultEmoji = entityType === 'item' ? '📦' : entityType === 'store' ? '🏪' : entityType === 'enemy' ? '🐙' : '📋';
+            const cloneDisplayName = { item: 'Item', store: 'Store', safari_button: 'Action', enemy: 'Enemy' }[entityType] || 'Entity';
             const cloneOptions = [
               { label: '🔙 Back to all', value: 'back_to_all', description: 'Return to full list' }
             ];
@@ -27492,7 +27493,7 @@ Your server is now ready for Tycoons gameplay!`;
                 cloneOptions.push({
                   label: (cleanText || name).substring(0, 100),
                   value: id,
-                  description: `Clone this ${EDIT_CONFIGS[entityType]?.displayName?.toLowerCase() || 'entity'}`,
+                  description: `Clone this ${cloneDisplayName.toLowerCase()}`,
                   emoji: parsedEmoji
                 });
               });
@@ -27503,7 +27504,7 @@ Your server is now ready for Tycoons gameplay!`;
                 type: 17,
                 accent_color: 0x3498DB,
                 components: [
-                  { type: 10, content: `## 🔄 Clone ${EDIT_CONFIGS[entityType]?.displayName || 'Entity'}\nSelect the source to clone from:` },
+                  { type: 10, content: `## 🔄 Clone ${cloneDisplayName}\nSelect the source to clone from:` },
                   { type: 14 },
                   {
                     type: 1,
