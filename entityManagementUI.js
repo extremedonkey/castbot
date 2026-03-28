@@ -11,7 +11,7 @@ import {
 import { loadSafariContent, saveSafariContent, getCustomTerms } from './safariManager.js';
 import { EDIT_CONFIGS } from './editFramework.js';
 import { SAFARI_LIMITS } from './config/safariLimits.js';
-import { parseAndValidateEmoji } from './utils/emojiUtils.js';
+import { parseTextEmoji, parseAndValidateEmoji } from './utils/emojiUtils.js';
 
 /**
  * Create item selection UI for map locations
@@ -284,7 +284,9 @@ function createEntitySelector(entities, selectedId, entityType, searchTerm) {
             emoji = entity.emoji || getDefaultEmoji(entityType);
         }
         
-        const { cleanText, emoji: parsedEmoji } = parseAndValidateEmoji(`${emoji} ${name}`, getDefaultEmoji(entityType));
+        // Use parseTextEmoji (no cache validation) for String Select options —
+        // selects gracefully handle missing emojis, unlike buttons which crash
+        const { cleanText, emoji: parsedEmoji } = parseTextEmoji(`${emoji} ${name}`, getDefaultEmoji(entityType));
         const safeCleanText = cleanText || `${emoji} ${name}`;
         options.push({
             label: safeCleanText.substring(0, 100),

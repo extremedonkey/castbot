@@ -1010,8 +1010,27 @@ async function executeGiveCurrency(config, userId, guildId, interaction, buttonI
                 }]
             };
         }
+
+        if (config.limit.type === 'once_per_period') {
+            const lastUsed = (typeof claimedBy === 'object' && !Array.isArray(claimedBy)) ? claimedBy?.[userId] : undefined;
+            if (lastUsed && (Date.now() - lastUsed < config.limit.periodMs)) {
+                const { formatPeriod } = await import('./utils/periodUtils.js');
+                const remainingMs = config.limit.periodMs - (Date.now() - lastUsed);
+                return {
+                    flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+                    components: [{
+                        type: 17,
+                        accent_color: 0xE74C3C,
+                        components: [{
+                            type: 10,
+                            content: `⏱️ You can only use this every **${formatPeriod(config.limit.periodMs)}**. You need to wait **${formatPeriod(remainingMs)}**.`
+                        }]
+                    }]
+                };
+            }
+        }
     }
-    
+
     // Give the currency with context for logging
     const context = {
         username: interaction?.user?.username || 'Unknown',
@@ -1040,8 +1059,13 @@ async function executeGiveCurrency(config, userId, guildId, interaction, buttonI
                         }
                     } else if (config.limit.type === 'once_globally') {
                         action.config.limit.claimedBy = userId;
+                    } else if (config.limit.type === 'once_per_period') {
+                        if (!action.config.limit.claimedBy || typeof action.config.limit.claimedBy !== 'object' || Array.isArray(action.config.limit.claimedBy)) {
+                            action.config.limit.claimedBy = {};
+                        }
+                        action.config.limit.claimedBy[userId] = Date.now();
                     }
-                    
+
                     await saveSafariContent(safariData);
                     console.log(`✅ Updated claim tracking for give_currency action ${buttonId}[${actionIndex}]`);
                 }
@@ -1173,6 +1197,25 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
                 };
             }
         }
+
+        if (config.limit.type === 'once_per_period') {
+            const lastUsed = (typeof claimedBy === 'object' && !Array.isArray(claimedBy)) ? claimedBy?.[userId] : undefined;
+            if (lastUsed && (Date.now() - lastUsed < config.limit.periodMs)) {
+                const { formatPeriod } = await import('./utils/periodUtils.js');
+                const remainingMs = config.limit.periodMs - (Date.now() - lastUsed);
+                return {
+                    flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+                    components: [{
+                        type: 17,
+                        accent_color: 0xE74C3C,
+                        components: [{
+                            type: 10,
+                            content: `⏱️ You can only use this every **${formatPeriod(config.limit.periodMs)}**. You need to wait **${formatPeriod(remainingMs)}**.`
+                        }]
+                    }]
+                };
+            }
+        }
     }
 
     // Execute the operation based on type
@@ -1260,6 +1303,11 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
                         }
                     } else if (config.limit.type === 'once_globally') {
                         action.config.limit.claimedBy = userId;
+                    } else if (config.limit.type === 'once_per_period') {
+                        if (!action.config.limit.claimedBy || typeof action.config.limit.claimedBy !== 'object' || Array.isArray(action.config.limit.claimedBy)) {
+                            action.config.limit.claimedBy = {};
+                        }
+                        action.config.limit.claimedBy[userId] = Date.now();
                     }
 
                     console.log(`${operationEmoji} AFTER CLAIM: ${config.limit.type}, claimedBy:`, action.config.limit.claimedBy);

@@ -5,6 +5,7 @@ import { SAFARI_LIMITS } from './config/safariLimits.js';
 import { loadEntity, updateEntity } from './entityManager.js';
 import { loadSafariContent } from './safariManager.js';
 import { scheduler } from './scheduler.js';
+import { formatPeriod } from './utils/periodUtils.js';
 
 /**
  * Shared outcome type options for the "Add Outcome" select menus.
@@ -4380,6 +4381,13 @@ export async function showModifyAttributeConfig(guildId, buttonId, actionIndex) 
                 description: 'First player to use claims it for everyone',
                 emoji: { name: '🌍' },
                 default: currentLimit === 'once_globally'
+              },
+              {
+                label: currentLimit === 'once_per_period' && action?.config?.limit?.periodMs ? `Once Per Period (${formatPeriod(action.config.limit.periodMs)})` : 'Once Per Period',
+                value: 'once_per_period',
+                description: 'Each player can use once per set period',
+                emoji: { name: '⏱️' },
+                default: currentLimit === 'once_per_period'
               }
             ]
           }]
@@ -4835,7 +4843,8 @@ export async function showFightEnemyConfig(guildId, buttonId, actionIndex) {
         options: [
           { label: 'Unlimited', value: 'unlimited', description: 'Players can fight repeatedly', emoji: { name: '♾️' }, default: currentLimit === 'unlimited' },
           { label: 'Once per Player', value: 'once_per_player', description: 'Each player can fight once', emoji: { name: '👤' }, default: currentLimit === 'once_per_player' },
-          { label: 'Once Globally', value: 'once_globally', description: 'First player to fight claims it', emoji: { name: '🌍' }, default: currentLimit === 'once_globally' }
+          { label: 'Once Globally', value: 'once_globally', description: 'First player to fight claims it', emoji: { name: '🌍' }, default: currentLimit === 'once_globally' },
+          { label: currentLimit === 'once_per_period' && action?.config?.limit?.periodMs ? `Once Per Period (${formatPeriod(action.config.limit.periodMs)})` : 'Once Per Period', value: 'once_per_period', description: 'Each player can fight once per set period', emoji: { name: '⏱️' }, default: currentLimit === 'once_per_period' }
         ]
       }]
     }

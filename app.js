@@ -20097,7 +20097,23 @@ Your server is now ready for Tycoons gameplay!`;
           
           const limitType = context.values[0];
           console.log(`🎯 LIMIT: safari_item_limit - ${limitType} for ${buttonId}[${actionIndex}]`);
-          
+
+          // Once Per Period: show modal to collect days/hours/minutes
+          if (limitType === 'once_per_period') {
+            const { buildPeriodModalComponents } = await import('./utils/periodUtils.js');
+            const stateKey = `${context.guildId}_${buttonId}_${itemId}_${actionIndex}`;
+            const state = dropConfigState.get(stateKey);
+            const currentPeriodMs = state?.periodMs || 0;
+            return {
+              type: InteractionResponseType.MODAL,
+              data: {
+                custom_id: `period_modal_item_${buttonId}_${itemId}_${actionIndex}`,
+                title: 'Set Cooldown Period',
+                components: buildPeriodModalComponents({ currentPeriodMs })
+              }
+            };
+          }
+
           // Store in temporary state (preserve existing defaults if present)
           const stateKey = `${context.guildId}_${buttonId}_${itemId}_${actionIndex}`;
           const state = dropConfigState.get(stateKey) || {
@@ -20108,7 +20124,7 @@ Your server is now ready for Tycoons gameplay!`;
           };
           state.limit = limitType;
           dropConfigState.set(stateKey, state);
-          
+
           // Return updated configuration UI
           return await showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
         }
@@ -20474,10 +20490,12 @@ Your server is now ready for Tycoons gameplay!`;
               itemId: itemId,
               quantity: state.quantity || 1,  // Default to 1 if not set
               operation: state.operation || 'give',  // Default to 'give' for backwards compatibility
-              limit: {
-                type: state.limit || 'unlimited',  // Default to unlimited
-                claimedBy: (state.limit || 'unlimited') === 'unlimited' ? undefined : []
-              }
+              limit: (() => {
+                const lt = state.limit || 'unlimited';
+                if (lt === 'unlimited') return { type: 'unlimited' };
+                if (lt === 'once_per_period') return { type: 'once_per_period', periodMs: state.periodMs, claimedBy: {} };
+                return { type: lt, claimedBy: lt === 'once_per_player' ? [] : null };
+              })()
             },
             executeOn: state.executeOn || 'true'  // Default to 'true' for backwards compatibility
           };
@@ -20590,17 +20608,33 @@ Your server is now ready for Tycoons gameplay!`;
           const limitType = context.values[0];
           
           console.log(`🎯 LIMIT: safari_currency_limit - ${limitType} for ${buttonId}[${actionIndex}]`);
-          
+
+          // Once Per Period: show modal to collect days/hours/minutes
+          if (limitType === 'once_per_period') {
+            const { buildPeriodModalComponents } = await import('./utils/periodUtils.js');
+            const stateKey = `${context.guildId}_${buttonId}_currency_${actionIndex}`;
+            const state = dropConfigState.get(stateKey);
+            const currentPeriodMs = state?.periodMs || 0;
+            return {
+              type: InteractionResponseType.MODAL,
+              data: {
+                custom_id: `period_modal_currency_${buttonId}_${actionIndex}`,
+                title: 'Set Cooldown Period',
+                components: buildPeriodModalComponents({ currentPeriodMs })
+              }
+            };
+          }
+
           // Store in temporary state
           const stateKey = `${context.guildId}_${buttonId}_currency_${actionIndex}`;
           const state = dropConfigState.get(stateKey) || { limit: null, style: null, amount: null, executeOn: 'true' };
           state.limit = limitType;
           dropConfigState.set(stateKey, state);
-          
+
           // Update temporary state
           const { getCustomTerms } = await import('./safariManager.js');
           const customTerms = await getCustomTerms(context.guildId);
-          
+
           // Return updated configuration UI
           return await showGiveCurrencyConfig(context.guildId, buttonId, actionIndex, customTerms);
         }
@@ -20707,10 +20741,12 @@ Your server is now ready for Tycoons gameplay!`;
             order: actionIndex,
             config: {
               amount: state.amount || 100,  // Default to 100 if not set
-              limit: {
-                type: state.limit || 'unlimited',  // Default to unlimited
-                claimedBy: (state.limit || 'unlimited') === 'unlimited' ? undefined : []
-              }
+              limit: (() => {
+                const lt = state.limit || 'unlimited';
+                if (lt === 'unlimited') return { type: 'unlimited' };
+                if (lt === 'once_per_period') return { type: 'once_per_period', periodMs: state.periodMs, claimedBy: {} };
+                return { type: lt, claimedBy: lt === 'once_per_player' ? [] : null };
+              })()
             },
             executeOn: state.executeOn || 'true'  // Default to 'true' for backwards compatibility
           };
@@ -22347,6 +22383,20 @@ Your server is now ready for Tycoons gameplay!`;
             return { content: '❌ Action not found.', ephemeral: true };
           }
 
+          // Once Per Period: show modal to collect days/hours/minutes
+          if (limitValue === 'once_per_period') {
+            const { buildPeriodModalComponents } = await import('./utils/periodUtils.js');
+            const currentPeriodMs = button?.actions?.[actionIndex]?.config?.limit?.periodMs || 0;
+            return {
+              type: InteractionResponseType.MODAL,
+              data: {
+                custom_id: `period_modal_enemy_${buttonId}_${actionIndex}`,
+                title: 'Set Cooldown Period',
+                components: buildPeriodModalComponents({ currentPeriodMs })
+              }
+            };
+          }
+
           if (!button.actions[actionIndex].config) button.actions[actionIndex].config = {};
           button.actions[actionIndex].config.limit = {
             type: limitValue,
@@ -22734,6 +22784,22 @@ Your server is now ready for Tycoons gameplay!`;
           const limitValue = context.values[0];
 
           console.log(`📊 LIMIT: safari_modify_attr_limit - setting to ${limitValue} for ${buttonId}[${actionIndex}]`);
+
+          // Once Per Period: show modal to collect days/hours/minutes
+          if (limitValue === 'once_per_period') {
+            const { buildPeriodModalComponents } = await import('./utils/periodUtils.js');
+            const { loadSafariContent } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+            const currentPeriodMs = safariData[context.guildId]?.buttons?.[buttonId]?.actions?.[actionIndex]?.config?.limit?.periodMs || 0;
+            return {
+              type: InteractionResponseType.MODAL,
+              data: {
+                custom_id: `period_modal_attr_${buttonId}_${actionIndex}`,
+                title: 'Set Cooldown Period',
+                components: buildPeriodModalComponents({ currentPeriodMs })
+              }
+            };
+          }
 
           // Load and update safari data
           const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
@@ -46828,6 +46894,152 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
       
+    } else if (custom_id.startsWith('period_modal_')) {
+      // Handle Once Per Period cooldown configuration modal submission
+      try {
+        const guildId = req.body.guild_id;
+        const { parsePeriodFromModal, formatPeriod } = await import('./utils/periodUtils.js');
+        const { days, hours, minutes, totalMs } = parsePeriodFromModal(data.components);
+
+        // Validation
+        if (totalMs === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: '❌ Period must be at least 1 minute.', flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+        if (days > 30 || hours > 23 || minutes > 59 || days < 0 || hours < 0 || minutes < 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: '❌ Invalid values. Days: 0-30, Hours: 0-23, Minutes: 0-59.', flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+
+        console.log(`⏱️ Period modal submit: ${days}d ${hours}h ${minutes}m = ${totalMs}ms`);
+
+        // Route by outcome type prefix
+        const suffix = custom_id.replace('period_modal_', '');
+
+        if (suffix.startsWith('item_')) {
+          // Deferred save: update dropConfigState, re-render showGiveItemConfig
+          const remaining = suffix.replace('item_', '');
+          const lastUnderscore = remaining.lastIndexOf('_');
+          const actionIndex = parseInt(remaining.substring(lastUnderscore + 1));
+          const beforeActionIndex = remaining.substring(0, lastUnderscore);
+
+          // Find itemId using same pattern as safari_item_limit_ handler
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const items = safariData[guildId]?.items || {};
+          let buttonId, itemId, item;
+          const parts = beforeActionIndex.split('_');
+          for (let i = 1; i < parts.length; i++) {
+            const possibleItemId = parts.slice(i).join('_');
+            if (items[possibleItemId]) {
+              itemId = possibleItemId;
+              buttonId = parts.slice(0, i).join('_');
+              item = items[possibleItemId];
+              break;
+            }
+          }
+          if (!item) {
+            return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Item not found.', flags: InteractionResponseFlags.EPHEMERAL } });
+          }
+
+          const stateKey = `${guildId}_${buttonId}_${itemId}_${actionIndex}`;
+          const state = dropConfigState.get(stateKey) || { limit: 'once_per_period', style: '2', quantity: 1, operation: 'give', executeOn: 'true' };
+          state.limit = 'once_per_period';
+          state.periodMs = totalMs;
+          dropConfigState.set(stateKey, state);
+
+          console.log(`⏱️ Set once_per_period (${formatPeriod(totalMs)}) for item ${itemId} in ${buttonId}[${actionIndex}]`);
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: await showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex)
+          });
+
+        } else if (suffix.startsWith('currency_')) {
+          // Deferred save: update dropConfigState, re-render showGiveCurrencyConfig
+          const remaining = suffix.replace('currency_', '');
+          const lastUnderscore = remaining.lastIndexOf('_');
+          const actionIndex = parseInt(remaining.substring(lastUnderscore + 1));
+          const buttonId = remaining.substring(0, lastUnderscore);
+
+          const stateKey = `${guildId}_${buttonId}_currency_${actionIndex}`;
+          const state = dropConfigState.get(stateKey) || { limit: 'once_per_period', style: null, amount: null, executeOn: 'true' };
+          state.limit = 'once_per_period';
+          state.periodMs = totalMs;
+          dropConfigState.set(stateKey, state);
+
+          const { getCustomTerms } = await import('./safariManager.js');
+          const customTerms = await getCustomTerms(guildId);
+
+          console.log(`⏱️ Set once_per_period (${formatPeriod(totalMs)}) for currency in ${buttonId}[${actionIndex}]`);
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: await showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerms)
+          });
+
+        } else if (suffix.startsWith('attr_')) {
+          // Immediate save: write directly to safariData
+          const remaining = suffix.replace('attr_', '');
+          const lastUnderscore = remaining.lastIndexOf('_');
+          const actionIndex = parseInt(remaining.substring(lastUnderscore + 1));
+          const buttonId = remaining.substring(0, lastUnderscore);
+
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[guildId]?.buttons?.[buttonId];
+          if (!button?.actions?.[actionIndex]) {
+            return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Action not found.', flags: InteractionResponseFlags.EPHEMERAL } });
+          }
+          if (!button.actions[actionIndex].config) button.actions[actionIndex].config = {};
+          button.actions[actionIndex].config.limit = { type: 'once_per_period', periodMs: totalMs, claimedBy: {} };
+          await saveSafariContent(safariData);
+
+          const { showModifyAttributeConfig } = await import('./customActionUI.js');
+          console.log(`⏱️ Set once_per_period (${formatPeriod(totalMs)}) for modify_attribute ${buttonId}[${actionIndex}]`);
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: await showModifyAttributeConfig(guildId, buttonId, actionIndex)
+          });
+
+        } else if (suffix.startsWith('enemy_')) {
+          // Immediate save: write directly to safariData
+          const remaining = suffix.replace('enemy_', '');
+          const lastUnderscore = remaining.lastIndexOf('_');
+          const actionIndex = parseInt(remaining.substring(lastUnderscore + 1));
+          const buttonId = remaining.substring(0, lastUnderscore);
+
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[guildId]?.buttons?.[buttonId];
+          if (!button?.actions?.[actionIndex]) {
+            return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Action not found.', flags: InteractionResponseFlags.EPHEMERAL } });
+          }
+          if (!button.actions[actionIndex].config) button.actions[actionIndex].config = {};
+          button.actions[actionIndex].config.limit = { type: 'once_per_period', periodMs: totalMs, claimedBy: {} };
+          if (button.metadata) button.metadata.lastModified = Date.now();
+          await saveSafariContent(safariData);
+
+          const { showFightEnemyConfig } = await import('./customActionUI.js');
+          console.log(`⏱️ Set once_per_period (${formatPeriod(totalMs)}) for fight_enemy ${buttonId}[${actionIndex}]`);
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: await showFightEnemyConfig(guildId, buttonId, actionIndex)
+          });
+
+        } else {
+          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Unknown period modal type.', flags: InteractionResponseFlags.EPHEMERAL } });
+        }
+      } catch (error) {
+        console.error('❌ Error processing period modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: '❌ Error setting cooldown period.', flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
+
     } else if (custom_id.startsWith('ca_schedule_modal_')) {
       // Handle Custom Action scheduling modal submission
       try {
@@ -48983,6 +49195,13 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
                 description: 'Only one player can claim',
                 emoji: { name: '🌍' },
                 default: state.limit === 'once_globally'
+              },
+              {
+                label: state.limit === 'once_per_period' && state.periodMs ? `Once Per Period (${(await import('./utils/periodUtils.js')).formatPeriod(state.periodMs)})` : 'Once Per Period',
+                value: 'once_per_period',
+                description: 'Each player can claim once per set period',
+                emoji: { name: '⏱️' },
+                default: state.limit === 'once_per_period'
               }
             ]
           }]
@@ -49182,6 +49401,13 @@ async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerm
                 description: 'Only one player can claim',
                 emoji: { name: '🌍' },
                 default: state.limit === 'once_globally'
+              },
+              {
+                label: state.limit === 'once_per_period' && state.periodMs ? `Once Per Period (${(await import('./utils/periodUtils.js')).formatPeriod(state.periodMs)})` : 'Once Per Period',
+                value: 'once_per_period',
+                description: 'Each player can claim once per set period',
+                emoji: { name: '⏱️' },
+                default: state.limit === 'once_per_period'
               }
             ]
           }]
