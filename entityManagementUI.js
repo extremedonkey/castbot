@@ -520,27 +520,6 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
         }
     }
 
-    // Add turnOrder String Select for enemies
-    if (entityType === 'enemy') {
-        components.push({
-            type: 10,
-            content: '**🔄 Turn Order**'
-        });
-        components.push({
-            type: 1, // ActionRow
-            components: [{
-                type: 3, // String Select
-                custom_id: `entity_turnorder_enemy_${entityId}`,
-                placeholder: 'Select turn order',
-                options: [
-                    { label: 'Player First', value: 'player_first', description: 'Player attacks before the enemy', default: entity.turnOrder === 'player_first' },
-                    { label: 'Enemy First', value: 'enemy_first', description: 'Enemy attacks before the player', default: entity.turnOrder === 'enemy_first' },
-                    { label: 'Simultaneous', value: 'simultaneous', description: 'Both attack at the same time (double KO possible)', default: entity.turnOrder === 'simultaneous' }
-                ]
-            }]
-        });
-    }
-
     components.push({ type: 14 }); // Separator
 
     // Check for modal trigger actions if this is a map cell
@@ -677,7 +656,7 @@ export function getFieldGroups(entityType) {
         case 'enemy':
             return {
                 info: { label: 'Enemy Info', emoji: '📝', fields: ['name', 'emoji', 'description', 'category'] },
-                combat: { label: 'Combat', emoji: '⚔️', fields: ['hp', 'attackValue'] },
+                combat: { label: 'Combat', emoji: '⚔️', fields: ['hp', 'attackValue', 'turnOrder'] },
                 appearance: { label: 'Appearance', emoji: '🖼️', fields: ['image'] }
             };
         case 'map_cell':

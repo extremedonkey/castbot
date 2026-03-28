@@ -565,6 +565,10 @@ function createEnemyFieldModal(enemyId, fieldGroupId, group, currentValues) {
                 type: 1,
                 components: [{ type: 4, custom_id: 'attackValue', label: 'Attack Value', style: 1, value: (currentValues.attackValue ?? '').toString(), placeholder: '1-999', required: true, max_length: 3 }]
             });
+            components.push({
+                type: 1,
+                components: [{ type: 4, custom_id: 'turnOrder', label: 'Turn Order (player_first / enemy_first / simultaneous)', style: 1, value: currentValues.turnOrder || 'player_first', placeholder: 'player_first', required: false, max_length: 20 }]
+            });
             break;
 
         case 'appearance':
@@ -674,6 +678,16 @@ export function parseModalSubmission(modalData, fieldGroupId) {
                 case 'attackValue':
                 case 'defenseValue':
                 case 'staminaBoost':
+                case 'turnOrder':
+                    // Validate and normalize turn order
+                    if (value) {
+                        const normalized = value.trim().toLowerCase().replace(/\s+/g, '_');
+                        const valid = ['player_first', 'enemy_first', 'simultaneous'];
+                        fields[fieldId] = valid.includes(normalized) ? normalized : 'player_first';
+                    } else {
+                        fields[fieldId] = 'player_first';
+                    }
+                    break;
                 case 'hp':
                     // Parse as number, allow empty for optional fields
                     if (value === '' || value === null || value === undefined) {

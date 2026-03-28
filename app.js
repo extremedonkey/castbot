@@ -16575,31 +16575,6 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
 
-    } else if (custom_id.startsWith('entity_turnorder_enemy_')) {
-      return ButtonHandlerFactory.create({
-        id: 'entity_turnorder_enemy',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        updateMessage: true,
-        handler: async (context) => {
-          const enemyId = context.customId.replace('entity_turnorder_enemy_', '');
-          const selectedValue = context.values[0];
-          const { updateEntityFields } = await import('./entityManager.js');
-          await updateEntityFields(context.guildId, 'enemy', enemyId, { turnOrder: selectedValue });
-          console.log(`🐙 DEBUG: Enemy ${enemyId} turnOrder set to ${selectedValue}`);
-
-          const uiResponse = await createEntityManagementUI({
-            entityType: 'enemy',
-            guildId: context.guildId,
-            selectedId: enemyId,
-            activeFieldGroup: null,
-            searchTerm: '',
-            mode: 'edit'
-          });
-          return uiResponse;
-        }
-      })(req, res, client);
-
     } else if (custom_id === 'safari_store_create') {
       // MVP2: Create new store interface
       console.log('🏪 DEBUG: safari_store_create handler called');
