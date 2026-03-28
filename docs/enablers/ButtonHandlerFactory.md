@@ -389,54 +389,49 @@ handler: async (context) => {
 }
 ```
 
-### Modal-Triggering Handlers (Cannot Use Factory)
+### Modal-Triggering Handlers (Factory Supported)
 
-Buttons that show a Discord modal **cannot** use ButtonHandlerFactory. The factory wraps returns in message response types, but modals require `type: InteractionResponseType.MODAL` (type 9).
+Buttons that show a Discord modal **CAN** use ButtonHandlerFactory. Return a modal response object from the handler and the factory will detect and send it correctly. The key constraint: `deferred` must NOT be `true` (modals cannot be deferred).
 
-**Button click → Show modal (direct res.send, no factory):**
+**Button click → Show modal (factory pattern — PREFERRED):**
 ```javascript
-} else if (custom_id.startsWith('map_admin_move_player_')) {
-  try {
-    const targetUserId = custom_id.split('_').pop();
-    const guildId = req.body.guild_id;
-    // Load data for modal pre-fill
-    const currentLocation = await getPlayerLocation(guildId, targetUserId);
-    const modal = await createCoordinateModal(targetUserId, currentLocation);
-    return res.send({ type: InteractionResponseType.MODAL, data: modal });
-  } catch (error) {
-    console.error('Error showing modal:', error);
-    return res.send({
-      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-      data: { content: '❌ Error showing modal.', flags: InteractionResponseFlags.EPHEMERAL }
-    });
-  }
-}
-```
-
-**Modal submit → Process data (CAN use factory if needed):**
-```javascript
-} else if (custom_id.startsWith('map_admin_coordinate_modal_')) {
+} else if (custom_id.startsWith('app_dnc_select_')) {
   return ButtonHandlerFactory.create({
-    id: 'map_admin_coordinate_modal',
-    updateMessage: true,
+    id: 'app_dnc_select',
+    requiresModal: true,  // Tells factory to expect a modal response
+    // deferred: false — CRITICAL: modals CANNOT be deferred
     handler: async (context) => {
-      const targetUserId = context.customId.split('_').pop();
-      const coordinate = context.modalValues?.[0]?.trim().toUpperCase();
-      // Validate, save, return updated UI...
-      return updatedUI;
+      const modal = buildDncEntryModal(entry, channelId, questionIndex);
+      return {
+        type: InteractionResponseType.MODAL,
+        data: modal
+      };
     }
   })(req, res, client);
 }
 ```
 
+The factory detects `result.type === InteractionResponseType.MODAL` and sends it directly via `res.send()` (line 4460 in buttonHandlerFactory.js). This gives you factory benefits (error handling, logging, permission checks) while correctly routing the modal response.
+
+**Modal submit handlers** live in the `MODAL_SUBMIT` section of app.js and use `res.send()` directly. This is correct — modal submits are NOT button interactions, so they don't go through the button handler routing.
+
+**Legacy pattern (still works, but prefer factory):**
+```javascript
+// Direct res.send() — still valid, shows as [📝 MODAL] in debug
+} else if (custom_id.startsWith('map_admin_move_player_')) {
+  const modal = await createCoordinateModal(targetUserId, currentLocation);
+  return res.send({ type: InteractionResponseType.MODAL, data: modal });
+}
+```
+
 **Registry entry for modal buttons:**
 ```javascript
-'map_admin_move_player_*': {
-  label: 'Move Player',
-  description: 'Show coordinate entry modal for moving player',
-  emoji: '📍',
-  style: 'Secondary',
-  category: 'safari_map_admin',
+'app_dnc_select_*': {
+  label: 'DNC Entry Select',
+  description: 'Per-entry select with Edit and Delete options for DNC list entries',
+  emoji: '🚷',
+  style: 'Primary',
+  category: 'seasons',
   requiresModal: true  // Tells debug system this is [📝 MODAL], not [🪨 LEGACY]
 }
 ```
