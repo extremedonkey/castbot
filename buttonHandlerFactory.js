@@ -1661,6 +1661,18 @@ export const BUTTON_REGISTRY = {
     emoji: '🔄',
     category: 'safari'
   },
+  'safari_fight_enemy_select_*': {
+    label: 'Select Enemy',
+    description: 'Select enemy for fight outcome',
+    emoji: '👹',
+    category: 'custom_actions'
+  },
+  'safari_fight_enemy_execute_on_*': {
+    label: 'Fight Execute On',
+    description: 'Set when fight enemy outcome executes',
+    emoji: '👹',
+    category: 'custom_actions'
+  },
   'safari_manage_items': {
     label: '📦 Manage Items',
     description: 'Safari item management - create, edit, manage items',

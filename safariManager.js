@@ -312,6 +312,8 @@ const ACTION_TYPES = {
     APPLY_REGENERATION: 'apply_regeneration', // NEW: Force regeneration check
     // Attribute System Actions
     MODIFY_ATTRIBUTE: 'modify_attribute', // NEW: Add/subtract/set player attributes
+    // Enemy Combat Actions
+    FIGHT_ENEMY: 'fight_enemy', // NEW: Initiate combat against an enemy
     // Player State Actions
     MANAGE_PLAYER_STATE: 'manage_player_state' // Initialize, teleport, or de-initialize the triggering player
 };
@@ -1653,15 +1655,39 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
             }
         }
 
-        // Filter actions: always outcomes run first, then conditional pass/fail
-        const conditionsResultString = conditionsResult ? 'true' : 'false';
+        // Two-phase execution: opening outcomes run first (may contain fight_enemy),
+        // then fight result overrides conditionsResult for pass/fail branching
         const alwaysOutcomes = button.actions.filter(action => action.executeOn === 'always');
+
+        // Phase 1: Execute opening outcomes and detect fight result
+        let fightResult = null; // null = no fight, true = won, false = lost
+        const sortedAlways = [...alwaysOutcomes].sort((a, b) => (a.order || 0) - (b.order || 0));
+        for (const action of sortedAlways) {
+            if (action.type === ACTION_TYPES.FIGHT_ENEMY || action.type === 'fight_enemy') {
+                try {
+                    const fightResponse = await executeFightEnemy(action.config, guildId, userId, interaction, client);
+                    if (fightResponse?.fightResult !== undefined) {
+                        fightResult = fightResponse.fightResult;
+                    }
+                } catch (error) {
+                    console.error(`❌ Error executing fight_enemy:`, error);
+                }
+            }
+        }
+
+        // Phase 2: Determine final pass/fail (fight overrides conditions if present)
+        const finalResult = fightResult !== null ? fightResult : conditionsResult;
+        const conditionsResultString = finalResult ? 'true' : 'false';
+
         const conditionalOutcomes = button.actions.filter(action => {
             const executeOn = action.executeOn || 'true';
             return executeOn === conditionsResultString;
         });
         const actionsToExecute = [...alwaysOutcomes, ...conditionalOutcomes];
 
+        if (fightResult !== null) {
+            console.log(`🎯 Fight result: ${fightResult ? 'WIN' : 'LOSE'} — overriding conditions (was: ${conditionsResult})`);
+        }
         console.log(`🎯 Executing ${actionsToExecute.length} outcomes (${alwaysOutcomes.length} opening + ${conditionalOutcomes.length} ${conditionsResultString})`);
         
         // If no actions match the condition result, return a message
@@ -1968,6 +1994,22 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                             }]
                         };
                         responses.push(result);
+                    }
+                    break;
+
+                case 'fight_enemy':
+                case ACTION_TYPES.FIGHT_ENEMY:
+                    try {
+                        console.log(`👹 DEBUG: Executing fight_enemy action for guild ${guildId}`);
+                        result = await executeFightEnemy(action.config, guildId, userId, interaction, client);
+                        // Extract the display container from the fight result
+                        if (result?.display) {
+                            responses.push(result.display);
+                        } else if (result?.components) {
+                            responses.push(result);
+                        }
+                    } catch (error) {
+                        console.error('Error executing fight_enemy action:', error);
                     }
                     break;
 
@@ -9582,6 +9624,133 @@ async function toggleAttributeTrigger(guildId, triggerId) {
 // ========== Enemy Combat System ==========
 
 /**
+ * Execute a fight_enemy outcome — load enemy, resolve combat, update player HP
+ * @returns {Object} { fightResult: boolean, display: Components V2 container }
+ */
+async function executeFightEnemy(config, guildId, userId, interaction, client) {
+    const safariData = await loadSafariContent();
+    const pData = await loadPlayerData();
+
+    // Load enemy
+    const enemy = safariData[guildId]?.enemies?.[config?.enemyId];
+    if (!enemy) {
+        console.error(`👹 Enemy not found: ${config?.enemyId}`);
+        return {
+            fightResult: false,
+            display: {
+                flags: (1 << 15),
+                components: [{ type: 17, accent_color: 0xED4245, components: [{ type: 10, content: '⚠️ **Enemy not found.** It may have been deleted.' }] }]
+            }
+        };
+    }
+
+    // Check HP attribute exists and get player HP
+    const entityId = `player_${userId}`;
+    let playerHpData;
+    try {
+        const { getEntityPoints: getEP } = await import('./pointsManager.js');
+        playerHpData = await getEP(guildId, entityId, 'hp');
+    } catch (error) {
+        console.error(`👹 Error loading player HP:`, error);
+    }
+
+    if (!playerHpData || playerHpData.current === undefined) {
+        return {
+            fightResult: false,
+            display: {
+                flags: (1 << 15),
+                components: [{ type: 17, accent_color: 0xED4245, components: [{ type: 10, content: '⚠️ **HP attribute not configured.** Enable the HP attribute in Attributes before using Fight Enemy.' }] }]
+            }
+        };
+    }
+
+    if (playerHpData.current <= 0) {
+        return {
+            fightResult: false,
+            display: {
+                flags: (1 << 15),
+                components: [{ type: 17, accent_color: 0xED4245, components: [{ type: 10, content: '❌ **You don\'t have enough HP to fight!**\nRecover your health before battling.' }] }]
+            }
+        };
+    }
+
+    // Get player attack from inventory
+    const attackInfo = await getPlayerAttackValue(guildId, userId);
+    if (attackInfo.attack <= 0) {
+        return {
+            fightResult: false,
+            display: {
+                flags: (1 << 15),
+                components: [{ type: 17, accent_color: 0xED4245, components: [{ type: 10, content: '❌ **You need a weapon to fight!**\nAcquire an item with attack power first.' }] }]
+            }
+        };
+    }
+
+    // Resolve combat
+    const combatResult = resolveCombat({
+        playerHp: playerHpData.current,
+        playerMaxHp: playerHpData.max,
+        playerAttack: attackInfo.attack,
+        enemyHp: enemy.hp,
+        enemyMaxHp: enemy.hp,
+        enemyAttack: enemy.attackValue || 1,
+        turnOrder: enemy.turnOrder || 'player_first'
+    });
+
+    // Update player HP
+    try {
+        const { setEntityPoints: setEP } = await import('./pointsManager.js');
+        await setEP(guildId, entityId, 'hp', combatResult.finalPlayerHp, playerHpData.max);
+        console.log(`👹 Player HP updated: ${playerHpData.current} → ${combatResult.finalPlayerHp}/${playerHpData.max}`);
+    } catch (error) {
+        console.error(`👹 Error updating player HP:`, error);
+    }
+
+    // Consume weapon if consumable
+    if (attackInfo.isConsumable && attackInfo.itemId) {
+        try {
+            const freshPlayerData = await loadPlayerData();
+            const inventory = freshPlayerData[guildId]?.players?.[userId]?.safari?.inventory;
+            if (inventory?.[attackInfo.itemId]) {
+                const entry = inventory[attackInfo.itemId];
+                const qty = typeof entry === 'number' ? entry : (entry?.quantity || 0);
+                if (qty <= 1) {
+                    delete inventory[attackInfo.itemId];
+                } else if (typeof entry === 'number') {
+                    inventory[attackInfo.itemId] = qty - 1;
+                } else {
+                    entry.quantity = qty - 1;
+                }
+                await savePlayerData(freshPlayerData);
+                console.log(`👹 Consumed 1x weapon ${attackInfo.itemId} (was consumable)`);
+            }
+        } catch (error) {
+            console.error(`👹 Error consuming weapon:`, error);
+        }
+    }
+
+    // Build display
+    const playerName = interaction?.member?.displayName ||
+        interaction?.member?.user?.global_name ||
+        interaction?.member?.user?.username ||
+        interaction?.user?.global_name ||
+        interaction?.user?.username ||
+        'You';
+
+    const display = buildCombatDisplay(enemy, combatResult, playerName);
+
+    console.log(`👹 Combat resolved: ${playerName} vs ${enemy.name} — ${combatResult.playerWon ? 'WIN' : 'LOSE'} in ${combatResult.totalTurns} turns`);
+
+    return {
+        fightResult: combatResult.playerWon,
+        display: {
+            flags: (1 << 15),
+            components: [display]
+        }
+    };
+}
+
+/**
  * Resolve combat between a player and an enemy (synchronous, all turns at once)
  * @param {Object} state - { playerHp, playerMaxHp, playerAttack, enemyHp, enemyMaxHp, enemyAttack, turnOrder }
  * @returns {Object} { playerWon, finalPlayerHp, finalEnemyHp, turns[], totalTurns }
@@ -9880,6 +10049,7 @@ export {
     deleteAttributeTrigger,
     toggleAttributeTrigger,
     // Enemy Combat System
+    executeFightEnemy,
     resolveCombat,
     getPlayerAttackValue,
     buildCombatDisplay

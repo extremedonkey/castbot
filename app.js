@@ -4887,6 +4887,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_modify_attr_amount_') &&
         !custom_id.startsWith('safari_modify_attr_limit_') &&
         !custom_id.startsWith('safari_modify_attr_reset_') &&
+        !custom_id.startsWith('safari_fight_enemy_select_') &&
+        !custom_id.startsWith('safari_fight_enemy_execute_on_') &&
         !custom_id.startsWith('safari_player_state_mode_') &&
         !custom_id.startsWith('safari_player_state_execute_on_') &&
         !custom_id.startsWith('safari_player_state_coord_') &&
@@ -19254,6 +19256,37 @@ Your server is now ready for Tycoons gameplay!`;
             const { showManagePlayerStateConfig } = await import('./customActionUI.js');
             return await showManagePlayerStateConfig(context.guildId, buttonId, actionIndex);
 
+          // For fight_enemy, show enemy selection config UI
+          } else if (actionType === 'fight_enemy') {
+            const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+            const currentButton = safariData[context.guildId]?.buttons?.[buttonId];
+
+            if (!currentButton) {
+              return { content: '❌ Button not found.', ephemeral: true };
+            }
+
+            const actionIndex = currentButton?.actions?.length || 0;
+
+            if (!currentButton.actions) {
+              currentButton.actions = [];
+            }
+
+            if (!currentButton.actions[actionIndex]) {
+              currentButton.actions[actionIndex] = {
+                type: 'fight_enemy',
+                order: actionIndex,
+                config: {},
+                executeOn
+              };
+              await saveSafariContent(safariData);
+              console.log(`💾 SAVED: safari_action_type_select - created fight_enemy outcome for ${buttonId}[${actionIndex}]`);
+            }
+
+            console.log(`✅ SUCCESS: safari_action_type_select - showing fight_enemy config for ${buttonId}[${actionIndex}]`);
+            const { showFightEnemyConfig } = await import('./customActionUI.js');
+            return await showFightEnemyConfig(context.guildId, buttonId, actionIndex);
+
           // For modify_attribute, show new entity interface
           } else if (actionType === 'modify_attribute') {
             // Load safari content to create the action
@@ -22226,6 +22259,70 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
 
     // ============================================================
+    // FIGHT ENEMY CONFIG HANDLERS
+    // ============================================================
+
+    } else if (custom_id.startsWith('safari_fight_enemy_select_')) {
+      return ButtonHandlerFactory.create({
+        id: 'safari_fight_enemy_select',
+        updateMessage: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_fight_enemy_select_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          const enemyId = context.values[0];
+
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+
+          if (!button || !button.actions?.[actionIndex]) {
+            return { content: '❌ Action not found.', ephemeral: true };
+          }
+
+          if (!button.actions[actionIndex].config) button.actions[actionIndex].config = {};
+          button.actions[actionIndex].config.enemyId = enemyId;
+          button.metadata.lastModified = Date.now();
+          await saveSafariContent(safariData);
+
+          console.log(`👹 Enemy selected: ${enemyId} for ${buttonId}[${actionIndex}]`);
+          const { showFightEnemyConfig } = await import('./customActionUI.js');
+          return await showFightEnemyConfig(context.guildId, buttonId, actionIndex);
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('safari_fight_enemy_execute_on_')) {
+      return ButtonHandlerFactory.create({
+        id: 'safari_fight_enemy_execute_on',
+        updateMessage: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_fight_enemy_execute_on_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          const executeOnValue = context.values[0];
+
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+
+          if (!button || !button.actions?.[actionIndex]) {
+            return { content: '❌ Action not found.', ephemeral: true };
+          }
+
+          button.actions[actionIndex].executeOn = executeOnValue;
+          button.metadata.lastModified = Date.now();
+          await saveSafariContent(safariData);
+
+          console.log(`👹 Execute on set to: ${executeOnValue} for ${buttonId}[${actionIndex}]`);
+          const { showFightEnemyConfig } = await import('./customActionUI.js');
+          return await showFightEnemyConfig(context.guildId, buttonId, actionIndex);
+        }
+      })(req, res, client);
+
     // MANAGE PLAYER STATE CONFIG HANDLERS
     // ============================================================
 

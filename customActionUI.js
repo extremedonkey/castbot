@@ -21,7 +21,8 @@ const OUTCOME_TYPE_OPTIONS = [
   { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' }, description: 'Chain into another action after this one completes' },
   { label: 'Calculate Results', value: 'calculate_results', emoji: { name: '🌾' }, description: 'Process harvest/income for all or the triggering player' },
   { label: 'Calculate Attack', value: 'calculate_attack', emoji: { name: '⚔️' }, description: 'Run combat calculations between players or vs environment' },
-  { label: 'Safari Player State', value: 'manage_player_state', emoji: { name: '🚀' }, description: 'Initialize, teleport, or de-initialize the triggering player' }
+  { label: 'Safari Player State', value: 'manage_player_state', emoji: { name: '🚀' }, description: 'Initialize, teleport, or de-initialize the triggering player' },
+  { label: 'Fight Enemy', value: 'fight_enemy', emoji: { name: '👹' }, description: 'Battle an enemy — win/lose determines pass/fail outcomes' }
 ];
 
 /**
@@ -939,6 +940,11 @@ function getActionSummaryPlain(action, number, guildItems = {}, guildButtons = {
       summary = `${number}. Safari Player State | ${mode}${coord}`;
       break;
     }
+    case 'fight_enemy': {
+      const enemyId = action?.config?.enemyId;
+      summary = `${number}. Fight Enemy | ${enemyId || 'Not configured'}`;
+      break;
+    }
     default:
       summary = `${number}. ${action.type ? action.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Unknown'}`;
   }
@@ -981,6 +987,8 @@ function getActionTypeLabel(action) {
       return 'Modify Attribute';
     case 'manage_player_state':
       return 'Safari Player State';
+    case 'fight_enemy':
+      return 'Fight Enemy';
     default:
       return action.type ? action.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Unknown Action';
   }
@@ -1073,6 +1081,10 @@ function getActionSummary(action, number, guildItems = {}, guildButtons = {}, is
       const stateMode = modeLabels[action?.config?.mode] || '🚀 Init';
       const stateCoord = action?.config?.coordinate ? ` → ${action.config.coordinate}` : ' → Default';
       return `**\`${number}. Safari Player State\`** ${stateMode}${stateCoord}`;
+    }
+    case 'fight_enemy': {
+      const fightEnemyId = action?.config?.enemyId;
+      return `**\`${number}. Fight Enemy\`** 👹 ${fightEnemyId || 'Not configured'}`;
     }
     default:
       return `**${number}. ${action.type || 'Unknown Action'}**`;
@@ -4747,6 +4759,105 @@ if (!componentAnalysis.withinLimit) {
   console.log(`🎉 Safety margin: ${componentAnalysis.discordLimit - componentAnalysis.maxTotal} components remaining`);
 }
 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+/**
+ * Show fight_enemy outcome configuration UI
+ */
+export async function showFightEnemyConfig(guildId, buttonId, actionIndex) {
+  const safariData = await loadSafariContent();
+  const button = safariData[guildId]?.buttons?.[buttonId];
+  const action = button?.actions?.[actionIndex] || {};
+  const enemies = safariData[guildId]?.enemies || {};
+
+  const currentEnemyId = action?.config?.enemyId;
+  const currentEnemy = currentEnemyId ? enemies[currentEnemyId] : null;
+  const currentExecuteOn = action?.executeOn || 'always';
+
+  // Build enemy select options
+  const enemyOptions = Object.entries(enemies)
+    .sort((a, b) => (a[1].name || '').localeCompare(b[1].name || ''))
+    .slice(0, 25)
+    .map(([id, enemy]) => ({
+      label: `${enemy.emoji || '👹'} ${enemy.name || 'Unnamed'}`.substring(0, 100),
+      value: id,
+      description: `❤️${enemy.hp} ⚔️${enemy.attackValue || 0}`.substring(0, 100),
+      default: id === currentEnemyId
+    }));
+
+  const components = [
+    { type: 10, content: '## 👹 Fight Enemy Configuration' },
+    { type: 14 }
+  ];
+
+  if (enemyOptions.length === 0) {
+    components.push({
+      type: 10,
+      content: '⚠️ **No enemies created yet.** Go to Tools → Enemies to create one first.'
+    });
+  } else {
+    components.push(
+      { type: 10, content: '### Select Enemy' },
+      {
+        type: 1,
+        components: [{
+          type: 3,
+          custom_id: `safari_fight_enemy_select_${buttonId}_${actionIndex}`,
+          placeholder: 'Select an enemy...',
+          options: enemyOptions
+        }]
+      }
+    );
+  }
+
+  // Show selected enemy stats
+  if (currentEnemy) {
+    const turnLabels = { player_first: 'Player First', enemy_first: 'Enemy First', simultaneous: 'Simultaneous' };
+    components.push(
+      { type: 14 },
+      { type: 10, content: `### ${currentEnemy.emoji || '👹'} ${currentEnemy.name}\n${currentEnemy.description || ''}\n\n❤️ **HP:** ${currentEnemy.hp}  ⚔️ **Attack:** ${currentEnemy.attackValue || 0}  🔄 **Turn Order:** ${turnLabels[currentEnemy.turnOrder] || 'Player First'}` }
+    );
+  }
+
+  // Execute On select
+  components.push(
+    { type: 14 },
+    { type: 10, content: '### When to Execute' },
+    {
+      type: 1,
+      components: [{
+        type: 3,
+        custom_id: `safari_fight_enemy_execute_on_${buttonId}_${actionIndex}`,
+        placeholder: 'Select when this runs...',
+        options: [
+          { label: '⚡ Opening (Always)', value: 'always', description: 'Runs before pass/fail — fight result determines outcome', default: currentExecuteOn === 'always' },
+          { label: '✅ Pass Only', value: 'true', description: 'Only fight if conditions pass', default: currentExecuteOn === 'true' },
+          { label: '❌ Fail Only', value: 'false', description: 'Only fight if conditions fail', default: currentExecuteOn === 'false' }
+        ]
+      }]
+    }
+  );
+
+  // Navigation
+  components.push(
+    { type: 14 },
+    {
+      type: 1,
+      components: [
+        { type: 2, custom_id: `safari_action_editor_back_${buttonId}`, label: '← Back', style: 2 },
+        { type: 2, custom_id: `safari_delete_outcome_${buttonId}_${actionIndex}`, label: 'Delete', style: 4, emoji: { name: '🗑️' } }
+      ]
+    }
+  );
+
+  return {
+    flags: (1 << 15),
+    components: [{
+      type: 17,
+      accent_color: 0xE74C3C,
+      components
+    }]
+  };
+}
 
 export default {
   createCustomActionSelectionUI,
