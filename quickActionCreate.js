@@ -11,7 +11,7 @@ import { parseAndValidateEmoji } from './utils/emojiUtils.js';
 import { buildLimitOptions } from './utils/periodUtils.js';
 
 // Quick create defaults: once_per_player is pre-selected
-const LIMIT_OPTIONS = buildLimitOptions({ currentLimit: 'once_per_player' });
+const LIMIT_OPTIONS = buildLimitOptions({ currentLimit: 'once_per_player', periodDescription: 'Defaults to 1d in Quick Edit, change in Outcome Config' });
 
 const COLOR_OPTIONS = [
     { label: 'Blue (Primary)', value: 'Primary', emoji: { name: '🔵' }, default: true },

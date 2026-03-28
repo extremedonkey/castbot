@@ -54,14 +54,15 @@ export function parsePeriodFromModal(components, fieldIds = {}) {
  * @param {Object} [options]
  * @param {string} [options.currentLimit] - Currently selected limit type (for default marking)
  * @param {number} [options.periodMs] - Period in ms (for dynamic label on once_per_period)
+ * @param {string} [options.periodDescription] - Override description for once_per_period option
  * @returns {Array} Array of select option objects
  */
-export function buildLimitOptions({ currentLimit, periodMs } = {}) {
+export function buildLimitOptions({ currentLimit, periodMs, periodDescription } = {}) {
   return [
     { label: 'Unlimited', value: 'unlimited', description: 'Can be used infinite times', emoji: { name: '♾️' }, default: currentLimit === 'unlimited' },
     { label: 'Once Per Player', value: 'once_per_player', description: 'Each player can use once', emoji: { name: '👤' }, default: currentLimit === 'once_per_player' },
     { label: 'Once Globally', value: 'once_globally', description: 'Only one player total can use', emoji: { name: '🌍' }, default: currentLimit === 'once_globally' },
-    { label: currentLimit === 'once_per_period' && periodMs ? `Once Per Period (${formatPeriod(periodMs)})` : 'Once Per Period', value: 'once_per_period', description: 'Cooldown period before player can reuse', emoji: { name: '⏱️' }, default: currentLimit === 'once_per_period' }
+    { label: currentLimit === 'once_per_period' && periodMs ? `Once Per Period (${formatPeriod(periodMs)})` : 'Once Per Period', value: 'once_per_period', description: periodDescription || 'Cooldown period before player can reuse', emoji: { name: '⏱️' }, default: currentLimit === 'once_per_period' }
   ];
 }
 
