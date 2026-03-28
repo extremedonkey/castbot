@@ -501,7 +501,7 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
                         style: 2,
                         label: currencyLabel,
                         custom_id: `quick_currency_${entityId}`,
-                        emoji: { name: customTerms.currencyEmoji || '🪙' }
+                        emoji: parseTextEmoji(customTerms.currencyEmoji || '🪙', '🪙').emoji
                     },
                     {
                         type: 2, // Button

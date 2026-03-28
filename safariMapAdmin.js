@@ -3,10 +3,11 @@
  * Admin interface for managing player map states using Entity Edit Framework
  */
 
-import { 
-  InteractionResponseType, 
-  InteractionResponseFlags 
+import {
+  InteractionResponseType,
+  InteractionResponseFlags
 } from 'discord-interactions';
+import { parseTextEmoji } from './utils/emojiUtils.js';
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
 import { setEntityPoints } from './pointsManager.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
@@ -260,7 +261,7 @@ async function createPlayerViewUI(guildId, userId) {
       custom_id: `map_admin_edit_currency_${userId}`,
       label: `Edit ${customTerms.currencyName}`,
       style: 2, // Secondary
-      emoji: { name: customTerms.currencyEmoji || '💰' }
+      emoji: parseTextEmoji(customTerms.currencyEmoji || '💰', '💰').emoji
     },
     {
       type: 2, // Button
