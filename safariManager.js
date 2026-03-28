@@ -1661,11 +1661,13 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
 
         // Phase 1: Execute opening outcomes and detect fight result
         let fightResult = null; // null = no fight, true = won, false = lost
+        const phase1FightResults = new Map(); // Track fight results to avoid double-execution
         const sortedAlways = [...alwaysOutcomes].sort((a, b) => (a.order || 0) - (b.order || 0));
         for (const action of sortedAlways) {
             if (action.type === ACTION_TYPES.FIGHT_ENEMY || action.type === 'fight_enemy') {
                 try {
                     const fightResponse = await executeFightEnemy(action.config, guildId, userId, interaction, client);
+                    phase1FightResults.set(action, fightResponse);
                     if (fightResponse?.fightResult !== undefined) {
                         fightResult = fightResponse.fightResult;
                     }
@@ -2000,8 +2002,13 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                 case 'fight_enemy':
                 case ACTION_TYPES.FIGHT_ENEMY:
                     try {
-                        console.log(`🐙 DEBUG: Executing fight_enemy action for guild ${guildId}`);
-                        result = await executeFightEnemy(action.config, guildId, userId, interaction, client);
+                        // If already executed in Phase 1 (opening), reuse result instead of fighting again
+                        if (phase1FightResults.has(action)) {
+                            result = phase1FightResults.get(action);
+                        } else {
+                            console.log(`🐙 DEBUG: Executing fight_enemy action for guild ${guildId}`);
+                            result = await executeFightEnemy(action.config, guildId, userId, interaction, client);
+                        }
                         // Extract the display container from the fight result
                         if (result?.display) {
                             responses.push(result.display);
