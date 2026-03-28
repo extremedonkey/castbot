@@ -499,6 +499,7 @@ async function ensureGuildSafariData(guildId, safariData) {
             applications: {},
             stores: {},
             items: {},
+            enemies: {},
             attributeDefinitions: {},  // Custom attribute types for this server
             safariConfig: {
                 currencyName: "Coins",
@@ -531,6 +532,7 @@ async function ensureGuildSafariData(guildId, safariData) {
             applications: {},
             stores: {},
             items: {},
+            enemies: {},
             attributeDefinitions: {},  // Custom attribute types for this server
             safariConfig: {
                 currencyName: "Coins",
@@ -2362,7 +2364,7 @@ async function createStore(guildId, storeData, userId) {
         const safariData = await loadSafariContent();
 
         if (!safariData[guildId]) {
-            safariData[guildId] = { buttons: {}, safaris: {}, applications: {}, stores: {}, items: {} };
+            safariData[guildId] = { buttons: {}, safaris: {}, applications: {}, stores: {}, items: {}, enemies: {} };
         }
 
         // Check for duplicate store name (case-insensitive)
@@ -2418,7 +2420,7 @@ async function createItem(guildId, itemData, userId) {
         const safariData = await loadSafariContent();
         
         if (!safariData[guildId]) {
-            safariData[guildId] = { buttons: {}, safaris: {}, applications: {}, stores: {}, items: {} };
+            safariData[guildId] = { buttons: {}, safaris: {}, applications: {}, stores: {}, items: {}, enemies: {} };
         }
         
         const itemId = generateButtonId(itemData.name);
@@ -5167,6 +5169,7 @@ async function updateCustomTerms(guildId, terms) {
                 applications: {},
                 stores: {},
                 items: {},
+                enemies: {},
                 safariConfig: {}
             };
         }
@@ -6022,7 +6025,7 @@ async function storeRoundResult(guildId, roundResult) {
         const safariData = await loadSafariContent();
         
         if (!safariData[guildId]) {
-            safariData[guildId] = { buttons: {}, safaris: {}, applications: {}, stores: {}, items: {} };
+            safariData[guildId] = { buttons: {}, safaris: {}, applications: {}, stores: {}, items: {}, enemies: {} };
         }
         
         if (!safariData[guildId].roundHistory) {
