@@ -484,7 +484,7 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
         try {
             const { getCustomTerms } = await import('./safariManager.js');
             const customTerms = await getCustomTerms(guildId);
-            const currencyLabel = `Quick ${(customTerms.currencyName || 'Currency').slice(0, 14)}`;
+            const currencyLabel = `Quick ${customTerms.currencyName || 'Currency'}`;
 
             components.push({
                 type: 1, // ActionRow
