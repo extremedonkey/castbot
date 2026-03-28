@@ -145,99 +145,41 @@ function createItemFieldModal(itemId, fieldGroupId, group, currentValues) {
         case 'info':
             // Item Info: name, emoji & description
             components.push({
-                type: 1, // ActionRow
-                components: [{
-                    type: 4, // Text Input
-                    custom_id: 'name',
-                    label: 'Item Name',
-                    style: 1, // Short
-                    value: currentValues.name || '',
-                    placeholder: 'Enter item name',
-                    required: true,
-                    max_length: SAFARI_LIMITS.MAX_ITEM_NAME_LENGTH
-                }]
+                type: 18, label: 'Item Name',
+                component: { type: 4, custom_id: 'name', style: 1, value: currentValues.name || '', placeholder: 'Enter item name', required: true, max_length: SAFARI_LIMITS.MAX_ITEM_NAME_LENGTH }
             });
-            
+
             // Sanitize emoji value to prevent Discord API errors
             let emojiValue = currentValues.emoji || '';
-            // Check for replacement characters or other invalid characters
             if (emojiValue && emojiValue.includes('�')) {
                 console.warn(`⚠️ Corrupted emoji detected for item ${itemId}, using empty string`);
                 emojiValue = '';
             }
-            
+
             components.push({
-                type: 1, // ActionRow
-                components: [{
-                    type: 4, // Text Input
-                    custom_id: 'emoji',
-                    label: 'Item Emoji',
-                    style: 1, // Short
-                    value: emojiValue,
-                    placeholder: 'Enter an emoji for the item',
-                    required: false,
-                    max_length: 100
-                }]
+                type: 18, label: 'Item Emoji', description: 'Unicode emoji or custom Discord emoji code.',
+                component: { type: 4, custom_id: 'emoji', style: 1, value: emojiValue, placeholder: 'e.g. 🪣 or <:name:id>', required: false, max_length: 100 }
             });
-            
+
             components.push({
-                type: 1, // ActionRow
-                components: [{
-                    type: 4, // Text Input
-                    custom_id: 'description',
-                    label: 'Item Description',
-                    style: 2, // Paragraph
-                    value: currentValues.description || '',
-                    placeholder: 'Enter item description',
-                    required: false,
-                    max_length: SAFARI_LIMITS.MAX_ITEM_DESCRIPTION_LENGTH
-                }]
+                type: 18, label: 'Item Description', description: 'Shown in inventory and stores.',
+                component: { type: 4, custom_id: 'description', style: 2, value: currentValues.description || '', placeholder: 'Describe what this item does...', required: false, max_length: SAFARI_LIMITS.MAX_ITEM_DESCRIPTION_LENGTH }
             });
             break;
             
         case 'financials':
             // Financials: basePrice, goodOutcomeValue, badOutcomeValue
             components.push({
-                type: 1, // ActionRow
-                components: [{
-                    type: 4, // Text Input
-                    custom_id: 'basePrice',
-                    label: 'Base Price',
-                    style: 1, // Short
-                    value: (currentValues.basePrice ?? '').toString(),
-                    placeholder: 'Enter price (0-999999)',
-                    required: true,
-                    max_length: 6,
-                    min_length: 1
-                }]
+                type: 18, label: 'Base Price', description: 'Cost to purchase this item from a store.',
+                component: { type: 4, custom_id: 'basePrice', style: 1, value: (currentValues.basePrice ?? '').toString(), placeholder: '0-999999', required: true, max_length: 6, min_length: 1 }
             });
-            
             components.push({
-                type: 1, // ActionRow
-                components: [{
-                    type: 4, // Text Input
-                    custom_id: 'goodOutcomeValue',
-                    label: 'Good Outcome Value',
-                    style: 1, // Short
-                    value: (currentValues.goodOutcomeValue ?? '').toString(),
-                    placeholder: 'Value gained during good events (-999 to 999)',
-                    required: false,
-                    max_length: 4
-                }]
+                type: 18, label: 'Good Outcome Value', description: 'Currency gained during good events (e.g. clear skies).',
+                component: { type: 4, custom_id: 'goodOutcomeValue', style: 1, value: (currentValues.goodOutcomeValue ?? '').toString(), placeholder: '-999 to 999', required: false, max_length: 4 }
             });
-            
             components.push({
-                type: 1, // ActionRow
-                components: [{
-                    type: 4, // Text Input
-                    custom_id: 'badOutcomeValue',
-                    label: 'Bad Outcome Value',
-                    style: 1, // Short
-                    value: (currentValues.badOutcomeValue ?? '').toString(),
-                    placeholder: 'Value gained during bad events (-999 to 999)',
-                    required: false,
-                    max_length: 4
-                }]
+                type: 18, label: 'Bad Outcome Value', description: 'Currency gained during bad events (e.g. meteor strike).',
+                component: { type: 4, custom_id: 'badOutcomeValue', style: 1, value: (currentValues.badOutcomeValue ?? '').toString(), placeholder: '-999 to 999', required: false, max_length: 4 }
             });
             break;
             
@@ -515,8 +457,8 @@ function createEnemyFieldModal(enemyId, fieldGroupId, group, currentValues) {
     switch (fieldGroupId) {
         case 'info':
             components.push({
-                type: 1,
-                components: [{ type: 4, custom_id: 'name', label: 'Enemy Name', style: 1, value: currentValues.name || '', placeholder: 'Enter enemy name', required: true, max_length: SAFARI_LIMITS.MAX_ENEMY_NAME_LENGTH }]
+                type: 18, label: 'Enemy Name',
+                component: { type: 4, custom_id: 'name', style: 1, value: currentValues.name || '', placeholder: 'Enter enemy name', required: true, max_length: SAFARI_LIMITS.MAX_ENEMY_NAME_LENGTH }
             });
             let enemyEmojiValue = currentValues.emoji || '';
             if (enemyEmojiValue && enemyEmojiValue.includes('�')) {
@@ -524,16 +466,16 @@ function createEnemyFieldModal(enemyId, fieldGroupId, group, currentValues) {
                 enemyEmojiValue = '';
             }
             components.push({
-                type: 1,
-                components: [{ type: 4, custom_id: 'emoji', label: 'Enemy Emoji', style: 1, value: enemyEmojiValue, placeholder: 'Enter an emoji', required: false, max_length: 100 }]
+                type: 18, label: 'Enemy Emoji', description: 'Unicode emoji or custom Discord emoji code.',
+                component: { type: 4, custom_id: 'emoji', style: 1, value: enemyEmojiValue, placeholder: 'e.g. 🐙 or <:name:id>', required: false, max_length: 100 }
             });
             components.push({
-                type: 1,
-                components: [{ type: 4, custom_id: 'description', label: 'Description', style: 2, value: currentValues.description || '', placeholder: 'Describe the enemy', required: false, max_length: SAFARI_LIMITS.MAX_ENEMY_DESCRIPTION_LENGTH }]
+                type: 18, label: 'Description', description: 'Shown to players during combat.',
+                component: { type: 4, custom_id: 'description', style: 2, value: currentValues.description || '', placeholder: 'Describe the enemy...', required: false, max_length: SAFARI_LIMITS.MAX_ENEMY_DESCRIPTION_LENGTH }
             });
             components.push({
-                type: 1,
-                components: [{ type: 4, custom_id: 'category', label: 'Category', style: 1, value: currentValues.category || '', placeholder: 'e.g. common, elite, boss', required: false, max_length: 30 }]
+                type: 18, label: 'Category', description: 'For admin organization (e.g. common, elite, boss).',
+                component: { type: 4, custom_id: 'category', style: 1, value: currentValues.category || '', placeholder: 'e.g. common, elite, boss', required: false, max_length: 30 }
             });
             break;
 
