@@ -4843,8 +4843,7 @@ export async function showFightEnemyConfig(guildId, buttonId, actionIndex) {
     {
       type: 1,
       components: [
-        { type: 2, custom_id: `safari_action_editor_back_${buttonId}`, label: '← Back', style: 2 },
-        { type: 2, custom_id: `safari_delete_outcome_${buttonId}_${actionIndex}`, label: 'Delete', style: 4, emoji: { name: '🗑️' } }
+        { type: 2, custom_id: `custom_action_editor_${buttonId}`, label: '← Back', style: 2, emoji: { name: '⚡' } }
       ]
     }
   );
