@@ -2656,7 +2656,7 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'castlist'
   },
-  'entity_field_group': {
+  'entity_field_group_*': {
     label: 'Field Group Edit',
     description: 'Handle field group button click for editing',
     emoji: '✏️',

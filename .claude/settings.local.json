@@ -2,6 +2,8 @@
   "permissions": {
     "allow": [
       "Read(**)",
+      "Grep(**)",
+      "Glob(**)",
       "Edit(**)",
       "Write(**)",
       "WebSearch",
@@ -167,9 +169,23 @@
       "Skill(sharp)",
       "Skill(update-config)",
       "WebFetch(domain:support-dev.discord.com)",
-      "WebFetch(domain:www.reddit.com)"
+      "WebFetch(domain:www.reddit.com)",
+      "Bash(./.claude/hooks/*)"
     ],
     "deny": []
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/reject-bash-search.sh"
+          }
+        ]
+      }
+    ]
   },
   "outputStyle": "default"
 }
