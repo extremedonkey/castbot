@@ -31,7 +31,8 @@ import {
   Partials,
   Options
 } from 'discord.js';
-import { capitalize, DiscordRequest } from './utils.js';  // Add DiscordRequest to imports
+import { capitalize, DiscordRequest } from './utils.js';
+import { parseTextEmoji } from './utils/emojiUtils.js';
 import { discordLogTags } from './src/utils/discordLogTags.js';  // Educational logging tags
 import { 
   loadPlayerData, 
@@ -4347,7 +4348,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                   custom_id: 'safari_player_inventory',
                   label: customTerms.inventoryName,
                   style: 1, // Primary
-                  emoji: { name: customTerms.inventoryEmoji || '🧰' }
+                  emoji: parseTextEmoji(customTerms.inventoryEmoji || '🧰', '🧰').emoji
                 }
               ]
             }
@@ -31919,7 +31920,7 @@ Your server is now ready for Tycoons gameplay!`;
                           style: 2, // Secondary (grey)
                           label: 'Inventory',
                           custom_id: 'safari_player_inventory',
-                          emoji: { name: customTerms.inventoryEmoji || '🧰' }
+                          emoji: parseTextEmoji(customTerms.inventoryEmoji || '🧰', '🧰').emoji
                         };
                         
                         // Find existing buttons
@@ -45123,13 +45124,8 @@ Your server is now ready for Tycoons gameplay!`;
         const { processFieldGroupSubmission } = await import('./safariConfigUI.js');
         const updates = processFieldGroupSubmission(groupKey, req.body.data);
         
-        // If updating inventory emoji, parse it properly
-        if (updates.inventoryEmoji) {
-          const { parseTextEmoji } = await import('./utils/emojiUtils.js');
-          const { cleanText, emoji } = parseTextEmoji(updates.inventoryEmoji, '🧰');
-          // Use the emoji name if it's a valid emoji, otherwise default to 🧰
-          updates.inventoryEmoji = emoji.name || '🧰';
-        }
+        // Store emoji as-is (custom emoji codes like <:wallet:123> need full string for text rendering)
+        // Parsing to component format happens at render time in buttons via parseTextEmoji()
 
         // Validate defaultStartingCoordinate if present (from Rounds & Location modal)
         if (groupKey === 'rounds' && updates.defaultStartingCoordinate) {
