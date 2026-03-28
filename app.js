@@ -22362,7 +22362,8 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'entity_clone_select',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
-        handler: async (context, req, res) => {
+        requiresModal: true,
+        handler: async (context) => {
           const entityType = context.customId.replace('entity_clone_select_', '');
           const sourceId = context.values[0];
 
@@ -22393,7 +22394,7 @@ Your server is now ready for Tycoons gameplay!`;
           const sourceEmoji = typeof source.emoji === 'string' ? source.emoji : '';
 
           // Show clone modal
-          return res.send({
+          return {
             type: InteractionResponseType.MODAL,
             data: {
               custom_id: `entity_clone_modal_${entityType}_${sourceId}`,
@@ -22425,7 +22426,7 @@ Your server is now ready for Tycoons gameplay!`;
                 }
               ]
             }
-          });
+          };
         }
       })(req, res, client);
 
@@ -45830,8 +45831,8 @@ Your server is now ready for Tycoons gameplay!`;
         });
 
         return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: { ...ui, flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL }
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: ui
         });
       } catch (error) {
         console.error('Error cloning entity:', error);
