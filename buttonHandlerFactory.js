@@ -4020,7 +4020,124 @@ export const BUTTON_REGISTRY = {
     style: 'Danger',
     category: 'moai',
     parent: 'moai_ask'
-  }
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // AUTO-REGISTERED: Factory handlers missing wildcard registry entries
+  // Added 2026-03-24 — these were already using ButtonHandlerFactory
+  // but showed [🪨 LEGACY] because they weren't in the registry.
+  // ═══════════════════════════════════════════════════════════════
+
+  // Season Applications
+  'app_config_selection': { label: 'App Config Selection', emoji: '📋', category: 'seasons' },
+  'app_dnc_edit_*': { label: 'DNC Edit (Legacy)', emoji: '🚷', category: 'seasons' },
+  'casting_status_*': { label: 'Casting Status', emoji: '🎭', category: 'seasons' },
+  'question_add_*': { label: 'Add Question', emoji: '➕', category: 'seasons' },
+  'question_add_dnc': { label: 'Add DNC Question', emoji: '🚷', category: 'seasons' },
+  'question_select_*': { label: 'Question Select', emoji: '📝', category: 'seasons' },
+  'rank_applicant_*': { label: 'Rank Applicant', emoji: '⭐', category: 'seasons' },
+  'ranking_navigation_*': { label: 'Ranking Navigation', emoji: '🔄', category: 'seasons' },
+  'ranking_select_*': { label: 'Ranking Select', emoji: '🏆', category: 'seasons' },
+  'save_player_notes_*': { label: 'Save Player Notes', emoji: '📝', category: 'seasons' },
+  'season_new_question_config_*': { label: 'New Question Config', emoji: '⚙️', category: 'seasons' },
+  'season_post_button_config_*': { label: 'Post Button Config', emoji: '📮', category: 'seasons' },
+
+  // Season Planner
+  'planner_challenge_edit_*': { label: 'Planner Challenge Edit', emoji: '🏃', category: 'planner' },
+  'planner_ideas_save': { label: 'Planner Ideas Save', emoji: '💡', category: 'planner' },
+  'planner_modal_submit': { label: 'Planner Modal Submit', emoji: '📋', category: 'planner' },
+  'planner_ranking_legacy_*': { label: 'Planner Ranking', emoji: '🏆', category: 'planner' },
+  'planner_round_action_*': { label: 'Planner Round Action', emoji: '🎯', category: 'planner' },
+  'planner_round_edit_submit': { label: 'Planner Round Edit Submit', emoji: '✏️', category: 'planner' },
+  'planner_toolbar_noop': { label: 'Planner Toolbar', emoji: '🔧', category: 'planner' },
+
+  // Safari Actions / Outcomes
+  'safari_currency_amount_*': { label: 'Currency Amount', emoji: '💰', category: 'safari_actions' },
+  'safari_currency_execute_on_*': { label: 'Currency Execute On', emoji: '💰', category: 'safari_actions' },
+  'safari_currency_limit_*': { label: 'Currency Limit', emoji: '💰', category: 'safari_actions' },
+  'safari_currency_modal_*': { label: 'Currency Modal', emoji: '💰', category: 'safari_actions' },
+  'safari_currency_reset_*': { label: 'Currency Reset', emoji: '💰', category: 'safari_actions' },
+  'safari_display_text_edit_*': { label: 'Display Text Edit', emoji: '💬', category: 'safari_actions' },
+  'safari_display_text_execute_on_*': { label: 'Display Text Execute On', emoji: '💬', category: 'safari_actions' },
+  'safari_drop_reset_*': { label: 'Drop Reset', emoji: '🔄', category: 'safari_actions' },
+  'safari_drop_save_*': { label: 'Drop Save', emoji: '💾', category: 'safari_actions' },
+  'safari_drop_style_*': { label: 'Drop Style', emoji: '🎨', category: 'safari_actions' },
+  'safari_drop_style_select_*': { label: 'Drop Style Select', emoji: '🎨', category: 'safari_actions' },
+  'safari_drop_type_*': { label: 'Drop Type', emoji: '📦', category: 'safari_actions' },
+  'safari_drop_type_select_*': { label: 'Drop Type Select', emoji: '📦', category: 'safari_actions' },
+  'safari_followup_execute_on_*': { label: 'Followup Execute On', emoji: '🔗', category: 'safari_actions' },
+  'safari_followup_save_*': { label: 'Followup Save', emoji: '💾', category: 'safari_actions' },
+  'safari_item_execute_on_*': { label: 'Item Execute On', emoji: '📦', category: 'safari_actions' },
+  'safari_item_reset_*': { label: 'Item Reset', emoji: '🔄', category: 'safari_actions' },
+  'safari_role_select_*': { label: 'Role Select', emoji: '🎭', category: 'safari_actions' },
+  'safari_role_update_*': { label: 'Role Update', emoji: '🎭', category: 'safari_actions' },
+  'condition_currency_operator_*': { label: 'Condition Currency Op', emoji: '⚖️', category: 'safari_actions' },
+  'condition_has_toggle_*': { label: 'Condition Has Toggle', emoji: '🔀', category: 'safari_actions' },
+  'configure_input_label_*': { label: 'Configure Input Label', emoji: '🏷️', category: 'safari_actions' },
+  'custom_action_search_again_*': { label: 'Action Search Again', emoji: '🔍', category: 'safari_actions' },
+
+  // Safari General
+  'safari_menu_*': { label: 'Safari Menu', emoji: '🦁', category: 'safari' },
+  'safari_inv_page_*': { label: 'Safari Inventory Page', emoji: '🎒', category: 'safari' },
+
+  // Safari Map
+  'map_admin_blacklist_modal_*': { label: 'Map Blacklist Modal', emoji: '🗺️', category: 'safari_map' },
+  'map_admin_edit_items_deprecated_*': { label: 'Map Edit Items (Deprecated)', emoji: '🗺️', category: 'safari_map' },
+  'map_admin_refresh_anchors_modal_*': { label: 'Map Refresh Anchors Modal', emoji: '🗺️', category: 'safari_map' },
+  'map_admin_view_inventory_*': { label: 'Map View Inventory', emoji: '🎒', category: 'safari_map' },
+  'map_currency_drop_player_*': { label: 'Map Currency Drop', emoji: '💰', category: 'safari_map' },
+  'map_item_drop_player_*': { label: 'Map Item Drop', emoji: '📦', category: 'safari_map' },
+  'map_location_display_*': { label: 'Map Location Display', emoji: '📍', category: 'safari_map' },
+  'safari_map_admin_player_*': { label: 'Map Admin Player', emoji: '👤', category: 'safari_map' },
+
+  // Challenges
+  'challenge_action_back_*': { label: 'Challenge Action Back', emoji: '⬅️', category: 'challenges' },
+  'challenge_action_search_*': { label: 'Challenge Action Search', emoji: '🔍', category: 'challenges' },
+  'challenge_action_toggle_*': { label: 'Challenge Action Toggle', emoji: '🔀', category: 'challenges' },
+  'challenge_actions_*': { label: 'Challenge Actions', emoji: '🏃', category: 'challenges' },
+  'challenge_modal_submit': { label: 'Challenge Modal Submit', emoji: '📋', category: 'challenges' },
+  'challenge_post_send_*': { label: 'Challenge Post Send', emoji: '📮', category: 'challenges' },
+  'challenge_round_link_*': { label: 'Challenge Round Link', emoji: '🔗', category: 'challenges' },
+  'challenge_round_picker_*': { label: 'Challenge Round Picker', emoji: '🎯', category: 'challenges' },
+  'challenge_round_search_submit': { label: 'Challenge Round Search', emoji: '🔍', category: 'challenges' },
+  'challenge_search_submit': { label: 'Challenge Search', emoji: '🔍', category: 'challenges' },
+
+  // D20 / Probability
+  'd20_dc_submit': { label: 'D20 DC Submit', emoji: '🎲', category: 'd20' },
+  'd20_display_mode_*': { label: 'D20 Display Mode', emoji: '🎲', category: 'd20' },
+  'd20_mod_submit': { label: 'D20 Mod Submit', emoji: '🎲', category: 'd20' },
+  'd20_result_submit': { label: 'D20 Result Submit', emoji: '🎲', category: 'd20' },
+  'd20_set_dc_*': { label: 'D20 Set DC', emoji: '🎲', category: 'd20' },
+  'd20_set_mod_*': { label: 'D20 Set Mod', emoji: '🎲', category: 'd20' },
+  'd20_set_result_*': { label: 'D20 Set Result', emoji: '🎲', category: 'd20' },
+  'prob_display_mode_*': { label: 'Probability Display', emoji: '📊', category: 'd20' },
+  'prob_modal_submit': { label: 'Probability Modal', emoji: '📊', category: 'd20' },
+  'prob_set_modal_*': { label: 'Probability Set Modal', emoji: '📊', category: 'd20' },
+
+  // Entity Management
+  'entity_custom_action_edit_*': { label: 'Entity Action Edit', emoji: '⚡', category: 'entity_management' },
+  'modal_attr_edit_*': { label: 'Attribute Edit Modal', emoji: '📊', category: 'entity_management' },
+  'search_term_*': { label: 'Search Term', emoji: '🔍', category: 'entity_management' },
+
+  // Admin / Analytics
+  'castlist_hub_*': { label: 'Castlist Hub', emoji: '📋', category: 'admin' },
+  'nuke_roles_cancel': { label: 'Nuke Roles Cancel', emoji: '❌', category: 'admin' },
+  'nuke_roles_confirm': { label: 'Nuke Roles Confirm', emoji: '💀', category: 'admin' },
+  'prod_add_timezone_select': { label: 'Add Timezone Select', emoji: '🕐', category: 'admin' },
+  'server_stats_page_*': { label: 'Server Stats Page', emoji: '📊', category: 'analytics' },
+
+  // Import/Export
+  'file_import_submit': { label: 'File Import Submit', emoji: '📥', category: 'import_export' },
+  'library_publish_submit': { label: 'Library Publish', emoji: '📤', category: 'import_export' },
+  'library_search_submit': { label: 'Library Search', emoji: '🔍', category: 'import_export' },
+
+  // Stress Test (Legacy)
+  'stress_edit_season_modal_legacy': { label: 'Stress Edit Season', emoji: '🧪', category: 'stress_test' },
+  'stress_page_legacy_*': { label: 'Stress Page', emoji: '🧪', category: 'stress_test' },
+  'stress_select_legacy': { label: 'Stress Select', emoji: '🧪', category: 'stress_test' },
+
+  // Panel
+  'panel_name_*': { label: 'Panel Name', emoji: '🏷️', category: 'panel' }
 };
 
 /**

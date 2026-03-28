@@ -1,0 +1,154 @@
+#!/usr/bin/env node
+/**
+ * Legacy Handler Audit Script
+ *
+ * Scans app.js for legacy handlers (not using ButtonHandlerFactory)
+ * and outputs a stratified risk report.
+ *
+ * Usage: node scripts/legacy-handler-audit.js
+ */
+
+import fs from 'fs';
+
+const app = fs.readFileSync('app.js', 'utf8');
+const lines = app.split('\n');
+
+// Find MODAL_SUBMIT section boundaries
+let modalSubmitStart = -1, modalSubmitEnd = -1;
+lines.forEach((line, i) => {
+  if (line.includes('type === InteractionType.MODAL_SUBMIT')) modalSubmitStart = i;
+  if (line.includes('} // end if MODAL_SUBMIT')) modalSubmitEnd = i;
+});
+
+const handlers = [];
+
+lines.forEach((line, i) => {
+  // Skip MODAL_SUBMIT section
+  if (i >= modalSubmitStart && i <= modalSubmitEnd) return;
+
+  if (line.match(/\} else if \(custom_id/)) {
+    // Check if ButtonHandlerFactory.create is within 3 lines
+    const nextLines = lines.slice(i, i + 4).join('\n');
+    const isFactory = nextLines.includes('ButtonHandlerFactory.create');
+
+    if (!isFactory) {
+      // Extract custom_id pattern
+      const idMatch = line.match(/custom_id\s*===\s*'([^']+)'/) ||
+                      line.match(/custom_id\.startsWith\('([^']+)'\)/) ||
+                      line.match(/custom_id\s*===\s*`([^`]+)`/);
+      const customId = idMatch ? idMatch[1] : 'UNKNOWN';
+
+      // Count handler lines (until next } else if or end of block)
+      let handlerLines = 0;
+      for (let j = i + 1; j < lines.length && j < i + 500; j++) {
+        handlerLines++;
+        if (lines[j].match(/^\s{4}\} else if \(custom_id/) || lines[j].match(/^\s{4}\} else \{/)) break;
+      }
+
+      // Check complexity indicators
+      const block = lines.slice(i, i + handlerLines).join('\n');
+      const resSendCount = (block.match(/res\.send\(/g) || []).length;
+      const hasDeferred = block.includes('sendDeferredResponse') || block.includes('DEFERRED');
+      const hasDataMutation = block.includes('savePlayerData') || block.includes('saveSafariContent');
+      const hasCollector = block.includes('createMessageCollector') || block.includes('MessageCollector');
+      const hasProcessExit = block.includes('process.exit');
+      const callsExternalResSend = block.includes('showApplicationQuestion') ||
+                                    block.includes('handleCastlist');
+      const isModal = block.includes('InteractionResponseType.MODAL') || block.includes('type: 9');
+
+      // Determine risk level
+      let risk = 'NO-RISK';
+      if (hasCollector || hasProcessExit) {
+        risk = 'HIGH-RISK';
+      } else if (callsExternalResSend) {
+        risk = 'HIGH-RISK';
+      } else if (hasDeferred && resSendCount > 2) {
+        risk = 'MED-RISK';
+      } else if (hasDataMutation && resSendCount > 1) {
+        risk = 'MED-RISK';
+      } else if (handlerLines > 80) {
+        risk = 'MED-RISK';
+      } else if (resSendCount > 1 || hasDeferred) {
+        risk = 'LOW-RISK';
+      } else if (handlerLines > 40) {
+        risk = 'LOW-RISK';
+      }
+
+      handlers.push({
+        line: i + 1,
+        customId,
+        handlerLines,
+        resSendCount,
+        risk,
+        flags: [
+          hasDeferred && 'deferred',
+          hasDataMutation && 'data-mutation',
+          hasCollector && 'msg-collector',
+          hasProcessExit && 'process.exit',
+          callsExternalResSend && 'external-res.send',
+          isModal && 'modal'
+        ].filter(Boolean)
+      });
+    }
+  }
+});
+
+// Output report
+const riskOrder = ['NO-RISK', 'LOW-RISK', 'MED-RISK', 'HIGH-RISK'];
+const grouped = {};
+for (const r of riskOrder) grouped[r] = handlers.filter(h => h.risk === r);
+
+console.log('═══════════════════════════════════════════════════');
+console.log('  LEGACY HANDLER AUDIT — ButtonHandlerFactory Migration');
+console.log('═══════════════════════════════════════════════════');
+console.log(`  Total legacy handlers: ${handlers.length}`);
+console.log(`  NO-RISK:   ${grouped['NO-RISK'].length} (wrap and ship)`);
+console.log(`  LOW-RISK:  ${grouped['LOW-RISK'].length} (one-shot with quick test)`);
+console.log(`  MED-RISK:  ${grouped['MED-RISK'].length} (needs careful conversion)`);
+console.log(`  HIGH-RISK: ${grouped['HIGH-RISK'].length} (needs refactoring)`);
+console.log('═══════════════════════════════════════════════════\n');
+
+for (const risk of riskOrder) {
+  if (grouped[risk].length === 0) continue;
+  const emoji = { 'NO-RISK': '🟢', 'LOW-RISK': '🟡', 'MED-RISK': '🟠', 'HIGH-RISK': '🔴' }[risk];
+  console.log(`${emoji} ${risk} (${grouped[risk].length})`);
+  console.log('─'.repeat(50));
+  for (const h of grouped[risk]) {
+    const flags = h.flags.length ? ` [${h.flags.join(', ')}]` : '';
+    console.log(`  L${h.line} | ${h.customId} (${h.handlerLines} lines, ${h.resSendCount} res.send)${flags}`);
+  }
+  console.log('');
+}
+
+// Write to docs for persistence
+const reportLines = [
+  `# Legacy Handler Migration Report`,
+  ``,
+  `*Auto-generated by \`node scripts/legacy-handler-audit.js\` — ${new Date().toISOString().split('T')[0]}*`,
+  ``,
+  `**Total legacy handlers:** ${handlers.length}`,
+  ``,
+  `| Risk | Count | Action |`,
+  `|------|-------|--------|`,
+  `| 🟢 NO-RISK | ${grouped['NO-RISK'].length} | Wrap and ship |`,
+  `| 🟡 LOW-RISK | ${grouped['LOW-RISK'].length} | One-shot with quick test |`,
+  `| 🟠 MED-RISK | ${grouped['MED-RISK'].length} | Needs careful conversion |`,
+  `| 🔴 HIGH-RISK | ${grouped['HIGH-RISK'].length} | Needs refactoring |`,
+  ``
+];
+
+for (const risk of riskOrder) {
+  if (grouped[risk].length === 0) continue;
+  reportLines.push(`## ${risk} (${grouped[risk].length})`);
+  reportLines.push('');
+  reportLines.push('| Line | custom_id | Lines | Flags |');
+  reportLines.push('|------|-----------|-------|-------|');
+  for (const h of grouped[risk]) {
+    const flags = h.flags.length ? h.flags.join(', ') : '—';
+    reportLines.push(`| ${h.line} | \`${h.customId}\` | ${h.handlerLines} | ${flags} |`);
+  }
+  reportLines.push('');
+}
+
+fs.writeFileSync('docs/enablers/LegacyHandlerMigration.md', reportLines.join('\n'));
+console.log('📄 Report saved to docs/enablers/LegacyHandlerMigration.md');

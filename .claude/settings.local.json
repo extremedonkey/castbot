@@ -170,7 +170,9 @@
       "Skill(update-config)",
       "WebFetch(domain:support-dev.discord.com)",
       "WebFetch(domain:www.reddit.com)",
-      "Bash(./.claude/hooks/*)"
+      "Bash(./.claude/hooks/*)",
+      "WebFetch(domain:status.anthropic.com)",
+      "WebFetch(domain:status.claude.com)"
     ],
     "deny": []
   },
