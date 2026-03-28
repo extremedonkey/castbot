@@ -13,7 +13,8 @@ import { parseAndValidateEmoji } from './utils/emojiUtils.js';
 const LIMIT_OPTIONS = [
     { label: 'Unlimited', value: 'unlimited', emoji: { name: '♾️' }, description: 'No usage limit' },
     { label: 'Once Per Player', value: 'once_per_player', emoji: { name: '👤' }, description: 'Each player can use once', default: true },
-    { label: 'Once Globally', value: 'once_globally', emoji: { name: '🌍' }, description: 'Only one player total can use' }
+    { label: 'Once Globally', value: 'once_globally', emoji: { name: '🌍' }, description: 'Only one player total can use' },
+    { label: 'Once Per Period (24h)', value: 'once_per_period', emoji: { name: '⏱️' }, description: 'Cooldown per player (edit to change period)' }
 ];
 
 const COLOR_OPTIONS = [
@@ -261,7 +262,9 @@ export async function handleQuickCurrencySubmit(guildId, userId, coordinate, mod
         order: 0,
         config: {
             amount: parsedAmount,
-            limit: { type: limitType, claimedBy: [] }
+            limit: limitType === 'once_per_period'
+                ? { type: 'once_per_period', periodMs: 86400000, claimedBy: {} }
+                : { type: limitType, claimedBy: limitType === 'once_per_player' ? [] : null }
         },
         executeOn: 'true'
     });
@@ -367,7 +370,9 @@ export async function handleQuickItemSubmit(guildId, userId, coordinate, modalCo
             itemId,
             quantity: 1,
             operation: 'give',
-            limit: { type: limitType, claimedBy: [] }
+            limit: limitType === 'once_per_period'
+                ? { type: 'once_per_period', periodMs: 86400000, claimedBy: {} }
+                : { type: limitType, claimedBy: limitType === 'once_per_player' ? [] : null }
         },
         executeOn: 'true'
     });

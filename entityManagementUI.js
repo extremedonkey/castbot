@@ -509,6 +509,13 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
                         label: 'Quick Item',
                         custom_id: `quick_item_${entityId}`,
                         emoji: { name: '⚡' }
+                    },
+                    {
+                        type: 2, // Button
+                        style: 2,
+                        label: 'Quick Enemy',
+                        custom_id: `quick_enemy_${entityId}`,
+                        emoji: { name: '⚡' }
                     }
                 ]
             });

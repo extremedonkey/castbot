@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 const LIMIT_OPTIONS = [
     { label: 'Unlimited', value: 'unlimited', emoji: { name: '♾️' }, description: 'No usage limit' },
     { label: 'Once Per Player', value: 'once_per_player', emoji: { name: '👤' }, description: 'Each player can use once', default: true },
-    { label: 'Once Globally', value: 'once_globally', emoji: { name: '🌍' }, description: 'Only one player total can use' }
+    { label: 'Once Globally', value: 'once_globally', emoji: { name: '🌍' }, description: 'Only one player total can use' },
+    { label: 'Once Per Period (24h)', value: 'once_per_period', emoji: { name: '⏱️' }, description: 'Cooldown per player (edit to change period)' }
 ];
 
 const COLOR_OPTIONS = [
@@ -95,7 +96,7 @@ describe('buildQuickCurrencyModal', () => {
     it('limit field uses String Select (type 3)', () => {
         const modal = buildQuickCurrencyModal('A1', 'coins');
         assert.equal(modal.components[3].component.type, 3);
-        assert.equal(modal.components[3].component.options.length, 3);
+        assert.equal(modal.components[3].component.options.length, 4);
     });
 
     it('color field uses String Select (type 3)', () => {
