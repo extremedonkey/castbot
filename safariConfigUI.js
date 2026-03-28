@@ -161,50 +161,63 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
  * @returns {Object} Discord modal
  */
 export async function createFieldGroupModal(groupKey, currentConfig) {
-    const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
-    
     const config = EDIT_CONFIGS[EDIT_TYPES.SAFARI_CONFIG];
     const groupConfig = config.fieldGroups[groupKey];
-    
+
     if (!groupConfig) {
         throw new Error(`Unknown field group: ${groupKey}`);
     }
 
-    const modal = new ModalBuilder()
-        .setCustomId(`safari_config_modal_${groupKey}`)
-        .setTitle(`${groupConfig.label} Settings`);
+    // Field-level descriptions for better UX
+    const fieldDescriptions = {
+        currencyName: 'The name of your in-game currency (e.g. Dollars, Rupees, Gold).',
+        currencyEmoji: 'Unicode emoji or custom Discord emoji code.',
+        inventoryName: 'What the player\'s item bag is called.',
+        inventoryEmoji: 'Unicode emoji or custom Discord emoji code.',
+        defaultStartingCurrencyValue: 'Amount of currency new players start with.',
+        goodEventName: 'Name for positive random events.',
+        badEventName: 'Name for negative random events.',
+        goodEventEmoji: 'Emoji shown for positive events.',
+        badEventEmoji: 'Emoji shown for negative events.',
+        round1GoodProbability: 'Chance of a good event in round 1 (0-100).',
+        round2GoodProbability: 'Chance of a good event in round 2 (0-100).',
+        round3GoodProbability: 'Chance of a good event in round 3 (0-100).',
+        defaultStartingCoordinate: 'Where new players spawn on the map (e.g. A1).'
+    };
 
     const components = [];
-    
+
     Object.entries(groupConfig.fields).forEach(([fieldKey, fieldConfig]) => {
-        const input = new TextInputBuilder()
-            .setCustomId(fieldKey)
-            .setLabel(fieldConfig.label)
-            .setStyle(fieldConfig.type === 'textarea' ? TextInputStyle.Paragraph : TextInputStyle.Short)
-            .setRequired(fieldConfig.required || false)
-            .setMaxLength(fieldConfig.maxLength || 100);
-        
-        if (fieldConfig.placeholder) {
-            input.setPlaceholder(fieldConfig.placeholder);
-        }
-        
         // Pre-populate with current value
         let currentValue = currentConfig[fieldKey];
-        
-        // Special handling for inventoryEmoji - always ensure default
-        if (fieldKey === 'inventoryEmoji' && !currentValue) {
-            currentValue = '🧰';
-        }
-        
-        if (currentValue !== undefined && currentValue !== null) {
-            input.setValue(String(currentValue));
-        }
-        
-        components.push(new ActionRowBuilder().addComponents(input));
+        if (fieldKey === 'inventoryEmoji' && !currentValue) currentValue = '🧰';
+
+        const textInput = {
+            type: 4, // Text Input
+            custom_id: fieldKey,
+            style: fieldConfig.type === 'textarea' ? 2 : 1,
+            required: fieldConfig.required || false,
+            max_length: fieldConfig.maxLength || 100
+        };
+        if (fieldConfig.placeholder) textInput.placeholder = fieldConfig.placeholder;
+        if (currentValue !== undefined && currentValue !== null) textInput.value = String(currentValue);
+
+        const label = { type: 18, label: fieldConfig.label, component: textInput };
+        const desc = fieldDescriptions[fieldKey];
+        if (desc) label.description = desc;
+
+        components.push(label);
     });
-    
-    modal.addComponents(components.slice(0, 5)); // Discord modal limit
-    return modal;
+
+    return {
+        toJSON() {
+            return {
+                custom_id: `safari_config_modal_${groupKey}`,
+                title: `${groupConfig.label} Settings`,
+                components: components.slice(0, 5) // Discord modal limit
+            };
+        }
+    };
 }
 
 /**
@@ -225,8 +238,10 @@ export function processFieldGroupSubmission(groupKey, modalData) {
     const components = modalData.components;
 
     Object.entries(groupConfig.fields).forEach(([fieldKey, fieldConfig], index) => {
-        const value = components[index]?.components[0]?.value;
-        
+        // Support both Label-wrapped (type 18: .component.value) and ActionRow-wrapped (type 1: .components[0].value)
+        const row = components[index];
+        const value = row?.component?.value ?? row?.components?.[0]?.value;
+
         if (value !== undefined && value !== '') {
             if (fieldConfig.type === 'number') {
                 const num = parseInt(value, 10);
