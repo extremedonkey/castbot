@@ -619,7 +619,7 @@ export async function createPlayerManagementUI(options) {
               .setCustomId(`safari_store_browse_${guildId}_${storeId}`)
               .setLabel(store.name.slice(0, 80))
               .setStyle(ButtonStyle.Secondary)  // Grey style for global stores
-              .setEmoji(parseTextEmoji(store.emoji || '🏪', '🏪').emoji);
+              .setEmoji(parseAndValidateEmoji(store.emoji || '🏪', '🏪').emoji);
 
             currentRow.push(button);
 
@@ -691,7 +691,7 @@ export async function createPlayerManagementUI(options) {
               .setCustomId('safari_player_inventory')
               .setLabel(customTerms.inventoryName)
               .setStyle(ButtonStyle.Secondary)
-              .setEmoji(parseTextEmoji(customTerms.inventoryEmoji || '🧰', '🧰').emoji);
+              .setEmoji(parseAndValidateEmoji(customTerms.inventoryEmoji || '🧰', '🧰').emoji);
             
             // Create inventory row components
             const inventoryComponents = [];
