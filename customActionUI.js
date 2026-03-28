@@ -4395,41 +4395,6 @@ export async function showModifyAttributeConfig(guildId, buttonId, actionIndex) 
 
         { type: 14 }, // Separator
 
-        // Execution Condition section
-        {
-          type: 10,
-          content: '### Execution Condition\nWhen should this action be triggered?'
-        },
-        {
-          type: 1, // Action Row
-          components: [{
-            type: 3, // String Select
-            custom_id: `safari_modify_attr_execute_on_${buttonId}_${actionIndex}`,
-            placeholder: 'Select when to execute...',
-            options: (() => {
-              const effectiveExecuteOn = action?.executeOn || global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true';
-              return [
-                {
-                  label: 'Outcome runs when player passes conditions',
-                  value: 'true',
-                  description: 'Only execute when conditions are met',
-                  emoji: { name: '🟢' },
-                  default: effectiveExecuteOn === 'true'
-                },
-                {
-                  label: 'Outcome runs when player fails conditions',
-                  value: 'false',
-                  description: 'Only execute when conditions are NOT met',
-                  emoji: { name: '🔴' },
-                  default: effectiveExecuteOn === 'false'
-                }
-              ];
-            })()
-          }]
-        },
-
-        { type: 14 }, // Separator
-
         // Back, Reset Claims (if limit set), and Delete Action buttons
         {
           type: 1, // Action Row
