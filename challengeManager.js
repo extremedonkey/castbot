@@ -260,7 +260,7 @@ export function buildChallengeModal(challengeId = null, existing = null) {
       title: { label: 'Challenge Title', placeholder: 'e.g., "Tycoons of the Nile"', required: true, description: 'The name players will see' },
       content: { label: 'Challenge Writeup', placeholder: 'Challenge rules, instructions, flavor text...', required: false, maxLength: 4000, description: 'Supports formatting: **bold**, *italic*, ## Heading, > quote' },
       color: { label: 'Accent Color', placeholder: '#e74c3c', description: 'Hex color code for the card accent bar' },
-      image: { label: 'Image URL', placeholder: 'https://...', description: 'Link to a challenge image (upload to Discord first)' },
+      image: { label: 'Image URL', placeholder: 'https://cdn.discordapp.com/attachments/...', description: 'Upload to Discord first, then paste the CDN link.', style: 2 },
     },
   });
 

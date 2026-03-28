@@ -474,8 +474,8 @@ function createEnemyFieldModal(enemyId, fieldGroupId, group, currentValues) {
                 component: { type: 4, custom_id: 'description', style: 2, value: currentValues.description || '', placeholder: 'Describe the enemy...', required: false, max_length: SAFARI_LIMITS.MAX_ENEMY_DESCRIPTION_LENGTH }
             });
             components.push({
-                type: 18, label: 'Category', description: 'For admin organization (e.g. common, elite, boss).',
-                component: { type: 4, custom_id: 'category', style: 1, value: currentValues.category || '', placeholder: 'e.g. common, elite, boss', required: false, max_length: 30 }
+                type: 18, label: 'Image URL', description: 'Shown during combat. Upload to Discord first, then paste the CDN link.',
+                component: { type: 4, custom_id: 'image', style: 2, value: currentValues.image || '', placeholder: 'https://cdn.discordapp.com/attachments/...', required: false, max_length: 500 }
             });
             break;
 
@@ -503,12 +503,7 @@ function createEnemyFieldModal(enemyId, fieldGroupId, group, currentValues) {
             });
             break;
 
-        case 'appearance':
-            components.push({
-                type: 1,
-                components: [{ type: 4, custom_id: 'image', label: 'Image URL', style: 1, value: currentValues.image || '', placeholder: 'https://example.com/enemy.png', required: false, max_length: 500 }]
-            });
-            break;
+        // 'appearance' field group merged into 'info' — image URL is now in the info modal
     }
 
     return {
@@ -792,15 +787,15 @@ function createMapCellFieldModal(entityId, fieldGroupId, group, currentValues) {
                         {
                             type: 18, // Label
                             label: 'Image URL',
-                            description: 'Image shown on the anchor message. Leave empty to remove.',
+                            description: 'Upload to Discord first, then paste the CDN link. Leave empty to remove.',
                             component: {
                                 type: 4, // Text Input
                                 custom_id: 'image',
-                                style: 1, // Short
+                                style: 2, // Paragraph
                                 value: currentValues.baseContent?.image || '',
                                 required: false,
                                 max_length: 500,
-                                placeholder: 'https://example.com/image.png'
+                                placeholder: 'https://cdn.discordapp.com/attachments/...'
                             }
                         }
                     ]

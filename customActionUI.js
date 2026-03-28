@@ -827,7 +827,8 @@ function getActionListComponents(actions, actionId, guildItems = {}, guildButton
     const outcomeEmoji = {
       display_text: '📄', give_currency: '🪙', give_item: '🎁', give_role: '👑',
       remove_role: '🚫', modify_attribute: '📊', follow_up_button: '🔗', follow_up: '🔗',
-      calculate_results: '🌾', calculate_attack: '⚔️', manage_player_state: '🚀'
+      calculate_results: '🌾', calculate_attack: '⚔️', manage_player_state: '🚀',
+      fight_enemy: '🐙'
     }[action.type] || '▫️';
 
     // Build options array

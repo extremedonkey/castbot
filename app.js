@@ -27474,26 +27474,28 @@ Your server is now ready for Tycoons gameplay!`;
                 });
               });
 
-            return {
-              flags: (1 << 15),
-              components: [{
-                type: 17,
-                accent_color: 0x3498DB,
-                components: [
-                  { type: 10, content: `## 🔄 Clone ${cloneDisplayName}\nSelect the source to clone from:` },
-                  { type: 14 },
-                  {
-                    type: 1,
-                    components: [{
-                      type: 3,
-                      custom_id: `entity_clone_select_${entityType}`,
-                      placeholder: 'Select source to clone...',
-                      options: cloneOptions
-                    }]
-                  }
-                ]
-              }]
-            };
+            return res.send({
+              type: InteractionResponseType.UPDATE_MESSAGE,
+              data: {
+                components: [{
+                  type: 17,
+                  accent_color: 0x3498DB,
+                  components: [
+                    { type: 10, content: `## 🔄 Clone ${cloneDisplayName}\nSelect the source to clone from:` },
+                    { type: 14 },
+                    {
+                      type: 1,
+                      components: [{
+                        type: 3,
+                        custom_id: `entity_clone_select_${entityType}`,
+                        placeholder: 'Select source to clone...',
+                        options: cloneOptions
+                      }]
+                    }
+                  ]
+                }]
+              }
+            });
 
           } else if (selectedValue === 'create_new') {
             // Show creation modal with Item Info format (name, emoji, description)

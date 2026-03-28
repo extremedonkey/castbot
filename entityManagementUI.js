@@ -427,10 +427,7 @@ function createEntityDisplay(entity, entityType, safariConfig) {
                 lines.push(`**🔄 Turn Order**: ${turnLabels[entity.turnOrder] || entity.turnOrder}`);
             }
             if (entity.category) {
-                lines.push(`**Category**: ${entity.category}`);
-            }
-            if (entity.image) {
-                lines.push(`**🖼️ Image**: Set`);
+                lines.push(`**📂 Category**: ${entity.category}`);
             }
             break;
 
@@ -655,9 +652,8 @@ export function getFieldGroups(entityType) {
             };
         case 'enemy':
             return {
-                info: { label: 'Enemy Info', emoji: '📝', fields: ['name', 'emoji', 'description', 'category'] },
-                combat: { label: 'Combat', emoji: '⚔️', fields: ['hp', 'attackValue', 'turnOrder'] },
-                appearance: { label: 'Appearance', emoji: '🖼️', fields: ['image'] }
+                info: { label: 'Enemy Info', emoji: '📝', fields: ['name', 'emoji', 'description', 'image'] },
+                combat: { label: 'Combat', emoji: '⚔️', fields: ['hp', 'attackValue', 'turnOrder'] }
             };
         case 'map_cell':
             return {

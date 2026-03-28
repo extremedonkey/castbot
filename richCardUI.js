@@ -93,10 +93,11 @@ export function buildRichCardModal({
     {
       id: 'image',
       label: 'Image URL (optional)',
-      placeholder: 'Enter link of an image you have uploaded to Discord.',
+      description: 'Upload to Discord first, then paste the CDN link.',
+      placeholder: 'https://cdn.discordapp.com/attachments/...',
       required: false,
       maxLength: 500,
-      style: 1,
+      style: 2, // Paragraph — CDN URLs are long
     },
   ];
 
