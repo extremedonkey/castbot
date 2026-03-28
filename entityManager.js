@@ -444,6 +444,85 @@ export async function searchEntities(guildId, entityType, searchTerm) {
     return filtered;
 }
 
+/**
+ * Clone an existing entity with a new name
+ * Deep copies all fields, resets metadata and usage-specific data
+ * @param {string} guildId - Discord guild ID
+ * @param {string} entityType - Type of entity
+ * @param {string} sourceId - Source entity ID to clone
+ * @param {Object} overrides - Fields to override (e.g. { name, emoji, description })
+ * @param {string} userId - User ID performing the clone
+ * @returns {Object} Created clone entity
+ */
+export async function cloneEntity(guildId, entityType, sourceId, overrides, userId) {
+    const safariData = await loadSafariContent();
+    const entityPath = getEntityPath(entityType);
+    const source = safariData[guildId]?.[entityPath]?.[sourceId];
+
+    if (!source) {
+        throw new Error(`Source entity ${sourceId} not found`);
+    }
+
+    // Check limits
+    const entityCount = Object.keys(safariData[guildId][entityPath] || {}).length;
+    const limit = getEntityLimit(entityType);
+    if (entityCount >= limit) {
+        throw new Error(`Maximum ${entityType} limit reached (${limit})`);
+    }
+
+    // Deep clone the source
+    const clone = JSON.parse(JSON.stringify(source));
+
+    // Apply overrides (name, emoji, description from modal)
+    Object.assign(clone, overrides);
+
+    // Generate new ID from the new name
+    const newId = generateEntityId(entityType, clone);
+    clone.id = newId;
+
+    // Reset metadata
+    clone.metadata = {
+        createdBy: userId,
+        createdAt: Date.now(),
+        lastModified: Date.now()
+    };
+
+    // Reset usage-specific data based on entity type
+    switch (entityType) {
+        case 'item':
+            if (clone.metadata) clone.metadata.totalSold = 0;
+            break;
+        case 'store':
+            if (clone.metadata) clone.metadata.totalSales = 0;
+            break;
+        case 'safari_button':
+            if (clone.metadata) clone.metadata.usageCount = 0;
+            clone.coordinates = []; // Don't inherit locations
+            clone.menuVisibility = 'none';
+            // Reset claimedBy in any sub-action limits
+            if (clone.actions) {
+                for (const action of clone.actions) {
+                    if (action.config?.limit?.claimedBy) {
+                        action.config.limit.claimedBy = Array.isArray(action.config.limit.claimedBy) ? [] : null;
+                    }
+                }
+            }
+            break;
+        case 'enemy':
+            // Enemies are templates — no usage data to reset
+            break;
+    }
+
+    // Save
+    if (!safariData[guildId][entityPath]) {
+        safariData[guildId][entityPath] = {};
+    }
+    safariData[guildId][entityPath][newId] = clone;
+    await saveSafariContent(safariData);
+
+    return clone;
+}
+
 export {
     getEntityPath,
     generateEntityId,

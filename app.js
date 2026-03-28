@@ -4887,6 +4887,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_modify_attr_amount_') &&
         !custom_id.startsWith('safari_modify_attr_limit_') &&
         !custom_id.startsWith('safari_modify_attr_reset_') &&
+        !custom_id.startsWith('entity_clone_select_') &&
         !custom_id.startsWith('safari_fight_enemy_select_') &&
         !custom_id.startsWith('safari_fight_enemy_execute_on_') &&
         !custom_id.startsWith('safari_fight_enemy_limit_') &&
@@ -22305,6 +22306,81 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
 
     // ============================================================
+    // GENERIC ENTITY CLONE HANDLERS
+    // ============================================================
+
+    } else if (custom_id.startsWith('entity_clone_select_')) {
+      return ButtonHandlerFactory.create({
+        id: 'entity_clone_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context, req, res) => {
+          const entityType = context.customId.replace('entity_clone_select_', '');
+          const sourceId = context.values[0];
+
+          if (sourceId === 'back_to_all') {
+            const { createEntityManagementUI } = await import('./entityManagementUI.js');
+            return await createEntityManagementUI({
+              entityType, guildId: context.guildId, mode: 'edit'
+            });
+          }
+
+          // Load source entity to pre-fill modal
+          const { loadSafariContent } = await import('./safariManager.js');
+          const allData = await loadSafariContent();
+          const guildData = allData[context.guildId] || {};
+          let source = null;
+          switch (entityType) {
+            case 'item': source = guildData.items?.[sourceId]; break;
+            case 'store': source = guildData.stores?.[sourceId]; break;
+            case 'safari_button': source = guildData.buttons?.[sourceId]; break;
+            case 'enemy': source = guildData.enemies?.[sourceId]; break;
+          }
+
+          if (!source) {
+            return { content: '❌ Source entity not found.', ephemeral: true };
+          }
+
+          const sourceName = source.name || source.label || 'Unnamed';
+          const sourceEmoji = typeof source.emoji === 'string' ? source.emoji : '';
+
+          // Show clone modal
+          return res.send({
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: `entity_clone_modal_${entityType}_${sourceId}`,
+              title: `Clone ${EDIT_CONFIGS[entityType]?.displayName || 'Entity'}`,
+              components: [
+                {
+                  type: 1,
+                  components: [{
+                    type: 4, custom_id: 'clone_name', label: 'Name',
+                    style: 1, value: `${sourceName} (Copy)`.substring(0, 80),
+                    placeholder: 'Enter name for the clone', required: true, max_length: 80
+                  }]
+                },
+                {
+                  type: 1,
+                  components: [{
+                    type: 4, custom_id: 'clone_emoji', label: 'Emoji (Optional)',
+                    style: 1, value: sourceEmoji, placeholder: 'e.g. 🐙',
+                    required: false, max_length: 100
+                  }]
+                },
+                {
+                  type: 1,
+                  components: [{
+                    type: 4, custom_id: 'clone_description', label: 'Description (Optional)',
+                    style: 2, value: (source.description || '').substring(0, 500),
+                    placeholder: 'Enter description', required: false, max_length: 500
+                  }]
+                }
+              ]
+            }
+          });
+        }
+      })(req, res, client);
+
     // FIGHT ENEMY CONFIG HANDLERS
     // ============================================================
 
@@ -27337,6 +27413,63 @@ Your server is now ready for Tycoons gameplay!`;
                 }]
               }
             });
+          } else if (selectedValue === 'clone_entity') {
+            // Show clone source list — reuse the entity selector but without Create/Search/Clone options
+            const { loadSafariContent: loadCloneData } = await import('./safariManager.js');
+            const { parseTextEmoji: parseCloneEmoji } = await import('./utils/emojiUtils.js');
+            const cloneAllData = await loadCloneData();
+            const cloneGuildData = cloneAllData[context.guildId] || {};
+
+            let sourceEntities = {};
+            switch (entityType) {
+              case 'item': sourceEntities = cloneGuildData.items || {}; break;
+              case 'store': sourceEntities = cloneGuildData.stores || {}; break;
+              case 'safari_button': sourceEntities = cloneGuildData.buttons || {}; break;
+              case 'enemy': sourceEntities = cloneGuildData.enemies || {}; break;
+              default: sourceEntities = {};
+            }
+
+            const cloneDefaultEmoji = entityType === 'item' ? '📦' : entityType === 'store' ? '🏪' : entityType === 'enemy' ? '🐙' : '📋';
+            const cloneOptions = [
+              { label: '🔙 Back to all', value: 'back_to_all', description: 'Return to full list' }
+            ];
+
+            Object.entries(sourceEntities)
+              .sort((a, b) => (a[1].name || '').localeCompare(b[1].name || ''))
+              .slice(0, 24)
+              .forEach(([id, entity]) => {
+                const name = entity.name || entity.label || id;
+                const emoji = entity.emoji || cloneDefaultEmoji;
+                const { cleanText, emoji: parsedEmoji } = parseCloneEmoji(`${emoji} ${name}`, cloneDefaultEmoji);
+                cloneOptions.push({
+                  label: (cleanText || name).substring(0, 100),
+                  value: id,
+                  description: `Clone this ${EDIT_CONFIGS[entityType]?.displayName?.toLowerCase() || 'entity'}`,
+                  emoji: parsedEmoji
+                });
+              });
+
+            return {
+              flags: (1 << 15),
+              components: [{
+                type: 17,
+                accent_color: 0x3498DB,
+                components: [
+                  { type: 10, content: `## 🔄 Clone ${EDIT_CONFIGS[entityType]?.displayName || 'Entity'}\nSelect the source to clone from:` },
+                  { type: 14 },
+                  {
+                    type: 1,
+                    components: [{
+                      type: 3,
+                      custom_id: `entity_clone_select_${entityType}`,
+                      placeholder: 'Select source to clone...',
+                      options: cloneOptions
+                    }]
+                  }
+                ]
+              }]
+            };
+
           } else if (selectedValue === 'create_new') {
             // Show creation modal with Item Info format (name, emoji, description)
             const { createFieldGroupModal } = await import('./fieldEditors.js');
@@ -45597,6 +45730,68 @@ Your server is now ready for Tycoons gameplay!`;
         return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Error: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL } });
       }
 
+    } else if (custom_id.startsWith('entity_clone_modal_')) {
+      // Handle clone modal submission
+      try {
+        const withoutPrefix = custom_id.replace('entity_clone_modal_', '');
+        // Parse: entity_clone_modal_{entityType}_{sourceId}
+        // entityType could be 'safari_button' (has underscore) or 'enemy', 'item', 'store'
+        let entityType, sourceId;
+        if (withoutPrefix.startsWith('safari_button_')) {
+          entityType = 'safari_button';
+          sourceId = withoutPrefix.replace('safari_button_', '');
+        } else {
+          const firstUnderscore = withoutPrefix.indexOf('_');
+          entityType = withoutPrefix.substring(0, firstUnderscore);
+          sourceId = withoutPrefix.substring(firstUnderscore + 1);
+        }
+
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+
+        // Extract fields from modal
+        const getVal = (idx) => data.components?.[idx]?.components?.[0]?.value?.trim() || '';
+        const cloneName = getVal(0);
+        const cloneEmoji = getVal(1);
+        const cloneDesc = getVal(2);
+
+        if (!cloneName) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: '❌ Name is required.', flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+
+        const { cloneEntity } = await import('./entityManager.js');
+        const overrides = { name: cloneName };
+        if (cloneEmoji) overrides.emoji = cloneEmoji;
+        if (cloneDesc) overrides.description = cloneDesc;
+        // For safari_button, also set label
+        if (entityType === 'safari_button') overrides.label = cloneName;
+
+        const cloned = await cloneEntity(guildId, entityType, sourceId, overrides, userId);
+        console.log(`🔄 Cloned ${entityType} ${sourceId} → ${cloned.id} for guild ${guildId}`);
+
+        // Show the cloned entity in the editor
+        const { createEntityManagementUI } = await import('./entityManagementUI.js');
+        const ui = await createEntityManagementUI({
+          entityType, guildId, selectedId: cloned.id, mode: 'edit'
+        });
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { ...ui, flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL }
+        });
+      } catch (error) {
+        console.error('Error cloning entity:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: `❌ Clone failed: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
+
     } else if (custom_id.startsWith('entity_create_modal_')) {
       // Handle modal submission for entity creation
       try {
@@ -47457,6 +47652,46 @@ Your server is now ready for Tycoons gameplay!`;
             }
             break;
             
+          case 'enemy':
+            // Search enemies
+            if (guildData.enemies) {
+              entities = Object.entries(guildData.enemies)
+                .filter(([id, enemy]) => {
+                  const searchableText = [
+                    enemy.name?.toLowerCase() || '',
+                    enemy.description?.toLowerCase() || '',
+                    enemy.category?.toLowerCase() || '',
+                    id.toLowerCase()
+                  ].join(' ');
+                  return searchableText.includes(searchTerm);
+                })
+                .map(([id, enemy]) => {
+                  let emojiObj = null;
+                  if (enemy.emoji) {
+                    try {
+                      const emojiStr = String(enemy.emoji).trim();
+                      if (emojiStr && !emojiStr.includes('�')) {
+                        if (emojiStr.match(/<a?:(\w+):(\d+)>/)) {
+                          const parsed = parseTextEmoji(emojiStr);
+                          if (parsed?.emoji) emojiObj = parsed.emoji;
+                        } else if (emojiStr.length <= 4) {
+                          emojiObj = { name: emojiStr };
+                        }
+                      }
+                    } catch (e) {
+                      console.warn(`⚠️ Failed to parse emoji for enemy ${id}:`, e.message);
+                    }
+                  }
+                  return {
+                    value: id,
+                    label: enemy.name || id,
+                    description: `❤️${enemy.hp || 0} ⚔️${enemy.attackValue || 0}`,
+                    emoji: emojiObj
+                  };
+                });
+            }
+            break;
+
           case 'store':
             // Search stores
             if (guildData.stores) {

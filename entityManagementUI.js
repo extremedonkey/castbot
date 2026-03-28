@@ -269,6 +269,16 @@ function createEntitySelector(entities, selectedId, entityType, searchTerm) {
             description: 'Click to search entities'
         });
     }
+
+    // Add clone option if entities exist (not for map_cell or safari_config)
+    if (Object.keys(entities).length > 0 && entityType !== 'map_cell' && entityType !== 'safari_config') {
+        options.push({
+            label: '🔄 Clone Existing',
+            value: 'clone_entity',
+            emoji: { name: '🔄' },
+            description: `Duplicate an existing ${EDIT_CONFIGS[entityType]?.displayName?.toLowerCase() || 'entity'}`
+        });
+    }
     
     // Add entity options (newest first)
     Object.entries(entities)

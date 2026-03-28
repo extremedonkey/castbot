@@ -1661,6 +1661,12 @@ export const BUTTON_REGISTRY = {
     emoji: '🔄',
     category: 'safari'
   },
+  'entity_clone_select_*': {
+    label: 'Clone Entity Source',
+    description: 'Select source entity to clone',
+    emoji: '🔄',
+    category: 'entity_management'
+  },
   'safari_fight_enemy_select_*': {
     label: 'Select Enemy',
     description: 'Select enemy for fight outcome',
