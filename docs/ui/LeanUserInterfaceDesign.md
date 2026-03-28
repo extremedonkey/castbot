@@ -272,13 +272,48 @@ const container = {
 
 ---
 
-## 📝 Modal Pre-Population Standard
+## 📝 Modal Standards
+
+### MANDATORY: Use Label (Type 18) for ALL Modal Inputs
+
+**ALL modal components MUST use Label (type 18) wrappers.** The ActionRow + TextInput pattern is **deprecated**.
+
+```javascript
+// ❌ DEPRECATED — Do NOT copy this pattern
+{
+  type: 1, // ActionRow
+  components: [{ type: 4, custom_id: 'name', label: 'Name', style: 1 }]
+}
+
+// ✅ REQUIRED — Use Label wrapper for all modal inputs
+{
+  type: 18, // Label
+  label: 'Name',
+  description: 'Optional helpful description text',  // Use descriptions!
+  component: { type: 4, custom_id: 'name', style: 1, placeholder: '...' }
+}
+```
+
+**Why Labels are mandatory:**
+- `description` field provides context that ActionRow cannot (helps users understand what to enter)
+- Supports all input types: TextInput, String Select, User Select, Radio Group, Checkbox, File Upload
+- ActionRow+TextInput is deprecated by Discord and may stop working
+
+**Label `description` guidelines:**
+- Use for validation hints: `"1-9999, higher = harder to defeat"`
+- Use for context: `"Their exact Discord username (without @)"`
+- Use for consequences: `"This is confidential — only hosts will see this"`
+- Keep under ~80 characters
+- Not required for self-explanatory fields (e.g., "Name" doesn't need a description)
+
+### Modal Pre-Population Standard
 
 **CRITICAL: Edit modals MUST pre-populate all fields with existing data.**
 
 When a user clicks "Edit" on something they've already configured, the modal must show their current values — not empty fields or placeholders. Empty fields force users to re-enter data they've already set, which is confusing and error-prone.
 
 ### Rules
+- **Always use Label (type 18)** wrappers with `description` where helpful
 - **Always pass existing data** to the modal builder when editing (not just when creating)
 - **Use `value` property** on TextInput (type 4) to pre-fill — `placeholder` is only for empty/new fields
 - **Convert stored types** to strings for display (numbers → `String(n)`, timestamps → formatted date)

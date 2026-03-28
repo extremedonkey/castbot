@@ -637,7 +637,7 @@ export function getFieldGroups(entityType) {
             return {
                 info: { label: 'Item Info', emoji: '📝', fields: ['name', 'description'] },
                 financials: { label: 'Financials', emoji: '💰', fields: ['basePrice', 'goodOutcomeValue', 'badOutcomeValue'] },
-                battle: { label: 'Battle', emoji: '⚔️', fields: ['attackValue', 'defenseValue'] },
+                battle: { label: 'Combat', emoji: '⚔️', fields: ['attackValue', 'defenseValue'] },
                 properties: { label: 'Persistence', emoji: '🍏', fields: ['consumable', 'defaultItem'] },
                 stamina: { label: 'Movement', emoji: '⚡', fields: ['staminaBoost', 'reverseBlacklist', 'consumable'] },
                 stats: { label: 'Stats', emoji: '📊', fields: ['attributeModifiers'], useCustomUI: true }

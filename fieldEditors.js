@@ -242,33 +242,14 @@ function createItemFieldModal(itemId, fieldGroupId, group, currentValues) {
             break;
             
         case 'battle':
-            // Battle: attackValue, defenseValue
+            // Combat: attackValue, defenseValue
             components.push({
-                type: 1, // ActionRow
-                components: [{
-                    type: 4, // Text Input
-                    custom_id: 'attackValue',
-                    label: 'Attack Value',
-                    style: 1, // Short
-                    value: (currentValues.attackValue ?? '').toString(),
-                    placeholder: 'Attack power (0-999)',
-                    required: false,
-                    max_length: 3
-                }]
+                type: 18, label: 'Attack Value', description: 'Damage dealt when this item is used to attack.',
+                component: { type: 4, custom_id: 'attackValue', style: 1, value: (currentValues.attackValue ?? '').toString(), placeholder: '0-999', required: false, max_length: 3 }
             });
-            
             components.push({
-                type: 1, // ActionRow
-                components: [{
-                    type: 4, // Text Input
-                    custom_id: 'defenseValue',
-                    label: 'Defense Value',
-                    style: 1, // Short
-                    value: (currentValues.defenseValue ?? '').toString(),
-                    placeholder: 'Defense power (0-999)',
-                    required: false,
-                    max_length: 3
-                }]
+                type: 18, label: 'Defense Value', description: 'Damage reduction when this item is equipped.',
+                component: { type: 4, custom_id: 'defenseValue', style: 1, value: (currentValues.defenseValue ?? '').toString(), placeholder: '0-999', required: false, max_length: 3 }
             });
             break;
             
@@ -501,24 +482,24 @@ function createEnemyFieldModal(enemyId, fieldGroupId, group, currentValues) {
     // Handle new enemy creation
     if (enemyId === 'new' && fieldGroupId === 'info') {
         components.push({
-            type: 1,
-            components: [{ type: 4, custom_id: 'name', label: 'Enemy Name', style: 1, value: '', placeholder: 'Enter enemy name', required: true, max_length: SAFARI_LIMITS.MAX_ENEMY_NAME_LENGTH }]
+            type: 18, label: 'Enemy Name',
+            component: { type: 4, custom_id: 'name', style: 1, placeholder: 'Enter enemy name', required: true, max_length: SAFARI_LIMITS.MAX_ENEMY_NAME_LENGTH }
         });
         components.push({
-            type: 1,
-            components: [{ type: 4, custom_id: 'emoji', label: 'Enemy Emoji', style: 1, value: '', placeholder: 'Enter an emoji', required: false, max_length: 100 }]
+            type: 18, label: 'Enemy Emoji', description: 'Unicode emoji or custom Discord emoji code.',
+            component: { type: 4, custom_id: 'emoji', style: 1, placeholder: 'e.g. 🐙 or <:name:id>', required: false, max_length: 100 }
         });
         components.push({
-            type: 1,
-            components: [{ type: 4, custom_id: 'description', label: 'Description', style: 2, value: '', placeholder: 'Describe the enemy', required: false, max_length: SAFARI_LIMITS.MAX_ENEMY_DESCRIPTION_LENGTH }]
+            type: 18, label: 'Description', description: 'Shown to players during combat.',
+            component: { type: 4, custom_id: 'description', style: 2, placeholder: 'Describe the enemy...', required: false, max_length: SAFARI_LIMITS.MAX_ENEMY_DESCRIPTION_LENGTH }
         });
         components.push({
-            type: 1,
-            components: [{ type: 4, custom_id: 'hp', label: 'HP (Health Points)', style: 1, value: '10', placeholder: '1-9999', required: true, max_length: 4 }]
+            type: 18, label: 'HP (Health Points)', description: 'How much damage the enemy can take.',
+            component: { type: 4, custom_id: 'hp', style: 1, value: '10', placeholder: '1-9999', required: true, max_length: 4 }
         });
         components.push({
-            type: 1,
-            components: [{ type: 4, custom_id: 'attackValue', label: 'Attack Value', style: 1, value: '1', placeholder: '1-999', required: true, max_length: 3 }]
+            type: 18, label: 'Attack Value', description: 'Damage dealt to the player each turn.',
+            component: { type: 4, custom_id: 'attackValue', style: 1, value: '1', placeholder: '1-999', required: true, max_length: 3 }
         });
 
         return {
@@ -558,16 +539,16 @@ function createEnemyFieldModal(enemyId, fieldGroupId, group, currentValues) {
 
         case 'combat':
             components.push({
-                type: 1,
-                components: [{ type: 4, custom_id: 'hp', label: 'HP (Health Points)', style: 1, value: (currentValues.hp ?? '').toString(), placeholder: '1-9999', required: true, max_length: 4 }]
+                type: 18, label: 'HP (Health Points)', description: 'How much damage the enemy can take before being defeated.',
+                component: { type: 4, custom_id: 'hp', style: 1, value: (currentValues.hp ?? '').toString(), placeholder: '1-9999', required: true, max_length: 4 }
             });
             components.push({
-                type: 1,
-                components: [{ type: 4, custom_id: 'attackValue', label: 'Attack Value', style: 1, value: (currentValues.attackValue ?? '').toString(), placeholder: '1-999', required: true, max_length: 3 }]
+                type: 18, label: 'Attack Value', description: 'Damage dealt to the player each turn.',
+                component: { type: 4, custom_id: 'attackValue', style: 1, value: (currentValues.attackValue ?? '').toString(), placeholder: '1-999', required: true, max_length: 3 }
             });
             components.push({
-                type: 1,
-                components: [{ type: 4, custom_id: 'turnOrder', label: 'Turn Order (player_first / enemy_first / simultaneous)', style: 1, value: currentValues.turnOrder || 'player_first', placeholder: 'player_first', required: false, max_length: 20 }]
+                type: 18, label: 'Turn Order', description: 'player_first, enemy_first, or simultaneous',
+                component: { type: 4, custom_id: 'turnOrder', style: 1, value: currentValues.turnOrder || 'player_first', placeholder: 'player_first', required: false, max_length: 20 }
             });
             break;
 
