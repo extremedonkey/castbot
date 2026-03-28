@@ -20303,6 +20303,8 @@ Your server is now ready for Tycoons gameplay!`;
               } else if (action.config.limit.type === 'once_globally') {
                 // For once_globally, remove claimedBy property entirely - no arrays!
                 delete action.config.limit.claimedBy;
+              } else if (action.config.limit.type === 'once_per_period') {
+                action.config.limit.claimedBy = {};
               }
               
               console.log(`🔄 AFTER RESET: ${action.config.limit.type}, claimedBy:`, action.config.limit.claimedBy);
@@ -20670,8 +20672,10 @@ Your server is now ready for Tycoons gameplay!`;
                 action.config.limit.claimedBy = [];
               } else if (action.config.limit.type === 'once_globally') {
                 action.config.limit.claimedBy = null;
+              } else if (action.config.limit.type === 'once_per_period') {
+                action.config.limit.claimedBy = {};
               }
-              
+
               await saveSafariContent(safariData);
               console.log(`✅ Claims reset for give_currency action ${actionIndex}`);
             }
@@ -21267,6 +21271,7 @@ Your server is now ready for Tycoons gameplay!`;
                 const itemStateKey = `${context.guildId}_${actionId}_${itemId}_${actionIndex}`;
                 dropConfigState.set(itemStateKey, {
                   limit: action.config?.limit?.type || null,
+                  periodMs: action.config?.limit?.periodMs || null,
                   style: action.config?.style || null,
                   quantity: action.config?.quantity || action.quantity || 1,
                   operation: action.config?.operation || 'give',
@@ -21277,6 +21282,7 @@ Your server is now ready for Tycoons gameplay!`;
                 const currencyStateKey = `${context.guildId}_${actionId}_currency_${actionIndex}`;
                 dropConfigState.set(currencyStateKey, {
                   limit: action.config?.limit?.type || null,
+                  periodMs: action.config?.limit?.periodMs || null,
                   style: action.config?.style || null,
                   amount: action.config?.amount || action.amount || 0,
                   executeOn: action.executeOn || 'true'
@@ -22879,6 +22885,8 @@ Your server is now ready for Tycoons gameplay!`;
               action.config.limit.claimedBy = [];
             } else if (action.config.limit.type === 'once_globally') {
               action.config.limit.claimedBy = null;
+            } else if (action.config.limit.type === 'once_per_period') {
+              action.config.limit.claimedBy = {};
             }
           }
 
@@ -23494,7 +23502,7 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
 
-        // Open modal with hours + minutes inputs
+        // Open modal with days + hours + minutes inputs
         const modalComponents = [
           {
             type: 10, // Text Display
@@ -23502,14 +23510,27 @@ Your server is now ready for Tycoons gameplay!`;
           },
           {
             type: 18, // Label
+            label: 'Days from now',
+            description: '0-30 days (leave empty to skip)',
+            component: {
+              type: 4, // Text Input
+              custom_id: 'schedule_days',
+              style: 1,
+              placeholder: '0',
+              max_length: 2,
+              required: false
+            }
+          },
+          {
+            type: 18, // Label
             label: 'Hours from now',
-            description: '0-168 hours (leave empty to skip)',
+            description: '0-23 hours (leave empty to skip)',
             component: {
               type: 4, // Text Input
               custom_id: 'schedule_hours',
               style: 1,
               placeholder: '4',
-              max_length: 3,
+              max_length: 2,
               required: false
             }
           },
@@ -23522,7 +23543,7 @@ Your server is now ready for Tycoons gameplay!`;
               custom_id: 'schedule_minutes',
               style: 1,
               placeholder: '30',
-              max_length: 3,
+              max_length: 2,
               required: false
             }
           }
@@ -47066,44 +47087,29 @@ Your server is now ready for Tycoons gameplay!`;
 
         console.log(`⏰ Processing Custom Action schedule for action ${actionId}, channel ${channelId}`);
 
-        // Extract form data by custom_id
-        let hoursValue = '';
-        let minutesValue = '';
-        for (const comp of data.components) {
-          const child = comp.component || comp.components?.[0];
-          if (!child) continue;
-          if (child.custom_id === 'schedule_hours') hoursValue = child.value?.trim() || '';
-          if (child.custom_id === 'schedule_minutes') minutesValue = child.value?.trim() || '';
-        }
+        // Extract form data using shared utility
+        const { parsePeriodFromModal, formatPeriod } = await import('./utils/periodUtils.js');
+        const { days, hours, minutes, totalMs } = parsePeriodFromModal(data.components, {
+          days: 'schedule_days',
+          hours: 'schedule_hours',
+          minutes: 'schedule_minutes'
+        });
 
-        if (!hoursValue && !minutesValue) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Please enter hours and/or minutes to schedule.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        const hours = parseInt(hoursValue) || 0;
-        const minutes = parseInt(minutesValue) || 0;
-
-        if (hours < 0 || minutes < 0 || hours > 168 || minutes > 59) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Invalid time values. Hours: 0-168, Minutes: 0-59.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        if (hours === 0 && minutes === 0) {
+        if (totalMs === 0) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
               content: '❌ Schedule time must be at least 1 minute.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        if (days < 0 || hours < 0 || minutes < 0 || days > 30 || hours > 23 || minutes > 59) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Invalid time values. Days: 0-30, Hours: 0-23, Minutes: 0-59.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -47114,8 +47120,6 @@ Your server is now ready for Tycoons gameplay!`;
         const allSafariContent = await loadSafariContent();
         const action = allSafariContent[guildId]?.buttons?.[actionId];
         const actionName = action?.name || 'Custom Action';
-
-        const totalMs = (hours * 3600000) + (minutes * 60000);
 
         await scheduler.schedule('execute_custom_action',
           { channelId, guildId, actionId, userId, actionName },
@@ -47131,7 +47135,7 @@ Your server is now ready for Tycoons gameplay!`;
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `✅ **Scheduled Action**: "${actionName}" will execute in <#${channelId}> in **${hours}h ${minutes}m**\n*Executing at: ${executeAt.toLocaleString()}*`,
+            content: `✅ **Scheduled Action**: "${actionName}" will execute in <#${channelId}> in **${formatPeriod(totalMs)}**\n*Executing at: ${executeAt.toLocaleString()}*`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -49140,6 +49144,8 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
           claimsExist = Array.isArray(claimedBy) && claimedBy.length > 0;
         } else if (action.config.limit.type === 'once_globally') {
           claimsExist = claimedBy !== null && claimedBy !== undefined;
+        } else if (action.config.limit.type === 'once_per_period') {
+          claimsExist = typeof claimedBy === 'object' && !Array.isArray(claimedBy) && Object.keys(claimedBy).length > 0;
         }
       }
     }
@@ -49340,13 +49346,15 @@ async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerm
           claimsExist = Array.isArray(claimedBy) && claimedBy.length > 0;
         } else if (action.config.limit.type === 'once_globally') {
           claimsExist = claimedBy !== null && claimedBy !== undefined;
+        } else if (action.config.limit.type === 'once_per_period') {
+          claimsExist = typeof claimedBy === 'object' && !Array.isArray(claimedBy) && Object.keys(claimedBy).length > 0;
         }
       }
     }
   } catch (error) {
     console.error('Error checking claims:', error);
   }
-  
+
   return {
     components: [{
       type: 17, // Container

@@ -531,12 +531,13 @@ function filterActionForExport(action) {
         executeOn: action.executeOn
     };
 
-    // If action has limit tracking, preserve limit TYPE but remove claimedBy (runtime tracking)
+    // If action has limit tracking, preserve limit TYPE (and periodMs for once_per_period) but remove claimedBy (runtime tracking)
     if (filtered.config.limit) {
-        filtered.config.limit = {
-            type: filtered.config.limit.type  // Keep "once_globally", "once_per_player", "unlimited"
-            // Exclude: claimedBy (runtime tracking - will be reset on import)
-        };
+        const exportLimit = { type: filtered.config.limit.type };
+        if (filtered.config.limit.type === 'once_per_period' && filtered.config.limit.periodMs) {
+            exportLimit.periodMs = filtered.config.limit.periodMs;
+        }
+        filtered.config.limit = exportLimit;
     }
 
     return filtered;
@@ -560,6 +561,9 @@ function initializeActionLimitTracking(action) {
         } else if (limitType === 'once_per_player') {
             // Array of user IDs - initialize as empty array
             initialized.config.limit.claimedBy = [];
+        } else if (limitType === 'once_per_period') {
+            // Object map of userId → timestamp - initialize as empty object
+            initialized.config.limit.claimedBy = {};
         }
         // For 'unlimited', no claimedBy field needed
     }
