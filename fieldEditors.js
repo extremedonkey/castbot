@@ -489,8 +489,17 @@ function createEnemyFieldModal(enemyId, fieldGroupId, group, currentValues) {
                 component: { type: 4, custom_id: 'attackValue', style: 1, value: (currentValues.attackValue ?? '').toString(), placeholder: '1-999', required: true, max_length: 3 }
             });
             components.push({
-                type: 18, label: 'Turn Order', description: 'player_first, enemy_first, or simultaneous',
-                component: { type: 4, custom_id: 'turnOrder', style: 1, value: currentValues.turnOrder || 'player_first', placeholder: 'player_first', required: false, max_length: 20 }
+                type: 18, label: 'Turn Order', description: 'Who attacks first each turn?',
+                component: {
+                    type: 3, // String Select
+                    custom_id: 'turnOrder',
+                    required: false,
+                    options: [
+                        { label: 'Player First', value: 'player_first', description: 'Player attacks, then enemy (if alive)', default: (currentValues.turnOrder || 'player_first') === 'player_first' },
+                        { label: 'Enemy First', value: 'enemy_first', description: 'Enemy attacks, then player (if alive)', default: currentValues.turnOrder === 'enemy_first' },
+                        { label: 'Simultaneous', value: 'simultaneous', description: 'Both attack at the same time (double KO possible)', default: currentValues.turnOrder === 'simultaneous' }
+                    ]
+                }
             });
             break;
 
@@ -602,14 +611,8 @@ export function parseModalSubmission(modalData, fieldGroupId) {
                 case 'defenseValue':
                 case 'staminaBoost':
                 case 'turnOrder':
-                    // Validate and normalize turn order
-                    if (value) {
-                        const normalized = value.trim().toLowerCase().replace(/\s+/g, '_');
-                        const valid = ['player_first', 'enemy_first', 'simultaneous'];
-                        fields[fieldId] = valid.includes(normalized) ? normalized : 'player_first';
-                    } else {
-                        fields[fieldId] = 'player_first';
-                    }
+                    // String Select value — already validated
+                    fields[fieldId] = value || 'player_first';
                     break;
                 case 'hp':
                     // Parse as number, allow empty for optional fields
