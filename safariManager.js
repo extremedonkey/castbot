@@ -9944,6 +9944,19 @@ function buildCombatDisplay(enemy, combatResult, playerName) {
         components.push({ type: 10, content: `-# ${enemy.description}` });
     }
 
+    // Enemy image (Media Gallery)
+    if (enemy.image && enemy.image.trim()) {
+        try {
+            new URL(enemy.image); // Validate URL
+            components.push({
+                type: 12, // Media Gallery
+                items: [{ media: { url: enemy.image }, description: enemy.name || 'Enemy' }]
+            });
+        } catch {
+            // Invalid URL — skip silently
+        }
+    }
+
     components.push({ type: 14 });
 
     // Turn-by-turn narrative
