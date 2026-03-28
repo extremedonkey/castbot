@@ -522,6 +522,10 @@ export async function getTimeUntilRegeneration(guildId, entityId, pointType) {
         config = safariData[guildId]?.pointsConfig?.definitions?.[pointType] || getDefaultPointsConfig()[pointType];
     }
 
+    if (!config?.regeneration) {
+        return "N/A";
+    }
+
     if (pointData.current >= pointData.max) {
         return "Full";
     }
