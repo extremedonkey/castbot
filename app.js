@@ -20361,19 +20361,49 @@ Your server is now ready for Tycoons gameplay!`;
           ];
 
           // Limit type explanation
+          const { formatPeriod } = await import('./utils/periodUtils.js');
           const limitLabels = {
             unlimited: '♾️ **Unlimited** — no claim restrictions',
             once_per_player: '👤 **Once Per Player** — each player can claim once',
-            once_globally: '🌍 **Once Globally** — first player to claim gets it, nobody else can'
+            once_globally: '🌍 **Once Globally** — first player to claim gets it, nobody else can',
+            once_per_period: `⏱️ **Once Per Period** — every **${formatPeriod(limit.periodMs || 0)}**`
           };
           components.push({ type: 10, content: `### \`\`\`📋 Limit Type\`\`\`\n${limitLabels[limitType] || limitType}` });
 
-          // Item info
+          // Outcome info — resolve name based on action type
           const items = safariData[context.guildId]?.items || {};
-          const itemName = items[action.config.itemId]?.name || action.config.itemId || 'Unknown Item';
-          const itemEmoji = items[action.config.itemId]?.emoji || '📦';
-          const quantity = action.config.quantity || 1;
-          components.push({ type: 10, content: `-# ${itemEmoji} ${quantity}x ${itemName} | Outcome #${actionIndex + 1}` });
+          const enemies = safariData[context.guildId]?.enemies || {};
+          const { getCustomTerms } = await import('./safariManager.js');
+          const customTerms = await getCustomTerms(context.guildId);
+          let outcomeDesc = `Outcome #${actionIndex + 1}`;
+
+          switch (action.type) {
+            case 'give_item': {
+              const item = items[action.config.itemId];
+              const qty = action.config.quantity || 1;
+              const op = action.config.operation === 'remove' ? 'Remove' : 'Give';
+              outcomeDesc = `${item?.emoji || '📦'} ${op} ${qty}x ${item?.name || action.config.itemId || 'Unknown Item'}`;
+              break;
+            }
+            case 'give_currency': {
+              const amt = action.config.amount || 0;
+              outcomeDesc = `${customTerms.currencyEmoji || '🪙'} ${amt > 0 ? '+' : ''}${amt} ${customTerms.currencyName || 'Currency'}`;
+              break;
+            }
+            case 'modify_attribute': {
+              const attrDefs = safariData[context.guildId]?.attributeDefinitions || {};
+              const attrDef = attrDefs[action.config.attributeId];
+              const op = action.config.operation === 'add' ? '+' : action.config.operation === 'subtract' ? '-' : '=';
+              outcomeDesc = `${attrDef?.emoji || '📊'} ${op}${action.config.amount || 0} ${attrDef?.name || action.config.attributeId || 'Unknown Attribute'}`;
+              break;
+            }
+            case 'fight_enemy': {
+              const enemy = enemies[action.config.enemyId];
+              outcomeDesc = `${enemy?.emoji || '🐙'} Fight ${enemy?.name || 'Unknown Enemy'}`;
+              break;
+            }
+          }
+          components.push({ type: 10, content: `-# ${outcomeDesc} | Outcome #${actionIndex + 1}` });
 
           components.push({ type: 14 });
 
@@ -20393,6 +20423,24 @@ Your server is now ready for Tycoons gameplay!`;
             } else {
               const playerList = claimedArray.map((id, i) => `${i + 1}. <@${id}>`).join('\n');
               components.push({ type: 10, content: `### \`\`\`📊 Status\`\`\`\n📋 **${claimedArray.length} player${claimedArray.length === 1 ? '' : 's'}** claimed:\n${playerList}\n\n-# These players cannot claim again. Other players can still claim.` });
+            }
+          } else if (limitType === 'once_per_period') {
+            // claimedBy is { userId: timestamp } for once_per_period
+            const claims = (typeof claimedBy === 'object' && !Array.isArray(claimedBy)) ? claimedBy : {};
+            const entries = Object.entries(claims);
+            if (entries.length === 0) {
+              components.push({ type: 10, content: `### \`\`\`📊 Status\`\`\`\n🔓 **No claims yet** — all players can claim\n-# Each player can claim once every **${formatPeriod(limit.periodMs || 0)}**.` });
+            } else {
+              const now = Date.now();
+              const playerLines = entries.map(([userId, timestamp], i) => {
+                const elapsed = now - timestamp;
+                const remaining = (limit.periodMs || 0) - elapsed;
+                const status = remaining > 0
+                  ? `⏱️ **${formatPeriod(remaining)}** remaining`
+                  : '✅ Available';
+                return `${i + 1}. <@${userId}> — ${status}`;
+              }).join('\n');
+              components.push({ type: 10, content: `### \`\`\`📊 Status\`\`\`\n📋 **${entries.length} player${entries.length === 1 ? '' : 's'}** with cooldowns:\n${playerLines}\n\n-# Players can re-claim after their cooldown expires.` });
             }
           }
 
