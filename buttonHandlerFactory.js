@@ -4036,6 +4036,16 @@ export const BUTTON_REGISTRY = {
     parent: 'export_channel'
   },
 
+  // === POC / Experimental ===
+  'poc_menu_button': {
+    label: 'Menu (PoC)',
+    description: 'Opens admin production menu using bot application emoji',
+    emoji: '📋',
+    style: 'Primary',
+    category: 'experimental',
+    parent: 'reeces_stuff'
+  },
+
   // === MOAI (Claude Code Integration) ===
   'moai_ask': {
     label: 'Ask Moai',

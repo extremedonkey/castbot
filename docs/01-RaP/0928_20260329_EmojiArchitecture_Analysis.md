@@ -299,26 +299,44 @@ Add to CLAUDE.md critical section:
 
 ---
 
-## What About the Emoji Cache?
+## Decision: Remove the Emoji Cache (2026-03-29)
 
-The `_emojiClient` module-level cache (set via `setEmojiClient()` at startup) is **needed** for one specific case: detecting when a custom emoji has been deleted from the guild. Without it, we'd send `{ name: 'pokemart', id: '123' }` to Discord, and Discord would return `COMPONENT_INVALID_EMOJI`.
+**Decision: Remove all `_emojiClient` cache validation from emoji rendering. Trust Discord as the source of truth.**
 
-However, the cache has limitations:
-- Cold after bot restart until the guild's emojis are fetched
-- May not contain emojis from all guilds (only fetched on interaction)
-- The discord.js client auto-populates it from gateway events, so it's usually warm for active guilds
+### Why the Cache Exists
+The `_emojiClient` module-level cache (set via `setEmojiClient()` at startup) was added to detect deleted custom emojis before sending them to Discord — preventing `COMPONENT_INVALID_EMOJI` errors.
 
-**Recommendation:** Keep the cache validation but make it a soft check — log a warning but still attempt to use the emoji. If Discord rejects it, the existing error handling catches it. This way, emojis that ARE valid but aren't in cache yet still render.
+### Why It's Wrong
+The cache causes MORE problems than it solves:
+- **Cold after restart** — newly uploaded emojis aren't in cache, so they get rejected
+- **Application emojis** (bot's own emojis) are never in the guild emoji cache
+- **Lazy population** — cache only fills from gateway events, unreliable timing
+- **38 validation call sites** — every render path needs cache logic
+- **The bug it prevents is already handled** — anchor message retry logic catches Discord rejections
+
+### What To Do Instead
+1. **Store**: Save the raw emoji string as-is (`<:name:id>` or Unicode)
+2. **Parse**: At render time, parse to the correct format (object for raw JSON, string for ButtonBuilder)
+3. **Send**: Let Discord validate. If it rejects (deleted emoji), catch at the response level
+4. **Handle**: On `COMPONENT_INVALID_EMOJI` error, re-render without that emoji
+
+### The Math
+- 50 emojis max per guild × ~2KB = 100KB per guild
+- Only one guild's emojis are relevant per interaction
+- We don't need to cache anything — Discord's API validates for us in real time
+
+### Migration
+- Phase 1 of the migration plan removes cache from `resolveEmoji()` (no `_emojiClient` reference)
+- Phase 5 removes `setEmojiClient()`, `validateComponentEmoji()`, and `_emojiClient` entirely
+- Error handling for deleted emojis moves to response-level try/catch
 
 ---
 
-## Open Questions
+## Remaining Open Questions
 
-1. **Should `resolveEmoji` attempt the emoji even if not in cache?** Current behavior falls back to Unicode immediately. Alternative: try the custom emoji, let Discord reject it, catch the error. Pros: works for valid emojis not yet in cache. Cons: 1 failed API call per uncached emoji.
+1. **Should we store parsed emoji objects instead of strings?** No — keep storing strings. Markdown content uses the string format, and parsing at render time is cheap.
 
-2. **Should we store parsed emoji objects instead of strings?** Storing `{ name: 'pokemart', id: '123' }` instead of `'<:pokemart:123>'` would eliminate parsing at render time. But it breaks text display (markdown content uses the string format). Recommendation: keep storing strings, parse at render.
-
-3. **ButtonBuilder migration:** The 142 `.setEmoji()` calls across 12 files — should we convert them all to raw JSON buttons (eliminating the builder pattern)? Or keep builders and just pass the right format? Recommendation: keep builders, use `resolveEmoji(str, fallback, 'builder')`.
+2. **ButtonBuilder migration:** Keep builders, use `resolveEmoji(str, fallback, 'builder')` to pass the raw string format that ButtonBuilder expects.
 
 ---
 

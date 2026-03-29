@@ -49,6 +49,12 @@ const BOT_EMOJIS = {
   reece: {
     dev: '1436850201158483968',   // CastBot-Dev Reece emoji
     prod: '1436850226932748369'    // CastBot production Reece emoji
+  },
+
+  // Transparent CastBot icon (for button emojis)
+  cb_transparent: {
+    dev: '1487709952662573091',   // CastBot-Dev transparent icon
+    prod: '1487709751834837103'    // CastBot production transparent icon
   }
 
   // Add more bot emojis here as needed

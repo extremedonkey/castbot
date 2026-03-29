@@ -8846,6 +8846,23 @@ To fix this:
         }
       })(req, res, client);
 
+    } else if (custom_id === 'poc_menu_button') {
+      // PoC: Menu button using bot application emoji — opens admin menu as new ephemeral message
+      return ButtonHandlerFactory.create({
+        id: 'poc_menu_button',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          const isAdmin = hasAdminPermissions(req.body.member);
+          if (!isAdmin) {
+            return { content: '❌ You need admin permissions to use this.' };
+          }
+          const guild = await client.guilds.fetch(context.guildId);
+          const playerData = await loadPlayerData();
+          return await createProductionMenuInterface(guild, playerData, context.guildId, context.userId);
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'becs_cool_cats') {
       return ButtonHandlerFactory.create({
         id: 'becs_cool_cats',
