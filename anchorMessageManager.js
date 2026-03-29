@@ -311,27 +311,48 @@ async function updateSingleAnchor(guildId, coordinate) {
   } catch (error) {
     console.error(`❌ Failed to update anchor for ${coordinate}:`, error.message);
     
-    // Handle specific Discord API errors
-    if (error.message?.includes('Invalid Form Body') && error.message?.includes('BUTTON_COMPONENT_INVALID_EMOJI')) {
-      console.error(`❌ Invalid emoji detected in buttons for ${coordinate}. This will not be retried.`);
-      // Don't retry emoji validation errors as they will continue to fail
+    // Handle invalid emoji errors — strip ALL button emojis and retry once
+    if (error.message?.includes('COMPONENT_INVALID_EMOJI') || error.message?.includes('Invalid emoji')) {
+      console.warn(`⚠️ Invalid emoji in anchor for ${coordinate} — stripping button emojis and retrying`);
+      try {
+        // Strip emoji from ALL buttons in the components (simpler than parsing error paths)
+        let stripped = 0;
+        for (const topLevel of components) {
+          for (const child of (topLevel.components || [])) {
+            if (child.type === 1) { // ActionRow
+              for (const btn of (child.components || [])) {
+                if (btn.type === 2 && btn.emoji) { // Button with emoji
+                  delete btn.emoji;
+                  stripped++;
+                }
+              }
+            }
+          }
+        }
+
+        if (stripped > 0) {
+          console.log(`🔄 Stripped ${stripped} emoji(s) from buttons in ${coordinate}, retrying`);
+          await DiscordRequest(`channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, {
+            method: 'PATCH',
+            body: { components, flags: 1 << 15 }
+          });
+          console.log(`✅ Anchor for ${coordinate} updated after stripping invalid emojis`);
+          return true;
+        }
+      } catch (retryError) {
+        console.error(`❌ Retry after emoji strip also failed for ${coordinate}:`, retryError.message);
+      }
       return false;
     }
-    
+
     if (error.message?.includes('Invalid Form Body')) {
       console.error(`❌ Invalid form body for ${coordinate}. Discord rejected the message format.`);
-      // Log additional details about the error if available
-      if (error.errors) {
-        console.error(`❌ Discord API error details:`, JSON.stringify(error.errors, null, 2));
-      }
     }
-    
-    // Track error for retry (except for emoji validation errors)
-    if (!error.message?.includes('BUTTON_COMPONENT_INVALID_EMOJI')) {
-      const errorKey = `${guildId}_${coordinate}`;
-      updateErrors.set(errorKey, { guildId, coordinate, error: error.message });
-    }
-    
+
+    // Track error for retry
+    const errorKey = `${guildId}_${coordinate}`;
+    updateErrors.set(errorKey, { guildId, coordinate, error: error.message });
+
     return false;
   }
 }
