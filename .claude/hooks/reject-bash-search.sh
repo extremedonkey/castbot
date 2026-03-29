@@ -14,6 +14,11 @@ fi
 # Extract the first word (the actual command before args)
 FIRST_CMD=$(echo "$COMMAND" | sed 's/[|;&].*//' | awk '{print $1}')
 
+# Escape hatch: if you need grep/cat/find/head/tail for something the
+# dedicated tools genuinely can't do, use node -e instead:
+#   node -e "require('fs').readFileSync('file','utf8')"  instead of cat
+#   node -e "console.log(require('child_process').execSync('grep ...'))"  for complex pipelines
+
 case "$FIRST_CMD" in
   grep|rg)
     echo "Use the Grep tool instead of bash $FIRST_CMD — it's built-in and optimized." >&2

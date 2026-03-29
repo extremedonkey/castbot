@@ -23,14 +23,9 @@ export async function createSafeEmoji(emojiInput) {
       return undefined;
     }
 
-    // Handle Discord custom emojis (with ID) — validate exists in cache
+    // Handle Discord custom emojis (with ID)
+    // At save time: accept if format is valid (has name + id). Cache validation happens at RENDER time.
     if (emoji.id) {
-      const { validateComponentEmoji } = await import('./utils/emojiUtils.js');
-      const validated = validateComponentEmoji(emoji, null);
-      if (!validated || !validated.id) {
-        console.log(`⚠️ Custom emoji ${emoji.name}:${emoji.id} not found in cache, skipping`);
-        return undefined;
-      }
       console.log(`✅ Using Discord custom emoji: ${emoji.name} (ID: ${emoji.id}${emoji.animated ? ', animated' : ''})`);
       return {
         name: emoji.name,
@@ -157,7 +152,16 @@ export async function createSafariButtonComponents(buttonIds, guildId) {
     console.log(`🏷️ Using original button label for ${buttonId}: "${label}"`);
     
     // Create emoji safely with logging
-    const safeEmoji = await createSafeEmoji(button.emoji);
+    let safeEmoji = await createSafeEmoji(button.emoji);
+    // Validate custom emojis exist at render time (deleted emojis crash anchor updates)
+    if (safeEmoji?.id) {
+      const { validateComponentEmoji } = await import('./utils/emojiUtils.js');
+      safeEmoji = validateComponentEmoji(safeEmoji, undefined);
+      if (!safeEmoji?.id && button.emoji) {
+        console.warn(`⚠️ Custom emoji for ${buttonId} not in cache, rendering without emoji`);
+        safeEmoji = undefined;
+      }
+    }
     if (button.emoji && !safeEmoji) {
       console.warn(`⚠️ Rejected invalid emoji for button ${buttonId}: "${button.emoji}"`);
     }
