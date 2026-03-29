@@ -1293,15 +1293,26 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
     let progressMessages = [];
     progressMessages.push(`🏗️ Starting map creation with custom image (${gridWidth}x${gridHeight})...`);
 
-    // Memory safety check — refuse to process if server is low on RAM
+    // Memory safety check — refuse to process if server is critically low on RAM
+    // Uses MemAvailable from /proc/meminfo (actual usable memory) instead of os.freemem()
+    // which reports misleadingly low values on Linux (doesn't account for reclaimable cache)
+    // See docs/infrastructure-security/InfrastructureArchitecture.md for details
     const os = await import('os');
-    const freeMemMB = os.freemem() / (1024 * 1024);
+    const fs = await import('fs');
+    let availableMemMB;
+    try {
+      const meminfo = fs.readFileSync('/proc/meminfo', 'utf8');
+      const match = meminfo.match(/MemAvailable:\s+(\d+)/);
+      availableMemMB = match ? parseInt(match[1]) / 1024 : os.freemem() / (1024 * 1024);
+    } catch {
+      availableMemMB = os.freemem() / (1024 * 1024);
+    }
     const totalMemMB = os.totalmem() / (1024 * 1024);
-    if (freeMemMB < 80) {
-      console.error(`🚨 Low memory: ${freeMemMB.toFixed(0)}MB free of ${totalMemMB.toFixed(0)}MB — refusing map creation`);
+    if (availableMemMB < 50) {
+      console.error(`🚨 Low memory: ${availableMemMB.toFixed(0)}MB available of ${totalMemMB.toFixed(0)}MB — refusing map creation`);
       return {
         success: false,
-        message: `❌ Server is low on memory (${freeMemMB.toFixed(0)}MB free). Please try again in a few minutes.`
+        message: `❌ Server is low on memory (${availableMemMB.toFixed(0)}MB available). Please try again in a few minutes.`
       };
     }
 

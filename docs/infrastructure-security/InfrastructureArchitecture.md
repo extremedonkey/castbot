@@ -842,6 +842,57 @@ Print this and keep it handy for emergencies:
 ☐ 6. DOCUMENT - What happened, what fixed it
 ```
 
+## Memory Management on Lightsail
+
+### Linux Memory: `os.freemem()` vs `MemAvailable`
+
+**CRITICAL: Never use `os.freemem()` for memory guards on Linux.** It reports `MemFree` which is misleadingly low because Linux uses free RAM for disk cache. The cache is reclaimable under pressure — it's effectively available memory.
+
+| Metric | Source | What it measures | Typical value (448MB server) |
+|--------|--------|-----------------|------------------------------|
+| `MemFree` | `/proc/meminfo` | Truly unused RAM (no cache) | 12-20MB |
+| `MemAvailable` | `/proc/meminfo` | Usable memory (free + reclaimable cache) | 90-130MB |
+| `os.freemem()` | Node.js `os` module | Approximately `MemFree + Buffers + Cached` | 80-120MB |
+
+**The right approach for memory guards:**
+```javascript
+// Read MemAvailable from /proc/meminfo (Linux kernel's own estimate)
+const fs = await import('fs');
+let availableMemMB;
+try {
+  const meminfo = fs.readFileSync('/proc/meminfo', 'utf8');
+  const match = meminfo.match(/MemAvailable:\s+(\d+)/);
+  availableMemMB = match ? parseInt(match[1]) / 1024 : os.freemem() / (1024 * 1024);
+} catch {
+  availableMemMB = os.freemem() / (1024 * 1024); // Fallback for non-Linux
+}
+```
+
+### Memory Guards in CastBot
+
+| Location | Guard | Threshold | What it protects |
+|----------|-------|-----------|------------------|
+| `mapExplorer.js` | Map creation | 50MB available | Sharp image processing (20-50MB peak for typical maps) |
+
+### Sharp Memory Usage (Map Operations)
+
+Sharp decompresses images to raw RGBA (4 bytes/pixel). A 5.6MB compressed image could be 2000x2000 pixels = 15MB uncompressed. Processing is sequential (one cell at a time), so peak memory is roughly:
+
+| Grid | Source image | Peak memory |
+|------|-------------|-------------|
+| 4x4 | 2000x2000 | ~20MB |
+| 4x4 | 3000x3000 | ~40MB |
+| 8x8 | 3000x3000 | ~38MB |
+| 10x10 | 4000x4000 | ~65MB |
+
+### Production Server Specs (2026-03)
+
+- **Instance:** AWS Lightsail $3.50/month
+- **RAM:** 512MB (448MB usable after kernel)
+- **CastBot process:** 200-250MB typical (grows with guild count, currently 142)
+- **Available for operations:** ~100-130MB under normal load
+- **Swap:** 634MB configured (regularly 300-400MB used)
+
 ## Troubleshooting
 
 ### Development Issues
