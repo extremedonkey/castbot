@@ -152,16 +152,7 @@ export async function createSafariButtonComponents(buttonIds, guildId) {
     console.log(`🏷️ Using original button label for ${buttonId}: "${label}"`);
     
     // Create emoji safely with logging
-    let safeEmoji = await createSafeEmoji(button.emoji);
-    // Validate custom emojis exist at render time (deleted emojis crash anchor updates)
-    if (safeEmoji?.id) {
-      const { validateComponentEmoji } = await import('./utils/emojiUtils.js');
-      safeEmoji = validateComponentEmoji(safeEmoji, undefined);
-      if (!safeEmoji?.id && button.emoji) {
-        console.warn(`⚠️ Custom emoji for ${buttonId} not in cache, rendering without emoji`);
-        safeEmoji = undefined;
-      }
-    }
+    const safeEmoji = await createSafeEmoji(button.emoji);
     if (button.emoji && !safeEmoji) {
       console.warn(`⚠️ Rejected invalid emoji for button ${buttonId}: "${button.emoji}"`);
     }
