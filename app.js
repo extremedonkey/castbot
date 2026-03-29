@@ -1176,12 +1176,12 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setEmoji('💡'),
     new ButtonBuilder()
       .setCustomId('playerdata_import')
-      .setLabel('Import Server')
+      .setLabel('Server playerData')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('📥'),
     new ButtonBuilder()
       .setCustomId('file_import_safari')
-      .setLabel('Import Safari')
+      .setLabel('Server SafariContent')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🦁'),
     new ButtonBuilder()

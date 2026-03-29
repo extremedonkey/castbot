@@ -72,7 +72,7 @@ export const BUTTON_REGISTRY = {
     category: 'admin'
   },
   'playerdata_import': {
-    label: 'Import Server',
+    label: 'Server playerData',
     description: 'Import playerData from a file for current guild',
     emoji: '📥',
     style: 'Secondary',
@@ -360,7 +360,7 @@ export const BUTTON_REGISTRY = {
     category: 'legacy'
   },
   'file_import_safari': {
-    label: 'Import Safari',
+    label: 'Server SafariContent',
     description: 'Import Safari data via File Upload modal (Type 19) — no MessageContent intent needed',
     emoji: '🦁',
     style: 'Secondary',
