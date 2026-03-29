@@ -23,8 +23,16 @@ case "$FIRST_CMD" in
     echo "Use the Glob tool instead of bash find — it's built-in pattern matching." >&2
     exit 2
     ;;
-  cat|head|tail)
+  cat|head)
     echo "Use the Read tool instead of bash $FIRST_CMD — it's built-in file reading." >&2
+    exit 2
+    ;;
+  tail)
+    # Allow tail -f (live streaming), block tail for file reading
+    if echo "$COMMAND" | grep -qE 'tail\s+-f'; then
+      exit 0
+    fi
+    echo "Use the Read tool instead of bash tail — it's built-in file reading." >&2
     exit 2
     ;;
   echo)

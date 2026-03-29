@@ -1298,10 +1298,10 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
     // which reports misleadingly low values on Linux (doesn't account for reclaimable cache)
     // See docs/infrastructure-security/InfrastructureArchitecture.md for details
     const os = await import('os');
-    const fs = await import('fs');
+    const nodeFs = await import('fs');
     let availableMemMB;
     try {
-      const meminfo = fs.readFileSync('/proc/meminfo', 'utf8');
+      const meminfo = nodeFs.readFileSync('/proc/meminfo', 'utf8');
       const match = meminfo.match(/MemAvailable:\s+(\d+)/);
       availableMemMB = match ? parseInt(match[1]) / 1024 : os.freemem() / (1024 * 1024);
     } catch {
