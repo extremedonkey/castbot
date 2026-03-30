@@ -2178,6 +2178,18 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     }
   ];
 
+  // Add Create Map button when no active map exists
+  if (!hasActiveMap) {
+    const createMapButton = new ButtonBuilder()
+      .setCustomId('map_update')
+      .setLabel('Create Map')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('🗺️');
+    const createMapRow = new ActionRowBuilder().addComponents([createMapButton]);
+    containerComponents.push(createMapRow.toJSON());
+    containerComponents.push({ type: 14 });
+  }
+
   // Add Media Gallery with overlay if there's an active map with Discord CDN URL
   if (hasActiveMap && guildMaps[activeMapId].discordImageUrl) {
     console.log(`🖼️ DEBUG: Generating blacklist overlay for map from Discord CDN: ${guildMaps[activeMapId].discordImageUrl}`);
