@@ -355,7 +355,7 @@ export async function buildEmojiDashboard(guild, guildId) {
  * Set up a pending emoji pick for a user.
  * The messageReactionAdd handler in app.js checks this map.
  */
-export function setupReactionPick(userId, guildId, interactionToken) {
+export function setupReactionPick(userId, guildId, interactionToken, messageId = null, channelId = null) {
   if (!global.pendingEmojiPicks) global.pendingEmojiPicks = new Map();
 
   const pickId = `${guildId}_${userId}`;
@@ -370,10 +370,20 @@ export function setupReactionPick(userId, guildId, interactionToken) {
     userId,
     guildId,
     interactionToken,
+    messageId,      // The public message to clean up after capture
+    channelId,      // Channel where the public message was posted
     timestamp: Date.now(),
-    timeout: setTimeout(() => {
+    timeout: setTimeout(async () => {
       global.pendingEmojiPicks.delete(pickId);
       console.log(`⏱️ Emoji pick timed out for user ${userId} in guild ${guildId}`);
+      // Clean up the public message on timeout
+      if (messageId && channelId) {
+        try {
+          const { DiscordRequest } = await import('../utils.js');
+          await DiscordRequest(`channels/${channelId}/messages/${messageId}`, { method: 'DELETE' });
+          console.log(`🗑️ Cleaned up emoji pick message ${messageId}`);
+        } catch { /* message may already be deleted */ }
+      }
     }, 60000)
   };
 

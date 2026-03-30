@@ -8916,24 +8916,37 @@ To fix this:
       return ButtonHandlerFactory.create({
         id: 'emoji_react_pick',
         deferred: true,
-        ephemeral: true,
+        updateMessage: true,
         handler: async (context) => {
-          const { setupReactionPick } = await import('./poc/emojiEditor.js');
-          setupReactionPick(context.userId, context.guildId, req.body.token);
-          return {
+          // Send a PUBLIC follow-up message that users can react to
+          const followUpBody = {
+            flags: (1 << 15), // IS_COMPONENTS_V2, NOT ephemeral
             components: [{
               type: 17,
               accent_color: 0xF1C40F,
               components: [
-                { type: 10, content: `## 👆 React to Any Message\n\nReact to **any message in this server** with the emoji you want.\n\nI'll capture it within **60 seconds**.` },
-                { type: 10, content: `-# Works with Unicode emojis, custom server emojis, and emojis from other servers (if you have Nitro).` },
-                { type: 14 },
-                { type: 1, components: [
-                  { type: 2, custom_id: 'emoji_editor', label: 'Cancel', style: 2 }
-                ]}
+                { type: 10, content: `## 👆 React to This Message!\n\nReact below with the emoji you want. I'll capture it within **60 seconds**.\n\n-# Works with Unicode, custom server emojis, and emojis from other servers (Nitro).` }
               ]
             }]
           };
+
+          // Post public follow-up
+          const followUpResponse = await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}`, {
+            method: 'POST',
+            body: followUpBody
+          });
+
+          const followUpMessage = followUpResponse ? await followUpResponse.json?.() : null;
+          const followUpMessageId = followUpMessage?.id;
+
+          // Setup reaction listener with the follow-up message ID for cleanup
+          const { setupReactionPick } = await import('./poc/emojiEditor.js');
+          setupReactionPick(context.userId, context.guildId, req.body.token, followUpMessageId, context.channelId);
+
+          // Return updated parent message (emoji editor stays visible)
+          const { buildEmojiEditorMenu } = await import('./poc/emojiEditor.js');
+          const guild = await client.guilds.fetch(context.guildId);
+          return await buildEmojiEditorMenu(guild, context.guildId);
         }
       })(req, res, client);
 
@@ -49190,10 +49203,18 @@ client.on('messageReactionAdd', async (reaction, user) => {
           const { processReactionPick } = await import('./poc/emojiEditor.js');
           const { DiscordRequest } = await import('./utils.js');
           const responseData = await processReactionPick(reaction, user, pick);
+          // Send ephemeral follow-up with the result
           await DiscordRequest(`webhooks/${process.env.APP_ID}/${pick.interactionToken}`, {
             method: 'POST',
-            body: responseData
+            body: { ...responseData, flags: (1 << 15) | 64 } // ephemeral follow-up
           });
+          // Clean up the public "React to this" message
+          if (pick.messageId && pick.channelId) {
+            try {
+              await DiscordRequest(`channels/${pick.channelId}/messages/${pick.messageId}`, { method: 'DELETE' });
+              console.log(`🗑️ Cleaned up emoji pick message ${pick.messageId}`);
+            } catch { /* already deleted */ }
+          }
           console.log(`🎨 Emoji pick captured for user ${user.id}: ${reaction.emoji.name}`);
         } catch (error) {
           console.error('Error processing emoji pick:', error);
