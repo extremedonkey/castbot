@@ -79,6 +79,7 @@ export async function generatePlayerLocationImage({ guildId, gridWidth, gridHeig
   for (const [, loc] of playerLocations) {
     const coord = loc.coordinate;
     if (!coord) continue;
+    if (loc.displayName === 'Unknown Player') continue;
     if (!cellPlayers[coord]) cellPlayers[coord] = [];
     cellPlayers[coord].push(stripEmoji(loc.displayName || 'Unknown'));
   }
@@ -129,7 +130,8 @@ export async function generatePlayerLocationImage({ guildId, gridWidth, gridHeig
     const textLines = [];
     visible.forEach((name, i) => {
       let displayName = escapeXml(name);
-      const maxChars = Math.floor(w / (fontSize * 0.55)) - 2;
+      const availableWidth = w - 24;
+      const maxChars = Math.floor(availableWidth / (fontSize * 0.62));
       if (displayName.length > maxChars) displayName = displayName.substring(0, maxChars - 1) + '…';
       const y = startY + i * lineHeight;
       textLines.push(

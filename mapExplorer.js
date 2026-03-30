@@ -2003,6 +2003,8 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridWi
       for (const [, loc] of playerLocations) {
         const coord = loc.coordinate;
         if (!coord) continue;
+        // Skip Unknown Players (left server) from map image
+        if (loc.displayName === 'Unknown Player') continue;
         if (!cellPlayers[coord]) cellPlayers[coord] = [];
         // Strip emoji from display names for SVG
         const name = String(loc.displayName || 'Unknown')
@@ -2048,7 +2050,8 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridWi
         const textLines = [];
         visible.forEach((name, i) => {
           let displayName = escXml(name);
-          const maxChars = Math.floor(w / (fontSize * 0.55)) - 2;
+          const availableWidth = w - 24; // 16px left padding (dot+gap) + 8px right margin
+          const maxChars = Math.floor(availableWidth / (fontSize * 0.62));
           if (displayName.length > maxChars) displayName = displayName.substring(0, maxChars - 1) + '…';
           const y = startY + i * lineHeight;
           textLines.push(
