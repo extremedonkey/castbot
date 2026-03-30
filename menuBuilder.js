@@ -116,7 +116,7 @@ export class MenuBuilder {
     // Navigation
     components.push(
       { type: 14 },
-      { type: 1, components: [{ type: 2, custom_id: 'prod_menu_back', label: 'Menu', style: 1, emoji: getBotEmoji('cb_transparent') }] }
+      { type: 1, components: [{ type: 2, custom_id: 'prod_menu_back', label: 'Menu', style: 2, emoji: getBotEmoji('cb_transparent') }] }
     );
 
     return {
