@@ -38578,25 +38578,28 @@ Your server is now ready for Tycoons gameplay!`;
         }
 
         // Defer — upload takes time
-        res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE, data: { flags: InteractionResponseFlags.EPHEMERAL } });
+        res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE, data: { flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL } });
 
         const { handleEmojiUpload } = await import('./poc/emojiEditor.js');
         const result = await handleEmojiUpload(guild, guildId, emojiName, attachment.url, attachment.filename);
 
-        const { updateDeferredResponse } = await import('./buttonHandlerFactory.js');
-        await updateDeferredResponse(req, {
-          flags: (1 << 15),
-          components: [{
-            type: 17,
-            accent_color: result.success ? 0x57F287 : 0xED4245,
-            components: [
-              { type: 10, content: result.message },
-              { type: 14 },
-              { type: 1, components: [
-                { type: 2, custom_id: 'emoji_editor', label: '← Emoji Editor', style: 2 }
-              ]}
-            ]
-          }]
+        // Patch @original directly (not via updateDeferredResponse to avoid double-send)
+        await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`, {
+          method: 'PATCH',
+          body: {
+            flags: (1 << 15),
+            components: [{
+              type: 17,
+              accent_color: result.success ? 0x57F287 : 0xED4245,
+              components: [
+                { type: 10, content: result.message },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, custom_id: 'emoji_editor', label: '← Emoji Editor', style: 2 }
+                ]}
+              ]
+            }]
+          }
         });
         return;
       } catch (error) {
