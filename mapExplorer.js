@@ -1770,47 +1770,47 @@ export async function getBlacklistedCoordinates(guildId) {
  * @returns {string} Formatted legend text with color coding and warnings
  */
 export function generateMultiColorLegend(sortedItems, itemColorMap, blacklistedCoords) {
-  const legendLines = ['### ```Legend```', '🟥 Red overlay = Blacklisted (impossible to pass)'];
+  const legendLines = ['### ```Legend```'];
 
-  // Add color lines for first 4 items (unique colors)
-  sortedItems.slice(0, 4).forEach((item, index) => {
-    const color = itemColorMap.get(item.id);
-    legendLines.push(`${color.emoji} ${color.name} overlay = ${item.emoji} ${item.name}`);
-  });
-
-  // Add brown overflow line if 5+ items
-  if (sortedItems.length >= 5) {
-    legendLines.push('🟫 Brown overlay = Reverse blacklist unlock (various items)');
-  }
-
-  legendLines.push('⬜ No overlay = Normal access');
-
-  // Add blacklisted coordinates section
+  // Blacklisted coordinates with red square
   if (blacklistedCoords.length > 0) {
-    legendLines.push('', '### ```Blacklisted Coordinates```');
-    legendLines.push(blacklistedCoords.join(', '));
+    legendLines.push(`🟥 Blacklisted: ${blacklistedCoords.join(', ')}`);
+  } else {
+    legendLines.push('🟥 Blacklisted (none configured)');
   }
 
-  // Add reverse blacklist items section with warnings for non-blacklisted coords
-  legendLines.push('', '### ```Reverse Blacklist Items```');
+  // Items with unique colors (first 4) — include coordinates
   let hasNonBlacklistedCoords = false;
-
-  sortedItems.forEach(item => {
+  sortedItems.slice(0, 4).forEach(item => {
+    const color = itemColorMap.get(item.id);
     const coords = item.coordinates || [];
     const formattedCoords = coords.map(coord => {
       if (!blacklistedCoords.includes(coord)) {
         hasNonBlacklistedCoords = true;
-        return `${coord}¹`;  // Add superscript warning
+        return `${coord}¹`;
       }
       return coord;
     }).join(', ');
-
-    legendLines.push(`• ${item.emoji} ${item.name}: ${formattedCoords}`);
+    legendLines.push(`${color.emoji} ${item.emoji} ${item.name}: ${formattedCoords}`);
   });
 
-  // Add warning footnote if any non-blacklisted coords were found
+  // Overflow items (5+) — each gets its own brown row
+  sortedItems.slice(4).forEach(item => {
+    const coords = item.coordinates || [];
+    const formattedCoords = coords.map(coord => {
+      if (!blacklistedCoords.includes(coord)) {
+        hasNonBlacklistedCoords = true;
+        return `${coord}¹`;
+      }
+      return coord;
+    }).join(', ');
+    legendLines.push(`🟫 ${item.emoji} ${item.name}: ${formattedCoords}`);
+  });
+
+  legendLines.push('⬜ No overlay = Normal access');
+
   if (hasNonBlacklistedCoords) {
-    legendLines.push('', '¹ You need to add these coordinates to the Blacklist, or players will be able to access it even without the item!');
+    legendLines.push('', '¹ Add to Blacklist or players can access without the item');
   }
 
   return legendLines.join('\n');
@@ -2198,11 +2198,13 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     } else {
       // No reverse blacklist items - show basic legend
       const blacklistedCoords = await getBlacklistedCoordinates(guildId);
-      const basicLines = ['### ```Legend```', '🟥 Red overlay = Blacklisted (restricted access)', '⬜ No overlay = Normal access'];
+      const basicLines = ['### ```Legend```'];
       if (blacklistedCoords.length > 0) {
-        basicLines.push('', '### ```Blacklisted Coordinates```');
-        basicLines.push(blacklistedCoords.join(', '));
+        basicLines.push(`🟥 Blacklisted: ${blacklistedCoords.join(', ')}`);
+      } else {
+        basicLines.push('🟥 Blacklisted (none configured)');
       }
+      basicLines.push('⬜ No overlay = Normal access');
       legendContent = basicLines.join('\n');
     }
 
