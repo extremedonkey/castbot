@@ -1807,7 +1807,7 @@ export function generateMultiColorLegend(sortedItems, itemColorMap, blacklistedC
     legendLines.push(`🟫 ${item.emoji} ${item.name}: ${formattedCoords}`);
   });
 
-  legendLines.push('⬜ No overlay = Normal access');
+  legendLines.push('🔳 Normal access (no overlay)');
 
   if (hasNonBlacklistedCoords) {
     legendLines.push('', '¹ Add to Blacklist or players can access without the item');
@@ -2204,7 +2204,7 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
       } else {
         basicLines.push('🟥 Blacklisted (none configured)');
       }
-      basicLines.push('⬜ No overlay = Normal access');
+      basicLines.push('🔳 Normal access (no overlay)');
       legendContent = basicLines.join('\n');
     }
 
