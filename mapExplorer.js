@@ -2146,7 +2146,7 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     // Map management row directly under gallery (built early since it's positioned here)
     const createUpdateButton = new ButtonBuilder()
       .setCustomId('map_update')
-      .setLabel('Create / Update Map')
+      .setLabel('Update Map')
       .setStyle(ButtonStyle.Primary)
       .setEmoji('🗺️');
     const deleteButton = new ButtonBuilder()
