@@ -2143,8 +2143,26 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
       ]
     });
 
-    // Map management row directly under gallery
-    containerComponents.push(mapButtonRow1.toJSON());
+    // Map management row directly under gallery (built early since it's positioned here)
+    const createUpdateButton = new ButtonBuilder()
+      .setCustomId('map_update')
+      .setLabel('Create / Update Map')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('🗺️');
+    const deleteButton = new ButtonBuilder()
+      .setCustomId('map_delete')
+      .setLabel('Delete Map')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('🗑️')
+      .setDisabled(!hasActiveMap);
+    const blacklistButton = new ButtonBuilder()
+      .setCustomId('map_admin_blacklist')
+      .setLabel('Blacklist')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('📍')
+      .setDisabled(!hasActiveMap);
+    const mapMgmtRow = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, blacklistButton]);
+    containerComponents.push(mapMgmtRow.toJSON());
 
     // Generate multi-color legend with per-item color coding
     console.log(`🔍 DEBUG Map Explorer: Generating multi-color legend for guild ${guildId}`);
@@ -2220,40 +2238,11 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     });
   }
 
-  // Create map management buttons
-  const createUpdateButton = new ButtonBuilder()
-    .setCustomId('map_update')
-    .setLabel('Create / Update Map')
-    .setStyle(ButtonStyle.Primary)
-    .setEmoji('🗺️');
-
-  const deleteButton = new ButtonBuilder()
-    .setCustomId('map_delete')
-    .setLabel('Delete Map')
-    .setStyle(ButtonStyle.Danger)
-    .setEmoji('🗑️');
-
   const playerLocationsButton = new ButtonBuilder()
     .setCustomId('map_player_locations')
     .setLabel('Player Locations')
     .setStyle(ButtonStyle.Secondary)
-    .setEmoji('👥');
-
-  // Set states based on whether map exists
-  if (hasActiveMap) {
-    deleteButton.setDisabled(false);
-    playerLocationsButton.setDisabled(false);
-  } else {
-    deleteButton.setDisabled(true);
-    playerLocationsButton.setDisabled(true);
-  }
-
-  // Create blacklist button
-  const blacklistButton = new ButtonBuilder()
-    .setCustomId('map_admin_blacklist')
-    .setLabel('Blacklist')
-    .setStyle(ButtonStyle.Secondary)
-    .setEmoji('📍')
+    .setEmoji('👥')
     .setDisabled(!hasActiveMap);
 
   // Create refresh anchors button
@@ -2287,9 +2276,6 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     .setStyle(ButtonStyle.Danger)
     .setEmoji('🚪')
     .setDisabled(!hasActiveMap);
-
-  // Row 1: Map management (under gallery)
-  const mapButtonRow1 = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, blacklistButton]);
 
   // Row 2: Player lifecycle
   const mapButtonRow2 = new ActionRowBuilder().addComponents([startSafariButton, pausedPlayersButton, removePlayersButton]);
