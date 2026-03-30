@@ -38669,8 +38669,6 @@ Your server is now ready for Tycoons gameplay!`;
       }
 
       // User selected an emoji (or none) — show result
-      const nameComp = data.components?.find(c => (c.component?.custom_id || c.components?.[0]?.custom_id) === 'demo_item_name');
-      const itemName = (nameComp?.component?.value || nameComp?.components?.[0]?.value || 'Unnamed').trim();
       const guild = await client.guilds.fetch(req.body.guild_id);
       let emojiDisplay = 'No emoji';
       let emojiCode = 'none';
@@ -38691,7 +38689,7 @@ Your server is now ready for Tycoons gameplay!`;
             type: 17,
             accent_color: 0x57F287,
             components: [
-              { type: 10, content: `## 📝 Modal Picker Demo Result\n\n**Item:** ${itemName}\n**Emoji:** ${emojiDisplay}\n**Code:** \`${emojiCode}\`\n\n-# This is a demo — nothing was saved.` },
+              { type: 10, content: `## 📝 Modal Picker Result\n\n**Emoji:** ${emojiDisplay}\n**Code:** \`${emojiCode}\`\n\n-# This is a demo — nothing was saved.` },
               { type: 14 },
               { type: 1, components: [{ type: 2, custom_id: 'emoji_editor', label: '← Emoji Editor', style: 2 }] }
             ]

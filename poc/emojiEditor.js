@@ -555,19 +555,6 @@ export function buildDemoModalPicker(guild, page = 0) {
     components: [
       {
         type: 18,
-        label: 'Item Name',
-        description: 'This is a demo — nothing is saved.',
-        component: {
-          type: 4,
-          custom_id: 'demo_item_name',
-          style: 1,
-          required: true,
-          placeholder: 'e.g. Deku Shield',
-          max_length: 80
-        }
-      },
-      {
-        type: 18,
         label: `Select Emoji${pageLabel}`,
         description: totalPages > 1
           ? `Showing ${start + 1}-${Math.min(start + MODAL_PAGE_SIZE, allEmojis.length)} of ${allEmojis.length}. Pick ◀/▶ to browse pages.`
