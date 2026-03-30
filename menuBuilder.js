@@ -148,7 +148,6 @@ export class MenuBuilder {
           { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } },
           { type: 2, custom_id: 'moai_ask', label: 'Moai', style: 2, emoji: { name: '🗿' } },
           { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
-          { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } },
           { type: 2, custom_id: 'richcard_demo', label: 'Rich Card', style: 2, emoji: { name: '🎴' } }
         ]
       },
