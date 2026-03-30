@@ -1825,7 +1825,7 @@ export function generateMultiColorLegend(sortedItems, itemColorMap, blacklistedC
  * @param {Object} client - Discord.js client instance
  * @returns {Promise<string>} Discord CDN URL of overlaid image
  */
-export async function generateBlacklistOverlay(guildId, originalImageUrl, gridWidth, gridHeight, client) {
+export async function generateBlacklistOverlay(guildId, originalImageUrl, gridWidth, gridHeight, client, playerLocations = null) {
   try {
     console.log(`🎨 Generating blacklist overlay for guild ${guildId}`);
 
@@ -1997,6 +1997,82 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridWi
 
     console.log(`🎨 Created ${overlays.length} overlay rectangles`);
 
+    // Step 5b: Player location overlays
+    if (playerLocations && playerLocations.size > 0) {
+      const cellPlayers = {};
+      for (const [, loc] of playerLocations) {
+        const coord = loc.coordinate;
+        if (!coord) continue;
+        if (!cellPlayers[coord]) cellPlayers[coord] = [];
+        // Strip emoji from display names for SVG
+        const name = String(loc.displayName || 'Unknown')
+          .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
+          .replace(/[\u{2600}-\u{27BF}]/gu, '')
+          .replace(/[\u{FE00}-\u{FE0F}]/gu, '')
+          .replace(/[\u{200D}]/gu, '')
+          .trim();
+        cellPlayers[coord].push(name);
+      }
+
+      const escXml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+      for (const [coord, players] of Object.entries(cellPlayers)) {
+        const pos = coordToPosition(coord);
+        const w = Math.floor(cellWidth);
+        const h = Math.floor(cellHeight);
+        const hasColor = blacklistedCoords.includes(coord) || coordToItemMap.has(coord);
+
+        // Dark background only on cells without existing color overlay
+        if (!hasColor) {
+          overlays.push({
+            input: await sharp({
+              create: { width: w, height: h, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0.55 } }
+            }).png().toBuffer(),
+            top: pos.top,
+            left: pos.left
+          });
+        }
+
+        // Player names SVG
+        const fontSize = Math.min(16, Math.floor(cellWidth / 10));
+        const lineHeight = fontSize + 6;
+        const maxLines = Math.floor((h - 10) / lineHeight);
+        const visible = players.slice(0, maxLines);
+        const overflow = players.length - visible.length;
+        if (overflow > 0 && visible.length > 1) visible.pop();
+        const actualOverflow = players.length - visible.length;
+        const totalLines = visible.length + (actualOverflow > 0 ? 1 : 0);
+        const blockHeight = totalLines * lineHeight;
+        const startY = Math.floor((h - blockHeight) / 2) + fontSize;
+
+        const textLines = [];
+        visible.forEach((name, i) => {
+          let displayName = escXml(name);
+          const maxChars = Math.floor(w / (fontSize * 0.55)) - 2;
+          if (displayName.length > maxChars) displayName = displayName.substring(0, maxChars - 1) + '…';
+          const y = startY + i * lineHeight;
+          textLines.push(
+            `<circle cx="8" cy="${y - fontSize * 0.3}" r="3" fill="#4ade80"/>` +
+            `<text x="16" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="${fontSize}" font-weight="bold" fill="#ffffff">${displayName}</text>`
+          );
+        });
+        if (actualOverflow > 0) {
+          const y = startY + visible.length * lineHeight;
+          textLines.push(
+            `<text x="16" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="${Math.max(10, fontSize - 2)}" fill="#a0a0b0">+${actualOverflow} more</text>`
+          );
+        }
+
+        overlays.push({
+          input: Buffer.from(`<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">${textLines.join('')}</svg>`),
+          top: pos.top,
+          left: pos.left
+        });
+      }
+
+      console.log(`👥 Added player overlays for ${Object.keys(cellPlayers).length} occupied cells`);
+    }
+
     // If no overlays needed, return original URL
     if (overlays.length === 0) {
       console.log(`⏭️ No overlays needed, returning original image`);
@@ -2106,7 +2182,16 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
   if (hasActiveMap && guildMaps[activeMapId].discordImageUrl) {
     console.log(`🖼️ DEBUG: Generating blacklist overlay for map from Discord CDN: ${guildMaps[activeMapId].discordImageUrl}`);
 
-    // Generate overlay image with blacklist indicators
+    // Fetch player locations for overlay and text section
+    const { getAllPlayerLocations, formatPlayerLocationDisplay } = await import('./playerLocationManager.js');
+    let playerLocations = null;
+    try {
+      playerLocations = await getAllPlayerLocations(guildId, true, client);
+    } catch (e) {
+      console.warn(`⚠️ Could not fetch player locations: ${e.message}`);
+    }
+
+    // Generate overlay image with blacklist + player location indicators
     let imageUrl = guildMaps[activeMapId].discordImageUrl;
     try {
       imageUrl = await generateBlacklistOverlay(
@@ -2114,7 +2199,8 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
         guildMaps[activeMapId].discordImageUrl,  // Original clean map
         guildMaps[activeMapId].gridWidth || guildMaps[activeMapId].gridSize,
         guildMaps[activeMapId].gridHeight || guildMaps[activeMapId].gridSize,
-        client
+        client,
+        playerLocations
       );
       console.log(`✅ Using overlaid image: ${imageUrl}`);
     } catch (error) {
@@ -2214,6 +2300,23 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
       type: 10,  // Text Display
       content: legendContent
     });
+
+    // Player Locations text section
+    if (playerLocations && playerLocations.size > 0) {
+      const playersArray = Array.from(playerLocations.values());
+      const detailedList = formatPlayerLocationDisplay(playersArray, {
+        showStamina: true,
+        showLastMove: true,
+        showExplored: true,
+        groupByLocation: true
+      });
+      if (detailedList) {
+        containerComponents.push({
+          type: 10,
+          content: `### \`\`\`Player Locations\`\`\`\n${detailedList}`
+        });
+      }
+    }
 
     containerComponents.push({
       type: 14 // Separator
