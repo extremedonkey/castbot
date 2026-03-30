@@ -9031,6 +9031,47 @@ To fix this:
         }
       })(req, res, client);
 
+    } else if (custom_id === 'emoji_demo_modal_picker') {
+      return ButtonHandlerFactory.create({
+        id: 'emoji_demo_modal_picker',
+        requiresModal: true,
+        handler: async (context) => {
+          const guild = await client.guilds.fetch(context.guildId);
+          await guild.emojis.fetch();
+          const { buildDemoModalPicker } = await import('./poc/emojiEditor.js');
+          return { type: InteractionResponseType.MODAL, data: buildDemoModalPicker(guild) };
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'emoji_demo_context_picker') {
+      return ButtonHandlerFactory.create({
+        id: 'emoji_demo_context_picker',
+        updateMessage: true,
+        handler: async (context) => {
+          const { buildDemoContextPicker } = await import('./poc/emojiEditor.js');
+          return buildDemoContextPicker();
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('emoji_demo_ctx_')) {
+      // Context picker selection — show what was picked then go back
+      return ButtonHandlerFactory.create({
+        id: 'emoji_demo_ctx',
+        updateMessage: true,
+        handler: async (context) => {
+          const selected = context.values?.[0];
+          const emoji = selected?.split('_').pop();
+          const guild = await client.guilds.fetch(context.guildId);
+          const { buildEmojiEditorMenu } = await import('./poc/emojiEditor.js');
+          const menu = await buildEmojiEditorMenu(guild, context.guildId);
+          menu.components[0].components.unshift(
+            { type: 10, content: `✅ Context picker selected: ${emoji}` },
+            { type: 14 }
+          );
+          return menu;
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'becs_cool_cats') {
       return ButtonHandlerFactory.create({
         id: 'becs_cool_cats',
@@ -38566,6 +38607,41 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
       return;
+    }
+
+    if (custom_id === 'emoji_demo_modal_submit') {
+      // Demo modal picker submit — just show what was selected
+      const nameComp = data.components?.find(c => (c.component?.custom_id || c.components?.[0]?.custom_id) === 'demo_item_name');
+      const emojiComp = data.components?.find(c => (c.component?.custom_id || c.components?.[0]?.custom_id) === 'demo_item_emoji');
+      const itemName = (nameComp?.component?.value || nameComp?.components?.[0]?.value || 'Unnamed').trim();
+      const emojiId = emojiComp?.component?.values?.[0] || emojiComp?.components?.[0]?.values?.[0] || 'none';
+
+      const guild = await client.guilds.fetch(req.body.guild_id);
+      let emojiDisplay = 'No emoji';
+      let emojiCode = 'none';
+      if (emojiId !== 'none') {
+        const emoji = guild.emojis.cache.get(emojiId);
+        if (emoji) {
+          emojiCode = emoji.animated ? `<a:${emoji.name}:${emoji.id}>` : `<:${emoji.name}:${emoji.id}>`;
+          emojiDisplay = `${emojiCode} **${emoji.name}**`;
+        }
+      }
+
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+          components: [{
+            type: 17,
+            accent_color: 0x57F287,
+            components: [
+              { type: 10, content: `## 📝 Modal Picker Demo Result\n\n**Item:** ${itemName}\n**Emoji:** ${emojiDisplay}\n**Code:** \`${emojiCode}\`\n\n-# This is a demo — nothing was saved.` },
+              { type: 14 },
+              { type: 1, components: [{ type: 2, custom_id: 'emoji_editor', label: '← Emoji Editor', style: 2 }] }
+            ]
+          }]
+        }
+      });
     }
 
     if (custom_id.startsWith('emoji_upload_modal_')) {
