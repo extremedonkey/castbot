@@ -2292,13 +2292,6 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
   const mapButtonRow2 = new ActionRowBuilder().addComponents([startSafariButton, pausedPlayersButton, removePlayersButton]);
 
   // Row 3: Map views & data
-  const locationEditorButton = new ButtonBuilder()
-    .setCustomId('safari_location_editor')
-    .setLabel('Location Editor')
-    .setStyle(ButtonStyle.Secondary)
-    .setEmoji('📍')
-    .setDisabled(!hasActiveMap);
-
   const safariProgressButton = new ButtonBuilder()
     .setCustomId('safari_progress')
     .setLabel('Safari Progress')
@@ -2318,7 +2311,7 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
   const mapButtonRow3 = new ActionRowBuilder().addComponents([playerLocationsButton, sharedMapButton, blacklistButton, safariProgressButton]);
 
   // Row 4: Tools
-  const mapButtonRow4 = new ActionRowBuilder().addComponents([locationEditorButton, refreshAnchorsButton]);
+  const mapButtonRow4 = new ActionRowBuilder().addComponents([refreshAnchorsButton]);
 
   // Create back button (only for ephemeral messages)
   if (isEphemeral) {
@@ -2354,6 +2347,10 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     accent_color: 0x00AE86, // Teal accent for map theme
     components: containerComponents
   };
+
+  // Log component count for debugging
+  const { countComponents } = await import('./utils.js');
+  countComponents([mapExplorerContainer], { verbosity: 'full', label: 'Map Explorer' });
 
   console.log(`🔍 DEBUG: Built Map Explorer response, ephemeral: ${isEphemeral}`);
 

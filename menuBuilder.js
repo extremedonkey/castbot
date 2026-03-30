@@ -167,6 +167,7 @@ export class MenuBuilder {
         type: 1,
         components: [
           { type: 2, custom_id: 'prod_manage_tribes_legacy_debug', label: 'Tribes (Legacy)', style: 2, emoji: { name: '🔥' } },
+          { type: 2, custom_id: 'safari_location_editor', label: 'Location Editor', style: 2, emoji: { name: '📍' } },
           { type: 2, custom_id: 'prod_live_analytics', label: 'Print Logs', style: 2, emoji: { name: '⚠️' } },
           { type: 2, custom_id: 'prod_toggle_live_analytics', label: 'Toggle Logs', style: 2, emoji: { name: '🔃' } },
           { type: 2, custom_id: 'reeces_radio_mockup', label: 'Radio PoC (Mockup)', style: 2, emoji: { name: '📻' } }
