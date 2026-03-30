@@ -4037,7 +4037,7 @@ export const BUTTON_REGISTRY = {
   },
 
   // === EMOJI EDITOR (PoC) ===
-  'emoji_editor': { label: 'Emoji Editor', emoji: '🎨', category: 'experimental', parent: 'reeces_stuff' },
+  'emoji_editor': { label: 'Emoji Editor', emoji: '🎨', category: 'tools', parent: 'castbot_tools' },
   'emoji_picker_*': { label: 'Emoji Picker', emoji: '🔍', category: 'experimental' },
   'emoji_upload': { label: 'Upload Emoji', emoji: '📤', category: 'experimental', requiresModal: true },
   'emoji_react_pick': { label: 'React Pick', emoji: '👆', category: 'experimental' },

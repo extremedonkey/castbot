@@ -8871,6 +8871,8 @@ To fix this:
     } else if (custom_id === 'emoji_editor') {
       return ButtonHandlerFactory.create({
         id: 'emoji_editor',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
         deferred: true,
         updateMessage: true,
         handler: async (context) => {

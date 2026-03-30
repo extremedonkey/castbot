@@ -93,7 +93,8 @@ export class MenuBuilder {
         type: 1,
         components: [
           { type: 2, custom_id: 'prod_manage_pronouns_timezones', label: 'Reaction Roles', style: 2, emoji: { name: '💜' } },
-          { type: 2, custom_id: 'prod_availability', label: 'Availability', style: 2, emoji: { name: '🕐' } }
+          { type: 2, custom_id: 'prod_availability', label: 'Availability', style: 2, emoji: { name: '🕐' } },
+          { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } }
         ]
       },
       { type: 10, content: `### \`\`\`📜 Info & Support\`\`\`` }
@@ -146,7 +147,6 @@ export class MenuBuilder {
         type: 1,
         components: [
           { type: 2, custom_id: 'poc_menu_button', label: 'Menu', style: 1, emoji: getBotEmoji('cb_transparent') },
-          { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } },
           { type: 2, custom_id: 'moai_ask', label: 'Moai', style: 2, emoji: { name: '🗿' } },
           { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
           { type: 2, custom_id: 'richcard_demo', label: 'Rich Card', style: 2, emoji: { name: '🎴' } }
