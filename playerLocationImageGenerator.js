@@ -121,22 +121,25 @@ export async function generatePlayerLocationImage({ guildId, gridWidth, gridHeig
       visible.pop();
     }
 
+    const actualOverflow = players.length - visible.length;
+    const totalLines = visible.length + (actualOverflow > 0 ? 1 : 0);
+    const blockHeight = totalLines * lineHeight;
+    const startY = Math.floor((h - blockHeight) / 2) + fontSize; // vertically centered
+
     const textLines = [];
     visible.forEach((name, i) => {
       let displayName = escapeXml(name);
-      // Truncate to fit cell width (~0.55 * fontSize per char)
       const maxChars = Math.floor(w / (fontSize * 0.55)) - 2;
       if (displayName.length > maxChars) displayName = displayName.substring(0, maxChars - 1) + '…';
-      const y = 8 + fontSize + i * lineHeight;
+      const y = startY + i * lineHeight;
       textLines.push(
         `<circle cx="8" cy="${y - fontSize * 0.3}" r="3" fill="#4ade80"/>` +
         `<text x="16" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="${fontSize}" font-weight="bold" fill="#ffffff">${displayName}</text>`
       );
     });
 
-    const actualOverflow = players.length - visible.length;
     if (actualOverflow > 0) {
-      const y = 8 + fontSize + visible.length * lineHeight;
+      const y = startY + visible.length * lineHeight;
       textLines.push(
         `<text x="16" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="${Math.max(10, fontSize - 2)}" fill="#a0a0b0">+${actualOverflow} more</text>`
       );
