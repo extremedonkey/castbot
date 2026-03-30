@@ -29,40 +29,51 @@ export async function getAllPlayerLocations(guildId, includeOffline = true, clie
     
     const guildPlayers = playerData[guildId]?.players || {};
     const playerLocations = new Map();
-    
-    // Fetch guild and members if client is provided
-    let guild = null;
-    let members = null;
-    if (client) {
-        try {
-            guild = await client.guilds.fetch(guildId);
-            // Fetch all members to ensure cache is populated
-            members = await guild.members.fetch({ force: true });
-            logger.debug('LOCATION_MANAGER', 'Fetched guild members', { guildId, memberCount: members.size });
-        } catch (error) {
-            logger.debug('LOCATION_MANAGER', 'Could not fetch guild or members', { guildId, error: error.message });
+
+    // Collect userIds that have map locations first
+    const activeUserIds = [];
+    for (const [userId, player] of Object.entries(guildPlayers)) {
+        const mapProgress = player.safari?.mapProgress?.[activeMapId];
+        if (mapProgress?.currentLocation) {
+            activeUserIds.push(userId);
         }
     }
-    
+
+    // Fetch only the specific members we need (not ALL guild members)
+    let guild = null;
+    let members = new Map();
+    if (client && activeUserIds.length > 0) {
+        try {
+            guild = await client.guilds.fetch(guildId);
+            // Batch fetch only active safari players
+            const fetched = await guild.members.fetch({ user: activeUserIds });
+            fetched.forEach((member, id) => members.set(id, member));
+            logger.debug('LOCATION_MANAGER', 'Fetched active player members', { guildId, requested: activeUserIds.length, found: members.size });
+        } catch (error) {
+            logger.debug('LOCATION_MANAGER', 'Could not fetch members, trying cache', { guildId, error: error.message });
+            // Fallback: check cache for each user
+            if (guild) {
+                for (const userId of activeUserIds) {
+                    const cached = guild.members.cache.get(userId);
+                    if (cached) members.set(userId, cached);
+                }
+                logger.debug('LOCATION_MANAGER', 'Cache fallback', { guildId, found: members.size });
+            }
+        }
+    }
+
     for (const [userId, player] of Object.entries(guildPlayers)) {
         const mapProgress = player.safari?.mapProgress?.[activeMapId];
         if (!mapProgress?.currentLocation) continue;
-        
+
         // Try to get display name from Discord member
         let displayName = 'Unknown Player';
         let avatar = null;
-        
-        if (members) {
-            const member = members.get(userId);
-            if (member) {
-                displayName = member.displayName || member.user.username || 'Unknown Player';
-                avatar = member.user.displayAvatarURL({ size: 128 });
-                logger.debug('LOCATION_MANAGER', 'Found member', { userId, displayName, username: member.user.username });
-            } else {
-                logger.debug('LOCATION_MANAGER', 'Member not found in cache', { userId, totalMembers: members.size });
-            }
-        } else {
-            logger.debug('LOCATION_MANAGER', 'No members cache available', { userId, hasClient: !!client });
+
+        const member = members.get(userId);
+        if (member) {
+            displayName = member.displayName || member.user.username || 'Unknown Player';
+            avatar = member.user.displayAvatarURL({ size: 128 });
         }
         
         const locationData = {
