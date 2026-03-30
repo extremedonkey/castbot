@@ -426,31 +426,32 @@ async function getPlayerStamina(guildId, userId) {
 }
 
 function formatSinglePlayer(player, options) {
-    let display = `• **${player.displayName}** @ ${player.coordinate}`;
-    
+    let display = `${player.displayName}`;
+
+    const details = [];
     if (options.showStamina && player.stamina) {
-        display += ` ⚡${player.stamina.current}/${player.stamina.max}`;
+        details.push(`⚡${player.stamina.current}/${player.stamina.max}`);
     }
-    
     if (options.showLastMove && player.lastMovement) {
         const moveTime = new Date(player.lastMovement);
         const now = new Date();
         const minutesAgo = Math.floor((now - moveTime) / 60000);
-        
         if (minutesAgo < 1) {
-            display += ' _(just moved)_';
+            details.push('just moved');
         } else if (minutesAgo < 60) {
-            display += ` _(${minutesAgo}m ago)_`;
+            details.push(`${minutesAgo}m ago`);
         } else {
-            const hoursAgo = Math.floor(minutesAgo / 60);
-            display += ` _(${hoursAgo}h ago)_`;
+            details.push(`${Math.floor(minutesAgo / 60)}h ago`);
         }
     }
-    
     if (options.showExplored) {
-        display += ` 🗺️${player.exploredCount}`;
+        details.push(`🗺️${player.exploredCount}`);
     }
-    
+
+    if (details.length > 0) {
+        display += ` | ${details.join(' ')}`;
+    }
+
     display += '\n';
     return display;
 }
