@@ -9046,15 +9046,49 @@ To fix this:
     } else if (custom_id === 'emoji_demo_context_picker') {
       return ButtonHandlerFactory.create({
         id: 'emoji_demo_context_picker',
+        deferred: true,
         updateMessage: true,
         handler: async (context) => {
+          const guild = await client.guilds.fetch(context.guildId);
           const { buildDemoContextPicker } = await import('./poc/emojiEditor.js');
-          return buildDemoContextPicker();
+          return await buildDemoContextPicker(guild, context.guildId, 'all');
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'emoji_demo_filter') {
+      return ButtonHandlerFactory.create({
+        id: 'emoji_demo_filter',
+        deferred: true,
+        updateMessage: true,
+        handler: async (context) => {
+          const filter = context.values?.[0] || 'all';
+          const guild = await client.guilds.fetch(context.guildId);
+          const { buildDemoContextPicker } = await import('./poc/emojiEditor.js');
+          return await buildDemoContextPicker(guild, context.guildId, filter);
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'emoji_demo_filtered_pick') {
+      return ButtonHandlerFactory.create({
+        id: 'emoji_demo_filtered_pick',
+        updateMessage: true,
+        handler: async (context) => {
+          const selected = context.values?.[0];
+          const emojiId = selected?.replace('pick_', '');
+          const guild = await client.guilds.fetch(context.guildId);
+          const emoji = guild.emojis.cache.get(emojiId);
+          const code = emoji ? (emoji.animated ? `<a:${emoji.name}:${emoji.id}>` : `<:${emoji.name}:${emoji.id}>`) : 'none';
+          const { buildEmojiEditorMenu } = await import('./poc/emojiEditor.js');
+          const menu = await buildEmojiEditorMenu(guild, context.guildId);
+          menu.components[0].components.unshift(
+            { type: 10, content: `✅ Selected: ${code} **${emoji?.name || 'Unknown'}**\n📋 Code: \`${code}\`` },
+            { type: 14 }
+          );
+          return menu;
         }
       })(req, res, client);
 
     } else if (custom_id.startsWith('emoji_demo_ctx_')) {
-      // Context picker selection — show what was picked then go back
       return ButtonHandlerFactory.create({
         id: 'emoji_demo_ctx',
         updateMessage: true,
@@ -9065,7 +9099,7 @@ To fix this:
           const { buildEmojiEditorMenu } = await import('./poc/emojiEditor.js');
           const menu = await buildEmojiEditorMenu(guild, context.guildId);
           menu.components[0].components.unshift(
-            { type: 10, content: `✅ Context picker selected: ${emoji}` },
+            { type: 10, content: `✅ Selected Unicode: ${emoji}` },
             { type: 14 }
           );
           return menu;
@@ -38617,17 +38651,31 @@ Your server is now ready for Tycoons gameplay!`;
       return;
     }
 
-    if (custom_id === 'emoji_demo_modal_submit') {
-      // Demo modal picker submit — just show what was selected
-      const nameComp = data.components?.find(c => (c.component?.custom_id || c.components?.[0]?.custom_id) === 'demo_item_name');
+    if (custom_id.startsWith('emoji_demo_modal_submit')) {
+      // Demo paginated modal picker submit
       const emojiComp = data.components?.find(c => (c.component?.custom_id || c.components?.[0]?.custom_id) === 'demo_item_emoji');
-      const itemName = (nameComp?.component?.value || nameComp?.components?.[0]?.value || 'Unnamed').trim();
-      const emojiId = emojiComp?.component?.values?.[0] || emojiComp?.components?.[0]?.values?.[0] || 'none';
+      const selectedValue = emojiComp?.component?.values?.[0] || emojiComp?.components?.[0]?.values?.[0] || 'none';
 
+      // Check if user selected page navigation — reopen modal with new page
+      if (selectedValue.startsWith('modal_page_')) {
+        const nextPage = parseInt(selectedValue.replace('modal_page_', ''));
+        const guild = await client.guilds.fetch(req.body.guild_id);
+        await guild.emojis.fetch();
+        const { buildDemoModalPicker } = await import('./poc/emojiEditor.js');
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: buildDemoModalPicker(guild, nextPage)
+        });
+      }
+
+      // User selected an emoji (or none) — show result
+      const nameComp = data.components?.find(c => (c.component?.custom_id || c.components?.[0]?.custom_id) === 'demo_item_name');
+      const itemName = (nameComp?.component?.value || nameComp?.components?.[0]?.value || 'Unnamed').trim();
       const guild = await client.guilds.fetch(req.body.guild_id);
       let emojiDisplay = 'No emoji';
       let emojiCode = 'none';
-      if (emojiId !== 'none') {
+      if (selectedValue.startsWith('emoji_')) {
+        const emojiId = selectedValue.replace('emoji_', '');
         const emoji = guild.emojis.cache.get(emojiId);
         if (emoji) {
           emojiCode = emoji.animated ? `<a:${emoji.name}:${emoji.id}>` : `<:${emoji.name}:${emoji.id}>`;

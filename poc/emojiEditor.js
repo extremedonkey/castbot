@@ -495,37 +495,66 @@ export async function handleEmojiSteal(guild, emojiId, emojiName, animated) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// Demo: Modal Picker (how entity emoji fields would work)
+// Demo: Paginated Modal Picker
 // ═══════════════════════════════════════════════════════════
 
+const MODAL_PAGE_SIZE = 23; // 23 emojis + "None" + optional "Next/Prev"
+
 /**
- * Modal with a string select of guild emojis — replaces the current
- * free-text emoji input in entity create/edit modals.
+ * Paginated modal picker — browse guild emojis across multiple modals.
+ * Selecting "Next page" submits the modal and reopens with the next page.
  */
-export function buildDemoModalPicker(guild) {
+export function buildDemoModalPicker(guild, page = 0) {
   const allEmojis = [...guild.emojis.cache.values()]
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .slice(0, 24); // Leave room for "None" option
+    .sort((a, b) => a.name.localeCompare(b.name));
 
-  const options = [
-    { label: 'No emoji', value: 'none', emoji: { name: '🚫' }, description: 'Remove emoji' }
-  ];
+  const totalPages = Math.max(1, Math.ceil(allEmojis.length / MODAL_PAGE_SIZE));
+  const validPage = Math.max(0, Math.min(page, totalPages - 1));
+  const start = validPage * MODAL_PAGE_SIZE;
+  const pageEmojis = allEmojis.slice(start, start + MODAL_PAGE_SIZE);
 
-  for (const e of allEmojis) {
+  const options = [];
+
+  // "None" option on first page only
+  if (validPage === 0) {
+    options.push({ label: 'No emoji', value: 'none', emoji: { name: '🚫' }, description: 'Remove emoji' });
+  }
+
+  // Previous page option
+  if (validPage > 0) {
+    options.push({
+      label: `◀ Previous page (${validPage * MODAL_PAGE_SIZE - MODAL_PAGE_SIZE + 1}-${validPage * MODAL_PAGE_SIZE})`,
+      value: `modal_page_${validPage - 1}`,
+      emoji: { name: '◀️' }
+    });
+  }
+
+  for (const e of pageEmojis) {
     options.push({
       label: e.name.substring(0, 100),
-      value: e.id,
+      value: `emoji_${e.id}`,
       description: e.animated ? 'Animated' : 'Static',
       emoji: { name: e.name, id: e.id, animated: e.animated }
     });
   }
 
+  // Next page option
+  if (validPage < totalPages - 1) {
+    options.push({
+      label: `▶ Next page (${(validPage + 1) * MODAL_PAGE_SIZE + 1}-${Math.min((validPage + 2) * MODAL_PAGE_SIZE, allEmojis.length)})`,
+      value: `modal_page_${validPage + 1}`,
+      emoji: { name: '▶️' }
+    });
+  }
+
+  const pageLabel = totalPages > 1 ? ` (page ${validPage + 1}/${totalPages})` : '';
+
   return {
-    custom_id: 'emoji_demo_modal_submit',
-    title: 'Pick Emoji for Item (Demo)',
+    custom_id: `emoji_demo_modal_submit_${validPage}`,
+    title: `Pick Emoji${pageLabel}`,
     components: [
       {
-        type: 18, // Label
+        type: 18,
         label: 'Item Name',
         description: 'This is a demo — nothing is saved.',
         component: {
@@ -538,11 +567,13 @@ export function buildDemoModalPicker(guild) {
         }
       },
       {
-        type: 18, // Label
-        label: 'Item Emoji',
-        description: 'Select a custom emoji from this server, or choose "No emoji".',
+        type: 18,
+        label: `Select Emoji${pageLabel}`,
+        description: totalPages > 1
+          ? `Showing ${start + 1}-${Math.min(start + MODAL_PAGE_SIZE, allEmojis.length)} of ${allEmojis.length}. Pick ◀/▶ to browse pages.`
+          : 'Select a custom emoji from this server.',
         component: {
-          type: 3, // String Select
+          type: 3,
           custom_id: 'demo_item_emoji',
           placeholder: 'Select emoji...',
           options,
@@ -556,56 +587,130 @@ export function buildDemoModalPicker(guild) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// Demo: Context Picker (smart emoji suggestions by entity type)
+// Demo: Smart Filter Picker (filter by entity usage)
 // ═══════════════════════════════════════════════════════════
 
 const CONTEXT_SUGGESTIONS = {
-  item: {
-    label: '📦 Items',
-    emojis: ['⚔️', '🛡️', '🗡️', '🧪', '🔑', '💎', '🪙', '📦', '🎒', '🧰', '💊', '🏹', '🪄', '🔮', '📜', '🧲', '🪓', '🔧', '🪚', '🧨']
-  },
-  store: {
-    label: '🏪 Stores',
-    emojis: ['🏪', '🛒', '💰', '🏬', '🛍️', '🪙', '💎', '🎪', '🏦', '🏴‍☠️', '⚗️', '🔨', '🎭', '🍞', '🐟', '🌾', '🍺', '🏺', '📚', '🧙']
-  },
-  enemy: {
-    label: '👹 Enemies',
-    emojis: ['🐙', '🐉', '👹', '🦇', '💀', '🐺', '🕷️', '🦂', '🐍', '👻', '🧟', '🤖', '🦈', '🐊', '🦅', '🐻', '🦁', '🐗', '🌋', '⚡']
-  },
-  currency: {
-    label: '💰 Currency',
-    emojis: ['🪙', '💰', '💎', '🏆', '⭐', '🌟', '💫', '🔶', '🟡', '🔴', '💠', '🃏', '🎫', '🏅', '🥇', '💳', '🪨', '🧊', '🫧', '🌀']
-  }
+  item: { label: '📦 Items', emojis: ['⚔️', '🛡️', '🗡️', '🧪', '🔑', '💎', '🪙', '📦', '🎒', '🧰', '💊', '🏹', '🪄', '🔮', '📜', '🧲', '🪓', '🔧', '🪚', '🧨'] },
+  store: { label: '🏪 Stores', emojis: ['🏪', '🛒', '💰', '🏬', '🛍️', '🪙', '💎', '🎪', '🏦', '🏴‍☠️', '⚗️', '🔨', '🎭', '🍞', '🐟', '🌾', '🍺', '🏺', '📚', '🧙'] },
+  enemy: { label: '👹 Enemies', emojis: ['🐙', '🐉', '👹', '🦇', '💀', '🐺', '🕷️', '🦂', '🐍', '👻', '🧟', '🤖', '🦈', '🐊', '🦅', '🐻', '🦁', '🐗', '🌋', '⚡'] },
+  currency: { label: '💰 Currency', emojis: ['🪙', '💰', '💎', '🏆', '⭐', '🌟', '💫', '🔶', '🟡', '🔴', '💠', '🃏', '🎫', '🏅', '🥇', '💳', '🪨', '🧊', '🫧', '🌀'] }
 };
 
 /**
- * Show contextual emoji suggestions based on entity type.
- * The host picks from relevant Unicode emojis without typing.
+ * Smart filter picker — shows guild emojis filtered by usage, plus Unicode suggestions.
+ * Filters: All, Unused, Used by Items, Used by Stores, Used by Enemies, Used by Actions
  */
-export function buildDemoContextPicker() {
+export async function buildDemoContextPicker(guild, guildId, filter = 'all') {
+  await guild.emojis.fetch();
+  const { loadSafariContent } = await import('../safariManager.js');
+  const safariData = await loadSafariContent();
+  const guildData = safariData[guildId] || {};
+
+  const allEmojis = [...guild.emojis.cache.values()].sort((a, b) => a.name.localeCompare(b.name));
+
+  // Build usage index
+  const usedBy = {}; // emojiId → Set of entity types
+  const checkEmoji = (storedEmoji, emojiId, entityType) => {
+    if (!storedEmoji || typeof storedEmoji !== 'string') return;
+    if (storedEmoji.includes(emojiId)) {
+      if (!usedBy[emojiId]) usedBy[emojiId] = new Set();
+      usedBy[emojiId].add(entityType);
+    }
+  };
+
+  for (const e of allEmojis) {
+    for (const item of Object.values(guildData.items || {})) checkEmoji(item.emoji, e.id, 'item');
+    for (const store of Object.values(guildData.stores || {})) checkEmoji(store.emoji, e.id, 'store');
+    for (const enemy of Object.values(guildData.enemies || {})) checkEmoji(enemy.emoji, e.id, 'enemy');
+    for (const action of Object.values(guildData.buttons || {})) {
+      checkEmoji(action.emoji, e.id, 'action');
+      checkEmoji(action.trigger?.button?.emoji, e.id, 'action');
+    }
+  }
+
+  // Apply filter
+  let filtered = allEmojis;
+  let filterLabel = 'All server emojis';
+  switch (filter) {
+    case 'unused':
+      filtered = allEmojis.filter(e => !usedBy[e.id]);
+      filterLabel = 'Not used by CastBot';
+      break;
+    case 'item':
+      filtered = allEmojis.filter(e => usedBy[e.id]?.has('item'));
+      filterLabel = 'Used by Items';
+      break;
+    case 'store':
+      filtered = allEmojis.filter(e => usedBy[e.id]?.has('store'));
+      filterLabel = 'Used by Stores';
+      break;
+    case 'enemy':
+      filtered = allEmojis.filter(e => usedBy[e.id]?.has('enemy'));
+      filterLabel = 'Used by Enemies';
+      break;
+    case 'action':
+      filtered = allEmojis.filter(e => usedBy[e.id]?.has('action'));
+      filterLabel = 'Used by Actions';
+      break;
+  }
+
   const components = [
-    { type: 10, content: `## 🎯 Context Emoji Picker (Demo)\n\nSmart suggestions based on what you're editing. Select a category:` },
-    { type: 14 }
+    { type: 10, content: `## 🎯 Smart Emoji Picker\n**Filter:** ${filterLabel} (${filtered.length} emojis)` },
+    { type: 14 },
   ];
 
-  // One select per category showing relevant emojis
-  for (const [type, config] of Object.entries(CONTEXT_SUGGESTIONS)) {
-    const options = config.emojis.map(e => ({
-      label: e,
-      value: `ctx_${type}_${e}`,
-      emoji: { name: e }
-    }));
+  // Filter select
+  const filterOptions = [
+    { label: `All (${allEmojis.length})`, value: 'all', emoji: { name: '🌐' }, default: filter === 'all' },
+    { label: `Unused (${allEmojis.filter(e => !usedBy[e.id]).length})`, value: 'unused', emoji: { name: '🆓' }, default: filter === 'unused' },
+    { label: `Items (${allEmojis.filter(e => usedBy[e.id]?.has('item')).length})`, value: 'item', emoji: { name: '📦' }, default: filter === 'item' },
+    { label: `Stores (${allEmojis.filter(e => usedBy[e.id]?.has('store')).length})`, value: 'store', emoji: { name: '🏪' }, default: filter === 'store' },
+    { label: `Enemies (${allEmojis.filter(e => usedBy[e.id]?.has('enemy')).length})`, value: 'enemy', emoji: { name: '👹' }, default: filter === 'enemy' },
+    { label: `Actions (${allEmojis.filter(e => usedBy[e.id]?.has('action')).length})`, value: 'action', emoji: { name: '⚡' }, default: filter === 'action' },
+  ];
 
-    components.push({
-      type: 1,
-      components: [{
-        type: 3,
-        custom_id: `emoji_demo_ctx_${type}`,
-        placeholder: `${config.label} suggestions...`,
-        options: options.slice(0, 25)
-      }]
+  components.push({ type: 1, components: [{
+    type: 3,
+    custom_id: 'emoji_demo_filter',
+    placeholder: 'Filter by usage...',
+    options: filterOptions
+  }]});
+
+  // Show filtered emojis (up to 25)
+  if (filtered.length > 0) {
+    const emojiOptions = filtered.slice(0, 25).map(e => {
+      const uses = usedBy[e.id] ? [...usedBy[e.id]].join(', ') : 'unused';
+      return {
+        label: e.name.substring(0, 100),
+        value: `pick_${e.id}`,
+        description: `${e.animated ? 'Animated' : 'Static'} · ${uses}`,
+        emoji: { name: e.name, id: e.id, animated: e.animated }
+      };
     });
+    components.push({ type: 1, components: [{
+      type: 3,
+      custom_id: 'emoji_demo_filtered_pick',
+      placeholder: `Pick from ${filtered.length} emojis...`,
+      options: emojiOptions
+    }]});
+  } else {
+    components.push({ type: 10, content: `-# No emojis match this filter.` });
   }
+
+  // Unicode suggestions section
+  components.push({ type: 14 });
+  components.push({ type: 10, content: `-# 💡 **Unicode suggestions** — common emojis for each entity type` });
+
+  // Show one category of Unicode suggestions based on filter
+  const suggestType = ['item', 'store', 'enemy', 'currency'].includes(filter) ? filter : 'item';
+  const suggestions = CONTEXT_SUGGESTIONS[suggestType];
+  components.push({ type: 1, components: [{
+    type: 3,
+    custom_id: `emoji_demo_ctx_${suggestType}`,
+    placeholder: `${suggestions.label} suggestions...`,
+    options: suggestions.emojis.map(e => ({ label: e, value: `ctx_${suggestType}_${e}`, emoji: { name: e } }))
+  }]});
 
   components.push({ type: 14 });
   components.push({ type: 1, components: [
@@ -613,11 +718,7 @@ export function buildDemoContextPicker() {
   ]});
 
   return {
-    components: [{
-      type: 17,
-      accent_color: 0xE67E22,
-      components
-    }]
+    components: [{ type: 17, accent_color: 0xE67E22, components }]
   };
 }
 

@@ -4048,6 +4048,8 @@ export const BUTTON_REGISTRY = {
   'emoji_demo_modal_picker': { label: 'Modal Picker Demo', emoji: '📝', category: 'experimental', requiresModal: true },
   'emoji_demo_context_picker': { label: 'Context Picker Demo', emoji: '🎯', category: 'experimental' },
   'emoji_demo_ctx_*': { label: 'Context Pick', emoji: '🎯', category: 'experimental' },
+  'emoji_demo_filter': { label: 'Filter Emojis', emoji: '🔍', category: 'experimental' },
+  'emoji_demo_filtered_pick': { label: 'Filtered Pick', emoji: '✅', category: 'experimental' },
 
   // === POC / Experimental ===
   'poc_menu_button': {
