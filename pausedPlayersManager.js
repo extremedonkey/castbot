@@ -215,6 +215,9 @@ export async function createPausedPlayersUI(guildId, client = null) {
       });
     }
     
+    // Discord String Select limit: 1-25 options
+    const cappedOptions = selectOptions.slice(0, 25);
+
     components[0].components.push(
       { type: 14 }, // Separator
       {
@@ -222,10 +225,12 @@ export async function createPausedPlayersUI(guildId, client = null) {
         components: [{
           type: 3, // String Select (instead of User Select)
           custom_id: 'safari_pause_players_select',
-          placeholder: 'Select players to pause/unpause',
+          placeholder: selectOptions.length > 25
+            ? `Select players (showing 25/${selectOptions.length})`
+            : 'Select players to pause/unpause',
           min_values: 0,
-          max_values: Math.min(25, safariPlayers.length), // Discord limit is 25
-          options: selectOptions
+          max_values: cappedOptions.length,
+          options: cappedOptions
         }]
       }
     );
