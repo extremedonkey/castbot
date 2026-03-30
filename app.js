@@ -21414,6 +21414,7 @@ Your server is now ready for Tycoons gameplay!`;
               if (actionIndex > 0) {
                 [button.actions[actionIndex], button.actions[actionIndex - 1]] =
                   [button.actions[actionIndex - 1], button.actions[actionIndex]];
+                button.actions.forEach((a, idx) => { a.order = idx; });
                 await saveSafariContent(allSafariContent);
               }
               const { createCustomActionEditorUI } = await import('./customActionUI.js');
@@ -21424,6 +21425,7 @@ Your server is now ready for Tycoons gameplay!`;
               if (actionIndex < button.actions.length - 1) {
                 [button.actions[actionIndex], button.actions[actionIndex + 1]] =
                   [button.actions[actionIndex + 1], button.actions[actionIndex]];
+                button.actions.forEach((a, idx) => { a.order = idx; });
                 await saveSafariContent(allSafariContent);
               }
               const { createCustomActionEditorUI } = await import('./customActionUI.js');
