@@ -1819,7 +1819,7 @@ export function generateMultiColorLegend(sortedItems, itemColorMap, blacklistedC
  * @param {Object} client - Discord.js client instance
  * @returns {Promise<string>} Discord CDN URL of overlaid image
  */
-export async function generateBlacklistOverlay(guildId, originalImageUrl, gridSize, client) {
+export async function generateBlacklistOverlay(guildId, originalImageUrl, gridWidth, gridHeight, client) {
   try {
     console.log(`🎨 Generating blacklist overlay for guild ${guildId}`);
 
@@ -1885,11 +1885,11 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridSi
     const borderSize = 80;
     const innerWidth = metadata.width - (borderSize * 2);
     const innerHeight = metadata.height - (borderSize * 2);
-    const cellWidth = innerWidth / gridSize;
-    const cellHeight = innerHeight / gridSize;
+    const cellWidth = innerWidth / gridWidth;
+    const cellHeight = innerHeight / gridHeight;
 
     console.log(`📐 Map dimensions: ${metadata.width}x${metadata.height} (with ${borderSize}px border)`);
-    console.log(`📐 Inner dimensions: ${innerWidth}x${innerHeight}, Cell size: ${cellWidth}x${cellHeight}`);
+    console.log(`📐 Grid: ${gridWidth}x${gridHeight}, Inner: ${innerWidth}x${innerHeight}, Cell: ${cellWidth}x${cellHeight}`);
 
     // Step 3: Get blacklisted coordinates
     const blacklistedCoords = await getBlacklistedCoordinates(guildId);
@@ -2116,7 +2116,8 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
       imageUrl = await generateBlacklistOverlay(
         guildId,
         guildMaps[activeMapId].discordImageUrl,  // Original clean map
-        guildMaps[activeMapId].gridSize,
+        guildMaps[activeMapId].gridWidth || guildMaps[activeMapId].gridSize,
+        guildMaps[activeMapId].gridHeight || guildMaps[activeMapId].gridSize,
         client
       );
       console.log(`✅ Using overlaid image: ${imageUrl}`);

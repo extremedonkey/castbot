@@ -69,6 +69,15 @@ export async function buildEmojiEditorMenu(guild, guildId, page = 0) {
 
   components.push({ type: 1, components: actionButtons });
   components.push({ type: 14 });
+  components.push({ type: 10, content: `-# 🧪 **Picker Demos** — reference UIs for future entity emoji fields` });
+  components.push({
+    type: 1,
+    components: [
+      { type: 2, custom_id: 'emoji_demo_modal_picker', label: 'Modal Picker', style: 2, emoji: { name: '📝' } },
+      { type: 2, custom_id: 'emoji_demo_context_picker', label: 'Context Picker', style: 2, emoji: { name: '🎯' } },
+    ]
+  });
+  components.push({ type: 14 });
   components.push({ type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }] });
 
   return {
@@ -483,6 +492,133 @@ export async function handleEmojiSteal(guild, emojiId, emojiName, animated) {
     console.error('Emoji steal error:', error);
     return { success: false, message: `❌ Import failed: ${error.message}` };
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+// Demo: Modal Picker (how entity emoji fields would work)
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Modal with a string select of guild emojis — replaces the current
+ * free-text emoji input in entity create/edit modals.
+ */
+export function buildDemoModalPicker(guild) {
+  const allEmojis = [...guild.emojis.cache.values()]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .slice(0, 24); // Leave room for "None" option
+
+  const options = [
+    { label: 'No emoji', value: 'none', emoji: { name: '🚫' }, description: 'Remove emoji' }
+  ];
+
+  for (const e of allEmojis) {
+    options.push({
+      label: e.name.substring(0, 100),
+      value: e.id,
+      description: e.animated ? 'Animated' : 'Static',
+      emoji: { name: e.name, id: e.id, animated: e.animated }
+    });
+  }
+
+  return {
+    custom_id: 'emoji_demo_modal_submit',
+    title: 'Pick Emoji for Item (Demo)',
+    components: [
+      {
+        type: 18, // Label
+        label: 'Item Name',
+        description: 'This is a demo — nothing is saved.',
+        component: {
+          type: 4,
+          custom_id: 'demo_item_name',
+          style: 1,
+          required: true,
+          placeholder: 'e.g. Deku Shield',
+          max_length: 80
+        }
+      },
+      {
+        type: 18, // Label
+        label: 'Item Emoji',
+        description: 'Select a custom emoji from this server, or choose "No emoji".',
+        component: {
+          type: 3, // String Select
+          custom_id: 'demo_item_emoji',
+          placeholder: 'Select emoji...',
+          options,
+          required: false,
+          min_values: 0,
+          max_values: 1
+        }
+      }
+    ]
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+// Demo: Context Picker (smart emoji suggestions by entity type)
+// ═══════════════════════════════════════════════════════════
+
+const CONTEXT_SUGGESTIONS = {
+  item: {
+    label: '📦 Items',
+    emojis: ['⚔️', '🛡️', '🗡️', '🧪', '🔑', '💎', '🪙', '📦', '🎒', '🧰', '💊', '🏹', '🪄', '🔮', '📜', '🧲', '🪓', '🔧', '🪚', '🧨']
+  },
+  store: {
+    label: '🏪 Stores',
+    emojis: ['🏪', '🛒', '💰', '🏬', '🛍️', '🪙', '💎', '🎪', '🏦', '🏴‍☠️', '⚗️', '🔨', '🎭', '🍞', '🐟', '🌾', '🍺', '🏺', '📚', '🧙']
+  },
+  enemy: {
+    label: '👹 Enemies',
+    emojis: ['🐙', '🐉', '👹', '🦇', '💀', '🐺', '🕷️', '🦂', '🐍', '👻', '🧟', '🤖', '🦈', '🐊', '🦅', '🐻', '🦁', '🐗', '🌋', '⚡']
+  },
+  currency: {
+    label: '💰 Currency',
+    emojis: ['🪙', '💰', '💎', '🏆', '⭐', '🌟', '💫', '🔶', '🟡', '🔴', '💠', '🃏', '🎫', '🏅', '🥇', '💳', '🪨', '🧊', '🫧', '🌀']
+  }
+};
+
+/**
+ * Show contextual emoji suggestions based on entity type.
+ * The host picks from relevant Unicode emojis without typing.
+ */
+export function buildDemoContextPicker() {
+  const components = [
+    { type: 10, content: `## 🎯 Context Emoji Picker (Demo)\n\nSmart suggestions based on what you're editing. Select a category:` },
+    { type: 14 }
+  ];
+
+  // One select per category showing relevant emojis
+  for (const [type, config] of Object.entries(CONTEXT_SUGGESTIONS)) {
+    const options = config.emojis.map(e => ({
+      label: e,
+      value: `ctx_${type}_${e}`,
+      emoji: { name: e }
+    }));
+
+    components.push({
+      type: 1,
+      components: [{
+        type: 3,
+        custom_id: `emoji_demo_ctx_${type}`,
+        placeholder: `${config.label} suggestions...`,
+        options: options.slice(0, 25)
+      }]
+    });
+  }
+
+  components.push({ type: 14 });
+  components.push({ type: 1, components: [
+    { type: 2, custom_id: 'emoji_editor', label: '← Back', style: 2 }
+  ]});
+
+  return {
+    components: [{
+      type: 17,
+      accent_color: 0xE67E22,
+      components
+    }]
+  };
 }
 
 // ═══════════════════════════════════════════════════════════
