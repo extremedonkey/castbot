@@ -46,7 +46,7 @@ export async function buildEmojiEditorMenu(guild, guildId, page = 0) {
   const canManage = guild.members.me?.permissions?.has(PermissionFlagsBits.ManageGuildExpressions) ?? false;
 
   const components = [
-    { type: 10, content: `## 🎨 Emoji Editor\n📊 **${staticCount}**/${limit} static · **${animatedCount}**/${limit} animated` },
+    { type: 10, content: `## 🎨 Emoji Editor | Manage Server Emojis\n-# **${staticCount}**/${limit} static · **${animatedCount}**/${limit} animated` },
     { type: 14 },
   ];
 
@@ -59,26 +59,28 @@ export async function buildEmojiEditorMenu(guild, guildId, page = 0) {
 
   components.push({ type: 14 });
 
-  // Action buttons row
+  // Action buttons row 1: main actions
   const actionButtons = [];
   if (canManage) {
     actionButtons.push({ type: 2, custom_id: 'emoji_upload', label: 'Upload', style: 1, emoji: { name: '📤' } });
   }
   actionButtons.push({ type: 2, custom_id: 'emoji_react_pick', label: 'React Pick', style: 2, emoji: { name: '👆' } });
   actionButtons.push({ type: 2, custom_id: 'emoji_dashboard', label: 'Dashboard', style: 2, emoji: { name: '📊' } });
+  actionButtons.push({ type: 2, custom_id: 'prod_create_emojis', label: 'Player Emojis', style: 2, emoji: { name: '😀' } });
 
   components.push({ type: 1, components: actionButtons });
-  components.push({ type: 14 });
+
+  // Action buttons row 2: picker demos
   components.push({ type: 10, content: `-# 🧪 **Picker Demos** — reference UIs for future entity emoji fields` });
   components.push({
     type: 1,
     components: [
       { type: 2, custom_id: 'emoji_demo_modal_picker', label: 'Modal Picker', style: 2, emoji: { name: '📝' } },
-      { type: 2, custom_id: 'emoji_demo_context_picker', label: 'Context Picker', style: 2, emoji: { name: '🎯' } },
+      { type: 2, custom_id: 'emoji_demo_context_picker', label: 'Smart Filter', style: 2, emoji: { name: '🎯' } },
     ]
   });
   components.push({ type: 14 });
-  components.push({ type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }] });
+  components.push({ type: 1, components: [{ type: 2, custom_id: 'castbot_tools', label: '← Tools', style: 2 }] });
 
   return {
     components: [{

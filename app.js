@@ -24952,11 +24952,11 @@ Your server is now ready for Tycoons gameplay!`;
               components: [{
                 type: 17, accent_color: 0xe74c3c,
                 components: [
-                  { type: 10, content: '## 😀 Add/Remove Emojis' },
+                  { type: 10, content: '## 😀 Player Emojis | Auto-Generate from Avatars' },
                   { type: 14 },
                   { type: 10, content: '❌ No selectable roles found in this server.' },
                   { type: 14 },
-                  { type: 1, components: [{ type: 2, custom_id: 'castbot_tools', label: '← Tools', style: 2 }] }
+                  { type: 1, components: [{ type: 2, custom_id: 'emoji_editor', label: '← Emoji Editor', style: 2 }] }
                 ]
               }]
             };
@@ -24966,11 +24966,11 @@ Your server is now ready for Tycoons gameplay!`;
             components: [{
               type: 17, accent_color: 0x7ED321,
               components: [
-                { type: 10, content: '## 😀 Add/Remove Emojis' },
+                { type: 10, content: '## 😀 Player Emojis | Auto-Generate from Avatars' },
                 { type: 14 },
-                { type: 10, content: `Select a role (tribe) to auto-create emojis from player avatars for rankings, fan favourite, etc.\n\n\`${staticCount}/${emojiLimit}\` static | \`${animatedCount}/${emojiLimit}\` animated\n\n💡 To remove CastBot-created emojis, select the same role again.` },
+                { type: 10, content: `Select a role (tribe) to auto-create emojis from player avatars for rankings, fan favourite, etc.\n\n**${staticCount}**/${emojiLimit} static · **${animatedCount}**/${emojiLimit} animated\n\n-# 💡 To remove CastBot-created emojis, select the same role again.` },
                 { type: 14 },
-                { type: 10, content: '> **`🎭 Select Role`**' },
+                { type: 10, content: `### \`\`\`🎭 Select Role\`\`\`` },
                 {
                   type: 1,
                   components: [{
@@ -24980,7 +24980,7 @@ Your server is now ready for Tycoons gameplay!`;
                   }]
                 },
                 { type: 14 },
-                { type: 1, components: [{ type: 2, custom_id: 'castbot_tools', label: '← Tools', style: 2 }] }
+                { type: 1, components: [{ type: 2, custom_id: 'emoji_editor', label: '← Emoji Editor', style: 2 }] }
               ]
             }]
           };
@@ -38633,8 +38633,10 @@ Your server is now ready for Tycoons gameplay!`;
 
     if (custom_id.startsWith('emoji_demo_modal_submit')) {
       // Demo paginated modal picker submit
+      try {
       const emojiComp = data.components?.find(c => (c.component?.custom_id || c.components?.[0]?.custom_id) === 'demo_item_emoji');
       const selectedValue = emojiComp?.component?.values?.[0] || emojiComp?.components?.[0]?.values?.[0] || 'none';
+      console.log(`🎨 Modal picker submit: selectedValue=${selectedValue}, components=${JSON.stringify(data.components?.map(c => c.component?.custom_id || c.components?.[0]?.custom_id))}`);
 
       // Check if user selected page navigation — reopen modal with new page
       if (selectedValue.startsWith('modal_page_')) {
@@ -38676,6 +38678,10 @@ Your server is now ready for Tycoons gameplay!`;
           }]
         }
       });
+      } catch (error) {
+        console.error('Error in emoji_demo_modal_submit:', error);
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Error: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL } });
+      }
     }
 
     if (custom_id.startsWith('emoji_upload_modal_')) {
