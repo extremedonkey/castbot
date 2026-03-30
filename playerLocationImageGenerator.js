@@ -110,7 +110,7 @@ export async function generatePlayerLocationImage({ guildId, gridWidth, gridHeig
     });
 
     // Build SVG with player names
-    const fontSize = Math.min(16, Math.floor(cellW / 10));
+    const fontSize = Math.min(22, Math.floor(cellW / 7));
     const lineHeight = fontSize + 6;
     const maxLines = Math.floor((h - 10) / lineHeight);
     const visible = players.slice(0, maxLines);
