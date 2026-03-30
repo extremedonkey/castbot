@@ -2316,20 +2316,44 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
       content: legendContent
     });
 
-    // Player Locations text section
+    // Player Locations text section — split known vs unknown, chunk to stay under 4096 chars
     if (playerLocations && playerLocations.size > 0) {
       const playersArray = Array.from(playerLocations.values());
-      const detailedList = formatPlayerLocationDisplay(playersArray, {
-        showStamina: true,
-        showLastMove: true,
-        showExplored: true,
-        groupByLocation: true
-      });
-      if (detailedList) {
-        containerComponents.push({
-          type: 10,
-          content: `### \`\`\`Player Locations\`\`\`\n${detailedList}`
-        });
+      const knownPlayers = playersArray.filter(p => p.displayName !== 'Unknown Player');
+      const unknownPlayers = playersArray.filter(p => p.displayName === 'Unknown Player');
+
+      const displayOpts = { showStamina: true, showLastMove: true, showExplored: true, groupByLocation: true };
+
+      // Helper: push text in chunks that fit Text Display 4096 char limit
+      const pushChunked = (heading, text) => {
+        const MAX = 3900; // leave room for heading + margin
+        const fullText = heading ? `${heading}\n${text}` : text;
+        if (fullText.length <= MAX + (heading?.length || 0) + 1) {
+          containerComponents.push({ type: 10, content: fullText });
+        } else {
+          // Split by location blocks (each starts with \n**📍)
+          const blocks = text.split(/(?=\n\*\*📍)/);
+          let chunk = heading || '';
+          for (const block of blocks) {
+            if ((chunk + block).length > MAX) {
+              if (chunk.trim()) containerComponents.push({ type: 10, content: chunk.trim() });
+              chunk = block;
+            } else {
+              chunk += block;
+            }
+          }
+          if (chunk.trim()) containerComponents.push({ type: 10, content: chunk.trim() });
+        }
+      };
+
+      if (knownPlayers.length > 0) {
+        const knownList = formatPlayerLocationDisplay(knownPlayers, displayOpts);
+        pushChunked(`### \`\`\`Player Locations\`\`\``, knownList);
+      }
+
+      if (unknownPlayers.length > 0) {
+        const unknownList = formatPlayerLocationDisplay(unknownPlayers, displayOpts);
+        pushChunked(`### \`\`\`Unknown Players\`\`\``, unknownList);
       }
     }
 
