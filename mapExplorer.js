@@ -2245,14 +2245,6 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     .setEmoji('👥')
     .setDisabled(!hasActiveMap);
 
-  // Create refresh anchors button
-  const refreshAnchorsButton = new ButtonBuilder()
-    .setCustomId('map_admin_refresh_anchors')
-    .setLabel('Refresh Anchors')
-    .setStyle(ButtonStyle.Secondary)
-    .setEmoji('🔄')
-    .setDisabled(!hasActiveMap);
-
   // Create paused players button (pausedCount already computed above for header)
   const pausedPlayersButton = new ButtonBuilder()
     .setCustomId('safari_paused_players')
@@ -2290,15 +2282,12 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
 
   const sharedMapButton = new ButtonBuilder()
     .setCustomId('safari_shared_map')
-    .setLabel('Shared Map')
+    .setLabel('Prod Map')
     .setStyle(ButtonStyle.Secondary)
     .setEmoji('🗺️')
     .setDisabled(!hasActiveMap);
 
   const mapButtonRow3 = new ActionRowBuilder().addComponents([playerLocationsButton, sharedMapButton, safariProgressButton]);
-
-  // Row 4: Tools
-  const mapButtonRow4 = new ActionRowBuilder().addComponents([refreshAnchorsButton]);
 
   // Create back button (only for ephemeral messages)
   if (isEphemeral) {
@@ -2313,17 +2302,13 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     containerComponents.push(mapButtonRow2.toJSON());
     containerComponents.push({ type: 14 }); // Separator between player lifecycle and map tools
     containerComponents.push(mapButtonRow3.toJSON());
-    containerComponents.push(mapButtonRow4.toJSON());
-    containerComponents.push({
-      type: 14 // Separator
-    });
+    containerComponents.push({ type: 14 }); // Separator
     containerComponents.push(backRow.toJSON());
   } else {
     // For non-ephemeral (shared) maps, no back button
     containerComponents.push(mapButtonRow2.toJSON());
     containerComponents.push({ type: 14 });
     containerComponents.push(mapButtonRow3.toJSON());
-    containerComponents.push(mapButtonRow4.toJSON());
   }
 
   // Create container using Components V2 format

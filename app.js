@@ -31952,46 +31952,46 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Build UI components
           const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
-          
-          // Navigation buttons
+
+          // Navigation buttons (LEAN: back button first, no emoji)
+          const backButton = new ButtonBuilder()
+            .setCustomId('map_player_locations_back')
+            .setLabel('← Map Explorer')
+            .setStyle(2); // Secondary
+
           const refreshButton = new ButtonBuilder()
             .setCustomId('map_player_locations_refresh')
             .setLabel('Refresh')
             .setStyle(2) // Secondary
             .setEmoji('🔄');
-          
-          const backButton = new ButtonBuilder()
-            .setCustomId('safari_map_explorer')
-            .setLabel('Back to Map Explorer')
-            .setStyle(2) // Secondary
-            .setEmoji('◀️');
-          
-          const adminButton = new ButtonBuilder()
-            .setCustomId('safari_map_admin')
-            .setLabel('Player Admin')
-            .setStyle(4) // Danger
-            .setEmoji('🧭');
-          
-          const navigationRow = new ActionRowBuilder().addComponents([refreshButton, adminButton, backButton]);
-          
+
+          const navigationRow = new ActionRowBuilder().addComponents([backButton, refreshButton]);
+
           console.log(`✅ SUCCESS: map_player_locations - found ${playerLocations.size} players`);
-          
+
+          const container = {
+            type: 17, // Container
+            accent_color: 0x5865f2, // Discord blurple
+            components: [
+              { type: 10, content: `## 👥 Player Locations` },
+              { type: 14 },
+              mapDisplay,
+              { type: 14 },
+              {
+                type: 10,
+                content: detailedList || '_No players on the map_'
+              },
+              { type: 14 },
+              navigationRow.toJSON()
+            ]
+          };
+
+          const { countComponents } = await import('./utils.js');
+          countComponents([container], { verbosity: 'summary', label: 'Player Locations' });
+
           return {
             flags: (1 << 15), // IS_COMPONENTS_V2
-            components: [{
-              type: 17, // Container
-              accent_color: 0x5865f2, // Discord blurple
-              components: [
-                mapDisplay,
-                { type: 14 }, // Separator
-                {
-                  type: 10, // Text Display
-                  content: `## 📊 Player Details\n\n${detailedList || '_No players on the map_'}`
-                },
-                { type: 14 }, // Separator
-                navigationRow.toJSON()
-              ]
-            }]
+            components: [container]
           };
         }
       })(req, res, client);
@@ -32026,47 +32026,56 @@ Your server is now ready for Tycoons gameplay!`;
           });
           
           const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
-          
+
+          const backButton = new ButtonBuilder()
+            .setCustomId('map_player_locations_back')
+            .setLabel('← Map Explorer')
+            .setStyle(2);
+
           const refreshButton = new ButtonBuilder()
             .setCustomId('map_player_locations_refresh')
             .setLabel('Refresh')
             .setStyle(2)
             .setEmoji('🔄');
-          
-          const backButton = new ButtonBuilder()
-            .setCustomId('safari_map_explorer')
-            .setLabel('Back to Map Explorer')
-            .setStyle(2)
-            .setEmoji('◀️');
-          
-          const adminButton = new ButtonBuilder()
-            .setCustomId('safari_map_admin')
-            .setLabel('Player Admin')
-            .setStyle(4)
-            .setEmoji('🧭');
-          
-          const navigationRow = new ActionRowBuilder().addComponents([refreshButton, adminButton, backButton]);
-          
+
+          const navigationRow = new ActionRowBuilder().addComponents([backButton, refreshButton]);
+
+          const container = {
+            type: 17,
+            accent_color: 0x5865f2,
+            components: [
+              { type: 10, content: `## 👥 Player Locations` },
+              { type: 14 },
+              mapDisplay,
+              { type: 14 },
+              {
+                type: 10,
+                content: detailedList || '_No players on the map_'
+              },
+              { type: 14 },
+              navigationRow.toJSON()
+            ]
+          };
+
           return {
             flags: (1 << 15),
-            components: [{
-              type: 17,
-              accent_color: 0x5865f2,
-              components: [
-                mapDisplay,
-                { type: 14 },
-                {
-                  type: 10,
-                  content: `## 📊 Player Details\n\n${detailedList || '_No players on the map_'}`
-                },
-                { type: 14 },
-                navigationRow.toJSON()
-              ]
-            }]
+            components: [container]
           };
         }
       })(req, res, client);
       
+    } else if (custom_id === 'map_player_locations_back') {
+      // Back to Map Explorer - PATCH the current message
+      return ButtonHandlerFactory.create({
+        id: 'map_player_locations_back',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { buildMapExplorerResponse } = await import('./mapExplorer.js');
+          return await buildMapExplorerResponse(context.guildId, context.userId, context.client);
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('map_location_actions_')) {
       // Handle Location Actions button
       return ButtonHandlerFactory.create({

@@ -341,26 +341,18 @@ export async function createPlayerLocationMap(guildId, client = null, options = 
     gridDisplay += '```';
     
     // Build legend
-    let legend = '\n**Legend:**\n';
-    legend += '· = Empty cell\n';
-    legend += '♟ = Player(s)\n';
-    
-    // Add blacklist legend if showing blacklisted coords
+    let legend = '\n· = Empty  ♟ = Player(s)';
     if (showBlacklisted && blacklistedCoords.length > 0) {
-        legend += `${blacklistSymbol} = Blacklisted (restricted access)\n`;
+        legend += `  ${blacklistSymbol} = Blacklisted`;
     }
-    
-    // List coordinates with players and blacklisted coordinates
+
+    // List coordinates with players
     const occupiedCoords = Object.entries(playerCounts)
         .filter(([coord, count]) => count > 0)
         .sort(([a], [b]) => a.localeCompare(b));
-    
-    const blacklistedWithInfo = blacklistedCoords.filter(coord => {
-        return (playerCounts[coord] || 0) === 0; // Only show empty blacklisted coords here
-    }).sort();
-    
+
     if (occupiedCoords.length > 0) {
-        legend += '\n**Occupied Cells:**\n';
+        legend += '\n\n**Occupied Cells:**\n';
         for (const [coord, count] of occupiedCoords) {
             const playersHere = [];
             for (const [userId, locationData] of allLocations) {
@@ -368,26 +360,15 @@ export async function createPlayerLocationMap(guildId, client = null, options = 
                     playersHere.push(locationData);
                 }
             }
-            const names = playersHere.slice(0, 3).map(p => p.displayName).join(', ');
-            const more = playersHere.length > 3 ? ` +${playersHere.length - 3}` : '';
+            const names = playersHere.map(p => p.displayName).join(', ');
             const blacklistNote = blacklistedCoords.includes(coord) ? ' *(blacklisted)*' : '';
-            legend += `${coord}: ${names}${more}${blacklistNote}\n`;
-        }
-    }
-    
-    if (showBlacklisted && blacklistedWithInfo.length > 0) {
-        legend += `\n**Blacklisted Cells:** ${blacklistedWithInfo.join(', ')}\n`;
-
-        // Show reverse blacklist coverage using common function
-        const reverseBlacklistLegend = await formatReverseBlacklistLegend(guildId);
-        if (reverseBlacklistLegend) {
-            legend += `\n${reverseBlacklistLegend}`;
+            legend += `${coord}: ${names}${blacklistNote}\n`;
         }
     }
 
     return {
         type: 10, // Text Display
-        content: `## 🗺️ Player Locations\n\n${gridDisplay}${legend}`
+        content: `${gridDisplay}${legend}`
     };
 }
 
