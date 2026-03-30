@@ -4889,6 +4889,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_modify_attr_reset_') &&
         !custom_id.startsWith('condition_qty_select_') &&
         !custom_id.startsWith('entity_clone_select_') &&
+        !custom_id.startsWith('emoji_picker_') &&
         !custom_id.startsWith('safari_fight_enemy_select_') &&
         !custom_id.startsWith('safari_fight_enemy_execute_on_') &&
         !custom_id.startsWith('safari_fight_enemy_limit_') &&
@@ -8860,6 +8861,159 @@ To fix this:
           const guild = await client.guilds.fetch(context.guildId);
           const playerData = await loadPlayerData();
           return await createProductionMenuInterface(guild, playerData, context.guildId, context.userId);
+        }
+      })(req, res, client);
+
+    // ════════════════════════════════════════════
+    // EMOJI EDITOR (PoC)
+    // ════════════════════════════════════════════
+
+    } else if (custom_id === 'emoji_editor') {
+      return ButtonHandlerFactory.create({
+        id: 'emoji_editor',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          const { buildEmojiEditorMenu } = await import('./poc/emojiEditor.js');
+          const guild = await client.guilds.fetch(context.guildId);
+          return await buildEmojiEditorMenu(guild, context.guildId);
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('emoji_picker_')) {
+      const selectedValue = req.body.data.values?.[0];
+      return ButtonHandlerFactory.create({
+        id: 'emoji_picker',
+        deferred: selectedValue?.startsWith('select_'),
+        updateMessage: !selectedValue?.startsWith('select_'),
+        ephemeral: selectedValue?.startsWith('select_'),
+        handler: async (context) => {
+          const guild = await client.guilds.fetch(context.guildId);
+          if (selectedValue?.startsWith('page_')) {
+            const page = parseInt(selectedValue.replace('page_', ''));
+            const { buildEmojiEditorMenu } = await import('./poc/emojiEditor.js');
+            return await buildEmojiEditorMenu(guild, context.guildId, page);
+          }
+          if (selectedValue?.startsWith('select_')) {
+            const emojiId = selectedValue.replace('select_', '');
+            const { buildEmojiDetailView } = await import('./poc/emojiEditor.js');
+            return await buildEmojiDetailView(guild, emojiId, context.guildId);
+          }
+          return { content: '❌ Unknown selection' };
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'emoji_upload') {
+      return ButtonHandlerFactory.create({
+        id: 'emoji_upload',
+        requiresModal: true,
+        handler: async (context) => {
+          const { buildEmojiUploadModal } = await import('./poc/emojiEditor.js');
+          return { type: InteractionResponseType.MODAL, data: buildEmojiUploadModal(context.guildId) };
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'emoji_react_pick') {
+      return ButtonHandlerFactory.create({
+        id: 'emoji_react_pick',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          const { setupReactionPick } = await import('./poc/emojiEditor.js');
+          setupReactionPick(context.userId, context.guildId, req.body.token);
+          return {
+            components: [{
+              type: 17,
+              accent_color: 0xF1C40F,
+              components: [
+                { type: 10, content: `## 👆 React to Any Message\n\nReact to **any message in this server** with the emoji you want.\n\nI'll capture it within **60 seconds**.` },
+                { type: 10, content: `-# Works with Unicode emojis, custom server emojis, and emojis from other servers (if you have Nitro).` },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, custom_id: 'emoji_editor', label: 'Cancel', style: 2 }
+                ]}
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('emoji_steal_')) {
+      return ButtonHandlerFactory.create({
+        id: 'emoji_steal',
+        deferred: true,
+        updateMessage: true,
+        handler: async (context) => {
+          // Parse: emoji_steal_{emojiId}_{name}_{animated 0|1}
+          const parts = context.customId.replace('emoji_steal_', '').split('_');
+          const animated = parts.pop() === '1';
+          const name = parts.pop();
+          const emojiId = parts.join('_');
+          const guild = await client.guilds.fetch(context.guildId);
+          const { handleEmojiSteal } = await import('./poc/emojiEditor.js');
+          const result = await handleEmojiSteal(guild, emojiId, name, animated);
+          return {
+            components: [{
+              type: 17,
+              accent_color: result.success ? 0x57F287 : 0xED4245,
+              components: [
+                { type: 10, content: result.message },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, custom_id: 'emoji_editor', label: '← Emoji Editor', style: 2 }
+                ]}
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'emoji_dashboard') {
+      return ButtonHandlerFactory.create({
+        id: 'emoji_dashboard',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          const guild = await client.guilds.fetch(context.guildId);
+          const { buildEmojiDashboard } = await import('./poc/emojiEditor.js');
+          return await buildEmojiDashboard(guild, context.guildId);
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('emoji_copy_')) {
+      return ButtonHandlerFactory.create({
+        id: 'emoji_copy',
+        ephemeral: true,
+        handler: async (context) => {
+          const emojiId = context.customId.replace('emoji_copy_', '');
+          const guild = await client.guilds.fetch(context.guildId);
+          const emoji = guild.emojis.cache.get(emojiId);
+          if (!emoji) return { content: '❌ Emoji not found.' };
+          const code = emoji.animated ? `<a:${emoji.name}:${emoji.id}>` : `<:${emoji.name}:${emoji.id}>`;
+          return { content: `\`${code}\`` };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('emoji_delete_')) {
+      return ButtonHandlerFactory.create({
+        id: 'emoji_delete',
+        deferred: true,
+        updateMessage: true,
+        handler: async (context) => {
+          const emojiId = context.customId.replace('emoji_delete_', '');
+          const guild = await client.guilds.fetch(context.guildId);
+          const emoji = guild.emojis.cache.get(emojiId);
+          if (!emoji) return { content: '❌ Emoji already deleted.' };
+          const name = emoji.name;
+          await emoji.delete('Deleted via CastBot Emoji Editor');
+          const { buildEmojiEditorMenu } = await import('./poc/emojiEditor.js');
+          const menu = await buildEmojiEditorMenu(guild, context.guildId);
+          // Inject success message at top
+          menu.components[0].components.unshift(
+            { type: 10, content: `✅ Deleted emoji **${name}**` },
+            { type: 14 }
+          );
+          return menu;
         }
       })(req, res, client);
 
@@ -38400,6 +38554,60 @@ Your server is now ready for Tycoons gameplay!`;
       return;
     }
 
+    if (custom_id.startsWith('emoji_upload_modal_')) {
+      // Emoji Editor upload modal submit
+      try {
+        const guildId = custom_id.replace('emoji_upload_modal_', '');
+        const guild = await client.guilds.fetch(guildId);
+
+        // Extract name from text input
+        const nameComp = data.components?.find(c => (c.component?.custom_id || c.components?.[0]?.custom_id) === 'emoji_name');
+        const emojiName = (nameComp?.component?.value || nameComp?.components?.[0]?.value || '').trim();
+
+        // Extract file from file upload
+        const fileComp = data.components?.find(c => (c.component?.custom_id || c.components?.[0]?.custom_id) === 'emoji_file');
+        const fileValues = fileComp?.component?.values || fileComp?.components?.[0]?.values || [];
+        const attachmentId = fileValues[0];
+        const attachment = data.resolved?.attachments?.[attachmentId];
+
+        if (!emojiName || !attachment) {
+          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: {
+            content: '❌ Name and image file are required.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }});
+        }
+
+        // Defer — upload takes time
+        res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE, data: { flags: InteractionResponseFlags.EPHEMERAL } });
+
+        const { handleEmojiUpload } = await import('./poc/emojiEditor.js');
+        const result = await handleEmojiUpload(guild, guildId, emojiName, attachment.url, attachment.filename);
+
+        const { updateDeferredResponse } = await import('./buttonHandlerFactory.js');
+        await updateDeferredResponse(req, {
+          flags: (1 << 15),
+          components: [{
+            type: 17,
+            accent_color: result.success ? 0x57F287 : 0xED4245,
+            components: [
+              { type: 10, content: result.message },
+              { type: 14 },
+              { type: 1, components: [
+                { type: 2, custom_id: 'emoji_editor', label: '← Emoji Editor', style: 2 }
+              ]}
+            ]
+          }]
+        });
+        return;
+      } catch (error) {
+        console.error('Emoji upload error:', error);
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: {
+          content: `❌ Upload failed: ${error.message}`,
+          flags: InteractionResponseFlags.EPHEMERAL
+        }});
+      }
+    }
+
     if (custom_id.startsWith('file_import_submit:')) {
       // File Import modal submit — processes uploaded JSON file
       // Format: file_import_submit:{importType}:{guildId}[:{configId}]
@@ -48963,6 +49171,30 @@ client.on('messageReactionAdd', async (reaction, user) => {
       } catch (error) {
         console.error('Something went wrong when fetching the message:', error);
         return;
+      }
+    }
+
+    // Check for pending emoji picks (Emoji Editor react-pick feature)
+    if (global.pendingEmojiPicks?.size > 0) {
+      const emojiPickGuildId = reaction.message.guild?.id;
+      const pickId = `${emojiPickGuildId}_${user.id}`;
+      const pick = global.pendingEmojiPicks.get(pickId);
+      if (pick) {
+        global.pendingEmojiPicks.delete(pickId);
+        clearTimeout(pick.timeout);
+        try {
+          const { processReactionPick } = await import('./poc/emojiEditor.js');
+          const { DiscordRequest } = await import('./utils.js');
+          const responseData = await processReactionPick(reaction, user, pick);
+          await DiscordRequest(`webhooks/${process.env.APP_ID}/${pick.interactionToken}`, {
+            method: 'POST',
+            body: responseData
+          });
+          console.log(`🎨 Emoji pick captured for user ${user.id}: ${reaction.emoji.name}`);
+        } catch (error) {
+          console.error('Error processing emoji pick:', error);
+        }
+        return; // Don't process as normal reaction
       }
     }
 

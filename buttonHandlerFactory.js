@@ -4036,6 +4036,16 @@ export const BUTTON_REGISTRY = {
     parent: 'export_channel'
   },
 
+  // === EMOJI EDITOR (PoC) ===
+  'emoji_editor': { label: 'Emoji Editor', emoji: '🎨', category: 'experimental', parent: 'reeces_stuff' },
+  'emoji_picker_*': { label: 'Emoji Picker', emoji: '🔍', category: 'experimental' },
+  'emoji_upload': { label: 'Upload Emoji', emoji: '📤', category: 'experimental', requiresModal: true },
+  'emoji_react_pick': { label: 'React Pick', emoji: '👆', category: 'experimental' },
+  'emoji_steal_*': { label: 'Import Emoji', emoji: '📥', category: 'experimental' },
+  'emoji_dashboard': { label: 'Emoji Dashboard', emoji: '📊', category: 'experimental' },
+  'emoji_copy_*': { label: 'Copy Emoji Code', emoji: '📋', category: 'experimental' },
+  'emoji_delete_*': { label: 'Delete Emoji', emoji: '🗑️', style: 'Danger', category: 'experimental' },
+
   // === POC / Experimental ===
   'poc_menu_button': {
     label: 'Menu (PoC)',

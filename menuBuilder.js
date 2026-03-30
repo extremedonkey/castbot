@@ -145,6 +145,7 @@ export class MenuBuilder {
         type: 1,
         components: [
           { type: 2, custom_id: 'poc_menu_button', label: 'Menu', style: 1, emoji: getBotEmoji('cb_transparent') },
+          { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } },
           { type: 2, custom_id: 'moai_ask', label: 'Moai', style: 2, emoji: { name: '🗿' } },
           { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
           { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } },
