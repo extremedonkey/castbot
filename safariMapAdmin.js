@@ -906,13 +906,10 @@ export async function handleMapAdminBlacklistModal(context, req) {
   // Update blacklisted coordinates
   const { updateBlacklistedCoordinates } = await import('./mapExplorer.js');
   const result = await updateBlacklistedCoordinates(context.guildId, coordinatesList);
-  
+
   console.log(`✅ SUCCESS: map_admin_blacklist_modal - updated ${coordinatesList.length} blacklisted coordinates`);
-  
-  return {
-    content: result.message,
-    ephemeral: true
-  };
+
+  return result;
 }
 
 /**

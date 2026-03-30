@@ -31857,14 +31857,22 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
       
     } else if (custom_id === 'map_admin_blacklist_modal') {
-      // Handle blacklist modal submission
+      // Handle blacklist modal submission - updates parent Map Explorer message with regenerated overlay
       return ButtonHandlerFactory.create({
         id: 'map_admin_blacklist_modal',
+        updateMessage: true,
+        deferred: true,
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
           const { handleMapAdminBlacklistModal } = await import('./safariMapAdmin.js');
-          return await handleMapAdminBlacklistModal(context, req);
+          const result = await handleMapAdminBlacklistModal(context, req);
+          if (!result.success) {
+            return { content: result.message };
+          }
+          // Regenerate full Map Explorer with updated overlay
+          const { buildMapExplorerResponse } = await import('./mapExplorer.js');
+          return await buildMapExplorerResponse(context.guildId, context.userId, context.client);
         }
       })(req, res, client);
       
