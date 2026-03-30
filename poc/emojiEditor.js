@@ -146,7 +146,7 @@ export async function buildEmojiDetailView(guild, emojiId, guildId) {
   }
 
   const emojiCode = emoji.animated ? `<a:${emoji.name}:${emoji.id}>` : `<:${emoji.name}:${emoji.id}>`;
-  const cdnUrl = emoji.url;
+  const cdnUrl = emoji.imageURL?.() || `https://cdn.discordapp.com/emojis/${emoji.id}.${emoji.animated ? 'gif' : 'png'}`;
 
   // Find CastBot usage
   const usage = await findEmojiUsage(guildId, emojiCode, emoji.name, emoji.id);
@@ -459,7 +459,7 @@ export async function handleEmojiSteal(guild, emojiId, emojiName, animated) {
     const emojiCode = emoji.animated ? `<a:${emoji.name}:${emoji.id}>` : `<:${emoji.name}:${emoji.id}>`;
     return {
       success: true,
-      message: `✅ Imported! ${emojiCode} **${emoji.name}** is now available in this server.\n\n📋 Code: \`${emojiCode}\``
+      message: `✅ Imported! ${emojiCode} **${emoji.name}** is now available in this server.\n\n📋 Emoji Code (copy to use in CastBot items, buttons, etc):\n${emojiCode}`
     };
   } catch (error) {
     if (error.code === 30008) {

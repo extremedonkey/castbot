@@ -9006,6 +9006,8 @@ To fix this:
           if (!emoji) return { content: '❌ Emoji already deleted.' };
           const name = emoji.name;
           await emoji.delete('Deleted via CastBot Emoji Editor');
+          // Force cache refresh so deleted emoji doesn't appear in picker
+          await guild.emojis.fetch();
           const { buildEmojiEditorMenu } = await import('./poc/emojiEditor.js');
           const menu = await buildEmojiEditorMenu(guild, context.guildId);
           // Inject success message at top
