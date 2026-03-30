@@ -2248,9 +2248,9 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
   // Create blacklist button
   const blacklistButton = new ButtonBuilder()
     .setCustomId('map_admin_blacklist')
-    .setLabel('Blacklist')  // Changed from 'Blacklisted Coords'
+    .setLabel('Blacklist')
     .setStyle(ButtonStyle.Secondary)
-    .setEmoji('🚫')
+    .setEmoji('📍')
     .setDisabled(!hasActiveMap);
 
   // Create refresh anchors button
@@ -2285,8 +2285,8 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     .setEmoji('🚪')
     .setDisabled(!hasActiveMap);
 
-  // Row 1: Map management
-  const mapButtonRow1 = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton]);
+  // Row 1: Map management (under gallery)
+  const mapButtonRow1 = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, blacklistButton]);
 
   // Row 2: Player lifecycle
   const mapButtonRow2 = new ActionRowBuilder().addComponents([startSafariButton, pausedPlayersButton, removePlayersButton]);
@@ -2306,9 +2306,7 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     .setEmoji('🗺️')
     .setDisabled(!hasActiveMap);
 
-  blacklistButton.setLabel('Blacklist Coords');
-
-  const mapButtonRow3 = new ActionRowBuilder().addComponents([playerLocationsButton, sharedMapButton, blacklistButton, safariProgressButton]);
+  const mapButtonRow3 = new ActionRowBuilder().addComponents([playerLocationsButton, sharedMapButton, safariProgressButton]);
 
   // Row 4: Tools
   const mapButtonRow4 = new ActionRowBuilder().addComponents([refreshAnchorsButton]);
