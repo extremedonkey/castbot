@@ -399,29 +399,33 @@ export async function processReactionPick(reaction, user, pick) {
   const emoji = reaction.emoji;
   const isCustom = !!emoji.id;
   const isFromThisGuild = isCustom && reaction.message.guild?.emojis.cache.has(emoji.id);
+  const guild = reaction.message.guild;
 
-  const emojiDisplay = isCustom
-    ? (emoji.animated ? `<a:${emoji.name}:${emoji.id}>` : `<:${emoji.name}:${emoji.id}>`)
-    : emoji.name;
+  const components = [];
 
-  const components = [
-    { type: 10, content: `## 👆 Emoji Captured!\n${emojiDisplay} **${emoji.name}**` },
-    { type: 14 },
-  ];
-
-  if (isCustom) {
-    const emojiCode = emoji.animated ? `<a:${emoji.name}:${emoji.id}>` : `<:${emoji.name}:${emoji.id}>`;
-    components.push({ type: 10, content: `📋 **Code:** \`${emojiCode}\`\n🔗 **CDN:** [View](https://cdn.discordapp.com/emojis/${emoji.id}.${emoji.animated ? 'gif' : 'png'}?size=128)` });
-
-    if (!isFromThisGuild) {
-      components.push({ type: 14 });
-      components.push({ type: 10, content: `⚠️ This emoji is from **another server**. Import it to use in CastBot.` });
-      components.push({ type: 1, components: [
-        { type: 2, custom_id: `emoji_steal_${emoji.id}_${emoji.name}_${emoji.animated ? '1' : '0'}`, label: 'Import to This Server', style: 1, emoji: { name: '📥' } }
-      ]});
+  if (isCustom && !isFromThisGuild && guild) {
+    // Auto-import from another server
+    const stealResult = await handleEmojiSteal(guild, emoji.id, emoji.name, emoji.animated || false);
+    if (stealResult.success && stealResult.emoji) {
+      const newCode = stealResult.emoji.animated
+        ? `<a:${stealResult.emoji.name}:${stealResult.emoji.id}>`
+        : `<:${stealResult.emoji.name}:${stealResult.emoji.id}>`;
+      components.push({ type: 10, content: `# ${newCode}` });
+      components.push({ type: 10, content: `✅ Imported! ${newCode} **${stealResult.emoji.name}** is now available in this server.\n\n📋 Emoji Code (copy to use in CastBot items, buttons, etc):\n\`${newCode}\`` });
+    } else {
+      // Import failed — show error with the original emoji info
+      const emojiCode = emoji.animated ? `<a:${emoji.name}:${emoji.id}>` : `<:${emoji.name}:${emoji.id}>`;
+      components.push({ type: 10, content: `## 👆 Emoji Captured\n❌ Import failed: ${stealResult.message}\n\n📋 Original code: \`${emojiCode}\`` });
     }
+  } else if (isCustom) {
+    // Already in this guild
+    const emojiCode = emoji.animated ? `<a:${emoji.name}:${emoji.id}>` : `<:${emoji.name}:${emoji.id}>`;
+    components.push({ type: 10, content: `# ${emojiCode}` });
+    components.push({ type: 10, content: `👆 **${emoji.name}** — already in this server.\n\n📋 Emoji Code (copy to use in CastBot items, buttons, etc):\n\`${emojiCode}\`` });
   } else {
-    components.push({ type: 10, content: `This is a Unicode emoji — works everywhere, no import needed.\n📋 **Character:** \`${emoji.name}\`` });
+    // Unicode emoji
+    components.push({ type: 10, content: `# ${emoji.name}` });
+    components.push({ type: 10, content: `👆 Unicode emoji — works everywhere, no import needed.\n\n📋 Character: \`${emoji.name}\`` });
   }
 
   components.push({ type: 14 });
@@ -469,7 +473,8 @@ export async function handleEmojiSteal(guild, emojiId, emojiName, animated) {
     const emojiCode = emoji.animated ? `<a:${emoji.name}:${emoji.id}>` : `<:${emoji.name}:${emoji.id}>`;
     return {
       success: true,
-      message: `✅ Imported! ${emojiCode} **${emoji.name}** is now available in this server.\n\n📋 Emoji Code (copy to use in CastBot items, buttons, etc):\n${emojiCode}`
+      message: `✅ Imported! ${emojiCode} **${emoji.name}** is now available in this server.\n\n📋 Emoji Code (copy to use in CastBot items, buttons, etc):\n${emojiCode}`,
+      emoji
     };
   } catch (error) {
     if (error.code === 30008) {
