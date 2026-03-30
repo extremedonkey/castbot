@@ -155,7 +155,7 @@ export async function buildEmojiDetailView(guild, emojiId, guildId) {
     { type: 10, content: `## ${emojiCode} ${emoji.name}` },
     { type: 10, content: `${emoji.animated ? 'Animated' : 'Static'} custom emoji` },
     { type: 14 },
-    { type: 10, content: `📋 **Code:** \`${emojiCode}\`\n🔗 **CDN:** [${emoji.name}](${cdnUrl})` },
+    { type: 10, content: `🔗 **CDN:** [View Image](${cdnUrl})\n\n📋 Emoji Code (copy to use in CastBot items, buttons, etc):\n${emojiCode}` },
     { type: 14 },
   ];
 

@@ -8872,7 +8872,7 @@ To fix this:
       return ButtonHandlerFactory.create({
         id: 'emoji_editor',
         deferred: true,
-        ephemeral: true,
+        updateMessage: true,
         handler: async (context) => {
           const { buildEmojiEditorMenu } = await import('./poc/emojiEditor.js');
           const guild = await client.guilds.fetch(context.guildId);
@@ -8884,9 +8884,8 @@ To fix this:
       const selectedValue = req.body.data.values?.[0];
       return ButtonHandlerFactory.create({
         id: 'emoji_picker',
-        deferred: selectedValue?.startsWith('select_'),
-        updateMessage: !selectedValue?.startsWith('select_'),
-        ephemeral: selectedValue?.startsWith('select_'),
+        deferred: true,
+        updateMessage: true,
         handler: async (context) => {
           const guild = await client.guilds.fetch(context.guildId);
           if (selectedValue?.startsWith('page_')) {
@@ -8972,7 +8971,7 @@ To fix this:
       return ButtonHandlerFactory.create({
         id: 'emoji_dashboard',
         deferred: true,
-        ephemeral: true,
+        updateMessage: true,
         handler: async (context) => {
           const guild = await client.guilds.fetch(context.guildId);
           const { buildEmojiDashboard } = await import('./poc/emojiEditor.js');
