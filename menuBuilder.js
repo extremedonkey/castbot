@@ -137,7 +137,8 @@ export class MenuBuilder {
       {
         type: 1,
         components: [
-          { type: 2, custom_id: 'becs_cool_cats', label: "Bec's Button", style: 1, emoji: { name: '🐱' } }
+          { type: 2, custom_id: 'becs_cool_cats', label: "Bec's Button", style: 1, emoji: { name: '🐱' } },
+          { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } }
         ]
       },
       { type: 10, content: `### \`\`\`🦠 Experimental\`\`\`` },
