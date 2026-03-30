@@ -1961,48 +1961,38 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridWi
       };
     };
 
-    // Red overlay for blacklisted cells (drawn first, underneath colored overlays)
+    // Draw overlays: reverse blacklist item color takes priority over red
+    // If a blacklisted cell has an unlock item → show item color (not red)
+    // If a blacklisted cell has NO unlock item → show red
+    // If a cell has an unlock item but is NOT blacklisted → no overlay (alerts hosts to add blacklist)
     for (const coord of blacklistedCoords) {
       const pos = coordToPosition(coord);
+      const unlockItem = coordToItemMap.get(coord);
 
-      // Create red semi-transparent rectangle
-      const redOverlay = await sharp({
+      let background;
+      if (unlockItem) {
+        // Cell has an unlock item — show item color instead of red
+        const color = itemColorMap.get(unlockItem.id);
+        background = { r: color.r, g: color.g, b: color.b, alpha: color.alpha };
+      } else {
+        // Pure blacklisted cell — show red
+        background = { r: 255, g: 0, b: 0, alpha: 0.3 };
+      }
+
+      const overlay = await sharp({
         create: {
           width: Math.floor(cellWidth),
           height: Math.floor(cellHeight),
           channels: 4,
-          background: { r: 255, g: 0, b: 0, alpha: 0.3 }  // 30% red
+          background
         }
       }).png().toBuffer();
 
       overlays.push({
-        input: redOverlay,
+        input: overlay,
         top: pos.top,
         left: pos.left
       });
-    }
-
-    // Colored overlays for reverse blacklist unlocks (drawn on top of red)
-    for (const [coord, item] of coordToItemMap) {
-      if (blacklistedCoords.includes(coord)) {
-        const pos = coordToPosition(coord);
-        const color = itemColorMap.get(item.id);
-
-        const coloredOverlay = await sharp({
-          create: {
-            width: Math.floor(cellWidth),
-            height: Math.floor(cellHeight),
-            channels: 4,
-            background: { r: color.r, g: color.g, b: color.b, alpha: color.alpha }  // Extract only color values for Sharp
-          }
-        }).png().toBuffer();
-
-        overlays.push({
-          input: coloredOverlay,
-          top: pos.top,
-          left: pos.left
-        });
-      }
     }
 
     console.log(`🎨 Created ${overlays.length} overlay rectangles`);
