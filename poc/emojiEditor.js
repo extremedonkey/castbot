@@ -267,7 +267,7 @@ export async function handleEmojiUpload(guild, guildId, name, attachmentUrl, fil
     const emojiCode = emoji.animated ? `<a:${emoji.name}:${emoji.id}>` : `<:${emoji.name}:${emoji.id}>`;
     return {
       success: true,
-      message: `✅ Created emoji ${emojiCode} **${emoji.name}**\n\n📋 Code: \`${emojiCode}\``,
+      message: `✅ Created emoji ${emojiCode} **${emoji.name}**\n\n📋 Emoji Code (copy to use in CastBot items, buttons, etc):\n${emojiCode}`,
       emoji
     };
   } catch (error) {
