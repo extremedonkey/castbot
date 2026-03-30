@@ -2143,6 +2143,9 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
       ]
     });
 
+    // Map management row directly under gallery
+    containerComponents.push(mapButtonRow1.toJSON());
+
     // Generate multi-color legend with per-item color coding
     console.log(`🔍 DEBUG Map Explorer: Generating multi-color legend for guild ${guildId}`);
 
@@ -2321,7 +2324,6 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     const backRow = new ActionRowBuilder().addComponents([backButton]);
 
     // Add action row components to container
-    containerComponents.push(mapButtonRow1.toJSON());
     containerComponents.push(mapButtonRow2.toJSON());
     containerComponents.push({ type: 14 }); // Separator between player lifecycle and map tools
     containerComponents.push(mapButtonRow3.toJSON());
@@ -2332,7 +2334,6 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     containerComponents.push(backRow.toJSON());
   } else {
     // For non-ephemeral (shared) maps, no back button
-    containerComponents.push(mapButtonRow1.toJSON());
     containerComponents.push(mapButtonRow2.toJSON());
     containerComponents.push({ type: 14 });
     containerComponents.push(mapButtonRow3.toJSON());
