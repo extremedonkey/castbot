@@ -2348,13 +2348,6 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     });
   }
 
-  const playerLocationsButton = new ButtonBuilder()
-    .setCustomId('map_player_locations')
-    .setLabel('Player Locations')
-    .setStyle(ButtonStyle.Secondary)
-    .setEmoji('👥')
-    .setDisabled(!hasActiveMap);
-
   // Create paused players button (pausedCount already computed above for header)
   const pausedPlayersButton = new ButtonBuilder()
     .setCustomId('safari_paused_players')
@@ -2397,7 +2390,7 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     .setEmoji('🗺️')
     .setDisabled(!hasActiveMap);
 
-  const mapButtonRow3 = new ActionRowBuilder().addComponents([playerLocationsButton, sharedMapButton, safariProgressButton]);
+  const mapButtonRow3 = new ActionRowBuilder().addComponents([sharedMapButton, safariProgressButton]);
 
   // Create back button (only for ephemeral messages)
   if (isEphemeral) {
