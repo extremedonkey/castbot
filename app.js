@@ -31890,26 +31890,6 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
       
-    } else if (custom_id === 'map_admin_blacklist_modal') {
-      // Handle blacklist modal submission - updates parent Map Explorer message with regenerated overlay
-      return ButtonHandlerFactory.create({
-        id: 'map_admin_blacklist_modal',
-        updateMessage: true,
-        deferred: true,
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        handler: async (context) => {
-          const { handleMapAdminBlacklistModal } = await import('./safariMapAdmin.js');
-          const result = await handleMapAdminBlacklistModal(context, req);
-          if (!result.success) {
-            return { content: result.message };
-          }
-          // Regenerate full Map Explorer with updated overlay
-          const { buildMapExplorerResponse } = await import('./mapExplorer.js');
-          return await buildMapExplorerResponse(context.guildId, context.userId, context.client);
-        }
-      })(req, res, client);
-      
     } else if (custom_id === 'map_admin_refresh_anchors') {
       // Handle refresh anchors management
       return ButtonHandlerFactory.create({
@@ -48778,34 +48758,24 @@ Your server is now ready for Tycoons gameplay!`;
       }
       
     } else if (custom_id === 'map_admin_blacklist_modal') {
-      // Handle blacklist modal submission
-      try {
-        const guildId = req.body.guild_id;
-        const { handleMapAdminBlacklistModal } = await import('./safariMapAdmin.js');
-
-        // Create context for the handler
-        const context = {
-          guildId: guildId,
-          userId: req.body.member?.user?.id || req.body.user?.id
-        };
-
-        const result = await handleMapAdminBlacklistModal(context, req);
-
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: { content: result.content, flags: InteractionResponseFlags.EPHEMERAL }
-        });
-        
-      } catch (error) {
-        console.error('Error handling blacklist modal:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error updating blacklisted coordinates. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
+      // Handle blacklist modal submission - updates parent Map Explorer with regenerated overlay
+      return ButtonHandlerFactory.create({
+        id: 'map_admin_blacklist_modal',
+        updateMessage: true,
+        deferred: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const { handleMapAdminBlacklistModal } = await import('./safariMapAdmin.js');
+          const result = await handleMapAdminBlacklistModal(context, req);
+          if (!result.success) {
+            return { content: result.message };
           }
-        });
-      }
+          // Regenerate full Map Explorer with updated overlay
+          const { buildMapExplorerResponse } = await import('./mapExplorer.js');
+          return await buildMapExplorerResponse(context.guildId, context.userId, context.client);
+        }
+      })(req, res, client);
       
     } else if (custom_id === 'map_admin_refresh_anchors_modal') {
       // Handle refresh anchors modal submission
