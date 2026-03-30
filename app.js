@@ -31949,7 +31949,41 @@ Your server is now ready for Tycoons gameplay!`;
             showExplored: true,
             groupByLocation: true
           });
-          
+
+          // Generate Sharp visual map image
+          let mapImageUrl = null;
+          try {
+            const { loadSafariContent } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+            const activeMapId = safariData[context.guildId]?.maps?.active;
+            const mapData = safariData[context.guildId]?.maps?.[activeMapId];
+            if (mapData) {
+              const gridW = mapData.gridWidth || mapData.gridSize || 7;
+              const gridH = mapData.gridHeight || mapData.gridSize || 7;
+              const { generatePlayerLocationImage } = await import('./playerLocationImageGenerator.js');
+              const pngBuffer = await generatePlayerLocationImage({
+                gridWidth: gridW,
+                gridHeight: gridH,
+                playerLocations
+              });
+              // Save to temp and upload to Discord
+              const path = await import('path');
+              const fs = await import('fs/promises');
+              const __dirname = path.dirname(new URL(import.meta.url).pathname);
+              const tempDir = path.join(__dirname, 'temp');
+              try { await fs.mkdir(tempDir, { recursive: true }); } catch {}
+              const tempPath = path.join(tempDir, `player_locations_${context.guildId}_${Date.now()}.png`);
+              await fs.writeFile(tempPath, pngBuffer);
+              const { uploadImageToDiscord } = await import('./mapExplorer.js');
+              const guild = await context.client.guilds.fetch(context.guildId);
+              const uploadResult = await uploadImageToDiscord(guild, tempPath, `player_locations_${Date.now()}.png`);
+              mapImageUrl = uploadResult.url || uploadResult;
+              await fs.unlink(tempPath).catch(() => {});
+            }
+          } catch (imgError) {
+            console.error('⚠️ Player location image generation failed, continuing without:', imgError.message);
+          }
+
           // Build UI components
           const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
 
@@ -31969,21 +32003,31 @@ Your server is now ready for Tycoons gameplay!`;
 
           console.log(`✅ SUCCESS: map_player_locations - found ${playerLocations.size} players`);
 
+          const containerParts = [
+            { type: 10, content: `## 👥 Player Locations` },
+            { type: 14 },
+            mapDisplay
+          ];
+
+          // Add Sharp visual map if generated
+          if (mapImageUrl) {
+            containerParts.push({
+              type: 12, // Media Gallery
+              items: [{ media: { url: mapImageUrl } }]
+            });
+          }
+
+          containerParts.push(
+            { type: 14 },
+            { type: 10, content: detailedList || '_No players on the map_' },
+            { type: 14 },
+            navigationRow.toJSON()
+          );
+
           const container = {
             type: 17, // Container
             accent_color: 0x5865f2, // Discord blurple
-            components: [
-              { type: 10, content: `## 👥 Player Locations` },
-              { type: 14 },
-              mapDisplay,
-              { type: 14 },
-              {
-                type: 10,
-                content: detailedList || '_No players on the map_'
-              },
-              { type: 14 },
-              navigationRow.toJSON()
-            ]
+            components: containerParts
           };
 
           const { countComponents } = await import('./utils.js');
