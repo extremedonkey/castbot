@@ -1770,7 +1770,7 @@ export async function getBlacklistedCoordinates(guildId) {
  * @returns {string} Formatted legend text with color coding and warnings
  */
 export function generateMultiColorLegend(sortedItems, itemColorMap, blacklistedCoords) {
-  const legendLines = ['**Legend:**', '🟥 Red overlay = Blacklisted (impossible to pass)'];
+  const legendLines = ['### ```Legend```', '🟥 Red overlay = Blacklisted (impossible to pass)'];
 
   // Add color lines for first 4 items (unique colors)
   sortedItems.slice(0, 4).forEach((item, index) => {
@@ -1785,8 +1785,14 @@ export function generateMultiColorLegend(sortedItems, itemColorMap, blacklistedC
 
   legendLines.push('⬜ No overlay = Normal access');
 
+  // Add blacklisted coordinates section
+  if (blacklistedCoords.length > 0) {
+    legendLines.push('', '### ```Blacklisted Coordinates```');
+    legendLines.push(blacklistedCoords.join(', '));
+  }
+
   // Add reverse blacklist items section with warnings for non-blacklisted coords
-  legendLines.push('', '**Reverse Blacklist Items:**');
+  legendLines.push('', '### ```Reverse Blacklist Items```');
   let hasNonBlacklistedCoords = false;
 
   sortedItems.forEach(item => {
@@ -2180,9 +2186,13 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
       legendContent = generateMultiColorLegend(sortedItems, itemColorMap, blacklistedCoords);
     } else {
       // No reverse blacklist items - show basic legend
-      legendContent = `**Legend:**
-🟥 Red overlay = Blacklisted (restricted access)
-⬜ No overlay = Normal access`;
+      const blacklistedCoords = await getBlacklistedCoordinates(guildId);
+      const basicLines = ['### ```Legend```', '🟥 Red overlay = Blacklisted (restricted access)', '⬜ No overlay = Normal access'];
+      if (blacklistedCoords.length > 0) {
+        basicLines.push('', '### ```Blacklisted Coordinates```');
+        basicLines.push(blacklistedCoords.join(', '));
+      }
+      legendContent = basicLines.join('\n');
     }
 
     console.log(`🔍 DEBUG Map Explorer: Generated legend with ${reverseBlacklistItems.length} items`);
