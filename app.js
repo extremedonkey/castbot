@@ -31950,30 +31950,32 @@ Your server is now ready for Tycoons gameplay!`;
             groupByLocation: true
           });
 
-          // Generate Sharp visual map image
+          // Generate Sharp visual map image (overlays player names on actual map)
           let mapImageUrl = null;
           try {
             const { loadSafariContent } = await import('./safariManager.js');
             const safariData = await loadSafariContent();
             const activeMapId = safariData[context.guildId]?.maps?.active;
             const mapData = safariData[context.guildId]?.maps?.[activeMapId];
-            if (mapData) {
+            if (mapData?.discordImageUrl) {
               const gridW = mapData.gridWidth || mapData.gridSize || 7;
               const gridH = mapData.gridHeight || mapData.gridSize || 7;
               const { generatePlayerLocationImage } = await import('./playerLocationImageGenerator.js');
-              const pngBuffer = await generatePlayerLocationImage({
+              const imgBuffer = await generatePlayerLocationImage({
+                guildId: context.guildId,
                 gridWidth: gridW,
                 gridHeight: gridH,
-                playerLocations
+                playerLocations,
+                client: context.client
               });
-              // Save to temp and upload to Discord
+              // Save to temp and upload
               const path = await import('path');
               const fs = await import('fs/promises');
               const __dirname = path.dirname(new URL(import.meta.url).pathname);
               const tempDir = path.join(__dirname, 'temp');
               try { await fs.mkdir(tempDir, { recursive: true }); } catch {}
-              const tempPath = path.join(tempDir, `player_locations_${context.guildId}_${Date.now()}.png`);
-              await fs.writeFile(tempPath, pngBuffer);
+              const tempPath = path.join(tempDir, `player_locations_${context.guildId}_${Date.now()}.jpg`);
+              await fs.writeFile(tempPath, imgBuffer);
               const { uploadImageToDiscord } = await import('./mapExplorer.js');
               const guild = await context.client.guilds.fetch(context.guildId);
               const uploadResult = await uploadImageToDiscord(guild, tempPath, `player_locations_${Date.now()}.png`);
