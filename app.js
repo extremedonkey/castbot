@@ -32219,6 +32219,18 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
 
+    } else if (custom_id === 'anchor_open_menu') {
+      // Menu button on anchor messages — creates NEW ephemeral message (never updateMessage on anchors!)
+      return ButtonHandlerFactory.create({
+        id: 'anchor_open_menu',
+        ephemeral: true,
+        deferred: true,
+        handler: async (context) => {
+          const playerData = await loadPlayerData();
+          return await createProductionMenuInterface(context.guild, playerData, context.guildId, context.userId);
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('map_location_actions_')) {
       // Handle Location Actions button
       return ButtonHandlerFactory.create({

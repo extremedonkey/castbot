@@ -440,6 +440,13 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'seasons'
   },
+  'anchor_open_menu': {
+    label: 'Menu',
+    description: 'Open main menu from anchor message (creates new ephemeral)',
+    emoji: '🤖',
+    style: 'Secondary',
+    category: 'navigation'
+  },
   'bulk_rename_map_channels': {
     label: 'Rename Channels',
     description: 'Bulk rename map channels to new 📍 format',

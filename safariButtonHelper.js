@@ -336,7 +336,7 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
       },
       {
         type: 2, // Button
-        custom_id: 'prod_menu_back',
+        custom_id: 'anchor_open_menu',
         label: 'Menu',
         style: 2, // Secondary
         emoji: getBotEmoji('cb_transparent')
