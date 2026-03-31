@@ -581,7 +581,7 @@ async function createMapGrid(guild, userId) {
         channelId: channels[coord] || null,
         emoji: defaultEmoji,
         baseContent: {
-          title: defaultEmoji ? `${defaultEmoji} ${coord}` : coord,
+          title: coord,
           description: `You are at grid location ${coord}.`,
           image: null,
           clues: []
@@ -1597,7 +1597,7 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
         channelId: channels[coord] || null,
         emoji: defaultEmoji,
         baseContent: {
-          title: defaultEmoji ? `${defaultEmoji} ${coord}` : coord,
+          title: coord,
           description: `You are at grid location ${coord}.`,
           image: null,
           clues: []
@@ -2482,6 +2482,7 @@ export function deriveChannelName(coord, title, emoji) {
     .replace(/^\|\s*/, '')
     .replace(/[^a-zA-Z0-9\s-]/g, '')
     .trim()
+    .replace(/^-+/, '')           // Strip leading hyphens
     .toLowerCase()
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')

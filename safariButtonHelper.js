@@ -217,10 +217,14 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
     components.push({ type: 14 }); // Separator
   }
   
-  // Location Content
-  const title = coordData.baseContent?.title || `📍 Location ${coord}`;
-  const description = coordData.baseContent?.description || `You are at grid location ${coord}. This area hasn't been configured yet.`;
-  
+  // Location Content — prepend emoji from coordData (falls back to 📍 for old maps)
+  const locationEmoji = coordData.emoji ?? '📍';
+  const rawTitle = coordData.baseContent?.title || `Location ${coord}`;
+  // Strip any leading emoji from title to prevent doubling (old maps have emoji baked in)
+  const cleanTitle = rawTitle.replace(/^[\p{Emoji_Presentation}\p{Emoji}\uFE0F]+\s*/gu, '').trim() || rawTitle;
+  const title = locationEmoji ? `${locationEmoji} ${cleanTitle}` : cleanTitle;
+  const description = coordData.baseContent?.description || `You are at grid location ${coord}.`;
+
   components.push({
     type: 10, // Text Display
     content: `# ${title}\n\n${description}`
