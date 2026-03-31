@@ -15,6 +15,42 @@ export function setEmojiClient(client) {
 }
 
 /**
+ * Resolve an emoji string to the correct format for the target component type.
+ * ONE function to rule them all — replaces ad-hoc parsing across the codebase.
+ *
+ * @param {string|null|undefined} emojiStr - Stored emoji string ('🎯', '<:name:id>', '<a:name:id>', null)
+ * @param {string} [fallback='📦'] - Fallback Unicode emoji
+ * @param {'component'|'builder'} [target='component'] - Output format:
+ *   'component' → { name, id?, animated? } for raw JSON components (selects, containers, raw buttons)
+ *   'builder'   → raw string for ButtonBuilder.setEmoji() / discord.js builders
+ * @returns {Object|string} Component format { name, id?, animated? } or builder string
+ */
+export function resolveEmoji(emojiStr, fallback = '📦', target = 'component') {
+    // Null, undefined, empty, non-string → fallback
+    if (!emojiStr || typeof emojiStr !== 'string' || !emojiStr.trim()) {
+        return target === 'builder' ? fallback : { name: fallback };
+    }
+
+    const trimmed = emojiStr.trim();
+
+    // Custom emoji: <:name:id> or <a:name:id>
+    const customMatch = trimmed.match(/^<(a?):(\w+):(\d+)>$/);
+    if (customMatch) {
+        if (target === 'builder') {
+            return trimmed; // ButtonBuilder accepts '<:name:id>' as-is
+        }
+        return {
+            name: customMatch[2],
+            id: customMatch[3],
+            ...(customMatch[1] === 'a' ? { animated: true } : {})
+        };
+    }
+
+    // Unicode emoji or plain text — pass through
+    return target === 'builder' ? trimmed : { name: trimmed };
+}
+
+/**
  * Parse emoji code string to extract emoji information
  * @param {string} emojiCode - Discord emoji code like <:name:id> or <a:name:id>
  * @returns {Object|null} Parsed emoji info or null if invalid
