@@ -288,7 +288,7 @@ function createEntitySelector(entities, selectedId, entityType, searchTerm) {
         
         if (entityType === 'map_cell') {
             name = id; // Use coordinate as name (e.g., "A1")
-            emoji = '📍';
+            emoji = entity.emoji || '📍';
         } else {
             name = entity.name || entity.label || 'Unnamed';
             emoji = entity.emoji || getDefaultEmoji(entityType);
