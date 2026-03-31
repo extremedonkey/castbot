@@ -755,7 +755,7 @@ export function validateFields(fields, entityType) {
  */
 function createMapCellFieldModal(entityId, fieldGroupId, group, currentValues) {
     const customId = `entity_modal_submit_map_cell_${entityId}_${fieldGroupId}`;
-    const title = `Edit ${group.label}`;
+    const title = `Edit ${entityId} Details`;
 
     // Use Label-wrapped components (modern pattern) for map cell modals
     switch (fieldGroupId) {
@@ -777,6 +777,19 @@ function createMapCellFieldModal(entityId, fieldGroupId, group, currentValues) {
                                 value: currentValues.baseContent?.title || '',
                                 required: true,
                                 max_length: 100
+                            }
+                        },
+                        {
+                            type: 18, // Label
+                            label: 'Location Emoji',
+                            description: 'Emoji for channel name and navigation. Default: 📍',
+                            component: {
+                                type: 4, // Text Input
+                                custom_id: 'emoji',
+                                style: 1, // Short
+                                value: currentValues.emoji || '📍',
+                                required: false,
+                                max_length: 50
                             }
                         },
                         {
@@ -804,19 +817,6 @@ function createMapCellFieldModal(entityId, fieldGroupId, group, currentValues) {
                                 required: false,
                                 max_length: 500,
                                 placeholder: 'https://cdn.discordapp.com/attachments/...'
-                            }
-                        },
-                        {
-                            type: 18, // Label
-                            label: 'Location Emoji',
-                            description: 'Emoji for channel name and navigation. Default: 📍',
-                            component: {
-                                type: 4, // Text Input
-                                custom_id: 'emoji',
-                                style: 1, // Short
-                                value: currentValues.emoji || '📍',
-                                required: false,
-                                max_length: 50
                             }
                         }
                     ]
