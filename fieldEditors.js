@@ -807,7 +807,7 @@ function createMapCellFieldModal(entityId, fieldGroupId, group, currentValues) {
                         },
                         {
                             type: 18, // Label
-                            label: 'Image URL',
+                            label: 'Image URL (Displays under map)',
                             description: 'Upload to Discord first, then paste the CDN link. Leave empty to remove.',
                             component: {
                                 type: 4, // Text Input

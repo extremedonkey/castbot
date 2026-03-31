@@ -581,7 +581,7 @@ async function createMapGrid(guild, userId) {
         emoji: '📍',
         baseContent: {
           title: `📍 ${coord}`,
-          description: `You are at grid location ${coord}. This area hasn't been configured yet.`,
+          description: `You are at grid location ${coord}.`,
           image: null,
           clues: []
         },
@@ -1597,7 +1597,7 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
         emoji: '📍',
         baseContent: {
           title: `📍 ${coord}`,
-          description: `You are at grid location ${coord}. This area hasn't been configured yet.`,
+          description: `You are at grid location ${coord}.`,
           image: null,
           clues: []
         },
