@@ -6,6 +6,7 @@ import { loadEntity, updateEntity } from './entityManager.js';
 import { loadSafariContent } from './safariManager.js';
 import { scheduler } from './scheduler.js';
 import { formatPeriod, buildLimitOptions } from './utils/periodUtils.js';
+import { parseTextEmoji } from './utils/emojiUtils.js';
 
 /**
  * Shared outcome type options for the "Add Outcome" select menus.
@@ -1846,7 +1847,7 @@ export function buildActionChannelCard(action, guildId, actionId) {
             : `safari_${guildId}_${actionId}`,
           label: action.name || action.label || 'Activate',
           style: buttonStyle,
-          ...(action.emoji ? { emoji: { name: action.emoji } } : {})
+          ...(action.emoji ? { emoji: parseTextEmoji(action.emoji, '⚡').emoji } : {})
         }]
       }
     ]
