@@ -48800,7 +48800,7 @@ Your server is now ready for Tycoons gameplay!`;
         const mapUrl = components[0].components[0].value?.trim();
         const mapRows = parseInt(components[1].components[0].value?.trim());
         const mapColumns = parseInt(components[2].components[0].value?.trim());
-        const mapEmoji = components[3]?.components?.[0]?.value?.trim() || '📍';
+        const mapEmoji = components[3]?.components?.[0]?.value?.trim() ?? '📍';
         
         console.log(`🔄 DEBUG: Map update modal submitted - guild: ${guildId}, url: ${mapUrl}, dimensions: ${mapColumns}x${mapRows}`);
         
