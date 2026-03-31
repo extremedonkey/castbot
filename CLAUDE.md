@@ -455,6 +455,7 @@ General Workflow for new features:
 - **📦 ITEMS** → [docs/03-features/SafariImportExport.md](docs/03-features/SafariImportExport.md) - Items, stock management, import/export
 - **📊 ATTRIBUTES** → [docs/03-features/Attributes.md](docs/03-features/Attributes.md) - Player stats, resources, regeneration
 - **🗺️ MAP** → [docs/03-features/SafariMapSystem.md](docs/03-features/SafariMapSystem.md) - Map system ([Technical](docs/03-features/SafariMapTechnical.md), [Explorer](docs/03-features/SafariMapExplorer.md), [Movement](docs/03-features/SafariMapMovement.md))
+- **📍 LOCATION NAMING** → [docs/03-features/SafariLocationNaming.md](docs/03-features/SafariLocationNaming.md) - Emoji channels, auto-rename, bulk update
 - **💬 WHISPER** → [docs/03-features/WhisperSystem.md](docs/03-features/WhisperSystem.md)
 - **⌨️ PLAYER COMMANDS** → [docs/03-features/PlayerCommands.md](docs/03-features/PlayerCommands.md) - Text-based Custom Action invocation
 - **🎯 PLAYER MENU ACTIONS** → [docs/03-features/PlayerMenuActions.md](docs/03-features/PlayerMenuActions.md) - Custom Actions in player /menu

@@ -1,9 +1,10 @@
 # RaP 0926: Safari Location Naming, Channel Sync & Custom Locations
 
 **Date**: 2026-03-31
-**Status**: Design Analysis
+**Status**: ✅ Layers 1-4+6 IMPLEMENTED (2026-04-01) — Layer 5 (Custom Locations) deferred
 **Risk**: LOW for new maps, MEDIUM for channel rename sync, HIGH for custom locations
 **Trigger**: Map Explorer UI improvements revealed opportunity to make Safari channels more discoverable and support richer location metadata
+**As-Built**: [docs/03-features/SafariLocationNaming.md](../03-features/SafariLocationNaming.md)
 
 ## Original Context
 
