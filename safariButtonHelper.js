@@ -322,16 +322,26 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
     components.push(...buttonRows);
   }
   
-  // Location Actions Button (always present)
+  // Explore + Menu buttons (always present)
+  const { getBotEmoji } = await import('./botEmojis.js');
   components.push({
     type: 1, // Action Row
-    components: [{
-      type: 2, // Button
-      custom_id: `map_location_actions_${coord}`,
-      label: 'Location Actions',
-      style: 2, // Secondary
-      emoji: { name: '📍' }
-    }]
+    components: [
+      {
+        type: 2, // Button
+        custom_id: `map_location_actions_${coord}`,
+        label: 'Explore',
+        style: 2, // Secondary
+        emoji: { name: '🗺️' }
+      },
+      {
+        type: 2, // Button
+        custom_id: 'prod_menu_back',
+        label: 'Menu',
+        style: 2, // Secondary
+        emoji: getBotEmoji('cb_transparent')
+      }
+    ]
   });
   
   return [{
