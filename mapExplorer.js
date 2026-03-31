@@ -378,9 +378,10 @@ async function createFogOfWarMap(fullMapPath, gridSystem, visibleCoord, allCoord
 // COMMENTED OUT - Legacy hardcoded map functionality replaced by custom image upload
 /*
 async function createMapGrid(guild, userId) {
+  const defaultEmoji = '📍'; // Legacy function — hardcoded default
   try {
     console.log(`🏗️ Creating map grid for guild ${guild.id}`);
-    
+
     // Load safari content data
     let safariData = await loadSafariContent();
     
@@ -578,9 +579,9 @@ async function createMapGrid(guild, userId) {
     for (const coord of coordinates) {
       mapData.coordinates[coord] = {
         channelId: channels[coord] || null,
-        emoji: '📍',
+        emoji: defaultEmoji,
         baseContent: {
-          title: `📍 ${coord}`,
+          title: defaultEmoji ? `${defaultEmoji} ${coord}` : coord,
           description: `You are at grid location ${coord}.`,
           image: null,
           clues: []
@@ -1255,7 +1256,7 @@ async function updateMapImage(guild, userId, mapUrl) {
  * @param {number} gridHeight - Number of rows (default 7)
  * @returns {Object} Result with success status and message
  */
-async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7, gridHeight = 7) {
+async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7, gridHeight = 7, defaultEmoji = '📍') {
   try {
     console.log(`🏗️ Creating map grid with custom image for guild ${guild.id} - dimensions: ${gridWidth}x${gridHeight}`);
     
@@ -1531,7 +1532,7 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
       
       try {
         const channel = await guild.channels.create({
-          name: `📍${coord.toLowerCase()}`,
+          name: `${defaultEmoji}${coord.toLowerCase()}`,
           type: ChannelType.GuildText,
           parent: currentCategory.id,
           topic: `Map location ${coord} - Use buttons to explore!`,
@@ -1545,7 +1546,7 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
         
         channels[coord] = channel.id;
         channelsInCurrentCategory++;
-        console.log(`Created channel #📍${coord.toLowerCase()} (${i + 1}/${coordinates.length})`);
+        console.log(`Created channel #${defaultEmoji}${coord.toLowerCase()} (${i + 1}/${coordinates.length})`);
 
         if ((i + 1) % 5 === 0 || i === coordinates.length - 1) {
           progressMessages.push(`📍 Progress: ${i + 1}/${coordinates.length} channels created`);
@@ -1594,9 +1595,9 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
     for (const coord of coordinates) {
       mapData.coordinates[coord] = {
         channelId: channels[coord] || null,
-        emoji: '📍',
+        emoji: defaultEmoji,
         baseContent: {
-          title: `📍 ${coord}`,
+          title: defaultEmoji ? `${defaultEmoji} ${coord}` : coord,
           description: `You are at grid location ${coord}.`,
           image: null,
           clues: []
@@ -2468,8 +2469,9 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
  * @returns {string} Channel name
  */
 export function deriveChannelName(coord, title, emoji) {
-  const effectiveEmoji = emoji || '📍';
-  const prefix = `${effectiveEmoji}${coord.toLowerCase()}`;
+  // Empty string is valid (no emoji prefix); only fall back to 📍 for undefined/null
+  const effectiveEmoji = emoji ?? '📍';
+  const prefix = effectiveEmoji ? `${effectiveEmoji}${coord.toLowerCase()}` : coord.toLowerCase();
 
   if (!title) return prefix;
 

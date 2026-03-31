@@ -653,8 +653,8 @@ export function parseModalSubmission(modalData, fieldGroupId) {
                     break;
 
                 case 'emoji':
-                    // Store raw emoji string; empty = default
-                    fields[fieldId] = value?.trim() || '📍';
+                    // Store raw emoji string; empty string is valid (no emoji prefix)
+                    fields[fieldId] = value?.trim() ?? '';
                     break;
 
                 default:
@@ -787,7 +787,7 @@ function createMapCellFieldModal(entityId, fieldGroupId, group, currentValues) {
                                 type: 4, // Text Input
                                 custom_id: 'emoji',
                                 style: 1, // Short
-                                value: currentValues.emoji || '📍',
+                                value: currentValues.emoji ?? '📍',
                                 required: false,
                                 max_length: 50
                             }

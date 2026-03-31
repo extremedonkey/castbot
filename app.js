@@ -31766,8 +31766,8 @@ Your server is now ready for Tycoons gameplay!`;
           
           const modal = new ModalBuilder()
             .setCustomId('map_update_modal')
-            .setTitle(hasActiveMap ? 'Update Map Image' : 'Create Map with Custom Image');
-            
+            .setTitle(hasActiveMap ? 'Update Map Image' : 'Upload New Safari Map');
+
           const urlInput = new TextInputBuilder()
             .setCustomId('map_url')
             .setLabel('Discord Image URL')
@@ -31776,7 +31776,7 @@ Your server is now ready for Tycoons gameplay!`;
             .setPlaceholder('Paste Discord CDN URL here (e.g., https://cdn.discordapp.com/attachments/...)')
             .setMinLength(20)
             .setMaxLength(500);
-            
+
           // Add row input (height)
           const rowInput = new TextInputBuilder()
             .setCustomId('map_rows')
@@ -31787,7 +31787,7 @@ Your server is now ready for Tycoons gameplay!`;
             .setValue(existingMap?.gridHeight?.toString() || existingMap?.gridSize?.toString() || '7')
             .setMinLength(1)
             .setMaxLength(3);
-            
+
           // Add column input (width)
           const colInput = new TextInputBuilder()
             .setCustomId('map_columns')
@@ -31798,11 +31798,24 @@ Your server is now ready for Tycoons gameplay!`;
             .setValue(existingMap?.gridWidth?.toString() || existingMap?.gridSize?.toString() || '7')
             .setMinLength(1)
             .setMaxLength(3);
-            
+
           const actionRow1 = new ActionRowBuilder().addComponents(urlInput);
           const actionRow2 = new ActionRowBuilder().addComponents(rowInput);
           const actionRow3 = new ActionRowBuilder().addComponents(colInput);
           modal.addComponents(actionRow1, actionRow2, actionRow3);
+
+          // Default emoji field (only on new map creation, not updates)
+          if (!hasActiveMap) {
+            const emojiInput = new TextInputBuilder()
+              .setCustomId('map_emoji')
+              .setLabel('Default Location Emoji')
+              .setStyle(1) // Short
+              .setRequired(false)
+              .setPlaceholder('📍')
+              .setValue('📍')
+              .setMaxLength(8);
+            modal.addComponents(new ActionRowBuilder().addComponents(emojiInput));
+          }
           
           console.log(`✅ SUCCESS: map_update - modal created`);
           
@@ -48775,6 +48788,7 @@ Your server is now ready for Tycoons gameplay!`;
         const mapUrl = components[0].components[0].value?.trim();
         const mapRows = parseInt(components[1].components[0].value?.trim());
         const mapColumns = parseInt(components[2].components[0].value?.trim());
+        const mapEmoji = components[3]?.components?.[0]?.value?.trim() || '📍';
         
         console.log(`🔄 DEBUG: Map update modal submitted - guild: ${guildId}, url: ${mapUrl}, dimensions: ${mapColumns}x${mapRows}`);
         
@@ -48862,9 +48876,9 @@ Your server is now ready for Tycoons gameplay!`;
           result = await updateMapImage(guild, userId, mapUrl);
         } else {
           // Create new map with custom image and dimensions
-          console.log(`🏗️ Creating new map with custom image for guild ${guildId} - dimensions: ${mapColumns}x${mapRows}`);
+          console.log(`🏗️ Creating new map with custom image for guild ${guildId} - dimensions: ${mapColumns}x${mapRows}, emoji: ${mapEmoji}`);
           const { createMapGridWithCustomImage } = await import('./mapExplorer.js');
-          result = await createMapGridWithCustomImage(guild, userId, mapUrl, mapColumns, mapRows);
+          result = await createMapGridWithCustomImage(guild, userId, mapUrl, mapColumns, mapRows, mapEmoji);
         }
         
         // Check if map creation/update failed
