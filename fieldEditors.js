@@ -769,7 +769,7 @@ function createMapCellFieldModal(entityId, fieldGroupId, group, currentValues) {
                         {
                             type: 18, // Label
                             label: 'Location Title',
-                            description: 'The name shown at the top of this location.',
+                            description: 'Location name shown in the channel/anchor. Can be anything - coordinate can be deleted if desired.',
                             component: {
                                 type: 4, // Text Input
                                 custom_id: 'title',
