@@ -9134,6 +9134,90 @@ To fix this:
         }
       })(req, res, client);
 
+    } else if (custom_id === 'bulk_rename_map_channels') {
+      // Bulk rename map channels to new 📍 format
+      return ButtonHandlerFactory.create({
+        id: 'bulk_rename_map_channels',
+        updateMessage: true,
+        handler: async (context) => {
+          const { loadSafariContent, deriveChannelName } = await import('./mapExplorer.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const mapData = safariData[context.guildId]?.maps?.[activeMapId];
+          const coordinates = mapData?.coordinates || {};
+
+          const coordCount = Object.keys(coordinates).length;
+          if (!coordCount) {
+            return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
+              { type: 10, content: '## ❌ No Active Map\n\nNo active map found to rename channels for.' },
+              { type: 14 },
+              { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: "← Reece's Stuff", style: 2 }] }
+            ]}]};
+          }
+
+          const mapName = mapData.name || 'Unknown Map';
+          const estMinutes = Math.ceil(coordCount * 5.5 / 60);
+
+          return { components: [{ type: 17, accent_color: 0xf39c12, components: [
+            { type: 10, content: `## ⚠️ Bulk Channel Rename\n\n**Map**: ${mapName}\n**Channels**: ${coordCount}\n**Estimated time**: ~${estMinutes} minutes\n\nRenames all map channels to the new format:\n\`a1\` → \`📍a1\`\n\`d3\` → \`📍d3-kansas\` (if custom title set)\n\nChannels already in the correct format will be skipped.\n\n**This is cosmetic only** — no data will be modified.` },
+            { type: 14 },
+            { type: 1, components: [
+              { type: 2, custom_id: 'reeces_stuff', label: 'Cancel', style: 2, emoji: { name: '❌' } },
+              { type: 2, custom_id: 'bulk_rename_map_channels_confirm', label: 'Start Rename', style: 4, emoji: { name: '📍' } }
+            ]}
+          ]}]};
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'bulk_rename_map_channels_confirm') {
+      // Execute bulk channel rename
+      return ButtonHandlerFactory.create({
+        id: 'bulk_rename_map_channels_confirm',
+        deferred: true,
+        updateMessage: true,
+        handler: async (context) => {
+          const { loadSafariContent, deriveChannelName } = await import('./mapExplorer.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const coordinates = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates || {};
+
+          let renamed = 0, skipped = 0, failed = 0;
+          const total = Object.keys(coordinates).length;
+
+          for (const [coord, data] of Object.entries(coordinates)) {
+            if (!data.channelId) { skipped++; continue; }
+
+            const newName = deriveChannelName(coord, data.baseContent?.title, data.emoji);
+
+            try {
+              const channel = await context.client.channels.fetch(data.channelId);
+              if (!channel) { skipped++; continue; }
+              if (channel.name === newName) { skipped++; continue; }
+
+              await channel.setName(newName);
+              renamed++;
+              console.log(`📍 Bulk rename: ${coord} → ${newName} (${renamed + skipped + failed}/${total})`);
+
+              await new Promise(resolve => setTimeout(resolve, 5500));
+            } catch (e) {
+              failed++;
+              console.warn(`⚠️ Bulk rename failed for ${coord}: ${e.message}`);
+              if (e.status === 429 || e.httpStatus === 429) {
+                const retryAfter = e.retryAfter || 30;
+                console.log(`⏳ Rate limited, waiting ${retryAfter}s...`);
+                await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+              }
+            }
+          }
+
+          return { components: [{ type: 17, accent_color: renamed > 0 ? 0x2ecc71 : 0xe74c3c, components: [
+            { type: 10, content: `## 📍 Bulk Rename Complete\n\n**Renamed**: ${renamed} channels\n**Skipped**: ${skipped} (already correct or missing)\n**Failed**: ${failed}\n**Total**: ${total}` },
+            { type: 14 },
+            { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: "← Reece's Stuff", style: 2 }] }
+          ]}]};
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'reeces_radio_mockup') {
       // Checkbox Group PoC (Mockup) — tests Type 22 checkbox group in modal. See poc/checkboxGroupPoc.js
       return ButtonHandlerFactory.create({
@@ -47378,6 +47462,26 @@ Your server is now ready for Tycoons gameplay!`;
             await safeUpdateAnchorMessage(guildId, entityId, client);
           } catch (error) {
             console.error('Error updating anchor message:', error);
+          }
+
+          // Auto-rename channel to match title + emoji (only on info edits)
+          if (fieldGroup === 'info') {
+            try {
+              const { loadSafariContent: loadSC, deriveChannelName } = await import('./mapExplorer.js');
+              const freshData = await loadSC();
+              const activeMapId = freshData[guildId]?.maps?.active;
+              const coordData = freshData[guildId]?.maps?.[activeMapId]?.coordinates?.[entityId];
+              if (coordData?.channelId) {
+                const newName = deriveChannelName(entityId, coordData.baseContent?.title, coordData.emoji);
+                const channel = await client.channels.fetch(coordData.channelId);
+                if (channel && channel.name !== newName) {
+                  await channel.setName(newName);
+                  console.log(`📍 Renamed channel ${entityId}: → ${newName}`);
+                }
+              }
+            } catch (renameError) {
+              console.warn(`⚠️ Channel rename for ${entityId}: ${renameError.message}`);
+            }
           }
         }
         

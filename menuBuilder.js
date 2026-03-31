@@ -163,6 +163,13 @@ export class MenuBuilder {
           { type: 2, custom_id: 'export_channel', label: 'Export Channel', style: 2, emoji: { name: '📥' } }
         ]
       },
+      { type: 10, content: `### \`\`\`🗺️ Map Tools\`\`\`` },
+      {
+        type: 1,
+        components: [
+          { type: 2, custom_id: 'bulk_rename_map_channels', label: 'Rename Channels', style: 2, emoji: { name: '📍' } }
+        ]
+      },
       { type: 10, content: `### \`\`\`📼 Legacy\`\`\`` },
       {
         type: 1,

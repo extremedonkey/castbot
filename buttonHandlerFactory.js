@@ -440,6 +440,22 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'seasons'
   },
+  'bulk_rename_map_channels': {
+    label: 'Rename Channels',
+    description: 'Bulk rename map channels to new 📍 format',
+    emoji: '📍',
+    style: 'Secondary',
+    parent: 'reeces_stuff',
+    category: 'admin'
+  },
+  'bulk_rename_map_channels_confirm': {
+    label: 'Confirm Rename',
+    description: 'Execute bulk channel rename',
+    emoji: '📍',
+    style: 'Danger',
+    parent: 'bulk_rename_map_channels',
+    category: 'admin'
+  },
   'reeces_radio_mockup': {
     label: 'Radio PoC (Mockup)',
     description: 'UI mockup: Radio Group (Type 21) in modal with 10 options. Not a real feature.',

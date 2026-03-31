@@ -578,8 +578,9 @@ async function createMapGrid(guild, userId) {
     for (const coord of coordinates) {
       mapData.coordinates[coord] = {
         channelId: channels[coord] || null,
+        emoji: '📍',
         baseContent: {
-          title: `📍 Location ${coord}`,
+          title: `📍 ${coord}`,
           description: `You are at grid location ${coord}. This area hasn't been configured yet.`,
           image: null,
           clues: []
@@ -1530,7 +1531,7 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
       
       try {
         const channel = await guild.channels.create({
-          name: coord.toLowerCase(),
+          name: `📍${coord.toLowerCase()}`,
           type: ChannelType.GuildText,
           parent: currentCategory.id,
           topic: `Map location ${coord} - Use buttons to explore!`,
@@ -1544,8 +1545,8 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
         
         channels[coord] = channel.id;
         channelsInCurrentCategory++;
-        console.log(`Created channel #${coord.toLowerCase()} (${i + 1}/${coordinates.length})`);
-        
+        console.log(`Created channel #📍${coord.toLowerCase()} (${i + 1}/${coordinates.length})`);
+
         if ((i + 1) % 5 === 0 || i === coordinates.length - 1) {
           progressMessages.push(`📍 Progress: ${i + 1}/${coordinates.length} channels created`);
         }
@@ -1593,8 +1594,9 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
     for (const coord of coordinates) {
       mapData.coordinates[coord] = {
         channelId: channels[coord] || null,
+        emoji: '📍',
         baseContent: {
-          title: `📍 Location ${coord}`,
+          title: `📍 ${coord}`,
           description: `You are at grid location ${coord}. This area hasn't been configured yet.`,
           image: null,
           clues: []
@@ -2455,6 +2457,35 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     flags: (1 << 15), // IS_COMPONENTS_V2 flag
     components: [mapExplorerContainer]
   };
+}
+
+/**
+ * Derive Discord channel name from coordinate, title, and emoji.
+ * Produces names like: 📍a1, 📍d3-kansas, 🏰g7-castle
+ * @param {string} coord - Grid coordinate (e.g., "D3")
+ * @param {string} title - Location title (e.g., "📍 D3 | Kansas")
+ * @param {string} emoji - Location emoji (e.g., "📍")
+ * @returns {string} Channel name
+ */
+export function deriveChannelName(coord, title, emoji) {
+  const effectiveEmoji = emoji || '📍';
+  const prefix = `${effectiveEmoji}${coord.toLowerCase()}`;
+
+  if (!title) return prefix;
+
+  // Strip leading emoji, coordinate, and pipe from title to get custom part
+  const cleanTitle = title
+    .replace(/^[\p{Emoji_Presentation}\p{Emoji}\uFE0F]+\s*/gu, '')
+    .replace(new RegExp(`^${coord}\\s*`, 'i'), '')
+    .replace(/^\|\s*/, '')
+    .replace(/[^a-zA-Z0-9\s-]/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .substring(0, 80);
+
+  return cleanTitle ? `${prefix}-${cleanTitle}` : prefix;
 }
 
 // Export functions

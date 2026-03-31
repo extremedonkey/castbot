@@ -652,6 +652,11 @@ export function parseModalSubmission(modalData, fieldGroupId) {
                     }
                     break;
 
+                case 'emoji':
+                    // Store raw emoji string; empty = default
+                    fields[fieldId] = value?.trim() || '📍';
+                    break;
+
                 default:
                     // Store as-is for text fields
                     fields[fieldId] = value || '';
@@ -723,6 +728,9 @@ export function validateFields(fields, entityType) {
             }
             if (fields.image && fields.image.length > 500) {
                 errors.push('Image URL must be 500 characters or less');
+            }
+            if (fields.emoji && fields.emoji.length > 50) {
+                errors.push('Emoji must be 50 characters or less');
             }
             if (fields.buttons && typeof fields.buttons === 'string') {
                 // Parse buttons field as comma-separated list
@@ -796,6 +804,19 @@ function createMapCellFieldModal(entityId, fieldGroupId, group, currentValues) {
                                 required: false,
                                 max_length: 500,
                                 placeholder: 'https://cdn.discordapp.com/attachments/...'
+                            }
+                        },
+                        {
+                            type: 18, // Label
+                            label: 'Location Emoji',
+                            description: 'Emoji for channel name and navigation. Default: 📍',
+                            component: {
+                                type: 4, // Text Input
+                                custom_id: 'emoji',
+                                style: 1, // Short
+                                value: currentValues.emoji || '📍',
+                                required: false,
+                                max_length: 50
                             }
                         }
                     ]
