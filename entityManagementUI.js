@@ -805,7 +805,9 @@ function getEntityDescription(entity, entityType) {
             break;
         case 'map_cell':
             if (entity.baseContent?.title) {
-                parts.push(`Title: ${entity.baseContent.title.replace('📍 ', '')}`);
+                // Strip any leading emoji + space from title for description
+                const cleanTitle = entity.baseContent.title.replace(/^[\p{Emoji_Presentation}\p{Emoji}\uFE0F]+\s*/gu, '').trim();
+                if (cleanTitle) parts.push(cleanTitle);
             }
             if (entity.buttons?.length > 0) {
                 parts.push(`${entity.buttons.length} custom actions`);
