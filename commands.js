@@ -44,8 +44,8 @@ const MENU_COMMAND = {
 // Context menu commands (right-click message → Apps)
 // Type 3 = MESSAGE context menu. NOT slash commands.
 // Spec: docs/01-RaP/0925_20260403_SnowflakeTimer_Analysis.md
-const TIMER_START_COMMAND = { name: '❄️ Timer Start', type: 3 };
-const TIMER_END_COMMAND = { name: '❄️ Timer End', type: 3 };
+const TIMER_START_COMMAND = { name: '❄️ Start Timer', type: 3 };
+const TIMER_END_COMMAND = { name: '❄️ Stop Timer', type: 3 };
 const SNOWFLAKE_INFO_COMMAND = { name: '❄️ Snowflake Info', type: 3 };
 
 const ALL_COMMANDS = [
