@@ -169,6 +169,20 @@ export function buildChallengeActionMockup() {
   // ── Action count summary ──
   components.push({ type: 10, content: `-# ⚡ ${totalActions} action${totalActions === 1 ? '' : 's'} linked` });
 
+  // ── Challenge buttons (same as buildChallengeScreen lines 207-218, minus ⚡ Actions) ──
+  components.push(
+    { type: 14 },
+    { type: 1, components: [
+      { type: 2, custom_id: 'camock_noop_edit', label: 'Edit', style: 2, emoji: { name: '✏️' } },
+      { type: 2, custom_id: 'camock_noop_round', label: 'Round', style: 2, emoji: { name: '🔥' } },
+      { type: 2, custom_id: 'camock_noop_post', label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
+    ]},
+    { type: 1, components: [
+      { type: 2, custom_id: 'camock_noop_publish', label: 'Publish', style: 2, emoji: { name: '📤' } },
+      { type: 2, custom_id: 'camock_noop_delete', label: 'Delete', style: 4, emoji: { name: '🗑️' } },
+    ]},
+  );
+
   // ── Action Categories ──
   components.push({ type: 14 });
   components.push(...buildPlayerAllSection(STUB_ACTIONS.playerAll));
@@ -186,7 +200,8 @@ export function buildChallengeActionMockup() {
   components.push(
     { type: 14 },
     { type: 1, components: [
-      { type: 2, custom_id: 'camock_back', label: '← Back to Challenge', style: 2 },
+      { type: 2, custom_id: 'camock_back', label: '← Menu', style: 2 },
+      { type: 2, custom_id: 'camock_noop_library', label: 'Challenge Library', style: 2, emoji: { name: '📚' } },
     ]},
   );
 
@@ -275,6 +290,11 @@ export async function handleChallengeActionMockup(context) {
   }
 
   if (customId === 'camock_edit' || customId === 'camock_unlink' || customId === 'camock_delete') {
+    return buildChallengeActionMockup();
+  }
+
+  // Noop buttons (Edit, Round, Post, Publish, Delete, Library) — just refresh
+  if (customId.startsWith('camock_noop_')) {
     return buildChallengeActionMockup();
   }
 
