@@ -110,7 +110,7 @@ export async function buildCustomReactsListUI(guildId) {
           {
             label: `${panel.name} (${mappingCount} role${mappingCount !== 1 ? 's' : ''})`,
             value: 'summary',
-            emoji: { name: emoji },
+            emoji: resolveEmoji(emoji, '🧩'),
             default: true
           },
           { label: 'Edit Panel', value: 'edit', emoji: { name: '✏️' } },

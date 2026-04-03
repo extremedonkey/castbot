@@ -311,7 +311,7 @@ async function buildCardSelect(activeButton, targetMember, playerData, safariDat
           label: (id === 'default' ? 'Default Castlist' : (castlist.name || id)).slice(0, 100),
           value: id.slice(0, 100),
           description: id === 'default' ? 'Main castlist' : (castlist.isVirtual ? 'Legacy castlist' : 'Custom castlist'),
-          emoji: { name: typeof emoji === 'string' ? emoji : '📋' }
+          emoji: resolveEmoji(typeof emoji === 'string' ? emoji : null, '📋')
         });
         if (options.length >= 23) break;
       }
