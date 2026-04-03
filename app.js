@@ -28589,6 +28589,7 @@ Your server is now ready for Tycoons gameplay!`;
             const row1Groups = groupEntries.slice(0, 3);
             const row2Groups = groupEntries.slice(3);
 
+            const { resolveEmoji: resolveGroupEmoji } = await import('./utils/emojiUtils.js');
             containerComponents.push({
               type: 1,  // ActionRow
               components: row1Groups.map(([groupId, group]) => ({
@@ -28596,7 +28597,7 @@ Your server is now ready for Tycoons gameplay!`;
                 custom_id: `entity_field_group_item_${entityId}_${groupId}`,
                 label: group.label,
                 style: groupId === 'stats' ? 1 : 2,  // Primary if active
-                emoji: { name: group.emoji }
+                emoji: resolveGroupEmoji(group.emoji, '📋')
               }))
             });
 
@@ -28607,7 +28608,7 @@ Your server is now ready for Tycoons gameplay!`;
                 custom_id: `entity_field_group_item_${entityId}_${groupId}`,
                 label: group.label,
                 style: groupId === 'stats' ? 1 : 2,  // Primary if active
-                emoji: { name: group.emoji }
+                emoji: resolveGroupEmoji(group.emoji, '📋')
               }))
             });
 
