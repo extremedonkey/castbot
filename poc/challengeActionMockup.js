@@ -2,7 +2,7 @@
  * Challenge Action Categories — UI Mockup (PoC)
  *
  * Static mockup of the Phase 1B categorized action manager.
- * Uses stub data only — no real challenge or action loading.
+ * Based on real challenge: Hurley's Lotto Sweepstakes (challenge_a38ccad9c8e3)
  * Entry: Reece's Stuff → Experimental → "Chal Actions"
  *
  * DELETE THIS FILE when the real UI is built in challengeManager.js.
@@ -12,166 +12,172 @@ import { countComponents } from '../utils.js';
 import { CATEGORY_TYPES } from '../challengeActionCreate.js';
 
 // ═══════════════════════════════════════════════════════════
-// Stub Data
+// Stub Data — based on real Hurley's Lotto Sweepstakes
 // ═══════════════════════════════════════════════════════════
 
 const STUB_CHALLENGE = {
-  title: 'Spreadsheet Art',
-  description: 'Each player receives a unique Google Sheets link.\nCreate your masterpiece within 48 hours!',
-  accentColor: 0x2ECC71,
+  title: '🎟️Hurleys Lotto Sweepstakes 🎟️',
+  accentColor: 65280, // bright green
   creationHost: '391415444084490240',
+  image: 'https://cdn.discordapp.com/attachments/1337754151655833694/1482701225597341837/image7215695x.png',
 };
 
+// Mapping the ?commands from the challenge description to action categories:
+// ?buy-lottery-ticket 3  → Player Action All (everyone uses same command)
+// ?done                  → Player Action All (everyone uses same command)
+// Host: reveal results   → Host Action (host triggers at end of challenge)
 const STUB_ACTIONS = {
-  playerAll: [],
-  playerIndividual: {
-    '391415444084490240': { id: 'sheet_reece_123456', name: 'Spreadsheet Art (Reece)' },
-    '123456789012345678': { id: 'sheet_sarah_654321', name: 'Spreadsheet Art (Sarah)' },
-  },
+  playerAll: [
+    { id: 'buy_lottery_ticket_734262', name: '🎰 Buy Lottery Tickets', emoji: '🎰', trigger: 'button_input', description: 'Replaces ?buy-lottery-ticket — player enters ticket count' },
+    { id: 'done_challenge_889123', name: '✋ Done', emoji: '✋', trigger: 'button', description: 'Replaces ?done — player ends their challenge run' },
+  ],
+  playerIndividual: {},
   tribe: {},
-  host: {
-    'host_results_789': { id: 'host_results_789', name: 'Post Results' },
-  },
+  host: [
+    { id: 'reveal_results_991234', name: '📊 Reveal Results', emoji: '📊', trigger: 'button', description: 'Post final earnings per player to challenge channel' },
+  ],
 };
 
-const STUB_PLAYERS = {
-  '391415444084490240': 'Reece',
-  '123456789012345678': 'Sarah',
-  '111111111111111111': 'Tom',
-  '222222222222222222': 'Alex',
-  '333333333333333333': 'Jordan',
-  '444444444444444444': 'Casey',
-};
+// 18 players (realistic season size)
+const STUB_PLAYERS = [
+  'Reece', 'Sarah', 'Tom', 'Alex', 'Jordan', 'Casey',
+  'Morgan', 'Taylor', 'Riley', 'Quinn', 'Avery', 'Parker',
+  'Hayden', 'Drew', 'Sage', 'Rowan', 'Blake', 'Cameron',
+];
 
 // ═══════════════════════════════════════════════════════════
-// Main Mockup Screen — Categorized Action Manager
+// Main Mockup — Categorized Action Manager
 // ═══════════════════════════════════════════════════════════
 
-function buildCategorySection(categoryKey, meta, data) {
-  const components = [];
+function buildPlayerAllSection(actions) {
+  const triggerLabels = { button: '🖱️ Button', button_input: '⌨️ User Input', button_modal: '🔐 Secret Code' };
+  const options = [
+    { label: '➕ Create New', value: 'create_playerAll', emoji: { name: '➕' }, description: 'Same action for all players (e.g., ?buy-lottery-ticket)' },
+  ];
+  for (const a of actions) {
+    options.push({
+      label: `✅ ${a.name}`,
+      value: `manage_pa_${a.id}`,
+      description: `${triggerLabels[a.trigger] || '🖱️ Button'} — select to manage`,
+      emoji: { name: a.emoji },
+    });
+  }
+  return [
+    { type: 10, content: `### \`\`\`${CATEGORY_TYPES.playerAll.emoji} ${CATEGORY_TYPES.playerAll.label}\`\`\`\n-# ${CATEGORY_TYPES.playerAll.description}` },
+    { type: 1, components: [{
+      type: 3,
+      custom_id: 'camock_select_playerAll',
+      placeholder: actions.length > 0 ? `${actions.length} action${actions.length === 1 ? '' : 's'} linked` : 'No actions — select to create...',
+      options,
+    }]},
+  ];
+}
 
-  if (categoryKey === 'playerAll') {
-    const linked = data.playerAll || [];
-    const options = [
-      { label: '➕ Create New', value: 'create_playerAll', emoji: { name: '➕' }, description: 'Create a new action for all players' },
-    ];
-    if (linked.length === 0) {
-      options.push({ label: 'No actions linked', value: '_noop', description: 'Use ➕ Create New to add one' });
-    }
-    components.push(
-      { type: 10, content: `### \`\`\`${meta.emoji} ${meta.label}\`\`\`\n-# ${meta.description}` },
-      { type: 1, components: [{
-        type: 3,
-        custom_id: 'camock_select_playerAll',
-        placeholder: linked.length > 0 ? `${linked.length} action linked` : 'No actions — select to create...',
-        options,
-      }]},
-    );
+function buildPlayerIndividualSection(assignments, totalPlayers) {
+  const assignedCount = Object.keys(assignments).length;
+  const options = [
+    { label: '➕ Create for Players', value: 'create_playerIndividual', emoji: { name: '➕' }, description: 'Bulk-create individual actions for selected players' },
+  ];
+
+  // This challenge doesn't use individual actions — show empty state
+  if (assignedCount === 0) {
+    options.push({
+      label: 'No individual actions',
+      value: '_noop_ind',
+      description: 'Not needed for this challenge type',
+    });
   }
 
-  if (categoryKey === 'playerIndividual') {
-    const assignments = data.playerIndividual || {};
-    const assignedCount = Object.keys(assignments).length;
-    const totalPlayers = Object.keys(STUB_PLAYERS).length;
+  return [
+    { type: 10, content: `### \`\`\`${CATEGORY_TYPES.playerIndividual.emoji} ${CATEGORY_TYPES.playerIndividual.label}\`\`\`\n-# ${CATEGORY_TYPES.playerIndividual.description}` },
+    { type: 1, components: [{
+      type: 3,
+      custom_id: 'camock_select_playerIndividual',
+      placeholder: assignedCount > 0 ? `${assignedCount} of ${totalPlayers} assigned` : 'Not used — select to create if needed...',
+      options,
+    }]},
+  ];
+}
 
-    const options = [
-      { label: '➕ Create for Players', value: 'create_playerIndividual', emoji: { name: '➕' }, description: 'Bulk-create actions for selected players' },
-    ];
-
-    // Show assigned players
-    for (const [userId, actionData] of Object.entries(assignments)) {
-      const name = STUB_PLAYERS[userId] || `<@${userId}>`;
-      options.push({
-        label: `✅ ${name}`,
-        value: `manage_${userId}`,
-        description: `${actionData.name} — select to manage`,
-        emoji: { name: '👤' },
-      });
-    }
-
-    // Show unassigned players
-    for (const [userId, name] of Object.entries(STUB_PLAYERS)) {
-      if (assignments[userId]) continue;
-      if (options.length >= 25) break;
-      options.push({
-        label: `⬜ ${name}`,
-        value: `assign_${userId}`,
-        description: 'No action assigned',
-        emoji: { name: '👤' },
-      });
-    }
-
-    components.push(
-      { type: 10, content: `### \`\`\`${meta.emoji} ${meta.label}\`\`\`\n-# ${meta.description}\n-# **${assignedCount}** of ${totalPlayers} players assigned` },
-      { type: 1, components: [{
-        type: 3,
-        custom_id: 'camock_select_playerIndividual',
-        placeholder: assignedCount > 0 ? `${assignedCount} of ${totalPlayers} players assigned` : 'No players assigned — select to create...',
-        options,
-      }]},
-    );
+function buildTribeSection(assignments) {
+  const assignedCount = Object.keys(assignments).length;
+  const options = [
+    { label: '➕ Create for Tribes', value: 'create_tribe', emoji: { name: '➕' }, description: 'Create actions for selected tribe roles' },
+  ];
+  if (assignedCount === 0) {
+    options.push({
+      label: 'No tribe actions',
+      value: '_noop_tribe',
+      description: 'Not needed for this challenge type',
+    });
   }
+  return [
+    { type: 10, content: `### \`\`\`${CATEGORY_TYPES.tribe.emoji} ${CATEGORY_TYPES.tribe.label}\`\`\`\n-# ${CATEGORY_TYPES.tribe.description}` },
+    { type: 1, components: [{
+      type: 3,
+      custom_id: 'camock_select_tribe',
+      placeholder: 'Not used — select to create if needed...',
+      options,
+    }]},
+  ];
+}
 
-  if (categoryKey === 'tribe') {
-    const assignments = data.tribe || {};
-    const options = [
-      { label: '➕ Create for Tribes', value: 'create_tribe', emoji: { name: '➕' }, description: 'Create actions for selected tribe roles' },
-    ];
-    if (Object.keys(assignments).length === 0) {
-      options.push({ label: 'No tribe actions', value: '_noop_tribe', description: 'Use ➕ to assign tribe roles' });
-    }
-    components.push(
-      { type: 10, content: `### \`\`\`${meta.emoji} ${meta.label}\`\`\`\n-# ${meta.description}` },
-      { type: 1, components: [{
-        type: 3,
-        custom_id: 'camock_select_tribe',
-        placeholder: 'No tribes assigned — select to create...',
-        options,
-      }]},
-    );
+function buildHostSection(actions) {
+  const options = [
+    { label: '➕ Create New', value: 'create_host', emoji: { name: '➕' }, description: 'Automate host tasks (e.g., reveal results)' },
+  ];
+  for (const a of actions) {
+    options.push({
+      label: `✅ ${a.name}`,
+      value: `manage_host_${a.id}`,
+      description: `${a.description || 'Select to manage'}`,
+      emoji: { name: a.emoji },
+    });
   }
-
-  if (categoryKey === 'host') {
-    const hostActions = Object.values(data.host || {});
-    const options = [
-      { label: '➕ Create New', value: 'create_host', emoji: { name: '➕' }, description: 'Create a host automation action' },
-    ];
-    for (const action of hostActions) {
-      options.push({
-        label: `✅ ${action.name}`,
-        value: `manage_host_${action.id}`,
-        description: 'Select to manage (edit / unlink / delete)',
-        emoji: { name: '🔧' },
-      });
-    }
-    components.push(
-      { type: 10, content: `### \`\`\`${meta.emoji} ${meta.label}\`\`\`\n-# ${meta.description}` },
-      { type: 1, components: [{
-        type: 3,
-        custom_id: 'camock_select_host',
-        placeholder: hostActions.length > 0 ? `${hostActions.length} host action${hostActions.length === 1 ? '' : 's'}` : 'No actions — select to create...',
-        options,
-      }]},
-    );
-  }
-
-  return components;
+  return [
+    { type: 10, content: `### \`\`\`${CATEGORY_TYPES.host.emoji} ${CATEGORY_TYPES.host.label}\`\`\`\n-# ${CATEGORY_TYPES.host.description}` },
+    { type: 1, components: [{
+      type: 3,
+      custom_id: 'camock_select_host',
+      placeholder: actions.length > 0 ? `${actions.length} host action${actions.length === 1 ? '' : 's'}` : 'No actions — select to create...',
+      options,
+    }]},
+  ];
 }
 
 export function buildChallengeActionMockup() {
   const ch = STUB_CHALLENGE;
-  const components = [];
+  const totalActions = STUB_ACTIONS.playerAll.length + STUB_ACTIONS.host.length;
 
-  // Header
-  components.push(
-    { type: 10, content: `## ⚡ Challenge Actions\n-# **${ch.title}**` },
-  );
+  const components = [
+    // Header — shows challenge context
+    { type: 10, content: `## ⚡ Challenge Actions\n-# **${ch.title}**\n-# ${totalActions} action${totalActions === 1 ? '' : 's'} linked · Host: <@${ch.creationHost}>` },
+  ];
 
-  // Category sections
-  for (const [key, meta] of Object.entries(CATEGORY_TYPES)) {
-    components.push({ type: 14 });
-    components.push(...buildCategorySection(key, meta, { ...STUB_ACTIONS }));
+  // Challenge image thumbnail
+  if (ch.image) {
+    components.push({
+      type: 9, // Section
+      components: [{ type: 10, content: `-# Manage the actions players and hosts use during this challenge. Actions replace Carlbot \`?commands\` with interactive buttons.` }],
+      accessory: { type: 11, media: { url: ch.image } },
+    });
   }
+
+  // Player All — this challenge's main actions
+  components.push({ type: 14 });
+  components.push(...buildPlayerAllSection(STUB_ACTIONS.playerAll));
+
+  // Individual — empty for this challenge type
+  components.push({ type: 14 });
+  components.push(...buildPlayerIndividualSection(STUB_ACTIONS.playerIndividual, STUB_PLAYERS.length));
+
+  // Tribe — empty for this challenge type
+  components.push({ type: 14 });
+  components.push(...buildTribeSection(STUB_ACTIONS.tribe));
+
+  // Host actions
+  components.push({ type: 14 });
+  components.push(...buildHostSection(STUB_ACTIONS.host));
 
   // Navigation
   components.push(
@@ -194,18 +200,19 @@ export function buildChallengeActionMockup() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// Manage Action Sub-Screen (when selecting an assigned player/host action)
+// Manage Action Sub-Screen
 // ═══════════════════════════════════════════════════════════
 
-export function buildManageActionMockup(actionName = 'Spreadsheet Art (Reece)', category = 'playerIndividual') {
-  const categoryMeta = CATEGORY_TYPES[category] || CATEGORY_TYPES.playerAll;
+function buildManageScreen(actionName, emoji, category, description) {
+  const categoryMeta = CATEGORY_TYPES[category];
 
   const container = {
     type: 17,
     accent_color: STUB_CHALLENGE.accentColor,
     components: [
-      { type: 10, content: `## ⚡ Manage Action\n-# ${categoryMeta.emoji} ${categoryMeta.label}\n\n**${actionName}**` },
-      { type: 10, content: `-# This is a \`display_text\` action that shows content when a player clicks the button.` },
+      { type: 10, content: `## ${emoji} ${actionName}\n-# ${categoryMeta.emoji} ${categoryMeta.label} · **${STUB_CHALLENGE.title}**` },
+      { type: 14 },
+      { type: 10, content: description },
       { type: 14 },
       { type: 1, components: [
         { type: 2, custom_id: 'camock_edit', label: 'Edit in Action Editor', style: 1, emoji: { name: '✏️' } },
@@ -234,32 +241,41 @@ export async function handleChallengeActionMockup(context) {
     return buildChallengeActionMockup();
   }
 
-  // Select handlers — all route back to main or show manage screen
   if (customId.startsWith('camock_select_')) {
     const selected = values?.[0];
-    if (selected?.startsWith('manage_')) {
-      const playerName = Object.values(STUB_PLAYERS).find((_, i) =>
-        Object.keys(STUB_PLAYERS)[i] === selected.replace('manage_', '')
-      ) || 'Unknown';
-      return buildManageActionMockup(`Spreadsheet Art (${playerName})`, 'playerIndividual');
+
+    // Player All action management
+    if (selected === 'manage_pa_buy_lottery_ticket_734262') {
+      return buildManageScreen(
+        '🎰 Buy Lottery Tickets', '🎰', 'playerAll',
+        '⌨️ **User Input** trigger — player clicks, enters number of tickets\n\n**Outcomes:**\n1. `give_currency` — deduct ticket cost ($100 × count)\n2. `random_outcome` — lottery result (win multiplier / $0 / lose all)\n3. `display_text` — show result and running balance\n\n-# Replaces `?buy-lottery-ticket 3`',
+      );
     }
-    if (selected?.startsWith('manage_host_')) {
-      return buildManageActionMockup('Post Results', 'host');
+    if (selected === 'manage_pa_done_challenge_889123') {
+      return buildManageScreen(
+        '✋ Done', '✋', 'playerAll',
+        '🖱️ **Button** trigger — player clicks to end their run\n\n**Outcomes:**\n1. `display_text` — confirm challenge ended, show final balance\n2. `apply_cooldown` — prevent further ticket purchases\n\n-# Replaces `?done`',
+      );
     }
-    // Create/assign/noop — just refresh main screen
+
+    // Host action management
+    if (selected === 'manage_host_reveal_results_991234') {
+      return buildManageScreen(
+        '📊 Reveal Results', '📊', 'host',
+        '🖱️ **Button** trigger — host clicks to end the challenge\n\n**Outcomes:**\n1. `display_text` — post earnings leaderboard per player\n2. `display_text` — announce winning tribe\n\n-# Host-only: triggers in challenge channel',
+      );
+    }
+
     return buildChallengeActionMockup();
   }
 
-  // Back buttons
   if (customId === 'camock_back' || customId === 'camock_back_to_actions') {
     return buildChallengeActionMockup();
   }
 
-  // Edit/unlink/delete — show main screen (stub)
   if (customId === 'camock_edit' || customId === 'camock_unlink' || customId === 'camock_delete') {
     return buildChallengeActionMockup();
   }
 
-  // Fallback
   return buildChallengeActionMockup();
 }
