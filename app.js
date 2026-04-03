@@ -7421,12 +7421,12 @@ To fix this:
               components: [
                 {
                   type: 18, label: 'Start Message ID (timer begins)',
-                  description: 'The message marking the START of the timed action. You can also paste both IDs here separated by a space.',
+                  description: 'START of the timed event. Paste both IDs here separated by a space.',
                   component: { type: 4, custom_id: 'start_id', style: 1, max_length: 50, placeholder: 'e.g. 1234567890123456789', required: true }
                 },
                 {
                   type: 18, label: 'End Message ID (timer ends)',
-                  description: 'The message marking the END. Leave blank if you pasted both IDs above.',
+                  description: 'END of the timed event. Leave blank if both IDs pasted above.',
                   component: { type: 4, custom_id: 'end_id', style: 1, max_length: 25, placeholder: 'e.g. 9876543210987654321', required: false }
                 }
               ]
