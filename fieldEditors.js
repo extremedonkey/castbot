@@ -158,7 +158,7 @@ function createItemFieldModal(itemId, fieldGroupId, group, currentValues) {
 
             components.push({
                 type: 18, label: 'Item Emoji', description: 'Unicode emoji or custom Discord emoji code.',
-                component: { type: 4, custom_id: 'emoji', style: 1, value: emojiValue, placeholder: 'e.g. 🪣 or <:name:id>', required: false, max_length: 100 }
+                component: { type: 4, custom_id: 'emoji', style: 1, value: emojiValue, placeholder: 'e.g. 🛡️ or <:name:id>', required: false, max_length: 100 }
             });
 
             components.push({

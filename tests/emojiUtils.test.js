@@ -96,12 +96,12 @@ describe('resolveEmoji — component target', () => {
         assert.deepEqual(resolveEmoji('🏳️‍🌈'), { name: '🏳️‍🌈' });
     });
 
-    it('rejects malformed custom emoji (no closing bracket)', () => {
-        assert.deepEqual(resolveEmoji('<:broken:123'), { name: '<:broken:123' });
+    it('rejects malformed custom emoji (no closing bracket) — falls back', () => {
+        assert.deepEqual(resolveEmoji('<:broken:123', '📦'), { name: '📦' });
     });
 
-    it('rejects custom emoji with extra text', () => {
-        assert.deepEqual(resolveEmoji('<:test:123> extra'), { name: '<:test:123> extra' });
+    it('rejects custom emoji with extra text — falls back', () => {
+        assert.deepEqual(resolveEmoji('<:test:123> extra', '📦'), { name: '📦' });
     });
 });
 
