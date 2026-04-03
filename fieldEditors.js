@@ -81,7 +81,7 @@ function createItemFieldModal(itemId, fieldGroupId, group, currentValues) {
                 label: 'Item Emoji',
                 style: 1, // Short
                 value: currentValues.emoji || '',
-                placeholder: 'Enter an emoji for the item',
+                placeholder: 'e.g. 🛡️ or <:name:id>',
                 required: false,
                 max_length: 100
             }]
