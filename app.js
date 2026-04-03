@@ -7460,6 +7460,7 @@ To fix this:
       return ButtonHandlerFactory.create({
         id: 'timer_post',
         followUp: true,
+        ephemeral: false,
         handler: async () => {
           const { formatDuration } = await import('./timerUtils.js');
           const parts = custom_id.split('|');
