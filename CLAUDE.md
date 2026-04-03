@@ -448,6 +448,8 @@ General Workflow for new features:
 - **🥇 CASTLIST V3** → [docs/03-features/CastlistV3.md](docs/03-features/CastlistV3.md) - Castlist system overhaul
 - **📅 SEASONS** → [docs/concepts/SeasonLifecycle.md](docs/concepts/SeasonLifecycle.md) - Season lifecycle and integration
 
+- **❄️ SNOWFLAKE TIMER** → [docs/01-RaP/0925_20260403_SnowflakeTimer_Analysis.md](docs/01-RaP/0925_20260403_SnowflakeTimer_Analysis.md) - Snowflake timing utilities, context menus, calculator. Core: [timerUtils.js](timerUtils.js)
+
 **Safari Subsystems:**
 - **⚡ ACTIONS** (formerly Custom Actions) → [docs/03-features/SafariCustomActions.md](docs/03-features/SafariCustomActions.md) - Action system (triggers, outcomes, conditions). See [Terminology](docs/01-RaP/0956_20260308_ActionTerminology_Analysis.md) for naming conventions
 - **🏃 CHALLENGES** → [docs/03-features/Challenges.md](docs/03-features/Challenges.md) - Configurable challenge/rounds system (decoupled from map)
@@ -495,6 +497,7 @@ General Workflow for new features:
 - **🧵 THREADS** (future features) → [docs/standards/DiscordThreads.md](docs/standards/DiscordThreads.md) - Application discussions, Safari events, voting threads
 - **👤 USER RESOURCE** (player management) → [docs/standards/DiscordUserResource.md](docs/standards/DiscordUserResource.md) - Member fetching, player data, user validation
 - **😀 EMOJI RESOURCE** (custom emojis) → [docs/standards/DiscordEmojiResource.md](docs/standards/DiscordEmojiResource.md) - Emoji processing, validation, guild emoji management
+- **📋 APPLICATION COMMANDS** (context menus) → [docs/standards/DiscordApplicationCommands.md](docs/standards/DiscordApplicationCommands.md) - Slash commands, user/message context menus, registration, guild vs global
 
 **UI/UX Design:**
 - **📐 LEAN USER INTERFACE DESIGN** → [docs/ui/LeanUserInterfaceDesign.md](docs/ui/LeanUserInterfaceDesign.md)

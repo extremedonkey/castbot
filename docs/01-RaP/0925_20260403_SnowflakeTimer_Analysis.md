@@ -1,10 +1,12 @@
 # RaP 0925 — Snowflake Timer System
 
-**Status**: Analysis Complete — Ready for Implementation  
-**Date**: 2026-04-03  
-**Affects**: commands.js, app.js, new timerUtils.js, menuBuilder.js, challengeManager.js  
+**Status**: Implemented (Paradigms A + B live in dev, Paradigm C pending UX decisions)  
+**Date**: 2026-04-03 (analysis), 2026-04-04 (implementation)  
+**Affects**: commands.js, app.js, timerUtils.js, menuBuilder.js, buttonHandlerFactory.js  
 **Risk**: Low (additive feature, no existing code modified)  
-**Related**: [Challenges](../03-features/Challenges.md), [Challenge Analysis RaP 0945](0945_20260316_Challenges_Analysis.md)
+**Related**: [Challenges](../03-features/Challenges.md), [Challenge Analysis RaP 0945](0945_20260316_Challenges_Analysis.md), [Application Commands Reference](../standards/DiscordApplicationCommands.md)
+
+**Key Gotcha Discovered**: Discord strips the variation selector (U+FE0F) from emoji in command names. Code must match with bare emoji `❄` not `❄️`. See [DiscordApplicationCommands.md](../standards/DiscordApplicationCommands.md).
 
 ---
 
