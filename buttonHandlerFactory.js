@@ -4240,7 +4240,7 @@ export const BUTTON_REGISTRY = {
   // Snowflake Timer
   'snowflake_calculator': { label: 'Calculator', description: 'Calculate time between two message IDs', emoji: '⏱️', style: 'Secondary', category: 'timers', parent: 'setup_menu', requiresModal: true },
   'snowflake_lookup': { label: 'Lookup', description: 'Decode a message snowflake ID', emoji: '🔍', style: 'Secondary', category: 'timers', parent: 'setup_menu', requiresModal: true },
-  'timer_post': { label: 'Post Publicly', description: 'Post timer result as a public message', emoji: '📢', style: 'Secondary', category: 'timers' }
+  'timer_post_*': { label: 'Post Publicly', description: 'Post timer result as a public message', emoji: '📢', style: 'Secondary', category: 'timers' }
 };
 
 /**

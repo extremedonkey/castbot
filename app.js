@@ -2549,6 +2549,100 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       );
     }
 
+    // === CONTEXT MENU COMMANDS (data.type === 3 for MESSAGE) ===
+    // Dispatched before permission guard — open to all users
+    if (data.type === 3) {
+      const targetMessageId = data.target_id;
+      const targetMessage = data.resolved?.messages?.[targetMessageId];
+      const invokerId = req.body.member?.user?.id;
+      const channelId = req.body.channel_id;
+
+      if (name === '❄️ Timer Start') {
+        const { snowflakeToTimestamp, discordTimestamp, setPendingStart } = await import('./timerUtils.js');
+        const timestamp = snowflakeToTimestamp(targetMessageId);
+        const playerId = targetMessage?.author?.id;
+
+        setPendingStart(invokerId, playerId, targetMessageId, timestamp, channelId);
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+              type: 17, accent_color: 0x3498DB,
+              components: [
+                { type: 10, content: `### \`\`\`❄️ Timer Started\`\`\`` },
+                { type: 14 },
+                { type: 10, content: `**Player**: ${playerId ? `<@${playerId}>` : 'Unknown'}\n**Start**: ${discordTimestamp(timestamp, 'T')} (${discordTimestamp(timestamp, 'R')})\n\n-# Message ID: \`${targetMessageId}\`` }
+              ]
+            }]
+          }
+        });
+      } else if (name === '❄️ Timer End') {
+        const { snowflakeToTimestamp, discordTimestamp, timeBetweenSnowflakes, getPendingStart, clearPendingStart } = await import('./timerUtils.js');
+        const playerId = targetMessage?.author?.id;
+        const pending = getPendingStart(invokerId, playerId);
+
+        if (!pending) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+              components: [{
+                type: 17, accent_color: 0xe74c3c,
+                components: [
+                  { type: 10, content: `### \`\`\`❌ No Timer Found\`\`\`` },
+                  { type: 14 },
+                  { type: 10, content: `No pending start for ${playerId ? `<@${playerId}>` : 'this player'}.\n\n-# Right-click a message → Apps → **❄️ Timer Start** first.` }
+                ]
+              }]
+            }
+          });
+        }
+
+        const result = timeBetweenSnowflakes(pending.messageId, targetMessageId);
+        clearPendingStart(invokerId, playerId);
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+              type: 17, accent_color: 0x2ECC71,
+              components: [
+                { type: 10, content: `### \`\`\`❄️ Timer Result\`\`\`` },
+                { type: 14 },
+                { type: 10, content: `**Player**: <@${playerId}>\n**Duration**: **${result.formatted}**${result.reversed ? ' ⚠️ *reversed*' : ''}\n\n-# Start: ${discordTimestamp(result.startTime, 'T')} → End: ${discordTimestamp(result.endTime, 'T')}` },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, custom_id: `timer_post|${playerId}|${result.durationMs}`, label: 'Post Publicly', style: 2, emoji: { name: '📢' } }
+                ]}
+              ]
+            }]
+          }
+        });
+      } else if (name === '❄️ Snowflake Info') {
+        const { parseSnowflake, discordTimestamp } = await import('./timerUtils.js');
+        const parsed = parseSnowflake(targetMessageId);
+        const authorId = targetMessage?.author?.id;
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+              type: 17, accent_color: 0x5865F2,
+              components: [
+                { type: 10, content: `### \`\`\`❄️ Snowflake Info\`\`\`` },
+                { type: 14 },
+                { type: 10, content: `**Message ID**: \`${targetMessageId}\`\n**Author**: ${authorId ? `<@${authorId}>` : 'Unknown'}\n**Created**: ${discordTimestamp(parsed.timestamp, 'F')}\n**Relative**: ${discordTimestamp(parsed.timestamp, 'R')}\n\n-# Worker: ${parsed.workerId} | Process: ${parsed.processId} | Increment: ${parsed.increment}` }
+              ]
+            }]
+          }
+        });
+      }
+    }
+
     // Only castlist and menu are open commands - all others removed
     const readOnlyCommands = ['castlist', 'menu'];
     if (!readOnlyCommands.includes(name)) {
@@ -7329,6 +7423,82 @@ To fix this:
           };
         }
       })(req, res, client);
+    // ═══════════════ SNOWFLAKE TIMER ═══════════════
+
+    } else if (custom_id === 'snowflake_calculator') {
+      return ButtonHandlerFactory.create({
+        id: 'snowflake_calculator',
+        handler: async () => {
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: 'modal_snowflake_calc',
+              title: '❄️ Snowflake Calculator',
+              components: [
+                {
+                  type: 18, label: 'Start Message ID',
+                  description: 'Right-click a message → Copy Message ID',
+                  component: { type: 4, custom_id: 'start_id', style: 1, min_length: 17, max_length: 20, placeholder: 'e.g. 1234567890123456789', required: true }
+                },
+                {
+                  type: 18, label: 'End Message ID',
+                  description: 'The second message to compare against',
+                  component: { type: 4, custom_id: 'end_id', style: 1, min_length: 17, max_length: 20, placeholder: 'e.g. 9876543210987654321', required: true }
+                }
+              ]
+            }
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'snowflake_lookup') {
+      return ButtonHandlerFactory.create({
+        id: 'snowflake_lookup',
+        handler: async () => {
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: 'modal_snowflake_lookup',
+              title: '❄️ Snowflake Lookup',
+              components: [
+                {
+                  type: 18, label: 'Message ID',
+                  description: 'Right-click a message → Copy Message ID',
+                  component: { type: 4, custom_id: 'message_id', style: 1, min_length: 17, max_length: 20, placeholder: 'e.g. 1234567890123456789', required: true }
+                }
+              ]
+            }
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('timer_post|')) {
+      return ButtonHandlerFactory.create({
+        id: 'timer_post',
+        followUp: true,
+        handler: async () => {
+          const { formatDuration } = await import('./timerUtils.js');
+          const parts = custom_id.split('|');
+          const playerId = parts[1];
+          const durationMs = parseInt(parts[2]);
+          const formatted = formatDuration(durationMs);
+
+          return {
+            flags: (1 << 15),
+            components: [{
+              type: 17, accent_color: 0x2ECC71,
+              components: [
+                { type: 10, content: `### \`\`\`❄️ Timer Result\`\`\`` },
+                { type: 14 },
+                { type: 10, content: `**Player**: <@${playerId}>\n**Duration**: **${formatted}**` }
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+
+    // ═══════════════ REACTION ROLES ═══════════════
+
     } else if (custom_id === 'prod_manage_pronouns_timezones') {
       // Show reaction roles management menu
       return ButtonHandlerFactory.create({
