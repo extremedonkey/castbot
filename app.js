@@ -2635,7 +2635,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               components: [
                 { type: 10, content: `### \`\`\`❄️ Snowflake Info\`\`\`` },
                 { type: 14 },
-                { type: 10, content: `**Message ID**: \`${targetMessageId}\`\n**Author**: ${authorId ? `<@${authorId}>` : 'Unknown'}\n**Created**: ${discordTimestamp(parsed.timestamp, 'F')}\n**Relative**: ${discordTimestamp(parsed.timestamp, 'R')}\n\n-# Worker: ${parsed.workerId} | Process: ${parsed.processId} | Increment: ${parsed.increment}` }
+                { type: 10, content: `**Message ID**: \`${targetMessageId}\`\n**Author**: ${authorId ? `<@${authorId}>` : 'Unknown'}\n**Created**: ${discordTimestamp(parsed.timestamp, 'F')}\n**How long ago**: ${discordTimestamp(parsed.timestamp, 'R')}\n\n-# Worker: ${parsed.workerId} | Process: ${parsed.processId} | Increment: ${parsed.increment}` }
               ]
             }]
           }
@@ -49599,9 +49599,9 @@ Your server is now ready for Tycoons gameplay!`;
             components: [{
               type: 17, accent_color: 0x5865F2,
               components: [
-                { type: 10, content: `## ❄️ Snowflake | Message decode` },
+                { type: 10, content: `## ❄️ Snowflake | Message Details` },
                 { type: 14 },
-                { type: 10, content: `### \`\`\`🔍 Message Info\`\`\`\n**Created**: ${discordTimestamp(parsed.timestamp, 'F')}\n**Relative**: ${discordTimestamp(parsed.timestamp, 'R')}` },
+                { type: 10, content: `### \`\`\`🔍 Message Info\`\`\`\n**Created**: ${discordTimestamp(parsed.timestamp, 'F')}\n**How long ago**: ${discordTimestamp(parsed.timestamp, 'R')}` },
                 { type: 14 },
                 { type: 10, content: `-# Message ID: \`${messageId}\`\n-# Worker: ${parsed.workerId} | Process: ${parsed.processId} | Increment: ${parsed.increment}` },
                 { type: 14 },
