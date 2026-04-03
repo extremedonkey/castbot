@@ -6709,6 +6709,17 @@ To fix this:
         }
       })(req, res, client);
 
+    // ── Challenge Action Categories Mockup — self-contained in poc/challengeActionMockup.js ──
+    } else if (custom_id.startsWith('camock_')) {
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        updateMessage: true,
+        handler: async (context) => {
+          const { handleChallengeActionMockup } = await import('./poc/challengeActionMockup.js');
+          return await handleChallengeActionMockup(context);
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'attribute_management') {
       // Attribute Management Menu - displays server's custom attributes
       return ButtonHandlerFactory.create({

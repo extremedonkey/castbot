@@ -1087,6 +1087,16 @@ export const BUTTON_REGISTRY = {
     parent: 'reeces_stuff'
   },
 
+  // === CHALLENGE ACTION MOCKUP ===
+  'camock_*': {
+    label: 'Challenge Action Mockup',
+    description: 'Phase 1B challenge action categories UI mockup',
+    emoji: '⚡',
+    style: 'Secondary',
+    category: 'experimental',
+    parent: 'reeces_stuff'
+  },
+
   // === TRIBES (LEGACY) ===
   'prod_manage_tribes_legacy_debug': {
     label: 'Tribes (Legacy)',
