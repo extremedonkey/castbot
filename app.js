@@ -6808,7 +6808,7 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'attr_add_custom') {
-      // Open modal to create new custom attribute
+      // Open modal to create new custom attribute (Label components)
       return res.send({
         type: InteractionResponseType.MODAL,
         data: {
@@ -6816,69 +6816,50 @@ To fix this:
           title: '📊 Create Custom Attribute',
           components: [
             {
-              type: 1, // ActionRow
-              components: [{
-                type: 4, // Text Input
-                custom_id: 'attr_name',
-                label: 'Attribute Name',
-                style: 1, // Short
+              type: 18, label: 'Attribute Name',
+              component: {
+                type: 4, custom_id: 'attr_name', style: 1,
                 placeholder: 'e.g., Mana, Luck, Energy',
-                min_length: 1,
-                max_length: 30,
-                required: true
-              }]
+                min_length: 1, max_length: 30, required: true
+              }
             },
             {
-              type: 1,
-              components: [{
-                type: 4,
-                custom_id: 'attr_emoji',
-                label: 'Emoji',
-                style: 1,
-                placeholder: 'e.g., 🔮, 🍀, ⚡',
-                min_length: 1,
-                max_length: 10,
-                required: true
-              }]
+              type: 18, label: 'Emoji',
+              description: 'Unicode emoji (🔮) or custom server emoji (<:name:id>)',
+              component: {
+                type: 4, custom_id: 'attr_emoji', style: 1,
+                placeholder: 'e.g., 🔮 or <:custom:123456>',
+                min_length: 1, max_length: 50, required: true
+              }
             },
             {
-              type: 1,
-              components: [{
-                type: 4,
-                custom_id: 'attr_type',
-                label: 'Type (resource or stat)',
-                style: 1,
-                placeholder: 'resource (has max, regens) or stat (single value)',
-                min_length: 4,
-                max_length: 8,
-                required: true
-              }]
+              type: 18, label: 'Type',
+              description: 'Resource has max value and can regenerate. Stat is a single value.',
+              component: {
+                type: 21, custom_id: 'attr_type', required: true,
+                options: [
+                  { label: 'Resource', value: 'resource', description: 'Has max value, can regenerate (HP, Mana)', default: true },
+                  { label: 'Stat', value: 'stat', description: 'Single value, no regeneration (Strength, Luck)' }
+                ]
+              }
             },
             {
-              type: 1,
-              components: [{
-                type: 4,
-                custom_id: 'attr_max_value',
-                label: 'Default Max/Value',
-                style: 1,
+              type: 18, label: 'Default Max/Value',
+              description: 'Starting value for new players',
+              component: {
+                type: 4, custom_id: 'attr_max_value', style: 1,
                 placeholder: 'e.g., 100',
-                min_length: 1,
-                max_length: 6,
-                required: true
-              }]
+                min_length: 1, max_length: 6, required: true
+              }
             },
             {
-              type: 1,
-              components: [{
-                type: 4,
-                custom_id: 'attr_regen_minutes',
-                label: 'Regeneration (minutes, 0 for none)',
-                style: 1,
-                placeholder: 'e.g., 60 (for resource types)',
-                min_length: 1,
-                max_length: 5,
-                required: false
-              }]
+              type: 18, label: 'Regeneration (minutes, 0 for none)',
+              description: 'How often this attribute regenerates (resource types only)',
+              component: {
+                type: 4, custom_id: 'attr_regen_minutes', style: 1,
+                placeholder: 'e.g., 60',
+                min_length: 1, max_length: 5, required: false
+              }
             }
           ]
         }
@@ -7205,7 +7186,8 @@ To fix this:
                 },
                 {
                   type: 18, label: 'Emoji',
-                  component: { type: 4, custom_id: 'attr_emoji', style: 1, value: attr.emoji, min_length: 1, max_length: 10, required: true }
+                  description: 'Unicode emoji (🔮) or custom server emoji (<:name:id>)',
+                  component: { type: 4, custom_id: 'attr_emoji', style: 1, value: attr.emoji, min_length: 1, max_length: 50, required: true }
                 },
                 {
                   type: 18, label: 'Type', description: 'Resource has max value and can regenerate. Stat is a single value.',
@@ -7708,7 +7690,7 @@ To fix this:
                       type: 18,
                       label: 'Emoji',
                       description: 'Paste a single emoji',
-                      component: { type: 4, custom_id: 'emoji', style: 1, max_length: 20, required: true, value: mapping.emoji }
+                      component: { type: 4, custom_id: 'emoji', style: 1, max_length: 50, required: true, value: mapping.emoji }
                     },
                     {
                       type: 18,
@@ -7758,7 +7740,7 @@ To fix this:
                     type: 18,
                     label: 'Emoji',
                     description: 'Paste a single emoji for the reaction',
-                    component: { type: 4, custom_id: 'emoji', style: 1, max_length: 20, required: true, placeholder: 'e.g. 💗' }
+                    component: { type: 4, custom_id: 'emoji', style: 1, max_length: 50, required: true, placeholder: 'e.g. 💗 or <:custom:id>' }
                   },
                   {
                     type: 18,
@@ -7831,7 +7813,7 @@ To fix this:
                   type: 18,
                   label: 'Emoji',
                   description: 'Paste a single emoji for the reaction',
-                  component: { type: 4, custom_id: 'emoji', style: 1, max_length: 20, required: true, placeholder: 'e.g. 💗' }
+                  component: { type: 4, custom_id: 'emoji', style: 1, max_length: 50, required: true, placeholder: 'e.g. 💗 or <:custom:id>' }
                 },
                 {
                   type: 18,
@@ -7873,7 +7855,7 @@ To fix this:
                   type: 18,
                   label: 'Emoji',
                   description: 'Paste a single emoji for the reaction',
-                  component: { type: 4, custom_id: 'emoji', style: 1, max_length: 20, required: true, value: emoji !== '⭐' ? emoji : '', placeholder: 'e.g. 💗' }
+                  component: { type: 4, custom_id: 'emoji', style: 1, max_length: 50, required: true, value: emoji !== '⭐' ? emoji : '', placeholder: 'e.g. 💗 or <:custom:id>' }
                 },
                 {
                   type: 18,

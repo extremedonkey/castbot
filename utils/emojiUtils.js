@@ -46,6 +46,12 @@ export function resolveEmoji(emojiStr, fallback = '📦', target = 'component') 
         };
     }
 
+    // Malformed custom emoji (starts with < but doesn't match pattern) → fallback
+    if (trimmed.startsWith('<')) {
+        console.log(`⚠️ [EMOJI] Malformed custom emoji: "${trimmed}" — falling back to ${fallback}`);
+        return target === 'builder' ? fallback : { name: fallback };
+    }
+
     // Unicode emoji or plain text — pass through
     return target === 'builder' ? trimmed : { name: trimmed };
 }

@@ -21,6 +21,11 @@ function resolveEmoji(emojiStr, fallback = '📦', target = 'component') {
         };
     }
 
+    // Malformed custom emoji (starts with < but doesn't match pattern) → fallback
+    if (trimmed.startsWith('<')) {
+        return target === 'builder' ? fallback : { name: fallback };
+    }
+
     return target === 'builder' ? trimmed : { name: trimmed };
 }
 
@@ -97,6 +102,26 @@ describe('resolveEmoji — component target', () => {
 
     it('rejects custom emoji with extra text', () => {
         assert.deepEqual(resolveEmoji('<:test:123> extra'), { name: '<:test:123> extra' });
+    });
+});
+
+// === Malformed emoji handling ===
+
+describe('resolveEmoji — malformed custom emojis', () => {
+    it('truncated custom emoji falls back', () => {
+        assert.deepEqual(resolveEmoji('<:LinkGotI', '📊'), { name: '📊' });
+    });
+
+    it('incomplete custom emoji (no closing >) falls back', () => {
+        assert.deepEqual(resolveEmoji('<:name:123', '📦'), { name: '📦' });
+    });
+
+    it('bare < falls back', () => {
+        assert.deepEqual(resolveEmoji('<', '📦'), { name: '📦' });
+    });
+
+    it('malformed in builder mode falls back', () => {
+        assert.equal(resolveEmoji('<:broken', '🏪', 'builder'), '🏪');
     });
 });
 
