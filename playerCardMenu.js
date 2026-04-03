@@ -17,7 +17,7 @@ import { loadSafariContent, getCustomTerms, getAttributeDefinitions } from './sa
 import { createPlayerDisplaySection, createAttributeDisplaySection } from './playerManagement.js';
 import { extractCastlistData } from './castlistV2.js';
 import { countComponents } from './utils.js';
-import { parseAndValidateEmoji } from './utils/emojiUtils.js';
+import { parseAndValidateEmoji, resolveEmoji } from './utils/emojiUtils.js';
 
 // ════════════════════════════════════════════════════════════════════════════
 // CATEGORY DEFINITIONS — Three button rows
@@ -502,7 +502,7 @@ async function buildCardSelect(activeButton, targetMember, playerData, safariDat
         label: (action.inventoryConfig?.buttonLabel || action.trigger?.button?.label || action.name || 'Recipe').slice(0, 100),
         value: action.id.slice(0, 100),
         description: (action.description || 'Crafting recipe').slice(0, 100),
-        emoji: { name: action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji || '🛠️' }
+        emoji: resolveEmoji(action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji, '🛠️')
       }));
       return wrapSelect(customId, 'Select a recipe to craft...', options);
     }
@@ -525,7 +525,7 @@ async function buildCardSelect(activeButton, targetMember, playerData, safariDat
         label: (action.inventoryConfig?.buttonLabel || action.trigger?.button?.label || action.name || 'Action').slice(0, 100),
         value: action.id.slice(0, 100),
         description: (action.description || 'Player action').slice(0, 100),
-        emoji: { name: action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji || '⚡' }
+        emoji: resolveEmoji(action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji, '⚡')
       }));
       return wrapSelect(customId, 'Click a global action...', options);
     }
@@ -671,7 +671,7 @@ async function buildCardSelect(activeButton, targetMember, playerData, safariDat
           label: attr.name,
           value: id,
           description: `${isResource ? 'Resource' : 'Stat'} — Click to modify`,
-          emoji: { name: attr.emoji || '📊' }
+          emoji: resolveEmoji(attr.emoji, '📊')
         });
       }
 

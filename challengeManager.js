@@ -878,7 +878,7 @@ export function buildChallengePost(challenge, guildId = null, safariData = null)
         label,
         style: styleMap[style] || 1,
       };
-      if (emoji) button.emoji = { name: emoji };
+      if (emoji) button.emoji = resolveEmoji(emoji, '⚡');
       actionButtons.push(button);
 
       if (actionButtons.length >= 5) break; // Max 5 per row

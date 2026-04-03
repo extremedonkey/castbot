@@ -16,7 +16,7 @@ import { createPlayerCard, extractCastlistData, createCastlistRows } from './cas
 import { getPlayer, updatePlayer, getGuildPronouns, getGuildTimezones, loadPlayerData } from './storage.js';
 import { hasStoresInGuild, getEligiblePlayersFixed, getCustomTerms, getPlayerAttributes, getAttributeDefinitions, loadSafariContent, MAX_GLOBAL_STORES } from './safariManager.js';
 import { countComponents } from './utils.js';
-import { parseAndValidateEmoji, parseTextEmoji } from './utils/emojiUtils.js';
+import { parseAndValidateEmoji, parseTextEmoji, resolveEmoji } from './utils/emojiUtils.js';
 import { createBackButton } from './src/ui/backButtonFactory.js';
 import { getTimeUntilRegeneration } from './pointsManager.js';
 
@@ -1462,7 +1462,7 @@ async function createHotSwappableSelect(activeButton, targetMember, playerData, 
           label: attr.name,
           value: id,
           description: `${isResource ? 'Resource' : 'Stat'} - Click to modify`,
-          emoji: { name: attr.emoji || '📊' }
+          emoji: resolveEmoji(attr.emoji, '📊')
         };
       });
 

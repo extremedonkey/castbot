@@ -11,7 +11,7 @@ import {
 import { loadSafariContent, saveSafariContent, getCustomTerms } from './safariManager.js';
 import { EDIT_CONFIGS } from './editFramework.js';
 import { SAFARI_LIMITS } from './config/safariLimits.js';
-import { parseTextEmoji, parseAndValidateEmoji } from './utils/emojiUtils.js';
+import { parseTextEmoji, parseAndValidateEmoji, resolveEmoji } from './utils/emojiUtils.js';
 
 /**
  * Create item selection UI for map locations
@@ -625,7 +625,7 @@ function createFieldGroupButtons(entityType, entityId, activeFieldGroup) {
             style: activeFieldGroup === groupId ? 1 : 2, // Primary if active
             label: group.label,
             custom_id: `entity_field_group_${entityType}_${entityId}_${groupId}`,
-            emoji: { name: group.emoji }
+            emoji: resolveEmoji(group.emoji, '📋')
         });
     });
     

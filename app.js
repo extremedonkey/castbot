@@ -7066,11 +7066,12 @@ To fix this:
           }
 
           // Build select options for attributes
+          const { resolveEmoji: resolveEmojiUtil } = await import('./utils/emojiUtils.js');
           const attrOptions = attrEntries.slice(0, 25).map(([id, attr]) => ({
             label: attr.name,
             value: id,
             description: `${attr.category === 'resource' ? 'Resource' : 'Stat'} - ${attr.isPreset ? 'Preset' : 'Custom'}`,
-            emoji: { name: attr.emoji }
+            emoji: resolveEmojiUtil(attr.emoji, '📊')
           }));
 
           return {
@@ -7415,7 +7416,8 @@ To fix this:
           // Create setup menu using MenuBuilder
           const setupContainer = await MenuBuilder.create('setup_menu', context);
 
-          console.log(`✅ SUCCESS: prod_setup - showing setup interface via MenuBuilder`);
+          const { countComponents } = await import('./utils.js');
+          countComponents([setupContainer], { verbosity: "full", label: "Tools Menu (setup_menu)" });
 
           return {
             flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL (admin UI)
@@ -13351,6 +13353,7 @@ Your server is now ready for Tycoons gameplay!`;
           });
 
           // Sort select menu
+          const { resolveEmoji: resolveSortEmoji } = await import('./utils/emojiUtils.js');
           containerComponents.push({
             type: 1,
             components: [{
@@ -13360,7 +13363,7 @@ Your server is now ready for Tycoons gameplay!`;
               options: Object.entries(SORT_OPTIONS).map(([value, opt]) => ({
                 label: opt.label,
                 value,
-                emoji: { name: opt.emoji },
+                emoji: resolveSortEmoji(opt.emoji, '⚙️'),
                 description: opt.description,
                 default: value === currentSort
               }))
@@ -36961,12 +36964,13 @@ Your server is now ready for Tycoons gameplay!`;
           }
           
           // Edit Currency button
+          const { resolveEmoji: resolveCurrencyEmoji } = await import('./utils/emojiUtils.js');
           actionButtons.push({
             type: 2, // Button
             style: 2, // Secondary
             label: `Edit ${customTerms.currencyName}`,
             custom_id: `map_admin_edit_currency_${targetUserId}`,
-            emoji: { name: customTerms.currencyEmoji || '🪙' }
+            emoji: resolveCurrencyEmoji(customTerms.currencyEmoji, '🪙')
           });
           
           // Create action rows (max 5 buttons per row)

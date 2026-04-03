@@ -8653,6 +8653,7 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
                 // Add inventory button to last message if it's the last chunk
                 const messageComponents = [...chunk];
                 if (isLastChunk) {
+                    const { resolveEmoji: resolveInvEmoji } = await import('./utils/emojiUtils.js');
                     const buttonContainer = {
                         type: 17, // Container
                         accent_color: 0x3498db, // Blue
@@ -8665,7 +8666,7 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
                                         custom_id: 'safari_player_inventory',
                                         label: customTerms.inventoryName,
                                         style: 1, // Primary (blue)
-                                        emoji: { name: customTerms.inventoryEmoji || '🧰' }
+                                        emoji: resolveInvEmoji(customTerms.inventoryEmoji, '🧰')
                                     }
                                 ]
                             }

@@ -6,7 +6,7 @@ import { loadEntity, updateEntity } from './entityManager.js';
 import { loadSafariContent } from './safariManager.js';
 import { scheduler } from './scheduler.js';
 import { formatPeriod, buildLimitOptions } from './utils/periodUtils.js';
-import { parseTextEmoji } from './utils/emojiUtils.js';
+import { parseTextEmoji, resolveEmoji } from './utils/emojiUtils.js';
 
 /**
  * Shared outcome type options for the "Add Outcome" select menus.
@@ -4244,7 +4244,7 @@ export async function showModifyAttributeConfig(guildId, buttonId, actionIndex) 
     label: attr.name || attrId,
     value: attrId,
     description: attr.category === 'resource' ? 'Resource (current/max)' : 'Stat (single value)',
-    emoji: { name: attr.emoji || '📊' },
+    emoji: resolveEmoji(attr.emoji, '📊'),
     default: currentAttributeId === attrId
   }));
 

@@ -7,7 +7,7 @@ import {
   InteractionResponseType,
   InteractionResponseFlags
 } from 'discord-interactions';
-import { parseTextEmoji } from './utils/emojiUtils.js';
+import { parseTextEmoji, resolveEmoji } from './utils/emojiUtils.js';
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
 import { setEntityPoints } from './pointsManager.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
@@ -268,7 +268,7 @@ async function createPlayerViewUI(guildId, userId) {
       custom_id: `map_admin_view_inventory_${userId}`,
       label: 'View Items',
       style: 2, // Secondary
-      emoji: { name: customTerms.inventoryEmoji || '🧰' }
+      emoji: resolveEmoji(customTerms.inventoryEmoji, '🧰')
     },
     {
       type: 2, // Button

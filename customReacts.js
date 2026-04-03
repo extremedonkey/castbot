@@ -12,6 +12,7 @@ import { loadPlayerData, savePlayerData, saveReactionMapping } from './storage.j
 import { countComponents } from './utils.js';
 import { PermissionFlagsBits } from 'discord.js';
 import { formatRoleColor, hexToColorInt } from './utils/colorUtils.js';
+import { resolveEmoji } from './utils/emojiUtils.js';
 
 // ── Constants ──────────────────────────────────────────────────────
 
@@ -205,7 +206,7 @@ export async function buildPanelDetailUI(guildId, reactId, guild, page = 0) {
         label: `${mapping.label}`,
         value: 'summary',
         description: `@${mapping.roleName || 'Unknown Role'}`,
-        emoji: { name: mapping.emoji },
+        emoji: resolveEmoji(mapping.emoji, '🎭'),
         default: true
       },
       { label: 'Edit', value: 'edit', emoji: { name: '✏️' } },
