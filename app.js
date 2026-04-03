@@ -2491,14 +2491,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
     // === CONTEXT MENU COMMANDS (data.type === 3 for MESSAGE) ===
     // Must be FIRST — before analytics logging which takes >3s and causes timeout
-    console.log(`❄️ DEBUG: data.type=${data.type}, name=${data.name}, target_id=${data.target_id}`);
     if (data.type === 3) {
       const targetMessageId = data.target_id;
       const targetMessage = data.resolved?.messages?.[targetMessageId];
       const invokerId = req.body.member?.user?.id;
       const channelId = req.body.channel_id;
 
-      if (name === '❄️ Start Timer') {
+      if (name === '❄ Start Timer') {
         const { snowflakeToTimestamp, discordTimestamp, setPendingStart } = await import('./timerUtils.js');
         const timestamp = snowflakeToTimestamp(targetMessageId);
         const playerId = targetMessage?.author?.id;
@@ -2519,7 +2518,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             }]
           }
         });
-      } else if (name === '❄️ Stop Timer') {
+      } else if (name === '❄ Stop Timer') {
         const { snowflakeToTimestamp, discordTimestamp, timeBetweenSnowflakes, getPendingStart, clearPendingStart } = await import('./timerUtils.js');
         const playerId = targetMessage?.author?.id;
         const pending = getPendingStart(invokerId, playerId);
@@ -2562,7 +2561,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             }]
           }
         });
-      } else if (name === '❄️ Snowflake Info') {
+      } else if (name === '❄ Snowflake Info') {
         const { parseSnowflake, discordTimestamp } = await import('./timerUtils.js');
         const parsed = parseSnowflake(targetMessageId);
         const authorId = targetMessage?.author?.id;
