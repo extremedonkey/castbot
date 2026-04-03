@@ -7438,14 +7438,14 @@ To fix this:
               title: '❄️ Snowflake Calculator',
               components: [
                 {
-                  type: 18, label: 'Start Message ID',
-                  description: 'Right-click a message → Copy Message ID',
-                  component: { type: 4, custom_id: 'start_id', style: 1, min_length: 17, max_length: 20, placeholder: 'e.g. 1234567890123456789', required: true }
+                  type: 18, label: 'Start Message ID (timer begins)',
+                  description: 'The message marking the START of the timed action. You can also paste both IDs here separated by a space.',
+                  component: { type: 4, custom_id: 'start_id', style: 1, max_length: 50, placeholder: 'e.g. 1234567890123456789', required: true }
                 },
                 {
-                  type: 18, label: 'End Message ID',
-                  description: 'The second message to compare against',
-                  component: { type: 4, custom_id: 'end_id', style: 1, min_length: 17, max_length: 20, placeholder: 'e.g. 9876543210987654321', required: true }
+                  type: 18, label: 'End Message ID (timer ends)',
+                  description: 'The message marking the END. Leave blank if you pasted both IDs above.',
+                  component: { type: 4, custom_id: 'end_id', style: 1, max_length: 25, placeholder: 'e.g. 9876543210987654321', required: false }
                 }
               ]
             }
@@ -7465,8 +7465,8 @@ To fix this:
               components: [
                 {
                   type: 18, label: 'Message ID',
-                  description: 'Right-click a message → Copy Message ID',
-                  component: { type: 4, custom_id: 'message_id', style: 1, min_length: 17, max_length: 20, placeholder: 'e.g. 1234567890123456789', required: true }
+                  description: 'Right-click a message → Copy Message ID. Shows when the message was created.',
+                  component: { type: 4, custom_id: 'message_id', style: 1, max_length: 25, placeholder: 'e.g. 1234567890123456789', required: true }
                 }
               ]
             }
@@ -49535,13 +49535,21 @@ Your server is now ready for Tycoons gameplay!`;
     } else if (custom_id === 'modal_snowflake_calc') {
       return ButtonHandlerFactory.create({
         id: 'modal_snowflake_calc',
-        ephemeral: true,
         handler: async () => {
           const { extractModalFields } = await import('./seasonPlanner.js');
           const { timeBetweenSnowflakes, discordTimestamp } = await import('./timerUtils.js');
           const fields = extractModalFields(data.components);
-          const startId = fields.start_id?.trim();
-          const endId = fields.end_id?.trim();
+          let startId = fields.start_id?.trim();
+          let endId = fields.end_id?.trim();
+
+          // Smart parsing: support "ID1 ID2" pasted in the start field
+          if (startId && startId.includes(' ') && !endId) {
+            const parts = startId.split(/\s+/).filter(Boolean);
+            if (parts.length >= 2) {
+              startId = parts[0];
+              endId = parts[1];
+            }
+          }
 
           const isValid = (s) => /^\d{17,20}$/.test(s);
           if (!isValid(startId) || !isValid(endId)) {
@@ -49552,7 +49560,7 @@ Your server is now ready for Tycoons gameplay!`;
                 components: [
                   { type: 10, content: `### \`\`\`❌ Invalid Input\`\`\`` },
                   { type: 14 },
-                  { type: 10, content: `Snowflake IDs must be 17-20 digit numbers.\n\n-# Right-click a message → Copy Message ID` }
+                  { type: 10, content: `Enter two valid Discord message IDs (17-20 digit numbers).\n\nYou can paste both IDs in the Start field separated by a space, or fill in both fields.\n\n-# Right-click a message → Copy Message ID` }
                 ]
               }]
             };
@@ -49560,13 +49568,20 @@ Your server is now ready for Tycoons gameplay!`;
 
           const result = timeBetweenSnowflakes(startId, endId);
           return {
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            flags: (1 << 15),
             components: [{
               type: 17, accent_color: 0x2ECC71,
               components: [
-                { type: 10, content: `### \`\`\`❄️ Calculator Result\`\`\`` },
+                { type: 10, content: `## ❄️ Calculator | Time between messages` },
                 { type: 14 },
-                { type: 10, content: `**Duration**: **${result.formatted}**${result.reversed ? ' ⚠️ *reversed*' : ''}\n\n-# Start: ${discordTimestamp(result.startTime, 'T')} → End: ${discordTimestamp(result.endTime, 'T')}` }
+                { type: 10, content: `### \`\`\`⏱️ Duration\`\`\`\n**${result.formatted}**${result.reversed ? ' ⚠️ *reversed*' : ''}` },
+                { type: 14 },
+                { type: 10, content: `-# Start — ${discordTimestamp(result.startTime, 'F')}\n-# Message ID: \`${startId}\`` },
+                { type: 10, content: `-# End — ${discordTimestamp(result.endTime, 'F')}\n-# Message ID: \`${endId}\`` },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, custom_id: 'snowflake_calculator', label: 'Calculate Again', style: 2, emoji: { name: '⏱️' } }
+                ]}
               ]
             }]
           };
@@ -49576,7 +49591,6 @@ Your server is now ready for Tycoons gameplay!`;
     } else if (custom_id === 'modal_snowflake_lookup') {
       return ButtonHandlerFactory.create({
         id: 'modal_snowflake_lookup',
-        ephemeral: true,
         handler: async () => {
           const { extractModalFields } = await import('./seasonPlanner.js');
           const { parseSnowflake, discordTimestamp } = await import('./timerUtils.js');
@@ -49591,7 +49605,7 @@ Your server is now ready for Tycoons gameplay!`;
                 components: [
                   { type: 10, content: `### \`\`\`❌ Invalid Input\`\`\`` },
                   { type: 14 },
-                  { type: 10, content: `Snowflake IDs must be 17-20 digit numbers.\n\n-# Right-click a message → Copy Message ID` }
+                  { type: 10, content: `Enter a valid Discord message ID (17-20 digit number).\n\n-# Right-click a message → Copy Message ID` }
                 ]
               }]
             };
@@ -49599,13 +49613,19 @@ Your server is now ready for Tycoons gameplay!`;
 
           const parsed = parseSnowflake(messageId);
           return {
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            flags: (1 << 15),
             components: [{
               type: 17, accent_color: 0x5865F2,
               components: [
-                { type: 10, content: `### \`\`\`❄️ Snowflake Info\`\`\`` },
+                { type: 10, content: `## ❄️ Snowflake | Message decode` },
                 { type: 14 },
-                { type: 10, content: `**Message ID**: \`${messageId}\`\n**Created**: ${discordTimestamp(parsed.timestamp, 'F')}\n**Relative**: ${discordTimestamp(parsed.timestamp, 'R')}\n\n-# Worker: ${parsed.workerId} | Process: ${parsed.processId} | Increment: ${parsed.increment}` }
+                { type: 10, content: `### \`\`\`🔍 Message Info\`\`\`\n**Created**: ${discordTimestamp(parsed.timestamp, 'F')}\n**Relative**: ${discordTimestamp(parsed.timestamp, 'R')}` },
+                { type: 14 },
+                { type: 10, content: `-# Message ID: \`${messageId}\`\n-# Worker: ${parsed.workerId} | Process: ${parsed.processId} | Increment: ${parsed.increment}` },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, custom_id: 'snowflake_lookup', label: 'Look Up Another', style: 2, emoji: { name: '🔍' } }
+                ]}
               ]
             }]
           };
