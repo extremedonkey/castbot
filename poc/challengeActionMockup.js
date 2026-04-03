@@ -12,20 +12,41 @@ import { countComponents } from '../utils.js';
 import { CATEGORY_TYPES } from '../challengeActionCreate.js';
 
 // ═══════════════════════════════════════════════════════════
-// Stub Data — based on real Hurley's Lotto Sweepstakes
+// Stub Data — from real challenge_a38ccad9c8e3
 // ═══════════════════════════════════════════════════════════
 
 const STUB_CHALLENGE = {
   title: '🎟️Hurleys Lotto Sweepstakes 🎟️',
-  accentColor: 65280, // bright green
+  accentColor: 65280,
   creationHost: '391415444084490240',
   image: 'https://cdn.discordapp.com/attachments/1337754151655833694/1482701225597341837/image7215695x.png',
+  description: `While gathering items in the scavenger hunt, you found Hurley's winning lottery ticket! You're feeling lucky today, and you want to know if you can match his winnings.
+
+You're going to be buying lottery tickets, and the tribe with the most money at the end of the challenge will win immunity.
+
+Each player begins with $1000, and each ticket costs $100. Lottery tickets will earn you nothing ($0), a certain amount of money or make you lose all of your money. You must buy at least 1 ticket.
+
+You can buy 1 or more tickets at the same time, and buying more than one ticket will make you earn the ticket value multiplied by the number of tickets bought.
+
+
+**Example Playthrough:**
+* You start with $1000
+* You decide to buy 3 tickets at once for $300 by typing the command ?buy-lottery-ticket 3. The ticket is a winning one, worth $200.
+* You type the amount of money you now have : $1000-$300 (buying the tickets) + $600 (3 tickets of $200) = $1300.
+* You decide next to buy 5 tickets by typing the command ?buy-lottery-ticket 5. The ticket is worth $0.
+* You type the amount of money you now have: $1300-500 (buying the tickets) + $0 (earnings) = $800
+
+**End of Challenge: **
+* The challenge ends when you buy a lottery ticket that says you've lost all of your money or;
+* If you're out of money or;
+* When you choose to end your challenge by typing ?done.
+
+You are NOT allowed to discuss how much money you have or anything specific you did or saw during the challenge. However, you are welcome to discuss general strategy about the challenge.
+
+The tribe with the most money at the end will win immunity. In case of a tie, the tribe who bought the most tickets overall will win.
+The final amount of money earned by each player will be revealed at the end of the challenge.`,
 };
 
-// Mapping the ?commands from the challenge description to action categories:
-// ?buy-lottery-ticket 3  → Player Action All (everyone uses same command)
-// ?done                  → Player Action All (everyone uses same command)
-// Host: reveal results   → Host Action (host triggers at end of challenge)
 const STUB_ACTIONS = {
   playerAll: [
     { id: 'buy_lottery_ticket_734262', name: '🎰 Buy Lottery Tickets', emoji: '🎰', trigger: 'button_input', description: 'Replaces ?buy-lottery-ticket — player enters ticket count' },
@@ -38,15 +59,8 @@ const STUB_ACTIONS = {
   ],
 };
 
-// 18 players (realistic season size)
-const STUB_PLAYERS = [
-  'Reece', 'Sarah', 'Tom', 'Alex', 'Jordan', 'Casey',
-  'Morgan', 'Taylor', 'Riley', 'Quinn', 'Avery', 'Parker',
-  'Hayden', 'Drew', 'Sage', 'Rowan', 'Blake', 'Cameron',
-];
-
 // ═══════════════════════════════════════════════════════════
-// Main Mockup — Categorized Action Manager
+// Category Section Builders
 // ═══════════════════════════════════════════════════════════
 
 function buildPlayerAllSection(actions) {
@@ -73,44 +87,27 @@ function buildPlayerAllSection(actions) {
   ];
 }
 
-function buildPlayerIndividualSection(assignments, totalPlayers) {
-  const assignedCount = Object.keys(assignments).length;
+function buildPlayerIndividualSection() {
   const options = [
     { label: '➕ Create for Players', value: 'create_playerIndividual', emoji: { name: '➕' }, description: 'Bulk-create individual actions for selected players' },
+    { label: 'No individual actions', value: '_noop_ind', description: 'Not needed for this challenge type' },
   ];
-
-  // This challenge doesn't use individual actions — show empty state
-  if (assignedCount === 0) {
-    options.push({
-      label: 'No individual actions',
-      value: '_noop_ind',
-      description: 'Not needed for this challenge type',
-    });
-  }
-
   return [
     { type: 10, content: `### \`\`\`${CATEGORY_TYPES.playerIndividual.emoji} ${CATEGORY_TYPES.playerIndividual.label}\`\`\`\n-# ${CATEGORY_TYPES.playerIndividual.description}` },
     { type: 1, components: [{
       type: 3,
       custom_id: 'camock_select_playerIndividual',
-      placeholder: assignedCount > 0 ? `${assignedCount} of ${totalPlayers} assigned` : 'Not used — select to create if needed...',
+      placeholder: 'Not used — select to create if needed...',
       options,
     }]},
   ];
 }
 
-function buildTribeSection(assignments) {
-  const assignedCount = Object.keys(assignments).length;
+function buildTribeSection() {
   const options = [
     { label: '➕ Create for Tribes', value: 'create_tribe', emoji: { name: '➕' }, description: 'Create actions for selected tribe roles' },
+    { label: 'No tribe actions', value: '_noop_tribe', description: 'Not needed for this challenge type' },
   ];
-  if (assignedCount === 0) {
-    options.push({
-      label: 'No tribe actions',
-      value: '_noop_tribe',
-      description: 'Not needed for this challenge type',
-    });
-  }
   return [
     { type: 10, content: `### \`\`\`${CATEGORY_TYPES.tribe.emoji} ${CATEGORY_TYPES.tribe.label}\`\`\`\n-# ${CATEGORY_TYPES.tribe.description}` },
     { type: 1, components: [{
@@ -145,41 +142,47 @@ function buildHostSection(actions) {
   ];
 }
 
+// ═══════════════════════════════════════════════════════════
+// Main Mockup — Challenge Detail + Action Categories
+// Mirrors buildChallengeScreen pattern exactly
+// ═══════════════════════════════════════════════════════════
+
 export function buildChallengeActionMockup() {
   const ch = STUB_CHALLENGE;
   const totalActions = STUB_ACTIONS.playerAll.length + STUB_ACTIONS.host.length;
 
-  const components = [
-    // Header — shows challenge context
-    { type: 10, content: `## ⚡ Challenge Actions\n-# **${ch.title}**\n-# ${totalActions} action${totalActions === 1 ? '' : 's'} linked · Host: <@${ch.creationHost}>` },
-  ];
+  const components = [];
 
-  // Challenge image thumbnail
-  if (ch.image) {
-    components.push({
-      type: 9, // Section
-      components: [{ type: 10, content: `-# Manage the actions players and hosts use during this challenge. Actions replace Carlbot \`?commands\` with interactive buttons.` }],
-      accessory: { type: 11, media: { url: ch.image } },
-    });
+  // ── Challenge Preview (same as buildChallengeScreen lines 185-198) ──
+  const titleText = ch.title.startsWith('#') ? ch.title : `# ${ch.title}`;
+  const hostText = ch.creationHost ? `-# Host: <@${ch.creationHost}>` : '';
+  components.push({ type: 10, content: `${titleText}\n${hostText}` });
+
+  if (ch.description) {
+    components.push({ type: 10, content: ch.description });
   }
 
-  // Player All — this challenge's main actions
+  if (ch.image) {
+    components.push({ type: 12, items: [{ media: { url: ch.image }, description: ch.title }] });
+  }
+
+  // ── Action count summary ──
+  components.push({ type: 10, content: `-# ⚡ ${totalActions} action${totalActions === 1 ? '' : 's'} linked` });
+
+  // ── Action Categories ──
   components.push({ type: 14 });
   components.push(...buildPlayerAllSection(STUB_ACTIONS.playerAll));
 
-  // Individual — empty for this challenge type
   components.push({ type: 14 });
-  components.push(...buildPlayerIndividualSection(STUB_ACTIONS.playerIndividual, STUB_PLAYERS.length));
+  components.push(...buildPlayerIndividualSection());
 
-  // Tribe — empty for this challenge type
   components.push({ type: 14 });
-  components.push(...buildTribeSection(STUB_ACTIONS.tribe));
+  components.push(...buildTribeSection());
 
-  // Host actions
   components.push({ type: 14 });
   components.push(...buildHostSection(STUB_ACTIONS.host));
 
-  // Navigation
+  // ── Navigation ──
   components.push(
     { type: 14 },
     { type: 1, components: [
@@ -244,7 +247,6 @@ export async function handleChallengeActionMockup(context) {
   if (customId.startsWith('camock_select_')) {
     const selected = values?.[0];
 
-    // Player All action management
     if (selected === 'manage_pa_buy_lottery_ticket_734262') {
       return buildManageScreen(
         '🎰 Buy Lottery Tickets', '🎰', 'playerAll',
@@ -258,7 +260,6 @@ export async function handleChallengeActionMockup(context) {
       );
     }
 
-    // Host action management
     if (selected === 'manage_host_reveal_results_991234') {
       return buildManageScreen(
         '📊 Reveal Results', '📊', 'host',
