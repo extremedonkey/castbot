@@ -97,6 +97,14 @@ export class MenuBuilder {
           { type: 2, custom_id: 'map_admin_refresh_anchors', label: 'Refresh Anchors', style: 2, emoji: { name: '🔄' } }
         ]
       },
+      { type: 10, content: `### \`\`\`❄️ Snowflake\`\`\`` },
+      {
+        type: 1,
+        components: [
+          { type: 2, custom_id: 'snowflake_calculator', label: 'Calculator', style: 2, emoji: { name: '⏱️' } },
+          { type: 2, custom_id: 'snowflake_lookup', label: 'Lookup', style: 2, emoji: { name: '🔍' } }
+        ]
+      },
       { type: 10, content: `### \`\`\`📜 Info & Support\`\`\`` }
     ];
 

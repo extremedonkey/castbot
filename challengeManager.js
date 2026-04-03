@@ -10,6 +10,7 @@
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { buildRichCardModal, extractRichCardValues, buildRichCardContainer, parseAccentColor } from './richCardUI.js';
 import { countComponents } from './utils.js';
+import { resolveEmoji } from './utils/emojiUtils.js';
 
 const DEFAULT_ACCENT = 0x5865F2; // Discord blurple
 
@@ -784,7 +785,7 @@ export async function buildActionSelector(guildId, challengeId, searchTerm = '')
       label: `${isLinked ? '✅ ' : ''}${name}`.substring(0, 100),
       value: id,
       description: `${triggerLabel}${isLinked ? ' — select to unlink' : ' — select to link'}`.substring(0, 100),
-      emoji: { name: typeof actionEmoji === 'string' ? actionEmoji : '⚡' },
+      emoji: resolveEmoji(actionEmoji, '⚡'),
     });
   }
 

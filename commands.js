@@ -34,8 +34,6 @@ const CASTLIST_COMMAND = {
 // Player functionality now accessible through /menu → Player Profile
 
 
-// Only CASTLIST and MENU ar active at the moment
-
 // Unified menu command that shows player menu for regular users, admin menu for admins
 const MENU_COMMAND = {
 	name: 'menu',
@@ -43,10 +41,19 @@ const MENU_COMMAND = {
 	type: 1
 };
 
+// Context menu commands (right-click message → Apps)
+// Type 3 = MESSAGE context menu. NOT slash commands.
+// Spec: docs/01-RaP/0925_20260403_SnowflakeTimer_Analysis.md
+const TIMER_START_COMMAND = { name: '❄️ Timer Start', type: 3 };
+const TIMER_END_COMMAND = { name: '❄️ Timer End', type: 3 };
+const SNOWFLAKE_INFO_COMMAND = { name: '❄️ Snowflake Info', type: 3 };
 
 const ALL_COMMANDS = [
 	CASTLIST_COMMAND,
-	MENU_COMMAND
+	MENU_COMMAND,
+	TIMER_START_COMMAND,
+	TIMER_END_COMMAND,
+	SNOWFLAKE_INFO_COMMAND,
 ];
 
 console.log('Registering commands with:');
