@@ -49525,6 +49525,88 @@ Your server is now ready for Tycoons gameplay!`;
         console.error('Error in cr_create_role_modal:', error);
       }
 
+    // ═══════════════ SNOWFLAKE TIMER MODALS ═══════════════
+
+    } else if (custom_id === 'modal_snowflake_calc') {
+      return ButtonHandlerFactory.create({
+        id: 'modal_snowflake_calc',
+        ephemeral: true,
+        handler: async () => {
+          const { extractModalFields } = await import('./seasonPlanner.js');
+          const { timeBetweenSnowflakes, discordTimestamp } = await import('./timerUtils.js');
+          const fields = extractModalFields(data.components);
+          const startId = fields.start_id?.trim();
+          const endId = fields.end_id?.trim();
+
+          const isValid = (s) => /^\d{17,20}$/.test(s);
+          if (!isValid(startId) || !isValid(endId)) {
+            return {
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+              components: [{
+                type: 17, accent_color: 0xe74c3c,
+                components: [
+                  { type: 10, content: `### \`\`\`❌ Invalid Input\`\`\`` },
+                  { type: 14 },
+                  { type: 10, content: `Snowflake IDs must be 17-20 digit numbers.\n\n-# Right-click a message → Copy Message ID` }
+                ]
+              }]
+            };
+          }
+
+          const result = timeBetweenSnowflakes(startId, endId);
+          return {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+              type: 17, accent_color: 0x2ECC71,
+              components: [
+                { type: 10, content: `### \`\`\`❄️ Calculator Result\`\`\`` },
+                { type: 14 },
+                { type: 10, content: `**Duration**: **${result.formatted}**${result.reversed ? ' ⚠️ *reversed*' : ''}\n\n-# Start: ${discordTimestamp(result.startTime, 'T')} → End: ${discordTimestamp(result.endTime, 'T')}` }
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'modal_snowflake_lookup') {
+      return ButtonHandlerFactory.create({
+        id: 'modal_snowflake_lookup',
+        ephemeral: true,
+        handler: async () => {
+          const { extractModalFields } = await import('./seasonPlanner.js');
+          const { parseSnowflake, discordTimestamp } = await import('./timerUtils.js');
+          const fields = extractModalFields(data.components);
+          const messageId = fields.message_id?.trim();
+
+          if (!/^\d{17,20}$/.test(messageId)) {
+            return {
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+              components: [{
+                type: 17, accent_color: 0xe74c3c,
+                components: [
+                  { type: 10, content: `### \`\`\`❌ Invalid Input\`\`\`` },
+                  { type: 14 },
+                  { type: 10, content: `Snowflake IDs must be 17-20 digit numbers.\n\n-# Right-click a message → Copy Message ID` }
+                ]
+              }]
+            };
+          }
+
+          const parsed = parseSnowflake(messageId);
+          return {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+              type: 17, accent_color: 0x5865F2,
+              components: [
+                { type: 10, content: `### \`\`\`❄️ Snowflake Info\`\`\`` },
+                { type: 14 },
+                { type: 10, content: `**Message ID**: \`${messageId}\`\n**Created**: ${discordTimestamp(parsed.timestamp, 'F')}\n**Relative**: ${discordTimestamp(parsed.timestamp, 'R')}\n\n-# Worker: ${parsed.workerId} | Process: ${parsed.processId} | Increment: ${parsed.increment}` }
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+
     } else {
       console.log(`⚠️ DEBUG: Unhandled MODAL_SUBMIT custom_id: ${custom_id}`);
     }
