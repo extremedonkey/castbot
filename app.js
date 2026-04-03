@@ -2491,6 +2491,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
     // === CONTEXT MENU COMMANDS (data.type === 3 for MESSAGE) ===
     // Must be FIRST — before analytics logging which takes >3s and causes timeout
+    console.log(`❄️ DEBUG: data.type=${data.type}, name=${data.name}, target_id=${data.target_id}`);
     if (data.type === 3) {
       const targetMessageId = data.target_id;
       const targetMessage = data.resolved?.messages?.[targetMessageId];
