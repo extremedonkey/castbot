@@ -31,9 +31,9 @@ const STUB_CHALLENGE = {
 // All challenge actions in one flat list — type emoji indicates category
 // Sorted by lastModified (newest first) — same as createCustomActionSelectionUI
 const STUB_ALL_ACTIONS = [
-  { id: 'buy_lottery_ticket_734262', name: '🎰 Buy Lottery Tickets', type: 'player', description: 'Player enters ticket count · ⌨️ User Input · 3 outcomes', lastModified: 1774918900000 },
-  { id: 'done_challenge_889123', name: '✋ Done', type: 'player', description: 'Player ends their challenge run · 🖱️ Button · 2 outcomes', lastModified: 1774918800000 },
-  { id: 'reveal_results_991234', name: '📊 Reveal Results', type: 'host', description: 'Post final earnings leaderboard · 🖱️ Button · 2 outcomes', lastModified: 1774918700000 },
+  { id: 'buy_lottery_ticket_734262', name: 'Buy Lottery Tickets', emoji: '🎰', type: 'player', description: 'Player enters ticket count · ⌨️ User Input · 3 outcomes', lastModified: 1774918900000 },
+  { id: 'done_challenge_889123', name: 'Done', emoji: '✋', type: 'player', description: 'Player ends their challenge run · 🖱️ Button · 2 outcomes', lastModified: 1774918800000 },
+  { id: 'reveal_results_991234', name: 'Reveal Results', emoji: '📊', type: 'host', description: 'Post final earnings leaderboard · 🖱️ Button · 2 outcomes', lastModified: 1774918700000 },
 ];
 
 // Type → emoji mapping for select options
@@ -85,7 +85,7 @@ export function buildChallengeActionMockup() {
       label: action.name.substring(0, 100),
       value: action.id,
       description: action.description.substring(0, 100),
-      emoji: { name: TYPE_EMOJI[action.type] || '⚡' },
+      emoji: { name: action.emoji || '⚡' },
     });
   }
 
