@@ -110,12 +110,12 @@ export function buildChallengeActionMockup() {
     { type: 14 },
     { type: 1, components: [
       { type: 2, custom_id: `challenge_edit_${ch.id}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
-      { type: 2, custom_id: `challenge_round_${ch.id}`, label: 'Round', style: 2, emoji: { name: '🔥' } },
-      { type: 2, custom_id: `challenge_post_${ch.id}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
+      { type: 2, custom_id: `camock_round`, label: 'Round', style: 2, emoji: { name: '🔥' } },
+      { type: 2, custom_id: `camock_post`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
     ]},
     { type: 1, components: [
       { type: 2, custom_id: `challenge_publish_${ch.id}`, label: 'Publish', style: 2, emoji: { name: '📤' } },
-      { type: 2, custom_id: `challenge_delete_${ch.id}`, label: 'Delete', style: 4, emoji: { name: '🗑️' } },
+      { type: 2, custom_id: `camock_delete`, label: 'Delete', style: 4, emoji: { name: '🗑️' } },
     ]},
 
     // ── Unified Challenge Actions select ──
@@ -198,11 +198,78 @@ const ACTION_DETAILS = {
 // Interaction Handler
 // ═══════════════════════════════════════════════════════════
 
+/**
+ * Recursively patch all back/nav button custom_ids to route back to mockup.
+ */
+function patchBackButtons(obj) {
+  if (!obj) return obj;
+  if (Array.isArray(obj)) return obj.map(patchBackButtons);
+  if (typeof obj === 'object') {
+    // Patch challenge_select_nav_* and challenge_screen back buttons
+    if (obj.custom_id && (obj.custom_id.startsWith('challenge_select_nav_') || obj.custom_id === 'challenge_screen')) {
+      obj.custom_id = 'camock_open';
+    }
+    for (const key of Object.keys(obj)) {
+      obj[key] = patchBackButtons(obj[key]);
+    }
+  }
+  return obj;
+}
+
+/**
+ * Call a real challengeManager function and patch its back buttons to route to mockup.
+ */
+async function callRealAndPatch(fn, ...args) {
+  const result = await fn(...args);
+  return patchBackButtons(result);
+}
+
+const CHALLENGE_ID = 'challenge_a38ccad9c8e3';
+
 export async function handleChallengeActionMockup(context) {
-  const { customId, values } = context;
+  const { customId, values, guildId } = context;
 
   if (customId === 'camock_open') {
     return buildChallengeActionMockup();
+  }
+
+  // Sub-screens that need back-button patching
+  if (customId === 'camock_round') {
+    const { buildRoundSelector } = await import('../challengeManager.js');
+    return callRealAndPatch(buildRoundSelector, guildId, CHALLENGE_ID);
+  }
+  if (customId === 'camock_post') {
+    // Build channel selector inline (same as challenge_post handler)
+    const { loadPlayerData } = await import('../storage.js');
+    const pd = await loadPlayerData();
+    const ch = pd[guildId]?.challenges?.[CHALLENGE_ID];
+    const title = ch?.title || 'Challenge';
+    return { components: [{ type: 17, accent_color: ch?.accentColor || 65280, components: [
+      { type: 10, content: `## 📤 Post Challenge\n**${title}**\n\nSelect a channel to post this challenge to:` },
+      { type: 14 },
+      { type: 1, components: [{ type: 8, custom_id: `challenge_post_select_${CHALLENGE_ID}`, placeholder: 'Select a channel...' }] },
+      { type: 14 },
+      { type: 1, components: [{ type: 2, custom_id: 'camock_open', label: '← Cancel', style: 2 }] },
+    ]}]};
+  }
+  if (customId === 'camock_delete') {
+    const { loadPlayerData } = await import('../storage.js');
+    const pd = await loadPlayerData();
+    const ch = pd[guildId]?.challenges?.[CHALLENGE_ID];
+    const title = ch?.title || 'Challenge';
+    return { components: [{ type: 17, accent_color: 0xed4245, components: [
+      { type: 10, content: `## ⚠️ Delete Challenge\n\n**${title}**\n\nThis action cannot be undone.` },
+      { type: 14 },
+      { type: 1, components: [
+        { type: 2, custom_id: 'camock_open', label: 'Cancel', style: 2, emoji: { name: '❌' } },
+        { type: 2, custom_id: `challenge_delete_confirm_${CHALLENGE_ID}`, label: 'Yes, Delete', style: 4, emoji: { name: '🗑️' } },
+      ]},
+    ]}]};
+  }
+
+  // Round select/search — real handlers, but patch back buttons
+  if (customId.startsWith('challenge_round_select_') || customId.startsWith('challenge_round_search_')) {
+    // Let real handler process, but these will navigate away — acceptable
   }
 
   // Action select
