@@ -95,7 +95,7 @@ export function buildChallengeActionMockup() {
     { type: 14 },
     { type: 1, components: [{
       type: 3,
-      custom_id: 'camock_challenge_select',
+      custom_id: 'challenge_select',
       placeholder: 'Select or create a challenge...',
       options: challengeSelectOptions,
     }]},
@@ -109,13 +109,13 @@ export function buildChallengeActionMockup() {
     // ── Challenge buttons (Edit, Round, Post, Publish, Delete) ──
     { type: 14 },
     { type: 1, components: [
-      { type: 2, custom_id: 'camock_noop_edit', label: 'Edit', style: 2, emoji: { name: '✏️' } },
-      { type: 2, custom_id: 'camock_noop_round', label: 'Round', style: 2, emoji: { name: '🔥' } },
-      { type: 2, custom_id: 'camock_noop_post', label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
+      { type: 2, custom_id: `challenge_edit_${ch.id}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
+      { type: 2, custom_id: `challenge_round_${ch.id}`, label: 'Round', style: 2, emoji: { name: '🔥' } },
+      { type: 2, custom_id: `challenge_post_${ch.id}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
     ]},
     { type: 1, components: [
-      { type: 2, custom_id: 'camock_noop_publish', label: 'Publish', style: 2, emoji: { name: '📤' } },
-      { type: 2, custom_id: 'camock_noop_delete', label: 'Delete', style: 4, emoji: { name: '🗑️' } },
+      { type: 2, custom_id: `challenge_publish_${ch.id}`, label: 'Publish', style: 2, emoji: { name: '📤' } },
+      { type: 2, custom_id: `challenge_delete_${ch.id}`, label: 'Delete', style: 4, emoji: { name: '🗑️' } },
     ]},
 
     // ── Unified Challenge Actions select ──
@@ -131,8 +131,8 @@ export function buildChallengeActionMockup() {
     // ── Navigation ──
     { type: 14 },
     { type: 1, components: [
-      { type: 2, custom_id: 'camock_noop_menu', label: '← Menu', style: 2 },
-      { type: 2, custom_id: 'camock_noop_library', label: 'Challenge Library', style: 2, emoji: { name: '📚' } },
+      { type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 },
+      { type: 2, custom_id: 'library_home', label: 'Challenge Library', style: 2, emoji: { name: '📚' } },
     ]},
   ];
 
@@ -214,12 +214,12 @@ export async function handleChallengeActionMockup(context) {
     return buildChallengeActionMockup();
   }
 
-  // Challenge select, back, noop — all refresh main
-  if (customId === 'camock_challenge_select' || customId === 'camock_back_to_main' || customId.startsWith('camock_noop_')) {
+  // Back from action detail — refresh main
+  if (customId === 'camock_back_to_main') {
     return buildChallengeActionMockup();
   }
 
-  // Manage buttons — refresh main
+  // Manage action buttons — refresh main (stub)
   if (customId === 'camock_edit_action' || customId === 'camock_unlink_action' || customId === 'camock_delete_action') {
     return buildChallengeActionMockup();
   }
