@@ -158,13 +158,7 @@ export class MenuBuilder {
           { type: 2, custom_id: 'moai_ask', label: 'Moai', style: 2, emoji: { name: '🗿' } },
           { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
           { type: 2, custom_id: 'richcard_demo', label: 'Rich Card', style: 2, emoji: { name: '🎴' } },
-          { type: 2, custom_id: 'camock_open', label: 'Chal Actions', style: 2, emoji: { name: '⚡' } },
-        ]
-      },
-      {
-        type: 1,
-        components: [
-          { type: 2, custom_id: 'pcmock_open', label: 'Player Chal', style: 2, emoji: { name: '🏃' } }
+          { type: 2, custom_id: 'camock_open', label: 'Chal Actions', style: 2, emoji: { name: '⚡' } }
         ]
       },
       { type: 10, content: `### \`\`\`🔧 Admin Tools\`\`\`` },
