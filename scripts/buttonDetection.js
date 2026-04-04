@@ -85,6 +85,18 @@ const SAFE_TEST_BUTTONS = {
     style: 1, // Primary (blue)
     priority: 2
   },
+  'challenge_mockup': {
+    custom_id: 'camock_open',
+    label: '⚡ Chal Actions',
+    style: 1, // Primary (blue)
+    priority: 1
+  },
+  'player_card': {
+    custom_id: 'pcard_open',
+    label: '🪪 Player Card',
+    style: 1, // Primary (blue)
+    priority: 1
+  },
   'menu': {
     custom_id: 'viral_menu',
     label: '📋 Prod Menu',
@@ -171,11 +183,21 @@ const FEATURE_PATTERNS = {
     /challenge_select/,
     /challenge_edit/
   ],
+  challenge_mockup: [
+    /camock/i,
+    /challengeActionMockup/i,
+    /challengeActionCreate/i,
+    /poc\/challenge/i
+  ],
+  player_card: [
+    /playerCardMenu/i,
+    /pcard/i,
+    /playerChallengeMockup/i,
+    /poc\/player/i
+  ],
   experimental: [
     /reeces_stuff/i,
     /reece.*stuff/i,
-    /player.?card/i,
-    /pcard/i,
     /experimental/i
   ]
 };
