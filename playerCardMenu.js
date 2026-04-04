@@ -52,7 +52,7 @@ const ROW3_BUTTONS = [
 ];
 
 // Which categories show text info instead of a select menu
-const TEXT_CATEGORIES = new Set(['logs', 'inventory', 'commands', 'currency', 'location', 'challenges']);
+const TEXT_CATEGORIES = new Set(['logs', 'inventory', 'commands', 'currency', 'location']);
 
 // ════════════════════════════════════════════════════════════════════════════
 // HELPERS
@@ -752,27 +752,16 @@ async function buildCardSelect(activeButton, targetMember, playerData, safariDat
     // ── CHALLENGES (Mockup — stub data) ─────────────────────────────
 
     case 'challenges': {
-      // Stub data — Hurley's Lotto (active) + Tribal Jigsaw (completed)
-      const activeCh = {
-        title: '🎟️Hurleys Lotto Sweepstakes 🎟️',
-        round: 'F11 — Challenge 8',
-        status: '🟢 Active',
-        description: `While gathering items in the scavenger hunt, you found Hurley's winning lottery ticket! You're feeling lucky today, and you want to know if you can match his winnings. \n\nYou're going to be buying lottery tickets, and the tribe with the most money at the end of the challenge will win immunity. \n\nEach player begins with $1000, and each ticket costs $100. Lottery tickets will earn you nothing ($0), a certain amount of money or make you lose all of your money. You must buy at least 1 ticket. \n\nYou can buy 1 or more tickets at the same time, and buying more than one ticket will make you earn the ticket value multiplied by the number of tickets bought. \n\n\n**Example Playthrough:**\n* You start with $1000\n* You decide to buy 3 tickets at once for $300 by typing the command ?buy-lottery-ticket 3. The ticket is a winning one, worth $200.\n* You type the amount of money you now have : $1000-$300 (buying the tickets) + $600 (3 tickets of $200) = $1300.\n* You decide next to buy 5 tickets by typing the command ?buy-lottery-ticket 5. The ticket is worth $0.\n* You type the amount of money you now have: $1300-500 (buying the tickets) + $0 (earnings) = $800\n\n**End of Challenge: **\n* The challenge ends when you buy a lottery ticket that says you've lost all of your money or;\n* If you're out of money or;\n* When you choose to end your challenge by typing ?done.\n\nYou are NOT allowed to discuss how much money you have or anything specific you did or saw during the challenge. However, you are welcome to discuss general strategy about the challenge.\n\nThe tribe with the most money at the end will win immunity. In case of a tie, the tribe who bought the most tickets overall will win. \nThe final amount of money earned by each player will be revealed at the end of the challenge.`,
-        image: 'https://cdn.discordapp.com/attachments/1337754151655833694/1482701225597341837/image7215695x.png',
-      };
-
-      const prevCh = {
-        title: '🧩 Tribal Jigsaw Race',
-        round: 'F12 — Challenge 7',
-        status: '✅ Completed',
-        result: '✅ Completed in **34m 22s** — 3rd fastest',
-      };
-
-      // Show active challenge with full content + action buttons
-      return {
-        type: 10,
-        content: `# ${activeCh.title}\n-# ${activeCh.round} · ${activeCh.status}\n\n${activeCh.description}\n\n-# **Previous:** ${prevCh.title} (${prevCh.round}) — ${prevCh.result}\n-# Use \`🎰 Buy Lottery Tickets\` and \`✋ Done\` buttons when challenge actions are built. Replaces \`?buy-lottery-ticket\` and \`?done\`.`
-      };
+      // Player sees challenge actions as a select — pick an action to execute
+      // Challenge text lives in the challenge channel, not here
+      const options = [
+        // Active challenge actions (Hurley's Lotto — playerAll)
+        { label: '🎰 Buy Lottery Tickets', value: 'action_buy_lottery_ticket', description: '🟢 Hurleys Lotto Sweepstakes · F11', emoji: { name: '🎟️' } },
+        { label: '✋ Done', value: 'action_done_challenge', description: '🟢 Hurleys Lotto Sweepstakes · F11', emoji: { name: '🎟️' } },
+        // Completed challenge (no actions, info only)
+        { label: '✅ Tribal Jigsaw Race — 34m 22s', value: 'info_jigsaw', description: '✅ Completed · F12 — 3rd fastest', emoji: { name: '🧩' } },
+      ];
+      return wrapSelect(customId, 'Select a challenge action...', options);
     }
 
     default:
