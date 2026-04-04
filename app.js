@@ -6709,7 +6709,7 @@ To fix this:
         }
       })(req, res, client);
 
-    // ── Challenge Action Categories Mockup — self-contained in poc/challengeActionMockup.js ──
+    // ── Challenge Action Mockups — self-contained in poc/ ──
     } else if (custom_id.startsWith('camock_')) {
       return ButtonHandlerFactory.create({
         id: custom_id,
@@ -6717,6 +6717,15 @@ To fix this:
         handler: async (context) => {
           const { handleChallengeActionMockup } = await import('./poc/challengeActionMockup.js');
           return await handleChallengeActionMockup(context);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('pcmock_')) {
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        updateMessage: true,
+        handler: async (context) => {
+          const { handlePlayerChallengeMockup } = await import('./poc/playerChallengeMockup.js');
+          return await handlePlayerChallengeMockup(context);
         }
       })(req, res, client);
 
