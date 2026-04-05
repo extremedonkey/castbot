@@ -8972,7 +8972,7 @@ To fix this:
           const token = context.token;
           const { discordTimestamp } = await import('./timerUtils.js');
           const startTimestamp = Math.floor(Date.now() / 1000);
-          const userName = context.member?.displayName || context.member?.user?.username || `<@${context.userId}>`;
+          const userName = context.member?.nick || context.member?.user?.global_name || context.member?.user?.username || `<@${context.userId}>`;
           const timerContainer = {
             type: 17, accent_color: 0x2ECC71,
             components: [
@@ -9018,7 +9018,7 @@ To fix this:
           console.log(`⏱️ Challenge Timer: ${result.formatted} (${startId} → ${endId}) by user ${context.userId}`);
 
           // Post results as a NEW public message
-          const userName = context.member?.displayName || context.member?.user?.username || `<@${context.userId}>`;
+          const userName = context.member?.nick || context.member?.user?.global_name || context.member?.user?.username || `<@${context.userId}>`;
           const resultsContainer = {
             type: 17, accent_color: 0x2ECC71,
             components: [
