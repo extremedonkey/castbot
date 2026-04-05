@@ -230,12 +230,12 @@ export function buildQuickChallengeActionModal(challengeId, category = null) {
       {
         type: 18,
         label: 'Action Name',
-        description: 'Name for the action (e.g., "Spreadsheet Art")',
+        description: 'Name for the action (e.g., "START - Touchy Subjects")',
         component: {
           type: 4,
           custom_id: 'action_name',
           style: 1,
-          placeholder: 'e.g., "Spreadsheet Art"',
+          placeholder: 'e.g., "START - Touchy Subjects"',
           required: true,
           max_length: 80,
         },
@@ -259,7 +259,7 @@ export function buildQuickChallengeActionModal(challengeId, category = null) {
       {
         type: 18,
         label: 'Associated Players / Tribes',
-        description: 'Only use if you need special commands per user or tribe, else leave blank.',
+        description: 'Only use if Individual Player / Tribe Actions was selected above (special commands per user/tribe)',
         component: {
           type: 7, // Mentionable Select
           custom_id: 'assign_to',
@@ -431,7 +431,7 @@ export async function handleQuickChallengeActionSubmit(guildId, userId, challeng
           displayName = member.displayName || member.user.username;
         } catch { /* fallback to mention */ }
       }
-      const label = `${displayName} - ${actionName}`.substring(0, 100);
+      const label = `${actionName} - ${displayName}`.substring(0, 100);
       const actionId = createActionShell(label, i);
       if (!challenge.actions.playerIndividual[playerId]) challenge.actions.playerIndividual[playerId] = [];
       challenge.actions.playerIndividual[playerId].push({ actionId, timer: timerMode });
@@ -444,7 +444,7 @@ export async function handleQuickChallengeActionSubmit(guildId, userId, challeng
         const role = guild.roles.cache.get(roleId);
         if (role) roleName = role.name;
       }
-      const label = `${roleName} - ${actionName}`.substring(0, 100);
+      const label = `${actionName} - ${roleName}`.substring(0, 100);
       const actionId = createActionShell(label, i);
       if (!challenge.actions.tribe[roleId]) challenge.actions.tribe[roleId] = [];
       challenge.actions.tribe[roleId].push({ actionId, timer: timerMode });
