@@ -47402,6 +47402,7 @@ Your server is now ready for Tycoons gameplay!`;
         // Rebuild the same action detail view the user was on
         const guildId = req.body.guild_id;
         const { loadSafariContent } = await import('./safariManager.js');
+        const { getChallengeActions } = await import('./challengeActionCreate.js');
         const refreshedPlayerData = await loadPlayerData();
         const refreshedChallenge = refreshedPlayerData[guildId]?.challenges?.[challengeId];
         const refreshedSafariData = await loadSafariContent();
