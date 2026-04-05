@@ -8594,7 +8594,10 @@ To fix this:
         updateMessage: true,
         handler: async (context) => {
           const selectedValue = req.body.data.values?.[0];
-          if (selectedValue === 'none') return { type: 6 };
+          if (selectedValue === 'none') {
+            const { buildLibraryHome } = await import('./challengeManager.js');
+            return buildLibraryHome(context.userId);
+          }
           if (selectedValue === 'library_search') {
             // Show search prompt button (can't modal from deferred)
             return { components: [{ type: 17, accent_color: 0x9b59b6, components: [
