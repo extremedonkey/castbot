@@ -8497,7 +8497,10 @@ To fix this:
             const { buildRoundSelector } = await import('./challengeManager.js');
             return buildRoundSelector(context.guildId, challengeId);
           }
-          if (selectedValue === 'none') return { type: 6 };
+          if (selectedValue === 'none') {
+            const { buildRoundSelector } = await import('./challengeManager.js');
+            return buildRoundSelector(context.guildId, challengeId);
+          }
 
           // Link challenge to selected round
           const [seasonId, roundId] = selectedValue.split(':');
@@ -9035,11 +9038,16 @@ To fix this:
             body: { flags: (1 << 15), components: [resultsContainer] }
           });
 
-          // UPDATE the timer message: preserve original content, only swap the buttons
+          // UPDATE the timer message: swap buttons + replace current time with "Timer Stopped"
           const originalComponents = req.body.message?.components || [];
           const updatedContainer = JSON.parse(JSON.stringify(originalComponents[0] || { type: 17, components: [] }));
-          // Find and replace the ActionRow (last component in container)
           const containerComps = updatedContainer.components || [];
+          // Replace "🧭 Current Challenge Time" text with "🛑 Timer Stopped"
+          for (const comp of containerComps) {
+            if (comp.type === 10 && comp.content?.includes('🧭 Current Challenge Time')) {
+              comp.content = comp.content.replace(/> \*\*🧭 Current Challenge Time\*\*:.*/, '> **🛑 Timer Stopped**');
+            }
+          }
           const actionRowIdx = containerComps.findLastIndex(c => c.type === 1);
           if (actionRowIdx >= 0) {
             containerComps[actionRowIdx] = {
