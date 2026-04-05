@@ -9000,7 +9000,7 @@ To fix this:
       // Challenge Timer — Stop: UPDATE timer message + POST results as new message
       return ButtonHandlerFactory.create({
         id: 'challenge_timer_stop',
-        updateMessage: true, // UPDATE the timer message itself
+        deferred: true, updateMessage: true, // DEFERRED_UPDATE — needed for webhook follow-up
         handler: async (context) => {
           const { timeBetweenSnowflakes, discordTimestamp } = await import('./timerUtils.js');
 
