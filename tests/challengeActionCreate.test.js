@@ -430,23 +430,23 @@ describe('linkAction — add to category', () => {
   it('initializes actions from legacy actionIds on first link', () => {
     const challenge = { actionIds: ['legacy1'] };
     linkAction(challenge, 'new1', 'host');
-    assert.deepEqual(challenge.actions.playerAll, ['legacy1']);
-    assert.deepEqual(challenge.actions.host, ['new1']);
+    assert.deepEqual(extractActionIds(challenge.actions.playerAll), ['legacy1']);
+    assert.deepEqual(extractActionIds(challenge.actions.host), ['new1']);
     assert.equal(challenge.actionIds.length, 2);
     assert.ok(challenge.actionIds.includes('legacy1'));
     assert.ok(challenge.actionIds.includes('new1'));
   });
 
   it('does not duplicate in playerAll', () => {
-    const challenge = { actions: { playerAll: ['a1'], playerIndividual: {}, tribe: {}, host: [] } };
+    const challenge = { actions: { playerAll: [{ actionId: 'a1', timer: 'none' }], playerIndividual: {}, tribe: {}, host: [] } };
     linkAction(challenge, 'a1', 'playerAll');
-    assert.deepEqual(challenge.actions.playerAll, ['a1']);
+    assert.deepEqual(extractActionIds(challenge.actions.playerAll), ['a1']);
   });
 
   it('does not duplicate in host', () => {
-    const challenge = { actions: { playerAll: [], playerIndividual: {}, tribe: {}, host: ['h1'] } };
+    const challenge = { actions: { playerAll: [], playerIndividual: {}, tribe: {}, host: [{ actionId: 'h1', timer: 'none' }] } };
     linkAction(challenge, 'h1', 'host');
-    assert.deepEqual(challenge.actions.host, ['h1']);
+    assert.deepEqual(extractActionIds(challenge.actions.host), ['h1']);
   });
 });
 
@@ -456,7 +456,7 @@ describe('unlinkAction — remove from category', () => {
       actions: { playerAll: ['a1', 'a2'], playerIndividual: {}, tribe: {}, host: [] },
     };
     unlinkAction(challenge, 'a1', 'playerAll');
-    assert.deepEqual(challenge.actions.playerAll, ['a2']);
+    assert.deepEqual(extractActionIds(challenge.actions.playerAll), ['a2']);
     assert.deepEqual(challenge.actionIds, ['a2']);
   });
 
@@ -465,7 +465,7 @@ describe('unlinkAction — remove from category', () => {
       actions: { playerAll: [], playerIndividual: {}, tribe: {}, host: ['h1', 'h2'] },
     };
     unlinkAction(challenge, 'h1', 'host');
-    assert.deepEqual(challenge.actions.host, ['h2']);
+    assert.deepEqual(extractActionIds(challenge.actions.host), ['h2']);
   });
 
   it('removes from playerIndividual by value lookup', () => {
@@ -503,7 +503,7 @@ describe('unlinkAction — remove from category', () => {
       actions: { playerAll: ['a1'], playerIndividual: {}, tribe: {}, host: [] },
     };
     unlinkAction(challenge, 'nonexistent', 'playerAll');
-    assert.deepEqual(challenge.actions.playerAll, ['a1']);
+    assert.deepEqual(extractActionIds(challenge.actions.playerAll), ['a1']);
   });
 
   it('no-ops for non-existent action in playerIndividual', () => {
@@ -526,7 +526,7 @@ describe('Full CRUD workflow — link, read, unlink', () => {
 
     // Link a new playerAll action
     linkAction(challenge, 'new1', 'playerAll');
-    assert.deepEqual(challenge.actions.playerAll, ['old1', 'new1']);
+    assert.deepEqual(extractActionIds(challenge.actions.playerAll), ['old1', 'new1']);
     assert.equal(challenge.actionIds.length, 2);
 
     // Link individual player actions
@@ -544,11 +544,11 @@ describe('Full CRUD workflow — link, read, unlink', () => {
 
     // Read via getChallengeActions
     const actions = getChallengeActions(challenge);
-    assert.deepEqual(actions.playerAll, ['old1', 'new1']);
+    assert.deepEqual(extractActionIds(actions.playerAll), ['old1', 'new1']);
     assert.deepEqual(extractActionIds(actions.playerIndividual.player_a), ['ind1']);
     assert.deepEqual(extractActionIds(actions.playerIndividual.player_b), ['ind2']);
     assert.deepEqual(extractActionIds(actions.tribe.tribe_role), ['tri1']);
-    assert.deepEqual(actions.host, ['host1']);
+    assert.deepEqual(extractActionIds(actions.host), ['host1']);
 
     // Unlink one individual
     unlinkAction(challenge, 'ind1', 'playerIndividual');

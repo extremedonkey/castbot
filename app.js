@@ -7446,13 +7446,13 @@ To fix this:
               title: '❄️ Snowflake Calculator',
               components: [
                 {
-                  type: 18, label: 'Start Message ID (timer begins)',
-                  description: 'START of the timed event. Paste both IDs here separated by a space.',
+                  type: 18, label: 'Start of the timed event',
+                  description: 'Right click / long press > Copy Message ID. Or paste both IDs with a space.',
                   component: { type: 4, custom_id: 'start_id', style: 1, max_length: 50, placeholder: 'e.g. 1234567890123456789', required: true }
                 },
                 {
-                  type: 18, label: 'End Message ID (timer ends)',
-                  description: 'END of the timed event. Leave blank if both IDs pasted above.',
+                  type: 18, label: 'End of the timed event',
+                  description: 'Right click / long press > Copy Message ID. Leave blank if both pasted above.',
                   component: { type: 4, custom_id: 'end_id', style: 1, max_length: 25, placeholder: 'e.g. 9876543210987654321', required: false }
                 }
               ]
