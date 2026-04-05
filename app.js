@@ -8964,35 +8964,35 @@ To fix this:
           }
         } catch (e) { console.error('⏱️ Timer check failed:', e.message); }
 
-        if (!isTimed) return result;
+        if (isTimed) {
+          // TIMED: Return action content normally (factory patches @original with it).
+          // Post timer as a delayed follow-up AFTER the patch completes.
+          const token = context.token;
+          const timerContainer = {
+            type: 17, accent_color: 0x2ECC71,
+            components: [
+              { type: 10, content: `### \`\`\`⏱️ Challenge Timer Started!\`\`\`\nWhen you have completed the required challenge tasks, click stop.\nIf any questions, ping Production.\n-# Note to hosts: If any issues, manually snowflake via right-click > Apps > Start Timer, or \`/menu\` > Tools > Snowflake.` },
+              { type: 14 },
+              { type: 1, components: [
+                { type: 2, custom_id: 'challenge_timer_stop', label: 'Finish / Stop Timer', style: 4, emoji: { name: '🛑' } }
+              ]}
+            ]
+          };
+          // Delay ensures @original is patched with action content BEFORE timer appears
+          setTimeout(async () => {
+            try {
+              await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {
+                method: 'POST',
+                body: { flags: (1 << 15), components: [timerContainer] }
+              });
+              console.log(`⏱️ Challenge Timer: Posted timer for action ${selectedValue} by user ${context.userId}`);
+            } catch (e) {
+              console.error('⏱️ Challenge Timer: Failed to post timer:', e.message);
+            }
+          }, 1500);
+        }
 
-        // TIMED: Post action content as follow-up first, then timer as second follow-up.
-        // This guarantees ordering: content appears ABOVE timer.
-        const webhookUrl = `webhooks/${process.env.APP_ID}/${context.token}`;
-
-        // Follow-up 1: Action content (the result from executeButtonActions)
-        const contentBody = result.components
-          ? { flags: (1 << 15), components: result.components }
-          : { content: result.content || '✅ Action executed.' };
-        await DiscordRequest(webhookUrl, { method: 'POST', body: contentBody });
-
-        // Follow-up 2: Timer message
-        const timerContainer = {
-          type: 17, accent_color: 0x2ECC71,
-          components: [
-            { type: 10, content: `### \`\`\`⏱️ Challenge Timer Started!\`\`\`\nWhen you have completed the required challenge tasks, click stop.\nIf any questions, ping Production.\n-# Note to hosts: If any issues, manually snowflake via right-click > Apps > Start Timer, or \`/menu\` > Tools > Snowflake.` },
-            { type: 14 },
-            { type: 1, components: [
-              { type: 2, custom_id: 'challenge_timer_stop', label: 'Finish / Stop Timer', style: 4, emoji: { name: '🛑' } }
-            ]}
-          ]
-        };
-        await DiscordRequest(webhookUrl, { method: 'POST', body: { flags: (1 << 15), components: [timerContainer] } });
-        console.log(`⏱️ Challenge Timer: Posted content + timer for action ${selectedValue} by user ${context.userId}`);
-
-        // Return minimal content for @original (the deferred "thinking..." message)
-        // Must include IS_COMPONENTS_V2 flag since deferred ACK was created with it
-        return { flags: (1 << 15), components: [{ type: 17, components: [{ type: 10, content: '-# ⏱️ Challenge action started' }] }] };
+        return result;
       }})(req, res, client);
     } else if (custom_id === 'challenge_timer_stop') {
       // Challenge Timer — Stop button clicked. Calculate duration from snowflakes.
