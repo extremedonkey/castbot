@@ -8932,6 +8932,7 @@ To fix this:
         return ButtonHandlerFactory.create({ id: 'player_menu_sel_challenges_noop', updateMessage: true, handler: async () => ({ type: 6 }) })(req, res, client);
       }
       // Execute challenge action — non-ephemeral so production can see. Post timer if timed.
+      // Uses sequential follow-ups to guarantee message ordering (action content THEN timer).
       return ButtonHandlerFactory.create({ id: 'player_menu_sel_challenges', deferred: true, ephemeral: false, handler: async (context) => {
         const { executeButtonActions, getCustomButton } = await import('./safariManager.js');
         const button = await getCustomButton(context.guildId, selectedValue);
@@ -8944,12 +8945,12 @@ To fix this:
         const interactionData = { token: context.token, applicationId: context.applicationId, client: context.client, member: context.member, channelName: context.channelName, user: context.member?.user || { id: context.userId }, channel: { name: context.channelName } };
         const result = await executeButtonActions(context.guildId, selectedValue, context.userId, interactionData, context.client);
 
-        // Check if this action is timed — look up the link object in challenge data
+        // Check if this action is timed
+        let isTimed = false;
         try {
           const { getChallengeActions, normalizeLinks } = await import('./challengeActionCreate.js');
           const pd = await loadPlayerData();
           const challenges = pd[context.guildId]?.challenges || {};
-          let isTimed = false;
           for (const ch of Object.values(challenges)) {
             const actions = getChallengeActions(ch);
             const allLinks = [
@@ -8961,31 +8962,36 @@ To fix this:
             const link = allLinks.find(l => l.actionId === selectedValue);
             if (link?.timer === 'timed') { isTimed = true; break; }
           }
+        } catch (e) { console.error('⏱️ Timer check failed:', e.message); }
 
-          if (isTimed) {
-            // Post timer follow-up message (non-ephemeral, appears below the action result)
-            const timerContainer = {
-              type: 17, accent_color: 0x2ECC71,
-              components: [
-                { type: 10, content: `### \`\`\`⏱️ Challenge Timer Started!\`\`\`\nWhen you have completed the required challenge tasks, click stop.\nIf any questions, ping Production.\n-# Note to hosts: If any issues, manually snowflake via right-click > Apps > Start Timer, or \`/menu\` > Tools > Snowflake.` },
-                { type: 14 },
-                { type: 1, components: [
-                  { type: 2, custom_id: 'challenge_timer_stop', label: 'Finish / Stop Timer', style: 4, emoji: { name: '🛑' } }
-                ]}
-              ]
-            };
-            await DiscordRequest(`webhooks/${process.env.APP_ID}/${context.token}`, {
-              method: 'POST',
-              body: { flags: (1 << 15), components: [timerContainer] }
-            });
-            console.log(`⏱️ Challenge Timer: Posted timer start for action ${selectedValue} by user ${context.userId}`);
-          }
-        } catch (timerError) {
-          console.error('⏱️ Challenge Timer: Failed to post timer message:', timerError.message);
-          // Non-fatal — action result was already sent
-        }
+        if (!isTimed) return result;
 
-        return result;
+        // TIMED: Post action content as follow-up first, then timer as second follow-up.
+        // This guarantees ordering: content appears ABOVE timer.
+        const webhookUrl = `webhooks/${process.env.APP_ID}/${context.token}`;
+
+        // Follow-up 1: Action content (the result from executeButtonActions)
+        const contentBody = result.components
+          ? { flags: (1 << 15), components: result.components }
+          : { content: result.content || '✅ Action executed.' };
+        await DiscordRequest(webhookUrl, { method: 'POST', body: contentBody });
+
+        // Follow-up 2: Timer message
+        const timerContainer = {
+          type: 17, accent_color: 0x2ECC71,
+          components: [
+            { type: 10, content: `### \`\`\`⏱️ Challenge Timer Started!\`\`\`\nWhen you have completed the required challenge tasks, click stop.\nIf any questions, ping Production.\n-# Note to hosts: If any issues, manually snowflake via right-click > Apps > Start Timer, or \`/menu\` > Tools > Snowflake.` },
+            { type: 14 },
+            { type: 1, components: [
+              { type: 2, custom_id: 'challenge_timer_stop', label: 'Finish / Stop Timer', style: 4, emoji: { name: '🛑' } }
+            ]}
+          ]
+        };
+        await DiscordRequest(webhookUrl, { method: 'POST', body: { flags: (1 << 15), components: [timerContainer] } });
+        console.log(`⏱️ Challenge Timer: Posted content + timer for action ${selectedValue} by user ${context.userId}`);
+
+        // Return minimal content for @original (the deferred "thinking..." message)
+        return { content: '-# ⏱️ Challenge action started' };
       }})(req, res, client);
     } else if (custom_id === 'challenge_timer_stop') {
       // Challenge Timer — Stop button clicked. Calculate duration from snowflakes.
