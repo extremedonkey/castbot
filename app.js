@@ -2559,7 +2559,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 { type: 10, content: `**Player**: <@${playerId}>\n**Duration**: **${result.formatted}**${result.reversed ? ' ⚠️ *reversed*' : ''}\n\n-# Start: ${discordTimestamp(result.startTime, 'T')} → End: ${discordTimestamp(result.endTime, 'T')}` },
                 { type: 14 },
                 { type: 1, components: [
-                  { type: 2, custom_id: `timer_post|${playerId}|${result.durationMs}`, label: 'Post Publicly', style: 2, emoji: { name: '📢' } }
+                  { type: 2, custom_id: `timer_post|${playerId}|${result.durationMs}|${result.startTime}|${result.endTime}`, label: 'Post Publicly', style: 2, emoji: { name: '📢' } }
                 ]}
               ]
             }]
@@ -7488,10 +7488,12 @@ To fix this:
         followUp: true,
         ephemeral: false,
         handler: async () => {
-          const { formatDuration } = await import('./timerUtils.js');
+          const { formatDuration, discordTimestamp } = await import('./timerUtils.js');
           const parts = custom_id.split('|');
           const playerId = parts[1];
           const durationMs = parseInt(parts[2]);
+          const startTime = parseInt(parts[3]);
+          const endTime = parseInt(parts[4]);
           const formatted = formatDuration(durationMs);
 
           return {
@@ -7499,9 +7501,11 @@ To fix this:
             components: [{
               type: 17, accent_color: 0x2ECC71,
               components: [
-                { type: 10, content: `### \`\`\`❄️ Timer Result\`\`\`` },
+                { type: 10, content: `## ❄️ Timer Result` },
                 { type: 14 },
-                { type: 10, content: `**Player**: <@${playerId}>\n**Duration**: **${formatted}**` }
+                { type: 10, content: `**Player**: <@${playerId}>\n**Duration**: **${formatted}**` },
+                { type: 14 },
+                { type: 10, content: `-# Start — ${discordTimestamp(startTime, 'F')}\n-# End — ${discordTimestamp(endTime, 'F')}` }
               ]
             }]
           };

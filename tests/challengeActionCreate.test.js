@@ -402,14 +402,14 @@ describe('linkAction — add to category', () => {
   it('links to playerAll array', () => {
     const challenge = { actionIds: [] };
     linkAction(challenge, 'a1', 'playerAll');
-    assert.deepEqual(challenge.actions.playerAll, ['a1']);
+    assert.deepEqual(extractActionIds(challenge.actions.playerAll), ['a1']);
     assert.deepEqual(challenge.actionIds, ['a1']);
   });
 
   it('links to host array', () => {
     const challenge = { actionIds: [] };
     linkAction(challenge, 'h1', 'host');
-    assert.deepEqual(challenge.actions.host, ['h1']);
+    assert.deepEqual(extractActionIds(challenge.actions.host), ['h1']);
     assert.deepEqual(challenge.actionIds, ['h1']);
   });
 
