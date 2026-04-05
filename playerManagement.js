@@ -955,6 +955,79 @@ export async function createPlayerManagementUI(options) {
       }
     }
 
+    // === CHALLENGE ACTIONS SECTION ===
+    // Show challenge actions visible to this player (playerAll + individual + tribe, NOT host)
+    if (mode === PlayerManagementMode.PLAYER && !hideBottomButtons) {
+      try {
+        const { getChallengeActions } = await import('./challengeActionCreate.js');
+        const { resolveEmoji } = await import('./utils/emojiUtils.js');
+        const safariData = await loadSafariContent();
+        const challenges = playerData[guildId]?.challenges || {};
+        const chalButtons = [];
+
+        for (const [chId, ch] of Object.entries(challenges)) {
+          const actions = getChallengeActions(ch);
+          const chalTitle = (ch.title || 'Challenge').slice(0, 40);
+          const allButtons = safariData[guildId]?.buttons || {};
+
+          // playerAll — visible to everyone
+          for (const actionId of actions.playerAll) {
+            const action = allButtons[actionId];
+            if (action) chalButtons.push({ action, actionId, chalTitle, guildId });
+          }
+
+          // playerIndividual — only if assigned to this player
+          const indActionId = actions.playerIndividual[userId];
+          if (indActionId) {
+            const action = allButtons[indActionId];
+            if (action) chalButtons.push({ action, actionId: indActionId, chalTitle, guildId });
+          }
+
+          // tribe — only if player has the tribe role
+          for (const [roleId, triActionId] of Object.entries(actions.tribe)) {
+            if (targetMember?.roles?.cache?.has?.(roleId)) {
+              const action = allButtons[triActionId];
+              if (action) chalButtons.push({ action, actionId: triActionId, chalTitle, guildId });
+            }
+          }
+          // host actions — never shown to players
+        }
+
+        if (chalButtons.length > 0) {
+          const currentCount = countComponents(finalComponents, { enableLogging: false });
+          const remainingBudget = 40 - 2 - currentCount;
+
+          if (remainingBudget >= 2) {
+            const maxActions = Math.min(Math.floor(remainingBudget / 6) * 5, chalButtons.length, 5);
+            if (maxActions > 0) {
+              const row = {
+                type: 1,
+                components: chalButtons.slice(0, maxActions).map(({ action, actionId, guildId }) => {
+                  const isModalTrigger = action.trigger?.type === 'button_modal' || action.trigger?.type === 'button_input';
+                  const buttonCustomId = isModalTrigger
+                    ? `modal_launcher_${guildId}_${actionId}_${Date.now()}`
+                    : `challenge_${guildId}_${actionId}_${Date.now()}`;
+                  const btn = {
+                    type: 2,
+                    custom_id: buttonCustomId,
+                    label: (action.name || action.label || 'Action').slice(0, 80),
+                    style: 1, // Primary — challenge actions stand out
+                  };
+                  const emoji = resolveEmoji(action.emoji || action.trigger?.button?.emoji, undefined);
+                  if (emoji) btn.emoji = emoji;
+                  return btn;
+                })
+              };
+              finalComponents.push(row);
+              console.log(`🏃 Challenge Actions: Added ${Math.min(maxActions, chalButtons.length)} challenge action buttons`);
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Error loading challenge actions: ${error.message}`);
+      }
+    }
+
     // Add Activity Log + Guide buttons for initialized players (or admin mode)
     if (!hideBottomButtons) {
       // isPlayerInitialized check: safari.points is ONLY set by initializePlayerOnMap()
