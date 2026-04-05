@@ -8939,7 +8939,6 @@ To fix this:
                 custom_id: 'assign_to',
                 min_values: 1,
                 max_values: 1,
-                ...(currentUserId ? { default_values: [{ id: currentUserId, type: 'user' }] } : {}),
               },
             });
           } else if (category === 'tribe') {
@@ -8952,7 +8951,6 @@ To fix this:
                 custom_id: 'assign_to',
                 min_values: 1,
                 max_values: 1,
-                ...(currentRoleId ? { default_values: [{ id: currentRoleId, type: 'role' }] } : {}),
               },
             });
           }
@@ -8977,7 +8975,7 @@ To fix this:
           return {
             type: 9,
             data: {
-              custom_id: `challenge_action_info_modal::${challengeId}::${actionId}::${category}::${currentUserId || currentRoleId || ''}`,
+              custom_id: `ca_info::${challengeId}::${actionId}::${category.charAt(0)}::${currentUserId || currentRoleId || ''}`,
               title: 'Edit Challenge Action Info',
               components,
             }
@@ -47328,12 +47326,14 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
 
-    } else if (custom_id.startsWith('challenge_action_info_modal::')) {
+    } else if (custom_id.startsWith('ca_info::')) {
       // Challenge Action Info modal submit — update assignment + timer
+      // Shortened custom_id to fit 100-char limit: ca_info::{challengeId}::{actionId}::{categoryChar}::{oldId}
       const parts = custom_id.split('::');
       const challengeId = parts[1];
       const actionId = parts[2];
-      const category = parts[3];
+      const categoryMap = { p: 'playerIndividual', t: 'tribe', a: 'playerAll', h: 'host' };
+      const category = categoryMap[parts[3]] || 'playerAll';
       const oldAssignmentId = parts[4] || null;
       try {
         const { normalizeLinks } = await import('./challengeActionCreate.js');
