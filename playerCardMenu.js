@@ -749,19 +749,59 @@ async function buildCardSelect(activeButton, targetMember, playerData, safariDat
       };
     }
 
-    // ── CHALLENGES (Mockup — stub data) ─────────────────────────────
+    // ── CHALLENGES — shows actions visible to this player ───────────
 
     case 'challenges': {
-      // Player sees challenge actions as a select — pick an action to execute
-      // Challenge text lives in the challenge channel, not here
-      const options = [
-        // Active challenge actions (Hurley's Lotto — playerAll)
-        { label: '🎰 Buy Lottery Tickets', value: 'action_buy_lottery_ticket', description: '🟢 Hurleys Lotto Sweepstakes · F11', emoji: { name: '🎟️' } },
-        { label: '✋ Done', value: 'action_done_challenge', description: '🟢 Hurleys Lotto Sweepstakes · F11', emoji: { name: '🎟️' } },
-        // Completed challenge (no actions, info only)
-        { label: '✅ Tribal Jigsaw Race — 34m 22s', value: 'info_jigsaw', description: '✅ Completed · F12 — 3rd fastest', emoji: { name: '🧩' } },
-      ];
-      return wrapSelect(customId, 'Select a challenge action...', options);
+      const { getChallengeActions } = await import('./challengeActionCreate.js');
+      const challenges = playerData[guildId]?.challenges || {};
+      const options = [];
+
+      for (const [chId, ch] of Object.entries(challenges)) {
+        const actions = getChallengeActions(ch);
+        const chalTitle = (ch.title || 'Challenge').slice(0, 80);
+
+        // playerAll — visible to everyone
+        for (const actionId of actions.playerAll) {
+          const action = safariData[guildId]?.buttons?.[actionId];
+          if (!action) continue;
+          options.push({
+            label: (action.name || action.label || 'Action').slice(0, 100),
+            value: actionId,
+            description: `🟢 ${chalTitle}`.slice(0, 100),
+            emoji: resolveEmoji(action.emoji || action.trigger?.button?.emoji, '⚡'),
+          });
+        }
+
+        // playerIndividual — only if assigned to this player
+        const indActionId = actions.playerIndividual[targetId];
+        if (indActionId) {
+          const action = safariData[guildId]?.buttons?.[indActionId];
+          if (action) options.push({
+            label: (action.name || action.label || 'Action').slice(0, 100),
+            value: indActionId,
+            description: `🟢 ${chalTitle}`.slice(0, 100),
+            emoji: resolveEmoji(action.emoji || action.trigger?.button?.emoji, '⚡'),
+          });
+        }
+
+        // tribe — only if player has the tribe role
+        for (const [roleId, triActionId] of Object.entries(actions.tribe)) {
+          if (!targetMember.roles.cache.has(roleId)) continue;
+          const action = safariData[guildId]?.buttons?.[triActionId];
+          if (action) options.push({
+            label: (action.name || action.label || 'Action').slice(0, 100),
+            value: triActionId,
+            description: `🟢 ${chalTitle}`.slice(0, 100),
+            emoji: resolveEmoji(action.emoji || action.trigger?.button?.emoji, '⚡'),
+          });
+        }
+        // host actions — never shown to players
+      }
+
+      if (options.length === 0) {
+        return { type: 10, content: '🏃 **Challenges**\n*No active challenge actions available*' };
+      }
+      return wrapSelect(customId, 'Select a challenge action...', options.slice(0, 25));
     }
 
     default:

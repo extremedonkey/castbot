@@ -197,19 +197,12 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null, 
       } catch { /* invalid URL, skip */ }
     }
 
-    // Show linked actions count
-    const linkedActions = ch.actionIds || [];
-    if (linkedActions.length > 0) {
-      components.push({ type: 10, content: `-# ⚡ ${linkedActions.length} action${linkedActions.length === 1 ? '' : 's'} linked` });
-    }
-
-    // Action buttons
+    // Action buttons (⚡ Actions button replaced by inline select below)
     components.push(
       { type: 14 },
       { type: 1, components: [
         { type: 2, custom_id: `challenge_edit_${selectedChallengeId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
         { type: 2, custom_id: `challenge_round_${selectedChallengeId}`, label: 'Round', style: 2, emoji: { name: '🔥' } },
-        { type: 2, custom_id: `challenge_actions_${selectedChallengeId}`, label: 'Actions', style: linkedActions.length > 0 ? 1 : 2, emoji: { name: '⚡' } },
         { type: 2, custom_id: `challenge_post_${selectedChallengeId}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
       ]},
       { type: 1, components: [
@@ -217,6 +210,14 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null, 
         { type: 2, custom_id: `challenge_delete_${selectedChallengeId}`, label: 'Delete', style: 4, emoji: { name: '🗑️' } },
       ]}
     );
+
+    // Challenge Actions select (inline, replaces old ⚡ Actions button)
+    const { buildChallengeActionSelect } = await import('./challengeActionCreate.js');
+    const actionSelectComponents = await buildChallengeActionSelect(guildId, selectedChallengeId);
+    if (actionSelectComponents.length > 0) {
+      components.push({ type: 14 });
+      components.push(...actionSelectComponents);
+    }
   }
 
   // Navigation
@@ -720,131 +721,6 @@ export function buildPublishModal(challengeId) {
       ]
     }
   };
-}
-
-/**
- * Build the action selector screen for linking actions to a challenge.
- */
-export async function buildActionSelector(guildId, challengeId, searchTerm = '') {
-  const playerData = await loadPlayerData();
-  const challenge = playerData[guildId]?.challenges?.[challengeId];
-  if (!challenge) return { components: [{ type: 17, components: [{ type: 10, content: '❌ Challenge not found' }] }] };
-
-  const { loadSafariContent } = await import('./safariManager.js');
-  const safariData = await loadSafariContent();
-  const actions = safariData[guildId]?.buttons || {};
-  const linkedIds = challenge.actionIds || [];
-
-  // Build options from existing actions — same visual pattern as global action selector
-  const allEntries = Object.entries(actions)
-    .filter(([id, a]) => {
-      if (!searchTerm) return true;
-      const term = searchTerm.toLowerCase();
-      const name = (a.name || a.label || id).toLowerCase();
-      return name.includes(term);
-    })
-    .map(([id, a]) => ({ id, action: a, isLinked: linkedIds.includes(id) }))
-    .sort((a, b) => {
-      // Linked first, then by last modified (newest first)
-      if (a.isLinked !== b.isLinked) return a.isLinked ? -1 : 1;
-      const aTime = a.action.metadata?.lastModified || 0;
-      const bTime = b.action.metadata?.lastModified || 0;
-      return bTime - aTime;
-    });
-
-  const options = [];
-
-  // Search option
-  if (Object.keys(actions).length > 10 || searchTerm) {
-    options.push({
-      label: '🔍 Search Actions',
-      value: 'search_actions',
-      description: searchTerm ? `Searching: "${searchTerm}"` : 'Search through all actions',
-      emoji: { name: '🔍' }
-    });
-  }
-  if (searchTerm) {
-    options.push({
-      label: '🔙 Back to all',
-      value: 'back_to_all',
-      description: 'Return to full action list'
-    });
-  }
-
-  for (const { id, action, isLinked } of allEntries) {
-    if (options.length >= 25) break;
-    const name = (action.name || action.label || id).substring(0, 80);
-    const triggerType = action.trigger?.type || 'button';
-    const triggerLabels = { button: '🖱️ Button', button_modal: '🔐 Secret Code', button_input: '⌨️ User Input', modal: '🕹️ Command', schedule: '⏰ Scheduled' };
-    const triggerLabel = triggerLabels[triggerType] || triggerType;
-
-    // Use action's configured emoji, checkmark for linked
-    const actionEmoji = action.emoji || action.trigger?.button?.emoji || '⚡';
-
-    options.push({
-      label: `${isLinked ? '✅ ' : ''}${name}`.substring(0, 100),
-      value: id,
-      description: `${triggerLabel}${isLinked ? ' — select to unlink' : ' — select to link'}`.substring(0, 100),
-      emoji: resolveEmoji(actionEmoji, '⚡'),
-    });
-  }
-
-  const chalTitle = (challenge.title || 'Untitled').substring(0, 50);
-
-  if (options.length === 0) {
-    return { components: [{ type: 17, accent_color: challenge.accentColor || DEFAULT_ACCENT, components: [
-      { type: 10, content: `## ⚡ Link Actions\n-# **${chalTitle}**\n\nNo Custom Actions found. Create actions first via **⚡ Actions** in the Production Menu.` },
-      { type: 14 },
-      { type: 1, components: [
-        { type: 2, custom_id: `challenge_select_nav_${challengeId}`, label: '← Back', style: 2 }
-      ]}
-    ]}]};
-  }
-
-  const container = {
-    type: 17, accent_color: challenge.accentColor || DEFAULT_ACCENT,
-    components: [
-      { type: 10, content: `## ⚡ Link Actions\n-# Select actions players can use during **${chalTitle}**\n-# Selecting a linked action will unlink it` },
-      { type: 14 },
-      { type: 1, components: [{
-        type: 3,
-        custom_id: `challenge_action_toggle_${challengeId}`,
-        placeholder: linkedIds.length > 0 ? `${linkedIds.length} action${linkedIds.length === 1 ? '' : 's'} linked` : 'Select an action to link...',
-        options: options.slice(0, 25),
-      }]},
-      { type: 14 },
-      { type: 1, components: [
-        { type: 2, custom_id: `challenge_select_nav_${challengeId}`, label: '← Back', style: 2 }
-      ]}
-    ]
-  };
-
-  countComponents([container], { verbosity: "summary", label: "Action Selector" });
-  return { components: [container] };
-}
-
-/**
- * Toggle-link an action to/from a challenge.
- */
-export async function toggleChallengeAction(guildId, challengeId, actionId) {
-  const playerData = await loadPlayerData();
-  const challenge = playerData[guildId]?.challenges?.[challengeId];
-  if (!challenge) return { linked: false, error: 'Challenge not found' };
-
-  if (!challenge.actionIds) challenge.actionIds = [];
-
-  const idx = challenge.actionIds.indexOf(actionId);
-  if (idx >= 0) {
-    challenge.actionIds.splice(idx, 1);
-    await savePlayerData(playerData);
-    console.log(`⚡ Challenge: Unlinked action ${actionId} from ${challengeId}`);
-    return { linked: false, actionId };
-  } else {
-    challenge.actionIds.push(actionId);
-    await savePlayerData(playerData);
-    console.log(`⚡ Challenge: Linked action ${actionId} to ${challengeId}`);
-    return { linked: true, actionId };
-  }
 }
 
 /**

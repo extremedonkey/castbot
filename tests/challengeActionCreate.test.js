@@ -594,3 +594,103 @@ describe('getChallengeActionSummary — counts (replicated logic)', () => {
     assert.equal(summary.total, 2);
   });
 });
+
+// ─────────────────────────────────────────────
+// Tests — verifyChallengeActionAccess
+// ─────────────────────────────────────────────
+
+// Replicate access check logic inline
+function verifyChallengeActionAccess(challenge, actionId, member) {
+  const actions = getChallengeActions(challenge);
+
+  if (actions.playerAll.includes(actionId)) return { allowed: true };
+
+  for (const [userId, assignedId] of Object.entries(actions.playerIndividual)) {
+    if (assignedId === actionId) {
+      if (member?.user?.id === userId) return { allowed: true };
+      return { allowed: false, reason: 'This action isn\'t assigned to you.' };
+    }
+  }
+
+  for (const [roleId, assignedId] of Object.entries(actions.tribe)) {
+    if (assignedId === actionId) {
+      if (member?.roles?.cache?.has(roleId)) return { allowed: true };
+      return { allowed: false, reason: 'This action is for another tribe.' };
+    }
+  }
+
+  if (actions.host.includes(actionId)) {
+    const hasPermission = member?.permissions?.has?.(1n << 28n);
+    if (hasPermission) return { allowed: true };
+    return { allowed: false, reason: 'This is a host-only action.' };
+  }
+
+  return { allowed: true };
+}
+
+// Mock member objects
+const mockMember = (userId, roleIds = [], hasManageRoles = false) => ({
+  user: { id: userId },
+  roles: { cache: { has: (id) => roleIds.includes(id) } },
+  permissions: { has: (perm) => hasManageRoles },
+});
+
+describe('verifyChallengeActionAccess — security gating', () => {
+  const challenge = {
+    actions: {
+      playerAll: ['pa1'],
+      playerIndividual: { 'user_a': 'ind1', 'user_b': 'ind2' },
+      tribe: { 'role_x': 'tri1', 'role_y': 'tri2' },
+      host: ['host1'],
+    },
+  };
+
+  it('allows playerAll actions for any member', () => {
+    const result = verifyChallengeActionAccess(challenge, 'pa1', mockMember('random_user'));
+    assert.equal(result.allowed, true);
+  });
+
+  it('allows playerIndividual action for assigned player', () => {
+    const result = verifyChallengeActionAccess(challenge, 'ind1', mockMember('user_a'));
+    assert.equal(result.allowed, true);
+  });
+
+  it('denies playerIndividual action for wrong player', () => {
+    const result = verifyChallengeActionAccess(challenge, 'ind1', mockMember('user_b'));
+    assert.equal(result.allowed, false);
+    assert.ok(result.reason.includes('assigned'));
+  });
+
+  it('allows tribe action for member with tribe role', () => {
+    const result = verifyChallengeActionAccess(challenge, 'tri1', mockMember('anyone', ['role_x']));
+    assert.equal(result.allowed, true);
+  });
+
+  it('denies tribe action for member without tribe role', () => {
+    const result = verifyChallengeActionAccess(challenge, 'tri1', mockMember('anyone', ['role_y']));
+    assert.equal(result.allowed, false);
+    assert.ok(result.reason.includes('tribe'));
+  });
+
+  it('allows host action for member with ManageRoles', () => {
+    const result = verifyChallengeActionAccess(challenge, 'host1', mockMember('admin', [], true));
+    assert.equal(result.allowed, true);
+  });
+
+  it('denies host action for member without ManageRoles', () => {
+    const result = verifyChallengeActionAccess(challenge, 'host1', mockMember('player', [], false));
+    assert.equal(result.allowed, false);
+    assert.ok(result.reason.includes('host'));
+  });
+
+  it('allows unknown actionId (backwards compat)', () => {
+    const result = verifyChallengeActionAccess(challenge, 'unknown_legacy', mockMember('anyone'));
+    assert.equal(result.allowed, true);
+  });
+
+  it('allows with legacy actionIds (no actions object)', () => {
+    const legacyCh = { actionIds: ['legacy1'] };
+    const result = verifyChallengeActionAccess(legacyCh, 'legacy1', mockMember('anyone'));
+    assert.equal(result.allowed, true); // playerAll fallback
+  });
+});

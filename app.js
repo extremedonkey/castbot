@@ -4901,8 +4901,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('challenge_delete') &&
         !custom_id.startsWith('challenge_publish') &&
         !custom_id.startsWith('challenge_modal') &&
-        !custom_id.startsWith('challenge_actions_') &&
-        !custom_id.startsWith('challenge_action_toggle_') &&
+        !custom_id.startsWith('challenge_action_cat_select_') &&
+        !custom_id.startsWith('challenge_action_edit_') &&
+        !custom_id.startsWith('challenge_action_unlink_') &&
+        !custom_id.startsWith('challenge_action_delete_') &&
         !custom_id.startsWith('challenge_search') &&
         !custom_id.startsWith('challenge_library') &&
         !custom_id.startsWith('challenge_import')) ||
@@ -5055,6 +5057,25 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
 
           console.log(`🦁 DEBUG: Safari button interaction - Guild: ${guildId}, Button: ${resolvedButtonId}, User: ${context.userId}`);
+
+          // Security: verify challenge action access before execution
+          if (custom_id.startsWith('challenge_')) {
+            const { verifyChallengeActionAccess, getChallengeActions } = await import('./challengeActionCreate.js');
+            const pd = await (await import('./storage.js')).loadPlayerData();
+            const challenges = pd[guildId]?.challenges || {};
+            for (const ch of Object.values(challenges)) {
+              const actions = getChallengeActions(ch);
+              const allIds = [...actions.playerAll, ...Object.values(actions.playerIndividual), ...Object.values(actions.tribe), ...actions.host];
+              if (allIds.includes(resolvedButtonId)) {
+                const access = verifyChallengeActionAccess(ch, resolvedButtonId, context.member);
+                if (!access.allowed) {
+                  console.log(`🔒 Challenge action access denied: ${resolvedButtonId} — ${access.reason}`);
+                  return { content: `❌ ${access.reason}`, ephemeral: true };
+                }
+                break;
+              }
+            }
+          }
 
           // Create proper interaction object with token for follow-up messages
           const interactionData = {
@@ -6706,26 +6727,6 @@ To fix this:
         handler: async (context) => {
           const { handlePlayerCardInteraction } = await import('./playerCardMenu.js');
           return await handlePlayerCardInteraction(context);
-        }
-      })(req, res, client);
-
-    // ── Challenge Action Mockups — self-contained in poc/ ──
-    } else if (custom_id.startsWith('camock_')) {
-      return ButtonHandlerFactory.create({
-        id: custom_id,
-        updateMessage: true,
-        handler: async (context) => {
-          const { handleChallengeActionMockup } = await import('./poc/challengeActionMockup.js');
-          return await handleChallengeActionMockup(context);
-        }
-      })(req, res, client);
-    } else if (custom_id.startsWith('pcmock_')) {
-      return ButtonHandlerFactory.create({
-        id: custom_id,
-        updateMessage: true,
-        handler: async (context) => {
-          const { handlePlayerChallengeMockup } = await import('./poc/playerChallengeMockup.js');
-          return await handlePlayerChallengeMockup(context);
         }
       })(req, res, client);
 
@@ -8732,70 +8733,123 @@ To fix this:
           ]}]};
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('challenge_actions_')) {
-      // Challenges — show action selector for linking
-      const challengeId = custom_id.replace('challenge_actions_', '');
-      return ButtonHandlerFactory.create({
-        id: 'challenge_actions',
-        updateMessage: true,
-        deferred: true,
-        handler: async (context) => {
-          const { buildActionSelector } = await import('./challengeManager.js');
-          return buildActionSelector(context.guildId, challengeId);
-        }
-      })(req, res, client);
-    } else if (custom_id.startsWith('challenge_action_toggle_')) {
-      // Challenges — toggle action link or search
-      const challengeId = custom_id.replace('challenge_action_toggle_', '');
+    // ── Challenge Action Categories (Phase 1B) ──────────────────────────
+    } else if (custom_id.startsWith('challenge_action_cat_select_')) {
+      const challengeId = custom_id.replace('challenge_action_cat_select_', '');
       const selectedValue = req.body.data.values?.[0];
 
+      if (selectedValue === 'create_new') {
+        return ButtonHandlerFactory.create({
+          id: 'challenge_action_create',
+          requiresModal: true,
+          handler: async () => {
+            const { buildQuickChallengeActionModal } = await import('./challengeActionCreate.js');
+            return { type: 9, data: buildQuickChallengeActionModal(challengeId) };
+          }
+        })(req, res, client);
+      }
       if (selectedValue === 'search_actions') {
-        // Show search modal
         return ButtonHandlerFactory.create({
           id: 'challenge_action_search',
           requiresModal: true,
           handler: async () => ({
-            type: 9,
-            data: {
+            type: 9, data: {
               custom_id: `challenge_action_search_modal_${challengeId}`,
-              title: 'Search Actions',
-              components: [{
-                type: 18, label: 'Search Term',
-                description: 'Search by action name',
-                component: {
-                  type: 4, custom_id: 'search_term', style: 1,
-                  required: true, max_length: 50,
-                  placeholder: 'Type action name...'
-                }
-              }]
+              title: 'Search Challenge Actions',
+              components: [{ type: 18, label: 'Search Term', component: { type: 4, custom_id: 'search_term', style: 1, required: true, max_length: 50, placeholder: 'Type action name...' } }]
             }
           })
         })(req, res, client);
       }
-
-      if (selectedValue === 'back_to_all') {
-        // Clear search, show all
+      if (selectedValue === 'clone_action') {
+        // Clone flow — refresh for now (TODO: wire to clone selector)
         return ButtonHandlerFactory.create({
-          id: 'challenge_action_back',
-          updateMessage: true,
-          deferred: true,
+          id: 'challenge_action_clone',
+          updateMessage: true, deferred: true,
           handler: async (context) => {
-            const { buildActionSelector } = await import('./challengeManager.js');
-            return buildActionSelector(context.guildId, challengeId);
+            const { buildChallengeScreen } = await import('./challengeManager.js');
+            return buildChallengeScreen(context.guildId, challengeId);
           }
         })(req, res, client);
       }
 
-      // Toggle link
+      // Regular action selected — show manage sub-screen
       return ButtonHandlerFactory.create({
-        id: 'challenge_action_toggle',
-        updateMessage: true,
-        deferred: true,
+        id: 'challenge_action_manage',
+        updateMessage: true, deferred: true,
         handler: async (context) => {
-          if (!selectedValue) return { content: '❌ No action selected' };
-          const { toggleChallengeAction, buildActionSelector } = await import('./challengeManager.js');
-          await toggleChallengeAction(context.guildId, challengeId, selectedValue);
-          return buildActionSelector(context.guildId, challengeId);
+          const playerData = await (await import('./storage.js')).loadPlayerData();
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const challenge = playerData[context.guildId]?.challenges?.[challengeId];
+          const action = safariData[context.guildId]?.buttons?.[selectedValue];
+          if (!challenge || !action) {
+            return { components: [{ type: 17, components: [{ type: 10, content: '❌ Action not found' }] }] };
+          }
+          const actionName = action.name || action.label || 'Unnamed';
+          const outcomeCount = action.actions?.length || 0;
+          const triggerType = action.trigger?.type || 'button';
+          const triggerLabels = { button: '🖱️ Button', button_modal: '🔐 Secret Code', button_input: '⌨️ User Input', modal: '🕹️ Command', schedule: '⏰ Scheduled' };
+          return { components: [{ type: 17, accent_color: challenge.accentColor || 0x5865F2, components: [
+            { type: 10, content: `## ${actionName}\n-# **${challenge.title}** · ${triggerLabels[triggerType] || triggerType} · ${outcomeCount} outcome${outcomeCount !== 1 ? 's' : ''}` },
+            { type: 14 },
+            { type: 10, content: action.description || '-# No description' },
+            { type: 14 },
+            { type: 1, components: [
+              { type: 2, custom_id: `challenge_action_edit_${challengeId}_${selectedValue}`, label: 'Edit in Action Editor', style: 1, emoji: { name: '✏️' } },
+              { type: 2, custom_id: `challenge_action_unlink_${challengeId}_${selectedValue}`, label: 'Unlink', style: 2, emoji: { name: '🔗' } },
+              { type: 2, custom_id: `challenge_action_delete_${challengeId}_${selectedValue}`, label: 'Delete', style: 4, emoji: { name: '🗑️' } },
+            ]},
+            { type: 14 },
+            { type: 1, components: [
+              { type: 2, custom_id: `challenge_select_nav_${challengeId}`, label: '← Back', style: 2 },
+            ]},
+          ]}]};
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('challenge_action_edit_')) {
+      return ButtonHandlerFactory.create({
+        id: 'challenge_action_edit',
+        updateMessage: true, deferred: true,
+        handler: async (context) => {
+          const parts = custom_id.replace('challenge_action_edit_', '').split('_');
+          const actionId = parts.pop();
+          const { createCustomActionEditorUI } = await import('./customActionUI.js');
+          return await createCustomActionEditorUI({ guildId: context.guildId, actionId });
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('challenge_action_unlink_')) {
+      return ButtonHandlerFactory.create({
+        id: 'challenge_action_unlink',
+        updateMessage: true, deferred: true,
+        handler: async (context) => {
+          const parts = custom_id.replace('challenge_action_unlink_', '').split('_');
+          const actionId = parts.pop();
+          const challengeId = parts.join('_');
+          const { unlinkChallengeAction } = await import('./challengeActionCreate.js');
+          await unlinkChallengeAction(context.guildId, challengeId, actionId, 'playerAll');
+          await unlinkChallengeAction(context.guildId, challengeId, actionId, 'playerIndividual');
+          await unlinkChallengeAction(context.guildId, challengeId, actionId, 'tribe');
+          await unlinkChallengeAction(context.guildId, challengeId, actionId, 'host');
+          const { buildChallengeScreen } = await import('./challengeManager.js');
+          return buildChallengeScreen(context.guildId, challengeId);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('challenge_action_delete_')) {
+      return ButtonHandlerFactory.create({
+        id: 'challenge_action_delete_confirm',
+        updateMessage: true, deferred: true,
+        handler: async (context) => {
+          const parts = custom_id.replace('challenge_action_delete_', '').split('_');
+          const actionId = parts.pop();
+          const challengeId = parts.join('_');
+          const { deleteChallengeAction } = await import('./challengeActionCreate.js');
+          await deleteChallengeAction(context.guildId, challengeId, actionId, 'playerAll');
+          await deleteChallengeAction(context.guildId, challengeId, actionId, 'playerIndividual');
+          await deleteChallengeAction(context.guildId, challengeId, actionId, 'tribe');
+          await deleteChallengeAction(context.guildId, challengeId, actionId, 'host');
+          const { buildChallengeScreen } = await import('./challengeManager.js');
+          return buildChallengeScreen(context.guildId, challengeId);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('challenge_delete_') && !custom_id.startsWith('challenge_delete_confirm_')) {
@@ -46842,12 +46896,42 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id.startsWith('challenge_action_search_modal_')) {
-      // Challenge action search modal submit
+      // Challenge action search modal submit — return to challenge screen (search TODO)
       const challengeId = custom_id.replace('challenge_action_search_modal_', '');
-      const searchTerm = components[0]?.component?.value || components[0]?.components?.[0]?.value || '';
-      const { buildActionSelector } = await import('./challengeManager.js');
-      const result = await buildActionSelector(req.body.guild_id, challengeId, searchTerm.trim());
+      const { buildChallengeScreen } = await import('./challengeManager.js');
+      const result = await buildChallengeScreen(req.body.guild_id, challengeId);
       return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: result });
+
+    } else if (custom_id.startsWith('challenge_action_create_modal_')) {
+      // Quick Create Challenge Action modal submit
+      const challengeId = custom_id.replace('challenge_action_create_modal_', '');
+      try {
+        const { handleQuickChallengeActionSubmit } = await import('./challengeActionCreate.js');
+        const guild = client.guilds.cache.get(req.body.guild_id);
+        const result = await handleQuickChallengeActionSubmit(
+          req.body.guild_id,
+          req.body.member?.user?.id,
+          challengeId,
+          components,
+          guild
+        );
+        if (result.error) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: `❌ ${result.error}`, flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+        // Return to challenge screen showing new action
+        const { buildChallengeScreen } = await import('./challengeManager.js');
+        const screen = await buildChallengeScreen(req.body.guild_id, challengeId);
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: screen });
+      } catch (error) {
+        console.error('Error in challenge_action_create_modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: '❌ Error creating challenge action.', flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
 
     } else if (custom_id.startsWith('input_label_config_')) {
       // Handle input label configuration modal submit

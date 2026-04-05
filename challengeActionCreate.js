@@ -11,6 +11,7 @@
  */
 
 import { loadPlayerData, savePlayerData } from './storage.js';
+import { resolveEmoji } from './utils/emojiUtils.js';
 
 // ─────────────────────────────────────────────
 // Constants
@@ -561,4 +562,138 @@ export async function getChallengeActionSummary(guildId, challengeId) {
     host: { count: actions.host.length, ids: actions.host },
     total: actions.playerAll.length + playerIndividualAssignments.length + tribeAssignments.length + actions.host.length,
   };
+}
+
+// ─────────────────────────────────────────────
+// Exported: Security — Access verification (sync)
+// ─────────────────────────────────────────────
+
+/**
+ * Verify a member has access to execute a challenge action.
+ * Called before executeButtonActions() for challenge-posted action buttons.
+ * @param {object} challenge - Challenge entity
+ * @param {string} actionId - The action being executed
+ * @param {object} member - Discord GuildMember (needs .user.id and .roles.cache)
+ * @returns {{ allowed: boolean, reason?: string }}
+ */
+export function verifyChallengeActionAccess(challenge, actionId, member) {
+  const actions = getChallengeActions(challenge);
+
+  // playerAll — anyone can execute
+  if (actions.playerAll.includes(actionId)) {
+    return { allowed: true };
+  }
+
+  // playerIndividual — only the assigned player
+  for (const [userId, assignedId] of Object.entries(actions.playerIndividual)) {
+    if (assignedId === actionId) {
+      if (member?.user?.id === userId) return { allowed: true };
+      return { allowed: false, reason: 'This action isn\'t assigned to you.' };
+    }
+  }
+
+  // tribe — only members with the tribe role
+  for (const [roleId, assignedId] of Object.entries(actions.tribe)) {
+    if (assignedId === actionId) {
+      if (member?.roles?.cache?.has(roleId)) return { allowed: true };
+      return { allowed: false, reason: 'This action is for another tribe.' };
+    }
+  }
+
+  // host — only users with ManageRoles (standard host permission)
+  if (actions.host.includes(actionId)) {
+    const hasPermission = member?.permissions?.has?.(1n << 28n); // MANAGE_ROLES
+    if (hasPermission) return { allowed: true };
+    return { allowed: false, reason: 'This is a host-only action.' };
+  }
+
+  // Not found in any category — allow (backwards compat with legacy actionIds)
+  return { allowed: true };
+}
+
+// ─────────────────────────────────────────────
+// Exported: UI builder — Challenge Action Select (async)
+// ─────────────────────────────────────────────
+
+/**
+ * Build the ⚡ Challenge Actions select components for the challenge detail screen.
+ * Returns components array (heading + select) to splice into buildChallengeScreen.
+ * Follows createCustomActionSelectionUI pattern (customActionUI.js).
+ * @param {string} guildId
+ * @param {string} challengeId
+ * @returns {Promise<Array>} Components array (may be empty if no challenge found)
+ */
+export async function buildChallengeActionSelect(guildId, challengeId) {
+  const playerData = await loadPlayerData();
+  const challenge = playerData[guildId]?.challenges?.[challengeId];
+  if (!challenge) return [];
+
+  const { loadSafariContent } = await import('./safariManager.js');
+  const safariData = await loadSafariContent();
+  const allButtons = safariData[guildId]?.buttons || {};
+
+  // Gather all linked action IDs across all categories
+  const actions = getChallengeActions(challenge);
+  const allLinkedIds = new Set([
+    ...actions.playerAll,
+    ...Object.values(actions.playerIndividual),
+    ...Object.values(actions.tribe),
+    ...actions.host,
+  ]);
+
+  const totalActions = allLinkedIds.size;
+
+  // Build options — fixed options first
+  const options = [
+    { label: '➕ Create New Challenge Action', value: 'create_new', description: 'Design a new action for this challenge', emoji: { name: '➕' } },
+  ];
+  if (totalActions > 10) {
+    options.push({ label: '🔍 Search Actions', value: 'search_actions', description: 'Search through challenge actions', emoji: { name: '🔍' } });
+  }
+  if (totalActions > 0) {
+    options.push({ label: '🔄 Clone Action', value: 'clone_action', description: 'Duplicate an existing action', emoji: { name: '🔄' } });
+  }
+
+  // Action options — sorted by lastModified (newest first)
+  const fixedCount = options.length;
+  const maxSlots = 25 - fixedCount;
+
+  const actionEntries = [...allLinkedIds]
+    .map(id => ({ id, action: allButtons[id] }))
+    .filter(({ action }) => action) // skip orphaned refs
+    .sort((a, b) => {
+      const aTime = a.action.metadata?.lastModified || 0;
+      const bTime = b.action.metadata?.lastModified || 0;
+      return bTime - aTime;
+    })
+    .slice(0, maxSlots);
+
+  for (const { id, action } of actionEntries) {
+    const name = (action.name || action.label || 'Unnamed Action').substring(0, 100);
+    const outcomeCount = action.actions?.length || 0;
+    let desc = action.description || 'No description';
+    if (outcomeCount > 0) desc += ` · ${outcomeCount} outcome${outcomeCount !== 1 ? 's' : ''}`;
+
+    options.push({
+      label: name,
+      value: id,
+      description: desc.substring(0, 100),
+      emoji: resolveEmoji(action.emoji || action.trigger?.button?.emoji, '⚡'),
+    });
+  }
+
+  // Build components (heading + select)
+  const placeholder = totalActions > 0
+    ? `${totalActions} action${totalActions === 1 ? '' : 's'} linked`
+    : 'No actions — select to create...';
+
+  return [
+    { type: 10, content: `### \`\`\`⚡ Challenge Actions\`\`\`\n-# Equivalent to carlbot \`?tags\` (but better!)` },
+    { type: 1, components: [{
+      type: 3,
+      custom_id: `challenge_action_cat_select_${challengeId}`,
+      placeholder,
+      options: options.slice(0, 25),
+    }]},
+  ];
 }

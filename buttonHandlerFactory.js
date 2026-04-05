@@ -1087,24 +1087,38 @@ export const BUTTON_REGISTRY = {
     parent: 'reeces_stuff'
   },
 
-  // === CHALLENGE ACTION MOCKUP ===
-  'camock_*': {
-    label: 'Challenge Action Mockup',
-    description: 'Phase 1B challenge action categories UI mockup',
+  // === CHALLENGE ACTION CATEGORIES ===
+  'challenge_action_cat_select_*': {
+    label: 'Challenge Action Select',
+    description: 'Select/create/manage challenge actions',
     emoji: '⚡',
     style: 'Secondary',
-    category: 'experimental',
-    parent: 'reeces_stuff'
+    category: 'challenges',
+    parent: 'challenge_screen'
   },
-
-  // === PLAYER CHALLENGE MOCKUP ===
-  'pcmock_*': {
-    label: 'Player Challenge Mockup',
-    description: 'Phase 2 player challenge view UI mockup',
-    emoji: '🏃',
+  'challenge_action_edit_*': {
+    label: 'Edit Challenge Action',
+    description: 'Open action in Action Editor',
+    emoji: '✏️',
+    style: 'Primary',
+    category: 'challenges',
+    parent: 'challenge_action_cat_select'
+  },
+  'challenge_action_unlink_*': {
+    label: 'Unlink Challenge Action',
+    description: 'Remove action from challenge (keeps action)',
+    emoji: '🔗',
     style: 'Secondary',
-    category: 'experimental',
-    parent: 'reeces_stuff'
+    category: 'challenges',
+    parent: 'challenge_action_cat_select'
+  },
+  'challenge_action_delete_*': {
+    label: 'Delete Challenge Action',
+    description: 'Delete action and remove from challenge',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'challenges',
+    parent: 'challenge_action_cat_select'
   },
 
   // === TRIBES (LEGACY) ===
