@@ -40163,30 +40163,31 @@ Your server is now ready for Tycoons gameplay!`;
 
         console.log(`📊 Admin set ${attr.name} for player ${playerId}: ${newValue}${newMax ? `/${newMax}` : ''}`);
 
+        // Rebuild the player menu with fresh data — UPDATE_MESSAGE refreshes the parent
+        const playerData = await loadPlayerData();
+        const guild = await client.guilds.fetch(guildId);
+        const targetMember = await guild.members.fetch(playerId);
+        const userId = req.body.member?.user?.id;
+        const isAdmin = userId !== playerId;
+        const mode = isAdmin ? PlayerManagementMode.ADMIN : PlayerManagementMode.PLAYER;
+        const channelId = req.body.channel_id;
+
+        const menuData = await createPlayerManagementUI({
+          mode,
+          targetMember,
+          playerData,
+          guildId,
+          userId,
+          activeButton: 'attributes',
+          client,
+          channelId,
+          showUserSelect: isAdmin,
+          showVanityRoles: isAdmin,
+        });
+
         return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
-            components: [{
-              type: 17,
-              accent_color: 0x27ae60, // Green
-              components: [
-                { type: 10, content: '## ✅ Attribute Updated' },
-                { type: 14 },
-                { type: 10, content: `**${attr.emoji} ${attr.name}** for <@${playerId}> has been set to:\n\n• Current: **${result.current}**${attr.category === 'resource' ? `\n• Max: **${result.max}**` : ''}` },
-                { type: 14 },
-                {
-                  type: 1,
-                  components: [{
-                    type: 2,
-                    custom_id: 'admin_manage_player',
-                    label: '← Back to Player Management',
-                    style: 2
-                  }]
-                }
-              ]
-            }]
-          }
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: menuData
         });
       } catch (error) {
         console.error(`❌ Failed to set attribute: ${error.message}`);
