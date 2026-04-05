@@ -228,16 +228,34 @@ An agent was building custom reaction panels. It called `updateDeferredResponse(
 
 The factory prevents this class of bug entirely. The handler returns data. The factory sends it. You can't get the signature wrong because you never call it.
 
+## Implementation Summary
+
+| Phase | What | Effort | Risk | Blast Radius | Status |
+|---|---|---|---|---|---|
+| **1: Trivials** | Log tags, alias, docs | 30 min | None | Log-only, no behavior change | Not started |
+| **2a: Modal auto-detect** | Factory checks `type: 9` before committing response type | 1 hr | Low | Only affects handlers that return modals — existing `requiresModal` handlers keep working | Not started |
+| **2b: Response type redirect** | `responseTypeResolver` or `_responseType` override | 2 hr | Medium | Touches factory response path — all 400+ factory handlers flow through this. One wrong condition = all buttons break | Not started |
+| **3: Modal SUBMIT support** | Factory handles interaction type 5 | 2 hr | Low | New code path, doesn't touch existing modal handlers | Not started |
+| **4: Modal SUBMIT migration** | Migrate existing handlers to factory | Ongoing | Medium per handler | Each migration changes how a modal responds — test individually | Not started |
+| **5: Doc rewrite** | Rename to CIF, rewrite ButtonHandlerFactory.md | 1 hr | None | Docs only | Not started |
+
+**Highest value**: Phase 2a (modal auto-detect) — eliminates the most common agent confusion and pre-commit hook friction.
+
+**Highest risk**: Phase 2b (response type redirect) — the factory response path is the single hottest code path in the app. Every button click, select, and component interaction flows through it. Getting the redirect logic wrong breaks everything.
+
+**Recommended order**: 1 → 2a → 3 → 5 → 2b → 4. Do the response type redirect AFTER modal support is solid and tested, not before.
+
 ## Net Impact
 
 | Metric | Before | After |
 |---|---|---|
 | Interaction patterns with log tags | 1 (menu only) | All |
 | Modal handling | Handle-before-factory workaround | First-class auto-detect |
+| Response type switching | Split handler across multiple factory calls | Handler returns override hint |
 | Modal submit handlers in factory | 0 of ~20 | New ones + gradual migration |
 | Name accuracy | "ButtonHandlerFactory" (misleading) | "ComponentInteractionFactory" (accurate) |
 | Pre-commit coverage | Legacy buttons only | + wrong arg count, + modal submits |
-| Agent confusion rate | High (modals) | Low (one pattern for everything) |
+| Agent confusion rate | High (modals, response types) | Low (one pattern for everything) |
 
 ## Related
 
