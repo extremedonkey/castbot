@@ -233,7 +233,7 @@ The factory prevents this class of bug entirely. The handler returns data. The f
 | Phase | What | Effort | Risk | Blast Radius | Status |
 |---|---|---|---|---|---|
 | **1: Trivials** | Log tags, alias, docs | 30 min | None | Log-only, no behavior change | **Done** ✅ |
-| **2a: Modal auto-detect** | Factory checks `type: 9` before committing response type | 1 hr | Low | Only affects handlers that return modals — existing `requiresModal` handlers keep working | Not started |
+| **2a: Modal auto-detect** | Factory checks `type: 9` before committing response type | 1 hr | Low | Only affects handlers that return modals — existing `requiresModal` handlers keep working | **Done** ✅ |
 | **2b: Response type redirect** | `responseTypeResolver` or `_responseType` override | 2 hr | Medium | Touches factory response path — all 400+ factory handlers flow through this. One wrong condition = all buttons break | Not started |
 | **3: Modal SUBMIT support** | Factory handles interaction type 5 | 2 hr | Low | New code path, doesn't touch existing modal handlers | Not started |
 | **4: Modal SUBMIT migration** | Migrate existing handlers to factory | Ongoing | Medium per handler | Each migration changes how a modal responds — test individually | Not started |

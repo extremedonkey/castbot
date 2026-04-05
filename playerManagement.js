@@ -12,13 +12,14 @@ import {
   InteractionResponseType,
   InteractionResponseFlags
 } from 'discord-interactions';
-import { createPlayerCard, extractCastlistData, createCastlistRows } from './castlistV2.js';
+import { createPlayerCard, extractCastlistData, createCastlistRows, limitAndSortCastlists } from './castlistV2.js';
 import { getPlayer, updatePlayer, getGuildPronouns, getGuildTimezones, loadPlayerData } from './storage.js';
-import { hasStoresInGuild, getEligiblePlayersFixed, getCustomTerms, getPlayerAttributes, getAttributeDefinitions, loadSafariContent, MAX_GLOBAL_STORES } from './safariManager.js';
+import { hasStoresInGuild, getEligiblePlayersFixed, getCustomTerms, getPlayerAttributes, getAttributeDefinitions, loadSafariContent, MAX_GLOBAL_STORES, getCoordinateFromChannelId } from './safariManager.js';
 import { countComponents } from './utils.js';
 import { parseAndValidateEmoji, parseTextEmoji, resolveEmoji } from './utils/emojiUtils.js';
 import { createBackButton } from './src/ui/backButtonFactory.js';
 import { getTimeUntilRegeneration } from './pointsManager.js';
+import { getChallengeActions } from './challengeActionCreate.js';
 
 /**
  * Player management modes
@@ -320,6 +321,784 @@ export function createManagementButtons(targetUserId, mode, enabled = true, acti
   };
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// SECTION HELPERS — calculateVisibility, buildSectionRow, buildSuperSelect
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Pre-calculates which buttons should be visible/enabled in the player menu.
+ * @param {string} guildId
+ * @param {string} targetUserId - The user being viewed (may be null in admin mode)
+ * @param {Object} playerData
+ * @param {Object} safariData
+ * @param {string} mode - PlayerManagementMode
+ * @param {Object} client - Discord client
+ * @param {string} channelId - Current channel ID (for navigate detection)
+ * @returns {Object} Visibility map: { featureName: { show: bool, disabled: bool, label?: string, emoji?: string } }
+ */
+async function calculateVisibility(guildId, targetUserId, playerData, safariData, mode, client, channelId) {
+  const safariConfig = safariData[guildId]?.safariConfig || {};
+  const allButtons = safariData[guildId]?.buttons || {};
+  const isAdmin = mode === PlayerManagementMode.ADMIN;
+  const hasTarget = !!targetUserId;
+
+  // Player initialization state
+  const safariObj = playerData[guildId]?.players?.[targetUserId]?.safari;
+  const isInitialized = safariObj !== undefined;
+  const hasPoints = safariObj?.points !== undefined; // true init (not just skeleton)
+  const currentRound = safariConfig.currentRound;
+
+  // Map location state
+  const activeMapId = safariData[guildId]?.maps?.active;
+  const playerMapData = activeMapId ? playerData[guildId]?.players?.[targetUserId]?.safari?.mapProgress?.[activeMapId] : null;
+  const hasMapLocation = playerMapData?.currentLocation !== undefined;
+
+  // Feature configuration checks
+  const pronounRoleIds = playerData[guildId]?.pronounRoleIDs || [];
+  const timezones = playerData[guildId]?.timezones || {};
+  const timezoneEntries = Object.entries(timezones);
+  const hasPronounsConfigured = pronounRoleIds.length > 0;
+  const hasTimezonesConfigured = timezoneEntries.length > 0;
+
+  const attributeDefinitions = await getAttributeDefinitions(guildId);
+  const hasAttributesConfigured = Object.keys(attributeDefinitions).length > 0;
+
+  // Inventory visibility
+  const inventoryVisibilityMode = safariConfig.inventoryVisibilityMode || 'always';
+  let showInventory = false;
+  switch (inventoryVisibilityMode) {
+    case 'always': showInventory = true; break;
+    case 'never': showInventory = false; break;
+    case 'initialized_only': showInventory = isInitialized; break;
+    case 'standard': default: showInventory = isInitialized && currentRound && currentRound !== 0; break;
+  }
+
+  // Challenges — check if any have actions visible to this player
+  const challenges = playerData[guildId]?.challenges || {};
+  let hasChallengeActions = false;
+  for (const [chId, ch] of Object.entries(challenges)) {
+    const actions = getChallengeActions(ch);
+    if (actions.playerAll.length > 0) { hasChallengeActions = true; break; }
+    if (targetUserId && actions.playerIndividual[targetUserId]) { hasChallengeActions = true; break; }
+    // tribe check needs member roles — defer to runtime if we have entries
+    if (Object.keys(actions.tribe).length > 0) { hasChallengeActions = true; break; }
+  }
+
+  // Crafting actions
+  const craftingActions = Object.values(allButtons).filter(a => {
+    const vis = a.menuVisibility || 'none';
+    const tt = a.trigger?.type || 'button';
+    return vis === 'crafting_menu' && (tt === 'button' || tt === 'button_modal' || tt === 'button_input');
+  });
+  const hasCraftingConfigured = craftingActions.length > 0;
+
+  // Player menu actions
+  const menuActions = Object.values(allButtons).filter(a => {
+    const vis = a.menuVisibility || (a.showInInventory ? 'player_menu' : 'none');
+    const tt = a.trigger?.type || 'button';
+    return vis === 'player_menu' && (tt === 'button' || tt === 'button_modal' || tt === 'button_input');
+  });
+  const hasActionsConfigured = menuActions.length > 0;
+
+  // Global stores visibility
+  const globalStoresVisibilityMode = safariConfig.globalStoresVisibilityMode || 'always';
+  let showStores = false;
+  switch (globalStoresVisibilityMode) {
+    case 'always': showStores = true; break;
+    case 'never': showStores = false; break;
+    case 'initialized_only': showStores = isInitialized; break;
+    case 'standard': default: showStores = isInitialized && currentRound && currentRound !== 0; break;
+  }
+  const globalStores = (safariData[guildId]?.globalStores || []).slice(0, MAX_GLOBAL_STORES);
+  const stores = safariData[guildId]?.stores || {};
+  const hasStoresExist = globalStores.some(id => stores[id]);
+
+  // Commands
+  const enableGlobalCommands = safariConfig.enableGlobalCommands !== false;
+
+  // Custom inventory terms
+  const customTerms = await getCustomTerms(guildId);
+
+  // Navigate coordinate
+  const currentCoordinate = playerMapData?.currentLocation;
+
+  // Build visibility map
+  // For admin with no target: show as DISABLED if feature IS configured, HIDE if not configured
+  const vis = {};
+
+  // === Row 1: Castlists & Profile ===
+  vis.castlists = { show: true, disabled: isAdmin && !hasTarget, label: 'Castlists', emoji: '📋' };
+  vis.pronouns = { show: isAdmin ? hasPronounsConfigured : hasPronounsConfigured, disabled: isAdmin && !hasTarget, label: 'Pronouns', emoji: '💜' };
+  vis.timezone = { show: isAdmin ? hasTimezonesConfigured : hasTimezonesConfigured, disabled: isAdmin && !hasTarget, label: 'Timezone', emoji: '🌍' };
+  vis.age = { show: true, disabled: isAdmin && !hasTarget, label: 'Age', emoji: '🎂' };
+
+  // === Row 2: Safari ===
+  vis.inventory = { show: isAdmin ? showInventory : (showInventory && hasTarget), disabled: isAdmin && !hasTarget, label: customTerms.inventoryName || 'Inventory', emoji: customTerms.inventoryEmoji || '🧰', immediate: true };
+  vis.challenges = { show: isAdmin ? hasChallengeActions : hasChallengeActions, disabled: isAdmin && !hasTarget, label: 'Challenges', emoji: '🏃' };
+  vis.crafting = { show: isAdmin ? hasCraftingConfigured : hasCraftingConfigured, disabled: isAdmin && !hasTarget, label: 'Crafting', emoji: '🛠️' };
+  vis.actions = { show: isAdmin ? hasActionsConfigured : hasActionsConfigured, disabled: isAdmin && !hasTarget, label: 'Actions', emoji: '⚡' };
+  vis.stores = { show: isAdmin ? (showStores && hasStoresExist) : (showStores && hasStoresExist), disabled: isAdmin && !hasTarget, label: 'Stores', emoji: '🏪' };
+
+  // === Row 3: Advanced ===
+  vis.attributes = { show: isAdmin ? hasAttributesConfigured : hasAttributesConfigured, disabled: isAdmin && !hasTarget, label: 'Stats', emoji: '📊' };
+  vis.commands = { show: enableGlobalCommands, disabled: isAdmin && !hasTarget, label: 'Commands', emoji: '🕹️', immediate: true };
+  vis.vanity = { show: isAdmin, disabled: isAdmin && !hasTarget, label: 'Vanity Roles', emoji: '🎭' };
+  vis.navigate = { show: hasTarget && isInitialized && hasMapLocation, disabled: false, label: 'Navigate', emoji: '🗺️', immediate: true, coordinate: currentCoordinate };
+
+  // Metadata for footer
+  vis._meta = { isInitialized: hasPoints, hasTarget, isAdmin };
+
+  console.log(`📊 Visibility calc for ${guildId}/${targetUserId || 'none'}: ${Object.entries(vis).filter(([k,v]) => k !== '_meta' && v.show).map(([k]) => k).join(', ')}`);
+
+  return vis;
+}
+
+/**
+ * Builds a section ActionRow from button definitions, respecting visibility.
+ * @param {string[]} buttonIds - Ordered list of button category IDs
+ * @param {string} targetUserId - Target user (for custom_id suffix)
+ * @param {string} activeCategory - Currently active category (renders as Primary)
+ * @param {Object} visibility - From calculateVisibility()
+ * @param {string} mode - PlayerManagementMode
+ * @returns {Object|null} ActionRow component or null if no buttons visible
+ */
+function buildSectionRow(buttonIds, targetUserId, activeCategory, visibility, mode) {
+  const prefix = mode === PlayerManagementMode.ADMIN ? 'admin' : 'player';
+  const userIdPart = mode === PlayerManagementMode.ADMIN && targetUserId ? `_${targetUserId}` : '';
+  const components = [];
+
+  for (const id of buttonIds) {
+    const vis = visibility[id];
+    if (!vis || !vis.show) continue;
+
+    const isActive = activeCategory === id;
+    const isDisabled = vis.disabled;
+
+    // Build custom_id based on button type
+    let customId;
+    if (id === 'vanity') {
+      customId = `admin_manage_vanity${isDisabled ? '_pending' : ''}${userIdPart}`;
+    } else if (id === 'inventory') {
+      customId = 'safari_player_inventory';
+    } else if (id === 'navigate') {
+      customId = `safari_navigate_${targetUserId}_${vis.coordinate || 'unknown'}`;
+    } else if (id === 'commands') {
+      customId = 'player_enter_command_global';
+    } else {
+      customId = `${prefix}_set_${id}${isDisabled ? '_pending' : ''}${userIdPart}`;
+    }
+
+    const button = {
+      type: 2, // Button
+      style: isActive ? 1 : 2, // Primary if active, Secondary otherwise
+      label: vis.label,
+      custom_id: customId,
+      disabled: isDisabled
+    };
+
+    const emoji = resolveEmoji(vis.emoji, undefined);
+    if (emoji) button.emoji = emoji;
+
+    components.push(button);
+  }
+
+  if (components.length === 0) return null;
+
+  return {
+    type: 1, // ActionRow
+    components
+  };
+}
+
+/**
+ * Builds the hot-swap select menu for the active category.
+ * Returns a single ActionRow with either a StringSelect or RoleSelect.
+ * @param {string} activeCategory
+ * @param {Object} targetMember - Discord GuildMember or null
+ * @param {Object} playerData
+ * @param {Object} safariData
+ * @param {string} guildId
+ * @param {string} mode
+ * @param {Object} client - Discord client
+ * @param {Object} guild - Discord guild (pre-fetched)
+ * @param {string} userId - The interacting user's ID
+ * @returns {Object} ActionRow component (always returns something - disabled placeholder if no category)
+ */
+async function buildSuperSelect(activeCategory, targetMember, playerData, safariData, guildId, mode, client, guild, userId) {
+  const prefix = mode === PlayerManagementMode.ADMIN ? 'admin' : 'player';
+  const userIdPart = mode === PlayerManagementMode.ADMIN && targetMember ? `_${targetMember.id}` : '';
+
+  // No active category or no target — disabled placeholder
+  if (!activeCategory || !targetMember) {
+    const placeholder = !targetMember
+      ? 'Select player first..'
+      : 'Click a button above to configure..';
+    return {
+      type: 1, // ActionRow
+      components: [{
+        type: 6, // Role Select (always valid as placeholder)
+        custom_id: targetMember ? 'admin_integrated_select_inactive' : 'admin_integrated_select_pending',
+        placeholder,
+        min_values: 0,
+        max_values: 1,
+        disabled: true
+      }]
+    };
+  }
+
+  // IMMEDIATE-NEW categories don't have selects — show disabled placeholder
+  const immediateCategories = ['inventory', 'navigate', 'commands'];
+  if (immediateCategories.includes(activeCategory)) {
+    return {
+      type: 1, // ActionRow
+      components: [{
+        type: 6, // Role Select
+        custom_id: 'admin_integrated_select_inactive',
+        placeholder: `${activeCategory.charAt(0).toUpperCase() + activeCategory.slice(1)} opens in a new message`,
+        min_values: 0,
+        max_values: 1,
+        disabled: true
+      }]
+    };
+  }
+
+  switch (activeCategory) {
+    // ─── Castlists ───────────────────────────────────────────────────────
+    case 'castlists': {
+      const { allCastlists } = await extractCastlistData(playerData, guildId);
+      const safariConfig = safariData[guildId]?.safariConfig || {};
+      const showCustomCastlists = safariConfig.showCustomCastlists !== false;
+
+      const options = [
+        {
+          label: '📋 Post Castlist',
+          value: 'show_castlist2_default',
+          description: 'Publicly post an interactive Castlist. Use in subs for privacy.'
+        },
+        {
+          label: '🍒 Compact Castlist',
+          value: 'compact_castlist_default',
+          description: 'Posts an image version of the castlist'
+        }
+      ];
+
+      // Add custom castlists sorted by last updated
+      if (showCustomCastlists && allCastlists) {
+        const sorted = limitAndSortCastlists(allCastlists, 22); // 25 - 2 fixed - 1 safety
+        for (const [id, castlist] of sorted) {
+          if (id === 'default') continue; // Already covered by first option
+          if (options.length >= 25) break;
+          const emoji = resolveEmoji(castlist.emoji, '🏃');
+          options.push({
+            label: (castlist.name || id).slice(0, 100),
+            value: `show_castlist2_${id}`,
+            description: castlist.description?.slice(0, 100) || undefined,
+            emoji
+          });
+        }
+      }
+
+      if (options.length >= 25) {
+        options[24] = { label: '❌ Max Castlists shown', value: '_error_max', description: 'Too many castlists to display' };
+      }
+
+      return {
+        type: 1,
+        components: [{
+          type: 3, // String Select
+          custom_id: 'player_menu_sel_castlists',
+          placeholder: 'Select a castlist to post',
+          min_values: 1,
+          max_values: 1,
+          options
+        }]
+      };
+    }
+
+    // ─── Challenges ──────────────────────────────────────────────────────
+    case 'challenges': {
+      const challenges = playerData[guildId]?.challenges || {};
+      const allBtns = safariData[guildId]?.buttons || {};
+      const options = [];
+
+      for (const [chId, ch] of Object.entries(challenges)) {
+        const actions = getChallengeActions(ch);
+        const chalTitle = (ch.title || 'Challenge').slice(0, 50);
+
+        // playerAll
+        for (const actionId of actions.playerAll) {
+          const action = allBtns[actionId];
+          if (!action) continue;
+          const emoji = resolveEmoji(action.emoji || action.trigger?.button?.emoji, '🏃');
+          options.push({
+            label: (action.name || 'Action').slice(0, 100),
+            value: `challenge_${guildId}_${actionId}`,
+            description: chalTitle,
+            emoji
+          });
+        }
+
+        // playerIndividual — only if assigned to target
+        const targetId = targetMember.id;
+        const indActionId = actions.playerIndividual[targetId];
+        if (indActionId) {
+          const action = allBtns[indActionId];
+          if (action) {
+            const emoji = resolveEmoji(action.emoji || action.trigger?.button?.emoji, '🏃');
+            options.push({
+              label: (action.name || 'Action').slice(0, 100),
+              value: `challenge_${guildId}_${indActionId}`,
+              description: chalTitle,
+              emoji
+            });
+          }
+        }
+
+        // tribe — check roles
+        for (const [roleId, triActionId] of Object.entries(actions.tribe)) {
+          if (targetMember?.roles?.cache?.has?.(roleId)) {
+            const action = allBtns[triActionId];
+            if (action) {
+              const emoji = resolveEmoji(action.emoji || action.trigger?.button?.emoji, '🏃');
+              options.push({
+                label: (action.name || 'Action').slice(0, 100),
+                value: `challenge_${guildId}_${triActionId}`,
+                description: chalTitle,
+                emoji
+              });
+            }
+          }
+        }
+      }
+
+      if (options.length === 0) {
+        return {
+          type: 1,
+          components: [{
+            type: 3,
+            custom_id: 'player_menu_sel_challenges',
+            placeholder: 'No active challenge actions',
+            min_values: 0,
+            max_values: 1,
+            disabled: true,
+            options: [{ label: 'No challenges', value: 'none', description: 'No challenge actions available' }]
+          }]
+        };
+      }
+
+      return {
+        type: 1,
+        components: [{
+          type: 3,
+          custom_id: 'player_menu_sel_challenges',
+          placeholder: 'Select a challenge action',
+          min_values: 1,
+          max_values: 1,
+          options: options.slice(0, 25)
+        }]
+      };
+    }
+
+    // ─── Crafting ────────────────────────────────────────────────────────
+    case 'crafting': {
+      const allBtns = safariData[guildId]?.buttons || {};
+      const craftingActions = Object.entries(allBtns)
+        .filter(([id, a]) => {
+          const vis = a.menuVisibility || 'none';
+          const tt = a.trigger?.type || 'button';
+          return vis === 'crafting_menu' && (tt === 'button' || tt === 'button_modal' || tt === 'button_input');
+        })
+        .map(([id, a]) => ({ ...a, actionId: id }))
+        .sort((a, b) => {
+          const orderA = a.inventoryConfig?.sortOrder ?? 999;
+          const orderB = b.inventoryConfig?.sortOrder ?? 999;
+          if (orderA !== orderB) return orderA - orderB;
+          return (a.name || '').localeCompare(b.name || '');
+        });
+
+      if (craftingActions.length === 0) {
+        return {
+          type: 1,
+          components: [{
+            type: 3,
+            custom_id: 'player_menu_sel_crafting',
+            placeholder: 'No crafting recipes available',
+            min_values: 0,
+            max_values: 1,
+            disabled: true,
+            options: [{ label: 'No recipes', value: 'none', description: 'No crafting recipes configured' }]
+          }]
+        };
+      }
+
+      const options = craftingActions.slice(0, 25).map(action => {
+        const label = (action.inventoryConfig?.buttonLabel || action.trigger?.button?.label || action.name || 'Recipe').slice(0, 100);
+        const emoji = resolveEmoji(action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji || action.emoji, '🛠️');
+        return {
+          label,
+          value: `crafting_${guildId}_${action.actionId}`,
+          emoji
+        };
+      });
+
+      if (craftingActions.length >= 25) {
+        options[24] = { label: '❌ Max recipes shown', value: '_error_max' };
+      }
+
+      return {
+        type: 1,
+        components: [{
+          type: 3,
+          custom_id: 'player_menu_sel_crafting',
+          placeholder: 'Select a crafting recipe',
+          min_values: 1,
+          max_values: 1,
+          options
+        }]
+      };
+    }
+
+    // ─── Actions (Player Menu Actions) ──────────────────────────────────
+    case 'actions': {
+      const allBtns = safariData[guildId]?.buttons || {};
+      const menuActions = Object.entries(allBtns)
+        .filter(([id, a]) => {
+          const vis = a.menuVisibility || (a.showInInventory ? 'player_menu' : 'none');
+          const tt = a.trigger?.type || 'button';
+          return vis === 'player_menu' && (tt === 'button' || tt === 'button_modal' || tt === 'button_input');
+        })
+        .map(([id, a]) => ({ ...a, actionId: id }))
+        .sort((a, b) => {
+          const orderA = a.inventoryConfig?.sortOrder ?? 999;
+          const orderB = b.inventoryConfig?.sortOrder ?? 999;
+          if (orderA !== orderB) return orderA - orderB;
+          return (a.name || '').localeCompare(b.name || '');
+        });
+
+      if (menuActions.length === 0) {
+        return {
+          type: 1,
+          components: [{
+            type: 3,
+            custom_id: 'player_menu_sel_actions',
+            placeholder: 'No actions available',
+            min_values: 0,
+            max_values: 1,
+            disabled: true,
+            options: [{ label: 'No actions', value: 'none', description: 'No player menu actions configured' }]
+          }]
+        };
+      }
+
+      const options = menuActions.slice(0, 25).map(action => {
+        const label = (action.inventoryConfig?.buttonLabel || action.trigger?.button?.label || action.name || 'Action').slice(0, 100);
+        const emoji = resolveEmoji(action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji || action.emoji, '⚡');
+        return {
+          label,
+          value: `action_${guildId}_${action.actionId}`,
+          emoji
+        };
+      });
+
+      if (menuActions.length >= 25) {
+        options[24] = { label: '❌ Max actions shown', value: '_error_max' };
+      }
+
+      return {
+        type: 1,
+        components: [{
+          type: 3,
+          custom_id: 'player_menu_sel_actions',
+          placeholder: 'Select an action',
+          min_values: 1,
+          max_values: 1,
+          options
+        }]
+      };
+    }
+
+    // ─── Stores ──────────────────────────────────────────────────────────
+    case 'stores': {
+      const globalStores = (safariData[guildId]?.globalStores || []).slice(0, MAX_GLOBAL_STORES);
+      const stores = safariData[guildId]?.stores || {};
+      const options = [];
+
+      for (const storeId of globalStores) {
+        const store = stores[storeId];
+        if (!store) continue;
+        const itemCount = Object.keys(store.items || {}).length;
+        const emoji = resolveEmoji(store.emoji, '🏪');
+        options.push({
+          label: (store.name || 'Store').slice(0, 100),
+          value: `safari_store_browse_${guildId}_${storeId}`,
+          description: `${itemCount} item${itemCount !== 1 ? 's' : ''}`,
+          emoji
+        });
+      }
+
+      if (options.length === 0) {
+        return {
+          type: 1,
+          components: [{
+            type: 3,
+            custom_id: 'player_menu_sel_stores',
+            placeholder: 'No stores available',
+            min_values: 0,
+            max_values: 1,
+            disabled: true,
+            options: [{ label: 'No stores', value: 'none', description: 'No global stores configured' }]
+          }]
+        };
+      }
+
+      if (options.length >= 25) {
+        options[24] = { label: '❌ Max stores shown', value: '_error_max' };
+      }
+
+      return {
+        type: 1,
+        components: [{
+          type: 3,
+          custom_id: 'player_menu_sel_stores',
+          placeholder: 'Select a store to browse',
+          min_values: 1,
+          max_values: 1,
+          options
+        }]
+      };
+    }
+
+    // ─── Pronouns (ported from createHotSwappableSelect) ────────────────
+    case 'pronouns': {
+      const pronounRoleIds = await getGuildPronouns(guildId);
+      if (!pronounRoleIds || pronounRoleIds.length === 0) return null;
+
+      if (pronounRoleIds.length > 25) {
+        console.error(`❌ Too many pronoun roles (${pronounRoleIds.length}). Discord limit is 25.`);
+        return {
+          type: 1,
+          components: [{
+            type: 3,
+            custom_id: `${prefix}_integrated_pronouns${userIdPart}`,
+            placeholder: `❌ Too many pronoun roles (${pronounRoleIds.length}/25)`,
+            min_values: 0,
+            max_values: 1,
+            disabled: true,
+            options: [{ label: 'Error', value: 'error', description: 'Too many pronoun roles configured' }]
+          }]
+        };
+      }
+
+      const resolvedGuild = guild || await client.guilds.fetch(guildId);
+      const pronounRoles = [];
+      for (const roleId of pronounRoleIds) {
+        try {
+          const role = await resolvedGuild.roles.fetch(roleId);
+          if (role) pronounRoles.push(role);
+        } catch (error) {
+          console.warn(`Could not fetch pronoun role ${roleId}:`, error.message);
+        }
+      }
+      if (pronounRoles.length === 0) return null;
+
+      const currentPronouns = targetMember.roles.cache
+        .filter(role => pronounRoleIds.includes(role.id))
+        .map(role => role.id);
+
+      const customId = `${prefix}_integrated_pronouns${userIdPart}`;
+      return {
+        type: 1,
+        components: [{
+          type: 3,
+          custom_id: customId,
+          placeholder: 'Select pronouns',
+          min_values: 0,
+          max_values: Math.min(pronounRoles.length, 3),
+          options: pronounRoles.sort((a, b) => a.name.localeCompare(b.name)).map(role => ({
+            label: role.name,
+            value: role.id,
+            emoji: { name: '💜' },
+            default: currentPronouns.includes(role.id)
+          }))
+        }]
+      };
+    }
+
+    // ─── Timezone (ported from createHotSwappableSelect) ────────────────
+    case 'timezone': {
+      const resolvedGuild = guild || await client.guilds.fetch(guildId);
+
+      const { cleanupMissingRoles } = await import('./storage.js');
+      const cleanupResult = await cleanupMissingRoles(guildId, resolvedGuild);
+      if (cleanupResult.cleaned > 0) {
+        console.log(`🧹 CLEANUP: Cleaned up ${cleanupResult.cleaned} missing roles before creating timezone select`);
+      }
+
+      const timezones = await getGuildTimezones(guildId);
+      const timezoneEntries = Object.entries(timezones || {});
+      if (timezoneEntries.length === 0) return null;
+
+      if (timezoneEntries.length > 25) {
+        console.error(`❌ Too many timezone roles (${timezoneEntries.length}). Discord limit is 25.`);
+        return {
+          type: 1,
+          components: [{
+            type: 3,
+            custom_id: `${prefix}_integrated_timezone${userIdPart}`,
+            placeholder: `❌ Too many timezone roles (${timezoneEntries.length}/25)`,
+            min_values: 0,
+            max_values: 1,
+            disabled: true,
+            options: [{ label: 'Error', value: 'error', description: 'Too many timezone roles configured' }]
+          }]
+        };
+      }
+
+      const { loadDSTState } = await import('./storage.js');
+      const dstState = await loadDSTState();
+
+      const timezoneRoles = [];
+      for (const [roleId, data] of timezoneEntries) {
+        try {
+          const role = await resolvedGuild.roles.fetch(roleId);
+          if (role) timezoneRoles.push({ role, offset: data.offset, data });
+        } catch (error) {
+          console.warn(`🚨 Skipping invalid timezone role ${roleId}:`, error.message);
+        }
+      }
+      if (timezoneRoles.length === 0) return null;
+
+      timezoneRoles.sort((a, b) => a.offset - b.offset);
+
+      const currentTimezone = targetMember.roles.cache
+        .find(role => Object.keys(timezones).includes(role.id));
+
+      const customId = `${prefix}_integrated_timezone${userIdPart}`;
+      return {
+        type: 1,
+        components: [{
+          type: 3,
+          custom_id: customId,
+          placeholder: 'Select timezone',
+          min_values: 0,
+          max_values: 1,
+          options: timezoneRoles.map(({ role, offset, data }) => {
+            let description;
+            if (data.timezoneId && dstState[data.timezoneId]) {
+              description = dstState[data.timezoneId].displayName;
+            } else {
+              description = `UTC${offset >= 0 ? '+' : ''}${offset}`;
+            }
+            return {
+              label: role.name,
+              value: role.id,
+              description,
+              emoji: { name: '🌍' },
+              default: currentTimezone?.id === role.id
+            };
+          })
+        }]
+      };
+    }
+
+    // ─── Age (ported from createHotSwappableSelect) ─────────────────────
+    case 'age': {
+      const ageOptions = [];
+      for (let age = 16; age <= 39; age++) {
+        ageOptions.push({
+          label: age.toString(),
+          value: `age_${age}`,
+          description: `${age} years old`
+        });
+      }
+      ageOptions.push({
+        label: 'Custom Age',
+        value: 'age_custom',
+        description: "Age not shown or '30s' style age",
+        emoji: { name: '✏️' }
+      });
+
+      const currentAge = playerData[guildId]?.players?.[targetMember.id]?.age;
+      const customId = `${prefix}_integrated_age${userIdPart}`;
+      return {
+        type: 1,
+        components: [{
+          type: 3,
+          custom_id: customId,
+          placeholder: currentAge ? `Current age: ${currentAge}` : 'Select age',
+          min_values: 0,
+          max_values: 1,
+          options: ageOptions
+        }]
+      };
+    }
+
+    // ─── Vanity (ported from createHotSwappableSelect) ──────────────────
+    case 'vanity': {
+      if (mode !== PlayerManagementMode.ADMIN) return null;
+
+      const currentVanityRoles = playerData[guildId]?.players?.[targetMember.id]?.vanityRoles || [];
+      return {
+        type: 1,
+        components: [{
+          type: 6, // Role Select
+          custom_id: `admin_integrated_vanity_${targetMember.id}`,
+          placeholder: 'Select vanity roles',
+          min_values: 0,
+          max_values: 25,
+          default_values: currentVanityRoles.map(id => ({ id, type: 'role' }))
+        }]
+      };
+    }
+
+    // ─── Stats / Attributes (ported from createHotSwappableSelect) ──────
+    case 'attributes': {
+      const attributes = await getAttributeDefinitions(guildId);
+      const attrEntries = Object.entries(attributes);
+
+      if (attrEntries.length === 0) {
+        return {
+          type: 1,
+          components: [{
+            type: 3,
+            custom_id: `admin_integrated_attributes_${targetMember.id}`,
+            placeholder: 'No attributes configured - use Tools → Attributes',
+            min_values: 0,
+            max_values: 1,
+            disabled: true,
+            options: [{ label: 'No attributes', value: 'none', description: 'Configure attributes in Tools menu' }]
+          }]
+        };
+      }
+
+      const attrOptions = attrEntries.slice(0, 25).map(([id, attr]) => {
+        const isResource = attr.category === 'resource';
+        return {
+          label: attr.name,
+          value: id,
+          description: `${isResource ? 'Resource' : 'Stat'} - Click to modify`,
+          emoji: resolveEmoji(attr.emoji, '📊')
+        };
+      });
+
+      return {
+        type: 1,
+        components: [{
+          type: 3,
+          custom_id: `admin_integrated_attributes_${targetMember.id}`,
+          placeholder: 'Select attribute to modify',
+          min_values: 1,
+          max_values: 1,
+          options: attrOptions
+        }]
+      };
+    }
+
+    default:
+      return null;
+  }
+}
+
 /**
  * Creates the complete player management UI
  * @param {Object} options - Configuration options
@@ -335,7 +1114,7 @@ export async function createPlayerManagementUI(options) {
     showUserSelect = (mode === PlayerManagementMode.ADMIN),
     showVanityRoles = (mode === PlayerManagementMode.ADMIN),
     title = mode === PlayerManagementMode.ADMIN ? 'CastBot | Player Management' : 'CastBot | Player Menu',
-    activeButton = null, // Which button is currently active
+    activeButton = null, // Which button/category is currently active
     client = null, // Discord client for fetching data
     channelId = null, // Discord channel ID for location context
     // Application context options
@@ -343,736 +1122,242 @@ export async function createPlayerManagementUI(options) {
     hideBottomButtons = false // Whether to hide bottom action row buttons
   } = options;
 
-  // Check if this guild has stores
-  const hasStores = await hasStoresInGuild(guildId);
+  const isAdmin = mode === PlayerManagementMode.ADMIN;
+  const activeCategory = activeButton; // conceptual rename
 
-  // Create container
+  // Load safari data once (lazy — may not be loaded yet)
+  const safariData = await loadSafariContent();
+
+  // Pre-fetch guild if we have a client (needed by buildSuperSelect and visibility)
+  let guild = null;
+  if (client) {
+    try { guild = await client.guilds.fetch(guildId); } catch (e) { console.warn('Could not fetch guild:', e.message); }
+  }
+
+  // Calculate visibility for all buttons
+  const targetUserId = targetMember?.id || null;
+  const visibility = await calculateVisibility(guildId, targetUserId, playerData, safariData, mode, client, channelId);
+
+  // ════════════════════════════════════════════════════════════════════════
+  // BUILD SINGLE CONTAINER
+  // ════════════════════════════════════════════════════════════════════════
   const container = {
     type: 17, // Container
     accent_color: 0x3498DB, // Blue accent (matching production menu)
     components: []
   };
 
-  // Add header
+  // ── Header ──
   container.components.push({
     type: 10, // Text Display
     content: `## ${title}`
   });
 
-  // Add user select for admin mode
+  // ── Admin: User Select ──
   if (showUserSelect) {
-    container.components.push({
-      type: 14 // Separator
-    });
-    
+    container.components.push({ type: 14 }); // Separator
+
     const userSelectRow = {
       type: 1, // ActionRow
       components: [{
         type: 5, // User Select
         custom_id: 'admin_player_select_update',
         placeholder: 'Select a player to manage',
-        min_values: 0, // Allow deselection
+        min_values: 0,
         max_values: 1
       }]
     };
-    
-    // Preserve selection if we have a target member
+
     if (targetMember) {
       userSelectRow.components[0].default_values = [{
         id: targetMember.id,
         type: 'user'
       }];
     }
-    
+
     container.components.push(userSelectRow);
   }
 
-  // Add player display if we have a target member
+  // ── Player Info Section ──
   if (targetMember) {
-    container.components.push({
-      type: 14 // Separator
-    });
-
+    container.components.push({ type: 14 }); // Separator
     const playerSection = await createPlayerDisplaySection(targetMember, playerData, guildId);
     if (playerSection) {
       container.components.push(playerSection);
     }
+  }
 
-    // Attribute display moved to AFTER hot-swap select (shown only when Stats button active)
+  // ── Separator before button rows ──
+  container.components.push({ type: 14 }); // Separator
 
-    // Add separator before buttons
-    container.components.push({
-      type: 14 // Separator
-    });
+  // ════════════════════════════════════════════════════════════════════════
+  // 3 SECTION ROWS (conditional — hide row if no buttons visible)
+  // ════════════════════════════════════════════════════════════════════════
 
-    // Add management buttons with active state
-    const managementButtons = createManagementButtons(
-      targetMember.id, 
-      mode, 
-      true, // Enabled since we have a member
-      activeButton,
-      showVanityRoles
+  if (!hideBottomButtons) {
+    // Row 1: Castlists & Profile
+    const row1 = buildSectionRow(
+      ['castlists', 'pronouns', 'timezone', 'age'],
+      targetUserId, activeCategory, visibility, mode
     );
-    container.components.push(managementButtons);
-
-    // Add separator before hot-swappable select
-    container.components.push({
-      type: 14 // Separator
-    });
-
-    // Add hot-swappable select based on active button
-    const selectMenu = await createHotSwappableSelect(
-      activeButton,
-      targetMember,
-      playerData,
-      guildId,
-      mode,
-      client
-    );
-    if (selectMenu) {
-      container.components.push(selectMenu);
-    } else if (!activeButton) {
-      // Show disabled placeholder select when member is selected but no button is active
+    if (row1) {
       container.components.push({
-        type: 1, // ActionRow
-        components: [{
-          type: 6, // Role Select
-          custom_id: 'admin_integrated_select_inactive',
-          placeholder: 'Click a button above to configure..',
-          min_values: 0,
-          max_values: 1,
-          disabled: true
-        }]
+        type: 10,
+        content: '### ```✏️ Castlists & Profile```'
       });
+      container.components.push(row1);
     }
 
-    // Show stats display below select when Stats button is active
-    if (activeButton === 'attributes') {
-      const displayName = targetMember.displayName || targetMember.user?.username || 'Player';
-      const statsLabel = mode === PlayerManagementMode.ADMIN
-        ? `${displayName}'s Stats`
-        : 'Your Stats';
-      const attributeSection = await createAttributeDisplaySection(guildId, targetMember.id, statsLabel);
-      if (attributeSection) {
-        container.components.push(attributeSection);
+    // Row 2: Safari (conditional — hide if no buttons visible)
+    const row2Ids = ['inventory', 'challenges', 'crafting', 'actions', 'stores'];
+    const row2HasAny = row2Ids.some(id => visibility[id]?.show);
+    if (row2HasAny) {
+      const row2 = buildSectionRow(row2Ids, targetUserId, activeCategory, visibility, mode);
+      if (row2) {
+        container.components.push({
+          type: 10,
+          content: '### ```🦁 Idol Hunts, Challenges and Safari```'
+        });
+        container.components.push(row2);
       }
     }
 
-    // Don't add any select menus here - they're handled by hot-swappable select
-  } else if (mode === PlayerManagementMode.ADMIN) {
-    // No member selected - show disabled buttons
-    container.components.push({
-      type: 14 // Separator
-    });
+    // Row 3: Advanced (conditional — hide if no buttons visible)
+    const row3Ids = ['attributes', 'commands', 'vanity', 'navigate'];
+    const row3HasAny = row3Ids.some(id => visibility[id]?.show);
+    if (row3HasAny) {
+      const row3 = buildSectionRow(row3Ids, targetUserId, activeCategory, visibility, mode);
+      if (row3) {
+        container.components.push({
+          type: 10,
+          content: '### ```💎 Advanced```'
+        });
+        container.components.push(row3);
+      }
+    }
+  } else {
+    // hideBottomButtons mode (application context) — just show Row 1 essentials
+    const row1 = buildSectionRow(
+      ['pronouns', 'timezone', 'age'],
+      targetUserId, activeCategory, visibility, mode
+    );
+    if (row1) {
+      container.components.push(row1);
+    }
+  }
 
-    const disabledButtons = createManagementButtons(null, mode, false, null, showVanityRoles);
-    container.components.push(disabledButtons);
+  // ════════════════════════════════════════════════════════════════════════
+  // HOT-SWAP SELECT
+  // ════════════════════════════════════════════════════════════════════════
+  container.components.push({ type: 14 }); // Separator
 
-    // Add separator and disabled select placeholder
-    container.components.push({
-      type: 14 // Separator
-    });
+  const selectMenu = await buildSuperSelect(
+    activeCategory, targetMember, playerData, safariData,
+    guildId, mode, client, guild, userId
+  );
+  if (selectMenu) {
+    container.components.push(selectMenu);
+  }
 
+  // ════════════════════════════════════════════════════════════════════════
+  // STATS DISPLAY (below select when Stats button active)
+  // ════════════════════════════════════════════════════════════════════════
+  if (activeCategory === 'attributes' && targetMember) {
+    const displayName = targetMember.displayName || targetMember.user?.username || 'Player';
+    const statsLabel = isAdmin ? `${displayName}'s Stats` : 'Your Stats';
+    const attributeSection = await createAttributeDisplaySection(guildId, targetMember.id, statsLabel);
+    if (attributeSection) {
+      container.components.push(attributeSection);
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // APPLICATION CONTEXT — "Move on to main questions" button
+  // ════════════════════════════════════════════════════════════════════════
+  if (isApplicationContext) {
+    container.components.push({ type: 14 }); // Separator
     container.components.push({
       type: 1, // ActionRow
       components: [{
-        type: 6, // Role Select
-        custom_id: 'admin_integrated_select_pending',
-        placeholder: 'Select player first..',
-        min_values: 0,
-        max_values: 1,
-        disabled: true
+        type: 2, // Button
+        custom_id: `app_continue_${guildId}_${userId}`,
+        label: 'Move on to the main questions',
+        style: 1, // Primary
+        emoji: { name: '❔' }
       }]
     });
   }
 
-  // Extract castlist data for multiple castlist support
-  const { allCastlists } = await extractCastlistData(playerData, guildId);
+  // ════════════════════════════════════════════════════════════════════════
+  // FOOTER — ← Menu, Logs, Guide
+  // ════════════════════════════════════════════════════════════════════════
+  if (!hideBottomButtons) {
+    const footerButtons = [];
 
-  // Create Menu button row
-  const menuRow = {
-    type: 1, // ActionRow
-    components: []
-  };
-
-  // Add Menu button (far left) - using centralized factory
-  if (mode === PlayerManagementMode.ADMIN) {
-    menuRow.components.push(createBackButton('prod_menu_back'));
-
-    // Add Logs button when a player is selected
-    if (targetMember) {
-      menuRow.components.push({
-        type: 2, // Button
-        style: 2, // Secondary
-        label: 'Logs',
-        custom_id: `admin_view_logs_${targetMember.id}`,
-        emoji: { name: '📜' }
-      });
-    }
-  }
-
-  // Only add menu row if it has buttons (admin mode)
-  if (menuRow.components.length > 0) {
-    container.components.push(menuRow);
-  }
-
-  console.log(`🔍 createPlayerManagementUI mode check: mode=${mode}, PlayerManagementMode.ADMIN=${PlayerManagementMode.ADMIN}, is admin=${mode === PlayerManagementMode.ADMIN}`);
-
-  if (mode === PlayerManagementMode.ADMIN) {
-    // Admin mode (Player Management): No castlist buttons - focus on player management only
-    console.log(`🔍 Admin mode detected - returning early WITHOUT castlist buttons`);
-    return {
-      flags: (1 << 15), // IS_COMPONENTS_V2 only - ephemeral handled by caller
-      components: [container]
-    };
-  } else {
-    console.log(`🔍 Player mode detected - creating castlist buttons`);
-    // Player mode (Player Menu): Add castlist buttons outside the container (unless hidden)
-    let castlistRows = [];
-    let globalStoreRows = [];
-    let inventoryRow = null;
-
-    // Load safari configuration for castlist filtering and global stores
-    const { loadSafariContent } = await import('./safariManager.js');
-    const safariData = await loadSafariContent();
-    const safariConfig = safariData[guildId]?.safariConfig || {};
-
-    if (!hideBottomButtons) {
-      console.log(`🔍 Player Menu castlist check: allCastlists=${allCastlists}, size=${allCastlists?.size}, hideBottomButtons=${hideBottomButtons}`);
-
-      // Apply castlist visibility filter based on configuration
-      const showCustomCastlists = safariConfig.showCustomCastlists !== false; // Default true (show all)
-      let filteredCastlists = allCastlists;
-      let castlistsPreSorted = false;  // Track if castlists were sorted by timestamp
-
-      if (!showCustomCastlists) {
-        // Admin wants to hide custom castlists - show only default
-        console.log(`🔍 Filtering castlists: showCustomCastlists=false, showing default only`);
-        const defaultOnly = allCastlists?.get('default');
-        filteredCastlists = defaultOnly
-          ? new Map([['default', defaultOnly]])  // Show default button
-          : new Map();  // Empty → triggers fallback button below
-      } else {
-        // Limit to 3 custom castlists (+ default + compact = 5 buttons max per row)
-        const { limitAndSortCastlists } = await import('./castlistV2.js');
-        filteredCastlists = limitAndSortCastlists(allCastlists, 3);
-        castlistsPreSorted = true;  // Castlists are now sorted by timestamp (newest first)
-        console.log(`🔍 Limited castlists: showing ${filteredCastlists.size} of ${allCastlists?.size || 0} total (max 3 custom + default + compact)`);
-      }
-
-      if (filteredCastlists && filteredCastlists.size > 0) {
-        console.log(`✅ Creating castlist rows for ${filteredCastlists.size} castlists`);
-        // Player mode: don't include the "+" button (includeAddButton = false)
-        // Pass preSorted flag to preserve timestamp order from limitAndSortCastlists
-        castlistRows = createCastlistRows(filteredCastlists, false, hasStores, castlistsPreSorted);
-        console.log(`✅ Created ${castlistRows.length} castlist row(s)`);
-      } else {
-        // Fallback: single default castlist button if no castlist data found
-        console.log(`⚠️ No castlists found after filtering, showing fallback button`);
-        castlistRows = [{
-          type: 1, // ActionRow
-          components: [new ButtonBuilder()
-            .setCustomId('show_castlist2_default')
-            .setLabel('📃 Post Castlist')
-            .setStyle(ButtonStyle.Primary)]
-        }];
-      }
-
-      // Add global store buttons — visibility controlled by globalStoresVisibilityMode config
-      const currentRound = safariConfig.currentRound;
-      const globalStoresVisibilityMode = safariConfig.globalStoresVisibilityMode || 'always';
-      const isInitializedForStores = playerData[guildId]?.players?.[targetMember?.id]?.safari !== undefined;
-
-      let showGlobalStores = false;
-      switch (globalStoresVisibilityMode) {
-        case 'always':
-          showGlobalStores = true;
-          break;
-        case 'never':
-          showGlobalStores = false;
-          break;
-        case 'initialized_only':
-          showGlobalStores = isInitializedForStores;
-          break;
-        case 'standard':
-        default:
-          // Original behaviour: initialized AND round started (not 0)
-          showGlobalStores = isInitializedForStores && currentRound && currentRound !== 0;
-          break;
-      }
-
-      console.log(`🏪 Global stores check: mode=${globalStoresVisibilityMode}, initialized=${isInitializedForStores}, round=${currentRound}, show=${showGlobalStores}`);
-
-      if (showGlobalStores) {
-        const globalStores = (safariData[guildId]?.globalStores || []).slice(0, MAX_GLOBAL_STORES);
-        const stores = safariData[guildId]?.stores || {};
-
-        if (globalStores.length > 0) {
-          let currentRow = [];
-
-          for (const storeId of globalStores) {
-            const store = stores[storeId];
-            if (!store) continue;
-
-            const button = new ButtonBuilder()
-              .setCustomId(`safari_store_browse_${guildId}_${storeId}`)
-              .setLabel(store.name.slice(0, 80))
-              .setStyle(ButtonStyle.Secondary)  // Grey style for global stores
-              .setEmoji(parseAndValidateEmoji(store.emoji || '🏪', '🏪').emoji);
-
-            currentRow.push(button);
-
-            // Max 5 buttons per row
-            if (currentRow.length === 5) {
-              globalStoreRows.push({
-                type: 1, // ActionRow
-                components: currentRow
-              });
-              currentRow = [];
-            }
-          }
-
-          // Add remaining buttons
-          if (currentRow.length > 0) {
-            globalStoreRows.push({
-              type: 1, // ActionRow
-              components: currentRow
-            });
-          }
-        }
-      }
-      
-      // Check if user is eligible for Safari inventory access
-      if (targetMember && client) {
-        try {
-          // Check if player has been initialized in Safari system
-          const { getCoordinateFromChannelId } = await import('./safariManager.js');
-          const { loadPlayerData } = await import('./storage.js');
-          const playerData = await loadPlayerData();
-
-          // Player is initialized if they have Safari data structure
-          const isInitialized = playerData[guildId]?.players?.[targetMember.id]?.safari !== undefined;
-          const activeMapId = safariData[guildId]?.maps?.active;
-          const playerMapData = activeMapId ? playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId] : null;
-          const hasMapLocation = playerMapData?.currentLocation !== undefined;
-
-          // Get inventory visibility mode from configuration (default to 'always' - most user-friendly for new servers)
-          const inventoryVisibilityMode = safariConfig.inventoryVisibilityMode || 'always';
-
-          // Determine if inventory button should be shown based on configuration
-          let showInventory = false;
-          switch (inventoryVisibilityMode) {
-            case 'always':
-              showInventory = true;
-              break;
-            case 'never':
-              showInventory = false;
-              break;
-            case 'initialized_only':
-              showInventory = isInitialized;
-              break;
-            case 'standard':
-            default:
-              // Original logic: initialized AND round started (not 0)
-              showInventory = isInitialized && currentRound && currentRound !== 0;
-              break;
-          }
-
-          console.log(`🔍 Safari button check for ${targetMember.displayName}: initialized=${isInitialized}, hasMap=${hasMapLocation}, round=${currentRound}, mode=${inventoryVisibilityMode}, showInventory=${showInventory}`);
-
-          // Show Safari buttons based on configuration
-          if (showInventory) {
-            // Get custom terms for inventory name and emoji
-            const customTerms = await getCustomTerms(guildId);
-            
-            // Create inventory button with custom inventory emoji
-            const inventoryButton = new ButtonBuilder()
-              .setCustomId('safari_player_inventory')
-              .setLabel(customTerms.inventoryName)
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji(parseAndValidateEmoji(customTerms.inventoryEmoji || '🧰', '🧰').emoji);
-            
-            // Create inventory row components
-            const inventoryComponents = [];
-
-            // Check for crafting actions FIRST and add Crafting button if any exist
-            try {
-              const { loadSafariContent } = await import('./safariManager.js');
-              const safariDataForCrafting = await loadSafariContent();
-              const allButtons = safariDataForCrafting[guildId]?.buttons || {};
-              const craftingActions = Object.values(allButtons).filter(action => {
-                const visibility = action.menuVisibility || 'none';
-                const tt = action.trigger?.type || 'button';
-                return visibility === 'crafting_menu' && (tt === 'button' || tt === 'button_modal' || tt === 'button_input');
-              });
-
-              if (craftingActions.length > 0) {
-                console.log(`🛠️ Crafting Actions: ${craftingActions.length} actions - adding Crafting button (FIRST)`);
-                const craftingButton = new ButtonBuilder()
-                  .setCustomId(`safari_crafting_menu_${guildId}_${userId}`)
-                  .setLabel('Crafting')
-                  .setStyle(ButtonStyle.Primary)
-                  .setEmoji('🛠️');
-                inventoryComponents.push(craftingButton);
-              }
-            } catch (error) {
-              console.error('Error checking crafting actions:', error);
-            }
-
-            // Only create map-specific buttons if player has a map location
-            if (hasMapLocation) {
-              const navigateButton = new ButtonBuilder()
-                .setCustomId(`safari_navigate_${userId}_${playerMapData.currentLocation}`)
-                .setLabel('Navigate')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('🗺️');
-              
-              // Create Location Actions button
-              // Use channelId parameter passed from the interaction context
-              const currentCoordinate = channelId ? await getCoordinateFromChannelId(guildId, channelId) : null;
-              
-              // Add suffix for prod menu to control ephemeral behavior
-              const prodSuffix = title === 'CastBot | My Profile' ? '_prod' : '';
-              const locationActionsButton = new ButtonBuilder()
-                .setCustomId(currentCoordinate ? `map_location_display_${currentCoordinate}${prodSuffix}` : 'map_location_display_none')
-                .setLabel('Location')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('⚓')
-                .setDisabled(!currentCoordinate); // Disabled if not in a map channel
-              
-              // For production menu (My Profile), replace Navigate with Location Actions
-              if (title === 'CastBot | My Profile') {
-                // Only add Location Actions button for production menu
-                if (currentCoordinate) {
-                  inventoryComponents.push(locationActionsButton);
-                }
-              } else {
-                // Regular player menu: add Navigate button and Location Actions if in a map channel
-                inventoryComponents.push(navigateButton);
-                if (currentCoordinate) {
-                  inventoryComponents.push(locationActionsButton);
-                }
-              }
-            }
-
-            // Add global command button if enabled (for player-facing menus only)
-            try {
-              const { loadSafariContent } = await import('./safariManager.js');
-              const safariData = await loadSafariContent();
-              const safariConfig = safariData[guildId]?.safariConfig || {};
-
-              // Check if global commands are enabled (default to true for backward compatibility)
-              const enableGlobalCommands = safariConfig.enableGlobalCommands !== false;
-
-              if (enableGlobalCommands) {
-                // Add global command button for both Regular Player Menu and Player Profile Preview
-                // These are the only player-facing menus that should show this button
-                const globalCommandButton = new ButtonBuilder()
-                  .setCustomId('player_enter_command_global')
-                  .setLabel('Enter Command')
-                  .setStyle(ButtonStyle.Secondary)
-                  .setEmoji('🕹️');
-
-                inventoryComponents.push(globalCommandButton);
-              }
-            } catch (error) {
-              console.error('Error checking global commands configuration:', error);
-              // Don't add the button if there's an error loading config
-            }
-
-            // Always add inventory button for initialized players
-            inventoryComponents.push(inventoryButton);
-            
-            inventoryRow = {
-              type: 1, // ActionRow
-              components: inventoryComponents
-            };
-          }
-        } catch (error) {
-          console.error('Error checking Safari eligibility:', error);
-          // Don't show inventory button if there's an error
-        }
-      }
-    }
-    
-    // Add "Move on to main questions" button if in application context
-    let applicationContinueRow = null;
-    if (isApplicationContext) {
-      applicationContinueRow = {
-        type: 1, // ActionRow
-        components: [
-          {
-            type: 2, // Button
-            custom_id: `app_continue_${guildId}_${userId}`, // Include guildId and userId to retrieve config
-            label: 'Move on to the main questions',
-            style: 1, // Primary (blue)
-            emoji: { name: '❔' }
-          }
-        ]
-      };
-    }
-    
-    // Build final component array
-    const finalComponents = [container];
-    
-    // Add application continue button if in application context (before other buttons)
-    if (applicationContinueRow) {
-      finalComponents.push(applicationContinueRow);
-    }
-    
-    // Add castlist, global stores, and inventory buttons if not hidden
-    if (!hideBottomButtons) {
-      finalComponents.push(...castlistRows);
-      finalComponents.push(...globalStoreRows); // Add global store buttons
-      if (inventoryRow) {
-        finalComponents.push(inventoryRow);
-      }
+    // ← Menu button (admin mode only)
+    if (isAdmin) {
+      footerButtons.push(createBackButton('prod_menu_back'));
     }
 
-    // === CUSTOM ACTIONS SECTION (Player Menu Actions) ===
-    // Only show for player mode (not admin mode) and not in application context
-    // Note: Crafting button is now part of the Safari row (with Navigate/Location/Inventory)
-    if (mode === PlayerManagementMode.PLAYER && !hideBottomButtons) {
-      try {
-        const safariData = await loadSafariContent();
-        const allButtons = safariData[guildId]?.buttons || {};
-
-        // Filter actions that have player_menu visibility enabled and button/button_modal trigger
-        // Support both new menuVisibility field and legacy showInInventory for backward compatibility
-        // Use entries to preserve the action ID (key)
-        const menuActions = Object.entries(allButtons)
-          .filter(([actionId, action]) => {
-            const visibility = action.menuVisibility || (action.showInInventory ? 'player_menu' : 'none');
-            const triggerType = action.trigger?.type || 'button';
-            return visibility === 'player_menu' && (triggerType === 'button' || triggerType === 'button_modal' || triggerType === 'button_input');
-          })
-          .map(([actionId, action]) => ({ ...action, actionId }));
-
-        console.log(`🧰 Player Menu Actions: ${menuActions.length} actions enabled for menu`);
-
-        if (menuActions.length > 0) {
-          // Calculate component budget using recursive counting (same as castlist)
-          const currentCount = countComponents(finalComponents, { enableLogging: false });
-          const DISCORD_LIMIT = 40;
-          const SAFETY_BUFFER = 2;
-          const remainingBudget = DISCORD_LIMIT - SAFETY_BUFFER - currentCount;
-
-          console.log(`📊 Player Menu budget BEFORE actions: ${currentCount}/40 used, ${remainingBudget} remaining for actions`);
-
-          // Need at least 2 components (actionRow + 1 button)
-          if (remainingBudget >= 2) {
-            // Calculate max actions we can fit (each row = 1 + up to 5 buttons = 6 components)
-            const maxRows = Math.floor(remainingBudget / 6);
-            const maxActions = Math.min(maxRows * 5, menuActions.length, 10); // Cap at 10
-
-            if (maxActions > 0) {
-              // Sort actions by sortOrder then name
-              const sortedActions = menuActions
-                .slice(0, maxActions)
-                .sort((a, b) => {
-                  const orderA = a.inventoryConfig?.sortOrder ?? 999;
-                  const orderB = b.inventoryConfig?.sortOrder ?? 999;
-                  if (orderA !== orderB) return orderA - orderB;
-                  return (a.name || '').localeCompare(b.name || '');
-                });
-
-              // Helper function for button styles - include common aliases
-              const getButtonStyleNumber = (style) => {
-                const styleMap = {
-                  'Primary': 1, 'Blue': 1, 'primary': 1,
-                  'Secondary': 2, 'Grey': 2, 'Gray': 2, 'secondary': 2,
-                  'Success': 3, 'Green': 3, 'success': 3,
-                  'Danger': 4, 'Red': 4, 'danger': 4,
-                  1: 1, 2: 2, 3: 3, 4: 4
-                };
-                return styleMap[style] || 2; // Default to Secondary
-              };
-
-              // Create action buttons in rows of 5
-              for (let i = 0; i < sortedActions.length; i += 5) {
-                const rowActions = sortedActions.slice(i, i + 5);
-                const actionRow = {
-                  type: 1, // ActionRow
-                  components: rowActions.map(action => {
-                    // button_modal triggers use modal_launcher_ prefix so they show a modal on click
-                    const isModalTrigger = action.trigger?.type === 'button_modal' || action.trigger?.type === 'button_input';
-                    const buttonCustomId = isModalTrigger
-                      ? `modal_launcher_${guildId}_${action.actionId}_${Date.now()}`
-                      : `safari_${guildId}_${action.actionId}`;
-                    const button = {
-                      type: 2, // Button
-                      custom_id: buttonCustomId,
-                      label: (action.inventoryConfig?.buttonLabel || action.trigger?.button?.label || action.name || 'Action').slice(0, 80),
-                      // Fall back through: inventoryConfig -> trigger.button -> direct button property -> default
-                      style: getButtonStyleNumber(action.inventoryConfig?.buttonStyle || action.trigger?.button?.style || action.style || 'Secondary')
-                    };
-
-                    // Add emoji if defined - parse Discord emoji string format if needed
-                    // Fall back through: inventoryConfig -> trigger.button -> direct button property
-                    const rawEmoji = action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji || action.emoji;
-                    if (rawEmoji) {
-                      if (typeof rawEmoji === 'string') {
-                        // Parse Discord custom emoji format
-                        const staticMatch = rawEmoji.match(/<:(\w+):(\d+)>/);
-                        const animatedMatch = rawEmoji.match(/<a:(\w+):(\d+)>/);
-                        const match = staticMatch || animatedMatch;
-
-                        if (match) {
-                          button.emoji = {
-                            name: match[1],
-                            id: match[2],
-                            animated: !!animatedMatch
-                          };
-                        } else {
-                          // Standard unicode emoji
-                          button.emoji = { name: rawEmoji };
-                        }
-                      } else {
-                        // Already an object
-                        button.emoji = rawEmoji;
-                      }
-                    }
-
-                    return button;
-                  })
-                };
-                finalComponents.push(actionRow);
-              }
-
-              console.log(`✅ Added ${sortedActions.length} menu action buttons to player menu`);
-
-              if (menuActions.length > maxActions) {
-                console.log(`⚠️ Truncated menu actions: showing ${maxActions}/${menuActions.length} (component limit)`);
-              }
-            }
-          } else {
-            console.log(`⚠️ No budget for menu actions (${remainingBudget} remaining, need 2+)`);
-          }
-        }
-      } catch (error) {
-        console.error(`❌ Error loading menu actions: ${error.message}`);
-      }
-    }
-
-    // === CHALLENGE ACTIONS SECTION ===
-    // Show challenge actions visible to this player (playerAll + individual + tribe, NOT host)
-    if (mode === PlayerManagementMode.PLAYER && !hideBottomButtons) {
-      try {
-        const { getChallengeActions } = await import('./challengeActionCreate.js');
-        const { resolveEmoji } = await import('./utils/emojiUtils.js');
-        const safariData = await loadSafariContent();
-        const challenges = playerData[guildId]?.challenges || {};
-        const chalButtons = [];
-
-        for (const [chId, ch] of Object.entries(challenges)) {
-          const actions = getChallengeActions(ch);
-          const chalTitle = (ch.title || 'Challenge').slice(0, 40);
-          const allButtons = safariData[guildId]?.buttons || {};
-
-          // playerAll — visible to everyone
-          for (const actionId of actions.playerAll) {
-            const action = allButtons[actionId];
-            if (action) chalButtons.push({ action, actionId, chalTitle, guildId });
-          }
-
-          // playerIndividual — only if assigned to this player
-          const indActionId = actions.playerIndividual[userId];
-          if (indActionId) {
-            const action = allButtons[indActionId];
-            if (action) chalButtons.push({ action, actionId: indActionId, chalTitle, guildId });
-          }
-
-          // tribe — only if player has the tribe role
-          for (const [roleId, triActionId] of Object.entries(actions.tribe)) {
-            if (targetMember?.roles?.cache?.has?.(roleId)) {
-              const action = allButtons[triActionId];
-              if (action) chalButtons.push({ action, actionId: triActionId, chalTitle, guildId });
-            }
-          }
-          // host actions — never shown to players
-        }
-
-        if (chalButtons.length > 0) {
-          const currentCount = countComponents(finalComponents, { enableLogging: false });
-          const remainingBudget = 40 - 2 - currentCount;
-
-          if (remainingBudget >= 2) {
-            const maxActions = Math.min(Math.floor(remainingBudget / 6) * 5, chalButtons.length, 5);
-            if (maxActions > 0) {
-              const row = {
-                type: 1,
-                components: chalButtons.slice(0, maxActions).map(({ action, actionId, guildId }) => {
-                  const isModalTrigger = action.trigger?.type === 'button_modal' || action.trigger?.type === 'button_input';
-                  const buttonCustomId = isModalTrigger
-                    ? `modal_launcher_${guildId}_${actionId}_${Date.now()}`
-                    : `challenge_${guildId}_${actionId}_${Date.now()}`;
-                  const btn = {
-                    type: 2,
-                    custom_id: buttonCustomId,
-                    label: (action.name || action.label || 'Action').slice(0, 80),
-                    style: 1, // Primary — challenge actions stand out
-                  };
-                  const emoji = resolveEmoji(action.emoji || action.trigger?.button?.emoji, undefined);
-                  if (emoji) btn.emoji = emoji;
-                  return btn;
-                })
-              };
-              finalComponents.push(row);
-              console.log(`🏃 Challenge Actions: Added ${Math.min(maxActions, chalButtons.length)} challenge action buttons`);
-            }
-          }
-        }
-      } catch (error) {
-        console.error(`❌ Error loading challenge actions: ${error.message}`);
-      }
-    }
-
-    // Add Activity Log + Guide buttons for initialized players (or admin mode)
-    if (!hideBottomButtons) {
-      // isPlayerInitialized check: safari.points is ONLY set by initializePlayerOnMap()
-      // De-init preserves a skeleton .safari object (for startingLocation) but removes .points
-      const safariObj = playerData[guildId]?.players?.[userId]?.safari;
-      const isInitializedForLogs = safariObj?.points !== undefined;
-      console.log(`🦁 Guide/Logs visibility: userId=${userId}, safari=${typeof safariObj}, points=${safariObj?.points !== undefined}, isInitialized=${isInitializedForLogs}, mode=${mode}`);
-      if (isInitializedForLogs || mode === PlayerManagementMode.ADMIN) {
-        finalComponents.push({
-          type: 1, // ActionRow
-          components: [
-            {
-              type: 2, // Button
-              style: 2, // Secondary
-              label: 'Logs',
-              custom_id: 'player_view_logs',
-              emoji: { name: '📜' }
-            },
-            {
-              type: 2, // Button
-              style: 2, // Secondary
-              label: 'Guide',
-              custom_id: 'safari_guide_0',
-              emoji: { name: '🦁' }
-            }
-          ]
+    // Logs button
+    const showLogs = visibility._meta.isInitialized || isAdmin;
+    if (showLogs) {
+      if (isAdmin && targetMember) {
+        footerButtons.push({
+          type: 2,
+          style: 2, // Secondary
+          label: 'Logs',
+          custom_id: `admin_view_logs_${targetMember.id}`,
+          emoji: { name: '📜' }
+        });
+      } else if (!isAdmin) {
+        footerButtons.push({
+          type: 2,
+          style: 2,
+          label: 'Logs',
+          custom_id: 'player_view_logs',
+          emoji: { name: '📜' }
         });
       }
     }
 
-    // Final component count validation with detailed logging (same pattern as Production Menu)
-    const finalCount = countComponents(finalComponents, {
-      enableLogging: true,
-      verbosity: "full",
-      label: "Player Menu"
-    });
-
-    if (finalCount > 40) {
-      console.error(`🚨 CRITICAL: Player Menu exceeded component limit: ${finalCount}/40`);
+    // Guide button (player mode, initialized only)
+    if (!isAdmin && visibility._meta.isInitialized) {
+      footerButtons.push({
+        type: 2,
+        style: 2,
+        label: 'Guide',
+        custom_id: 'safari_guide_0',
+        emoji: { name: '🦁' }
+      });
     }
 
-    return {
-      flags: (1 << 15), // IS_COMPONENTS_V2 only - ephemeral handled by caller
-      components: finalComponents
-    };
+    if (footerButtons.length > 0) {
+      container.components.push({ type: 14 }); // Separator
+      container.components.push({
+        type: 1, // ActionRow
+        components: footerButtons
+      });
+    }
   }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // COMPONENT COUNT VALIDATION
+  // ════════════════════════════════════════════════════════════════════════
+  const finalCount = countComponents([container], {
+    enableLogging: true,
+    verbosity: 'full',
+    label: 'Player Menu'
+  });
+
+  if (finalCount > 40) {
+    console.error(`🚨 CRITICAL: Player Menu exceeded component limit: ${finalCount}/40`);
+  }
+
+  return {
+    flags: (1 << 15), // IS_COMPONENTS_V2 only - ephemeral handled by caller
+    components: [container]
+  };
 }
 
 /**
@@ -1285,274 +1570,18 @@ export async function handlePlayerModalSubmit(req, res, customId, playerData, cl
 }
 
 /**
- * Creates a hot-swappable select menu based on the active button
- * @param {string} activeButton - Which button is active
- * @param {Object} targetMember - Target Discord member
- * @param {Object} playerData - Guild player data
- * @param {string} guildId - Guild ID
- * @param {string} mode - Player management mode
- * @param {Object} client - Discord client
- * @returns {Object|null} ActionRow with select menu or null
+ * Legacy wrapper — delegates to buildSuperSelect.
+ * Kept for backward compatibility with external callers.
+ * @deprecated Use buildSuperSelect directly within this module.
  */
 async function createHotSwappableSelect(activeButton, targetMember, playerData, guildId, mode, client) {
   if (!activeButton || !targetMember) return null;
-
-  const prefix = mode === PlayerManagementMode.ADMIN ? 'admin' : 'player';
-  const userIdPart = mode === PlayerManagementMode.ADMIN ? `_${targetMember.id}` : '';
-
-  switch (activeButton) {
-    case 'pronouns': {
-      const pronounRoleIds = await getGuildPronouns(guildId);
-      if (!pronounRoleIds || pronounRoleIds.length === 0) return null;
-
-      // Check if more than 25 pronoun roles exist
-      if (pronounRoleIds.length > 25) {
-        console.error(`❌ Too many pronoun roles (${pronounRoleIds.length}). Discord String Select limit is 25.`);
-        return {
-          type: 1, // ActionRow
-          components: [{
-            type: 10, // Text Display
-            content: `❌ **Error:** This server has ${pronounRoleIds.length} pronoun roles, but Discord only supports 25 in a select menu.\n\n**Please notify the production team to remove some pronoun roles to fix this issue.**`
-          }]
-        };
-      }
-
-      // Get role objects and filter by configured pronoun roles
-      const guild = await client.guilds.fetch(guildId);
-      const pronounRoles = [];
-      for (const roleId of pronounRoleIds) {
-        try {
-          const role = await guild.roles.fetch(roleId);
-          if (role) pronounRoles.push(role);
-        } catch (error) {
-          console.warn(`Could not fetch pronoun role ${roleId}:`, error.message);
-        }
-      }
-      
-      if (pronounRoles.length === 0) return null;
-      
-      const currentPronouns = targetMember.roles.cache
-        .filter(role => pronounRoleIds.includes(role.id))
-        .map(role => role.id);
-
-      const customId = `${prefix}_integrated_pronouns${userIdPart}`;
-      console.log('🔍 DEBUG: Creating pronouns select with custom_id:', customId);
-
-      return {
-        type: 1, // ActionRow
-        components: [{
-          type: 3, // String Select (not Role Select)
-          custom_id: customId,
-          placeholder: 'Select pronouns',
-          min_values: 0,
-          max_values: Math.min(pronounRoles.length, 3),
-          options: pronounRoles.sort((a, b) => a.name.localeCompare(b.name)).map(role => ({
-            label: role.name,
-            value: role.id,
-            emoji: { name: '💜' },
-            default: currentPronouns.includes(role.id)
-          }))
-        }]
-      };
-    }
-
-    case 'timezone': {
-      // Get guild for cleanup and role fetching
-      const guild = await client.guilds.fetch(guildId);
-      
-      // Clean up any missing roles first
-      const { cleanupMissingRoles } = await import('./storage.js');
-      const cleanupResult = await cleanupMissingRoles(guildId, guild);
-      if (cleanupResult.cleaned > 0) {
-        console.log(`🧹 CLEANUP: Cleaned up ${cleanupResult.cleaned} missing roles before creating timezone select`);
-      }
-
-      // Get timezone roles (after potential cleanup)
-      const timezones = await getGuildTimezones(guildId);
-      const timezoneEntries = Object.entries(timezones || {});
-      if (timezoneEntries.length === 0) return null;
-
-      // Check if more than 25 timezone roles exist (after cleanup)
-      if (timezoneEntries.length > 25) {
-        console.error(`❌ Too many timezone roles (${timezoneEntries.length}). Discord String Select limit is 25.`);
-        return {
-          type: 1, // ActionRow
-          components: [{
-            type: 10, // Text Display
-            content: `❌ **Error:** This server has ${timezoneEntries.length} timezone roles, but Discord only supports 25 in a select menu.\n\n**Please notify the production team to remove some timezone roles to fix this issue.**`
-          }]
-        };
-      }
-
-      // Load DST state for enhanced descriptions
-      const { loadDSTState } = await import('./storage.js');
-      const dstState = await loadDSTState();
-
-      // Get role objects and sort by UTC offset
-      const timezoneRoles = [];
-
-      for (const [roleId, data] of timezoneEntries) {
-        try {
-          const role = await guild.roles.fetch(roleId);
-          if (role) {
-            timezoneRoles.push({ role, offset: data.offset, data }); // Include data for timezoneId
-          }
-        } catch (error) {
-          console.warn(`🚨 Skipping invalid timezone role ${roleId}:`, error.message);
-          // Role doesn't exist anymore - skip it
-        }
-      }
-      
-      if (timezoneRoles.length === 0) {
-        console.error('❌ No valid timezone roles found!');
-        return null;
-      }
-      
-      timezoneRoles.sort((a, b) => a.offset - b.offset);
-      
-      const currentTimezone = targetMember.roles.cache
-        .find(role => Object.keys(timezones).includes(role.id));
-
-      const customId = `${prefix}_integrated_timezone${userIdPart}`;
-      console.log('🔍 DEBUG: Creating timezone select with custom_id:', customId);
-
-      return {
-        type: 1, // ActionRow
-        components: [{
-          type: 3, // String Select (not Role Select)
-          custom_id: customId,
-          placeholder: 'Select timezone',
-          min_values: 0,
-          max_values: 1,
-          options: timezoneRoles.map(({ role, offset, data }) => {
-            // Use displayName from dstState if role has been converted to new system
-            let description;
-            if (data.timezoneId && dstState[data.timezoneId]) {
-              description = dstState[data.timezoneId].displayName;
-            } else {
-              // Fallback to UTC offset for legacy roles
-              description = `UTC${offset >= 0 ? '+' : ''}${offset}`;
-            }
-
-            return {
-              label: role.name,
-              value: role.id,
-              description,
-              emoji: { name: '🌍' },
-              default: currentTimezone?.id === role.id
-            };
-          })
-        }]
-      };
-    }
-
-    case 'age': {
-      // Create age select menu with 16-40 + Custom Age option
-      const ageOptions = [];
-      
-      // Add ages 16-39 (24 options to stay within Discord's 25 option limit)
-      for (let age = 16; age <= 39; age++) {
-        ageOptions.push({
-          label: age.toString(),
-          value: `age_${age}`,
-          description: `${age} years old`
-        });
-      }
-
-      // Add Custom Age option
-      ageOptions.push({
-        label: 'Custom Age',
-        value: 'age_custom',
-        description: "Age not shown or '30s' style age",
-        emoji: { name: '✏️' }
-      });
-
-      // Get current age
-      const currentAge = playerData[guildId]?.players?.[targetMember.id]?.age;
-
-      const customId = `${prefix}_integrated_age${userIdPart}`;
-      console.log('🔍 DEBUG: Creating age select with custom_id:', customId);
-
-      return {
-        type: 1, // ActionRow
-        components: [{
-          type: 3, // String Select
-          custom_id: customId,
-          placeholder: currentAge ? `Current age: ${currentAge}` : 'Select age',
-          min_values: 0,
-          max_values: 1,
-          options: ageOptions
-        }]
-      };
-    }
-
-    case 'vanity': {
-      if (mode !== PlayerManagementMode.ADMIN) return null;
-
-      // Get current vanity roles
-      const currentVanityRoles = playerData[guildId]?.players?.[targetMember.id]?.vanityRoles || [];
-
-      return {
-        type: 1, // ActionRow
-        components: [{
-          type: 6, // Role Select
-          custom_id: `admin_integrated_vanity_${targetMember.id}`,
-          placeholder: 'Select vanity roles',
-          min_values: 0,
-          max_values: 25, // Discord limit
-          default_values: currentVanityRoles.map(id => ({ id, type: 'role' }))
-        }]
-      };
-    }
-
-    case 'attributes': {
-
-      // Get guild's attribute definitions
-      const attributes = await getAttributeDefinitions(guildId);
-      const attrEntries = Object.entries(attributes);
-
-      if (attrEntries.length === 0) {
-        return {
-          type: 1, // ActionRow
-          components: [{
-            type: 3, // String Select
-            custom_id: `admin_integrated_attributes_${targetMember.id}`,
-            placeholder: 'No attributes configured - use Tools → Attributes',
-            min_values: 0,
-            max_values: 1,
-            disabled: true,
-            options: [{ label: 'No attributes', value: 'none', description: 'Configure attributes in Tools menu' }]
-          }]
-        };
-      }
-
-      // Build attribute options
-      const attrOptions = attrEntries.slice(0, 25).map(([id, attr]) => {
-        const isResource = attr.category === 'resource';
-        return {
-          label: attr.name,
-          value: id,
-          description: `${isResource ? 'Resource' : 'Stat'} - Click to modify`,
-          emoji: resolveEmoji(attr.emoji, '📊')
-        };
-      });
-
-      return {
-        type: 1, // ActionRow
-        components: [{
-          type: 3, // String Select
-          custom_id: `admin_integrated_attributes_${targetMember.id}`,
-          placeholder: 'Select attribute to modify',
-          min_values: 1,
-          max_values: 1,
-          options: attrOptions
-        }]
-      };
-    }
-
-    default:
-      return null;
+  const safariData = await loadSafariContent();
+  let guild = null;
+  if (client) {
+    try { guild = await client.guilds.fetch(guildId); } catch (e) { /* */ }
   }
+  return buildSuperSelect(activeButton, targetMember, playerData, safariData, guildId, mode, client, guild, targetMember.id);
 }
 
 export {
