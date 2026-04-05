@@ -333,10 +333,10 @@ export async function handleQuickChallengeActionSubmit(guildId, userId, challeng
   let assignToIds = [];
   let warnings = [];
   if (category === 'playerIndividual') {
-    assignToIds = resolvedUsers;
+    assignToIds = [...new Set(resolvedUsers)]; // Deduplicate
     if (resolvedRoles.length > 0) warnings.push('Roles ignored — Individual Player Action only supports users.');
   } else if (category === 'tribe') {
-    assignToIds = resolvedRoles;
+    assignToIds = [...new Set(resolvedRoles)]; // Deduplicate
     if (resolvedUsers.length > 0) warnings.push('Users ignored — Tribe Action only supports roles.');
   } else if (category === 'playerAll' || category === 'host') {
     if (mentionableIds.length > 0) warnings.push(`${CATEGORY_TYPES[category]?.label} doesn't support per-player/tribe assignment. Created 1 shared action.`);
@@ -375,9 +375,11 @@ export async function handleQuickChallengeActionSubmit(guildId, userId, challeng
    * Create a single action shell in safariData and return its ID.
    */
   function createActionShell(label, index = 0) {
-    // Add index suffix to prevent ID collisions in bulk creation within same ms
-    const idLabel = index > 0 ? `${label}_${index}` : label;
-    const actionId = generateButtonId(idLabel);
+    // Use readable prefix + UUID suffix for guaranteed uniqueness in bulk creation
+    // (generateButtonId truncates to 20 chars, causing collisions when labels share a prefix)
+    const sanitized = label.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_{2,}/g, '_').replace(/^_|_$/g, '').substring(0, 20);
+    const unique = `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    const actionId = `${sanitized}_${unique}`;
 
     // Build outcomes — only add display_text if content provided
     const outcomes = [];
