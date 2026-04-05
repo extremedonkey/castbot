@@ -262,7 +262,7 @@ export async function createPlayerCardUI(options) {
   });
 
   // Validate component count
-  const count = countComponents([container], { enableLogging: false });
+  const count = countComponents([container], { verbosity: 'full', label: 'Player Card Menu' });
   console.log(`📊 Player Card Menu: ${count}/40 components (active: ${activeButton || 'none'})`);
 
   return {
