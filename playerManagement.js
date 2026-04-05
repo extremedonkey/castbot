@@ -243,7 +243,7 @@ export async function createAttributeDisplaySection(guildId, playerId, label = '
 
     return {
       type: 10, // Text Display
-      content: `> **\`📊 ${label}\`**\n${attrLines.join('\n')}`
+      content: `### \`\`\`📊 ${label}\`\`\`\n${attrLines.join('\n')}`
     };
   } catch (error) {
     console.error('Error creating attribute display:', error);
@@ -304,17 +304,15 @@ export function createManagementButtons(targetUserId, mode, enabled = true, acti
     });
   }
 
-  // Add attributes button for admin mode (5th button - at max for ActionRow)
-  if (mode === PlayerManagementMode.ADMIN) {
-    components.push({
-      type: 2, // Button
-      style: activeButton === 'attributes' ? ButtonStyle.Primary : ButtonStyle.Secondary,
-      label: 'Stats',
-      custom_id: `admin_set_attributes${suffix}${userIdPart}`,
-      emoji: { name: '📊' },
-      disabled: !enabled
-    });
-  }
+  // Add attributes/stats button for both admin and player mode
+  components.push({
+    type: 2, // Button
+    style: activeButton === 'attributes' ? ButtonStyle.Primary : ButtonStyle.Secondary,
+    label: 'Stats',
+    custom_id: `${prefix}_set_attributes${suffix}${userIdPart}`,
+    emoji: { name: '📊' },
+    disabled: !enabled
+  });
 
   return {
     type: 1, // ActionRow
@@ -400,18 +398,7 @@ export async function createPlayerManagementUI(options) {
       container.components.push(playerSection);
     }
 
-    // Add attribute display section (only shows if guild has attributes configured)
-    // Use "Your Stats" for player mode, player name for admin mode
-    const statsLabel = mode === PlayerManagementMode.ADMIN
-      ? `${targetMember.displayName || targetMember.user?.username || 'Player'}'s Stats`
-      : 'Your Stats';
-    const attributeSection = await createAttributeDisplaySection(guildId, targetMember.id, statsLabel);
-    if (attributeSection) {
-      container.components.push({
-        type: 14 // Separator
-      });
-      container.components.push(attributeSection);
-    }
+    // Attribute display moved to AFTER hot-swap select (shown only when Stats button active)
 
     // Add separator before buttons
     container.components.push({
@@ -457,6 +444,18 @@ export async function createPlayerManagementUI(options) {
           disabled: true
         }]
       });
+    }
+
+    // Show stats display below select when Stats button is active
+    if (activeButton === 'attributes') {
+      const displayName = targetMember.displayName || targetMember.user?.username || 'Player';
+      const statsLabel = mode === PlayerManagementMode.ADMIN
+        ? `${displayName}'s Stats`
+        : 'Your Stats';
+      const attributeSection = await createAttributeDisplaySection(guildId, targetMember.id, statsLabel);
+      if (attributeSection) {
+        container.components.push(attributeSection);
+      }
     }
 
     // Don't add any select menus here - they're handled by hot-swappable select
@@ -1507,7 +1506,6 @@ async function createHotSwappableSelect(activeButton, targetMember, playerData, 
     }
 
     case 'attributes': {
-      if (mode !== PlayerManagementMode.ADMIN) return null;
 
       // Get guild's attribute definitions
       const attributes = await getAttributeDefinitions(guildId);

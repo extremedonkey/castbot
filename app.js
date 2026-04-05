@@ -25919,16 +25919,8 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id === 'player_set_pronouns') {
-      // Use new modular handler
-      const playerData = await loadPlayerData();
-      return await handlePlayerButtonClick(req, res, custom_id, playerData, client);
-    } else if (custom_id === 'player_set_timezone') {
-      // Use new modular handler
-      const playerData = await loadPlayerData();
-      return await handlePlayerButtonClick(req, res, custom_id, playerData, client);
-    } else if (custom_id === 'player_set_age') {
-      // Use new modular handler
+    } else if (custom_id === 'player_set_pronouns' || custom_id === 'player_set_timezone' || custom_id === 'player_set_age' || custom_id === 'player_set_attributes') {
+      // Player management buttons — use modular handler
       const playerData = await loadPlayerData();
       return await handlePlayerButtonClick(req, res, custom_id, playerData, client);
     } else if (custom_id === 'player_menu') {
