@@ -8939,6 +8939,7 @@ To fix this:
                 custom_id: 'assign_to',
                 min_values: 1,
                 max_values: 1,
+                ...(currentUserId ? { default_values: [{ id: currentUserId, type: 'user' }] } : {}),
               },
             });
           } else if (category === 'tribe') {
@@ -8951,6 +8952,7 @@ To fix this:
                 custom_id: 'assign_to',
                 min_values: 1,
                 max_values: 1,
+                ...(currentRoleId ? { default_values: [{ id: currentRoleId, type: 'role' }] } : {}),
               },
             });
           }
