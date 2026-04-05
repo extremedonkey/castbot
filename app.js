@@ -9020,25 +9020,30 @@ To fix this:
           const result = timeBetweenSnowflakes(startId, endId);
           console.log(`⏱️ Challenge Timer: ${result.formatted} (${startId} → ${endId}) by user ${context.userId}`);
 
-          // Post results as a NEW public message
+          // Post results as a delayed follow-up AFTER the timer message is updated
           const userName = context.member?.nick || context.member?.user?.global_name || context.member?.user?.username || `<@${context.userId}>`;
-          const resultsContainer = {
-            type: 17, accent_color: 0x2ECC71,
-            components: [
-              { type: 10, content: `### \`\`\`🏁 Challenge Timer Finished - ${userName}\`\`\`` },
-              { type: 14 },
-              { type: 10, content: `### \`\`\`⏱️ Duration\`\`\`\n**${result.formatted}**` },
-              { type: 14 },
-              { type: 10, content: `-# Start — <t:${Math.floor(result.startTime / 1000)}:F>\n-# Message ID: \`${startId}\`` },
-              { type: 10, content: `-# End — <t:${Math.floor(result.endTime / 1000)}:F>\n-# Message ID: \`${endId}\`` },
-            ]
-          };
-          await DiscordRequest(`webhooks/${process.env.APP_ID}/${context.token}`, {
-            method: 'POST',
-            body: { flags: (1 << 15), components: [resultsContainer] }
-          });
+          const token = context.token;
+          setTimeout(async () => {
+            try {
+              const resultsContainer = {
+                type: 17, accent_color: 0x2ECC71,
+                components: [
+                  { type: 10, content: `### \`\`\`🏁 Challenge Timer Finished - ${userName}\`\`\`` },
+                  { type: 14 },
+                  { type: 10, content: `### \`\`\`⏱️ Duration\`\`\`\n**${result.formatted}**` },
+                  { type: 14 },
+                  { type: 10, content: `-# Start — <t:${Math.floor(result.startTime / 1000)}:F>\n-# Message ID: \`${startId}\`` },
+                  { type: 10, content: `-# End — <t:${Math.floor(result.endTime / 1000)}:F>\n-# Message ID: \`${endId}\`` },
+                ]
+              };
+              await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {
+                method: 'POST',
+                body: { flags: (1 << 15), components: [resultsContainer] }
+              });
+            } catch (e) { console.error('⏱️ Timer results post failed:', e.message); }
+          }, 500);
 
-          // UPDATE the timer message: swap buttons + replace current time with "Timer Stopped"
+          // UPDATE the timer message FIRST: swap buttons + replace current time with "Timer Stopped"
           const originalComponents = req.body.message?.components || [];
           const updatedContainer = JSON.parse(JSON.stringify(originalComponents[0] || { type: 17, components: [] }));
           const containerComps = updatedContainer.components || [];
