@@ -8991,7 +8991,8 @@ To fix this:
         console.log(`⏱️ Challenge Timer: Posted content + timer for action ${selectedValue} by user ${context.userId}`);
 
         // Return minimal content for @original (the deferred "thinking..." message)
-        return { content: '-# ⏱️ Challenge action started' };
+        // Must include IS_COMPONENTS_V2 flag since deferred ACK was created with it
+        return { flags: (1 << 15), components: [{ type: 17, components: [{ type: 10, content: '-# ⏱️ Challenge action started' }] }] };
       }})(req, res, client);
     } else if (custom_id === 'challenge_timer_stop') {
       // Challenge Timer — Stop button clicked. Calculate duration from snowflakes.

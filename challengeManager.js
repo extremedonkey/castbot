@@ -728,41 +728,8 @@ export function buildPublishModal(challengeId) {
 export function buildChallengePost(challenge, guildId = null, safariData = null) {
   const extraComponents = [];
 
-  // Add linked action buttons
-  if (guildId && challenge.actionIds?.length > 0 && safariData) {
-    const actionButtons = [];
-    for (const actionId of challenge.actionIds) {
-      const action = safariData[guildId]?.buttons?.[actionId];
-      if (!action) continue;
-
-      const triggerType = action.trigger?.type || 'button';
-      const isModalTrigger = triggerType === 'button_modal' || triggerType === 'button_input';
-      const buttonCustomId = isModalTrigger
-        ? `modal_launcher_${guildId}_${actionId}_${Date.now()}`
-        : `challenge_${guildId}_${actionId}_${Date.now()}`;
-
-      const label = (action.name || action.trigger?.button?.label || action.label || 'Action').substring(0, 80);
-      const emoji = action.emoji || action.trigger?.button?.emoji;
-      const style = action.trigger?.button?.style || 'Primary';
-      const styleMap = { Primary: 1, Secondary: 2, Success: 3, Danger: 4 };
-
-      const button = {
-        type: 2,
-        custom_id: buttonCustomId,
-        label,
-        style: styleMap[style] || 1,
-      };
-      if (emoji) button.emoji = resolveEmoji(emoji, '⚡');
-      actionButtons.push(button);
-
-      if (actionButtons.length >= 5) break; // Max 5 per row
-    }
-
-    if (actionButtons.length > 0) {
-      extraComponents.push({ type: 14 });
-      extraComponents.push({ type: 1, components: actionButtons });
-    }
-  }
+  // Action buttons removed from Post to Channel — players access actions via /menu → Challenges.
+  // Future: "Attach button to challenge" action type will re-enable selective button attachment.
 
   // Add credit line
   if (challenge.creationHost) {

@@ -385,7 +385,7 @@ export async function handleQuickChallengeActionSubmit(guildId, userId, challeng
       outcomes.push({
         type: 'display_text',
         order: 0,
-        config: { text: displayText.trim() },
+        config: { content: displayText.trim() },
         executeOn: 'true',
       });
     }
