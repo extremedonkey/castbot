@@ -47399,10 +47399,79 @@ Your server is now ready for Tycoons gameplay!`;
 
         console.log(`🏃 Challenge Info: Updated ${actionId} in ${challengeId} — timer: ${newTimer}${newAssignmentId && newAssignmentId !== oldAssignmentId ? `, moved to ${newAssignmentId}` : ''}`);
 
-        // Return to challenge screen (modal submits can't reliably UPDATE the parent)
-        const { buildChallengeScreen } = await import('./challengeManager.js');
-        const screen = await buildChallengeScreen(req.body.guild_id, challengeId);
-        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: screen });
+        // Rebuild the same action detail view the user was on
+        const guildId = req.body.guild_id;
+        const { loadSafariContent } = await import('./safariManager.js');
+        const refreshedPlayerData = await loadPlayerData();
+        const refreshedChallenge = refreshedPlayerData[guildId]?.challenges?.[challengeId];
+        const refreshedSafariData = await loadSafariContent();
+        const refreshedAction = refreshedSafariData[guildId]?.buttons?.[actionId];
+
+        if (!refreshedChallenge || !refreshedAction) {
+          return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { components: [{ type: 17, components: [{ type: 10, content: '❌ Challenge or action not found.' }] }] } });
+        }
+
+        const refreshedActions = getChallengeActions(refreshedChallenge);
+        const actionName = refreshedAction.name || refreshedAction.label || 'Unnamed';
+        const outcomeCount = refreshedAction.actions?.length || 0;
+        const triggerType = refreshedAction.trigger?.type || 'button';
+        const triggerLabels = { button: '🖱️ Button', button_modal: '🔐 Secret Code', button_input: '⌨️ User Input', modal: '🕹️ Command', schedule: '⏰ Scheduled' };
+
+        let assignmentInfo = '';
+        if (normalizeLinks(refreshedActions.playerAll).some(l => l.actionId === actionId)) {
+          assignmentInfo = '⚡ **Type**: Player Action — All';
+        }
+        for (const [uid, links] of Object.entries(refreshedActions.playerIndividual)) {
+          if (normalizeLinks(links).some(l => l.actionId === actionId)) {
+            try {
+              const guild = await client.guilds.fetch(guildId);
+              const member = await guild.members.fetch(uid);
+              assignmentInfo = `👤 **Assigned to**: ${member.displayName || member.user.username}`;
+            } catch { assignmentInfo = `👤 **Assigned to**: <@${uid}>`; }
+            break;
+          }
+        }
+        for (const [rid, links] of Object.entries(refreshedActions.tribe)) {
+          if (normalizeLinks(links).some(l => l.actionId === actionId)) {
+            const guild = await client.guilds.fetch(guildId);
+            const role = guild.roles.cache.get(rid);
+            assignmentInfo = `🏰 **Tribe**: ${role?.name || rid}`;
+            break;
+          }
+        }
+        if (normalizeLinks(refreshedActions.host).some(l => l.actionId === actionId)) {
+          assignmentInfo = '🔧 **Type**: Host Action';
+        }
+
+        const allLinks = [
+          ...normalizeLinks(refreshedActions.playerAll),
+          ...Object.values(refreshedActions.playerIndividual).flatMap(v => normalizeLinks(v)),
+          ...Object.values(refreshedActions.tribe).flatMap(v => normalizeLinks(v)),
+          ...normalizeLinks(refreshedActions.host),
+        ];
+        const refreshedLink = allLinks.find(l => l.actionId === actionId);
+        const timerIcon = refreshedLink?.timer === 'timed' ? '⏱️' : '♾️';
+        const timerLabel = refreshedLink?.timer === 'timed' ? 'Timed' : 'No Timer';
+        const infoLines = [assignmentInfo, `${timerIcon} **Timer**: ${timerLabel}`, `-# ${triggerLabels[triggerType] || triggerType} · ${outcomeCount} outcome${outcomeCount !== 1 ? 's' : ''}`].filter(Boolean).join('\n');
+
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: {
+          components: [{ type: 17, accent_color: refreshedChallenge.accentColor || 0x5865F2, components: [
+            { type: 10, content: `### \`\`\`⚡ ${actionName}\`\`\`\n-# **${refreshedChallenge.title}**` },
+            { type: 14 },
+            { type: 10, content: infoLines },
+            { type: 14 },
+            { type: 1, components: [
+              { type: 2, custom_id: `challenge_action_edit::${challengeId}::${actionId}`, label: 'Action Editor', style: 1, emoji: { name: '⚡' } },
+              { type: 2, custom_id: `challenge_action_info::${challengeId}::${actionId}`, label: 'Challenge Info', style: 2, emoji: { name: '🏃' } },
+              { type: 2, custom_id: `challenge_action_unlink::${challengeId}::${actionId}`, label: 'Unlink', style: 2, emoji: { name: '🔗' } },
+              { type: 2, custom_id: `challenge_action_delete::${challengeId}::${actionId}`, label: 'Delete', style: 4, emoji: { name: '🗑️' } },
+            ]},
+            { type: 14 },
+            { type: 1, components: [
+              { type: 2, custom_id: `challenge_select_nav_${challengeId}`, label: '← Back', style: 2 },
+            ]},
+          ]}]
+        }});
       } catch (error) {
         console.error('Error in challenge_action_info_modal handler:', error);
         return res.send({
