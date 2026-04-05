@@ -47399,12 +47399,10 @@ Your server is now ready for Tycoons gameplay!`;
 
         console.log(`🏃 Challenge Info: Updated ${actionId} in ${challengeId} — timer: ${newTimer}${newAssignmentId && newAssignmentId !== oldAssignmentId ? `, moved to ${newAssignmentId}` : ''}`);
 
-        // Return to action list (not challenge screen — user was on the action view)
-        const { buildChallengeActionSelect } = await import('./challengeActionCreate.js');
-        const actionComponents = await buildChallengeActionSelect(req.body.guild_id, challengeId);
-        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: {
-          components: [{ type: 17, accent_color: 0x3498DB, components: actionComponents }]
-        }});
+        // Return to challenge screen (modal submits can't reliably UPDATE the parent)
+        const { buildChallengeScreen } = await import('./challengeManager.js');
+        const screen = await buildChallengeScreen(req.body.guild_id, challengeId);
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: screen });
       } catch (error) {
         console.error('Error in challenge_action_info_modal handler:', error);
         return res.send({
