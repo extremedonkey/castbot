@@ -8881,6 +8881,90 @@ To fix this:
           return buildChallengeScreen(context.guildId);
         }
       })(req, res, client);
+    // ── Super Player Menu — New select handlers for castlists/challenges/crafting/actions/stores ──
+    } else if (custom_id === 'player_menu_sel_castlists') {
+      const selectedValue = req.body.data.values?.[0];
+      if (!selectedValue || selectedValue === '_error_max') {
+        return ButtonHandlerFactory.create({ id: 'player_menu_sel_castlists_noop', updateMessage: true, handler: async (context) => {
+          const playerData = await loadPlayerData();
+          return await createPlayerManagementUI({ mode: PlayerManagementMode.PLAYER, targetMember: await (await context.client.guilds.fetch(context.guildId)).members.fetch(context.userId), playerData, guildId: context.guildId, userId: context.userId, activeButton: 'castlists', client: context.client, channelId: context.channelId });
+        }})(req, res, client);
+      }
+      // Delegate to existing castlist posting handlers
+      if (selectedValue.startsWith('show_castlist2_')) {
+        // Post castlist — use deferred new public message
+        return ButtonHandlerFactory.create({ id: 'player_menu_sel_castlists_post', deferred: true, handler: async (context) => {
+          const castlistId = selectedValue.replace('show_castlist2_', '');
+          const { handleCastlistDisplay } = await import('./castlistV2.js');
+          return await handleCastlistDisplay(context.guildId, castlistId, context.userId, context.client, context.channelId, 'view');
+        }})(req, res, client);
+      }
+      if (selectedValue.startsWith('compact_castlist_')) {
+        return ButtonHandlerFactory.create({ id: 'player_menu_sel_castlists_compact', deferred: true, updateMessage: true, handler: async (context) => {
+          const castlistId = selectedValue.replace('compact_castlist_', '');
+          const { handleCompactCastlist } = await import('./castlistV2.js');
+          await handleCompactCastlist(context.guildId, castlistId, context.client, context.channelId);
+          // Rebuild menu after compact post
+          const playerData = await loadPlayerData();
+          const guild = await context.client.guilds.fetch(context.guildId);
+          const member = await guild.members.fetch(context.userId);
+          return await createPlayerManagementUI({ mode: PlayerManagementMode.PLAYER, targetMember: member, playerData, guildId: context.guildId, userId: context.userId, activeButton: 'castlists', client: context.client, channelId: context.channelId });
+        }})(req, res, client);
+      }
+    } else if (custom_id === 'player_menu_sel_challenges') {
+      const selectedValue = req.body.data.values?.[0];
+      if (!selectedValue) {
+        return ButtonHandlerFactory.create({ id: 'player_menu_sel_challenges_noop', updateMessage: true, handler: async () => ({ type: 6 }) })(req, res, client);
+      }
+      // Execute challenge action
+      return ButtonHandlerFactory.create({ id: 'player_menu_sel_challenges', deferred: true, handler: async (context) => {
+        const { executeButtonActions } = await import('./safariManager.js');
+        const interactionData = { token: context.token, applicationId: context.applicationId, client: context.client, member: context.member, channelName: context.channelName, user: context.member?.user || { id: context.userId }, channel: { name: context.channelName } };
+        const result = await executeButtonActions(context.guildId, selectedValue, context.userId, interactionData, context.client);
+        return { ...result, ephemeral: true };
+      }})(req, res, client);
+    } else if (custom_id === 'player_menu_sel_crafting' || custom_id === 'player_menu_sel_actions') {
+      const selectedValue = req.body.data.values?.[0];
+      if (!selectedValue || selectedValue === '_error_max') {
+        return ButtonHandlerFactory.create({ id: 'player_menu_sel_noop', updateMessage: true, handler: async (context) => {
+          const playerData = await loadPlayerData();
+          const guild = await context.client.guilds.fetch(context.guildId);
+          const member = await guild.members.fetch(context.userId);
+          const category = custom_id.includes('crafting') ? 'crafting' : 'actions';
+          return await createPlayerManagementUI({ mode: PlayerManagementMode.PLAYER, targetMember: member, playerData, guildId: context.guildId, userId: context.userId, activeButton: category, client: context.client, channelId: context.channelId });
+        }})(req, res, client);
+      }
+      // Execute the action (same as safari custom action)
+      return ButtonHandlerFactory.create({ id: 'player_menu_sel_action_exec', deferred: true, handler: async (context) => {
+        const { executeButtonActions, getCustomButton } = await import('./safariManager.js');
+        const button = await getCustomButton(context.guildId, selectedValue);
+        if (!button) return { content: '❌ Action not found', ephemeral: true };
+        const isModalTrigger = button.trigger?.type === 'button_modal' || button.trigger?.type === 'button_input';
+        if (isModalTrigger) {
+          // Can't show modal from deferred — rebuild menu with error note
+          return { content: '⚠️ This action requires a modal. Use the button version in your channel instead.', ephemeral: true };
+        }
+        const interactionData = { token: context.token, applicationId: context.applicationId, client: context.client, member: context.member, channelName: context.channelName, user: context.member?.user || { id: context.userId }, channel: { name: context.channelName } };
+        const result = await executeButtonActions(context.guildId, selectedValue, context.userId, interactionData, context.client);
+        return { ...result, ephemeral: true };
+      }})(req, res, client);
+    } else if (custom_id === 'player_menu_sel_stores') {
+      const selectedValue = req.body.data.values?.[0];
+      if (!selectedValue || selectedValue === '_error_max') {
+        return ButtonHandlerFactory.create({ id: 'player_menu_sel_stores_noop', updateMessage: true, handler: async (context) => {
+          const playerData = await loadPlayerData();
+          const guild = await context.client.guilds.fetch(context.guildId);
+          const member = await guild.members.fetch(context.userId);
+          return await createPlayerManagementUI({ mode: PlayerManagementMode.PLAYER, targetMember: member, playerData, guildId: context.guildId, userId: context.userId, activeButton: 'stores', client: context.client, channelId: context.channelId });
+        }})(req, res, client);
+      }
+      // Browse the store — new ephemeral message
+      return ButtonHandlerFactory.create({ id: 'player_menu_sel_stores_browse', deferred: true, handler: async (context) => {
+        const { createStoreBrowseDisplay } = await import('./safariManager.js');
+        const result = await createStoreBrowseDisplay(context.guildId, selectedValue, context.userId, 0);
+        return { ...result, ephemeral: true };
+      }})(req, res, client);
+
     } else if (custom_id.startsWith('stress_page_')) {
       // Legacy mockup page navigation — redirect to planner selector
       return ButtonHandlerFactory.create({
@@ -25297,7 +25381,7 @@ Your server is now ready for Tycoons gameplay!`;
           };
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('admin_set_pronouns_') || custom_id.startsWith('admin_set_timezone_') || custom_id.startsWith('admin_set_age_') || custom_id.startsWith('admin_manage_vanity_') || custom_id.startsWith('admin_set_attributes_')) {
+    } else if (custom_id.startsWith('admin_set_pronouns_') || custom_id.startsWith('admin_set_timezone_') || custom_id.startsWith('admin_set_age_') || custom_id.startsWith('admin_manage_vanity_') || custom_id.startsWith('admin_set_attributes_') || custom_id.startsWith('admin_set_castlists_') || custom_id.startsWith('admin_set_challenges_') || custom_id.startsWith('admin_set_crafting_') || custom_id.startsWith('admin_set_actions_') || custom_id.startsWith('admin_set_stores_')) {
       // 🔘 Convert to ButtonHandlerFactory
       return ButtonHandlerFactory.create({
         id: custom_id,
@@ -25919,7 +26003,7 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id === 'player_set_pronouns' || custom_id === 'player_set_timezone' || custom_id === 'player_set_age' || custom_id === 'player_set_attributes') {
+    } else if (custom_id === 'player_set_pronouns' || custom_id === 'player_set_timezone' || custom_id === 'player_set_age' || custom_id === 'player_set_attributes' || custom_id === 'player_set_castlists' || custom_id === 'player_set_challenges' || custom_id === 'player_set_crafting' || custom_id === 'player_set_actions' || custom_id === 'player_set_stores') {
       // Player management buttons — use modular handler
       const playerData = await loadPlayerData();
       return await handlePlayerButtonClick(req, res, custom_id, playerData, client);

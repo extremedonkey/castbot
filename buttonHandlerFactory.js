@@ -1087,6 +1087,20 @@ export const BUTTON_REGISTRY = {
     parent: 'reeces_stuff'
   },
 
+  // === SUPER PLAYER MENU — New category selects ===
+  'player_menu_sel_*': {
+    label: 'Player Menu Select',
+    description: 'Hot-swap select in unified player menu',
+    emoji: '📋',
+    style: 'Secondary',
+    category: 'player_management'
+  },
+  'player_set_castlists': { label: 'Castlists', description: 'Show castlist select', emoji: '📋', style: 'Secondary', category: 'player_management' },
+  'player_set_challenges': { label: 'Challenges', description: 'Show challenge actions', emoji: '🏃', style: 'Secondary', category: 'player_management' },
+  'player_set_crafting': { label: 'Crafting', description: 'Show crafting recipes', emoji: '����️', style: 'Secondary', category: 'player_management' },
+  'player_set_actions': { label: 'Actions', description: 'Show player actions', emoji: '⚡', style: 'Secondary', category: 'player_management' },
+  'player_set_stores': { label: 'Stores', description: 'Show global stores', emoji: '🏪', style: 'Secondary', category: 'player_management' },
+
   // === CHALLENGE ACTION CATEGORIES ===
   'challenge_action_cat_select_*': {
     label: 'Challenge Action Select',
@@ -4796,35 +4810,40 @@ export class ButtonHandlerFactory {
           }
         }
         
-        // 4. Handle deferred response
-        if (config.deferred) {
+        // 4. Handle deferred response (skip if requiresModal — modals must be immediate)
+        if (config.deferred && !config.requiresModal) {
           await sendDeferredResponse(res, config.ephemeral !== false, config.updateMessage);
         }
 
         // 5. Execute handler logic
         const result = await config.handler(context, req, res, client);
-        
+
         // 6. Send response (skip if deferred or handler sent response)
-        if (!config.deferred && result && !res.headersSent) {
-          // CRITICAL: Modal responses cannot be sent as UPDATE_MESSAGE
-          const isModal = result.type === InteractionResponseType.MODAL;
-          const shouldUpdateMessage = config.updateMessage && !isModal;
+        if ((!config.deferred || config.requiresModal) && result && !res.headersSent) {
+          // CRITICAL: Modal responses — send directly regardless of updateMessage config
+          const isModal = result.type === InteractionResponseType.MODAL || result.type === 9;
+          if (isModal) {
+            console.log(`🔍 ButtonHandlerFactory sending response for ${config.id}, updateMessage: undefined, isModal: true`);
+            return res.send(result);
+          }
+
+          const shouldUpdateMessage = config.updateMessage;
 
           // Inject ephemeral flag from config into result data
-          if (config.ephemeral && !shouldUpdateMessage && !isModal) {
+          if (config.ephemeral && !shouldUpdateMessage) {
             result.ephemeral = true;
           }
 
-          console.log(`🔍 ButtonHandlerFactory sending response for ${config.id}, updateMessage: ${shouldUpdateMessage}, isModal: ${isModal}`);
+          console.log(`🔍 ButtonHandlerFactory sending response for ${config.id}, updateMessage: ${shouldUpdateMessage}, isModal: false`);
           return sendResponse(res, result, shouldUpdateMessage);
         }
-        
+
         // 7. Handle deferred response update
-        if (config.deferred && result) {
+        if (config.deferred && !config.requiresModal && result) {
           // Check if this is a modal response - modals can't be sent via webhook
-          if (result.type === InteractionResponseType.MODAL) {
-            console.error(`🚨 ButtonHandlerFactory: Cannot send modal via deferred response for ${config.id}`);
-            console.error(`🚨 Solution: Remove deferred: true from handler config when returning modals`);
+          if (result.type === InteractionResponseType.MODAL || result.type === 9) {
+            console.error(`🚨 ButtonHandlerFactory: Handler returned modal from deferred context for ${config.id}`);
+            console.error(`🚨 Solution: Add requiresModal: true to handler config, or remove deferred: true`);
             // Send error message instead
             return updateDeferredResponse(context.token, {
               content: '❌ Unable to display modal. Please try again.',
