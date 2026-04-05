@@ -222,6 +222,14 @@ export async function createPlayerCardUI(options) {
       buildCategoryRow(ROW1_BUTTONS, targetMember.id, activeButton)
     );
 
+    // Row 2: Safari & Gameplay
+    container.components.push({
+      type: 10, content: '> **`🦁 Safari & Gameplay`**'
+    });
+    container.components.push(
+      buildCategoryRow(ROW2_BUTTONS, targetMember.id, activeButton)
+    );
+
     // Row 3: Advanced Management (admin only)
     if (isAdmin) {
       container.components.push({
@@ -244,6 +252,8 @@ export async function createPlayerCardUI(options) {
     container.components.push({ type: 14 });
     container.components.push({ type: 10, content: '> **`✏️ Castlists & Profile`**' });
     container.components.push(buildCategoryRow(ROW1_BUTTONS, null, null, true));
+    container.components.push({ type: 10, content: '> **`🦁 Safari & Gameplay`**' });
+    container.components.push(buildCategoryRow(ROW2_BUTTONS, null, null, true));
     container.components.push({ type: 10, content: '> **`⚙️ Advanced Management`**' });
     container.components.push(buildCategoryRow(ROW3_BUTTONS, null, null, true));
     container.components.push({ type: 14 });
