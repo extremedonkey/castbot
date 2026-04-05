@@ -8978,33 +8978,40 @@ To fix this:
           const startTimestamp = Math.floor(Date.now() / 1000);
           const userName = context.member?.nick || context.member?.user?.global_name || context.member?.user?.username || `<@${context.userId}>`;
 
-          const timerComponents = [
-            { type: 14 },
-            { type: 10, content: `### \`\`\`🚦 Challenge Timer Started - ${userName}\`\`\`\n> **⏱️ Start Time**: <t:${startTimestamp}:F>\n> **🧭 Current Challenge Time**: <t:${startTimestamp}:R>\n\nWhen you have completed the required challenge tasks, click stop.\nIf any questions, ping Production.\n-# Note to hosts: If any issues, manually snowflake via right-click > Apps > Start Timer, or \`/menu\` > Tools > Snowflake.` },
-            { type: 14 },
-            { type: 1, components: [
-              { type: 2, custom_id: 'challenge_timer_stop', label: 'Finish / Stop Timer', style: 4, emoji: { name: '🛑' } }
-            ]}
-          ];
+          const timerContainer = {
+            type: 17, accent_color: 0x2ECC71,
+            components: [
+              { type: 10, content: `### \`\`\`🚦 Challenge Timer Started - ${userName}\`\`\`\n> **⏱️ Start Time**: <t:${startTimestamp}:F>\n> **🧭 Current Challenge Time**: <t:${startTimestamp}:R>\n\nWhen you have completed the required challenge tasks, click stop.\nIf any questions, ping Production.\n-# Note to hosts: If any issues, manually snowflake via right-click > Apps > Start Timer, or \`/menu\` > Tools > Snowflake.` },
+              { type: 14 },
+              { type: 1, components: [
+                { type: 2, custom_id: 'challenge_timer_stop', label: 'Finish / Stop Timer', style: 4, emoji: { name: '🛑' } }
+              ]}
+            ]
+          };
 
-          // Inject timer into the existing result Container (one message, one PATCH, no setTimeout)
-          const resultContainer = result.components?.[0] || result.data?.components?.[0];
-          if (resultContainer?.components) {
-            resultContainer.components.push(...timerComponents);
+          // Append timer as a SEPARATE Container (visually distinct from action content)
+          if (result.components) {
+            result.components.push(timerContainer);
           } else if (result.content) {
-            // Plain text result — wrap in Container with timer
+            // Plain text result — wrap in Container + add timer Container
             result = {
               flags: (1 << 15),
-              components: [{
-                type: 17, accent_color: 0x2ECC71,
-                components: [
-                  { type: 10, content: result.content },
-                  ...timerComponents
-                ]
-              }]
+              components: [
+                { type: 17, components: [{ type: 10, content: result.content }] },
+                timerContainer
+              ]
             };
           }
-          console.log(`⏱️ Challenge Timer: Injected timer into result for action ${selectedValue} by user ${context.userId}`);
+
+          // Validate component count before returning
+          const { countComponents } = await import('./utils.js');
+          const totalComponents = countComponents(result.components || [], { enableLogging: false });
+          if (totalComponents > 40) {
+            console.warn(`⚠️ Challenge Timer: Combined message has ${totalComponents}/40 components — over limit! Falling back to timer-only.`);
+            result = { flags: (1 << 15), components: [timerContainer] };
+          } else {
+            console.log(`⏱️ Challenge Timer: Combined ${totalComponents}/40 components for action ${selectedValue} by user ${context.userId}`);
+          }
         }
 
         return result;
@@ -9050,26 +9057,36 @@ To fix this:
             } catch (e) { console.error('⏱️ Timer results post failed:', e.message); }
           }, 500);
 
-          // UPDATE the timer message FIRST: swap buttons + replace current time with "Timer Stopped"
-          const originalComponents = req.body.message?.components || [];
-          const updatedContainer = JSON.parse(JSON.stringify(originalComponents[0] || { type: 17, components: [] }));
-          const containerComps = updatedContainer.components || [];
-          // Replace "🧭 Current Challenge Time" text with "🛑 Timer Stopped"
-          for (const comp of containerComps) {
-            if (comp.type === 10 && comp.content?.includes('🧭 Current Challenge Time')) {
-              comp.content = comp.content.replace(/> \*\*🧭 Current Challenge Time\*\*:.*/, '> **🛑 Timer Stopped**');
+          // UPDATE the message: find the timer container (may be one of multiple containers)
+          const originalComponents = JSON.parse(JSON.stringify(req.body.message?.components || []));
+
+          // Find and update the timer container (the one with 🧭 Current Challenge Time)
+          for (const container of originalComponents) {
+            if (container.type !== 17) continue;
+            const comps = container.components || [];
+            let isTimerContainer = false;
+            for (const comp of comps) {
+              if (comp.type === 10 && comp.content?.includes('🧭 Current Challenge Time')) {
+                comp.content = comp.content.replace(/> \*\*🧭 Current Challenge Time\*\*:.*/, '> **🛑 Timer Stopped**');
+                isTimerContainer = true;
+              }
+            }
+            if (isTimerContainer) {
+              // Swap the button row
+              const actionRowIdx = comps.findLastIndex(c => c.type === 1);
+              if (actionRowIdx >= 0) {
+                comps[actionRowIdx] = {
+                  type: 1, components: [
+                    { type: 2, custom_id: 'challenge_timer_stopped_noop', label: 'Timer Stopped', style: 2, emoji: { name: '🕛' }, disabled: true },
+                    { type: 2, custom_id: 'challenge_timer_stop', label: 'Re-time from Start', style: 2, emoji: { name: '🏁' } },
+                  ]
+                };
+              }
+              // Change accent to grey
+              container.accent_color = 0x95a5a6;
             }
           }
-          const actionRowIdx = containerComps.findLastIndex(c => c.type === 1);
-          if (actionRowIdx >= 0) {
-            containerComps[actionRowIdx] = {
-              type: 1, components: [
-                { type: 2, custom_id: 'challenge_timer_stopped_noop', label: 'Timer Stopped', style: 2, emoji: { name: '🕛' }, disabled: true },
-                { type: 2, custom_id: 'challenge_timer_stop', label: 'Re-time from Start', style: 2, emoji: { name: '🏁' } },
-              ]
-            };
-          }
-          return { components: [updatedContainer] };
+          return { components: originalComponents };
         }
       })(req, res, client);
     } else if (custom_id === 'player_menu_sel_crafting' || custom_id === 'player_menu_sel_actions') {
