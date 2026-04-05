@@ -8971,8 +8971,11 @@ To fix this:
         } catch (e) { console.error('⏱️ Timer check failed:', e.message); }
 
         if (isTimed) {
-          // Strip ephemeral flag — timed action content must be PUBLIC (visible to production)
-          if (result.flags) result.flags = (1 << 15); // Keep IS_COMPONENTS_V2 only
+          // Force PUBLIC — strip ALL flags except IS_COMPONENTS_V2.
+          // executeButtonActions returns ephemeral flags that would hide the content.
+          result.flags = (1 << 15); // IS_COMPONENTS_V2 only, NO ephemeral
+          if (result.data?.flags) result.data.flags = (1 << 15); // Handle nested structure
+          console.log(`⏱️ Timer: Stripped ephemeral from result. flags=${result.flags}, components=${!!result.components}, data.components=${!!result.data?.components}`);
           // TIMED: Return action content normally (factory patches @original with it).
           // Post timer as a delayed follow-up AFTER the patch completes.
           const token = context.token;
