@@ -2514,7 +2514,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               components: [
                 { type: 10, content: `### \`\`\`❄️ Timer Started\`\`\`` },
                 { type: 14 },
-                { type: 10, content: `**Player**: ${playerId ? `<@${playerId}>` : 'Unknown'}\n**Start**: ${discordTimestamp(timestamp, 'T')} (${discordTimestamp(timestamp, 'R')})\n\n-# Message ID: \`${targetMessageId}\`` }
+                { type: 10, content: `**Player**: ${playerId ? `<@${playerId}>` : 'Unknown'}\n**Start**: ${discordTimestamp(timestamp, 'F')} (${discordTimestamp(timestamp, 'R')})\n\n-# Message ID: \`${targetMessageId}\`` }
               ]
             }]
           }
@@ -2556,7 +2556,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               components: [
                 { type: 10, content: `### \`\`\`❄️ Timer Result\`\`\`` },
                 { type: 14 },
-                { type: 10, content: `**Player**: <@${playerId}>\n**Duration**: **${result.formatted}**${result.reversed ? ' ⚠️ *reversed*' : ''}\n\n-# Start: ${discordTimestamp(result.startTime, 'T')} → End: ${discordTimestamp(result.endTime, 'T')}` },
+                { type: 10, content: `**Player**: <@${playerId}>\n**Duration**: **${result.formatted}**${result.reversed ? ' ⚠️ *reversed*' : ''}\n\n-# Start: ${discordTimestamp(result.startTime, 'F')} → End: ${discordTimestamp(result.endTime, 'F')}` },
                 { type: 14 },
                 { type: 1, components: [
                   { type: 2, custom_id: `timer_post|${playerId}|${result.durationMs}|${result.startTime}|${result.endTime}`, label: 'Post Publicly', style: 2, emoji: { name: '📢' } }
@@ -8970,10 +8970,13 @@ To fix this:
           // TIMED: Return action content normally (factory patches @original with it).
           // Post timer as a delayed follow-up AFTER the patch completes.
           const token = context.token;
+          const { discordTimestamp } = await import('./timerUtils.js');
+          const startTimestamp = Math.floor(Date.now() / 1000);
+          const userName = context.member?.displayName || context.member?.user?.username || `<@${context.userId}>`;
           const timerContainer = {
             type: 17, accent_color: 0x2ECC71,
             components: [
-              { type: 10, content: `### \`\`\`⏱️ Challenge Timer Started!\`\`\`\nWhen you have completed the required challenge tasks, click stop.\nIf any questions, ping Production.\n-# Note to hosts: If any issues, manually snowflake via right-click > Apps > Start Timer, or \`/menu\` > Tools > Snowflake.` },
+              { type: 10, content: `### \`\`\`🚦 Challenge Timer Started - ${userName}\`\`\`\n> **⏱️ Start Time**: <t:${startTimestamp}:F>\n\n🧭 Current Challenge Time: <t:${startTimestamp}:R>\n\nWhen you have completed the required challenge tasks, click stop.\nIf any questions, ping Production.\n-# Note to hosts: If any issues, manually snowflake via right-click > Apps > Start Timer, or \`/menu\` > Tools > Snowflake.` },
               { type: 14 },
               { type: 1, components: [
                 { type: 2, custom_id: 'challenge_timer_stop', label: 'Finish / Stop Timer', style: 4, emoji: { name: '🛑' } }
@@ -9015,15 +9018,16 @@ To fix this:
           console.log(`⏱️ Challenge Timer: ${result.formatted} (${startId} → ${endId}) by user ${context.userId}`);
 
           // Post results as a NEW public message
+          const userName = context.member?.displayName || context.member?.user?.username || `<@${context.userId}>`;
           const resultsContainer = {
             type: 17, accent_color: 0x2ECC71,
             components: [
-              { type: 10, content: `### \`\`\`🏃 Challenge Timer Results\`\`\`` },
+              { type: 10, content: `### \`\`\`🏁 Challenge Timer Finished - ${userName}\`\`\`` },
               { type: 14 },
               { type: 10, content: `### \`\`\`⏱️ Duration\`\`\`\n**${result.formatted}**` },
               { type: 14 },
-              { type: 10, content: `-# Start — ${discordTimestamp(result.startTime, 'F')}\n-# Message ID: \`${startId}\`` },
-              { type: 10, content: `-# End — ${discordTimestamp(result.endTime, 'F')}\n-# Message ID: \`${endId}\`` },
+              { type: 10, content: `-# Start — <t:${Math.floor(result.startTime / 1000)}:F>\n-# Message ID: \`${startId}\`` },
+              { type: 10, content: `-# End — <t:${Math.floor(result.endTime / 1000)}:F>\n-# Message ID: \`${endId}\`` },
             ]
           };
           await DiscordRequest(`webhooks/${process.env.APP_ID}/${context.token}`, {
