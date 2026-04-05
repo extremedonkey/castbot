@@ -8971,39 +8971,40 @@ To fix this:
         } catch (e) { console.error('⏱️ Timer check failed:', e.message); }
 
         if (isTimed) {
-          // Force PUBLIC — strip ALL flags except IS_COMPONENTS_V2.
-          // executeButtonActions returns ephemeral flags that would hide the content.
+          // Force PUBLIC — strip ephemeral flags
           result.flags = (1 << 15); // IS_COMPONENTS_V2 only, NO ephemeral
-          if (result.data?.flags) result.data.flags = (1 << 15); // Handle nested structure
-          console.log(`⏱️ Timer: Stripped ephemeral from result. flags=${result.flags}, components=${!!result.components}, data.components=${!!result.data?.components}`);
-          // TIMED: Return action content normally (factory patches @original with it).
-          // Post timer as a delayed follow-up AFTER the patch completes.
-          const token = context.token;
-          const { discordTimestamp } = await import('./timerUtils.js');
+          if (result.data?.flags) result.data.flags = (1 << 15);
+
           const startTimestamp = Math.floor(Date.now() / 1000);
           const userName = context.member?.nick || context.member?.user?.global_name || context.member?.user?.username || `<@${context.userId}>`;
-          const timerContainer = {
-            type: 17, accent_color: 0x2ECC71,
-            components: [
-              { type: 10, content: `### \`\`\`🚦 Challenge Timer Started - ${userName}\`\`\`\n> **⏱️ Start Time**: <t:${startTimestamp}:F>\n> **🧭 Current Challenge Time**: <t:${startTimestamp}:R>\n\nWhen you have completed the required challenge tasks, click stop.\nIf any questions, ping Production.\n-# Note to hosts: If any issues, manually snowflake via right-click > Apps > Start Timer, or \`/menu\` > Tools > Snowflake.` },
-              { type: 14 },
-              { type: 1, components: [
-                { type: 2, custom_id: 'challenge_timer_stop', label: 'Finish / Stop Timer', style: 4, emoji: { name: '🛑' } }
-              ]}
-            ]
-          };
-          // Delay ensures @original is patched with action content BEFORE timer appears
-          setTimeout(async () => {
-            try {
-              await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {
-                method: 'POST',
-                body: { flags: (1 << 15), components: [timerContainer] }
-              });
-              console.log(`⏱️ Challenge Timer: Posted timer for action ${selectedValue} by user ${context.userId}`);
-            } catch (e) {
-              console.error('⏱️ Challenge Timer: Failed to post timer:', e.message);
-            }
-          }, 1500);
+
+          const timerComponents = [
+            { type: 14 },
+            { type: 10, content: `### \`\`\`🚦 Challenge Timer Started - ${userName}\`\`\`\n> **⏱️ Start Time**: <t:${startTimestamp}:F>\n> **🧭 Current Challenge Time**: <t:${startTimestamp}:R>\n\nWhen you have completed the required challenge tasks, click stop.\nIf any questions, ping Production.\n-# Note to hosts: If any issues, manually snowflake via right-click > Apps > Start Timer, or \`/menu\` > Tools > Snowflake.` },
+            { type: 14 },
+            { type: 1, components: [
+              { type: 2, custom_id: 'challenge_timer_stop', label: 'Finish / Stop Timer', style: 4, emoji: { name: '🛑' } }
+            ]}
+          ];
+
+          // Inject timer into the existing result Container (one message, one PATCH, no setTimeout)
+          const resultContainer = result.components?.[0] || result.data?.components?.[0];
+          if (resultContainer?.components) {
+            resultContainer.components.push(...timerComponents);
+          } else if (result.content) {
+            // Plain text result — wrap in Container with timer
+            result = {
+              flags: (1 << 15),
+              components: [{
+                type: 17, accent_color: 0x2ECC71,
+                components: [
+                  { type: 10, content: result.content },
+                  ...timerComponents
+                ]
+              }]
+            };
+          }
+          console.log(`⏱️ Challenge Timer: Injected timer into result for action ${selectedValue} by user ${context.userId}`);
         }
 
         return result;
