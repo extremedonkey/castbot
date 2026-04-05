@@ -47401,8 +47401,10 @@ Your server is now ready for Tycoons gameplay!`;
 
         // Return to action list (not challenge screen — user was on the action view)
         const { buildChallengeActionSelect } = await import('./challengeActionCreate.js');
-        const actionView = await buildChallengeActionSelect(req.body.guild_id, challengeId);
-        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: actionView });
+        const actionComponents = await buildChallengeActionSelect(req.body.guild_id, challengeId);
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: {
+          components: [{ type: 17, accent_color: 0x3498DB, components: actionComponents }]
+        }});
       } catch (error) {
         console.error('Error in challenge_action_info_modal handler:', error);
         return res.send({
