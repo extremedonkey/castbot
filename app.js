@@ -9031,20 +9031,21 @@ To fix this:
             body: { flags: (1 << 15), components: [resultsContainer] }
           });
 
-          // UPDATE the timer message: add "Timer Stopped" + change Stop to "Re-time from Start"
-          return {
-            components: [{
-              type: 17, accent_color: 0x95a5a6, // Grey accent — timer stopped
-              components: [
-                { type: 10, content: `### \`\`\`⏱️ Challenge Timer\`\`\`\n**${result.formatted}**` },
-                { type: 14 },
-                { type: 1, components: [
-                  { type: 2, custom_id: 'challenge_timer_stopped_noop', label: 'Timer Stopped', style: 2, emoji: { name: '🕛' }, disabled: true },
-                  { type: 2, custom_id: 'challenge_timer_stop', label: 'Re-time from Start', style: 2, emoji: { name: '🏁' } },
-                ]}
+          // UPDATE the timer message: preserve original content, only swap the buttons
+          const originalComponents = req.body.message?.components || [];
+          const updatedContainer = JSON.parse(JSON.stringify(originalComponents[0] || { type: 17, components: [] }));
+          // Find and replace the ActionRow (last component in container)
+          const containerComps = updatedContainer.components || [];
+          const actionRowIdx = containerComps.findLastIndex(c => c.type === 1);
+          if (actionRowIdx >= 0) {
+            containerComps[actionRowIdx] = {
+              type: 1, components: [
+                { type: 2, custom_id: 'challenge_timer_stopped_noop', label: 'Timer Stopped', style: 2, emoji: { name: '🕛' }, disabled: true },
+                { type: 2, custom_id: 'challenge_timer_stop', label: 'Re-time from Start', style: 2, emoji: { name: '🏁' } },
               ]
-            }]
-          };
+            };
+          }
+          return { components: [updatedContainer] };
         }
       })(req, res, client);
     } else if (custom_id === 'player_menu_sel_crafting' || custom_id === 'player_menu_sel_actions') {
