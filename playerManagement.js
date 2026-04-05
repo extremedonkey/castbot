@@ -698,7 +698,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
         components: [{
           type: 3,
           custom_id: 'player_menu_sel_challenges',
-          placeholder: 'Select a challenge action',
+          placeholder: '🏃 Select challenge action',
           min_values: 1,
           max_values: 1,
           options: options.slice(0, 25)

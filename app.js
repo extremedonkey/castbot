@@ -8921,8 +8921,8 @@ To fix this:
       if (!selectedValue) {
         return ButtonHandlerFactory.create({ id: 'player_menu_sel_challenges_noop', updateMessage: true, handler: async () => ({ type: 6 }) })(req, res, client);
       }
-      // Execute challenge action — value is raw actionId
-      return ButtonHandlerFactory.create({ id: 'player_menu_sel_challenges', deferred: true, handler: async (context) => {
+      // Execute challenge action — value is raw actionId, non-ephemeral so production can see
+      return ButtonHandlerFactory.create({ id: 'player_menu_sel_challenges', deferred: true, ephemeral: false, handler: async (context) => {
         const { executeButtonActions, getCustomButton } = await import('./safariManager.js');
         const button = await getCustomButton(context.guildId, selectedValue);
         if (!button) {
@@ -8933,7 +8933,7 @@ To fix this:
         }
         const interactionData = { token: context.token, applicationId: context.applicationId, client: context.client, member: context.member, channelName: context.channelName, user: context.member?.user || { id: context.userId }, channel: { name: context.channelName } };
         const result = await executeButtonActions(context.guildId, selectedValue, context.userId, interactionData, context.client);
-        return { ...result, ephemeral: true };
+        return result;
       }})(req, res, client);
     } else if (custom_id === 'player_menu_sel_crafting' || custom_id === 'player_menu_sel_actions') {
       const selectedValue = req.body.data.values?.[0];
