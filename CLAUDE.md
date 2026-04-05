@@ -436,6 +436,17 @@ General Workflow for new features:
 | `/docs/infrastructure-security/` | Deployment, monitoring, production ops, permissions & security | Deploying, debugging prod, or understanding security model |
 | `/docs/ui/` | Visual design standards, menu hierarchy | Designing a new menu or screen |
 
+**📝 Promotion Path** — docs follow the feature lifecycle:
+```
+01-RaP → 02-implementation-wip → 03-features
+(idea)      (building)             (shipped ✅)
+```
+When a feature is **deployed to production and working**, move/rename its doc into `03-features/`:
+1. Move the file: `git mv docs/01-RaP/0948_Analysis.md docs/03-features/FeatureName.md`
+2. Update status to "Active", remove implementation TODOs
+3. Update any links in CLAUDE.md Feature Documentation Index
+4. **Don't leave shipped features in RaP** — if it's built and deployed, promote it
+
 ## 📚 Feature Documentation Index
 
 **Core Systems:**
