@@ -4908,6 +4908,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('challenge_action_cat_select_') &&
         !custom_id.startsWith('challenge_timer_') &&
         !custom_id.startsWith('challenge_action_edit::') &&
+        !custom_id.startsWith('challenge_action_info::') &&
         !custom_id.startsWith('challenge_action_unlink::') &&
         !custom_id.startsWith('challenge_action_delete::') &&
         !custom_id.startsWith('challenge_search') &&
@@ -8789,13 +8790,14 @@ To fix this:
         })(req, res, client);
       }
 
-      // Regular action selected — show manage sub-screen
+      // Regular action selected — show manage sub-screen with challenge-action details
       return ButtonHandlerFactory.create({
         id: 'challenge_action_manage',
         updateMessage: true, deferred: true,
         handler: async (context) => {
           const playerData = await (await import('./storage.js')).loadPlayerData();
           const { loadSafariContent } = await import('./safariManager.js');
+          const { getChallengeActions, normalizeLinks } = await import('./challengeActionCreate.js');
           const safariData = await loadSafariContent();
           const challenge = playerData[context.guildId]?.challenges?.[challengeId];
           const action = safariData[context.guildId]?.buttons?.[selectedValue];
@@ -8806,13 +8808,67 @@ To fix this:
           const outcomeCount = action.actions?.length || 0;
           const triggerType = action.trigger?.type || 'button';
           const triggerLabels = { button: '🖱️ Button', button_modal: '🔐 Secret Code', button_input: '⌨️ User Input', modal: '🕹️ Command', schedule: '⏰ Scheduled' };
+
+          // Find assignment info — which category and who is assigned
+          const actions = getChallengeActions(challenge);
+          let assignmentInfo = '';
+          let category = 'unknown';
+          // Check playerAll
+          if (normalizeLinks(actions.playerAll).some(l => l.actionId === selectedValue)) {
+            category = 'playerAll';
+            assignmentInfo = '⚡ **Type**: Player Action — All';
+          }
+          // Check playerIndividual
+          for (const [userId, links] of Object.entries(actions.playerIndividual)) {
+            if (normalizeLinks(links).some(l => l.actionId === selectedValue)) {
+              category = 'playerIndividual';
+              const guild = await context.client.guilds.fetch(context.guildId);
+              try {
+                const member = await guild.members.fetch(userId);
+                assignmentInfo = `👤 **Assigned to**: ${member.displayName || member.user.username} (\`${userId}\`)`;
+              } catch {
+                assignmentInfo = `👤 **Assigned to**: <@${userId}>`;
+              }
+              break;
+            }
+          }
+          // Check tribe
+          for (const [roleId, links] of Object.entries(actions.tribe)) {
+            if (normalizeLinks(links).some(l => l.actionId === selectedValue)) {
+              category = 'tribe';
+              const guild = await context.client.guilds.fetch(context.guildId);
+              const role = guild.roles.cache.get(roleId);
+              assignmentInfo = `🏰 **Tribe**: ${role?.name || roleId}`;
+              break;
+            }
+          }
+          // Check host
+          if (normalizeLinks(actions.host).some(l => l.actionId === selectedValue)) {
+            category = 'host';
+            assignmentInfo = '🔧 **Type**: Host Action';
+          }
+
+          // Find timer status
+          const allLinks = [
+            ...normalizeLinks(actions.playerAll),
+            ...Object.values(actions.playerIndividual).flatMap(v => normalizeLinks(v)),
+            ...Object.values(actions.tribe).flatMap(v => normalizeLinks(v)),
+            ...normalizeLinks(actions.host),
+          ];
+          const link = allLinks.find(l => l.actionId === selectedValue);
+          const timerIcon = link?.timer === 'timed' ? '⏱️' : '♾️';
+          const timerLabel = link?.timer === 'timed' ? 'Timed' : 'No Timer';
+
+          const infoLines = [assignmentInfo, `${timerIcon} **Timer**: ${timerLabel}`, `-# ${triggerLabels[triggerType] || triggerType} · ${outcomeCount} outcome${outcomeCount !== 1 ? 's' : ''}`].filter(Boolean).join('\n');
+
           return { components: [{ type: 17, accent_color: challenge.accentColor || 0x5865F2, components: [
-            { type: 10, content: `## ${actionName}\n-# **${challenge.title}** · ${triggerLabels[triggerType] || triggerType} · ${outcomeCount} outcome${outcomeCount !== 1 ? 's' : ''}` },
+            { type: 10, content: `### \`\`\`⚡ ${actionName}\`\`\`\n-# **${challenge.title}**` },
             { type: 14 },
-            { type: 10, content: action.description || '-# No description' },
+            { type: 10, content: infoLines },
             { type: 14 },
             { type: 1, components: [
-              { type: 2, custom_id: `challenge_action_edit::${challengeId}::${selectedValue}`, label: 'Edit in Action Editor', style: 1, emoji: { name: '✏️' } },
+              { type: 2, custom_id: `challenge_action_edit::${challengeId}::${selectedValue}`, label: 'Action Editor', style: 1, emoji: { name: '⚡' } },
+              { type: 2, custom_id: `challenge_action_info::${challengeId}::${selectedValue}`, label: 'Challenge Info', style: 2, emoji: { name: '🏃' } },
               { type: 2, custom_id: `challenge_action_unlink::${challengeId}::${selectedValue}`, label: 'Unlink', style: 2, emoji: { name: '🔗' } },
               { type: 2, custom_id: `challenge_action_delete::${challengeId}::${selectedValue}`, label: 'Delete', style: 4, emoji: { name: '🗑️' } },
             ]},
@@ -8831,6 +8887,101 @@ To fix this:
           const [, challengeId, actionId] = custom_id.split('::');
           const { createCustomActionEditorUI } = await import('./customActionUI.js');
           return await createCustomActionEditorUI({ guildId: context.guildId, actionId });
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('challenge_action_info::')) {
+      // Challenge Info — edit assignment + timer via modal
+      return ButtonHandlerFactory.create({
+        id: 'challenge_action_info',
+        requiresModal: true,
+        handler: async (context) => {
+          const [, challengeId, actionId] = custom_id.split('::');
+          const { getChallengeActions, normalizeLinks } = await import('./challengeActionCreate.js');
+          const playerData = await loadPlayerData();
+          const challenge = playerData[context.guildId]?.challenges?.[challengeId];
+          if (!challenge) return { type: 9, data: { custom_id: 'noop', title: 'Error', components: [{ type: 18, label: 'Error', component: { type: 4, custom_id: 'err', style: 1, value: 'Challenge not found' } }] } };
+
+          const actions = getChallengeActions(challenge);
+
+          // Find current assignment and timer
+          let currentUserId = null;
+          let currentRoleId = null;
+          let currentTimer = 'none';
+          let category = 'playerAll';
+
+          for (const [userId, links] of Object.entries(actions.playerIndividual)) {
+            const found = normalizeLinks(links).find(l => l.actionId === actionId);
+            if (found) { currentUserId = userId; currentTimer = found.timer || 'none'; category = 'playerIndividual'; break; }
+          }
+          if (!currentUserId) {
+            for (const [roleId, links] of Object.entries(actions.tribe)) {
+              const found = normalizeLinks(links).find(l => l.actionId === actionId);
+              if (found) { currentRoleId = roleId; currentTimer = found.timer || 'none'; category = 'tribe'; break; }
+            }
+          }
+          if (!currentUserId && !currentRoleId) {
+            const allLink = normalizeLinks(actions.playerAll).find(l => l.actionId === actionId);
+            if (allLink) { currentTimer = allLink.timer || 'none'; category = 'playerAll'; }
+            const hostLink = normalizeLinks(actions.host).find(l => l.actionId === actionId);
+            if (hostLink) { currentTimer = hostLink.timer || 'none'; category = 'host'; }
+          }
+
+          // Build modal components based on category
+          const components = [];
+
+          if (category === 'playerIndividual') {
+            components.push({
+              type: 18,
+              label: 'Assigned Player',
+              description: 'Change which player this action is assigned to',
+              component: {
+                type: 5, // User Select
+                custom_id: 'assign_to',
+                min_values: 1,
+                max_values: 1,
+                ...(currentUserId ? { default_values: [{ id: currentUserId, type: 'user' }] } : {}),
+              },
+            });
+          } else if (category === 'tribe') {
+            components.push({
+              type: 18,
+              label: 'Assigned Tribe',
+              description: 'Change which tribe this action is assigned to',
+              component: {
+                type: 6, // Role Select
+                custom_id: 'assign_to',
+                min_values: 1,
+                max_values: 1,
+                ...(currentRoleId ? { default_values: [{ id: currentRoleId, type: 'role' }] } : {}),
+              },
+            });
+          }
+
+          // Timer select — always shown
+          components.push({
+            type: 18,
+            label: 'Challenge Timer',
+            description: 'Should CastBot time how long the player takes?',
+            component: {
+              type: 3,
+              custom_id: 'timer_mode',
+              min_values: 1,
+              max_values: 1,
+              options: [
+                { label: 'No Timer', value: 'none', emoji: { name: '♾️' }, default: currentTimer !== 'timed' },
+                { label: 'Timed', value: 'timed', emoji: { name: '⏱️' }, default: currentTimer === 'timed' },
+              ],
+            },
+          });
+
+          return {
+            type: 9,
+            data: {
+              custom_id: `challenge_action_info_modal::${challengeId}::${actionId}::${category}::${currentUserId || currentRoleId || ''}`,
+              title: 'Edit Challenge Action Info',
+              components,
+            }
+          };
         }
       })(req, res, client);
     } else if (custom_id.startsWith('challenge_action_unlink::')) {
@@ -47174,6 +47325,87 @@ Your server is now ready for Tycoons gameplay!`;
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: { content: '❌ Error creating challenge action.', flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
+
+    } else if (custom_id.startsWith('challenge_action_info_modal::')) {
+      // Challenge Action Info modal submit — update assignment + timer
+      const parts = custom_id.split('::');
+      const challengeId = parts[1];
+      const actionId = parts[2];
+      const category = parts[3];
+      const oldAssignmentId = parts[4] || null;
+      try {
+        const { normalizeLinks } = await import('./challengeActionCreate.js');
+        const playerData = await loadPlayerData();
+        const challenge = playerData[req.body.guild_id]?.challenges?.[challengeId];
+        if (!challenge || !challenge.actions) {
+          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Challenge not found.', flags: InteractionResponseFlags.EPHEMERAL } });
+        }
+
+        // Extract modal values
+        let newAssignmentId = null;
+        let newTimer = 'none';
+        for (const comp of components) {
+          if (comp.component?.custom_id === 'assign_to') {
+            newAssignmentId = comp.component?.values?.[0] || null;
+          }
+          if (comp.component?.custom_id === 'timer_mode') {
+            newTimer = comp.component?.values?.[0] || 'none';
+          }
+        }
+
+        // Update timer on the link object
+        if (category === 'playerIndividual' || category === 'tribe') {
+          const targetId = oldAssignmentId;
+          const map = category === 'playerIndividual' ? challenge.actions.playerIndividual : challenge.actions.tribe;
+          if (targetId && map[targetId]) {
+            const links = normalizeLinks(map[targetId]);
+            const link = links.find(l => l.actionId === actionId);
+            if (link) link.timer = newTimer;
+
+            // If assignment changed, move the link
+            if (newAssignmentId && newAssignmentId !== targetId) {
+              // Remove from old
+              map[targetId] = links.filter(l => l.actionId !== actionId);
+              if (map[targetId].length === 0) delete map[targetId];
+              // Add to new
+              if (!map[newAssignmentId]) map[newAssignmentId] = [];
+              const newLinks = normalizeLinks(map[newAssignmentId]);
+              newLinks.push({ actionId, timer: newTimer });
+              map[newAssignmentId] = newLinks;
+              console.log(`🏃 Challenge Info: Moved ${actionId} from ${targetId} to ${newAssignmentId}`);
+            } else {
+              map[targetId] = links; // Save timer update
+            }
+          }
+        } else {
+          // playerAll or host — just update timer
+          const arr = category === 'playerAll' ? challenge.actions.playerAll : challenge.actions.host;
+          const links = normalizeLinks(arr);
+          const link = links.find(l => l.actionId === actionId);
+          if (link) link.timer = newTimer;
+          if (category === 'playerAll') challenge.actions.playerAll = links;
+          else challenge.actions.host = links;
+        }
+
+        // Sync actionIds for backwards compat
+        const { syncActionIds } = await import('./challengeActionCreate.js');
+        syncActionIds(challenge);
+        challenge.lastUpdated = Date.now();
+        await (await import('./storage.js')).savePlayerData(playerData);
+
+        console.log(`🏃 Challenge Info: Updated ${actionId} in ${challengeId} — timer: ${newTimer}${newAssignmentId && newAssignmentId !== oldAssignmentId ? `, moved to ${newAssignmentId}` : ''}`);
+
+        // Return to challenge screen
+        const { buildChallengeScreen } = await import('./challengeManager.js');
+        const screen = await buildChallengeScreen(req.body.guild_id, challengeId);
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: screen });
+      } catch (error) {
+        console.error('Error in challenge_action_info_modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: `❌ Error updating challenge action: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL }
         });
       }
 

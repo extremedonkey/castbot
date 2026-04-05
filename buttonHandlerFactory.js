@@ -1136,6 +1136,14 @@ export const BUTTON_REGISTRY = {
   },
 
   // === CHALLENGE TIMER ===
+  'challenge_action_info::*': {
+    label: 'Challenge Info',
+    description: 'Edit challenge action assignment and timer',
+    emoji: '🏃',
+    style: 'Secondary',
+    category: 'challenges'
+  },
+
   'challenge_timer_stop': {
     label: 'Stop Challenge Timer',
     description: 'Stop timer and show challenge duration',
