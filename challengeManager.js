@@ -206,7 +206,6 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null, 
         { type: 2, custom_id: `challenge_post_${selectedChallengeId}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
       ]},
       { type: 1, components: [
-        { type: 2, custom_id: `challenge_publish_${selectedChallengeId}`, label: 'Publish', style: 2, emoji: { name: '📤' } },
         { type: 2, custom_id: `challenge_delete_${selectedChallengeId}`, label: 'Delete', style: 4, emoji: { name: '🗑️' } },
       ]}
     );
@@ -226,6 +225,7 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null, 
     { type: 1, components: [
       { type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 },
       { type: 2, custom_id: 'library_home', label: 'Challenge Library', style: 2, emoji: { name: '📚' } },
+      ...(selectedChallengeId ? [{ type: 2, custom_id: `challenge_publish_${selectedChallengeId}`, label: 'Publish', style: 2, emoji: { name: '📤' } }] : []),
     ]}
   );
 
