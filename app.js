@@ -8976,7 +8976,7 @@ To fix this:
           const timerContainer = {
             type: 17, accent_color: 0x2ECC71,
             components: [
-              { type: 10, content: `### \`\`\`🚦 Challenge Timer Started - ${userName}\`\`\`\n> **⏱️ Start Time**: <t:${startTimestamp}:F>\n\n🧭 Current Challenge Time: <t:${startTimestamp}:R>\n\nWhen you have completed the required challenge tasks, click stop.\nIf any questions, ping Production.\n-# Note to hosts: If any issues, manually snowflake via right-click > Apps > Start Timer, or \`/menu\` > Tools > Snowflake.` },
+              { type: 10, content: `### \`\`\`🚦 Challenge Timer Started - ${userName}\`\`\`\n> **⏱️ Start Time**: <t:${startTimestamp}:F>\n> **🧭 Current Challenge Time**: <t:${startTimestamp}:R>\n\nWhen you have completed the required challenge tasks, click stop.\nIf any questions, ping Production.\n-# Note to hosts: If any issues, manually snowflake via right-click > Apps > Start Timer, or \`/menu\` > Tools > Snowflake.` },
               { type: 14 },
               { type: 1, components: [
                 { type: 2, custom_id: 'challenge_timer_stop', label: 'Finish / Stop Timer', style: 4, emoji: { name: '🛑' } }
