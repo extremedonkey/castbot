@@ -41,7 +41,7 @@ Plus 6 things no interaction pattern doc covers:
 - Auto-registration in BUTTON_REGISTRY
 - `[✨ FACTORY]` / `[🪨 LEGACY]` debug tagging
 
-## The Three Gaps
+## The Four Gaps
 
 ### Gap 1: Modals Are Second-Class (Small Fix, Biggest Impact)
 
@@ -82,6 +82,41 @@ This already partially exists (line 4290 checks `isModal`) but only for the non-
 
 **The fix**: One function in the factory that builds the tag string, called from the 4 response paths (sendResponse, sendDeferredResponse, updateDeferredResponse, createFollowupMessage). ~20 lines total.
 
+### Gap 4: Response Type Redirect (Select → Different Response Per Option)
+
+**Current state**: A String Select handler configured with `updateMessage: true` commits to UPDATE_MESSAGE for ALL options. But some select options need a completely different response type — e.g., a "Post" option that needs DEFERRED-NEW PUBLIC (creates a new non-ephemeral message) while "Edit" and "Delete" options need UPDATE_MESSAGE.
+
+**Real-world example**: Castlist select with options like Edit (update), Delete (update), Post to Channel (deferred new public). The handler detects the selected value and needs to route to a different response type, but the factory already committed to UPDATE_MESSAGE in the ACK.
+
+**Current workaround**: Handle the routing BEFORE the factory — check `req.body.data.values[0]` and branch to different factory calls with different configs. This works but means the select handler is split across multiple `if` blocks before the factory, which looks like legacy code.
+
+**The fix**: Same mechanism as Gap 1 (modal auto-detect). The handler returns a result with a `_responseType` override that the factory respects:
+
+```javascript
+// Handler returns override hint:
+handler: async (context) => {
+  if (context.values[0] === 'post') {
+    const result = await buildCastlistPost(...);
+    return { ...result, _responseType: 'DEFERRED_NEW_PUBLIC' };
+  }
+  // Default: UPDATE_MESSAGE (from factory config)
+  return buildEditUI(...);
+}
+
+// Factory checks before sending:
+if (result?._responseType === 'DEFERRED_NEW_PUBLIC') {
+  // Switch to deferred new message path
+  delete result._responseType;
+  // ... send as new public message
+}
+```
+
+**Complexity**: Medium — the factory needs to handle switching from an already-sent UPDATE ACK to a new message. If the factory already sent `type: 6` (DEFERRED_UPDATE_MESSAGE), it can't switch to `type: 5` (DEFERRED_CHANNEL_MESSAGE). The handler needs to know the response type BEFORE the ACK.
+
+**Alternative**: The factory could accept `responseTypeResolver: (values) => 'DEFERRED_NEW'` in config — a function that runs BEFORE the ACK to determine response type based on the interaction data. This is cleaner but more complex.
+
+**Depends on**: Gap 1 (modal auto-detect) — same mechanism, same code path.
+
 ## Implementation Plan
 
 ### Phase 1: Trivials (One Commit)
@@ -99,14 +134,16 @@ All trivials from the table below. One commit, no testing needed, instant improv
 
 **Estimated**: 30 minutes. **Test**: `dev-restart.sh`, click any button, verify tags appear in logs.
 
-### Phase 2: Modal Auto-Detect (Small)
+### Phase 2: Modal Auto-Detect + Response Type Redirect (Small-Medium)
 
-The ~5 line fix that makes modals a first-class response type.
+The ~5 line fix that makes modals a first-class response type, PLUS the response type redirect for select handlers that need different response types per option (Gap 4).
 
 **Implementation**:
 1. In factory's non-deferred response path (line ~4288): move the `isModal` check BEFORE the `shouldUpdateMessage` logic
 2. In factory's deferred response path (line ~4297): add the same `isModal` check — if handler returned a modal from a deferred handler, log a warning (modals can't be deferred)
 3. Remove `requiresModal: true` from BUTTON_REGISTRY entries — no longer needed since factory handles it
+4. Add `responseTypeResolver: (context) => 'DEFERRED_NEW'` config option — runs BEFORE the ACK to determine response type based on interaction values
+5. Or simpler: add `_responseType` result override detection (same pattern as modal auto-detect)
 4. Update `ButtonHandlerFactory.md` modal section — remove "Cannot Use Factory" language
 
 **Test**: Find a select menu with a modal option (question_completion_select → edit). Remove the handle-before-factory workaround. Verify modal shows via factory.
