@@ -8965,6 +8965,8 @@ To fix this:
         } catch (e) { console.error('⏱️ Timer check failed:', e.message); }
 
         if (isTimed) {
+          // Strip ephemeral flag — timed action content must be PUBLIC (visible to production)
+          if (result.flags) result.flags = (1 << 15); // Keep IS_COMPONENTS_V2 only
           // TIMED: Return action content normally (factory patches @original with it).
           // Post timer as a delayed follow-up AFTER the patch completes.
           const token = context.token;
@@ -8995,10 +8997,10 @@ To fix this:
         return result;
       }})(req, res, client);
     } else if (custom_id === 'challenge_timer_stop') {
-      // Challenge Timer — Stop button clicked. Calculate duration from snowflakes.
+      // Challenge Timer — Stop: UPDATE timer message + POST results as new message
       return ButtonHandlerFactory.create({
         id: 'challenge_timer_stop',
-        ephemeral: false, // Results are public
+        updateMessage: true, // UPDATE the timer message itself
         handler: async (context) => {
           const { timeBetweenSnowflakes, discordTimestamp } = await import('./timerUtils.js');
 
@@ -9012,17 +9014,34 @@ To fix this:
           const result = timeBetweenSnowflakes(startId, endId);
           console.log(`⏱️ Challenge Timer: ${result.formatted} (${startId} → ${endId}) by user ${context.userId}`);
 
+          // Post results as a NEW public message
+          const resultsContainer = {
+            type: 17, accent_color: 0x2ECC71,
+            components: [
+              { type: 10, content: `### \`\`\`🏃 Challenge Timer Results\`\`\`` },
+              { type: 14 },
+              { type: 10, content: `### \`\`\`⏱️ Duration\`\`\`\n**${result.formatted}**` },
+              { type: 14 },
+              { type: 10, content: `-# Start — ${discordTimestamp(result.startTime, 'F')}\n-# Message ID: \`${startId}\`` },
+              { type: 10, content: `-# End — ${discordTimestamp(result.endTime, 'F')}\n-# Message ID: \`${endId}\`` },
+            ]
+          };
+          await DiscordRequest(`webhooks/${process.env.APP_ID}/${context.token}`, {
+            method: 'POST',
+            body: { flags: (1 << 15), components: [resultsContainer] }
+          });
+
+          // UPDATE the timer message: add "Timer Stopped" + change Stop to "Re-time from Start"
           return {
-            flags: (1 << 15),
             components: [{
-              type: 17, accent_color: 0x2ECC71,
+              type: 17, accent_color: 0x95a5a6, // Grey accent — timer stopped
               components: [
-                { type: 10, content: `### \`\`\`🏃 Challenge Timer Results\`\`\`` },
+                { type: 10, content: `### \`\`\`⏱️ Challenge Timer\`\`\`\n**${result.formatted}**` },
                 { type: 14 },
-                { type: 10, content: `### \`\`\`⏱️ Duration\`\`\`\n**${result.formatted}**` },
-                { type: 14 },
-                { type: 10, content: `-# Start — ${discordTimestamp(result.startTime, 'F')}\n-# Message ID: \`${startId}\`` },
-                { type: 10, content: `-# End — ${discordTimestamp(result.endTime, 'F')}\n-# Message ID: \`${endId}\`` },
+                { type: 1, components: [
+                  { type: 2, custom_id: 'challenge_timer_stopped_noop', label: 'Timer Stopped', style: 2, emoji: { name: '🕛' }, disabled: true },
+                  { type: 2, custom_id: 'challenge_timer_stop', label: 'Re-time from Start', style: 2, emoji: { name: '🏁' } },
+                ]}
               ]
             }]
           };

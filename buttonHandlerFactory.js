@@ -1143,6 +1143,13 @@ export const BUTTON_REGISTRY = {
     style: 'Danger',
     category: 'challenges'
   },
+  'challenge_timer_stopped_noop': {
+    label: 'Timer Stopped',
+    description: 'Disabled indicator that timer has been stopped',
+    emoji: '🕛',
+    style: 'Secondary',
+    category: 'challenges'
+  },
 
   // === TRIBES (LEGACY) ===
   'prod_manage_tribes_legacy_debug': {
