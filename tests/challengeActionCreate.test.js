@@ -27,12 +27,22 @@ function getChallengeActions(challenge) {
   };
 }
 
+function normalizeAssignment(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  return [value];
+}
+
 function syncActionIds(challenge) {
   if (!challenge.actions) return;
   const all = new Set();
   for (const id of (challenge.actions.playerAll || [])) all.add(id);
-  for (const id of Object.values(challenge.actions.playerIndividual || {})) all.add(id);
-  for (const id of Object.values(challenge.actions.tribe || {})) all.add(id);
+  for (const ids of Object.values(challenge.actions.playerIndividual || {})) {
+    for (const id of normalizeAssignment(ids)) all.add(id);
+  }
+  for (const ids of Object.values(challenge.actions.tribe || {})) {
+    for (const id of normalizeAssignment(ids)) all.add(id);
+  }
   for (const id of (challenge.actions.host || [])) all.add(id);
   challenge.actionIds = [...all];
 }
@@ -59,17 +69,6 @@ const CATEGORY_TYPES = {
   host:             { label: 'Host Challenge Action',     emoji: '🔧', description: 'Automation for hosts beyond challenge text' },
 };
 
-// Replicate modal builder field5 logic
-function buildField5(category) {
-  if (category === 'playerIndividual') {
-    return { type: 18, label: 'Assign to Players', component: { type: 5, custom_id: 'assign_to' } };
-  }
-  if (category === 'tribe') {
-    return { type: 18, label: 'Assign to Tribes', component: { type: 6, custom_id: 'assign_to' } };
-  }
-  return { type: 18, label: 'Button Color', component: { type: 3, custom_id: 'button_color' } };
-}
-
 function buildQuickChallengeActionModal(challengeId, category = null) {
   const CATEGORY_OPTIONS = Object.entries(CATEGORY_TYPES).map(([value, meta]) => ({
     label: meta.label, value, emoji: { name: meta.emoji }, description: meta.description,
@@ -78,11 +77,11 @@ function buildQuickChallengeActionModal(challengeId, category = null) {
     custom_id: `challenge_action_create_modal_${challengeId}`,
     title: 'Quick Challenge Action',
     components: [
-      { type: 18, label: 'Action Type', component: { type: 3, custom_id: 'action_category', options: CATEGORY_OPTIONS.map(o => ({ ...o, default: o.value === category })) } },
       { type: 18, label: 'Action Name', component: { type: 4, custom_id: 'action_name' } },
-      { type: 18, label: 'Display Text', component: { type: 4, custom_id: 'display_text' } },
-      { type: 18, label: 'Button Emoji (Optional)', component: { type: 4, custom_id: 'button_emoji' } },
-      buildField5(category),
+      { type: 18, label: 'Action Type', component: { type: 3, custom_id: 'action_category', options: CATEGORY_OPTIONS.map(o => ({ ...o, default: o.value === category })) } },
+      { type: 18, label: 'Associated Players / Tribes', component: { type: 7, custom_id: 'assign_to' } },
+      { type: 18, label: 'Display Text (Optional)', component: { type: 4, custom_id: 'display_text', required: false } },
+      { type: 18, label: 'Challenge Timer', component: { type: 3, custom_id: 'timer_mode', options: [{ label: 'No Timer', value: 'none' }, { label: 'Timed', value: 'timed' }] } },
     ],
   };
 }
@@ -95,9 +94,15 @@ function linkAction(challenge, actionId, category, assignmentId) {
   } else if (category === 'host') {
     if (!challenge.actions.host.includes(actionId)) challenge.actions.host.push(actionId);
   } else if (category === 'playerIndividual') {
-    challenge.actions.playerIndividual[assignmentId] = actionId;
+    if (!challenge.actions.playerIndividual[assignmentId]) challenge.actions.playerIndividual[assignmentId] = [];
+    const arr = normalizeAssignment(challenge.actions.playerIndividual[assignmentId]);
+    if (!arr.includes(actionId)) arr.push(actionId);
+    challenge.actions.playerIndividual[assignmentId] = arr;
   } else if (category === 'tribe') {
-    challenge.actions.tribe[assignmentId] = actionId;
+    if (!challenge.actions.tribe[assignmentId]) challenge.actions.tribe[assignmentId] = [];
+    const arr = normalizeAssignment(challenge.actions.tribe[assignmentId]);
+    if (!arr.includes(actionId)) arr.push(actionId);
+    challenge.actions.tribe[assignmentId] = arr;
   }
   syncActionIds(challenge);
 }
@@ -110,11 +115,25 @@ function unlinkAction(challenge, actionId, category) {
     challenge.actions.host = challenge.actions.host.filter(id => id !== actionId);
   } else if (category === 'playerIndividual') {
     for (const [key, val] of Object.entries(challenge.actions.playerIndividual)) {
-      if (val === actionId) { delete challenge.actions.playerIndividual[key]; break; }
+      const arr = normalizeAssignment(val);
+      const idx = arr.indexOf(actionId);
+      if (idx >= 0) {
+        arr.splice(idx, 1);
+        if (arr.length === 0) delete challenge.actions.playerIndividual[key];
+        else challenge.actions.playerIndividual[key] = arr;
+        break;
+      }
     }
   } else if (category === 'tribe') {
     for (const [key, val] of Object.entries(challenge.actions.tribe)) {
-      if (val === actionId) { delete challenge.actions.tribe[key]; break; }
+      const arr = normalizeAssignment(val);
+      const idx = arr.indexOf(actionId);
+      if (idx >= 0) {
+        arr.splice(idx, 1);
+        if (arr.length === 0) delete challenge.actions.tribe[key];
+        else challenge.actions.tribe[key] = arr;
+        break;
+      }
     }
   }
   syncActionIds(challenge);
@@ -129,14 +148,14 @@ describe('getChallengeActions — reads categorized or falls back to legacy', ()
     const challenge = {
       actions: {
         playerAll: ['a1'],
-        playerIndividual: { user1: 'a2' },
+        playerIndividual: { user1: ['a2'] },
         tribe: { role1: 'a3' },
         host: ['a4'],
       },
     };
     const result = getChallengeActions(challenge);
     assert.deepEqual(result.playerAll, ['a1']);
-    assert.deepEqual(result.playerIndividual, { user1: 'a2' });
+    assert.deepEqual(result.playerIndividual, { user1: ['a2'] });
     assert.deepEqual(result.tribe, { role1: 'a3' });
     assert.deepEqual(result.host, ['a4']);
   });
@@ -185,8 +204,8 @@ describe('syncActionIds — flat union of all categories', () => {
     const challenge = {
       actions: {
         playerAll: ['a1'],
-        playerIndividual: { user1: 'a2', user2: 'a3' },
-        tribe: { role1: 'a4' },
+        playerIndividual: { user1: ['a2'], user2: ['a3'] },
+        tribe: { role1: ['a4'] },
         host: ['a5'],
       },
     };
@@ -315,63 +334,57 @@ describe('buildQuickChallengeActionModal — modal structure', () => {
     assert.equal(modal.custom_id, 'challenge_action_create_modal_test_abc');
   });
 
-  it('field 1 is String Select with 4 category options', () => {
+  it('field 1 is Action Name (Text Input)', () => {
     const modal = buildQuickChallengeActionModal('test_123');
-    const field1 = modal.components[0].component;
-    assert.equal(field1.type, 3); // String Select
-    assert.equal(field1.options.length, 4);
-    const values = field1.options.map(o => o.value);
+    assert.equal(modal.components[0].label, 'Action Name');
+    assert.equal(modal.components[0].component.type, 4); // Text Input
+  });
+
+  it('field 2 is Action Type (String Select with 4 options)', () => {
+    const modal = buildQuickChallengeActionModal('test_123');
+    const field2 = modal.components[1].component;
+    assert.equal(field2.type, 3); // String Select
+    assert.equal(field2.options.length, 4);
+    const values = field2.options.map(o => o.value);
     assert.deepEqual(values, ['playerAll', 'playerIndividual', 'tribe', 'host']);
   });
 
-  it('pre-selects category in String Select options', () => {
+  it('field 3 is Mentionable Select (type 7)', () => {
+    const modal = buildQuickChallengeActionModal('test_123');
+    const field3 = modal.components[2].component;
+    assert.equal(field3.type, 7); // Mentionable Select
+    assert.equal(field3.custom_id, 'assign_to');
+  });
+
+  it('field 4 is Display Text (optional)', () => {
+    const modal = buildQuickChallengeActionModal('test_123');
+    assert.ok(modal.components[3].label.includes('Optional'));
+    assert.equal(modal.components[3].component.required, false);
+  });
+
+  it('field 5 is Challenge Timer (String Select)', () => {
+    const modal = buildQuickChallengeActionModal('test_123');
+    const field5 = modal.components[4].component;
+    assert.equal(field5.type, 3); // String Select
+    assert.equal(field5.custom_id, 'timer_mode');
+    assert.equal(field5.options.length, 2);
+    assert.equal(field5.options[0].value, 'none');
+    assert.equal(field5.options[1].value, 'timed');
+  });
+
+  it('pre-selects category in Action Type options', () => {
     const modal = buildQuickChallengeActionModal('test_123', 'tribe');
-    const field1 = modal.components[0].component;
-    const tribeOpt = field1.options.find(o => o.value === 'tribe');
-    const otherOpt = field1.options.find(o => o.value === 'playerAll');
+    const field2 = modal.components[1].component;
+    const tribeOpt = field2.options.find(o => o.value === 'tribe');
+    const otherOpt = field2.options.find(o => o.value === 'playerAll');
     assert.equal(tribeOpt.default, true);
     assert.equal(otherOpt.default, false);
   });
 
-  it('field 5 is User Select when category is playerIndividual', () => {
-    const modal = buildQuickChallengeActionModal('test_123', 'playerIndividual');
-    const field5 = modal.components[4].component;
-    assert.equal(field5.type, 5); // User Select
-    assert.equal(field5.custom_id, 'assign_to');
-  });
-
-  it('field 5 is Role Select when category is tribe', () => {
-    const modal = buildQuickChallengeActionModal('test_123', 'tribe');
-    const field5 = modal.components[4].component;
-    assert.equal(field5.type, 6); // Role Select
-    assert.equal(field5.custom_id, 'assign_to');
-  });
-
-  it('field 5 is String Select (color) when category is playerAll', () => {
-    const modal = buildQuickChallengeActionModal('test_123', 'playerAll');
-    const field5 = modal.components[4].component;
-    assert.equal(field5.type, 3); // String Select
-    assert.equal(field5.custom_id, 'button_color');
-  });
-
-  it('field 5 is String Select (color) when category is host', () => {
-    const modal = buildQuickChallengeActionModal('test_123', 'host');
-    const field5 = modal.components[4].component;
-    assert.equal(field5.type, 3);
-    assert.equal(field5.custom_id, 'button_color');
-  });
-
-  it('field 5 is String Select (color) when category is null', () => {
-    const modal = buildQuickChallengeActionModal('test_123', null);
-    const field5 = modal.components[4].component;
-    assert.equal(field5.type, 3);
-    assert.equal(field5.custom_id, 'button_color');
-  });
-
   it('no category option has default true when category is null', () => {
     const modal = buildQuickChallengeActionModal('test_123', null);
-    const field1 = modal.components[0].component;
-    const anyDefault = field1.options.some(o => o.default === true);
+    const field2 = modal.components[1].component;
+    const anyDefault = field2.options.some(o => o.default === true);
     assert.equal(anyDefault, false);
   });
 });
@@ -398,14 +411,14 @@ describe('linkAction — add to category', () => {
   it('links to playerIndividual with userId key', () => {
     const challenge = { actionIds: [] };
     linkAction(challenge, 'a2', 'playerIndividual', 'user123');
-    assert.equal(challenge.actions.playerIndividual['user123'], 'a2');
+    assert.deepEqual(challenge.actions.playerIndividual['user123'], ['a2']);
     assert.deepEqual(challenge.actionIds, ['a2']);
   });
 
   it('links to tribe with roleId key', () => {
     const challenge = { actionIds: [] };
     linkAction(challenge, 'a3', 'tribe', 'role456');
-    assert.equal(challenge.actions.tribe['role456'], 'a3');
+    assert.deepEqual(challenge.actions.tribe['role456'], ['a3']);
     assert.deepEqual(challenge.actionIds, ['a3']);
   });
 
@@ -452,26 +465,26 @@ describe('unlinkAction — remove from category', () => {
 
   it('removes from playerIndividual by value lookup', () => {
     const challenge = {
-      actions: { playerAll: [], playerIndividual: { u1: 'a1', u2: 'a2' }, tribe: {}, host: [] },
+      actions: { playerAll: [], playerIndividual: { u1: ['a1'], u2: ['a2'] }, tribe: {}, host: [] },
     };
     unlinkAction(challenge, 'a1', 'playerIndividual');
     assert.equal(challenge.actions.playerIndividual['u1'], undefined);
-    assert.equal(challenge.actions.playerIndividual['u2'], 'a2');
+    assert.deepEqual(challenge.actions.playerIndividual['u2'], ['a2']);
     assert.deepEqual(challenge.actionIds, ['a2']);
   });
 
   it('removes from tribe by value lookup', () => {
     const challenge = {
-      actions: { playerAll: [], playerIndividual: {}, tribe: { r1: 't1', r2: 't2' }, host: [] },
+      actions: { playerAll: [], playerIndividual: {}, tribe: { r1: ['t1'], r2: ['t2'] }, host: [] },
     };
     unlinkAction(challenge, 't1', 'tribe');
     assert.equal(challenge.actions.tribe['r1'], undefined);
-    assert.equal(challenge.actions.tribe['r2'], 't2');
+    assert.deepEqual(challenge.actions.tribe['r2'], ['t2']);
   });
 
   it('syncs actionIds after unlink', () => {
     const challenge = {
-      actions: { playerAll: ['a1', 'a2'], playerIndividual: { u1: 'a3' }, tribe: {}, host: [] },
+      actions: { playerAll: ['a1', 'a2'], playerIndividual: { u1: ['a3'] }, tribe: {}, host: [] },
     };
     unlinkAction(challenge, 'a1', 'playerAll');
     assert.equal(challenge.actionIds.length, 2);
@@ -490,10 +503,10 @@ describe('unlinkAction — remove from category', () => {
 
   it('no-ops for non-existent action in playerIndividual', () => {
     const challenge = {
-      actions: { playerAll: [], playerIndividual: { u1: 'a1' }, tribe: {}, host: [] },
+      actions: { playerAll: [], playerIndividual: { u1: ['a1'] }, tribe: {}, host: [] },
     };
     unlinkAction(challenge, 'nonexistent', 'playerIndividual');
-    assert.equal(challenge.actions.playerIndividual['u1'], 'a1');
+    assert.deepEqual(challenge.actions.playerIndividual['u1'], ['a1']);
   });
 });
 
@@ -527,8 +540,8 @@ describe('Full CRUD workflow — link, read, unlink', () => {
     // Read via getChallengeActions
     const actions = getChallengeActions(challenge);
     assert.deepEqual(actions.playerAll, ['old1', 'new1']);
-    assert.deepEqual(actions.playerIndividual, { player_a: 'ind1', player_b: 'ind2' });
-    assert.deepEqual(actions.tribe, { tribe_role: 'tri1' });
+    assert.deepEqual(actions.playerIndividual, { player_a: ['ind1'], player_b: ['ind2'] });
+    assert.deepEqual(actions.tribe, { tribe_role: ['tri1'] });
     assert.deepEqual(actions.host, ['host1']);
 
     // Unlink one individual
@@ -566,8 +579,8 @@ describe('getChallengeActionSummary — counts (replicated logic)', () => {
     const challenge = {
       actions: {
         playerAll: ['a1', 'a2'],
-        playerIndividual: { u1: 'a3', u2: 'a4', u3: 'a5' },
-        tribe: { r1: 'a6' },
+        playerIndividual: { u1: ['a3'], u2: ['a4'], u3: ['a5'] },
+        tribe: { r1: ['a6'] },
         host: ['a7'],
       },
     };
@@ -605,15 +618,15 @@ function verifyChallengeActionAccess(challenge, actionId, member) {
 
   if (actions.playerAll.includes(actionId)) return { allowed: true };
 
-  for (const [userId, assignedId] of Object.entries(actions.playerIndividual)) {
-    if (assignedId === actionId) {
+  for (const [userId, assignedIds] of Object.entries(actions.playerIndividual)) {
+    if (normalizeAssignment(assignedIds).includes(actionId)) {
       if (member?.user?.id === userId) return { allowed: true };
       return { allowed: false, reason: 'This action isn\'t assigned to you.' };
     }
   }
 
-  for (const [roleId, assignedId] of Object.entries(actions.tribe)) {
-    if (assignedId === actionId) {
+  for (const [roleId, assignedIds] of Object.entries(actions.tribe)) {
+    if (normalizeAssignment(assignedIds).includes(actionId)) {
       if (member?.roles?.cache?.has(roleId)) return { allowed: true };
       return { allowed: false, reason: 'This action is for another tribe.' };
     }
@@ -639,8 +652,8 @@ describe('verifyChallengeActionAccess — security gating', () => {
   const challenge = {
     actions: {
       playerAll: ['pa1'],
-      playerIndividual: { 'user_a': 'ind1', 'user_b': 'ind2' },
-      tribe: { 'role_x': 'tri1', 'role_y': 'tri2' },
+      playerIndividual: { 'user_a': ['ind1'], 'user_b': ['ind2'] },
+      tribe: { 'role_x': ['tri1'], 'role_y': ['tri2'] },
       host: ['host1'],
     },
   };

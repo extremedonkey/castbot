@@ -768,9 +768,10 @@ async function buildCardSelect(activeButton, targetMember, playerData, safariDat
           });
         }
 
-        // playerIndividual — only if assigned to this player
-        const indActionId = actions.playerIndividual[targetId];
-        if (indActionId) {
+        // playerIndividual — only if assigned to this player (array format)
+        const indActionIds = actions.playerIndividual[targetId];
+        const normalizedInd = !indActionIds ? [] : Array.isArray(indActionIds) ? indActionIds : [indActionIds];
+        for (const indActionId of normalizedInd) {
           const action = safariData[guildId]?.buttons?.[indActionId];
           if (action) options.push({
             label: (action.name || action.label || 'Action').slice(0, 100),
@@ -780,16 +781,19 @@ async function buildCardSelect(activeButton, targetMember, playerData, safariDat
           });
         }
 
-        // tribe — only if player has the tribe role
-        for (const [roleId, triActionId] of Object.entries(actions.tribe)) {
+        // tribe — only if player has the tribe role (array format)
+        for (const [roleId, triActionIds] of Object.entries(actions.tribe)) {
           if (!targetMember.roles.cache.has(roleId)) continue;
-          const action = safariData[guildId]?.buttons?.[triActionId];
-          if (action) options.push({
-            label: (action.name || action.label || 'Action').slice(0, 100),
-            value: triActionId,
-            description: `🟢 ${chalTitle}`.slice(0, 100),
-            emoji: resolveEmoji(action.emoji || action.trigger?.button?.emoji, '⚡'),
-          });
+          const normalizedTri = !triActionIds ? [] : Array.isArray(triActionIds) ? triActionIds : [triActionIds];
+          for (const triActionId of normalizedTri) {
+            const action = safariData[guildId]?.buttons?.[triActionId];
+            if (action) options.push({
+              label: (action.name || action.label || 'Action').slice(0, 100),
+              value: triActionId,
+              description: `🟢 ${chalTitle}`.slice(0, 100),
+              emoji: resolveEmoji(action.emoji || action.trigger?.button?.emoji, '⚡'),
+            });
+          }
         }
         // host actions — never shown to players
       }
