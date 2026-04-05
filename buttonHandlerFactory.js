@@ -1096,7 +1096,7 @@ export const BUTTON_REGISTRY = {
     category: 'challenges',
     parent: 'challenge_screen'
   },
-  'challenge_action_edit_*': {
+  'challenge_action_edit::*': {
     label: 'Edit Challenge Action',
     description: 'Open action in Action Editor',
     emoji: '✏️',
@@ -1104,7 +1104,7 @@ export const BUTTON_REGISTRY = {
     category: 'challenges',
     parent: 'challenge_action_cat_select'
   },
-  'challenge_action_unlink_*': {
+  'challenge_action_unlink::*': {
     label: 'Unlink Challenge Action',
     description: 'Remove action from challenge (keeps action)',
     emoji: '🔗',
@@ -1112,7 +1112,7 @@ export const BUTTON_REGISTRY = {
     category: 'challenges',
     parent: 'challenge_action_cat_select'
   },
-  'challenge_action_delete_*': {
+  'challenge_action_delete::*': {
     label: 'Delete Challenge Action',
     description: 'Delete action and remove from challenge',
     emoji: '🗑️',

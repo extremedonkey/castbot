@@ -4902,9 +4902,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('challenge_publish') &&
         !custom_id.startsWith('challenge_modal') &&
         !custom_id.startsWith('challenge_action_cat_select_') &&
-        !custom_id.startsWith('challenge_action_edit_') &&
-        !custom_id.startsWith('challenge_action_unlink_') &&
-        !custom_id.startsWith('challenge_action_delete_') &&
+        !custom_id.startsWith('challenge_action_edit::') &&
+        !custom_id.startsWith('challenge_action_unlink::') &&
+        !custom_id.startsWith('challenge_action_delete::') &&
         !custom_id.startsWith('challenge_search') &&
         !custom_id.startsWith('challenge_library') &&
         !custom_id.startsWith('challenge_import')) ||
@@ -8796,9 +8796,9 @@ To fix this:
             { type: 10, content: action.description || '-# No description' },
             { type: 14 },
             { type: 1, components: [
-              { type: 2, custom_id: `challenge_action_edit_${challengeId}_${selectedValue}`, label: 'Edit in Action Editor', style: 1, emoji: { name: '✏️' } },
-              { type: 2, custom_id: `challenge_action_unlink_${challengeId}_${selectedValue}`, label: 'Unlink', style: 2, emoji: { name: '🔗' } },
-              { type: 2, custom_id: `challenge_action_delete_${challengeId}_${selectedValue}`, label: 'Delete', style: 4, emoji: { name: '🗑️' } },
+              { type: 2, custom_id: `challenge_action_edit::${challengeId}::${selectedValue}`, label: 'Edit in Action Editor', style: 1, emoji: { name: '✏️' } },
+              { type: 2, custom_id: `challenge_action_unlink::${challengeId}::${selectedValue}`, label: 'Unlink', style: 2, emoji: { name: '🔗' } },
+              { type: 2, custom_id: `challenge_action_delete::${challengeId}::${selectedValue}`, label: 'Delete', style: 4, emoji: { name: '🗑️' } },
             ]},
             { type: 14 },
             { type: 1, components: [
@@ -8807,25 +8807,22 @@ To fix this:
           ]}]};
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('challenge_action_edit_')) {
+    } else if (custom_id.startsWith('challenge_action_edit::')) {
       return ButtonHandlerFactory.create({
         id: 'challenge_action_edit',
         updateMessage: true, deferred: true,
         handler: async (context) => {
-          const parts = custom_id.replace('challenge_action_edit_', '').split('_');
-          const actionId = parts.pop();
+          const [, challengeId, actionId] = custom_id.split('::');
           const { createCustomActionEditorUI } = await import('./customActionUI.js');
           return await createCustomActionEditorUI({ guildId: context.guildId, actionId });
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('challenge_action_unlink_')) {
+    } else if (custom_id.startsWith('challenge_action_unlink::')) {
       return ButtonHandlerFactory.create({
         id: 'challenge_action_unlink',
         updateMessage: true, deferred: true,
         handler: async (context) => {
-          const parts = custom_id.replace('challenge_action_unlink_', '').split('_');
-          const actionId = parts.pop();
-          const challengeId = parts.join('_');
+          const [, challengeId, actionId] = custom_id.split('::');
           const { unlinkChallengeAction } = await import('./challengeActionCreate.js');
           await unlinkChallengeAction(context.guildId, challengeId, actionId, 'playerAll');
           await unlinkChallengeAction(context.guildId, challengeId, actionId, 'playerIndividual');
@@ -8835,14 +8832,12 @@ To fix this:
           return buildChallengeScreen(context.guildId, challengeId);
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('challenge_action_delete_')) {
+    } else if (custom_id.startsWith('challenge_action_delete::')) {
       return ButtonHandlerFactory.create({
         id: 'challenge_action_delete_confirm',
         updateMessage: true, deferred: true,
         handler: async (context) => {
-          const parts = custom_id.replace('challenge_action_delete_', '').split('_');
-          const actionId = parts.pop();
-          const challengeId = parts.join('_');
+          const [, challengeId, actionId] = custom_id.split('::');
           const { deleteChallengeAction } = await import('./challengeActionCreate.js');
           await deleteChallengeAction(context.guildId, challengeId, actionId, 'playerAll');
           await deleteChallengeAction(context.guildId, challengeId, actionId, 'playerIndividual');
