@@ -867,7 +867,7 @@ async function executeDisplayText(config, interaction, parentAction = null) {
 
     // Variable substitution — replace {tokens} with runtime values
     let title = config.title || '';
-    let content = config.content || '';
+    let content = config.content || config.text || '';
 
     if (parentAction?._triggerInput) {
         title = title.replaceAll('{triggerInput}', parentAction._triggerInput);
@@ -884,11 +884,19 @@ async function executeDisplayText(config, interaction, parentAction = null) {
         });
     }
 
-    // Add main content
-    components.push({
-        type: 10, // Text Display
-        content: content
-    });
+    // Add main content (guard against empty — Discord requires 1-4000 chars)
+    if (content) {
+        components.push({
+            type: 10, // Text Display
+            content: content.substring(0, 4000)
+        });
+    } else if (!title) {
+        // Both title and content empty — show fallback
+        components.push({
+            type: 10, // Text Display
+            content: '*Action executed successfully*'
+        });
+    }
     
     // Add Media Gallery if image is provided
     if (config.image) {
