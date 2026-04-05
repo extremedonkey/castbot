@@ -479,7 +479,7 @@ function buildSectionRow(buttonIds, targetUserId, activeCategory, visibility, mo
     if (id === 'vanity') {
       customId = `admin_manage_vanity${isDisabled ? '_pending' : ''}${userIdPart}`;
     } else if (id === 'inventory') {
-      customId = 'safari_player_inventory';
+      customId = mode === 'admin' && targetUserId ? `safari_player_inventory_${targetUserId}` : 'safari_player_inventory';
     } else if (id === 'navigate') {
       customId = `safari_navigate_${targetUserId}_${vis.coordinate || 'unknown'}`;
     } else if (id === 'commands') {

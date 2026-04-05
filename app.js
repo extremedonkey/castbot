@@ -14745,15 +14745,19 @@ Your server is now ready for Tycoons gameplay!`;
       }
     // RESTORED 2025-10-20: Handler was commented out 2025-01-19, but button still exists in 10 locations
     // (playerManagement.js, safariManager.js, app.js) causing "interaction failed" errors
-    } else if (custom_id === 'safari_player_inventory') {
-      // Handle "My Inventory" player inventory display (MIGRATED TO FACTORY)
+    } else if (custom_id === 'safari_player_inventory' || custom_id.startsWith('safari_player_inventory_')) {
+      // Handle inventory display — supports admin viewing another player's inventory
       return ButtonHandlerFactory.create({
         id: 'safari_player_inventory',
         handler: async (context) => {
-          console.log(`🥚 DEBUG: User ${context.userId} viewing inventory in guild ${context.guildId}`);
+          // If custom_id has a target userId suffix (admin mode), use that instead of the interacting user
+          const targetUserId = custom_id.startsWith('safari_player_inventory_')
+            ? custom_id.replace('safari_player_inventory_', '')
+            : context.userId;
+          console.log(`🥚 DEBUG: User ${context.userId} viewing inventory for ${targetUserId} in guild ${context.guildId}`);
 
           // Start at page 0 when opening inventory
-          const inventoryDisplay = await createPlayerInventoryDisplay(context.guildId, context.userId, context.member, 0);
+          const inventoryDisplay = await createPlayerInventoryDisplay(context.guildId, targetUserId, context.member, 0);
 
           console.log(`📤 DEBUG: About to send inventory response for user ${context.userId}`);
           console.log(`📋 DEBUG: Data keys: ${Object.keys(inventoryDisplay)}`);
