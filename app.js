@@ -5065,7 +5065,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             const challenges = pd[guildId]?.challenges || {};
             for (const ch of Object.values(challenges)) {
               const actions = getChallengeActions(ch);
-              const allIds = [...actions.playerAll, ...Object.values(actions.playerIndividual), ...Object.values(actions.tribe), ...actions.host];
+              const allIds = [...actions.playerAll, ...Object.values(actions.playerIndividual).flatMap(v => Array.isArray(v) ? v : [v]), ...Object.values(actions.tribe).flatMap(v => Array.isArray(v) ? v : [v]), ...actions.host];
               if (allIds.includes(resolvedButtonId)) {
                 const access = verifyChallengeActionAccess(ch, resolvedButtonId, context.member);
                 if (!access.allowed) {
@@ -46992,12 +46992,14 @@ Your server is now ready for Tycoons gameplay!`;
       try {
         const { handleQuickChallengeActionSubmit } = await import('./challengeActionCreate.js');
         const guild = client.guilds.cache.get(req.body.guild_id);
+        const resolvedData = req.body.data?.resolved || {};
         const result = await handleQuickChallengeActionSubmit(
           req.body.guild_id,
           req.body.member?.user?.id,
           challengeId,
           components,
-          guild
+          guild,
+          resolvedData
         );
         if (result.error) {
           return res.send({

@@ -379,7 +379,8 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   for (const [chId, ch] of Object.entries(challenges)) {
     const actions = getChallengeActions(ch);
     if (actions.playerAll.length > 0) { hasChallengeActions = true; break; }
-    if (targetUserId && actions.playerIndividual[targetUserId]) { hasChallengeActions = true; break; }
+    const indIds = actions.playerIndividual[targetUserId];
+    if (targetUserId && indIds && (Array.isArray(indIds) ? indIds.length > 0 : true)) { hasChallengeActions = true; break; }
     // tribe check needs member roles — defer to runtime if we have entries
     if (Object.keys(actions.tribe).length > 0) { hasChallengeActions = true; break; }
   }
@@ -640,10 +641,11 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
           });
         }
 
-        // playerIndividual — only if assigned to target
+        // playerIndividual — only if assigned to target (now arrays)
         const targetId = targetMember.id;
-        const indActionId = actions.playerIndividual[targetId];
-        if (indActionId) {
+        const indActionIds = actions.playerIndividual[targetId];
+        const normalizedInd = !indActionIds ? [] : Array.isArray(indActionIds) ? indActionIds : [indActionIds];
+        for (const indActionId of normalizedInd) {
           const action = allBtns[indActionId];
           if (action) {
             const emoji = resolveEmoji(action.emoji || action.trigger?.button?.emoji, '🏃');
@@ -656,18 +658,21 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
           }
         }
 
-        // tribe — check roles
-        for (const [roleId, triActionId] of Object.entries(actions.tribe)) {
+        // tribe — check roles (now arrays)
+        for (const [roleId, triActionIds] of Object.entries(actions.tribe)) {
           if (targetMember?.roles?.cache?.has?.(roleId)) {
-            const action = allBtns[triActionId];
-            if (action) {
-              const emoji = resolveEmoji(action.emoji || action.trigger?.button?.emoji, '🏃');
-              options.push({
-                label: (action.name || 'Action').slice(0, 100),
-                value: triActionId,
-                description: chalTitle,
-                emoji
-              });
+            const normalizedTri = !triActionIds ? [] : Array.isArray(triActionIds) ? triActionIds : [triActionIds];
+            for (const triActionId of normalizedTri) {
+              const action = allBtns[triActionId];
+              if (action) {
+                const emoji = resolveEmoji(action.emoji || action.trigger?.button?.emoji, '🏃');
+                options.push({
+                  label: (action.name || 'Action').slice(0, 100),
+                  value: triActionId,
+                  description: chalTitle,
+                  emoji
+                });
+              }
             }
           }
         }

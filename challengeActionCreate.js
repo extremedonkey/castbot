@@ -7,11 +7,27 @@
  *
  * All business logic — no UI rendering beyond modals. app.js is pure routing.
  *
- * Spec: docs/01-RaP/0943_20260316_ChallengeActions_Analysis.md (Phase 1B)
+ * Spec: docs/01-RaP/0943_20260316_ChallengeActions_Analysis.md (Phase 1C)
  */
 
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { resolveEmoji } from './utils/emojiUtils.js';
+
+// ─────────────────────────────────────────────
+// Backwards-compat helper: normalize assignment values
+// ─────────────────────────────────────────────
+
+/**
+ * Normalize a playerIndividual/tribe assignment value to always be an array.
+ * Handles legacy string format (single actionId) and new array format.
+ * @param {string|string[]|undefined|null} value
+ * @returns {string[]}
+ */
+export function normalizeAssignment(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  return [value];
+}
 
 // ─────────────────────────────────────────────
 // Constants
@@ -86,10 +102,8 @@ function ensureActions(challenge) {
   if (!challenge.actions.host) challenge.actions.host = [];
 }
 
-/**
- * Build the 5th modal field — adapts based on category.
- */
-function buildField5(category) {
+// buildField5 removed — Phase 1C uses Mentionable Select + Timer instead
+function _unused_buildField5(category) {
   if (category === 'playerIndividual') {
     return {
       type: 18,
@@ -168,8 +182,12 @@ export function syncActionIds(challenge) {
   if (!challenge.actions) return;
   const all = new Set();
   for (const id of (challenge.actions.playerAll || [])) all.add(id);
-  for (const id of Object.values(challenge.actions.playerIndividual || {})) all.add(id);
-  for (const id of Object.values(challenge.actions.tribe || {})) all.add(id);
+  for (const ids of Object.values(challenge.actions.playerIndividual || {})) {
+    for (const id of normalizeAssignment(ids)) all.add(id);
+  }
+  for (const ids of Object.values(challenge.actions.tribe || {})) {
+    for (const id of normalizeAssignment(ids)) all.add(id);
+  }
   for (const id of (challenge.actions.host || [])) all.add(id);
   challenge.actionIds = [...all];
 }
@@ -179,7 +197,8 @@ export function syncActionIds(challenge) {
 // ─────────────────────────────────────────────
 
 /**
- * Build Quick Create modal for challenge actions.
+ * Build Quick Create modal for challenge actions (Phase 1C).
+ * 5 fields: Action Name, Action Type, Mentionable Select, Display Text (optional), Timer.
  * @param {string} challengeId
  * @param {string|null} category - Pre-selected category (null = no default)
  * @returns {object} Modal data (caller wraps in { type: 9, data: ... })
@@ -189,6 +208,19 @@ export function buildQuickChallengeActionModal(challengeId, category = null) {
     custom_id: `challenge_action_create_modal_${challengeId}`,
     title: 'Quick Challenge Action',
     components: [
+      {
+        type: 18,
+        label: 'Action Name',
+        description: 'Name for the action (e.g., "Spreadsheet Art")',
+        component: {
+          type: 4,
+          custom_id: 'action_name',
+          style: 1,
+          placeholder: 'e.g., "Spreadsheet Art"',
+          required: true,
+          max_length: 80,
+        },
+      },
       {
         type: 18,
         label: 'Action Type',
@@ -207,44 +239,46 @@ export function buildQuickChallengeActionModal(challengeId, category = null) {
       },
       {
         type: 18,
-        label: 'Action Name',
-        description: 'Name for the button players will click',
+        label: 'Associated Players / Tribes',
+        description: 'Only use if you need special commands per user or tribe, else leave blank.',
         component: {
-          type: 4,
-          custom_id: 'action_name',
-          style: 1,
-          placeholder: 'e.g., "Start Jigsaw Puzzle"',
-          required: true,
-          max_length: 80,
+          type: 7, // Mentionable Select
+          custom_id: 'assign_to',
+          placeholder: 'Select players or tribe roles...',
+          min_values: 0,
+          max_values: 25,
+          required: false,
         },
       },
       {
         type: 18,
-        label: 'Display Text',
-        description: 'What the player sees when they click. Markdown supported.',
+        label: 'Display Text (Optional)',
+        description: 'What the player sees when they click. Leave blank to configure later.',
         component: {
           type: 4,
           custom_id: 'display_text',
           style: 2,
           placeholder: 'Instructions, links, or content shown on click...',
-          required: true,
+          required: false,
           max_length: 2000,
         },
       },
       {
         type: 18,
-        label: 'Button Emoji (Optional)',
-        description: 'Emoji that appears on the button',
+        label: 'Challenge Timer',
+        description: 'Should CastBot time how long the player takes?',
         component: {
-          type: 4,
-          custom_id: 'button_emoji',
-          style: 1,
-          placeholder: 'e.g., 🧩',
-          required: false,
-          max_length: 100,
+          type: 3,
+          custom_id: 'timer_mode',
+          placeholder: 'Select timer mode...',
+          min_values: 1,
+          max_values: 1,
+          options: [
+            { label: 'No Timer', value: 'none', emoji: { name: '♾️' }, description: 'Timer is not needed for this challenge', default: true },
+            { label: 'Timed', value: 'timed', emoji: { name: '⏱️' }, description: 'CastBot tracks how long the player takes' },
+          ],
         },
       },
-      buildField5(category),
     ],
   };
 }
@@ -263,17 +297,31 @@ export function buildQuickChallengeActionModal(challengeId, category = null) {
  * @param {object} [guild] - Discord guild object (for display name resolution)
  * @returns {Promise<{ actionIds: string[], category: string, count: number } | { error: string }>}
  */
-export async function handleQuickChallengeActionSubmit(guildId, userId, challengeId, modalComponents, guild) {
-  // Extract values
-  const category = getModalValue(modalComponents[0]);
-  const actionName = getModalValue(modalComponents[1]);
-  const displayText = getModalValue(modalComponents[2]);
-  const emojiInput = getModalValue(modalComponents[3]);
+export async function handleQuickChallengeActionSubmit(guildId, userId, challengeId, modalComponents, guild, resolvedData) {
+  // Extract values from new modal layout:
+  // [0] Action Name, [1] Action Type, [2] Mentionable Select, [3] Display Text, [4] Timer
+  const actionName = getModalValue(modalComponents[0]);
+  const category = getModalValue(modalComponents[1]);
+  const mentionableIds = getModalValues(modalComponents[2]);
+  const displayText = getModalValue(modalComponents[3]);
+  const timerMode = getModalValue(modalComponents[4]) || 'none';
 
-  // Field 5: either assignTo values (User/Role Select) or buttonColor (String Select)
-  const isAssignmentCategory = category === 'playerIndividual' || category === 'tribe';
-  const assignToIds = isAssignmentCategory ? getModalValues(modalComponents[4]) : [];
-  const buttonColor = !isAssignmentCategory ? (getModalValue(modalComponents[4]) || 'Primary') : 'Primary';
+  // Parse mentionables into users and roles using resolved data
+  const resolvedUsers = resolvedData?.users ? Object.keys(resolvedData.users) : [];
+  const resolvedRoles = resolvedData?.roles ? Object.keys(resolvedData.roles) : [];
+
+  // Determine assignment IDs based on category
+  let assignToIds = [];
+  let warnings = [];
+  if (category === 'playerIndividual') {
+    assignToIds = resolvedUsers;
+    if (resolvedRoles.length > 0) warnings.push('Roles ignored — Individual Player Action only supports users.');
+  } else if (category === 'tribe') {
+    assignToIds = resolvedRoles;
+    if (resolvedUsers.length > 0) warnings.push('Users ignored — Tribe Action only supports roles.');
+  } else if (category === 'playerAll' || category === 'host') {
+    if (mentionableIds.length > 0) warnings.push(`${CATEGORY_TYPES[category]?.label} doesn't support per-player/tribe assignment. Created 1 shared action.`);
+  }
 
   // Validate
   if (!category || !CATEGORY_TYPES[category]) {
@@ -282,20 +330,8 @@ export async function handleQuickChallengeActionSubmit(guildId, userId, challeng
   if (!actionName) {
     return { error: 'Action name is required.' };
   }
-  if (!displayText) {
-    return { error: 'Display text is required.' };
-  }
-  if (isAssignmentCategory && assignToIds.length === 0) {
-    return { error: `At least one ${category === 'playerIndividual' ? 'player' : 'tribe role'} must be selected.` };
-  }
 
-  // Validate emoji
-  let validatedEmoji = null;
-  if (emojiInput) {
-    const { createSafeEmoji } = await import('./safariButtonHelper.js');
-    const safe = await createSafeEmoji(emojiInput);
-    if (safe) validatedEmoji = emojiInput;
-  }
+  const validatedEmoji = null; // Emoji removed from modal — configure in Action Editor
 
   // Load both data stores (one load each)
   const playerData = await loadPlayerData();
@@ -324,19 +360,25 @@ export async function handleQuickChallengeActionSubmit(guildId, userId, challeng
     const idLabel = index > 0 ? `${label}_${index}` : label;
     const actionId = generateButtonId(idLabel);
 
+    // Build outcomes — only add display_text if content provided
+    const outcomes = [];
+    if (displayText && displayText.trim()) {
+      outcomes.push({
+        type: 'display_text',
+        order: 0,
+        config: { text: displayText.trim() },
+        executeOn: 'true',
+      });
+    }
+
     safariData[guildId].buttons[actionId] = {
       id: actionId,
       name: label,
       label: label,
       emoji: validatedEmoji,
-      style: buttonColor,
-      trigger: { type: 'button', button: { style: buttonColor } },
-      actions: [{
-        type: 'display_text',
-        order: 0,
-        config: { text: displayText },
-        executeOn: 'true',
-      }],
+      style: 'Primary',
+      trigger: { type: 'button', button: { style: 'Primary' } },
+      actions: outcomes,
       metadata: {
         createdBy: userId,
         createdAt: now,
@@ -344,6 +386,7 @@ export async function handleQuickChallengeActionSubmit(guildId, userId, challeng
         usageCount: 0,
         tags: [],
         createdVia: `quick_challenge_${category}`,
+        challengeTimer: timerMode,
         challengeId,
       },
     };
@@ -369,9 +412,10 @@ export async function handleQuickChallengeActionSubmit(guildId, userId, challeng
           displayName = member.displayName || member.user.username;
         } catch { /* fallback to mention */ }
       }
-      const label = `${actionName} (${displayName})`.substring(0, 80);
+      const label = `${displayName} - ${actionName}`.substring(0, 100);
       const actionId = createActionShell(label, i);
-      challenge.actions.playerIndividual[playerId] = actionId;
+      if (!challenge.actions.playerIndividual[playerId]) challenge.actions.playerIndividual[playerId] = [];
+      challenge.actions.playerIndividual[playerId].push(actionId);
     }
   } else if (category === 'tribe') {
     for (let i = 0; i < assignToIds.length; i++) {
@@ -381,9 +425,10 @@ export async function handleQuickChallengeActionSubmit(guildId, userId, challeng
         const role = guild.roles.cache.get(roleId);
         if (role) roleName = role.name;
       }
-      const label = `${actionName} (${roleName})`.substring(0, 80);
+      const label = `${roleName} - ${actionName}`.substring(0, 100);
       const actionId = createActionShell(label, i);
-      challenge.actions.tribe[roleId] = actionId;
+      if (!challenge.actions.tribe[roleId]) challenge.actions.tribe[roleId] = [];
+      challenge.actions.tribe[roleId].push(actionId);
     }
   }
 
@@ -398,7 +443,7 @@ export async function handleQuickChallengeActionSubmit(guildId, userId, challeng
   const typeLabel = CATEGORY_TYPES[category].label;
   console.log(`⚡ Challenge Action: Created ${createdActionIds.length}x ${typeLabel} for ${challengeId}`);
 
-  return { actionIds: createdActionIds, category, count: createdActionIds.length };
+  return { actionIds: createdActionIds, category, count: createdActionIds.length, warnings, timerMode };
 }
 
 // ─────────────────────────────────────────────
@@ -433,10 +478,16 @@ export async function linkChallengeAction(guildId, challengeId, actionId, catego
     }
   } else if (category === 'playerIndividual') {
     if (!assignmentId) return { linked: false, error: 'assignmentId (userId) required for playerIndividual.' };
-    challenge.actions.playerIndividual[assignmentId] = actionId;
+    if (!challenge.actions.playerIndividual[assignmentId]) challenge.actions.playerIndividual[assignmentId] = [];
+    const arr = normalizeAssignment(challenge.actions.playerIndividual[assignmentId]);
+    if (!arr.includes(actionId)) arr.push(actionId);
+    challenge.actions.playerIndividual[assignmentId] = arr;
   } else if (category === 'tribe') {
     if (!assignmentId) return { linked: false, error: 'assignmentId (roleId) required for tribe.' };
-    challenge.actions.tribe[assignmentId] = actionId;
+    if (!challenge.actions.tribe[assignmentId]) challenge.actions.tribe[assignmentId] = [];
+    const arr = normalizeAssignment(challenge.actions.tribe[assignmentId]);
+    if (!arr.includes(actionId)) arr.push(actionId);
+    challenge.actions.tribe[assignmentId] = arr;
   }
 
   syncActionIds(challenge);
@@ -470,11 +521,25 @@ export async function unlinkChallengeAction(guildId, challengeId, actionId, cate
     challenge.actions.host = challenge.actions.host.filter(id => id !== actionId);
   } else if (category === 'playerIndividual') {
     for (const [key, val] of Object.entries(challenge.actions.playerIndividual)) {
-      if (val === actionId) { delete challenge.actions.playerIndividual[key]; break; }
+      const arr = normalizeAssignment(val);
+      const idx = arr.indexOf(actionId);
+      if (idx >= 0) {
+        arr.splice(idx, 1);
+        if (arr.length === 0) delete challenge.actions.playerIndividual[key];
+        else challenge.actions.playerIndividual[key] = arr;
+        break;
+      }
     }
   } else if (category === 'tribe') {
     for (const [key, val] of Object.entries(challenge.actions.tribe)) {
-      if (val === actionId) { delete challenge.actions.tribe[key]; break; }
+      const arr = normalizeAssignment(val);
+      const idx = arr.indexOf(actionId);
+      if (idx >= 0) {
+        arr.splice(idx, 1);
+        if (arr.length === 0) delete challenge.actions.tribe[key];
+        else challenge.actions.tribe[key] = arr;
+        break;
+      }
     }
   }
 
@@ -511,11 +576,25 @@ export async function deleteChallengeAction(guildId, challengeId, actionId, cate
     challenge.actions.host = challenge.actions.host.filter(id => id !== actionId);
   } else if (category === 'playerIndividual') {
     for (const [key, val] of Object.entries(challenge.actions.playerIndividual)) {
-      if (val === actionId) { delete challenge.actions.playerIndividual[key]; break; }
+      const arr = normalizeAssignment(val);
+      const idx = arr.indexOf(actionId);
+      if (idx >= 0) {
+        arr.splice(idx, 1);
+        if (arr.length === 0) delete challenge.actions.playerIndividual[key];
+        else challenge.actions.playerIndividual[key] = arr;
+        break;
+      }
     }
   } else if (category === 'tribe') {
     for (const [key, val] of Object.entries(challenge.actions.tribe)) {
-      if (val === actionId) { delete challenge.actions.tribe[key]; break; }
+      const arr = normalizeAssignment(val);
+      const idx = arr.indexOf(actionId);
+      if (idx >= 0) {
+        arr.splice(idx, 1);
+        if (arr.length === 0) delete challenge.actions.tribe[key];
+        else challenge.actions.tribe[key] = arr;
+        break;
+      }
     }
   }
 
@@ -552,15 +631,15 @@ export async function getChallengeActionSummary(guildId, challengeId) {
   if (!challenge) return null;
 
   const actions = getChallengeActions(challenge);
-  const playerIndividualAssignments = Object.entries(actions.playerIndividual);
-  const tribeAssignments = Object.entries(actions.tribe);
+  const indCount = Object.values(actions.playerIndividual).reduce((sum, v) => sum + normalizeAssignment(v).length, 0);
+  const triCount = Object.values(actions.tribe).reduce((sum, v) => sum + normalizeAssignment(v).length, 0);
 
   return {
     playerAll: { count: actions.playerAll.length, ids: actions.playerAll },
-    playerIndividual: { count: playerIndividualAssignments.length, assignments: actions.playerIndividual },
-    tribe: { count: tribeAssignments.length, assignments: actions.tribe },
+    playerIndividual: { count: indCount, assignments: actions.playerIndividual },
+    tribe: { count: triCount, assignments: actions.tribe },
     host: { count: actions.host.length, ids: actions.host },
-    total: actions.playerAll.length + playerIndividualAssignments.length + tribeAssignments.length + actions.host.length,
+    total: actions.playerAll.length + indCount + triCount + actions.host.length,
   };
 }
 
@@ -585,16 +664,16 @@ export function verifyChallengeActionAccess(challenge, actionId, member) {
   }
 
   // playerIndividual — only the assigned player
-  for (const [userId, assignedId] of Object.entries(actions.playerIndividual)) {
-    if (assignedId === actionId) {
+  for (const [userId, assignedIds] of Object.entries(actions.playerIndividual)) {
+    if (normalizeAssignment(assignedIds).includes(actionId)) {
       if (member?.user?.id === userId) return { allowed: true };
       return { allowed: false, reason: 'This action isn\'t assigned to you.' };
     }
   }
 
   // tribe — only members with the tribe role
-  for (const [roleId, assignedId] of Object.entries(actions.tribe)) {
-    if (assignedId === actionId) {
+  for (const [roleId, assignedIds] of Object.entries(actions.tribe)) {
+    if (normalizeAssignment(assignedIds).includes(actionId)) {
       if (member?.roles?.cache?.has(roleId)) return { allowed: true };
       return { allowed: false, reason: 'This action is for another tribe.' };
     }
@@ -636,8 +715,8 @@ export async function buildChallengeActionSelect(guildId, challengeId) {
   const actions = getChallengeActions(challenge);
   const allLinkedIds = new Set([
     ...actions.playerAll,
-    ...Object.values(actions.playerIndividual),
-    ...Object.values(actions.tribe),
+    ...Object.values(actions.playerIndividual).flatMap(v => normalizeAssignment(v)),
+    ...Object.values(actions.tribe).flatMap(v => normalizeAssignment(v)),
     ...actions.host,
   ]);
 
