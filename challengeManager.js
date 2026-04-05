@@ -127,8 +127,8 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null, 
     });
   }
 
-  // Sort by title
-  entries.sort(([, a], [, b]) => (a.title || '').localeCompare(b.title || ''));
+  // Sort by last updated (newest first)
+  entries.sort(([, a], [, b]) => (b.lastUpdated || 0) - (a.lastUpdated || 0));
 
   // Build select options
   const options = [];
@@ -204,8 +204,6 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null, 
         { type: 2, custom_id: `challenge_edit_${selectedChallengeId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
         { type: 2, custom_id: `challenge_round_${selectedChallengeId}`, label: 'Round', style: 2, emoji: { name: '🔥' } },
         { type: 2, custom_id: `challenge_post_${selectedChallengeId}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
-      ]},
-      { type: 1, components: [
         { type: 2, custom_id: `challenge_delete_${selectedChallengeId}`, label: 'Delete', style: 4, emoji: { name: '🗑️' } },
       ]}
     );
