@@ -571,14 +571,16 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
 
       const options = [
         {
-          label: '📋 Post Castlist',
+          label: 'Post Castlist',
           value: 'show_castlist2_default',
-          description: 'Publicly post an interactive Castlist. Use in subs for privacy.'
+          description: 'Publicly post an interactive Castlist. Use in subs for privacy.',
+          emoji: { name: '📋' }
         },
         {
-          label: '🍒 Compact Castlist',
+          label: 'Compact Castlist',
           value: 'compact_castlist_default',
-          description: 'Posts an image version of the castlist'
+          description: 'Posts an image version of the castlist',
+          emoji: { name: '🍒' }
         }
       ];
 
