@@ -24,11 +24,11 @@ import { parseAndValidateEmoji, resolveEmoji } from './utils/emojiUtils.js';
 // ════════════════════════════════════════════════════════════════════════════
 
 const ROW1_BUTTONS = [
-  { id: 'castlists', label: 'Castlists', emoji: '📋' },
-  { id: 'pronouns',  label: 'Pronouns',  emoji: '💜' },
-  { id: 'timezone',  label: 'Timezone',  emoji: '🌍' },
-  { id: 'age',       label: 'Age',       emoji: '🎂' },
-  { id: 'logs',      label: 'Logs',      emoji: '🪵' }
+  { id: 'castlists',  label: 'Castlists',  emoji: '📋' },
+  { id: 'pronouns',   label: 'Pronouns',   emoji: '💜' },
+  { id: 'timezone',   label: 'Timezone',   emoji: '🌍' },
+  { id: 'age',        label: 'Age',        emoji: '🎂' },
+  { id: 'challenges', label: 'Challenges', emoji: '🏃' }
 ];
 
 const ROW2_BUTTONS = [
@@ -37,10 +37,6 @@ const ROW2_BUTTONS = [
   { id: 'actions',   label: 'Actions',   emoji: '⚡' },
   { id: 'stores',    label: 'Stores',    emoji: '🏪' },
   { id: 'commands',  label: 'Commands',  emoji: '🕹️' }
-];
-
-const ROW_CHALLENGES = [
-  { id: 'challenges', label: 'Challenges', emoji: '🏃' },
 ];
 
 const ROW3_BUTTONS = [
@@ -226,14 +222,6 @@ export async function createPlayerCardUI(options) {
       buildCategoryRow(ROW1_BUTTONS, targetMember.id, activeButton)
     );
 
-    // Row: Challenges
-    container.components.push({
-      type: 10, content: '> **`🏃 Challenges`**'
-    });
-    container.components.push(
-      buildCategoryRow(ROW_CHALLENGES, targetMember.id, activeButton)
-    );
-
     // Row 3: Advanced Management (admin only)
     if (isAdmin) {
       container.components.push({
@@ -256,8 +244,6 @@ export async function createPlayerCardUI(options) {
     container.components.push({ type: 14 });
     container.components.push({ type: 10, content: '> **`✏️ Castlists & Profile`**' });
     container.components.push(buildCategoryRow(ROW1_BUTTONS, null, null, true));
-    container.components.push({ type: 10, content: '> **`🏃 Challenges`**' });
-    container.components.push(buildCategoryRow(ROW_CHALLENGES, null, null, true));
     container.components.push({ type: 10, content: '> **`⚙️ Advanced Management`**' });
     container.components.push(buildCategoryRow(ROW3_BUTTONS, null, null, true));
     container.components.push({ type: 14 });
