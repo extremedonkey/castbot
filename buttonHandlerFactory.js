@@ -1135,6 +1135,15 @@ export const BUTTON_REGISTRY = {
     parent: 'challenge_action_cat_select'
   },
 
+  // === CHALLENGE TIMER ===
+  'challenge_timer_stop': {
+    label: 'Stop Challenge Timer',
+    description: 'Stop timer and show challenge duration',
+    emoji: '🛑',
+    style: 'Danger',
+    category: 'challenges'
+  },
+
   // === TRIBES (LEGACY) ===
   'prod_manage_tribes_legacy_debug': {
     label: 'Tribes (Legacy)',
