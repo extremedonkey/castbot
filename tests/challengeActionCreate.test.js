@@ -27,23 +27,31 @@ function getChallengeActions(challenge) {
   };
 }
 
-function normalizeAssignment(value) {
+function normalizeLinks(value) {
   if (!value) return [];
-  if (Array.isArray(value)) return value;
-  return [value];
+  if (!Array.isArray(value)) value = [value];
+  return value.map(v => {
+    if (typeof v === 'string') return { actionId: v, timer: 'none' };
+    if (v && typeof v === 'object' && v.actionId) return v;
+    return { actionId: String(v), timer: 'none' };
+  });
+}
+
+function extractActionIds(value) {
+  return normalizeLinks(value).map(link => link.actionId);
 }
 
 function syncActionIds(challenge) {
   if (!challenge.actions) return;
   const all = new Set();
-  for (const id of (challenge.actions.playerAll || [])) all.add(id);
+  for (const id of extractActionIds(challenge.actions.playerAll)) all.add(id);
   for (const ids of Object.values(challenge.actions.playerIndividual || {})) {
-    for (const id of normalizeAssignment(ids)) all.add(id);
+    for (const id of extractActionIds(ids)) all.add(id);
   }
   for (const ids of Object.values(challenge.actions.tribe || {})) {
-    for (const id of normalizeAssignment(ids)) all.add(id);
+    for (const id of extractActionIds(ids)) all.add(id);
   }
-  for (const id of (challenge.actions.host || [])) all.add(id);
+  for (const id of extractActionIds(challenge.actions.host)) all.add(id);
   challenge.actionIds = [...all];
 }
 
@@ -89,20 +97,19 @@ function buildQuickChallengeActionModal(challengeId, category = null) {
 // Replicate link/unlink logic (pure data manipulation)
 function linkAction(challenge, actionId, category, assignmentId) {
   ensureActions(challenge);
+  const link = { actionId, timer: 'none' };
   if (category === 'playerAll') {
-    if (!challenge.actions.playerAll.includes(actionId)) challenge.actions.playerAll.push(actionId);
+    if (!extractActionIds(challenge.actions.playerAll).includes(actionId)) challenge.actions.playerAll.push(link);
   } else if (category === 'host') {
-    if (!challenge.actions.host.includes(actionId)) challenge.actions.host.push(actionId);
+    if (!extractActionIds(challenge.actions.host).includes(actionId)) challenge.actions.host.push(link);
   } else if (category === 'playerIndividual') {
     if (!challenge.actions.playerIndividual[assignmentId]) challenge.actions.playerIndividual[assignmentId] = [];
-    const arr = normalizeAssignment(challenge.actions.playerIndividual[assignmentId]);
-    if (!arr.includes(actionId)) arr.push(actionId);
-    challenge.actions.playerIndividual[assignmentId] = arr;
+    const ids = extractActionIds(challenge.actions.playerIndividual[assignmentId]);
+    if (!ids.includes(actionId)) challenge.actions.playerIndividual[assignmentId] = [...normalizeLinks(challenge.actions.playerIndividual[assignmentId]), link];
   } else if (category === 'tribe') {
     if (!challenge.actions.tribe[assignmentId]) challenge.actions.tribe[assignmentId] = [];
-    const arr = normalizeAssignment(challenge.actions.tribe[assignmentId]);
-    if (!arr.includes(actionId)) arr.push(actionId);
-    challenge.actions.tribe[assignmentId] = arr;
+    const ids = extractActionIds(challenge.actions.tribe[assignmentId]);
+    if (!ids.includes(actionId)) challenge.actions.tribe[assignmentId] = [...normalizeLinks(challenge.actions.tribe[assignmentId]), link];
   }
   syncActionIds(challenge);
 }
@@ -110,28 +117,26 @@ function linkAction(challenge, actionId, category, assignmentId) {
 function unlinkAction(challenge, actionId, category) {
   ensureActions(challenge);
   if (category === 'playerAll') {
-    challenge.actions.playerAll = challenge.actions.playerAll.filter(id => id !== actionId);
+    challenge.actions.playerAll = normalizeLinks(challenge.actions.playerAll).filter(link => link.actionId !== actionId);
   } else if (category === 'host') {
-    challenge.actions.host = challenge.actions.host.filter(id => id !== actionId);
+    challenge.actions.host = normalizeLinks(challenge.actions.host).filter(link => link.actionId !== actionId);
   } else if (category === 'playerIndividual') {
     for (const [key, val] of Object.entries(challenge.actions.playerIndividual)) {
-      const arr = normalizeAssignment(val);
-      const idx = arr.indexOf(actionId);
-      if (idx >= 0) {
-        arr.splice(idx, 1);
-        if (arr.length === 0) delete challenge.actions.playerIndividual[key];
-        else challenge.actions.playerIndividual[key] = arr;
+      const links = normalizeLinks(val);
+      const filtered = links.filter(link => link.actionId !== actionId);
+      if (filtered.length < links.length) {
+        if (filtered.length === 0) delete challenge.actions.playerIndividual[key];
+        else challenge.actions.playerIndividual[key] = filtered;
         break;
       }
     }
   } else if (category === 'tribe') {
     for (const [key, val] of Object.entries(challenge.actions.tribe)) {
-      const arr = normalizeAssignment(val);
-      const idx = arr.indexOf(actionId);
-      if (idx >= 0) {
-        arr.splice(idx, 1);
-        if (arr.length === 0) delete challenge.actions.tribe[key];
-        else challenge.actions.tribe[key] = arr;
+      const links = normalizeLinks(val);
+      const filtered = links.filter(link => link.actionId !== actionId);
+      if (filtered.length < links.length) {
+        if (filtered.length === 0) delete challenge.actions.tribe[key];
+        else challenge.actions.tribe[key] = filtered;
         break;
       }
     }
@@ -148,14 +153,14 @@ describe('getChallengeActions — reads categorized or falls back to legacy', ()
     const challenge = {
       actions: {
         playerAll: ['a1'],
-        playerIndividual: { user1: ['a2'] },
+        playerIndividual: { user1: [{ actionId: 'a2', timer: 'none' }] },
         tribe: { role1: 'a3' },
         host: ['a4'],
       },
     };
     const result = getChallengeActions(challenge);
     assert.deepEqual(result.playerAll, ['a1']);
-    assert.deepEqual(result.playerIndividual, { user1: ['a2'] });
+    assert.deepEqual(result.playerIndividual, { user1: [{ actionId: 'a2', timer: 'none' }] });
     assert.deepEqual(result.tribe, { role1: 'a3' });
     assert.deepEqual(result.host, ['a4']);
   });
@@ -204,8 +209,8 @@ describe('syncActionIds — flat union of all categories', () => {
     const challenge = {
       actions: {
         playerAll: ['a1'],
-        playerIndividual: { user1: ['a2'], user2: ['a3'] },
-        tribe: { role1: ['a4'] },
+        playerIndividual: { user1: [{ actionId: 'a2', timer: 'none' }], user2: [{ actionId: 'a3', timer: 'none' }] },
+        tribe: { role1: [{ actionId: 'a4', timer: 'none' }] },
         host: ['a5'],
       },
     };
@@ -411,14 +416,14 @@ describe('linkAction — add to category', () => {
   it('links to playerIndividual with userId key', () => {
     const challenge = { actionIds: [] };
     linkAction(challenge, 'a2', 'playerIndividual', 'user123');
-    assert.deepEqual(challenge.actions.playerIndividual['user123'], ['a2']);
+    assert.deepEqual(extractActionIds(challenge.actions.playerIndividual['user123']), ['a2']);
     assert.deepEqual(challenge.actionIds, ['a2']);
   });
 
   it('links to tribe with roleId key', () => {
     const challenge = { actionIds: [] };
     linkAction(challenge, 'a3', 'tribe', 'role456');
-    assert.deepEqual(challenge.actions.tribe['role456'], ['a3']);
+    assert.deepEqual(extractActionIds(challenge.actions.tribe['role456']), ['a3']);
     assert.deepEqual(challenge.actionIds, ['a3']);
   });
 
@@ -465,26 +470,26 @@ describe('unlinkAction — remove from category', () => {
 
   it('removes from playerIndividual by value lookup', () => {
     const challenge = {
-      actions: { playerAll: [], playerIndividual: { u1: ['a1'], u2: ['a2'] }, tribe: {}, host: [] },
+      actions: { playerAll: [], playerIndividual: { u1: [{ actionId: 'a1', timer: 'none' }], u2: [{ actionId: 'a2', timer: 'none' }] }, tribe: {}, host: [] },
     };
     unlinkAction(challenge, 'a1', 'playerIndividual');
     assert.equal(challenge.actions.playerIndividual['u1'], undefined);
-    assert.deepEqual(challenge.actions.playerIndividual['u2'], ['a2']);
+    assert.deepEqual(extractActionIds(challenge.actions.playerIndividual['u2']), ['a2']);
     assert.deepEqual(challenge.actionIds, ['a2']);
   });
 
   it('removes from tribe by value lookup', () => {
     const challenge = {
-      actions: { playerAll: [], playerIndividual: {}, tribe: { r1: ['t1'], r2: ['t2'] }, host: [] },
+      actions: { playerAll: [], playerIndividual: {}, tribe: { r1: [{ actionId: 't1', timer: 'none' }], r2: [{ actionId: 't2', timer: 'none' }] }, host: [] },
     };
     unlinkAction(challenge, 't1', 'tribe');
     assert.equal(challenge.actions.tribe['r1'], undefined);
-    assert.deepEqual(challenge.actions.tribe['r2'], ['t2']);
+    assert.deepEqual(extractActionIds(challenge.actions.tribe['r2']), ['t2']);
   });
 
   it('syncs actionIds after unlink', () => {
     const challenge = {
-      actions: { playerAll: ['a1', 'a2'], playerIndividual: { u1: ['a3'] }, tribe: {}, host: [] },
+      actions: { playerAll: [{ actionId: 'a1', timer: 'none' }, { actionId: 'a2', timer: 'none' }], playerIndividual: { u1: [{ actionId: 'a3', timer: 'none' }] }, tribe: {}, host: [] },
     };
     unlinkAction(challenge, 'a1', 'playerAll');
     assert.equal(challenge.actionIds.length, 2);
@@ -503,10 +508,10 @@ describe('unlinkAction — remove from category', () => {
 
   it('no-ops for non-existent action in playerIndividual', () => {
     const challenge = {
-      actions: { playerAll: [], playerIndividual: { u1: ['a1'] }, tribe: {}, host: [] },
+      actions: { playerAll: [], playerIndividual: { u1: [{ actionId: 'a1', timer: 'none' }] }, tribe: {}, host: [] },
     };
     unlinkAction(challenge, 'nonexistent', 'playerIndividual');
-    assert.deepEqual(challenge.actions.playerIndividual['u1'], ['a1']);
+    assert.deepEqual(extractActionIds(challenge.actions.playerIndividual['u1']), ['a1']);
   });
 });
 
@@ -540,8 +545,9 @@ describe('Full CRUD workflow — link, read, unlink', () => {
     // Read via getChallengeActions
     const actions = getChallengeActions(challenge);
     assert.deepEqual(actions.playerAll, ['old1', 'new1']);
-    assert.deepEqual(actions.playerIndividual, { player_a: ['ind1'], player_b: ['ind2'] });
-    assert.deepEqual(actions.tribe, { tribe_role: ['tri1'] });
+    assert.deepEqual(extractActionIds(actions.playerIndividual.player_a), ['ind1']);
+    assert.deepEqual(extractActionIds(actions.playerIndividual.player_b), ['ind2']);
+    assert.deepEqual(extractActionIds(actions.tribe.tribe_role), ['tri1']);
     assert.deepEqual(actions.host, ['host1']);
 
     // Unlink one individual
@@ -579,8 +585,8 @@ describe('getChallengeActionSummary — counts (replicated logic)', () => {
     const challenge = {
       actions: {
         playerAll: ['a1', 'a2'],
-        playerIndividual: { u1: ['a3'], u2: ['a4'], u3: ['a5'] },
-        tribe: { r1: ['a6'] },
+        playerIndividual: { u1: [{ actionId: 'a3', timer: 'none' }], u2: [{ actionId: 'a4', timer: 'none' }], u3: [{ actionId: 'a5', timer: 'none' }] },
+        tribe: { r1: [{ actionId: 'a6', timer: 'none' }] },
         host: ['a7'],
       },
     };
@@ -616,23 +622,23 @@ describe('getChallengeActionSummary — counts (replicated logic)', () => {
 function verifyChallengeActionAccess(challenge, actionId, member) {
   const actions = getChallengeActions(challenge);
 
-  if (actions.playerAll.includes(actionId)) return { allowed: true };
+  if (extractActionIds(actions.playerAll).includes(actionId)) return { allowed: true };
 
   for (const [userId, assignedIds] of Object.entries(actions.playerIndividual)) {
-    if (normalizeAssignment(assignedIds).includes(actionId)) {
+    if (extractActionIds(assignedIds).includes(actionId)) {
       if (member?.user?.id === userId) return { allowed: true };
       return { allowed: false, reason: 'This action isn\'t assigned to you.' };
     }
   }
 
   for (const [roleId, assignedIds] of Object.entries(actions.tribe)) {
-    if (normalizeAssignment(assignedIds).includes(actionId)) {
+    if (extractActionIds(assignedIds).includes(actionId)) {
       if (member?.roles?.cache?.has(roleId)) return { allowed: true };
       return { allowed: false, reason: 'This action is for another tribe.' };
     }
   }
 
-  if (actions.host.includes(actionId)) {
+  if (extractActionIds(actions.host).includes(actionId)) {
     const hasPermission = member?.permissions?.has?.(1n << 28n);
     if (hasPermission) return { allowed: true };
     return { allowed: false, reason: 'This is a host-only action.' };
@@ -651,10 +657,10 @@ const mockMember = (userId, roleIds = [], hasManageRoles = false) => ({
 describe('verifyChallengeActionAccess — security gating', () => {
   const challenge = {
     actions: {
-      playerAll: ['pa1'],
-      playerIndividual: { 'user_a': ['ind1'], 'user_b': ['ind2'] },
-      tribe: { 'role_x': ['tri1'], 'role_y': ['tri2'] },
-      host: ['host1'],
+      playerAll: [{ actionId: 'pa1', timer: 'none' }],
+      playerIndividual: { 'user_a': [{ actionId: 'ind1', timer: 'none' }], 'user_b': [{ actionId: 'ind2', timer: 'none' }] },
+      tribe: { 'role_x': [{ actionId: 'tri1', timer: 'none' }], 'role_y': [{ actionId: 'tri2', timer: 'none' }] },
+      host: [{ actionId: 'host1', timer: 'none' }],
     },
   };
 

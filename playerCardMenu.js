@@ -748,7 +748,7 @@ async function buildCardSelect(activeButton, targetMember, playerData, safariDat
     // ── CHALLENGES — shows actions visible to this player ───────────
 
     case 'challenges': {
-      const { getChallengeActions } = await import('./challengeActionCreate.js');
+      const { getChallengeActions, normalizeLinks } = await import('./challengeActionCreate.js');
       const challenges = playerData[guildId]?.challenges || {};
       const options = [];
 
@@ -756,40 +756,37 @@ async function buildCardSelect(activeButton, targetMember, playerData, safariDat
         const actions = getChallengeActions(ch);
         const chalTitle = (ch.title || 'Challenge').slice(0, 80);
 
-        // playerAll — visible to everyone
-        for (const actionId of actions.playerAll) {
-          const action = safariData[guildId]?.buttons?.[actionId];
+        // playerAll — visible to everyone (link objects)
+        for (const link of normalizeLinks(actions.playerAll)) {
+          const action = safariData[guildId]?.buttons?.[link.actionId];
           if (!action) continue;
           options.push({
             label: (action.name || action.label || 'Action').slice(0, 100),
-            value: actionId,
+            value: link.actionId,
             description: `🟢 ${chalTitle}`.slice(0, 100),
             emoji: resolveEmoji(action.emoji || action.trigger?.button?.emoji, '⚡'),
           });
         }
 
-        // playerIndividual — only if assigned to this player (array format)
-        const indActionIds = actions.playerIndividual[targetId];
-        const normalizedInd = !indActionIds ? [] : Array.isArray(indActionIds) ? indActionIds : [indActionIds];
-        for (const indActionId of normalizedInd) {
-          const action = safariData[guildId]?.buttons?.[indActionId];
+        // playerIndividual — only if assigned to this player (link objects)
+        for (const link of normalizeLinks(actions.playerIndividual[targetId])) {
+          const action = safariData[guildId]?.buttons?.[link.actionId];
           if (action) options.push({
             label: (action.name || action.label || 'Action').slice(0, 100),
-            value: indActionId,
+            value: link.actionId,
             description: `🟢 ${chalTitle}`.slice(0, 100),
             emoji: resolveEmoji(action.emoji || action.trigger?.button?.emoji, '⚡'),
           });
         }
 
-        // tribe — only if player has the tribe role (array format)
-        for (const [roleId, triActionIds] of Object.entries(actions.tribe)) {
+        // tribe — only if player has the tribe role (link objects)
+        for (const [roleId, triLinks] of Object.entries(actions.tribe)) {
           if (!targetMember.roles.cache.has(roleId)) continue;
-          const normalizedTri = !triActionIds ? [] : Array.isArray(triActionIds) ? triActionIds : [triActionIds];
-          for (const triActionId of normalizedTri) {
-            const action = safariData[guildId]?.buttons?.[triActionId];
+          for (const link of normalizeLinks(triLinks)) {
+            const action = safariData[guildId]?.buttons?.[link.actionId];
             if (action) options.push({
               label: (action.name || action.label || 'Action').slice(0, 100),
-              value: triActionId,
+              value: link.actionId,
               description: `🟢 ${chalTitle}`.slice(0, 100),
               emoji: resolveEmoji(action.emoji || action.trigger?.button?.emoji, '⚡'),
             });

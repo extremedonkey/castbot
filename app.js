@@ -2501,6 +2501,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const { snowflakeToTimestamp, discordTimestamp, setPendingStart } = await import('./timerUtils.js');
         const timestamp = snowflakeToTimestamp(targetMessageId);
         const playerId = targetMessage?.author?.id;
+        console.log(`❄️ [START] Timer started by ${invokerId} for player ${playerId} — message ${targetMessageId} (${new Date(timestamp).toISOString()})`);
 
         setPendingStart(invokerId, playerId, targetMessageId, timestamp, channelId);
 
@@ -2524,6 +2525,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const pending = getPendingStart(invokerId, playerId);
 
         if (!pending) {
+          console.log(`❄️ [STOP] No pending start for player ${playerId} (invoked by ${invokerId})`);
+
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -2542,6 +2545,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
         const result = timeBetweenSnowflakes(pending.messageId, targetMessageId);
         clearPendingStart(invokerId, playerId);
+        console.log(`❄️ [STOP] Timer result for player ${playerId}: ${result.formatted} (${result.durationMs}ms)${result.reversed ? ' ⚠️ REVERSED' : ''}`);
 
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -5065,7 +5069,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             const challenges = pd[guildId]?.challenges || {};
             for (const ch of Object.values(challenges)) {
               const actions = getChallengeActions(ch);
-              const allIds = [...actions.playerAll, ...Object.values(actions.playerIndividual).flatMap(v => Array.isArray(v) ? v : [v]), ...Object.values(actions.tribe).flatMap(v => Array.isArray(v) ? v : [v]), ...actions.host];
+              const { extractActionIds: _extractIds } = await import('./challengeActionCreate.js');
+              const allIds = [..._extractIds(actions.playerAll), ...Object.values(actions.playerIndividual).flatMap(v => _extractIds(v)), ...Object.values(actions.tribe).flatMap(v => _extractIds(v)), ..._extractIds(actions.host)];
               if (allIds.includes(resolvedButtonId)) {
                 const access = verifyChallengeActionAccess(ch, resolvedButtonId, context.member);
                 if (!access.allowed) {

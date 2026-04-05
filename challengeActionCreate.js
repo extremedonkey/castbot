@@ -18,16 +18,35 @@ import { resolveEmoji } from './utils/emojiUtils.js';
 // ─────────────────────────────────────────────
 
 /**
- * Normalize a playerIndividual/tribe assignment value to always be an array.
- * Handles legacy string format (single actionId) and new array format.
- * @param {string|string[]|undefined|null} value
+ * Normalize a challenge action link value to always be an array of link objects.
+ * Handles 3 legacy formats:
+ *   - string "actionId" → [{ actionId, timer: 'none' }]
+ *   - ["actionId1", "actionId2"] → [{ actionId: "actionId1", timer: 'none' }, ...]
+ *   - [{ actionId, timer }] → pass through (current format)
+ * @param {string|string[]|object[]|undefined|null} value
+ * @returns {{ actionId: string, timer: string }[]}
+ */
+export function normalizeLinks(value) {
+  if (!value) return [];
+  if (!Array.isArray(value)) value = [value];
+  return value.map(v => {
+    if (typeof v === 'string') return { actionId: v, timer: 'none' };
+    if (v && typeof v === 'object' && v.actionId) return v;
+    return { actionId: String(v), timer: 'none' };
+  });
+}
+
+/**
+ * Extract just the actionIds from a normalized link array.
+ * @param {string|string[]|object[]|undefined|null} value
  * @returns {string[]}
  */
-export function normalizeAssignment(value) {
-  if (!value) return [];
-  if (Array.isArray(value)) return value;
-  return [value];
+export function extractActionIds(value) {
+  return normalizeLinks(value).map(link => link.actionId);
 }
+
+// Keep old name as alias for any external consumers
+export const normalizeAssignment = extractActionIds;
 
 // ─────────────────────────────────────────────
 // Constants
@@ -181,14 +200,14 @@ export function getChallengeActions(challenge) {
 export function syncActionIds(challenge) {
   if (!challenge.actions) return;
   const all = new Set();
-  for (const id of (challenge.actions.playerAll || [])) all.add(id);
+  for (const id of extractActionIds(challenge.actions.playerAll)) all.add(id);
   for (const ids of Object.values(challenge.actions.playerIndividual || {})) {
-    for (const id of normalizeAssignment(ids)) all.add(id);
+    for (const id of extractActionIds(ids)) all.add(id);
   }
   for (const ids of Object.values(challenge.actions.tribe || {})) {
-    for (const id of normalizeAssignment(ids)) all.add(id);
+    for (const id of extractActionIds(ids)) all.add(id);
   }
-  for (const id of (challenge.actions.host || [])) all.add(id);
+  for (const id of extractActionIds(challenge.actions.host)) all.add(id);
   challenge.actionIds = [...all];
 }
 
@@ -398,10 +417,10 @@ export async function handleQuickChallengeActionSubmit(guildId, userId, challeng
   // Create action(s) based on category
   if (category === 'playerAll') {
     const actionId = createActionShell(actionName);
-    challenge.actions.playerAll.push(actionId);
+    challenge.actions.playerAll.push({ actionId, timer: timerMode });
   } else if (category === 'host') {
     const actionId = createActionShell(actionName);
-    challenge.actions.host.push(actionId);
+    challenge.actions.host.push({ actionId, timer: timerMode });
   } else if (category === 'playerIndividual') {
     for (let i = 0; i < assignToIds.length; i++) {
       const playerId = assignToIds[i];
@@ -415,7 +434,7 @@ export async function handleQuickChallengeActionSubmit(guildId, userId, challeng
       const label = `${displayName} - ${actionName}`.substring(0, 100);
       const actionId = createActionShell(label, i);
       if (!challenge.actions.playerIndividual[playerId]) challenge.actions.playerIndividual[playerId] = [];
-      challenge.actions.playerIndividual[playerId].push(actionId);
+      challenge.actions.playerIndividual[playerId].push({ actionId, timer: timerMode });
     }
   } else if (category === 'tribe') {
     for (let i = 0; i < assignToIds.length; i++) {
@@ -428,7 +447,7 @@ export async function handleQuickChallengeActionSubmit(guildId, userId, challeng
       const label = `${roleName} - ${actionName}`.substring(0, 100);
       const actionId = createActionShell(label, i);
       if (!challenge.actions.tribe[roleId]) challenge.actions.tribe[roleId] = [];
-      challenge.actions.tribe[roleId].push(actionId);
+      challenge.actions.tribe[roleId].push({ actionId, timer: timerMode });
     }
   }
 
@@ -468,26 +487,30 @@ export async function linkChallengeAction(guildId, challengeId, actionId, catego
 
   ensureActions(challenge);
 
+  const link = { actionId, timer: 'none' };
+
   if (category === 'playerAll') {
-    if (!challenge.actions.playerAll.includes(actionId)) {
-      challenge.actions.playerAll.push(actionId);
+    if (!extractActionIds(challenge.actions.playerAll).includes(actionId)) {
+      challenge.actions.playerAll.push(link);
     }
   } else if (category === 'host') {
-    if (!challenge.actions.host.includes(actionId)) {
-      challenge.actions.host.push(actionId);
+    if (!extractActionIds(challenge.actions.host).includes(actionId)) {
+      challenge.actions.host.push(link);
     }
   } else if (category === 'playerIndividual') {
     if (!assignmentId) return { linked: false, error: 'assignmentId (userId) required for playerIndividual.' };
     if (!challenge.actions.playerIndividual[assignmentId]) challenge.actions.playerIndividual[assignmentId] = [];
-    const arr = normalizeAssignment(challenge.actions.playerIndividual[assignmentId]);
-    if (!arr.includes(actionId)) arr.push(actionId);
-    challenge.actions.playerIndividual[assignmentId] = arr;
+    const ids = extractActionIds(challenge.actions.playerIndividual[assignmentId]);
+    if (!ids.includes(actionId)) {
+      challenge.actions.playerIndividual[assignmentId] = [...normalizeLinks(challenge.actions.playerIndividual[assignmentId]), link];
+    }
   } else if (category === 'tribe') {
     if (!assignmentId) return { linked: false, error: 'assignmentId (roleId) required for tribe.' };
     if (!challenge.actions.tribe[assignmentId]) challenge.actions.tribe[assignmentId] = [];
-    const arr = normalizeAssignment(challenge.actions.tribe[assignmentId]);
-    if (!arr.includes(actionId)) arr.push(actionId);
-    challenge.actions.tribe[assignmentId] = arr;
+    const ids = extractActionIds(challenge.actions.tribe[assignmentId]);
+    if (!ids.includes(actionId)) {
+      challenge.actions.tribe[assignmentId] = [...normalizeLinks(challenge.actions.tribe[assignmentId]), link];
+    }
   }
 
   syncActionIds(challenge);
@@ -516,28 +539,26 @@ export async function unlinkChallengeAction(guildId, challengeId, actionId, cate
   ensureActions(challenge);
 
   if (category === 'playerAll') {
-    challenge.actions.playerAll = challenge.actions.playerAll.filter(id => id !== actionId);
+    challenge.actions.playerAll = normalizeLinks(challenge.actions.playerAll).filter(link => link.actionId !== actionId);
   } else if (category === 'host') {
-    challenge.actions.host = challenge.actions.host.filter(id => id !== actionId);
+    challenge.actions.host = normalizeLinks(challenge.actions.host).filter(link => link.actionId !== actionId);
   } else if (category === 'playerIndividual') {
     for (const [key, val] of Object.entries(challenge.actions.playerIndividual)) {
-      const arr = normalizeAssignment(val);
-      const idx = arr.indexOf(actionId);
-      if (idx >= 0) {
-        arr.splice(idx, 1);
-        if (arr.length === 0) delete challenge.actions.playerIndividual[key];
-        else challenge.actions.playerIndividual[key] = arr;
+      const links = normalizeLinks(val);
+      const filtered = links.filter(link => link.actionId !== actionId);
+      if (filtered.length < links.length) {
+        if (filtered.length === 0) delete challenge.actions.playerIndividual[key];
+        else challenge.actions.playerIndividual[key] = filtered;
         break;
       }
     }
   } else if (category === 'tribe') {
     for (const [key, val] of Object.entries(challenge.actions.tribe)) {
-      const arr = normalizeAssignment(val);
-      const idx = arr.indexOf(actionId);
-      if (idx >= 0) {
-        arr.splice(idx, 1);
-        if (arr.length === 0) delete challenge.actions.tribe[key];
-        else challenge.actions.tribe[key] = arr;
+      const links = normalizeLinks(val);
+      const filtered = links.filter(link => link.actionId !== actionId);
+      if (filtered.length < links.length) {
+        if (filtered.length === 0) delete challenge.actions.tribe[key];
+        else challenge.actions.tribe[key] = filtered;
         break;
       }
     }
@@ -571,28 +592,26 @@ export async function deleteChallengeAction(guildId, challengeId, actionId, cate
 
   // Remove from challenge.actions (inline, not calling unlinkChallengeAction to avoid double load/save)
   if (category === 'playerAll') {
-    challenge.actions.playerAll = challenge.actions.playerAll.filter(id => id !== actionId);
+    challenge.actions.playerAll = normalizeLinks(challenge.actions.playerAll).filter(link => link.actionId !== actionId);
   } else if (category === 'host') {
-    challenge.actions.host = challenge.actions.host.filter(id => id !== actionId);
+    challenge.actions.host = normalizeLinks(challenge.actions.host).filter(link => link.actionId !== actionId);
   } else if (category === 'playerIndividual') {
     for (const [key, val] of Object.entries(challenge.actions.playerIndividual)) {
-      const arr = normalizeAssignment(val);
-      const idx = arr.indexOf(actionId);
-      if (idx >= 0) {
-        arr.splice(idx, 1);
-        if (arr.length === 0) delete challenge.actions.playerIndividual[key];
-        else challenge.actions.playerIndividual[key] = arr;
+      const links = normalizeLinks(val);
+      const filtered = links.filter(link => link.actionId !== actionId);
+      if (filtered.length < links.length) {
+        if (filtered.length === 0) delete challenge.actions.playerIndividual[key];
+        else challenge.actions.playerIndividual[key] = filtered;
         break;
       }
     }
   } else if (category === 'tribe') {
     for (const [key, val] of Object.entries(challenge.actions.tribe)) {
-      const arr = normalizeAssignment(val);
-      const idx = arr.indexOf(actionId);
-      if (idx >= 0) {
-        arr.splice(idx, 1);
-        if (arr.length === 0) delete challenge.actions.tribe[key];
-        else challenge.actions.tribe[key] = arr;
+      const links = normalizeLinks(val);
+      const filtered = links.filter(link => link.actionId !== actionId);
+      if (filtered.length < links.length) {
+        if (filtered.length === 0) delete challenge.actions.tribe[key];
+        else challenge.actions.tribe[key] = filtered;
         break;
       }
     }
@@ -631,8 +650,8 @@ export async function getChallengeActionSummary(guildId, challengeId) {
   if (!challenge) return null;
 
   const actions = getChallengeActions(challenge);
-  const indCount = Object.values(actions.playerIndividual).reduce((sum, v) => sum + normalizeAssignment(v).length, 0);
-  const triCount = Object.values(actions.tribe).reduce((sum, v) => sum + normalizeAssignment(v).length, 0);
+  const indCount = Object.values(actions.playerIndividual).reduce((sum, v) => sum + normalizeLinks(v).length, 0);
+  const triCount = Object.values(actions.tribe).reduce((sum, v) => sum + normalizeLinks(v).length, 0);
 
   return {
     playerAll: { count: actions.playerAll.length, ids: actions.playerAll },
@@ -659,13 +678,13 @@ export function verifyChallengeActionAccess(challenge, actionId, member) {
   const actions = getChallengeActions(challenge);
 
   // playerAll — anyone can execute
-  if (actions.playerAll.includes(actionId)) {
+  if (extractActionIds(actions.playerAll).includes(actionId)) {
     return { allowed: true };
   }
 
   // playerIndividual — only the assigned player
   for (const [userId, assignedIds] of Object.entries(actions.playerIndividual)) {
-    if (normalizeAssignment(assignedIds).includes(actionId)) {
+    if (extractActionIds(assignedIds).includes(actionId)) {
       if (member?.user?.id === userId) return { allowed: true };
       return { allowed: false, reason: 'This action isn\'t assigned to you.' };
     }
@@ -673,14 +692,14 @@ export function verifyChallengeActionAccess(challenge, actionId, member) {
 
   // tribe — only members with the tribe role
   for (const [roleId, assignedIds] of Object.entries(actions.tribe)) {
-    if (normalizeAssignment(assignedIds).includes(actionId)) {
+    if (extractActionIds(assignedIds).includes(actionId)) {
       if (member?.roles?.cache?.has(roleId)) return { allowed: true };
       return { allowed: false, reason: 'This action is for another tribe.' };
     }
   }
 
   // host — only users with ManageRoles (standard host permission)
-  if (actions.host.includes(actionId)) {
+  if (extractActionIds(actions.host).includes(actionId)) {
     const hasPermission = member?.permissions?.has?.(1n << 28n); // MANAGE_ROLES
     if (hasPermission) return { allowed: true };
     return { allowed: false, reason: 'This is a host-only action.' };
@@ -714,10 +733,10 @@ export async function buildChallengeActionSelect(guildId, challengeId) {
   // Gather all linked action IDs across all categories
   const actions = getChallengeActions(challenge);
   const allLinkedIds = new Set([
-    ...actions.playerAll,
-    ...Object.values(actions.playerIndividual).flatMap(v => normalizeAssignment(v)),
-    ...Object.values(actions.tribe).flatMap(v => normalizeAssignment(v)),
-    ...actions.host,
+    ...extractActionIds(actions.playerAll),
+    ...Object.values(actions.playerIndividual).flatMap(v => extractActionIds(v)),
+    ...Object.values(actions.tribe).flatMap(v => extractActionIds(v)),
+    ...extractActionIds(actions.host),
   ]);
 
   const totalActions = allLinkedIds.size;

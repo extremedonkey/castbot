@@ -19,7 +19,7 @@ import { countComponents } from './utils.js';
 import { parseAndValidateEmoji, parseTextEmoji, resolveEmoji } from './utils/emojiUtils.js';
 import { createBackButton } from './src/ui/backButtonFactory.js';
 import { getTimeUntilRegeneration } from './pointsManager.js';
-import { getChallengeActions } from './challengeActionCreate.js';
+import { getChallengeActions, normalizeLinks, extractActionIds } from './challengeActionCreate.js';
 
 /**
  * Player management modes
@@ -379,8 +379,7 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   for (const [chId, ch] of Object.entries(challenges)) {
     const actions = getChallengeActions(ch);
     if (actions.playerAll.length > 0) { hasChallengeActions = true; break; }
-    const indIds = actions.playerIndividual[targetUserId];
-    if (targetUserId && indIds && (Array.isArray(indIds) ? indIds.length > 0 : true)) { hasChallengeActions = true; break; }
+    if (targetUserId && normalizeLinks(actions.playerIndividual[targetUserId]).length > 0) { hasChallengeActions = true; break; }
     // tribe check needs member roles — defer to runtime if we have entries
     if (Object.keys(actions.tribe).length > 0) { hasChallengeActions = true; break; }
   }
@@ -628,47 +627,44 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
         const actions = getChallengeActions(ch);
         const chalTitle = (ch.title || 'Challenge').slice(0, 50);
 
-        // playerAll
-        for (const actionId of actions.playerAll) {
-          const action = allBtns[actionId];
+        // playerAll — link objects with .actionId
+        for (const link of normalizeLinks(actions.playerAll)) {
+          const action = allBtns[link.actionId];
           if (!action) continue;
           const emoji = resolveEmoji(action.emoji || action.trigger?.button?.emoji, '🏃');
           options.push({
             label: (action.name || 'Action').slice(0, 100),
-            value: actionId,
+            value: link.actionId,
             description: chalTitle,
             emoji
           });
         }
 
-        // playerIndividual — only if assigned to target (now arrays)
+        // playerIndividual — only if assigned to target
         const targetId = targetMember.id;
-        const indActionIds = actions.playerIndividual[targetId];
-        const normalizedInd = !indActionIds ? [] : Array.isArray(indActionIds) ? indActionIds : [indActionIds];
-        for (const indActionId of normalizedInd) {
-          const action = allBtns[indActionId];
+        for (const link of normalizeLinks(actions.playerIndividual[targetId])) {
+          const action = allBtns[link.actionId];
           if (action) {
             const emoji = resolveEmoji(action.emoji || action.trigger?.button?.emoji, '🏃');
             options.push({
               label: (action.name || 'Action').slice(0, 100),
-              value: indActionId,
+              value: link.actionId,
               description: chalTitle,
               emoji
             });
           }
         }
 
-        // tribe — check roles (now arrays)
-        for (const [roleId, triActionIds] of Object.entries(actions.tribe)) {
+        // tribe — check roles
+        for (const [roleId, triLinks] of Object.entries(actions.tribe)) {
           if (targetMember?.roles?.cache?.has?.(roleId)) {
-            const normalizedTri = !triActionIds ? [] : Array.isArray(triActionIds) ? triActionIds : [triActionIds];
-            for (const triActionId of normalizedTri) {
-              const action = allBtns[triActionId];
+            for (const link of normalizeLinks(triLinks)) {
+              const action = allBtns[link.actionId];
               if (action) {
                 const emoji = resolveEmoji(action.emoji || action.trigger?.button?.emoji, '🏃');
                 options.push({
                   label: (action.name || 'Action').slice(0, 100),
-                  value: triActionId,
+                  value: link.actionId,
                   description: chalTitle,
                   emoji
                 });
