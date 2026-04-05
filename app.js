@@ -49749,6 +49749,7 @@ Your server is now ready for Tycoons gameplay!`;
           }
 
           const result = timeBetweenSnowflakes(startId, endId);
+          console.log(`❄️ [CALC] ${startId} → ${endId} = ${result.formatted} (${result.durationMs}ms)${result.reversed ? ' ⚠️ REVERSED' : ''}`);
           return {
             flags: (1 << 15),
             components: [{
@@ -49794,6 +49795,7 @@ Your server is now ready for Tycoons gameplay!`;
           }
 
           const parsed = parseSnowflake(messageId);
+          console.log(`❄️ [LOOKUP] ${messageId} → ${parsed.date} (worker: ${parsed.workerId}, process: ${parsed.processId}, inc: ${parsed.increment})`);
           return {
             flags: (1 << 15),
             components: [{
