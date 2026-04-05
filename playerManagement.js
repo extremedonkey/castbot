@@ -588,7 +588,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
         for (const [id, castlist] of sorted) {
           if (id === 'default') continue; // Already covered by first option
           if (options.length >= 25) break;
-          const emoji = resolveEmoji(castlist.emoji, '🏃');
+          const emoji = resolveEmoji(castlist?.metadata?.emoji || castlist.emoji, '📋');
           options.push({
             label: (castlist.name || id).slice(0, 100),
             value: `show_castlist2_${id}`,
@@ -632,7 +632,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
           const emoji = resolveEmoji(action.emoji || action.trigger?.button?.emoji, '🏃');
           options.push({
             label: (action.name || 'Action').slice(0, 100),
-            value: `challenge_${guildId}_${actionId}`,
+            value: actionId,
             description: chalTitle,
             emoji
           });
@@ -647,7 +647,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
             const emoji = resolveEmoji(action.emoji || action.trigger?.button?.emoji, '🏃');
             options.push({
               label: (action.name || 'Action').slice(0, 100),
-              value: `challenge_${guildId}_${indActionId}`,
+              value: indActionId,
               description: chalTitle,
               emoji
             });
@@ -662,7 +662,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
               const emoji = resolveEmoji(action.emoji || action.trigger?.button?.emoji, '🏃');
               options.push({
                 label: (action.name || 'Action').slice(0, 100),
-                value: `challenge_${guildId}_${triActionId}`,
+                value: triActionId,
                 description: chalTitle,
                 emoji
               });
@@ -736,7 +736,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
         const emoji = resolveEmoji(action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji || action.emoji, '🛠️');
         return {
           label,
-          value: `crafting_${guildId}_${action.actionId}`,
+          value: action.actionId,
           emoji
         };
       });
@@ -795,7 +795,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
         const emoji = resolveEmoji(action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji || action.emoji, '⚡');
         return {
           label,
-          value: `action_${guildId}_${action.actionId}`,
+          value: action.actionId,
           emoji
         };
       });
@@ -830,7 +830,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
         const emoji = resolveEmoji(store.emoji, '🏪');
         options.push({
           label: (store.name || 'Store').slice(0, 100),
-          value: `safari_store_browse_${guildId}_${storeId}`,
+          value: storeId,
           description: `${itemCount} item${itemCount !== 1 ? 's' : ''}`,
           emoji
         });

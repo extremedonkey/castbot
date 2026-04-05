@@ -8892,19 +8892,24 @@ To fix this:
       }
       // Delegate to existing castlist posting handlers
       if (selectedValue.startsWith('show_castlist2_')) {
-        // Post castlist — use deferred new public message
-        return ButtonHandlerFactory.create({ id: 'player_menu_sel_castlists_post', deferred: true, handler: async (context) => {
+        // Post castlist — use deferred new public message (same as show_castlist2 button handler)
+        return ButtonHandlerFactory.create({ id: 'player_menu_sel_castlists_post', deferred: true, ephemeral: false, handler: async (context) => {
           const castlistId = selectedValue.replace('show_castlist2_', '');
-          const { handleCastlistDisplay } = await import('./castlistV2.js');
-          return await handleCastlistDisplay(context.guildId, castlistId, context.userId, context.client, context.channelId, 'view');
+          const { displayCastlist } = await import('./castlistDisplay.js');
+          return await displayCastlist(context, castlistId, 'view', buildNoTribesContainer, canSendMessagesInChannel);
         }})(req, res, client);
       }
       if (selectedValue.startsWith('compact_castlist_')) {
         return ButtonHandlerFactory.create({ id: 'player_menu_sel_castlists_compact', deferred: true, updateMessage: true, handler: async (context) => {
           const castlistId = selectedValue.replace('compact_castlist_', '');
-          const { handleCompactCastlist } = await import('./castlistV2.js');
-          await handleCompactCastlist(context.guildId, castlistId, context.client, context.channelId);
-          // Rebuild menu after compact post
+          const { generateCastlistImage } = await import('./castlistImageGenerator.js');
+          const pngBuffer = await generateCastlistImage(context.guildId, castlistId, context.client);
+          const { AttachmentBuilder } = await import('discord.js');
+          const attachment = new AttachmentBuilder(pngBuffer, { name: 'castlist.png' });
+          const channelId = req.body.channel?.id || req.body.channel_id;
+          const channel = await context.client.channels.fetch(channelId);
+          await channel.send({ files: [attachment] });
+          // Rebuild menu
           const playerData = await loadPlayerData();
           const guild = await context.client.guilds.fetch(context.guildId);
           const member = await guild.members.fetch(context.userId);
@@ -8916,9 +8921,16 @@ To fix this:
       if (!selectedValue) {
         return ButtonHandlerFactory.create({ id: 'player_menu_sel_challenges_noop', updateMessage: true, handler: async () => ({ type: 6 }) })(req, res, client);
       }
-      // Execute challenge action
+      // Execute challenge action — value is raw actionId
       return ButtonHandlerFactory.create({ id: 'player_menu_sel_challenges', deferred: true, handler: async (context) => {
-        const { executeButtonActions } = await import('./safariManager.js');
+        const { executeButtonActions, getCustomButton } = await import('./safariManager.js');
+        const button = await getCustomButton(context.guildId, selectedValue);
+        if (!button) {
+          return { content: '❌ Action not found.', ephemeral: true };
+        }
+        if (!button.actions || button.actions.length === 0) {
+          return { content: `⚡ **${button.name || 'Action'}** has no outcomes configured yet.`, ephemeral: true };
+        }
         const interactionData = { token: context.token, applicationId: context.applicationId, client: context.client, member: context.member, channelName: context.channelName, user: context.member?.user || { id: context.userId }, channel: { name: context.channelName } };
         const result = await executeButtonActions(context.guildId, selectedValue, context.userId, interactionData, context.client);
         return { ...result, ephemeral: true };
