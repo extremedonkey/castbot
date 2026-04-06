@@ -1137,6 +1137,14 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, all
         });
     }
     
+    // If no options at all, show a text message instead of an empty select
+    if (options.length === 0) {
+        return {
+            type: 10, // Text Display
+            content: '-# No items created yet. Create items first via `/menu` → 📦 Items, then come back to add them to this store.'
+        };
+    }
+
     return {
         type: 1, // ActionRow
         components: [{
