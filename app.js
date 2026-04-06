@@ -5001,6 +5001,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_all_server_items_') &&
         !custom_id.startsWith('safari_progress_') &&
         !custom_id.startsWith('safari_inv_page_') &&  // Exclude inventory pagination buttons
+        !custom_id.startsWith('safari_player_inventory_') &&  // Exclude admin inventory view
         !custom_id.startsWith('safari_init_player_') &&  // Exclude player initialization button
         !custom_id.startsWith('safari_result_ordering_') &&  // Exclude result ordering buttons
         !custom_id.startsWith('safari_use_linked_') &&  // Exclude item-triggered action buttons
