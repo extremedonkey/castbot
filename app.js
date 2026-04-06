@@ -14929,8 +14929,16 @@ Your server is now ready for Tycoons gameplay!`;
             : context.userId;
           console.log(`🥚 DEBUG: User ${context.userId} viewing inventory for ${targetUserId} in guild ${context.guildId}`);
 
+          // Fetch target member for display name (not the admin's member)
+          let targetMember = context.member;
+          if (targetUserId !== context.userId && context.guild) {
+            try {
+              targetMember = await context.guild.members.fetch(targetUserId);
+            } catch { /* fallback to admin member */ }
+          }
+
           // Start at page 0 when opening inventory
-          const inventoryDisplay = await createPlayerInventoryDisplay(context.guildId, targetUserId, context.member, 0);
+          const inventoryDisplay = await createPlayerInventoryDisplay(context.guildId, targetUserId, targetMember, 0);
 
           console.log(`📤 DEBUG: About to send inventory response for user ${context.userId}`);
           console.log(`📋 DEBUG: Data keys: ${Object.keys(inventoryDisplay)}`);
