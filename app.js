@@ -2512,9 +2512,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             components: [{
               type: 17, accent_color: 0x3498DB,
               components: [
-                { type: 10, content: `### \`\`\`❄️ Timer Started\`\`\`` },
+                { type: 10, content: `## ❄️ Timer | Start Marked` },
                 { type: 14 },
-                { type: 10, content: `**Player**: ${playerId ? `<@${playerId}>` : 'Unknown'}\n**Start**: ${discordTimestamp(timestamp, 'F')} (${discordTimestamp(timestamp, 'R')})\n\n-# Message ID: \`${targetMessageId}\`` }
+                { type: 10, content: `### \`\`\`▶️ Player\`\`\`\n${playerId ? `<@${playerId}>` : 'Unknown'}` },
+                { type: 14 },
+                { type: 10, content: `-# Start — ${discordTimestamp(timestamp, 'F')} (${discordTimestamp(timestamp, 'R')})\n-# Message ID: \`${targetMessageId}\`` }
               ]
             }]
           }
@@ -2554,9 +2556,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             components: [{
               type: 17, accent_color: 0x2ECC71,
               components: [
-                { type: 10, content: `### \`\`\`❄️ Timer Result\`\`\`` },
+                { type: 10, content: `## ❄️ Timer | Result` },
                 { type: 14 },
-                { type: 10, content: `**Player**: <@${playerId}>\n**Duration**: **${result.formatted}**${result.reversed ? ' ⚠️ *reversed*' : ''}\n\n-# Start: ${discordTimestamp(result.startTime, 'F')} → End: ${discordTimestamp(result.endTime, 'F')}` },
+                { type: 10, content: `### \`\`\`⏱️ Duration\`\`\`\n**${result.formatted}**${result.reversed ? ' ⚠️ *reversed*' : ''}\n\n-# Player: <@${playerId}>` },
+                { type: 14 },
+                { type: 10, content: `-# Start — ${discordTimestamp(result.startTime, 'F')}\n-# Message ID: \`${pending.messageId}\`` },
+                { type: 10, content: `-# End — ${discordTimestamp(result.endTime, 'F')}\n-# Message ID: \`${targetMessageId}\`` },
                 { type: 14 },
                 { type: 1, components: [
                   { type: 2, custom_id: `timer_post|${playerId}|${result.durationMs}|${pending.messageId}|${targetMessageId}`, label: 'Post Publicly', style: 2, emoji: { name: '📢' } }
