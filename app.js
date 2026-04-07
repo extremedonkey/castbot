@@ -2514,7 +2514,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               components: [
                 { type: 10, content: `## ❄️ Timer | Start Marked` },
                 { type: 14 },
-                { type: 10, content: `### \`\`\`▶️ Player\`\`\`\n${playerId ? `<@${playerId}>` : 'Unknown'}` },
+                { type: 10, content: `### \`\`\`⏱️ Started\`\`\`\n**${playerId ? `<@${playerId}>` : 'Unknown'}**` },
                 { type: 14 },
                 { type: 10, content: `-# Start — ${discordTimestamp(timestamp, 'F')} (${discordTimestamp(timestamp, 'R')})\n-# Message ID: \`${targetMessageId}\`` }
               ]

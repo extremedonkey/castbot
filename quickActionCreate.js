@@ -392,9 +392,10 @@ export async function handleQuickCurrencySubmit(guildId, userId, coordinate, mod
     const verb = parsedAmount > 0 ? 'Gives' : 'Removes';
     console.log(`⚡ QUICK CURRENCY: Created action ${actionId} at ${coordinate} — ${verb} ${Math.abs(parsedAmount)} ${customTerms.currencyName}`);
 
-    // Return Action Editor UI
+    // Return Action Editor UI (null coordinate for global actions)
     const { createCustomActionEditorUI } = await import('./customActionUI.js');
-    return await createCustomActionEditorUI({ guildId, actionId, coordinate });
+    const editorCoordinate = coordinate === 'global' ? null : coordinate;
+    return await createCustomActionEditorUI({ guildId, actionId, coordinate: editorCoordinate });
 }
 
 /**
@@ -475,7 +476,8 @@ export async function handleQuickTextSubmit(guildId, userId, coordinate, modalCo
     console.log(`⚡ QUICK TEXT: Created action ${actionId} at ${coordinate} — Display: "${buttonName}"`);
 
     const { createCustomActionEditorUI } = await import('./customActionUI.js');
-    return await createCustomActionEditorUI({ guildId, actionId, coordinate });
+    const editorCoordinate = coordinate === 'global' ? null : coordinate;
+    return await createCustomActionEditorUI({ guildId, actionId, coordinate: editorCoordinate });
 }
 
 /**
