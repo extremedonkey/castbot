@@ -5035,10 +5035,20 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       console.log(`🚀 DEBUG: Safari Custom Action - ALWAYS using deferred response to prevent webhook timeout`);
       console.log(`🔍 DEBUG: Will try buttonId: "${fullButtonId}" first, then "${buttonIdWithoutTimestamp}" if not found`);
 
+      // Pre-load button BEFORE CIF to determine display mode for the deferred ACK.
+      // The ACK locks ephemeral status — we must know displayMode before it's sent.
+      const { getCustomButton: preloadGetButton } = await import('./safariManager.js');
+      const preloadedButton = await preloadGetButton(guildId, fullButtonId) || await preloadGetButton(guildId, buttonIdWithoutTimestamp);
+      const isPublicAction = preloadedButton?.displayMode === 'public';
+      if (isPublicAction) {
+        console.log(`📢 DEBUG: Action has displayMode=public — deferred ACK will be non-ephemeral`);
+      }
+
       // Always use deferred pattern for ALL Safari Custom Actions
       return ButtonHandlerFactory.create({
         id: custom_id,
         deferred: true, // ALWAYS defer Safari buttons to prevent webhook timeout
+        ephemeral: !isPublicAction, // Public actions get non-ephemeral ACK
         handler: async (context) => {
           console.log(`🔍 START (DEFERRED): ${custom_id} - user ${context.userId}`);
 
@@ -5101,7 +5111,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           console.log(`✅ SUCCESS (DEFERRED): ${custom_id} - completed`);
           return {
             ...result,
-            ephemeral: true // Make all Safari custom action responses ephemeral
+            ephemeral: !isPublicAction // Public actions → visible to all; private → ephemeral
           };
         }
       })(req, res, client);
