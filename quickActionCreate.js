@@ -53,7 +53,7 @@ export function buildQuickTextModal(coordinate) {
             },
             {
                 type: 18,
-                label: 'Text to Display',
+                label: 'Text to display',
                 description: 'The main text shown when the action triggers. Supports markdown.',
                 component: {
                     type: 4,

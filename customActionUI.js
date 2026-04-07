@@ -4501,7 +4501,7 @@ export async function handleDisplayTextEdit(guildId, userId, customId) {
             value: action?.config?.title || action?.title || '',
             placeholder: 'e.g., "Welcome to the Adventure!"'
         }},
-        { type: 18, label: 'Text to Display',
+        { type: 18, label: 'Text to display',
           description: 'The main text shown when the action triggers. Supports markdown.',
           component: {
             type: 4, custom_id: 'action_content', style: 2,
