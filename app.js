@@ -2559,7 +2559,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 { type: 10, content: `**Player**: <@${playerId}>\n**Duration**: **${result.formatted}**${result.reversed ? ' ⚠️ *reversed*' : ''}\n\n-# Start: ${discordTimestamp(result.startTime, 'F')} → End: ${discordTimestamp(result.endTime, 'F')}` },
                 { type: 14 },
                 { type: 1, components: [
-                  { type: 2, custom_id: `timer_post|${playerId}|${result.durationMs}|${result.startTime}|${result.endTime}`, label: 'Post Publicly', style: 2, emoji: { name: '📢' } }
+                  { type: 2, custom_id: `timer_post|${playerId}|${result.durationMs}|${result.startTime}|${result.endTime}|${pending.messageId}|${targetMessageId}`, label: 'Post Publicly', style: 2, emoji: { name: '📢' } }
                 ]}
               ]
             }]
@@ -7535,6 +7535,8 @@ To fix this:
           const durationMs = parseInt(parts[2]);
           const startTime = parseInt(parts[3]);
           const endTime = parseInt(parts[4]);
+          const startMsgId = parts[5];
+          const endMsgId = parts[6];
           const formatted = formatDuration(durationMs);
 
           return {
@@ -7546,7 +7548,8 @@ To fix this:
                 { type: 14 },
                 { type: 10, content: `**Player**: <@${playerId}>\n**Duration**: **${formatted}**` },
                 { type: 14 },
-                { type: 10, content: `-# Start — ${discordTimestamp(startTime, 'F')}\n-# End — ${discordTimestamp(endTime, 'F')}` }
+                { type: 10, content: `-# Start — ${discordTimestamp(startTime, 'F')}\n-# Message ID: \`${startMsgId}\`` },
+                { type: 10, content: `-# End — ${discordTimestamp(endTime, 'F')}\n-# Message ID: \`${endMsgId}\`` }
               ]
             }]
           };

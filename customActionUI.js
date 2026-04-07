@@ -3,7 +3,7 @@
 
 import { SAFARI_LIMITS } from './config/safariLimits.js';
 import { loadEntity, updateEntity } from './entityManager.js';
-import { loadSafariContent } from './safariManager.js';
+import { loadSafariContent, getCustomTerms } from './safariManager.js';
 import { scheduler } from './scheduler.js';
 import { formatPeriod, buildLimitOptions } from './utils/periodUtils.js';
 import { parseTextEmoji, resolveEmoji } from './utils/emojiUtils.js';
@@ -157,17 +157,35 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
   
   const selectRow = new ActionRowBuilder().addComponents(selectMenu);
   
+  // Build Quick Create buttons for global view (coordinate views have them in Location Actions menu)
+  const quickCreateRow = [];
+  if (!coordinate) {
+    const customTerms = await getCustomTerms(guildId);
+    const currencyLabel = `Quick ${customTerms.currencyName || 'Currency'}`;
+    const currencyEmoji = parseTextEmoji(customTerms.currencyEmoji || '🪙', '🪙').emoji;
+    quickCreateRow.push({
+      type: 1, // ActionRow
+      components: [
+        { type: 2, style: 2, label: 'Quick Text', custom_id: 'quick_text_global', emoji: { name: '📃' } },
+        { type: 2, style: 2, label: currencyLabel, custom_id: 'quick_currency_global', emoji: currencyEmoji },
+        { type: 2, style: 2, label: 'Quick Item', custom_id: 'quick_item_global', emoji: { name: '📦' } },
+        { type: 2, style: 2, label: 'Quick Enemy', custom_id: 'quick_enemy_global', emoji: { name: '🐙' } }
+      ]
+    });
+  }
+
   // Create container like stores handler
   const container = {
     type: 17, // Container
     accent_color: 0x3498db,
     components: [
       {
-        type: 10, // Text Display  
-        content: coordinate && mapId ? 
+        type: 10, // Text Display
+        content: coordinate && mapId ?
           `## ⚡ Actions for ${coordinate}\n\nSelect an action to manage or create a new one.` :
           `## ⚡ Actions\n\nSelect an action to manage or create a new one.`
       },
+      ...quickCreateRow,
       { type: 14 }, // Separator
       selectRow.toJSON() // Convert to JSON
     ]
