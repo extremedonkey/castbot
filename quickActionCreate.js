@@ -579,9 +579,10 @@ export async function handleQuickItemSubmit(guildId, userId, coordinate, modalCo
 
     console.log(`⚡ QUICK ITEM: Created action ${actionId} at ${coordinate} — Gives 1x ${itemName}`);
 
-    // Return Action Editor UI
+    // Return Action Editor UI (null coordinate for global actions)
     const { createCustomActionEditorUI } = await import('./customActionUI.js');
-    return await createCustomActionEditorUI({ guildId, actionId, coordinate });
+    const editorCoordinate = coordinate === 'global' ? null : coordinate;
+    return await createCustomActionEditorUI({ guildId, actionId, coordinate: editorCoordinate });
 }
 
 /**
@@ -712,6 +713,8 @@ export async function handleQuickEnemySubmit(guildId, userId, coordinate, modalC
 
     console.log(`⚡ QUICK ENEMY: Created action ${actionId} at ${coordinate} — Fight ${enemyName}`);
 
+    // Return Action Editor UI (null coordinate for global actions)
     const { createCustomActionEditorUI } = await import('./customActionUI.js');
-    return await createCustomActionEditorUI({ guildId, actionId, coordinate });
+    const editorCoordinate = coordinate === 'global' ? null : coordinate;
+    return await createCustomActionEditorUI({ guildId, actionId, coordinate: editorCoordinate });
 }
