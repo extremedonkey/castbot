@@ -33340,7 +33340,7 @@ Your server is now ready for Tycoons gameplay!`;
                   label: 'Command',
                   style: 1, // Short
                   required: true,
-                  placeholder: 'Enter command you want to try, e.g. hello, claude, sendmea, tomato',
+                  placeholder: 'e.g., password1234, my-idol-clue',
                   min_length: 1,
                   max_length: 100
                 }]
@@ -33372,7 +33372,7 @@ Your server is now ready for Tycoons gameplay!`;
                   label: 'Command',
                   style: 1, // Short
                   required: true,
-                  placeholder: 'Enter command you want to try, e.g. climb vines, check rock',
+                  placeholder: 'e.g., password1234, my-idol-clue',
                   min_length: 1,
                   max_length: 100
                 }]
