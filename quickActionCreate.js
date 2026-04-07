@@ -358,30 +358,34 @@ export async function handleQuickCurrencySubmit(guildId, userId, coordinate, mod
     action.trigger.button.style = style;
     action.style = style;
 
-    // Assign to coordinate
-    const activeMapId = safariData[guildId]?.maps?.active;
-    if (activeMapId) {
-        const coordData = safariData[guildId].maps[activeMapId].coordinates[coordinate];
-        if (coordData) {
-            if (!coordData.buttons) coordData.buttons = [];
-            if (!coordData.buttons.includes(actionId)) {
-                coordData.buttons.push(actionId);
+    // Assign to coordinate (skip for global actions)
+    if (coordinate && coordinate !== 'global') {
+        const activeMapId = safariData[guildId]?.maps?.active;
+        if (activeMapId) {
+            const coordData = safariData[guildId].maps[activeMapId].coordinates[coordinate];
+            if (coordData) {
+                if (!coordData.buttons) coordData.buttons = [];
+                if (!coordData.buttons.includes(actionId)) {
+                    coordData.buttons.push(actionId);
+                }
             }
-        }
-        if (!action.coordinates) action.coordinates = [];
-        if (!action.coordinates.includes(coordinate)) {
-            action.coordinates.push(coordinate);
+            if (!action.coordinates) action.coordinates = [];
+            if (!action.coordinates.includes(coordinate)) {
+                action.coordinates.push(coordinate);
+            }
         }
     }
 
     await saveSafariContent(safariData);
 
-    // Queue anchor update
-    try {
-        const { afterAddCoordinate } = await import('./anchorMessageIntegration.js');
-        await afterAddCoordinate(guildId, actionId, coordinate);
-    } catch (error) {
-        console.error('Error queueing anchor update after quick currency:', error);
+    // Queue anchor update only for coordinate-based actions
+    if (coordinate && coordinate !== 'global') {
+        try {
+            const { afterAddCoordinate } = await import('./anchorMessageIntegration.js');
+            await afterAddCoordinate(guildId, actionId, coordinate);
+        } catch (error) {
+            console.error('Error queueing anchor update after quick currency:', error);
+        }
     }
 
     const customTerms = await getCustomTerms(guildId);
@@ -442,24 +446,30 @@ export async function handleQuickTextSubmit(guildId, userId, coordinate, modalCo
         executeOn: 'true'
     });
 
-    const activeMapId = safariData[guildId]?.maps?.active;
-    if (activeMapId) {
-        const coordData = safariData[guildId].maps[activeMapId].coordinates[coordinate];
-        if (coordData) {
-            if (!coordData.buttons) coordData.buttons = [];
-            if (!coordData.buttons.includes(actionId)) coordData.buttons.push(actionId);
+    // Assign to coordinate (skip for global actions — coordinate='global' means no map assignment)
+    if (coordinate && coordinate !== 'global') {
+        const activeMapId = safariData[guildId]?.maps?.active;
+        if (activeMapId) {
+            const coordData = safariData[guildId].maps[activeMapId].coordinates[coordinate];
+            if (coordData) {
+                if (!coordData.buttons) coordData.buttons = [];
+                if (!coordData.buttons.includes(actionId)) coordData.buttons.push(actionId);
+            }
+            if (!action.coordinates) action.coordinates = [];
+            if (!action.coordinates.includes(coordinate)) action.coordinates.push(coordinate);
         }
-        if (!action.coordinates) action.coordinates = [];
-        if (!action.coordinates.includes(coordinate)) action.coordinates.push(coordinate);
     }
 
     await saveSafariContent(safariData);
 
-    try {
-        const { afterAddCoordinate } = await import('./anchorMessageIntegration.js');
-        await afterAddCoordinate(guildId, actionId, coordinate);
-    } catch (error) {
-        console.error('Error queueing anchor update after quick text:', error);
+    // Queue anchor update only for coordinate-based actions
+    if (coordinate && coordinate !== 'global') {
+        try {
+            const { afterAddCoordinate } = await import('./anchorMessageIntegration.js');
+            await afterAddCoordinate(guildId, actionId, coordinate);
+        } catch (error) {
+            console.error('Error queueing anchor update after quick text:', error);
+        }
     }
 
     console.log(`⚡ QUICK TEXT: Created action ${actionId} at ${coordinate} — Display: "${buttonName}"`);
@@ -535,30 +545,34 @@ export async function handleQuickItemSubmit(guildId, userId, coordinate, modalCo
         executeOn: 'true'
     });
 
-    // Assign to coordinate
-    const activeMapId = safariData[guildId]?.maps?.active;
-    if (activeMapId) {
-        const coordData = safariData[guildId].maps[activeMapId].coordinates[coordinate];
-        if (coordData) {
-            if (!coordData.buttons) coordData.buttons = [];
-            if (!coordData.buttons.includes(actionId)) {
-                coordData.buttons.push(actionId);
+    // Assign to coordinate (skip for global actions)
+    if (coordinate && coordinate !== 'global') {
+        const activeMapId = safariData[guildId]?.maps?.active;
+        if (activeMapId) {
+            const coordData = safariData[guildId].maps[activeMapId].coordinates[coordinate];
+            if (coordData) {
+                if (!coordData.buttons) coordData.buttons = [];
+                if (!coordData.buttons.includes(actionId)) {
+                    coordData.buttons.push(actionId);
+                }
             }
-        }
-        if (!action.coordinates) action.coordinates = [];
-        if (!action.coordinates.includes(coordinate)) {
-            action.coordinates.push(coordinate);
+            if (!action.coordinates) action.coordinates = [];
+            if (!action.coordinates.includes(coordinate)) {
+                action.coordinates.push(coordinate);
+            }
         }
     }
 
     await saveSafariContent(safariData);
 
-    // Queue anchor update
-    try {
-        const { afterAddCoordinate } = await import('./anchorMessageIntegration.js');
-        await afterAddCoordinate(guildId, actionId, coordinate);
-    } catch (error) {
-        console.error('Error queueing anchor update after quick item:', error);
+    // Queue anchor update only for coordinate-based actions
+    if (coordinate && coordinate !== 'global') {
+        try {
+            const { afterAddCoordinate } = await import('./anchorMessageIntegration.js');
+            await afterAddCoordinate(guildId, actionId, coordinate);
+        } catch (error) {
+            console.error('Error queueing anchor update after quick item:', error);
+        }
     }
 
     console.log(`⚡ QUICK ITEM: Created action ${actionId} at ${coordinate} — Gives 1x ${itemName}`);
@@ -668,24 +682,30 @@ export async function handleQuickEnemySubmit(guildId, userId, coordinate, modalC
         executeOn: 'always'
     });
 
-    const activeMapId = safariData[guildId]?.maps?.active;
-    if (activeMapId) {
-        const coordData = safariData[guildId].maps[activeMapId].coordinates[coordinate];
-        if (coordData) {
-            if (!coordData.buttons) coordData.buttons = [];
-            if (!coordData.buttons.includes(actionId)) coordData.buttons.push(actionId);
+    // Assign to coordinate (skip for global actions)
+    if (coordinate && coordinate !== 'global') {
+        const activeMapId = safariData[guildId]?.maps?.active;
+        if (activeMapId) {
+            const coordData = safariData[guildId].maps[activeMapId].coordinates[coordinate];
+            if (coordData) {
+                if (!coordData.buttons) coordData.buttons = [];
+                if (!coordData.buttons.includes(actionId)) coordData.buttons.push(actionId);
+            }
+            if (!action.coordinates) action.coordinates = [];
+            if (!action.coordinates.includes(coordinate)) action.coordinates.push(coordinate);
         }
-        if (!action.coordinates) action.coordinates = [];
-        if (!action.coordinates.includes(coordinate)) action.coordinates.push(coordinate);
     }
 
     await saveSafariContent(safariData);
 
-    try {
-        const { afterAddCoordinate } = await import('./anchorMessageIntegration.js');
-        await afterAddCoordinate(guildId, actionId, coordinate);
-    } catch (error) {
-        console.error('Error queueing anchor update after quick enemy:', error);
+    // Queue anchor update only for coordinate-based actions
+    if (coordinate && coordinate !== 'global') {
+        try {
+            const { afterAddCoordinate } = await import('./anchorMessageIntegration.js');
+            await afterAddCoordinate(guildId, actionId, coordinate);
+        } catch (error) {
+            console.error('Error queueing anchor update after quick enemy:', error);
+        }
     }
 
     console.log(`⚡ QUICK ENEMY: Created action ${actionId} at ${coordinate} — Fight ${enemyName}`);
