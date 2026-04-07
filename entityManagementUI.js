@@ -183,13 +183,16 @@ export async function createEntityManagementUI(options) {
             
             // Entity selector
             createEntitySelector(filteredEntities, selectedId, entityType, searchTerm),
-            
+
+            // For map_cell, show field group buttons directly under the selector
+            ...(selectedEntity && entityType === 'map_cell' ? createFieldGroupButtons('map_cell', selectedId, activeFieldGroup) : []),
+
             // Show entity details if selected
             ...(selectedEntity ? [
                 { type: 14 }, // Separator
                 createEntityDisplay(selectedEntity, entityType, guildData.safariConfig)
             ] : []),
-            
+
             // Mode-specific UI
             ...(selectedEntity ? await createModeSpecificUI(mode, entityType, selectedId, selectedEntity, activeFieldGroup, guildId, userId) : [])
         ]
@@ -477,7 +480,8 @@ async function createModeSpecificUI(mode, entityType, entityId, entity, activeFi
 async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, guildId) {
     const components = [
         { type: 14 }, // Separator
-        ...createFieldGroupButtons(entityType, entityId, activeFieldGroup),
+        // Field group buttons are shown under the selector for map_cell (in createEntityManagementUI)
+        ...(entityType !== 'map_cell' ? createFieldGroupButtons(entityType, entityId, activeFieldGroup) : []),
     ];
 
     // Add Quick Create row for map cells (Actions + Quick Item + Quick Currency)
