@@ -5409,6 +5409,34 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           return result;
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('dnc_overview_')) {
+      // DNC Overview — global DNC conflict view for all season applicants (new ephemeral message)
+      return ButtonHandlerFactory.create({
+        id: 'dnc_overview',
+        updateMessage: false, // New ephemeral message, don't replace Cast Ranking card
+        handler: async (context) => {
+          console.log(`🔍 START: dnc_overview - user ${context.userId}`);
+
+          const { guildId, userId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
+          const member = await guild.members.fetch(userId);
+
+          // Permission check — same as all Cast Ranking handlers
+          if (!hasCastRankingPermissions(member, guildId)) {
+            return {
+              content: '❌ You need Manage Roles or Manage Channels permissions to access the DNC Overview.',
+              ephemeral: true
+            };
+          }
+
+          const configId = context.customId.replace('dnc_overview_', '');
+          const { generateDncOverviewUI } = await import('./castRankingManager.js');
+          const result = await generateDncOverviewUI({ guildId, configId, guild });
+
+          console.log(`✅ SUCCESS: dnc_overview - ephemeral UI created`);
+          return result;
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('ranking_prev_') || custom_id.startsWith('ranking_next_') || custom_id.startsWith('ranking_view_all_scores')) {
       // Handle ranking navigation and view all scores - USING CAST RANKING MANAGER
       const isEphemeral = custom_id.includes('_ephemeral');

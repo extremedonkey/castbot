@@ -458,6 +458,12 @@ export async function generateSeasonAppRankingUI({
           .setStyle(ButtonStyle.Secondary)
           .toJSON(),
         new ButtonBuilder()
+          .setCustomId(`dnc_overview_${configId}`)
+          .setLabel('DNC List')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('🚷')
+          .toJSON(),
+        new ButtonBuilder()
           .setCustomId(`delete_application_mode_${currentApp.channelId}_${appIndex}_${configId}`)
           .setLabel('Delete App')
           .setStyle(ButtonStyle.Danger)
@@ -483,6 +489,91 @@ export async function generateSeasonAppRankingUI({
   return {
     flags: ephemeral ? ((1 << 15) | (1 << 6)) : (1 << 15), // IS_COMPONENTS_V2 + EPHEMERAL if personal
     components: [castRankingContainer]
+  };
+}
+
+/**
+ * Generate the DNC Overview screen — global view of all DNC entries and conflicts.
+ * Always returns a new ephemeral message (does not update the Cast Ranking card).
+ *
+ * @param {Object} params
+ * @param {string} params.guildId - Discord guild ID
+ * @param {string} params.configId - Season config ID
+ * @param {Object} params.guild - Discord guild object
+ * @returns {Object} Complete ephemeral UI response
+ */
+export async function generateDncOverviewUI({ guildId, configId, guild }) {
+  const playerData = await loadPlayerData();
+  const { getApplicationsForSeason } = await import('./storage.js');
+  const { buildGlobalDncOverview } = await import('./dncManager.js');
+
+  const allApplications = await getApplicationsForSeason(guildId, configId);
+  const seasonConfig = playerData[guildId]?.applicationConfigs?.[configId];
+  const seasonName = seasonConfig?.seasonName || 'Current Season';
+
+  const overview = buildGlobalDncOverview(allApplications, playerData, guildId);
+
+  const components = [
+    { type: 10, content: `## 🚷 DNC Overview | ${seasonName}` },
+    { type: 14 }
+  ];
+
+  if (overview.hasConflicts) {
+    // Red state: conflicts detected + all entries
+    components.push(
+      { type: 10, content: `### \`\`\`⚠️ Conflicts Detected\`\`\`\n-# These applicants have cross-listed each other — casting them together is high risk.` },
+      { type: 10, content: overview.conflictText }
+    );
+    if (overview.hasEntries) {
+      components.push(
+        { type: 14 },
+        { type: 10, content: `### \`\`\`📋 All DNC Entries\`\`\`\n-# ${overview.stats.withEntries} of ${overview.stats.total} applicants have DNC entries` },
+        { type: 10, content: overview.entriesText }
+      );
+    }
+  } else if (overview.hasEntries) {
+    // Blue state: entries exist but no conflicts
+    components.push(
+      { type: 10, content: `### \`\`\`✅ No Conflicts\`\`\`\n-# No cross-listed DNC entries found. Safe to cast freely.` },
+      { type: 14 },
+      { type: 10, content: `### \`\`\`📋 All DNC Entries\`\`\`\n-# ${overview.stats.withEntries} of ${overview.stats.total} applicants have DNC entries` },
+      { type: 10, content: overview.entriesText }
+    );
+  } else {
+    // Green state: no entries at all
+    components.push(
+      { type: 10, content: `### \`\`\`✅ All Clear\`\`\`\n-# No applicants have submitted DNC entries this season.\n-# You're free to cast without DNC constraints.` }
+    );
+  }
+
+  // Navigation — back to Cast Ranking
+  components.push(
+    { type: 14 },
+    {
+      type: 1,
+      components: [
+        new ButtonBuilder()
+          .setCustomId(`season_app_ranking_${configId}`)
+          .setLabel('← Cast Ranking')
+          .setStyle(ButtonStyle.Secondary)
+          .toJSON()
+      ]
+    }
+  );
+
+  const container = {
+    type: 17,
+    accent_color: overview.accentColor,
+    components
+  };
+
+  // Validate component count
+  const { countComponents } = await import('./utils.js');
+  countComponents([container], { enableLogging: true, label: 'DNC Overview' });
+
+  return {
+    flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 + EPHEMERAL — always private
+    components: [container]
   };
 }
 

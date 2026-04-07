@@ -405,3 +405,177 @@ export function buildDncSummary(application) {
 
   return `**DNC — Names:** ${names}\n**DNC — Issues:** ${issues || 'No details provided'}`;
 }
+
+/**
+ * Build global DNC overview for all applicants in a season.
+ * Computes conflict matrix, deduplicates bidirectional results into pairs,
+ * classifies mutual vs one-way, and formats for display.
+ *
+ * @param {Array} allApplications - All applications in the season
+ * @param {Object} playerData - Full playerData for the guild
+ * @param {string} guildId - Guild ID
+ * @returns {{ conflictText: string, entriesText: string, hasConflicts: boolean, hasEntries: boolean, stats: Object, accentColor: number }}
+ */
+export function buildGlobalDncOverview(allApplications, playerData, guildId) {
+  const applicantsWithDnc = [];
+  const conflictPairs = new Map(); // key: sorted channelId pair
+  const tierOrder = { exact: 3, username: 2, name: 1 };
+
+  // Phase 1: Collect DNC entries and compute conflicts for each applicant
+  for (const app of allApplications) {
+    const appData = playerData[guildId]?.applications?.[app.channelId];
+    if (!appData) continue;
+
+    const entries = getDncEntries(appData);
+    if (entries.length > 0) {
+      applicantsWithDnc.push({
+        name: appData.displayName || appData.username || 'Unknown',
+        channelId: app.channelId,
+        entries
+      });
+    }
+
+    // Run conflict detection (reuses existing bidirectional logic)
+    const conflicts = findDncConflicts(appData, allApplications, playerData, guildId);
+    for (const conflict of conflicts) {
+      const pairKey = [app.channelId, conflict.otherChannelId].sort().join('_');
+
+      if (!conflictPairs.has(pairKey)) {
+        conflictPairs.set(pairKey, {
+          listers: new Map(), // listerChannelId -> { entry, listerName }
+          tier: conflict.tier,
+          names: {}
+        });
+      }
+
+      const pair = conflictPairs.get(pairKey);
+
+      // Determine who actually did the listing and deduplicate by lister
+      if (conflict.direction === 'current_listed_other') {
+        // Current app (app) listed the other — lister is app
+        if (!pair.listers.has(app.channelId)) {
+          pair.listers.set(app.channelId, {
+            entry: conflict.entry,
+            listerName: appData.displayName || appData.username || 'Unknown',
+            targetName: conflict.otherName
+          });
+        }
+      } else {
+        // Other listed current — lister is the other applicant
+        if (!pair.listers.has(conflict.otherChannelId)) {
+          pair.listers.set(conflict.otherChannelId, {
+            entry: conflict.entry,
+            listerName: conflict.otherName,
+            targetName: appData.displayName || appData.username || 'Unknown'
+          });
+        }
+      }
+
+      // Track names for display
+      pair.names[app.channelId] = appData.displayName || appData.username || 'Unknown';
+      pair.names[conflict.otherChannelId] = conflict.otherName;
+
+      // Keep best tier
+      if ((tierOrder[conflict.tier] || 0) > (tierOrder[pair.tier] || 0)) {
+        pair.tier = conflict.tier;
+      }
+    }
+  }
+
+  // Phase 2: Classify pairs as mutual (both listed each other) vs one-way
+  const mutualConflicts = [];
+  const oneWayConflicts = [];
+
+  for (const [, pair] of conflictPairs) {
+    // Mutual = two different listers (both applicants listed each other)
+    pair.isMutual = pair.listers.size >= 2;
+
+    if (pair.isMutual) {
+      mutualConflicts.push(pair);
+    } else {
+      oneWayConflicts.push(pair);
+    }
+  }
+
+  // Sort each group by tier (exact first)
+  const sortByTier = (a, b) => (tierOrder[b.tier] || 0) - (tierOrder[a.tier] || 0);
+  mutualConflicts.sort(sortByTier);
+  oneWayConflicts.sort(sortByTier);
+
+  // Phase 3: Format conflict text
+  let conflictText = '';
+  const allConflicts = [...mutualConflicts, ...oneWayConflicts];
+
+  if (allConflicts.length > 0) {
+    const lines = [];
+    for (const pair of allConflicts) {
+      const tierSuffix = pair.tier === 'exact' ? '' : pair.tier === 'username' ? ' (username match)' : ' (possible match)';
+      const listerEntries = Array.from(pair.listers.values());
+
+      if (pair.isMutual) {
+        const names = Object.values(pair.names);
+        lines.push(`🔴 **${names[0]}** ↔ **${names[1]}** — mutual conflict${tierSuffix}`);
+      } else {
+        // One-way: single lister
+        const lister = listerEntries[0];
+        lines.push(`🟡 **${lister.listerName}** → **${lister.targetName}** (one-way)${tierSuffix}`);
+      }
+
+      // Add reasons from each lister
+      for (const lister of listerEntries) {
+        if (lister.entry?.issues) {
+          const truncated = lister.entry.issues.length > 100
+            ? lister.entry.issues.substring(0, 97) + '...'
+            : lister.entry.issues;
+          lines.push(`> ${lister.listerName}: "${truncated}"`);
+        }
+      }
+    }
+    conflictText = lines.join('\n');
+  }
+
+  // Phase 4: Format entries text (all applicants with DNC, sorted alphabetically)
+  let entriesText = '';
+  if (applicantsWithDnc.length > 0) {
+    applicantsWithDnc.sort((a, b) => a.name.localeCompare(b.name));
+    const lines = [];
+
+    for (const applicant of applicantsWithDnc) {
+      const countLabel = applicant.entries.length === 1 ? '1 entry' : `${applicant.entries.length} entries`;
+      lines.push(`**${applicant.name}** — ${countLabel}`);
+
+      for (const entry of applicant.entries) {
+        const usernameDisplay = entry.username ? ` (@${entry.username})` : '';
+        if (entry.issues) {
+          const truncated = entry.issues.length > 100
+            ? entry.issues.substring(0, 97) + '...'
+            : entry.issues;
+          lines.push(`> 🚷 ${entry.name}${usernameDisplay}: "${truncated}"`);
+        } else {
+          lines.push(`> 🚷 ${entry.name}${usernameDisplay}: (no details)`);
+        }
+      }
+    }
+    entriesText = lines.join('\n');
+  }
+
+  // Phase 5: Stats and accent color
+  const hasConflicts = conflictPairs.size > 0;
+  const hasEntries = applicantsWithDnc.length > 0;
+  const accentColor = hasConflicts ? 0xe74c3c   // red
+    : hasEntries ? 0x3498DB                       // blue
+    : 0x27ae60;                                   // green
+
+  return {
+    conflictText,
+    entriesText,
+    hasConflicts,
+    hasEntries,
+    stats: {
+      total: allApplications.length,
+      withEntries: applicantsWithDnc.length,
+      conflictCount: conflictPairs.size
+    },
+    accentColor
+  };
+}

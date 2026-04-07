@@ -1398,6 +1398,14 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'ranking'
   },
+  'dnc_overview': {
+    label: '🚷 DNC List',
+    description: 'View global DNC overview with conflict detection for all season applicants',
+    emoji: '🚷',
+    style: 'Secondary',
+    category: 'ranking',
+    parent: 'season_app_ranking'
+  },
 
   // === CASTLIST HUB ===
   'castlist_hub_main': {
