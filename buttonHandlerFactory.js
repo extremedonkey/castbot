@@ -1704,6 +1704,14 @@ export const BUTTON_REGISTRY = {
     category: 'safari'
   },
   // Quick Create buttons
+  'quick_text_*': {
+    label: 'Quick Text',
+    description: 'Quick-create a display text action at a location',
+    emoji: '📃',
+    style: 'Secondary',
+    category: 'safari_quick_create',
+    requiresModal: true
+  },
   'quick_currency_*': {
     label: 'Quick Currency',
     description: 'Quick-create a give currency action at a location',

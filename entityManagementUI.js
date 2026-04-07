@@ -287,7 +287,8 @@ function createEntitySelector(entities, selectedId, entityType, searchTerm) {
         let name, emoji;
         
         if (entityType === 'map_cell') {
-            name = id; // Use coordinate as name (e.g., "A1")
+            const title = entity.baseContent?.title;
+            name = title ? `${id} | ${title}` : id;
             emoji = entity.emoji || '📍';
         } else {
             name = entity.name || entity.label || 'Unnamed';
@@ -495,6 +496,13 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
                         label: 'Actions',
                         custom_id: `entity_field_group_map_cell_${entityId}_interaction`,
                         emoji: { name: '⚡' }
+                    },
+                    {
+                        type: 2, // Button
+                        style: 2,
+                        label: 'Quick Text',
+                        custom_id: `quick_text_${entityId}`,
+                        emoji: { name: '📃' }
                     },
                     {
                         type: 2, // Button

@@ -33156,6 +33156,21 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
     
     // ─── Quick Create Handlers ───────────────────────────────────────────
+    } else if (custom_id.startsWith('quick_text_') && !custom_id.startsWith('quick_text_modal_')) {
+      // Quick Text button — show modal
+      const coord = custom_id.replace('quick_text_', '');
+      try {
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        const { buildQuickTextModal } = await import('./quickActionCreate.js');
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: buildQuickTextModal(coord)
+        });
+      } catch (error) {
+        console.error('Error showing quick text modal:', error);
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Error opening Quick Text modal.', flags: InteractionResponseFlags.EPHEMERAL } });
+      }
+
     } else if (custom_id.startsWith('quick_currency_') && !custom_id.startsWith('quick_currency_modal_')) {
       // Quick Currency button — show modal
       const coord = custom_id.replace('quick_currency_', '');
@@ -47026,6 +47041,24 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     // ─── Quick Create Modal Submissions ──────────────────────────────────
+    } else if (custom_id.startsWith('quick_text_modal_')) {
+      try {
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        const coordinate = custom_id.replace('quick_text_modal_', '');
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+
+        const { handleQuickTextSubmit } = await import('./quickActionCreate.js');
+        const result = await handleQuickTextSubmit(guildId, userId, coordinate, components);
+        if (result.error) {
+          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ ${result.error}`, flags: InteractionResponseFlags.EPHEMERAL } });
+        }
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...result, flags: (1 << 15) } });
+      } catch (error) {
+        console.error('Error handling quick text modal:', error);
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Error: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL } });
+      }
+
     } else if (custom_id.startsWith('quick_currency_modal_')) {
       try {
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;

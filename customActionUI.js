@@ -4493,29 +4493,37 @@ export async function handleDisplayTextEdit(guildId, userId, customId) {
       custom_id: `safari_display_text_save_${buttonId}_${actionIndex}`,
       title: action ? 'Edit Text Display Action' : 'Create Text Display Action',
       components: [
-        { type: 18, label: 'Title (optional)', component: {
-          type: 4, custom_id: 'action_title', style: 1,
-          required: false, max_length: 100,
-          value: action?.config?.title || action?.title || '',
-          placeholder: 'e.g., "Welcome to the Adventure!"'
+        { type: 18, label: 'Title (optional)',
+          description: 'Heading shown above the text content.',
+          component: {
+            type: 4, custom_id: 'action_title', style: 1,
+            required: false, max_length: 100,
+            value: action?.config?.title || action?.title || '',
+            placeholder: 'e.g., "Welcome to the Adventure!"'
         }},
-        { type: 18, label: 'Content', component: {
-          type: 4, custom_id: 'action_content', style: 2,
-          required: true, max_length: 2000,
-          value: action?.config?.content || action?.content || '',
-          placeholder: 'The text to display when the action is triggered...'
+        { type: 18, label: 'Text to Display',
+          description: 'The main text shown when the action triggers. Supports markdown.',
+          component: {
+            type: 4, custom_id: 'action_content', style: 2,
+            required: true, max_length: 2000,
+            value: action?.config?.content || action?.content || '',
+            placeholder: 'The text to display when the action is triggered...'
         }},
-        { type: 18, label: 'Accent Color (optional)', component: {
-          type: 4, custom_id: 'action_color', style: 1,
-          required: false, max_length: 10,
-          value: action?.config?.color || action?.color || '',
-          placeholder: 'e.g., #3498db or ff5722'
+        { type: 18, label: 'Accent Color (optional)',
+          description: 'Hex color for the container border (e.g., #3498db).',
+          component: {
+            type: 4, custom_id: 'action_color', style: 1,
+            required: false, max_length: 10,
+            value: action?.config?.color || action?.color || '',
+            placeholder: 'e.g., #3498db or ff5722'
         }},
-        { type: 18, label: 'Image URL (optional)', component: {
-          type: 4, custom_id: 'action_image', style: 1,
-          required: false, max_length: 500,
-          value: action?.config?.image || action?.image || '',
-          placeholder: 'Enter link of an image you have uploaded to Discord.'
+        { type: 18, label: 'Image URL (optional)',
+          description: 'Direct link to an image uploaded to Discord.',
+          component: {
+            type: 4, custom_id: 'action_image', style: 1,
+            required: false, max_length: 500,
+            value: action?.config?.image || action?.image || '',
+            placeholder: 'Enter link of an image you have uploaded to Discord.'
         }}
       ]
     }

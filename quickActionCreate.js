@@ -20,6 +20,93 @@ const COLOR_OPTIONS = [
     { label: 'Red (Danger)', value: 'Danger', emoji: { name: '🔴' } }
 ];
 
+// Map button style to accent color hex for display_text outcomes
+const STYLE_TO_ACCENT_COLOR = {
+    'Primary': '3498db',
+    'Secondary': '95a5a6',
+    'Success': '2ecc71',
+    'Danger': 'e74c3c'
+};
+
+/**
+ * Build the Quick Text modal — 5 fields
+ * @param {string} coordinate - Map coordinate (e.g. "A2")
+ * @returns {object} Modal interaction response data
+ */
+export function buildQuickTextModal(coordinate) {
+    return {
+        custom_id: `quick_text_modal_${coordinate}`,
+        title: 'Quick Text Action',
+        components: [
+            {
+                type: 18,
+                label: 'Button Name',
+                description: 'Label on the button the player clicks. Also used as the display text title.',
+                component: {
+                    type: 4,
+                    custom_id: 'button_name',
+                    style: 1,
+                    placeholder: 'e.g., "Read the Sign"',
+                    required: true,
+                    max_length: 80
+                }
+            },
+            {
+                type: 18,
+                label: 'Text to Display',
+                description: 'The main text shown when the action triggers. Supports markdown.',
+                component: {
+                    type: 4,
+                    custom_id: 'display_content',
+                    style: 2, // Paragraph
+                    placeholder: 'The text to display when the action is triggered...',
+                    required: true,
+                    max_length: 2000
+                }
+            },
+            {
+                type: 18,
+                label: 'Button Emoji (Optional)',
+                description: 'Emoji that appears on the button.',
+                component: {
+                    type: 4,
+                    custom_id: 'button_emoji',
+                    style: 1,
+                    placeholder: 'e.g., 📃',
+                    required: false,
+                    max_length: 100
+                }
+            },
+            {
+                type: 18,
+                label: 'Usage Limit',
+                description: 'How many times can this action be used?',
+                component: {
+                    type: 3,
+                    custom_id: 'usage_limit',
+                    placeholder: 'Select usage limit...',
+                    min_values: 1,
+                    max_values: 1,
+                    options: LIMIT_OPTIONS
+                }
+            },
+            {
+                type: 18,
+                label: 'Button Color',
+                description: 'Color of the button. Also sets the accent color of the text display.',
+                component: {
+                    type: 3,
+                    custom_id: 'button_color',
+                    placeholder: 'Select button color...',
+                    min_values: 1,
+                    max_values: 1,
+                    options: COLOR_OPTIONS
+                }
+            }
+        ]
+    };
+}
+
 /**
  * Build the Quick Currency modal — 5 fields
  * @param {string} coordinate - Map coordinate (e.g. "A2")
@@ -302,6 +389,81 @@ export async function handleQuickCurrencySubmit(guildId, userId, coordinate, mod
     console.log(`⚡ QUICK CURRENCY: Created action ${actionId} at ${coordinate} — ${verb} ${Math.abs(parsedAmount)} ${customTerms.currencyName}`);
 
     // Return Action Editor UI
+    const { createCustomActionEditorUI } = await import('./customActionUI.js');
+    return await createCustomActionEditorUI({ guildId, actionId, coordinate });
+}
+
+/**
+ * Handle Quick Text modal submission — creates action with display_text outcome, returns Action Editor
+ */
+export async function handleQuickTextSubmit(guildId, userId, coordinate, modalComponents) {
+    const { createCustomButton, loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+
+    const buttonName = getModalValue(modalComponents[0]);
+    const displayContent = getModalValue(modalComponents[1]);
+    const emojiInput = getModalValue(modalComponents[2]);
+    const limitType = getModalValue(modalComponents[3]) || 'once_per_player';
+    const style = getModalValue(modalComponents[4]) || 'Primary';
+
+    if (!buttonName) return { error: 'Button name is required.' };
+    if (!displayContent) return { error: 'Text to display is required.' };
+
+    let buttonEmoji = null;
+    if (emojiInput) {
+        const { createSafeEmoji } = await import('./safariButtonHelper.js');
+        const validated = await createSafeEmoji(emojiInput);
+        if (validated) buttonEmoji = emojiInput;
+    }
+
+    const actionId = await createCustomButton(guildId, {
+        label: buttonName, emoji: buttonEmoji, style, actions: [], tags: []
+    }, userId);
+
+    const safariData = await loadSafariContent();
+    const action = safariData[guildId].buttons[actionId];
+    action.name = buttonName;
+    action.description = '';
+    action.metadata = { ...action.metadata, createdVia: 'quick_text' };
+
+    if (!action.trigger) action.trigger = { type: 'button' };
+    if (!action.trigger.button) action.trigger.button = {};
+    action.trigger.button.style = style;
+    action.style = style;
+
+    action.actions.push({
+        type: 'display_text',
+        order: 0,
+        config: {
+            title: buttonName,
+            content: displayContent,
+            image: '',
+            color: STYLE_TO_ACCENT_COLOR[style] || '3498db'
+        },
+        executeOn: 'true'
+    });
+
+    const activeMapId = safariData[guildId]?.maps?.active;
+    if (activeMapId) {
+        const coordData = safariData[guildId].maps[activeMapId].coordinates[coordinate];
+        if (coordData) {
+            if (!coordData.buttons) coordData.buttons = [];
+            if (!coordData.buttons.includes(actionId)) coordData.buttons.push(actionId);
+        }
+        if (!action.coordinates) action.coordinates = [];
+        if (!action.coordinates.includes(coordinate)) action.coordinates.push(coordinate);
+    }
+
+    await saveSafariContent(safariData);
+
+    try {
+        const { afterAddCoordinate } = await import('./anchorMessageIntegration.js');
+        await afterAddCoordinate(guildId, actionId, coordinate);
+    } catch (error) {
+        console.error('Error queueing anchor update after quick text:', error);
+    }
+
+    console.log(`⚡ QUICK TEXT: Created action ${actionId} at ${coordinate} — Display: "${buttonName}"`);
+
     const { createCustomActionEditorUI } = await import('./customActionUI.js');
     return await createCustomActionEditorUI({ guildId, actionId, coordinate });
 }
