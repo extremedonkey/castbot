@@ -47885,8 +47885,9 @@ Your server is now ready for Tycoons gameplay!`;
 
           for (const actionId of Object.keys(safariData[guildId]?.buttons || {})) {
             const action = safariData[guildId].buttons[actionId];
+            const realCoords = (action.coordinates || []).filter(c => c !== 'global');
             if (action.trigger?.type === 'modal' &&
-                (!action.coordinates || action.coordinates.length === 0)) {
+                realCoords.length === 0) {
               const phrases = action.trigger.phrases || [];
               if (phrases.some(phrase => phrase.toLowerCase() === command)) {
                 matchingAction = { ...action, id: actionId };  // Add the actionId as id property
