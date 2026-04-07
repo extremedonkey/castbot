@@ -2559,7 +2559,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 { type: 10, content: `**Player**: <@${playerId}>\n**Duration**: **${result.formatted}**${result.reversed ? ' ⚠️ *reversed*' : ''}\n\n-# Start: ${discordTimestamp(result.startTime, 'F')} → End: ${discordTimestamp(result.endTime, 'F')}` },
                 { type: 14 },
                 { type: 1, components: [
-                  { type: 2, custom_id: `timer_post|${playerId}|${result.durationMs}|${result.startTime}|${result.endTime}|${pending.messageId}|${targetMessageId}`, label: 'Post Publicly', style: 2, emoji: { name: '📢' } }
+                  { type: 2, custom_id: `timer_post|${playerId}|${result.durationMs}|${pending.messageId}|${targetMessageId}`, label: 'Post Publicly', style: 2, emoji: { name: '📢' } }
                 ]}
               ]
             }]
@@ -7529,14 +7529,14 @@ To fix this:
         followUp: true,
         ephemeral: false,
         handler: async () => {
-          const { formatDuration, discordTimestamp } = await import('./timerUtils.js');
+          const { formatDuration, discordTimestamp, snowflakeToTimestamp } = await import('./timerUtils.js');
           const parts = custom_id.split('|');
           const playerId = parts[1];
           const durationMs = parseInt(parts[2]);
-          const startTime = parseInt(parts[3]);
-          const endTime = parseInt(parts[4]);
-          const startMsgId = parts[5];
-          const endMsgId = parts[6];
+          const startMsgId = parts[3];
+          const endMsgId = parts[4];
+          const startTime = snowflakeToTimestamp(startMsgId);
+          const endTime = snowflakeToTimestamp(endMsgId);
           const formatted = formatDuration(durationMs);
 
           return {

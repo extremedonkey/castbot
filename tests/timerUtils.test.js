@@ -337,3 +337,59 @@ describe('pendingStarts — in-memory state', () => {
     assert.equal(getAllPendingStarts('host1').size, 0);
   });
 });
+
+// ─────────────────────────────────────────────
+// Discord custom_id constraints
+// ─────────────────────────────────────────────
+
+describe('Discord custom_id encoding — must stay under 100 chars', () => {
+  // Discord rejects any component with custom_id > 100 characters.
+  // This caused a production break when we encoded too many values.
+  // These tests use worst-case Discord snowflake IDs (max 20 digits).
+  const DISCORD_CUSTOM_ID_LIMIT = 100;
+  const MAX_SNOWFLAKE = '99999999999999999999'; // 20 digits (theoretical max)
+  const MAX_PLAYER_ID = '99999999999999999999'; // 20 digits
+  const MAX_DURATION_MS = '999999999'; // ~11.5 days in ms (9 digits, realistic max)
+
+  it('timer_post custom_id fits with worst-case IDs', () => {
+    // Format: timer_post|playerId|durationMs|startMsgId|endMsgId
+    const customId = `timer_post|${MAX_PLAYER_ID}|${MAX_DURATION_MS}|${MAX_SNOWFLAKE}|${MAX_SNOWFLAKE}`;
+    assert.ok(
+      customId.length <= DISCORD_CUSTOM_ID_LIMIT,
+      `timer_post custom_id is ${customId.length} chars (max ${DISCORD_CUSTOM_ID_LIMIT}): ${customId}`
+    );
+  });
+
+  it('timer_post custom_id fits with realistic IDs', () => {
+    // Real Discord IDs are 18-19 digits currently (2026)
+    const playerId = '391415444084490240';     // 18 digits
+    const durationMs = '86400000';             // 24 hours (8 digits)
+    const startMsgId = '1491110871315779655';  // 19 digits
+    const endMsgId = '1491110875904335872';    // 19 digits
+    const customId = `timer_post|${playerId}|${durationMs}|${startMsgId}|${endMsgId}`;
+    assert.ok(
+      customId.length <= DISCORD_CUSTOM_ID_LIMIT,
+      `timer_post custom_id is ${customId.length} chars (max ${DISCORD_CUSTOM_ID_LIMIT}): ${customId}`
+    );
+  });
+
+  it('rejects encoding with too many fields (regression guard)', () => {
+    // This was the bug: 7 pipe-separated values exceeded 100 chars
+    // Format that BROKE: timer_post|playerId|durationMs|startTime|endTime|startMsgId|endMsgId
+    const brokenFormat = `timer_post|${MAX_PLAYER_ID}|${MAX_DURATION_MS}|${MAX_SNOWFLAKE}|${MAX_SNOWFLAKE}|${MAX_SNOWFLAKE}|${MAX_SNOWFLAKE}`;
+    assert.ok(
+      brokenFormat.length > DISCORD_CUSTOM_ID_LIMIT,
+      `6-value encoding should exceed limit to prove why we removed fields (${brokenFormat.length} chars)`
+    );
+  });
+
+  it('snowflake_calculator button custom_id fits', () => {
+    const customId = 'snowflake_calculator';
+    assert.ok(customId.length <= DISCORD_CUSTOM_ID_LIMIT);
+  });
+
+  it('snowflake_lookup button custom_id fits', () => {
+    const customId = 'snowflake_lookup';
+    assert.ok(customId.length <= DISCORD_CUSTOM_ID_LIMIT);
+  });
+});
