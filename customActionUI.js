@@ -3555,7 +3555,9 @@ export async function showDisplayTextConfig(guildId, buttonId, actionIndex) {
           content: (() => {
             const effectiveExecuteOn = action?.executeOn || global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true';
             const sectionEmoji = effectiveExecuteOn === 'always' ? '🔵' : effectiveExecuteOn === 'false' ? '🔴' : '🟢';
-            return `## 📝 Display Text Configuration ${sectionEmoji}\n${isEdit ? 'Editing' : 'Creating'} text display outcome`;
+            const displayMode = action?.config?.displayMode || 'ephemeral';
+            const modeLabel = displayMode === 'public' ? '📢 Public' : '👁️ Ephemeral';
+            return `## 📝 Display Text Configuration ${sectionEmoji}\n${isEdit ? 'Editing' : 'Creating'} text display outcome\n-# Display Mode: ${modeLabel}`;
           })()
         },
 
@@ -4485,60 +4487,59 @@ export async function handleDisplayTextEdit(guildId, userId, customId) {
     };
   }
   
-  // Create modal with pre-filled values from existing action
-  const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
-  
-  const modal = new ModalBuilder()
-    .setCustomId(`safari_display_text_save_${buttonId}_${actionIndex}`)
-    .setTitle(action ? 'Edit Text Display Action' : 'Create Text Display Action');
+  // Build modal with raw JSON (Label type 18 wrappers required for String Select support)
+  const currentDisplayMode = action?.config?.displayMode || 'ephemeral';
 
-  const titleInput = new TextInputBuilder()
-    .setCustomId('action_title')
-    .setLabel('Title (optional)')
-    .setPlaceholder('e.g., "Welcome to the Adventure!"')
-    .setStyle(TextInputStyle.Short)
-    .setRequired(false)
-    .setMaxLength(100)
-    .setValue(action?.config?.title || action?.title || '');
-
-  const contentInput = new TextInputBuilder()
-    .setCustomId('action_content')
-    .setLabel('Content')
-    .setPlaceholder('The text to display when the button is clicked...')
-    .setStyle(TextInputStyle.Paragraph)
-    .setRequired(true)
-    .setMaxLength(2000)
-    .setValue(action?.config?.content || action?.content || '');
-
-  const colorInput = new TextInputBuilder()
-    .setCustomId('action_color')
-    .setLabel('Accent Color (optional)')
-    .setPlaceholder('e.g., #3498db or ff5722')
-    .setStyle(TextInputStyle.Short)
-    .setRequired(false)
-    .setMaxLength(10)
-    .setValue(action?.config?.color || action?.color || '');
-
-  const imageInput = new TextInputBuilder()
-    .setCustomId('action_image')
-    .setLabel('Image URL (Optional)')
-    .setPlaceholder('Enter link of an image you have uploaded to Discord.')
-    .setStyle(TextInputStyle.Short)
-    .setRequired(false)
-    .setMaxLength(500)
-    .setValue(action?.config?.image || action?.image || '');
-
-  modal.addComponents(
-    new ActionRowBuilder().addComponents(titleInput),
-    new ActionRowBuilder().addComponents(contentInput),
-    new ActionRowBuilder().addComponents(colorInput),
-    new ActionRowBuilder().addComponents(imageInput)
-  );
-  
   console.log(`✅ SUCCESS: safari_display_text_edit - showing edit modal for ${buttonId}[${actionIndex}]`);
   return {
     type: 9, // MODAL
-    data: modal.toJSON()
+    data: {
+      custom_id: `safari_display_text_save_${buttonId}_${actionIndex}`,
+      title: action ? 'Edit Text Display Action' : 'Create Text Display Action',
+      components: [
+        { type: 18, label: 'Title (optional)', component: {
+          type: 4, custom_id: 'action_title', style: 1,
+          required: false, max_length: 100,
+          value: action?.config?.title || action?.title || '',
+          placeholder: 'e.g., "Welcome to the Adventure!"'
+        }},
+        { type: 18, label: 'Content', component: {
+          type: 4, custom_id: 'action_content', style: 2,
+          required: true, max_length: 2000,
+          value: action?.config?.content || action?.content || '',
+          placeholder: 'The text to display when the action is triggered...'
+        }},
+        { type: 18, label: 'Accent Color (optional)', component: {
+          type: 4, custom_id: 'action_color', style: 1,
+          required: false, max_length: 10,
+          value: action?.config?.color || action?.color || '',
+          placeholder: 'e.g., #3498db or ff5722'
+        }},
+        { type: 18, label: 'Image URL (optional)', component: {
+          type: 4, custom_id: 'action_image', style: 1,
+          required: false, max_length: 500,
+          value: action?.config?.image || action?.image || '',
+          placeholder: 'Enter link of an image you have uploaded to Discord.'
+        }},
+        { type: 18, label: 'Display Mode',
+          description: 'Who can see this text when the action triggers?',
+          component: {
+            type: 3, custom_id: 'display_mode',
+            required: false, min_values: 1, max_values: 1,
+            options: [
+              { label: 'Ephemeral (Recommended)', value: 'ephemeral',
+                description: 'Only the user who initiated the action will see it',
+                emoji: { name: '👁️' },
+                default: currentDisplayMode === 'ephemeral' },
+              { label: 'Public', value: 'public',
+                description: 'Message will be publicly posted in the channel',
+                emoji: { name: '📢' },
+                default: currentDisplayMode === 'public' }
+            ]
+          }
+        }
+      ]
+    }
   };
 }
 
@@ -4550,12 +4551,21 @@ export async function handleDisplayTextSave(guildId, customId, formData) {
   
   console.log(`💾 SAVE: safari_display_text_save - saving display_text for ${buttonId}[${actionIndex}]`);
   
-  // Extract form data (executeOn now handled by entity string select)
+  // Extract form data from Label (type 18) components by custom_id
   const components = formData.components;
-  const title = components[0].components[0].value?.trim() || '';
-  const content = components[1].components[0].value?.trim();
-  const color = components[2].components[0].value?.trim() || '';
-  const image = components[3].components[0].value?.trim() || '';
+  let title = '', content = '', color = '', image = '', displayMode = 'ephemeral';
+
+  for (const comp of components) {
+    if (comp.type !== 18 || !comp.component) continue;
+    const inner = comp.component;
+    switch (inner.custom_id) {
+      case 'action_title': title = inner.value?.trim() || ''; break;
+      case 'action_content': content = inner.value?.trim() || ''; break;
+      case 'action_color': color = inner.value?.trim() || ''; break;
+      case 'action_image': image = inner.value?.trim() || ''; break;
+      case 'display_mode': displayMode = inner.values?.[0] || 'ephemeral'; break;
+    }
+  }
   
   if (!content) {
     return {
@@ -4581,7 +4591,8 @@ export async function handleDisplayTextSave(guildId, customId, formData) {
   const actionConfig = {
     title: title,
     content: content,
-    image: image
+    image: image,
+    displayMode: displayMode
   };
   
   // Only include color if it's not empty
