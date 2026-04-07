@@ -2514,7 +2514,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               components: [
                 { type: 10, content: `## ❄️ Timer | Start Marked` },
                 { type: 14 },
-                { type: 10, content: `### \`\`\`⏱️ Started\`\`\`\n**${playerId ? `<@${playerId}>` : 'Unknown'}**` },
+                { type: 10, content: `**Player**: ${playerId ? `<@${playerId}>` : 'Unknown'}` },
                 { type: 14 },
                 { type: 10, content: `-# Start — ${discordTimestamp(timestamp, 'F')} (${discordTimestamp(timestamp, 'R')})\n-# Message ID: \`${targetMessageId}\`` }
               ]
@@ -2558,7 +2558,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               components: [
                 { type: 10, content: `## ❄️ Timer | Result` },
                 { type: 14 },
-                { type: 10, content: `### \`\`\`⏱️ Duration\`\`\`\n**${result.formatted}**${result.reversed ? ' ⚠️ *reversed*' : ''}\n\n-# Player: <@${playerId}>` },
+                { type: 10, content: `**Player**: <@${playerId}>\n**Duration**: **${result.formatted}**${result.reversed ? ' ⚠️ *reversed*' : ''}` },
                 { type: 14 },
                 { type: 10, content: `-# Start — ${discordTimestamp(result.startTime, 'F')}\n-# Message ID: \`${pending.messageId}\`` },
                 { type: 10, content: `-# End — ${discordTimestamp(result.endTime, 'F')}\n-# Message ID: \`${targetMessageId}\`` },
@@ -7549,7 +7549,7 @@ To fix this:
             components: [{
               type: 17, accent_color: 0x2ECC71,
               components: [
-                { type: 10, content: `## ❄️ Timer Result` },
+                { type: 10, content: `## ❄️ Timer | Result` },
                 { type: 14 },
                 { type: 10, content: `**Player**: <@${playerId}>\n**Duration**: **${formatted}**` },
                 { type: 14 },
@@ -50361,7 +50361,7 @@ Your server is now ready for Tycoons gameplay!`;
               components: [
                 { type: 10, content: `## ❄️ Calculator | Time between messages` },
                 { type: 14 },
-                { type: 10, content: `### \`\`\`⏱️ Duration\`\`\`\n**${result.formatted}**${result.reversed ? ' ⚠️ *reversed*' : ''}` },
+                { type: 10, content: `**Duration**: **${result.formatted}**${result.reversed ? ' ⚠️ *reversed*' : ''}` },
                 { type: 14 },
                 { type: 10, content: `-# Start — ${discordTimestamp(result.startTime, 'F')}\n-# Message ID: \`${startId}\`` },
                 { type: 10, content: `-# End — ${discordTimestamp(result.endTime, 'F')}\n-# Message ID: \`${endId}\`` },
@@ -50407,7 +50407,7 @@ Your server is now ready for Tycoons gameplay!`;
               components: [
                 { type: 10, content: `## ❄️ Snowflake | Message Details` },
                 { type: 14 },
-                { type: 10, content: `### \`\`\`🔍 Message Info\`\`\`\n**Created**: ${discordTimestamp(parsed.timestamp, 'F')}\n**How long ago**: ${discordTimestamp(parsed.timestamp, 'R')}` },
+                { type: 10, content: `**Created**: ${discordTimestamp(parsed.timestamp, 'F')}\n**How long ago**: ${discordTimestamp(parsed.timestamp, 'R')}` },
                 { type: 14 },
                 { type: 10, content: `-# Message ID: \`${messageId}\`\n-# Worker: ${parsed.workerId} | Process: ${parsed.processId} | Increment: ${parsed.increment}` },
                 { type: 14 },
