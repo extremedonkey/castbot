@@ -28796,7 +28796,7 @@ Your server is now ready for Tycoons gameplay!`;
               }
 
               const { countComponents } = await import('./utils.js');
-              countComponents(uiResponse.components, { verbosity: "summary", label: "Entity Field Group (stores)" });
+              countComponents(uiResponse.components, { verbosity: "full", label: "Entity Field Group (stores)" });
 
               return uiResponse;
 
@@ -28899,7 +28899,7 @@ Your server is now ready for Tycoons gameplay!`;
               
               // Build final response
               const { countComponents: countItemComponents } = await import('./utils.js');
-              countItemComponents([{ type: 17, components }], { verbosity: "summary", label: "Entity Field Group (items)" });
+              countItemComponents([{ type: 17, components }], { verbosity: "full", label: "Entity Field Group (items)" });
 
               return {
                 components: [{
@@ -28968,7 +28968,7 @@ Your server is now ready for Tycoons gameplay!`;
             );
             
             const { countComponents: countPropComponents } = await import('./utils.js');
-            countPropComponents(uiResponse.components, { verbosity: "summary", label: "Entity Field Group (properties)" });
+            countPropComponents(uiResponse.components, { verbosity: "full", label: "Entity Field Group (properties)" });
 
             return {
               ...uiResponse,
@@ -28998,7 +28998,7 @@ Your server is now ready for Tycoons gameplay!`;
             });
             
             const { countComponents: countInteractionComponents } = await import('./utils.js');
-            countInteractionComponents(customActionUI.components, { verbosity: "summary", label: "Entity Field Group (interaction)" });
+            countInteractionComponents(customActionUI.components, { verbosity: "full", label: "Entity Field Group (interaction)" });
 
             return {
               flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + ephemeral
@@ -29132,7 +29132,7 @@ Your server is now ready for Tycoons gameplay!`;
             });
 
             const { countComponents: countStatsComponents } = await import('./utils.js');
-            countStatsComponents([{ type: 17, accent_color: 0x5865f2, components: containerComponents }], { verbosity: "summary", label: "Entity Field Group (stats)" });
+            countStatsComponents([{ type: 17, accent_color: 0x5865f2, components: containerComponents }], { verbosity: "full", label: "Entity Field Group (stats)" });
 
             return {
               components: [{
