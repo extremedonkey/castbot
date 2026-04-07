@@ -3556,7 +3556,7 @@ export async function showDisplayTextConfig(guildId, buttonId, actionIndex) {
             const effectiveExecuteOn = action?.executeOn || global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true';
             const sectionEmoji = effectiveExecuteOn === 'always' ? '🔵' : effectiveExecuteOn === 'false' ? '🔴' : '🟢';
             const displayMode = action?.config?.displayMode || 'ephemeral';
-            const modeLabel = displayMode === 'public' ? '📢 Public' : '👁️ Ephemeral';
+            const modeLabel = displayMode === 'public' ? '📢 Public' : '🔇 Private';
             return `## 📝 Display Text Configuration ${sectionEmoji}\n${isEdit ? 'Editing' : 'Creating'} text display outcome\n-# Display Mode: ${modeLabel}`;
           })()
         },
@@ -4527,9 +4527,9 @@ export async function handleDisplayTextEdit(guildId, userId, customId) {
             type: 3, custom_id: 'display_mode',
             required: false, min_values: 1, max_values: 1,
             options: [
-              { label: 'Ephemeral (Recommended)', value: 'ephemeral',
-                description: 'Only the user who initiated the action will see it',
-                emoji: { name: '👁️' },
+              { label: 'Private (Recommended)', value: 'ephemeral',
+                description: 'Only the user who initiated the action will see it (Ephemeral)',
+                emoji: { name: '🔇' },
                 default: currentDisplayMode === 'ephemeral' },
               { label: 'Public', value: 'public',
                 description: 'Message will be publicly posted in the channel',
