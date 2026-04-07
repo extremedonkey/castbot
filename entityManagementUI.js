@@ -484,23 +484,30 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
         ...(entityType !== 'map_cell' ? createFieldGroupButtons(entityType, entityId, activeFieldGroup) : []),
     ];
 
-    // Add Quick Create row for map cells (Actions + Quick Item + Quick Currency)
+    // Add action select + Quick Create row for map cells
     if (entityType === 'map_cell' && guildId) {
         try {
             const { getCustomTerms } = await import('./safariManager.js');
             const customTerms = await getCustomTerms(guildId);
             const currencyLabel = `Quick ${customTerms.currencyName || 'Currency'}`;
 
+            // Embed action string select directly in the Map Location Manager
+            const safariData = await loadSafariContent();
+            const activeMapId = safariData[guildId]?.maps?.active;
+            if (activeMapId) {
+                const { buildActionSelectRow } = await import('./customActionUI.js');
+                const actionSelectRow = await buildActionSelectRow({
+                    guildId,
+                    coordinate: entityId,
+                    mapId: activeMapId
+                });
+                components.push(actionSelectRow);
+            }
+
+            // Quick Create row (Actions button removed — select is now inline above)
             components.push({
                 type: 1, // ActionRow
                 components: [
-                    {
-                        type: 2, // Button
-                        style: activeFieldGroup === 'interaction' ? 1 : 2,
-                        label: 'Actions',
-                        custom_id: `entity_field_group_map_cell_${entityId}_interaction`,
-                        emoji: { name: '⚡' }
-                    },
                     {
                         type: 2, // Button
                         style: 2,

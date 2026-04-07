@@ -29482,19 +29482,23 @@ Your server is now ready for Tycoons gameplay!`;
           }
           
           if (selectedValue === 'back_to_all') {
-            // Return to full action list
+            if (coordinate && mapId) {
+              // Return to Map Location Manager (action select is embedded there)
+              const { createEntityManagementUI } = await import('./entityManagementUI.js');
+              const ui = await createEntityManagementUI({
+                entityType: 'map_cell',
+                guildId: context.guildId,
+                selectedId: coordinate,
+                mode: 'edit'
+              });
+              return { ...ui, ephemeral: true };
+            }
+            // Global context - return to standalone action list
             const { createCustomActionSelectionUI } = await import('./customActionUI.js');
-            
             const ui = await createCustomActionSelectionUI({
-              guildId: context.guildId,
-              coordinate: coordinate,
-              mapId: mapId
+              guildId: context.guildId
             });
-            
-            return {
-              ...ui,
-              ephemeral: true
-            };
+            return { ...ui, ephemeral: true };
           } else if (selectedValue === 'search_actions') {
             // Show search modal for custom actions
             const modalCustomId = coordinate ? 

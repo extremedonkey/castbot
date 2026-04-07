@@ -36,127 +36,8 @@ const OUTCOME_TYPE_OPTIONS = [
  * @returns {Object} Discord Components V2 UI
  */
 export async function createCustomActionSelectionUI({ guildId, coordinate = null, mapId = null }) {
-  // Import Discord.js builders - matching stores pattern exactly
-  const { StringSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
-  
-  // Load all safari buttons (now custom actions)
-  const allSafariContent = await loadSafariContent();
-  const guildData = allSafariContent[guildId] || {};
-  const allActions = guildData.buttons || {};
-  const assignedActionIds = coordinate && mapId ? (guildData.maps?.[mapId]?.coordinates?.[coordinate]?.buttons || []) : [];
-  
-  // Build select menu using Discord.js builder
-  const customId = coordinate && mapId ? `entity_custom_action_list_${coordinate}_${mapId}` : 'entity_custom_action_list_global';
-  const selectMenu = new StringSelectMenuBuilder()
-    .setCustomId(customId)
-    .setPlaceholder("Select an action to manage...")
-    .setMinValues(1)
-    .setMaxValues(1); // Single select for managing actions
-  
-  // Add "Create New" option first
-  selectMenu.addOptions({
-    label: "➕ Create New Action",
-    value: "create_new",
-    description: "Design a new interactive action"
-  });
+  const selectRow = await buildActionSelectRow({ guildId, coordinate, mapId });
 
-  // Add search option if many actions
-  const totalActions = Object.keys(allActions).length;
-  if (totalActions > 10) {
-    selectMenu.addOptions({
-      label: "🔍 Search Actions",
-      value: "search_actions",
-      description: "Search through all custom actions"
-    });
-  }
-
-  // Add clone option if there are actions to clone (position after Search)
-  if (totalActions > 0) {
-    selectMenu.addOptions({
-      label: "🔄 Clone Action",
-      value: "clone_action",
-      description: "Duplicate an existing action"
-    });
-  }
-
-  // Add existing actions in prioritized order
-  const allActionEntries = Object.entries(allActions).map(([actionId, action]) => ({ actionId, action }));
-
-  // Step 1: Get actions assigned to this coordinate (if coordinate-specific view)
-  const assignedActions = coordinate && mapId ?
-    allActionEntries.filter(({ actionId }) => assignedActionIds.includes(actionId)) : [];
-
-  // Step 2: Get unassigned actions, sorted by reverse creation order (newest first)
-  const unassignedActions = allActionEntries
-    .filter(({ actionId }) => !assignedActionIds.includes(actionId))
-    .sort((a, b) => {
-      const aLastModified = a.action.metadata?.lastModified || 0;
-      const bLastModified = b.action.metadata?.lastModified || 0;
-      return bLastModified - aLastModified; // Descending order (newest first)
-    });
-
-  // Step 3: Combine in required order: assigned actions first, then unassigned
-  // Option count: Create(1) + Search(if>10) + Clone(if>0) + actions
-  // Max 24 options total, so action slots = 24 - fixedOptions
-  const fixedOptions = 1 + (totalActions > 10 ? 1 : 0) + (totalActions > 0 ? 1 : 0);
-  const maxActionSlots = 24 - fixedOptions;
-  const sortedActions = [...assignedActions, ...unassignedActions]
-    .slice(0, maxActionSlots);
-  
-  // Debug log for global view
-  if (!coordinate && !mapId) {
-    console.log(`📋 Building global action list (${sortedActions.length} actions)`);
-  }
-
-  for (const { actionId, action } of sortedActions) {
-    // Create meaningful description showing action type and status
-    let description;
-    if (coordinate && mapId) {
-      // Coordinate-specific view
-      description = assignedActionIds.includes(actionId) ? "✅ Already assigned here" : "Click to assign/edit";
-    } else {
-      // Global view - show location info
-      description = action.description || 'No description';
-      if (action.coordinates && action.coordinates.length > 0) {
-        description += ` • Locations: ${action.coordinates.slice(0, 3).join(', ')}${action.coordinates.length > 3 ? '...' : ''}`;
-      }
-      // Add menu visibility info
-      const visibility = action.menuVisibility || (action.showInInventory ? 'player_menu' : 'none');
-      if (visibility === 'player_menu') {
-        description += ' • 📋 Menu';
-      } else if (visibility === 'crafting_menu') {
-        description += ' • 🛠️ Crafting';
-      }
-    }
-
-    // Add outcome count info
-    const outcomeCount = action.actions?.length || 0;
-    if (outcomeCount > 0) {
-      description += ` • ${outcomeCount} outcome${outcomeCount !== 1 ? 's' : ''}`;
-    }
-
-    const option = {
-      label: (action.name || action.label || 'Unnamed Action').substring(0, 100),
-      value: actionId,
-      description: description.substring(0, 100) // Discord limit
-      // Removed default value - don't auto-select assigned actions for better UX
-    };
-
-    selectMenu.addOptions(option);
-  }
-
-  // Debug: Log sample options in global view
-  if (!coordinate && !mapId && sortedActions.length > 0) {
-    const sampleActions = sortedActions.slice(0, 3);
-    sampleActions.forEach(({ actionId, action }) => {
-      const coords = action.coordinates?.length || 0;
-      const vis = action.menuVisibility || (action.showInInventory ? 'player_menu' : 'none');
-      console.log(`  📝 ${action.name}: coords=${coords}, vis=${vis}`);
-    });
-  }
-  
-  const selectRow = new ActionRowBuilder().addComponents(selectMenu);
-  
   // Build Quick Create buttons for global view (coordinate views have them in Location Actions menu)
   const quickCreateRow = [];
   if (!coordinate) {
@@ -187,7 +68,7 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
       },
       ...quickCreateRow,
       { type: 14 }, // Separator
-      selectRow.toJSON() // Convert to JSON
+      selectRow
     ]
   };
 
@@ -204,6 +85,117 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
     flags: (1 << 15), // IS_COMPONENTS_V2
     components: [container]
   };
+}
+
+/**
+ * Build just the ActionRow containing the action StringSelect.
+ * Reusable by both the standalone action selection UI and the embedded Map Location Manager.
+ * @param {Object} params
+ * @param {string} params.guildId
+ * @param {string} [params.coordinate]
+ * @param {string} [params.mapId]
+ * @returns {Object} ActionRow component JSON containing the StringSelect
+ */
+export async function buildActionSelectRow({ guildId, coordinate = null, mapId = null }) {
+  const { StringSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
+
+  const allSafariContent = await loadSafariContent();
+  const guildData = allSafariContent[guildId] || {};
+  const allActions = guildData.buttons || {};
+  const assignedActionIds = coordinate && mapId ? (guildData.maps?.[mapId]?.coordinates?.[coordinate]?.buttons || []) : [];
+
+  const customId = coordinate && mapId ? `entity_custom_action_list_${coordinate}_${mapId}` : 'entity_custom_action_list_global';
+  const selectMenu = new StringSelectMenuBuilder()
+    .setCustomId(customId)
+    .setPlaceholder("Select an action to manage...")
+    .setMinValues(1)
+    .setMaxValues(1);
+
+  selectMenu.addOptions({
+    label: "➕ Create New Action",
+    value: "create_new",
+    description: "Design a new interactive action"
+  });
+
+  const totalActions = Object.keys(allActions).length;
+  if (totalActions > 10) {
+    selectMenu.addOptions({
+      label: "🔍 Search Actions",
+      value: "search_actions",
+      description: "Search through all custom actions"
+    });
+  }
+
+  if (totalActions > 0) {
+    selectMenu.addOptions({
+      label: "🔄 Clone Action",
+      value: "clone_action",
+      description: "Duplicate an existing action"
+    });
+  }
+
+  const allActionEntries = Object.entries(allActions).map(([actionId, action]) => ({ actionId, action }));
+
+  const assignedActions = coordinate && mapId ?
+    allActionEntries.filter(({ actionId }) => assignedActionIds.includes(actionId)) : [];
+
+  const unassignedActions = allActionEntries
+    .filter(({ actionId }) => !assignedActionIds.includes(actionId))
+    .sort((a, b) => {
+      const aLastModified = a.action.metadata?.lastModified || 0;
+      const bLastModified = b.action.metadata?.lastModified || 0;
+      return bLastModified - aLastModified;
+    });
+
+  const fixedOptions = 1 + (totalActions > 10 ? 1 : 0) + (totalActions > 0 ? 1 : 0);
+  const maxActionSlots = 24 - fixedOptions;
+  const sortedActions = [...assignedActions, ...unassignedActions]
+    .slice(0, maxActionSlots);
+
+  if (!coordinate && !mapId) {
+    console.log(`📋 Building global action list (${sortedActions.length} actions)`);
+  }
+
+  for (const { actionId, action } of sortedActions) {
+    let description;
+    if (coordinate && mapId) {
+      description = assignedActionIds.includes(actionId) ? "✅ Already assigned here" : "Click to assign/edit";
+    } else {
+      description = action.description || 'No description';
+      if (action.coordinates && action.coordinates.length > 0) {
+        description += ` • Locations: ${action.coordinates.slice(0, 3).join(', ')}${action.coordinates.length > 3 ? '...' : ''}`;
+      }
+      const visibility = action.menuVisibility || (action.showInInventory ? 'player_menu' : 'none');
+      if (visibility === 'player_menu') {
+        description += ' • 📋 Menu';
+      } else if (visibility === 'crafting_menu') {
+        description += ' • 🛠️ Crafting';
+      }
+    }
+
+    const outcomeCount = action.actions?.length || 0;
+    if (outcomeCount > 0) {
+      description += ` • ${outcomeCount} outcome${outcomeCount !== 1 ? 's' : ''}`;
+    }
+
+    selectMenu.addOptions({
+      label: (action.name || action.label || 'Unnamed Action').substring(0, 100),
+      value: actionId,
+      description: description.substring(0, 100)
+    });
+  }
+
+  if (!coordinate && !mapId && sortedActions.length > 0) {
+    const sampleActions = sortedActions.slice(0, 3);
+    sampleActions.forEach(({ actionId, action }) => {
+      const coords = action.coordinates?.length || 0;
+      const vis = action.menuVisibility || (action.showInInventory ? 'player_menu' : 'none');
+      console.log(`  📝 ${action.name}: coords=${coords}, vis=${vis}`);
+    });
+  }
+
+  const selectRow = new ActionRowBuilder().addComponents(selectMenu);
+  return selectRow.toJSON();
 }
 
 /**
@@ -4861,6 +4853,7 @@ export async function showFightEnemyConfig(guildId, buttonId, actionIndex) {
 }
 
 export default {
+  buildActionSelectRow,
   createCustomActionSelectionUI,
   createCustomActionEditorUI,
   createTriggerConfigUI,
