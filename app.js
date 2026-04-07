@@ -29499,7 +29499,7 @@ Your server is now ready for Tycoons gameplay!`;
               'global_create_modal_safari_button_info';
             const modal = {
               custom_id: modalCustomId,
-              title: 'Create Custom Action',
+              title: 'Create Action',
               components: [
                 {
                   type: 18, // Label
@@ -29536,6 +29536,24 @@ Your server is now ready for Tycoons gameplay!`;
                     style: 2, // Paragraph
                     placeholder: 'e.g., "Starts the jungle adventure safari"',
                     required: false
+                  }
+                },
+                {
+                  type: 18, // Label
+                  label: 'Display Mode',
+                  description: 'Who can see the response when a player triggers this action?',
+                  component: {
+                    type: 3, // String Select
+                    custom_id: 'display_mode',
+                    required: false, min_values: 1, max_values: 1,
+                    options: [
+                      { label: 'Private (Recommended)', value: 'ephemeral',
+                        description: 'Only the player who triggered it will see it (Ephemeral)',
+                        emoji: { name: '🔇' }, default: true },
+                      { label: 'Public', value: 'public',
+                        description: 'Message will be publicly posted in the channel',
+                        emoji: { name: '📢' } }
+                    ]
                   }
                 }
               ]
@@ -29722,6 +29740,7 @@ Your server is now ready for Tycoons gameplay!`;
           }
           
           // Create modal with pre-filled values (Label format - Components V2)
+          const currentDisplayMode = action.displayMode || 'ephemeral';
           const modal = {
             custom_id: `entity_edit_action_info_modal_${actionId}`,
             title: 'Edit Action Info',
@@ -29764,6 +29783,24 @@ Your server is now ready for Tycoons gameplay!`;
                   required: false,
                   max_length: 4000,
                   ...(action.description ? { value: action.description } : {})
+                }
+              },
+              {
+                type: 18, // Label
+                label: 'Display Mode',
+                description: 'Who can see the response when a player triggers this action?',
+                component: {
+                  type: 3, // String Select
+                  custom_id: 'display_mode',
+                  required: false, min_values: 1, max_values: 1,
+                  options: [
+                    { label: 'Private (Recommended)', value: 'ephemeral',
+                      description: 'Only the player who triggered it will see it (Ephemeral)',
+                      emoji: { name: '🔇' }, default: currentDisplayMode === 'ephemeral' },
+                    { label: 'Public', value: 'public',
+                      description: 'Message will be publicly posted in the channel',
+                      emoji: { name: '📢' }, default: currentDisplayMode === 'public' }
+                  ]
                 }
               }
             ]
@@ -46694,6 +46731,7 @@ Your server is now ready for Tycoons gameplay!`;
         const buttonLabel = getModalVal(components[0]);
         const buttonEmojiInput = getModalVal(components[1]);
         const buttonDesc = getModalVal(components[2]);
+        const displayMode = components[3]?.component?.values?.[0] || 'ephemeral';
 
         // Validate emoji using advanced parsing (for error checking only)
         let buttonEmoji = null;
@@ -46736,6 +46774,7 @@ Your server is now ready for Tycoons gameplay!`;
           coordinates: [], // No coordinates initially
           linkedItems: [], // No linked items initially
           actions: [],
+          displayMode: displayMode,
           trigger: {
             type: 'button'
           },
@@ -47125,7 +47164,8 @@ Your server is now ready for Tycoons gameplay!`;
           const buttonLabel = getModalVal(components[0]);
           const buttonEmojiInput = getModalVal(components[1]);
           const buttonDesc = getModalVal(components[2]);
-          
+          const displayMode = components[3]?.component?.values?.[0] || 'ephemeral';
+
           // Validate emoji using advanced parsing (for error checking only)
           let buttonEmoji = null;
           if (buttonEmojiInput) {
@@ -47140,7 +47180,7 @@ Your server is now ready for Tycoons gameplay!`;
               buttonEmoji = null;
             }
           }
-          
+
           if (!buttonLabel) {
             return res.send({
               type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -47150,7 +47190,7 @@ Your server is now ready for Tycoons gameplay!`;
               }
             });
           }
-          
+
           // Create custom action using safariManager
           const { createCustomButton } = await import('./safariManager.js');
           const buttonId = await createCustomButton(guildId, {
@@ -47160,13 +47200,14 @@ Your server is now ready for Tycoons gameplay!`;
             actions: [],
             tags: buttonDesc ? [buttonDesc] : []
           }, userId);
-          
-          // Set name and description
+
+          // Set name, description, and display mode
           const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
           const allSafariContent = await loadSafariContent();
           const button = allSafariContent[guildId].buttons[buttonId];
           button.name = buttonLabel;
           button.description = buttonDesc || '';
+          button.displayMode = displayMode;
           await saveSafariContent(allSafariContent);
           
           console.log(`✅ DEBUG: Created custom action ${buttonId} for coordinate ${coordinate}`);
@@ -47245,8 +47286,9 @@ Your server is now ready for Tycoons gameplay!`;
         const actionName = getModalVal(components[0]);
         const actionEmoji = getModalVal(components[1]) || '';
         const actionDescription = getModalVal(components[2]) || '';
-        
-        console.log(`📝 Updating action ${actionId} with name: "${actionName}", emoji: "${actionEmoji}", description: "${actionDescription}"`);
+        const displayMode = components[3]?.component?.values?.[0] || 'ephemeral';
+
+        console.log(`📝 Updating action ${actionId} with name: "${actionName}", emoji: "${actionEmoji}", description: "${actionDescription}", displayMode: "${displayMode}"`);
         
         // Validate emoji using enhanced validation (same as Create modal)
         let validatedEmoji = null;
@@ -47284,6 +47326,7 @@ Your server is now ready for Tycoons gameplay!`;
         btn.label = actionName; // label mirrors name until decoupled by design
         btn.emoji = validatedEmoji; // Store validated emoji (null if invalid/empty)
         btn.description = actionDescription;
+        btn.displayMode = displayMode;
         // Also sync trigger.button label + emoji so posted buttons and preview stay current
         if (btn.trigger?.button) {
           btn.trigger.button.label = actionName;

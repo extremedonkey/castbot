@@ -55,7 +55,7 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
   
   // Add "Create New" option first
   selectMenu.addOptions({
-    label: "➕ Create New Custom Action",
+    label: "➕ Create New Action",
     value: "create_new",
     description: "Design a new interactive action"
   });
@@ -3555,9 +3555,7 @@ export async function showDisplayTextConfig(guildId, buttonId, actionIndex) {
           content: (() => {
             const effectiveExecuteOn = action?.executeOn || global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true';
             const sectionEmoji = effectiveExecuteOn === 'always' ? '🔵' : effectiveExecuteOn === 'false' ? '🔴' : '🟢';
-            const displayMode = action?.config?.displayMode || 'ephemeral';
-            const modeLabel = displayMode === 'public' ? '📢 Public' : '🔇 Private';
-            return `## 📝 Display Text Configuration ${sectionEmoji}\n${isEdit ? 'Editing' : 'Creating'} text display outcome\n-# Display Mode: ${modeLabel}`;
+            return `## 📝 Display Text Configuration ${sectionEmoji}\n${isEdit ? 'Editing' : 'Creating'} text display outcome`;
           })()
         },
 
@@ -4487,9 +4485,7 @@ export async function handleDisplayTextEdit(guildId, userId, customId) {
     };
   }
   
-  // Build modal with raw JSON (Label type 18 wrappers required for String Select support)
-  const currentDisplayMode = action?.config?.displayMode || 'ephemeral';
-
+  // Build modal with raw JSON (Label type 18 wrappers — converted from ModalBuilder for consistency)
   console.log(`✅ SUCCESS: safari_display_text_edit - showing edit modal for ${buttonId}[${actionIndex}]`);
   return {
     type: 9, // MODAL
@@ -4520,24 +4516,7 @@ export async function handleDisplayTextEdit(guildId, userId, customId) {
           required: false, max_length: 500,
           value: action?.config?.image || action?.image || '',
           placeholder: 'Enter link of an image you have uploaded to Discord.'
-        }},
-        { type: 18, label: 'Display Mode',
-          description: 'Who can see this text when the action triggers?',
-          component: {
-            type: 3, custom_id: 'display_mode',
-            required: false, min_values: 1, max_values: 1,
-            options: [
-              { label: 'Private (Recommended)', value: 'ephemeral',
-                description: 'Only the user who initiated the action will see it (Ephemeral)',
-                emoji: { name: '🔇' },
-                default: currentDisplayMode === 'ephemeral' },
-              { label: 'Public', value: 'public',
-                description: 'Message will be publicly posted in the channel',
-                emoji: { name: '📢' },
-                default: currentDisplayMode === 'public' }
-            ]
-          }
-        }
+        }}
       ]
     }
   };
@@ -4553,7 +4532,7 @@ export async function handleDisplayTextSave(guildId, customId, formData) {
   
   // Extract form data from Label (type 18) components by custom_id
   const components = formData.components;
-  let title = '', content = '', color = '', image = '', displayMode = 'ephemeral';
+  let title = '', content = '', color = '', image = '';
 
   for (const comp of components) {
     if (comp.type !== 18 || !comp.component) continue;
@@ -4563,7 +4542,6 @@ export async function handleDisplayTextSave(guildId, customId, formData) {
       case 'action_content': content = inner.value?.trim() || ''; break;
       case 'action_color': color = inner.value?.trim() || ''; break;
       case 'action_image': image = inner.value?.trim() || ''; break;
-      case 'display_mode': displayMode = inner.values?.[0] || 'ephemeral'; break;
     }
   }
   
@@ -4591,8 +4569,7 @@ export async function handleDisplayTextSave(guildId, customId, formData) {
   const actionConfig = {
     title: title,
     content: content,
-    image: image,
-    displayMode: displayMode
+    image: image
   };
   
   // Only include color if it's not empty
