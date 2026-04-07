@@ -454,6 +454,7 @@ When a feature is **deployed to production and working**, move/rename its doc in
 - **🦁 SAFARI** → [docs/03-features/Safari.md](docs/03-features/Safari.md) - Safari system overview
 - **📝 SEASON APPLICATIONS** → [docs/03-features/SeasonAppBuilder.md](docs/03-features/SeasonAppBuilder.md)
 - **🏆 CAST RANKING** → [docs/03-features/CastRanking.md](docs/03-features/CastRanking.md)
+- **🚷 DNC OVERVIEW** → [docs/03-features/DNCOverview.md](docs/03-features/DNCOverview.md) - Global DNC conflict detection, mutual/one-way classification, season-wide view
 - **🐙 ENEMIES** → [docs/03-features/EnemySystem.md](docs/03-features/EnemySystem.md) - Enemy entities, fight_enemy outcome, combat resolution
 - **🧑‍🤝‍🧑 PLAYER MANAGEMENT** → [playerManagement.js](playerManagement.js) - Pronouns, timezones, age, vanity roles, attributes display
 - **🥇 CASTLIST V3** → [docs/03-features/CastlistV3.md](docs/03-features/CastlistV3.md) - Castlist system overhaul

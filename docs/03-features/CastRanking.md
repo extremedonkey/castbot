@@ -817,6 +817,7 @@ console.log('Button registry entry:', BUTTON_REGISTRY['season_app_ranking']);
 ## Support & Resources
 
 **Primary Documentation**: [Season Application Builder](SeasonAppBuilder.md)  
+**DNC Overview**: [DNC Overview](DNCOverview.md) — Global DNC conflict detection (accessed via 🚷 DNC List button in Cast Ranking)  
 **Architecture Reference**: [Components V2](../architecture/ComponentsV2.md)  
 **Button System**: [Button Handler Factory](../architecture/ButtonHandlerFactory.md)  
 **Permission Utilities**: [Permission Utils](../../utils/permissionUtils.js)

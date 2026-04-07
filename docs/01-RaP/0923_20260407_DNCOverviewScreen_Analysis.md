@@ -1,5 +1,7 @@
 # DNC Overview Screen — Analysis & Design
 
+> **Status: SHIPPED** — Deployed to production 2026-04-07. Feature doc: [docs/03-features/DNCOverview.md](../03-features/DNCOverview.md)
+
 ## Original Context
 
 > In Cast Ranking (plus the associated paginations), I'd like to add a button to the right of 'Personal Ranker' called 'DNC List'. On click, leveraging LEAN UI design it displays a new ephemeral message that highlights where a particular applicant has added to their DNC list (keeping in mind most people will have an empty list so we don't want to clutter the UI), it shows them in a list + any reasons. And up the top implement some smart matching logic to identify WHERE there are crossovers e.g. reece (username extremedonkey) does not want to play with Dave (username serviver).. Shows prominently up the top of the list. This is a semi confidential feature so be sure to double check we are following our permissions model so only admins can click the button. Feel free to take any liberties in designing the UI or bells and whistles beyond what I've stated. In the future we may evolve this to include other 'global' applicant considerations such as Accommodations for Blindness etc. But for now we can brand as DNC. Lets ultrathink design this as a RaP.

@@ -111,6 +111,7 @@ This document serves as the source of truth for the Season Application Builder f
 - **Navigation Controls**: Previous/Next buttons for multi-applicant evaluation
 - **Score Analytics**: Real-time average scores and vote counts
 - **Ranking Leaderboard**: "View All Scores" with medal rankings (🥇🥈🥉)
+- **DNC Overview**: Global DNC conflict detection via 🚷 DNC List button — see [DNCOverview.md](DNCOverview.md)
 - **Application Integration**: Direct links to applicant channels
 
 **Admin Requirements:** Manage Roles, Manage Channels, OR Manage Server permissions
