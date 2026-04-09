@@ -2498,12 +2498,27 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const channelId = req.body.channel_id;
 
       if (name === '❄ Start Timer') {
-        const { snowflakeToTimestamp, discordTimestamp, setPendingStart } = await import('./timerUtils.js');
+        const { snowflakeToTimestamp, discordTimestampWithSeconds, isBot, setPendingStart } = await import('./timerUtils.js');
         const timestamp = snowflakeToTimestamp(targetMessageId);
-        const playerId = targetMessage?.author?.id;
-        console.log(`❄️ [START] Timer started by ${invokerId} for player ${playerId} — message ${targetMessageId} (${new Date(timestamp).toISOString()})`);
+        const startAuthor = targetMessage?.author || null;
+        const authorIsBot = isBot(startAuthor);
+        const authorId = startAuthor?.id || null;
+        console.log(`❄️ [START] Timer started by ${invokerId} — message ${targetMessageId} by ${authorId || 'unknown'}${authorIsBot ? ' (bot)' : ''} (${new Date(timestamp).toISOString()})`);
 
-        setPendingStart(invokerId, playerId, targetMessageId, timestamp, channelId);
+        const previous = setPendingStart(invokerId, {
+          messageId: targetMessageId,
+          timestamp,
+          channelId,
+          authorId,
+          authorIsBot,
+        });
+
+        const overwriteHint = previous
+          ? `\n\n⚠️ *Replaced previous pending start (message ID \`${previous.messageId}\`)*`
+          : '';
+        const authorHint = authorIsBot
+          ? '\n-# Start author is a bot — player will be taken from the Stop message.'
+          : '';
 
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -2512,22 +2527,26 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             components: [{
               type: 17, accent_color: 0x3498DB,
               components: [
-                { type: 10, content: `## ❄️ Timer | Start Marked` },
+                { type: 10, content: `## ❄️ Timer | Start Marked${overwriteHint}` },
                 { type: 14 },
-                { type: 10, content: `**Player**: ${playerId ? `<@${playerId}>` : 'Unknown'}` },
-                { type: 14 },
-                { type: 10, content: `-# Start — ${discordTimestamp(timestamp, 'F')} (${discordTimestamp(timestamp, 'R')})\n-# Message ID: \`${targetMessageId}\`` }
+                { type: 10, content: `Start: ${discordTimestampWithSeconds(timestamp)}\nMessage ID: \`${targetMessageId}\`${!authorIsBot && authorId ? `\nUser: <@${authorId}>` : ''}${authorHint}` }
               ]
             }]
           }
         });
       } else if (name === '❄ Stop Timer') {
-        const { snowflakeToTimestamp, discordTimestamp, timeBetweenSnowflakes, getPendingStart, clearPendingStart } = await import('./timerUtils.js');
-        const playerId = targetMessage?.author?.id;
-        const pending = getPendingStart(invokerId, playerId);
+        const {
+          timeBetweenSnowflakes,
+          discordTimestampWithSeconds,
+          isBot,
+          resolvePlayerForResult,
+          getPendingStart,
+          clearPendingStart,
+        } = await import('./timerUtils.js');
+        const pending = getPendingStart(invokerId);
 
         if (!pending) {
-          console.log(`❄️ [STOP] No pending start for player ${playerId} (invoked by ${invokerId})`);
+          console.log(`❄️ [STOP] No pending start (invoked by ${invokerId})`);
 
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -2536,18 +2555,30 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               components: [{
                 type: 17, accent_color: 0xe74c3c,
                 components: [
-                  { type: 10, content: `### \`\`\`❌ No Timer Found\`\`\`` },
+                  { type: 10, content: `## ❄️ Timer | No Start Found` },
                   { type: 14 },
-                  { type: 10, content: `No pending start for ${playerId ? `<@${playerId}>` : 'this player'}.\n\n-# Right-click a message → Apps → **❄️ Start Timer** first.` }
+                  { type: 10, content: `No pending start found.\n\n-# Right-click a message → Apps → **❄ Start Timer** first.` }
                 ]
               }]
             }
           });
         }
 
+        const endAuthor = targetMessage?.author || null;
         const result = timeBetweenSnowflakes(pending.messageId, targetMessageId);
-        clearPendingStart(invokerId, playerId);
-        console.log(`❄️ [STOP] Timer result for player ${playerId}: ${result.formatted} (${result.durationMs}ms)${result.reversed ? ' ⚠️ REVERSED' : ''}`);
+        clearPendingStart(invokerId);
+
+        // Reconstruct a minimal start author "user object" from stored data for resolvePlayerForResult
+        const startAuthorProxy = pending.authorId ? { id: pending.authorId, bot: pending.authorIsBot } : null;
+        const playerId = resolvePlayerForResult(startAuthorProxy, endAuthor);
+        const startIsBot = isBot(startAuthorProxy);
+        const endIsBot = isBot(endAuthor);
+
+        console.log(`❄️ [STOP] Timer result: ${result.formatted} (${result.durationMs}ms)${result.reversed ? ' ⚠️ REVERSED' : ''} — player=${playerId || 'none (both bots)'}, startAuthor=${pending.authorId || 'unknown'}${startIsBot ? '(bot)' : ''}, endAuthor=${endAuthor?.id || 'unknown'}${endIsBot ? '(bot)' : ''}`);
+
+        const playerLine = playerId ? `**Player**: <@${playerId}>\n` : '';
+        const startUserLine = !startIsBot && pending.authorId ? `\nUser: <@${pending.authorId}>` : '';
+        const endUserLine = !endIsBot && endAuthor?.id ? `\nUser: <@${endAuthor.id}>` : '';
 
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -2558,13 +2589,14 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               components: [
                 { type: 10, content: `## ❄️ Timer | Result` },
                 { type: 14 },
-                { type: 10, content: `**Player**: <@${playerId}>\n**Duration**: **${result.formatted}**${result.reversed ? ' ⚠️ *reversed*' : ''}` },
+                { type: 10, content: `${playerLine}**Duration**: **${result.formatted}** \`${result.formattedExcel}\`${result.reversed ? ' ⚠️ *reversed*' : ''}` },
                 { type: 14 },
-                { type: 10, content: `-# Start — ${discordTimestamp(result.startTime, 'F')}\n-# Message ID: \`${pending.messageId}\`` },
-                { type: 10, content: `-# End — ${discordTimestamp(result.endTime, 'F')}\n-# Message ID: \`${targetMessageId}\`` },
+                { type: 10, content: `Start: ${discordTimestampWithSeconds(result.startTime)}\nMessage ID: \`${pending.messageId}\`${startUserLine}` },
+                { type: 14 },
+                { type: 10, content: `End: ${discordTimestampWithSeconds(result.endTime)}\nMessage ID: \`${targetMessageId}\`${endUserLine}` },
                 { type: 14 },
                 { type: 1, components: [
-                  { type: 2, custom_id: `timer_post|${playerId}|${result.durationMs}|${pending.messageId}|${targetMessageId}`, label: 'Post Publicly', style: 2, emoji: { name: '📢' } }
+                  { type: 2, custom_id: `timer_post|${pending.messageId}|${targetMessageId}|${pending.authorId || '0'}|${endAuthor?.id || '0'}`, label: 'Post Publicly', style: 2, emoji: { name: '📢' } }
                 ]}
               ]
             }]
@@ -7534,15 +7566,28 @@ To fix this:
         followUp: true,
         ephemeral: false,
         handler: async () => {
-          const { formatDuration, discordTimestamp, snowflakeToTimestamp } = await import('./timerUtils.js');
+          const {
+            timeBetweenSnowflakes,
+            discordTimestampWithSeconds,
+            isBotId,
+            resolvePlayerFromIds,
+          } = await import('./timerUtils.js');
+          // Format: timer_post|{startMsgId}|{endMsgId}|{startUserId}|{endUserId}
+          // User IDs use "0" as a placeholder when the author was missing.
           const parts = custom_id.split('|');
-          const playerId = parts[1];
-          const durationMs = parseInt(parts[2]);
-          const startMsgId = parts[3];
-          const endMsgId = parts[4];
-          const startTime = snowflakeToTimestamp(startMsgId);
-          const endTime = snowflakeToTimestamp(endMsgId);
-          const formatted = formatDuration(durationMs);
+          const startMsgId = parts[1];
+          const endMsgId = parts[2];
+          const startUserId = parts[3] && parts[3] !== '0' ? parts[3] : null;
+          const endUserId = parts[4] && parts[4] !== '0' ? parts[4] : null;
+
+          const result = timeBetweenSnowflakes(startMsgId, endMsgId);
+          const playerId = resolvePlayerFromIds(startUserId, endUserId);
+          const startIsBot = isBotId(startUserId);
+          const endIsBot = isBotId(endUserId);
+
+          const playerLine = playerId ? `**Player**: <@${playerId}>\n` : '';
+          const startUserLine = !startIsBot && startUserId ? `\nUser: <@${startUserId}>` : '';
+          const endUserLine = !endIsBot && endUserId ? `\nUser: <@${endUserId}>` : '';
 
           return {
             flags: (1 << 15),
@@ -7551,10 +7596,11 @@ To fix this:
               components: [
                 { type: 10, content: `## ❄️ Timer | Result` },
                 { type: 14 },
-                { type: 10, content: `**Player**: <@${playerId}>\n**Duration**: **${formatted}**` },
+                { type: 10, content: `${playerLine}**Duration**: **${result.formatted}** \`${result.formattedExcel}\`` },
                 { type: 14 },
-                { type: 10, content: `-# Start — ${discordTimestamp(startTime, 'F')}\n-# Message ID: \`${startMsgId}\`` },
-                { type: 10, content: `-# End — ${discordTimestamp(endTime, 'F')}\n-# Message ID: \`${endMsgId}\`` }
+                { type: 10, content: `Start: ${discordTimestampWithSeconds(result.startTime)}\nMessage ID: \`${startMsgId}\`${startUserLine}` },
+                { type: 14 },
+                { type: 10, content: `End: ${discordTimestampWithSeconds(result.endTime)}\nMessage ID: \`${endMsgId}\`${endUserLine}` }
               ]
             }]
           };
@@ -9220,7 +9266,7 @@ To fix this:
         id: 'challenge_timer_stop',
         deferred: true, updateMessage: true, // DEFERRED_UPDATE — needed for webhook follow-up
         handler: async (context) => {
-          const { timeBetweenSnowflakes, discordTimestamp } = await import('./timerUtils.js');
+          const { timeBetweenSnowflakes, discordTimestampWithSeconds } = await import('./timerUtils.js');
 
           const startId = req.body.message?.id; // Timer message snowflake = start time
           const endId = req.body.id; // This interaction's snowflake = end time
@@ -9230,22 +9276,25 @@ To fix this:
           }
 
           const result = timeBetweenSnowflakes(startId, endId);
-          console.log(`⏱️ Challenge Timer: ${result.formatted} (${startId} → ${endId}) by user ${context.userId}`);
+          // Start message is always the CastBot-posted timer (a bot) → no Start User line.
+          // End "author" is the player who clicked → always shown as Player + End User.
+          const playerId = context.userId;
+          console.log(`⏱️ Challenge Timer: ${result.formatted} (${result.formattedExcel}) — ${startId} → ${endId} by player ${playerId}`);
 
           // Post results as a delayed follow-up AFTER the timer message is updated
-          const userName = context.member?.nick || context.member?.user?.global_name || context.member?.user?.username || `<@${context.userId}>`;
           const token = context.token;
           setTimeout(async () => {
             try {
               const resultsContainer = {
                 type: 17, accent_color: 0x2ECC71,
                 components: [
-                  { type: 10, content: `### \`\`\`🏁 Challenge Timer Finished - ${userName}\`\`\`` },
+                  { type: 10, content: `## ❄️ Challenge Timer | Finished` },
                   { type: 14 },
-                  { type: 10, content: `### \`\`\`⏱️ Duration\`\`\`\n**${result.formatted}**` },
+                  { type: 10, content: `**Player**: <@${playerId}>\n**Duration**: **${result.formatted}** \`${result.formattedExcel}\`` },
                   { type: 14 },
-                  { type: 10, content: `-# Start — <t:${Math.floor(result.startTime / 1000)}:F>\n-# Message ID: \`${startId}\`` },
-                  { type: 10, content: `-# End — <t:${Math.floor(result.endTime / 1000)}:F>\n-# Message ID: \`${endId}\`` },
+                  { type: 10, content: `Start: ${discordTimestampWithSeconds(result.startTime)}\nMessage ID: \`${startId}\`` },
+                  { type: 14 },
+                  { type: 10, content: `End: ${discordTimestampWithSeconds(result.endTime)}\nMessage ID: \`${endId}\`\nUser: <@${playerId}>` },
                 ]
               };
               await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {
@@ -50323,7 +50372,7 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'modal_snowflake_calc',
         handler: async () => {
           const { extractModalFields } = await import('./seasonPlanner.js');
-          const { timeBetweenSnowflakes, discordTimestamp } = await import('./timerUtils.js');
+          const { timeBetweenSnowflakes, discordTimestampWithSeconds } = await import('./timerUtils.js');
           const fields = extractModalFields(data.components);
           let startId = fields.start_id?.trim();
           let endId = fields.end_id?.trim();
@@ -50344,7 +50393,7 @@ Your server is now ready for Tycoons gameplay!`;
               components: [{
                 type: 17, accent_color: 0xe74c3c,
                 components: [
-                  { type: 10, content: `### \`\`\`❌ Invalid Input\`\`\`` },
+                  { type: 10, content: `## ❄️ Calculator | Invalid Input` },
                   { type: 14 },
                   { type: 10, content: `Enter two valid Discord message IDs (17-20 digit numbers).\n\nYou can paste both IDs in the Start field separated by a space, or fill in both fields.\n\n-# Right-click a message → Copy Message ID` }
                 ]
@@ -50361,10 +50410,11 @@ Your server is now ready for Tycoons gameplay!`;
               components: [
                 { type: 10, content: `## ❄️ Calculator | Time between messages` },
                 { type: 14 },
-                { type: 10, content: `**Duration**: **${result.formatted}**${result.reversed ? ' ⚠️ *reversed*' : ''}` },
+                { type: 10, content: `**Duration**: **${result.formatted}** \`${result.formattedExcel}\`${result.reversed ? ' ⚠️ *reversed*' : ''}` },
                 { type: 14 },
-                { type: 10, content: `-# Start — ${discordTimestamp(result.startTime, 'F')}\n-# Message ID: \`${startId}\`` },
-                { type: 10, content: `-# End — ${discordTimestamp(result.endTime, 'F')}\n-# Message ID: \`${endId}\`` },
+                { type: 10, content: `Start: ${discordTimestampWithSeconds(result.startTime)}\nMessage ID: \`${startId}\`` },
+                { type: 14 },
+                { type: 10, content: `End: ${discordTimestampWithSeconds(result.endTime)}\nMessage ID: \`${endId}\`` },
                 { type: 14 },
                 { type: 1, components: [
                   { type: 2, custom_id: 'snowflake_calculator', label: 'Calculate Again', style: 2, emoji: { name: '⏱️' } }
@@ -50380,7 +50430,7 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'modal_snowflake_lookup',
         handler: async () => {
           const { extractModalFields } = await import('./seasonPlanner.js');
-          const { parseSnowflake, discordTimestamp } = await import('./timerUtils.js');
+          const { parseSnowflake, discordTimestampWithSeconds, discordTimestamp } = await import('./timerUtils.js');
           const fields = extractModalFields(data.components);
           const messageId = fields.message_id?.trim();
 
@@ -50390,7 +50440,7 @@ Your server is now ready for Tycoons gameplay!`;
               components: [{
                 type: 17, accent_color: 0xe74c3c,
                 components: [
-                  { type: 10, content: `### \`\`\`❌ Invalid Input\`\`\`` },
+                  { type: 10, content: `## ❄️ Snowflake | Invalid Input` },
                   { type: 14 },
                   { type: 10, content: `Enter a valid Discord message ID (17-20 digit number).\n\n-# Right-click a message → Copy Message ID` }
                 ]
@@ -50407,9 +50457,9 @@ Your server is now ready for Tycoons gameplay!`;
               components: [
                 { type: 10, content: `## ❄️ Snowflake | Message Details` },
                 { type: 14 },
-                { type: 10, content: `**Created**: ${discordTimestamp(parsed.timestamp, 'F')}\n**How long ago**: ${discordTimestamp(parsed.timestamp, 'R')}` },
+                { type: 10, content: `**Created**: ${discordTimestampWithSeconds(parsed.timestamp)}\n**How long ago**: ${discordTimestamp(parsed.timestamp, 'R')}` },
                 { type: 14 },
-                { type: 10, content: `-# Message ID: \`${messageId}\`\n-# Worker: ${parsed.workerId} | Process: ${parsed.processId} | Increment: ${parsed.increment}` },
+                { type: 10, content: `Message ID: \`${messageId}\`\n-# Worker: ${parsed.workerId} | Process: ${parsed.processId} | Increment: ${parsed.increment}` },
                 { type: 14 },
                 { type: 1, components: [
                   { type: 2, custom_id: 'snowflake_lookup', label: 'Look Up Another', style: 2, emoji: { name: '🔍' } }

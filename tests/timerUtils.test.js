@@ -2,16 +2,26 @@
  * timerUtils.test.js — Unit tests for snowflake timing utilities
  *
  * Tests pure functions only — no Discord, no I/O.
+ * Logic is replicated inline to avoid importing runtime modules.
  */
 
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 // ─────────────────────────────────────────────
-// Replicate pure logic inline (avoids importing heavy modules)
+// Replicate pure logic inline (matches timerUtils.js)
 // ─────────────────────────────────────────────
 
 const DISCORD_EPOCH = 1420070400000n;
+
+const KNOWN_ORG_BOT_IDS = new Set([
+  '235148962103951360',  // CarlBot
+  '784284227373367346',
+  '155149108183695360',
+  '695664345832620062',
+  '443545183997657120',
+  '1319912453248647170',
+]);
 
 function snowflakeToTimestamp(snowflake) {
   return Number((BigInt(snowflake) >> 22n) + DISCORD_EPOCH);
@@ -36,6 +46,7 @@ function timeBetweenSnowflakes(startId, endId) {
   return {
     durationMs,
     formatted: formatDuration(durationMs),
+    formattedExcel: formatDurationExcel(durationMs),
     startTime,
     endTime,
     reversed: endTime < startTime,
@@ -61,31 +72,67 @@ function formatDuration(ms) {
   return `${days}d ${h}h ${m}m`;
 }
 
+function formatDurationExcel(ms) {
+  if (ms < 0) ms = Math.abs(ms);
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
 function discordTimestamp(timestampMs, style = 'F') {
   return `<t:${Math.floor(timestampMs / 1000)}:${style}>`;
 }
 
-// Pending starts (in-memory)
+function discordTimestampWithSeconds(timestampMs) {
+  const unix = Math.floor(timestampMs / 1000);
+  return `<t:${unix}:D> at <t:${unix}:T>`;
+}
+
+// Bot detection + player resolution
+function isBot(user) {
+  if (!user) return true;
+  if (user.bot === true) return true;
+  if (user.id && KNOWN_ORG_BOT_IDS.has(user.id)) return true;
+  return false;
+}
+
+function isBotId(userId) {
+  if (!userId || userId === '0') return true;
+  return KNOWN_ORG_BOT_IDS.has(userId);
+}
+
+function resolvePlayerForResult(startAuthor, endAuthor) {
+  const startIsBot = isBot(startAuthor);
+  const endIsBot = isBot(endAuthor);
+
+  if (!endIsBot) return endAuthor.id;
+  if (!startIsBot) return startAuthor.id;
+  return null;
+}
+
+function resolvePlayerFromIds(startUserId, endUserId) {
+  const startIsBot = isBotId(startUserId);
+  const endIsBot = isBotId(endUserId);
+
+  if (!endIsBot) return endUserId;
+  if (!startIsBot) return startUserId;
+  return null;
+}
+
+// Pending starts (in-memory) — invoker-only keying
 const pendingStarts = new Map();
-function setPendingStart(hostId, playerId, messageId, timestamp, channelId) {
-  if (!pendingStarts.has(hostId)) pendingStarts.set(hostId, new Map());
-  pendingStarts.get(hostId).set(playerId, { messageId, timestamp, channelId });
+function setPendingStart(invokerId, data) {
+  const previous = pendingStarts.get(invokerId) || null;
+  pendingStarts.set(invokerId, data);
+  return previous;
 }
-function getPendingStart(hostId, playerId) {
-  return pendingStarts.get(hostId)?.get(playerId) || null;
+function getPendingStart(invokerId) {
+  return pendingStarts.get(invokerId) || null;
 }
-function clearPendingStart(hostId, playerId) {
-  const hostMap = pendingStarts.get(hostId);
-  if (hostMap) {
-    hostMap.delete(playerId);
-    if (hostMap.size === 0) pendingStarts.delete(hostId);
-  }
-}
-function getAllPendingStarts(hostId) {
-  return pendingStarts.get(hostId) || new Map();
-}
-function clearAllPendingStarts(hostId) {
-  pendingStarts.delete(hostId);
+function clearPendingStart(invokerId) {
+  pendingStarts.delete(invokerId);
 }
 
 // ─────────────────────────────────────────────
@@ -95,20 +142,17 @@ function clearAllPendingStarts(hostId) {
 describe('snowflakeToTimestamp', () => {
   it('decodes a known Discord snowflake (Discord epoch reference)', () => {
     // Snowflake 0 = Discord epoch exactly (2015-01-01T00:00:00.000Z)
-    // Snowflake with only timestamp bits set to 0 = epoch
-    // ID 0 would mean timestamp=0, worker=0, process=0, increment=0
     const ts = snowflakeToTimestamp('0');
-    assert.equal(ts, 1420070400000); // Discord epoch in unix ms
+    assert.equal(ts, 1420070400000);
     assert.equal(new Date(ts).toISOString(), '2015-01-01T00:00:00.000Z');
   });
 
   it('decodes a real-world snowflake correctly', () => {
-    // Known: Discord's example snowflake 175928847299117063
-    // Created: 2016-04-30T11:18:25.796Z
+    // Known: Discord's example snowflake 175928847299117063 → 2016-04-30
     const ts = snowflakeToTimestamp('175928847299117063');
     const date = new Date(ts);
     assert.equal(date.getUTCFullYear(), 2016);
-    assert.equal(date.getUTCMonth(), 3); // April = 3 (0-indexed)
+    assert.equal(date.getUTCMonth(), 3);
     assert.equal(date.getUTCDate(), 30);
   });
 
@@ -119,10 +163,6 @@ describe('snowflakeToTimestamp', () => {
   });
 
   it('handles recent snowflakes (2026+)', () => {
-    // Fabricate a snowflake for 2026-04-03T00:00:00.000Z
-    // Unix ms: 1775088000000
-    // Discord ms: 1775088000000 - 1420070400000 = 355017600000
-    // Shift left 22: 355017600000 << 22 = BigInt
     const discordMs = 355017600000n;
     const fabricated = (discordMs << 22n).toString();
     const ts = snowflakeToTimestamp(fabricated);
@@ -136,9 +176,6 @@ describe('parseSnowflake', () => {
     assert.equal(typeof result.timestamp, 'number');
     assert.equal(typeof result.date, 'string');
     assert.ok(result.date.includes('2016'));
-    assert.equal(typeof result.workerId, 'number');
-    assert.equal(typeof result.processId, 'number');
-    assert.equal(typeof result.increment, 'number');
     assert.ok(result.workerId >= 0 && result.workerId <= 31);
     assert.ok(result.processId >= 0 && result.processId <= 31);
     assert.ok(result.increment >= 0 && result.increment <= 4095);
@@ -160,17 +197,17 @@ describe('parseSnowflake', () => {
 });
 
 describe('timeBetweenSnowflakes', () => {
-  // Helper: fabricate a snowflake for a given Discord-epoch ms offset
   function makeSnowflake(discordMs) {
     return (BigInt(discordMs) << 22n).toString();
   }
 
   it('calculates duration between two snowflakes', () => {
-    const start = makeSnowflake(100000000); // some time
+    const start = makeSnowflake(100000000);
     const end = makeSnowflake(100060000);   // 60 seconds later
     const result = timeBetweenSnowflakes(start, end);
     assert.equal(result.durationMs, 60000);
     assert.equal(result.formatted, '1m 0s');
+    assert.equal(result.formattedExcel, '0:01:00');
     assert.equal(result.reversed, false);
   });
 
@@ -178,7 +215,7 @@ describe('timeBetweenSnowflakes', () => {
     const start = makeSnowflake(100060000);
     const end = makeSnowflake(100000000);
     const result = timeBetweenSnowflakes(start, end);
-    assert.equal(result.durationMs, 60000); // absolute value
+    assert.equal(result.durationMs, 60000);
     assert.equal(result.reversed, true);
   });
 
@@ -187,6 +224,7 @@ describe('timeBetweenSnowflakes', () => {
     const result = timeBetweenSnowflakes(id, id);
     assert.equal(result.durationMs, 0);
     assert.equal(result.formatted, '0ms');
+    assert.equal(result.formattedExcel, '0:00:00');
     assert.equal(result.reversed, false);
   });
 
@@ -196,15 +234,16 @@ describe('timeBetweenSnowflakes', () => {
     const result = timeBetweenSnowflakes(start, end);
     assert.equal(result.durationMs, 3600000);
     assert.equal(result.formatted, '1h 0m 0s');
+    assert.equal(result.formattedExcel, '1:00:00');
   });
 
   it('calculates complex durations', () => {
     const start = makeSnowflake(100000000);
-    // 2h 15m 30s = 8130000ms later
-    const end = makeSnowflake(108130000);
+    const end = makeSnowflake(108130000); // 2h 15m 30s
     const result = timeBetweenSnowflakes(start, end);
     assert.equal(result.durationMs, 8130000);
     assert.equal(result.formatted, '2h 15m 30s');
+    assert.equal(result.formattedExcel, '2:15:30');
   });
 });
 
@@ -246,95 +285,312 @@ describe('formatDuration', () => {
   });
 });
 
-describe('discordTimestamp', () => {
-  it('formats with default full style', () => {
-    // 1712150400000 ms = some timestamp
-    const result = discordTimestamp(1712150400000);
-    assert.equal(result, '<t:1712150400:F>');
+describe('formatDurationExcel — HH:MM:SS for copy-paste', () => {
+  it('formats sub-minute', () => {
+    assert.equal(formatDurationExcel(0), '0:00:00');
+    assert.equal(formatDurationExcel(1000), '0:00:01');
+    assert.equal(formatDurationExcel(45200), '0:00:45');
+    assert.equal(formatDurationExcel(59900), '0:00:59');
   });
 
-  it('formats with relative style', () => {
-    const result = discordTimestamp(1712150400000, 'R');
-    assert.equal(result, '<t:1712150400:R>');
+  it('formats minutes with zero padding', () => {
+    assert.equal(formatDurationExcel(60000), '0:01:00');
+    assert.equal(formatDurationExcel(611000), '0:10:11'); // user's example
+    assert.equal(formatDurationExcel(754000), '0:12:34');
+    assert.equal(formatDurationExcel(611000), '0:10:11');
   });
 
-  it('formats with short time style', () => {
-    const result = discordTimestamp(1712150400000, 't');
-    assert.equal(result, '<t:1712150400:t>');
+  it('formats hours', () => {
+    assert.equal(formatDurationExcel(3600000), '1:00:00');
+    assert.equal(formatDurationExcel(5025000), '1:23:45');
   });
 
-  it('handles millisecond precision (floors to seconds)', () => {
-    const result = discordTimestamp(1712150400999);
-    assert.equal(result, '<t:1712150400:F>');
+  it('formats multi-hour durations (no day rollover)', () => {
+    // 25 hours = 25:00:00 (not 1d 1h)
+    assert.equal(formatDurationExcel(90000000), '25:00:00');
+    assert.equal(formatDurationExcel(94500000), '26:15:00');
+  });
+
+  it('handles negative values (takes absolute)', () => {
+    assert.equal(formatDurationExcel(-611000), '0:10:11');
   });
 });
 
-describe('pendingStarts — in-memory state', () => {
+describe('discordTimestamp', () => {
+  it('formats with default full style', () => {
+    assert.equal(discordTimestamp(1712150400000), '<t:1712150400:F>');
+  });
+
+  it('formats with relative style', () => {
+    assert.equal(discordTimestamp(1712150400000, 'R'), '<t:1712150400:R>');
+  });
+
+  it('formats with short time style', () => {
+    assert.equal(discordTimestamp(1712150400000, 't'), '<t:1712150400:t>');
+  });
+
+  it('handles millisecond precision (floors to seconds)', () => {
+    assert.equal(discordTimestamp(1712150400999), '<t:1712150400:F>');
+  });
+});
+
+describe('discordTimestampWithSeconds', () => {
+  it('combines D and T styles', () => {
+    const result = discordTimestampWithSeconds(1712150400000);
+    assert.equal(result, '<t:1712150400:D> at <t:1712150400:T>');
+  });
+
+  it('floors to seconds on both halves', () => {
+    const result = discordTimestampWithSeconds(1712150400999);
+    assert.equal(result, '<t:1712150400:D> at <t:1712150400:T>');
+  });
+});
+
+// ─────────────────────────────────────────────
+// Bot detection + player resolution
+// ─────────────────────────────────────────────
+
+describe('isBot — detects bots via flag or ID list', () => {
+  it('treats null/undefined as bot', () => {
+    assert.equal(isBot(null), true);
+    assert.equal(isBot(undefined), true);
+  });
+
+  it('detects bot via author.bot flag', () => {
+    assert.equal(isBot({ id: '123', bot: true }), true);
+  });
+
+  it('accepts real user (bot: false)', () => {
+    assert.equal(isBot({ id: '391415444084490240', bot: false }), false);
+  });
+
+  it('accepts user with no bot field', () => {
+    assert.equal(isBot({ id: '391415444084490240' }), false);
+  });
+
+  it('detects CarlBot by ID even without bot flag', () => {
+    assert.equal(isBot({ id: '235148962103951360' }), true);
+  });
+
+  it('detects all known ORG bots by ID', () => {
+    for (const id of KNOWN_ORG_BOT_IDS) {
+      assert.equal(isBot({ id }), true, `${id} should be detected as a bot`);
+    }
+  });
+});
+
+describe('isBotId — ID-only bot detection', () => {
+  it('treats null/undefined/empty as bot', () => {
+    assert.equal(isBotId(null), true);
+    assert.equal(isBotId(undefined), true);
+    assert.equal(isBotId(''), true);
+  });
+
+  it('detects CarlBot by ID', () => {
+    assert.equal(isBotId('235148962103951360'), true);
+  });
+
+  it('returns false for real user ID', () => {
+    assert.equal(isBotId('391415444084490240'), false);
+  });
+});
+
+describe('resolvePlayerForResult — player identification fallback', () => {
+  const realUserA = { id: '391415444084490240', bot: false };
+  const realUserB = { id: '1086246253819613274', bot: false };
+  const carlBot = { id: '235148962103951360', bot: true };
+  const otherBot = { id: '784284227373367346' }; // bot via ID list
+
+  it('prefers END user when both are real users', () => {
+    assert.equal(resolvePlayerForResult(realUserA, realUserB), realUserB.id);
+  });
+
+  it('returns START user when END is a bot', () => {
+    assert.equal(resolvePlayerForResult(realUserA, carlBot), realUserA.id);
+  });
+
+  it('returns END user when START is a bot (the main bug scenario)', () => {
+    // The bug: host right-clicks carl-bot's message as start, player's message as end
+    assert.equal(resolvePlayerForResult(carlBot, realUserA), realUserA.id);
+  });
+
+  it('returns END user when START is a CastBot-like bot', () => {
+    // The Challenge Timer scenario — CastBot posts start, player clicks button
+    const castBot = { id: '1328366050848411658', bot: true };
+    assert.equal(resolvePlayerForResult(castBot, realUserA), realUserA.id);
+  });
+
+  it('returns null when both are bots', () => {
+    assert.equal(resolvePlayerForResult(carlBot, otherBot), null);
+  });
+
+  it('returns null when both are missing', () => {
+    assert.equal(resolvePlayerForResult(null, null), null);
+  });
+
+  it('returns END user when START is missing', () => {
+    assert.equal(resolvePlayerForResult(null, realUserA), realUserA.id);
+  });
+
+  it('returns START user when END is missing', () => {
+    assert.equal(resolvePlayerForResult(realUserA, null), realUserA.id);
+  });
+});
+
+describe('resolvePlayerFromIds — ID-only player resolution', () => {
+  const userA = '391415444084490240';
+  const userB = '1086246253819613274';
+  const carlBot = '235148962103951360';
+
+  it('prefers END when both are real', () => {
+    assert.equal(resolvePlayerFromIds(userA, userB), userB);
+  });
+
+  it('returns END when START is a bot', () => {
+    assert.equal(resolvePlayerFromIds(carlBot, userA), userA);
+  });
+
+  it('returns START when END is a bot', () => {
+    assert.equal(resolvePlayerFromIds(userA, carlBot), userA);
+  });
+
+  it('returns null when both are bots', () => {
+    assert.equal(resolvePlayerFromIds(carlBot, '784284227373367346'), null);
+  });
+
+  it('treats "0" placeholder as missing', () => {
+    // The Post Publicly encoding uses "0" when author ID is missing
+    assert.equal(resolvePlayerFromIds('0', userA), userA);
+    assert.equal(resolvePlayerFromIds(userA, '0'), userA);
+    assert.equal(resolvePlayerFromIds('0', '0'), null);
+  });
+});
+
+// ─────────────────────────────────────────────
+// Pending starts — invoker-only keying
+// ─────────────────────────────────────────────
+
+describe('pendingStarts — invoker-only keying', () => {
   beforeEach(() => {
-    // Clear state between tests
-    clearAllPendingStarts('host1');
-    clearAllPendingStarts('host2');
+    pendingStarts.clear();
   });
 
   it('stores and retrieves a pending start', () => {
-    setPendingStart('host1', 'player1', 'msg123', 1712150400000, 'ch456');
-    const result = getPendingStart('host1', 'player1');
-    assert.deepEqual(result, { messageId: 'msg123', timestamp: 1712150400000, channelId: 'ch456' });
+    const data = { messageId: 'msg123', timestamp: 1712150400000, channelId: 'ch456', authorId: 'user1', authorIsBot: false };
+    const previous = setPendingStart('invoker1', data);
+    assert.equal(previous, null);
+    assert.deepEqual(getPendingStart('invoker1'), data);
   });
 
-  it('returns null for missing entries', () => {
-    assert.equal(getPendingStart('host1', 'nobody'), null);
-    assert.equal(getPendingStart('nobody', 'player1'), null);
+  it('returns null for unknown invoker', () => {
+    assert.equal(getPendingStart('nobody'), null);
   });
 
-  it('supports multiple players per host', () => {
-    setPendingStart('host1', 'playerA', 'msgA', 100, 'ch1');
-    setPendingStart('host1', 'playerB', 'msgB', 200, 'ch2');
-    assert.equal(getPendingStart('host1', 'playerA').messageId, 'msgA');
-    assert.equal(getPendingStart('host1', 'playerB').messageId, 'msgB');
+  it('setPendingStart returns the previous value when overwriting', () => {
+    const first = { messageId: 'msgA', timestamp: 100, channelId: 'ch1', authorId: 'u1', authorIsBot: false };
+    const second = { messageId: 'msgB', timestamp: 200, channelId: 'ch2', authorId: 'u2', authorIsBot: true };
+    assert.equal(setPendingStart('invoker1', first), null);
+    assert.deepEqual(setPendingStart('invoker1', second), first);
+    assert.deepEqual(getPendingStart('invoker1'), second);
   });
 
-  it('supports multiple hosts independently', () => {
-    setPendingStart('host1', 'playerA', 'msg1', 100, 'ch1');
-    setPendingStart('host2', 'playerA', 'msg2', 200, 'ch1');
-    assert.equal(getPendingStart('host1', 'playerA').messageId, 'msg1');
-    assert.equal(getPendingStart('host2', 'playerA').messageId, 'msg2');
+  it('supports multiple invokers independently', () => {
+    const dataA = { messageId: 'msgA', timestamp: 100, channelId: 'ch1', authorId: 'u1', authorIsBot: false };
+    const dataB = { messageId: 'msgB', timestamp: 200, channelId: 'ch2', authorId: 'u2', authorIsBot: false };
+    setPendingStart('invoker1', dataA);
+    setPendingStart('invoker2', dataB);
+    assert.deepEqual(getPendingStart('invoker1'), dataA);
+    assert.deepEqual(getPendingStart('invoker2'), dataB);
   });
 
-  it('overwrites previous start for same player', () => {
-    setPendingStart('host1', 'player1', 'msgOld', 100, 'ch1');
-    setPendingStart('host1', 'player1', 'msgNew', 200, 'ch1');
-    assert.equal(getPendingStart('host1', 'player1').messageId, 'msgNew');
+  it('clears a specific invoker', () => {
+    setPendingStart('invoker1', { messageId: 'msg', timestamp: 1, channelId: 'ch', authorId: 'u', authorIsBot: false });
+    clearPendingStart('invoker1');
+    assert.equal(getPendingStart('invoker1'), null);
   });
 
-  it('clears a specific pending start', () => {
-    setPendingStart('host1', 'playerA', 'msgA', 100, 'ch1');
-    setPendingStart('host1', 'playerB', 'msgB', 200, 'ch2');
-    clearPendingStart('host1', 'playerA');
-    assert.equal(getPendingStart('host1', 'playerA'), null);
-    assert.equal(getPendingStart('host1', 'playerB').messageId, 'msgB');
+  it('clearPendingStart is a no-op for unknown invokers', () => {
+    assert.doesNotThrow(() => clearPendingStart('nobody'));
   });
 
-  it('cleans up host map when last player cleared', () => {
-    setPendingStart('host1', 'player1', 'msg1', 100, 'ch1');
-    clearPendingStart('host1', 'player1');
-    assert.equal(getAllPendingStarts('host1').size, 0);
+  it('stores bot author info for resolution at Stop time', () => {
+    // Main scenario: Start is a bot, need to remember that for Stop
+    const data = { messageId: 'msg', timestamp: 1, channelId: 'ch', authorId: '235148962103951360', authorIsBot: true };
+    setPendingStart('invoker1', data);
+    const retrieved = getPendingStart('invoker1');
+    assert.equal(retrieved.authorIsBot, true);
+    assert.equal(retrieved.authorId, '235148962103951360');
+  });
+});
+
+// ─────────────────────────────────────────────
+// Integration scenarios — the bug and its fix
+// ─────────────────────────────────────────────
+
+describe('Bug regression — mismatched start/end authors', () => {
+  beforeEach(() => pendingStarts.clear());
+
+  it('scenario: bot-posted start + player-posted end', () => {
+    // 1. Host right-clicks carl-bot's message → Start Timer
+    const carlBotAuthor = { id: '235148962103951360', bot: true };
+    const startMsgId = (BigInt(100000000) << 22n).toString();
+    setPendingStart('host1', {
+      messageId: startMsgId,
+      timestamp: snowflakeToTimestamp(startMsgId),
+      channelId: 'ch1',
+      authorId: carlBotAuthor.id,
+      authorIsBot: true,
+    });
+
+    // 2. Host right-clicks player's message → Stop Timer
+    const playerAuthor = { id: '391415444084490240', bot: false };
+    const endMsgId = (BigInt(100610000) << 22n).toString(); // 10m 10s later
+    const pending = getPendingStart('host1');
+    assert.ok(pending, 'pending start should be found (invoker-only keying)');
+
+    // 3. Resolve player
+    const startProxy = { id: pending.authorId, bot: pending.authorIsBot };
+    const playerId = resolvePlayerForResult(startProxy, playerAuthor);
+    assert.equal(playerId, playerAuthor.id, 'player should be the end author (carl-bot is filtered)');
+
+    // 4. Calculate duration
+    const result = timeBetweenSnowflakes(pending.messageId, endMsgId);
+    assert.equal(result.durationMs, 610000);
+    assert.equal(result.formatted, '10m 10s');
+    assert.equal(result.formattedExcel, '0:10:10');
   });
 
-  it('getAllPendingStarts returns all players for a host', () => {
-    setPendingStart('host1', 'pA', 'mA', 100, 'c1');
-    setPendingStart('host1', 'pB', 'mB', 200, 'c2');
-    setPendingStart('host1', 'pC', 'mC', 300, 'c3');
-    const all = getAllPendingStarts('host1');
-    assert.equal(all.size, 3);
+  it('scenario: player-to-player (same author) still works', () => {
+    const playerAuthor = { id: '391415444084490240', bot: false };
+    const startMsgId = (BigInt(100000000) << 22n).toString();
+    setPendingStart('host1', {
+      messageId: startMsgId,
+      timestamp: snowflakeToTimestamp(startMsgId),
+      channelId: 'ch1',
+      authorId: playerAuthor.id,
+      authorIsBot: false,
+    });
+
+    const pending = getPendingStart('host1');
+    const endMsgId = (BigInt(100300000) << 22n).toString();
+    const startProxy = { id: pending.authorId, bot: pending.authorIsBot };
+    const playerId = resolvePlayerForResult(startProxy, playerAuthor);
+    assert.equal(playerId, playerAuthor.id);
   });
 
-  it('clearAllPendingStarts removes everything for a host', () => {
-    setPendingStart('host1', 'pA', 'mA', 100, 'c1');
-    setPendingStart('host1', 'pB', 'mB', 200, 'c2');
-    clearAllPendingStarts('host1');
-    assert.equal(getPendingStart('host1', 'pA'), null);
-    assert.equal(getAllPendingStarts('host1').size, 0);
+  it('scenario: both start and end are bots (no player field)', () => {
+    const carlBot = { id: '235148962103951360', bot: true };
+    const otherBot = { id: '784284227373367346', bot: true };
+    setPendingStart('host1', {
+      messageId: 'msg',
+      timestamp: 1,
+      channelId: 'ch',
+      authorId: carlBot.id,
+      authorIsBot: true,
+    });
+    const startProxy = { id: 'msg' && carlBot.id, bot: true };
+    const playerId = resolvePlayerForResult(startProxy, otherBot);
+    assert.equal(playerId, null, 'no player when both are bots');
   });
 });
 
@@ -343,53 +599,43 @@ describe('pendingStarts — in-memory state', () => {
 // ─────────────────────────────────────────────
 
 describe('Discord custom_id encoding — must stay under 100 chars', () => {
-  // Discord rejects any component with custom_id > 100 characters.
-  // This caused a production break when we encoded too many values.
-  // These tests use worst-case Discord snowflake IDs (max 20 digits).
   const DISCORD_CUSTOM_ID_LIMIT = 100;
-  const MAX_SNOWFLAKE = '99999999999999999999'; // 20 digits (theoretical max)
-  const MAX_PLAYER_ID = '99999999999999999999'; // 20 digits
-  const MAX_DURATION_MS = '999999999'; // ~11.5 days in ms (9 digits, realistic max)
+  const MAX_SNOWFLAKE = '99999999999999999999'; // 20 digits
+  const MAX_USER_ID = '99999999999999999999';   // 20 digits
 
-  it('timer_post custom_id fits with worst-case IDs', () => {
-    // Format: timer_post|playerId|durationMs|startMsgId|endMsgId
-    const customId = `timer_post|${MAX_PLAYER_ID}|${MAX_DURATION_MS}|${MAX_SNOWFLAKE}|${MAX_SNOWFLAKE}`;
+  it('timer_post encoding fits with worst-case IDs', () => {
+    // Format: timer_post|{startMsgId}|{endMsgId}|{startUserId}|{endUserId}
+    const customId = `timer_post|${MAX_SNOWFLAKE}|${MAX_SNOWFLAKE}|${MAX_USER_ID}|${MAX_USER_ID}`;
     assert.ok(
       customId.length <= DISCORD_CUSTOM_ID_LIMIT,
       `timer_post custom_id is ${customId.length} chars (max ${DISCORD_CUSTOM_ID_LIMIT}): ${customId}`
     );
   });
 
-  it('timer_post custom_id fits with realistic IDs', () => {
-    // Real Discord IDs are 18-19 digits currently (2026)
-    const playerId = '391415444084490240';     // 18 digits
-    const durationMs = '86400000';             // 24 hours (8 digits)
+  it('timer_post encoding fits with realistic IDs', () => {
     const startMsgId = '1491110871315779655';  // 19 digits
     const endMsgId = '1491110875904335872';    // 19 digits
-    const customId = `timer_post|${playerId}|${durationMs}|${startMsgId}|${endMsgId}`;
+    const startUserId = '391415444084490240';  // 18 digits
+    const endUserId = '1086246253819613274';   // 19 digits
+    const customId = `timer_post|${startMsgId}|${endMsgId}|${startUserId}|${endUserId}`;
     assert.ok(
       customId.length <= DISCORD_CUSTOM_ID_LIMIT,
-      `timer_post custom_id is ${customId.length} chars (max ${DISCORD_CUSTOM_ID_LIMIT}): ${customId}`
+      `timer_post custom_id is ${customId.length} chars: ${customId}`
     );
   });
 
-  it('rejects encoding with too many fields (regression guard)', () => {
-    // This was the bug: 7 pipe-separated values exceeded 100 chars
-    // Format that BROKE: timer_post|playerId|durationMs|startTime|endTime|startMsgId|endMsgId
-    const brokenFormat = `timer_post|${MAX_PLAYER_ID}|${MAX_DURATION_MS}|${MAX_SNOWFLAKE}|${MAX_SNOWFLAKE}|${MAX_SNOWFLAKE}|${MAX_SNOWFLAKE}`;
-    assert.ok(
-      brokenFormat.length > DISCORD_CUSTOM_ID_LIMIT,
-      `6-value encoding should exceed limit to prove why we removed fields (${brokenFormat.length} chars)`
-    );
+  it('timer_post with "0" placeholder for missing users fits', () => {
+    const startMsgId = '1491110871315779655';
+    const endMsgId = '1491110875904335872';
+    const customId = `timer_post|${startMsgId}|${endMsgId}|0|0`;
+    assert.ok(customId.length <= DISCORD_CUSTOM_ID_LIMIT);
   });
 
   it('snowflake_calculator button custom_id fits', () => {
-    const customId = 'snowflake_calculator';
-    assert.ok(customId.length <= DISCORD_CUSTOM_ID_LIMIT);
+    assert.ok('snowflake_calculator'.length <= DISCORD_CUSTOM_ID_LIMIT);
   });
 
   it('snowflake_lookup button custom_id fits', () => {
-    const customId = 'snowflake_lookup';
-    assert.ok(customId.length <= DISCORD_CUSTOM_ID_LIMIT);
+    assert.ok('snowflake_lookup'.length <= DISCORD_CUSTOM_ID_LIMIT);
   });
 });
