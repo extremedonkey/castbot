@@ -436,11 +436,8 @@ function createEntityDisplay(entity, entityType, safariConfig) {
             break;
 
         case 'map_cell':
-            if (entity.baseContent?.title) {
-                lines.push(`**Title**: ${entity.baseContent.title}`);
-            }
             if (entity.baseContent?.description) {
-                lines.push(`**Description**: ${entity.baseContent.description}`);
+                lines.push(entity.baseContent.description);
             }
             if (entity.buttons?.length > 0) {
                 lines.push(`**Custom Actions**: ${entity.buttons.length} configured`);
