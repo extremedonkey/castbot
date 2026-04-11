@@ -1306,7 +1306,7 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
   const components = [
     {
       type: 10,
-      content: `## 🚀 Trigger Configuration\n\n**Action is activated through..**`
+      content: `## 🚀 Trigger Configuration | ⚡ ${action.name || action.label || 'Unnamed Action'}\n\n**Action is activated through..**`
     },
     {
       type: 1, // Action Row

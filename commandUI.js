@@ -372,7 +372,7 @@ export async function addActionPhrase(guildId, actionId, phrase) {
     return { success: false, error: `Phrase "${trimmed}" already exists.` };
   }
 
-  action.trigger.phrases.push(trimmed);
+  action.trigger.phrases.push(trimmed.toLowerCase());
   if (action.metadata) {
     action.metadata.lastModified = Date.now();
   }
