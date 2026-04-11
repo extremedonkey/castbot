@@ -115,11 +115,15 @@ export async function buildCommandPrefixesUI(guildId) {
   }
 
   components.push({ type: 14 });
+
+  const atLimit = prefixes.length >= SAFARI_LIMITS.MAX_COMMAND_PREFIXES;
   components.push({
     type: 1, // ActionRow
     components: [
       { type: 2, custom_id: 'safari_customization_back', label: '← Settings', style: 2 },
-      { type: 2, custom_id: 'command_prefix_add', label: 'Add Prefix', style: 2, emoji: { name: '🧗' } }
+      atLimit
+        ? { type: 2, custom_id: 'command_prefix_add', label: 'Limit Reached — Delete a Prefix', style: 2, disabled: true }
+        : { type: 2, custom_id: 'command_prefix_add', label: 'Add Prefix', style: 2, emoji: { name: '🧗' } }
     ]
   });
 
