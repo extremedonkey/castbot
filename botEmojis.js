@@ -29,7 +29,7 @@ const isProduction = process.env.PRODUCTION === 'TRUE';
 const BOT_EMOJIS = {
   // CastBot Logo
   castbot_logo: {
-    dev: '1492402492108046376',   // CastBot-Dev application emoji (cb_yellow)
+    dev: '1487709952662573091',   // CastBot-Dev transparent icon (testing)
     prod: '1408700895415500911'    // CastBot production application emoji
   },
   
