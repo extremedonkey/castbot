@@ -245,7 +245,91 @@ The `[🪨 LEGACY]` debug indicators fire for wildcard custom_id patterns like `
 
 ---
 
-## 6. Summary for AI Agents (Zero-Context Handoff)
+## 6. Command (Text Trigger) Execution Logic
+
+When a player types a command, execution follows a strict nested-if model. The trigger phrase is a **precondition** — nothing happens unless it matches. Fail Outcomes only fire when the phrase matched but conditions didn't.
+
+### Logic Tree
+
+```mermaid
+flowchart TD
+    START["Player types command<br/>e.g. 'get sword'"] --> LOC{"Is player at a<br/>map location?"}
+
+    LOC -->|Yes| T1["Tier 1: Search location<br/>actions for phrase match"]
+    LOC -->|No| T2
+
+    T1 --> T1M{"Phrase<br/>matched?"}
+    T1M -->|Yes| EXEC
+    T1M -->|No| T2["Tier 2: Search global<br/>actions (coordinates = [])"]
+
+    T2 --> T2M{"Phrase<br/>matched?"}
+    T2M -->|Yes| EXEC
+    T2M -->|No| NOTHING["## Nothing happened<br/>'Attempted to get sword in Kokiri Forest.<br/>Nothing particularly exciting happened.'"]
+
+    EXEC["Action matched!<br/>Enter executeButtonActions()"] --> OPENING{"Has Opening<br/>Outcomes?<br/>(executeOn: 'always')"}
+
+    OPENING -->|Yes| RUN_OPEN["Execute Opening Outcomes<br/>(display_text, fight_enemy, etc.)"]
+    OPENING -->|No| COND
+
+    RUN_OPEN --> FIGHT{"Opening included<br/>fight_enemy?"}
+    FIGHT -->|Yes| FIGHT_RESULT["Fight result overrides<br/>condition evaluation"]
+    FIGHT -->|No| COND
+
+    FIGHT_RESULT --> BRANCH
+    COND["Evaluate Conditions<br/>(currency, item, role,<br/>attribute checks)"] --> BRANCH
+
+    BRANCH{"Conditions<br/>passed?"}
+    BRANCH -->|Yes| PASS["Execute Pass Outcomes<br/>(executeOn: 'true')<br/>e.g. Give Sword of 1000 Truths"]
+    BRANCH -->|No| FAIL["Execute Fail Outcomes<br/>(executeOn: 'false')<br/>e.g. 'You need something to<br/>go with that sword first!'"]
+
+    style NOTHING fill:#808080,color:#fff
+    style PASS fill:#57F287,color:#000
+    style FAIL fill:#ED4245,color:#fff
+    style RUN_OPEN fill:#5865F2,color:#fff
+    style EXEC fill:#3498DB,color:#fff
+```
+
+### Pseudocode
+
+```
+if phrase matches an action at this location (or globally):
+    execute Opening Outcomes       ← executeOn: 'always', always run
+    evaluate Conditions            ← currency/item/role/attribute checks
+    if conditions pass:
+        execute Pass Outcomes      ← executeOn: 'true'
+    else:
+        execute Fail Outcomes      ← executeOn: 'false'
+else:
+    "Nothing happened"             ← no action entered, no outcomes fire
+```
+
+### Key Principle
+
+**The trigger phrase is a gate, not a condition.** If the player types the wrong phrase (or gibberish), the system never enters any Action's execution flow. Fail Outcomes are for "you got the right door but don't have the key" — not for "you knocked on the wrong door."
+
+### Data Schema Reference
+
+```javascript
+action.actions[] = [
+  { type: 'display_text', executeOn: 'always', ... },  // Opening Outcome
+  { type: 'give_item',    executeOn: 'true',   ... },  // Pass Outcome
+  { type: 'display_text', executeOn: 'false',  ... },  // Fail Outcome
+]
+```
+
+### Example: "Get Sword" at A1
+
+| Phase | What happens | Data |
+|-------|-------------|------|
+| **Trigger** | Player types "get sword" at A1 | `trigger.type: 'modal'`, `trigger.phrases: ['get sword']` |
+| **Opening** | "You reach for the ancient blade..." | `executeOn: 'always'`, `type: 'display_text'` |
+| **Condition** | Does player have Kokiri Shield? | `conditions: [{ type: 'item', config: { itemId: 'kokiri_shield' } }]` |
+| **Pass** | Give Sword of 1000 Truths | `executeOn: 'true'`, `type: 'give_item'` |
+| **Fail** | "You need something to go with that sword first!" | `executeOn: 'false'`, `type: 'display_text'` |
+
+---
+
+## 7. Summary for AI Agents (Zero-Context Handoff)
 
 **If you're a Claude Code instance picking this up:**
 

@@ -47934,105 +47934,42 @@ Your server is now ready for Tycoons gameplay!`;
             return;
           }
 
-          // Still no match found - proceed with existing executeOn:"false" logic
+          // No phrase matched anywhere — show "nothing happened"
+          // Note: executeOn:'false' outcomes only fire when a phrase DOES match but conditions fail.
+          // That's handled inside executeButtonActions() during the normal Tier 1/2 flow.
+          // An unmatched phrase should never leak into any action's outcome execution.
           console.log(`❌ No matching action found for command "${command}" at ${actualLocation || 'location'} or globally`);
 
-          // Check for actions with executeOn: "false" to execute when no match is found
-          let falseActions = [];
-          for (const actionId of locationActions) {
-            const action = safariData[guildId]?.buttons?.[actionId];
-            if (action?.trigger?.type === 'modal' && action.actions) {
-              // Collect all actions with executeOn: "false"
-              const actionsToExecute = action.actions.filter(act => act.executeOn === 'false');
-              if (actionsToExecute.length > 0) {
-                falseActions.push({ actionId: action.id, actions: actionsToExecute });
-              }
-            }
-          }
-          
-          if (falseActions.length > 0) {
-            console.log(`🎯 Found ${falseActions.length} actions with executeOn:'false' to execute`);
-            
-            // Execute the false actions from the first modal action that has them
-            const { executeButtonActions } = await import('./safariManager.js');
-            const firstFalseAction = falseActions[0];
-            
-            // Create proper interaction object for the execution
-            const interactionData = {
-              token: req.body.token,
-              applicationId: req.body.application_id,
-              member: req.body.member,
-              channelName: `#${req.body.channel?.name || coord.toLowerCase()}`
-            };
-            
-            // Execute with forceConditionsFail=true to trigger FALSE actions
-            const result = await executeButtonActions(
-              guildId,
-              firstFalseAction.actionId,
-              userId,
-              interactionData,
-              client,
-              true // forceConditionsFail - treat as if conditions failed
-            );
-            
-            // Log the player command with false actions
-            try {
-              const { logCustomAction } = await import('./safariLogger.js');
-              const userData = req.body.member?.user || {};
-              
-              await logCustomAction({
-                guildId,
-                userId,
-                username: userData.username || 'Unknown',
-                displayName: req.body.member?.nick || userData.global_name || userData.username || 'Unknown',
-                location: coord,
-                actionType: 'player_command',
-                actionId: command,
-                executedActions: firstFalseAction.actions.map(action => ({
-                  type: action.type,
-                  config: action.config,
-                  result: 'executed (on failure)'
-                })),
-                success: true,
-                errorMessage: `No match found for command "${command}", executed failure actions`,
-                channelName: `#${req.body.channel?.name || coord.toLowerCase()}`
-              });
-            } catch (logError) {
-              console.error('Error logging player command:', logError);
-            }
-            
-            // Edit the deferred response with the result
-            await DiscordRequest(`webhooks/${applicationId}/${token}/messages/@original`, {
-              method: 'PATCH',
-              body: result
-            });
-            return;
-          } else {
-            // No false actions found, show default message
-            const locationName = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord]?.baseContent?.title || `location ${coord}`;
-            
+          {
+            // Show default "nothing happened" message
+            const effectiveCoord = actualLocation || (coord !== 'global' ? coord : null);
+            const locationTitle = effectiveCoord ? safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[effectiveCoord]?.baseContent?.title : null;
+            const nothingMessage = locationTitle
+              ? `## Nothing happened\n\nAttempted to \`${command}\` in ${locationTitle}. Nothing particularly exciting happened.`
+              : `## Nothing happened\n\nAttempted to \`${command}\`. Nothing particularly exciting happened.`;
+
             // Log the failed player command
             try {
               const { logCustomAction } = await import('./safariLogger.js');
               const userData = req.body.member?.user || {};
-              
+
               await logCustomAction({
                 guildId,
                 userId,
                 username: userData.username || 'Unknown',
                 displayName: req.body.member?.nick || userData.global_name || userData.username || 'Unknown',
-                location: coord,
+                location: effectiveCoord || 'global',
                 actionType: 'player_command',
                 actionId: command,
                 executedActions: [],
                 success: false,
                 errorMessage: `No matching action found for command "${command}"`,
-                channelName: `#${req.body.channel?.name || coord.toLowerCase()}`
+                channelName: `#${req.body.channel?.name || (effectiveCoord || 'unknown').toLowerCase()}`
               });
             } catch (logError) {
               console.error('Error logging player command:', logError);
             }
-            
+
             // Edit the deferred response with the "nothing happened" message
             await DiscordRequest(`webhooks/${applicationId}/${token}/messages/@original`, {
               method: 'PATCH',
@@ -48043,7 +47980,7 @@ Your server is now ready for Tycoons gameplay!`;
                   components: [
                     {
                       type: 10, // Text Display
-                      content: `## Nothing happened\n\nAttempted to \`${command}\` in ${locationName}. Nothing particularly exciting happened.`
+                      content: nothingMessage
                     }
                   ]
                 }],
@@ -48292,56 +48229,18 @@ Your server is now ready for Tycoons gameplay!`;
               }
             });
           } else {
-            // No matching command found
+            // No matching command found — show "nothing happened"
+            // Fail outcomes only fire when a phrase matches but conditions fail (handled in executeButtonActions)
             console.log(`❌ No matching action found for command "${command}" at ${coord}`);
-            
-            // Check for actions with executeOn: "false" to execute when no match is found
-            let falseActions = [];
-            for (const actionId of locationActions) {
-              const action = safariData[guildId]?.buttons?.[actionId];
-              if (action?.trigger?.type === 'modal' && action.actions) {
-                // Collect all actions with executeOn: "false"
-                const actionsToExecute = action.actions.filter(act => act.executeOn === 'false');
-                if (actionsToExecute.length > 0) {
-                  falseActions.push({ actionId: action.id, actions: actionsToExecute });
-                }
-              }
-            }
-            
-            if (falseActions.length > 0) {
-              console.log(`🎯 Found ${falseActions.length} actions with executeOn:'false' to execute`);
-              
-              // Execute the false actions from the first modal action that has them
-              const { executeButtonActions } = await import('./safariManager.js');
-              const firstFalseAction = falseActions[0];
-              
-              // Create proper interaction object for the execution
-              const interactionData = {
-                token: req.body.token,
-                applicationId: req.body.application_id
-              };
-              
-              // Execute with forceConditionsFail=true to trigger FALSE actions
-              const result = await executeButtonActions(
-                guildId,
-                firstFalseAction.actionId,
-                userId,
-                interactionData,
-                true // forceConditionsFail - treat as if conditions failed
-              );
-              
-              // Return the result but make it ephemeral for admin
-              return res.send({
-                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: {
-                  ...result,
-                  flags: (result.flags || 0) | InteractionResponseFlags.EPHEMERAL
-                }
-              });
-            } else {
-              // No false actions found, show default message
-              const locationName = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord]?.baseContent?.title || `location ${coord}`;
-              
+
+            {
+              // Show default "nothing happened" message
+              const effectiveCoord2 = coord !== 'global' ? coord : null;
+              const locationTitle2 = effectiveCoord2 ? safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[effectiveCoord2]?.baseContent?.title : null;
+              const nothingMessage2 = locationTitle2
+                ? `## Nothing happened\n\nAttempted to \`${command}\` in ${locationTitle2}. Nothing particularly exciting happened.`
+                : `## Nothing happened\n\nAttempted to \`${command}\`. Nothing particularly exciting happened.`;
+
               return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
@@ -48351,7 +48250,7 @@ Your server is now ready for Tycoons gameplay!`;
                     components: [
                       {
                         type: 10, // Text Display
-                        content: `## Nothing happened\n\nAttempted to \`${command}\` in ${locationName}. Nothing particularly exciting happened.`
+                        content: nothingMessage2
                       }
                     ]
                   }],
