@@ -51,20 +51,30 @@ export async function createPlayerDisplaySection(player, playerData, guildId) {
     return null;
   }
 
+  // Guard against accessing roles before guild cache is populated (e.g. during bot startup)
+  let roleCache;
+  try {
+    roleCache = player.roles?.cache;
+  } catch {
+    console.warn(`⚠️ createPlayerDisplaySection: Guild role cache not available for player ${player.id} — bot may still be starting`);
+    return null;
+  }
+  if (!roleCache) return null;
+
   // Prepare parameters for castlistV2 createPlayerCard
   const pronounRoleIds = playerData[guildId]?.pronounRoleIDs || [];
   const timezones = playerData[guildId]?.timezones || {};
-  
+
   // Get player pronouns
-  const memberPronouns = player.roles.cache
+  const memberPronouns = roleCache
     .filter(role => pronounRoleIds.includes(role.id))
     .map(role => role.name)
     .join(', ') || '';
-    
+
   // Get player timezone and calculate current time
   let memberTimezone = '';
   let formattedTime = '';
-  const timezoneRole = player.roles.cache.find(role => timezones[role.id]);
+  const timezoneRole = roleCache.find(role => timezones[role.id]);
   
   if (timezoneRole) {
     memberTimezone = timezoneRole.name;
