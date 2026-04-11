@@ -133,7 +133,6 @@ import {
 } from './buttonHandlerFactory.js';
 import { createEntityManagementUI } from './entityManagementUI.js';
 import { formatBotEmoji } from './botEmojis.js';
-import { createCastlistMenu } from './castlistMenu.js';
 import {
   deleteMapGrid,
   createMapExplorerMenu
@@ -1006,11 +1005,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   
   // Component validation moved to utils.js - use countComponents() or validateComponentLimit()
   
-  // Check for active season to display in header
-  const activeSeason = playerData[guildId]?.activeSeason;
-  const menuTitle = activeSeason?.name 
-    ? `## ${formatBotEmoji('castbot_logo')} CastBot | ${activeSeason.name}`
-    : `## ${formatBotEmoji('castbot_logo')} CastBot | Production Menu`;
+  const menuTitle = `## ${formatBotEmoji('castbot_logo')} CastBot | Production Menu`;
   
   // Build container components array with pagination support
   const containerComponents = [
@@ -11875,75 +11870,6 @@ To fix this:
             ...reeceMenuData,
             ephemeral: true
           };
-        }
-      })(req, res, client);
-    } else if (custom_id === 'prod_change_season') {
-      // Handle Change Season - allows setting the active season for the server
-      return ButtonHandlerFactory.create({
-        id: 'prod_change_season',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        handler: async (context) => {
-          console.log(`🔍 START: prod_change_season - user ${context.userId}`);
-          MenuBuilder.trackLegacyMenu('prod_change_season', 'Change active season menu');
-          
-          // Security check - only allow specific Discord ID for now
-          if (context.userId !== '391415444084490240') {
-            console.log(`❌ ACCESS DENIED: prod_change_season - user ${context.userId} not authorized`);
-            return {
-              content: 'Access denied. This feature is in development.',
-              ephemeral: true
-            };
-          }
-          
-          // Show season selector to change active season
-          console.log(`✅ SUCCESS: prod_change_season - showing season selector`);
-          
-          const menuData = await createCastlistMenu(context.guildId);
-          
-          return {
-            ...menuData,
-            flags: (menuData.flags || 0) | InteractionResponseFlags.EPHEMERAL
-          };
-        }
-      })(req, res, client);
-    } else if (custom_id === 'castlist_season_select') {
-      // Handle season selection - save and refresh production menu
-      return ButtonHandlerFactory.create({
-        id: 'castlist_season_select',
-        updateMessage: true, // Update the existing message
-        handler: async (context) => {
-          console.log(`🔍 START: castlist_season_select - user ${context.userId}`);
-          const playerData = await loadPlayerData();
-          const { guildId, values } = context;
-          const selectedValue = values[0];
-          
-          // Get the selected season details
-          const season = playerData[guildId]?.applicationConfigs?.[selectedValue];
-          
-          if (!season) {
-            return {
-              content: '❌ Season not found. Please try again.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            };
-          }
-          
-          // Save the active season to playerData
-          if (!playerData[guildId]) {
-            playerData[guildId] = {};
-          }
-          playerData[guildId].activeSeason = {
-            id: selectedValue,
-            name: season.seasonName,
-            stage: season.currentStage || 'planning'
-          };
-          
-          await savePlayerData(playerData);
-          console.log(`✅ Active season set to: ${season.seasonName}`);
-          
-          // Refresh the production menu to show the new season in header
-          const menuData = await createProductionMenuInterface(context.guild, playerData, guildId, context.userId);
-          return menuData;
         }
       })(req, res, client);
     } else if (custom_id === 'castlist_hub') {

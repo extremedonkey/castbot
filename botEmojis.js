@@ -30,7 +30,7 @@ const BOT_EMOJIS = {
   // CastBot Logo
   castbot_logo: {
     dev: '1487709952662573091',   // CastBot-Dev transparent icon (testing)
-    prod: '1408700895415500911'    // CastBot production application emoji
+    prod: '1487709751834837103'    // CastBot production transparent icon
   },
   
   // CastBot Full Logo — NOT CURRENTLY USED, flag for removal

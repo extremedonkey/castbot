@@ -1588,16 +1588,6 @@ export const BUTTON_REGISTRY = {
     category: 'castlist'
   },
 
-  // === PRODUCTION MENU ITEMS ===
-  'prod_change_season': {
-    label: 'Change Szn',
-    description: 'Change the active season for the server',
-    emoji: '🔃',
-    style: 'Secondary',
-    category: 'production_menu',
-    restrictedUser: '391415444084490240' // Restricted to Reece during development
-  },
-  
   // === SAFARI MENU SYSTEM ===
   'prod_safari_menu': {
     label: 'Safari',
@@ -2809,13 +2799,6 @@ export const BUTTON_REGISTRY = {
     emoji: '📋',
     style: 'Primary',
     category: 'entity_management'
-  },
-  'castlist_season_select': {
-    label: 'Castlist Season Selection',
-    description: 'Select a season for castlist management',
-    emoji: '📋',
-    style: 'Secondary',
-    category: 'castlist'
   },
   'entity_field_group_*': {
     label: 'Field Group Edit',
