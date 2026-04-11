@@ -47682,11 +47682,12 @@ Your server is now ready for Tycoons gameplay!`;
         const getVal = (comp) => (comp?.component?.value ?? comp?.components?.[0]?.value)?.trim() || '';
         const label = getVal(components[0]);
         const emoji = getVal(components[1]);
+        const description = getVal(components[2]);
 
-        console.log(`🧗 DEBUG: Add prefix modal submit - label: "${label}", emoji: "${emoji}"`);
+        console.log(`🧗 DEBUG: Add prefix modal submit - label: "${label}", emoji: "${emoji}", desc: "${description}"`);
 
         const { addCommandPrefix, buildCommandPrefixesUI } = await import('./commandUI.js');
-        const result = await addCommandPrefix(guildId, label, emoji);
+        const result = await addCommandPrefix(guildId, label, emoji, description);
 
         if (!result.success) {
           return res.send({

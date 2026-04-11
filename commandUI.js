@@ -97,11 +97,12 @@ export async function buildCommandPrefixesUI(guildId) {
     for (let i = 0; i < prefixes.length; i++) {
       const prefix = prefixes[i];
       const emoji = prefix.emoji || '🏷️';
+      const descLine = prefix.description ? `\n-# ${prefix.description}` : '';
       components.push({
         type: 9, // Section
         components: [{
           type: 10,
-          content: `${emoji} **${prefix.label}**`
+          content: `${emoji} **${prefix.label}**${descLine}`
         }],
         accessory: {
           type: 2, // Button
@@ -180,6 +181,19 @@ export function buildAddPrefixModal() {
             placeholder: 'e.g., 🧗, 🔍, 🤿',
             max_length: 50
           }
+        },
+        {
+          type: 18, // Label
+          label: 'Description (optional)',
+          description: 'Gives the player some additional information about when they should use this prefix',
+          component: {
+            type: 4, // Text Input
+            custom_id: 'prefix_description',
+            style: 1, // Short
+            required: false,
+            placeholder: 'e.g., Gives a closer look at something in the location',
+            max_length: 100
+          }
         }
       ]
     }
@@ -192,9 +206,10 @@ export function buildAddPrefixModal() {
  * @param {string} guildId
  * @param {string} label - Prefix text
  * @param {string} [emoji] - Optional emoji
+ * @param {string} [description] - Optional description
  * @returns {{ success: boolean, error?: string }}
  */
-export async function addCommandPrefix(guildId, label, emoji) {
+export async function addCommandPrefix(guildId, label, emoji, description) {
   const safariData = await loadSafariContent();
   if (!safariData[guildId]) safariData[guildId] = {};
   if (!safariData[guildId].safariConfig) safariData[guildId].safariConfig = {};
@@ -215,7 +230,8 @@ export async function addCommandPrefix(guildId, label, emoji) {
 
   config.commandPrefixes.push({
     label: label.trim(),
-    ...(emoji?.trim() ? { emoji: emoji.trim() } : {})
+    ...(emoji?.trim() ? { emoji: emoji.trim() } : {}),
+    ...(description?.trim() ? { description: description.trim() } : {})
   });
 
   await saveSafariContent(safariData);
@@ -287,7 +303,7 @@ export function buildAddPhraseModal({ actionId, prefixes = [] }) {
     options.push({
       label: prefix.label,
       value: prefix.label.toLowerCase(),
-      description: `Prepends "${prefix.label}" to your phrase`,
+      description: (prefix.description || `Prepends "${prefix.label}" to your phrase`).substring(0, 100),
       emoji: { name: prefix.emoji || '🏷️' }
     });
   }
