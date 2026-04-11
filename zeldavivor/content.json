@@ -1,0 +1,333 @@
+{
+  "_meta": {
+    "source": "Zeldavivor — Carlbot custom tags, pre-CastBot era",
+    "theme": "The Legend of Zelda: Ocarina of Time",
+    "extracted": "2026-04-11",
+    "defaultColor": "7ece21",
+    "notes": "CDN image URLs are likely expired. Content extracted from temp/zeldavivor/*.tag files. Structured to match CastBot display_text action config schema (title, content, color, image).",
+    "originalAuthor": "Reece"
+  },
+
+  "locations": [
+    {
+      "id": "b3-explore",
+      "coordinate": "B3",
+      "title": "You at the entrance to the Desert Colossus",
+      "content": "The colossus is a vast, secluded area situated at the rear of the Haunted Wasteland, far out of Hyrule's boundaries and even those of the Gerudo's Fortress, the nearest civilization to the region. The most prominent feature of the desert is a giant monument known as the Desert Colossus and the \"goddess of the sand\".\n\nYou find yourself at the entrance of the Desert Colossus. It's literally just sand. And a Leever.",
+      "image": "https://cdn.discordapp.com/attachments/1205174228555403284/1210245904569991218/OoT3D-Desert-Colossus.png",
+      "color": "7ece21",
+      "links_to": ["b3-fight-leever"]
+    },
+    {
+      "id": "c1-explore",
+      "coordinate": "C1",
+      "title": "You are in a corner of the Desert Colossus",
+      "content": "The colossus is a vast, secluded area situated at the rear of the Haunted Wasteland, far out of Hyrule's boundaries and even those of the Gerudo's Fortress, the nearest civilization to the region. The most prominent feature of the desert is a giant monument known as the Desert Colossus and the \"goddess of the sand\".\n\nYou find yourself in a secluded corner of the Desert Colossus. There's not really much here, you see a palm tree, a few rocks and also a lone Leever. Other than that, it's just a lot of sand!",
+      "image": "https://cdn.discordapp.com/attachments/1205174228555403284/1210245904569991218/OoT3D-Desert-Colossus.png",
+      "color": "7ece21",
+      "links_to": ["b3-fight-leever"]
+    },
+    {
+      "id": "d3-explore",
+      "coordinate": "D3",
+      "title": "You have entered Hyrule Castle Town",
+      "content": "It's a really busy town.",
+      "image": "https://media.discordapp.net/attachments/1205174228555403284/1210250225021747260/Hyrule_Castle_Town_Market.png",
+      "color": "7ece21",
+      "links_to": ["d3-enter-bazaar"]
+    },
+    {
+      "id": "d4-explore",
+      "coordinate": "D4",
+      "title": "You are standing in front of the Hyrule Castle Town drawbridge",
+      "content": "It's a grand, gigantic drawbridge, manned by some scary looking guards during the day.\n\nYou can see an Octorok flailing around in the river below the drawbridge.",
+      "image": "https://cdn.discordapp.com/attachments/1205174228555403284/1210250497462636544/Legendofzeldaocarinaoftimeheader.png",
+      "color": "7ece21",
+      "links_to": ["d4-fight-octorok"]
+    },
+    {
+      "id": "g5-explore",
+      "coordinate": "G5",
+      "title": "You're at the mouth of the Zora River",
+      "content": "You're at the mouth of the Zora River. The river gushes past you, flowing downstream past Hyrule Castle and on to Gerudo Valley. If you follow the mouth of the river up, you'll reach Zora's Fountain, which serves as the water source of all Hyrule.\n\nAn Octorok pops up as you approach the river bank.",
+      "image": "https://cdn.discordapp.com/attachments/1205174228555403284/1210254164530171915/latest.png",
+      "color": "7ece21",
+      "links_to": ["g5-fight-octorok"]
+    },
+    {
+      "id": "g8-explore",
+      "coordinate": "G8",
+      "title": "You are in a narrow, winding ravine",
+      "content": "You find yourself in a small, winding, narrow passageway. Suddenly, a giant venus fly-trap like creature springs out of the ground.\n\nIt's just sitting there snapping and looks pretty weak - you think you can take it.\n\nOn the other hand, you're pretty sure you can just dodge around it and make your way to the Great Deku Tree in the next coordinate.",
+      "image": null,
+      "color": "7ece21",
+      "links_to": ["g8-battle-dekubaba", "h8-navigate"]
+    },
+    {
+      "id": "h8-explore",
+      "coordinate": "H8",
+      "title": "The Great Deku Tree..",
+      "content": "The Deku Tree is the guardian of the Kokiri and of their forest. He protects the Kokiri's Emerald, one of the three Spiritual Stones.\n\nThe Great Deku Tree looms before you, ancient and wise, its bark etched with the passage of countless seasons. Its leaves rustled a greeting, and the air was heavy with the scent of moss and wood.",
+      "image": "https://cdn.discordapp.com/attachments/1205174228555403284/1214419762915057714/4436708.png",
+      "color": "7ece21",
+      "links_to": ["h8-enter-great-deku-tree"]
+    }
+  ],
+
+  "arrivals": {
+    "_note": "Navigate tags were templated: 'You have arrived at coordinate X. Type ?X-explore to look around.' Each had a unique map screenshot and the footer 'It's dangerous to go alone! Take this!'",
+    "footer": "It's dangerous to go alone! Take this!",
+    "maps": {
+      "B3": "https://media.discordapp.net/attachments/1205174228555403284/1210236096860917771/B3.PNG",
+      "C1": "https://media.discordapp.net/attachments/1205174228555403284/1210236150787211355/C1.PNG",
+      "D3": "https://media.discordapp.net/attachments/1205174228555403284/1210236232005849139/D3.PNG",
+      "D4": "https://media.discordapp.net/attachments/1205174228555403284/1210236345318899712/G5.PNG",
+      "D5": "https://media.discordapp.net/attachments/1205174228555403284/1210236233083527178/D5.PNG",
+      "F8": "https://cdn.discordapp.com/attachments/1205174228555403284/1210236299995516939/F8.PNG",
+      "G5": "https://media.discordapp.net/attachments/1205174228555403284/1210236345318899712/G5.PNG",
+      "G8": null
+    }
+  },
+
+  "interactions": [
+    {
+      "id": "f8-talk-mido",
+      "coordinate": "F8",
+      "title": "A small angry man in front of a narrow passageway...",
+      "content": "You approach Mido, a grouchy looking Kokori who you understand to be the leader of the Kokori villagers.\n\nHe's physically blocking a passageway that you understand is on the way to the Great Deku Tree.\n\n'Go on, just try and get past me!'",
+      "image": "https://cdn.discordapp.com/attachments/1205174228555403284/1214239055064076338/images.png",
+      "color": "7ece21",
+      "links_to": ["g8-navigate"]
+    },
+    {
+      "id": "g8-mido-gate",
+      "coordinate": "G8",
+      "title": "A small angry man in front of a narrow passageway...",
+      "condition": "Requires Kokiri Sword AND Deku Shield",
+      "content_pass": "You walk past the head of the Kokori Mido, who gives you the nod of approval as he eyes off your sword and shield.\n\nMido has let you past.",
+      "content_fail": "You head through Kokori Village up to the narrow passageway, which you understand is on the way to the Great Deku Tree.\n\n.. however you're physically blocked by Mido, a grouchy looking Kokori who you understand to be the leader of the Kokori villagers.\n\nHe looks you up and down.\n\n'Hey you! What's your business with the Great Deku Tree? You aren't even fully equipped yet. How do you think you're going to help the Great Deku Tree without both a sword and a shield ready? If you want to pass through here, you should at least equip a sword and shield!'\n\nSeems like he's pretty insistent and he's not gonna let you pass. Better not tick off the head of the Kokori...",
+      "image": "https://cdn.discordapp.com/attachments/1205174228555403284/1214239055064076338/images.png",
+      "color": "7ece21",
+      "links_to": ["g8-explore", "g8-battle-dekubaba"]
+    },
+    {
+      "id": "f8-crawl-log",
+      "coordinate": "F8",
+      "title": "Some huge, dangerous looking boulders!",
+      "content": "You squeeze out of the tiny hole into a narrow maze-like area, relieved to be over the (w)hole ordeal.\n\n.. only to be confronted with a gigantic boulder booming past the area!\n\nIt's one of those perpetual motion boulders - it's rolling from side to side through the maze permanently and without stopping. Past the dangerous boulder, at the end of the maze, you can faintly make out what looks to be a treasure chest?!\n\nIt's going to be quite the puzzle to get past that boulder..",
+      "image": "https://cdn.discordapp.com/attachments/1205174228555403284/1211226684234272768/image.png",
+      "color": "d0021b",
+      "puzzle_url": "https://www.jigsawplanet.com/?rc=play&pid=01c6b0cf8a1a",
+      "spotify": "https://open.spotify.com/track/7FdBdnPO4Fn9LhbG3wqby7",
+      "links_to": ["f8-thou-art-corageous"]
+    },
+    {
+      "id": "f8-thou-art-corageous",
+      "coordinate": "F8",
+      "title": "You narrowly dodge the boulder but....",
+      "content": "You may tell them how to find it, but do not give the command you just typed in to other players.\n\nYou are now confronted with yet another Deku Baba! This one looks slightly more vicious than the last one.\n\nDeku Babas are venus flytrap-like carnivorous plants. Their body consists of a thin green stem, an indigo, round head, large pink veins on their head, and large teeth.",
+      "image": "https://cdn.discordapp.com/attachments/1205174228555403284/1211187499888807986/image.png",
+      "color": "7ece21",
+      "stats_shown": { "hp": 2, "attack": 2 },
+      "links_to": ["g8-battle-bigbaba"]
+    },
+    {
+      "id": "f8-inspect-waterfall",
+      "coordinate": "F8",
+      "title": "Behind the waterfall...",
+      "content": "You approach the waterfall and notice there's actually an alcove behind it big enough to step in...\n\nAnd you spot what appears to be a treasure chest - the wood of the chest itself appears to be brindled in gold!\n\nYou crank open the chest, and at the bottom rests a large, deep red rupee, glimmering as the light from the waterfall filters through to the chest.\n\nYou got 20 rupees!",
+      "content_already_claimed": "Unfortunately, it looks like someone else has already been here.. the chest is already open, and is empty.",
+      "image": null,
+      "color": "cab200",
+      "spotify": "https://open.spotify.com/track/36iNmlwtr9eabiO2vud4yR",
+      "reward": { "type": "currency", "amount": 20, "limit": "once_per_player" }
+    },
+    {
+      "id": "f8-smash-pots",
+      "coordinate": "F8",
+      "title": null,
+      "content": "You smash the pots and find some rupees!",
+      "content_cooldown": "There's no more pots left! Maybe if you wait a while the owner will buy some more...",
+      "image": null,
+      "color": null,
+      "reward": { "type": "currency", "amount": 20, "limit": "cooldown", "cooldown": "1 hour" },
+      "_note": "Original had no embed — just text output + cooldown role. Narrative was minimal."
+    },
+    {
+      "id": "h8-shoot-spiders",
+      "coordinate": "H8",
+      "condition": "Requires Slingshot",
+      "title": null,
+      "content_pass": "With your trusty new slingshot, you take aim and .. WHAM! WHAM! WHAM! You knock all of those vicious spiders off the wall.\n\nYou climb to the top of the tree, but there's nothing up there. All you can really do from up here is inspect the spiderweb from afar.",
+      "content_fail": "Shooting the spiders would be a great idea... if you had something to shoot them with!",
+      "image": null,
+      "color": null,
+      "links_to": ["h8-inspect-spiderweb-from-afar"]
+    }
+  ],
+
+  "rewards": [
+    {
+      "id": "f8-kokiri-chest",
+      "coordinate": "F8",
+      "title": "What's inside the chest?",
+      "content": "You strike the final blow on the Big Deku's flowery carapace, and immediately turn your attention to the impressive looking chest - adorned with a lustrous gold clasp and crafted from burnished wood, its surface imbued with the faint scent of brine and distant lands.\n\nWith some difficulty you force the lid open, the hinge creaking as you slowly and carefully push it back to see what is inside.\n\nAt the bottom of the chest you see a glint, and upon your eyes adjusting to the darkness you realise it is a small, but sharp looking sword.\n\nYou got the Kokiri Sword!\n\nThe Kokiri sword automatically increases your attack by 1. You don't need to do anything - it has been automatically equipped!",
+      "image": null,
+      "color": "cab200",
+      "spotify": "https://open.spotify.com/track/36iNmlwtr9eabiO2vud4yR",
+      "reward": { "type": "item", "name": "Kokiri Sword", "effect": "+1 attack" }
+    },
+    {
+      "id": "h8-glimmering-chest",
+      "coordinate": "H8",
+      "title": null,
+      "content": "You reach into the glimmering chest - it looks to be made of the wood of the Great Deku tree itself.\n\nYou pull out a sturdy slingshot and bag full of what appears to be nearly endless ammo in the form of deku seeds. Nice!\n\nYou got the Slingshot!\n\nThe Slingshot automatically increases your attack by 1. You don't need to do anything - it has been automatically equipped!\n\nAdditionally, you can now target certain objects and enemies that are remote. Try it out sometime!",
+      "image": null,
+      "color": null,
+      "reward": { "type": "item", "name": "Slingshot", "effect": "+1 attack, enables ranged targeting" }
+    }
+  ],
+
+  "enemies": [
+    {
+      "id": "f8-battle-dekubaba",
+      "coordinate": "F8",
+      "name": "Withered Deku Baba",
+      "hp": 1,
+      "attack": 1,
+      "bounty": 2,
+      "description": "You are fighting a withered Deku Baba. This is a fairly weak carnivorous plant that you don't want to get near!",
+      "win_message": "You slayed that Deku Baba!\n\nYou notice something.. There's a small log hollowed out with a space just big enough to crawl through directly below where the deku baba was.",
+      "color": "7ece21",
+      "links_to": ["f8-crawl-log"]
+    },
+    {
+      "id": "g8-battle-dekubaba",
+      "coordinate": "G8",
+      "name": "Withered Deku Baba",
+      "hp": 1,
+      "attack": 1,
+      "bounty": 2,
+      "description": "You are fighting a withered Deku Baba. This is a fairly weak carnivorous plant that you don't want to get near!",
+      "win_message": null,
+      "color": "7ece21"
+    },
+    {
+      "id": "f8-battle-bigbaba",
+      "coordinate": "F8",
+      "name": "Big Deku Baba",
+      "hp": 2,
+      "attack": 2,
+      "bounty": 5,
+      "description": "You are fighting a Big Deku Baba. This one is lunging toward you!",
+      "win_message": "The treasure is yours!\n\nThe chest sits perched atop a chopped log, glimmering.",
+      "color": "7ece21",
+      "links_to": ["f8-kokiri-chest"]
+    },
+    {
+      "id": "h8-fight-bigbaba",
+      "coordinate": "H8",
+      "name": "Big Deku Baba",
+      "hp": 2,
+      "attack": 2,
+      "bounty": 5,
+      "description": "You are fighting a Big Deku Baba. This one is lunging toward you!",
+      "win_message": null,
+      "color": "7ece21"
+    },
+    {
+      "id": "d4-fight-octorok",
+      "coordinate": "D4",
+      "name": "Octorok",
+      "hp": 2,
+      "attack": 2,
+      "bounty": 8,
+      "description": "You are fighting an Octorok, a water-dwelling creature that shoots rock projectiles from its cylindrical snout in short intervals. When approached, Octoroks will immediately submerge underwater to avoid harm.\n\nIt spots you from the distance, emerging out of the water and gazing at you intensely..",
+      "win_message": null,
+      "color": "7ece21"
+    },
+    {
+      "id": "e4-fight-octorok",
+      "coordinate": "E4",
+      "name": "Octorok",
+      "hp": 2,
+      "attack": 2,
+      "bounty": 8,
+      "description": "You are fighting an Octorok, a water-dwelling creature that shoots rock projectiles from its cylindrical snout in short intervals. When approached, Octoroks will immediately submerge underwater to avoid harm.\n\nIt spots you from the distance, emerging out of the water and gazing at you intensely....",
+      "win_message": null,
+      "color": "7ece21"
+    },
+    {
+      "id": "b3-fight-leever",
+      "coordinate": "B3",
+      "name": "Leever",
+      "hp": 3,
+      "attack": 1,
+      "bounty": 7,
+      "description": "You are fighting a Leever, a sand-dwelling creature known for its burrowing capability. It notices you, and starts barreling toward you at breakneck speed making an ominous rocking sound!",
+      "win_message": null,
+      "color": "7ece21"
+    },
+    {
+      "id": "h8-fight-dekuscrub",
+      "coordinate": "H8",
+      "name": "Deku Scrub",
+      "hp": 3,
+      "attack": 3,
+      "bounty": 7,
+      "description": "You are fighting a Deku Scrub, a creature with round, wooden face. Its wide, curious eyes gleam with a mischievous spark, hinting at a playful nature. Its body resembling a stout tree trunk, complete with bark-like skin that ranges in color from a rich, earthy brown to a vibrant green.",
+      "win_message": "The treasure is yours!\n\nYou can tell them where and how you found it, but you cannot tell other players this specific command.",
+      "color": "7ece21",
+      "links_to": ["h8-glimmering-chest"]
+    },
+    {
+      "id": "h8-battle-gohma",
+      "coordinate": "H8",
+      "name": "Gohma",
+      "hp": 5,
+      "attack": 2,
+      "bounty": 15,
+      "description": "You are fighting Gohma - the cause of the infection of The Great Deku Tree. She's dangerous, watch out...",
+      "win_message": null,
+      "color": "7ece21",
+      "_note": "Boss fight. Highest HP and bounty in the game."
+    }
+  ],
+
+  "shop": {
+    "id": "bazaar",
+    "coordinate": "D3",
+    "title": "Hyrule Castle Town Bazaar",
+    "items": [
+      { "name": "Deku Shield", "price": 80, "description": "A basic wooden shield" },
+      { "name": "Empty Bottle", "price": 50, "description": "An empty bottle for storing things" },
+      { "name": "Red Potion", "price": 15, "description": "A healing potion" },
+      { "name": "Fairy", "price": 300, "description": "A fairy that can revive you" },
+      { "name": "Magic Bean", "price": 150, "description": "A mysterious magic bean" },
+      { "name": "Deku Stick", "price": 20, "description": "A simple wooden stick" }
+    ]
+  },
+
+  "game_flow": {
+    "_note": "Reconstructed progression path from command links",
+    "progression": [
+      "Start at F8 (Kokiri Village) — explore, talk to Mido",
+      "F8: Smash pots for rupees, inspect waterfall for rupees",
+      "F8: Battle Withered Deku Baba (HP 1) — discover crawl-log",
+      "F8: Crawl through log — boulder maze jigsaw puzzle",
+      "F8: Dodge boulder — encounter Big Deku Baba (HP 2)",
+      "F8: Defeat Big Deku Baba — get Kokiri Sword from chest",
+      "D3/D4: Visit Hyrule Castle Town, buy Deku Shield from bazaar (80 rupees)",
+      "G8: Mido gate check — need both Sword + Shield to pass",
+      "G8: Battle Withered Deku Baba or dodge to H8",
+      "H8: The Great Deku Tree — enter",
+      "H8: Fight Deku Scrub (HP 3) — get Slingshot from chest",
+      "H8: Shoot spiders with Slingshot",
+      "H8: Fight Big Deku Baba (HP 2)",
+      "H8: Boss fight — Gohma (HP 5, bounty 15)",
+      "B3/C1: Desert Colossus — fight Leevers",
+      "G5: Zora River — fight Octoroks",
+      "D4/E4: Castle drawbridge — fight Octoroks"
+    ]
+  }
+}
