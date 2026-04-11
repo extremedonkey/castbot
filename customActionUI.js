@@ -417,7 +417,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10,
-            content: `-# How does this action get activated?\n${getTriggerTypeLabel(triggerType)}`
+            content: `-# How does this action get activated?\n${getTriggerTypeLabelWithPhrases(triggerType, action)}`
           }],
           accessory: {
             type: 2,
@@ -1174,6 +1174,18 @@ function getTriggerTypeLabel(type) {
     schedule: '⏰ Scheduled Action'
   };
   return labels[type] || '❓ Unknown';
+}
+
+function getTriggerTypeLabelWithPhrases(type, action) {
+  const base = getTriggerTypeLabel(type);
+  if (type !== 'modal') return base;
+  const phrases = action?.trigger?.phrases || [];
+  if (phrases.length === 0) return base;
+  // Show phrases in parentheses, truncate if too long for display
+  const phraseList = phrases.join(', ');
+  const maxLen = 200; // TextDisplay supports 4000, but keep it readable
+  const display = phraseList.length > maxLen ? phraseList.substring(0, maxLen) + '...' : phraseList;
+  return `${base} (${display})`;
 }
 
 function getTriggerDescription(trigger) {
