@@ -130,7 +130,7 @@ export async function buildCommandPrefixesUI(guildId) {
   }];
 
   const { countComponents } = await import('./utils.js');
-  countComponents(result, { verbosity: 'summary', label: 'Command Prefixes' });
+  countComponents(result, { verbosity: 'full', label: 'Command Prefixes' });
 
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2
