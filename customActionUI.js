@@ -4758,9 +4758,10 @@ export async function showFightEnemyConfig(guildId, buttonId, actionIndex) {
     .sort((a, b) => (a[1].name || '').localeCompare(b[1].name || ''))
     .slice(0, 25)
     .map(([id, enemy]) => ({
-      label: `${enemy.emoji || '🐙'} ${enemy.name || 'Unnamed'}`.substring(0, 100),
+      label: (enemy.name || 'Unnamed').substring(0, 100),
       value: id,
       description: `❤️${enemy.hp} ⚔️${enemy.attackValue || 0}`.substring(0, 100),
+      emoji: resolveEmoji(enemy.emoji, '🐙'),
       default: id === currentEnemyId
     }));
 
