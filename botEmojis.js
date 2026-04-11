@@ -33,7 +33,7 @@ const BOT_EMOJIS = {
     prod: '1408700895415500911'    // CastBot production application emoji
   },
   
-  // CastBot Full Logo
+  // CastBot Full Logo — NOT CURRENTLY USED, flag for removal
   castbot_logo_full: {
     dev: '1421388843654975599',   // CastBot-Dev full logo emoji
     prod: '1408708179227054222'    // CastBot production full logo emoji
