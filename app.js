@@ -9188,7 +9188,7 @@ To fix this:
           return { content: `⚡ **${button.name || 'Action'}** has no outcomes configured yet.`, ephemeral: true };
         }
         const interactionData = { token: context.token, applicationId: context.applicationId, client: context.client, member: context.member, channelName: context.channelName, user: context.member?.user || { id: context.userId }, channel: { name: context.channelName } };
-        const result = await executeButtonActions(context.guildId, selectedValue, context.userId, interactionData, context.client);
+        let result = await executeButtonActions(context.guildId, selectedValue, context.userId, interactionData, context.client);
 
         // Check if this action is timed
         let isTimed = false;

@@ -340,4 +340,24 @@ The cache causes MORE problems than it solves:
 
 ---
 
+## Lessons Learned (2026-04-11)
+
+### The Shortcode Gap
+
+The original analysis identified 6 emoji patterns but missed a 7th: **Discord shortcodes** (`:rocket:`, `:pen_fountain:`, `:scales:`). These aren't unicode, don't match `<:name:id>`, and don't start with `<` — so `resolveEmoji()` treated them as plain text and passed `{ name: ':pen_fountain:' }` to Discord, which rejected it as `COMPONENT_INVALID_EMOJI`.
+
+**Root cause**: One guild (828660) had ~15+ items with shortcode emojis stored in `safariContent.json`. These were likely entered via a modal text input where the user typed `:rocket:` expecting Discord to render it — but CastBot stores the raw string, not the rendered unicode.
+
+**Fix applied**: Added shortcode detection to `resolveEmoji()` — maps known shortcodes to unicode via the existing `SHORTCODE_TO_EMOJI` table, falls back to the default emoji for unmapped ones. This is a band-aid; the proper fix is to resolve shortcodes to unicode **at save time** (in the modal submit handler) rather than at render time, so the stored data is always clean.
+
+**What the census missed**: The 1,568 emoji fields were counted by pattern (how they're rendered), not by **stored format**. The stored formats include a 4th type nobody counted:
+1. Unicode: `🎯` — works everywhere
+2. Custom: `<:name:id>` — needs parsing for components, works raw for builders
+3. Null/empty — needs fallback
+4. **Shortcode: `:rocket:`** — needs mapping to unicode, NOT valid in any component emoji field
+
+**Recommendation for Phase 1**: When `resolveEmoji()` is adopted across the codebase, also add a **save-time normalizer** that converts shortcodes to unicode before writing to `safariContent.json`. This eliminates the render-time fallback entirely.
+
+---
+
 Related: [PlayerMenuCustomEmoji RaP 0929](0929_20260329_PlayerMenuCustomEmoji_Analysis.md) | [ComponentsV2](../standards/ComponentsV2.md) | [DiscordEmojiResource](../standards/DiscordEmojiResource.md)

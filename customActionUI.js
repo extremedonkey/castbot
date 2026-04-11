@@ -454,6 +454,10 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           const trueActions = allActions.filter(a => !a.executeOn || a.executeOn === 'true');
           const falseActions = allActions.filter(a => a.executeOn === 'false');
           const notAtMax = allActions.length < SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON;
+          // Budget check: 29 fixed (incl. container + bottom nav) + (outcomes × 2) + (add selects × 2) <= 40
+          // Each add select = 2 components (ActionRow + StringSelect), 3 possible = 6
+          const componentBudget = 40 - 29 - (allActions.length * 2); // remaining for add selects
+          const maxAddSelects = Math.min(3, Math.floor(componentBudget / 2)); // how many add selects fit
           const capWarning = !notAtMax ? `\n-# > ⚠️ Reached combined ${allActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON} outcome cap; delete one to add more.` : '';
 
           const components = [];
@@ -465,7 +469,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
             content: `### \`\`\`🔵 Opening Outcomes (${alwaysActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What always happens when this action triggers?${capWarning}`
           });
           components.push(...getActionListComponents(alwaysActions, actionId, guildItems, guildButtons, 'always', allActions, guildEnemies));
-          if (notAtMax) {
+          if (notAtMax && maxAddSelects >= 3) {
             components.push({
               type: 1,
               components: [{
@@ -507,8 +511,8 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           // Display TRUE outcomes
           components.push(...getActionListComponents(trueActions, actionId, guildItems, guildButtons, 'true', allActions, guildEnemies));
 
-          // Add Pass Outcome select (if not at max total)
-          if (notAtMax) {
+          // Add Pass Outcome select (if not at max total and budget allows — always prioritized)
+          if (notAtMax && maxAddSelects >= 1) {
             components.push({
               type: 1, // Action Row
               components: [{
@@ -524,14 +528,14 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           components.push({ type: 14 });
           components.push({
             type: 10,
-            content: falseActions.length === 0 && !notAtMax
+            content: falseActions.length === 0 && !(notAtMax && maxAddSelects >= 2)
               ? `### \`\`\`🔴 Fail Outcomes (0/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player fails conditions?\n*No fail outcomes — displays generic error message*${capWarning}`
               : `### \`\`\`🔴 Fail Outcomes (${falseActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player fails conditions?${capWarning}`
           });
           components.push(...getActionListComponents(falseActions, actionId, guildItems, guildButtons, 'false', allActions, guildEnemies));
 
-          // Add Fail Outcome select (if not at max total)
-          if (notAtMax) {
+          // Add Fail Outcome select (if not at max total and budget allows)
+          if (notAtMax && maxAddSelects >= 2) {
             components.push({
               type: 1, // Action Row
               components: [{
