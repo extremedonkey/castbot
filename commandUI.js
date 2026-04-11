@@ -78,7 +78,7 @@ export async function buildCommandPrefixesUI(guildId) {
   const components = [
     {
       type: 10,
-      content: `## ❗ About Commands\n-# Players can type secret words or phrases to trigger hidden actions at map locations or from their menu. Commands power Easter eggs, puzzles, secret codes, and interactive story moments.`
+      content: `## ❗ Commands\n-# Players can type secret words or phrases to trigger hidden actions at map locations or from their menu. Commands power Easter eggs, puzzles, secret codes, and interactive story moments.`
     },
     { type: 14 },
     {

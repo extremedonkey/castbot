@@ -36,7 +36,7 @@ export const SAFARI_LIMITS = {
   MAX_DISCORD_COMPONENTS: 40,
 
   // Command system
-  MAX_COMMAND_PREFIXES: 10  // 10 × 3 components per prefix + 9 fixed = 39/40 budget
+  MAX_COMMAND_PREFIXES: 8   // 8 × 3 components per prefix + 9 fixed = 33/40 (7 spare for expansion)
 };
 
 // Semantic aliases — use these in new code

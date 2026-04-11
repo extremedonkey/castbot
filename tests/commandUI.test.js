@@ -133,7 +133,7 @@ describe('buildCommandModal — Consistency', () => {
 
 // ─── Replicated prefix logic ───
 
-const MAX_COMMAND_PREFIXES = 10;
+const MAX_COMMAND_PREFIXES = 8;
 
 function addPrefixToList(prefixes, label, emoji) {
   const normalized = label.trim().toLowerCase();
@@ -211,8 +211,8 @@ describe('addPrefixToList — Validation', () => {
     assert.ok(result.error.includes('already exists'));
   });
 
-  it('rejects when at 10 prefix limit', () => {
-    const prefixes = Array.from({ length: 10 }, (_, i) => ({ label: `prefix${i}` }));
+  it('rejects when at 8 prefix limit', () => {
+    const prefixes = Array.from({ length: 8 }, (_, i) => ({ label: `prefix${i}` }));
     const result = addPrefixToList(prefixes, 'one_more', null);
     assert.equal(result.success, false);
     assert.ok(result.error.includes('Maximum'));
