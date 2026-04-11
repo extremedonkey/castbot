@@ -312,23 +312,9 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
     }
   }
   
-  // Create action rows with 5 button limit
-  if (allButtons.length > 0) {
-    components.push({ type: 14 }); // Separator
-    
-    const buttonRows = [];
-    for (let i = 0; i < allButtons.length; i += 5) {
-      buttonRows.push({
-        type: 1, // Action Row
-        components: allButtons.slice(i, i + 5)
-      });
-    }
-    components.push(...buttonRows);
-  }
-  
-  // Explore + Command + Menu buttons (always present)
+  // Nav row (Explore + Command + Menu) — always present, built first to reserve budget
   const { getBotEmoji } = await import('./botEmojis.js');
-  components.push({
+  const navRow = {
     type: 1, // Action Row
     components: [
       {
@@ -353,10 +339,45 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
         emoji: getBotEmoji('cb_transparent')
       }
     ]
-  });
-  
-  return [{
-    type: 17, // Container
-    components: components
-  }];
+  };
+
+  // Budget check: count fixed components + nav row, then cap dynamic buttons
+  // Nav row = 1 (ActionRow) + 3 (buttons) = 4 components
+  const { countComponents } = await import('./utils.js');
+  const fixedContainer = [{ type: 17, components: [...components, { type: 14 }, navRow] }];
+  const fixedCount = countComponents(fixedContainer, { enableLogging: false });
+  const MAX_COMPONENTS = 40;
+  const buttonBudget = MAX_COMPONENTS - fixedCount;
+
+  // Each button = 1 component, each ActionRow = 1 component. N buttons = N + ceil(N/5)
+  // Solve: N + ceil(N/5) <= budget → N <= budget * 5/6
+  const maxButtons = Math.max(0, Math.floor(buttonBudget * 5 / 6));
+
+  if (allButtons.length > maxButtons) {
+    console.warn(`⚠️ Anchor ${coord}: ${allButtons.length} buttons exceed budget (max ${maxButtons} with ${fixedCount} fixed components). Truncating.`);
+    allButtons.length = maxButtons;
+  }
+
+  // Create action rows with 5 button limit
+  if (allButtons.length > 0) {
+    components.push({ type: 14 }); // Separator
+
+    const buttonRows = [];
+    for (let i = 0; i < allButtons.length; i += 5) {
+      buttonRows.push({
+        type: 1, // Action Row
+        components: allButtons.slice(i, i + 5)
+      });
+    }
+    components.push(...buttonRows);
+  }
+
+  // Add nav row last
+  components.push(navRow);
+
+  const result = [{ type: 17, components }];
+  const totalCount = countComponents(result, { enableLogging: false });
+  console.log(`📋 Anchor ${coord}: ${totalCount}/40 components (${allButtons.length} buttons)`);
+
+  return result;
 }
