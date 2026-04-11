@@ -17,22 +17,17 @@ Quick Create Actions are one-modal shortcuts that create fully-formed Actions in
 
 ## Available Quick Actions
 
-| Type | Button Label | Modal Title | Outcome Created | Default Emoji |
-|------|-------------|-------------|-----------------|---------------|
-| **Quick Text** | 📃 Quick Text | Quick Text Action | `display_text` | 📃 |
-| **Quick Currency** | 🪙 Quick {CurrencyName} | Quick {CurrencyName} Action | `give_currency` | 🪙 (or custom) |
-| **Quick Item** | 📦 Quick Item | Quick Item Action | `give_item` (qty 1) | 📦 |
-| **Quick Enemy** | 🐙 Quick Enemy | Quick Enemy Action | `fight_enemy` | 🐙 |
+| Type | Button Label | Modal Title | Trigger Type | Outcome Created |
+|------|-------------|-------------|--------------|-----------------|
+| **Quick Text** | 📃 Quick Text | Quick Text Action | Button Click | `display_text` |
+| **Quick Currency** | 🪙 Quick {CurrencyName} | Quick {CurrencyName} Action | Button Click | `give_currency` |
+| **Quick Item** | 📦 Quick Item | Quick Item Action | Button Click | `give_item` (qty 1) |
+| **Quick Enemy** | 🐙 Quick Enemy | Quick Enemy Action | Button Click | `fight_enemy` |
+| **Quick Command** | ❗ Quick Command | ❗ Quick Command | Command (modal) | `display_text` |
 
-All four share the same 5-field modal structure:
+Quick Text/Currency/Item/Enemy create **button-triggered** actions (5 fields: name, content/amount/item/enemy, emoji, limit, color).
 
-| Slot | Quick Text | Quick Currency | Quick Item | Quick Enemy |
-|------|-----------|---------------|-----------|-------------|
-| 1 | Button Name (TextInput) | Button Name (TextInput) | Button Name (TextInput) | Button Name (TextInput) |
-| 2 | Text to display (Paragraph) | Amount (TextInput) | Item Select (StringSelect) | Enemy Select (StringSelect) |
-| 3 | Button Emoji (TextInput) | Button Emoji (TextInput) | Button Emoji (TextInput) | Button Emoji (TextInput) |
-| 4 | Usage Limit (StringSelect) | Usage Limit (StringSelect) | Usage Limit (StringSelect) | Usage Limit (StringSelect) |
-| 5 | Button Color (StringSelect) | Button Color (StringSelect) | Button Color (StringSelect) | Button Color (StringSelect) |
+Quick Command creates a **Command-triggered** action (3-5 fields depending on prefix config: name, prefix select (if prefixes exist), command phrase, display text, usage limit). No button color/emoji since Command actions don't render as buttons on anchor messages.
 
 ---
 
@@ -108,6 +103,16 @@ Buttons in `customActionUI.js` → `createCustomActionSelectionUI()`, shown only
 - `executeOn: 'always'` (fight happens regardless of conditions)
 - Enemy Select shows `❤️{hp} ⚔️{attackValue}` in descriptions
 
+### Quick Command Special Behavior
+
+- Sets `trigger.type: 'modal'` (Command trigger, not Button Click)
+- Conditionally shows prefix String Select (only when guild has command prefixes configured)
+- Concatenates prefix + phrase on submit (e.g., "climb" + "tree" → "climb tree"), normalized to lowercase
+- Creates one `display_text` outcome with `executeOn: 'true'` (pass)
+- No button emoji or color (Command actions don't render as buttons on anchor messages)
+- `metadata.createdVia: 'quick_command'`
+- Component indices shift dynamically based on whether prefix select is present (handled by `hasPrefixes` parameter)
+
 ### Global Actions (`coordinate === 'global'`)
 
 When Quick Actions are triggered from the global Actions screen:
@@ -124,6 +129,7 @@ All Quick-created actions have `metadata.createdVia`:
 - `'quick_currency'`
 - `'quick_item'`
 - `'quick_enemy'`
+- `'quick_command'`
 
 ---
 
@@ -131,6 +137,7 @@ All Quick-created actions have `metadata.createdVia`:
 
 ```
 'quick_text_*'     → category: safari_quick_create, requiresModal: true
+'quick_command_*'  → category: safari_quick_create, requiresModal: true
 'quick_currency_*' → category: safari_quick_create, requiresModal: true
 'quick_item_*'     → category: safari_quick_create, requiresModal: true
 'quick_enemy_*'    → category: safari_quick_create, requiresModal: true
