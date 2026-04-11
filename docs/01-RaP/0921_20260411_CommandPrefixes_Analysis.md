@@ -1,7 +1,7 @@
 # 0921 — Command Prefixes & Unified Command UI
 
 **Date**: 2026-04-11
-**Status**: Analysis complete, ready for implementation (phases 1-2)
+**Status**: Phases 1, 2, 3a implemented. Phase 3b (player modal) pending.
 **Related**: [ActionTerminology](0956_20260308_ActionTerminology_Analysis.md), [PlayerCommands](../03-features/PlayerCommands.md), [SafariCustomActions](../03-features/SafariCustomActions.md)
 
 ## Original Context
@@ -218,30 +218,17 @@ The submit handler concatenates: `prefix + " " + target` (or just `target` if no
 
 ## 4. Implementation Plan
 
-### Phase 1: Common UI (extract shared builder)
+### Phase 1: Common UI (extract shared builder) — DONE ✅
 
 **Goal**: Single source of truth for the Command modal. Migrate from legacy ActionRow to Label.
 
-**Changes**:
+**Implemented**: `commandUI.js` with `buildCommandModal()`. All 3 inline modal builders replaced. Tests: `tests/commandUI.test.js` (10 tests). Modal submit handlers updated to support Label extraction.
 
-| File | Change |
-|------|--------|
-| `commandUI.js` (new) | Create `buildCommandModal()` — the shared builder |
-| `app.js:33371` | `player_enter_command_global` handler → call `buildCommandModal({ coord: 'global' })` |
-| `app.js:33401` | `player_enter_command_{coord}` handler → call `buildCommandModal({ coord })` |
-| `app.js:33434` | `admin_test_command_{coord}` handler → call `buildCommandModal({ coord, isAdmin: true })` |
-
-**Tests**: `tests/commandUI.test.js` — modal structure, custom_id patterns, label usage
-
-### Phase 2: Anchor button
+### Phase 2: Anchor button — DONE ✅
 
 **Goal**: Add 🕹️ Command button directly on anchor messages, between Explore and Menu.
 
-**Changes**:
-
-| File | Change |
-|------|--------|
-| `safariButtonHelper.js:329-349` | Add Command button between Explore and Menu in `createAnchorMessageComponents()` |
+**Implemented**: `safariButtonHelper.js` — Command button added between Explore and Menu. Component budget check added (truncates with warning if over 40).
 
 The button uses the existing `player_enter_command_{coord}` custom_id — no new handler needed. The same `buildCommandModal()` from Phase 1 generates the modal.
 
@@ -265,15 +252,17 @@ The button uses the existing `player_enter_command_{coord}` custom_id — no new
 
 **Goal**: Per-guild configurable "action verbs" that appear as a String Select in the Command modal, concatenated with the text input before phrase matching.
 
-#### Phase 3a: Admin Configuration UI
+#### Phase 3a: Admin Configuration UI — DONE ✅
 
-**Where**: Safari settings (alongside `enableGlobalCommands`)
+**Implemented**: Settings menu → ❗ Commands → Prefix management UI.
 
-**Data**: `safariConfig.commandPrefixes: string[]` (e.g., `['climb', 'inspect', 'dive', 'open']`)
+**Data**: `safariConfig.commandPrefixes: [{ label: string, emoji?: string }]`
 
-**UI**: A modal or inline editor to add/remove/reorder prefixes. Each prefix is a plain string — no emoji or config required initially (emoji mapping could be a later enhancement).
+**UI**: `buildCommandPrefixesUI()` in `commandUI.js`. Section rows with Remove buttons, Add Prefix modal with Label-wrapped fields. Validation: empty check, duplicate check (case-insensitive), 20 max limit.
 
-**Default**: Empty array (no prefixes → modal shows text input only, same as Phase 1)
+**Handlers**: `command_prefixes_menu`, `command_prefix_add`, `command_prefix_remove_*`, `command_prefix_add_modal` (modal submit), `safari_customization_back`. All registered in BUTTON_REGISTRY.
+
+**Settings menu changes**: "🦁 Idol Hunts, Challenges and Safari Settings" header. Events moved to "📼 Legacy" section.
 
 #### Phase 3b: Modal Update
 
@@ -294,8 +283,8 @@ No changes to `executeButtonActions`, phrase matching, or the Action data model.
 
 #### Phase 3n: Future Considerations
 
-- **Per-prefix emoji**: Map prefixes to emoji for the select options (e.g., climb → 🧗)
-- **Per-location prefixes**: Different prefixes available at different coordinates (override guild defaults)
+- ~~**Per-prefix emoji**: Map prefixes to emoji for the select options (e.g., climb → 🧗)~~ — DONE, emoji is part of the data model
+- ~~**Per-location prefixes**: Different prefixes available at different coordinates (override guild defaults)~~ — STRUCK: keeping it guild-wide for standardisation
 - **Prefix-only matching**: Allow a prefix without a target (e.g., just "climb" as a valid command)
 - **Prefix display in "Nothing happened"**: Show the prefix in the failure message for context
 

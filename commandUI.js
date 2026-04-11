@@ -83,7 +83,8 @@ export async function buildCommandPrefixesUI(guildId) {
     {
       type: 10,
       content: `### \`\`\`🧗 Command Prefixes\`\`\`\n-# Prefixes give players a set of pre-defined action verbs (e.g. climb, inspect, open) shown as a dropdown when entering commands. This saves players from guessing and reduces spam — they pick an action, then type the target. The prefix and target are combined before matching (e.g. "climb" + "tree" = "climb tree").`
-    }
+    },
+    { type: 14 }
   ];
 
   if (prefixes.length === 0) {
