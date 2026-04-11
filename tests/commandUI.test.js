@@ -16,7 +16,7 @@ function buildCommandModal({ coord, isAdmin = false, prefixes = [] }) {
       { label: 'Freeform (no prefix)', value: 'freeform', emoji: { name: '♾️' }, default: true }
     ];
     for (const p of prefixes) {
-      prefixOptions.push({ label: p.label, value: p.label.toLowerCase(), emoji: { name: p.emoji || '🏷️' } });
+      prefixOptions.push({ label: p.label, value: p.label.toLowerCase(), description: (p.description || `Prepends "${p.label}" to your command`).substring(0, 100), emoji: { name: p.emoji || '🏷️' } });
     }
     components.push({
       type: 18, label: 'Prefix (optional)',
