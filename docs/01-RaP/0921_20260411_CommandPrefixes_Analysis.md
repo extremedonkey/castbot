@@ -1,7 +1,7 @@
 # 0921 — Command Prefixes & Unified Command UI
 
 **Date**: 2026-04-11
-**Status**: Phases 1, 2, 3a implemented. Phase 3b (player modal) pending.
+**Status**: All phases implemented. Promoted to feature doc: [PlayerCommands.md](../03-features/PlayerCommands.md)
 **Related**: [ActionTerminology](0956_20260308_ActionTerminology_Analysis.md), [PlayerCommands](../03-features/PlayerCommands.md), [SafariCustomActions](../03-features/SafariCustomActions.md)
 
 ## Original Context
@@ -256,15 +256,15 @@ The button uses the existing `player_enter_command_{coord}` custom_id — no new
 
 **Implemented**: Settings menu → ❗ Commands → Prefix management UI.
 
-**Data**: `safariConfig.commandPrefixes: [{ label: string, emoji?: string }]`
+**Data**: `safariConfig.commandPrefixes: [{ label: string, emoji?: string, description?: string }]`
 
-**UI**: `buildCommandPrefixesUI()` in `commandUI.js`. Section rows with Remove buttons, Add Prefix modal with Label-wrapped fields. Validation: empty check, duplicate check (case-insensitive), 20 max limit.
+**UI**: `buildCommandPrefixesUI()` in `commandUI.js`. Section rows with Remove buttons, Add Prefix modal with Label-wrapped fields (prefix, emoji, description). Validation: empty check, duplicate check (case-insensitive), MAX_COMMAND_PREFIXES = 8 limit. Button disabled at limit.
 
 **Handlers**: `command_prefixes_menu`, `command_prefix_add`, `command_prefix_remove_*`, `command_prefix_add_modal` (modal submit), `safari_customization_back`. All registered in BUTTON_REGISTRY.
 
 **Settings menu changes**: "🦁 Idol Hunts, Challenges and Safari Settings" header. Events moved to "📼 Legacy" section.
 
-#### Phase 3b: Admin Phrase Management UI — IN PROGRESS
+#### Phase 3b: Admin Phrase Management UI — DONE ✅
 
 **Goal**: Replace the old 5-input phrase modal with an inline list UI (matching the Command Prefixes pattern). Each phrase shown as a Section with Remove button. Adding one-at-a-time via a modal with prefix selection.
 
@@ -289,16 +289,13 @@ Player types a command phrase via the 🕹️ Enter Command button...
 
 **Backward compat**: Old `configure_modal_trigger_` and `modal_phrases_config_` handlers kept for `button_modal` trigger type.
 
-#### Phase 3c: Player Command Modal Update (future — not built yet)
+#### Phase 3c: Player Command Modal Update — DONE ✅
 
-**Where**: `buildCommandModal()` — already has `prefixes` parameter (stubbed).
+**Implemented**: `buildCommandModal()` now conditionally shows prefix String Select when `prefixes.length > 0`. Freeform default + guild prefixes with descriptions. Submit handler dynamically detects select vs text-only and concatenates prefix + phrase. All 3 callers (global, location, admin) load and pass prefixes.
 
-When `prefixes.length > 0`, the player modal gains a String Select above the text input:
-- **Label**: "Prefix" — optional, defaults to freeform
-- **Options**: One per guild prefix + freeform
-- **Submit**: Concatenates prefix + target before phrase matching
+**Action editor**: Trigger section now shows phrases inline: `🕹️ Command (climb tree, inspect leaves)`.
 
-No changes to `executeButtonActions`, phrase matching, or the Action data model. Prefixes are purely a UI convenience — the matched phrase is still stored as `"climb tree"` in the Action's `trigger.phrases[]`.
+**All phrases normalized to lowercase on save.**
 
 #### Phase 3n: Future Considerations
 
