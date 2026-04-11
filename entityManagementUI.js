@@ -184,9 +184,6 @@ export async function createEntityManagementUI(options) {
             // Entity selector
             createEntitySelector(filteredEntities, selectedId, entityType, searchTerm),
 
-            // For map_cell, show field group buttons directly under the selector
-            ...(selectedEntity && entityType === 'map_cell' ? createFieldGroupButtons('map_cell', selectedId, activeFieldGroup) : []),
-
             // Show entity details if selected
             ...(selectedEntity ? [
                 { type: 14 }, // Separator
@@ -480,12 +477,13 @@ async function createModeSpecificUI(mode, entityType, entityId, entity, activeFi
 async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, guildId) {
     const components = [
         { type: 14 }, // Separator
-        // Field group buttons are shown under the selector for map_cell (in createEntityManagementUI)
         ...(entityType !== 'map_cell' ? createFieldGroupButtons(entityType, entityId, activeFieldGroup) : []),
     ];
 
-    // Add action select + Quick Create row for map cells
+    // Add field group buttons + action select + Quick Create row for map cells
     if (entityType === 'map_cell' && guildId) {
+        // Location info/stores buttons above the action select
+        components.push(...createFieldGroupButtons('map_cell', entityId, activeFieldGroup));
         try {
             const { getCustomTerms } = await import('./safariManager.js');
             const customTerms = await getCustomTerms(guildId);
