@@ -47665,8 +47665,8 @@ Your server is now ready for Tycoons gameplay!`;
       const token = req.body.token;
       const applicationId = req.body.application_id;
 
-      // Get the command entered by the player
-      const command = components[0].components[0].value?.trim().toLowerCase();
+      // Get the command entered by the player (supports both Label and legacy ActionRow)
+      const command = (components[0].component?.value ?? components[0].components?.[0]?.value)?.trim().toLowerCase();
 
       console.log(`⌨️ DEBUG: Player command submitted - coord: ${coord}, command: "${command}"`);
 
@@ -48099,8 +48099,8 @@ Your server is now ready for Tycoons gameplay!`;
           const channelId = req.body.channel_id;
           const userId = req.body.member.user.id;
           
-          // Get the command entered by the admin
-          const command = components[0].components[0].value?.trim().toLowerCase();
+          // Get the command entered by the admin (supports both Label and legacy ActionRow)
+          const command = (components[0].component?.value ?? components[0].components?.[0]?.value)?.trim().toLowerCase();
           
           console.log(`🔧 DEBUG: Admin command submitted (via player logic) - coord: ${coord}, command: "${command}"`);
           
