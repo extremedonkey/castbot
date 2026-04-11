@@ -12,6 +12,7 @@
 
 import { InteractionResponseType, InteractionResponseFlags } from 'discord-interactions';
 import { PermissionFlagsBits } from 'discord.js';
+import { BOT_EMOJIS, formatBotEmoji, getBotEmojiNames } from '../botEmojis.js';
 
 const EMOJIS_PER_PAGE = 23; // Reserve 2 slots for pagination nav
 
@@ -345,6 +346,29 @@ export async function buildEmojiDashboard(guild, guildId) {
   // Broken references
   if (broken.length > 0) {
     components.push({ type: 10, content: `### ⚠️ Broken References (${broken.length})\n${broken.slice(0, 5).join('\n')}` });
+  }
+
+  // Bot Application Emojis section
+  const botEmojiNames = getBotEmojiNames();
+  if (botEmojiNames.length > 0) {
+    components.push({ type: 14 });
+    const entries = botEmojiNames.map(name => `${formatBotEmoji(name)} **${name}**`);
+    // Split into multiple text displays if content exceeds 4096 chars
+    const header = `### 🤖 Bot Application Emojis (${botEmojiNames.length})\n-# Available in all servers via CastBot. Managed in Developer Portal.\n`;
+    let current = header;
+    const TEXT_DISPLAY_LIMIT = 4096;
+    for (const entry of entries) {
+      const candidate = current + (current === header ? '' : ' · ') + entry;
+      if (candidate.length > TEXT_DISPLAY_LIMIT) {
+        components.push({ type: 10, content: current });
+        current = entry;
+      } else {
+        current = candidate;
+      }
+    }
+    if (current) {
+      components.push({ type: 10, content: current });
+    }
   }
 
   components.push({ type: 14 });
