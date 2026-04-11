@@ -77,7 +77,7 @@ export function buildCommandModal({ coord, isAdmin = false, prefixes = [] }) {
       custom_id: 'command',
       style: 1, // Short
       required: true,
-      placeholder: 'e.g., climb tree, open chest, my-secret-idol',
+      placeholder: 'e.g., tree, rock, secret-code',
       min_length: 1,
       max_length: 100
     }

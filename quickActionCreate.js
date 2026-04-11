@@ -699,7 +699,7 @@ export function buildQuickCommandModal(coordinate, prefixes = []) {
                 type: 4,
                 custom_id: 'command_phrase',
                 style: 1,
-                placeholder: 'e.g., climb tree, open chest, my-secret-idol',
+                placeholder: 'e.g., tree, rock, secret-code',
                 required: true,
                 max_length: 100
             }

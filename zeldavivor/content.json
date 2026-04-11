@@ -55,13 +55,13 @@
       "links_to": ["g5-fight-octorok"]
     },
     {
-      "id": "g8-explore",
-      "coordinate": "G8",
+      "id": "e7-explore",
+      "coordinate": "E7",
       "title": "You are in a narrow, winding ravine",
       "content": "You find yourself in a small, winding, narrow passageway. Suddenly, a giant venus fly-trap like creature springs out of the ground.\n\nIt's just sitting there snapping and looks pretty weak - you think you can take it.\n\nOn the other hand, you're pretty sure you can just dodge around it and make your way to the Great Deku Tree in the next coordinate.",
       "image": null,
       "color": "7ece21",
-      "links_to": ["g8-battle-dekubaba", "h8-navigate"]
+      "links_to": ["e7-battle-dekubaba", "h8-navigate"]
     },
     {
       "id": "h8-explore",
@@ -83,57 +83,57 @@
       "D3": "https://media.discordapp.net/attachments/1205174228555403284/1210236232005849139/D3.PNG",
       "D4": "https://media.discordapp.net/attachments/1205174228555403284/1210236345318899712/G5.PNG",
       "D5": "https://media.discordapp.net/attachments/1205174228555403284/1210236233083527178/D5.PNG",
-      "F8": "https://cdn.discordapp.com/attachments/1205174228555403284/1210236299995516939/F8.PNG",
+      "F7": "https://cdn.discordapp.com/attachments/1205174228555403284/1210236299995516939/F8.PNG",
       "G5": "https://media.discordapp.net/attachments/1205174228555403284/1210236345318899712/G5.PNG",
-      "G8": null
+      "E7": null
     }
   },
 
   "interactions": [
     {
-      "id": "f8-talk-mido",
-      "coordinate": "F8",
+      "id": "f7-talk-mido",
+      "coordinate": "F7",
       "title": "A small angry man in front of a narrow passageway...",
       "content": "You approach Mido, a grouchy looking Kokori who you understand to be the leader of the Kokori villagers.\n\nHe's physically blocking a passageway that you understand is on the way to the Great Deku Tree.\n\n'Go on, just try and get past me!'",
       "image": "https://cdn.discordapp.com/attachments/1205174228555403284/1214239055064076338/images.png",
       "color": "7ece21",
-      "links_to": ["g8-navigate"]
+      "links_to": ["e7-navigate"]
     },
     {
-      "id": "g8-mido-gate",
-      "coordinate": "G8",
+      "id": "e7-mido-gate",
+      "coordinate": "E7",
       "title": "A small angry man in front of a narrow passageway...",
       "condition": "Requires Kokiri Sword AND Deku Shield",
       "content_pass": "You walk past the head of the Kokori Mido, who gives you the nod of approval as he eyes off your sword and shield.\n\nMido has let you past.",
       "content_fail": "You head through Kokori Village up to the narrow passageway, which you understand is on the way to the Great Deku Tree.\n\n.. however you're physically blocked by Mido, a grouchy looking Kokori who you understand to be the leader of the Kokori villagers.\n\nHe looks you up and down.\n\n'Hey you! What's your business with the Great Deku Tree? You aren't even fully equipped yet. How do you think you're going to help the Great Deku Tree without both a sword and a shield ready? If you want to pass through here, you should at least equip a sword and shield!'\n\nSeems like he's pretty insistent and he's not gonna let you pass. Better not tick off the head of the Kokori...",
       "image": "https://cdn.discordapp.com/attachments/1205174228555403284/1214239055064076338/images.png",
       "color": "7ece21",
-      "links_to": ["g8-explore", "g8-battle-dekubaba"]
+      "links_to": ["e7-explore", "e7-battle-dekubaba"]
     },
     {
-      "id": "f8-crawl-log",
-      "coordinate": "F8",
+      "id": "f7-crawl-log",
+      "coordinate": "F7",
       "title": "Some huge, dangerous looking boulders!",
       "content": "You squeeze out of the tiny hole into a narrow maze-like area, relieved to be over the (w)hole ordeal.\n\n.. only to be confronted with a gigantic boulder booming past the area!\n\nIt's one of those perpetual motion boulders - it's rolling from side to side through the maze permanently and without stopping. Past the dangerous boulder, at the end of the maze, you can faintly make out what looks to be a treasure chest?!\n\nIt's going to be quite the puzzle to get past that boulder..",
       "image": "https://cdn.discordapp.com/attachments/1205174228555403284/1211226684234272768/image.png",
       "color": "d0021b",
       "puzzle_url": "https://www.jigsawplanet.com/?rc=play&pid=01c6b0cf8a1a",
       "spotify": "https://open.spotify.com/track/7FdBdnPO4Fn9LhbG3wqby7",
-      "links_to": ["f8-thou-art-corageous"]
+      "links_to": ["f7-thou-art-corageous"]
     },
     {
-      "id": "f8-thou-art-corageous",
-      "coordinate": "F8",
+      "id": "f7-thou-art-corageous",
+      "coordinate": "F7",
       "title": "You narrowly dodge the boulder but....",
       "content": "You may tell them how to find it, but do not give the command you just typed in to other players.\n\nYou are now confronted with yet another Deku Baba! This one looks slightly more vicious than the last one.\n\nDeku Babas are venus flytrap-like carnivorous plants. Their body consists of a thin green stem, an indigo, round head, large pink veins on their head, and large teeth.",
       "image": "https://cdn.discordapp.com/attachments/1205174228555403284/1211187499888807986/image.png",
       "color": "7ece21",
       "stats_shown": { "hp": 2, "attack": 2 },
-      "links_to": ["g8-battle-bigbaba"]
+      "links_to": ["e7-battle-bigbaba"]
     },
     {
-      "id": "f8-inspect-waterfall",
-      "coordinate": "F8",
+      "id": "f7-inspect-waterfall",
+      "coordinate": "F7",
       "title": "Behind the waterfall...",
       "content": "You approach the waterfall and notice there's actually an alcove behind it big enough to step in...\n\nAnd you spot what appears to be a treasure chest - the wood of the chest itself appears to be brindled in gold!\n\nYou crank open the chest, and at the bottom rests a large, deep red rupee, glimmering as the light from the waterfall filters through to the chest.\n\nYou got 20 rupees!",
       "content_already_claimed": "Unfortunately, it looks like someone else has already been here.. the chest is already open, and is empty.",
@@ -143,8 +143,8 @@
       "reward": { "type": "currency", "amount": 20, "limit": "once_per_player" }
     },
     {
-      "id": "f8-smash-pots",
-      "coordinate": "F8",
+      "id": "f7-smash-pots",
+      "coordinate": "F7",
       "title": null,
       "content": "You smash the pots and find some rupees!",
       "content_cooldown": "There's no more pots left! Maybe if you wait a while the owner will buy some more...",
@@ -168,8 +168,8 @@
 
   "rewards": [
     {
-      "id": "f8-kokiri-chest",
-      "coordinate": "F8",
+      "id": "f7-kokiri-chest",
+      "coordinate": "F7",
       "title": "What's inside the chest?",
       "content": "You strike the final blow on the Big Deku's flowery carapace, and immediately turn your attention to the impressive looking chest - adorned with a lustrous gold clasp and crafted from burnished wood, its surface imbued with the faint scent of brine and distant lands.\n\nWith some difficulty you force the lid open, the hinge creaking as you slowly and carefully push it back to see what is inside.\n\nAt the bottom of the chest you see a glint, and upon your eyes adjusting to the darkness you realise it is a small, but sharp looking sword.\n\nYou got the Kokiri Sword!\n\nThe Kokiri sword automatically increases your attack by 1. You don't need to do anything - it has been automatically equipped!",
       "image": null,
@@ -190,8 +190,8 @@
 
   "enemies": [
     {
-      "id": "f8-battle-dekubaba",
-      "coordinate": "F8",
+      "id": "f7-battle-dekubaba",
+      "coordinate": "F7",
       "name": "Withered Deku Baba",
       "hp": 1,
       "attack": 1,
@@ -199,11 +199,11 @@
       "description": "You are fighting a withered Deku Baba. This is a fairly weak carnivorous plant that you don't want to get near!",
       "win_message": "You slayed that Deku Baba!\n\nYou notice something.. There's a small log hollowed out with a space just big enough to crawl through directly below where the deku baba was.",
       "color": "7ece21",
-      "links_to": ["f8-crawl-log"]
+      "links_to": ["f7-crawl-log"]
     },
     {
-      "id": "g8-battle-dekubaba",
-      "coordinate": "G8",
+      "id": "e7-battle-dekubaba",
+      "coordinate": "E7",
       "name": "Withered Deku Baba",
       "hp": 1,
       "attack": 1,
@@ -213,8 +213,8 @@
       "color": "7ece21"
     },
     {
-      "id": "f8-battle-bigbaba",
-      "coordinate": "F8",
+      "id": "f7-battle-bigbaba",
+      "coordinate": "F7",
       "name": "Big Deku Baba",
       "hp": 2,
       "attack": 2,
@@ -222,7 +222,7 @@
       "description": "You are fighting a Big Deku Baba. This one is lunging toward you!",
       "win_message": "The treasure is yours!\n\nThe chest sits perched atop a chopped log, glimmering.",
       "color": "7ece21",
-      "links_to": ["f8-kokiri-chest"]
+      "links_to": ["f7-kokiri-chest"]
     },
     {
       "id": "h8-fight-bigbaba",
@@ -311,15 +311,15 @@
   "game_flow": {
     "_note": "Reconstructed progression path from command links",
     "progression": [
-      "Start at F8 (Kokiri Village) — explore, talk to Mido",
-      "F8: Smash pots for rupees, inspect waterfall for rupees",
-      "F8: Battle Withered Deku Baba (HP 1) — discover crawl-log",
-      "F8: Crawl through log — boulder maze jigsaw puzzle",
-      "F8: Dodge boulder — encounter Big Deku Baba (HP 2)",
-      "F8: Defeat Big Deku Baba — get Kokiri Sword from chest",
+      "Start at F7 (Kokiri Village) — explore, talk to Mido",
+      "F7: Smash pots for rupees, inspect waterfall for rupees",
+      "F7: Battle Withered Deku Baba (HP 1) — discover crawl-log",
+      "F7: Crawl through log — boulder maze jigsaw puzzle",
+      "F7: Dodge boulder — encounter Big Deku Baba (HP 2)",
+      "F7: Defeat Big Deku Baba — get Kokiri Sword from chest",
       "D3/D4: Visit Hyrule Castle Town, buy Deku Shield from bazaar (80 rupees)",
-      "G8: Mido gate check — need both Sword + Shield to pass",
-      "G8: Battle Withered Deku Baba or dodge to H8",
+      "E7: Mido gate check — need both Sword + Shield to pass",
+      "E7: Battle Withered Deku Baba or dodge to H8",
       "H8: The Great Deku Tree — enter",
       "H8: Fight Deku Scrub (HP 3) — get Slingshot from chest",
       "H8: Shoot spiders with Slingshot",
