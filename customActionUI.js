@@ -107,7 +107,7 @@ export async function buildActionSelectRow({ guildId, coordinate = null, mapId =
   const customId = coordinate && mapId ? `entity_custom_action_list_${coordinate}_${mapId}` : 'entity_custom_action_list_global';
   const selectMenu = new StringSelectMenuBuilder()
     .setCustomId(customId)
-    .setPlaceholder("Select an action to manage...")
+    .setPlaceholder("⚡ Select an action to manage...")
     .setMinValues(1)
     .setMaxValues(1);
 
