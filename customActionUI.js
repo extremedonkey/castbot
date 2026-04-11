@@ -105,9 +105,11 @@ export async function buildActionSelectRow({ guildId, coordinate = null, mapId =
   const assignedActionIds = coordinate && mapId ? (guildData.maps?.[mapId]?.coordinates?.[coordinate]?.buttons || []) : [];
 
   const customId = coordinate && mapId ? `entity_custom_action_list_${coordinate}_${mapId}` : 'entity_custom_action_list_global';
+  const actionCount = assignedActionIds.length;
+  const placeholderSuffix = coordinate ? ` (${coordinate}:⚡${actionCount})` : '';
   const selectMenu = new StringSelectMenuBuilder()
     .setCustomId(customId)
-    .setPlaceholder("⚡ Select an action to manage...")
+    .setPlaceholder(`Select an action to manage${placeholderSuffix}`)
     .setMinValues(1)
     .setMaxValues(1);
 

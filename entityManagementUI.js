@@ -439,9 +439,6 @@ function createEntityDisplay(entity, entityType, safariConfig) {
             if (entity.baseContent?.description) {
                 lines.push(entity.baseContent.description);
             }
-            if (entity.buttons?.length > 0) {
-                lines.push(`**Custom Actions**: ${entity.buttons.length} configured`);
-            }
             break;
     }
     
