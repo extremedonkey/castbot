@@ -173,7 +173,8 @@
       "Bash(./.claude/hooks/*)",
       "WebFetch(domain:status.anthropic.com)",
       "WebFetch(domain:status.claude.com)",
-      "Bash(do head:*)"
+      "Bash(do head:*)",
+      "WebFetch(domain:hermes-agent.nousresearch.com)"
     ],
     "deny": []
   },

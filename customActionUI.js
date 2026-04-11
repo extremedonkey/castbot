@@ -412,7 +412,6 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
         },
 
         // Trigger Configuration Section
-        { type: 14 },
         { type: 10, content: `## \`\`\`🚀 Triggers\`\`\`` },
         {
           type: 9, // Section
@@ -430,7 +429,6 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
         },
 
         // Locations Section (below Triggers)
-        { type: 14 },
         { type: 10, content: `## \`\`\`📍 Locations\`\`\`` },
         {
           type: 9, // Section
@@ -454,9 +452,9 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           const trueActions = allActions.filter(a => !a.executeOn || a.executeOn === 'true');
           const falseActions = allActions.filter(a => a.executeOn === 'false');
           const notAtMax = allActions.length < SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON;
-          // Budget check: 29 fixed (incl. container + bottom nav) + (outcomes × 2) + (add selects × 2) <= 40
+          // Budget check: 24 fixed (incl. container + bottom nav) + (outcomes × 2) + (add selects × 2) <= 40
           // Each add select = 2 components (ActionRow + StringSelect), 3 possible = 6
-          const componentBudget = 40 - 29 - (allActions.length * 2); // remaining for add selects
+          const componentBudget = 40 - 24 - (allActions.length * 2); // remaining for add selects
           const maxAddSelects = Math.min(3, Math.floor(componentBudget / 2)); // how many add selects fit
           const capWarning = !notAtMax ? `\n-# > ⚠️ Reached combined ${allActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON} outcome cap; delete one to add more.` : '';
 
@@ -483,7 +481,6 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
 
           // 2. Conditions Section (evaluated after opening outcomes)
           components.push(
-            { type: 14 },
             { type: 10, content: `### \`\`\`🧩 Conditions\`\`\`` },
             {
               type: 9,
@@ -502,7 +499,6 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           );
 
           // 3. Pass Outcomes Section
-          components.push({ type: 14 });
           components.push({
             type: 10,
             content: `### \`\`\`🟢 Pass Outcomes (${trueActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player passes conditions?${capWarning}`
@@ -525,7 +521,6 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           }
 
           // FALSE Outcomes Section
-          components.push({ type: 14 });
           components.push({
             type: 10,
             content: falseActions.length === 0 && !(notAtMax && maxAddSelects >= 2)
