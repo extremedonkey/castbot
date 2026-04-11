@@ -352,22 +352,25 @@ export async function buildEmojiDashboard(guild, guildId) {
   const botEmojiNames = getBotEmojiNames();
   if (botEmojiNames.length > 0) {
     components.push({ type: 14 });
-    const entries = botEmojiNames.map(name => `${formatBotEmoji(name)} **${name}**`);
+    const lines = botEmojiNames.map(name => {
+      const code = formatBotEmoji(name);
+      return `${code} \`${code}\` — ${name}`;
+    });
     // Split into multiple text displays if content exceeds 4096 chars
     const header = `### 🤖 Bot Application Emojis (${botEmojiNames.length})\n-# Available in all servers via CastBot. Managed in Developer Portal.\n`;
-    let current = header;
     const TEXT_DISPLAY_LIMIT = 4096;
-    for (const entry of entries) {
-      const candidate = current + (current === header ? '' : ' · ') + entry;
+    let current = header;
+    for (const line of lines) {
+      const candidate = current + line + '\n';
       if (candidate.length > TEXT_DISPLAY_LIMIT) {
-        components.push({ type: 10, content: current });
-        current = entry;
+        components.push({ type: 10, content: current.trimEnd() });
+        current = line + '\n';
       } else {
         current = candidate;
       }
     }
     if (current) {
-      components.push({ type: 10, content: current });
+      components.push({ type: 10, content: current.trimEnd() });
     }
   }
 
