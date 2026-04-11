@@ -14,6 +14,7 @@
  */
 
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
+import { SAFARI_LIMITS } from './config/safariLimits.js';
 
 /**
  * Build the Enter Command modal.
@@ -82,7 +83,7 @@ export async function buildCommandPrefixesUI(guildId) {
     { type: 14 },
     {
       type: 10,
-      content: `### \`\`\`🧗 Command Prefixes\`\`\`\n-# Prefixes give players a set of pre-defined action verbs (e.g. climb, inspect, open) shown as a dropdown when entering commands. This saves players from guessing and reduces spam — they pick an action, then type the target. The prefix and target are combined before matching (e.g. "climb" + "tree" = "climb tree").`
+      content: `### \`\`\`🧗 Command Prefixes (${prefixes.length}/${SAFARI_LIMITS.MAX_COMMAND_PREFIXES})\`\`\`\n-# Prefixes give players a set of pre-defined action verbs (e.g. climb, inspect, open) shown as a dropdown when entering commands. This saves players from guessing and reduces spam — they pick an action, then type the target. The prefix and target are combined before matching (e.g. "climb" + "tree" = "climb tree").`
     },
     { type: 14 }
   ];
@@ -122,13 +123,18 @@ export async function buildCommandPrefixesUI(guildId) {
     ]
   });
 
+  const result = [{
+    type: 17, // Container
+    accent_color: 0x3498DB,
+    components
+  }];
+
+  const { countComponents } = await import('./utils.js');
+  countComponents(result, { verbosity: 'summary', label: 'Command Prefixes' });
+
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2
-    components: [{
-      type: 17, // Container
-      accent_color: 0x3498DB,
-      components
-    }]
+    components: result
   };
 }
 
@@ -199,8 +205,8 @@ export async function addCommandPrefix(guildId, label, emoji) {
     return { success: false, error: `Prefix "${label.trim()}" already exists.` };
   }
 
-  if (config.commandPrefixes.length >= 20) {
-    return { success: false, error: 'Maximum 20 prefixes allowed.' };
+  if (config.commandPrefixes.length >= SAFARI_LIMITS.MAX_COMMAND_PREFIXES) {
+    return { success: false, error: `Maximum ${SAFARI_LIMITS.MAX_COMMAND_PREFIXES} prefixes allowed.` };
   }
 
   config.commandPrefixes.push({

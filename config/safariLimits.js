@@ -33,7 +33,10 @@ export const SAFARI_LIMITS = {
   // General limits
   MAX_TAG_LENGTH: 30,
   MAX_TAGS_PER_ITEM: 5,
-  MAX_DISCORD_COMPONENTS: 40
+  MAX_DISCORD_COMPONENTS: 40,
+
+  // Command system
+  MAX_COMMAND_PREFIXES: 10  // 10 × 3 components per prefix + 9 fixed = 39/40 budget
 };
 
 // Semantic aliases — use these in new code

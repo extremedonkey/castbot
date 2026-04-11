@@ -133,14 +133,16 @@ describe('buildCommandModal — Consistency', () => {
 
 // ─── Replicated prefix logic ───
 
+const MAX_COMMAND_PREFIXES = 10;
+
 function addPrefixToList(prefixes, label, emoji) {
   const normalized = label.trim().toLowerCase();
   if (!normalized) return { success: false, error: 'Prefix cannot be empty.' };
   if (prefixes.some(p => p.label.toLowerCase() === normalized)) {
     return { success: false, error: `Prefix "${label.trim()}" already exists.` };
   }
-  if (prefixes.length >= 20) {
-    return { success: false, error: 'Maximum 20 prefixes allowed.' };
+  if (prefixes.length >= MAX_COMMAND_PREFIXES) {
+    return { success: false, error: `Maximum ${MAX_COMMAND_PREFIXES} prefixes allowed.` };
   }
   prefixes.push({ label: label.trim(), ...(emoji?.trim() ? { emoji: emoji.trim() } : {}) });
   return { success: true };
@@ -209,8 +211,8 @@ describe('addPrefixToList — Validation', () => {
     assert.ok(result.error.includes('already exists'));
   });
 
-  it('rejects when at 20 prefix limit', () => {
-    const prefixes = Array.from({ length: 20 }, (_, i) => ({ label: `prefix${i}` }));
+  it('rejects when at 10 prefix limit', () => {
+    const prefixes = Array.from({ length: 10 }, (_, i) => ({ label: `prefix${i}` }));
     const result = addPrefixToList(prefixes, 'one_more', null);
     assert.equal(result.success, false);
     assert.ok(result.error.includes('Maximum'));
