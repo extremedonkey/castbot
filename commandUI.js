@@ -240,3 +240,149 @@ export async function removeCommandPrefix(guildId, index) {
   await saveSafariContent(safariData);
   return { success: true, removed: removed.label };
 }
+
+// ─── Phrase Management ──────────────────────────────────────────────────
+
+/**
+ * Detect if a phrase starts with a configured prefix.
+ * Checks longest prefixes first to handle "climb up" vs "climb".
+ *
+ * @param {string} phrase - The full phrase (e.g., "climb tree")
+ * @param {Array} prefixes - Guild command prefixes [{ label, emoji? }]
+ * @returns {{ prefix: Object, remainder: string } | null}
+ */
+export function detectPhrasePrefix(phrase, prefixes) {
+  if (!prefixes?.length) return null;
+  const sorted = [...prefixes].sort((a, b) => b.label.length - a.label.length);
+  const phraseLower = phrase.toLowerCase();
+  for (const prefix of sorted) {
+    const prefixLower = prefix.label.toLowerCase();
+    if (phraseLower.startsWith(prefixLower + ' ') && phrase.length > prefixLower.length + 1) {
+      return { prefix, remainder: phrase.substring(prefix.label.length + 1) };
+    }
+  }
+  return null;
+}
+
+/**
+ * Build the Add Phrase modal.
+ *
+ * @param {Object} options
+ * @param {string} options.actionId - Action ID
+ * @param {Array}  options.prefixes - Guild command prefixes [{ label, emoji? }]
+ * @returns {Object} Modal interaction response (type 9)
+ */
+export function buildAddPhraseModal({ actionId, prefixes = [] }) {
+  const options = [
+    {
+      label: 'Freeform (no prefix)',
+      value: 'freeform',
+      description: 'Best for idol hunt commands (e.g., my-secret-idol)',
+      emoji: { name: '♾️' },
+      default: true
+    }
+  ];
+
+  for (const prefix of prefixes) {
+    options.push({
+      label: prefix.label,
+      value: prefix.label.toLowerCase(),
+      description: `Prepends "${prefix.label}" to your phrase`,
+      emoji: { name: prefix.emoji || '🏷️' }
+    });
+  }
+
+  return {
+    type: 9, // MODAL
+    data: {
+      custom_id: `action_phrase_add_modal_${actionId}`,
+      title: 'Add Command Phrase',
+      components: [
+        {
+          type: 18, // Label
+          label: 'Prefix',
+          description: 'Prefixes prepend an action verb. Select Freeform for exact phrases like idol hunt codes.',
+          component: {
+            type: 3, // String Select
+            custom_id: 'phrase_prefix',
+            min_values: 1,
+            max_values: 1,
+            options
+          }
+        },
+        {
+          type: 18, // Label
+          label: 'Command Phrase',
+          description: 'The word or phrase the player types after the prefix',
+          component: {
+            type: 4, // Text Input
+            custom_id: 'phrase_text',
+            style: 1, // Short
+            required: true,
+            placeholder: 'e.g., tree, rock, secret-code',
+            min_length: 1,
+            max_length: 100
+          }
+        }
+      ]
+    }
+  };
+}
+
+/**
+ * Add a phrase to an action's trigger phrases.
+ *
+ * @param {string} guildId
+ * @param {string} actionId
+ * @param {string} phrase
+ * @returns {{ success: boolean, error?: string }}
+ */
+export async function addActionPhrase(guildId, actionId, phrase) {
+  const safariData = await loadSafariContent();
+  const action = safariData[guildId]?.buttons?.[actionId];
+  if (!action) return { success: false, error: 'Action not found.' };
+
+  if (!action.trigger) action.trigger = { type: 'modal' };
+  if (!action.trigger.phrases) action.trigger.phrases = [];
+
+  const trimmed = phrase.trim();
+  if (!trimmed) return { success: false, error: 'Phrase cannot be empty.' };
+
+  if (action.trigger.phrases.length >= SAFARI_LIMITS.MAX_PHRASES_PER_ACTION) {
+    return { success: false, error: `Maximum ${SAFARI_LIMITS.MAX_PHRASES_PER_ACTION} phrases allowed.` };
+  }
+
+  if (action.trigger.phrases.some(p => p.toLowerCase() === trimmed.toLowerCase())) {
+    return { success: false, error: `Phrase "${trimmed}" already exists.` };
+  }
+
+  action.trigger.phrases.push(trimmed);
+  if (action.metadata) {
+    action.metadata.lastModified = Date.now();
+  }
+  await saveSafariContent(safariData);
+  return { success: true };
+}
+
+/**
+ * Remove a phrase by index from an action's trigger phrases.
+ *
+ * @param {string} guildId
+ * @param {string} actionId
+ * @param {number} index
+ * @returns {{ success: boolean, error?: string, removed?: string }}
+ */
+export async function removeActionPhrase(guildId, actionId, index) {
+  const safariData = await loadSafariContent();
+  const action = safariData[guildId]?.buttons?.[actionId];
+  if (!action?.trigger?.phrases || index < 0 || index >= action.trigger.phrases.length) {
+    return { success: false, error: 'Phrase not found.' };
+  }
+
+  const [removed] = action.trigger.phrases.splice(index, 1);
+  if (action.metadata) {
+    action.metadata.lastModified = Date.now();
+  }
+  await saveSafariContent(safariData);
+  return { success: true, removed };
+}

@@ -1985,6 +1985,22 @@ export const BUTTON_REGISTRY = {
     category: 'safari_admin',
     parent: 'command_prefixes_menu'
   },
+  'action_phrase_add_*': {
+    label: 'Add Phrase',
+    description: 'Add a command phrase to an action trigger',
+    emoji: '🕹️',
+    style: 'Secondary',
+    category: 'safari_actions',
+    parent: 'custom_action_editor'
+  },
+  'action_phrase_remove_*': {
+    label: 'Remove Phrase',
+    description: 'Remove a command phrase from an action trigger',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari_actions',
+    parent: 'custom_action_editor'
+  },
   'player_enter_command_global': {
     label: 'Enter Command',
     description: 'Enter a text command from anywhere (global)',

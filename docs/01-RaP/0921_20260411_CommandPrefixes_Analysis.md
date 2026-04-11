@@ -264,20 +264,39 @@ The button uses the existing `player_enter_command_{coord}` custom_id — no new
 
 **Settings menu changes**: "🦁 Idol Hunts, Challenges and Safari Settings" header. Events moved to "📼 Legacy" section.
 
-#### Phase 3b: Modal Update
+#### Phase 3b: Admin Phrase Management UI — IN PROGRESS
 
-**Where**: `buildCommandModal()` — already designed for this.
+**Goal**: Replace the old 5-input phrase modal with an inline list UI (matching the Command Prefixes pattern). Each phrase shown as a Section with Remove button. Adding one-at-a-time via a modal with prefix selection.
 
-When `prefixes.length > 0`, the modal gains a String Select above the text input:
-- **Label**: "Action" or a custom term from the guild
-- **Required**: false (player can skip and type the full command)
-- **Options**: One per prefix
+**New UI layout (trigger config, when type = 'modal')**:
+```
+### ```🕹️ Command Phrases (N/8)```
+Player types a command phrase via the 🕹️ Enter Command button...
+━━━━━━━━━━━━━━━━━━━━━━━━
+🧗 climb `tree`              [Remove]
+♾️ `my-secret-idol`           [Remove]
+━━━━━━━━━━━━━━━━━━━━━━━━
+[⚡ Actions]  [🕹️ Add Phrase]
+```
 
-**Submit handler change** (`player_command_modal_` handler in app.js):
-- Extract prefix from `command_prefix` select (if present)
-- Extract target from `command` text input
-- Concatenate: `const fullCommand = prefix ? \`${prefix} ${target}\` : target`
-- Feed `fullCommand` into the existing phrase matching logic
+**Add Phrase modal**: Label-wrapped String Select (guild prefixes + "♾️ Freeform" default) + Label-wrapped Text Input. On submit, concatenates prefix + phrase if prefix selected.
+
+**Data model**: No changes — `action.trigger.phrases` stays as `string[]`. Prefix is baked into the phrase string (e.g., "climb tree"). Prefix detection for display done by matching against guild's `commandPrefixes` (longest first).
+
+**Limit**: `MAX_PHRASES_PER_ACTION = 8` in safariLimits.js (budget: 8×3 + 12 fixed = 36/40).
+
+**New handlers**: `action_phrase_add_{actionId}` (opens modal), `action_phrase_remove_{actionId}_{index}` (instant remove), `action_phrase_add_modal_{actionId}` (modal submit).
+
+**Backward compat**: Old `configure_modal_trigger_` and `modal_phrases_config_` handlers kept for `button_modal` trigger type.
+
+#### Phase 3c: Player Command Modal Update (future — not built yet)
+
+**Where**: `buildCommandModal()` — already has `prefixes` parameter (stubbed).
+
+When `prefixes.length > 0`, the player modal gains a String Select above the text input:
+- **Label**: "Prefix" — optional, defaults to freeform
+- **Options**: One per guild prefix + freeform
+- **Submit**: Concatenates prefix + target before phrase matching
 
 No changes to `executeButtonActions`, phrase matching, or the Action data model. Prefixes are purely a UI convenience — the matched phrase is still stored as `"climb tree"` in the Action's `trigger.phrases[]`.
 

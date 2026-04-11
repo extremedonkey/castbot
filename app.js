@@ -31965,8 +31965,54 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
       
+    } else if (custom_id.startsWith('action_phrase_add_') && !custom_id.startsWith('action_phrase_add_modal_')) {
+      // Handle Add Phrase button — opens modal with prefix select + text input
+      return ButtonHandlerFactory.create({
+        id: 'action_phrase_add',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const actionId = context.customId.replace('action_phrase_add_', '');
+          console.log(`🕹️ START: action_phrase_add - user ${context.userId}, action ${actionId}`);
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const prefixes = safariData[context.guildId]?.safariConfig?.commandPrefixes || [];
+          const { buildAddPhraseModal } = await import('./commandUI.js');
+          return buildAddPhraseModal({ actionId, prefixes });
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('action_phrase_remove_')) {
+      // Handle Remove Phrase button — instant remove, update message
+      return ButtonHandlerFactory.create({
+        id: 'action_phrase_remove',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const suffix = context.customId.replace('action_phrase_remove_', '');
+          const lastUnderscore = suffix.lastIndexOf('_');
+          const actionId = suffix.substring(0, lastUnderscore);
+          const index = parseInt(suffix.substring(lastUnderscore + 1));
+          console.log(`🗑️ START: action_phrase_remove - action ${actionId}, index ${index}`);
+
+          const { removeActionPhrase } = await import('./commandUI.js');
+          const result = await removeActionPhrase(context.guildId, actionId, index);
+          if (!result.success) {
+            return { content: `❌ ${result.error}`, ephemeral: true };
+          }
+          console.log(`✅ SUCCESS: action_phrase_remove - removed "${result.removed}"`);
+
+          try {
+            const { queueActionCoordinateUpdates } = await import('./anchorMessageManager.js');
+            await queueActionCoordinateUpdates(context.guildId, actionId, 'phrase_removed');
+          } catch (e) { console.error('Anchor update error:', e); }
+
+          const { createTriggerConfigUI } = await import('./customActionUI.js');
+          return await createTriggerConfigUI({ guildId: context.guildId, actionId });
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('configure_modal_trigger_')) {
-      // Handle modal trigger phrase configuration button
+      // Handle modal trigger phrase configuration button (legacy — kept for button_modal trigger type)
       try {
         const guildId = req.body.guild_id;
         const member = req.body.member;
@@ -47662,6 +47708,62 @@ Your server is now ready for Tycoons gameplay!`;
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: { content: `❌ Error adding prefix: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
+
+    } else if (custom_id.startsWith('action_phrase_add_modal_')) {
+      // Handle Add Phrase modal submission
+      try {
+        const actionId = custom_id.replace('action_phrase_add_modal_', '');
+        const guildId = req.body.guild_id;
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+
+        // Extract from Label-wrapped components (index 0 = String Select, index 1 = Text Input)
+        const getSelectVal = (comp) => comp?.component?.values?.[0] || null;
+        const getTextVal = (comp) => (comp?.component?.value ?? comp?.components?.[0]?.value)?.trim() || null;
+
+        const prefixValue = getSelectVal(components[0]) || 'freeform';
+        const phraseText = getTextVal(components[1]);
+
+        console.log(`🕹️ DEBUG: Add phrase modal submit - prefix: "${prefixValue}", phrase: "${phraseText}", action: ${actionId}`);
+
+        if (!phraseText) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: '❌ Phrase cannot be empty.', flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+
+        const fullPhrase = prefixValue === 'freeform' ? phraseText : `${prefixValue} ${phraseText}`;
+
+        const { addActionPhrase } = await import('./commandUI.js');
+        const result = await addActionPhrase(guildId, actionId, fullPhrase);
+
+        if (!result.success) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: `❌ ${result.error}`, flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+
+        console.log(`✅ SUCCESS: action_phrase_add_modal - added "${fullPhrase}" to ${actionId}`);
+
+        try {
+          const { queueActionCoordinateUpdates } = await import('./anchorMessageManager.js');
+          await queueActionCoordinateUpdates(guildId, actionId, 'phrase_added');
+        } catch (e) { console.error('Anchor update error:', e); }
+
+        const { createTriggerConfigUI } = await import('./customActionUI.js');
+        const configUI = await createTriggerConfigUI({ guildId, actionId });
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: configUI
+        });
+      } catch (error) {
+        console.error('Error in action_phrase_add_modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: `❌ Error: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL }
         });
       }
 

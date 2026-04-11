@@ -231,3 +231,160 @@ describe('addPrefixToList — Validation', () => {
     assert.equal(prefixes[0].emoji, '🤿');
   });
 });
+
+// ─── Phrase Management ───
+
+const MAX_PHRASES = 8;
+
+function detectPhrasePrefix(phrase, prefixes) {
+  if (!prefixes?.length) return null;
+  const sorted = [...prefixes].sort((a, b) => b.label.length - a.label.length);
+  const phraseLower = phrase.toLowerCase();
+  for (const prefix of sorted) {
+    const prefixLower = prefix.label.toLowerCase();
+    if (phraseLower.startsWith(prefixLower + ' ') && phrase.length > prefixLower.length + 1) {
+      return { prefix, remainder: phrase.substring(prefix.label.length + 1) };
+    }
+  }
+  return null;
+}
+
+function addPhraseToList(phrases, phrase) {
+  const trimmed = phrase.trim();
+  if (!trimmed) return { success: false, error: 'Phrase cannot be empty.' };
+  if (phrases.length >= MAX_PHRASES) return { success: false, error: `Maximum ${MAX_PHRASES} phrases allowed.` };
+  if (phrases.some(p => p.toLowerCase() === trimmed.toLowerCase())) {
+    return { success: false, error: `Phrase "${trimmed}" already exists.` };
+  }
+  phrases.push(trimmed);
+  return { success: true };
+}
+
+function buildAddPhraseModal({ actionId, prefixes = [] }) {
+  const options = [{ label: 'Freeform (no prefix)', value: 'freeform', emoji: { name: '♾️' }, default: true }];
+  for (const p of prefixes) {
+    options.push({ label: p.label, value: p.label.toLowerCase(), emoji: { name: p.emoji || '🏷️' } });
+  }
+  return {
+    type: 9,
+    data: {
+      custom_id: `action_phrase_add_modal_${actionId}`,
+      title: 'Add Command Phrase',
+      components: [
+        { type: 18, label: 'Prefix', component: { type: 3, custom_id: 'phrase_prefix', min_values: 1, max_values: 1, options } },
+        { type: 18, label: 'Command Phrase', component: { type: 4, custom_id: 'phrase_text', style: 1, required: true, min_length: 1, max_length: 100 } }
+      ]
+    }
+  };
+}
+
+describe('detectPhrasePrefix', () => {
+  const prefixes = [
+    { label: 'climb', emoji: '🧗' },
+    { label: 'climb up', emoji: '⬆️' },
+    { label: 'inspect', emoji: '���' }
+  ];
+
+  it('detects a matching prefix', () => {
+    const result = detectPhrasePrefix('climb tree', prefixes);
+    assert.ok(result);
+    assert.equal(result.prefix.label, 'climb');
+    assert.equal(result.remainder, 'tree');
+  });
+
+  it('prefers longest matching prefix', () => {
+    const result = detectPhrasePrefix('climb up ladder', prefixes);
+    assert.ok(result);
+    assert.equal(result.prefix.label, 'climb up');
+    assert.equal(result.remainder, 'ladder');
+  });
+
+  it('returns null for freeform phrases', () => {
+    const result = detectPhrasePrefix('my-secret-idol', prefixes);
+    assert.equal(result, null);
+  });
+
+  it('returns null when prefix matches but no remainder', () => {
+    const result = detectPhrasePrefix('climb', prefixes);
+    assert.equal(result, null);
+  });
+
+  it('returns null with empty prefix list', () => {
+    const result = detectPhrasePrefix('climb tree', []);
+    assert.equal(result, null);
+  });
+
+  it('is case-insensitive', () => {
+    const result = detectPhrasePrefix('Climb Tree', prefixes);
+    assert.ok(result);
+    assert.equal(result.prefix.label, 'climb');
+    assert.equal(result.remainder, 'Tree');
+  });
+});
+
+describe('buildAddPhraseModal — Structure', () => {
+  it('returns a type 9 MODAL with correct custom_id', () => {
+    const result = buildAddPhraseModal({ actionId: 'test_123' });
+    assert.equal(result.type, 9);
+    assert.equal(result.data.custom_id, 'action_phrase_add_modal_test_123');
+  });
+
+  it('uses Label (type 18) wrappers', () => {
+    const result = buildAddPhraseModal({ actionId: 'test_123' });
+    assert.equal(result.data.components[0].type, 18);
+    assert.equal(result.data.components[1].type, 18);
+  });
+
+  it('includes freeform option by default', () => {
+    const result = buildAddPhraseModal({ actionId: 'test_123' });
+    const options = result.data.components[0].component.options;
+    assert.equal(options[0].value, 'freeform');
+    assert.equal(options[0].default, true);
+  });
+
+  it('includes guild prefixes as additional options', () => {
+    const result = buildAddPhraseModal({
+      actionId: 'test_123',
+      prefixes: [{ label: 'climb', emoji: '🧗' }, { label: 'inspect' }]
+    });
+    const options = result.data.components[0].component.options;
+    assert.equal(options.length, 3); // freeform + 2 prefixes
+    assert.equal(options[1].value, 'climb');
+    assert.equal(options[2].label, 'inspect');
+  });
+});
+
+describe('addPhraseToList — Validation', () => {
+  it('adds a valid phrase', () => {
+    const phrases = [];
+    const result = addPhraseToList(phrases, 'climb tree');
+    assert.equal(result.success, true);
+    assert.equal(phrases.length, 1);
+    assert.equal(phrases[0], 'climb tree');
+  });
+
+  it('rejects empty phrase', () => {
+    const result = addPhraseToList([], '  ');
+    assert.equal(result.success, false);
+  });
+
+  it('rejects duplicate phrase (case-insensitive)', () => {
+    const phrases = ['climb tree'];
+    const result = addPhraseToList(phrases, 'Climb Tree');
+    assert.equal(result.success, false);
+    assert.ok(result.error.includes('already exists'));
+  });
+
+  it('rejects when at phrase limit', () => {
+    const phrases = Array.from({ length: 8 }, (_, i) => `phrase${i}`);
+    const result = addPhraseToList(phrases, 'one more');
+    assert.equal(result.success, false);
+    assert.ok(result.error.includes('Maximum'));
+  });
+
+  it('trims whitespace', () => {
+    const phrases = [];
+    addPhraseToList(phrases, '  climb tree  ');
+    assert.equal(phrases[0], 'climb tree');
+  });
+});

@@ -1357,44 +1357,55 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
   
   // Add trigger-specific configuration based on current type
   if (action.trigger?.type === 'modal') {
-    components.push({ type: 14 }); // Separator
+    const { SAFARI_LIMITS } = await import('./config/safariLimits.js');
+    const { detectPhrasePrefix } = await import('./commandUI.js');
+    const phrases = action.trigger?.phrases || [];
+    const prefixes = guildData.safariConfig?.commandPrefixes || [];
 
+    components.push({ type: 14 });
     components.push({
       type: 10,
-      content: `**Command**\nPlayer types a command phrase via the 🕹️ Enter Command button on map locations or player menu. Works like Carl-bot ?commands in idol hunts — players must know the exact phrase to trigger the action.`
+      content: `### \`\`\`🕹️ Command Phrases (${phrases.length}/${SAFARI_LIMITS.MAX_PHRASES_PER_ACTION})\`\`\`\n-# Player types a command phrase via the 🕹️ Enter Command button on map locations or player menu.`
     });
+    components.push({ type: 14 });
 
-    // Show current phrases if any
-    const phrases = action.trigger?.phrases || [];
-    if (phrases.length > 0) {
+    if (phrases.length === 0) {
       components.push({
         type: 10,
-        content: `### Command Phrases:\n*${phrases.join(', ')}*`
+        content: `*No phrases configured yet*`
       });
     } else {
-      components.push({
-        type: 10,
-        content: `### Command Phrases:\n*No phrases configured yet*`
-      });
+      for (let i = 0; i < phrases.length; i++) {
+        const phrase = phrases[i];
+        const detected = detectPhrasePrefix(phrase, prefixes);
+        const display = detected
+          ? `${detected.prefix.emoji || '🏷️'} ${detected.prefix.label} \`${detected.remainder}\``
+          : `♾️ \`${phrase}\``;
+        components.push({
+          type: 9, // Section
+          components: [{ type: 10, content: display }],
+          accessory: {
+            type: 2,
+            custom_id: `action_phrase_remove_${actionId}_${i}`,
+            label: 'Remove',
+            style: 4,
+            emoji: { name: '🗑️' }
+          }
+        });
+      }
     }
-    
-    // Add configure button
-    const configButton = new ButtonBuilder()
-      .setCustomId(`configure_modal_trigger_${actionId}`)
-      .setLabel('Configure Phrases')
-      .setEmoji('💬')
-      .setStyle(2); // Secondary
-    
-    const backButton = new ButtonBuilder()
-      .setCustomId(`custom_action_editor_${actionId}`)
-      .setLabel('⬅ Back')
-      .setEmoji('⚡')
-      .setStyle(2);
-    
-    const buttonRow = new ActionRowBuilder().addComponents([backButton, configButton]);
-    
-    components.push({ type: 14 }); // Separator
-    components.push(buttonRow.toJSON());
+
+    const atLimit = phrases.length >= SAFARI_LIMITS.MAX_PHRASES_PER_ACTION;
+    components.push({ type: 14 });
+    components.push({
+      type: 1,
+      components: [
+        { type: 2, custom_id: `custom_action_editor_${actionId}`, label: '⚡ Actions', style: 2 },
+        atLimit
+          ? { type: 2, custom_id: `action_phrase_add_${actionId}`, label: 'Limit Reached', style: 2, disabled: true }
+          : { type: 2, custom_id: `action_phrase_add_${actionId}`, label: 'Add Phrase', style: 2, emoji: { name: '🕹️' } }
+      ]
+    });
   } else if (action.trigger?.type === 'button') {
     // Additional Button Configuration
     components.push({ type: 14 });
