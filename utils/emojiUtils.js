@@ -52,6 +52,18 @@ export function resolveEmoji(emojiStr, fallback = '📦', target = 'component') 
         return target === 'builder' ? fallback : { name: fallback };
     }
 
+    // Discord shortcode (e.g., :rocket:, :pen_fountain:) — not valid in component emoji fields
+    if (/^:\w+:$/.test(trimmed)) {
+        // Check our mapping first
+        if (SHORTCODE_TO_EMOJI[trimmed]) {
+            const unicode = SHORTCODE_TO_EMOJI[trimmed];
+            return target === 'builder' ? unicode : { name: unicode };
+        }
+        // Unmapped shortcode — fallback rather than sending invalid name to Discord
+        console.log(`⚠️ [EMOJI] Unmapped shortcode: "${trimmed}" — falling back to ${fallback}`);
+        return target === 'builder' ? fallback : { name: fallback };
+    }
+
     // Unicode emoji or plain text — pass through
     return target === 'builder' ? trimmed : { name: trimmed };
 }

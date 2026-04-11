@@ -412,6 +412,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
         },
 
         // Trigger Configuration Section
+        { type: 14 },
         { type: 10, content: `## \`\`\`🚀 Triggers\`\`\`` },
         {
           type: 9, // Section
@@ -429,6 +430,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
         },
 
         // Locations Section (below Triggers)
+        { type: 14 },
         { type: 10, content: `## \`\`\`📍 Locations\`\`\`` },
         {
           type: 9, // Section
@@ -477,6 +479,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
 
           // 2. Conditions Section (evaluated after opening outcomes)
           components.push(
+            { type: 14 },
             { type: 10, content: `### \`\`\`🧩 Conditions\`\`\`` },
             {
               type: 9,
@@ -495,6 +498,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           );
 
           // 3. Pass Outcomes Section
+          components.push({ type: 14 });
           components.push({
             type: 10,
             content: `### \`\`\`🟢 Pass Outcomes (${trueActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})\`\`\`\n-# What happens if the player passes conditions?${capWarning}`
@@ -517,6 +521,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           }
 
           // FALSE Outcomes Section
+          components.push({ type: 14 });
           components.push({
             type: 10,
             content: falseActions.length === 0 && !notAtMax
