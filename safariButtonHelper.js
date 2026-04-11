@@ -326,7 +326,7 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
     components.push(...buttonRows);
   }
   
-  // Explore + Menu buttons (always present)
+  // Explore + Command + Menu buttons (always present)
   const { getBotEmoji } = await import('./botEmojis.js');
   components.push({
     type: 1, // Action Row
@@ -337,6 +337,13 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
         label: 'Explore',
         style: 2, // Secondary
         emoji: { name: '🗺️' }
+      },
+      {
+        type: 2, // Button
+        custom_id: `player_enter_command_${coord}`,
+        label: 'Command',
+        style: 2, // Secondary
+        emoji: { name: '🕹️' }
       },
       {
         type: 2, // Button

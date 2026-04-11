@@ -33300,28 +33300,8 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'player_enter_command_global',
         handler: async (context) => {
           console.log(`⌨️ START: player_enter_command_global - user ${context.userId}`);
-
-          // Show modal for global command input
-          return {
-            type: InteractionResponseType.MODAL,
-            data: {
-              custom_id: 'player_command_modal_global',
-              title: 'Enter Command',
-              components: [{
-                type: 1, // Action Row
-                components: [{
-                  type: 4, // Text Input
-                  custom_id: 'command',
-                  label: 'Command',
-                  style: 1, // Short
-                  required: true,
-                  placeholder: 'e.g., password1234, my-idol-clue',
-                  min_length: 1,
-                  max_length: 100
-                }]
-              }]
-            }
-          };
+          const { buildCommandModal } = await import('./commandUI.js');
+          return buildCommandModal({ coord: 'global' });
         }
       })(req, res, client);
     } else if (custom_id.startsWith('player_enter_command_')) {
@@ -33330,30 +33310,9 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'player_enter_command',
         handler: async (context) => {
           const coord = context.customId.replace('player_enter_command_', '');
-          
           console.log(`⌨️ START: player_enter_command - user ${context.userId}, coord ${coord}`);
-          
-          // Show modal for command input
-          return {
-            type: InteractionResponseType.MODAL,
-            data: {
-              custom_id: `player_command_modal_${coord}`,
-              title: 'Enter Command',
-              components: [{
-                type: 1, // Action Row
-                components: [{
-                  type: 4, // Text Input
-                  custom_id: 'command',
-                  label: 'Command',
-                  style: 1, // Short
-                  required: true,
-                  placeholder: 'e.g., password1234, my-idol-clue',
-                  min_length: 1,
-                  max_length: 100
-                }]
-              }]
-            }
-          };
+          const { buildCommandModal } = await import('./commandUI.js');
+          return buildCommandModal({ coord });
         }
       })(req, res, client);
     
@@ -33367,35 +33326,8 @@ Your server is now ready for Tycoons gameplay!`;
           const coord = context.customId.replace('admin_test_command_', '');
           
           console.log(`🔧 START: admin_test_command - user ${context.userId}, coord ${coord}`);
-          
-          // Get location name
-          const { loadSafariContent } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
-          const activeMapId = safariData[context.guildId]?.maps?.active;
-          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
-          const locationName = coordData?.baseContent?.title || `Location ${coord}`;
-          
-          // Show modal for command input (identical to player modal)
-          return {
-            type: InteractionResponseType.MODAL,
-            data: {
-              custom_id: `admin_command_modal_${coord}`,
-              title: 'Test Command (Admin)',
-              components: [{
-                type: 1, // Action Row
-                components: [{
-                  type: 4, // Text Input
-                  custom_id: 'command',
-                  label: 'Command',
-                  style: 1, // Short
-                  required: true,
-                  placeholder: 'Enter command you want to test, e.g. climb vines, check rock',
-                  min_length: 1,
-                  max_length: 100
-                }]
-              }]
-            }
-          };
+          const { buildCommandModal } = await import('./commandUI.js');
+          return buildCommandModal({ coord, isAdmin: true });
         }
       })(req, res, client);
     
