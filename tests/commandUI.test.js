@@ -1,7 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-// Replicate buildCommandModal inline to avoid importing modules with heavy dependencies
+// ─── Replicated pure functions (avoids importing modules with heavy deps) ───
+
 function buildCommandModal({ coord, isAdmin = false, prefixes = [] }) {
   const customId = isAdmin
     ? `admin_command_modal_${coord}`
@@ -127,5 +128,104 @@ describe('buildCommandModal — Consistency', () => {
     const global = buildCommandModal({ coord: 'global' });
     const location = buildCommandModal({ coord: 'E7' });
     assert.notEqual(global.data.custom_id, location.data.custom_id);
+  });
+});
+
+// ─── Replicated prefix logic ───
+
+function addPrefixToList(prefixes, label, emoji) {
+  const normalized = label.trim().toLowerCase();
+  if (!normalized) return { success: false, error: 'Prefix cannot be empty.' };
+  if (prefixes.some(p => p.label.toLowerCase() === normalized)) {
+    return { success: false, error: `Prefix "${label.trim()}" already exists.` };
+  }
+  if (prefixes.length >= 20) {
+    return { success: false, error: 'Maximum 20 prefixes allowed.' };
+  }
+  prefixes.push({ label: label.trim(), ...(emoji?.trim() ? { emoji: emoji.trim() } : {}) });
+  return { success: true };
+}
+
+function buildAddPrefixModal() {
+  return {
+    type: 9,
+    data: {
+      custom_id: 'command_prefix_add_modal',
+      title: 'Add Command Prefix',
+      components: [
+        {
+          type: 18, label: 'Prefix',
+          component: { type: 4, custom_id: 'prefix_label', style: 1, required: true, min_length: 1, max_length: 30 }
+        },
+        {
+          type: 18, label: 'Emoji (optional)',
+          component: { type: 4, custom_id: 'prefix_emoji', style: 1, required: false, max_length: 50 }
+        }
+      ]
+    }
+  };
+}
+
+describe('buildAddPrefixModal — Structure', () => {
+  it('returns a type 9 MODAL response', () => {
+    const result = buildAddPrefixModal();
+    assert.equal(result.type, 9);
+    assert.equal(result.data.custom_id, 'command_prefix_add_modal');
+  });
+
+  it('uses Label (type 18) wrappers for both fields', () => {
+    const result = buildAddPrefixModal();
+    assert.equal(result.data.components[0].type, 18);
+    assert.equal(result.data.components[1].type, 18);
+  });
+
+  it('prefix field is required, emoji is optional', () => {
+    const result = buildAddPrefixModal();
+    assert.equal(result.data.components[0].component.required, true);
+    assert.equal(result.data.components[1].component.required, false);
+  });
+});
+
+describe('addPrefixToList — Validation', () => {
+  it('adds a valid prefix', () => {
+    const prefixes = [];
+    const result = addPrefixToList(prefixes, 'Climb', '🧗');
+    assert.equal(result.success, true);
+    assert.equal(prefixes.length, 1);
+    assert.equal(prefixes[0].label, 'Climb');
+    assert.equal(prefixes[0].emoji, '🧗');
+  });
+
+  it('rejects empty prefix', () => {
+    const result = addPrefixToList([], '  ', null);
+    assert.equal(result.success, false);
+    assert.ok(result.error.includes('empty'));
+  });
+
+  it('rejects duplicate prefix (case-insensitive)', () => {
+    const prefixes = [{ label: 'Climb' }];
+    const result = addPrefixToList(prefixes, 'climb', null);
+    assert.equal(result.success, false);
+    assert.ok(result.error.includes('already exists'));
+  });
+
+  it('rejects when at 20 prefix limit', () => {
+    const prefixes = Array.from({ length: 20 }, (_, i) => ({ label: `prefix${i}` }));
+    const result = addPrefixToList(prefixes, 'one_more', null);
+    assert.equal(result.success, false);
+    assert.ok(result.error.includes('Maximum'));
+  });
+
+  it('omits emoji property when not provided', () => {
+    const prefixes = [];
+    addPrefixToList(prefixes, 'Inspect', '');
+    assert.equal(prefixes[0].emoji, undefined);
+  });
+
+  it('trims whitespace from label and emoji', () => {
+    const prefixes = [];
+    addPrefixToList(prefixes, '  Dive  ', '  🤿  ');
+    assert.equal(prefixes[0].label, 'Dive');
+    assert.equal(prefixes[0].emoji, '🤿');
   });
 });

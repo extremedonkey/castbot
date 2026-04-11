@@ -15824,6 +15824,66 @@ Your server is now ready for Tycoons gameplay!`;
           };
         }
       })(req, res, client);
+    } else if (custom_id === 'command_prefixes_menu') {
+      // Handle Commands button from Settings — show prefix management UI
+      return ButtonHandlerFactory.create({
+        id: 'command_prefixes_menu',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`❗ START: command_prefixes_menu - user ${context.userId}`);
+          const { buildCommandPrefixesUI } = await import('./commandUI.js');
+          const ui = await buildCommandPrefixesUI(context.guildId);
+          console.log(`✅ SUCCESS: command_prefixes_menu`);
+          return ui;
+        }
+      })(req, res, client);
+    } else if (custom_id === 'safari_customization_back') {
+      // Handle back button from Commands UI → Settings menu
+      return ButtonHandlerFactory.create({
+        id: 'safari_customization_back',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const { getCustomTerms } = await import('./safariManager.js');
+          const currentTerms = await getCustomTerms(context.guildId);
+          const { createSafariCustomizationUI } = await import('./safariConfigUI.js');
+          return await createSafariCustomizationUI(context.guildId, currentTerms);
+        }
+      })(req, res, client);
+    } else if (custom_id === 'command_prefix_add') {
+      // Handle Add Prefix button — show modal
+      return ButtonHandlerFactory.create({
+        id: 'command_prefix_add',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🧗 START: command_prefix_add - user ${context.userId}`);
+          const { buildAddPrefixModal } = await import('./commandUI.js');
+          return buildAddPrefixModal();
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('command_prefix_remove_')) {
+      // Handle Remove Prefix button — instant remove, update message
+      return ButtonHandlerFactory.create({
+        id: 'command_prefix_remove',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const index = parseInt(context.customId.replace('command_prefix_remove_', ''));
+          console.log(`🗑️ START: command_prefix_remove - index ${index}, user ${context.userId}`);
+          const { removeCommandPrefix, buildCommandPrefixesUI } = await import('./commandUI.js');
+          const result = await removeCommandPrefix(context.guildId, index);
+          if (!result.success) {
+            return { content: `❌ ${result.error}`, ephemeral: true };
+          }
+          console.log(`✅ SUCCESS: command_prefix_remove - removed "${result.removed}"`);
+          return await buildCommandPrefixesUI(context.guildId);
+        }
+      })(req, res, client);
     } else if (custom_id === 'safari_player_menu_config') {
       // Handle Player Menu configuration button
       return ButtonHandlerFactory.create({
@@ -47565,6 +47625,45 @@ Your server is now ready for Tycoons gameplay!`;
         type: InteractionResponseType.UPDATE_MESSAGE,
         data: triggerUI
       });
+
+    } else if (custom_id === 'command_prefix_add_modal') {
+      // Handle Add Prefix modal submission
+      try {
+        const guildId = req.body.guild_id;
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+
+        // Extract from Label-wrapped components
+        const getVal = (comp) => (comp?.component?.value ?? comp?.components?.[0]?.value)?.trim() || '';
+        const label = getVal(components[0]);
+        const emoji = getVal(components[1]);
+
+        console.log(`🧗 DEBUG: Add prefix modal submit - label: "${label}", emoji: "${emoji}"`);
+
+        const { addCommandPrefix, buildCommandPrefixesUI } = await import('./commandUI.js');
+        const result = await addCommandPrefix(guildId, label, emoji);
+
+        if (!result.success) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: `❌ ${result.error}`, flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+
+        console.log(`✅ SUCCESS: command_prefix_add_modal - added "${label}"`);
+
+        // WEBHOOK-PATCH: update the parent settings message with the new prefix list
+        const ui = await buildCommandPrefixesUI(guildId);
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: ui
+        });
+      } catch (error) {
+        console.error('Error in command_prefix_add_modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: `❌ Error adding prefix: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
 
     } else if (custom_id.startsWith('modal_phrases_config_')) {
       // Handle modal trigger phrase configuration submission

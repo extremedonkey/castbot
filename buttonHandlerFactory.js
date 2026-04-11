@@ -1955,6 +1955,36 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari'
   },
+  'command_prefixes_menu': {
+    label: 'Commands',
+    description: 'Manage command prefixes for player text commands',
+    emoji: '❗',
+    style: 'Secondary',
+    category: 'safari_admin',
+    parent: 'castbot_settings'
+  },
+  'safari_customization_back': {
+    label: '← Settings',
+    description: 'Back to Safari settings menu',
+    style: 'Secondary',
+    category: 'safari_admin'
+  },
+  'command_prefix_add': {
+    label: 'Add Prefix',
+    description: 'Add a new command prefix',
+    emoji: '🧗',
+    style: 'Secondary',
+    category: 'safari_admin',
+    parent: 'command_prefixes_menu'
+  },
+  'command_prefix_remove_*': {
+    label: 'Remove',
+    description: 'Remove a command prefix',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari_admin',
+    parent: 'command_prefixes_menu'
+  },
   'player_enter_command_global': {
     label: 'Enter Command',
     description: 'Enter a text command from anywhere (global)',

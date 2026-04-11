@@ -113,13 +113,20 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
     // Get current settings display
     const currentSettingsDisplay = await createCurrentSettingsDisplay(guildId, currentConfig);
 
+    // Separate events button from main field group buttons (moved to Legacy section)
+    const mainButtons = fieldGroupButtons.filter(b => b.custom_id !== 'safari_config_group_events');
+    const eventsButton = fieldGroupButtons.find(b => b.custom_id === 'safari_config_group_events');
+
     // Create Components V2 Container — LEAN design
     const containerComponents = [
         { type: 10, content: `## ⚙️ CastBot Settings` },
         { type: 10, content: currentSettingsDisplay },
         { type: 14 },
-        { type: 10, content: `### \`\`\`🦁 Safari & Game Settings\`\`\`` },
-        { type: 1, components: fieldGroupButtons },
+        { type: 10, content: `### \`\`\`🦁 Idol Hunts, Challenges and Safari Settings\`\`\`` },
+        { type: 1, components: [
+            ...mainButtons,
+            { type: 2, custom_id: 'command_prefixes_menu', label: 'Commands', style: 2, emoji: { name: '❗' } }
+        ] },
         { type: 14 },
         { type: 10, content: `### \`\`\`⚙️ Global Settings\`\`\`` },
         {
@@ -130,6 +137,14 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
                 { type: 2, custom_id: 'safari_export_data', label: 'Export', style: 2, emoji: { name: '📤' } },
                 { type: 2, custom_id: 'safari_import_data', label: 'Import', style: 2, emoji: { name: '📥' } },
                 { type: 2, custom_id: 'safari_config_reset_defaults', label: 'Reset', style: 4, emoji: { name: '🔄' } }
+            ]
+        },
+        { type: 14 },
+        { type: 10, content: `### \`\`\`📼 Legacy\`\`\`` },
+        {
+            type: 1,
+            components: [
+                ...(eventsButton ? [eventsButton] : [])
             ]
         },
         { type: 14 },
