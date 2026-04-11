@@ -2001,6 +2001,14 @@ export const BUTTON_REGISTRY = {
     category: 'safari_actions',
     parent: 'custom_action_editor'
   },
+  'quick_command_*': {
+    label: 'Quick Command',
+    description: 'Create a Command-triggered action with one modal',
+    emoji: '❗',
+    style: 'Secondary',
+    category: 'safari_quick_create',
+    requiresModal: true
+  },
   'player_enter_command_global': {
     label: 'Enter Command',
     description: 'Enter a text command from anywhere (global)',

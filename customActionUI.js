@@ -50,7 +50,8 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
         { type: 2, style: 2, label: 'Quick Text', custom_id: 'quick_text_global', emoji: { name: '📃' } },
         { type: 2, style: 2, label: currencyLabel, custom_id: 'quick_currency_global', emoji: currencyEmoji },
         { type: 2, style: 2, label: 'Quick Item', custom_id: 'quick_item_global', emoji: { name: '📦' } },
-        { type: 2, style: 2, label: 'Quick Enemy', custom_id: 'quick_enemy_global', emoji: { name: '🐙' } }
+        { type: 2, style: 2, label: 'Quick Enemy', custom_id: 'quick_enemy_global', emoji: { name: '🐙' } },
+        { type: 2, style: 2, label: 'Quick Command', custom_id: 'quick_command_global', emoji: { name: '❗' } }
       ]
     });
   }

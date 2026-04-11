@@ -2,7 +2,7 @@
 
 **Status**: Active (Production)
 **Module**: `quickActionCreate.js`
-**Related**: [SafariCustomActions.md](SafariCustomActions.md), [RaP 0951 (original design)](../01-RaP/0951_QuickCreate_original.md), [RaP 0922 (global extension)](../01-RaP/0922_20260406_QuickActions_GlobalExtension_Analysis.md)
+**Related**: [SafariCustomActions.md](SafariCustomActions.md), [RaP 0951 (original design)](../01-RaP/0951_QuickCreate_original.md)
 
 ---
 

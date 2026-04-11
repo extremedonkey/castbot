@@ -33340,6 +33340,25 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
 
+    } else if (custom_id.startsWith('quick_command_') && !custom_id.startsWith('quick_command_modal_')) {
+      // Quick Command button — show modal with prefix select + command phrase
+      return ButtonHandlerFactory.create({
+        id: 'quick_command',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        requiresModal: true,
+        handler: async (context) => {
+          const coord = context.customId.replace('quick_command_', '');
+          console.log(`❗ START: quick_command - user ${context.userId}, coord ${coord}`);
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const prefixes = safariData[context.guildId]?.safariConfig?.commandPrefixes || [];
+          const { buildQuickCommandModal } = await import('./quickActionCreate.js');
+          const modalData = buildQuickCommandModal(coord, prefixes);
+          return { type: InteractionResponseType.MODAL, data: modalData };
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('map_location_display_')) {
       // Handle Location button display (shows anchor message content)
       return ButtonHandlerFactory.create({
@@ -47144,6 +47163,29 @@ Your server is now ready for Tycoons gameplay!`;
         return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...result, flags: (1 << 15) } });
       } catch (error) {
         console.error('Error handling quick enemy modal:', error);
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Error: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL } });
+      }
+
+    } else if (custom_id.startsWith('quick_command_modal_')) {
+      try {
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        const coordinate = custom_id.replace('quick_command_modal_', '');
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+
+        // Detect if prefix select was present (guild has prefixes configured)
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const hasPrefixes = (safariData[guildId]?.safariConfig?.commandPrefixes || []).length > 0;
+
+        const { handleQuickCommandSubmit } = await import('./quickActionCreate.js');
+        const result = await handleQuickCommandSubmit(guildId, userId, coordinate, components, hasPrefixes);
+        if (result.error) {
+          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ ${result.error}`, flags: InteractionResponseFlags.EPHEMERAL } });
+        }
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...result, flags: (1 << 15) } });
+      } catch (error) {
+        console.error('Error handling quick command modal:', error);
         return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Error: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL } });
       }
 
