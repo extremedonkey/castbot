@@ -33406,8 +33406,11 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'player_enter_command_global',
         handler: async (context) => {
           console.log(`⌨️ START: player_enter_command_global - user ${context.userId}`);
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const prefixes = safariData[context.guildId]?.safariConfig?.commandPrefixes || [];
           const { buildCommandModal } = await import('./commandUI.js');
-          return buildCommandModal({ coord: 'global' });
+          return buildCommandModal({ coord: 'global', prefixes });
         }
       })(req, res, client);
     } else if (custom_id.startsWith('player_enter_command_')) {
@@ -33417,8 +33420,11 @@ Your server is now ready for Tycoons gameplay!`;
         handler: async (context) => {
           const coord = context.customId.replace('player_enter_command_', '');
           console.log(`⌨️ START: player_enter_command - user ${context.userId}, coord ${coord}`);
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const prefixes = safariData[context.guildId]?.safariConfig?.commandPrefixes || [];
           const { buildCommandModal } = await import('./commandUI.js');
-          return buildCommandModal({ coord });
+          return buildCommandModal({ coord, prefixes });
         }
       })(req, res, client);
     
@@ -33432,8 +33438,11 @@ Your server is now ready for Tycoons gameplay!`;
           const coord = context.customId.replace('admin_test_command_', '');
           
           console.log(`🔧 START: admin_test_command - user ${context.userId}, coord ${coord}`);
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const prefixes = safariData[context.guildId]?.safariConfig?.commandPrefixes || [];
           const { buildCommandModal } = await import('./commandUI.js');
-          return buildCommandModal({ coord, isAdmin: true });
+          return buildCommandModal({ coord, isAdmin: true, prefixes });
         }
       })(req, res, client);
     
@@ -47867,10 +47876,19 @@ Your server is now ready for Tycoons gameplay!`;
       const token = req.body.token;
       const applicationId = req.body.application_id;
 
-      // Get the command entered by the player (supports both Label and legacy ActionRow)
-      const command = (components[0].component?.value ?? components[0].components?.[0]?.value)?.trim().toLowerCase();
+      // Get the command entered by the player — handles prefix select + text, or text-only
+      const firstComp = components[0];
+      const hasPrefix = Array.isArray(firstComp?.component?.values);
+      let command;
+      if (hasPrefix) {
+        const prefixValue = firstComp.component.values[0];
+        const phraseText = (components[1]?.component?.value ?? components[1]?.components?.[0]?.value)?.trim().toLowerCase() || '';
+        command = (prefixValue === 'freeform' || !prefixValue) ? phraseText : `${prefixValue} ${phraseText}`.toLowerCase();
+      } else {
+        command = (firstComp?.component?.value ?? firstComp?.components?.[0]?.value)?.trim().toLowerCase();
+      }
 
-      console.log(`⌨️ DEBUG: Player command submitted - coord: ${coord}, command: "${command}"`);
+      console.log(`⌨️ DEBUG: Player command submitted - coord: ${coord}, command: "${command}", hasPrefix: ${hasPrefix}`);
 
       if (!command) {
         return res.send({
@@ -48301,10 +48319,19 @@ Your server is now ready for Tycoons gameplay!`;
           const channelId = req.body.channel_id;
           const userId = req.body.member.user.id;
           
-          // Get the command entered by the admin (supports both Label and legacy ActionRow)
-          const command = (components[0].component?.value ?? components[0].components?.[0]?.value)?.trim().toLowerCase();
-          
-          console.log(`🔧 DEBUG: Admin command submitted (via player logic) - coord: ${coord}, command: "${command}"`);
+          // Get the command entered by the admin — handles prefix select + text, or text-only
+          const firstCompAdmin = components[0];
+          const hasPrefixAdmin = Array.isArray(firstCompAdmin?.component?.values);
+          let command;
+          if (hasPrefixAdmin) {
+            const prefixValue = firstCompAdmin.component.values[0];
+            const phraseText = (components[1]?.component?.value ?? components[1]?.components?.[0]?.value)?.trim().toLowerCase() || '';
+            command = (prefixValue === 'freeform' || !prefixValue) ? phraseText : `${prefixValue} ${phraseText}`.toLowerCase();
+          } else {
+            command = (firstCompAdmin?.component?.value ?? firstCompAdmin?.components?.[0]?.value)?.trim().toLowerCase();
+          }
+
+          console.log(`🔧 DEBUG: Admin command submitted (via player logic) - coord: ${coord}, command: "${command}", hasPrefix: ${hasPrefixAdmin}`);
           
           if (!command) {
             return res.send({

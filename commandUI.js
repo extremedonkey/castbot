@@ -34,21 +34,50 @@ export function buildCommandModal({ coord, isAdmin = false, prefixes = [] }) {
 
   const components = [];
 
-  // Future: when prefixes are configured, add a String Select above the text input
-  // Phase 3 will add:
-  //   if (prefixes.length > 0) { components.push(prefixSelect); }
+  // Show prefix select when guild has prefixes configured
+  if (prefixes.length > 0) {
+    const prefixOptions = [
+      {
+        label: 'Freeform (no prefix)',
+        value: 'freeform',
+        description: 'Enter the full command exactly as it is — common for idol hunts',
+        emoji: { name: '♾️' },
+        default: true
+      }
+    ];
+    for (const prefix of prefixes) {
+      prefixOptions.push({
+        label: prefix.label,
+        value: prefix.label.toLowerCase(),
+        description: (prefix.description || `Prepends "${prefix.label}" to your command`).substring(0, 100),
+        emoji: { name: prefix.emoji || '🏷️' }
+      });
+    }
+    components.push({
+      type: 18, // Label
+      label: 'Prefix (optional)',
+      description: 'Pick an action verb, or choose Freeform to enter the full command yourself',
+      component: {
+        type: 3, // String Select
+        custom_id: 'command_prefix',
+        min_values: 1,
+        max_values: 1,
+        options: prefixOptions
+      }
+    });
+  }
 
   // Command text input (Label wrapper — Components V2 modal standard)
   components.push({
     type: 18, // Label
     label: 'Command',
-    description: 'Type a command to interact with this location',
+    description: 'Enter a secret word, phrase, or code',
     component: {
       type: 4, // Text Input
       custom_id: 'command',
       style: 1, // Short
       required: true,
-      placeholder: 'e.g., climb tree, inspect rock, open chest',
+      placeholder: 'e.g., climb tree, open chest, my-secret-idol',
       min_length: 1,
       max_length: 100
     }
@@ -329,7 +358,7 @@ export function buildAddPhraseModal({ actionId, prefixes = [] }) {
         {
           type: 18, // Label
           label: 'Command Phrase',
-          description: 'The word or phrase the player types after the prefix',
+          description: 'The word or phrase the player types. If using a prefix, this is what follows it.',
           component: {
             type: 4, // Text Input
             custom_id: 'phrase_text',

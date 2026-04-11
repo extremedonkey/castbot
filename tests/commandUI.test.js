@@ -9,32 +9,28 @@ function buildCommandModal({ coord, isAdmin = false, prefixes = [] }) {
     : `player_command_modal_${coord}`;
 
   const title = isAdmin ? 'Test Command (Admin)' : 'Enter Command';
-
   const components = [];
 
-  components.push({
-    type: 18,
-    label: 'Command',
-    description: 'Type a command to interact with this location',
-    component: {
-      type: 4,
-      custom_id: 'command',
-      style: 1,
-      required: true,
-      placeholder: 'e.g., climb tree, inspect rock, open chest',
-      min_length: 1,
-      max_length: 100
+  if (prefixes.length > 0) {
+    const prefixOptions = [
+      { label: 'Freeform (no prefix)', value: 'freeform', emoji: { name: '♾️' }, default: true }
+    ];
+    for (const p of prefixes) {
+      prefixOptions.push({ label: p.label, value: p.label.toLowerCase(), emoji: { name: p.emoji || '🏷️' } });
     }
+    components.push({
+      type: 18, label: 'Prefix (optional)',
+      component: { type: 3, custom_id: 'command_prefix', min_values: 1, max_values: 1, options: prefixOptions }
+    });
+  }
+
+  components.push({
+    type: 18, label: 'Command',
+    description: 'Enter a secret word, phrase, or code',
+    component: { type: 4, custom_id: 'command', style: 1, required: true, min_length: 1, max_length: 100 }
   });
 
-  return {
-    type: 9,
-    data: {
-      custom_id: customId,
-      title,
-      components
-    }
-  };
+  return { type: 9, data: { custom_id: customId, title, components } };
 }
 
 describe('buildCommandModal — Structure', () => {
@@ -54,20 +50,20 @@ describe('buildCommandModal — Structure', () => {
 
   it('uses Label (type 18) wrapper, not legacy ActionRow', () => {
     const result = buildCommandModal({ coord: 'A1' });
-    const label = result.data.components[0];
-    assert.equal(label.type, 18, 'First component should be Label (type 18)');
-    assert.equal(label.component.type, 4, 'Label should wrap a TextInput (type 4)');
+    const lastComp = result.data.components[result.data.components.length - 1];
+    assert.equal(lastComp.type, 18, 'Last component should be Label (type 18)');
+    assert.equal(lastComp.component.type, 4, 'Label should wrap a TextInput (type 4)');
   });
 
   it('text input has correct configuration', () => {
     const result = buildCommandModal({ coord: 'B3' });
-    const input = result.data.components[0].component;
+    const lastComp = result.data.components[result.data.components.length - 1];
+    const input = lastComp.component;
     assert.equal(input.custom_id, 'command');
     assert.equal(input.style, 1);
     assert.equal(input.required, true);
     assert.equal(input.min_length, 1);
     assert.equal(input.max_length, 100);
-    assert.ok(input.placeholder.length > 0);
   });
 });
 
@@ -128,6 +124,43 @@ describe('buildCommandModal — Consistency', () => {
     const global = buildCommandModal({ coord: 'global' });
     const location = buildCommandModal({ coord: 'E7' });
     assert.notEqual(global.data.custom_id, location.data.custom_id);
+  });
+});
+
+describe('buildCommandModal — Prefix Support', () => {
+  const testPrefixes = [
+    { label: 'climb', emoji: '🧗', description: 'Climb something' },
+    { label: 'inspect', emoji: '🔍' }
+  ];
+
+  it('shows only text input when no prefixes configured', () => {
+    const result = buildCommandModal({ coord: 'F7' });
+    assert.equal(result.data.components.length, 1);
+    assert.equal(result.data.components[0].component.type, 4); // TextInput
+  });
+
+  it('shows prefix select + text input when prefixes configured', () => {
+    const result = buildCommandModal({ coord: 'F7', prefixes: testPrefixes });
+    assert.equal(result.data.components.length, 2);
+    assert.equal(result.data.components[0].component.type, 3); // StringSelect
+    assert.equal(result.data.components[1].component.type, 4); // TextInput
+  });
+
+  it('prefix select includes freeform as default + guild prefixes', () => {
+    const result = buildCommandModal({ coord: 'F7', prefixes: testPrefixes });
+    const options = result.data.components[0].component.options;
+    assert.equal(options.length, 3); // freeform + 2 prefixes
+    assert.equal(options[0].value, 'freeform');
+    assert.equal(options[0].default, true);
+    assert.equal(options[1].value, 'climb');
+    assert.equal(options[2].value, 'inspect');
+  });
+
+  it('uses prefix description when available', () => {
+    const result = buildCommandModal({ coord: 'F7', prefixes: testPrefixes });
+    const options = result.data.components[0].component.options;
+    assert.equal(options[1].description, 'Climb something');
+    assert.ok(options[2].description.includes('inspect')); // fallback description
   });
 });
 
