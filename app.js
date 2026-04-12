@@ -31304,7 +31304,12 @@ Your server is now ready for Tycoons gameplay!`;
           // Add warning if many actions enabled for a menu
           const warningCount = selectedValue === 'player_menu' ? playerMenuCount : craftingMenuCount;
           if (warningCount >= 10 && selectedValue !== 'none') {
-            const menuName = selectedValue === 'player_menu' ? 'Player Menu' : 'Crafting';
+            let menuName = 'Player Menu';
+            if (selectedValue === 'crafting_menu') {
+              const { getCustomTerms } = await import('./safariManager.js');
+              const ct = await getCustomTerms(context.guildId);
+              menuName = ct.craftingName || 'Crafting';
+            }
             const container = ui.components[0];
             if (container?.components) {
               container.components.splice(2, 0, {
