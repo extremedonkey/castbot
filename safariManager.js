@@ -4838,6 +4838,10 @@ async function createCraftingMenuUI(guildId, userId) {
 
         const safariData = await loadSafariContent();
         const allButtons = safariData[guildId]?.buttons || {};
+        const customTerms = await getCustomTerms(guildId);
+        const craftingName = customTerms.craftingName || 'Crafting';
+        const craftingEmoji = customTerms.craftingEmoji || '🛠️';
+        const craftingNameLower = craftingName.toLowerCase();
 
         // Get crafting actions - use entries to preserve the action ID (key)
         const craftingActions = Object.entries(allButtons)
@@ -4852,10 +4856,10 @@ async function createCraftingMenuUI(guildId, userId) {
 
         const components = [];
 
-        // Header
+        // Header — uses custom emoji + name (e.g. "🌱 Gardening")
         components.push({
             type: 10, // Text Display
-            content: `## 🛠️ Crafting`
+            content: `## ${craftingEmoji} ${craftingName}`
         });
 
         components.push({ type: 14 }); // Separator
@@ -4864,7 +4868,7 @@ async function createCraftingMenuUI(guildId, userId) {
             // No crafting actions message
             components.push({
                 type: 10,
-                content: `*No crafting recipes available.*`
+                content: `*No ${craftingNameLower} recipes available.*`
             });
         } else {
             // Section header
@@ -5179,6 +5183,8 @@ async function getCustomTerms(guildId) {
             inventoryName: config.inventoryName || 'Inventory',
             currencyEmoji: config.currencyEmoji || '🪙',
             inventoryEmoji: config.inventoryEmoji || '🧰',
+            craftingName: config.craftingName || 'Crafting',
+            craftingEmoji: config.craftingEmoji || '🛠️',
             defaultStartingCurrencyValue: config.defaultStartingCurrencyValue ?? 100,
             defaultStartingCoordinate: config.defaultStartingCoordinate || 'A1',
 
@@ -5208,7 +5214,9 @@ async function getCustomTerms(guildId) {
             inventoryName: 'Inventory',
             currencyEmoji: '🪙',
             inventoryEmoji: '🧰',
-            
+            craftingName: 'Crafting',
+            craftingEmoji: '🛠️',
+
             // Game settings fallbacks
             round1GoodProbability: 75,
             round2GoodProbability: 50,
@@ -5275,6 +5283,12 @@ async function updateCustomTerms(guildId, terms) {
         if (terms.inventoryEmoji !== undefined) {
             safariData[guildId].safariConfig.inventoryEmoji = terms.inventoryEmoji || '🧰';
         }
+        if (terms.craftingName !== undefined) {
+            safariData[guildId].safariConfig.craftingName = terms.craftingName || 'Crafting';
+        }
+        if (terms.craftingEmoji !== undefined) {
+            safariData[guildId].safariConfig.craftingEmoji = terms.craftingEmoji || '🛠️';
+        }
         if (terms.defaultStartingCurrencyValue !== undefined) {
             const parsedCurrency = parseInt(terms.defaultStartingCurrencyValue);
             safariData[guildId].safariConfig.defaultStartingCurrencyValue = isNaN(parsedCurrency) ? 100 : parsedCurrency;
@@ -5321,7 +5335,36 @@ async function updateCustomTerms(guildId, terms) {
         if (terms.lastRoundTimestamp !== undefined) {
             safariData[guildId].safariConfig.lastRoundTimestamp = terms.lastRoundTimestamp;
         }
-        
+
+        // Stamina settings (so reset can clear them via this same path)
+        if (terms.startingStamina !== undefined) {
+            safariData[guildId].safariConfig.startingStamina = terms.startingStamina;
+        }
+        if (terms.maxStamina !== undefined) {
+            safariData[guildId].safariConfig.maxStamina = terms.maxStamina;
+        }
+        if (terms.staminaRegenerationMinutes !== undefined) {
+            safariData[guildId].safariConfig.staminaRegenerationMinutes = terms.staminaRegenerationMinutes;
+        }
+        if (terms.staminaRegenerationAmount !== undefined) {
+            // null = full reset to max
+            safariData[guildId].safariConfig.staminaRegenerationAmount = terms.staminaRegenerationAmount;
+        }
+
+        // Player Menu visibility settings
+        if (terms.enableGlobalCommands !== undefined) {
+            safariData[guildId].safariConfig.enableGlobalCommands = terms.enableGlobalCommands;
+        }
+        if (terms.inventoryVisibilityMode !== undefined) {
+            safariData[guildId].safariConfig.inventoryVisibilityMode = terms.inventoryVisibilityMode;
+        }
+        if (terms.globalStoresVisibilityMode !== undefined) {
+            safariData[guildId].safariConfig.globalStoresVisibilityMode = terms.globalStoresVisibilityMode;
+        }
+        if (terms.showCustomCastlists !== undefined) {
+            safariData[guildId].safariConfig.showCustomCastlists = terms.showCustomCastlists;
+        }
+
         // Save updated data
         await saveSafariContent(safariData);
         
@@ -5341,10 +5384,38 @@ async function updateCustomTerms(guildId, terms) {
  */
 async function resetCustomTerms(guildId) {
     return await updateCustomTerms(guildId, {
+        // Currency & Inventory
         currencyName: 'Dollars',
-        inventoryName: 'Inventory',
         currencyEmoji: '🪙',
-        inventoryEmoji: '🧰'
+        inventoryName: 'Inventory',
+        inventoryEmoji: '🧰',
+        defaultStartingCurrencyValue: 100,
+        // Crafting
+        craftingName: 'Crafting',
+        craftingEmoji: '🛠️',
+        // Events
+        goodEventName: 'Clear Skies',
+        badEventName: 'Meteor Strike',
+        goodEventEmoji: '☀️',
+        badEventEmoji: '☄️',
+        goodEventMessage: 'The skies are clear! All creatures thrive!',
+        badEventMessage: 'Meteors rain down! Only the protected survive!',
+        // Rounds (legacy Tycoons probabilities)
+        round1GoodProbability: 75,
+        round2GoodProbability: 50,
+        round3GoodProbability: 25,
+        // Location
+        defaultStartingCoordinate: 'A1',
+        // Stamina (defaults match getStaminaConfig fallbacks)
+        startingStamina: 1,
+        maxStamina: 10,
+        staminaRegenerationMinutes: 60,
+        staminaRegenerationAmount: null, // null = full reset to max
+        // Player Menu visibility
+        enableGlobalCommands: true,
+        inventoryVisibilityMode: 'always',
+        globalStoresVisibilityMode: 'always',
+        showCustomCastlists: true
     });
 }
 

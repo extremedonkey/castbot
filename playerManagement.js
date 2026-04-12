@@ -445,7 +445,7 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   // === Row 2: Safari ===
   vis.inventory = { show: isAdmin ? showInventory : (showInventory && hasTarget), disabled: isAdmin && !hasTarget, label: customTerms.inventoryName || 'Inventory', emoji: customTerms.inventoryEmoji || '🧰', immediate: true };
   vis.challenges = { show: isAdmin ? hasChallengeActions : hasChallengeActions, disabled: isAdmin && !hasTarget, label: 'Challenges', emoji: '🏃' };
-  vis.crafting = { show: isAdmin ? hasCraftingConfigured : hasCraftingConfigured, disabled: isAdmin && !hasTarget, label: 'Crafting', emoji: '🛠️' };
+  vis.crafting = { show: isAdmin ? hasCraftingConfigured : hasCraftingConfigured, disabled: isAdmin && !hasTarget, label: customTerms.craftingName || 'Crafting', emoji: customTerms.craftingEmoji || '🛠️' };
   vis.actions = { show: isAdmin ? hasActionsConfigured : hasActionsConfigured, disabled: isAdmin && !hasTarget, label: 'Actions', emoji: '⚡' };
   vis.stores = { show: isAdmin ? (showStores && hasStoresExist) : (showStores && hasStoresExist), disabled: isAdmin && !hasTarget, label: 'Stores', emoji: '🏪' };
 
@@ -714,6 +714,9 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
 
     // ─── Crafting ────────────────────────────────────────────────────────
     case 'crafting': {
+      const customTerms = await getCustomTerms(guildId);
+      const craftingNameLower = (customTerms.craftingName || 'Crafting').toLowerCase();
+      const craftingFallbackEmoji = customTerms.craftingEmoji || '🛠️';
       const allBtns = safariData[guildId]?.buttons || {};
       const craftingActions = Object.entries(allBtns)
         .filter(([id, a]) => {
@@ -735,18 +738,18 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
           components: [{
             type: 3,
             custom_id: 'player_menu_sel_crafting',
-            placeholder: 'No crafting recipes available',
+            placeholder: `No ${craftingNameLower} recipes available`,
             min_values: 0,
             max_values: 1,
             disabled: true,
-            options: [{ label: 'No recipes', value: 'none', description: 'No crafting recipes configured' }]
+            options: [{ label: 'No recipes', value: 'none', description: `No ${craftingNameLower} recipes configured` }]
           }]
         };
       }
 
       const options = craftingActions.slice(0, 25).map(action => {
         const label = (action.inventoryConfig?.buttonLabel || action.trigger?.button?.label || action.name || 'Recipe').slice(0, 100);
-        const emoji = resolveEmoji(action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji || action.emoji, '🛠️');
+        const emoji = resolveEmoji(action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji || action.emoji, craftingFallbackEmoji);
         return {
           label,
           value: action.actionId,
@@ -763,7 +766,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
         components: [{
           type: 3,
           custom_id: 'player_menu_sel_crafting',
-          placeholder: 'Select a crafting recipe',
+          placeholder: `Select a ${craftingNameLower} recipe`,
           min_values: 1,
           max_values: 1,
           options

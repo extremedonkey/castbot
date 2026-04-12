@@ -159,6 +159,11 @@ export async function buildActionSelectRow({ guildId, coordinate = null, mapId =
     console.log(`📋 Building global action list (${sortedActions.length} actions)`);
   }
 
+  // Load custom terms once for crafting label
+  const summaryTerms = await getCustomTerms(guildId);
+  const summaryCraftingName = summaryTerms.craftingName || 'Crafting';
+  const summaryCraftingEmoji = summaryTerms.craftingEmoji || '🛠️';
+
   for (const { actionId, action } of sortedActions) {
     let description;
     if (coordinate && mapId) {
@@ -172,7 +177,7 @@ export async function buildActionSelectRow({ guildId, coordinate = null, mapId =
       if (visibility === 'player_menu') {
         description += ' • 📋 Menu';
       } else if (visibility === 'crafting_menu') {
-        description += ' • 🛠️ Crafting';
+        description += ` • ${summaryCraftingEmoji} ${summaryCraftingName}`;
       }
     }
 
@@ -340,10 +345,13 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
   const guildButtons = guildData.buttons || {};
   const guildEnemies = guildData.enemies || {};
   let action = actionId === 'new' ? createDefaultAction() : guildData.buttons?.[actionId];
-  
+
   if (!action) {
     throw new Error('Action not found');
   }
+
+  // Custom terms drive the Crafting label everywhere it's surfaced
+  const editorCustomTerms = await getCustomTerms(guildId);
   
   // Ensure action has new structure
   action = ensureActionStructure(action);
@@ -435,7 +443,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10,
-            content: `-# Where can players find this action?\n${formatButtonLocations(action, guildItems)}`
+            content: `-# Where can players find this action?\n${formatButtonLocations(action, guildItems, editorCustomTerms)}`
           }],
           accessory: {
             type: 2,
@@ -790,7 +798,7 @@ function formatCoordinateList(coordinates) {
 }
 
 // Build summary of all trigger surfaces for the Action Editor
-function formatButtonLocations(action, guildItems = {}) {
+function formatButtonLocations(action, guildItems = {}, customTerms = null) {
   const parts = [];
 
   // Coordinates
@@ -806,7 +814,7 @@ function formatButtonLocations(action, guildItems = {}) {
   // Menu visibility
   const visibility = action.menuVisibility || 'none';
   if (visibility === 'player_menu') parts.push('Player Menu');
-  if (visibility === 'crafting_menu') parts.push('Crafting');
+  if (visibility === 'crafting_menu') parts.push(customTerms?.craftingName || 'Crafting');
 
   // Linked items - show names, truncate if too long
   const linkedItemIds = action.linkedItems || [];
@@ -1959,6 +1967,11 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
     menuVisibility = action.showInInventory ? 'player_menu' : 'none';
   }
 
+  // Resolve customizable Crafting label/emoji for this guild
+  const customTerms = await getCustomTerms(guildId);
+  const craftingName = customTerms.craftingName || 'Crafting';
+  const craftingEmoji = resolveEmoji(customTerms.craftingEmoji, '🛠️');
+
   const components = [
     {
       type: 10,
@@ -1998,10 +2011,10 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
           default: menuVisibility === 'player_menu'
         },
         {
-          label: 'Crafting',
+          label: craftingName,
           value: 'crafting_menu',
-          description: 'Appears in Crafting menu from Inventory',
-          emoji: { name: '🛠️' },
+          description: `Appears in ${craftingName} menu from Inventory`,
+          emoji: craftingEmoji,
           default: menuVisibility === 'crafting_menu'
         }
       ]

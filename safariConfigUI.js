@@ -101,26 +101,29 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
         emoji: { name: '⚡' }
     });
 
-    // Add player menu configuration button (5th and final button)
-    fieldGroupButtons.push({
-        type: 2, // Button
-        custom_id: 'safari_player_menu_config',
-        label: 'Player Menu',
-        style: 2, // Secondary
-        emoji: { name: '🕹️' }
-    });
-
     // Get current settings display
     const currentSettingsDisplay = await createCurrentSettingsDisplay(guildId, currentConfig);
 
-    // Separate events button from main field group buttons (moved to Legacy section)
-    const mainButtons = fieldGroupButtons.filter(b => b.custom_id !== 'safari_config_group_events');
-    const eventsButton = fieldGroupButtons.find(b => b.custom_id === 'safari_config_group_events');
+    // Separate legacy buttons (events, rounds) from main field-group buttons.
+    // Legacy buttons are rendered in the bottom 📼 Legacy section.
+    const legacyKeys = ['events', 'rounds'];
+    const mainButtons = fieldGroupButtons.filter(
+        b => !legacyKeys.some(k => b.custom_id === `safari_config_group_${k}`)
+    );
+    const legacyButtons = legacyKeys
+        .map(k => fieldGroupButtons.find(b => b.custom_id === `safari_config_group_${k}`))
+        .filter(Boolean);
 
     // Create Components V2 Container — LEAN design
     const containerComponents = [
         { type: 10, content: `## ⚙️ CastBot Settings` },
         { type: 10, content: currentSettingsDisplay },
+        { type: 14 },
+        { type: 10, content: `### \`\`\`🎛️ CastBot-Wide Settings\`\`\`` },
+        { type: 1, components: [
+            { type: 2, custom_id: 'safari_player_menu_config', label: 'Player Menu', style: 2, emoji: { name: '🕹️' } },
+            { type: 2, custom_id: 'prod_manage_pronouns_timezones', label: 'Reaction Roles', style: 2, emoji: { name: '💜' } }
+        ] },
         { type: 14 },
         { type: 10, content: `### \`\`\`🦁 Idol Hunts, Challenges and Safari Settings\`\`\`` },
         { type: 1, components: [
@@ -128,7 +131,7 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
             { type: 2, custom_id: 'command_prefixes_menu', label: 'Commands', style: 2, emoji: { name: '❗' } }
         ] },
         { type: 14 },
-        { type: 10, content: `### \`\`\`⚙️ Global Settings\`\`\`` },
+        { type: 10, content: `### \`\`\`⚙️ Advanced\`\`\`` },
         {
             type: 1,
             components: [
@@ -143,9 +146,7 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
         { type: 10, content: `### \`\`\`📼 Legacy\`\`\`` },
         {
             type: 1,
-            components: [
-                ...(eventsButton ? [eventsButton] : [])
-            ]
+            components: legacyButtons
         },
         { type: 14 },
         {
@@ -190,6 +191,8 @@ export async function createFieldGroupModal(groupKey, currentConfig) {
         inventoryName: 'What the player\'s item bag is called.',
         inventoryEmoji: 'Unicode emoji or custom Discord emoji code.',
         defaultStartingCurrencyValue: 'Amount of currency new players start with.',
+        craftingName: 'What the crafting feature is called in menus and buttons (e.g. Gardening, Cooking).',
+        craftingEmoji: 'Unicode emoji or custom Discord emoji code for crafting.',
         goodEventName: 'Name for positive random events.',
         badEventName: 'Name for negative random events.',
         goodEventEmoji: 'Emoji shown for positive events.',
@@ -202,10 +205,20 @@ export async function createFieldGroupModal(groupKey, currentConfig) {
 
     const components = [];
 
+    // Legacy Tycoons warning shown above the Rounds modal fields
+    if (groupKey === 'rounds') {
+        components.push({
+            type: 10, // Text Display
+            content: '### ⚠️ Legacy Tycoons Feature\n\nRound probabilities power the legacy **Tycoons** simulation (💼 Tycoons in Tools). For new games, use **Challenges** instead.'
+        });
+    }
+
     Object.entries(groupConfig.fields).forEach(([fieldKey, fieldConfig]) => {
-        // Pre-populate with current value
+        // Pre-populate with current value (with sensible defaults for emoji fields)
         let currentValue = currentConfig[fieldKey];
         if (fieldKey === 'inventoryEmoji' && !currentValue) currentValue = '🧰';
+        if (fieldKey === 'craftingEmoji' && !currentValue) currentValue = '🛠️';
+        if (fieldKey === 'craftingName' && !currentValue) currentValue = 'Crafting';
 
         const textInput = {
             type: 4, // Text Input
@@ -250,12 +263,29 @@ export function processFieldGroupSubmission(groupKey, modalData) {
     }
 
     const updates = {};
-    const components = modalData.components;
+    const components = modalData.components || [];
 
-    Object.entries(groupConfig.fields).forEach(([fieldKey, fieldConfig], index) => {
-        // Support both Label-wrapped (type 18: .component.value) and ActionRow-wrapped (type 1: .components[0].value)
-        const row = components[index];
-        const value = row?.component?.value ?? row?.components?.[0]?.value;
+    // Build a custom_id → value lookup so we tolerate non-input modal entries
+    // (e.g. type 10 Text Display warnings) without index-fragility.
+    const valuesByCustomId = {};
+    for (const row of components) {
+        // Label-wrapped (type 18): row.component is the input
+        if (row?.component?.custom_id !== undefined) {
+            valuesByCustomId[row.component.custom_id] = row.component.value;
+            continue;
+        }
+        // ActionRow-wrapped (type 1, legacy): row.components[] are inputs
+        if (Array.isArray(row?.components)) {
+            for (const inner of row.components) {
+                if (inner?.custom_id !== undefined) {
+                    valuesByCustomId[inner.custom_id] = inner.value;
+                }
+            }
+        }
+    }
+
+    Object.entries(groupConfig.fields).forEach(([fieldKey, fieldConfig]) => {
+        const value = valuesByCustomId[fieldKey];
 
         if (value !== undefined && value !== '') {
             if (fieldConfig.type === 'number') {
@@ -292,6 +322,13 @@ async function createCurrentSettingsDisplay(guildId, config) {
     display += `• Inventory Emoji: ${inventoryEmoji}\n`;
     display += `• Default Starting Currency: ${config.defaultStartingCurrencyValue ?? 100}\n\n`;
 
+    // --- Crafting ---
+    const craftingName = config.craftingName || 'Crafting';
+    const craftingEmoji = config.craftingEmoji || '🛠️';
+    display += `**🛠️ Crafting**\n`;
+    display += `• Crafting Name: ${craftingName}\n`;
+    display += `• Crafting Emoji: ${craftingEmoji}\n\n`;
+
     // --- Stamina Settings ---
     const { getStaminaConfig } = await import('./safariManager.js');
     const staminaConfig = await getStaminaConfig(guildId);
@@ -325,24 +362,19 @@ async function createCurrentSettingsDisplay(guildId, config) {
         display += `\n`;
     }
 
-    // --- Rounds & Location ---
-    if (config.round1GoodProbability !== undefined ||
-        config.round2GoodProbability !== undefined ||
-        config.round3GoodProbability !== undefined) {
-        const totalRounds = config.totalRounds || 3;
-        display += `**🎲 Rounds & Location** (${totalRounds} total)\n`;
-        if (config.round1GoodProbability !== undefined) {
-            display += `• Round 1: Good ${config.round1GoodProbability}% | Bad ${100 - config.round1GoodProbability}%\n`;
-        }
-        if (config.round2GoodProbability !== undefined) {
-            display += `• Round 2: Good ${config.round2GoodProbability}% | Bad ${100 - config.round2GoodProbability}%\n`;
-        }
-        if (config.round3GoodProbability !== undefined) {
-            display += `• Round 3: Good ${config.round3GoodProbability}% | Bad ${100 - config.round3GoodProbability}%\n`;
-        }
-        display += `• Default Starting Coordinate: ${config.defaultStartingCoordinate || 'A1'}\n`;
-        display += `\n`;
-    }
+    // --- Rounds (legacy Tycoons) ---
+    const totalRounds = config.totalRounds || 3;
+    const r1 = config.round1GoodProbability ?? 75;
+    const r2 = config.round2GoodProbability ?? 50;
+    const r3 = config.round3GoodProbability ?? 25;
+    display += `**🎲 Rounds** (${totalRounds} total)\n`;
+    display += `• Round 1: Good ${r1}% | Bad ${100 - r1}%\n`;
+    display += `• Round 2: Good ${r2}% | Bad ${100 - r2}%\n`;
+    display += `• Round 3: Good ${r3}% | Bad ${100 - r3}%\n\n`;
+
+    // --- Location ---
+    display += `**📍 Location**\n`;
+    display += `• Starting Coordinate: ${config.defaultStartingCoordinate || 'A1'}\n\n`;
 
     // --- Player Menu ---
     const enableGlobalCommands = config.enableGlobalCommands !== false;
@@ -357,6 +389,11 @@ async function createCurrentSettingsDisplay(guildId, config) {
     display += `• Inventory Button: ${visibilityModeLabels[config.inventoryVisibilityMode || 'always']}\n`;
     display += `• Global Stores Button: ${visibilityModeLabels[config.globalStoresVisibilityMode || 'always']}\n`;
     display += `• Custom Castlists: ${config.showCustomCastlists !== false ? '✅ Show All' : '📋 Default Only'}\n\n`;
+
+    // --- Commands ---
+    const prefixCount = Array.isArray(config.commandPrefixes) ? config.commandPrefixes.length : 0;
+    display += `**❗ Commands**\n`;
+    display += `• Prefixes: ${prefixCount} configured\n\n`;
 
     // --- Safari Log ---
     const { loadSafariContent } = await import('./safariManager.js');
@@ -377,8 +414,10 @@ async function createCurrentSettingsDisplay(guildId, config) {
 function getGroupEmoji(groupKey) {
     const emojis = {
         currency: '🪙',
-        events: '☄️', 
-        rounds: '🎲'
+        crafting: '🛠️',
+        events: '☄️',
+        rounds: '🎲',
+        location: '📍'
     };
     return emojis[groupKey] || '⚙️';
 }
@@ -391,7 +430,7 @@ export function createResetConfirmationUI() {
     const containerComponents = [
         {
             type: 10, // Text Display component
-            content: `## ⚠️ Reset Safari Settings\n\nAre you sure you want to reset all Safari customizations to default values?\n\n**This will reset:**\n• Currency name back to "Dollars" 🪙\n• Inventory name back to "Inventory"\n• Event names back to defaults\n• Round harvest probabilities back to 75%, 50%, 25%\n\n**This action cannot be undone.**`
+            content: `## ⚠️ Reset CastBot Settings\n\nAre you sure you want to reset all settings to default values?\n\n**This will reset:**\n• 🪙 Currency & Inventory (name, emoji, starting amount)\n• 🛠️ Crafting (name, emoji)\n• ☄️ Event names and emojis\n• 🎲 Round probabilities (75%, 50%, 25%)\n• 📍 Default starting coordinate (A1)\n• ⚡ Stamina settings\n• 🕹️ Player Menu visibility\n\n**Will NOT reset:**\n• 🔐 Roles & Security whitelist\n• 📊 Safari Log channel\n• ❗ Command prefixes\n\n**This action cannot be undone.**`
         },
         {
             type: 1, // Action Row

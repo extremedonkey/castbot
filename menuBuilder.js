@@ -84,14 +84,13 @@ export class MenuBuilder {
           { type: 2, custom_id: 'prod_setup_wizard', label: 'Setup Wizard', style: 1, emoji: { name: '🧙' } },
           { type: 2, custom_id: 'attribute_management', label: 'Attributes', style: 2, emoji: { name: '📊' } },
           { type: 2, custom_id: 'safari_manage_enemies', label: 'Enemies', style: 2, emoji: { name: '🐙' } },
-          { type: 2, custom_id: 'safari_rounds_menu', label: 'Tycoons', style: 2, emoji: { name: '💎' } }
+          { type: 2, custom_id: 'tycoons_legacy', label: 'Tycoons', style: 2, emoji: { name: '💼' } }
         ]
       },
       { type: 10, content: `### \`\`\`🔮 Roles & Utilities\`\`\`` },
       {
         type: 1,
         components: [
-          { type: 2, custom_id: 'prod_manage_pronouns_timezones', label: 'Reaction Roles', style: 2, emoji: { name: '💜' } },
           { type: 2, custom_id: 'prod_availability', label: 'Availability', style: 2, emoji: { name: '🕐' } },
           { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } },
           { type: 2, custom_id: 'map_admin_refresh_anchors', label: 'Refresh Anchors', style: 2, emoji: { name: '🔄' } }

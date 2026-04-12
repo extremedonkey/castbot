@@ -15745,7 +15745,7 @@ Your server is now ready for Tycoons gameplay!`;
                 type: 10, // Text Display
                 content: '### Configure Stamina Settings\n\n' +
                          'These settings control stamina for this server.\n' +
-                         'Configure starting location in Rounds & Location.'
+                         'Configure starting location in 📍 Location.'
               },
 
               // Label 1: Starting Stamina
@@ -16737,7 +16737,7 @@ Your server is now ready for Tycoons gameplay!`;
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '✅ **Safari Settings Reset!**\n\nAll customizations have been reset to default values:\n• Currency: 🪙 Dollars\n• Inventory: Inventory\n• Events: ☀️ Clear Skies / ☄️ Meteor Strike\n• Round harvest probabilities: 75%, 50%, 25%',
+            content: '✅ **CastBot Settings Reset!**\n\nAll customizations have been reset to default values:\n• 🪙 Currency: Dollars / Inventory (start: 100)\n• 🛠️ Crafting: Crafting\n• ☄️ Events: ☀️ Clear Skies / ☄️ Meteor Strike\n• 🎲 Round probabilities: 75%, 50%, 25%\n• 📍 Starting coordinate: A1\n• ⚡ Stamina: 1 / max 10 / regen 60min\n• 🕹️ Player Menu visibility restored to defaults',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -35730,13 +35730,14 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
       
-    } else if (custom_id === 'safari_rounds_menu') {
+    } else if (custom_id === 'tycoons_legacy' || custom_id === 'safari_rounds_menu') {
+      // Note: 'safari_rounds_menu' kept as soft-deprecation alias for cached/pinned messages
       return ButtonHandlerFactory.create({
-        id: 'safari_rounds_menu',
+        id: 'tycoons_legacy',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
-          console.log(`⏳ START: safari_rounds_menu - user ${context.userId}`);
+          console.log(`💼 START: tycoons_legacy - user ${context.userId}`);
           
           // Load Safari data to get current round info
           const { loadSafariContent } = await import('./safariManager.js');
@@ -35825,11 +35826,11 @@ Your server is now ready for Tycoons gameplay!`;
           const containerComponents = [
             {
               type: 10, // Text Display
-              content: `## 🏃‍♀️ Challenges`
+              content: `## 💼 Tycoons`
             },
             {
               type: 10, // Text Display
-              content: `Use CastBot features to add turn-based elements to your Challenges or Safari. Run challenges in multiple rounds over 24 hour cycles, combining with the Actions feature, or as part of a more elaborate Safari Design system.\n\nRounds will allow items which have yields to accrue currency, and player attacks / defence actions to be executed when Round Results are revealed.`
+              content: `**Legacy Feature.** Tycoons is the original turn-based round simulation: items accrue currency yields per round, and player attacks/defence actions execute when Round Results are revealed.\n\nFor new games, use the **Challenges** feature instead — it offers the same round structure with broader hooks into Actions and the wider Safari design system.`
             },
             { type: 14 }, // Separator
             {
@@ -35851,7 +35852,7 @@ Your server is now ready for Tycoons gameplay!`;
             backRow.toJSON()
           ];
           
-          console.log(`✅ SUCCESS: safari_rounds_menu - displayed`);
+          console.log(`✅ SUCCESS: tycoons_legacy - displayed`);
           
           return {
             flags: (1 << 15) | 64, // IS_COMPONENTS_V2 | EPHEMERAL
@@ -46477,8 +46478,8 @@ Your server is now ready for Tycoons gameplay!`;
         // Store emoji as-is (custom emoji codes like <:wallet:123> need full string for text rendering)
         // Parsing to component format happens at render time in buttons via parseTextEmoji()
 
-        // Validate defaultStartingCoordinate if present (from Rounds & Location modal)
-        if (groupKey === 'rounds' && updates.defaultStartingCoordinate) {
+        // Validate defaultStartingCoordinate if present (from Location modal)
+        if (groupKey === 'location' && updates.defaultStartingCoordinate) {
           const coordinate = updates.defaultStartingCoordinate.trim().toUpperCase();
 
           // Coordinate Format validation

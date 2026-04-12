@@ -1663,11 +1663,20 @@ export const BUTTON_REGISTRY = {
     category: 'safari'
   },
   
-  // Safari Rounds Management
+  // Tycoons (legacy round simulation) — formerly safari_rounds_menu
+  'tycoons_legacy': {
+    label: 'Tycoons',
+    description: 'Legacy turn-based round simulation (superseded by Challenges)',
+    emoji: '💼',
+    style: 'Secondary',
+    category: 'safari',
+    parent: 'castbot_tools'
+  },
+  // Soft-deprecation alias — keeps old custom_id resolving for one release
   'safari_rounds_menu': {
-    label: 'Rounds',
-    description: 'Manage Safari rounds and game progression',
-    emoji: '⏳',
+    label: 'Tycoons (legacy id)',
+    description: 'Soft-deprecation alias for tycoons_legacy',
+    emoji: '💼',
     style: 'Secondary',
     category: 'safari'
   },

@@ -155,6 +155,14 @@ export async function createPlayerCardUI(options) {
   const safariData = await loadSafariContent();
   const isAdmin = mode === 'admin';
 
+  // Resolve customizable Crafting label/emoji for the row buttons
+  const cardCustomTerms = await getCustomTerms(guildId);
+  const row2WithCrafting = ROW2_BUTTONS.map(b =>
+    b.id === 'crafting'
+      ? { ...b, label: cardCustomTerms.craftingName || 'Crafting', emoji: cardCustomTerms.craftingEmoji || '🛠️' }
+      : b
+  );
+
   const container = {
     type: 17, // Container
     accent_color: 0x3498DB,
@@ -227,7 +235,7 @@ export async function createPlayerCardUI(options) {
       type: 10, content: '> **`🦁 Safari & Gameplay`**'
     });
     container.components.push(
-      buildCategoryRow(ROW2_BUTTONS, targetMember.id, activeButton)
+      buildCategoryRow(row2WithCrafting, targetMember.id, activeButton)
     );
 
     // Row 3: Advanced Management (admin only)
@@ -253,7 +261,7 @@ export async function createPlayerCardUI(options) {
     container.components.push({ type: 10, content: '> **`✏️ Castlists & Profile`**' });
     container.components.push(buildCategoryRow(ROW1_BUTTONS, null, null, true));
     container.components.push({ type: 10, content: '> **`🦁 Safari & Gameplay`**' });
-    container.components.push(buildCategoryRow(ROW2_BUTTONS, null, null, true));
+    container.components.push(buildCategoryRow(row2WithCrafting, null, null, true));
     container.components.push({ type: 10, content: '> **`⚙️ Advanced Management`**' });
     container.components.push(buildCategoryRow(ROW3_BUTTONS, null, null, true));
     container.components.push({ type: 14 });
@@ -495,16 +503,18 @@ async function buildCardSelect(activeButton, targetMember, playerData, safariDat
         .map(([id, action]) => ({ id, ...action }))
         .sort((a, b) => (a.inventoryConfig?.sortOrder ?? 999) - (b.inventoryConfig?.sortOrder ?? 999));
 
+      const craftingNameLower = (customTerms.craftingName || 'Crafting').toLowerCase();
+      const craftingFallbackEmoji = customTerms.craftingEmoji || '🛠️';
       if (craftingActions.length === 0) {
-        return buildDisabledSelect('No crafting recipes configured');
+        return buildDisabledSelect(`No ${craftingNameLower} recipes configured`);
       }
       const options = craftingActions.slice(0, 23).map(action => ({
         label: (action.inventoryConfig?.buttonLabel || action.trigger?.button?.label || action.name || 'Recipe').slice(0, 100),
         value: action.id.slice(0, 100),
-        description: (action.description || 'Crafting recipe').slice(0, 100),
-        emoji: resolveEmoji(action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji, '🛠️')
+        description: (action.description || `${customTerms.craftingName || 'Crafting'} recipe`).slice(0, 100),
+        emoji: resolveEmoji(action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji, craftingFallbackEmoji)
       }));
-      return wrapSelect(customId, 'Select a recipe to craft...', options);
+      return wrapSelect(customId, `Select a ${craftingNameLower} recipe...`, options);
     }
 
     case 'actions': {

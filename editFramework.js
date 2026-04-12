@@ -152,6 +152,14 @@ export const EDIT_CONFIGS = {
           defaultStartingCurrencyValue: { type: 'text', maxLength: 10, required: false, label: 'Default Starting Currency', placeholder: '100' }
         }
       },
+      crafting: {
+        label: 'Crafting',
+        description: 'Customize the name and emoji of the Crafting feature',
+        fields: {
+          craftingName: { type: 'text', maxLength: 30, required: true, label: 'Crafting Name', placeholder: 'Crafting' },
+          craftingEmoji: { type: 'text', maxLength: 100, required: false, label: 'Crafting Emoji', placeholder: '🛠️ or <:name:id>' }
+        }
+      },
       events: {
         label: 'Event Customization',
         description: 'Customize good and bad event names and emojis',
@@ -163,12 +171,18 @@ export const EDIT_CONFIGS = {
         }
       },
       rounds: {
-        label: 'Rounds & Location',
-        description: 'Set round probabilities and default starting location',
+        label: 'Rounds',
+        description: 'Set round probabilities for the legacy Tycoons simulation',
         fields: {
           round1GoodProbability: { type: 'number', min: 0, max: 100, required: false, label: 'Round 1 Good %', placeholder: '75' },
           round2GoodProbability: { type: 'number', min: 0, max: 100, required: false, label: 'Round 2 Good %', placeholder: '50' },
-          round3GoodProbability: { type: 'number', min: 0, max: 100, required: false, label: 'Round 3 Good %', placeholder: '25' },
+          round3GoodProbability: { type: 'number', min: 0, max: 100, required: false, label: 'Round 3 Good %', placeholder: '25' }
+        }
+      },
+      location: {
+        label: 'Location',
+        description: 'Set default starting map location for new players',
+        fields: {
           defaultStartingCoordinate: { type: 'text', maxLength: 4, required: false, label: 'Starting Coordinate', placeholder: 'A1' }
         }
       }

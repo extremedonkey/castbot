@@ -174,7 +174,8 @@
       "WebFetch(domain:status.anthropic.com)",
       "WebFetch(domain:status.claude.com)",
       "Bash(do head:*)",
-      "WebFetch(domain:hermes-agent.nousresearch.com)"
+      "WebFetch(domain:hermes-agent.nousresearch.com)",
+      "Bash(xxd)"
     ],
     "deny": []
   },
