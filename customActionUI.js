@@ -44,14 +44,22 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
     const customTerms = await getCustomTerms(guildId);
     const currencyLabel = `Quick ${customTerms.currencyName || 'Currency'}`;
     const currencyEmoji = parseTextEmoji(customTerms.currencyEmoji || '🪙', '🪙').emoji;
+    const craftingLabel = `Quick ${customTerms.craftingName || 'Crafting'}`;
+    const craftingEmoji = resolveEmoji(customTerms.craftingEmoji || '🛠️', '🛠️');
     quickCreateRow.push({
       type: 1, // ActionRow
       components: [
         { type: 2, style: 2, label: 'Quick Text', custom_id: 'quick_text_global', emoji: { name: '📃' } },
         { type: 2, style: 2, label: currencyLabel, custom_id: 'quick_currency_global', emoji: currencyEmoji },
         { type: 2, style: 2, label: 'Quick Item', custom_id: 'quick_item_global', emoji: { name: '📦' } },
-        { type: 2, style: 2, label: 'Quick Enemy', custom_id: 'quick_enemy_global', emoji: { name: '🐙' } },
-        { type: 2, style: 2, label: 'Quick Command', custom_id: 'quick_command_global', emoji: { name: '❗' } }
+        { type: 2, style: 2, label: 'Quick Enemy', custom_id: 'quick_enemy_global', emoji: { name: '🐙' } }
+      ]
+    });
+    quickCreateRow.push({
+      type: 1, // ActionRow
+      components: [
+        { type: 2, style: 2, label: 'Quick Command', custom_id: 'quick_command_global', emoji: { name: '❗' } },
+        { type: 2, style: 2, label: craftingLabel, custom_id: 'quick_crafting_global', emoji: craftingEmoji }
       ]
     });
   }

@@ -203,3 +203,83 @@ describe('getModalValue', () => {
         assert.equal(getModalValue({}), null);
     });
 });
+
+// Replicate buildCraftingLogic inline (pure logic — no I/O or Discord deps)
+function buildCraftingLogic(item1Id, item2Id, itemToGiveId) {
+    const conditions = [];
+    const outcomes = [];
+    const sameInput = item1Id === item2Id;
+    const mkCondition = (itemId, quantity) => ({
+        id: `cond_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        type: 'item', operator: 'has', itemId, quantity, logic: 'AND'
+    });
+    const mkOutcome = (order, itemId, quantity, operation) => ({
+        type: 'give_item', order, config: { itemId, quantity, operation }, executeOn: 'true'
+    });
+    if (sameInput) {
+        conditions.push(mkCondition(item1Id, 2));
+        outcomes.push(mkOutcome(0, item1Id, 2, 'remove'));
+        outcomes.push(mkOutcome(1, itemToGiveId, 1, 'give'));
+    } else {
+        conditions.push(mkCondition(item1Id, 1));
+        conditions.push(mkCondition(item2Id, 1));
+        outcomes.push(mkOutcome(0, item1Id, 1, 'remove'));
+        outcomes.push(mkOutcome(1, item2Id, 1, 'remove'));
+        outcomes.push(mkOutcome(2, itemToGiveId, 1, 'give'));
+    }
+    return { conditions, outcomes };
+}
+
+describe('buildCraftingLogic — different input items', () => {
+    const { conditions, outcomes } = buildCraftingLogic('iron_1', 'wood_2', 'sword_3');
+
+    it('creates exactly 2 conditions (one per input)', () => {
+        assert.equal(conditions.length, 2);
+    });
+    it('conditions check type=item, operator=has, quantity=1, logic=AND', () => {
+        for (const c of conditions) {
+            assert.equal(c.type, 'item');
+            assert.equal(c.operator, 'has');
+            assert.equal(c.quantity, 1);
+            assert.equal(c.logic, 'AND');
+        }
+        assert.equal(conditions[0].itemId, 'iron_1');
+        assert.equal(conditions[1].itemId, 'wood_2');
+    });
+    it('creates 3 outcomes: remove input1, remove input2, give output', () => {
+        assert.equal(outcomes.length, 3);
+        assert.equal(outcomes[0].config.operation, 'remove');
+        assert.equal(outcomes[0].config.itemId, 'iron_1');
+        assert.equal(outcomes[1].config.operation, 'remove');
+        assert.equal(outcomes[1].config.itemId, 'wood_2');
+        assert.equal(outcomes[2].config.operation, 'give');
+        assert.equal(outcomes[2].config.itemId, 'sword_3');
+    });
+    it('all outcomes are type=give_item, executeOn=true, order set correctly', () => {
+        outcomes.forEach((o, i) => {
+            assert.equal(o.type, 'give_item');
+            assert.equal(o.executeOn, 'true');
+            assert.equal(o.order, i);
+            assert.equal(o.config.quantity, 1);
+        });
+    });
+});
+
+describe('buildCraftingLogic — same input item twice', () => {
+    const { conditions, outcomes } = buildCraftingLogic('stone_1', 'stone_1', 'brick_2');
+
+    it('collapses duplicate inputs into 1 condition with quantity=2', () => {
+        assert.equal(conditions.length, 1);
+        assert.equal(conditions[0].itemId, 'stone_1');
+        assert.equal(conditions[0].quantity, 2);
+    });
+    it('collapses duplicate inputs into 1 remove outcome with quantity=2', () => {
+        assert.equal(outcomes.length, 2);
+        assert.equal(outcomes[0].config.operation, 'remove');
+        assert.equal(outcomes[0].config.itemId, 'stone_1');
+        assert.equal(outcomes[0].config.quantity, 2);
+        assert.equal(outcomes[1].config.operation, 'give');
+        assert.equal(outcomes[1].config.itemId, 'brick_2');
+        assert.equal(outcomes[1].config.quantity, 1);
+    });
+});

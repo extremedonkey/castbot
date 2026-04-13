@@ -33368,6 +33368,41 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
 
+    } else if (custom_id.startsWith('quick_crafting_') && !custom_id.startsWith('quick_crafting_modal_')) {
+      // Quick Crafting button — show modal with 2x item selects + output item select
+      return ButtonHandlerFactory.create({
+        id: 'quick_crafting',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        requiresModal: true,
+        handler: async (context) => {
+          const coord = context.customId.replace('quick_crafting_', '');
+          console.log(`🛠️ START: quick_crafting - user ${context.userId}, coord ${coord}`);
+          const { loadSafariContent, getCustomTerms } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const items = safariData[context.guildId]?.items || {};
+          const itemList = Object.entries(items).map(([id, item]) => ({
+            id, name: item.name, emoji: item.emoji, description: item.description
+          }));
+          if (itemList.length < 2) {
+            return {
+              content: '❌ You need at least 2 items to create a crafting recipe. Add items via **Actions** → **Give Item** outcome first.',
+              ephemeral: true
+            };
+          }
+          const sortedItems = itemList.sort((a, b) => {
+            const aNum = parseInt(a.id.match(/_(\d+)$/)?.[1] || '0');
+            const bNum = parseInt(b.id.match(/_(\d+)$/)?.[1] || '0');
+            return bNum - aNum;
+          }).slice(0, 25);
+          const customTerms = await getCustomTerms(context.guildId);
+          const craftingName = customTerms.craftingName || 'Crafting';
+          const { buildQuickCraftingModal } = await import('./quickActionCreate.js');
+          const modalData = buildQuickCraftingModal(coord, sortedItems, craftingName);
+          return { type: InteractionResponseType.MODAL, data: modalData };
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('map_location_display_')) {
       // Handle Location button display (shows anchor message content)
       return ButtonHandlerFactory.create({
@@ -47196,6 +47231,24 @@ Your server is now ready for Tycoons gameplay!`;
         return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...result, flags: (1 << 15) } });
       } catch (error) {
         console.error('Error handling quick command modal:', error);
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Error: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL } });
+      }
+
+    } else if (custom_id.startsWith('quick_crafting_modal_')) {
+      try {
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        const coordinate = custom_id.replace('quick_crafting_modal_', '');
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+
+        const { handleQuickCraftingSubmit } = await import('./quickActionCreate.js');
+        const result = await handleQuickCraftingSubmit(guildId, userId, coordinate, components);
+        if (result.error) {
+          return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ ${result.error}`, flags: InteractionResponseFlags.EPHEMERAL } });
+        }
+        return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...result, flags: (1 << 15) } });
+      } catch (error) {
+        console.error('Error handling quick crafting modal:', error);
         return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Error: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL } });
       }
 

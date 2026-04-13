@@ -497,7 +497,10 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
                 components.push(actionSelectRow);
             }
 
-            // Quick Create row (Actions button removed — select is now inline above)
+            // Quick Create row 1: Text / Currency / Item / Enemy
+            // Quick Create row 2: Command / Quick {craftingName}
+            const craftingLabel = `Quick ${customTerms.craftingName || 'Crafting'}`;
+            const craftingEmoji = resolveEmoji(customTerms.craftingEmoji || '🛠️', '🛠️');
             components.push({
                 type: 1, // ActionRow
                 components: [
@@ -528,13 +531,25 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
                         label: 'Quick Enemy',
                         custom_id: `quick_enemy_${entityId}`,
                         emoji: { name: '🐙' }
-                    },
+                    }
+                ]
+            });
+            components.push({
+                type: 1, // ActionRow
+                components: [
                     {
                         type: 2, // Button
                         style: 2,
                         label: 'Quick Command',
                         custom_id: `quick_command_${entityId}`,
                         emoji: { name: '❗' }
+                    },
+                    {
+                        type: 2, // Button
+                        style: 2,
+                        label: craftingLabel,
+                        custom_id: `quick_crafting_${entityId}`,
+                        emoji: craftingEmoji
                     }
                 ]
             });

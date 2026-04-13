@@ -2018,6 +2018,14 @@ export const BUTTON_REGISTRY = {
     category: 'safari_quick_create',
     requiresModal: true
   },
+  'quick_crafting_*': {
+    label: 'Quick Crafting',
+    description: 'Create a crafting recipe Action: 2 input items → 1 output item in one modal',
+    emoji: '🛠️',
+    style: 'Secondary',
+    category: 'safari_quick_create',
+    requiresModal: true
+  },
   'player_enter_command_global': {
     label: 'Enter Command',
     description: 'Enter a text command from anywhere (global)',

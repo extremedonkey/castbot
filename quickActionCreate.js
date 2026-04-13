@@ -843,6 +843,245 @@ export async function handleQuickCommandSubmit(guildId, userId, coordinate, moda
 }
 
 /**
+ * Build the Quick Crafting modal — 5 fields
+ * Single modal that produces an Action combining two input items into a third.
+ * @param {string} coordinate - Map coordinate (e.g. "A2") or "global"
+ * @param {Array} items - Array of { id, name, emoji, description } for item selects
+ * @param {string} craftingName - Server-customizable crafting name (e.g. "Crafting", "Gardening")
+ * @returns {object} Modal interaction response data
+ */
+export function buildQuickCraftingModal(coordinate, items, craftingName = 'Crafting') {
+    const itemOptions = items.slice(0, 25).map(item => {
+        const opt = {
+            label: (item.name || item.id).slice(0, 100),
+            value: item.id
+        };
+        opt.emoji = parseAndValidateEmoji(item.emoji, '📦').emoji;
+        if (item.description) opt.description = item.description.slice(0, 100);
+        return opt;
+    });
+
+    return {
+        custom_id: `quick_crafting_modal_${coordinate}`,
+        title: `Quick ${craftingName} Action`,
+        components: [
+            {
+                type: 18,
+                label: 'Button Name',
+                description: 'Label on the button the player clicks.',
+                component: {
+                    type: 4,
+                    custom_id: 'button_name',
+                    style: 1,
+                    placeholder: 'e.g., "Craft Sword"',
+                    required: true,
+                    max_length: 80
+                }
+            },
+            {
+                type: 18,
+                label: 'Crafting Item #1',
+                description: 'Select the first item to craft, removed from inventory upon successful craft.',
+                component: {
+                    type: 3,
+                    custom_id: 'crafting_item_1',
+                    placeholder: 'Select first input item...',
+                    min_values: 1,
+                    max_values: 1,
+                    options: itemOptions
+                }
+            },
+            {
+                type: 18,
+                label: 'Crafting Item #2',
+                description: 'Select the second item to craft, removed from inventory upon successful craft.',
+                component: {
+                    type: 3,
+                    custom_id: 'crafting_item_2',
+                    placeholder: 'Select second input item...',
+                    min_values: 1,
+                    max_values: 1,
+                    options: itemOptions
+                }
+            },
+            {
+                type: 18,
+                label: 'Item to Give',
+                description: 'Select the item the player receives after combining the two inputs.',
+                component: {
+                    type: 3,
+                    custom_id: 'item_to_give',
+                    placeholder: 'Select output item...',
+                    min_values: 1,
+                    max_values: 1,
+                    options: itemOptions
+                }
+            },
+            {
+                type: 18,
+                label: 'Button Emoji (Optional)',
+                description: 'Emoji that appears on the button. Defaults to the server\u2019s crafting emoji.',
+                component: {
+                    type: 4,
+                    custom_id: 'button_emoji',
+                    style: 1,
+                    placeholder: 'e.g., 🛠️',
+                    required: false,
+                    max_length: 100
+                }
+            }
+        ]
+    };
+}
+
+/**
+ * Build the conditions + outcomes for a Quick Crafting Action.
+ * Exported for tests — pure logic, no I/O.
+ *
+ * Rules:
+ *  - Same item picked for both inputs → one condition (qty 2) + one remove outcome (qty 2)
+ *  - Different items → two conditions (qty 1 each, AND) + two remove outcomes (qty 1 each)
+ *  - Always ends with a give_item outcome for itemToGive (qty 1)
+ *
+ * @param {string} item1Id
+ * @param {string} item2Id
+ * @param {string} itemToGiveId
+ * @returns {{ conditions: Array, outcomes: Array }}
+ */
+export function buildCraftingLogic(item1Id, item2Id, itemToGiveId) {
+    const conditions = [];
+    const outcomes = [];
+    const sameInput = item1Id === item2Id;
+
+    const mkCondition = (itemId, quantity) => ({
+        id: `cond_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        type: 'item',
+        operator: 'has',
+        itemId,
+        quantity,
+        logic: 'AND'
+    });
+
+    const mkOutcome = (order, itemId, quantity, operation) => ({
+        type: 'give_item',
+        order,
+        config: { itemId, quantity, operation },
+        executeOn: 'true'
+    });
+
+    if (sameInput) {
+        conditions.push(mkCondition(item1Id, 2));
+        outcomes.push(mkOutcome(0, item1Id, 2, 'remove'));
+        outcomes.push(mkOutcome(1, itemToGiveId, 1, 'give'));
+    } else {
+        conditions.push(mkCondition(item1Id, 1));
+        conditions.push(mkCondition(item2Id, 1));
+        outcomes.push(mkOutcome(0, item1Id, 1, 'remove'));
+        outcomes.push(mkOutcome(1, item2Id, 1, 'remove'));
+        outcomes.push(mkOutcome(2, itemToGiveId, 1, 'give'));
+    }
+
+    return { conditions, outcomes };
+}
+
+/**
+ * Handle Quick Crafting modal submit — creates an Action with:
+ *  - 2 'has item' conditions (AND)
+ *  - Pass outcomes: remove Item #1, remove Item #2, give Item to Give
+ *  - style = Secondary (Grey)
+ *  - menuVisibility = 'crafting_menu' (auto-appears in the Crafting menu)
+ */
+export async function handleQuickCraftingSubmit(guildId, userId, coordinate, modalComponents) {
+    const { createCustomButton, loadSafariContent, saveSafariContent, getCustomTerms } = await import('./safariManager.js');
+
+    const buttonName = getModalValue(modalComponents[0]);
+    const item1Id = getModalValue(modalComponents[1]);
+    const item2Id = getModalValue(modalComponents[2]);
+    const itemToGiveId = getModalValue(modalComponents[3]);
+    const emojiInput = getModalValue(modalComponents[4]);
+
+    if (!buttonName) return { error: 'Button name is required.' };
+    if (!item1Id) return { error: 'Crafting Item #1 is required.' };
+    if (!item2Id) return { error: 'Crafting Item #2 is required.' };
+    if (!itemToGiveId) return { error: 'Item to Give is required.' };
+
+    const customTerms = await getCustomTerms(guildId);
+    const craftingEmoji = customTerms.craftingEmoji || '🛠️';
+
+    // Validate user-entered emoji; fall back to server crafting emoji if blank/invalid
+    let buttonEmoji = craftingEmoji;
+    if (emojiInput) {
+        const { createSafeEmoji } = await import('./safariButtonHelper.js');
+        const validated = await createSafeEmoji(emojiInput);
+        if (validated) buttonEmoji = emojiInput;
+    }
+
+    const style = 'Secondary';
+
+    // Create action shell
+    const actionId = await createCustomButton(guildId, {
+        label: buttonName,
+        emoji: buttonEmoji,
+        style,
+        actions: [],
+        tags: []
+    }, userId);
+
+    const safariData = await loadSafariContent();
+    const action = safariData[guildId].buttons[actionId];
+    action.name = buttonName;
+    action.description = '';
+    action.metadata = { ...action.metadata, createdVia: 'quick_crafting' };
+
+    if (!action.trigger) action.trigger = { type: 'button' };
+    if (!action.trigger.button) action.trigger.button = {};
+    action.trigger.button.style = style;
+    action.style = style;
+
+    // Auto-show in Crafting menu — that's the whole point of this variant
+    action.menuVisibility = 'crafting_menu';
+
+    // Conditions + outcomes (collapses duplicates when both inputs match)
+    const { conditions, outcomes } = buildCraftingLogic(item1Id, item2Id, itemToGiveId);
+    if (!Array.isArray(action.conditions)) action.conditions = [];
+    action.conditions.push(...conditions);
+    action.actions.push(...outcomes);
+
+    // Assign coordinate (skip for global)
+    if (coordinate && coordinate !== 'global') {
+        const activeMapId = safariData[guildId]?.maps?.active;
+        if (activeMapId) {
+            const coordData = safariData[guildId].maps[activeMapId].coordinates[coordinate];
+            if (coordData) {
+                if (!coordData.buttons) coordData.buttons = [];
+                if (!coordData.buttons.includes(actionId)) coordData.buttons.push(actionId);
+            }
+            if (!action.coordinates) action.coordinates = [];
+            if (!action.coordinates.includes(coordinate)) action.coordinates.push(coordinate);
+        }
+    }
+
+    await saveSafariContent(safariData);
+
+    if (coordinate && coordinate !== 'global') {
+        try {
+            const { afterAddCoordinate } = await import('./anchorMessageIntegration.js');
+            await afterAddCoordinate(guildId, actionId, coordinate);
+        } catch (error) {
+            console.error('Error queueing anchor update after quick crafting:', error);
+        }
+    }
+
+    const items = safariData[guildId]?.items || {};
+    const n = id => items[id]?.name || id;
+    console.log(`⚡ QUICK CRAFTING: Created action ${actionId} at ${coordinate} — ${n(item1Id)} + ${n(item2Id)} → ${n(itemToGiveId)}`);
+
+    const { createCustomActionEditorUI } = await import('./customActionUI.js');
+    const editorCoordinate = coordinate === 'global' ? null : coordinate;
+    return await createCustomActionEditorUI({ guildId, actionId, coordinate: editorCoordinate });
+}
+
+/**
  * Handle Quick Enemy modal submit — creates a fight_enemy action at the coordinate
  */
 export async function handleQuickEnemySubmit(guildId, userId, coordinate, modalComponents) {

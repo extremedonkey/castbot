@@ -1,8 +1,8 @@
 # Crafting
 
 **Status**: Active (Production)
-**Modules**: `safariManager.js` (menu UI), `playerCardMenu.js` (player card select), `customActionUI.js` (admin select), `safariConfigUI.js` (settings)
-**Related**: [SafariCustomActions.md](SafariCustomActions.md), [PlayerMenuActions.md](PlayerMenuActions.md), [SuperPlayerMenu](../01-RaP/0924_20260405_SuperPlayerMenu_Analysis.md)
+**Modules**: `safariManager.js` (menu UI), `playerCardMenu.js` (player card select), `customActionUI.js` (admin select), `safariConfigUI.js` (settings), `quickActionCreate.js` (Quick Crafting)
+**Related**: [SafariCustomActions.md](SafariCustomActions.md), [PlayerMenuActions.md](PlayerMenuActions.md), [QuickCreateActions.md](QuickCreateActions.md), [SuperPlayerMenu](../01-RaP/0924_20260405_SuperPlayerMenu_Analysis.md)
 **Original design**: Promoted from `0961_20260111_CraftingMenuActions_Analysis.md` (RaP)
 
 ---
@@ -73,6 +73,19 @@ This is the "select" surface — same Action pool, different presentation (selec
 ### 3. Admin: Coordinate Management
 
 `customActionUI.js:1964-2020` renders the Menu Visibility String Select with three options (Hidden / Player Menu / Crafting). Selection routes to `menu_visibility_select_*` handler at `app.js:31257`, which writes `action.menuVisibility` and logs the new per-guild crafting count.
+
+### 4. Admin: Quick Crafting (creation shortcut)
+
+A one-modal shortcut that creates a fully-formed crafting recipe Action. Button appears as `🛠️ Quick {craftingName}` (e.g. `🛠️ Quick Crafting`, `🌱 Quick Gardening`) on both the map-cell Location Actions screen and the global Actions screen (Row 2).
+
+Produces an Action with:
+- `style: 'Secondary'` (Grey)
+- `menuVisibility: 'crafting_menu'` — auto-appears in the Crafting menu without any extra admin steps
+- 2 `item`-type conditions (one per input, `operator:'has'`, `quantity:1`, `logic:'AND'`)
+- 3 Pass Outcomes: `give_item` with `operation:'remove'` × 2 (inputs) + `give_item` with `operation:'give'` × 1 (output)
+- `metadata.createdVia: 'quick_crafting'`
+
+When the player picks the same item for both inputs, the logic collapses to 1 condition (qty 2) + 1 remove outcome (qty 2). Full details in [QuickCreateActions.md § Quick Crafting Special Behavior](QuickCreateActions.md).
 
 ---
 
