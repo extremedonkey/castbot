@@ -12,7 +12,7 @@ import { loadPlayerData, savePlayerData, saveReactionMapping } from './storage.j
 import { countComponents } from './utils.js';
 import { PermissionFlagsBits } from 'discord.js';
 import { formatRoleColor, hexToColorInt } from './utils/colorUtils.js';
-import { resolveEmoji } from './utils/emojiUtils.js';
+import { resolveEmoji, emojiToReactionApiFormat } from './utils/emojiUtils.js';
 
 // ── Constants ──────────────────────────────────────────────────────
 
@@ -457,16 +457,26 @@ export async function postPanelToChannel(guildId, reactId, channelId, client) {
     const messageId = postedMessage.id;
     console.log(`🧩 Custom react panel "${panel.name}" posted: ${messageId}`);
 
-    // Add reactions with rate limiting
+    // Add reactions with rate limiting.
+    // Custom emojis must be sent as `name:id` (or `a:name:id`), NOT as raw `<:name:id>`.
     for (const mapping of panel.mappings) {
+      const apiEmoji = emojiToReactionApiFormat(mapping.emoji);
+      if (!apiEmoji) {
+        console.warn(`⚠️ Skipping reaction add for empty emoji on mapping for role ${mapping.roleId}`);
+        continue;
+      }
       try {
-        await fetch(
-          `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}/reactions/${encodeURIComponent(mapping.emoji)}/@me`,
+        const reactRes = await fetch(
+          `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}/reactions/${encodeURIComponent(apiEmoji)}/@me`,
           {
             method: 'PUT',
             headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
           }
         );
+        if (!reactRes.ok) {
+          const body = await reactRes.text();
+          console.error(`❌ Failed to add reaction ${mapping.emoji} (api=${apiEmoji}): HTTP ${reactRes.status} — ${body.slice(0, 200)}`);
+        }
         await new Promise(resolve => setTimeout(resolve, 150));
       } catch (error) {
         console.error(`❌ Failed to add reaction ${mapping.emoji}:`, error.message);

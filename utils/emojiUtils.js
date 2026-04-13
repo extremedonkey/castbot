@@ -195,6 +195,32 @@ export function parseAndValidateEmoji(text, fallback = '📦', client = null) {
 }
 
 /**
+ * Convert a stored emoji string into the format required by Discord's
+ * reactions API path segment: PUT /channels/X/messages/Y/reactions/{emoji}/@me
+ *
+ * - Custom static `<:name:id>`   → `name:id`
+ * - Custom animated `<a:name:id>` → `a:name:id`
+ * - Unicode `💗`                  → `💗` (caller must still URL-encode)
+ *
+ * The reactions API rejects raw `<:...>` syntax with "Unknown Emoji"; this
+ * helper strips the angle brackets and leading colon so encodeURIComponent
+ * produces the format Discord expects.
+ *
+ * @param {string|null|undefined} emojiStr
+ * @returns {string|null} normalised emoji or null if input was empty
+ */
+export function emojiToReactionApiFormat(emojiStr) {
+    if (!emojiStr || typeof emojiStr !== 'string') return null;
+    const trimmed = emojiStr.trim();
+    if (!trimmed) return null;
+    const match = trimmed.match(/^<(a?):(\w+):(\d+)>$/);
+    if (match) {
+        return `${match[1] === 'a' ? 'a:' : ''}${match[2]}:${match[3]}`;
+    }
+    return trimmed;
+}
+
+/**
  * Sanitize username for emoji naming (Discord requirements: 2-32 chars, alphanumeric + underscores only)
  * @param {string} username - Username to sanitize
  * @returns {string} Sanitized emoji name

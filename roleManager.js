@@ -8,6 +8,7 @@ import {
     saveReactionMapping,
     loadDSTState
 } from './storage.js';
+import { emojiToReactionApiFormat } from './utils/emojiUtils.js';
 import { 
     InteractionResponseType,
     InteractionResponseFlags
@@ -2286,20 +2287,30 @@ async function createPronounReactionMessage(guildData, channelId, token, client)
                     return;
                 }
 
-                // Add reactions with rate limiting using the determined emojis
+                // Add reactions with rate limiting using the determined emojis.
+                // Custom emojis must be sent as `name:id` (or `a:name:id`), NOT raw `<:name:id>`.
                 for (let i = 0; i < roleObjects.length; i++) {
+                    const rawEmoji = roleObjects[i].reactionEmoji;
+                    const apiEmoji = emojiToReactionApiFormat(rawEmoji);
+                    if (!apiEmoji) {
+                        console.warn(`⚠️ Skipping reaction add: empty emoji for role ${roleObjects[i].name}`);
+                        continue;
+                    }
                     try {
-                        const emoji = roleObjects[i].reactionEmoji;
-                        await fetch(
-                            `https://discord.com/api/v10/channels/${channelId}/messages/${message.id}/reactions/${encodeURIComponent(emoji)}/@me`,
+                        const reactRes = await fetch(
+                            `https://discord.com/api/v10/channels/${channelId}/messages/${message.id}/reactions/${encodeURIComponent(apiEmoji)}/@me`,
                             {
                                 method: 'PUT',
                                 headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
                             }
                         );
+                        if (!reactRes.ok) {
+                            const body = await reactRes.text();
+                            console.error(`❌ Failed to add reaction ${rawEmoji} (api=${apiEmoji}): HTTP ${reactRes.status} — ${body.slice(0, 200)}`);
+                        }
                         await new Promise(resolve => setTimeout(resolve, 100)); // Rate limiting
                     } catch (error) {
-                        console.error(`❌ DEBUG: Failed to add reaction ${roleObjects[i].reactionEmoji}:`, error);
+                        console.error(`❌ DEBUG: Failed to add reaction ${rawEmoji}:`, error);
                     }
                 }
 
