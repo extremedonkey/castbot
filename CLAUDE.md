@@ -473,6 +473,7 @@ When a feature is **deployed to production and working**, move/rename its doc in
 - **💬 WHISPER** → [docs/03-features/WhisperSystem.md](docs/03-features/WhisperSystem.md)
 - **⌨️ PLAYER COMMANDS** → [docs/03-features/PlayerCommands.md](docs/03-features/PlayerCommands.md) - Text-based Custom Action invocation
 - **🎯 PLAYER MENU ACTIONS** → [docs/03-features/PlayerMenuActions.md](docs/03-features/PlayerMenuActions.md) - Custom Actions in player /menu
+- **🛠️ CRAFTING** → [docs/03-features/Crafting.md](docs/03-features/Crafting.md) - Crafting menu (configurable name/emoji, `menuVisibility` enum, dedicated player menu/select)
 - **📍 PLAYER LOCATIONS** → [docs/03-features/PlayerLocationManager.md](docs/03-features/PlayerLocationManager.md)
 - **🔄 SAFARI PROGRESS** → [docs/03-features/SafariProgress.md](docs/03-features/SafariProgress.md)
 - **🚀 SAFARI INITIALIZATION** → [docs/03-features/SafariInitialization.md](docs/03-features/SafariInitialization.md) - Player init flow, config resolution, decision trees

@@ -15,6 +15,7 @@
 
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
 import { SAFARI_LIMITS } from './config/safariLimits.js';
+import { resolveEmoji } from './utils/emojiUtils.js';
 
 /**
  * Build the Enter Command modal.
@@ -50,7 +51,7 @@ export function buildCommandModal({ coord, isAdmin = false, prefixes = [] }) {
         label: prefix.label,
         value: prefix.label.toLowerCase(),
         description: (prefix.description || `Prepends "${prefix.label}" to your command`).substring(0, 100),
-        emoji: { name: prefix.emoji || '🏷️' }
+        emoji: resolveEmoji(prefix.emoji, '🏷️')
       });
     }
     components.push({
@@ -333,7 +334,7 @@ export function buildAddPhraseModal({ actionId, prefixes = [] }) {
       label: prefix.label,
       value: prefix.label.toLowerCase(),
       description: (prefix.description || `Prepends "${prefix.label}" to your phrase`).substring(0, 100),
-      emoji: { name: prefix.emoji || '🏷️' }
+      emoji: resolveEmoji(prefix.emoji, '🏷️')
     });
   }
 
