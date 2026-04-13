@@ -50746,12 +50746,17 @@ client.on('messageReactionAdd', async (reaction, user) => {
       client.roleReactions.set(reaction.message.id, roleMapping);
     }
 
-    const roleId = roleMapping[reaction.emoji.name];
+    // Mappings are keyed by the canonical stored emoji string ('<:name:id>' for
+    // custom, raw unicode for built-in). Discord delivers reactions as
+    // { name, id } so we must rebuild the stored-format key before lookup.
+    const { reactionEmojiToStoredKey } = await import('./utils/emojiUtils.js');
+    const reactionKey = reactionEmojiToStoredKey(reaction.emoji);
+    const roleId = roleMapping[reactionKey];
     if (!roleId) return;
 
     const guild = reaction.message.guild;
     const channelName = reaction.message.channel?.name || reaction.message.channel?.id || 'unknown';
-    console.log(`🔍 DEBUG: Role reaction added - Server: ${guild.name} (${guild.id}) #${channelName}, Message: ${reaction.message.id}, Emoji: ${reaction.emoji.name}, User: ${user.tag} (ID: ${user.id})`);
+    console.log(`🔍 DEBUG: Role reaction added - Server: ${guild.name} (${guild.id}) #${channelName}, Message: ${reaction.message.id}, Emoji: ${reactionKey}, User: ${user.tag} (ID: ${user.id})`);
 
     const member = await guild.members.fetch(user.id);
 
@@ -50964,12 +50969,15 @@ client.on('messageReactionRemove', async (reaction, user) => {
     // Don't process reaction removal for ban traps (user is already banned)
     if (roleMapping.isBan) return;
 
-    const roleId = roleMapping[reaction.emoji.name];
+    // Same canonical-key rebuild as messageReactionAdd — required for custom emoji.
+    const { reactionEmojiToStoredKey } = await import('./utils/emojiUtils.js');
+    const reactionKey = reactionEmojiToStoredKey(reaction.emoji);
+    const roleId = roleMapping[reactionKey];
     if (!roleId) return;
 
     const guild = reaction.message.guild;
     const channelName = reaction.message.channel?.name || reaction.message.channel?.id || 'unknown';
-    console.log(`🔍 DEBUG: Role reaction removed - Server: ${guild.name} (${guild.id}) #${channelName}, Message: ${reaction.message.id}, Emoji: ${reaction.emoji.name}, User: ${user.tag} (ID: ${user.id})`);
+    console.log(`🔍 DEBUG: Role reaction removed - Server: ${guild.name} (${guild.id}) #${channelName}, Message: ${reaction.message.id}, Emoji: ${reactionKey}, User: ${user.tag} (ID: ${user.id})`);
 
     const member = await guild.members.fetch(user.id);
 

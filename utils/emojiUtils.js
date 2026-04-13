@@ -195,6 +195,30 @@ export function parseAndValidateEmoji(text, fallback = '📦', client = null) {
 }
 
 /**
+ * Convert a Discord.js `reaction.emoji` object back into the canonical stored
+ * string format used as a key in reaction-mapping objects.
+ *
+ * Discord delivers reactions as `{ name, id, animated }`:
+ * - Unicode: `{ name: '😎', id: null }` → returns `'😎'`
+ * - Custom:  `{ name: 'LinkGotItem', id: '1487...', animated: false }` → returns `'<:LinkGotItem:1487...>'`
+ * - Animated: same with `animated: true` → returns `'<a:name:id>'`
+ *
+ * Required because reaction-role mappings are stored keyed by the original
+ * stored emoji string (e.g. `'<:LinkGotItem:1234>'`), so a lookup using the
+ * raw `reaction.emoji.name` would miss for custom emoji.
+ *
+ * @param {{ name: string|null, id: string|null, animated?: boolean }} emoji
+ * @returns {string} canonical stored-format key
+ */
+export function reactionEmojiToStoredKey(emoji) {
+    if (!emoji) return '';
+    if (emoji.id) {
+        return `<${emoji.animated ? 'a' : ''}:${emoji.name}:${emoji.id}>`;
+    }
+    return emoji.name || '';
+}
+
+/**
  * Convert a stored emoji string into the format required by Discord's
  * reactions API path segment: PUT /channels/X/messages/Y/reactions/{emoji}/@me
  *
