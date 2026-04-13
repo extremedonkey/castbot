@@ -67,7 +67,10 @@ function buildCategoryRow(buttons, targetUserId, activeButton, disabled = false)
         : `pcard_btn_${cat.id}_${targetUserId}`,
       label: cat.label,
       style: activeButton === cat.id ? 1 : 2, // Primary if active, Secondary otherwise
-      emoji: { name: cat.emoji },
+      // resolveEmoji parses custom emoji strings (<:name:id>) into { name, id } and
+      // passes Unicode through unchanged. Required because the crafting button can
+      // receive a server-customized emoji that may be a custom Discord emoji.
+      ...(cat.emoji ? { emoji: resolveEmoji(cat.emoji, '🔘') } : {}),
       disabled
     }))
   };
