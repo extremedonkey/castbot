@@ -13,6 +13,7 @@
  */
 
 import { countComponents, validateComponentLimit } from './utils.js';
+import { resolveEmoji } from './utils/emojiUtils.js';
 
 const TOTAL_ROUNDS = 20;
 const DOT = '\u2981'; // ⦁
@@ -156,7 +157,7 @@ const ALL_ROUNDS = Array.from({ length: TOTAL_ROUNDS }, (_, i) => {
   } else if (hasEvent) {
     // Event round: swap/merge 2nd with date, structural actions below divider
     options = [
-      { label: roundLabel, value: 'summary', default: true, emoji: { name: event.emoji } },
+      { label: roundLabel, value: 'summary', default: true, emoji: resolveEmoji(event.emoji, '📅') },
       { label: `Manage ${event.label}`, value: 'manage_event', emoji: { name: '🔀' }, description: dateStr },
       { label: `Edit ${challengeName}`, value: 'edit_challenge', emoji: { name: '🤸' }, description: `${challengeDateStr} ${DOT} ${host}` },
       { label: `Edit F${finalists} Tribal (1 elim)`, value: 'edit_tribal', emoji: { name: '🔥' }, description: `${tribalDateStr} ${DOT} ${host}` },

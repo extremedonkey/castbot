@@ -7005,11 +7005,12 @@ To fix this:
           }
 
           // Build preset options for select menu
+          const { resolveEmoji: resolveEmojiUtil } = await import('./utils/emojiUtils.js');
           const presetOptions = availablePresets.slice(0, 25).map(([id, preset]) => ({
             label: preset.name,
             value: id,
             description: preset.description?.substring(0, 50) || `${preset.category} attribute`,
-            emoji: { name: preset.emoji }
+            emoji: resolveEmojiUtil(preset.emoji, '📊')
           }));
 
           return {
@@ -7846,6 +7847,7 @@ To fix this:
           if (action === 'create_role') {
             // Show create role modal with color presets
             const { COLOR_PRESETS } = await import('./utils/colorUtils.js');
+            const { resolveEmoji: resolveEmojiUtil } = await import('./utils/emojiUtils.js');
             return {
               type: InteractionResponseType.MODAL,
               data: {
@@ -7872,7 +7874,7 @@ To fix this:
                       options: COLOR_PRESETS.map(p => ({
                         label: p.label,
                         value: p.value,
-                        emoji: { name: p.emoji },
+                        emoji: resolveEmojiUtil(p.emoji, '🎨'),
                         ...(p.value === '#3498DB' ? { default: true } : {})
                       })),
                       required: false
@@ -12474,6 +12476,7 @@ To fix this:
 
           // Always show Discord role color as source of truth (user may change it directly in Discord)
           const { formatRoleColor, TRIBE_COLOR_PRESETS } = await import('./utils/tribeDataUtils.js');
+          const { resolveEmoji: resolveEmojiUtil } = await import('./utils/emojiUtils.js');
           const roleColor = role?.color ? formatRoleColor(role.color) : '';
           const displayColor = (roleColor && roleColor !== '#000000') ? roleColor : (tribeData.color || '');
 
@@ -12549,7 +12552,7 @@ To fix this:
                       label: preset.label,
                       value: preset.value,
                       description: preset.value === 'custom' ? 'Enter hex code below' : preset.value,
-                      emoji: { name: preset.emoji },
+                      emoji: resolveEmojiUtil(preset.emoji, '🎨'),
                       default: preset.value === 'custom'
                         ? (!isPresetColor && !!displayColor)
                         : preset.value.toUpperCase() === displayColor?.toUpperCase()
@@ -12589,6 +12592,7 @@ To fix this:
         updateMessage: false, // Returns modal
         handler: async (context) => {
           const { TRIBE_COLOR_PRESETS } = await import('./utils/tribeDataUtils.js');
+          const { resolveEmoji: resolveEmojiUtil } = await import('./utils/emojiUtils.js');
 
           return {
             type: 9, // MODAL
@@ -12651,7 +12655,7 @@ To fix this:
                       label: preset.label,
                       value: preset.value,
                       description: preset.value === 'custom' ? 'Enter hex code below' : preset.value,
-                      emoji: { name: preset.emoji },
+                      emoji: resolveEmojiUtil(preset.emoji, '🎨'),
                       default: false
                     }))
                   }
