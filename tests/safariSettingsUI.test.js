@@ -280,6 +280,76 @@ describe('Safari Settings — Modal submission processing', () => {
   });
 });
 
+describe('Safari Settings — Crafting emoji resolution (regression for interaction-failed bug)', () => {
+  // Replicate the fixed pattern inline so the test pins the contract
+  function buildCraftingOptionEmoji(action, customTerms, resolveEmojiFn) {
+    const rawEmojiStr =
+      action.inventoryConfig?.buttonEmoji
+      || action.trigger?.button?.emoji
+      || action.emoji
+      || customTerms.craftingEmoji;
+    return resolveEmojiFn(rawEmojiStr, '🛠️');
+  }
+
+  // Minimal resolveEmoji stub mirroring utils/emojiUtils.js contract
+  function resolveEmoji(emojiStr, fallback = '📦') {
+    if (!emojiStr || typeof emojiStr !== 'string' || !emojiStr.trim()) {
+      return { name: fallback };
+    }
+    const trimmed = emojiStr.trim();
+    const customMatch = trimmed.match(/^<(a?):(\w+):(\d+)>$/);
+    if (customMatch) {
+      return {
+        name: customMatch[2],
+        id: customMatch[3],
+        ...(customMatch[1] === 'a' ? { animated: true } : {})
+      };
+    }
+    return { name: trimmed };
+  }
+
+  it('server crafting emoji as custom emoji string is parsed correctly (not wrapped in invalid { name: "<:...>" })', () => {
+    const action = { name: 'Widget', inventoryConfig: {}, trigger: { button: {} }, emoji: null };
+    const customTerms = { craftingEmoji: '<:LinkGotItem:1487510833754804294>' };
+    const emoji = buildCraftingOptionEmoji(action, customTerms, resolveEmoji);
+    assert.equal(emoji.name, 'LinkGotItem');
+    assert.equal(emoji.id, '1487510833754804294');
+    assert.ok(!emoji.name.startsWith('<'), 'name field must not contain raw <:...:> syntax');
+  });
+
+  it('recipe with custom emoji overrides server crafting emoji', () => {
+    const action = { inventoryConfig: { buttonEmoji: '<:Apple:111>' }, trigger: { button: {} } };
+    const customTerms = { craftingEmoji: '<:LinkGotItem:222>' };
+    const emoji = buildCraftingOptionEmoji(action, customTerms, resolveEmoji);
+    assert.equal(emoji.name, 'Apple');
+    assert.equal(emoji.id, '111');
+  });
+
+  it('falls back to Unicode 🛠️ when nothing is set', () => {
+    const action = { inventoryConfig: {}, trigger: { button: {} } };
+    const customTerms = {};
+    const emoji = buildCraftingOptionEmoji(action, customTerms, resolveEmoji);
+    assert.equal(emoji.name, '🛠️');
+  });
+
+  it('Unicode server crafting emoji works', () => {
+    const action = { inventoryConfig: {}, trigger: { button: {} } };
+    const customTerms = { craftingEmoji: '🌱' };
+    const emoji = buildCraftingOptionEmoji(action, customTerms, resolveEmoji);
+    assert.equal(emoji.name, '🌱');
+    assert.equal(emoji.id, undefined);
+  });
+
+  it('animated custom crafting emoji preserves animated flag', () => {
+    const action = { inventoryConfig: {}, trigger: { button: {} } };
+    const customTerms = { craftingEmoji: '<a:spin:999>' };
+    const emoji = buildCraftingOptionEmoji(action, customTerms, resolveEmoji);
+    assert.equal(emoji.name, 'spin');
+    assert.equal(emoji.id, '999');
+    assert.equal(emoji.animated, true);
+  });
+});
+
 describe('Safari Settings — Reset coverage', () => {
   // Mock resetCustomTerms by replicating the keys it sets
   const resetKeys = [

@@ -7660,7 +7660,7 @@ To fix this:
               { type: 10, content: '### ```💜 Pronoun Management```' },
               pronounRow,
               { type: 14 },
-              { type: 1, components: [{ type: 2, custom_id: 'castbot_tools', label: '← Tools', style: 2 }] }
+              { type: 1, components: [{ type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2 }] }
             ]
           };
 

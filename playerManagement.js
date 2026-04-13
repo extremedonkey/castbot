@@ -716,7 +716,6 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
     case 'crafting': {
       const customTerms = await getCustomTerms(guildId);
       const craftingNameLower = (customTerms.craftingName || 'Crafting').toLowerCase();
-      const craftingFallbackEmoji = customTerms.craftingEmoji || '🛠️';
       const allBtns = safariData[guildId]?.buttons || {};
       const craftingActions = Object.entries(allBtns)
         .filter(([id, a]) => {
@@ -749,7 +748,14 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
 
       const options = craftingActions.slice(0, 25).map(action => {
         const label = (action.inventoryConfig?.buttonLabel || action.trigger?.button?.label || action.name || 'Recipe').slice(0, 100);
-        const emoji = resolveEmoji(action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji || action.emoji, craftingFallbackEmoji);
+        // Recipe's own emoji → server's crafting emoji → Unicode default.
+        // Pass custom-emoji strings as PRIMARY so resolveEmoji parses them; fallback must stay Unicode per contract.
+        const rawEmojiStr =
+          action.inventoryConfig?.buttonEmoji
+          || action.trigger?.button?.emoji
+          || action.emoji
+          || customTerms.craftingEmoji;
+        const emoji = resolveEmoji(rawEmojiStr, '🛠️');
         return {
           label,
           value: action.actionId,

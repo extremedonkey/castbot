@@ -504,7 +504,6 @@ async function buildCardSelect(activeButton, targetMember, playerData, safariDat
         .sort((a, b) => (a.inventoryConfig?.sortOrder ?? 999) - (b.inventoryConfig?.sortOrder ?? 999));
 
       const craftingNameLower = (customTerms.craftingName || 'Crafting').toLowerCase();
-      const craftingFallbackEmoji = customTerms.craftingEmoji || '🛠️';
       if (craftingActions.length === 0) {
         return buildDisabledSelect(`No ${craftingNameLower} recipes configured`);
       }
@@ -512,7 +511,12 @@ async function buildCardSelect(activeButton, targetMember, playerData, safariDat
         label: (action.inventoryConfig?.buttonLabel || action.trigger?.button?.label || action.name || 'Recipe').slice(0, 100),
         value: action.id.slice(0, 100),
         description: (action.description || `${customTerms.craftingName || 'Crafting'} recipe`).slice(0, 100),
-        emoji: resolveEmoji(action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji, craftingFallbackEmoji)
+        // Recipe's own emoji → server's crafting emoji → Unicode default.
+        // Custom-emoji strings go in as PRIMARY so resolveEmoji parses <:name:id>; fallback must stay Unicode per contract.
+        emoji: resolveEmoji(
+          action.inventoryConfig?.buttonEmoji || action.trigger?.button?.emoji || customTerms.craftingEmoji,
+          '🛠️'
+        )
       }));
       return wrapSelect(customId, `Select a ${craftingNameLower} recipe...`, options);
     }
