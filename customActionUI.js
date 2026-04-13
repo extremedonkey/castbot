@@ -3083,7 +3083,7 @@ async function createAttributeConditionUI(condition, actionId, conditionIndex, c
     label: def.name || id,
     value: id,
     description: def.category === 'resource' ? 'Resource (has current/max)' : 'Stat (single value)',
-    emoji: def.emoji ? { name: def.emoji } : { name: '📊' },
+    emoji: resolveEmoji(def.emoji, '📊'),
     default: attributeId === id
   }));
 
@@ -3251,7 +3251,7 @@ async function createAttributeCompareUI(condition, actionId, conditionIndex, cur
     label: def.name || id,
     value: id,
     description: def.category === 'resource' ? 'Resource' : 'Stat',
-    emoji: def.emoji ? { name: def.emoji } : { name: '📊' }
+    emoji: resolveEmoji(def.emoji, '📊')
   }));
 
   if (attrOptions.length < 2) {
@@ -3440,7 +3440,7 @@ async function createMultiAttributeCheckUI(condition, actionId, conditionIndex, 
       label: def.name || id,
       value: id,
       description: def.category === 'resource' ? 'Resource' : 'Stat',
-      emoji: def.emoji ? { name: def.emoji } : { name: '📊' },
+      emoji: resolveEmoji(def.emoji, '📊'),
       default: attributes.includes(id)
     });
   });
