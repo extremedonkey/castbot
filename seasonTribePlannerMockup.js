@@ -29,7 +29,6 @@
  * See docs/ui/UIPrototyping.md for the prototyping approach.
  */
 
-import { InteractionResponseType, InteractionResponseFlags } from 'discord-interactions';
 import { countComponents, validateComponentLimit } from './utils.js';
 import { loadPlayerData } from './storage.js';
 
@@ -448,52 +447,30 @@ function buildHierarchyOptions({ season, castlists, castlist, phases, phase, tri
 }
 
 // ─────────────────────────────────────────────
-// Single dispatcher
+// Factory-friendly handlers (called from app.js via ButtonHandlerFactory)
 // ─────────────────────────────────────────────
 
 /**
- * Top-level dispatcher for all `tribeplan_*` interactions.
- * Returns a Discord interaction response object (does NOT call res.send — caller does that).
+ * Mutate state for a given interaction, then return the rebuilt view.
+ * Caller is a ButtonHandlerFactory handler with `updateMessage: true, deferred: true`,
+ * so the factory handles ack + PATCH. We just return the view object.
+ *
+ * @param {Object} context - ButtonHandlerFactory context (guildId, userId, customId, values, ...)
+ * @returns {Object} { components: [container] } | { components, _ephemeralRedirect: true }
  */
-export async function handleTribePlannerInteraction(req, res, client) {
-  const data = req.body.data || {};
-  const customId = data.custom_id;
-  const userId = req.body.member?.user?.id || req.body.user?.id;
-  const guildId = req.body.guild_id;
+export async function processTribePlannerView(context) {
+  const { guildId, userId, customId, values } = context;
+  const v = Array.isArray(values) ? values[0] : undefined;
 
-  if (!userId || !guildId) {
-    return ackEphemeral(res, '⚠️ This prototype must be invoked inside a guild.');
-  }
-
-  // Entry button — opens (or re-opens) the prototype
   if (customId === 'tribeplan_open') {
-    const view = await buildTribePlannerView(guildId, userId);
-    return res.send({
-      type: InteractionResponseType.UPDATE_MESSAGE,
-      data: view,
-    });
-  }
-
-  // Reset selection
-  if (customId === 'tribeplan_reset') {
+    // No state change — just open
+  } else if (customId === 'tribeplan_reset') {
     userState.set(userId, emptyState());
-    const view = await buildTribePlannerView(guildId, userId);
-    return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: view });
-  }
-
-  // Season picked
-  if (customId === 'tribeplan_pick_season') {
-    const v = data.values?.[0];
+  } else if (customId === 'tribeplan_pick_season') {
     if (v && v !== 'none') {
       patchState(userId, { configId: v, castlistId: null, phaseId: null, tribeId: null });
     }
-    const view = await buildTribePlannerView(guildId, userId);
-    return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: view });
-  }
-
-  // Hierarchy navigation
-  if (customId === 'tribeplan_navigate') {
-    const v = data.values?.[0];
+  } else if (customId === 'tribeplan_navigate') {
     if (v && v !== 'noop') {
       const state = getState(userId);
       if (v === 'up') {
@@ -505,26 +482,30 @@ export async function handleTribePlannerInteraction(req, res, client) {
         if (kind === 'cl') patchState(userId, { castlistId: id, phaseId: null, tribeId: null });
         else if (kind === 'ph') patchState(userId, { phaseId: id, tribeId: null });
         else if (kind === 'tr') patchState(userId, { tribeId: id });
-        // 'pl' (player) is a focus selection — no state change for now, surface a hint
-        else if (kind === 'pl') {
-          return ephemeralPreview(res, `👤 Selected applicant \`${id}\`. In production: would open assignment / notes dialog.`);
-        }
+        // 'pl' (player) is just informational — no state change, view stays at tribe level
       }
     }
-    const view = await buildTribePlannerView(guildId, userId);
-    return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: view });
   }
 
-  // Action buttons (no-ops with descriptive previews)
-  if (customId.startsWith('tribeplan_act_')) {
-    const state = getState(userId);
-    const action = customId.replace('tribeplan_act_', '');
-    const preview = describeAction(action, state);
-    return ephemeralPreview(res, preview);
-  }
+  return buildTribePlannerView(guildId, userId);
+}
 
-  // Unknown — fall through with a friendly note
-  return ackEphemeral(res, `⚠️ Tribe Planner mockup: unhandled custom_id \`${customId}\`.`);
+/**
+ * Return the ephemeral preview for an action button (no-op in mockup).
+ * Caller is a ButtonHandlerFactory handler with `ephemeral: true`.
+ */
+export async function previewTribePlannerAction(context) {
+  const { userId, customId } = context;
+  const state = getState(userId);
+  const action = customId.replace('tribeplan_act_', '');
+  const content = describeAction(action, state);
+  return {
+    components: [{
+      type: 17,
+      accent_color: ACCENT,
+      components: [{ type: 10, content }],
+    }],
+  };
 }
 
 function describeAction(action, state) {
@@ -550,25 +531,4 @@ function describeAction(action, state) {
   }
 }
 
-function ephemeralPreview(res, content) {
-  return res.send({
-    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-    data: {
-      flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
-      components: [{
-        type: 17, accent_color: ACCENT,
-        components: [{ type: 10, content }],
-      }],
-    },
-  });
-}
-
-function ackEphemeral(res, content) {
-  return res.send({
-    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-    data: {
-      flags: InteractionResponseFlags.EPHEMERAL,
-      content,
-    },
-  });
-}
+// (raw res.send helpers removed — all responses go through ButtonHandlerFactory now)

@@ -8166,11 +8166,32 @@ To fix this:
           return buildPlannerSelector(context.guildId);
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('tribeplan_')) {
-      // Tribe Planner (Mockup) — UI prototype, see seasonTribePlannerMockup.js
-      // Single dispatch: the module owns all state and response shaping.
-      const { handleTribePlannerInteraction } = await import('./seasonTribePlannerMockup.js');
-      return handleTribePlannerInteraction(req, res, client);
+    } else if (
+      custom_id === 'tribeplan_open' ||
+      custom_id === 'tribeplan_reset' ||
+      custom_id === 'tribeplan_pick_season' ||
+      custom_id === 'tribeplan_navigate'
+    ) {
+      // Tribe Planner (Mockup) — view interactions (UPDATE_MESSAGE flow). See seasonTribePlannerMockup.js
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { processTribePlannerView } = await import('./seasonTribePlannerMockup.js');
+          return processTribePlannerView(context);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('tribeplan_act_')) {
+      // Tribe Planner (Mockup) — action buttons (ephemeral preview, no-op). See seasonTribePlannerMockup.js
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        ephemeral: true,
+        handler: async (context) => {
+          const { previewTribePlannerAction } = await import('./seasonTribePlannerMockup.js');
+          return previewTribePlannerAction(context);
+        }
+      })(req, res, client);
     } else if (custom_id === 'planner_select_season') {
       // Season Planner — season selected from dropdown
       return ButtonHandlerFactory.create({
