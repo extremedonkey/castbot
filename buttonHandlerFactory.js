@@ -416,15 +416,6 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
-  'tribeplan_act_clone': {
-    label: 'Clone From Prev',
-    description: 'Mockup: would clone tribes from previous game phase',
-    emoji: '📋',
-    style: 'Secondary',
-    parent: 'tribeplan_open',
-    restrictedUser: '391415444084490240',
-    category: 'experimental'
-  },
   'tribeplan_act_remove': {
     label: 'Remove Tribe',
     description: 'Mockup: would remove the selected tribe',

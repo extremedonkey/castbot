@@ -49,8 +49,10 @@ function getGamePhases(rounds) {
   return out;
 }
 
+// castRankingView is a SIBLING of tribeId at depth 4 — both children of phaseId.
+// Conceptual flow: applicants → cast-ranked → cast → assigned to tribes.
 function depth(state) {
-  if (state.tribeId) return 4;
+  if (state.tribeId || state.castRankingView) return 4;
   if (state.phaseId) return 3;
   if (state.castlistId) return 2;
   if (state.configId) return 1;
@@ -58,7 +60,10 @@ function depth(state) {
 }
 
 function navUp(state) {
-  if (state.tribeId) state.tribeId = null;
+  if (state.tribeId || state.castRankingView) {
+    state.tribeId = null;
+    state.castRankingView = false;
+  }
   else if (state.phaseId) state.phaseId = null;
   else if (state.castlistId) state.castlistId = null;
   return state;
@@ -70,12 +75,12 @@ function describeAction(action, state) {
   if (state.castlistId) parts.push(`castlist \`${state.castlistId}\``);
   if (state.phaseId) parts.push(`phase \`${state.phaseId}\``);
   if (state.tribeId) parts.push(`tribe \`${state.tribeId}\``);
+  if (state.castRankingView) parts.push(`view \`cast-ranking\``);
   const scope = parts.length ? parts.join(' / ') : '(no scope)';
   switch (action) {
     case 'create_tribe': return `➕ **Create Tribe** (mockup) — would open a modal under ${scope} to create a new Discord role + tribe entry, then attach it to the selected phase.`;
     case 'edit_tribe':   return `✏️ **Edit Tribe** (mockup) — would open the tribe editor (name/emoji/color/vanity roles) for ${scope}.`;
-    case 'assign':       return `👥 **Assign Players** (mockup) — would open a multi-select of cast-ranked applicants to attach to ${scope}. Currently selected applicants would be pre-checked.`;
-    case 'clone':        return `📋 **Clone From Previous Phase** (mockup) — would copy the tribe → player composition from the previous game phase into ${scope}.`;
+    case 'assign':       return `👥 **Assign Players** (mockup) — would open a multi-select of CAST applicants from Cast Ranking, then write the tribe ↔ player mapping (the "glue logic" that doesn't exist yet) for ${scope}.`;
     case 'remove':       return `🗑️ **Remove Tribe** (mockup) — would prompt for confirmation, then detach ${scope} from the phase (Discord role kept).`;
     default:             return `Unknown action \`${action}\` for scope ${scope}.`;
   }
@@ -218,7 +223,10 @@ describe('depth — state level calculation', () => {
   it('configId only → 1 (season)', () => assert.equal(depth({ configId: 'c' }), 1));
   it('+ castlistId → 2 (castlist)', () => assert.equal(depth({ configId: 'c', castlistId: 'cl' }), 2));
   it('+ phaseId → 3 (phase)', () => assert.equal(depth({ configId: 'c', castlistId: 'cl', phaseId: 'r3' }), 3));
-  it('+ tribeId → 4 (tribe)', () => assert.equal(depth({ configId: 'c', castlistId: 'cl', phaseId: 'r3', tribeId: 't' }), 4));
+  it('+ tribeId → 4 (tribe path)', () => assert.equal(depth({ configId: 'c', castlistId: 'cl', phaseId: 'r3', tribeId: 't' }), 4));
+  it('+ castRankingView → 4 (Cast Ranking sibling of tribe)', () => {
+    assert.equal(depth({ configId: 'c', castlistId: 'cl', phaseId: 'r3', castRankingView: true }), 4);
+  });
 });
 
 describe('navUp — pops one level at a time', () => {
@@ -226,6 +234,12 @@ describe('navUp — pops one level at a time', () => {
     const s = navUp({ configId: 'c', castlistId: 'cl', phaseId: 'r3', tribeId: 't' });
     assert.equal(depth(s), 3);
     assert.equal(s.tribeId, null);
+    assert.equal(s.phaseId, 'r3');
+  });
+  it('cast ranking view → phase (sibling collapses same as tribe)', () => {
+    const s = navUp({ configId: 'c', castlistId: 'cl', phaseId: 'r3', castRankingView: true });
+    assert.equal(depth(s), 3);
+    assert.equal(s.castRankingView, false);
     assert.equal(s.phaseId, 'r3');
   });
   it('phase → castlist', () => {
@@ -243,6 +257,15 @@ describe('navUp — pops one level at a time', () => {
   });
 });
 
+describe('cast ranking is mutually exclusive with tribeId at depth 4', () => {
+  it('cast ranking + tribe set → both clear together via navUp (defensive)', () => {
+    const s = navUp({ configId: 'c', castlistId: 'cl', phaseId: 'r3', tribeId: 't', castRankingView: true });
+    assert.equal(s.tribeId, null);
+    assert.equal(s.castRankingView, false);
+    assert.equal(depth(s), 3);
+  });
+});
+
 // ─────────────────────────────────────────────
 // describeAction — preview surface area
 // ─────────────────────────────────────────────
@@ -250,13 +273,22 @@ describe('navUp — pops one level at a time', () => {
 describe('describeAction — ephemeral preview text', () => {
   const fullScope = { configId: 'config_X', castlistId: 'cl_Y', phaseId: 'r3', tribeId: 't1' };
 
-  it('all 5 actions return preview text including the scope', () => {
-    for (const action of ['create_tribe', 'edit_tribe', 'assign', 'clone', 'remove']) {
+  it('all 4 mockup actions return preview text including the scope', () => {
+    for (const action of ['create_tribe', 'edit_tribe', 'assign', 'remove']) {
       const out = describeAction(action, fullScope);
       assert.match(out, /mockup/);
       assert.match(out, /config_X/);
       assert.match(out, /t1/);
     }
+  });
+
+  it('assign action mentions the missing glue logic explicitly', () => {
+    assert.match(describeAction('assign', fullScope), /glue logic/);
+  });
+
+  it('cast-ranking view shows up in scope', () => {
+    const out = describeAction('create_tribe', { configId: 'c', castlistId: 'cl', phaseId: 'r3', castRankingView: true });
+    assert.match(out, /cast-ranking/);
   });
 
   it('empty state shows "(no scope)"', () => {
