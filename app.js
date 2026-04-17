@@ -8166,6 +8166,11 @@ To fix this:
           return buildPlannerSelector(context.guildId);
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('tribeplan_')) {
+      // Tribe Planner (Mockup) — UI prototype, see seasonTribePlannerMockup.js
+      // Single dispatch: the module owns all state and response shaping.
+      const { handleTribePlannerInteraction } = await import('./seasonTribePlannerMockup.js');
+      return handleTribePlannerInteraction(req, res, client);
     } else if (custom_id === 'planner_select_season') {
       // Season Planner — season selected from dropdown
       return ButtonHandlerFactory.create({

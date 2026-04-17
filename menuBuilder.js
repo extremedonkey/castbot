@@ -188,6 +188,13 @@ export class MenuBuilder {
           { type: 2, custom_id: 'reeces_radio_mockup', label: 'Radio PoC (Mockup)', style: 2, emoji: { name: '📻' } }
         ]
       },
+      { type: 10, content: `### \`\`\`🎯 Prototypes\`\`\`` },
+      {
+        type: 1,
+        components: [
+          { type: 2, custom_id: 'tribeplan_open', label: 'Tribe Planner (Mockup)', style: 1, emoji: { name: '🎯' } }
+        ]
+      },
       { type: 14 },
       { type: 1, components: [{ type: 2, custom_id: 'castbot_tools', label: '← Tools', style: 2 }] }
     ];

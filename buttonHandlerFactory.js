@@ -359,6 +359,90 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'legacy'
   },
+  // === TRIBE PLANNER (Mockup — UI prototype) ===
+  // See seasonTribePlannerMockup.js. To remove the prototype, delete these
+  // entries plus the dispatch block in app.js (`startsWith('tribeplan_')`).
+  'tribeplan_open': {
+    label: 'Tribe Planner (Mockup)',
+    description: 'Season → Castlist → Phase → Tribe → Players hierarchy prototype',
+    emoji: '🎯',
+    style: 'Primary',
+    parent: 'reeces_stuff',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
+  'tribeplan_pick_season': {
+    label: 'Season',
+    description: 'Pick a season to plan tribes for',
+    emoji: '📅',
+    style: 'String Select',
+    parent: 'tribeplan_open',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
+  'tribeplan_navigate': {
+    label: 'Hierarchy',
+    description: 'Drill into Castlist → Phase → Tribe → Player',
+    emoji: '🌲',
+    style: 'String Select',
+    parent: 'tribeplan_open',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
+  'tribeplan_act_create_tribe': {
+    label: 'Create Tribe',
+    description: 'Mockup: would create a new tribe under the selected phase',
+    emoji: '➕',
+    style: 'Primary',
+    parent: 'tribeplan_open',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
+  'tribeplan_act_edit_tribe': {
+    label: 'Edit Tribe',
+    description: 'Mockup: would edit the selected tribe',
+    emoji: '✏️',
+    style: 'Secondary',
+    parent: 'tribeplan_open',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
+  'tribeplan_act_assign': {
+    label: 'Assign Players',
+    description: 'Mockup: would assign cast-ranked players to the tribe',
+    emoji: '👥',
+    style: 'Primary',
+    parent: 'tribeplan_open',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
+  'tribeplan_act_clone': {
+    label: 'Clone From Prev',
+    description: 'Mockup: would clone tribes from previous game phase',
+    emoji: '📋',
+    style: 'Secondary',
+    parent: 'tribeplan_open',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
+  'tribeplan_act_remove': {
+    label: 'Remove Tribe',
+    description: 'Mockup: would remove the selected tribe',
+    emoji: '🗑️',
+    style: 'Danger',
+    parent: 'tribeplan_open',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
+  'tribeplan_reset': {
+    label: 'Reset Selection',
+    description: 'Clear the navigation state',
+    emoji: '↻',
+    style: 'Secondary',
+    parent: 'tribeplan_open',
+    restrictedUser: '391415444084490240',
+    category: 'experimental'
+  },
   'file_import_safari': {
     label: 'Server SafariContent',
     description: 'Import Safari data via File Upload modal (Type 19) — no MessageContent intent needed',
