@@ -198,14 +198,19 @@ function getCastRankedApplicants(guildData, configId) {
 const trunc = (s, n) => (s && s.length > n ? s.slice(0, n - 1) + '…' : (s || ''));
 
 /**
- * Defensive emoji picker for select-option `emoji.name` slots.
- * Discord rejects custom emoji strings ("<:foo:123>") in `name` — they need a
- * separate {id, name} shape we don't bother building for the mockup.
+ * Defensive emoji picker for `emoji.name` slots.
+ * Discord rejects:
+ *  - custom emoji strings ("<:foo:123>") — need {id, name} shape we don't build here
+ *  - Unicode symbols that aren't true emoji (↻ U+21BB, · U+00B7, ↑ U+2191, etc.) —
+ *    error: COMPONENT_INVALID_EMOJI
+ * Only allows codepoints inside the Unicode Emoji property (\p{Emoji}).
  */
 function safeEmoji(raw, fallback) {
   if (typeof raw !== 'string' || !raw) return fallback;
   if (raw.startsWith('<') || raw.includes(':')) return fallback;
   if (raw.length > 4) return fallback;
+  // Require at least one true Emoji codepoint (U+21BB ↻, U+2191 ↑, U+00B7 · would fail)
+  if (!/\p{Extended_Pictographic}/u.test(raw)) return fallback;
   return raw;
 }
 
@@ -277,7 +282,7 @@ export async function buildTribePlannerView(guildId, userId) {
         type: 3,
         custom_id: 'tribeplan_navigate',
         placeholder: hierarchyPlaceholder({ castlist, phase, tribe }),
-        options: opts.length ? opts : [{ label: '(empty)', value: 'noop', emoji: { name: '·' } }],
+        options: opts.length ? opts : [{ label: '(empty)', value: 'noop', emoji: { name: '⚠️' } }],
         min_values: 0, max_values: 1,
       }],
     };
@@ -331,7 +336,7 @@ export async function buildTribePlannerView(guildId, userId) {
       type: 1,
       components: [
         { type: 2, custom_id: 'reeces_stuff', label: '← Reece\'s Stuff', style: 2 },
-        { type: 2, custom_id: 'tribeplan_reset', label: 'Reset Selection', style: 2, emoji: { name: '↻' }, disabled: lvl === 0 },
+        { type: 2, custom_id: 'tribeplan_reset', label: 'Reset Selection', style: 2, emoji: { name: '🔄' }, disabled: lvl === 0 },
       ],
     },
   );
