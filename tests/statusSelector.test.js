@@ -106,7 +106,7 @@ describe('StatusSelector — validation', () => {
   });
 });
 
-describe('StatusSelector — current state badge', () => {
+describe('StatusSelector — current state heading', () => {
   const base = {
     customId: 'x',
     title: '## ✏️ Pick one',
@@ -125,7 +125,7 @@ describe('StatusSelector — current state badge', () => {
     assert.equal(inner[1].type, 14, 'separator should come directly after title');
   });
 
-  it('renders large emoji + code-block heading between description and separator', () => {
+  it('renders code-block heading only (no duplicate emoji above the select)', () => {
     const out = buildStatusSelector({
       ...base,
       description: 'Change who can see this.',
@@ -133,27 +133,16 @@ describe('StatusSelector — current state badge', () => {
       showCurrentStateBadge: true,
     });
     const inner = out.components[0].components;
-    // title, description, badge-emoji, badge-label, separator, select, separator, back
+    // title, description, heading, separator, select, separator, back
     assert.equal(inner[0].type, 10); // title
     assert.equal(inner[1].type, 10); // description
-    assert.equal(inner[2].type, 10); // badge emoji (# heading)
-    assert.ok(inner[2].content.includes('🧪'), 'badge emoji should be from the matching option');
-    assert.ok(inner[2].content.startsWith('# '), 'badge emoji should be rendered as H1 for prominence');
-    assert.equal(inner[3].type, 10); // badge label
-    assert.ok(inner[3].content.includes('```Current Status```'), 'badge label wraps text in backticks');
-    assert.equal(inner[4].type, 14); // separator
-    assert.equal(inner[5].type, 1);  // action row with select
-  });
-
-  it('reflects the matching option emoji when currentValue changes', () => {
-    const out = buildStatusSelector({
-      ...base,
-      currentValue: 'active',
-      showCurrentStateBadge: true,
-    });
-    const inner = out.components[0].components;
-    const badgeEmoji = inner.find(c => c.type === 10 && c.content.startsWith('# '));
-    assert.ok(badgeEmoji.content.includes('🏁'), 'active → 🏁');
+    assert.equal(inner[2].type, 10); // heading
+    assert.ok(inner[2].content.includes('```Current Status```'), 'heading wraps text in backticks');
+    assert.equal(inner[3].type, 14); // separator
+    assert.equal(inner[4].type, 1);  // action row with select
+    // Explicitly check no standalone large-emoji TextDisplay was emitted
+    const largeEmojiLine = inner.find(c => c.type === 10 && c.content?.startsWith('# '));
+    assert.equal(largeEmojiLine, undefined, 'no bare "# <emoji>" line — emoji lives in the select option instead');
   });
 
   it('uses custom currentStateLabel when provided', () => {
@@ -164,35 +153,19 @@ describe('StatusSelector — current state badge', () => {
       currentStateLabel: 'Right Now',
     });
     const inner = out.components[0].components;
-    const badgeLabel = inner.find(c => c.type === 10 && c.content.includes('```'));
-    assert.ok(badgeLabel.content.includes('```Right Now```'));
+    const heading = inner.find(c => c.type === 10 && c.content.includes('```'));
+    assert.ok(heading.content.includes('```Right Now```'));
   });
 
-  it('badge not rendered when currentValue does not match any option', () => {
+  it('heading still rendered when currentValue does not match any option (it is pure label)', () => {
     const out = buildStatusSelector({
       ...base,
       currentValue: 'nonexistent',
       showCurrentStateBadge: true,
     });
     const inner = out.components[0].components;
-    // Only title, separator, actionrow(select), separator, actionrow(back) — no badge
-    const badgeEmoji = inner.find(c => c.type === 10 && c.content.startsWith('# '));
-    assert.equal(badgeEmoji, undefined);
-  });
-
-  it('badge not rendered when matching option has no emoji', () => {
-    const out = buildStatusSelector({
-      ...base,
-      options: [
-        { value: 'plain', label: 'Plain' },
-        { value: 'other', label: 'Other' },
-      ],
-      currentValue: 'plain',
-      showCurrentStateBadge: true,
-    });
-    const inner = out.components[0].components;
-    const badgeEmoji = inner.find(c => c.type === 10 && c.content.startsWith('# '));
-    assert.equal(badgeEmoji, undefined);
+    const heading = inner.find(c => c.type === 10 && c.content?.includes('```'));
+    assert.ok(heading, 'heading renders regardless of currentValue — it is just a section label');
   });
 });
 

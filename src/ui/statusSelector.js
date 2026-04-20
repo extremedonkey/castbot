@@ -33,9 +33,9 @@ const DEFAULT_ACCENT = 0x5865F2;
  * @param {StatusOption[]} opts.options - 2-25 options
  * @param {string} [opts.placeholder] - Select placeholder text
  * @param {Object} opts.backButton - { customId, label } — Secondary back button
- * @param {boolean} [opts.showCurrentStateBadge=false] - Render a prominent "current state" block
- *        (large emoji from the matching option + a code-block heading) between the description
- *        and the select. Useful when the currently-set value needs to be obvious at a glance.
+ * @param {boolean} [opts.showCurrentStateBadge=false] - When true, render a code-block heading
+ *        labelled by `currentStateLabel` between the description and the select. Useful when the
+ *        currently-set value needs to stand out at a glance.
  * @param {string} [opts.currentStateLabel='Current Status'] - Text shown inside the code-block
  *        heading when `showCurrentStateBadge` is true.
  * @returns {{ components: [{ type: 17, accent_color: number, components: object[] }] }}
@@ -66,17 +66,13 @@ export function buildStatusSelector({
     ...(opt.value === currentValue ? { default: true } : {}),
   }));
 
-  // Current-state badge: large emoji of the currently-selected option + a code-block heading.
-  // Renders between the description and the first separator. Only when explicitly opted in
-  // AND there's a matching option with an emoji.
-  const currentOption = options.find(o => o.value === currentValue);
-  const showBadge = showCurrentStateBadge && currentOption?.emoji;
-
+  // Current-state badge: a code-block heading signalling "here's what's set now." Rendered
+  // between the description and the first separator. The select itself already shows the
+  // current option's emoji via `default: true`, so we don't duplicate the emoji here.
   const components = [
     { type: 10, content: title },
     ...(description ? [{ type: 10, content: description }] : []),
-    ...(showBadge ? [
-      { type: 10, content: `# ${currentOption.emoji}` },
+    ...(showCurrentStateBadge ? [
       { type: 10, content: `### \`\`\`${currentStateLabel}\`\`\`` },
     ] : []),
     { type: 14 },
