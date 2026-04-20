@@ -235,7 +235,7 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null, 
     components
   };
 
-  countComponents([container], { verbosity: "summary", label: "Challenges" });
+  countComponents([container], { verbosity: "full", label: "Challenges" });
 
   return { components: [container] };
 }

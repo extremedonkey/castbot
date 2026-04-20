@@ -405,27 +405,221 @@ If 2GB turns out to be overkill after a month, downsize to 1GB ($5/mo). If it's 
 
 ---
 
+## 🔐 Three-Tier Discord App Strategy + Emergency Local Fallback
+
+**(Added 2026-04-20 — supersedes Open Question 5)**
+
+The original plan assumed two Discord apps: prod and dev. After thinking through "what happens when build is down and prod has a critical bug?", we now want **three** Discord apps so that we always have a working dev path, no matter what's broken.
+
+### The Three Apps
+
+| App | Purpose | Discord App ID | Where it runs | Front door |
+|---|---|---|---|---|
+| **Prod** | Real users, all 140+ guilds | `<prod app id>` | Lightsail prod | `castbotaws.reecewagner.com` |
+| **Build** | Day-to-day dev, identical to prod env | `1328366050848411658` (existing dev) | Lightsail build | `castbot-build.reecewagner.com` |
+| **Local** | Emergency fallback, ad-hoc experiments | NEW — "CastBot Local" | Laptop (WSL) | ngrok free tier |
+
+The Build app inherits the existing dev app ID. The Local app is brand new — its only job is to **always be available** when build is unreachable.
+
+### Why Three, Not Two
+
+Two-app model has a single point of failure: build dies → no safe place to develop a fix → either patch blind on prod (terrifying) or wait until you can revive build (slow). Three-app model means:
+
+- **Build healthy**: develop on build (default daily flow)
+- **Build sick / Lightsail outage / DNS broken**: switch to local, develop, push to GitHub, deploy to prod
+- **Both build AND local broken**: the laptop can ALWAYS run code locally with raw `node` — same insurance the current setup provides today
+
+The third app costs nothing ($0 from Discord) and the infra is what we have today (laptop + ngrok). It's pure resilience.
+
+### Technical Setup (~15 min, one-time)
+
+**Discord side:**
+1. Discord Developer Portal → New Application → "CastBot Local"
+2. Bot tab → Reset Token → capture `BOT_TOKEN`
+3. General Information → capture `APP_ID` and `PUBLIC_KEY`
+4. OAuth2 URL Generator → scopes: `bot`, `applications.commands` → permissions: Administrator → invite to a dedicated sandbox guild
+5. Interactions Endpoint URL → existing ngrok URL (`adapted-deeply-stag.ngrok-free.app/interactions`)
+
+**Code side — zero source changes needed.** All config is already env-driven via dotenv. Just add a per-environment `.env` file:
+
+```
+~/castbot/
+├── .env                  # gitignored — currently dev creds (when on laptop)
+├── .env.local            # gitignored — NEW, local app creds
+└── .env.local.template   # committed — blank template for reference
+```
+
+**Switching mechanism — pick one:**
+
+```bash
+# Option 1: Manual cp before start (simplest)
+cp .env.local .env && ./scripts/dev/dev-start.sh
+
+# Option 2: Add --local flag to dev-start.sh
+./scripts/dev/dev-start.sh --local   # symlinks .env → .env.local for the session
+
+# Option 3: dotenv-cli at invocation
+npx dotenv -e .env.local -- node app.js
+```
+
+Option 2 is the cleanest long-term — keep `.env` files separate, never copy.
+
+**Slash commands** are registered per Discord app, so the local app starts with zero commands. One-time-per-app:
+
+```bash
+APP_ID=<local> DISCORD_TOKEN=<local-token> npm run deploy-commands
+```
+
+Re-run when commands change. (Today's `dev-restart.sh` doesn't auto-register commands, so this stays manual — same as current dev workflow.)
+
+**Sandbox guild** — dedicated Discord guild with the local bot invited. Probably create a fresh one ("CastBot Local Sandbox") to keep test data fully isolated from EmeraldORG dev guilds.
+
+### Git Workflow Implications
+
+This is the part most likely to bite. Three deployment targets, one codebase, easy to deploy the wrong thing.
+
+**Branch model:**
+
+```
+main                    ← what's in (or about to be in) prod. Sacred.
+  ├─ feature/X          ← active feature work, normally tested on build
+  └─ hotfix/Y           ← emergency local-only branch when build is down
+```
+
+**Per-environment workflow:**
+
+| Environment | Branch | How code arrives | Bot identity |
+|---|---|---|---|
+| **Local** | any | `git checkout` on laptop | Local app |
+| **Build** | feature branches via `git pull` | `git pull origin <branch>` from build's tmux | Build app (existing dev ID) |
+| **Prod** | `main` only | `npm run deploy-remote-wsl` from laptop | Prod app |
+
+**The one rule:** **prod only deploys from `main`.** `deploy-remote-wsl` already pulls from main on prod — keep that invariant.
+
+### Emergency Hotfix Flow (Build Unreachable)
+
+```mermaid
+sequenceDiagram
+    participant Laptop
+    participant Local as Local Discord App<br/>+ ngrok + Sandbox Guild
+    participant GitHub
+    participant Prod as Prod Lightsail
+
+    Note over Laptop: Build is dead, prod has critical bug
+    Laptop->>Laptop: git checkout -b hotfix/critical-bug
+    Laptop->>Laptop: ./scripts/dev/dev-start.sh --local
+    Laptop->>Local: connects with .env.local creds
+    Note over Local: Test fix in sandbox guild — zero risk to real users
+    Laptop->>GitHub: git push hotfix branch
+    Laptop->>Laptop: git checkout main && git merge hotfix/critical-bug
+    Laptop->>GitHub: git push origin main
+    Laptop->>Prod: npm run deploy-remote-wsl
+    Prod->>GitHub: git pull, pm2 restart
+    Note over Prod: Fix live. Real users unaffected by entire flow.
+    Note over Laptop: Later: revive build, git pull on it
+```
+
+### The Things That Will Bite You
+
+1. **`.env` accidentally committed** — already gitignored, but verify with `git status` before any commit. A committed prod `.env` exposes the prod token to GitHub. Treat as a P0 incident if it happens (rotate token immediately).
+2. **`dev-restart.sh` auto-commits** — per CLAUDE.md, this script auto-commits changes. If `.env` files aren't in gitignore (they are), they'd get committed. Verify gitignore stays correct.
+3. **Slash command drift** — adding a command and only registering against one app means the others lack it until re-registered. Already true today with two apps; just gets one tier worse with three.
+4. **Database divergence** — `playerData.json` is meaningful only within the app that wrote it (different bot user IDs, different guild memberships). **Never copy local's playerData to build/prod or vice versa.** Treat each app's data as fully isolated.
+5. **Two bots, one token** — never put the same bot token in two `.env` files in two places. They'll fight for the gateway connection. Three distinct apps with three distinct tokens makes this structurally impossible — which is exactly why having distinct apps is safer than "shared dev token across local + build".
+
+### Make Local Data Genuinely Disposable
+
+```bash
+# Add to .gitignore (verify these are already there):
+.env
+.env.local
+.env.build      # if any local copies exist
+
+# Commit a template:
+.env.local.template  # blank fields, documented
+```
+
+For local's `playerData.json`: **start with `{}` and let `/menu` populate it organically.** Don't import dev or prod data — the foreign guild IDs are useless to the local bot, and importing real user data into a sandbox is pointless privacy risk.
+
+### Cost: Effectively Zero
+
+| Item | Cost |
+|---|---|
+| Local Discord app | $0 (Discord apps are free) |
+| Sandbox guild | $0 |
+| ngrok free tier | $0 (already using it) |
+| Laptop electricity (only when actively used) | Pennies |
+| **Total** | **$0/mo** |
+
+Local fallback adds zero ongoing cost. It's pure insurance — like keeping a spare tire in the boot.
+
+### When to Reach for Local
+
+Mental model:
+
+```
+Default:   Develop on build (the daily loop, post-RaP-completion)
+Build sick:    Develop on local, deploy to build/prod from main
+Both broken:   Develop on local with raw node, no Discord —
+               unit tests still run, fix code blind, deploy when something recovers
+```
+
+**Don't use local for routine work** — it bypasses env parity and reintroduces all the WSL/ngrok pain we're trying to escape. Reserve it for "build is broken" or "I want to test something destructive in total isolation" scenarios.
+
+---
+
+## 💸 Lightsail Hourly Billing — Burst Capacity Is Cheap
+
+**(Added 2026-04-20)**
+
+Worth calling out explicitly because it changes how you can think about the build instance and rehearsal cost:
+
+- Lightsail bills **hourly with a monthly cap** — 2GB instance is ~$0.014/hr, capped at $10/mo
+- A 2GB box for a weekend of cutover practice → **~$0.67**
+- Static IPs: **free while attached**, $0.005/hr only when detached and unused
+- Snapshots: $0.05/GB-month, billed hourly (~$1/mo for prod's 8.5GB used disk)
+
+Implication: the "spin up a temporary Build-B for cutover practice, delete it after" flow from [RaP 0919](0919_20260420_ProdCutoverStrategy_Analysis.md) costs under a dollar. You can afford to over-provision during transitions and right-size after.
+
+**Gotcha**: the monthly cap is per-instance, not aggregate. Spinning up five 2GB instances in a month means paying for each one's hours individually (still cheap, but not "infinite swaps for $10").
+
+---
+
 ## 🔍 Open Questions
 
 1. **Anthropic auth on second machine** — does a Claude Code subscription work on both laptop and build simultaneously without logout-each-time? Check before Phase 3.
 2. **Do we want a staging data copy?** Build should probably get a scrubbed/fresh `playerData.json`, not prod data, to avoid testing on real guild records.
 3. **Backup strategy for build** — it's "just dev", but losing a week's in-progress work would sting. Git covers code, but local JSON test data needs its own plan. Probably: `rsync` to S3 nightly, or just accept loss (it's dev).
 4. **Domain naming — keep `castbot-build` even after it becomes dev?** Probably rename to `castbot-dev.reecewagner.com` in Phase 9 for clarity.
-5. **Discord dev app** — currently `1328366050848411658`. Keep using it. Don't need a new one.
+5. ~~**Discord dev app** — currently `1328366050848411658`. Keep using it. Don't need a new one.~~ **Superseded by the Three-Tier Discord App Strategy section above** — we now want a third "Local" app for emergency fallback.
 
 ---
 
 ## ✅ Definition of Done
 
+**Build environment:**
 - [ ] Build Lightsail provisioned, SSH accessible
 - [ ] `castbot-build.reecewagner.com` resolves, serves valid Let's Encrypt SSL
 - [ ] PM2 manages castbot-dev process, survives reboot
 - [ ] `./scripts/dev/dev-restart.sh` works on build (no ngrok refs)
 - [ ] Claude Code authenticated and usable inside tmux session
-- [ ] Discord webhook flipped, commands work end-to-end for 3 days
+- [ ] Build Discord webhook flipped, commands work end-to-end for 3 days
 - [ ] Laptop can be fully powered off for 24h without any dev impact
-- [ ] ngrok process + config removed from laptop
-- [ ] Documentation updated: `InfrastructureArchitecture.md` gets a build-env section
+- [ ] ngrok process kept on laptop (now reserved for Local app fallback only)
+
+**Local fallback:**
+- [ ] "CastBot Local" Discord app created, token captured securely
+- [ ] Sandbox guild created, local bot invited
+- [ ] `.env.local` file populated on laptop (gitignored)
+- [ ] `.env.local.template` committed for reference
+- [ ] `dev-start.sh --local` flag implemented (or equivalent switching mechanism)
+- [ ] Slash commands registered against local app at least once
+- [ ] Test: full hotfix flow rehearsed (local → main → deploy-remote-wsl) in non-emergency
+
+**Documentation:**
+- [ ] `InfrastructureArchitecture.md` gets a build-env section
+- [ ] `InfrastructureArchitecture.md` documents the three-app strategy
+- [ ] `DevWorkflow.md` updated with build + local workflows
 
 ---
 
