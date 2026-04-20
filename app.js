@@ -4943,6 +4943,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('challenge_action_info::') &&
         !custom_id.startsWith('challenge_action_unlink::') &&
         !custom_id.startsWith('challenge_action_delete::') &&
+        !custom_id.startsWith('challenge_status::') &&
+        !custom_id.startsWith('challenge_status_select::') &&
         !custom_id.startsWith('challenge_search') &&
         !custom_id.startsWith('challenge_library') &&
         !custom_id.startsWith('challenge_import')) ||
@@ -8708,9 +8710,9 @@ To fix this:
           return buildChallengeScreen(context.guildId, challengeId);
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('challenge_status_select_')) {
+    } else if (custom_id.startsWith('challenge_status_select::')) {
       // Challenges — status selector committed: mutate + UPDATE back to main screen
-      const challengeId = custom_id.replace('challenge_status_select_', '');
+      const challengeId = custom_id.replace('challenge_status_select::', '');
       return ButtonHandlerFactory.create({
         id: 'challenge_status_select',
         updateMessage: true,
@@ -8736,9 +8738,9 @@ To fix this:
           return buildChallengeScreen(context.guildId, challengeId);
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('challenge_status_')) {
+    } else if (custom_id.startsWith('challenge_status::')) {
       // Challenges — status button clicked: show StatusSelector in same message
-      const challengeId = custom_id.replace('challenge_status_', '');
+      const challengeId = custom_id.replace('challenge_status::', '');
       return ButtonHandlerFactory.create({
         id: 'challenge_status',
         updateMessage: true,

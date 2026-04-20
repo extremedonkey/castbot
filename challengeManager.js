@@ -24,12 +24,16 @@ const PAUSE_HISTORY_CAP = 100;
 /**
  * Dynamic button config for the Challenge Status button.
  * Legacy challenges (no field set) lazy-default to 'active'.
+ *
+ * Label reflects the likely next action:
+ *   - testing / paused (not live) → "Start Challenge" (🏁)
+ *   - active (live)               → "Stop / Pause"    (⏯️)
+ * Both use Secondary (grey) style per design spec.
  */
 export function getStatusButtonConfig(status) {
   const s = status || 'active';
-  if (s === 'testing') return { label: 'Testing', emoji: '🧪', style: 2 };   // Secondary
-  if (s === 'paused')  return { label: 'Paused',  emoji: '⏯️', style: 4 };   // Danger
-  return { label: 'Active', emoji: '🏁', style: 3 };                          // Success
+  if (s === 'active') return { label: 'Stop / Pause',   emoji: '⏯️', style: 2 };
+  return                       { label: 'Start Challenge', emoji: '🏁', style: 2 };
 }
 
 /**
@@ -269,7 +273,7 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null, 
       { type: 1, components: [
         { type: 2, custom_id: `challenge_edit_${selectedChallengeId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
         { type: 2, custom_id: `challenge_round_${selectedChallengeId}`, label: 'Round', style: 2, emoji: { name: '🔥' } },
-        { type: 2, custom_id: `challenge_status_${selectedChallengeId}`, label: statusCfg.label, style: statusCfg.style, emoji: { name: statusCfg.emoji } },
+        { type: 2, custom_id: `challenge_status::${selectedChallengeId}`, label: statusCfg.label, style: statusCfg.style, emoji: { name: statusCfg.emoji } },
         { type: 2, custom_id: `challenge_post_${selectedChallengeId}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
         { type: 2, custom_id: `challenge_delete_${selectedChallengeId}`, label: 'Delete', style: 4, emoji: { name: '🗑️' } },
       ]}
@@ -339,7 +343,7 @@ export async function buildChallengeStatusScreen(guildId, challengeId) {
   const chalTitle = (challenge.title || 'Untitled').substring(0, 60);
 
   return buildStatusSelector({
-    customId: `challenge_status_select_${challengeId}`,
+    customId: `challenge_status_select::${challengeId}`,
     title: `## ✏️ Challenge Status — ${chalTitle}`,
     description: '-# Change who can see and use this challenge.',
     accentColor: challenge.accentColor || DEFAULT_ACCENT,

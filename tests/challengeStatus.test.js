@@ -16,9 +16,8 @@ const PAUSE_HISTORY_CAP = 100;
 
 function getStatusButtonConfig(status) {
   const s = status || 'active';
-  if (s === 'testing') return { label: 'Testing', emoji: '🧪', style: 2 };
-  if (s === 'paused')  return { label: 'Paused',  emoji: '⏯️', style: 4 };
-  return { label: 'Active', emoji: '🏁', style: 3 };
+  if (s === 'active') return { label: 'Stop / Pause',   emoji: '⏯️', style: 2 };
+  return                       { label: 'Start Challenge', emoji: '🏁', style: 2 };
 }
 
 function updateChallengeStatus(challenge, newStatus) {
@@ -82,19 +81,27 @@ function verifyChallengeStatus(challenge, isAdmin) {
 // ─────────────────────────────────────────────
 
 describe('getStatusButtonConfig — dynamic button appearance', () => {
-  it('testing → Secondary + 🧪', () => {
-    assert.deepEqual(getStatusButtonConfig('testing'), { label: 'Testing', emoji: '🧪', style: 2 });
+  it('testing → Secondary grey + 🏁 Start Challenge', () => {
+    assert.deepEqual(getStatusButtonConfig('testing'), { label: 'Start Challenge', emoji: '🏁', style: 2 });
   });
-  it('active → Success + 🏁', () => {
-    assert.deepEqual(getStatusButtonConfig('active'), { label: 'Active', emoji: '🏁', style: 3 });
+  it('active → Secondary grey + ⏯️ Stop / Pause', () => {
+    assert.deepEqual(getStatusButtonConfig('active'), { label: 'Stop / Pause', emoji: '⏯️', style: 2 });
   });
-  it('paused → Danger + ⏯️', () => {
-    assert.deepEqual(getStatusButtonConfig('paused'), { label: 'Paused', emoji: '⏯️', style: 4 });
+  it('paused → Secondary grey + 🏁 Start Challenge (same as testing — click to resume)', () => {
+    assert.deepEqual(getStatusButtonConfig('paused'), { label: 'Start Challenge', emoji: '🏁', style: 2 });
   });
-  it('unknown / undefined → defaults to active', () => {
-    assert.equal(getStatusButtonConfig(undefined).label, 'Active');
-    assert.equal(getStatusButtonConfig(null).label, 'Active');
-    assert.equal(getStatusButtonConfig('weird').label, 'Active');
+  it('undefined / null → lazy-default to active (Stop / Pause)', () => {
+    assert.equal(getStatusButtonConfig(undefined).label, 'Stop / Pause');
+    assert.equal(getStatusButtonConfig(null).label, 'Stop / Pause');
+  });
+  it('unknown strings → safe fallback to Start Challenge (not Stop / Pause)', () => {
+    // Safer: if status is corrupt/unknown, do NOT claim the challenge is live
+    assert.equal(getStatusButtonConfig('weird').label, 'Start Challenge');
+  });
+  it('all states use Secondary (grey) style', () => {
+    assert.equal(getStatusButtonConfig('testing').style, 2);
+    assert.equal(getStatusButtonConfig('active').style, 2);
+    assert.equal(getStatusButtonConfig('paused').style, 2);
   });
 });
 
