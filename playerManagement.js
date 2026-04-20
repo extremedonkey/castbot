@@ -633,9 +633,24 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
       const allBtns = safariData[guildId]?.buttons || {};
       const options = [];
 
+      // Viewer admin-status for status gating (playerAll/individual/tribe all use this bypass)
+      // Bits: ManageChannels(4) | ManageGuild(5) | ManageRoles(28) | Administrator(3)
+      const viewerIsAdmin = (() => {
+        const p = targetMember?.permissions;
+        if (!p) return false;
+        const perms = BigInt(p);
+        const mask = (1n << 4n) | (1n << 5n) | (1n << 28n) | (1n << 3n);
+        return (perms & mask) !== 0n;
+      })();
+
       for (const [chId, ch] of Object.entries(challenges)) {
         const actions = getChallengeActions(ch);
         const chalTitle = (ch.title || 'Challenge').slice(0, 50);
+
+        // Status gate: paused → hidden for all; testing → admin-only
+        const chStatus = ch.status || 'active';
+        if (chStatus === 'paused') continue;
+        if (chStatus === 'testing' && !viewerIsAdmin) continue;
 
         // playerAll — link objects with .actionId
         for (const link of normalizeLinks(actions.playerAll)) {
@@ -665,7 +680,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
           }
         }
 
-        // tribe — check roles
+        // tribe — check roles (role check always applies; status gate above already handled admin bypass during testing)
         for (const [roleId, triLinks] of Object.entries(actions.tribe)) {
           if (targetMember?.roles?.cache?.has?.(roleId)) {
             for (const link of normalizeLinks(triLinks)) {

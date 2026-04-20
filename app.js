@@ -5107,16 +5107,30 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
           console.log(`🦁 DEBUG: Safari button interaction - Guild: ${guildId}, Button: ${resolvedButtonId}, User: ${context.userId}`);
 
-          // Security: verify challenge action access before execution
+          // Security: verify challenge action status + access before execution
           if (custom_id.startsWith('challenge_')) {
-            const { verifyChallengeActionAccess, getChallengeActions } = await import('./challengeActionCreate.js');
+            const { verifyChallengeActionAccess, verifyChallengeStatus, getChallengeActions, extractActionIds: _extractIds } = await import('./challengeActionCreate.js');
             const pd = await (await import('./storage.js')).loadPlayerData();
             const challenges = pd[guildId]?.challenges || {};
+            const isAdmin = hasAdminPermissions(context.member);
             for (const ch of Object.values(challenges)) {
               const actions = getChallengeActions(ch);
-              const { extractActionIds: _extractIds } = await import('./challengeActionCreate.js');
-              const allIds = [..._extractIds(actions.playerAll), ...Object.values(actions.playerIndividual).flatMap(v => _extractIds(v)), ...Object.values(actions.tribe).flatMap(v => _extractIds(v)), ..._extractIds(actions.host)];
+              const hostIds = _extractIds(actions.host);
+              const nonHostIds = [
+                ..._extractIds(actions.playerAll),
+                ...Object.values(actions.playerIndividual).flatMap(v => _extractIds(v)),
+                ...Object.values(actions.tribe).flatMap(v => _extractIds(v)),
+              ];
+              const allIds = [...nonHostIds, ...hostIds];
               if (allIds.includes(resolvedButtonId)) {
+                // Status gate applies only to non-host actions (host actions already require MANAGE_ROLES)
+                if (nonHostIds.includes(resolvedButtonId)) {
+                  const statusCheck = verifyChallengeStatus(ch, isAdmin);
+                  if (!statusCheck.allowed) {
+                    console.log(`🔒 Challenge status gate blocked: ${resolvedButtonId} — ${statusCheck.reason}`);
+                    return { content: statusCheck.reason, ephemeral: true };
+                  }
+                }
                 const access = verifyChallengeActionAccess(ch, resolvedButtonId, context.member);
                 if (!access.allowed) {
                   console.log(`🔒 Challenge action access denied: ${resolvedButtonId} — ${access.reason}`);
@@ -8694,6 +8708,46 @@ To fix this:
           return buildChallengeScreen(context.guildId, challengeId);
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('challenge_status_select_')) {
+      // Challenges — status selector committed: mutate + UPDATE back to main screen
+      const challengeId = custom_id.replace('challenge_status_select_', '');
+      return ButtonHandlerFactory.create({
+        id: 'challenge_status_select',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const selectedValue = req.body.data.values?.[0];
+          const { buildChallengeScreen, updateChallengeStatus, CHALLENGE_STATUS_VALUES } = await import('./challengeManager.js');
+          if (!CHALLENGE_STATUS_VALUES.includes(selectedValue)) {
+            return buildChallengeScreen(context.guildId, challengeId);
+          }
+          const { loadPlayerData, savePlayerData } = await import('./storage.js');
+          const playerData = await loadPlayerData();
+          const challenge = playerData[context.guildId]?.challenges?.[challengeId];
+          if (!challenge) {
+            return { content: '❌ Challenge not found', ephemeral: true };
+          }
+          const oldStatus = challenge.status || 'active';
+          const changed = updateChallengeStatus(challenge, selectedValue);
+          if (changed) {
+            await savePlayerData(playerData);
+            console.log(`🏃 Challenge Status: "${challenge.title}" ${oldStatus} → ${selectedValue} by user ${context.userId}`);
+          }
+          return buildChallengeScreen(context.guildId, challengeId);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('challenge_status_')) {
+      // Challenges — status button clicked: show StatusSelector in same message
+      const challengeId = custom_id.replace('challenge_status_', '');
+      return ButtonHandlerFactory.create({
+        id: 'challenge_status',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { buildChallengeStatusScreen } = await import('./challengeManager.js');
+          return buildChallengeStatusScreen(context.guildId, challengeId);
+        }
+      })(req, res, client);
     } else if (custom_id === 'library_home') {
       // Challenge Library — home screen
       return ButtonHandlerFactory.create({
@@ -9215,6 +9269,31 @@ To fix this:
         if (!button.actions || button.actions.length === 0) {
           return { content: `⚡ **${button.name || 'Action'}** has no outcomes configured yet.`, ephemeral: true };
         }
+
+        // Status gate: refuse execution if the owning challenge is paused or
+        // in testing (for non-admins). Mirrors the UI filter in buildSuperSelect.
+        try {
+          const { getChallengeActions, verifyChallengeStatus, extractActionIds: _extractIds } = await import('./challengeActionCreate.js');
+          const pd = await loadPlayerData();
+          const isAdmin = hasAdminPermissions(context.member);
+          for (const ch of Object.values(pd[context.guildId]?.challenges || {})) {
+            const actions = getChallengeActions(ch);
+            const nonHostIds = [
+              ..._extractIds(actions.playerAll),
+              ...Object.values(actions.playerIndividual).flatMap(v => _extractIds(v)),
+              ...Object.values(actions.tribe).flatMap(v => _extractIds(v)),
+            ];
+            if (nonHostIds.includes(selectedValue)) {
+              const statusCheck = verifyChallengeStatus(ch, isAdmin);
+              if (!statusCheck.allowed) {
+                console.log(`🔒 Challenge status gate blocked (player menu): ${selectedValue} — ${statusCheck.reason}`);
+                return { content: statusCheck.reason, ephemeral: true };
+              }
+              break;
+            }
+          }
+        } catch (e) { console.error('Status gate check failed:', e.message); }
+
         const interactionData = { token: context.token, applicationId: context.applicationId, client: context.client, member: context.member, channelName: context.channelName, user: context.member?.user || { id: context.userId }, channel: { name: context.channelName } };
         let result = await executeButtonActions(context.guildId, selectedValue, context.userId, interactionData, context.client);
 

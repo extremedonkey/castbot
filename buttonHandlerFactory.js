@@ -208,6 +208,22 @@ export const BUTTON_REGISTRY = {
     parent: 'challenge_screen',
     category: 'challenges'
   },
+  'challenge_status_*': {
+    label: 'Challenge Status',
+    description: 'Show the status picker (testing/active/paused) in-place',
+    emoji: '✏️',
+    style: 'Secondary',
+    parent: 'challenge_screen',
+    category: 'challenges'
+  },
+  'challenge_status_select_*': {
+    label: 'Challenge Status Select',
+    description: 'Commit a status change and return to challenge detail',
+    emoji: '✏️',
+    style: 'String Select',
+    parent: 'challenge_status',
+    category: 'challenges'
+  },
   // === CHALLENGE LIBRARY ===
   'library_home': {
     label: 'Challenge Library',

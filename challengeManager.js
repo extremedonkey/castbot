@@ -15,6 +15,83 @@ import { resolveEmoji } from './utils/emojiUtils.js';
 const DEFAULT_ACCENT = 0x5865F2; // Discord blurple
 
 // ─────────────────────────────────────────────
+// Status constants & helpers
+// ─────────────────────────────────────────────
+
+export const CHALLENGE_STATUS_VALUES = ['testing', 'active', 'paused'];
+const PAUSE_HISTORY_CAP = 100;
+
+/**
+ * Dynamic button config for the Challenge Status button.
+ * Legacy challenges (no field set) lazy-default to 'active'.
+ */
+export function getStatusButtonConfig(status) {
+  const s = status || 'active';
+  if (s === 'testing') return { label: 'Testing', emoji: '🧪', style: 2 };   // Secondary
+  if (s === 'paused')  return { label: 'Paused',  emoji: '⏯️', style: 4 };   // Danger
+  return { label: 'Active', emoji: '🏁', style: 3 };                          // Success
+}
+
+/**
+ * Apply a status transition to a challenge object. Mutates in place; caller saves.
+ *
+ *  - →active:  set startedAt if null; if from paused, patch last pauseHistory + clear pauseOrStoppedAt
+ *  - →paused:  set pauseOrStoppedAt; push new pauseHistory entry (capped at 100)
+ *  - →testing: if from paused, patch last pauseHistory + clear pauseOrStoppedAt
+ *
+ * Invariant: pauseOrStoppedAt === null iff status !== 'paused'.
+ *
+ * @param {object} challenge
+ * @param {'testing'|'active'|'paused'} newStatus
+ * @returns {boolean} true if mutated, false if no-op
+ */
+export function updateChallengeStatus(challenge, newStatus) {
+  if (!CHALLENGE_STATUS_VALUES.includes(newStatus)) {
+    throw new Error(`updateChallengeStatus: invalid status "${newStatus}"`);
+  }
+  const oldStatus = challenge.status || 'active';
+  if (oldStatus === newStatus) return false;
+
+  const now = Date.now();
+
+  if (challenge.startedAt === undefined) challenge.startedAt = null;
+  if (challenge.pauseOrStoppedAt === undefined) challenge.pauseOrStoppedAt = null;
+  if (challenge.completedAt === undefined) challenge.completedAt = null;
+  if (!Array.isArray(challenge.pauseHistory)) challenge.pauseHistory = [];
+
+  if (newStatus === 'active') {
+    if (challenge.startedAt == null) challenge.startedAt = now;
+    if (oldStatus === 'paused') {
+      const last = challenge.pauseHistory[challenge.pauseHistory.length - 1];
+      if (last && last.resumedAt == null) {
+        last.resumedAt = now;
+        last.durationMs = now - (last.pausedAt || now);
+      }
+      challenge.pauseOrStoppedAt = null;
+    }
+  } else if (newStatus === 'paused') {
+    challenge.pauseOrStoppedAt = now;
+    challenge.pauseHistory.push({ pausedAt: now, resumedAt: null, durationMs: null });
+    if (challenge.pauseHistory.length > PAUSE_HISTORY_CAP) {
+      challenge.pauseHistory = challenge.pauseHistory.slice(-PAUSE_HISTORY_CAP);
+    }
+  } else if (newStatus === 'testing') {
+    if (oldStatus === 'paused') {
+      const last = challenge.pauseHistory[challenge.pauseHistory.length - 1];
+      if (last && last.resumedAt == null) {
+        last.resumedAt = now;
+        last.durationMs = now - (last.pausedAt || now);
+      }
+      challenge.pauseOrStoppedAt = null;
+    }
+  }
+
+  challenge.status = newStatus;
+  challenge.lastUpdated = now;
+  return true;
+}
+
+// ─────────────────────────────────────────────
 // CRUD Operations
 // ─────────────────────────────────────────────
 
@@ -39,12 +116,17 @@ export async function createChallenge(guildId, userId, data) {
     runningHost: data.runningHost || null,
     seasonId: data.seasonId || null,
     actionIds: [],
+    status: 'testing',
+    startedAt: null,
+    pauseOrStoppedAt: null,
+    completedAt: null,
+    pauseHistory: [],
     createdAt: Date.now(),
     lastUpdated: Date.now(),
   };
 
   await savePlayerData(playerData);
-  console.log(`🏃 Challenge: Created "${data.title}" (${challengeId})`);
+  console.log(`🏃 Challenge: Created "${data.title}" (${challengeId}) — status: testing`);
   return challengeId;
 }
 
@@ -177,9 +259,22 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null, 
     }]},
   ];
 
-  // If a challenge is selected, show its preview
+  // If a challenge is selected, show action row first, THEN preview below
   if (selectedChallengeId && challenges[selectedChallengeId]) {
     const ch = challenges[selectedChallengeId];
+
+    // Action buttons — moved above the preview (primary controls first)
+    const statusCfg = getStatusButtonConfig(ch.status);
+    components.push(
+      { type: 1, components: [
+        { type: 2, custom_id: `challenge_edit_${selectedChallengeId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
+        { type: 2, custom_id: `challenge_round_${selectedChallengeId}`, label: 'Round', style: 2, emoji: { name: '🔥' } },
+        { type: 2, custom_id: `challenge_status_${selectedChallengeId}`, label: statusCfg.label, style: statusCfg.style, emoji: { name: statusCfg.emoji } },
+        { type: 2, custom_id: `challenge_post_${selectedChallengeId}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
+        { type: 2, custom_id: `challenge_delete_${selectedChallengeId}`, label: 'Delete', style: 4, emoji: { name: '🗑️' } },
+      ]}
+    );
+
     components.push({ type: 14 });
 
     // RichCard preview
@@ -196,17 +291,6 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null, 
         components.push({ type: 12, items: [{ media: { url: ch.image }, description: ch.title || 'Challenge' }] });
       } catch { /* invalid URL, skip */ }
     }
-
-    // Action buttons (⚡ Actions button replaced by inline select below)
-    components.push(
-      { type: 14 },
-      { type: 1, components: [
-        { type: 2, custom_id: `challenge_edit_${selectedChallengeId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
-        { type: 2, custom_id: `challenge_round_${selectedChallengeId}`, label: 'Round', style: 2, emoji: { name: '🔥' } },
-        { type: 2, custom_id: `challenge_post_${selectedChallengeId}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
-        { type: 2, custom_id: `challenge_delete_${selectedChallengeId}`, label: 'Delete', style: 4, emoji: { name: '🗑️' } },
-      ]}
-    );
 
     // Challenge Actions select (inline, replaces old ⚡ Actions button)
     const { buildChallengeActionSelect } = await import('./challengeActionCreate.js');
@@ -238,6 +322,51 @@ export async function buildChallengeScreen(guildId, selectedChallengeId = null, 
   countComponents([container], { verbosity: "full", label: "Challenges" });
 
   return { components: [container] };
+}
+
+/**
+ * Build the Challenge Status picker screen (uses reusable StatusSelector).
+ * Shown when host clicks the dynamic status button on the challenge detail screen.
+ */
+export async function buildChallengeStatusScreen(guildId, challengeId) {
+  const { buildStatusSelector } = await import('./src/ui/statusSelector.js');
+  const playerData = await loadPlayerData();
+  const challenge = playerData[guildId]?.challenges?.[challengeId];
+  if (!challenge) {
+    return { components: [{ type: 17, components: [{ type: 10, content: '❌ Challenge not found' }] }] };
+  }
+
+  const chalTitle = (challenge.title || 'Untitled').substring(0, 60);
+
+  return buildStatusSelector({
+    customId: `challenge_status_select_${challengeId}`,
+    title: `## ✏️ Challenge Status — ${chalTitle}`,
+    description: '-# Change who can see and use this challenge.',
+    accentColor: challenge.accentColor || DEFAULT_ACCENT,
+    currentValue: challenge.status || 'active',
+    placeholder: 'Pick a status...',
+    options: [
+      {
+        value: 'testing',
+        label: 'Testing / Soft Launch',
+        emoji: '🧪',
+        description: 'Only Production can see / use challenge actions.',
+      },
+      {
+        value: 'active',
+        label: 'Start Challenge (Enable Actions)',
+        emoji: '🏁',
+        description: 'Players will see challenge actions in /menu, if configured.',
+      },
+      {
+        value: 'paused',
+        label: 'Stop / Pause Challenge',
+        emoji: '⏯️',
+        description: 'Players will no longer be able to see / use challenge actions.',
+      },
+    ],
+    backButton: { customId: `challenge_select_nav_${challengeId}`, label: '← Back' },
+  });
 }
 
 /**
@@ -475,6 +604,11 @@ export async function importChallenge(guildId, userId, templateId) {
     creationHost: userId,
     runningHost: null,
     seasonId: null,
+    status: 'testing',
+    startedAt: null,
+    pauseOrStoppedAt: null,
+    completedAt: null,
+    pauseHistory: [],
     createdAt: Date.now(),
     lastUpdated: Date.now(),
     importedFrom: {

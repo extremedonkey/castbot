@@ -55,7 +55,7 @@ export const normalizeAssignment = extractActionIds;
 export const CATEGORY_TYPES = {
   playerAll:        { label: 'Player Action — All',      emoji: '⚡', description: 'Same command for all players (e.g., jigsaw link)' },
   playerIndividual: { label: 'Individual Player Action', emoji: '👤', description: 'Unique command per player (e.g., private sheet)' },
-  tribe:            { label: 'Tribe Challenge Action',    emoji: '🏰', description: 'Unique command per tribe (e.g., tribe attack)' },
+  tribe:            { label: 'Tribe Challenge Action',    emoji: '🏰', description: 'Unique command per tribe (e.g., tribe attack). Set prod role below if testing.' },
   host:             { label: 'Host Challenge Action',     emoji: '🔧', description: 'Automation for hosts beyond challenge text' },
 };
 
@@ -662,6 +662,37 @@ export async function getChallengeActionSummary(guildId, challengeId) {
     host: { count: actions.host.length, ids: actions.host },
     total: actions.playerAll.length + indCount + triCount + actions.host.length,
   };
+}
+
+// ─────────────────────────────────────────────
+// Exported: Security — Status gate (sync)
+// ─────────────────────────────────────────────
+
+/**
+ * Gate an action by challenge status BEFORE the per-category access check.
+ * Status rules:
+ *   - paused  → hidden for everyone (including admins)
+ *   - testing → hidden unless viewer is admin
+ *   - active  → visible; per-category rules apply separately
+ * Legacy challenges with no status field lazy-default to 'active'.
+ *
+ * Host actions are filtered out by the per-category rule in
+ * verifyChallengeActionAccess and aren't exposed in the player menu — the
+ * caller should not bother calling this for host actions.
+ *
+ * @param {object} challenge
+ * @param {boolean} isAdmin - result of hasAdminPermissions(member)
+ * @returns {{ allowed: boolean, reason?: string }}
+ */
+export function verifyChallengeStatus(challenge, isAdmin) {
+  const status = challenge?.status || 'active';
+  if (status === 'paused') {
+    return { allowed: false, reason: '⏯️ This challenge is currently paused.' };
+  }
+  if (status === 'testing' && !isAdmin) {
+    return { allowed: false, reason: '🧪 This challenge is in testing mode — not yet available to players.' };
+  }
+  return { allowed: true };
 }
 
 // ─────────────────────────────────────────────
