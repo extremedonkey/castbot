@@ -129,7 +129,21 @@ function getCastlists(guildData, seasonId) {
   return out;
 }
 
-function getTribes(guildData, castlist) {
+/**
+ * Resolve a friendly tribe name. CastBot's stored `tribe.name` is sometimes the literal
+ * placeholder "Tribe <roleId>" — fall back to the live Discord role name in that case.
+ */
+function resolveTribeName(client, guildId, roleId, t) {
+  // Live role name beats anything stored
+  const role = client?.guilds?.cache?.get(guildId)?.roles?.cache?.get(roleId);
+  if (role?.name) return role.name;
+  // Then friendly stored fields
+  if (t.displayName) return t.displayName;
+  if (t.name && !/^Tribe \d{15,}$/.test(t.name)) return t.name;  // reject placeholder
+  return `Tribe ${roleId.slice(-4)}`;
+}
+
+function getTribes(guildData, castlist, { client, guildId } = {}) {
   const tribes = guildData?.tribes || {};
   const out = [];
   for (const [roleId, t] of Object.entries(tribes)) {
@@ -139,7 +153,7 @@ function getTribes(guildData, castlist) {
     if (inIds || inLegacy) {
       out.push({
         id: roleId,
-        name: t.displayName || t.name || `Tribe ${roleId.slice(-4)}`,
+        name: resolveTribeName(client, guildId, roleId, t),
         emoji: t.emoji || '🏕️',
         color: t.color,
         memberCount: t.memberCount || 0,
@@ -178,6 +192,32 @@ function getGamePhases(guildData, seasonId) {
       fNumber: r.fNumber,
     });
   }
+  return out;
+}
+
+/**
+ * Resolve actual Discord role members for a tribe (since a tribe IS a Discord role).
+ * Pulls from the Discord.js cache — no network fetch (mockup keeps it fast).
+ *
+ * Returns null if the client isn't passed in (degraded mode), [] if the role
+ * exists but has no cached members, or a non-empty array of member descriptors.
+ */
+function getTribeRoleMembers(client, guildId, roleId) {
+  if (!client?.guilds?.cache) return null;
+  const guild = client.guilds.cache.get(guildId);
+  if (!guild) return null;
+  const role = guild.roles.cache.get(roleId);
+  if (!role) return [];
+  const out = [];
+  for (const m of role.members.values()) {
+    out.push({
+      userId: m.id,
+      displayName: m.displayName || m.user?.globalName || m.user?.username || m.id,
+      isBot: !!m.user?.bot,
+    });
+  }
+  // Sort: humans before bots, then alphabetical
+  out.sort((a, b) => (Number(a.isBot) - Number(b.isBot)) || a.displayName.localeCompare(b.displayName));
   return out;
 }
 
@@ -231,8 +271,11 @@ function safeEmoji(raw, fallback) {
 
 /**
  * Build the prototype view from the user's current navigation state.
+ * @param {string} guildId
+ * @param {string} userId
+ * @param {import('discord.js').Client} [client] - optional; required for live tribe-member resolution
  */
-export async function buildTribePlannerView(guildId, userId) {
+export async function buildTribePlannerView(guildId, userId, client = null) {
   const playerData = await loadPlayerData();
   const guildData = playerData?.[guildId] || {};
   const state = getState(userId);
@@ -249,7 +292,7 @@ export async function buildTribePlannerView(guildId, userId) {
   const phase = state.phaseId ? phases.find(p => p.id === state.phaseId) || null : null;
   if (state.phaseId && !phase) { state.phaseId = state.tribeId = null; }
 
-  const tribes = castlist ? getTribes(guildData, castlist) : [];
+  const tribes = castlist ? getTribes(guildData, castlist, { client, guildId }) : [];
   const tribe = state.tribeId ? tribes.find(t => t.id === state.tribeId) || null : null;
   if (state.tribeId && !tribe) { state.tribeId = null; }
 
@@ -291,7 +334,7 @@ export async function buildTribePlannerView(guildId, userId) {
   // ── Hierarchy select (only when a season is picked) ──
   let hierarchyBlock = null;
   if (season) {
-    const opts = buildHierarchyOptions({ season, castlists, castlist, phases, phase, tribes, tribe, guildData, state });
+    const opts = buildHierarchyOptions({ season, castlists, castlist, phases, phase, tribes, tribe, guildData, state, client, guildId });
     hierarchyBlock = {
       type: 1,
       components: [{
@@ -383,7 +426,7 @@ function hierarchyPlaceholder({ castlist, phase, tribe, state }) {
 
 function hierarchyHelp({ castlist, phase, tribe, state }) {
   if (state?.castRankingView) return `-# Full **Cast Ranking** pool for the season. Sorted: cast → tentative → pending → reject, then by avg score.`;
-  if (tribe) return `-# Players (cast applicants) for **${tribe.name}**. Tribe → applicant assignment logic doesn't exist yet — these are all **cast** applicants for the season.`;
+  if (tribe) return `-# Live members of the **${tribe.name}** Discord role. Glue logic to cross-reference with Cast Ranking is TBD.`;
   if (phase) return `-# At Phase level you have two sibling drilldowns: 🏆 **Cast Ranking** (the full applicant pool) and 🏕️ **Tribes** (containers). Both lead to depth 4.`;
   if (castlist) return `-# Showing **game phase** rounds only (marooning, swap, merge, FTC, reunion). Standard challenge rounds are hidden.`;
   return `-# Pick a castlist to start. Default is always available.`;
@@ -404,7 +447,7 @@ function hierarchyHelp({ castlist, phase, tribe, state }) {
  *
  * Option value namespace: `up` | `cl:<id>` | `ph:<id>` | `tr:<id>` | `cr:open` | `noop`
  */
-function buildHierarchyOptions({ season, castlists, castlist, phases, phase, tribes, tribe, guildData, state }) {
+function buildHierarchyOptions({ season, castlists, castlist, phases, phase, tribes, tribe, guildData, state, client, guildId }) {
   const opts = [];
 
   // Depth 1 → showing castlists (no castlist picked yet)
@@ -491,39 +534,51 @@ function buildHierarchyOptions({ season, castlists, castlist, phases, phase, tri
       return opts;
     }
     for (const t of tribes.slice(0, 23)) {  // 25 - 1 (up) - 1 (cast ranking) = 23 tribe slots
+      // Prefer LIVE Discord role member count over the cached field — that's the truth
+      const liveMembers = getTribeRoleMembers(client, guildId, t.id);
+      const count = Array.isArray(liveMembers) ? liveMembers.length : (t.memberCount || 0);
+      const liveTag = Array.isArray(liveMembers) ? '' : ' cached';
       opts.push({
         label: trunc(`${IND}${t.name}`, 95),
         value: `tr:${t.id}`,
-        description: trunc(`${t.memberCount || 0} members ${DOT} ${t.color || 'no color'}`, 95),
+        description: trunc(`${count} member${count === 1 ? '' : 's'}${liveTag} ${DOT} ${t.color || 'no color'}`, 95),
         emoji: { name: safeEmoji(t.emoji, '🏕️') },
       });
     }
     return opts;
   }
 
-  // Depth 4 (tribe picked) → show CAST applicants as the assignment pool placeholder
+  // Depth 4 (tribe picked) → show actual Discord role members.
+  // Tribe IS a Discord role; members IS role.members. Anything else is a stale abstraction.
   opts.push({
     label: '↑ Back to Phase Contents', value: 'up', emoji: { name: '⬆️' },
     description: `Currently in ${phase.label} ${DOT} ${tribe.name}`,
   });
-  const castApplicants = getCastRankedApplicants(guildData, state.configId)
-    .filter(a => a.castingStatus === 'cast').slice(0, 24);
-  if (castApplicants.length === 0) {
+  const members = getTribeRoleMembers(client, guildId, tribe.id);
+  if (members === null) {
     opts.push({
-      label: '(No cast applicants yet — assign via Cast Ranking)',
+      label: '(Discord client unavailable — can\'t resolve members)',
       value: 'noop',
-      description: 'Tribe ↔ player assignment glue logic is TBD',
+      description: 'Mockup limitation: client wasn\'t threaded through this code path',
+      emoji: { name: '⚠️' },
+    });
+    return opts;
+  }
+  if (members.length === 0) {
+    opts.push({
+      label: '(No members in this Discord role)',
+      value: 'noop',
+      description: 'Either no one has the role, or the cache is cold (try a real /castlist first)',
       emoji: { name: '🚧' },
     });
     return opts;
   }
-  for (const a of castApplicants) {
-    const score = a.avgScore != null ? `★ ${a.avgScore.toFixed(1)}` : 'unranked';
+  for (const m of members.slice(0, 24)) {
     opts.push({
-      label: trunc(`${IND}${a.displayName}`, 95),
-      value: `pl:${a.userId}`,
-      description: trunc(`CAST ${DOT} ${score} ${DOT} TBD: assign to ${tribe.name}`, 95),
-      emoji: { name: '✅' },
+      label: trunc(`${IND}${m.displayName}`, 95),
+      value: `pl:${m.userId}`,
+      description: trunc(`Discord role member ${m.isBot ? '(bot)' : ''} ${DOT} TBD: cross-reference with Cast Ranking`, 95),
+      emoji: { name: m.isBot ? '🤖' : '👤' },
     });
   }
   return opts;
@@ -542,7 +597,7 @@ function buildHierarchyOptions({ season, castlists, castlist, phases, phase, tri
  * @returns {Object} { components: [container] } | { components, _ephemeralRedirect: true }
  */
 export async function processTribePlannerView(context) {
-  const { guildId, userId, customId, values } = context;
+  const { guildId, userId, customId, values, client } = context;
   const v = Array.isArray(values) ? values[0] : undefined;
 
   if (customId === 'tribeplan_open') {
@@ -575,7 +630,7 @@ export async function processTribePlannerView(context) {
     }
   }
 
-  return buildTribePlannerView(guildId, userId);
+  return buildTribePlannerView(guildId, userId, client);
 }
 
 /**

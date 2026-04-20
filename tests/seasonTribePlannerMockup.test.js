@@ -86,6 +86,41 @@ function describeAction(action, state) {
   }
 }
 
+// Inline replica of resolveTribeName for testing the placeholder-rejection logic.
+function resolveTribeName(client, guildId, roleId, t) {
+  const role = client?.guilds?.cache?.get(guildId)?.roles?.cache?.get(roleId);
+  if (role?.name) return role.name;
+  if (t.displayName) return t.displayName;
+  if (t.name && !/^Tribe \d{15,}$/.test(t.name)) return t.name;
+  return `Tribe ${roleId.slice(-4)}`;
+}
+
+describe('resolveTribeName — prefer live Discord role name, reject stored placeholder', () => {
+  const guildId = 'g1';
+  const roleId = '1368969395795398716';
+
+  it('uses live role.name when client has it cached (truth source)', () => {
+    const client = { guilds: { cache: new Map([[guildId, { roles: { cache: new Map([[roleId, { name: '🌋 Moai Tribe' }]]) } }]]) } };
+    assert.equal(resolveTribeName(client, guildId, roleId, { name: 'Tribe 1368969395795398716' }), '🌋 Moai Tribe');
+  });
+
+  it('falls back to displayName when no client', () => {
+    assert.equal(resolveTribeName(null, guildId, roleId, { displayName: 'Aitu', name: 'whatever' }), 'Aitu');
+  });
+
+  it('rejects stored placeholder "Tribe <15+ digits>" — that\'s the bug we hit', () => {
+    assert.equal(resolveTribeName(null, guildId, roleId, { name: 'Tribe 1368969395795398716' }), 'Tribe 8716');
+  });
+
+  it('keeps friendly stored name (not the placeholder pattern)', () => {
+    assert.equal(resolveTribeName(null, guildId, roleId, { name: 'Aitu' }), 'Aitu');
+  });
+
+  it('final fallback uses last-4 of roleId', () => {
+    assert.equal(resolveTribeName(null, guildId, roleId, {}), 'Tribe 8716');
+  });
+});
+
 // ─────────────────────────────────────────────
 // safeEmoji — guards Discord COMPONENT_INVALID_EMOJI
 // ─────────────────────────────────────────────
