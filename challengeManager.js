@@ -345,10 +345,12 @@ export async function buildChallengeStatusScreen(guildId, challengeId) {
   return buildStatusSelector({
     customId: `challenge_status_select::${challengeId}`,
     title: `## ✏️ Challenge Status — ${chalTitle}`,
-    description: '-# Change who can see and use this challenge.',
+    description: 'Change who can see and use this challenge.',
     accentColor: challenge.accentColor || DEFAULT_ACCENT,
     currentValue: challenge.status || 'active',
     placeholder: 'Pick a status...',
+    showCurrentStateBadge: true,
+    currentStateLabel: 'Current Status',
     options: [
       {
         value: 'testing',

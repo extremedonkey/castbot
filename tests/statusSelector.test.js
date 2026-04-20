@@ -106,6 +106,96 @@ describe('StatusSelector — validation', () => {
   });
 });
 
+describe('StatusSelector — current state badge', () => {
+  const base = {
+    customId: 'x',
+    title: '## ✏️ Pick one',
+    options: [
+      { value: 'testing', label: 'Testing', emoji: '🧪' },
+      { value: 'active',  label: 'Active',  emoji: '🏁' },
+      { value: 'paused',  label: 'Paused',  emoji: '⏯️' },
+    ],
+    backButton: { customId: 'back' },
+  };
+
+  it('omitted when showCurrentStateBadge is false (default)', () => {
+    const out = buildStatusSelector({ ...base, currentValue: 'testing' });
+    const inner = out.components[0].components;
+    // inner[0]=title, inner[1]=separator, inner[2]=actionrow(select)
+    assert.equal(inner[1].type, 14, 'separator should come directly after title');
+  });
+
+  it('renders large emoji + code-block heading between description and separator', () => {
+    const out = buildStatusSelector({
+      ...base,
+      description: 'Change who can see this.',
+      currentValue: 'testing',
+      showCurrentStateBadge: true,
+    });
+    const inner = out.components[0].components;
+    // title, description, badge-emoji, badge-label, separator, select, separator, back
+    assert.equal(inner[0].type, 10); // title
+    assert.equal(inner[1].type, 10); // description
+    assert.equal(inner[2].type, 10); // badge emoji (# heading)
+    assert.ok(inner[2].content.includes('🧪'), 'badge emoji should be from the matching option');
+    assert.ok(inner[2].content.startsWith('# '), 'badge emoji should be rendered as H1 for prominence');
+    assert.equal(inner[3].type, 10); // badge label
+    assert.ok(inner[3].content.includes('```Current Status```'), 'badge label wraps text in backticks');
+    assert.equal(inner[4].type, 14); // separator
+    assert.equal(inner[5].type, 1);  // action row with select
+  });
+
+  it('reflects the matching option emoji when currentValue changes', () => {
+    const out = buildStatusSelector({
+      ...base,
+      currentValue: 'active',
+      showCurrentStateBadge: true,
+    });
+    const inner = out.components[0].components;
+    const badgeEmoji = inner.find(c => c.type === 10 && c.content.startsWith('# '));
+    assert.ok(badgeEmoji.content.includes('🏁'), 'active → 🏁');
+  });
+
+  it('uses custom currentStateLabel when provided', () => {
+    const out = buildStatusSelector({
+      ...base,
+      currentValue: 'testing',
+      showCurrentStateBadge: true,
+      currentStateLabel: 'Right Now',
+    });
+    const inner = out.components[0].components;
+    const badgeLabel = inner.find(c => c.type === 10 && c.content.includes('```'));
+    assert.ok(badgeLabel.content.includes('```Right Now```'));
+  });
+
+  it('badge not rendered when currentValue does not match any option', () => {
+    const out = buildStatusSelector({
+      ...base,
+      currentValue: 'nonexistent',
+      showCurrentStateBadge: true,
+    });
+    const inner = out.components[0].components;
+    // Only title, separator, actionrow(select), separator, actionrow(back) — no badge
+    const badgeEmoji = inner.find(c => c.type === 10 && c.content.startsWith('# '));
+    assert.equal(badgeEmoji, undefined);
+  });
+
+  it('badge not rendered when matching option has no emoji', () => {
+    const out = buildStatusSelector({
+      ...base,
+      options: [
+        { value: 'plain', label: 'Plain' },
+        { value: 'other', label: 'Other' },
+      ],
+      currentValue: 'plain',
+      showCurrentStateBadge: true,
+    });
+    const inner = out.components[0].components;
+    const badgeEmoji = inner.find(c => c.type === 10 && c.content.startsWith('# '));
+    assert.equal(badgeEmoji, undefined);
+  });
+});
+
 describe('StatusSelector — accent color', () => {
   it('uses provided accent', () => {
     const out = buildStatusSelector({

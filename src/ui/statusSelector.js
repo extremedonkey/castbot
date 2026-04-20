@@ -33,6 +33,11 @@ const DEFAULT_ACCENT = 0x5865F2;
  * @param {StatusOption[]} opts.options - 2-25 options
  * @param {string} [opts.placeholder] - Select placeholder text
  * @param {Object} opts.backButton - { customId, label } — Secondary back button
+ * @param {boolean} [opts.showCurrentStateBadge=false] - Render a prominent "current state" block
+ *        (large emoji from the matching option + a code-block heading) between the description
+ *        and the select. Useful when the currently-set value needs to be obvious at a glance.
+ * @param {string} [opts.currentStateLabel='Current Status'] - Text shown inside the code-block
+ *        heading when `showCurrentStateBadge` is true.
  * @returns {{ components: [{ type: 17, accent_color: number, components: object[] }] }}
  */
 export function buildStatusSelector({
@@ -44,6 +49,8 @@ export function buildStatusSelector({
   options,
   placeholder = 'Select a status...',
   backButton,
+  showCurrentStateBadge = false,
+  currentStateLabel = 'Current Status',
 }) {
   if (!Array.isArray(options) || options.length < 2 || options.length > 25) {
     throw new Error(`StatusSelector: options must be 2-25 entries (got ${options?.length})`);
@@ -59,9 +66,19 @@ export function buildStatusSelector({
     ...(opt.value === currentValue ? { default: true } : {}),
   }));
 
+  // Current-state badge: large emoji of the currently-selected option + a code-block heading.
+  // Renders between the description and the first separator. Only when explicitly opted in
+  // AND there's a matching option with an emoji.
+  const currentOption = options.find(o => o.value === currentValue);
+  const showBadge = showCurrentStateBadge && currentOption?.emoji;
+
   const components = [
     { type: 10, content: title },
     ...(description ? [{ type: 10, content: description }] : []),
+    ...(showBadge ? [
+      { type: 10, content: `# ${currentOption.emoji}` },
+      { type: 10, content: `### \`\`\`${currentStateLabel}\`\`\`` },
+    ] : []),
     { type: 14 },
     { type: 1, components: [{
       type: 3,
