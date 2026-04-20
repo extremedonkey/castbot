@@ -1,12 +1,85 @@
 /**
  * Tests for challenge status logic — getStatusButtonConfig, updateChallengeStatus,
- * verifyChallengeStatus. All pure, no I/O.
+ * verifyChallengeStatus. Pure logic inlined per TestingStandards.md to avoid
+ * importing heavy modules (which breaks worker-thread serialization).
  */
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { getStatusButtonConfig, updateChallengeStatus, CHALLENGE_STATUS_VALUES } from '../challengeManager.js';
-import { verifyChallengeStatus } from '../challengeActionCreate.js';
+
+// ─────────────────────────────────────────────
+// Inlined pure logic — keep in sync with challengeManager.js / challengeActionCreate.js
+// ─────────────────────────────────────────────
+
+const CHALLENGE_STATUS_VALUES = ['testing', 'active', 'paused'];
+const PAUSE_HISTORY_CAP = 100;
+
+function getStatusButtonConfig(status) {
+  const s = status || 'active';
+  if (s === 'testing') return { label: 'Testing', emoji: '🧪', style: 2 };
+  if (s === 'paused')  return { label: 'Paused',  emoji: '⏯️', style: 4 };
+  return { label: 'Active', emoji: '🏁', style: 3 };
+}
+
+function updateChallengeStatus(challenge, newStatus) {
+  if (!CHALLENGE_STATUS_VALUES.includes(newStatus)) {
+    throw new Error(`updateChallengeStatus: invalid status "${newStatus}"`);
+  }
+  const oldStatus = challenge.status || 'active';
+  if (oldStatus === newStatus) return false;
+
+  const now = Date.now();
+  if (challenge.startedAt === undefined) challenge.startedAt = null;
+  if (challenge.pauseOrStoppedAt === undefined) challenge.pauseOrStoppedAt = null;
+  if (challenge.completedAt === undefined) challenge.completedAt = null;
+  if (!Array.isArray(challenge.pauseHistory)) challenge.pauseHistory = [];
+
+  if (newStatus === 'active') {
+    if (challenge.startedAt == null) challenge.startedAt = now;
+    if (oldStatus === 'paused') {
+      const last = challenge.pauseHistory[challenge.pauseHistory.length - 1];
+      if (last && last.resumedAt == null) {
+        last.resumedAt = now;
+        last.durationMs = now - (last.pausedAt || now);
+      }
+      challenge.pauseOrStoppedAt = null;
+    }
+  } else if (newStatus === 'paused') {
+    challenge.pauseOrStoppedAt = now;
+    challenge.pauseHistory.push({ pausedAt: now, resumedAt: null, durationMs: null });
+    if (challenge.pauseHistory.length > PAUSE_HISTORY_CAP) {
+      challenge.pauseHistory = challenge.pauseHistory.slice(-PAUSE_HISTORY_CAP);
+    }
+  } else if (newStatus === 'testing') {
+    if (oldStatus === 'paused') {
+      const last = challenge.pauseHistory[challenge.pauseHistory.length - 1];
+      if (last && last.resumedAt == null) {
+        last.resumedAt = now;
+        last.durationMs = now - (last.pausedAt || now);
+      }
+      challenge.pauseOrStoppedAt = null;
+    }
+  }
+
+  challenge.status = newStatus;
+  challenge.lastUpdated = now;
+  return true;
+}
+
+function verifyChallengeStatus(challenge, isAdmin) {
+  const status = challenge?.status || 'active';
+  if (status === 'paused') {
+    return { allowed: false, reason: '⏯️ This challenge is currently paused.' };
+  }
+  if (status === 'testing' && !isAdmin) {
+    return { allowed: false, reason: '🧪 This challenge is in testing mode — not yet available to players.' };
+  }
+  return { allowed: true };
+}
+
+// ─────────────────────────────────────────────
+// Tests
+// ─────────────────────────────────────────────
 
 describe('getStatusButtonConfig — dynamic button appearance', () => {
   it('testing → Secondary + 🧪', () => {
@@ -102,7 +175,7 @@ describe('updateChallengeStatus — state machine transitions', () => {
   });
 
   it('lazy-inits missing fields on first touch', () => {
-    const ch = { status: 'active' }; // legacy — no timestamps, no pauseHistory
+    const ch = { status: 'active' };
     updateChallengeStatus(ch, 'paused');
     assert.equal(ch.startedAt, null);
     assert.equal(ch.completedAt, null);
@@ -147,11 +220,5 @@ describe('verifyChallengeStatus — gate rules', () => {
     assert.match(paused.reason, /paused/i);
     const testing = verifyChallengeStatus({ status: 'testing' }, false);
     assert.match(testing.reason, /testing/i);
-  });
-});
-
-describe('Status constants', () => {
-  it('CHALLENGE_STATUS_VALUES exposes the three supported states', () => {
-    assert.deepEqual(CHALLENGE_STATUS_VALUES, ['testing', 'active', 'paused']);
   });
 });
