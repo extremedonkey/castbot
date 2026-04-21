@@ -6,6 +6,8 @@
  * container that renders them as a rich card preview.
  */
 
+import { expandBotEmojis } from './botEmojis.js';
+
 // ---------------------------------------------------------------------------
 // Color parsing (consolidates 5+ copies across the codebase)
 // ---------------------------------------------------------------------------
@@ -224,11 +226,11 @@ export function buildRichCardContainer({ title, content, color, image, extraComp
   const components = [];
 
   if (title) {
-    components.push({ type: 10, content: `# ${title}` });
+    components.push({ type: 10, content: expandBotEmojis(`# ${title}`) });
   }
 
   if (content) {
-    components.push({ type: 10, content });
+    components.push({ type: 10, content: expandBotEmojis(content) });
   }
 
   if (image && image.trim()) {
