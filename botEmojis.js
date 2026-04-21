@@ -55,6 +55,12 @@ const BOT_EMOJIS = {
   cb_transparent: {
     dev: '1487709952662573091',   // CastBot-Dev transparent icon
     prod: '1487709751834837103'    // CastBot production transparent icon
+  },
+
+  // CastBot blue icon
+  cb_blue: {
+    dev: '1495983773379199056',   // CastBot-Dev blue icon
+    prod: '1492393976324685954'    // CastBot production blue icon
   }
 
   // Add more bot emojis here as needed
@@ -123,9 +129,34 @@ export function getBotEmojiNames() {
 export function formatBotEmoji(emojiName, guildId = null) {
   const emojiId = getBotEmojiId(emojiName, guildId);
   if (!emojiId) return '';
-  
+
   // Application emojis don't need the name part, but we'll include it for clarity
   return `<:${emojiName}:${emojiId}>`;
+}
+
+/**
+ * Expand bot-emoji shorthand `<:name>` in a string to full `<:name:id>`.
+ *
+ * Usage in Text Display (type 10) content:
+ *   content: expandBotEmojis('Click the <:cb_blue> button')
+ *
+ * - Unknown names pass through unchanged (Discord renders them as plain text).
+ * - Real full emoji codes `<:name:id>` are not matched (require the `:id>` suffix).
+ * - Registry entries with `animated: true` emit `<a:name:id>`.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export function expandBotEmojis(text) {
+  if (!text || typeof text !== 'string') return text;
+  return text.replace(/<:(\w+)>/g, (full, name) => {
+    const entry = BOT_EMOJIS[name];
+    if (!entry) return full;
+    const id = isProduction ? entry.prod : entry.dev;
+    if (!id) return full;
+    const marker = entry.animated ? 'a' : '';
+    return `<${marker}:${name}:${id}>`;
+  });
 }
 
 // Export the registry for direct access if needed
