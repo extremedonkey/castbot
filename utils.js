@@ -26,9 +26,9 @@ export async function DiscordRequest(endpoint, options, context = null) {
     const error = await res.text();
     
     // Graceful handling for webhook errors (Discord interaction token expiry/invalid)
-    if (error.includes('Unknown Webhook') || 
+    if (error.includes('Unknown Webhook') ||
         error.includes('Invalid Webhook Token') ||
-        error.includes('"code": 10015') || 
+        error.includes('"code": 10015') ||
         error.includes('"code": 50027')) {
       // Extract interaction ID from token for debugging (token format: base64 of "interaction:snowflakeId:...")
       let interactionAge = '';
@@ -47,6 +47,19 @@ export async function DiscordRequest(endpoint, options, context = null) {
       const ctxStr = context ? ` [${context}]` : '';
       console.log(`⏰ [WEBHOOK] Token expired or invalid${interactionAge}${ctxStr} — interaction response will not be updated`);
       return null; // Return null instead of throwing error
+    }
+
+    // Graceful handling: target message/channel was deleted between deferral and follow-up.
+    // Happens when a handler deletes the channel containing its own original message
+    // (e.g. nuke-category invoked from a channel inside the nuked category).
+    // Throwing here becomes an unhandled rejection at the route boundary and crashes the process.
+    if (error.includes('Unknown Message') ||
+        error.includes('Unknown Channel') ||
+        error.includes('"code": 10008') ||
+        error.includes('"code": 10003')) {
+      const ctxStr = context ? ` [${context}]` : '';
+      console.log(`🗑️ [WEBHOOK] Target message/channel deleted${ctxStr} — skipping update`);
+      return null;
     }
 
     const ctxStr = context ? ` [Context: ${context}]` : '';
