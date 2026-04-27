@@ -110,7 +110,7 @@ export async function processFileImport({ importType, guildId, userId, resolved,
   if (importType === 'safari') {
     return await processSafariImport(guildId, jsonContent, userId, client);
   } else if (importType === 'playerdata') {
-    return buildErrorResponse('PlayerData import not yet implemented via File Upload.');
+    return await processPlayerDataImport(guildId, jsonContent);
   } else if (importType === 'seasonquestions') {
     return await processSeasonQuestionsImport(guildId, jsonContent);
   } else if (importType === 'sq_single') {
@@ -145,6 +145,50 @@ async function processSafariImport(guildId, jsonContent, userId, client) {
   return buildSuccessResponse(
     'Safari Import Complete',
     `${summaryText}${refreshNote}`
+  );
+}
+
+// --- PlayerData Import ---
+
+async function processPlayerDataImport(guildId, jsonContent) {
+  const { loadPlayerData, savePlayerData } = await import('../storage.js');
+
+  let importData;
+  try {
+    importData = JSON.parse(jsonContent);
+  } catch {
+    return buildErrorResponse('Invalid JSON file. Could not parse.', 'playerdata');
+  }
+
+  if (importData.dataType !== 'playerData' || !importData.data) {
+    return buildErrorResponse(
+      'This doesn\'t appear to be a playerData export file (missing `dataType: "playerData"` or `data` field).',
+      'playerdata'
+    );
+  }
+
+  const allPlayerData = await loadPlayerData();
+  const oldDataSize = allPlayerData[guildId]
+    ? Object.keys(allPlayerData[guildId].players || {}).length
+    : 0;
+
+  allPlayerData[guildId] = importData.data;
+  await savePlayerData(allPlayerData);
+
+  const newDataSize = Object.keys(importData.data.players || {}).length;
+  console.log(`✅ [FileImport] PlayerData import completed for guild ${guildId}: ${oldDataSize} → ${newDataSize} players`);
+
+  const exportDateLine = importData.exportDate
+    ? `**Export Date:** ${new Date(importData.exportDate).toLocaleDateString()}\n`
+    : '';
+
+  return buildSuccessResponse(
+    'PlayerData Import Complete',
+    `**Server:** ${importData.guildName || 'Unknown'}\n` +
+    `**Guild ID:** ${importData.guildId || guildId}\n` +
+    exportDateLine +
+    `**Players:** ${oldDataSize} → ${newDataSize}`,
+    'playerdata'
   );
 }
 
@@ -517,7 +561,8 @@ function buildErrorResponse(message, importType = 'safari') {
   const retryIds = {
     seasonquestions: 'file_import_seasonquestions',
     sq_single: 'season_management_menu', // No retry for single — go back to pick config
-    safari: 'file_import_safari'
+    safari: 'file_import_safari',
+    playerdata: 'file_import_playerdata'
   };
   const retryId = retryIds[importType] || 'file_import_safari';
   const showRetry = importType !== 'sq_single';

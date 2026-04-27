@@ -1170,7 +1170,7 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('💡'),
     new ButtonBuilder()
-      .setCustomId('playerdata_import')
+      .setCustomId('file_import_playerdata')
       .setLabel('Server playerData')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('📥'),
@@ -9594,6 +9594,18 @@ To fix this:
         }
       })(req, res, client);
 
+    } else if (custom_id === 'file_import_playerdata') {
+      // File Import — opens modal with File Upload (Type 19) for playerData import
+      // See RaP 0917 — replaces legacy playerdata_import (createMessageCollector pattern)
+      return ButtonHandlerFactory.create({
+        id: 'file_import_playerdata',
+        requiresModal: true,
+        handler: async (context) => {
+          const { buildFileImportModal } = await import('./src/fileImportHandler.js');
+          return buildFileImportModal('playerdata', context.guildId);
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'file_import_seasonquestions') {
       // Season Questions Import — opens modal with File Upload (Type 19)
       return ButtonHandlerFactory.create({
@@ -17224,6 +17236,8 @@ Your server is now ready for Tycoons gameplay!`;
         }
       }
     } else if (custom_id === 'playerdata_import') {
+      // 🪨 DEAD CODE — replaced by file_import_playerdata (modal File Upload Type 19)
+      // See RaP 0917. Kept temporarily for rollback. Safe to delete after 2026-05-15.
       // Handle playerdata import with file upload (similar to Safari import)
       try {
         const member = req.body.member;

@@ -460,6 +460,16 @@ export const BUTTON_REGISTRY = {
     requiresModal: true,
     category: 'admin'
   },
+  'file_import_playerdata': {
+    label: 'Server playerData',
+    description: 'Import playerData via File Upload modal (Type 19) — no MessageContent intent needed',
+    emoji: '📥',
+    style: 'Secondary',
+    parent: 'data_admin',
+    restrictedUser: '391415444084490240',
+    requiresModal: true,
+    category: 'admin'
+  },
   'file_import_seasonquestions': {
     label: 'Import Questions',
     description: 'Import season application questions from exported JSON file',
