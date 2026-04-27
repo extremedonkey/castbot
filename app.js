@@ -17236,145 +17236,44 @@ Your server is now ready for Tycoons gameplay!`;
         }
       }
     } else if (custom_id === 'safari_import_data') {
-      // Handle Safari data import with file upload
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        const channelId = req.body.channel_id;
-        const userId = member.user.id;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to import Safari data.')) return;
-        
-        console.log(`📥 DEBUG: Starting file-based Safari import for guild ${guildId}`);
-        
-        // Send instructions and set up message collector
-        // NOTE: Uses legacy content format because this is a CHANNEL_MESSAGE_WITH_SOURCE
-        // from a legacy handler — Components V2 breaks the message collector flow
-        res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `📥 **Safari Data Import**\n\n` +
-                    `⚠️ **Before importing**, you must first create the map:\n` +
-                    `1. Go to **Map Explorer** → **Create / Upload Map**\n` +
-                    `2. Upload the same map image used in the export\n` +
-                    `3. Set the correct grid size (must match the export)\n` +
-                    `4. Wait for all location channels to be created\n\n` +
-                    `**Then** upload your Safari export JSON file here.\n` +
-                    `Drag and drop the file or use the attachment button.\n\n` +
-                    `⏱️ Waiting for your file upload... (60 second timeout)`,
+      // Settings → Advanced → Import — shows prep-warning screen, then offers
+      // the modal File Upload (file_import_safari). Replaces legacy createMessageCollector
+      // pattern. See RaP 0917.
+      return ButtonHandlerFactory.create({
+        id: 'safari_import_data',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async () => {
+          return {
             components: [{
-              type: 1,
-              components: [{
-                type: 2,
-                style: 4,
-                label: 'Cancel Import',
-                custom_id: 'safari_import_cancel',
-                emoji: { name: '❌' }
-              }]
+              type: 17, // Container
+              accent_color: 0x9b59b6, // Purple — info/prep tier
+              components: [
+                { type: 10, content: '## 📥 Import Safari Data' },
+                { type: 14 },
+                { type: 10, content: '### ```⚠️ Before You Import```' },
+                { type: 10, content: '-# Make sure your map is ready first — the import will merge into your active map.' },
+                { type: 10, content:
+                  '**1.** Go to **Map Explorer** → **Create / Upload Map**\n' +
+                  '**2.** Upload the **same map image** used in the export\n' +
+                  '**3.** Set the correct **grid size** (must match the export)\n' +
+                  '**4.** Wait for all **location channels** to be created'
+                },
+                { type: 14 },
+                { type: 10, content: 'Once your map is ready, click **Import** below to upload your Safari export JSON file.' },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2 },
+                  { type: 2, custom_id: 'file_import_safari', label: 'Import', style: 1, emoji: { name: '📥' } }
+                ] }
+              ]
             }],
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-        // Set up message collector to wait for file upload
-        const channel = await client.channels.fetch(channelId);
-        const filter = m => m.author.id === userId && m.attachments.size > 0;
-        
-        const collector = channel.createMessageCollector({ 
-          filter, 
-          time: 60000, // 60 second timeout
-          max: 1 // Only collect one message
-        });
-        
-        collector.on('collect', async (message) => {
-          try {
-            console.log(`📥 DEBUG: File upload detected from user ${userId}`);
-            
-            // Get the first attachment
-            const attachment = message.attachments.first();
-            
-            // Validate it's a JSON file
-            if (!attachment.name.endsWith('.json')) {
-              await message.reply({
-                content: '❌ Please upload a JSON file (`.json` extension required).',
-                ephemeral: true
-              });
-              return;
-            }
-            
-            // Fetch the file content
-            const response = await fetch(attachment.url);
-            const jsonContent = await response.text();
-            
-            console.log(`📥 DEBUG: Downloaded file ${attachment.name}, size: ${jsonContent.length} characters`);
-            
-            // Import the Safari data
-            const { importSafariData, formatImportSummary } = await import('./safariImportExport.js');
-            const summary = await importSafariData(guildId, jsonContent, { userId, client });
-            
-            console.log(`✅ DEBUG: Safari import completed for guild ${guildId}:`, summary);
+            flags: 1 << 15 // IS_COMPONENTS_V2
+          };
+        }
+      })(req, res, client);
 
-            // Send success message
-            await message.reply({
-              content: `✅ **Safari Data Import Successful!**\n\n${formatImportSummary(summary)}\n\n🔄 Refreshing anchor messages...`,
-              ephemeral: true
-            });
-
-            // Auto-refresh anchor messages so custom action buttons appear immediately
-            try {
-              const { updateAllAnchorMessages } = await import('./mapCellUpdater.js');
-              const refreshResult = await updateAllAnchorMessages(guildId, client);
-              console.log(`🔄 Post-import anchor refresh: ${refreshResult.success} succeeded, ${refreshResult.failed} failed`);
-            } catch (refreshErr) {
-              console.log(`⚠️ Post-import anchor refresh failed: ${refreshErr.message}`);
-            }
-
-            // Delete the uploaded file message for privacy
-            try {
-              await message.delete();
-            } catch (err) {
-              console.log('Could not delete import file message:', err.message);
-            }
-            
-          } catch (error) {
-            console.error('Error processing Safari import file:', error);
-            await message.reply({
-              content: `❌ **Import Failed**\n\nError: ${error.message}\n\nPlease check your JSON file format and try again.`,
-              ephemeral: true
-            });
-          }
-        });
-        
-        collector.on('end', (collected, reason) => {
-          if (reason === 'time' && collected.size === 0) {
-            // Edit the original message to show timeout
-            const token = req.body.token;
-            const editUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${token}/messages/@original`;
-            
-            fetch(editUrl, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                content: '⏱️ **Import Timed Out**\n\nNo file was uploaded within 60 seconds. Please try again.',
-                components: []
-              })
-            }).catch(err => console.error('Error updating timeout message:', err));
-          }
-        });
-        
-        return;
-        
-      } catch (error) {
-        console.error('Error in safari_import_data:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error starting import process. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
     } else if (custom_id === 'safari_import_cancel') {
       // Handle import cancellation
       return res.send({

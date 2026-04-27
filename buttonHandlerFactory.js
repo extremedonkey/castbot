@@ -442,6 +442,14 @@ export const BUTTON_REGISTRY = {
     requiresModal: true,
     category: 'admin'
   },
+  'safari_import_data': {
+    label: 'Import',
+    description: 'Settings → Advanced → Import — shows prep-warning screen, then opens file_import_safari modal',
+    emoji: '📥',
+    style: 'Secondary',
+    parent: 'castbot_settings',
+    category: 'admin'
+  },
   'file_import_playerdata': {
     label: 'Server playerData',
     description: 'Import playerData via File Upload modal (Type 19) — no MessageContent intent needed',

@@ -125,6 +125,33 @@ export async function processFileImport({ importType, guildId, userId, resolved,
 async function processSafariImport(guildId, jsonContent, userId, client) {
   const { importSafariData, formatImportSummary } = await import('../safariImportExport.js');
 
+  // Pre-flight: if the export references map cells but the guild has no active map,
+  // refuse and tell the user to set up the map first. Otherwise the merge silently
+  // creates orphan customActions pointing at non-existent coordinates.
+  try {
+    const preview = JSON.parse(jsonContent);
+    const importHasMapData = preview.maps && Object.keys(preview.maps).filter(k => k !== 'active').length > 0;
+    const importHasMapCoords = preview.customActions && Object.values(preview.customActions).some(a => a.coordinates?.length);
+
+    if (importHasMapData || importHasMapCoords) {
+      const { loadSafariContent } = await import('../safariManager.js');
+      const safariData = await loadSafariContent();
+      if (!safariData[guildId]?.maps?.active) {
+        return buildErrorResponse(
+          'This export contains map data, but your server has no active map yet.\n\n' +
+          '**1.** Go to **Map Explorer** → **Create / Upload Map**\n' +
+          '**2.** Upload the **same map image** used in the export\n' +
+          '**3.** Set the correct **grid size** (must match the export)\n' +
+          '**4.** Wait for all **location channels** to be created\n\n' +
+          'Then try importing again.',
+          'safari'
+        );
+      }
+    }
+  } catch {
+    // JSON parse failures fall through to importSafariData, which throws a friendlier error
+  }
+
   const summary = await importSafariData(guildId, jsonContent, { userId, client });
   console.log(`✅ [FileImport] Safari import completed for guild ${guildId}:`, JSON.stringify(summary));
 
