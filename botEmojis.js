@@ -162,5 +162,9 @@ export function expandBotEmojis(text) {
 // Export the registry for direct access if needed
 export { BOT_EMOJIS };
 
-// Log the current environment on module load
-console.log(`🤖 Bot Emoji System initialized - Mode: ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'}`);
+// Log the current environment on module load (suppressed under node --test to avoid
+// flaky 'Unable to deserialize cloned data' errors caused by stdout writes interleaving
+// with the test runner's IPC stream)
+if (!process.env.NODE_TEST_CONTEXT) {
+  console.log(`🤖 Bot Emoji System initialized - Mode: ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'}`);
+}
