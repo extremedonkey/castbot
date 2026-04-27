@@ -162,8 +162,13 @@ async function processSafariImport(guildId, jsonContent, userId, client) {
   try {
     const { updateAllAnchorMessages } = await import('../mapCellUpdater.js');
     const refreshResult = await updateAllAnchorMessages(guildId, client);
-    console.log(`🔄 [FileImport] Post-import anchor refresh: ${refreshResult.success} succeeded, ${refreshResult.failed} failed`);
-    refreshNote = `\n🔄 Anchor messages refreshed (${refreshResult.success} updated)`;
+    console.log(`🔄 [FileImport] Post-import anchor refresh: ${refreshResult.successful} succeeded, ${refreshResult.failed} failed`);
+    if (refreshResult.failed > 0) {
+      const failedList = refreshResult.errors?.length ? ` (${refreshResult.errors.join(', ')})` : '';
+      refreshNote = `\n🔄 Anchor messages refreshed (${refreshResult.successful} updated, ${refreshResult.failed} failed${failedList})`;
+    } else {
+      refreshNote = `\n🔄 Anchor messages refreshed (${refreshResult.successful} updated)`;
+    }
   } catch (refreshErr) {
     console.log(`⚠️ [FileImport] Post-import anchor refresh failed: ${refreshErr.message}`);
     refreshNote = '\n⚠️ Anchor refresh failed — run manually from Map Explorer';
