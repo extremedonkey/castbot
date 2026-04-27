@@ -1532,10 +1532,13 @@ const PORT = process.env.PORT || 3000;
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.GuildMessageReactions,
-    GatewayIntentBits.MessageContent  // Required for message collector (safari import file uploads) - attachments field is empty without this
+    GatewayIntentBits.GuildMembers,           // Privileged. Powers castlist, season apps, role/permission checks (members.fetch + REST member list)
+    GatewayIntentBits.GuildMessages,          // Required for messageDelete (reaction-message cleanup) — does NOT need MessageContent
+    GatewayIntentBits.GuildMessageReactions   // Reaction roles (timezone/pronoun/ban)
+    // MessageContent (privileged) intentionally REMOVED — RaP 0917/0940
+    // Both file imports (playerData + Safari) now use Modal File Upload (Type 19) which delivers
+    // attachments via interaction.data.resolved.attachments — does NOT consult the gateway intent.
+    // If a future feature needs to read user message text, see RaP 0940 for trade-offs first.
   ],
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
   // Cache limits: Only limit MessageManager to prevent unbounded message cache growth
