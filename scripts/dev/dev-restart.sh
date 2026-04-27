@@ -59,21 +59,33 @@ TEST_SUMMARY=""
 if [ "$RUN_TESTS" = true ]; then
     echo ""
     echo "🧪 Running unit tests..."
-    echo "----------------------------------------"
     TEST_OUTPUT=$(node --test tests/*.test.js 2>&1)
     TEST_EXIT=$?
-    echo "$TEST_OUTPUT"
-    echo "----------------------------------------"
+
+    # Extract counts + duration from TAP summary footer
+    TEST_PASS=$(echo "$TEST_OUTPUT" | grep "^# pass" | awk '{print $3}')
+    TEST_FAIL=$(echo "$TEST_OUTPUT" | grep "^# fail" | awk '{print $3}')
+    TEST_SUITES=$(echo "$TEST_OUTPUT" | grep "^# suites" | awk '{print $3}')
+    TEST_TOTAL=$(echo "$TEST_OUTPUT" | grep "^# tests" | awk '{print $3}')
+    TEST_DURATION_MS=$(echo "$TEST_OUTPUT" | grep "^# duration_ms" | awk '{print $3}')
+    TEST_DURATION=$(awk "BEGIN {printf \"%.2fs\", ${TEST_DURATION_MS:-0}/1000}")
+    TEST_SUMMARY="${TEST_PASS:-0} pass, ${TEST_FAIL:-0} fail (${TEST_SUITES:-0} suites)"
+
     if [ $TEST_EXIT -eq 0 ]; then
-        # Extract pass/fail counts from TAP output
-        TEST_PASS=$(echo "$TEST_OUTPUT" | grep "^# pass" | awk '{print $3}')
-        TEST_FAIL=$(echo "$TEST_OUTPUT" | grep "^# fail" | awk '{print $3}')
-        TEST_SUITES=$(echo "$TEST_OUTPUT" | grep "^# suites" | awk '{print $3}')
-        TEST_SUMMARY="${TEST_PASS:-0} pass, ${TEST_FAIL:-0} fail (${TEST_SUITES:-0} suites)"
-        echo "✅ All tests passed"
+        echo "✅ Tests passed: ${TEST_PASS:-0}/${TEST_TOTAL:-0} (${TEST_SUITES:-0} suites in ${TEST_DURATION})"
         echo ""
     else
-        echo "❌ Tests FAILED — aborting restart"
+        echo "❌ Tests FAILED: ${TEST_PASS:-0}/${TEST_TOTAL:-0} (${TEST_FAIL:-0} failed, ${TEST_SUITES:-0} suites in ${TEST_DURATION})"
+        echo ""
+        echo "Failing tests:"
+        # Extract each `not ok` block + its YAML diagnostic (--- ... ...) so we see what broke
+        echo "$TEST_OUTPUT" | awk '
+            /^[[:space:]]*not ok [0-9]+/ { print; in_block=1; in_yaml=0; next }
+            in_block && /^[[:space:]]*---[[:space:]]*$/ { print; in_yaml=1; next }
+            in_yaml { print; if ($0 ~ /^[[:space:]]*\.\.\.[[:space:]]*$/) { in_yaml=0; in_block=0; print "" } }
+        '
+        echo "(Run \`node --test tests/*.test.js\` for the full TAP output)"
+        echo ""
         exit 1
     fi
 fi
