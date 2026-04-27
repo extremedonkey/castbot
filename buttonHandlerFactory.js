@@ -71,24 +71,6 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
-  'playerdata_import': {
-    label: 'Server playerData',
-    description: 'Import playerData from a file for current guild',
-    emoji: '📥',
-    style: 'Secondary',
-    parent: 'data_admin',
-    restrictedUser: '391415444084490240',
-    category: 'admin'
-  },
-  'playerdata_import_cancel': {
-    label: 'Cancel Import',
-    description: 'Cancel an in-progress playerData import',
-    emoji: '❌',
-    style: 'Danger',
-    parent: 'playerdata_import',
-    restrictedUser: '391415444084490240',
-    category: 'admin'
-  },
   'reeces_season_planner_mockup': {
     label: 'Season Planner',
     description: 'Season Planner — plan rounds, swaps, merge, FTC for a season',
