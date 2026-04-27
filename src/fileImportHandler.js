@@ -7,7 +7,7 @@
  * Currently supports: Safari import, Season App Questions import
  * Designed to be extended for: PlayerData import, any JSON import
  *
- * See: RaP 0940 — Privileged Intents Analysis
+ * See: RaP 0917 — Privileged Intents (canonical reference; supersedes RaP 0940)
  */
 
 /**

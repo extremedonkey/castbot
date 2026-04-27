@@ -1535,10 +1535,11 @@ const client = new Client({
     GatewayIntentBits.GuildMembers,           // Privileged. Powers castlist, season apps, role/permission checks (members.fetch + REST member list)
     GatewayIntentBits.GuildMessages,          // Required for messageDelete (reaction-message cleanup) — does NOT need MessageContent
     GatewayIntentBits.GuildMessageReactions   // Reaction roles (timezone/pronoun/ban)
-    // MessageContent (privileged) intentionally REMOVED — RaP 0917/0940
+    // MessageContent (privileged) intentionally REMOVED — see RaP 0917 (canonical privileged-intents doc)
     // Both file imports (playerData + Safari) now use Modal File Upload (Type 19) which delivers
     // attachments via interaction.data.resolved.attachments — does NOT consult the gateway intent.
-    // If a future feature needs to read user message text, see RaP 0940 for trade-offs first.
+    // If a future feature needs to read user message text, read RaP 0917 first — there are 4 mechanisms
+    // that get conflated as "intents" (gateway events vs cache vs REST vs interaction payloads).
   ],
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
   // Cache limits: Only limit MessageManager to prevent unbounded message cache growth
@@ -9587,7 +9588,7 @@ To fix this:
 
     } else if (custom_id === 'file_import_safari') {
       // File Import — opens modal with File Upload (Type 19) for Safari import
-      // See RaP 0940 — replaces legacy createMessageCollector pattern
+      // See RaP 0917 — replaces legacy createMessageCollector pattern (Modal File Upload Type 19)
       return ButtonHandlerFactory.create({
         id: 'file_import_safari',
         requiresModal: true,
