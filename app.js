@@ -14115,13 +14115,11 @@ Your server is now ready for Tycoons gameplay!`;
       // Nuke Category - Show list of categories to select from
       return ButtonHandlerFactory.create({
         id: 'prod_nuke_category',
+        requiresPermission: PermissionFlagsBits.ManageChannels,
+        permissionName: 'Manage Channels',
         deferred: true,
         ephemeral: true,
         handler: async (context) => {
-          if (context.userId !== '391415444084490240') {
-            return { content: '❌ Access denied.' };
-          }
-
           const guild = await context.client.guilds.fetch(context.guildId);
           const channels = await guild.channels.fetch();
           const categories = channels.filter(ch => ch.type === 4); // ChannelType.GuildCategory = 4
@@ -14181,12 +14179,10 @@ Your server is now ready for Tycoons gameplay!`;
       // Category selected - show Critical Deletion confirmation
       return ButtonHandlerFactory.create({
         id: 'nuke_cat_select',
+        requiresPermission: PermissionFlagsBits.ManageChannels,
+        permissionName: 'Manage Channels',
         updateMessage: true,
         handler: async (context) => {
-          if (context.userId !== '391415444084490240') {
-            return { content: '❌ Access denied.' };
-          }
-
           const categoryId = data.values[0];
           const guild = await context.client.guilds.fetch(context.guildId);
           const channels = await guild.channels.fetch();
@@ -14248,13 +14244,11 @@ Your server is now ready for Tycoons gameplay!`;
       // Confirmed category deletion - execute
       return ButtonHandlerFactory.create({
         id: 'nuke_cat_confirm',
+        requiresPermission: PermissionFlagsBits.ManageChannels,
+        permissionName: 'Manage Channels',
         deferred: true,
         updateMessage: true,
         handler: async (context) => {
-          if (context.userId !== '391415444084490240') {
-            return { content: '❌ Access denied.' };
-          }
-
           const categoryId = custom_id.replace('nuke_cat_confirm_', '');
           const guild = await context.client.guilds.fetch(context.guildId);
           const channels = await guild.channels.fetch();
@@ -14335,12 +14329,11 @@ Your server is now ready for Tycoons gameplay!`;
       // Cancelled - bounce back to Castbot Tools (new parent menu)
       return ButtonHandlerFactory.create({
         id: 'nuke_cat_cancel',
+        requiresPermission: PermissionFlagsBits.ManageChannels,
+        permissionName: 'Manage Channels',
         updateMessage: true,
         ephemeral: true,
         handler: async (context) => {
-          if (context.userId !== '391415444084490240') {
-            return { content: '❌ Access denied.' };
-          }
           const setupContainer = await MenuBuilder.create('setup_menu', context);
           return {
             flags: (1 << 15),

@@ -687,7 +687,6 @@ export const BUTTON_REGISTRY = {
     emoji: '🧹',
     style: 'Danger',
     parent: 'castbot_tools',
-    restrictedUser: '391415444084490240',
     category: 'admin'
   },
   'nuke_cat_select': {
@@ -696,7 +695,6 @@ export const BUTTON_REGISTRY = {
     emoji: '🧹',
     style: 'Secondary',
     parent: 'prod_nuke_category',
-    restrictedUser: '391415444084490240',
     category: 'admin'
   },
   'nuke_cat_confirm_*': {
@@ -705,7 +703,6 @@ export const BUTTON_REGISTRY = {
     emoji: '🗑️',
     style: 'Danger',
     parent: 'prod_nuke_category',
-    restrictedUser: '391415444084490240',
     category: 'admin'
   },
   'nuke_cat_cancel': {
@@ -714,7 +711,6 @@ export const BUTTON_REGISTRY = {
     emoji: '❌',
     style: 'Secondary',
     parent: 'prod_nuke_category',
-    restrictedUser: '391415444084490240',
     category: 'admin'
   },
   'restart_bot': {
