@@ -1232,11 +1232,6 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setEmoji('💥')
       .setDisabled(!hasRolesInData),
     new ButtonBuilder()
-      .setCustomId('prod_nuke_category')
-      .setLabel('Nuke Category')
-      .setStyle(ButtonStyle.Danger)
-      .setEmoji('🧹'),
-    new ButtonBuilder()
       .setCustomId('nuke_player_data')
       .setLabel('Nuke playerData')
       .setStyle(ButtonStyle.Danger)
@@ -14165,8 +14160,8 @@ Your server is now ready for Tycoons gameplay!`;
               type: 1,
               components: [{
                 type: 2,
-                custom_id: 'data_admin',
-                label: '← Data',
+                custom_id: 'castbot_tools',
+                label: '← Tools',
                 style: 2
               }]
             }
@@ -14320,8 +14315,8 @@ Your server is now ready for Tycoons gameplay!`;
                   type: 1,
                   components: [{
                     type: 2,
-                    custom_id: 'data_admin',
-                    label: '← Data',
+                    custom_id: 'castbot_tools',
+                    label: '← Tools',
                     style: 2
                   }, {
                     type: 2,
@@ -14337,7 +14332,7 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id === 'nuke_cat_cancel') {
-      // Cancelled - go back to category list
+      // Cancelled - bounce back to Castbot Tools (new parent menu)
       return ButtonHandlerFactory.create({
         id: 'nuke_cat_cancel',
         updateMessage: true,
@@ -14346,9 +14341,11 @@ Your server is now ready for Tycoons gameplay!`;
           if (context.userId !== '391415444084490240') {
             return { content: '❌ Access denied.' };
           }
-          // Redirect to analytics menu
-          const reeceMenuData = await createReeceStuffMenu(context.guildId, context.channelId);
-          return reeceMenuData;
+          const setupContainer = await MenuBuilder.create('setup_menu', context);
+          return {
+            flags: (1 << 15),
+            components: [setupContainer]
+          };
         }
       })(req, res, client);
     } else if (custom_id === 'restart_bot') {

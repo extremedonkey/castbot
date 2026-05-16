@@ -686,7 +686,7 @@ export const BUTTON_REGISTRY = {
     description: 'Select and delete all channels in a Discord category',
     emoji: '🧹',
     style: 'Danger',
-    parent: 'data_admin',
+    parent: 'castbot_tools',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },

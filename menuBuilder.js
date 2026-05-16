@@ -93,7 +93,8 @@ export class MenuBuilder {
         components: [
           { type: 2, custom_id: 'prod_availability', label: 'Availability', style: 2, emoji: { name: '🕐' } },
           { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } },
-          { type: 2, custom_id: 'map_admin_refresh_anchors', label: 'Refresh Anchors', style: 2, emoji: { name: '🔄' } }
+          { type: 2, custom_id: 'map_admin_refresh_anchors', label: 'Refresh Anchors', style: 2, emoji: { name: '🔄' } },
+          ...(isReece ? [{ type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 4, emoji: { name: '🧹' } }] : [])
         ]
       },
       { type: 10, content: `### \`\`\`❄️ Snowflake\`\`\`` },

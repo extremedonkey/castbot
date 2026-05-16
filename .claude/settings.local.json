@@ -175,7 +175,8 @@
       "WebFetch(domain:status.claude.com)",
       "Bash(do head:*)",
       "WebFetch(domain:hermes-agent.nousresearch.com)",
-      "Bash(xxd)"
+      "Bash(xxd)",
+      "Bash(/home/reece/castbot/scripts/dev/dev-restart.sh Move Nuke Category from Data menu to Castbot Tools → Roles & Utilities \\(Reece-only\\) *)"
     ],
     "deny": []
   },
