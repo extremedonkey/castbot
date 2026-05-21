@@ -45121,8 +45121,15 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Import Safari manager functions
         const { buyItem } = await import('./safariManager.js');
-        
-        const result = await buyItem(guildId, storeId, itemId, userId);
+
+        // Pass member/channel context so the purchase log resolves the real player + channel
+        const channelObj = client?.channels?.cache?.get(req.body.channel_id);
+        const purchaseCtx = {
+          username: req.body.member?.user?.username || req.body.user?.username || 'Unknown',
+          displayName: req.body.member?.nick || req.body.member?.user?.global_name || req.body.member?.user?.username || 'Unknown',
+          channelName: channelObj?.name || null
+        };
+        const result = await buyItem(guildId, storeId, itemId, userId, purchaseCtx);
         
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,

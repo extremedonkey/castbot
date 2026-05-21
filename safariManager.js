@@ -1230,7 +1230,15 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
 
     if (operation === 'give') {
         // GIVE operation - add item to inventory
-        const success = await addItemToInventory(guildId, userId, config.itemId, quantity, null);
+        // Pass a logging context derived from the interaction so the Safari Log shows the
+        // real player + channel instead of "Unknown (Unknown) at Unknown" (RaP: Give Item logging).
+        const logContext = {
+            username: interaction?.member?.user?.username || interaction?.user?.username || 'Unknown',
+            displayName: interaction?.member?.nick || interaction?.member?.user?.global_name || interaction?.member?.user?.username || interaction?.user?.username || 'Unknown',
+            channelId: interaction?.channel_id || null,
+            source: 'action_give'
+        };
+        const success = await addItemToInventory(guildId, userId, config.itemId, quantity, null, logContext);
 
         if (!success) {
             return {
@@ -2537,7 +2545,7 @@ async function getPlayerInventory(guildId, userId) {
  * @param {number} quantity - Quantity to add (default: 1)
  * @param {Object} existingPlayerData - Optional existing player data to avoid race conditions
  */
-async function addItemToInventory(guildId, userId, itemId, quantity = 1, existingPlayerData = null) {
+async function addItemToInventory(guildId, userId, itemId, quantity = 1, existingPlayerData = null, logContext = null) {
     try {
         const playerData = existingPlayerData || await loadPlayerData();
         const safariData = await loadSafariContent();
@@ -2593,54 +2601,63 @@ async function addItemToInventory(guildId, userId, itemId, quantity = 1, existin
         
         console.log(`📦 DEBUG: Added ${quantity}x ${itemId} to user ${userId} inventory`);
         
-        // Log item pickup to Safari Log
-        try {
-            const { logItemPickup } = await import('./safariLogger.js');
-            const itemDef = safariData[guildId]?.items?.[itemId];
-            
-            // Get location - prefer channel-based location over player's map position
-            let location = 'Unknown';
+        // Resolve logging context: an explicit logContext takes priority, otherwise
+        // fall back to fields a caller may have bolted onto existingPlayerData (store path).
+        // Without either, name/channel resolve to 'Unknown' — the source of the
+        // "Unknown (Unknown) at Unknown" Safari Log entries from context-less callers.
+        const logCtx = logContext || (existingPlayerData && typeof existingPlayerData === 'object' ? existingPlayerData : {});
 
-            // First, try to extract location from channel name (e.g., "d7-buttonbundletest" -> "D7")
-            const channelName = existingPlayerData?.channelName;
-            if (channelName && typeof channelName === 'string') {
-                const locationMatch = channelName.match(/^([a-z]\d+)/i);
-                if (locationMatch) {
-                    location = locationMatch[1].toUpperCase();
-                    console.log(`📍 DEBUG: Extracted location ${location} from channel name: ${channelName}`);
-                }
-            }
+        // Log item pickup to Safari Log (unless the caller logs this event itself,
+        // e.g. buyItem → SAFARI_PURCHASE, in which case skipPickupLog avoids a double entry).
+        if (!logCtx.skipPickupLog) {
+            try {
+                const { logItemPickup } = await import('./safariLogger.js');
+                const itemDef = safariData[guildId]?.items?.[itemId];
 
-            // Fallback to player's current map location if channel-based location not available
-            if (location === 'Unknown') {
-                const activeMapId = safariData[guildId]?.maps?.active;
-                if (activeMapId && playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId]) {
-                    location = playerData[guildId].players[userId].safari.mapProgress[activeMapId].currentLocation || 'Unknown';
-                    console.log(`📍 DEBUG: Using player's map location: ${location}`);
+                // Get location - prefer channel-based location over player's map position
+                let location = 'Unknown';
+
+                // First, try to extract location from channel name (e.g., "d7-buttonbundletest" -> "D7")
+                const channelName = logCtx.channelName;
+                if (channelName && typeof channelName === 'string') {
+                    const locationMatch = channelName.match(/^([a-z]\d+)/i);
+                    if (locationMatch) {
+                        location = locationMatch[1].toUpperCase();
+                        console.log(`📍 DEBUG: Extracted location ${location} from channel name: ${channelName}`);
+                    }
                 }
+
+                // Fallback to player's current map location if channel-based location not available
+                if (location === 'Unknown') {
+                    const activeMapId = safariData[guildId]?.maps?.active;
+                    if (activeMapId && playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId]) {
+                        location = playerData[guildId].players[userId].safari.mapProgress[activeMapId].currentLocation || 'Unknown';
+                        console.log(`📍 DEBUG: Using player's map location: ${location}`);
+                    }
+                }
+
+                // Get user info from the resolved logging context
+                const username = logCtx.username || 'Unknown';
+                const displayName = logCtx.displayName || username;
+
+                await logItemPickup({
+                    guildId,
+                    userId,
+                    username,
+                    displayName,
+                    location,
+                    itemId,
+                    itemName: itemDef?.name || itemId,
+                    itemEmoji: itemDef?.emoji || '📦',
+                    quantity,
+                    source: logCtx.source || 'manual',
+                    channelName: logCtx.channelName || null,
+                    channelId: logCtx.channelId || null
+                });
+            } catch (logError) {
+                console.error('Safari Log Error:', logError);
+                // Don't fail the item pickup if logging fails
             }
-            
-            // Get user info from Discord if available (caller can pass via existingPlayerData.username)
-            const username = existingPlayerData?.username || 'Unknown';
-            const displayName = existingPlayerData?.displayName || username;
-            
-            await logItemPickup({
-                guildId,
-                userId,
-                username,
-                displayName,
-                location,
-                itemId,
-                itemName: itemDef?.name || itemId,
-                itemEmoji: itemDef?.emoji || '📦',
-                quantity,
-                source: existingPlayerData?.source || 'manual',
-                channelName: existingPlayerData?.channelName || null,
-                channelId: existingPlayerData?.channelId || null
-            });
-        } catch (logError) {
-            console.error('Safari Log Error:', logError);
-            // Don't fail the item pickup if logging fails
         }
         
         // Return the final quantity using universal accessor
@@ -3820,7 +3837,7 @@ async function executeManagePlayerState(config, guildId, userId, interaction) {
 /**
  * Handle item purchase
  */
-async function buyItem(guildId, storeId, itemId, userId) {
+async function buyItem(guildId, storeId, itemId, userId, context = {}) {
     try {
         console.log(`💳 DEBUG: User ${userId} buying ${itemId} from store ${storeId}`);
         
@@ -3878,14 +3895,17 @@ async function buyItem(guildId, storeId, itemId, userId) {
             }
         }
         
-        // Process purchase with context for logging
+        // Process purchase with context for logging.
+        // NOTE: this previously referenced an undeclared `interaction`, throwing
+        // ReferenceError on every purchase through this path. Context is now passed
+        // in by the caller (app.js safari_buy_ handler).
         const purchaseContext = {
-            username: interaction?.user?.username || 'Unknown',
-            displayName: interaction?.member?.displayName || interaction?.user?.username || 'Unknown',
+            username: context?.username || 'Unknown',
+            displayName: context?.displayName || context?.username || 'Unknown',
             source: `Store: ${store.name}`,
-            channelName: interaction?.channel?.name || null
+            channelName: context?.channelName || null
         };
-        
+
         await updateCurrency(guildId, userId, -price, purchaseContext);
         
         // Decrement stock after successful payment
@@ -3901,7 +3921,9 @@ async function buyItem(guildId, storeId, itemId, userId) {
         
         // Fix: Pass null for existingPlayerData so the item is saved
         // NOTE: purchaseContext was being wrongly passed as existingPlayerData
-        await addItemToInventory(guildId, userId, itemId, 1, null);
+        // skipPickupLog: this path logs SAFARI_PURCHASE below, so suppress the
+        // generic ITEM PICKUP log to avoid a duplicate entry.
+        await addItemToInventory(guildId, userId, itemId, 1, null, { skipPickupLog: true });
         
         // Log store purchase
         try {
