@@ -3556,9 +3556,9 @@ export const BUTTON_REGISTRY = {
     type: 'select_menu'
   },
   'safari_view_claims_*': {
-    label: 'View Claims',
+    label: 'Player Claims',
     description: 'Open the per-player claims manager for an outcome (give_item, give_currency, modify_attribute, fight_enemy)',
-    emoji: '📥',
+    emoji: '👥',
     style: 'Secondary',
     category: 'safari_management'
   },

@@ -57,7 +57,7 @@ async function describeOutcome(safariData, guildId, action, actionIndex) {
 
 function errorContainer(message, buttonId) {
   return { components: [{ type: 17, accent_color: 0x3498DB, components: [
-    { type: 10, content: `## 📥 Claims\n-# ${message}` },
+    { type: 10, content: `## 👥 Player Claims\n-# ${message}` },
     { type: 14 },
     { type: 1, components: [
       { type: 2, custom_id: `custom_action_editor_${buttonId}`, label: '← Back', style: 2, emoji: { name: '⚡' } }
@@ -97,7 +97,7 @@ export async function buildClaimsManagerUI({ client, guildId, buttonId, actionIn
   const outcomeDesc = await describeOutcome(safariData, guildId, action, actionIndex);
 
   const components = [
-    { type: 10, content: `## 📥 Claims | ${button.name || buttonId}` },
+    { type: 10, content: `## 👥 Player Claims | ${button.name || buttonId}` },
     { type: 14 },
     { type: 10, content: `### \`\`\`📋 Limit Type\`\`\`\n${limitLabels[limitType] || limitType}` },
     { type: 10, content: `-# ${outcomeDesc} | Outcome #${actionIndex + 1}` },

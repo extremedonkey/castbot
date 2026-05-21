@@ -867,6 +867,10 @@ function getActionListComponents(actions, actionId, guildItems = {}, guildButton
 
     // Build options array
     const atMax = allActions && allActions.length >= SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON;
+    // Player Claims option: only for outcome types that track claims AND when a (non-unlimited) limit is set
+    const CLAIM_OUTCOME_TYPES = ['give_item', 'give_currency', 'modify_attribute', 'fight_enemy'];
+    const claimsManageable = CLAIM_OUTCOME_TYPES.includes(action.type)
+      && !!action.config?.limit?.type && action.config.limit.type !== 'unlimited';
     const options = [
       { label: summaryText, value: 'summary', default: true, emoji: { name: outcomeEmoji } },
       { label: 'Edit Outcome', value: 'edit', emoji: { name: '✏️' }, description: 'Configure settings' },
@@ -874,6 +878,7 @@ function getActionListComponents(actions, actionId, guildItems = {}, guildButton
       { label: 'Move Down', value: 'move_down', emoji: { name: '⬇️' }, description: 'Change execution order' },
       { label: '───────────────────', value: 'divider', description: ' ' },
       ...(!atMax ? [{ label: 'Clone Outcome', value: 'clone', emoji: { name: '📋' }, description: 'Duplicate this outcome' }] : []),
+      ...(claimsManageable ? [{ label: 'Player Claims', value: 'player_claims', emoji: { name: '👥' }, description: 'View and manage which players have claimed this outcome already.' }] : []),
       ...moveOptions,
       { label: 'Delete Outcome', value: 'delete', emoji: { name: '🗑️' }, description: 'Remove from action' }
     ];
@@ -4468,9 +4473,9 @@ export async function showModifyAttributeConfig(guildId, buttonId, actionIndex) 
             {
               type: 2,
               custom_id: `safari_view_claims_${buttonId}_${actionIndex}`,
-              label: 'Claims',
+              label: 'Player Claims',
               style: 2,
-              emoji: { name: '📥' }
+              emoji: { name: '👥' }
             }] : []),
             {
               type: 2, // Button
@@ -4885,7 +4890,7 @@ export async function showFightEnemyConfig(guildId, buttonId, actionIndex) {
         { type: 2, custom_id: `custom_action_editor_${buttonId}`, label: '← Back', style: 2, emoji: { name: '⚡' } },
         // Single Claims button opens the unified per-player manager (view + clear + cooldown + add + reset all)
         ...(currentLimit !== 'unlimited' ? [
-          { type: 2, custom_id: `safari_view_claims_${buttonId}_${actionIndex}`, label: 'Claims', style: 2, emoji: { name: '📥' } }
+          { type: 2, custom_id: `safari_view_claims_${buttonId}_${actionIndex}`, label: 'Player Claims', style: 2, emoji: { name: '👥' } }
         ] : [])
       ]
     }

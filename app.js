@@ -22174,6 +22174,13 @@ Your server is now ready for Tycoons gameplay!`;
           }
 
           switch (selectedValue) {
+            case 'player_claims': {
+              // Jump straight to the per-player Claims manager for this outcome.
+              // actionId/actionIndex are already parsed above — pass them directly (no custom_id
+              // round-trip, which would risk mis-splitting actionId's trailing numeric segment).
+              const { buildClaimsManagerUI } = await import('./claimsUI.js');
+              return await buildClaimsManagerUI({ client: context.client, guildId: context.guildId, buttonId: actionId, actionIndex, page: 0 });
+            }
             case 'edit': {
               // Delegate to the existing safari_edit_action handler logic
               // Simulate the custom_id so the edit handler can parse it
@@ -51257,9 +51264,9 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
             ...(state.limit && state.limit !== 'unlimited' ? [{
               type: 2, // Button
               custom_id: `safari_view_claims_${buttonId}_${actionIndex}`,
-              label: 'Claims',
+              label: 'Player Claims',
               style: 2,
-              emoji: { name: '📥' }
+              emoji: { name: '👥' }
             }] : []),
             {
               type: 2, // Button
@@ -51394,9 +51401,9 @@ async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerm
             ...((limitConfigured || (state.limit && state.limit !== 'unlimited')) ? [{
               type: 2, // Button
               custom_id: `safari_view_claims_${buttonId}_${actionIndex}`,
-              label: 'Claims',
+              label: 'Player Claims',
               style: 2,
-              emoji: { name: '📥' }
+              emoji: { name: '👥' }
             }] : []),
             {
               type: 2, // Button
