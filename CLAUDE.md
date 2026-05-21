@@ -458,6 +458,7 @@ When a feature is **deployed to production and working**, move/rename its doc in
 - **🐙 ENEMIES** → [docs/03-features/EnemySystem.md](docs/03-features/EnemySystem.md) - Enemy entities, fight_enemy outcome, combat resolution
 - **🧑‍🤝‍🧑 PLAYER MANAGEMENT** → [playerManagement.js](playerManagement.js) - Pronouns, timezones, age, vanity roles, attributes display
 - **🥇 CASTLIST V3** → [docs/03-features/CastlistV3.md](docs/03-features/CastlistV3.md) - Castlist system overhaul
+- **🏷️ VANITY ROLE SORT/DISPLAY** → [docs/03-features/VanityRoleSortDisplay.md](docs/03-features/VanityRoleSortDisplay.md) - Vanity role tier sorting (Season→Alpha→Numeric→Emoji→Other) for member ordering + in-card display
 - **📅 SEASONS** → [docs/concepts/SeasonLifecycle.md](docs/concepts/SeasonLifecycle.md) - Season lifecycle and integration
 
 - **❄️ SNOWFLAKE TIMER** → [docs/03-features/SnowflakeTimer.md](docs/03-features/SnowflakeTimer.md) - Snowflake timing, context menus, calculator. Core: [timerUtils.js](timerUtils.js). Design: [RaP 0925](docs/01-RaP/0925_20260403_SnowflakeTimer_Analysis.md)
