@@ -1,7 +1,7 @@
 /**
  * Vanity Role Manager
  *
- * Admin cleanup tool for "vanity roles" — the cosmetic tribe badges stored at
+ * Admin cleanup tool for "vanity roles" — the cosmetic extra tribe roles stored at
  * playerData[guildId].players[playerId].vanityRoles[] and rendered as role mentions
  * on castlists (see castlistV2.js). They accumulate via the Tribe Swap/Merge feature
  * and have no removal path, so this tool wipes them in bulk.
@@ -70,7 +70,7 @@ export function buildClearVanityUI() {
         {
           type: 10,
           content: 'Select a role below. **Every member who has that role** will have all of their ' +
-            'vanity badges (the extra tribe roles shown on castlists) cleared.\n\n' +
+            'vanity roles (the extra tribe roles shown on castlists) cleared.\n\n' +
             '-# This only clears the cosmetic castlist data — the Discord role itself is left on members.'
         },
         {
@@ -78,7 +78,7 @@ export function buildClearVanityUI() {
           components: [{
             type: 6, // Role Select
             custom_id: 'data_clear_vanity_select',
-            placeholder: 'Select a role — its members lose all vanity badges',
+            placeholder: 'Select a role — its members lose all vanity roles',
             min_values: 1,
             max_values: 1
           }]
@@ -120,7 +120,7 @@ export async function handleVanityRoleSelect(context) {
       { type: 10, content: '## 🧹 Clear Vanity Roles' },
       { type: 14 },
       { type: 10, content: `<@&${roleId}> has **${memberIds.length}** member(s), but **none** of them have ` +
-        `any vanity badges. Nothing to clear.` },
+        `any vanity roles. Nothing to clear.` },
       { type: 14 },
       { type: 1, components: [
         { type: 2, custom_id: 'data_clear_vanity', label: '← Pick Another Role', style: 2 },
@@ -132,9 +132,9 @@ export async function handleVanityRoleSelect(context) {
   return { components: [{ type: 17, accent_color: ACCENT_RED, components: [
     { type: 10, content: '## ⚠️ Confirm Clear Vanity Roles' },
     { type: 14 },
-    { type: 10, content: `This will clear vanity badges from all members of <@&${roleId}>:\n\n` +
+    { type: 10, content: `This will clear vanity roles from all members of <@&${roleId}>:\n\n` +
       `• **${memberIds.length}** member(s) have this role\n` +
-      `• **${idsToClear.length}** of them have vanity badges\n` +
+      `• **${idsToClear.length}** of them have vanity roles\n` +
       `• **${entriesRemoved}** total vanity entry/entries will be removed\n\n` +
       `-# Cosmetic castlist data only — Discord roles are not touched. This cannot be undone.` },
     { type: 14 },
@@ -170,7 +170,7 @@ export async function handleVanityClearConfirm(context) {
   return { components: [{ type: 17, accent_color: ACCENT_RED, components: [
     { type: 10, content: '## ✅ Vanity Roles Cleared' },
     { type: 14 },
-    { type: 10, content: `Cleared vanity badges for members of <@&${roleId}>:\n\n` +
+    { type: 10, content: `Cleared vanity roles for members of <@&${roleId}>:\n\n` +
       `• **${idsToClear.length}** player(s) updated\n` +
       `• **${entriesRemoved}** vanity entry/entries removed` },
     { type: 14 },

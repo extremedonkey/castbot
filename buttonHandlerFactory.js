@@ -36,7 +36,7 @@ export const BUTTON_REGISTRY = {
   
   'data_clear_vanity': {
     label: 'Clear Vanity Roles',
-    description: 'Pick a role; wipe all vanity badges from every member who has it',
+    description: 'Pick a role; wipe all vanity roles from every member who has it',
     emoji: '🧹',
     style: 'Secondary',
     parent: 'data_admin',
@@ -45,7 +45,7 @@ export const BUTTON_REGISTRY = {
   },
   'data_clear_vanity_select': {
     label: 'Vanity Role Select',
-    description: 'Select the role whose members should have vanity badges cleared',
+    description: 'Select the role whose members should have vanity roles cleared',
     emoji: '🧹',
     style: 'Role Select',
     parent: 'data_clear_vanity',
@@ -54,7 +54,7 @@ export const BUTTON_REGISTRY = {
   },
   'data_clear_vanity_confirm_*': {
     label: 'Confirm Clear Vanity',
-    description: 'Confirm clearing vanity badges from all members of the selected role',
+    description: 'Confirm clearing vanity roles from all members of the selected role',
     emoji: '🧹',
     style: 'Danger',
     parent: 'data_clear_vanity',
