@@ -3588,8 +3588,15 @@ export const BUTTON_REGISTRY = {
   'safari_claims_reset_all_*': {
     label: 'Reset All Claims',
     description: 'Reset every claim for an outcome',
-    emoji: '🔄',
+    emoji: '🗑️',
     style: 'Danger',
+    category: 'safari_management'
+  },
+  'safari_claims_refresh_*': {
+    label: 'Refresh Claims',
+    description: 'Re-render the claims manager so cooldown timers update',
+    emoji: '🔄',
+    style: 'Secondary',
     category: 'safari_management'
   },
   'custom_action_editor_*': {

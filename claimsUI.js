@@ -141,20 +141,23 @@ export async function buildClaimsManagerUI({ client, guildId, buttonId, actionIn
     }
   }
 
-  // Footer
+  // Footer — navigation row (Back + pagination) then actions row (Add / Refresh / Reset All)
   components.push({ type: 14 });
-  const footer = [
+  const navRow = [
     { type: 2, custom_id: `custom_action_editor_${buttonId}`, label: '← Back', style: 2, emoji: { name: '⚡' } }
   ];
   if (totalPages > 1) {
-    footer.push(
+    navRow.push(
       { type: 2, custom_id: checkId(`safari_claims_page:${safePage - 1}:${buttonId}:${actionIndex}`), label: '◀', style: 2, disabled: safePage === 0 },
       { type: 2, custom_id: checkId(`safari_claims_page:${safePage + 1}:${buttonId}:${actionIndex}`), label: '▶', style: 2, disabled: safePage >= totalPages - 1 }
     );
   }
-  footer.push({ type: 2, custom_id: checkId(`safari_claim_add:${buttonId}:${actionIndex}`), label: 'Add Manual Claim', style: 1, emoji: { name: '➕' } });
-  footer.push({ type: 2, custom_id: checkId(`safari_claims_reset_all:${buttonId}:${actionIndex}`), label: 'Reset All', style: 4, emoji: { name: '🔄' }, disabled: claimants.length === 0 });
-  components.push({ type: 1, components: footer });
+  components.push({ type: 1, components: navRow });
+  components.push({ type: 1, components: [
+    { type: 2, custom_id: checkId(`safari_claim_add:${buttonId}:${actionIndex}`), label: 'Add Manual Claim', style: 2, emoji: { name: '➕' } },
+    { type: 2, custom_id: checkId(`safari_claims_refresh:${buttonId}:${actionIndex}`), label: 'Refresh', style: 2, emoji: { name: '🔄' } },
+    { type: 2, custom_id: checkId(`safari_claims_reset_all:${buttonId}:${actionIndex}`), label: 'Reset All', style: 4, emoji: { name: '🗑️' }, disabled: claimants.length === 0 }
+  ]});
 
   const container = { type: 17, accent_color: 0x3498DB, components };
   const { countComponents } = await import('./utils.js');

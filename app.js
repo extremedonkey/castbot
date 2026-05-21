@@ -21234,6 +21234,20 @@ Your server is now ready for Tycoons gameplay!`;
           return await buildClaimsManagerUI({ client: context.client, guildId: context.guildId, buttonId, actionIndex: parseInt(actionIndex), page: parseInt(page) });
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('safari_claims_refresh:')) {
+      // Refresh the Claims manager — re-render so cooldown timers update
+      return ButtonHandlerFactory.create({
+        id: 'safari_claims_refresh',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const [, buttonId, actionIndex] = context.customId.split(':');
+          const { buildClaimsManagerUI } = await import('./claimsUI.js');
+          return await buildClaimsManagerUI({ client: context.client, guildId: context.guildId, buttonId, actionIndex: parseInt(actionIndex), page: 0 });
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_claim_p:')) {
       // Per-player claim management select (Clear / Set Cooldown)
       return ButtonHandlerFactory.create({
