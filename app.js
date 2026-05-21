@@ -4956,6 +4956,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_post_') &&
         !custom_id.startsWith('safari_manage_') &&
         !custom_id.startsWith('safari_view_') &&
+        !custom_id.startsWith('safari_claim_') &&
+        !custom_id.startsWith('safari_claims_') &&
         !custom_id.startsWith('safari_inventory_') &&
         !custom_id.startsWith('safari_log_') &&
         !custom_id.startsWith('safari_configure_log') &&
