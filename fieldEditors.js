@@ -51,6 +51,19 @@ export function createFieldGroupModal(entityType, entityId, fieldGroupId, curren
 }
 
 /**
+ * Coerce a stored numeric field to a safe string for a Text Input `value`.
+ *
+ * Legacy data may contain non-numeric strings (e.g. 'player_first' written by
+ * an old parsing bug) that exceed the input's max_length. Discord silently
+ * rejects any modal containing such a value ("This interaction failed"), so we
+ * render unparseable values as blank — the next valid submit cleans them up.
+ */
+function numericFieldValue(v) {
+    if (v === null || v === undefined || v === '') return '';
+    return isNaN(Number(v)) ? '' : v.toString();
+}
+
+/**
  * Create modal for item field editing
  */
 function createItemFieldModal(itemId, fieldGroupId, group, currentValues) {
@@ -171,15 +184,15 @@ function createItemFieldModal(itemId, fieldGroupId, group, currentValues) {
             // Financials: basePrice, goodOutcomeValue, badOutcomeValue
             components.push({
                 type: 18, label: 'Base Price', description: 'Cost to purchase this item from a store.',
-                component: { type: 4, custom_id: 'basePrice', style: 1, value: (currentValues.basePrice ?? '').toString(), placeholder: '0-999999', required: true, max_length: 6, min_length: 1 }
+                component: { type: 4, custom_id: 'basePrice', style: 1, value: numericFieldValue(currentValues.basePrice), placeholder: '0-999999', required: true, max_length: 6, min_length: 1 }
             });
             components.push({
                 type: 18, label: 'Good Outcome Value', description: 'Currency gained during good events (e.g. clear skies).',
-                component: { type: 4, custom_id: 'goodOutcomeValue', style: 1, value: (currentValues.goodOutcomeValue ?? '').toString(), placeholder: '-999 to 999', required: false, max_length: 4 }
+                component: { type: 4, custom_id: 'goodOutcomeValue', style: 1, value: numericFieldValue(currentValues.goodOutcomeValue), placeholder: '-999 to 999', required: false, max_length: 4 }
             });
             components.push({
                 type: 18, label: 'Bad Outcome Value', description: 'Currency gained during bad events (e.g. meteor strike).',
-                component: { type: 4, custom_id: 'badOutcomeValue', style: 1, value: (currentValues.badOutcomeValue ?? '').toString(), placeholder: '-999 to 999', required: false, max_length: 4 }
+                component: { type: 4, custom_id: 'badOutcomeValue', style: 1, value: numericFieldValue(currentValues.badOutcomeValue), placeholder: '-999 to 999', required: false, max_length: 4 }
             });
             break;
             
@@ -187,11 +200,11 @@ function createItemFieldModal(itemId, fieldGroupId, group, currentValues) {
             // Combat: attackValue, defenseValue
             components.push({
                 type: 18, label: 'Attack Value', description: 'Damage dealt when this item is used to attack.',
-                component: { type: 4, custom_id: 'attackValue', style: 1, value: (currentValues.attackValue ?? '').toString(), placeholder: '0-999', required: false, max_length: 3 }
+                component: { type: 4, custom_id: 'attackValue', style: 1, value: numericFieldValue(currentValues.attackValue), placeholder: '0-999', required: false, max_length: 3 }
             });
             components.push({
                 type: 18, label: 'Defense Value', description: 'Damage reduction when this item is equipped.',
-                component: { type: 4, custom_id: 'defenseValue', style: 1, value: (currentValues.defenseValue ?? '').toString(), placeholder: '0-999', required: false, max_length: 3 }
+                component: { type: 4, custom_id: 'defenseValue', style: 1, value: numericFieldValue(currentValues.defenseValue), placeholder: '0-999', required: false, max_length: 3 }
             });
             break;
             
@@ -605,6 +618,20 @@ export function parseModalSubmission(modalData, fieldGroupId) {
                 case 'attackValue':
                 case 'defenseValue':
                 case 'staminaBoost':
+                    // Numeric text inputs — parse as integer, empty → null.
+                    // (Previously these shared turnOrder's 'player_first' default,
+                    //  which corrupted the field and overflowed the input's
+                    //  max_length on re-edit, causing "This interaction failed".)
+                    if (value === '' || value === null || value === undefined) {
+                        fields[fieldId] = null;
+                    } else {
+                        const num = parseInt(value, 10);
+                        if (isNaN(num)) {
+                            throw new Error(`${fieldId} must be a number`);
+                        }
+                        fields[fieldId] = num;
+                    }
+                    break;
                 case 'turnOrder':
                     // String Select value — already validated
                     fields[fieldId] = value || 'player_first';
