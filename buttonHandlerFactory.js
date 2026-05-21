@@ -3557,9 +3557,39 @@ export const BUTTON_REGISTRY = {
   },
   'safari_view_claims_*': {
     label: 'View Claims',
-    description: 'View claims data for an outcome (give_item, give_currency, etc.)',
-    emoji: '📋',
+    description: 'Open the per-player claims manager for an outcome (give_item, give_currency, modify_attribute, fight_enemy)',
+    emoji: '📥',
     style: 'Secondary',
+    category: 'safari_management'
+  },
+  'safari_claims_page_*': {
+    label: 'Claims Page',
+    description: 'Paginate the per-player claims manager',
+    emoji: '📄',
+    style: 'Secondary',
+    category: 'safari_management'
+  },
+  'safari_claim_p_*': {
+    label: 'Manage Claim',
+    description: 'Per-player claim select (Clear / Set Cooldown)',
+    emoji: '▫️',
+    style: 'Secondary',
+    category: 'safari_management',
+    requiresModal: true
+  },
+  'safari_claim_add_*': {
+    label: 'Add Manual Claim',
+    description: 'Add a claim for a player (opens modal)',
+    emoji: '➕',
+    style: 'Primary',
+    category: 'safari_management',
+    requiresModal: true
+  },
+  'safari_claims_reset_all_*': {
+    label: 'Reset All Claims',
+    description: 'Reset every claim for an outcome',
+    emoji: '🔄',
+    style: 'Danger',
     category: 'safari_management'
   },
   'custom_action_editor_*': {

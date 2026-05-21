@@ -4011,11 +4011,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
     if (!isFactoryButton) {
       // Auto-discover wildcard patterns from BUTTON_REGISTRY
-      // Matches 'foo_bar_*' → 'foo_bar_12345' AND 'foo_bar|12345' (pipe separator)
+      // Matches 'foo_bar_*' → 'foo_bar_12345' (underscore), 'foo_bar|12345' (pipe) AND 'foo_bar:12345' (colon)
       for (const registryKey of Object.keys(BUTTON_REGISTRY)) {
         if (registryKey.endsWith('_*')) {
           const basePattern = registryKey.slice(0, -2); // Remove trailing '_*'
-          if (custom_id.startsWith(basePattern + '_') || custom_id.startsWith(basePattern + '|')) {
+          if (custom_id.startsWith(basePattern + '_') || custom_id.startsWith(basePattern + '|') || custom_id.startsWith(basePattern + ':')) {
             isFactoryButton = BUTTON_REGISTRY[registryKey];
             break;
           }
@@ -21214,128 +21214,114 @@ Your server is now ready for Tycoons gameplay!`;
           const actionIndex = parseInt(fullString.substring(lastUnderscore + 1));
           const buttonId = fullString.substring(0, lastUnderscore);
 
+          const { buildClaimsManagerUI } = await import('./claimsUI.js');
+          return await buildClaimsManagerUI({ client: context.client, guildId: context.guildId, buttonId, actionIndex, page: 0 });
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_claims_page:')) {
+      // Paginate the Claims manager
+      return ButtonHandlerFactory.create({
+        id: 'safari_claims_page',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const [, page, buttonId, actionIndex] = context.customId.split(':');
+          const { buildClaimsManagerUI } = await import('./claimsUI.js');
+          return await buildClaimsManagerUI({ client: context.client, guildId: context.guildId, buttonId, actionIndex: parseInt(actionIndex), page: parseInt(page) });
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_claim_p:')) {
+      // Per-player claim management select (Clear / Set Cooldown)
+      return ButtonHandlerFactory.create({
+        id: 'safari_claim_p',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        requiresModal: true,   // allows conditional modal (set_cooldown); non-modal returns become UPDATE_MESSAGE
+        updateMessage: true,
+        handler: async (context) => {
+          const [, buttonId, actionIndexStr, userId] = context.customId.split(':');
+          const actionIndex = parseInt(actionIndexStr);
+          const value = context.values?.[0];
+          if (!value || value === 'summary') return { type: 6 }; // no-op ACK
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const limit = safariData[context.guildId]?.buttons?.[buttonId]?.actions?.[actionIndex]?.config?.limit;
+          const { buildClaimsManagerUI } = await import('./claimsUI.js');
+          if (!limit) return await buildClaimsManagerUI({ client: context.client, guildId: context.guildId, buttonId, actionIndex, page: 0, fetchNames: false });
+
+          if (value === 'set_cooldown') {
+            const { getClaimants } = await import('./claimsManager.js');
+            const { buildPeriodModalComponents } = await import('./utils/periodUtils.js');
+            const claimant = getClaimants(limit).find(c => c.userId === userId);
+            return { type: 9, data: {
+              custom_id: `safari_claim_cd_modal:${buttonId}:${actionIndex}:${userId}`,
+              title: 'Set Cooldown',
+              components: buildPeriodModalComponents({ fieldPrefix: 'claim_cd', currentPeriodMs: claimant?.remainingMs || 0 })
+            }};
+          }
+
+          if (value === 'clear') {
+            const { clearClaim } = await import('./claimsManager.js');
+            clearClaim(limit, userId);
+            await saveSafariContent(safariData);
+            // Non-deferred path (requiresModal) → cache-first names to stay within 3s
+            return await buildClaimsManagerUI({ client: context.client, guildId: context.guildId, buttonId, actionIndex, page: 0, fetchNames: false });
+          }
+
+          return { type: 6 };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_claim_add:')) {
+      // Add Manual Claim → open modal (User Select + period inputs if timed)
+      return ButtonHandlerFactory.create({
+        id: 'safari_claim_add',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        requiresModal: true,
+        handler: async (context) => {
+          const [, buttonId, actionIndexStr] = context.customId.split(':');
+          const actionIndex = parseInt(actionIndexStr);
           const { loadSafariContent } = await import('./safariManager.js');
           const safariData = await loadSafariContent();
-          const button = safariData[context.guildId]?.buttons?.[buttonId];
-          const action = button?.actions?.[actionIndex];
+          const limit = safariData[context.guildId]?.buttons?.[buttonId]?.actions?.[actionIndex]?.config?.limit;
+          const { isTimed } = await import('./claimsManager.js');
 
-          if (!action?.config?.limit) {
-            return { components: [{ type: 17, accent_color: 0x3498DB, components: [
-              { type: 10, content: '## 📥 Claims\n-# No claim limit configured for this outcome' },
-              { type: 14 },
-              { type: 1, components: [
-                { type: 2, custom_id: `custom_action_editor_${buttonId}`, label: '← Back', style: 2, emoji: { name: '⚡' } }
-              ]}
-            ]}]};
-          }
-
-          const limit = action.config.limit;
-          const limitType = limit.type || 'unlimited';
-          const claimedBy = limit.claimedBy;
-
-          // Build claim status
           const components = [
-            { type: 10, content: `## 📥 Claims | ${button.name || buttonId}` },
-            { type: 14 },
+            { type: 18, label: 'Player', description: 'Select the player to add a claim for', component: {
+              type: 5, custom_id: 'claim_user', min_values: 1, max_values: 1
+            }}
           ];
-
-          // Limit type explanation
-          const { formatPeriod } = await import('./utils/periodUtils.js');
-          const limitLabels = {
-            unlimited: '♾️ **Unlimited** — no claim restrictions',
-            once_per_player: '👤 **Once Per Player** — each player can claim once',
-            once_globally: '🌍 **Once Globally** — first player to claim gets it, nobody else can',
-            once_per_period: `⏱️ **Once Per Period** — every **${formatPeriod(limit.periodMs || 0)}**`
-          };
-          components.push({ type: 10, content: `### \`\`\`📋 Limit Type\`\`\`\n${limitLabels[limitType] || limitType}` });
-
-          // Outcome info — resolve name based on action type
-          const items = safariData[context.guildId]?.items || {};
-          const enemies = safariData[context.guildId]?.enemies || {};
-          const { getCustomTerms } = await import('./safariManager.js');
-          const customTerms = await getCustomTerms(context.guildId);
-          let outcomeDesc = `Outcome #${actionIndex + 1}`;
-
-          switch (action.type) {
-            case 'give_item': {
-              const item = items[action.config.itemId];
-              const qty = action.config.quantity || 1;
-              const op = action.config.operation === 'remove' ? 'Remove' : 'Give';
-              outcomeDesc = `${item?.emoji || '📦'} ${op} ${qty}x ${item?.name || action.config.itemId || 'Unknown Item'}`;
-              break;
-            }
-            case 'give_currency': {
-              const amt = action.config.amount || 0;
-              outcomeDesc = `${customTerms.currencyEmoji || '🪙'} ${amt > 0 ? '+' : ''}${amt} ${customTerms.currencyName || 'Currency'}`;
-              break;
-            }
-            case 'modify_attribute': {
-              const attrDefs = safariData[context.guildId]?.attributeDefinitions || {};
-              const attrDef = attrDefs[action.config.attributeId];
-              const op = action.config.operation === 'add' ? '+' : action.config.operation === 'subtract' ? '-' : '=';
-              outcomeDesc = `${attrDef?.emoji || '📊'} ${op}${action.config.amount || 0} ${attrDef?.name || action.config.attributeId || 'Unknown Attribute'}`;
-              break;
-            }
-            case 'fight_enemy': {
-              const enemy = enemies[action.config.enemyId];
-              outcomeDesc = `${enemy?.emoji || '🐙'} Fight ${enemy?.name || 'Unknown Enemy'}`;
-              break;
-            }
+          if (isTimed(limit)) {
+            const { buildPeriodModalComponents } = await import('./utils/periodUtils.js');
+            components.push(...buildPeriodModalComponents({ fieldPrefix: 'claim_cd', currentPeriodMs: limit.periodMs || 0 }));
           }
-          components.push({ type: 10, content: `-# ${outcomeDesc} | Outcome #${actionIndex + 1}` });
-
-          components.push({ type: 14 });
-
-          // Claim data
-          if (limitType === 'unlimited') {
-            components.push({ type: 10, content: `### \`\`\`📊 Status\`\`\`\n✅ No restrictions — all players can claim freely` });
-          } else if (limitType === 'once_globally') {
-            if (typeof claimedBy === 'string' && claimedBy.length > 0) {
-              components.push({ type: 10, content: `### \`\`\`📊 Status\`\`\`\n🔒 **Claimed** by <@${claimedBy}>\n-# This outcome is locked. No other players can claim it.\n-# Use **🔄 Reset Claims** to unlock.` });
-            } else {
-              components.push({ type: 10, content: `### \`\`\`📊 Status\`\`\`\n🔓 **Available** — waiting for the first player to claim\n-# Once claimed, no other player will be able to claim this outcome.` });
-            }
-          } else if (limitType === 'once_per_player') {
-            const claimedArray = Array.isArray(claimedBy) ? claimedBy : (claimedBy ? [claimedBy] : []);
-            if (claimedArray.length === 0) {
-              components.push({ type: 10, content: `### \`\`\`📊 Status\`\`\`\n🔓 **No claims yet** — all players can still claim\n-# Each player gets one claim. After claiming, they cannot claim again.` });
-            } else {
-              const playerList = claimedArray.map((id, i) => `${i + 1}. <@${id}>`).join('\n');
-              components.push({ type: 10, content: `### \`\`\`📊 Status\`\`\`\n📋 **${claimedArray.length} player${claimedArray.length === 1 ? '' : 's'}** claimed:\n${playerList}\n\n-# These players cannot claim again. Other players can still claim.` });
-            }
-          } else if (limitType === 'once_per_period') {
-            // claimedBy is { userId: timestamp } for once_per_period
-            const claims = (typeof claimedBy === 'object' && !Array.isArray(claimedBy)) ? claimedBy : {};
-            const entries = Object.entries(claims);
-            if (entries.length === 0) {
-              components.push({ type: 10, content: `### \`\`\`📊 Status\`\`\`\n🔓 **No claims yet** — all players can claim\n-# Each player can claim once every **${formatPeriod(limit.periodMs || 0)}**.` });
-            } else {
-              const now = Date.now();
-              const playerLines = entries.map(([userId, timestamp], i) => {
-                const elapsed = now - timestamp;
-                const remaining = (limit.periodMs || 0) - elapsed;
-                const status = remaining > 0
-                  ? `⏱️ **${formatPeriod(remaining)}** remaining`
-                  : '✅ Available';
-                return `${i + 1}. <@${userId}> — ${status}`;
-              }).join('\n');
-              components.push({ type: 10, content: `### \`\`\`📊 Status\`\`\`\n📋 **${entries.length} player${entries.length === 1 ? '' : 's'}** with cooldowns:\n${playerLines}\n\n-# Players can re-claim after their cooldown expires.` });
-            }
+          return { type: 9, data: { custom_id: `safari_claim_add_modal:${buttonId}:${actionIndex}`, title: 'Add Manual Claim', components } };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_claims_reset_all:')) {
+      // Reset ALL claims for an outcome
+      return ButtonHandlerFactory.create({
+        id: 'safari_claims_reset_all',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const [, buttonId, actionIndexStr] = context.customId.split(':');
+          const actionIndex = parseInt(actionIndexStr);
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const limit = safariData[context.guildId]?.buttons?.[buttonId]?.actions?.[actionIndex]?.config?.limit;
+          if (limit) {
+            const { clearAllClaims } = await import('./claimsManager.js');
+            clearAllClaims(limit);
+            await saveSafariContent(safariData);
           }
-
-          // Navigation
-          components.push(
-            { type: 14 },
-            { type: 1, components: [
-              { type: 2, custom_id: `custom_action_editor_${buttonId}`, label: '← Back', style: 2, emoji: { name: '⚡' } },
-              { type: 2, custom_id: `safari_modify_attr_reset_${buttonId}_${actionIndex}`, label: 'Reset Claims', style: 2, emoji: { name: '🔄' } }
-            ]}
-          );
-
-          const container = { type: 17, accent_color: 0x3498DB, components };
-          const { countComponents } = await import('./utils.js');
-          countComponents([container], { verbosity: "summary", label: "Claims Viewer" });
-          return { components: [container] };
+          const { buildClaimsManagerUI } = await import('./claimsUI.js');
+          return await buildClaimsManagerUI({ client: context.client, guildId: context.guildId, buttonId, actionIndex, page: 0 });
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_item_save_')) {
@@ -39882,6 +39868,62 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
 
+    } else if (custom_id.startsWith('safari_claim_cd_modal:')) {
+      // Claims manager — set a player's remaining cooldown (timed outcomes)
+      return ButtonHandlerFactory.create({
+        id: 'safari_claim_cd_modal',
+        updateMessage: true,
+        handler: async (context) => {
+          const [, buttonId, actionIndexStr, userId] = custom_id.split(':');
+          const actionIndex = parseInt(actionIndexStr);
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const limit = safariData[context.guildId]?.buttons?.[buttonId]?.actions?.[actionIndex]?.config?.limit;
+          if (limit) {
+            const { parsePeriodFromModal } = await import('./utils/periodUtils.js');
+            const { setCooldown } = await import('./claimsManager.js');
+            const { totalMs } = parsePeriodFromModal(components, { days: 'claim_cd_days', hours: 'claim_cd_hours', minutes: 'claim_cd_minutes' });
+            setCooldown(limit, userId, totalMs);
+            await saveSafariContent(safariData);
+          }
+          const { buildClaimsManagerUI } = await import('./claimsUI.js');
+          return await buildClaimsManagerUI({ client: context.client, guildId: context.guildId, buttonId, actionIndex, page: 0 });
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('safari_claim_add_modal:')) {
+      // Claims manager — add a manual claim for a player
+      return ButtonHandlerFactory.create({
+        id: 'safari_claim_add_modal',
+        updateMessage: true,
+        handler: async (context) => {
+          const [, buttonId, actionIndexStr] = custom_id.split(':');
+          const actionIndex = parseInt(actionIndexStr);
+          let userId = null;
+          for (const comp of (components || [])) {
+            const inner = comp.component || comp.components?.[0];
+            if (inner?.custom_id === 'claim_user') { userId = inner.values?.[0] || inner.value || null; break; }
+          }
+          const { buildClaimsManagerUI } = await import('./claimsUI.js');
+          if (!userId) return await buildClaimsManagerUI({ client: context.client, guildId: context.guildId, buttonId, actionIndex, page: 0 });
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const limit = safariData[context.guildId]?.buttons?.[buttonId]?.actions?.[actionIndex]?.config?.limit;
+          if (limit) {
+            const { addClaim, isTimed } = await import('./claimsManager.js');
+            let remainingMs;
+            if (isTimed(limit)) {
+              const { parsePeriodFromModal } = await import('./utils/periodUtils.js');
+              remainingMs = parsePeriodFromModal(components, { days: 'claim_cd_days', hours: 'claim_cd_hours', minutes: 'claim_cd_minutes' }).totalMs;
+            }
+            addClaim(limit, userId, { remainingMs });
+            await saveSafariContent(safariData);
+          }
+          return await buildClaimsManagerUI({ client: context.client, guildId: context.guildId, buttonId, actionIndex, page: 0 });
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'challenge_modal_create' || custom_id.startsWith('challenge_modal_edit:')) {
       // Challenges — create or edit modal submit
       return ButtonHandlerFactory.create({
@@ -51209,21 +51251,14 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
         {
           type: 1, // Action Row
           components: [
-            {
-              type: 2, // Button
-              custom_id: `safari_item_reset_${buttonId}_${itemId}_${actionIndex}`,
-              label: 'Reset Claims',
-              style: 2, // Secondary (grey)
-              emoji: { name: '🔄' },
-              disabled: !claimsExist // Enable when claims exist
-            },
-            {
+            // Single Claims button opens the unified per-player manager (view + clear + cooldown + add + reset all)
+            ...(state.limit && state.limit !== 'unlimited' ? [{
               type: 2, // Button
               custom_id: `safari_view_claims_${buttonId}_${actionIndex}`,
               label: 'Claims',
               style: 2,
               emoji: { name: '📥' }
-            },
+            }] : []),
             {
               type: 2, // Button
               custom_id: `safari_remove_action_${buttonId}_${actionIndex}`,
@@ -51261,6 +51296,7 @@ async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerm
 
   // Check if there are existing claims to enable/disable reset button
   let claimsExist = false;
+  let limitConfigured = false; // true when a non-unlimited limit is configured (gates the Claims button)
   try {
     const { loadSafariContent } = await import('./safariManager.js');
     const safariData = await loadSafariContent();
@@ -51268,6 +51304,7 @@ async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerm
     if (button && button.actions && button.actions[actionIndex]) {
       const action = button.actions[actionIndex];
       if (action.type === 'give_currency' && action.config?.limit) {
+        limitConfigured = !!action.config.limit.type && action.config.limit.type !== 'unlimited';
         const claimedBy = action.config.limit.claimedBy;
         if (action.config.limit.type === 'once_per_player') {
           claimsExist = Array.isArray(claimedBy) && claimedBy.length > 0;
@@ -51351,14 +51388,14 @@ async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerm
         {
           type: 1, // Action Row
           components: [
-            {
+            // Single Claims button opens the unified per-player manager (view + clear + cooldown + add + reset all)
+            ...((limitConfigured || (state.limit && state.limit !== 'unlimited')) ? [{
               type: 2, // Button
-              custom_id: `safari_currency_reset_${buttonId}_${actionIndex}`,
-              label: 'Reset Claims',
-              style: 2, // Secondary (grey)
-              emoji: { name: '🔄' },
-              disabled: !claimsExist // Enable when claims exist
-            },
+              custom_id: `safari_view_claims_${buttonId}_${actionIndex}`,
+              label: 'Claims',
+              style: 2,
+              emoji: { name: '📥' }
+            }] : []),
             {
               type: 2, // Button
               custom_id: `safari_remove_action_${buttonId}_${actionIndex}`,
