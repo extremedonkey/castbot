@@ -34,6 +34,34 @@ export const BUTTON_REGISTRY = {
     category: 'admin'
   },
   
+  'data_clear_vanity': {
+    label: 'Clear Vanity Roles',
+    description: 'Pick a role; wipe all vanity badges from every member who has it',
+    emoji: '🧹',
+    style: 'Secondary',
+    parent: 'data_admin',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
+  'data_clear_vanity_select': {
+    label: 'Vanity Role Select',
+    description: 'Select the role whose members should have vanity badges cleared',
+    emoji: '🧹',
+    style: 'Role Select',
+    parent: 'data_clear_vanity',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
+  'data_clear_vanity_confirm_*': {
+    label: 'Confirm Clear Vanity',
+    description: 'Confirm clearing vanity badges from all members of the selected role',
+    emoji: '🧹',
+    style: 'Danger',
+    parent: 'data_clear_vanity',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
+
   // Analytics Row 1
   'refresh_tips': {
     label: 'Refresh Tips',

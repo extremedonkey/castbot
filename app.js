@@ -1245,10 +1245,20 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setDisabled(!hasSafariData)
   ];
   
+  // Cleanup section — maintenance tools that mutate stored data
+  const cleanupButtons = [
+    new ButtonBuilder()
+      .setCustomId('data_clear_vanity')
+      .setLabel('Clear Vanity Roles')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🧹')
+  ];
+
   const analyticsRow = new ActionRowBuilder().addComponents(analyticsButtons);
   const dangerZoneRow = new ActionRowBuilder().addComponents(dangerZoneButtons);
   const dataActionsRow = new ActionRowBuilder().addComponents(dataActionsButtons);
   const exportDataRow = new ActionRowBuilder().addComponents(exportDataButtons);
+  const cleanupRow = new ActionRowBuilder().addComponents(cleanupButtons);
 
   const backRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -1269,6 +1279,9 @@ async function createReeceStuffMenu(guildId, channelId = null) {
     { type: 14 },
     { type: 10, content: `### \`\`\`📤 Export & Actions\`\`\`` },
     exportDataRow.toJSON(),
+    { type: 14 },
+    { type: 10, content: `### \`\`\`🧹 Cleanup\`\`\`` },
+    cleanupRow.toJSON(),
     { type: 14 },
     { type: 10, content: `### \`\`\`☢️ Danger Zone\`\`\`` },
     dangerZoneRow.toJSON(),
@@ -12968,6 +12981,40 @@ To fix this:
             ...reeceMenuData,
             ephemeral: true
           };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'data_clear_vanity') {
+      // Vanity role cleanup — show role-select picker (DELEGATED TO MODULE)
+      return ButtonHandlerFactory.create({
+        id: 'data_clear_vanity',
+        updateMessage: true,
+        handler: async (context) => {
+          const { buildClearVanityUI } = await import('./vanityRoleManager.js');
+          return { ...buildClearVanityUI(), ephemeral: true };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'data_clear_vanity_select') {
+      // Role selected — show confirmation with impact counts (DELEGATED TO MODULE)
+      return ButtonHandlerFactory.create({
+        id: 'data_clear_vanity_select',
+        updateMessage: true,
+        deferred: true, // member list fetch can exceed 3s
+        handler: async (context) => {
+          const { handleVanityRoleSelect } = await import('./vanityRoleManager.js');
+          return { ...(await handleVanityRoleSelect(context)), ephemeral: true };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('data_clear_vanity_confirm_')) {
+      // Confirmed — wipe vanityRoles for all members of the role (DELEGATED TO MODULE)
+      return ButtonHandlerFactory.create({
+        id: 'data_clear_vanity_confirm',
+        requiresPermission: PermissionFlagsBits.ManageRoles | PermissionFlagsBits.ManageChannels,
+        permissionName: 'Manage Roles or Manage Channels',
+        updateMessage: true,
+        deferred: true, // member list fetch + save can exceed 3s
+        handler: async (context) => {
+          const { handleVanityClearConfirm } = await import('./vanityRoleManager.js');
+          return { ...(await handleVanityClearConfirm(context)), ephemeral: true };
         }
       })(req, res, client);
     } else if (custom_id === 'safari_manage_safari_buttons') {
