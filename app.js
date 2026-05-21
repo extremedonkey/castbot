@@ -5149,6 +5149,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             client: context.client,
             member: context.member, // Pass the full member object for role checks
             channelName: context.channelName, // Pass channel name for logging - CRITICAL for location fix
+            channel_id: context.channelId, // Pass channel ID so item-pickup logs render a <#channel> mention (not "at Unknown")
             user: context.member?.user || { id: context.userId }, // Pass user information with at minimum the userId
             channel: { name: context.channelName } // Pass channel information for logging
           };

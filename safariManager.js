@@ -1236,6 +1236,7 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
             username: interaction?.member?.user?.username || interaction?.user?.username || 'Unknown',
             displayName: interaction?.member?.nick || interaction?.member?.user?.global_name || interaction?.member?.user?.username || interaction?.user?.username || 'Unknown',
             channelId: interaction?.channel_id || null,
+            channelName: interaction?.channelName || interaction?.channel?.name || null,
             source: 'action_give'
         };
         const success = await addItemToInventory(guildId, userId, config.itemId, quantity, null, logContext);
