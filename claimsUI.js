@@ -154,7 +154,7 @@ export async function buildClaimsManagerUI({ client, guildId, buttonId, actionIn
   }
   components.push({ type: 1, components: navRow });
   components.push({ type: 1, components: [
-    { type: 2, custom_id: checkId(`safari_claim_add:${buttonId}:${actionIndex}`), label: 'Add Manual Claim', style: 2, emoji: { name: '➕' } },
+    { type: 2, custom_id: checkId(`safari_claim_add:${buttonId}:${actionIndex}`), label: 'Manual Claim', style: 2, emoji: { name: '👤' } },
     { type: 2, custom_id: checkId(`safari_claims_refresh:${buttonId}:${actionIndex}`), label: 'Refresh', style: 2, emoji: { name: '🔄' } },
     { type: 2, custom_id: checkId(`safari_claims_reset_all:${buttonId}:${actionIndex}`), label: 'Reset All', style: 4, emoji: { name: '🗑️' }, disabled: claimants.length === 0 }
   ]});

@@ -3578,9 +3578,9 @@ export const BUTTON_REGISTRY = {
     requiresModal: true
   },
   'safari_claim_add_*': {
-    label: 'Add Manual Claim',
+    label: 'Manual Claim',
     description: 'Add a claim for a player (opens modal)',
-    emoji: '➕',
+    emoji: '👤',
     style: 'Primary',
     category: 'safari_management',
     requiresModal: true
