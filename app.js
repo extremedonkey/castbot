@@ -42291,9 +42291,13 @@ Your server is now ready for Tycoons gameplay!`;
 
         console.log(`🔀 [TRIBE SWAP] Found ${playerArray.length} players in current tribes`);
 
-        // Send deferred response (this will take time)
+        // Send deferred response (this will take time).
+        // DEFERRED_UPDATE_MESSAGE (not DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE): the modal was
+        // launched from the ephemeral castlist hub, so we silently ACK and PATCH @original at the
+        // end. Using a new-message defer (type 5) leaves a public "thinking..." placeholder that
+        // is never resolved by a webhook POST follow-up — that was the stuck-spinner bug.
         await res.send({
-          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+          type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
         });
 
         // Helper: Shuffle array (Fisher-Yates)
@@ -42703,40 +42707,26 @@ Your server is now ready for Tycoons gameplay!`;
           })
         });
 
-        // Return to castlist hub
-        const { createCastlistHub } = await import('./castlistHub.js');
-        const hubData = await createCastlistHub(guildId, {
+        // Refresh the castlist hub in place — PATCHes @original, resolving the deferred update.
+        // (Previously this POSTed a new follow-up which left the deferred placeholder unresolved.)
+        const { twoPhaseHubResponse } = await import('./castlistHandlers.js');
+        await twoPhaseHubResponse(req.body.token, guildId, {
           selectedCastlistId: 'default',
           activeButton: null
         }, client);
 
-        // Send follow-up message with hub
-        await fetch(`https://discord.com/api/v10/webhooks/${process.env.DISCORD_APP_ID}/${req.body.token}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            flags: InteractionResponseFlags.EPHEMERAL,
-            ...hubData
-          })
-        });
-
       } catch (error) {
         console.error(`🔀 [TRIBE SWAP] Error:`, error);
 
-        // Send error message
-        await fetch(`https://discord.com/api/v10/webhooks/${process.env.DISCORD_APP_ID}/${req.body.token}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            flags: InteractionResponseFlags.EPHEMERAL,
+        // Send error message by PATCHing @original (resolves the deferred update).
+        await updateDeferredResponse(req.body.token, {
+          components: [{
+            type: 17,
             components: [{
-              type: 17,
-              components: [{
-                type: 10,
-                content: `❌ Tribe swap failed: ${error.message}`
-              }]
+              type: 10,
+              content: `❌ Tribe swap failed: ${error.message}`
             }]
-          })
+          }]
         });
       }
     } else if (custom_id.startsWith('tribe_add_modal|')) {
