@@ -101,11 +101,19 @@ describe('claimsManager — addClaim', () => {
     assert.equal(getClaimants(limit, now).find(e => e.userId === 'a').remainingMs, HOUR);
   });
 
-  it('once_per_period clamps remaining over period', () => {
+  it('once_per_period allows remaining over period (admin override → future timestamp)', () => {
     const now = 1_000_000_000;
     const limit = { type: 'once_per_period', periodMs: PERIOD, claimedBy: {} };
     addClaim(limit, 'a', { remainingMs: 99 * HOUR, now });
-    assert.equal(limit.claimedBy.a, now); // clamped to full period
+    assert.equal(limit.claimedBy.a, now - PERIOD + 99 * HOUR); // future timestamp, not clamped
+    assert.equal(getClaimants(limit, now).find(e => e.userId === 'a').remainingMs, 99 * HOUR);
+  });
+
+  it('once_per_period clamps negative remaining to 0', () => {
+    const now = 1_000_000_000;
+    const limit = { type: 'once_per_period', periodMs: PERIOD, claimedBy: {} };
+    addClaim(limit, 'a', { remainingMs: -5000, now });
+    assert.equal(getClaimants(limit, now).find(e => e.userId === 'a').onCooldown, false);
   });
 });
 
@@ -137,6 +145,16 @@ describe('claimsManager — setCooldown', () => {
     const limit = { type: 'once_per_period', periodMs: PERIOD, claimedBy: { a: 0 } };
     setCooldown(limit, 'a', 30 * 60000, now); // 30m remaining
     assert.equal(getClaimants(limit, now).find(e => e.userId === 'a').remainingMs, 30 * 60000);
+  });
+
+  it('allows remaining beyond the period (admin override)', () => {
+    const now = 1_000_000_000;
+    const limit = { type: 'once_per_period', periodMs: 5 * 60000, claimedBy: { a: 0 } };
+    setCooldown(limit, 'a', 11 * 60000, now); // 11m on a 5m period
+    const c = getClaimants(limit, now).find(e => e.userId === 'a');
+    assert.equal(c.onCooldown, true);
+    assert.equal(c.remainingMs, 11 * 60000);
+    assert.equal(claimStatusLine(c, limit), '🧊 On Cooldown | 11m remaining');
   });
 
   it('remaining 0 → immediately available', () => {

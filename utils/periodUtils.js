@@ -21,6 +21,27 @@ export function formatPeriod(ms) {
 }
 
 /**
+ * Format a *remaining* countdown, rounding UP to the nearest minute.
+ * A 11-minute timer should read "11m" the instant it's set (not "10m" because a few ms elapsed),
+ * and tick down 11m → 10m → … → 1m → (then "0m" / expired). Use this for "X remaining" displays;
+ * use formatPeriod() for fixed durations like "every 5m".
+ * @param {number} ms
+ * @returns {string} e.g. "11m", "1h 59m", "2d 3h 0m"
+ */
+export function formatCountdown(ms) {
+  if (!ms || ms <= 0) return '0m';
+  const totalMinutes = Math.ceil(ms / 60000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  const parts = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (days > 0 || hours > 0) parts.push(`${hours}h`);
+  parts.push(`${minutes}m`);
+  return parts.join(' ');
+}
+
+/**
  * Parse period values from modal submit components.
  * Supports both Label (type 18) and legacy ActionRow formats.
  * @param {Array} components - Modal submit components array

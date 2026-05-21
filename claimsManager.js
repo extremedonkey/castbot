@@ -12,12 +12,12 @@
  * (`resolveNames`) only reads from a passed-in guild object.
  */
 
-import { formatPeriod } from './utils/periodUtils.js';
+import { formatCountdown } from './utils/periodUtils.js';
 
-function clamp(n, min, max) {
+/** Coerce to a non-negative number (cooldown remaining can exceed the period — admin override). */
+function nonNeg(n, fallback = 0) {
   n = Number(n);
-  if (Number.isNaN(n)) n = max;
-  return Math.max(min, Math.min(max, n));
+  return Number.isNaN(n) ? fallback : Math.max(0, n);
 }
 
 /** True when the outcome uses a time-based (cooldown) limit. */
@@ -66,7 +66,7 @@ export function getClaimants(limit, now = Date.now()) {
 export function claimStatusLine(claimant, limit) {
   if (limit?.type === 'once_per_period') {
     return claimant.onCooldown
-      ? `🧊 On Cooldown | ${formatPeriod(claimant.remainingMs)} remaining`
+      ? `🧊 On Cooldown | ${formatCountdown(claimant.remainingMs)} remaining`
       : '✅ Available';
   }
   return '🔒 Claimed';
@@ -89,7 +89,8 @@ export function addClaim(limit, userId, { remainingMs, now = Date.now() } = {}) 
       limit.claimedBy = {};
     }
     const periodMs = limit.periodMs || 0;
-    const rem = (remainingMs === undefined || remainingMs === null) ? periodMs : clamp(remainingMs, 0, periodMs);
+    // Remaining defaults to the full period; admin may set more (future timestamp = extended cooldown)
+    const rem = (remainingMs === undefined || remainingMs === null) ? periodMs : nonNeg(remainingMs);
     limit.claimedBy[userId] = now - periodMs + rem;
   }
 
@@ -125,7 +126,8 @@ export function setCooldown(limit, userId, remainingMs, now = Date.now()) {
     limit.claimedBy = {};
   }
   const periodMs = limit.periodMs || 0;
-  limit.claimedBy[userId] = now - periodMs + clamp(remainingMs, 0, periodMs);
+  // Allow remaining > period (admin override): stores a future timestamp the cooldown counts down from
+  limit.claimedBy[userId] = now - periodMs + nonNeg(remainingMs);
   return limit;
 }
 
