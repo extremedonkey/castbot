@@ -138,6 +138,11 @@ import {
   createMapExplorerMenu
 } from './mapExplorer.js';
 import { shouldLog } from './src/utils/logConfig.js';
+import { installHeapDumpHandler } from './src/monitoring/heapDumpHandler.js';
+
+// Diagnostic: SIGUSR2 → heap snapshot to /tmp. See RaP 0915 (MemoryLeakOOM).
+// Triggered manually from ops: `kill -SIGUSR2 <pid>` — safe to leave installed.
+installHeapDumpHandler();
 
 // Season App question pagination — single source of truth
 const QUESTIONS_PER_PAGE = 8;
