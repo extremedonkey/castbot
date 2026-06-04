@@ -37,6 +37,26 @@ function markdownToHtml(text) {
 }
 
 /**
+ * Extract human-readable text from a Components V2 message tree.
+ * CastBot's own messages store their text in `components` (Text Display type 10),
+ * not in `content` — so without this they'd render as "[no content]".
+ */
+function extractComponentText(components) {
+  const parts = [];
+  const walk = (comps) => {
+    for (const c of comps || []) {
+      if (!c) continue;
+      if (c.type === 10 && c.content) parts.push(c.content);   // Text Display
+      else if (c.type === 2 && c.label) parts.push(`[${c.label}]`); // Button label
+      if (Array.isArray(c.components)) walk(c.components);      // Container/Section/ActionRow
+      if (c.accessory) walk([c.accessory]);                    // Section accessory
+    }
+  };
+  walk(components);
+  return parts.join('\n');
+}
+
+/**
  * Generate a unique color from a user ID (deterministic)
  */
 function userColor(userId) {
@@ -87,6 +107,12 @@ export function generateExportHTML(channelName, messages) {
     // Message content
     if (msg.content) {
       contentParts.push(`<div class="content">${markdownToHtml(msg.content)}</div>`);
+    }
+
+    // Components V2 text (CastBot messages put their text here, not in content)
+    if (msg.components?.length) {
+      const compText = extractComponentText(msg.components);
+      if (compText) contentParts.push(`<div class="content">${markdownToHtml(compText)}</div>`);
     }
 
     // Embeds

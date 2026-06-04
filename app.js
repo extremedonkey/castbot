@@ -36788,7 +36788,7 @@ Your server is now ready for Tycoons gameplay!`;
               type: 17,
               accent_color: 0x3498db,
               components: [
-                { type: 10, content: `## 📥 Export Channel\n\nSelect a channel to export all messages as a text file.\n\n-# Uses REST API only — no Privileged Intents required.` },
+                { type: 10, content: `## 📥 Export Channel\n\nSelect a channel to export its full message history as a styled HTML file.\n\n-# ⚠️ Large channels take time (~1 min per 3,000 messages — a 13k channel ≈ 4 min). Requires the **Message Content Intent** to be enabled, or message text will be blank.` },
                 { type: 14 },
                 { type: 1, components: [{
                   type: 8, // Channel Select
@@ -36822,27 +36822,13 @@ Your server is now ready for Tycoons gameplay!`;
       setTimeout(async () => {
         try {
           console.log(`📥 START: export_channel for channel ${selectedChannelId}`);
-          let allMessages = [];
-          let before = null;
-          let batch = 0;
 
-          while (true) {
-            const params = new URLSearchParams({ limit: '100' });
-            if (before) params.set('before', before);
-
-            const messages = await DiscordRequest(`channels/${selectedChannelId}/messages?${params}`, { method: 'GET' });
-            if (!messages || messages.length === 0) break;
-
-            allMessages.push(...messages);
-            before = messages[messages.length - 1].id;
-            batch++;
-            console.log(`  📥 Batch ${batch}: ${messages.length} messages (total: ${allMessages.length})`);
-
-            if (messages.length < 100) break;
-            await new Promise(r => setTimeout(r, 300));
-          }
-
-          allMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+          // Rate-limit-aware fetch (header-driven pacing + 429 backstop) — see RaP 0915
+          const { fetchAllChannelMessages } = await import('./channelExportFetcher.js');
+          const { messages: allMessages, total429, batches } = await fetchAllChannelMessages(selectedChannelId, {
+            onProgress: (n) => { if (n % 500 === 0) console.log(`  📥 Fetched ${n} messages...`); }
+          });
+          console.log(`📥 Fetch complete: ${allMessages.length} messages in ${batches} batches (${total429} rate-limit waits)`);
 
           // Get channel name
           let channelName = selectedChannelId;

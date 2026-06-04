@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>#✨new-features — Export</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #313338; color: #dbdee1; font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.375; }
+.header-bar { background: #2b2d31; border-bottom: 1px solid #1e1f22; padding: 12px 16px; position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 8px; }
+.header-bar .hash { color: #80848e; font-size: 24px; }
+.header-bar .name { color: #f2f3f5; font-weight: 600; font-size: 16px; }
+.header-bar .count { color: #80848e; font-size: 13px; margin-left: auto; }
+.search-bar { background: #2b2d31; padding: 8px 16px; border-bottom: 1px solid #1e1f22; position: sticky; top: 49px; z-index: 9; }
+.search-bar input { width: 100%; background: #1e1f22; border: none; color: #dbdee1; padding: 8px 12px; border-radius: 4px; font-size: 14px; outline: none; }
+.search-bar input::placeholder { color: #80848e; }
+.messages { padding: 16px 0; }
+.msg { display: flex; padding: 2px 16px; gap: 16px; position: relative; }
+.msg:hover { background: #2e3035; }
+.msg.grouped { padding-left: 72px; }
+.msg.grouped .time-inline { display: none; font-size: 11px; color: #80848e; position: absolute; left: 16px; width: 40px; text-align: right; }
+.msg.grouped:hover .time-inline { display: block; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; margin-top: 2px; }
+.msg-body { min-width: 0; flex: 1; }
+.msg-body .header { display: flex; align-items: baseline; gap: 8px; }
+.author { font-weight: 600; font-size: 15px; cursor: pointer; }
+.author:hover { text-decoration: underline; }
+.time { font-size: 12px; color: #80848e; }
+.content { white-space: pre-wrap; word-wrap: break-word; }
+.content.system { color: #80848e; font-style: italic; }
+.content a { color: #00a8fc; text-decoration: none; }
+.content a:hover { text-decoration: underline; }
+.content code { background: #2b2d31; padding: 2px 4px; border-radius: 3px; font-size: 13px; }
+.content strong { color: #f2f3f5; }
+.embed { border-left: 4px solid #4f545c; background: #2b2d31; border-radius: 4px; padding: 8px 12px; margin: 4px 0; max-width: 520px; }
+.embed-title { font-weight: 600; color: #00a8fc; margin-bottom: 4px; }
+.embed-desc { font-size: 14px; }
+.attachment { margin: 4px 0; }
+.attachment img { max-width: 400px; max-height: 300px; border-radius: 8px; cursor: pointer; }
+.attachment.file { background: #2b2d31; padding: 8px 12px; border-radius: 8px; display: inline-block; }
+.attachment.file a { color: #00a8fc; text-decoration: none; }
+.reactions { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+.reaction { background: #2b2d31; border: 1px solid #3f4147; border-radius: 8px; padding: 2px 6px; font-size: 13px; }
+.date-sep { display: flex; align-items: center; margin: 16px 16px; }
+.date-sep::before, .date-sep::after { content: ''; flex: 1; border-top: 1px solid #3f4147; }
+.date-sep span { padding: 0 8px; font-size: 12px; font-weight: 600; color: #80848e; white-space: nowrap; }
+.no-results { text-align: center; color: #80848e; padding: 40px; font-size: 16px; display: none; }
+</style>
+</head>
+<body>
+<div class="header-bar">
+  <span class="hash">#</span>
+  <span class="name">✨new-features</span>
+  <span class="count">111 messages</span>
+</div>
+<div class="search-bar">
+  <input type="text" id="search" placeholder="Search messages..." autocomplete="off">
+</div>
+<div class="messages" id="messages">
+<div class="date-sep"><span>Tuesday, January 28, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Jan 28, 2025 10:44 PM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Jan 28, 2025 11:54 PM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Thursday, January 30, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Jan 30, 2025 1:35 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jan 30, 2025 1:35 AM</span><div class="reactions"><span class="reaction">❤️ 1</span></div></div></div>
+<div class="date-sep"><span>Saturday, March 29, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Mar 29, 2025 8:34 PM</span></div>
+          <div class="reactions"><span class="reaction">❤️ 1</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Friday, April 25, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Apr 25, 2025 11:30 PM</span></div>
+          <div class="reactions"><span class="reaction">💚 2</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Monday, June 2, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Jun 2, 2025 8:09 PM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Tuesday, June 3, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Jun 3, 2025 2:30 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 3, 2025 2:30 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 3, 2025 2:31 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 3, 2025 2:32 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 3, 2025 2:36 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 3, 2025 2:38 AM</span><div class="reactions"><span class="reaction">❤️ 1</span></div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 3, 2025 2:38 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 3, 2025 2:41 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 3, 2025 2:43 AM</span><div class="reactions"><span class="reaction">:yumshot: 1</span><span class="reaction">💚 1</span><span class="reaction">👑 1</span></div></div></div>
+<div class="date-sep"><span>Sunday, June 8, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Jun 8, 2025 2:38 AM</span></div>
+          <div class="reactions"><span class="reaction">❤️ 1</span></div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 8, 2025 2:38 AM</span><div class="content system">[no content]</div></div></div>
+<div class="date-sep"><span>Wednesday, June 11, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Jun 11, 2025 2:17 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:17 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/1319912453248647170/5947c59131f86c244263c9f810d4702b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#9c27b0">CastBot</span><span class="time">Jun 11, 2025 2:18 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Jun 11, 2025 2:19 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:21 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:24 AM</span><div class="reactions"><span class="reaction">❤️ 1</span></div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:25 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:27 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:27 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:27 AM</span><div class="reactions"><span class="reaction">💕 3</span></div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:29 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:30 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:34 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:34 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:35 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:36 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:38 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:38 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:39 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:42 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:42 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:43 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:43 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:44 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:45 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 11, 2025 2:45 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Jun 11, 2025 8:32 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Thursday, June 12, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Jun 12, 2025 1:53 AM</span></div>
+          <div class="reactions"><span class="reaction">❤️ 1</span></div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Jun 12, 2025 12:09 PM</span></div>
+          <div class="reactions"><span class="reaction">❤️ 1</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Tuesday, June 17, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Jun 17, 2025 12:50 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/1319912453248647170/5947c59131f86c244263c9f810d4702b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#9c27b0">CastBot</span><span class="time">Jun 17, 2025 12:50 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Jun 17, 2025 12:51 AM</span></div>
+          <div class="reactions"><span class="reaction">❤️ 1</span></div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Jun 17, 2025 1:03 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Saturday, June 28, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Jun 28, 2025 10:40 AM</span></div>
+          <div class="reactions"><span class="reaction">😍 2</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Sunday, July 27, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Jul 27, 2025 3:13 PM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/1328366050848411658/672e5427401e225f2d64e174ce401b08.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#ff9800">CastBot-Dev</span><span class="time">Jul 27, 2025 3:14 PM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Jul 27, 2025 3:17 PM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Tuesday, August 12, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Aug 12, 2025 12:02 AM</span></div>
+          <div class="reactions"><span class="reaction">❤️ 2</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Monday, September 22, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Sep 22, 2025 10:40 PM</span></div>
+          <div class="reactions"><span class="reaction">💜 3</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Sunday, October 19, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Oct 19, 2025 11:43 PM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Oct 19, 2025 11:53 PM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Oct 19, 2025 11:53 PM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Oct 19, 2025 11:59 PM</span><div class="content system">[no content]</div></div></div>
+<div class="date-sep"><span>Monday, October 20, 2025</span></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Oct 20, 2025 12:04 AM</span><div class="reactions"><span class="reaction">❤️ 2</span></div></div></div>
+<div class="date-sep"><span>Tuesday, October 21, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Oct 21, 2025 2:54 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Oct 21, 2025 2:54 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Oct 21, 2025 2:59 AM</span><div class="reactions"><span class="reaction">❤️ 1</span></div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Oct 21, 2025 3:00 AM</span><div class="content system">[no content]</div></div></div>
+<div class="date-sep"><span>Tuesday, October 28, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Oct 28, 2025 12:23 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Tuesday, December 30, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Dec 30, 2025 2:53 PM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Dec 30, 2025 2:53 PM</span><div class="reactions"><span class="reaction">👀 1</span><span class="reaction">💚 1</span></div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Dec 30, 2025 2:53 PM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Dec 30, 2025 2:54 PM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Dec 30, 2025 2:55 PM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Dec 30, 2025 2:56 PM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Dec 30, 2025 2:57 PM</span><div class="content system">[no content]</div></div></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/1319912453248647170/5947c59131f86c244263c9f810d4702b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#9c27b0">CastBot</span><span class="time">Dec 30, 2025 2:57 PM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Dec 30, 2025 2:57 PM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Dec 30, 2025 2:57 PM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Dec 30, 2025 2:57 PM</span><div class="content system">[no content]</div></div></div>
+<div class="date-sep"><span>Wednesday, January 7, 2026</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Jan 7, 2026 2:51 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Saturday, February 14, 2026</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Feb 14, 2026 1:25 PM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Feb 14, 2026 1:26 PM</span><div class="content system">[no content]</div></div></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Feb 14, 2026 2:31 PM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Saturday, February 28, 2026</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Feb 28, 2026 1:06 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/1319912453248647170/5947c59131f86c244263c9f810d4702b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#9c27b0">CastBot</span><span class="time">Feb 28, 2026 1:06 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Feb 28, 2026 1:06 AM</span><div class="content system">[no content]</div></div></div>
+<div class="date-sep"><span>Sunday, March 1, 2026</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Mar 1, 2026 1:55 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Monday, March 2, 2026</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Mar 2, 2026 11:50 PM</span></div>
+          <div class="reactions"><span class="reaction">🔥 3</span></div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Mar 2, 2026 11:50 PM</span><div class="content system">[no content]</div></div></div>
+<div class="date-sep"><span>Tuesday, March 3, 2026</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/691850627189309492/7a51699df794d747594671b96382afd3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#ff9800">Jason</span><span class="time">Mar 3, 2026 12:09 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Mar 3, 2026 12:30 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/691850627189309492/7a51699df794d747594671b96382afd3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#ff9800">Jason</span><span class="time">Mar 3, 2026 12:35 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Thursday, March 5, 2026</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Mar 5, 2026 2:23 AM</span></div>
+          <div class="reactions"><span class="reaction">🔥 1</span><span class="reaction">💜 1</span></div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Mar 5, 2026 2:24 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Mar 5, 2026 2:26 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Mar 5, 2026 2:26 AM</span><div class="content system">[no content]</div></div></div>
+<div class="date-sep"><span>Sunday, March 8, 2026</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Mar 8, 2026 10:40 PM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Tuesday, March 17, 2026</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Mar 17, 2026 8:29 AM</span></div>
+          <div class="reactions"><span class="reaction">💜 1</span></div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Mar 17, 2026 8:31 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Mar 17, 2026 8:40 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Saturday, March 28, 2026</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Mar 28, 2026 5:39 PM</span></div>
+          <div class="reactions"><span class="reaction">💜 1</span><span class="reaction">💕 1</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Tuesday, March 31, 2026</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Mar 31, 2026 2:18 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Mar 31, 2026 2:19 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Mar 31, 2026 2:19 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Mar 31, 2026 2:19 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Mar 31, 2026 2:19 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Mar 31, 2026 2:19 AM</span><div class="content system">[no content]</div></div></div>
+<div class="date-sep"><span>Wednesday, April 8, 2026</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Apr 8, 2026 12:55 AM</span></div>
+          <div class="content system">[no content]</div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Apr 8, 2026 12:55 AM</span><div class="content system">[no content]</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Apr 8, 2026 12:56 AM</span><div class="content system">[no content]</div></div></div>
+<div class="date-sep"><span>Monday, April 13, 2026</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Apr 13, 2026 11:56 PM</span></div>
+          <div class="reactions"><span class="reaction">💜 1</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Thursday, May 21, 2026</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">May 21, 2026 3:06 PM</span></div>
+          <div class="reactions"><span class="reaction">❤️ 1</span></div>
+        </div>
+      </div>
+</div>
+<div class="no-results" id="noResults">No messages match your search.</div>
+<script>
+const search = document.getElementById('search');
+const msgs = document.querySelectorAll('.msg');
+const dateSeps = document.querySelectorAll('.date-sep');
+const noResults = document.getElementById('noResults');
+search.addEventListener('input', () => {
+  const q = search.value.toLowerCase();
+  let visible = 0;
+  msgs.forEach(m => {
+    const show = !q || m.textContent.toLowerCase().includes(q);
+    m.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  dateSeps.forEach(d => {
+    let next = d.nextElementSibling;
+    let hasVisible = false;
+    while (next && !next.classList.contains('date-sep')) {
+      if (next.classList.contains('msg') && next.style.display !== 'none') hasVisible = true;
+      next = next.nextElementSibling;
+    }
+    d.style.display = hasVisible ? '' : 'none';
+  });
+  noResults.style.display = visible === 0 && q ? 'block' : 'none';
+});
+</script>
+</body>
+</html>
