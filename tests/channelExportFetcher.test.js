@@ -23,7 +23,8 @@ describe('channelExportFetcher — computeRateLimitDelay', () => {
   });
 
   it('rounds fractional reset windows up', () => {
-    assert.equal(computeRateLimitDelay({ remaining: 0, resetAfter: 4.357 }), 4358 + 150);
+    // 4.5s → ceil(4500)=4500 + 150 buffer
+    assert.equal(computeRateLimitDelay({ remaining: 0, resetAfter: 4.5005 }), 4501 + 150);
   });
 
   it('falls back to a 1s wait when resetAfter is missing but bucket empty', () => {
