@@ -13,10 +13,14 @@ import { capitalize } from './utils.js';
 
 // ─── Layout Constants ───────────────────────────────────────────────────────
 
-const CANVAS_WIDTH = 900;
-const COLUMN_COUNT = 2;
+const CANVAS_WIDTH = 900;          // Base canvas for the 1- and 2-tribe layouts
+const COLUMN_COUNT = 2;            // Base grid the column width is calibrated to
+const MAX_COLUMNS = 4;             // Max side-by-side columns; extra tribes stack (bin-pack)
 const COLUMN_GAP = 20;
 const MARGIN = 30;
+// Fixed per-column width (derived from the base 2-up grid = 410px). This NEVER
+// changes — the canvas widens to fit more columns instead of shrinking cards, so
+// per-card rendering is identical regardless of tribe count.
 const COLUMN_WIDTH = (CANVAS_WIDTH - MARGIN * 2 - COLUMN_GAP * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
 
 // Tribe header
@@ -120,11 +124,11 @@ function createTribeHeaderSvg(tribeName, memberCount, tribeColor, width) {
 /**
  * Create an SVG for the castlist title
  */
-function createTitleSvg(castlistName, totalPlayers, totalTribes) {
+function createTitleSvg(castlistName, totalPlayers, totalTribes, canvasWidth = CANVAS_WIDTH) {
   const cleanName = stripEmoji(castlistName);
-  return `<svg width="${CANVAS_WIDTH}" height="60" xmlns="http://www.w3.org/2000/svg">
-    <text x="${CANVAS_WIDTH / 2}" y="32" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="bold" fill="${TEXT_PRIMARY}" text-anchor="middle">${escapeXml(cleanName)}</text>
-    <text x="${CANVAS_WIDTH / 2}" y="52" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="${TEXT_SECONDARY}" text-anchor="middle">${totalPlayers} players across ${totalTribes} tribes</text>
+  return `<svg width="${canvasWidth}" height="60" xmlns="http://www.w3.org/2000/svg">
+    <text x="${canvasWidth / 2}" y="32" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="bold" fill="${TEXT_PRIMARY}" text-anchor="middle">${escapeXml(cleanName)}</text>
+    <text x="${canvasWidth / 2}" y="52" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="${TEXT_SECONDARY}" text-anchor="middle">${totalPlayers} players across ${totalTribes} tribes</text>
   </svg>`;
 }
 
@@ -249,16 +253,41 @@ async function collectTribePlayerData(tribe, guildId, pronounRoleIds, timezones)
 // ─── Layout Engine ───────────────────────────────────────────────────────────
 
 /**
- * Calculate the layout positions for all tribes and players in a 2-column layout.
+ * Decide how many side-by-side columns to use and the canvas width for a given
+ * tribe count. Column width is FIXED (COLUMN_WIDTH) so per-card rendering never
+ * changes; the canvas grows to fit more columns rather than shrinking the cards.
+ *
+ * - 1 tribe  → single centered column on the base 900px canvas (preserves the
+ *              centered-single-tribe look from commit fe134314)
+ * - 2 tribes → 2 columns on the base 900px canvas (byte-identical to legacy)
+ * - 3..MAX   → one column per tribe, canvas widened to fit
+ * - >MAX     → MAX columns, extra tribes bin-pack (stack) into the shortest column
+ *
+ * @param {number} tribeCount
+ * @returns {{ columnCount: number, columnWidth: number, canvasWidth: number }}
+ */
+function selectColumns(tribeCount) {
+  if (tribeCount <= 1) {
+    return { columnCount: 1, columnWidth: COLUMN_WIDTH, canvasWidth: CANVAS_WIDTH };
+  }
+  const columnCount = Math.min(tribeCount, MAX_COLUMNS);
+  const canvasWidth = MARGIN * 2 + columnCount * COLUMN_WIDTH + (columnCount - 1) * COLUMN_GAP;
+  return { columnCount, columnWidth: COLUMN_WIDTH, canvasWidth };
+}
+
+/**
+ * Calculate the layout positions for all tribes and players.
+ * Bin-packs each tribe into the shortest column — when columnCount === tribeCount
+ * (the common case after selectColumns), this naturally yields one tribe per column.
  * Returns an array of positioned elements to composite.
  */
-function calculateLayout(tribeDataList) {
+function calculateLayout(tribeDataList, columnCount, columnWidth, canvasWidth) {
   // Track the Y position for each column
-  const columnY = new Array(COLUMN_COUNT).fill(0);
+  const columnY = new Array(columnCount).fill(0);
 
   // Center single-tribe castlists instead of leaving an empty column
   const singleTribe = tribeDataList.length === 1;
-  const centerOffset = singleTribe ? Math.floor((CANVAS_WIDTH - COLUMN_WIDTH) / 2) : 0;
+  const centerOffset = singleTribe ? Math.floor((canvasWidth - columnWidth) / 2) : 0;
 
   const elements = []; // { type: 'tribe_header'|'player_card', column, x, y, data }
 
@@ -267,7 +296,7 @@ function calculateLayout(tribeDataList) {
     const col = columnY.indexOf(Math.min(...columnY));
     const colX = singleTribe
       ? centerOffset
-      : MARGIN + col * (COLUMN_WIDTH + COLUMN_GAP);
+      : MARGIN + col * (columnWidth + COLUMN_GAP);
 
     // Tribe header
     elements.push({
@@ -365,7 +394,10 @@ export async function generateCastlistImage(guildId, castlistIdentifier, client)
 
   // ── 3. Calculate layout ────────────────────────────────────────────────
   const TITLE_HEIGHT = 70;
-  const { elements, totalHeight } = calculateLayout(tribeDataList);
+  // Columns track tribe count (1 per tribe up to MAX_COLUMNS); canvas widens to
+  // fit while column width stays fixed, so each card renders identically.
+  const { columnCount, columnWidth, canvasWidth } = selectColumns(tribeDataList.length);
+  const { elements, totalHeight } = calculateLayout(tribeDataList, columnCount, columnWidth, canvasWidth);
   const canvasHeight = TITLE_HEIGHT + totalHeight + MARGIN;
 
   // ── 4. Create avatar mask (reused for all avatars) ─────────────────────
@@ -375,7 +407,7 @@ export async function generateCastlistImage(guildId, castlistIdentifier, client)
   const composites = [];
 
   // Title
-  const titleSvg = createTitleSvg(castlistName, totalPlayers, tribes.length);
+  const titleSvg = createTitleSvg(castlistName, totalPlayers, tribes.length, canvasWidth);
   composites.push({
     input: Buffer.from(titleSvg),
     top: 10,
@@ -391,14 +423,14 @@ export async function generateCastlistImage(guildId, castlistIdentifier, client)
         `${el.data.emoji} ${el.data.name} ${el.data.emoji}`,
         el.data.memberCount,
         el.data.color,
-        COLUMN_WIDTH
+        columnWidth
       );
       composites.push({ input: Buffer.from(headerSvg), top: y, left: el.x });
     } else if (el.type === 'player_card') {
       const player = el.data;
 
       // Card background
-      const cardBg = createCardBgSvg(COLUMN_WIDTH, CARD_HEIGHT);
+      const cardBg = createCardBgSvg(columnWidth, CARD_HEIGHT);
       composites.push({ input: Buffer.from(cardBg), top: y, left: el.x });
 
       // Avatar (rounded with mask)
@@ -424,7 +456,7 @@ export async function generateCastlistImage(guildId, castlistIdentifier, client)
         player.age,
         player.timezone,
         player.formattedTime,
-        COLUMN_WIDTH,
+        columnWidth,
         CARD_HEIGHT
       );
       composites.push({ input: Buffer.from(textSvg), top: y, left: el.x });
@@ -434,7 +466,7 @@ export async function generateCastlistImage(guildId, castlistIdentifier, client)
   // ── 6. Composite everything onto the canvas ────────────────────────────
   const pngBuffer = await sharp({
     create: {
-      width: CANVAS_WIDTH,
+      width: canvasWidth,
       height: canvasHeight,
       channels: 4,
       background: { r: 26, g: 26, b: 46, alpha: 1 } // BG_COLOR #1a1a2e

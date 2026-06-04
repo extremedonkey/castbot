@@ -34,7 +34,7 @@ Button click (compact_castlist_{id})
 
 1. **Data collection** — `getTribesForCastlist()` loads tribes + Discord members, then per-member: pronouns (from role IDs), age, timezone (DST-aware), local time
 2. **Avatar fetch** — `member.user.displayAvatarURL({ size: 128, extension: 'png' })`, concurrent per tribe via `Promise.all`, placeholder on failure (initial letter on blurple)
-3. **Layout engine** — 2-column shortest-column-first algorithm, places tribe headers then player cards sequentially
+3. **Layout engine** — `selectColumns(tribeCount)` picks the column count (1 per tribe, capped at `MAX_COLUMNS = 4`); `calculateLayout()` then bin-packs each tribe into the shortest column (one tribe per column when `columnCount === tribeCount`). Column width is **fixed** at 410px — the canvas *widens* to fit more columns rather than shrinking cards
 4. **SVG text rendering** — Player name (bold), info line (pronouns/age/timezone), local time. Tribe headers with colored accent strip. All emoji stripped (SVG can't render them)
 5. **Sharp compositing** — Dark background → card backgrounds → rounded avatars (dest-in mask) → text overlays → single PNG
 
@@ -42,8 +42,8 @@ Button click (compact_castlist_{id})
 
 | Property | Value |
 |---|---|
-| Canvas width | 900px |
-| Columns | 2 (415px each, 20px gap) |
+| Canvas width | Dynamic: 900px (1-2 tribes), 1330px (3), 1760px (4), capped at 4 cols |
+| Columns | 1 per tribe up to `MAX_COLUMNS = 4`; 5+ tribes stack into 4 columns. Fixed 410px each, 20px gap |
 | Card height | 80px |
 | Avatar | 60×60px, 8px border radius |
 | Background | `#1a1a2e` (dark navy) |
@@ -89,8 +89,14 @@ Typical generation: ~300-700ms, ~40-50KB PNG for 8 players across 2 tribes. Avat
 
 - SVG text rendering only (no emoji in output, no custom fonts)
 - No pagination — renders all players (designed for max ~24)
-- Hardcoded 2-column layout
+- Side-by-side columns capped at 4 (`MAX_COLUMNS`); 5+ tribes stack/bin-pack
+- Wide images (3+ tribes) display scaled-down inline in Discord but are crisp at full size
 - No vanity roles or player emojis in image
+
+## Layout History
+
+- **Mar 15** (`fe134314`) — single tribe centered under the title instead of left-aligned in column 0 (avoids empty right half)
+- **Jun 4** — column count made dynamic (1 per tribe, cap 4). Column width stays fixed at 410px and the canvas widens, so 1- and 2-tribe output is byte-identical to before. Locked by `tests/castlistImageLayout.test.js`
 
 ## Related Documentation
 
