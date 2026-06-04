@@ -5,6 +5,7 @@
  */
 
 import os from 'os';
+import v8 from 'v8';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { getBotEmoji } from '../../botEmojis.js';
@@ -102,6 +103,16 @@ export class HealthMonitor {
       // Memory usage (works in both dev and prod)
       const memUsage = process.memoryUsage();
       metrics.memory = Math.round(memUsage.heapUsed / 1048576);
+
+      // V8 heap vs limit — the TRUE OOM crash predictor (in-process, always accurate).
+      // NOTE: in prod, metrics.memory below gets overwritten with PM2's RSS (line ~131),
+      // which is capped by physical RAM (swapped pages don't count) so it plateaus and
+      // hides real heap growth. heapUsed/heap_size_limit is what actually predicts the crash.
+      const heapStats = v8.getHeapStatistics();
+      metrics.heapUsed = Math.round(memUsage.heapUsed / 1048576);
+      metrics.heapLimit = Math.round(heapStats.heap_size_limit / 1048576);
+      metrics.heapPercent = Math.round((memUsage.heapUsed / heapStats.heap_size_limit) * 100);
+      metrics.rss = Math.round(memUsage.rss / 1048576);
 
       // CPU usage (simplified, works everywhere)
       const cpuUsage = process.cpuUsage();
@@ -299,7 +310,7 @@ export class HealthMonitor {
       { type: 14 },
       {
         type: 10,
-        content: `## 🤖 Bot Metrics\n\`\`\`\nMemory:   ${metrics.bot.memory}MB\nCPU:      ${metrics.bot.cpu}%\nUptime:   ${metrics.bot.uptime}\nRestarts: ${metrics.bot.restarts || 0}\nStatus:   ${metrics.bot.status === 'online' ? '🟢 Online' : '🔴 ' + metrics.bot.status}\n\`\`\``
+        content: `## 🤖 Bot Metrics\n\`\`\`\nMemory:   ${metrics.bot.memory}MB (RSS)\nHeap:     ${metrics.bot.heapUsed ?? '?'}/${metrics.bot.heapLimit ?? '?'}MB (${metrics.bot.heapPercent ?? '?'}% of limit)\nCPU:      ${metrics.bot.cpu}%\nUptime:   ${metrics.bot.uptime}\nRestarts: ${metrics.bot.restarts || 0}\nStatus:   ${metrics.bot.status === 'online' ? '🟢 Online' : '🔴 ' + metrics.bot.status}\n\`\`\``
       },
       { type: 14 },
       {

@@ -533,18 +533,184 @@ This is a 1-2 hour migration with real downtime (5-30 min) and recovery scenario
 
 | # | Action | Status | Notes |
 |---|---|---|---|
-| 1 | Add Discord.js sweepers | 🅿️ **PARKED** | Cache risk; revisit if Phase 2 evidence demands |
+| 1 | Add Discord.js sweepers | 🅿️ **PARKED** | Cache risk; Reece has concerns to unpack later |
 | 2 | Plug `availabilityReactions` cleanup | 🅿️ **PARKED** | Data proves it's negligible (~16KB max) |
-| 3 | Set `--max-old-space-size=320` via NODE_OPTIONS | ⏸️ **PENDING PROD PERMISSION** | Recommend NODE_OPTIONS approach + `pm2 restart` |
-| 4 | Heap dump SIGUSR2 handler | ⏸️ **AWAITING REECE GO-AHEAD** | Tiny code change, dev-test ready |
-| 5 | Bump Lightsail tier | 🅿️ **PARKED (long-term)** | Not trivial — DNS cutover required |
+| 3 | Set `--max-old-space-size=320` via NODE_OPTIONS | ✅ **EXECUTED 2026-06-03 11:09 UTC** | See execution log below |
+| 4 | Heap dump SIGUSR2 handler | ✅ **DEPLOYED TO DEV; PROD PENDING** | Working in dev; needs deploy-remote-wsl |
+| 5 | Bump Lightsail tier | 🅿️ **PARKED (long-term)** | DNS cutover required, not trivial |
 
-### What I'm going to do next (without further confirmation)
+---
 
-- Nothing prod-touching. All actions above require Reece's go-ahead.
+# ✅ Execution Log (2026-06-03)
 
-### What I'm asking Reece to confirm
+## Item 3 Execution — `--max-old-space-size=320`
 
-1. **Item 3 (max-old-space=320):** Approve the NODE_OPTIONS approach? If yes, I'll prepare the exact SSH command sequence (no execution until approval).
-2. **Item 4 (SIGUSR2 heap dump):** Want me to add the handler in dev this turn, or queue for next session?
+**Permission:** Reece granted explicit permission ("3. giving you permission... if needed i give you permission to restart prod").
+
+**Pre-flight baseline (captured before any change):**
+```
+Process: pm2 castbot-pm, id 1, fork mode, autorestart on
+Old PID: 737507, uptime 5h, mem 217.7mb, restarts 58
+Bot RSS: 208 MB, swap usage: 384 MB  ← already deep in swap
+Start args: node /opt/bitnami/projects/castbot/app.js  (no flags)
+PM2 saved env: NODE_OPTIONS=(unset), node_args=[]
+systemd unit: /etc/systemd/system/pm2-bitnami.service exists (boot persistence via pm2 resurrect → dump.pm2)
+Recent error log: empty (no crashes since last restart)
+```
+
+**Command executed:**
+```bash
+ssh -i ~/.ssh/castbot-key.pem bitnami@13.238.148.170 \
+  'NODE_OPTIONS="--max-old-space-size=320" pm2 restart castbot-pm --update-env'
+```
+
+Followed by `pm2 save` to persist the new env to `~/.pm2/dump.pm2` so it survives PM2 daemon restarts (boot reboots).
+
+**Post-restart verification:**
+- ✅ New PID: 739946 (was 737507), restart counter 58 → 59
+- ✅ `NODE_OPTIONS=--max-old-space-size=320` confirmed in `/proc/739946/environ`
+- ✅ Discord client ready, listening on port 3000
+- ✅ `playerData.json` loaded (3.7MB, 160 guilds)
+- ✅ Live interactions served immediately (Ultramonitor button, Components V2 webhook patches)
+- ✅ Startup backup ran cleanly (6.2 MB)
+- ✅ 3-minute soak: event loop p95 = 1.04ms (normal), HTTP latency 133ms mean
+
+**Rollback command (kept handy for ops):**
+```bash
+ssh -i ~/.ssh/castbot-key.pem bitnami@13.238.148.170 \
+  'unset NODE_OPTIONS; pm2 restart castbot-pm --update-env; pm2 save'
+```
+Returns the bot to default V8 heap auto-sizing (~259 MB ceiling). No data risk — just changes the memory ceiling.
+
+**Expected outcome:** Crashes shift from every ~3 days to every ~5 days. Bot will use more swap during the high-heap window (already starts with 384 MB swap, so swap pressure was already a fact of life). PM2 metrics will show heap growing toward the new 320 MB ceiling over the next few days — that's expected, not an alarm.
+
+**Known follow-up needed (NOT urgent):** If the Lightsail box ever fully reboots (not just PM2 daemon restart), `pm2 resurrect` should restore the NODE_OPTIONS env from dump.pm2 — but this is unverified. To fully de-risk durability, the long-term fix is a proper `ecosystem.config.cjs` for prod with `node_args: '--max-old-space-size=320'` (currently the file at this path is for dev only). Not worth doing tonight.
+
+## Item 4 Execution — SIGUSR2 Heap Dump Handler (dev only)
+
+**Permission:** Reece granted ("4. yes please sounds low risk").
+
+**Files created:**
+- `src/monitoring/heapDumpHandler.js` — installs SIGUSR2 listener (idempotent)
+- `tests/heapDumpHandler.test.js` — verifies listener install + idempotency
+
+**Files modified:**
+- `app.js` lines 141-145 — import + call `installHeapDumpHandler()` once at startup
+
+**Dev verification:**
+```
+$ ./scripts/dev/dev-restart.sh
+✅ Tests passed: 1044/1044 (223 suites in 1.28s)
+✅ App restarted (PID 352755)
+
+$ kill -SIGUSR2 352755
+$ sleep 4 && ls -lh /tmp/castbot-heap-*.heapsnapshot
+-rw------- 1 reece reece 35M Jun  3 19:15 /tmp/castbot-heap-2026-06-03T11-15-44-717Z.heapsnapshot
+
+$ tail /tmp/castbot-dev.log
+[HeapDump] Installed SIGUSR2 handler. Trigger with: kill -SIGUSR2 352755
+[HeapDump] 📸 SIGUSR2 received — writing snapshot to /tmp/castbot-heap-...
+[HeapDump] ⚠️  Event loop will pause for several seconds during write.
+[HeapDump] ✅ Wrote /tmp/castbot-heap-...-717Z.heapsnapshot in 3966ms
+```
+
+**Prod deploy status:** Not deployed. Code is committed and pushed to GitHub (`8f610c2a Add SIGUSR2 heap dump handler for OOM diagnostics`). Awaiting Reece's go-ahead for `npm run deploy-remote-wsl`.
+
+**Workflow for analyzing prod once deployed:**
+1. Wait until prod heap is moderately full (~day 2-3 of uptime)
+2. `ssh ... 'kill -SIGUSR2 $(pm2 jlist | ...PID...)'` — bot pauses ~5-10s
+3. `scp` the `/tmp/castbot-heap-*.heapsnapshot` to local WSL
+4. Take a second snapshot a few hours later (or near next expected crash)
+5. Chrome DevTools → Memory tab → Load Profile → use "Comparison" view to diff the two snapshots
+6. Anything with growing "Retained Size" between snapshots = the leak source
+
+## What I Will Not Do Tonight
+
+Per Reece's stated constraint ("about to go away... don't want to get into some error state where prod is down"):
+- ❌ No deploy of the SIGUSR2 handler to prod tonight
+- ❌ No further prod-touching changes
+- ❌ No additional restarts beyond the one for item 3
+
+## What Reece Should Watch For
+
+- ✅ **Expected:** Bot memory will climb toward 320 MB over next ~5 days instead of 259 MB. PM2 metrics will show higher numbers — that's the *intent*, not a problem.
+- ✅ **Expected:** Next OOM crash should be later than 2026-06-06 (3-day mark would have been). If we see it at 2026-06-08 or later, item 3 is working as designed.
+- ⚠️ **Watch for:** If the Ultrathink monitor reports the bot is **unresponsive but not crashed** (HTTP latency >5s), that's swap thrashing — would suggest 320 was too aggressive. Rollback command above brings it back to 259.
+- ⚠️ **Watch for:** Any new error patterns in the `#error` channel that mention `ENOMEM`, `Cannot allocate memory`, or new V8 stack traces. If they appear, that's the Linux OOM-killer or swap exhaustion — execute rollback.
+
+---
+
+# 📌 Open Questions Reece Mentioned For Later
+
+> *"re 1) I understand this is probably the true root cause but I'm reluctant to start on this now as I have to go in like 20 mins and log off for the rest of the night and have some concerns to explain / unpack later with you."*
+
+**Item 1 (Discord.js sweepers) — Reece's concerns to unpack:** Reece has flagged historical cache-related issues (probable references: `GuildMemberManager`/`UserManager` cache removal at app.js:1556-1560, where cache limits caused mid-operation evictions producing "Supplied parameter is not a User nor a Role" errors). Worth scheduling a dedicated session to:
+
+1. Hear Reece's specific concerns from past incidents
+2. Identify which sweeper categories are safe vs risky in CastBot's specific code paths
+3. Map sweeper interactions against the codebase's `guild.members.cache.get()` / `guild.members.fetch()` patterns (which already exist in many places and could collide with sweepers)
+4. Decide whether to attempt this AT ALL or accept the natural cache pressure as the cost of operational safety
+5. If proceeding: pilot with the SAFEST sweeper first (`users` filtering only bots, NOT messages or members), 24h dev observation, then prod
+
+This is the highest-value remaining lever, but its risk profile is the highest of the remaining options. **Not to be touched without an explicit follow-up conversation.**
+
+---
+
+# 🔬 Session 2 — Execution & Findings (2026-06-04, ~09:50 AWST)
+
+## Corrected understanding of the leak (supersedes the "33 KB/min linear" claim)
+
+The original analysis modeled a steady ~33 KB/min linear leak over 3 days. **Live data refutes this.** The clean numbers:
+
+- **Ultrathink "Memory" = `heapUsed`** (confirmed: `healthMonitor.js:104`). Not RSS.
+- **Startup spike → settle:** heapUsed hits ~204 MB at 54s uptime (parsing 160 guilds + building registries), then GC settles it to **~85 MB** by ~3 min.
+- **This cycle's growth:** ~85 MB → 233–255 MB in **14 hours** ≈ **~10.6 MB/hour**.
+- **Historical average:** ceiling 259 MB reached every ~72h ≈ **~2.4 MB/hour**.
+
+So this cycle ran ~4× hotter than historical average. Two non-exclusive explanations:
+1. **Activity-driven, not steady:** growth scales with castlist/safari/member-fetch activity, not wall-clock. Overnight idle ≠ zero growth because timers (PM2ErrorLogger 60s, HealthMonitor, Backup) and any cached member/image data keep accreting.
+2. **Raised-ceiling GC laziness:** with `--max-old-space-size=320`, V8's GC thresholds scale up, so it tolerates more *uncollected-but-collectable* garbage. Part of the higher heapUsed is lazy garbage, not true leak. **A forced-GC heap snapshot (which `v8.writeHeapSnapshot` does) reveals the true live retained set** — this is why the snapshot diff is the decisive diagnostic.
+
+**Corrected suspect ranking** (overnight growth with low user activity promotes timers):
+1. Timer-driven accretion — PM2ErrorLogger / HealthMonitor / Backup (NEW #1)
+2. Discord.js `GuildMemberManager` — unbounded across 160 guilds, grows per castlist `members.fetch()`
+3. Image-generation buffers — sharp/canvas PNG generation (`[CASTLIST-IMG]`), under-weighted originally
+
+## Item 4 deployed to prod ✅
+
+- `npm run deploy-remote-wsl-dry` previewed → `npm run deploy-remote-wsl` executed
+- Prod `17ee44aa` → `8f610c2a` (heapDumpHandler + doc move). npm install + command deploy were no-ops (no new deps, no command changes).
+- **`NODE_OPTIONS=--max-old-space-size=320` survived the deploy** (verified in `/proc/746462/environ`). Confirmed because the deploy script uses a plain `pm2 restart castbot-pm` (deploy-remote-wsl.js:336) which reuses PM2's stored env — NOT `--update-env`.
+- This deploy's restart also served as the "reset the thrashing bot" action — one restart, not two. New PID 746462, restart #60.
+
+## ⚠️ CRITICAL FINDING: Heap dumps are expensive on this box
+
+Captured a fresh baseline snapshot via `kill -SIGUSR2 746462` at ~80 MB heap. Result:
+
+- **The write took 74,214 ms (74 seconds).** `v8.writeHeapSnapshot()` is synchronous → **the event loop was frozen for 74s** → any Discord interaction in that window would have failed.
+- During serialization, **free RAM dropped to 6.8 MB** (snapshot scratch memory ≈ 2× heap doesn't fit in the 448 MB box → heavy swap thrash, which is why it was so slow).
+- Output: **106 MB** snapshot. Bot recovered fully afterward (CPU → 0%, free RAM → 71 MB, HealthMonitor + Backup resumed).
+
+**Operational rule going forward:** Heap dumps on prod are a **maintenance-window action**, not a casual one. Each one = ~60–90s outage + near-RAM-exhaustion. Trigger only when (a) traffic is genuinely low, and (b) we accept a ~1 min interaction outage. Best captured right after a restart when heap is smallest (faster write).
+
+**Snapshot artifacts:**
+- Prod: `/tmp/castbot-heap-2026-06-04T01-51-38-460Z.heapsnapshot` (clears on reboot)
+- Local (safekept): `~/castbot-heapdumps/prod-baseline-2026-06-04-boot.heapsnapshot` (this is the **~85 MB fresh-boot baseline**)
+- **TODO:** capture a "hot" snapshot when prod reaches ~250 MB (next session / later today), scp it local, diff against baseline in Chrome DevTools → Memory → Comparison view. The objects with growing retained size = the leak.
+
+## New pragmatic option on the table: scheduled restart
+
+A `cron`/`pm2` scheduled restart (e.g. daily at a low-traffic hour like 20:00 UTC / 04:00 AWST) would reset the heap before it crashes — converting random ~3-day OOM crashes into controlled 1×/day restarts at a chosen quiet time. **Zero code risk.** It's a band-aid, but the lowest-risk one available and possibly "good enough" permanently. Should be weighed against the sweeper surgery (item 1).
+
+## Updated Action Plan
+
+| # | Action | Status |
+|---|---|---|
+| 1 | Discord.js sweepers | 🅿️ **DISCUSS** — framing questions raised; lean toward waiting for heap-diff first |
+| 2 | availabilityReactions cleanup | 🅿️ Parked (negligible) |
+| 3 | `--max-old-space-size=320` | ✅ Live; survived deploy |
+| 4 | SIGUSR2 heap dump handler | ✅ **Live on prod**; baseline snapshot captured + safekept |
+| 4b | Capture HOT snapshot + diff | ⏳ **NEXT** — decisive diagnostic |
+| 5 | Bump Lightsail tier | 🅿️ Parked (DNS cutover) |
+| 6 | Scheduled daily restart | 🆕 **NEW OPTION** — lowest-risk band-aid |
 
