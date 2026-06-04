@@ -714,3 +714,29 @@ A `cron`/`pm2` scheduled restart (e.g. daily at a low-traffic hour like 20:00 UT
 | 5 | Bump Lightsail tier | 🅿️ Parked (DNS cutover) |
 | 6 | Scheduled daily restart | 🆕 **NEW OPTION** — lowest-risk band-aid |
 
+## 🔁 Major correction from incident history (2026-06-04)
+
+Reviewed `docs/incidents/` — two prior incidents directly settle the sweeper question and supersede the earlier "sweepers is probably the real fix" lean:
+
+### `03-V8HeapOOMCrash.md` (2026-04-19) — we already diagnosed this 6 weeks ago
+
+This incident is the **same crash class** and already identified the same fixes I independently re-derived:
+- Crash trace smoking gun: **`Builtin_JsonParse`** — V8 died *while parsing the 3MB `playerData.json`*. Heap was at 239/256MB, one 3MB parse (transiently allocates ~6–10MB of UTF-16 strings) tipped it over.
+- **`playerData.json` is loaded + parsed ~164×/day** (per-request, cache cleared on every save). This is the activity-driven churn that actually triggers the crash — the slow Discord.js cache drift just shrinks the headroom until a parse tips it.
+- Its recommended fixes (PENDING REECE APPROVAL since April, never executed → why crashes continued): `--max-old-space-size` (✅ now done), **in-memory playerData cache w/ mtime invalidation = "single highest-leverage fix"**, Discord cache limits (P2), Lightsail upgrade (P3).
+
+### `castlistCrashIssues_cache.md` (Nov 2025) — why sweeping members is DANGEROUS
+
+The app.js comment `// GuildMemberManager: REMOVED - caused mid-operation evictions` is backed by a **High-severity incident**:
+- **Failure mode A:** setting a `GuildMemberManager` *size limit* → members evicted mid-operation → "Supplied parameter is not a User nor a Role" crashes.
+- **Failure mode B (the big one):** a **cold member cache** → `guild.members.fetch()` takes **30+ seconds** in 500+ member guilds → `GuildMembersTimeout` → "interaction failed" on ALL castlist ops. A warm member cache had silently been making castlists instant for 5+ weeks.
+
+**Conclusion:** the member cache is **load-bearing for castlist performance, not a leak.** A `guildMembers` sweeper would evict idle members → cold cache → recreate Failure Mode B. **Do NOT sweep guildMembers.** This kills item 1 as a member-cache fix.
+
+### Revised priority (evidence-based)
+1. **In-memory `playerData` cache** (kills the JSON.parse spikes that actually trigger OOM) — *the* highest-leverage fix, per incident 03. Needs its own RaP/implementation.
+2. ✅ `--max-old-space-size=320` (done)
+3. Scheduled daily restart (zero-risk floor)
+4. Lightsail upgrade (clean permanent fix)
+5. ❌ Sweepers on guildMembers — **rejected** (recreates Nov 2025 timeout incident). Message/thread/presence sweeping still safe but low-value.
+
