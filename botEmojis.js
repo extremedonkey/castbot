@@ -19,8 +19,17 @@
  * @see CLAUDE.md for full documentation
  */
 
-// Detect if we're running in production or development
+// Detect environment. PRODUCTION gates prod IDs; INSTANCE_ROLE=test (castbot-blue)
+// selects test-app IDs (the test app has its own emoji namespace). Falls back to dev.
 const isProduction = process.env.PRODUCTION === 'TRUE';
+const isTestInstance = process.env.INSTANCE_ROLE === 'test';
+
+/** Pick the right emoji id for the current environment, with graceful fallback. */
+function pickEmojiId(emoji) {
+  if (isProduction) return emoji.prod;
+  if (isTestInstance) return emoji.test || emoji.dev;
+  return emoji.dev;
+}
 
 /**
  * Bot Emoji Registry
@@ -30,36 +39,42 @@ const BOT_EMOJIS = {
   // CastBot Logo
   castbot_logo: {
     dev: '1487709952662573091',   // CastBot-Dev transparent icon (testing)
+    test: '1514983506059464746',  // CastBot-Test app
     prod: '1487709751834837103'    // CastBot production transparent icon
   },
-  
+
   // CastBot Full Logo — NOT CURRENTLY USED, flag for removal
   castbot_logo_full: {
     dev: '1421388843654975599',   // CastBot-Dev full logo emoji
+    test: '1514983511398813817',  // CastBot-Test app
     prod: '1408708179227054222'    // CastBot production full logo emoji
   },
-  
+
   // Command emoji (existing)
   command: {
     dev: '1396095623815495700',   // CastBot-Dev command emoji
+    test: '1514980834011119636',  // CastBot-Test app
     prod: '1396098411287285942'    // CastBot production command emoji
   },
 
   // Reece emoji (developer avatar)
   reece: {
     dev: '1436850201158483968',   // CastBot-Dev Reece emoji
+    test: '1514983517350789150',  // CastBot-Test app
     prod: '1436850226932748369'    // CastBot production Reece emoji
   },
 
   // Transparent CastBot icon (for button emojis)
   cb_transparent: {
     dev: '1487709952662573091',   // CastBot-Dev transparent icon
+    test: '1514980746098638919',  // CastBot-Test app
     prod: '1487709751834837103'    // CastBot production transparent icon
   },
 
   // CastBot blue icon
   cb_blue: {
     dev: '1495983773379199056',   // CastBot-Dev blue icon
+    test: '1514980526702854184',  // CastBot-Test app
     prod: '1492393976324685954'    // CastBot production blue icon
   }
 
@@ -83,13 +98,7 @@ export function getBotEmojiId(emojiName, guildId = null) {
     return null;
   }
   
-  // Use production emoji if explicitly in production mode
-  if (isProduction) {
-    return emoji.prod;
-  }
-  
-  // Use dev emoji for test server or when not in production
-  return emoji.dev;
+  return pickEmojiId(emoji);
 }
 
 /**
@@ -152,7 +161,7 @@ export function expandBotEmojis(text) {
   return text.replace(/<:(\w+)>/g, (full, name) => {
     const entry = BOT_EMOJIS[name];
     if (!entry) return full;
-    const id = isProduction ? entry.prod : entry.dev;
+    const id = pickEmojiId(entry);
     if (!id) return full;
     const marker = entry.animated ? 'a' : '';
     return `<${marker}:${name}:${id}>`;

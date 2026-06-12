@@ -97,6 +97,17 @@ export function getCurrentEnvironment() {
 }
 
 /**
+ * Human-readable environment label for upload messages (TEST / PROD / DEV).
+ * Distinct from getCurrentEnvironment() — that keys image URLs (dev/prod only);
+ * this is purely for the audit label so the TEST box doesn't masquerade as [DEV].
+ * @returns {string} 'TEST' | 'PROD' | 'DEV'
+ */
+export function getEnvironmentLabel() {
+  if (process.env.INSTANCE_ROLE === 'test') return 'TEST';
+  return process.env.PRODUCTION === 'TRUE' ? 'PROD' : 'DEV';
+}
+
+/**
  * Get tip URLs for current environment
  * @param {Object} config - Tips configuration
  * @param {string} env - Environment ('dev' or 'prod')
@@ -167,10 +178,12 @@ export async function refreshTips(client, env) {
 
       console.log(`📤 Uploading ${tip.filename} (${tip.title})...`);
 
-      // Upload to Discord
+      // Upload to Discord. Omit the title echo when it's just the default "Tip N"
+      // (avoids "Tip 9/10 - Tip 9"); use an accurate env label (TEST/PROD/DEV).
+      const titlePart = (tip.title && tip.title !== `Tip ${tip.id}`) ? ` - ${tip.title}` : '';
       const attachment = new AttachmentBuilder(imagePath, { name: `tip_${tip.id}.png` });
       const message = await tipsChannel.send({
-        content: `Tip ${tip.id}/10 - ${tip.title} [${env.toUpperCase()}]`,
+        content: `Tip ${tip.id}/10${titlePart} [${getEnvironmentLabel()}]`,
         files: [attachment]
       });
 
