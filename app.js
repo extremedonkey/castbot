@@ -8178,6 +8178,73 @@ To fix this:
           return { components: [container] };
         }
       })(req, res, client);
+    } else if (custom_id === 'restart_prod') {
+      // TEST-instance-only: confirm screen for restarting PROD via forced-command SSH.
+      if (!['391415444084490240'].includes(req.body.member?.user?.id)) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: '❌ Access denied.', flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
+      return ButtonHandlerFactory.create({
+        id: 'restart_prod',
+        updateMessage: true,
+        handler: async () => {
+          if (process.env.INSTANCE_ROLE !== 'test') {
+            return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
+              { type: 10, content: '⛔ **Restart Prod** is only available on the TEST instance.' },
+              { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }] }
+            ] }] };
+          }
+          return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
+            { type: 10, content: '## 🔁 Restart Production?\nSSHes to prod (`13.238.148.170`) via the restricted forced-command key and runs remediation:\n- Fix Apache/nginx if the web layer is down\n- `pm2 restart castbot-pm` (preserves `NODE_OPTIONS`)\n\n⚠️ Causes a few seconds of prod downtime.' },
+            { type: 14 },
+            { type: 1, components: [
+              { type: 2, custom_id: 'restart_prod_confirm', label: 'Confirm Restart Prod', style: 4, emoji: { name: '⚠️' } },
+              { type: 2, custom_id: 'reeces_stuff', label: 'Cancel', style: 2 }
+            ] }
+          ] }] };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'restart_prod_confirm') {
+      // TEST-instance-only: execute prod remediation. The key on this box can ONLY run
+      // /home/bitnami/remediate-castbot.sh on prod (authorized_keys forced-command).
+      if (!['391415444084490240'].includes(req.body.member?.user?.id)) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: '❌ Access denied.', flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
+      return ButtonHandlerFactory.create({
+        id: 'restart_prod_confirm',
+        deferred: true,
+        updateMessage: true,
+        handler: async (context) => {
+          if (process.env.INSTANCE_ROLE !== 'test') {
+            return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
+              { type: 10, content: '⛔ Only available on the TEST instance.' },
+              { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }] }
+            ] }] };
+          }
+          const { execFile } = await import('node:child_process');
+          const output = await new Promise((resolve) => {
+            execFile('ssh', [
+              '-i', '/home/ubuntu/.ssh/prod-remediate-key',
+              '-o', 'StrictHostKeyChecking=no',
+              '-o', 'ConnectTimeout=12',
+              'bitnami@13.238.148.170'
+            ], { timeout: 90000 }, (err, stdout, stderr) => {
+              resolve(`${stdout || ''}${stderr || ''}${err ? `\n[ssh exit ${err.code ?? err.message}]` : ''}`.trim());
+            });
+          });
+          console.log(`🔁 [RESTART-PROD] invoked by ${context.userId}`);
+          const trimmed = (output || '(no output)').slice(0, 1500);
+          return { components: [{ type: 17, accent_color: 0x2ecc71, components: [
+            { type: 10, content: `## 🔁 Prod Remediation Complete\n\`\`\`\n${trimmed}\n\`\`\`` },
+            { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: "← Back to Reece's Stuff", style: 2 }] }
+          ] }] };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('stamina_guide_') || custom_id.startsWith('safari_guide_')) {
       // Safari Guide — paginated player-friendly guide
       return ButtonHandlerFactory.create({

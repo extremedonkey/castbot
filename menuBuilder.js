@@ -139,9 +139,21 @@ export class MenuBuilder {
    * Build Reece's Stuff menu — secret admin tools
    */
   static buildReecesStuffMenu(menuConfig, context) {
+    const isTestInstance = process.env.INSTANCE_ROLE === 'test';
     const components = [
       { type: 10, content: `## ${menuConfig.title}` },
       { type: 14 },
+      // Test-instance-only: out-of-band controls for the always-on TEST box (castbot-blue).
+      // Lets Reece restart PROD via the test bot when prod itself is down. Hidden on prod/dev.
+      ...(isTestInstance ? [
+        { type: 10, content: `### \`\`\`🟦 Test Instance Controls\`\`\`` },
+        {
+          type: 1,
+          components: [
+            { type: 2, custom_id: 'restart_prod', label: 'Restart Prod', style: 4, emoji: { name: '🔁' } }
+          ]
+        }
+      ] : []),
       { type: 10, content: `### \`\`\`🐱 Bec's Cool Area\`\`\`` },
       {
         type: 1,

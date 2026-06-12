@@ -1191,6 +1191,24 @@ export const BUTTON_REGISTRY = {
     category: 'experimental',
     parent: 'reeces_stuff'
   },
+  'restart_prod': {
+    label: 'Restart Prod',
+    description: 'TEST-instance only: SSH (forced-command) to prod and run remediation (fix Apache/nginx + pm2 restart castbot-pm). Shows a confirm step.',
+    emoji: '🔁',
+    style: 'Danger',
+    category: 'admin',
+    parent: 'reeces_stuff',
+    restrictedUser: '391415444084490240'
+  },
+  'restart_prod_confirm': {
+    label: 'Confirm Restart Prod',
+    description: 'TEST-instance only: executes prod remediation via the forced-command SSH key.',
+    emoji: '⚠️',
+    style: 'Danger',
+    category: 'admin',
+    parent: 'restart_prod',
+    restrictedUser: '391415444084490240'
+  },
 
   // === PLAYER CARD ===
   'pcard_*': {
