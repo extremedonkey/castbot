@@ -18,13 +18,14 @@ import os from 'os';
 import path from 'path';
 
 const REECE_USER_ID = '391415444084490240';
+const BUGS_CHANNEL_ID = '1335678517907816530';   // #private-bugs in the community server
 const PROD_URL = 'https://castbotaws.reecewagner.com/interactions';
 const PROD_SSH_TARGET = 'bitnami@13.238.148.170';
 const REMEDIATE_KEY = path.join(os.homedir(), '.ssh', 'prod-remediate-key');
 
 const PROBE_INTERVAL_MS = Number(process.env.PROD_WATCHDOG_INTERVAL_MS) || 60_000;   // probe cadence
 const PROBE_TIMEOUT_MS = 10_000;                                                     // per-probe timeout
-const FAILURE_THRESHOLD = Number(process.env.PROD_WATCHDOG_THRESHOLD) || 3;          // consecutive fails before DOWN alert
+const FAILURE_THRESHOLD = Number(process.env.PROD_WATCHDOG_THRESHOLD) || 1;          // consecutive fails before DOWN alert (1 = ping on first failure)
 const REALERT_MS = 30 * 60_000;                                                      // re-ping cadence while still down
 
 /**
@@ -55,7 +56,8 @@ export function evaluateProbe(state, healthy, now, opts = {}) {
 }
 
 export class ProdWatchdog {
-  constructor() {
+  constructor(client = null) {
+    this.client = client;
     this.interval = null;
     this.webhookUrl = process.env.PROD_WATCHDOG_WEBHOOK_URL || null;
     this.state = { consecutiveFailures: 0, isDown: false, lastAlertAt: 0 };
@@ -87,7 +89,8 @@ export class ProdWatchdog {
     });
   }
 
-  async postAlert(content) {
+  /** Fallback alert: webhook ping only (a manual webhook cannot carry a working button). */
+  async postWebhook(content) {
     if (!this.webhookUrl) return;
     try {
       await fetch(this.webhookUrl, {
@@ -104,6 +107,50 @@ export class ProdWatchdog {
     }
   }
 
+  /**
+   * Send an alert. Preferred path: post AS the bot (Components V2 + one-click Restart Prod
+   * button) — requires CastBot-Test to be a member of the community server, and the button
+   * routes back to this always-on box. Falls back to a webhook ping (no button) otherwise.
+   * kind ∈ 'DOWN' | 'REMINDER' | 'RECOVERY'
+   */
+  async alert(kind, probe, diag) {
+    const isRecovery = kind === 'RECOVERY';
+    const title = isRecovery ? '🟢 Prod Recovered'
+      : kind === 'REMINDER' ? '🔴 Prod Still Down' : '🔴 Prod Down';
+    const detail = isRecovery
+      ? `Prod is responding again (${probe.detail}).`
+      : `**Probe:** ${probe.detail}\n\`\`\`\n${String(diag || '').slice(0, 1200)}\n\`\`\``;
+
+    if (this.client) {
+      try {
+        const channel = await this.client.channels.fetch(BUGS_CHANNEL_ID);
+        const inner = [{ type: 10, content: `<@${REECE_USER_ID}>\n## ${title}\n${detail}` }];
+        if (!isRecovery) {
+          inner.push(
+            { type: 14 },
+            { type: 1, components: [
+              { type: 2, custom_id: 'restart_prod_confirm', label: 'Restart Prod Now', style: 4, emoji: { name: '🔁' } }
+            ] }
+          );
+        }
+        await channel.send({
+          flags: 1 << 15, // IS_COMPONENTS_V2
+          components: [{ type: 17, accent_color: isRecovery ? 0x27ae60 : 0xe74c3c, components: inner }],
+          allowedMentions: { users: [REECE_USER_ID] }
+        });
+        return;
+      } catch (e) {
+        console.error('[ProdWatchdog] Bot post failed (bot not in community server?) — webhook fallback:', e.message);
+      }
+    }
+
+    // Fallback: ping only (manual webhook can't host a working button)
+    await this.postWebhook(
+      `<@${REECE_USER_ID}> ${title} — ${isRecovery ? probe.detail : `probe: ${probe.detail}`}` +
+      (isRecovery ? '' : `\n\`\`\`\n${String(diag || '').slice(0, 1200)}\n\`\`\`\n-# Restart via TEST bot → Reece's Stuff → Restart Prod`)
+    );
+  }
+
   async tick() {
     const probe = await this.probe();
     const { state, action } = evaluateProbe(this.state, probe.healthy, Date.now());
@@ -112,19 +159,14 @@ export class ProdWatchdog {
 
     if (action === 'RECOVERY') {
       console.log('[ProdWatchdog] 🟢 Prod recovered');
-      await this.postAlert(`<@${REECE_USER_ID}> 🟢 **PROD RECOVERED** — responding again (${probe.detail}).`);
+      await this.alert('RECOVERY', probe, null);
       return;
     }
 
     // DOWN or REMINDER — enrich with read-only prod diagnostics
     console.log(`[ProdWatchdog] 🔴 Prod ${action} (${probe.detail})`);
     const diag = await this.prodStatus();
-    const title = action === 'REMINDER' ? 'PROD STILL DOWN' : 'PROD DOWN';
-    await this.postAlert(
-      `<@${REECE_USER_ID}> 🔴 **${title}** — probe: ${probe.detail}\n` +
-      `\`\`\`\n${String(diag).slice(0, 1500)}\n\`\`\`\n` +
-      `-# Restart via TEST bot → Reece's Stuff → Restart Prod`
-    );
+    await this.alert(action, probe, diag);
   }
 
   start() {
@@ -149,8 +191,9 @@ export class ProdWatchdog {
 }
 
 let instance = null;
-export const getProdWatchdog = () => {
-  if (!instance) instance = new ProdWatchdog();
+export const getProdWatchdog = (client = null) => {
+  if (!instance) instance = new ProdWatchdog(client);
+  else if (client && !instance.client) instance.client = client;
   return instance;
 };
 

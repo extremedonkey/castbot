@@ -1855,7 +1855,7 @@ client.once('ready', async () => {
   // on sustained downtime. Self-gates on INSTANCE_ROLE=test + PROD_WATCHDOG_WEBHOOK_URL.
   try {
     const { getProdWatchdog } = await import('./src/monitoring/prodWatchdog.js');
-    getProdWatchdog().start();
+    getProdWatchdog(client).start();
   } catch (err) {
     console.error('[ProdWatchdog] Failed to start:', err.message);
   }
