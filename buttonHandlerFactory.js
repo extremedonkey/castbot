@@ -4362,6 +4362,14 @@ export const BUTTON_REGISTRY = {
     category: 'admin',
     parent: 'archive_channel'
   },
+  'archive_confirm': {
+    label: 'Confirm Archive',
+    description: 'Confirms and starts the background channel archive loop',
+    emoji: '📦',
+    style: 'Danger',
+    category: 'admin',
+    parent: 'archive_channel_select'
+  },
 
   // === EMOJI EDITOR (PoC) ===
   'emoji_editor': { label: 'Emoji Editor', emoji: '🎨', category: 'tools', parent: 'castbot_tools' },

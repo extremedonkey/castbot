@@ -36864,8 +36864,8 @@ Your server is now ready for Tycoons gameplay!`;
                 { type: 1, components: [{
                   type: 8, // Channel Select
                   custom_id: 'archive_channel_select',
-                  placeholder: 'Select a channel to archive...',
-                  channel_types: [0, 5], // Text + Announcement
+                  placeholder: 'Select a channel or category...',
+                  channel_types: [0, 4, 5], // Text + Category + Announcement
                   min_values: 1,
                   max_values: 1
                 }]},
@@ -36878,117 +36878,231 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
 
     } else if (custom_id === 'archive_channel_select') {
-      // Fetch all messages from selected channel, generate HTML archive, post with View Archive button
-      const selectedChannelId = req.body.data.values?.[0];
-      const interactionToken = req.body.token;
-      const appId = process.env.APP_ID;
-      const channelId = req.body.channel?.id || req.body.channel_id;
+      return ButtonHandlerFactory.create({
+        id: 'archive_channel_select',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { guildId, userId } = context;
+          const selectedId = req.body.data.values?.[0];
+          const invokedChannelId = req.body.channel?.id || req.body.channel_id;
 
-      // Defer PUBLIC — the export message persists in the channel
-      res.send({
-        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {}
-      });
+          // Fetch selected channel/category info
+          const chanData = await DiscordRequest(`channels/${selectedId}`, { method: 'GET' });
+          let channels = [];
+          let selectionLabel = '';
 
-      setTimeout(async () => {
-        try {
-          console.log(`📥 START: export_channel for channel ${selectedChannelId}`);
-
-          // Rate-limit-aware fetch (header-driven pacing + 429 backstop) — see RaP 0915
-          const { fetchAllChannelMessages } = await import('./channelExportFetcher.js');
-          const { messages: allMessages, total429, batches } = await fetchAllChannelMessages(selectedChannelId, {
-            onProgress: (n) => { if (n % 500 === 0) console.log(`  📥 Fetched ${n} messages...`); }
-          });
-          console.log(`📥 Fetch complete: ${allMessages.length} messages in ${batches} batches (${total429} rate-limit waits)`);
-
-          // Get channel name
-          let channelName = selectedChannelId;
-          try {
-            const channelData = await DiscordRequest(`channels/${selectedChannelId}`, { method: 'GET' });
-            if (channelData?.name) channelName = channelData.name;
-          } catch (e) { /* use ID as fallback */ }
-
-          // Build HTML export
-          const { generateExportHTML } = await import('./channelExport.js');
-          const html = generateExportHTML(channelName, allMessages);
-          const filename = `${channelName}-export-${new Date().toISOString().slice(0, 10)}.html`;
-          const fileBuffer = Buffer.from(html, 'utf-8');
-
-          console.log(`📥 Export complete: ${allMessages.length} messages, ${fileBuffer.length} bytes`);
-
-          // Step 1: Post the file as a public message
-          const FormData = (await import('form-data')).default;
-          const fetch = (await import('node-fetch')).default;
-          const form = new FormData();
-
-          form.append('files[0]', fileBuffer, { filename, contentType: 'text/html' });
-          form.append('payload_json', JSON.stringify({
-            content: `📥 **Channel Export: #${channelName}**\n${allMessages.length} messages exported.`,
-            attachments: [{ id: 0, filename }]
-          }));
-
-          const webhookUrl = `https://discord.com/api/v10/webhooks/${appId}/${interactionToken}/messages/@original`;
-          const response = await fetch(webhookUrl, {
-            method: 'PATCH',
-            body: form,
-            headers: form.getHeaders()
-          });
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`❌ Export webhook failed: ${response.status} ${errorText}`);
-            return;
+          if (chanData?.type === 4) {
+            // Category: expand to child text/announcement channels
+            const allChannels = await DiscordRequest(`guilds/${guildId}/channels`, { method: 'GET' });
+            channels = (allChannels || [])
+              .filter(c => c.parent_id === selectedId && [0, 5].includes(c.type))
+              .sort((a, b) => (a.position || 0) - (b.position || 0));
+            selectionLabel = `📁 **${chanData.name}** — ${channels.length} channel${channels.length !== 1 ? 's' : ''}`;
+          } else {
+            channels = [chanData];
+            selectionLabel = `📄 **#${chanData.name}**`;
           }
 
-          // Step 2: Read the CDN URL from the response and edit to add View Archive button
-          const responseText = await response.text();
-          let msgData;
-          try {
-            msgData = JSON.parse(responseText);
-          } catch (e) {
-            console.error(`❌ Failed to parse response: ${responseText.substring(0, 200)}`);
-            return;
-          }
-          console.log(`📥 Response attachments: ${JSON.stringify(msgData.attachments?.map(a => ({ filename: a.filename, url: a.url?.substring(0, 60) })))}`);
-          const cdnUrl = msgData.attachments?.[0]?.url;
-          console.log(`📥 CDN URL: ${cdnUrl?.substring(0, 80)}...`);
-
-          if (cdnUrl) {
-            // PATCH again with just JSON to add the link button (keep existing attachment)
-            const viewUrl = `https://htmlpreview.github.io/?${cdnUrl}`;
-            const editResponse = await DiscordRequest(`webhooks/${appId}/${interactionToken}/messages/@original`, {
-              method: 'PATCH',
-              body: {
-                content: `📥 **Channel Export: #${channelName}**\n${allMessages.length} messages exported.\n-# Open the HTML file in your browser to view with search + Discord styling.`,
-                components: [{
-                  type: 1,
-                  components: [
-                    { type: 2, style: 5, label: 'View Archive', emoji: { name: '🔗' }, url: viewUrl }
-                  ]
-                }]
-              }
-            });
-
-            if (editResponse) {
-              console.log(`✅ Archive export sent: ${filename}`);
-            } else {
-              console.error(`⚠️ View Archive button edit failed (file still sent)`);
-            }
-          }
-        } catch (error) {
-          console.error('❌ Channel export failed:', error);
-          try {
-            await updateDeferredResponse(interactionToken, {
+          if (channels.length === 0) {
+            return {
               components: [{
-                type: 17, accent_color: 0xe74c3c,
-                components: [{ type: 10, content: `❌ Export failed: ${error.message}` }]
-              }],
-              flags: (1 << 15)
-            });
-          } catch (e) { /* token may have expired */ }
+                type: 17,
+                accent_color: 0xe67e22,
+                components: [
+                  { type: 10, content: `## 🧹 Archive Channels\n\n⚠️ No text channels found in that category.` },
+                  { type: 14 },
+                  { type: 1, components: [{ type: 2, style: 2, label: '← Back', custom_id: 'archive_channel' }] }
+                ]
+              }]
+            };
+          }
+
+          // Stash pending archive state for archive_confirm to pick up
+          global.pendingArchive = global.pendingArchive || new Map();
+          global.pendingArchive.set(`${guildId}:${userId}`, { channels, invokedChannelId });
+
+          // Channel list (up to 20 shown)
+          const displayChannels = channels.slice(0, 20);
+          const channelList = displayChannels.map(c => `- #${c.name}`).join('\n');
+          const overflow = channels.length > 20 ? `\n-# ...and ${channels.length - 20} more` : '';
+          const estMin = channels.length === 1 ? '1–5 min' : `${channels.length * 1}–${channels.length * 5} min`;
+
+          return {
+            components: [{
+              type: 17,
+              accent_color: 0x3498db,
+              components: [
+                { type: 10, content: `## 🧹 Archive Channels\n\n${selectionLabel}\n\n${channelList}${overflow}\n\n-# ⏱️ Estimated time: ${estMin} (varies by message count)` },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, style: 4, label: '📦 Archive', custom_id: 'archive_confirm' },
+                  { type: 2, style: 2, label: '← Back', custom_id: 'archive_channel' }
+                ]}
+              ]
+            }]
+          };
         }
-      }, 100);
-      return;
+      })(req, res, client);
+
+    } else if (custom_id === 'archive_confirm') {
+      return ButtonHandlerFactory.create({
+        id: 'archive_confirm',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { guildId, userId } = context;
+
+          global.pendingArchive = global.pendingArchive || new Map();
+          const pending = global.pendingArchive.get(`${guildId}:${userId}`);
+          global.pendingArchive.delete(`${guildId}:${userId}`);
+
+          if (!pending) {
+            return {
+              components: [{
+                type: 17,
+                accent_color: 0xe74c3c,
+                components: [
+                  { type: 10, content: `## 🧹 Archive Channels\n\n❌ Session expired — please start over.` },
+                  { type: 14 },
+                  { type: 1, components: [{ type: 2, style: 2, label: '← Back', custom_id: 'archive_channel' }] }
+                ]
+              }]
+            };
+          }
+
+          const { channels, invokedChannelId } = pending;
+
+          // Background loop — fires after factory sends the "started" response
+          setTimeout(async () => {
+            const { fetchAllChannelMessages } = await import('./channelExportFetcher.js');
+            const { generateExportHTML } = await import('./channelExport.js');
+            const { getBotEmoji } = await import('./botEmojis.js');
+            const FormData = (await import('form-data')).default;
+            const fetch = (await import('node-fetch')).default;
+            const IS_CV2 = 1 << 15;
+
+            const cbEmoji = getBotEmoji('cb_blue');
+            const cbEmojiStr = cbEmoji?.id ? `<:cb_blue:${cbEmoji.id}>` : '🗄️';
+
+            for (const channel of channels) {
+              try {
+                console.log(`📥 START archive: #${channel.name} (${channel.id})`);
+
+                const { messages, total429, batches } = await fetchAllChannelMessages(channel.id, {
+                  onProgress: (n) => { if (n % 500 === 0) console.log(`  📥 Fetched ${n} messages...`); }
+                });
+                console.log(`📥 Fetch complete: ${messages.length} messages in ${batches} batches (${total429} rate-limit waits)`);
+
+                const html = generateExportHTML(channel.name, messages);
+                const today = new Date().toISOString().slice(0, 10);
+                const filename = `${channel.name}-export-${today}.html`;
+                const fileBuffer = Buffer.from(html, 'utf-8');
+                const nowUnix = Math.floor(Date.now() / 1000);
+
+                const container = {
+                  type: 17,
+                  accent_color: 0x3498db,
+                  components: [
+                    { type: 10, content: `## 📂 #${channel.name}\n-# ${cbEmojiStr} CastBot Archive` },
+                    { type: 14 },
+                    { type: 10, content: `📄 **${messages.length} messages**\n📅 <t:${nowUnix}:F>` },
+                    { type: 14 },
+                    { type: 10, content: `## 🔍 Viewing the archive` },
+                    { type: 13, file: { url: `attachment://${filename}` } },
+                    { type: 10, content: `-# **Option 1** — Download and open the HTML file above\n-# **Option 2** — Click the button below to view online *(link expires ~24h)*` }
+                  ]
+                };
+
+                // Step 1: POST multipart — file + Components V2
+                const form = new FormData();
+                form.append('files[0]', fileBuffer, { filename, contentType: 'text/html' });
+                form.append('payload_json', JSON.stringify({
+                  flags: IS_CV2,
+                  components: [container],
+                  attachments: [{ id: 0, filename }]
+                }));
+
+                const postRes = await fetch(`https://discord.com/api/v10/channels/${invokedChannelId}/messages`, {
+                  method: 'POST',
+                  body: form,
+                  headers: { ...form.getHeaders(), Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
+                });
+
+                if (!postRes.ok) {
+                  const errText = await postRes.text();
+                  console.error(`❌ Archive POST failed for #${channel.name}: ${postRes.status} ${errText}`);
+                  continue;
+                }
+
+                const postData = await postRes.json();
+                const cdnAttachment = postData.attachments?.[0];
+                const cdnUrl = cdnAttachment?.url;
+                const attachmentId = cdnAttachment?.id;
+
+                if (cdnUrl && attachmentId) {
+                  // Step 2: PATCH to add "View Online" link button
+                  const viewUrl = `https://htmlpreview.github.io/?${cdnUrl}`;
+                  const maxNameLen = 80 - 'View '.length - ' Online'.length; // 68 chars
+                  const truncName = channel.name.length > maxNameLen ? channel.name.slice(0, maxNameLen - 1) + '…' : channel.name;
+
+                  const patchRes = await fetch(`https://discord.com/api/v10/channels/${invokedChannelId}/messages/${postData.id}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                      flags: IS_CV2,
+                      components: [{
+                        ...container,
+                        components: [
+                          ...container.components,
+                          { type: 14 },
+                          { type: 1, components: [{ type: 2, style: 5, label: `View ${truncName} Online`, url: viewUrl }] }
+                        ]
+                      }],
+                      attachments: [{ id: attachmentId, filename }]
+                    }),
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
+                  });
+
+                  if (!patchRes.ok) {
+                    const errText = await patchRes.text();
+                    console.error(`⚠️ Archive PATCH failed for #${channel.name}: ${patchRes.status} ${errText}`);
+                  } else {
+                    console.log(`✅ Archive complete: #${channel.name} (${messages.length} messages)`);
+                  }
+                } else {
+                  console.log(`✅ Archive posted (no CDN URL for button): #${channel.name}`);
+                }
+              } catch (err) {
+                console.error(`❌ Archive error for #${channel.name}:`, err);
+                try {
+                  const fetch2 = (await import('node-fetch')).default;
+                  await fetch2(`https://discord.com/api/v10/channels/${invokedChannelId}/messages`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                      flags: IS_CV2,
+                      components: [{ type: 17, accent_color: 0xe74c3c, components: [{ type: 10, content: `❌ Archive failed for **#${channel.name}**: ${err.message}` }] }]
+                    }),
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
+                  });
+                } catch (e2) { /* post error failed too */ }
+              }
+            }
+          }, 0);
+
+          // Immediate "started" response (factory sends this, then background loop runs)
+          return {
+            components: [{
+              type: 17,
+              accent_color: 0x2ecc71,
+              components: [
+                { type: 10, content: `## 📦 Archiving ${channels.length === 1 ? `**#${channels[0].name}**` : `**${channels.length} channels**`}\n\n-# Archive messages will appear in this channel as each one completes.` },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, style: 2, label: '← Data', custom_id: 'data_admin' }] }
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
 
     // === END ACTIVITY LOG HANDLERS ===
 
