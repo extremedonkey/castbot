@@ -111,8 +111,8 @@ export class MenuBuilder {
     const infoRow = [];
     if (isReece) {
       infoRow.push(
-        { type: 2, custom_id: 'reeces_stuff', label: "Reece's Stuff", style: 4, emoji: { name: '🐧' } },
-        { type: 2, custom_id: 'data_admin', label: 'Data', style: 4, emoji: { name: '🧮' } }
+        { type: 2, custom_id: 'data_admin', label: 'Data', style: 4, emoji: { name: '🧮' } },
+        { type: 2, custom_id: 'reeces_stuff', label: "Reece's Stuff", style: 4, emoji: { name: '🐧' } }
       );
     }
     infoRow.push(
@@ -139,29 +139,9 @@ export class MenuBuilder {
    * Build Reece's Stuff menu — secret admin tools
    */
   static buildReecesStuffMenu(menuConfig, context) {
-    const isTestInstance = process.env.INSTANCE_ROLE === 'test';
     const components = [
       { type: 10, content: `## ${menuConfig.title}` },
       { type: 14 },
-      // Test-instance-only: out-of-band controls for the always-on TEST box (castbot-blue).
-      // Lets Reece restart PROD via the test bot when prod itself is down. Hidden on prod/dev.
-      ...(isTestInstance ? [
-        { type: 10, content: `### \`\`\`🟦 Test Instance Controls\`\`\`` },
-        {
-          type: 1,
-          components: [
-            { type: 2, custom_id: 'restart_prod', label: 'Restart Prod', style: 4, emoji: { name: '🔁' } }
-          ]
-        }
-      ] : []),
-      { type: 10, content: `### \`\`\`🐱 Bec's Cool Area\`\`\`` },
-      {
-        type: 1,
-        components: [
-          { type: 2, custom_id: 'becs_cool_cats', label: "Bec's Button", style: 1, emoji: { name: '🐱' } },
-          { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } }
-        ]
-      },
       { type: 10, content: `### \`\`\`🦠 Experimental\`\`\`` },
       {
         type: 1,
@@ -169,7 +149,8 @@ export class MenuBuilder {
           { type: 2, custom_id: 'poc_menu_button', label: 'Menu', style: 1, emoji: getBotEmoji('cb_transparent') },
           { type: 2, custom_id: 'moai_ask', label: 'Moai', style: 2, emoji: { name: '🗿' } },
           { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
-          { type: 2, custom_id: 'richcard_demo', label: 'Rich Card', style: 2, emoji: { name: '🎴' } }
+          { type: 2, custom_id: 'richcard_demo', label: 'Rich Card', style: 2, emoji: { name: '🎴' } },
+          { type: 2, custom_id: 'msg_test', label: 'Msg Test', style: 2, emoji: { name: '💬' } }
         ]
       },
       { type: 10, content: `### \`\`\`🔧 Admin Tools\`\`\`` },
@@ -179,8 +160,7 @@ export class MenuBuilder {
           { type: 2, custom_id: 'test_role_hierarchy', label: 'Check Roles', style: 2, emoji: { name: '🔰' } },
           { type: 2, custom_id: 'admin_populate_logs', label: 'Populate Logs', style: 2, emoji: { name: '📜' } },
           { type: 2, custom_id: 'admin_backfill_channel_logs', label: 'Backfill Channel', style: 2, emoji: { name: '📡' } },
-          { type: 2, custom_id: 'emergency_app_reinit', label: 'App Re-Init', style: 2, emoji: { name: '🚨' } },
-          { type: 2, custom_id: 'export_channel', label: 'Export Channel', style: 2, emoji: { name: '📥' } }
+          { type: 2, custom_id: 'emergency_app_reinit', label: 'App Re-Init', style: 2, emoji: { name: '🚨' } }
         ]
       },
       { type: 10, content: `### \`\`\`🗺️ Map Tools\`\`\`` },

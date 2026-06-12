@@ -1183,21 +1183,13 @@ export const BUTTON_REGISTRY = {
     parent: 'castbot_tools',
     restrictedUser: '391415444084490240'
   },
-  'becs_cool_cats': {
-    label: "Bec's Button",
-    description: "Bec's Cool Area — shows a random cat picture",
-    emoji: '🐱',
-    style: 'Primary',
-    category: 'experimental',
-    parent: 'reeces_stuff'
-  },
   'restart_prod': {
     label: 'Restart Prod',
     description: 'TEST-instance only: SSH (forced-command) to prod and run remediation (fix Apache/nginx + pm2 restart castbot-pm). Shows a confirm step.',
     emoji: '🔁',
     style: 'Danger',
     category: 'admin',
-    parent: 'reeces_stuff',
+    parent: 'data_admin',
     restrictedUser: '391415444084490240'
   },
   'restart_prod_confirm': {
@@ -4354,21 +4346,21 @@ export const BUTTON_REGISTRY = {
     category: 'admin',
     parent: 'reeces_stuff'
   },
-  'export_channel': {
-    label: 'Export Channel',
-    description: 'Export all messages from a channel as a text file (REST API only, no Privileged Intents)',
-    emoji: '📥',
+  'archive_channel': {
+    label: 'Archive Channels',
+    description: 'Archive all messages from a channel as a styled HTML file',
+    emoji: '🧹',
     style: 'Secondary',
     category: 'admin',
-    parent: 'reeces_stuff'
+    parent: 'data_admin'
   },
-  'export_channel_select': {
-    label: 'Export Channel Select',
-    description: 'Channel select handler for channel export feature',
-    emoji: '📥',
+  'archive_channel_select': {
+    label: 'Archive Channel Select',
+    description: 'Channel select handler for archive channels feature',
+    emoji: '🧹',
     style: 'Secondary',
     category: 'admin',
-    parent: 'export_channel'
+    parent: 'archive_channel'
   },
 
   // === EMOJI EDITOR (PoC) ===

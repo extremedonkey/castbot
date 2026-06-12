@@ -1213,11 +1213,6 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setLabel('Export Questions')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('📝'),
-    new ButtonBuilder()
-      .setCustomId('restart_bot')
-      .setLabel('Restart Bot')
-      .setStyle(ButtonStyle.Danger)
-      .setEmoji('🔄')
   ];
 
   // Danger Zone section buttons
@@ -1250,13 +1245,29 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setDisabled(!hasSafariData)
   ];
   
-  // Cleanup section — maintenance tools that mutate stored data
+  // Cleanup & Restart section — maintenance tools + process controls
+  const envLabel = process.env.INSTANCE_ROLE === 'test' ? 'Test' : process.env.NODE_ENV === 'production' ? 'Prod' : 'Dev';
   const cleanupButtons = [
+    new ButtonBuilder()
+      .setCustomId('archive_channel')
+      .setLabel('Archive Channels')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🧹'),
     new ButtonBuilder()
       .setCustomId('data_clear_vanity')
       .setLabel('Clear Vanity Roles')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🧹')
+      .setEmoji('🧹'),
+    new ButtonBuilder()
+      .setCustomId('restart_bot')
+      .setLabel(`Restart ${envLabel}`)
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('🔄'),
+    new ButtonBuilder()
+      .setCustomId('restart_prod')
+      .setLabel('Restart Prod')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('🔁')
   ];
 
   const analyticsRow = new ActionRowBuilder().addComponents(analyticsButtons);
@@ -1285,7 +1296,7 @@ async function createReeceStuffMenu(guildId, channelId = null) {
     { type: 10, content: `### \`\`\`📤 Export & Actions\`\`\`` },
     exportDataRow.toJSON(),
     { type: 14 },
-    { type: 10, content: `### \`\`\`🧹 Cleanup\`\`\`` },
+    { type: 10, content: `### \`\`\`🧹 Cleanup & Restart\`\`\`` },
     cleanupRow.toJSON(),
     { type: 14 },
     { type: 10, content: `### \`\`\`☢️ Danger Zone\`\`\`` },
@@ -8202,7 +8213,7 @@ To fix this:
           if (process.env.INSTANCE_ROLE !== 'test') {
             return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
               { type: 10, content: '⛔ **Restart Prod** is only available on the TEST instance.' },
-              { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }] }
+              { type: 1, components: [{ type: 2, custom_id: 'data_admin', label: '← Back', style: 2 }] }
             ] }] };
           }
           return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
@@ -8210,7 +8221,7 @@ To fix this:
             { type: 14 },
             { type: 1, components: [
               { type: 2, custom_id: 'restart_prod_confirm', label: 'Confirm Restart Prod', style: 4, emoji: { name: '⚠️' } },
-              { type: 2, custom_id: 'reeces_stuff', label: 'Cancel', style: 2 }
+              { type: 2, custom_id: 'data_admin', label: 'Cancel', style: 2 }
             ] }
           ] }] };
         }
@@ -8232,7 +8243,7 @@ To fix this:
           if (process.env.INSTANCE_ROLE !== 'test') {
             return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
               { type: 10, content: '⛔ Only available on the TEST instance.' },
-              { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }] }
+              { type: 1, components: [{ type: 2, custom_id: 'data_admin', label: '← Back', style: 2 }] }
             ] }] };
           }
           const { execFile } = await import('node:child_process');
@@ -8250,7 +8261,7 @@ To fix this:
           const trimmed = (output || '(no output)').slice(0, 1500);
           return { components: [{ type: 17, accent_color: 0x2ecc71, components: [
             { type: 10, content: `## 🔁 Prod Remediation Complete\n\`\`\`\n${trimmed}\n\`\`\`` },
-            { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: "← Back to Reece's Stuff", style: 2 }] }
+            { type: 1, components: [{ type: 2, custom_id: 'data_admin', label: '← Back', style: 2 }] }
           ] }] };
         }
       })(req, res, client);
@@ -10050,32 +10061,6 @@ To fix this:
         }
       })(req, res, client);
 
-    } else if (custom_id === 'becs_cool_cats') {
-      return ButtonHandlerFactory.create({
-        id: 'becs_cool_cats',
-        updateMessage: true,
-        deferred: true,
-        handler: async (context) => {
-          const catRes = await fetch('https://api.thecatapi.com/v1/images/search');
-          const [cat] = await catRes.json();
-          const container = {
-            type: 17,
-            accent_color: 0xff69b4,
-            components: [
-              { type: 10, content: `## Bec's Cool Area` },
-              { type: 10, content: `-# Here's a random cat for you!` },
-              { type: 12, items: [{ media: { url: cat.url }, description: 'Random cat' }] },
-              { type: 14 },
-              { type: 1, components: [
-                { type: 2, custom_id: 'becs_cool_cats', label: 'Another Cat', style: 1, emoji: { name: '🐱' } },
-                { type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }
-              ]}
-            ]
-          };
-          return { components: [container] };
-        }
-      })(req, res, client);
-
     } else if (custom_id === 'bulk_rename_map_channels') {
       // Bulk rename map channels to new 📍 format
       return ButtonHandlerFactory.create({
@@ -11557,6 +11542,7 @@ To fix this:
       // Test sending a message from CastBot to user (USING DISCORD MESSENGER SERVICE)
       return ButtonHandlerFactory.create({
         id: 'msg_test',
+        deferred: true,
         handler: async (context) => {
           console.log(`🔍 START: msg_test - user ${context.userId}`);
           
@@ -36860,12 +36846,12 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
 
-    // === CHANNEL EXPORT HANDLER ===
+    // === ARCHIVE CHANNELS HANDLER ===
 
-    } else if (custom_id === 'export_channel') {
-      // Show channel select for export
+    } else if (custom_id === 'archive_channel') {
+      // Show channel select for archive export
       return ButtonHandlerFactory.create({
-        id: 'export_channel',
+        id: 'archive_channel',
         updateMessage: true,
         handler: async (context) => {
           return {
@@ -36873,26 +36859,26 @@ Your server is now ready for Tycoons gameplay!`;
               type: 17,
               accent_color: 0x3498db,
               components: [
-                { type: 10, content: `## 📥 Export Channel\n\nSelect a channel to export its full message history as a styled HTML file.\n\n-# ⚠️ Large channels take time (~1 min per 3,000 messages — a 13k channel ≈ 4 min). Requires the **Message Content Intent** to be enabled, or message text will be blank.` },
+                { type: 10, content: `## 🧹 Archive Channels\n\nSelect a channel to archive its full message history as a styled HTML file.\n\n-# ⚠️ Large channels take time (~1 min per 3,000 messages — a 13k channel ≈ 4 min). Requires the **Message Content Intent** to be enabled, or message text will be blank.` },
                 { type: 14 },
                 { type: 1, components: [{
                   type: 8, // Channel Select
-                  custom_id: 'export_channel_select',
-                  placeholder: 'Select a channel to export...',
+                  custom_id: 'archive_channel_select',
+                  placeholder: 'Select a channel to archive...',
                   channel_types: [0, 5], // Text + Announcement
                   min_values: 1,
                   max_values: 1
                 }]},
                 { type: 14 },
-                { type: 1, components: [{ type: 2, style: 2, label: '← Back', custom_id: 'reeces_stuff' }] }
+                { type: 1, components: [{ type: 2, style: 2, label: '← Back', custom_id: 'data_admin' }] }
               ]
             }]
           };
         }
       })(req, res, client);
 
-    } else if (custom_id === 'export_channel_select') {
-      // Fetch all messages from selected channel, generate HTML, post with View Log button
+    } else if (custom_id === 'archive_channel_select') {
+      // Fetch all messages from selected channel, generate HTML archive, post with View Archive button
       const selectedChannelId = req.body.data.values?.[0];
       const interactionToken = req.body.token;
       const appId = process.env.APP_ID;
@@ -36954,7 +36940,7 @@ Your server is now ready for Tycoons gameplay!`;
             return;
           }
 
-          // Step 2: Read the CDN URL from the response and edit to add View Log button
+          // Step 2: Read the CDN URL from the response and edit to add View Archive button
           const responseText = await response.text();
           let msgData;
           try {
@@ -36977,16 +36963,16 @@ Your server is now ready for Tycoons gameplay!`;
                 components: [{
                   type: 1,
                   components: [
-                    { type: 2, style: 5, label: 'View Log', emoji: { name: '🔗' }, url: viewUrl }
+                    { type: 2, style: 5, label: 'View Archive', emoji: { name: '🔗' }, url: viewUrl }
                   ]
                 }]
               }
             });
 
             if (editResponse) {
-              console.log(`✅ Export with View Log button sent: ${filename}`);
+              console.log(`✅ Archive export sent: ${filename}`);
             } else {
-              console.error(`⚠️ View Log button edit failed (file still sent)`);
+              console.error(`⚠️ View Archive button edit failed (file still sent)`);
             }
           }
         } catch (error) {
