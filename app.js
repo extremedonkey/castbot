@@ -1816,19 +1816,18 @@ client.once('ready', async () => {
   scheduler.init(client);
   await scheduler.restore();
 
-  // Discord-posting monitors (error logger, backups, health monitor) are skipped on the
-  // TEST instance (INSTANCE_ROLE=test) so it doesn't double-post into prod's monitoring
-  // channels (channel IDs are hardcoded to the prod/HQ guild the test bot also lives in).
-  // Prod and laptop-dev set no INSTANCE_ROLE, so they keep running these unchanged.
   const isTestInstance = process.env.INSTANCE_ROLE === 'test';
-  if (isTestInstance) {
-    console.log('🧪 [TEST INSTANCE] Skipping Discord-posting monitors (PM2 error logger, backups, health monitor)');
-  } else {
-    // Start PM2 Error Log Monitoring (Dev & Prod)
-    const pm2Logger = getPM2ErrorLogger(client);
-    pm2Logger.start();
 
-    // Start automated Discord channel backups
+  // Start PM2 Error Log Monitoring (Dev, Prod & Test — all post to the shared #error channel;
+  // the logger picks the right local log path per env, incl. /home/ubuntu on the test box).
+  const pm2Logger = getPM2ErrorLogger(client);
+  pm2Logger.start();
+
+  // Automated Discord channel backups — SKIP on the TEST instance: its data is a copy of prod,
+  // so backing it up would upload duplicate ~6MB prod-data dumps hourly to prod's backup channel.
+  if (isTestInstance) {
+    console.log('🧪 [TEST INSTANCE] Skipping backup service (data is a prod copy; avoids duplicate dumps)');
+  } else {
     try {
       const { getBackupService } = await import('./src/monitoring/backupService.js');
       const backupService = getBackupService(client);
@@ -1840,15 +1839,16 @@ client.once('ready', async () => {
     } catch (err) {
       console.error('📦 [BACKUP] Failed to start backup service:', err.message);
     }
+  }
 
-    // Restore health monitor if previously configured
-    try {
-      const { getHealthMonitor } = await import('./src/monitoring/healthMonitor.js');
-      const monitor = getHealthMonitor(client);
-      await monitor.restoreFromConfig();
-    } catch (err) {
-      console.error('[HealthMonitor] Failed to restore:', err.message);
-    }
+  // Restore health monitor (all instances). Reads channel/interval from playerData; the test
+  // box reports its own 2GB system stats live, posting to its configured channel.
+  try {
+    const { getHealthMonitor } = await import('./src/monitoring/healthMonitor.js');
+    const monitor = getHealthMonitor(client);
+    await monitor.restoreFromConfig();
+  } catch (err) {
+    console.error('[HealthMonitor] Failed to restore:', err.message);
   }
 
   // Dev-only: Log test coverage scan

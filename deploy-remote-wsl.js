@@ -18,18 +18,28 @@ import os from 'os';
  *   npm run logs-remote-wsl          - View recent logs
  */
 
-// WSL-optimized configuration
-const REMOTE_HOST = process.env.LIGHTSAIL_HOST || '13.238.148.170';
-const REMOTE_USER = process.env.LIGHTSAIL_USER || 'bitnami';
-const REMOTE_PATH = process.env.LIGHTSAIL_PATH || '/opt/bitnami/projects/castbot';
-const SSH_KEY_PATH = path.join(os.homedir(), '.ssh', 'castbot-key.pem');
-const SSH_TARGET = `${REMOTE_USER}@${REMOTE_HOST}`;
-
 // Parse command line arguments
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
 const COMMANDS_ONLY = args.includes('--commands-only');
 const VERBOSE = args.includes('--verbose') || args.includes('-v');
+// Deploy target: 'prod' (default) or 'test' (castbot-blue). `--target test` or `--test`.
+const TARGET = (args.includes('--test') ||
+  (args.includes('--target') && args[args.indexOf('--target') + 1] === 'test')) ? 'test' : 'prod';
+const IS_TEST = TARGET === 'test';
+
+// WSL-optimized configuration — keyed by target so prod behaviour is untouched.
+const REMOTE_HOST = IS_TEST
+  ? (process.env.TEST_LIGHTSAIL_HOST || '13.210.218.153')
+  : (process.env.LIGHTSAIL_HOST || '13.238.148.170');
+const REMOTE_USER = IS_TEST
+  ? (process.env.TEST_LIGHTSAIL_USER || 'ubuntu')
+  : (process.env.LIGHTSAIL_USER || 'bitnami');
+const REMOTE_PATH = IS_TEST
+  ? (process.env.TEST_LIGHTSAIL_PATH || '/home/ubuntu/castbot')
+  : (process.env.LIGHTSAIL_PATH || '/opt/bitnami/projects/castbot');
+const SSH_KEY_PATH = path.join(os.homedir(), '.ssh', IS_TEST ? 'castbot-blue-key.pem' : 'castbot-key.pem');
+const SSH_TARGET = `${REMOTE_USER}@${REMOTE_HOST}`;
 
 function log(message, level = 'info') {
     const prefix = {
@@ -364,34 +374,32 @@ async function deployToProduction() {
         if (!DRY_RUN) {
             log('🔔 Sending deployment notification to Discord...', 'info');
             try {
-                // Set PRODUCTION=TRUE temporarily for the notification
-                const originalProd = process.env.PRODUCTION;
-                process.env.PRODUCTION = 'TRUE';
-                
-                // Build custom message based on deployment type
-                let customMessage = COMMANDS_ONLY 
-                    ? 'Production commands updated - changes will propagate within 1 hour!'
-                    : 'Production deployment successful - bot is now live with latest changes!';
-                
-                // Use the existing notify-restart script with production flag
+                // Build custom message based on deployment type + target
+                const envWord = IS_TEST ? 'Test' : 'Production';
+                let customMessage = COMMANDS_ONLY
+                    ? `${envWord} commands updated - changes will propagate within 1 hour!`
+                    : `${envWord} deployment successful - bot is now live with latest changes!`;
+
+                // notify-restart picks its label from INSTANCE_ROLE/PRODUCTION; pass the right pair.
+                const notifyEnv = IS_TEST
+                    ? { ...process.env, PRODUCTION: 'FALSE', INSTANCE_ROLE: 'test' }
+                    : { ...process.env, PRODUCTION: 'TRUE', INSTANCE_ROLE: '' };
+
                 const { spawn } = await import('child_process');
                 const notifyProcess = spawn('node', [
                     'scripts/notify-restart.js',
                     customMessage,
-                    gitCommitMessage || 'Production deployment',
+                    gitCommitMessage || `${envWord} deployment`,
                     gitFilesChanged,
                     gitStats
                 ], {
-                    env: { ...process.env, PRODUCTION: 'TRUE' },
+                    env: notifyEnv,
                     detached: true,
                     stdio: 'ignore'
                 });
-                
+
                 notifyProcess.unref();
-                
-                // Restore original PRODUCTION value
-                process.env.PRODUCTION = originalProd;
-                
+
                 log('✅ Discord notification sent', 'success');
             } catch (notifyError) {
                 log('⚠️  Could not send Discord notification (non-critical)', 'warning');

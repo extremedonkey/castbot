@@ -95,9 +95,10 @@ async function sendRestartNotification() {
     try {
         console.log('🔔 Sending restart notification to Discord...');
 
-        // Determine environment
+        // Determine environment (INSTANCE_ROLE=test wins, else PRODUCTION flag, else dev)
         const isProduction = process.env.PRODUCTION === 'TRUE';
-        const environment = isProduction ? 'PRODUCTION' : 'DEVELOPMENT';
+        const environment = process.env.INSTANCE_ROLE === 'test' ? 'TEST'
+            : isProduction ? 'PRODUCTION' : 'DEVELOPMENT';
         
         // Get current time
         const now = new Date();
@@ -158,8 +159,8 @@ async function sendRestartNotification() {
         }
 
         // Create the notification message with Components V2 structure using direct API
-        // Use blue accent for production, red for development
-        const accentColor = isProduction ? 0x3498db : 0xe74c3c; // Blue for prod, Red for dev
+        // Blue for prod, orange for test, red for development
+        const accentColor = environment === 'TEST' ? 0xf39c12 : isProduction ? 0x3498db : 0xe74c3c;
         
         const messageData = {
             flags: (1 << 15), // IS_COMPONENTS_V2

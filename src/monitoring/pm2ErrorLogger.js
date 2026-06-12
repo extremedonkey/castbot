@@ -27,6 +27,13 @@ const PM2_LOG_PATHS = {
     error: '/home/bitnami/.pm2/logs/castbot-pm-error.log',
     processName: 'castbot-pm',
     local: false  // Default to remote, will be overridden if running on prod server
+  },
+  // TEST instance (castbot-blue, Ubuntu): pm2 runs as 'ubuntu', logs live here. Always local.
+  test: {
+    out: '/home/ubuntu/.pm2/logs/castbot-pm-out.log',
+    error: '/home/ubuntu/.pm2/logs/castbot-pm-error.log',
+    processName: 'castbot-pm',
+    local: true
   }
 };
 
@@ -35,6 +42,7 @@ let monitoringState = {
   interval: null,
   positions: {
     dev: { out: 0, error: 0 },
+    test: { out: 0, error: 0 },
     prod: { out: 0, error: 0 }
   }
 };
@@ -266,16 +274,15 @@ export class PM2ErrorLogger {
    */
   async checkLogs() {
     try {
-      const env = process.env.PRODUCTION === 'TRUE' ? 'prod' : 'dev';
+      const env = process.env.INSTANCE_ROLE === 'test' ? 'test'
+        : process.env.PRODUCTION === 'TRUE' ? 'prod' : 'dev';
       const config = PM2_LOG_PATHS[env];
       let logs = [];
 
       // Determine if we should read local or remote
-      // If running ON prod server, always read local files
-      // If running in dev, always read local files
-      // If PRODUCTION=TRUE but not on prod server, read remote via SSH
+      // dev/test always read local files; on prod server read local; PRODUCTION from dev machine reads remote via SSH
       const isOnProdServer = this.isRunningOnProdServer();
-      const shouldReadLocal = env === 'dev' || isOnProdServer;
+      const shouldReadLocal = env === 'dev' || env === 'test' || isOnProdServer;
 
       console.log(`[PM2Logger] Check: env=${env}, isOnProdServer=${isOnProdServer}, shouldReadLocal=${shouldReadLocal}`);
 
@@ -296,7 +303,7 @@ export class PM2ErrorLogger {
         }
 
         // Format with environment tag and timestamp
-        const tag = env === 'prod' ? '🔴 **[PM2-PROD]**' : '🟡 **[PM2-DEV]**';
+        const tag = env === 'prod' ? '🔴 **[PM2-PROD]**' : env === 'test' ? '🟦 **[PM2-TEST]**' : '🟡 **[PM2-DEV]**';
         const timestamp = new Date().toLocaleTimeString('en-US', {
           hour: '2-digit',
           minute: '2-digit',
