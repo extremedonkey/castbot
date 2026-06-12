@@ -1851,6 +1851,15 @@ client.once('ready', async () => {
     console.error('[HealthMonitor] Failed to restore:', err.message);
   }
 
+  // Prod watchdog — TEST instance only: external liveness probe of prod; pings Reece via webhook
+  // on sustained downtime. Self-gates on INSTANCE_ROLE=test + PROD_WATCHDOG_WEBHOOK_URL.
+  try {
+    const { getProdWatchdog } = await import('./src/monitoring/prodWatchdog.js');
+    getProdWatchdog().start();
+  } catch (err) {
+    console.error('[ProdWatchdog] Failed to start:', err.message);
+  }
+
   // Dev-only: Log test coverage scan
   if (process.env.PRODUCTION !== 'TRUE') {
     try {
