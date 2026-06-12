@@ -37010,11 +37010,11 @@ Your server is now ready for Tycoons gameplay!`;
                     { type: 14 },
                     { type: 10, content: `## 🔍 Viewing the archive` },
                     { type: 13, file: { url: `attachment://${filename}` } },
-                    { type: 10, content: `-# **Option 1** — Download and open the HTML file above\n-# **Option 2** — Click the button below to view online *(link expires ~24h)*` }
+                    { type: 10, content: `-# **Option 1** — Download and open the HTML file above\n-# **Option 2** — Use the link button below to view online *(expires ~24h)*` }
                   ]
                 };
 
-                // Step 1: POST multipart — file + Components V2
+                // Step 1: POST multipart — file + Components V2 container
                 const form = new FormData();
                 form.append('files[0]', fileBuffer, { filename, contentType: 'text/html' });
                 form.append('payload_json', JSON.stringify({
@@ -37036,41 +37036,54 @@ Your server is now ready for Tycoons gameplay!`;
                 }
 
                 const postData = await postRes.json();
-                const cdnAttachment = postData.attachments?.[0];
-                const cdnUrl = cdnAttachment?.url;
-                const attachmentId = cdnAttachment?.id;
 
-                if (cdnUrl && attachmentId) {
-                  // Step 2: PATCH to add "View Online" link button
+                // For CV2 + type-13 messages, Discord resolves attachment:// URLs inside the component
+                // itself (postData.components[...].file.url), not in the top-level attachments array.
+                // Fall back to attachments[] in case Discord changes this behaviour later.
+                let cdnUrl = postData.attachments?.[0]?.url;
+                if (!cdnUrl) {
+                  const findType13Url = (comps) => {
+                    for (const c of (comps || [])) {
+                      if (c.type === 13 && c.file?.url && !c.file.url.startsWith('attachment://')) return c.file.url;
+                      const hit = findType13Url(c.components);
+                      if (hit) return hit;
+                    }
+                    return null;
+                  };
+                  cdnUrl = findType13Url(postData.components);
+                  if (cdnUrl) console.log(`📥 CDN URL resolved from type-13 component`);
+                }
+
+                if (cdnUrl) {
+                  // Step 2: POST a separate message with the "View Online" link button
                   const viewUrl = `https://htmlpreview.github.io/?${cdnUrl}`;
                   const maxNameLen = 80 - 'View '.length - ' Online'.length; // 68 chars
                   const truncName = channel.name.length > maxNameLen ? channel.name.slice(0, maxNameLen - 1) + '…' : channel.name;
 
-                  const patchRes = await fetch(`https://discord.com/api/v10/channels/${invokedChannelId}/messages/${postData.id}`, {
-                    method: 'PATCH',
+                  const btnRes = await fetch(`https://discord.com/api/v10/channels/${invokedChannelId}/messages`, {
+                    method: 'POST',
                     body: JSON.stringify({
                       flags: IS_CV2,
                       components: [{
-                        ...container,
-                        components: [
-                          ...container.components,
-                          { type: 14 },
-                          { type: 1, components: [{ type: 2, style: 5, label: `View ${truncName} Online`, url: viewUrl }] }
-                        ]
-                      }],
-                      attachments: [{ id: attachmentId, filename }]
+                        type: 17,
+                        components: [{
+                          type: 1,
+                          components: [{ type: 2, style: 5, label: `View ${truncName} Online`, url: viewUrl }]
+                        }]
+                      }]
                     }),
                     headers: { 'Content-Type': 'application/json', Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
                   });
 
-                  if (!patchRes.ok) {
-                    const errText = await patchRes.text();
-                    console.error(`⚠️ Archive PATCH failed for #${channel.name}: ${patchRes.status} ${errText}`);
+                  if (!btnRes.ok) {
+                    const errText = await btnRes.text();
+                    console.error(`⚠️ Archive button POST failed for #${channel.name}: ${btnRes.status} ${errText}`);
                   } else {
                     console.log(`✅ Archive complete: #${channel.name} (${messages.length} messages)`);
                   }
                 } else {
-                  console.log(`✅ Archive posted (no CDN URL for button): #${channel.name}`);
+                  // Log full response so we can diagnose the structure if this ever happens
+                  console.warn(`⚠️ No CDN URL found for #${channel.name} — button skipped. attachments=${JSON.stringify(postData.attachments?.slice(0, 1))}, components=${JSON.stringify(postData.components)?.substring(0, 400)}`);
                 }
               } catch (err) {
                 console.error(`❌ Archive error for #${channel.name}:`, err);
