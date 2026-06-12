@@ -4,21 +4,26 @@
 # Your new "Ctrl+C" - restarts app while preserving ngrok tunnel
 # Includes git safety net (replaces start-and-push.ps1 functionality)
 # 
-# Usage: ./dev-restart.sh [-skip-tests] [commit-message] [custom-discord-message]
+# Usage: ./dev-restart.sh [-skip-tests] [-dev-only] [commit-message] [custom-discord-message]
 # Examples:
-#   ./dev-restart.sh "Fix safari buttons"                    # Runs tests (mandatory)
+#   ./dev-restart.sh "Fix safari buttons"                    # Tests + push + restart DEV + deploy TEST
 #   ./dev-restart.sh "Fix safari buttons" "Safari working!"  # With Discord message
-#   ./dev-restart.sh -skip-tests "Fix safari buttons"        # Skip tests (escape hatch)
+#   ./dev-restart.sh -skip-tests "Fix safari buttons"        # Skip unit tests (escape hatch)
+#   ./dev-restart.sh -dev-only "WIP debugging"               # Restart DEV only, do NOT deploy to TEST
+#
+# By default this deploys to BOTH dev (local) and test (castbot-blue). Prod is NEVER touched here.
 
 set -e  # Exit on any error
 
 echo "=== CastBot Dev Restart ==="
 
-# Parse flags — tests are mandatory by default
+# Parse flags — tests mandatory + test-deploy on, both by default
 RUN_TESTS=true
+DEPLOY_TEST=true
 while [[ "$1" == -* ]]; do
     case "$1" in
         -skip-tests) RUN_TESTS=false ;;
+        -dev-only) DEPLOY_TEST=false ;;
         *) echo "⚠️  Unknown flag: $1" ;;
     esac
     shift
@@ -90,6 +95,36 @@ if [ "$RUN_TESTS" = true ]; then
     fi
 fi
 
+# Deploy to TEST instance (castbot-blue) — fast sync from main. Skipped with -dev-only.
+# Runs AFTER the test gate so only test-passing code reaches test. Non-fatal: dev + push
+# already succeeded, so a test-deploy failure just warns (run `npm run deploy-test` to retry).
+TEST_DEPLOY_STATUS="skipped"
+if [ "$DEPLOY_TEST" = true ]; then
+    echo ""
+    echo "🟦 Deploying to TEST (castbot-blue)..."
+    if ssh -o ConnectTimeout=15 castbot-blue 'set -e
+        cd /home/ubuntu/castbot
+        BEFORE=$(git rev-parse HEAD)
+        git pull --quiet origin main
+        AFTER=$(git rev-parse HEAD)
+        if [ "$BEFORE" != "$AFTER" ]; then
+            if ! git diff --quiet "$BEFORE" "$AFTER" -- package-lock.json package.json; then
+                echo "  📦 deps changed → npm install"; npm install --omit=dev --no-audit --no-fund >/dev/null 2>&1
+            fi
+            if ! git diff --quiet "$BEFORE" "$AFTER" -- commands.js; then
+                echo "  ⌨️  commands changed → deploy-commands"; npm run deploy-commands >/dev/null 2>&1
+            fi
+        fi
+        pm2 restart castbot-pm >/dev/null
+    '; then
+        echo "✅ TEST deployed (castbot-blue)"
+        TEST_DEPLOY_STATUS="deployed"
+    else
+        echo "⚠️  TEST deploy failed — dev + push already succeeded. Retry with: npm run deploy-test"
+        TEST_DEPLOY_STATUS="failed"
+    fi
+fi
+
 # Send Discord notification
 echo "🔔 Sending restart notification to Discord..."
 # Ensure we're in the project root for notification script
@@ -98,9 +133,9 @@ cd "$PROJECT_ROOT"
 # Run notification in background - let it complete independently
 if [ -n "$CUSTOM_MESSAGE" ]; then
     echo "📝 Including custom message: $CUSTOM_MESSAGE"
-    (node scripts/notify-restart.js "$CUSTOM_MESSAGE" "$COMMIT_MESSAGE" "$GIT_FILES_CHANGED" "$GIT_STATS" "$TEST_SUMMARY" 2>/dev/null || true) &
+    (node scripts/notify-restart.js "$CUSTOM_MESSAGE" "$COMMIT_MESSAGE" "$GIT_FILES_CHANGED" "$GIT_STATS" "$TEST_SUMMARY" "$TEST_DEPLOY_STATUS" 2>/dev/null || true) &
 else
-    (node scripts/notify-restart.js "" "$COMMIT_MESSAGE" "$GIT_FILES_CHANGED" "$GIT_STATS" "$TEST_SUMMARY" 2>/dev/null || true) &
+    (node scripts/notify-restart.js "" "$COMMIT_MESSAGE" "$GIT_FILES_CHANGED" "$GIT_STATS" "$TEST_SUMMARY" "$TEST_DEPLOY_STATUS" 2>/dev/null || true) &
 fi
 echo "📤 Notification sent in background"
 

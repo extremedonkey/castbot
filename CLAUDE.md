@@ -215,32 +215,42 @@ const dynamicPatterns = [
 - **Full Guide**: [docs/enablers/ButtonHandlerFactory.md](docs/enablers/ButtonHandlerFactory.md)
 - **Button Catalog**: [docs/enablers/ButtonHandlerRegistry.md](docs/enablers/ButtonHandlerRegistry.md)
 
-## 🚨 MANDATORY AFTER ANY CODE CHANGES - RESTART DEV
+## 🚨 MANDATORY AFTER ANY CODE CHANGES — DEPLOY TO DEV + TEST
 
-**🔴 CRITICAL: ALWAYS restart development after making code changes!**
+**🔴 CRITICAL: After ANY code change, run the restart script. ONE command. It does everything.**
 
 ```bash
-# MANDATORY after ANY code change - runs tests automatically!
+# MANDATORY after ANY code change. This single command:
+#   1. Runs the unit tests (aborts if any fail)
+#   2. Commits + pushes to main
+#   3. Restarts DEV (local bot)
+#   4. Deploys to TEST (castbot-blue) ← automatic, do NOT run a separate deploy command
 ./scripts/dev/dev-restart.sh "descriptive commit message"
 
-# For significant features, include Discord notification:
+# With a Discord notification message:
 ./scripts/dev/dev-restart.sh "Fix safari logic" "Safari navigation working!"
 
-# Skip tests only in emergencies:
+# Troubleshooting DEV only — does NOT deploy to test (use ONLY when told to):
+./scripts/dev/dev-restart.sh -dev-only "WIP debugging dev"
+
+# Skip unit tests (emergency escape hatch only):
 ./scripts/dev/dev-restart.sh -skip-tests "emergency hotfix"
 ```
 
-**⚠️ This is NOT optional - restart after EVERY code change:**
-- ✅ Button handlers, modal handlers, UI changes
-- ✅ Configuration changes, data structure updates
-- ✅ New features, bug fixes, refactoring
-- ✅ ANY modification to .js files
+**🎯 The deploy targets — know exactly where your change goes:**
+| Target | When | How |
+|---|---|---|
+| **DEV** (local + ngrok) | Every `dev-restart.sh` (if tunnel up) | Automatic |
+| **TEST** (castbot-blue, always-on) | Every `dev-restart.sh` (default) | Automatic — skip only with `-dev-only` |
+| **PROD** (live users) | 🔴 NEVER here — separate, explicit, permissioned | `npm run deploy-remote-wsl` — **only on Reece's explicit word** |
 
-**📝 Always provide descriptive commit messages:**
-- ❌ Bad: `./scripts/dev/dev-restart.sh "fix"`
-- ✅ Good: `./scripts/dev/dev-restart.sh "Add global command button to player menu"`
+**⚠️ This is NOT optional — run it after EVERY code change** (button/modal/UI handlers, config, data-structure changes, new features, bug fixes, refactors, ANY `.js` change).
 
-**🎯 This replaces manual saves - the script commits your changes automatically**
+**🚫 Do NOT** run `npm run deploy-test` separately after `dev-restart.sh` — the restart script already deployed to test. (The standalone `npm run deploy-test` is only for a full re-deploy: forced npm install + command re-registration.)
+
+**🔴 PROD is sacred:** by the time Reece says "deploy to prod," the change is already on dev + test and verified in test. Never deploy to prod without explicit permission — see Production Deployment below.
+
+**📝 Always use descriptive commit messages** — ❌ `"fix"` → ✅ `"Add global command button to player menu"`.
 
 ## 🔴 CRITICAL: Unit Tests - MANDATORY FOR NEW FEATURES
 

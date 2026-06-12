@@ -26,6 +26,7 @@ const commitMessage = process.argv[3]; // Second argument - git commit message
 const filesChanged = process.argv[4]; // Third argument - files changed
 const gitStats = process.argv[5]; // Fourth argument - git stats
 const testSummary = process.argv[6]; // Fifth argument - test results (e.g. "29 pass, 0 fail (6 suites)")
+const testDeployStatus = process.argv[7]; // Sixth - test-instance deploy result: deployed|skipped|failed
 
 /**
  * Analyze files changed and provide risk assessment
@@ -151,6 +152,16 @@ async function sendRestartNotification() {
         // Add test results if tests were run
         if (testSummary) {
             messageContent += `\n\n## :white_check_mark: Unit Tests\n\`${testSummary}\``;
+        }
+
+        // Show where this change was deployed (dev-restart deploys to dev + test by default)
+        if (testDeployStatus) {
+            const targets = {
+                deployed: '🖥️ dev + 🟦 test',
+                skipped: '🖥️ dev only (`-dev-only`)',
+                failed: '🖥️ dev — ⚠️ TEST deploy FAILED (run `npm run deploy-test`)'
+            };
+            messageContent += `\n\n## :dart: Deployed To\n${targets[testDeployStatus] || testDeployStatus}`;
         }
 
         // Add custom message only if explicitly provided
