@@ -177,7 +177,8 @@
       "WebFetch(domain:hermes-agent.nousresearch.com)",
       "Bash(xxd)",
       "Bash(/home/reece/castbot/scripts/dev/dev-restart.sh Move Nuke Category from Data menu to Castbot Tools → Roles & Utilities \\(Reece-only\\) *)",
-      "Bash(/home/reece/castbot/scripts/dev/dev-restart.sh Open Nuke Category to all admins \\(ManageChannels gate\\) — remove Reece-only restriction *)"
+      "Bash(/home/reece/castbot/scripts/dev/dev-restart.sh Open Nuke Category to all admins \\(ManageChannels gate\\) — remove Reece-only restriction *)",
+      "Bash(aws configure *)"
     ],
     "deny": []
   },

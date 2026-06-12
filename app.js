@@ -1816,30 +1816,39 @@ client.once('ready', async () => {
   scheduler.init(client);
   await scheduler.restore();
 
-  // Start PM2 Error Log Monitoring (Dev & Prod)
-  const pm2Logger = getPM2ErrorLogger(client);
-  pm2Logger.start();
+  // Discord-posting monitors (error logger, backups, health monitor) are skipped on the
+  // TEST instance (INSTANCE_ROLE=test) so it doesn't double-post into prod's monitoring
+  // channels (channel IDs are hardcoded to the prod/HQ guild the test bot also lives in).
+  // Prod and laptop-dev set no INSTANCE_ROLE, so they keep running these unchanged.
+  const isTestInstance = process.env.INSTANCE_ROLE === 'test';
+  if (isTestInstance) {
+    console.log('🧪 [TEST INSTANCE] Skipping Discord-posting monitors (PM2 error logger, backups, health monitor)');
+  } else {
+    // Start PM2 Error Log Monitoring (Dev & Prod)
+    const pm2Logger = getPM2ErrorLogger(client);
+    pm2Logger.start();
 
-  // Start automated Discord channel backups
-  try {
-    const { getBackupService } = await import('./src/monitoring/backupService.js');
-    const backupService = getBackupService(client);
-    const isProduction = process.env.PRODUCTION === 'TRUE';
-    backupService.start({
-      intervalMs: isProduction ? 24 * 60 * 60 * 1000 : 60 * 60 * 1000, // 24h prod, 1h dev
-      targetHourUTC: isProduction ? 10 : null, // Prod: 10:00 UTC = 6PM AWST daily. Dev: simple interval
-    });
-  } catch (err) {
-    console.error('📦 [BACKUP] Failed to start backup service:', err.message);
-  }
+    // Start automated Discord channel backups
+    try {
+      const { getBackupService } = await import('./src/monitoring/backupService.js');
+      const backupService = getBackupService(client);
+      const isProduction = process.env.PRODUCTION === 'TRUE';
+      backupService.start({
+        intervalMs: isProduction ? 24 * 60 * 60 * 1000 : 60 * 60 * 1000, // 24h prod, 1h dev
+        targetHourUTC: isProduction ? 10 : null, // Prod: 10:00 UTC = 6PM AWST daily. Dev: simple interval
+      });
+    } catch (err) {
+      console.error('📦 [BACKUP] Failed to start backup service:', err.message);
+    }
 
-  // Restore health monitor if previously configured
-  try {
-    const { getHealthMonitor } = await import('./src/monitoring/healthMonitor.js');
-    const monitor = getHealthMonitor(client);
-    await monitor.restoreFromConfig();
-  } catch (err) {
-    console.error('[HealthMonitor] Failed to restore:', err.message);
+    // Restore health monitor if previously configured
+    try {
+      const { getHealthMonitor } = await import('./src/monitoring/healthMonitor.js');
+      const monitor = getHealthMonitor(client);
+      await monitor.restoreFromConfig();
+    } catch (err) {
+      console.error('[HealthMonitor] Failed to restore:', err.message);
+    }
   }
 
   // Dev-only: Log test coverage scan
