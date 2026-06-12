@@ -84,6 +84,7 @@ export class PM2ErrorLogger {
     } catch {
       return {
         dev: { out: 0, error: 0 },
+        test: { out: 0, error: 0 },
         prod: { out: 0, error: 0 }
       };
     }
@@ -277,6 +278,7 @@ export class PM2ErrorLogger {
       const env = process.env.INSTANCE_ROLE === 'test' ? 'test'
         : process.env.PRODUCTION === 'TRUE' ? 'prod' : 'dev';
       const config = PM2_LOG_PATHS[env];
+      if (!monitoringState.positions[env]) monitoringState.positions[env] = { out: 0, error: 0 };
       let logs = [];
 
       // Determine if we should read local or remote
