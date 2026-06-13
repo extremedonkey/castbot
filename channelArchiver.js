@@ -26,6 +26,68 @@ const EPHEMERAL = 1 << 6;
 const SAFE_UPLOAD_BYTES = 9 * 1024 * 1024;
 
 /**
+ * Archive modes shown in the "Archive Mode" string select on the main archive screen.
+ * Only `archive_only` is implemented today; the rest are stubs for future expansion
+ * (the select re-renders with a "coming soon" note and stays on Archive Only).
+ */
+export const ARCHIVE_MODES = [
+  { value: 'archive_only', label: 'Archive Only', emoji: '📥', implemented: true,
+    description: 'Save channels/categories as HTML, posted in this channel' },
+  { value: 'archive_delete', label: 'Archive + Delete', emoji: '🗑️',
+    description: 'Archive, then delete the originals to free channel slots' },
+  { value: 'category_archive', label: 'Category Archive', emoji: '📁',
+    description: 'One archive channel per category; archives posted inside each' },
+  { value: 'category_archive_delete', label: 'Category Archive + Delete', emoji: '🗂️',
+    description: 'Per-category archive channel, then delete the originals' },
+  { value: 'clone_archive', label: 'Clone Archive', emoji: '📋',
+    description: 'Copy an existing archive into a new target channel' },
+  { value: 'move_archive', label: 'Move Archive', emoji: '📦',
+    description: 'Move an existing archive to a new channel (deletes the source)' },
+];
+
+/**
+ * Build the main Archive Channels screen container (LEAN: sectioned, ephemeral menu).
+ * Shared by the `archive_channel` button and the `archive_mode_select` re-render.
+ * @param {string} mode - selected archive mode value (default 'archive_only')
+ * @param {string} [note] - optional small note line (e.g. "coming soon")
+ */
+export function buildArchiveScreen(mode = 'archive_only', note = '') {
+  const options = ARCHIVE_MODES.map(m => ({
+    label: m.label,
+    value: m.value,
+    description: m.implemented ? m.description : `🚧 Coming soon — ${m.description}`.slice(0, 100),
+    emoji: { name: m.emoji },
+    default: m.value === mode,
+  }));
+
+  return {
+    type: 17,
+    accent_color: 0x3498db,
+    components: [
+      { type: 10, content: `## 🧹 Archive Channels\n\nArchive full message history as styled HTML files.${note ? `\n\n${note}` : ''}` },
+      { type: 14 },
+      { type: 10, content: `### \`\`\`⚙️ Archive Mode\`\`\`` },
+      { type: 1, components: [{ type: 3, custom_id: 'archive_mode_select', placeholder: 'Archive mode...', min_values: 1, max_values: 1, options }] },
+      { type: 14 },
+      { type: 10, content: `### \`\`\`📁 Select Channels\`\`\`\n-# Up to 25 channels/categories — categories expand to all their text channels. Large/many channels take time (~1 min per 3,000 msgs). Needs the **Message Content Intent**, or text is blank.` },
+      { type: 1, components: [{
+        type: 8, // Channel Select
+        custom_id: 'archive_channel_select',
+        placeholder: 'Select channels and/or categories...',
+        channel_types: [0, 4, 5],
+        min_values: 1,
+        max_values: 25,
+      }] },
+      { type: 14 },
+      { type: 1, components: [
+        { type: 2, style: 2, label: '← Back', custom_id: 'data_admin' },
+        { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 4, emoji: { name: '🧹' } } // copy of Nuke/Delete Category button (self-contained flow)
+      ] }
+    ]
+  };
+}
+
+/**
  * Expand an archive multi-selection into a flat, de-duplicated list of channels.
  * Pure function — unit tested in tests/channelArchiver.test.js.
  *
@@ -161,7 +223,15 @@ async function postSummary(container, { interactionToken, applicationId, post })
         body: JSON.stringify({ flags: IS_CV2 | EPHEMERAL, components: [container] })
       });
       if (res.ok) return;
-      console.error(`⚠️ Ephemeral summary followup failed: ${res.status} ${await res.text()} — falling back to public post`);
+      const body = await res.text();
+      // 401 / code 50027 (Invalid Webhook Token) = the interaction token expired because the
+      // run outlasted the 15-min window. Expected on long runs — log as info (not an error, so
+      // the PM2 error logger ignores it) and fall back to a public summary post.
+      if (res.status === 401) {
+        console.log(`ℹ️ Archive summary: interaction token expired (long run) — posting summary publicly instead.`);
+      } else {
+        console.error(`⚠️ Ephemeral summary followup failed: ${res.status} ${body} — falling back to public post`);
+      }
     } catch (err) {
       console.error(`⚠️ Ephemeral summary followup error: ${err.message} — falling back to public post`);
     }

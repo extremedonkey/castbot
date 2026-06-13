@@ -36871,34 +36871,33 @@ Your server is now ready for Tycoons gameplay!`;
     // === ARCHIVE CHANNELS HANDLER ===
 
     } else if (custom_id === 'archive_channel') {
-      // Show channel select for archive export
+      // Show the main archive screen (Archive Mode select + channel select)
       return ButtonHandlerFactory.create({
         id: 'archive_channel',
         updateMessage: true,
         handler: async (context) => {
-          return {
-            components: [{
-              type: 17,
-              accent_color: 0x3498db,
-              components: [
-                { type: 10, content: `## 🧹 Archive Channels\n\nSelect one or more channels and/or categories to archive their full message history as styled HTML files. Categories are expanded to all their text channels.\n\n-# ⚠️ Large/many channels take time (~1 min per 3,000 messages). Pick up to 25 items. Requires the **Message Content Intent** enabled, or message text will be blank.` },
-                { type: 14 },
-                { type: 1, components: [{
-                  type: 8, // Channel Select
-                  custom_id: 'archive_channel_select',
-                  placeholder: 'Select channels and/or categories...',
-                  channel_types: [0, 4, 5], // Text + Category + Announcement
-                  min_values: 1,
-                  max_values: 25 // multi-select (Discord cap); categories expand to many more
-                }]},
-                { type: 14 },
-                { type: 1, components: [
-                  { type: 2, style: 2, label: '← Back', custom_id: 'data_admin' },
-                  { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 4, emoji: { name: '🧹' } } // copy of Delete/Nuke Category button (self-contained flow)
-                ]}
-              ]
-            }]
-          };
+          const { buildArchiveScreen } = await import('./channelArchiver.js');
+          const container = buildArchiveScreen('archive_only');
+          const { countComponents } = await import('./utils.js');
+          countComponents([container], { verbosity: 'summary', label: 'Archive Channels' });
+          return { components: [container] };
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'archive_mode_select') {
+      // Archive Mode string select — only 'archive_only' is implemented; others are stubs.
+      return ButtonHandlerFactory.create({
+        id: 'archive_mode_select',
+        updateMessage: true,
+        handler: async (context) => {
+          const selected = req.body.data.values?.[0] || 'archive_only';
+          const { buildArchiveScreen, ARCHIVE_MODES } = await import('./channelArchiver.js');
+          const mode = ARCHIVE_MODES.find(m => m.value === selected);
+          // Stub modes: re-render with a "coming soon" note and stay on Archive Only.
+          const note = mode?.implemented
+            ? ''
+            : `-# 🚧 **${mode?.label || 'That mode'}** is coming soon — using **Archive Only** for now.`;
+          return { components: [buildArchiveScreen('archive_only', note)] };
         }
       })(req, res, client);
 

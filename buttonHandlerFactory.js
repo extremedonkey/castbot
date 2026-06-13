@@ -4354,6 +4354,14 @@ export const BUTTON_REGISTRY = {
     category: 'admin',
     parent: 'data_admin'
   },
+  'archive_mode_select': {
+    label: 'Archive Mode',
+    description: 'String select for archive mode (Archive Only + future expansion stubs)',
+    emoji: '⚙️',
+    style: 'Secondary',
+    category: 'admin',
+    parent: 'archive_channel'
+  },
   'archive_channel_select': {
     label: 'Archive Channel Select',
     description: 'Channel select handler for archive channels feature',
