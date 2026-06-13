@@ -922,7 +922,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   adminButtons.push(
     new ButtonBuilder()
       .setCustomId('admin_manage_player')
-      .setLabel('Players')
+      .setLabel('Player Admin')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🧑‍🤝‍🧑')
     // Challenges moved to Safari row, Donate moved to Advanced Features row
@@ -9618,6 +9618,107 @@ To fix this:
         const { createStoreBrowseDisplay } = await import('./safariManager.js');
         const result = await createStoreBrowseDisplay(context.guildId, selectedValue, context.userId, 0);
         return { ...result, ephemeral: true };
+      }})(req, res, client);
+
+    } else if (custom_id === 'player_menu_sel_currency' || custom_id.startsWith('player_menu_sel_currency_')) {
+      const selectedValue = req.body.data.values?.[0];
+      if (custom_id.startsWith('player_menu_sel_currency_') && selectedValue === 'edit_currency') {
+        return ButtonHandlerFactory.create({ id: 'player_menu_sel_currency_edit', requiresPermission: PermissionFlagsBits.ManageRoles, permissionName: 'Manage Roles', handler: async (context) => {
+          // Admin "Edit" → reuse the existing Safari currency modal, retagged (spm_) so its submit
+          // updates THIS player menu instead of the Safari map admin view.
+          const targetUserId = context.customId.replace('player_menu_sel_currency_', '');
+          const { getCustomTerms } = await import('./safariManager.js');
+          const { createCurrencyModal } = await import('./safariMapAdmin.js');
+          const playerData = await loadPlayerData();
+          const currentAmount = playerData[context.guildId]?.players?.[targetUserId]?.safari?.currency || 0;
+          const customTerms = await getCustomTerms(context.guildId);
+          const modal = await createCurrencyModal(targetUserId, currentAmount, customTerms.currencyName);
+          modal.setCustomId(`spm_currency_modal_${targetUserId}`);
+          return { type: 9, data: modal.toJSON() };
+        }})(req, res, client);
+      }
+      // view_balance (player or admin) — ephemeral read-only display
+      const isAdminMode = custom_id.startsWith('player_menu_sel_currency_');
+      const targetUserId = isAdminMode ? custom_id.replace('player_menu_sel_currency_', '') : (req.body.member?.user?.id || req.body.user?.id);
+      return ButtonHandlerFactory.create({ id: 'player_menu_sel_currency', handler: async (context) => {
+        const { getCustomTerms } = await import('./safariManager.js');
+        const playerData = await loadPlayerData();
+        const terms = await getCustomTerms(context.guildId);
+        const name = terms.currencyName || 'Currency';
+        const emoji = terms.currencyEmoji || '🪙';
+        const balance = playerData[context.guildId]?.players?.[targetUserId]?.safari?.currency ?? 0;
+        const who = isAdminMode ? `<@${targetUserId}>` : 'You';
+        const verb = isAdminMode ? 'has' : 'have';
+        return { content: `${emoji} ${who} ${verb} **${balance}** ${name}.`, ephemeral: true };
+      }})(req, res, client);
+
+    } else if (custom_id === 'player_menu_sel_inventory' || custom_id.startsWith('player_menu_sel_inventory_')) {
+      const selectedValue = req.body.data.values?.[0];
+      if (custom_id.startsWith('player_menu_sel_inventory_') && selectedValue === 'edit_items') {
+        return ButtonHandlerFactory.create({ id: 'player_menu_sel_inventory_edit', updateMessage: true, requiresPermission: PermissionFlagsBits.ManageRoles, permissionName: 'Manage Roles', handler: async (context) => {
+          // Admin "Edit items" → swap the parent menu in-place for the item selector. Uses spm_ custom_ids
+          // so its item-select / back / qty-modal all route back to THIS menu (not the Safari map admin view).
+          const targetUserId = context.customId.replace('player_menu_sel_inventory_', '');
+          const { createPlayerItemSelectorUI } = await import('./entityManagementUI.js');
+          const ui = await createPlayerItemSelectorUI({
+            guildId: context.guildId,
+            targetUserId,
+            searchTerm: '',
+            selectedItemId: null,
+            itemSelectPrefix: 'spm_item_select_',
+            backButton: { label: '← Player Admin', custom_id: `admin_set_inventory_${targetUserId}`, emoji: { name: '🧑‍🤝‍🧑' } }
+          });
+          delete ui.ephemeral; // updateMessage inherits parent ephemerality
+          return ui;
+        }})(req, res, client);
+      }
+      // view_inventory (player or admin) — ephemeral inventory display (reuses safari_player_inventory builder)
+      const isAdminMode = custom_id.startsWith('player_menu_sel_inventory_');
+      const targetUserId = isAdminMode ? custom_id.replace('player_menu_sel_inventory_', '') : (req.body.member?.user?.id || req.body.user?.id);
+      return ButtonHandlerFactory.create({ id: 'player_menu_sel_inventory', handler: async (context) => {
+        const { createPlayerInventoryDisplay } = await import('./safariManager.js');
+        let targetMember = context.member;
+        if (targetUserId !== context.userId && context.guild) {
+          try { targetMember = await context.guild.members.fetch(targetUserId); } catch { /* fallback to interactor */ }
+        }
+        return await createPlayerInventoryDisplay(context.guildId, targetUserId, targetMember, 0);
+      }})(req, res, client);
+
+    } else if (custom_id.startsWith('spm_item_select_')) {
+      // Item picked in the Super Player Menu edit flow → show quantity modal (spm_ so submit returns here).
+      return ButtonHandlerFactory.create({ id: 'spm_item_select', requiresPermission: PermissionFlagsBits.ManageRoles, permissionName: 'Manage Roles', handler: async (context, req) => {
+        const targetUserId = context.customId.replace('spm_item_select_', '');
+        const selectedValue = req.body.data.values[0];
+
+        if (selectedValue === 'search_entities') {
+          const { ModalBuilder, TextInputBuilder, ActionRowBuilder } = await import('discord.js');
+          const modal = new ModalBuilder().setCustomId(`spm_item_search_modal_${targetUserId}`).setTitle('Search Items');
+          const searchInput = new TextInputBuilder().setCustomId('search_term').setLabel('Search Term').setStyle(1).setPlaceholder('Enter item name or description...').setRequired(true).setMaxLength(100);
+          modal.addComponents(new ActionRowBuilder().addComponents(searchInput));
+          return { type: 9, data: modal.toJSON() };
+        }
+        if (selectedValue === 'no_items') {
+          return { content: '❌ No items exist in this server yet. Create items in **Safari → Items** first.', ephemeral: true };
+        }
+
+        const itemId = selectedValue;
+        const { loadEntity } = await import('./entityManager.js');
+        const item = await loadEntity(context.guildId, 'item', itemId);
+        const itemName = item?.name || 'Unknown Item';
+        const playerData = await loadPlayerData();
+        const inventory = playerData[context.guildId]?.players?.[targetUserId]?.safari?.inventory || {};
+        const currentItem = inventory[itemId];
+        let currentQuantity = '';
+        if (currentItem !== undefined) currentQuantity = String(typeof currentItem === 'object' ? (currentItem.quantity ?? 0) : currentItem);
+
+        const { ModalBuilder, TextInputBuilder, ActionRowBuilder } = await import('discord.js');
+        let modalTitle = `Set ${itemName} Quantity`;
+        if (modalTitle.length > 45) modalTitle = `Set ${itemName.substring(0, 29)}... Quantity`;
+        const modal = new ModalBuilder().setCustomId(`spm_item_qty_modal_${context.guildId}_${itemId}_${targetUserId}`).setTitle(modalTitle);
+        const quantityInput = new TextInputBuilder().setCustomId('item_quantity').setLabel('Qty').setStyle(1).setRequired(true).setMaxLength(10).setPlaceholder('Enter quantity (0 or higher)');
+        if (currentQuantity !== '') quantityInput.setValue(currentQuantity);
+        modal.addComponents(new ActionRowBuilder().addComponents(quantityInput));
+        return { type: 9, data: modal.toJSON() };
       }})(req, res, client);
 
     } else if (custom_id.startsWith('stress_page_')) {
@@ -25783,7 +25884,7 @@ Your server is now ready for Tycoons gameplay!`;
           };
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('admin_set_pronouns_') || custom_id.startsWith('admin_set_timezone_') || custom_id.startsWith('admin_set_age_') || custom_id.startsWith('admin_manage_vanity_') || custom_id.startsWith('admin_set_attributes_') || custom_id.startsWith('admin_set_castlists_') || custom_id.startsWith('admin_set_challenges_') || custom_id.startsWith('admin_set_crafting_') || custom_id.startsWith('admin_set_actions_') || custom_id.startsWith('admin_set_stores_')) {
+    } else if (custom_id.startsWith('admin_set_pronouns_') || custom_id.startsWith('admin_set_timezone_') || custom_id.startsWith('admin_set_age_') || custom_id.startsWith('admin_manage_vanity_') || custom_id.startsWith('admin_set_attributes_') || custom_id.startsWith('admin_set_castlists_') || custom_id.startsWith('admin_set_challenges_') || custom_id.startsWith('admin_set_crafting_') || custom_id.startsWith('admin_set_actions_') || custom_id.startsWith('admin_set_stores_') || custom_id.startsWith('admin_set_currency_') || custom_id.startsWith('admin_set_inventory_')) {
       // 🔘 Convert to ButtonHandlerFactory
       return ButtonHandlerFactory.create({
         id: custom_id,
@@ -26405,7 +26506,7 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id === 'player_set_pronouns' || custom_id === 'player_set_timezone' || custom_id === 'player_set_age' || custom_id === 'player_set_attributes' || custom_id === 'player_set_castlists' || custom_id === 'player_set_challenges' || custom_id === 'player_set_crafting' || custom_id === 'player_set_actions' || custom_id === 'player_set_stores') {
+    } else if (custom_id === 'player_set_pronouns' || custom_id === 'player_set_timezone' || custom_id === 'player_set_age' || custom_id === 'player_set_attributes' || custom_id === 'player_set_castlists' || custom_id === 'player_set_challenges' || custom_id === 'player_set_crafting' || custom_id === 'player_set_actions' || custom_id === 'player_set_stores' || custom_id === 'player_set_currency' || custom_id === 'player_set_inventory') {
       // Player management buttons — use modular handler
       const playerData = await loadPlayerData();
       return await handlePlayerButtonClick(req, res, custom_id, playerData, client);
@@ -45045,6 +45146,192 @@ Your server is now ready for Tycoons gameplay!`;
           }
         }
       })(); // Fire and forget
+
+    } else if (custom_id.startsWith('spm_currency_modal_')) {
+      // Currency edit submitted from the Super Player Menu (admin). Reuses the Safari currency
+      // modal but, on success, WEBHOOK-PATCHes the parent player menu (deferred update → @original)
+      // instead of re-rendering the Safari map admin view.
+      const targetUserId = custom_id.replace('spm_currency_modal_', '');
+      const guildId = req.body.guild_id;
+      const amount = parseInt(components[0].components[0].value?.trim());
+
+      if (isNaN(amount) || amount < 0 || amount > 999999) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Invalid amount. Please enter a number between 0 and 999999.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+
+      // Silent ACK — we rebuild the menu and PATCH @original below.
+      await res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+
+      try {
+        const { loadPlayerData, savePlayerData } = await import('./storage.js');
+        const playerData = await loadPlayerData();
+        if (!playerData[guildId]) playerData[guildId] = { players: {} };
+        if (!playerData[guildId].players) playerData[guildId].players = {};
+        if (!playerData[guildId].players[targetUserId]) playerData[guildId].players[targetUserId] = {};
+        if (!playerData[guildId].players[targetUserId].safari) playerData[guildId].players[targetUserId].safari = {};
+        playerData[guildId].players[targetUserId].safari.currency = amount;
+
+        // Log admin activity + Safari log (mirrors map_admin_currency_modal)
+        const { addActivityEntry, ACTIVITY_TYPES } = await import('./activityLogger.js');
+        const { getCustomTerms } = await import('./safariManager.js');
+        const adminTerms = await getCustomTerms(guildId);
+        addActivityEntry(playerData, guildId, targetUserId, ACTIVITY_TYPES.admin, `[ADMIN] Currency set to ${amount} ${adminTerms.currencyName}`);
+        await savePlayerData(playerData);
+
+        try {
+          const { logCurrencyChange } = await import('./safariLogger.js');
+          const adminMember = req.body.member;
+          const adminName = adminMember?.user?.username || 'Admin';
+          await logCurrencyChange({
+            guildId, userId: targetUserId, username: adminName, displayName: adminMember?.nick || adminName,
+            location: 'Admin', amount, currencyName: adminTerms.currencyName,
+            source: `[ADMIN] Set to ${amount}`, channelName: 'admin'
+          });
+        } catch (e) { /* Safari log is optional */ }
+
+        // Rebuild the Super Player Menu (currency category active) and PATCH @original.
+        const guild = await client.guilds.fetch(guildId);
+        const targetMember = await guild.members.fetch(targetUserId);
+        const ui = await createPlayerManagementUI({
+          mode: PlayerManagementMode.ADMIN,
+          targetMember,
+          playerData,
+          guildId,
+          userId: req.body.member?.user?.id,
+          showUserSelect: true,
+          showVanityRoles: true,
+          title: `Player Management | ${targetMember.displayName}`,
+          activeButton: 'currency',
+          client,
+          channelId: req.body.channel_id
+        });
+        ui.flags = (1 << 15); // IS_COMPONENTS_V2 (parent menu is non-ephemeral on update)
+        await updateDeferredResponse(req.body.token, ui);
+      } catch (error) {
+        console.error('Error in spm_currency_modal:', error);
+        await updateDeferredResponse(req.body.token, {
+          components: [{
+            type: 17,
+            accent_color: 0xe74c3c,
+            components: [{ type: 10, content: `❌ Error setting currency: ${error.message}` }]
+          }]
+        });
+      }
+
+    } else if (custom_id.startsWith('spm_item_search_modal_')) {
+      // Search submitted in the Super Player Menu item editor → rebuild the selector in place.
+      const targetUserId = custom_id.replace('spm_item_search_modal_', '');
+      const guildId = req.body.guild_id;
+      const searchTerm = components[0].components[0].value?.trim() || '';
+      await res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+      try {
+        const { createPlayerItemSelectorUI } = await import('./entityManagementUI.js');
+        const ui = await createPlayerItemSelectorUI({
+          guildId, targetUserId, searchTerm, selectedItemId: null,
+          itemSelectPrefix: 'spm_item_select_',
+          backButton: { label: '← Player Admin', custom_id: `admin_set_inventory_${targetUserId}`, emoji: { name: '🧑‍🤝‍🧑' } }
+        });
+        delete ui.ephemeral;
+        await updateDeferredResponse(req.body.token, ui);
+      } catch (error) {
+        console.error('Error in spm_item_search_modal:', error);
+        await updateDeferredResponse(req.body.token, { components: [{ type: 17, accent_color: 0xe74c3c, components: [{ type: 10, content: `❌ Search failed: ${error.message}` }] }] });
+      }
+
+    } else if (custom_id.startsWith('spm_item_qty_modal_')) {
+      // Item quantity set from the Super Player Menu → set qty, then WEBHOOK-PATCH the parent menu.
+      const guildId = req.body.guild_id;
+      const parts = custom_id.replace('spm_item_qty_modal_', '').split('_');
+      const userId = parts[parts.length - 1];
+      const itemId = parts.slice(1, -1).join('_'); // between embedded guildId and userId
+
+      if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage player items.')) return;
+
+      const quantity = parseInt(components[0].components[0].value?.trim(), 10);
+      if (isNaN(quantity) || quantity < 0) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: '❌ Invalid quantity. Please enter a number 0 or higher.', flags: InteractionResponseFlags.EPHEMERAL }
+        });
+      }
+
+      await res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+
+      try {
+        const { loadEntity } = await import('./entityManager.js');
+        const item = await loadEntity(guildId, 'item', itemId);
+        const itemName = item?.name || 'Unknown Item';
+        const isAttackItem = item?.attackValue !== undefined && item?.attackValue > 0;
+
+        const playerData = await loadPlayerData();
+        if (!playerData[guildId]) playerData[guildId] = { players: {} };
+        if (!playerData[guildId].players) playerData[guildId].players = {};
+        if (!playerData[guildId].players[userId]) playerData[guildId].players[userId] = {};
+        if (!playerData[guildId].players[userId].safari) playerData[guildId].players[userId].safari = {};
+        if (!playerData[guildId].players[userId].safari.inventory) playerData[guildId].players[userId].safari.inventory = {};
+
+        const inventory = playerData[guildId].players[userId].safari.inventory;
+        const currentItem = inventory[itemId];
+        const previousQuantity = typeof currentItem === 'number' ? currentItem : (currentItem?.quantity || 0);
+        const quantityChange = quantity - previousQuantity;
+
+        if (quantity === 0) {
+          delete inventory[itemId];
+        } else if (isAttackItem) {
+          const previousAttacks = (typeof currentItem === 'object' && currentItem?.numAttacksAvailable !== undefined)
+            ? currentItem.numAttacksAvailable + quantityChange : quantity;
+          inventory[itemId] = { quantity, numAttacksAvailable: Math.max(0, previousAttacks) };
+        } else {
+          inventory[itemId] = { quantity, numAttacksAvailable: 0 };
+        }
+
+        try {
+          const { addActivityEntry, ACTIVITY_TYPES } = await import('./activityLogger.js');
+          addActivityEntry(playerData, guildId, userId, ACTIVITY_TYPES.admin, `[ADMIN] Set ${itemName} x${quantity}`);
+        } catch (e) { console.error('Activity log error:', e); }
+
+        await savePlayerData(playerData);
+
+        const guild = await client.guilds.fetch(guildId);
+        const targetMember = await guild.members.fetch(userId);
+
+        try {
+          const { logItemPickup } = await import('./safariLogger.js');
+          await logItemPickup({
+            guildId, userId, username: targetMember.user?.username, displayName: targetMember.displayName,
+            location: 'Admin', itemId, itemName, itemEmoji: item?.emoji, quantity,
+            source: `[ADMIN] Set to ${quantity} (was ${previousQuantity})`, channelName: 'admin'
+          });
+        } catch (e) { /* Safari log is optional */ }
+
+        // Rebuild the Super Player Menu (inventory category active) and PATCH @original.
+        const ui = await createPlayerManagementUI({
+          mode: PlayerManagementMode.ADMIN,
+          targetMember,
+          playerData,
+          guildId,
+          userId: req.body.member?.user?.id,
+          showUserSelect: true,
+          showVanityRoles: true,
+          title: `Player Management | ${targetMember.displayName}`,
+          activeButton: 'inventory',
+          client,
+          channelId: req.body.channel_id
+        });
+        ui.flags = (1 << 15);
+        await updateDeferredResponse(req.body.token, ui);
+      } catch (error) {
+        console.error('Error in spm_item_qty_modal:', error);
+        await updateDeferredResponse(req.body.token, {
+          components: [{ type: 17, accent_color: 0xe74c3c, components: [{ type: 10, content: `❌ Error setting item quantity: ${error.message}` }] }]
+        });
+      }
 
     } else if (custom_id.startsWith('map_admin_currency_modal_')) {
       // Handle currency edit submission

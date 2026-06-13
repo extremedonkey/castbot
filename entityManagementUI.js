@@ -1206,7 +1206,15 @@ export async function createPlayerItemSelectorUI(options) {
         guildId,
         targetUserId,
         searchTerm = '',
-        selectedItemId = null
+        selectedItemId = null,
+        // Optional overrides so callers (e.g. the Super Player Menu) can route the item
+        // select + back button to their own handlers instead of the Safari map admin flow.
+        itemSelectPrefix = 'player_item_select_',
+        backButton = {
+            label: '← Player Admin',
+            custom_id: `map_admin_user_select_continue_${targetUserId}`,
+            emoji: { name: '🧭' }
+        }
     } = options;
 
     console.log(`📦 DEBUG: createPlayerItemSelectorUI - targetUserId: ${targetUserId}, searchTerm: "${searchTerm}"`);
@@ -1226,7 +1234,7 @@ export async function createPlayerItemSelectorUI(options) {
     console.log(`🔍 DEBUG: createPlayerItemSelectorUI - found ${Object.keys(filteredItems).length} matching items`);
 
     // Create player-specific item selector (no Create New option)
-    const itemSelector = createPlayerItemSelector(filteredItems, targetUserId, searchTerm, selectedItemId);
+    const itemSelector = createPlayerItemSelector(filteredItems, targetUserId, searchTerm, selectedItemId, itemSelectPrefix);
 
     // Build Components V2 UI
     const components = [{
@@ -1249,9 +1257,9 @@ export async function createPlayerItemSelectorUI(options) {
                     {
                         type: 2, // Button
                         style: 2, // Secondary
-                        label: '← Player Admin',
-                        custom_id: `map_admin_user_select_continue_${targetUserId}`,
-                        emoji: { name: '🧭' }
+                        label: backButton.label,
+                        custom_id: backButton.custom_id,
+                        emoji: backButton.emoji
                     }
                 ]
             }
@@ -1273,7 +1281,7 @@ export async function createPlayerItemSelectorUI(options) {
  * @param {string} selectedItemId - Currently selected item ID
  * @returns {Object} ActionRow with String Select
  */
-function createPlayerItemSelector(items, targetUserId, searchTerm, selectedItemId) {
+function createPlayerItemSelector(items, targetUserId, searchTerm, selectedItemId, itemSelectPrefix = 'player_item_select_') {
     const options = [];
 
     // Add search option if many items (but no Create New)
@@ -1342,7 +1350,7 @@ function createPlayerItemSelector(items, targetUserId, searchTerm, selectedItemI
         type: 1, // ActionRow
         components: [{
             type: 3, // String Select
-            custom_id: `player_item_select_${targetUserId}`,
+            custom_id: `${itemSelectPrefix}${targetUserId}`,
             placeholder: searchTerm ? `Filtered: "${searchTerm}"` : 'Select an item to edit quantity...',
             options
         }]

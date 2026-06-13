@@ -443,7 +443,9 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   vis.age = { show: true, disabled: isAdmin && !hasTarget, label: 'Age', emoji: '🎂' };
 
   // === Row 2: Safari ===
-  vis.inventory = { show: isAdmin ? showInventory : (showInventory && hasTarget), disabled: isAdmin && !hasTarget, label: customTerms.inventoryName || 'Inventory', emoji: customTerms.inventoryEmoji || '🧰', immediate: true };
+  // Currency mirrors inventory's visibility for now (both core safari concepts). Refine gate later if needed.
+  vis.currency = { show: isAdmin ? showInventory : (showInventory && hasTarget), disabled: isAdmin && !hasTarget, label: customTerms.currencyName || 'Currency', emoji: customTerms.currencyEmoji || '🪙' };
+  vis.inventory = { show: isAdmin ? showInventory : (showInventory && hasTarget), disabled: isAdmin && !hasTarget, label: customTerms.inventoryName || 'Inventory', emoji: customTerms.inventoryEmoji || '🧰' };
   vis.challenges = { show: isAdmin ? hasChallengeActions : hasChallengeActions, disabled: isAdmin && !hasTarget, label: 'Challenges', emoji: '🏃' };
   vis.crafting = { show: isAdmin ? hasCraftingConfigured : hasCraftingConfigured, disabled: isAdmin && !hasTarget, label: customTerms.craftingName || 'Crafting', emoji: customTerms.craftingEmoji || '🛠️' };
   vis.actions = { show: isAdmin ? hasActionsConfigured : hasActionsConfigured, disabled: isAdmin && !hasTarget, label: 'Actions', emoji: '⚡' };
@@ -488,8 +490,6 @@ function buildSectionRow(buttonIds, targetUserId, activeCategory, visibility, mo
     let customId;
     if (id === 'vanity') {
       customId = `admin_manage_vanity${isDisabled ? '_pending' : ''}${userIdPart}`;
-    } else if (id === 'inventory') {
-      customId = mode === 'admin' && targetUserId ? `safari_player_inventory_${targetUserId}` : 'safari_player_inventory';
     } else if (id === 'navigate') {
       customId = `safari_navigate_${targetUserId}_${vis.coordinate || 'unknown'}`;
     } else if (id === 'commands') {
@@ -557,7 +557,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
   }
 
   // IMMEDIATE-NEW categories don't have selects — show disabled placeholder
-  const immediateCategories = ['inventory', 'navigate', 'commands'];
+  const immediateCategories = ['navigate', 'commands'];
   if (immediateCategories.includes(activeCategory)) {
     return {
       type: 1, // ActionRow
@@ -573,6 +573,96 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
   }
 
   switch (activeCategory) {
+    // ─── Currency ────────────────────────────────────────────────────────
+    case 'currency': {
+      const ct = await getCustomTerms(guildId);
+      const currencyName = ct.currencyName || 'Currency';
+      const currencyEmoji = ct.currencyEmoji || '🪙';
+      const balance = playerData[guildId]?.players?.[targetMember.id]?.safari?.currency ?? 0;
+      const isAdminMode = mode === PlayerManagementMode.ADMIN;
+
+      // Option 1 (both modes): read-only View. Option 2 (admin only): Edit → opens modal.
+      const options = [{
+        label: `View ${currencyName}`.slice(0, 100),
+        value: 'view_balance',
+        description: (isAdminMode ? 'Show the current balance' : 'Show your current balance').slice(0, 100),
+        emoji: { name: '👁️' }
+      }];
+
+      if (isAdminMode) {
+        const editOption = {
+          label: `Edit ${currencyName}`.slice(0, 100),
+          value: 'edit_currency',
+          description: `Set ${currencyName} to an exact amount`.slice(0, 100)
+        };
+        const editEmoji = resolveEmoji(currencyEmoji, '🪙');
+        if (editEmoji) editOption.emoji = editEmoji;
+        options.push(editOption);
+      }
+
+      // Admin select carries the target id so the handler knows whose currency to edit.
+      const selectCustomId = isAdminMode && targetMember
+        ? `player_menu_sel_currency_${targetMember.id}`
+        : 'player_menu_sel_currency';
+
+      return {
+        type: 1,
+        components: [{
+          type: 3, // String Select
+          custom_id: selectCustomId,
+          placeholder: `Select to manage ${currencyName} (Current: ${currencyEmoji} ${balance})`.slice(0, 150),
+          min_values: 1,
+          max_values: 1,
+          options
+        }]
+      };
+    }
+
+    // ─── Inventory ───────────────────────────────────────────────────────
+    case 'inventory': {
+      const ct = await getCustomTerms(guildId);
+      const inventoryName = ct.inventoryName || 'Inventory';
+      const inventoryEmoji = ct.inventoryEmoji || '🧰';
+      const inv = playerData[guildId]?.players?.[targetMember.id]?.safari?.inventory || {};
+      const itemCount = Object.keys(inv).length;
+      const isAdminMode = mode === PlayerManagementMode.ADMIN;
+
+      // Option 1 (both modes): View. Option 2 (admin only): Edit items → item selector.
+      const viewOption = {
+        label: `View ${inventoryName}`.slice(0, 100),
+        value: 'view_inventory',
+        description: (isAdminMode ? 'Show this player\'s items' : 'Show your items').slice(0, 100)
+      };
+      const viewEmoji = resolveEmoji(inventoryEmoji, '🧰');
+      if (viewEmoji) viewOption.emoji = viewEmoji;
+      const options = [viewOption];
+
+      if (isAdminMode) {
+        options.push({
+          label: `Edit ${inventoryName}`.slice(0, 100),
+          value: 'edit_items',
+          description: `Add, set or remove items`.slice(0, 100),
+          emoji: { name: '✏️' }
+        });
+      }
+
+      const selectCustomId = isAdminMode && targetMember
+        ? `player_menu_sel_inventory_${targetMember.id}`
+        : 'player_menu_sel_inventory';
+
+      return {
+        type: 1,
+        components: [{
+          type: 3, // String Select
+          custom_id: selectCustomId,
+          placeholder: `Select to manage ${inventoryName} (${itemCount} item${itemCount === 1 ? '' : 's'})`.slice(0, 150),
+          min_values: 1,
+          max_values: 1,
+          options
+        }]
+      };
+    }
+
     // ─── Castlists ───────────────────────────────────────────────────────
     case 'castlists': {
       const { allCastlists } = await extractCastlistData(playerData, guildId);
@@ -1246,7 +1336,7 @@ export async function createPlayerManagementUI(options) {
     }
 
     // Row 2: Safari (conditional — hide if no buttons visible)
-    const row2Ids = ['inventory', 'challenges', 'crafting', 'actions', 'stores'];
+    const row2Ids = ['currency', 'inventory', 'challenges', 'crafting', 'actions', 'stores'];
     const row2HasAny = row2Ids.some(id => visibility[id]?.show);
     if (row2HasAny) {
       const row2 = buildSectionRow(row2Ids, targetUserId, activeCategory, visibility, mode);
