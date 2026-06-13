@@ -37,6 +37,88 @@ export function computeRateLimitDelay({ remaining, resetAfter }, bufferMs = 150)
 }
 
 /**
+ * Decide pacing AFTER a message-create POST, from its rate-limit headers / status.
+ * Pure function — unit tested in tests/channelExportFetcher.test.js.
+ *
+ * The write path (POST /channels/{id}/messages) has its own per-channel bucket
+ * (~5 msgs / 5s). Archiving a whole category fires many POSTs at ONE channel, so
+ * without this pacing they 429 in bursts. Same idea as computeRateLimitDelay, but
+ * a 429 here means "retry the same POST" rather than "advance the cursor".
+ *
+ * @param {{status:number, remaining:number|null, resetAfter:number|null, retryAfter:number|null}} res
+ * @param {number} bufferMs - safety margin
+ * @returns {{retry: boolean, waitMs: number}} retry=true → resend the SAME request after waitMs
+ */
+export function computePostPacing({ status, remaining, resetAfter, retryAfter }, bufferMs = 200) {
+  // Rate limited → must retry the same request after the server-stated delay.
+  if (status === 429) {
+    return { retry: true, waitMs: Math.ceil((retryAfter || resetAfter || 1) * 1000) + bufferMs };
+  }
+  // Budget exhausted → space out the NEXT request so we don't 429 next time.
+  if (remaining !== null && remaining <= 0) {
+    return { retry: false, waitMs: Math.ceil((resetAfter || 1) * 1000) + bufferMs };
+  }
+  // Budget remains → fire immediately.
+  return { retry: false, waitMs: 0 };
+}
+
+/**
+ * Create a header-aware, self-retrying poster bound to ONE channel.
+ *
+ * All archive writes in a run go to the same channel (the invoking channel), so a
+ * single poster instance naturally serialises them and respects the shared bucket.
+ * Carries pacing state between calls and transparently retries 429s — callers never
+ * see a rate-limit error, they just wait. Handles both multipart (FormData) and JSON
+ * bodies; the caller passes content headers only, the poster adds Authorization.
+ *
+ * @param {string} channelId
+ * @param {object} [opts]
+ * @param {string} [opts.token]
+ * @param {number} [opts.maxRetries] - give up after this many consecutive 429s
+ * @returns {(req: {body: any, headers: object}) => Promise<import('node-fetch').Response>}
+ */
+export function createMessagePoster(channelId, { token = process.env.DISCORD_TOKEN, maxRetries = 8 } = {}) {
+  if (!token) throw new Error('DISCORD_TOKEN not set');
+  let waitBeforeNext = 0; // ms to wait before the next POST (set from prior response)
+
+  return async function postMessage({ body, headers = {} }) {
+    let attempt = 0;
+    while (true) {
+      if (waitBeforeNext > 0) { await sleep(waitBeforeNext); waitBeforeNext = 0; }
+
+      const res = await fetch(`${BASE}/channels/${channelId}/messages`, {
+        method: 'POST',
+        body,
+        headers: { ...headers, Authorization: `Bot ${token}` },
+      });
+
+      const remaining = parseInt(res.headers.get('x-ratelimit-remaining'), 10);
+      const resetAfter = parseFloat(res.headers.get('x-ratelimit-reset-after'));
+      let retryAfter = null;
+      if (res.status === 429) {
+        const body429 = await res.clone().json().catch(() => ({}));
+        retryAfter = body429.retry_after ?? parseFloat(res.headers.get('retry-after'));
+      }
+
+      const pacing = computePostPacing({
+        status: res.status,
+        remaining: Number.isNaN(remaining) ? null : remaining,
+        resetAfter: Number.isNaN(resetAfter) ? null : resetAfter,
+        retryAfter: Number.isNaN(retryAfter) ? null : retryAfter,
+      });
+      waitBeforeNext = pacing.waitMs;
+
+      if (pacing.retry && attempt < maxRetries) {
+        attempt++;
+        console.log(`  ⏳ POST 429 on channel ${channelId} — waiting ${(waitBeforeNext / 1000).toFixed(2)}s (retry ${attempt}/${maxRetries})`);
+        continue; // resend the SAME request
+      }
+      return res; // success, non-429 error (e.g. 413), or retries exhausted
+    }
+  };
+}
+
+/**
  * Fetch ALL messages from a channel, oldest-first, with header-aware throttling.
  *
  * @param {string} channelId

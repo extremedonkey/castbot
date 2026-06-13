@@ -492,8 +492,10 @@ When a feature is **deployed to production and working**, move/rename its doc in
 **Infrastructure, Deployment & Security:**
 - **🔐 SECURITY ARCHITECTURE** → [docs/infrastructure-security/SecurityArchitecture.md](docs/infrastructure-security/SecurityArchitecture.md) - Permission tiers, enforcement mechanisms, channel permissions, globalRoleAccess
 - **🌍 INFRASTRUCTURE ARCHITECTURE** → [docs/infrastructure-security/InfrastructureArchitecture.md](docs/infrastructure-security/InfrastructureArchitecture.md)
+- **🧪 TEST INSTANCE (BLUE/GREEN)** → [docs/03-features/TestInstanceBlueGreen.md](docs/03-features/TestInstanceBlueGreen.md) - castbot-blue always-on staging box, `npm run deploy-test`, Restart Prod button + ProdWatchdog, future flip
 - **🎯 PRODUCTION MONITORING** → [docs/infrastructure-security/ProductionMonitoring.md](docs/infrastructure-security/ProductionMonitoring.md)
 - **📊 ANALYTICS** → [docs/infrastructure-security/Analytics.md](docs/infrastructure-security/Analytics.md)
+- **📂 CHANNEL ARCHIVE** → [docs/03-features/ChannelArchive.md](docs/03-features/ChannelArchive.md) - Archive a channel/category's full history as on-Discord HTML (rate-limit-safe REST fetch, type-13 file, htmlpreview link). Code: [channelExportFetcher.js](channelExportFetcher.js), [channelExport.js](channelExport.js)
 
 **Enablers & Frameworks:**
 - **🔘 BUTTON HANDLER FACTORY** (MANDATORY) → [docs/enablers/ButtonHandlerFactory.md](docs/enablers/ButtonHandlerFactory.md)

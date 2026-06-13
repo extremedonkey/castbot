@@ -36973,132 +36973,15 @@ Your server is now ready for Tycoons gameplay!`;
 
           const { channels, invokedChannelId } = pending;
 
-          // Background loop — fires after factory sends the "started" response
+          // Background archive run — fires after factory sends the "started" response.
+          // All fetch/render/post logic (incl. write-path rate-limit pacing + 413 splitting)
+          // lives in channelArchiver.js. app.js stays a router.
           setTimeout(async () => {
-            const { fetchAllChannelMessages } = await import('./channelExportFetcher.js');
-            const { generateExportHTML } = await import('./channelExport.js');
-            const { getBotEmoji } = await import('./botEmojis.js');
-            const FormData = (await import('form-data')).default;
-            const fetch = (await import('node-fetch')).default;
-            const IS_CV2 = 1 << 15;
-
-            const cbEmoji = getBotEmoji('cb_blue');
-            const cbEmojiStr = cbEmoji?.id ? `<:cb_blue:${cbEmoji.id}>` : '🗄️';
-
-            for (const channel of channels) {
-              try {
-                console.log(`📥 START archive: #${channel.name} (${channel.id})`);
-
-                const { messages, total429, batches } = await fetchAllChannelMessages(channel.id, {
-                  onProgress: (n) => { if (n % 500 === 0) console.log(`  📥 Fetched ${n} messages...`); }
-                });
-                console.log(`📥 Fetch complete: ${messages.length} messages in ${batches} batches (${total429} rate-limit waits)`);
-
-                const html = generateExportHTML(channel.name, messages);
-                const today = new Date().toISOString().slice(0, 10);
-                const filename = `${channel.name}-export-${today}.html`;
-                const fileBuffer = Buffer.from(html, 'utf-8');
-                const nowUnix = Math.floor(Date.now() / 1000);
-
-                const container = {
-                  type: 17,
-                  accent_color: 0x3498db,
-                  components: [
-                    { type: 10, content: `## 📂 #${channel.name}\n-# ${cbEmojiStr} CastBot Archive` },
-                    { type: 14 },
-                    { type: 10, content: `📄 **${messages.length} messages**\n📅 <t:${nowUnix}:F>` },
-                    { type: 14 },
-                    { type: 10, content: `## 🔍 Viewing the archive` },
-                    { type: 13, file: { url: `attachment://${filename}` } },
-                    { type: 10, content: `-# **Option 1** — Download and open the HTML file above\n-# **Option 2** — Use the link button below to view online *(expires ~24h)*` }
-                  ]
-                };
-
-                // Step 1: POST multipart — file + Components V2 container
-                const form = new FormData();
-                form.append('files[0]', fileBuffer, { filename, contentType: 'text/html' });
-                form.append('payload_json', JSON.stringify({
-                  flags: IS_CV2,
-                  components: [container],
-                  attachments: [{ id: 0, filename }]
-                }));
-
-                const postRes = await fetch(`https://discord.com/api/v10/channels/${invokedChannelId}/messages`, {
-                  method: 'POST',
-                  body: form,
-                  headers: { ...form.getHeaders(), Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
-                });
-
-                if (!postRes.ok) {
-                  const errText = await postRes.text();
-                  console.error(`❌ Archive POST failed for #${channel.name}: ${postRes.status} ${errText}`);
-                  continue;
-                }
-
-                const postData = await postRes.json();
-
-                // For CV2 + type-13 messages, Discord resolves attachment:// URLs inside the component
-                // itself (postData.components[...].file.url), not in the top-level attachments array.
-                // Fall back to attachments[] in case Discord changes this behaviour later.
-                let cdnUrl = postData.attachments?.[0]?.url;
-                if (!cdnUrl) {
-                  const findType13Url = (comps) => {
-                    for (const c of (comps || [])) {
-                      if (c.type === 13 && c.file?.url && !c.file.url.startsWith('attachment://')) return c.file.url;
-                      const hit = findType13Url(c.components);
-                      if (hit) return hit;
-                    }
-                    return null;
-                  };
-                  cdnUrl = findType13Url(postData.components);
-                  if (cdnUrl) console.log(`📥 CDN URL resolved from type-13 component`);
-                }
-
-                if (cdnUrl) {
-                  // Step 2: POST a separate message with the "View Online" link button
-                  const viewUrl = `https://htmlpreview.github.io/?${cdnUrl}`;
-                  const maxNameLen = 80 - 'View '.length - ' Online'.length; // 68 chars
-                  const truncName = channel.name.length > maxNameLen ? channel.name.slice(0, maxNameLen - 1) + '…' : channel.name;
-
-                  const btnRes = await fetch(`https://discord.com/api/v10/channels/${invokedChannelId}/messages`, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                      flags: IS_CV2,
-                      components: [{
-                        type: 17,
-                        components: [{
-                          type: 1,
-                          components: [{ type: 2, style: 5, label: `View ${truncName} Online`, url: viewUrl }]
-                        }]
-                      }]
-                    }),
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
-                  });
-
-                  if (!btnRes.ok) {
-                    const errText = await btnRes.text();
-                    console.error(`⚠️ Archive button POST failed for #${channel.name}: ${btnRes.status} ${errText}`);
-                  } else {
-                    console.log(`✅ Archive complete: #${channel.name} (${messages.length} messages)`);
-                  }
-                } else {
-                  // Log full response so we can diagnose the structure if this ever happens
-                  console.warn(`⚠️ No CDN URL found for #${channel.name} — button skipped. attachments=${JSON.stringify(postData.attachments?.slice(0, 1))}, components=${JSON.stringify(postData.components)?.substring(0, 400)}`);
-                }
-              } catch (err) {
-                console.error(`❌ Archive error for #${channel.name}:`, err);
-                try {
-                  const fetch2 = (await import('node-fetch')).default;
-                  await fetch2(`https://discord.com/api/v10/channels/${invokedChannelId}/messages`, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                      flags: IS_CV2,
-                      components: [{ type: 17, accent_color: 0xe74c3c, components: [{ type: 10, content: `❌ Archive failed for **#${channel.name}**: ${err.message}` }] }]
-                    }),
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
-                  });
-                } catch (e2) { /* post error failed too */ }
-              }
+            try {
+              const { archiveChannels } = await import('./channelArchiver.js');
+              await archiveChannels(channels, invokedChannelId);
+            } catch (err) {
+              console.error('❌ archiveChannels fatal:', err);
             }
           }, 0);
 
