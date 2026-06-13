@@ -138,7 +138,20 @@ export async function createPlayerDisplaySection(player, playerData, guildId) {
     ? `https://cdn.discordapp.com/avatars/${userId}/${avatarHash}.png?size=128`
     : `https://cdn.discordapp.com/embed/avatars/${userId % 5}.png`;
   
-  return {
+  // Resolve which of this player's roles are tribes on the default castlist → clickable role tags.
+  let tribeTags = '';
+  try {
+    const { castlistManager } = await import('./castlistManager.js');
+    const defaultTribeRoleIds = await castlistManager.getTribesUsingCastlist(guildId, 'default');
+    const playerTribeRoleIds = defaultTribeRoleIds.filter(id => roleCache.has(id));
+    if (playerTribeRoleIds.length > 0) {
+      tribeTags = playerTribeRoleIds.map(id => `<@&${id}>`).join(' ');
+    }
+  } catch (e) {
+    console.warn(`⚠️ createPlayerDisplaySection: could not resolve default-castlist tribes for ${player.id}: ${e.message}`);
+  }
+
+  const result = {
     ...playerCard,
     accessory: {
       ...playerCard.accessory,
@@ -147,6 +160,16 @@ export async function createPlayerDisplaySection(player, playerData, guildId) {
       }
     }
   };
+
+  // Override the card's name line (line 1) with a clickable user mention + tribe role tag(s).
+  // e.g. "<@userId> (<@&tribeRoleId>)". Player-menu only — castlist cards are unaffected.
+  if (result.components?.[0]?.content) {
+    const lines = result.components[0].content.split('\n');
+    lines[0] = `<@${userId}>${tribeTags ? ` (${tribeTags})` : ''}`;
+    result.components[0].content = lines.join('\n');
+  }
+
+  return result;
 }
 
 /**
