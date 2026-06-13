@@ -165,7 +165,7 @@ export async function createPlayerDisplaySection(player, playerData, guildId) {
   // e.g. "<@userId> (<@&tribeRoleId>)". Player-menu only — castlist cards are unaffected.
   if (result.components?.[0]?.content) {
     const lines = result.components[0].content.split('\n');
-    lines[0] = `<@${userId}>${tribeTags ? ` (${tribeTags})` : ''}`;
+    lines[0] = `**<@${userId}>${tribeTags ? ` (${tribeTags})` : ''}**`;
     result.components[0].content = lines.join('\n');
   }
 
