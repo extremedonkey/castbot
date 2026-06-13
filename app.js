@@ -36892,7 +36892,10 @@ Your server is now ready for Tycoons gameplay!`;
                   max_values: 25 // multi-select (Discord cap); categories expand to many more
                 }]},
                 { type: 14 },
-                { type: 1, components: [{ type: 2, style: 2, label: '← Back', custom_id: 'data_admin' }] }
+                { type: 1, components: [
+                  { type: 2, style: 2, label: '← Back', custom_id: 'data_admin' },
+                  { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 4, emoji: { name: '🧹' } } // copy of Delete/Nuke Category button (self-contained flow)
+                ]}
               ]
             }]
           };
