@@ -94,7 +94,7 @@ async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, pr
 
   // POST 2 — separate message with the "View Online" link button
   const viewUrl = `https://htmlpreview.github.io/?${cdnUrl}`;
-  const maxNameLen = 80 - 'View '.length - ' Online'.length; // 68 chars
+  const maxNameLen = 80 - 'View #'.length - ' Online'.length; // 67 chars (account for the # prefix)
   const truncName = displayName.length > maxNameLen ? displayName.slice(0, maxNameLen - 1) + '…' : displayName;
 
   const btnRes = await post({
@@ -102,7 +102,7 @@ async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, pr
       flags: IS_CV2,
       components: [{
         type: 17,
-        components: [{ type: 1, components: [{ type: 2, style: 5, label: `View ${truncName} Online`, url: viewUrl }] }]
+        components: [{ type: 1, components: [{ type: 2, style: 5, label: `View #${truncName} Online`, url: viewUrl }] }]
       }]
     }),
     headers: { 'Content-Type': 'application/json' }
