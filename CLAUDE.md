@@ -224,7 +224,7 @@ const dynamicPatterns = [
 #   1. Runs the unit tests (aborts if any fail)
 #   2. Commits + pushes to main
 #   3. Restarts DEV (local bot)
-#   4. Deploys to TEST (castbot-blue) ← automatic, do NOT run a separate deploy command
+#   4. Deploys to TEST (castbot-blue): SSH pull + `pm2 restart castbot-pm` ← a real restart, not just a code sync
 ./scripts/dev/dev-restart.sh "descriptive commit message"
 
 # With a Discord notification message:
@@ -241,8 +241,10 @@ const dynamicPatterns = [
 | Target | When | How |
 |---|---|---|
 | **DEV** (local + ngrok) | Every `dev-restart.sh` (if tunnel up) | Automatic |
-| **TEST** (castbot-blue, always-on) | Every `dev-restart.sh` (default) | Automatic — skip only with `-dev-only` |
+| **TEST** (castbot-blue, always-on) | Every `dev-restart.sh` (default) | SSH pull + `pm2 restart castbot-pm` — skip only with `-dev-only` |
 | **PROD** (live users) | 🔴 NEVER here — separate, explicit, permissioned | `npm run deploy-remote-wsl` — **only on Reece's explicit word** |
+
+> **⚠️ Restart notification caveat:** the Discord `#💎deploy` notification is sent by `notify-restart.js` running **on the laptop (dev)**, so it always shows the **"DEVELOPMENT Server Restart!"** header even when test was restarted — the test deploy only appears in the "Deployed To: dev + test" line. The test box (`INSTANCE_ROLE=test`) does **not** yet announce its own restarts, so any test restart NOT triggered from the laptop (PM2 auto-restart, ProdWatchdog, crash) is silent. Known gap — fix is a test-side startup self-announce gated to `INSTANCE_ROLE==='test'`.
 
 **⚠️ This is NOT optional — run it after EVERY code change** (button/modal/UI handlers, config, data-structure changes, new features, bug fixes, refactors, ANY `.js` change).
 

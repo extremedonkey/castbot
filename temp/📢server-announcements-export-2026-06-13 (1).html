@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>#📢server-announcements — Export</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #313338; color: #dbdee1; font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.375; }
+.header-bar { background: #2b2d31; border-bottom: 1px solid #1e1f22; padding: 12px 16px; position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 8px; }
+.header-bar .hash { color: #80848e; font-size: 24px; }
+.header-bar .name { color: #f2f3f5; font-weight: 600; font-size: 16px; }
+.header-bar .count { color: #80848e; font-size: 13px; margin-left: auto; }
+.search-bar { background: #2b2d31; padding: 8px 16px; border-bottom: 1px solid #1e1f22; position: sticky; top: 49px; z-index: 9; }
+.search-bar input { width: 100%; background: #1e1f22; border: none; color: #dbdee1; padding: 8px 12px; border-radius: 4px; font-size: 14px; outline: none; }
+.search-bar input::placeholder { color: #80848e; }
+.messages { padding: 16px 0; }
+.msg { display: flex; padding: 2px 16px; gap: 16px; position: relative; }
+.msg:hover { background: #2e3035; }
+.msg.grouped { padding-left: 72px; }
+.msg.grouped .time-inline { display: none; font-size: 11px; color: #80848e; position: absolute; left: 16px; width: 40px; text-align: right; }
+.msg.grouped:hover .time-inline { display: block; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; margin-top: 2px; }
+.msg-body { min-width: 0; flex: 1; }
+.msg-body .header { display: flex; align-items: baseline; gap: 8px; }
+.author { font-weight: 600; font-size: 15px; cursor: pointer; }
+.author:hover { text-decoration: underline; }
+.time { font-size: 12px; color: #80848e; }
+.content { white-space: pre-wrap; word-wrap: break-word; }
+.content.system { color: #80848e; font-style: italic; }
+.content a { color: #00a8fc; text-decoration: none; }
+.content a:hover { text-decoration: underline; }
+.content code { background: #2b2d31; padding: 2px 4px; border-radius: 3px; font-size: 13px; }
+.content strong { color: #f2f3f5; }
+.embed { border-left: 4px solid #4f545c; background: #2b2d31; border-radius: 4px; padding: 8px 12px; margin: 4px 0; max-width: 520px; }
+.embed-title { font-weight: 600; color: #00a8fc; margin-bottom: 4px; }
+.embed-desc { font-size: 14px; }
+.attachment { margin: 4px 0; }
+.attachment img { max-width: 400px; max-height: 300px; border-radius: 8px; cursor: pointer; }
+.attachment.file { background: #2b2d31; padding: 8px 12px; border-radius: 8px; display: inline-block; }
+.attachment.file a { color: #00a8fc; text-decoration: none; }
+.reactions { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+.reaction { background: #2b2d31; border: 1px solid #3f4147; border-radius: 8px; padding: 2px 6px; font-size: 13px; }
+.date-sep { display: flex; align-items: center; margin: 16px 16px; }
+.date-sep::before, .date-sep::after { content: ''; flex: 1; border-top: 1px solid #3f4147; }
+.date-sep span { padding: 0 8px; font-size: 12px; font-weight: 600; color: #80848e; white-space: nowrap; }
+.no-results { text-align: center; color: #80848e; padding: 40px; font-size: 16px; display: none; }
+</style>
+</head>
+<body>
+<div class="header-bar">
+  <span class="hash">#</span>
+  <span class="name">📢server-announcements</span>
+  <span class="count">57 messages</span>
+</div>
+<div class="search-bar">
+  <input type="text" id="search" placeholder="Search messages..." autocomplete="off">
+</div>
+<div class="messages" id="messages">
+<div class="date-sep"><span>Saturday, March 25, 2023</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/1058212158732783727/d477883157a55c0e3a7a2abe0eeaf5e3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#3f51b5">Blissy</span><span class="time">Mar 25, 2023 7:11 PM</span></div>
+          <div class="content">||@everyone || <br>Hey everyone!! just here to give a general update on the server and what's new to get you hyped and ready for the new season! The server, is going to go under some renovations. Channels will be reorganized, channels will be deleted + updated, just overall aiming to make the server more widely assessable for everyone. We want YOU to have the best experience possible while here which is also why, we will be adding in some spectator engagement activities! <br>Coming to you specs, in season 4 of Couchcast:<br>&gt; - Draft <br>&gt; - Elimination Game<br>&gt; - Bootlist <br>&gt; - &amp; Bransteeles <br><br>What about applicants and alumni? What is in store for you? We have already added &lt;#1082134192982335580&gt; and season based chat rooms, now here is what's coming for you: <br>&gt; - Player Reviews (detailed w/ future season potentials) <br>&gt; - Edgic <br>&gt; - Trust Ranking Charts (now you can see post season, where each individual player has placed you) <br>&gt; - Host Predictions <br><br>With all of that being said, our new season of Couchcast is coming quickly, with applications closing on <strong>MAY 8TH</strong> and the game marooning on <strong>MAY 15TH</strong>. The hosting team have been working so hard for this new season to be the best one yet! Get applying, invite your friends, and most importantly, stay awhile! This is a season you <strong>DON'T</strong> wanna miss! (also keep an eye out for another announcement we might have coming your way soon)<br><br>(ALUMNI: with all the changes, if you played in S1 or S2, your channels are going to be deleted, so if you have anything you want to save I'd do it ASAP)</div><div class="reactions"><span class="reaction">:UcolYikes: 4</span><span class="reaction">😱 1</span></div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Mar 25, 2023 7:12 PM</span><div class="content"><a href="https://tenor.com/view/clap-gif-25211694" target="_blank">https://tenor.com/view/clap-gif-25211694</a></div><div class="embed" style="">
+          
+          
+        </div><div class="reactions"><span class="reaction">:Drake: 1</span></div></div></div>
+<div class="date-sep"><span>Friday, April 28, 2023</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/468655730975703041/db65f5b1966022e3c481822630af663b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#2196f3">Serviver</span><span class="time">Apr 28, 2023 12:30 AM</span></div>
+          <div class="content">Congrats to our very own &lt;@700105131517018182&gt; for making it to her first ever FTC by winning final immunity!</div><div class="reactions"><span class="reaction">❤️ 9</span><span class="reaction">⭐ 2</span><span class="reaction">🔥 3</span><span class="reaction">🙌 2</span><span class="reaction">:king420: 3</span></div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/468655730975703041/db65f5b1966022e3c481822630af663b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#2196f3">Serviver</span><span class="time">Apr 28, 2023 10:37 PM</span></div>
+          <div class="content">Now congrats go out to fellow host &lt;@813130551254056960&gt; and alumni &lt;@749410046269456495&gt; on joining &lt;@700105131517018182&gt; at FTC.<br><br>A true Couchcast triple! Way to go guys!!</div><div class="reactions"><span class="reaction">❤️ 6</span><span class="reaction">⭐ 7</span><span class="reaction">:Blobheart: 4</span></div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/813130551254056960/ddfa34f3b1cde3d0f1a69cd429510df1.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#2196f3">Lo</span><span class="time">Apr 28, 2023 10:37 PM</span></div>
+          <div class="content">Wooooohoooooo!!!!</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Monday, May 1, 2023</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/468655730975703041/db65f5b1966022e3c481822630af663b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#2196f3">Serviver</span><span class="time">May 1, 2023 3:03 AM</span></div>
+          <div class="content">&lt;@700105131517018182&gt; has won her first org!<br>&lt;@813130551254056960&gt; was right behind in 2nd!<br><br>Congrats to both</div><div class="reactions"><span class="reaction">🥺 6</span><span class="reaction">❤️ 6</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Wednesday, May 3, 2023</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/245470919600898048/3d5aadccfef4e180d6bcbea7a49a5606.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#4caf50">Oreo</span><span class="time">May 3, 2023 5:12 AM</span></div>
+          <div class="content">You forgot Peter</div><div class="reactions"><span class="reaction">💀 5</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Wednesday, June 21, 2023</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/468655730975703041/db65f5b1966022e3c481822630af663b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#2196f3">Serviver</span><span class="time">Jun 21, 2023 3:27 AM</span></div>
+          <div class="content">&lt;@&amp;1098810710680678462&gt; &lt;@&amp;1093894083707142154&gt; &lt;@&amp;1096258762928574596&gt; <br><br>Normally I'd announce this at finale, but gonna drop it a bit early this time</div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 21, 2023 3:28 AM</span><div class="content">Next season is going to our biggest season yet! We're looking for 14 pairs to play a Blood vs. Water season.<br><br>We're looking for Alumni/Newbie pairs!!!</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 21, 2023 3:29 AM</span><div class="content">As for the theme?</div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 21, 2023 3:29 AM</span><div class="attachment"><img src="https://cdn.discordapp.com/attachments/1089264075227271209/1120918332024045629/Scream-VI-teaser-title-card.jpg?ex=6a2e200c&amp;is=6a2cce8c&amp;hm=ec4cbeb7a0dac4e9ace9f2e5f5fa711e6e575256792170c731eb4fbb4fbee790&amp;" alt="Scream-VI-teaser-title-card.jpg" loading="lazy"></div></div></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/1058212158732783727/d477883157a55c0e3a7a2abe0eeaf5e3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#3f51b5">Blissy</span><span class="time">Jun 21, 2023 3:31 AM</span></div>
+          <div class="content"><a href="https://tenor.com/view/knife-clean-ghostface-cleaning-knife-blood-clean-scream-6-gif-15157241443457597013" target="_blank">https://tenor.com/view/knife-clean-ghostface-cleaning-knife-blood-clean-scream-6-gif-15157241443457597013</a></div><div class="embed" style="">
+          
+          
+        </div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 21, 2023 3:32 AM</span><div class="content">Who’s going to shed the most blood next season ;)</div></div></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/468655730975703041/db65f5b1966022e3c481822630af663b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#2196f3">Serviver</span><span class="time">Jun 21, 2023 3:32 AM</span></div>
+          <div class="content">Me<br>It's me</div><div class="reactions"><span class="reaction">💯 6</span></div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/408736654275379210/28224c7fdc369c42d4301ecb1b00f4d5.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#00bcd4">GuardianBrandt</span><span class="time">Jun 21, 2023 3:45 AM</span></div>
+          <div class="content"><a href="https://tenor.com/view/scream-wazzup-gif-18536799" target="_blank">https://tenor.com/view/scream-wazzup-gif-18536799</a></div><div class="embed" style="">
+          
+          
+        </div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jun 21, 2023 3:45 AM</span><div class="content">Wait wrong movie..</div></div></div>
+<div class="date-sep"><span>Monday, June 26, 2023</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/468655730975703041/db65f5b1966022e3c481822630af663b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#2196f3">Serviver</span><span class="time">Jun 26, 2023 4:27 AM</span></div>
+          <div class="content">Happy birthday &lt;@700105131517018182&gt; !!!</div><div class="reactions"><span class="reaction">❤️ 7</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Monday, July 24, 2023</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/468655730975703041/db65f5b1966022e3c481822630af663b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#2196f3">Serviver</span><span class="time">Jul 24, 2023 1:06 PM</span></div>
+          <div class="content">A big congrats to our s4 winner &lt;@987862850338963506&gt; for the arrival of his son Archer!<br><br>A future org winner in the making</div><div class="reactions"><span class="reaction">❤️ 16</span></div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/987862850338963506/08c477c70f6d4a52d29cb432241b65ba.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#795548">Jason</span><span class="time">Jul 24, 2023 1:25 PM</span></div>
+          <div class="content">Thanks Dave 😁</div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jul 24, 2023 1:26 PM</span><div class="attachment"><img src="https://cdn.discordapp.com/attachments/1089264075227271209/1133027418228138037/IMG_7345.jpg?ex=6a2e0343&amp;is=6a2cb1c3&amp;hm=a6e92c6ea36cecffe670285a4ad3f4dd9f724b629a1f3a72cdafed77452b28ca&amp;" alt="IMG_7345.jpg" loading="lazy"></div><div class="reactions"><span class="reaction">❤️ 16</span></div></div></div>
+<div class="date-sep"><span>Sunday, July 30, 2023</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/468655730975703041/db65f5b1966022e3c481822630af663b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#2196f3">Serviver</span><span class="time">Jul 30, 2023 8:55 PM</span></div>
+          <div class="content">When this org was started, it was named after an alliance previously formed between the 3 founding members. Now, two of those people have moved on to other things. We are Couchcast no more...<br><br>So, as we move forward with a new chapter, we'll also be moving forward with a new name.<br><br>With that bring said, welcome to the new (and improved) Servivorg.</div><div class="reactions"><span class="reaction">❤️ 9</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Thursday, September 21, 2023</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/245470919600898048/3d5aadccfef4e180d6bcbea7a49a5606.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#4caf50">Oreo</span><span class="time">Sep 21, 2023 9:19 AM</span></div>
+          <div class="content">For this coming season for Survivor I will be holding a fantasy draft</div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Sep 21, 2023 9:19 AM</span><div class="content"><a href="https://www.fantasysurvivorgame.com/group-join.html?groupcode=41BD-40BF-B7F3" target="_blank">https://www.fantasysurvivorgame.com/group-join.html?groupcode=41BD-40BF-B7F3</a></div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Sep 21, 2023 9:19 AM</span><div class="content">Join if you want to. It is all for fun</div></div></div>
+<div class="date-sep"><span>Tuesday, October 24, 2023</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/468655730975703041/db65f5b1966022e3c481822630af663b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#2196f3">Serviver</span><span class="time">Oct 24, 2023 4:18 PM</span></div>
+          <div class="content">Happy birthday &lt;@877692281619116093&gt; !!!<br><br>I'll assume it's her 21st</div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/877692281619116093/2b1ac95272a96230dba1a619dae52dbf.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#f44336">Jenn (Chooch)</span><span class="time">Oct 24, 2023 4:24 PM</span></div>
+          <div class="content">Thank you Davey, definitely my 21st 🥹</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Monday, April 8, 2024</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/468655730975703041/db65f5b1966022e3c481822630af663b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#2196f3">Serviver</span><span class="time">Apr 8, 2024 1:51 AM</span></div>
+          <div class="content">Congrats to &lt;@473926986516135937&gt; for winning the Saw mini</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Monday, April 15, 2024</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/877692281619116093/2b1ac95272a96230dba1a619dae52dbf.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#f44336">Jenn (Chooch)</span><span class="time">Apr 15, 2024 11:07 PM</span></div>
+          <div class="content">Do your taxes</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Tuesday, April 16, 2024</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/408736654275379210/28224c7fdc369c42d4301ecb1b00f4d5.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#00bcd4">GuardianBrandt</span><span class="time">Apr 16, 2024 3:06 AM</span></div>
+          <div class="content">No</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Thursday, April 18, 2024</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/877692281619116093/2b1ac95272a96230dba1a619dae52dbf.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#f44336">Jenn (Chooch)</span><span class="time">Apr 18, 2024 8:28 PM</span></div>
+          <div class="content">HAPPY BIRTHDAY &lt;@248962410306600960&gt;</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Wednesday, May 1, 2024</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/468655730975703041/db65f5b1966022e3c481822630af663b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#2196f3">Serviver</span><span class="time">May 1, 2024 9:16 PM</span></div>
+          <div class="content">Everyone please wish &lt;@813130551254056960&gt; the happiest of birthdays! You too &lt;@&amp;1214761093948379197&gt;</div><div class="reactions"><span class="reaction">❤️ 15</span><span class="reaction">🥂 11</span><span class="reaction">👑 6</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Monday, June 17, 2024</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/877692281619116093/2b1ac95272a96230dba1a619dae52dbf.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#f44336">Jenn (Chooch)</span><span class="time">Jun 17, 2024 1:20 AM</span></div>
+          <div class="content">EVERYONE WISH &lt;@408736654275379210&gt; a VERY HAPPY BIRTHDAY!!!!</div><div class="reactions"><span class="reaction">🎂 5</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Wednesday, June 26, 2024</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/468655730975703041/db65f5b1966022e3c481822630af663b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#2196f3">Serviver</span><span class="time">Jun 26, 2024 1:18 PM</span></div>
+          <div class="content">Happy birthday to bestie &lt;@700105131517018182&gt;!! Show her some love!</div><div class="reactions"><span class="reaction">❤️ 3</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Thursday, June 27, 2024</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/468655730975703041/db65f5b1966022e3c481822630af663b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#2196f3">Serviver</span><span class="time">Jun 27, 2024 3:52 PM</span></div>
+          <div class="content">Also a belated happy birthday to bestie from Down Under - &lt;@627126623434571789&gt;</div><div class="reactions"><span class="reaction">❤️ 4</span><span class="reaction">🔥 4</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Wednesday, July 24, 2024</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/468655730975703041/db65f5b1966022e3c481822630af663b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#2196f3">Serviver</span><span class="time">Jul 24, 2024 12:57 AM</span></div>
+          <div class="content">Everybody wish &lt;@493803682173943810&gt; the best of luck as she heads into the next phase of her life as she moves to AUSTRALIA tomorrow.<br><br>They'll be lucky to have her</div><div class="reactions"><span class="reaction">😮 7</span><span class="reaction">🏆 5</span><span class="reaction">❤️ 5</span><span class="reaction">🦫 3</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Thursday, October 31, 2024</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/468655730975703041/db65f5b1966022e3c481822630af663b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#2196f3">Serviver</span><span class="time">Oct 31, 2024 2:34 PM</span></div>
+          <div class="content">Happy Halloween everyone!</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Tuesday, November 26, 2024</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/468655730975703041/db65f5b1966022e3c481822630af663b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#2196f3">Serviver</span><span class="time">Nov 26, 2024 3:05 PM</span></div>
+          <div class="content">&lt;@&amp;1246988837985714228&gt; sorry for the ping, but we are adding a &lt;@&amp;1306779882302472233&gt; role. If you're interested in recaps, ranking and other in season notifications, please react with a ✅ . Otherwise, we will only ping your at the start and end of a season</div><div class="reactions"><span class="reaction">✅ 6</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Wednesday, December 25, 2024</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/468655730975703041/db65f5b1966022e3c481822630af663b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#2196f3">Serviver</span><span class="time">Dec 25, 2024 3:00 AM</span></div>
+          <div class="content">Happy holiday from the hosts here at Servivorg!</div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/408736654275379210/28224c7fdc369c42d4301ecb1b00f4d5.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#00bcd4">GuardianBrandt</span><span class="time">Dec 25, 2024 12:18 PM</span></div>
+          <div class="content">Tis be the day to watch the greatest christmas movie of all time..<br><br>Die Hard</div><div class="reactions"><span class="reaction">💯 3</span></div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/877692281619116093/2b1ac95272a96230dba1a619dae52dbf.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#f44336">Jenn (Chooch)</span><span class="time">Dec 25, 2024 12:40 PM</span></div>
+          <div class="content">MERRY CHRISTMAS YOU FUCKS</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Monday, January 27, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/468655730975703041/db65f5b1966022e3c481822630af663b.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#2196f3">Serviver</span><span class="time">Jan 27, 2025 4:44 PM</span></div>
+          <div class="content">&lt;@&amp;1246988837985714228&gt; <br><br>I need your help!<br><br>Normally I have every season planned well in advance, but I can't decide on which theme to go with for season 11. So I decided to let you all pick for me. I've narrowed it down to a few options, so please choose the one(s) you think would be best. Please react to your choices<br><br>But be warned - if it wins, you'll likely be asked to play...</div>
+        </div>
+      </div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jan 27, 2025 4:45 PM</span><div class="content">1. TRU BLOOD</div><div class="reactions"><span class="reaction">❤️ 7</span></div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jan 27, 2025 4:45 PM</span><div class="content">2. STEPHEN KING</div><div class="reactions"><span class="reaction">🩵 25</span></div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jan 27, 2025 4:46 PM</span><div class="content">3. SNL 50th ANNIVERSARY</div><div class="reactions"><span class="reaction">❤️ 8</span></div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jan 27, 2025 4:46 PM</span><div class="content">4. THAT 70S SHOW</div><div class="reactions"><span class="reaction">💚 5</span></div></div></div>
+<div class="msg grouped"><div class="msg-body"><span class="time-inline">Jan 27, 2025 4:47 PM</span><div class="content">5. FRIENDS</div><div class="reactions"><span class="reaction">❤️ 8</span></div></div></div>
+<div class="date-sep"><span>Thursday, February 13, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/877692281619116093/2b1ac95272a96230dba1a619dae52dbf.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#f44336">Jenn (Chooch)</span><span class="time">Feb 13, 2025 4:35 PM</span></div>
+          <div class="content">&lt;@&amp;1246988837985714228&gt; If anyone is interested in joining a survivor Bracketology league for this upcoming season of Survivor join this server : <a href="https://discord.gg/YWby69MC" target="_blank">https://discord.gg/YWby69MC</a><br><br>you basically make picks weekly on who is going to do good that week. It’s pretty cool 😎</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Sunday, June 8, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/877692281619116093/2b1ac95272a96230dba1a619dae52dbf.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#f44336">Jenn (Chooch)</span><span class="time">Jun 8, 2025 8:30 PM</span></div>
+          <div class="content">Everyone wish &lt;@987862850338963506&gt; good luck on ftc in TruVivor!!!! ❤️❤️❤️</div><div class="reactions"><span class="reaction">🥳 4</span><span class="reaction">🫶 6</span><span class="reaction">💪🏾 4</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Monday, June 9, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/877692281619116093/2b1ac95272a96230dba1a619dae52dbf.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#f44336">Jenn (Chooch)</span><span class="time">Jun 9, 2025 5:43 PM</span></div>
+          <div class="content"># <strong>HAPPY 6/9</strong></div><div class="reactions"><span class="reaction">6️⃣ 4</span><span class="reaction">9️⃣ 4</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Wednesday, June 11, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/877692281619116093/2b1ac95272a96230dba1a619dae52dbf.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#f44336">Jenn (Chooch)</span><span class="time">Jun 11, 2025 7:11 PM</span></div>
+          <div class="content">I’m stealing this from Jon but Dans a host here too so <br>&lt;@671651621956222978&gt; interviewed the one the only PARVATI<br><br><a href="https://www.realitytea.com/2025/06/11/survivor-parvati-shallow-book-take-readers-surprise-interview-exclusive/" target="_blank">https://www.realitytea.com/2025/06/11/survivor-parvati-shallow-book-take-readers-surprise-interview-exclusive/</a><br><br>congrats Dan!!!</div><div class="embed" style="">
+          <div class="embed-title">Survivor’s Parvati Shallow Promises Book Will ‘Take Readers by ...</div>
+          <div class="embed-desc">Survivor's Parvati Shallow speaks to Reality Tea in an exclusive interview teasing her upcoming book, and appearance on Australian Survivor.</div>
+        </div><div class="reactions"><span class="reaction">🔥 6</span><span class="reaction">🩵 5</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Thursday, June 12, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#009688">Reece</span><span class="time">Jun 12, 2025 6:27 PM</span></div>
+          <div class="content">For any ORG hosts out there running challenges, images and attachments are major busted..  <a href="https://discordstatus.com/" target="_blank">https://discordstatus.com/</a></div><div class="embed" style="">
+          <div class="embed-title">Discord Status</div>
+          <div class="embed-desc">Welcome to Discord's home for real-time and historical data on system performance.</div>
+        </div>
+        </div>
+      </div>
+<div class="date-sep"><span>Monday, June 16, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/877692281619116093/2b1ac95272a96230dba1a619dae52dbf.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#f44336">Jenn (Chooch)</span><span class="time">Jun 16, 2025 3:40 PM</span></div>
+          <div class="content"># HAPPY BIRTHDAY &lt;@408736654275379210&gt; (I think)</div>
+        </div>
+      </div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/408736654275379210/28224c7fdc369c42d4301ecb1b00f4d5.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#00bcd4">GuardianBrandt</span><span class="time">Jun 16, 2025 3:49 PM</span></div>
+          <div class="content">Yes it is and thank you &lt;:ClaraHeart:1101550388559216700&gt;</div><div class="reactions"><span class="reaction">❤️ 4</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Thursday, June 26, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/877692281619116093/2b1ac95272a96230dba1a619dae52dbf.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#f44336">Jenn (Chooch)</span><span class="time">Jun 26, 2025 4:45 PM</span></div>
+          <div class="content">AH SHIT I MISSED IT BUT HAPPY BELATED BIRTHDAY &lt;@700105131517018182&gt;</div><div class="reactions"><span class="reaction">❤️ 1</span></div>
+        </div>
+      </div>
+<div class="date-sep"><span>Thursday, October 2, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/877692281619116093/2b1ac95272a96230dba1a619dae52dbf.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#f44336">Jenn (Chooch)</span><span class="time">Oct 2, 2025 9:01 PM</span></div>
+          <div class="content"># HAPPY BIRTHDAY &lt;@468655730975703041&gt;</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Friday, October 17, 2025</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/408736654275379210/28224c7fdc369c42d4301ecb1b00f4d5.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#00bcd4">GuardianBrandt</span><span class="time">Oct 17, 2025 5:49 PM</span></div>
+          <div class="content">&lt;@&amp;1246988837985714228&gt; Last ping for this kinda thing from me. But if you wish to get notified about anything to do with up and coming Game Nights please visit &lt;#979090924271443988&gt; to pick up the special gamer role~</div>
+        </div>
+      </div>
+<div class="date-sep"><span>Thursday, February 19, 2026</span></div>
+<div class="msg">
+        <img class="avatar" src="https://cdn.discordapp.com/avatars/877692281619116093/2b1ac95272a96230dba1a619dae52dbf.png?size=40" alt="" loading="lazy">
+        <div class="msg-body">
+          <div class="header"><span class="author" style="color:#f44336">Jenn (Chooch)</span><span class="time">Feb 19, 2026 4:57 PM</span></div>
+          <div class="content">HAPPY BIRTHDAY &lt;@987862850338963506&gt; !!!</div><div class="reactions"><span class="reaction">🫶 1</span></div>
+        </div>
+      </div>
+</div>
+<div class="no-results" id="noResults">No messages match your search.</div>
+<script>
+const search = document.getElementById('search');
+const msgs = document.querySelectorAll('.msg');
+const dateSeps = document.querySelectorAll('.date-sep');
+const noResults = document.getElementById('noResults');
+search.addEventListener('input', () => {
+  const q = search.value.toLowerCase();
+  let visible = 0;
+  msgs.forEach(m => {
+    const show = !q || m.textContent.toLowerCase().includes(q);
+    m.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  dateSeps.forEach(d => {
+    let next = d.nextElementSibling;
+    let hasVisible = false;
+    while (next && !next.classList.contains('date-sep')) {
+      if (next.classList.contains('msg') && next.style.display !== 'none') hasVisible = true;
+      next = next.nextElementSibling;
+    }
+    d.style.display = hasVisible ? '' : 'none';
+  });
+  noResults.style.display = visible === 0 && q ? 'block' : 'none';
+});
+</script>
+</body>
+</html>

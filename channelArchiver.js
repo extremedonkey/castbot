@@ -15,11 +15,13 @@
  *    split into multiple parts, each kept under SAFE_UPLOAD_BYTES.
  */
 import FormData from 'form-data';
+import fetch from 'node-fetch';
 import { fetchAllChannelMessages, createMessagePoster } from './channelExportFetcher.js';
 import { generateExportHTML } from './channelExport.js';
 import { getBotEmoji } from './botEmojis.js';
 
 const IS_CV2 = 1 << 15;
+const EPHEMERAL = 1 << 6;
 // Stay comfortably under Discord's base upload cap (~10 MiB at boost level 0).
 const SAFE_UPLOAD_BYTES = 9 * 1024 * 1024;
 
@@ -113,11 +115,39 @@ async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, pr
 }
 
 /**
+ * Post the run summary as an EPHEMERAL interaction followup (only the invoking user
+ * sees it) — the archives themselves are public by design, but this status message is
+ * not. Falls back to a public channel post if the interaction token is missing/expired
+ * (tokens live ~15 min; a very long run could outlast it), so a run never ends silently.
+ */
+async function postSummary(container, { interactionToken, applicationId, post }) {
+  if (interactionToken && applicationId) {
+    try {
+      const res = await fetch(`https://discord.com/api/v10/webhooks/${applicationId}/${interactionToken}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ flags: IS_CV2 | EPHEMERAL, components: [container] })
+      });
+      if (res.ok) return;
+      console.error(`⚠️ Ephemeral summary followup failed: ${res.status} ${await res.text()} — falling back to public post`);
+    } catch (err) {
+      console.error(`⚠️ Ephemeral summary followup error: ${err.message} — falling back to public post`);
+    }
+  }
+  try {
+    await post({ body: JSON.stringify({ flags: IS_CV2, components: [container] }), headers: { 'Content-Type': 'application/json' } });
+  } catch { /* summary is best-effort */ }
+}
+
+/**
  * Archive a list of channels into the invoking channel.
  * @param {Array<{id:string,name:string}>} channels
  * @param {string} invokedChannelId - channel the archive messages are posted to
+ * @param {object} [opts]
+ * @param {string} [opts.interactionToken] - to send the final summary as an ephemeral followup
+ * @param {string} [opts.applicationId]
  */
-export async function archiveChannels(channels, invokedChannelId) {
+export async function archiveChannels(channels, invokedChannelId, { interactionToken, applicationId } = {}) {
   const post = createMessagePoster(invokedChannelId);
   const cbEmoji = getBotEmoji('cb_blue');
   const cbEmojiStr = cbEmoji?.id ? `<:cb_blue:${cbEmoji.id}>` : '🗄️';
@@ -166,21 +196,14 @@ export async function archiveChannels(channels, invokedChannelId) {
     }
   }
 
-  // Final summary so the run never "silently" ends.
+  // Final summary (ephemeral — only the invoking user) so the run never "silently" ends.
   if (channels.length > 1) {
-    try {
-      await post({
-        body: JSON.stringify({
-          flags: IS_CV2,
-          components: [{
-            type: 17,
-            accent_color: failed ? 0xe67e22 : 0x2ecc71,
-            components: [{ type: 10, content: `## ${failed ? '⚠️' : '✅'} Archive run complete\n${succeeded} archived${failed ? `, ${failed} failed` : ''} (of ${channels.length}).` }]
-          }]
-        }),
-        headers: { 'Content-Type': 'application/json' }
-      });
-    } catch { /* summary is best-effort */ }
+    const summaryContainer = {
+      type: 17,
+      accent_color: failed ? 0xe67e22 : 0x2ecc71,
+      components: [{ type: 10, content: `## ${failed ? '⚠️' : '✅'} Archive run complete\n${succeeded} archived${failed ? `, ${failed} failed` : ''} (of ${channels.length}).` }]
+    };
+    await postSummary(summaryContainer, { interactionToken, applicationId, post });
   }
 
   console.log(`🏁 Archive run done: ${succeeded} ok, ${failed} failed (of ${channels.length})`);

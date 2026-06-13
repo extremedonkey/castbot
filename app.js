@@ -1829,6 +1829,28 @@ client.once('ready', async () => {
 
   const isTestInstance = process.env.INSTANCE_ROLE === 'test';
 
+  // TEST instance announces its OWN restart, independently of the laptop/dev notifier.
+  // The laptop's notify-restart.js only fires when dev-restart.sh is run (laptop on); this
+  // covers EVERY test restart (deploy, PM2 auto-restart, ProdWatchdog, crash) so the always-on
+  // test box is never silent. Reuses notify-restart.js → correct "🟦 TEST Server Restart!" header
+  // (it keys off INSTANCE_ROLE). Dev/prod startup behaviour unchanged.
+  if (isTestInstance) {
+    try {
+      const { exec } = await import('child_process');
+      const node = process.execPath;
+      exec('git log -1 --pretty=%s', { cwd: process.cwd() }, (_e, stdout) => {
+        const subject = ((stdout || '').trim() || 'Test instance restarted').replace(/'/g, "'\\''");
+        // argv: customMessage, commitMessage, filesChanged, gitStats, testSummary, testDeployStatus
+        exec(`'${node}' scripts/notify-restart.js '' '${subject}' '' '' '' ''`, { cwd: process.cwd() }, (err) => {
+          if (err) console.error('🟦 [TEST] restart self-announce failed:', err.message);
+          else console.log('🟦 [TEST] restart self-announce sent');
+        });
+      });
+    } catch (err) {
+      console.error('🟦 [TEST] restart self-announce error:', err.message);
+    }
+  }
+
   // Start PM2 Error Log Monitoring (Dev, Prod & Test — all post to the shared #error channel;
   // the logger picks the right local log path per env, incl. /home/ubuntu on the test box).
   const pm2Logger = getPM2ErrorLogger(client);
@@ -36972,6 +36994,9 @@ Your server is now ready for Tycoons gameplay!`;
           }
 
           const { channels, invokedChannelId } = pending;
+          // Captured for the EPHEMERAL run-summary followup (token lives ~15 min).
+          const interactionToken = req.body.token;
+          const applicationId = req.body.application_id || process.env.APP_ID;
 
           // Background archive run — fires after factory sends the "started" response.
           // All fetch/render/post logic (incl. write-path rate-limit pacing + 413 splitting)
@@ -36979,7 +37004,7 @@ Your server is now ready for Tycoons gameplay!`;
           setTimeout(async () => {
             try {
               const { archiveChannels } = await import('./channelArchiver.js');
-              await archiveChannels(channels, invokedChannelId);
+              await archiveChannels(channels, invokedChannelId, { interactionToken, applicationId });
             } catch (err) {
               console.error('❌ archiveChannels fatal:', err);
             }
