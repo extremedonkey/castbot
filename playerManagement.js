@@ -446,6 +446,8 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   // Currency mirrors inventory's visibility for now (both core safari concepts). Refine gate later if needed.
   vis.currency = { show: isAdmin ? showInventory : (showInventory && hasTarget), disabled: isAdmin && !hasTarget, label: customTerms.currencyName || 'Currency', emoji: customTerms.currencyEmoji || '🪙' };
   vis.inventory = { show: isAdmin ? showInventory : (showInventory && hasTarget), disabled: isAdmin && !hasTarget, label: customTerms.inventoryName || 'Inventory', emoji: customTerms.inventoryEmoji || '🧰' };
+  // Map: admins see it whenever a map exists (to init/manage); players only when on the map.
+  vis.map = { show: isAdmin ? !!activeMapId : (hasTarget && isInitialized && hasMapLocation), disabled: isAdmin && !hasTarget, label: 'Map', emoji: '🗺️', coordinate: currentCoordinate };
   vis.challenges = { show: isAdmin ? hasChallengeActions : hasChallengeActions, disabled: isAdmin && !hasTarget, label: 'Challenges', emoji: '🏃' };
   vis.crafting = { show: isAdmin ? hasCraftingConfigured : hasCraftingConfigured, disabled: isAdmin && !hasTarget, label: customTerms.craftingName || 'Crafting', emoji: customTerms.craftingEmoji || '🛠️' };
   vis.actions = { show: isAdmin ? hasActionsConfigured : hasActionsConfigured, disabled: isAdmin && !hasTarget, label: 'Actions', emoji: '⚡' };
@@ -582,12 +584,14 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
       const isAdminMode = mode === PlayerManagementMode.ADMIN;
 
       // Option 1 (both modes): read-only View. Option 2 (admin only): Edit → opens modal.
-      const options = [{
+      const viewOption = {
         label: `View ${currencyName}`.slice(0, 100),
         value: 'view_balance',
-        description: (isAdminMode ? 'Show the current balance' : 'Show your current balance').slice(0, 100),
-        emoji: { name: '👁️' }
-      }];
+        description: (isAdminMode ? 'Show the current balance' : 'Show your current balance').slice(0, 100)
+      };
+      const viewCurrencyEmoji = resolveEmoji(currencyEmoji, '🪙');
+      if (viewCurrencyEmoji) viewOption.emoji = viewCurrencyEmoji;
+      const options = [viewOption];
 
       if (isAdminMode) {
         const editOption = {
@@ -610,7 +614,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
         components: [{
           type: 3, // String Select
           custom_id: selectCustomId,
-          placeholder: `Select to manage ${currencyName} (Current: ${currencyEmoji} ${balance})`.slice(0, 150),
+          placeholder: `${currencyName} Options (Current: ${currencyEmoji} ${balance})`.slice(0, 150),
           min_values: 1,
           max_values: 1,
           options
@@ -655,7 +659,55 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
         components: [{
           type: 3, // String Select
           custom_id: selectCustomId,
-          placeholder: `Select to manage ${inventoryName} (${itemCount} item${itemCount === 1 ? '' : 's'})`.slice(0, 150),
+          placeholder: `${inventoryName} Options (${itemCount} item${itemCount === 1 ? '' : 's'})`.slice(0, 150),
+          min_values: 1,
+          max_values: 1,
+          options
+        }]
+      };
+    }
+
+    // ─── Map ─────────────────────────────────────────────────────────────
+    case 'map': {
+      const isAdminMode = mode === PlayerManagementMode.ADMIN;
+      const mapActiveId = safariData[guildId]?.maps?.active;
+      const pSafari = playerData[guildId]?.players?.[targetMember.id]?.safari;
+      const pMap = mapActiveId ? pSafari?.mapProgress?.[mapActiveId] : null;
+      const currentLocation = pMap?.currentLocation;
+      const isInit = pSafari !== undefined;
+      const isPaused = pSafari?.isPaused === true;
+
+      // Option 1 (both): Show Navigate Pane.
+      const options = [{
+        label: 'Show Navigate Pane', value: 'navigate',
+        description: 'View the map movement pane', emoji: { name: '🗺️' }
+      }];
+
+      if (isAdminMode) {
+        // Init XOR De-init depending on current state.
+        if (!isInit) {
+          options.push({ label: 'Initialize Safari', value: 'init', description: 'Initialise this player into Safari', emoji: { name: '🚀' } });
+        } else {
+          options.push({ label: 'De-initialize from Safari', value: 'deinit', description: 'Remove this player from Safari (backs up first)', emoji: { name: '🛬' } });
+        }
+        // Starting location works pre-init (sets where they'll spawn).
+        options.push({ label: 'Starting Location', value: 'starting_location', description: 'Set where this player starts on the map', emoji: { name: '🚩' } });
+        if (isInit) {
+          options.push({ label: 'Move Player', value: 'move', description: 'Move this player to a coordinate', emoji: { name: '📍' } });
+          options.push(isPaused
+            ? { label: 'Unpause player in Safari', value: 'unpause', description: "Resume this player's movement", emoji: { name: '⏯️' } }
+            : { label: 'Pause player in Safari', value: 'pause', description: "Freeze this player's movement", emoji: { name: '⏸️' } });
+          options.push({ label: 'Reset Explored locations', value: 'reset_explored', description: 'Clear explored coordinates (keeps current)', emoji: { name: '🔄' } });
+        }
+      }
+
+      const selectCustomId = isAdminMode && targetMember ? `player_menu_sel_map_${targetMember.id}` : 'player_menu_sel_map';
+      return {
+        type: 1,
+        components: [{
+          type: 3, // String Select
+          custom_id: selectCustomId,
+          placeholder: `Click here to view map options... (${currentLocation ? '📍Current Location: ' + currentLocation : 'Uninitialized'})`.slice(0, 150),
           min_values: 1,
           max_values: 1,
           options
@@ -1336,7 +1388,7 @@ export async function createPlayerManagementUI(options) {
     }
 
     // Row 2: Safari (conditional — hide if no buttons visible)
-    const row2Ids = ['currency', 'inventory', 'challenges', 'crafting', 'actions', 'stores'];
+    const row2Ids = ['currency', 'inventory', 'map', 'challenges', 'crafting', 'actions', 'stores'];
     const row2HasAny = row2Ids.some(id => visibility[id]?.show);
     if (row2HasAny) {
       const row2 = buildSectionRow(row2Ids, targetUserId, activeCategory, visibility, mode);
@@ -1485,6 +1537,31 @@ export async function createPlayerManagementUI(options) {
     flags: (1 << 15), // IS_COMPONENTS_V2 only - ephemeral handled by caller
     components: [container]
   };
+}
+
+/**
+ * Rebuilds the admin Super Player Menu for a target player. Used by map/currency/inventory
+ * sub-flows that WEBHOOK-PATCH (or UPDATE_MESSAGE) the parent menu back into place after an action.
+ * @returns {Object} Components V2 response ready for updateDeferredResponse / UPDATE_MESSAGE.
+ */
+export async function buildAdminPlayerMenu(client, guildId, targetUserId, adminUserId, activeButton = null) {
+  const guild = await client.guilds.fetch(guildId);
+  const targetMember = await guild.members.fetch(targetUserId);
+  const playerData = await loadPlayerData();
+  const ui = await createPlayerManagementUI({
+    mode: PlayerManagementMode.ADMIN,
+    targetMember,
+    playerData,
+    guildId,
+    userId: adminUserId,
+    showUserSelect: true,
+    showVanityRoles: true,
+    title: `Player Management | ${targetMember.displayName}`,
+    activeButton,
+    client
+  });
+  ui.flags = (1 << 15); // IS_COMPONENTS_V2 (parent menu non-ephemeral on update)
+  return ui;
 }
 
 /**

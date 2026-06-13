@@ -9721,6 +9721,108 @@ To fix this:
         return { type: 9, data: modal.toJSON() };
       }})(req, res, client);
 
+    } else if (custom_id === 'player_menu_sel_map' || custom_id.startsWith('player_menu_sel_map_')) {
+      const selectedValue = req.body.data.values?.[0];
+      if (selectedValue === 'move' || selectedValue === 'starting_location') {
+        return ButtonHandlerFactory.create({ id: 'player_menu_sel_map_modal', requiresPermission: PermissionFlagsBits.ManageRoles, permissionName: 'Manage Roles', handler: async (context) => {
+          // Reuse the existing Safari modals, retagged spm_ so their submit returns to THIS menu.
+          const targetUserId = context.customId.replace('player_menu_sel_map_', '');
+          const { loadSafariContent } = await import('./safariManager.js');
+          const playerData = await loadPlayerData();
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const pMap = playerData[context.guildId]?.players?.[targetUserId]?.safari?.mapProgress?.[activeMapId];
+          if (selectedValue === 'starting_location') {
+            const { createStartingInfoModal } = await import('./safariMapAdmin.js');
+            const modal = await createStartingInfoModal(targetUserId, pMap?.startingLocation || '');
+            modal.setCustomId(`spm_starting_info_modal_${targetUserId}`);
+            return { type: 9, data: modal.toJSON() };
+          }
+          const { createCoordinateModal } = await import('./safariMapAdmin.js');
+          const modal = await createCoordinateModal(targetUserId, pMap?.currentLocation || '');
+          modal.setCustomId(`spm_move_modal_${targetUserId}`);
+          return { type: 9, data: modal.toJSON() };
+        }})(req, res, client);
+      }
+      // All other map actions update the menu message in place (deferred — several are slow).
+      return ButtonHandlerFactory.create({ id: 'player_menu_sel_map', deferred: true, updateMessage: true, handler: async (context) => {
+        const isAdminMode = context.customId.startsWith('player_menu_sel_map_');
+        const targetUserId = isAdminMode ? context.customId.replace('player_menu_sel_map_', '') : context.userId;
+        const adminUserId = context.userId;
+        const { buildAdminPlayerMenu } = await import('./playerManagement.js');
+
+        // Navigate pane (both player + admin) — replace menu in place, with a back button.
+        if (selectedValue === 'navigate') {
+          const { getMovementDisplay, getPlayerLocation } = await import('./mapMovement.js');
+          const loc = await getPlayerLocation(context.guildId, targetUserId);
+          const coordinate = loc?.currentCoordinate;
+          if (!coordinate) {
+            // Not on the map — just refresh the menu (placeholder will show Uninitialized).
+            if (isAdminMode) return await buildAdminPlayerMenu(context.client, context.guildId, targetUserId, adminUserId, 'map');
+            const guild = await context.client.guilds.fetch(context.guildId);
+            const member = await guild.members.fetch(targetUserId);
+            const playerData = await loadPlayerData();
+            return await createPlayerManagementUI({ mode: PlayerManagementMode.PLAYER, targetMember: member, playerData, guildId: context.guildId, userId: targetUserId, activeButton: 'map', client: context.client, channelId: context.channelId });
+          }
+          const pane = await getMovementDisplay(context.guildId, targetUserId, coordinate, true);
+          const backId = isAdminMode ? `admin_set_map_${targetUserId}` : 'player_set_map';
+          pane.components[0].components.push({ type: 14 });
+          pane.components[0].components.push({ type: 1, components: [{ type: 2, style: 2, label: '← Player Admin', custom_id: backId, emoji: { name: '🧑‍🤝‍🧑' } }] });
+          return pane;
+        }
+
+        // Everything below is admin-only.
+        if (!hasAdminPermissions(context.member)) return { content: '❌ You need admin permissions for this.', ephemeral: true };
+
+        if (selectedValue === 'init') {
+          const { initializePlayerOnMap } = await import('./safariMapAdmin.js');
+          await initializePlayerOnMap(context.guildId, targetUserId, null, context.client);
+        } else if (selectedValue === 'pause') {
+          const { pauseSinglePlayer } = await import('./pausedPlayersManager.js');
+          await pauseSinglePlayer(context.guildId, targetUserId, context.client);
+        } else if (selectedValue === 'unpause') {
+          const { unpauseSinglePlayer } = await import('./pausedPlayersManager.js');
+          await unpauseSinglePlayer(context.guildId, targetUserId, context.client);
+        } else if (selectedValue === 'reset_explored') {
+          const { resetPlayerExploration } = await import('./safariMapAdmin.js');
+          await resetPlayerExploration(context.guildId, targetUserId);
+        } else if (selectedValue === 'deinit') {
+          // Show a de-init confirmation whose buttons route back to THIS menu.
+          const { getDeinitializationInfo } = await import('./safariDeinitialization.js');
+          const info = await getDeinitializationInfo(context.guildId, targetUserId);
+          if (!info.canDeinit) return await buildAdminPlayerMenu(context.client, context.guildId, targetUserId, adminUserId, 'map');
+          return {
+            flags: (1 << 15),
+            components: [{
+              type: 17, accent_color: 0xed4245,
+              components: [
+                { type: 10, content: `## 🛬 De-initialize <@${targetUserId}>?\n\nThis removes the player from Safari (currency, inventory, stamina, map progress). A backup is taken first.` },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, style: 4, label: 'Confirm De-initialize', custom_id: `spm_map_deinit_confirm_${targetUserId}`, emoji: { name: '🛬' } },
+                  { type: 2, style: 2, label: '← Cancel', custom_id: `admin_set_map_${targetUserId}`, emoji: { name: '🧑‍🤝‍🧑' } }
+                ]}
+              ]
+            }]
+          };
+        }
+        // Re-render the Super Player Menu (map category active).
+        return await buildAdminPlayerMenu(context.client, context.guildId, targetUserId, adminUserId, 'map');
+      }})(req, res, client);
+
+    } else if (custom_id.startsWith('spm_map_deinit_confirm_')) {
+      return ButtonHandlerFactory.create({ id: 'spm_map_deinit_confirm', deferred: true, updateMessage: true, requiresPermission: PermissionFlagsBits.ManageRoles, permissionName: 'Manage Roles', handler: async (context) => {
+        const targetUserId = context.customId.replace('spm_map_deinit_confirm_', '');
+        try {
+          const { addActivityEntryAndSave, ACTIVITY_TYPES } = await import('./activityLogger.js');
+          addActivityEntryAndSave(context.guildId, targetUserId, ACTIVITY_TYPES.admin, `[ADMIN] Player de-initialized`);
+        } catch (e) { console.error('Activity log error:', e); }
+        const { deinitializePlayer } = await import('./safariDeinitialization.js');
+        await deinitializePlayer(context.guildId, targetUserId, context.client);
+        const { buildAdminPlayerMenu } = await import('./playerManagement.js');
+        return await buildAdminPlayerMenu(context.client, context.guildId, targetUserId, context.userId, 'map');
+      }})(req, res, client);
+
     } else if (custom_id.startsWith('stress_page_')) {
       // Legacy mockup page navigation — redirect to planner selector
       return ButtonHandlerFactory.create({
@@ -25884,7 +25986,7 @@ Your server is now ready for Tycoons gameplay!`;
           };
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('admin_set_pronouns_') || custom_id.startsWith('admin_set_timezone_') || custom_id.startsWith('admin_set_age_') || custom_id.startsWith('admin_manage_vanity_') || custom_id.startsWith('admin_set_attributes_') || custom_id.startsWith('admin_set_castlists_') || custom_id.startsWith('admin_set_challenges_') || custom_id.startsWith('admin_set_crafting_') || custom_id.startsWith('admin_set_actions_') || custom_id.startsWith('admin_set_stores_') || custom_id.startsWith('admin_set_currency_') || custom_id.startsWith('admin_set_inventory_')) {
+    } else if (custom_id.startsWith('admin_set_pronouns_') || custom_id.startsWith('admin_set_timezone_') || custom_id.startsWith('admin_set_age_') || custom_id.startsWith('admin_manage_vanity_') || custom_id.startsWith('admin_set_attributes_') || custom_id.startsWith('admin_set_castlists_') || custom_id.startsWith('admin_set_challenges_') || custom_id.startsWith('admin_set_crafting_') || custom_id.startsWith('admin_set_actions_') || custom_id.startsWith('admin_set_stores_') || custom_id.startsWith('admin_set_currency_') || custom_id.startsWith('admin_set_inventory_') || custom_id.startsWith('admin_set_map_')) {
       // 🔘 Convert to ButtonHandlerFactory
       return ButtonHandlerFactory.create({
         id: custom_id,
@@ -26506,7 +26608,7 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id === 'player_set_pronouns' || custom_id === 'player_set_timezone' || custom_id === 'player_set_age' || custom_id === 'player_set_attributes' || custom_id === 'player_set_castlists' || custom_id === 'player_set_challenges' || custom_id === 'player_set_crafting' || custom_id === 'player_set_actions' || custom_id === 'player_set_stores' || custom_id === 'player_set_currency' || custom_id === 'player_set_inventory') {
+    } else if (custom_id === 'player_set_pronouns' || custom_id === 'player_set_timezone' || custom_id === 'player_set_age' || custom_id === 'player_set_attributes' || custom_id === 'player_set_castlists' || custom_id === 'player_set_challenges' || custom_id === 'player_set_crafting' || custom_id === 'player_set_actions' || custom_id === 'player_set_stores' || custom_id === 'player_set_currency' || custom_id === 'player_set_inventory' || custom_id === 'player_set_map') {
       // Player management buttons — use modular handler
       const playerData = await loadPlayerData();
       return await handlePlayerButtonClick(req, res, custom_id, playerData, client);
@@ -45222,6 +45324,76 @@ Your server is now ready for Tycoons gameplay!`;
             components: [{ type: 10, content: `❌ Error setting currency: ${error.message}` }]
           }]
         });
+      }
+
+    } else if (custom_id.startsWith('spm_starting_info_modal_')) {
+      // Starting location set from the Super Player Menu → save, then WEBHOOK-PATCH the menu.
+      const targetUserId = custom_id.replace('spm_starting_info_modal_', '');
+      const guildId = req.body.guild_id;
+      const startingLocation = components[0]?.component?.value?.trim().toUpperCase() || '';
+
+      if (!startingLocation || !startingLocation.match(/^[A-Z][1-9]\d?$/)) {
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Invalid or empty starting location. Use letter + number (e.g., B3).', flags: InteractionResponseFlags.EPHEMERAL } });
+      }
+      const { loadSafariContent: loadSafariStart } = await import('./safariManager.js');
+      const safariStart = await loadSafariStart();
+      const activeMapIdStart = safariStart[guildId]?.maps?.active;
+      const activeMapStart = activeMapIdStart ? safariStart[guildId]?.maps?.[activeMapIdStart] : null;
+      if (activeMapStart && !activeMapStart.coordinates[startingLocation]) {
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Starting location **${startingLocation}** does not exist on the current map.`, flags: InteractionResponseFlags.EPHEMERAL } });
+      }
+
+      await res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+      try {
+        const playerData = await loadPlayerData();
+        if (!playerData[guildId]) playerData[guildId] = { players: {} };
+        if (!playerData[guildId].players[targetUserId]) playerData[guildId].players[targetUserId] = {};
+        if (!playerData[guildId].players[targetUserId].safari) playerData[guildId].players[targetUserId].safari = { mapProgress: {} };
+        if (!playerData[guildId].players[targetUserId].safari.mapProgress) playerData[guildId].players[targetUserId].safari.mapProgress = {};
+        if (!playerData[guildId].players[targetUserId].safari.mapProgress[activeMapIdStart]) playerData[guildId].players[targetUserId].safari.mapProgress[activeMapIdStart] = {};
+        playerData[guildId].players[targetUserId].safari.mapProgress[activeMapIdStart].startingLocation = startingLocation;
+        await savePlayerData(playerData);
+        const { buildAdminPlayerMenu } = await import('./playerManagement.js');
+        await updateDeferredResponse(req.body.token, await buildAdminPlayerMenu(client, guildId, targetUserId, req.body.member?.user?.id, 'map'));
+      } catch (error) {
+        console.error('Error in spm_starting_info_modal:', error);
+        await updateDeferredResponse(req.body.token, { components: [{ type: 17, accent_color: 0xe74c3c, components: [{ type: 10, content: `❌ Error: ${error.message}` }] }] });
+      }
+
+    } else if (custom_id.startsWith('spm_move_modal_')) {
+      // Move player set from the Super Player Menu → move, then WEBHOOK-PATCH the menu.
+      const targetUserId = custom_id.replace('spm_move_modal_', '');
+      const guildId = req.body.guild_id;
+      const coordinate = components[0]?.component?.value?.trim().toUpperCase() || '';
+
+      if (!coordinate || !coordinate.match(/^[A-Z][1-9]\d?$/)) {
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Invalid or empty coordinate. Use letter + number (e.g., B3).', flags: InteractionResponseFlags.EPHEMERAL } });
+      }
+      const { loadSafariContent: loadSafariMove } = await import('./safariManager.js');
+      const safariMove = await loadSafariMove();
+      const activeMapIdMove = safariMove[guildId]?.maps?.active;
+      const activeMapMove = activeMapIdMove ? safariMove[guildId]?.maps?.[activeMapIdMove] : null;
+      if (activeMapMove && !activeMapMove.coordinates[coordinate]) {
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Coordinate **${coordinate}** does not exist on the current map.`, flags: InteractionResponseFlags.EPHEMERAL } });
+      }
+      const playerDataMove = await loadPlayerData();
+      const pMapMove = playerDataMove[guildId]?.players?.[targetUserId]?.safari?.mapProgress?.[activeMapIdMove];
+      if (!pMapMove) {
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Cannot move player — they are not initialized in Safari.', flags: InteractionResponseFlags.EPHEMERAL } });
+      }
+      if (coordinate === pMapMove.currentLocation) {
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `⚠️ Player is already at **${coordinate}**.`, flags: InteractionResponseFlags.EPHEMERAL } });
+      }
+
+      await res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+      try {
+        const { movePlayerToCoordinate } = await import('./safariMapAdmin.js');
+        await movePlayerToCoordinate(guildId, targetUserId, coordinate, client);
+        const { buildAdminPlayerMenu } = await import('./playerManagement.js');
+        await updateDeferredResponse(req.body.token, await buildAdminPlayerMenu(client, guildId, targetUserId, req.body.member?.user?.id, 'map'));
+      } catch (error) {
+        console.error('Error in spm_move_modal:', error);
+        await updateDeferredResponse(req.body.token, { components: [{ type: 17, accent_color: 0xe74c3c, components: [{ type: 10, content: `❌ Error: ${error.message}` }] }] });
       }
 
     } else if (custom_id.startsWith('spm_item_search_modal_')) {
