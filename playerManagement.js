@@ -1402,7 +1402,8 @@ export async function createPlayerManagementUI(options) {
     }
 
     // Row 3: Advanced (conditional — hide if no buttons visible)
-    const row3Ids = ['attributes', 'commands', 'vanity', 'navigate'];
+    // 'navigate' removed — superseded by the Map category's "Show Navigate Pane" option.
+    const row3Ids = ['attributes', 'commands', 'vanity'];
     const row3HasAny = row3Ids.some(id => visibility[id]?.show);
     if (row3HasAny) {
       const row3 = buildSectionRow(row3Ids, targetUserId, activeCategory, visibility, mode);
