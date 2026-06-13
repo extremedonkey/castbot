@@ -659,7 +659,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
         components: [{
           type: 3, // String Select
           custom_id: selectCustomId,
-          placeholder: `${inventoryName} Options (${itemCount} item${itemCount === 1 ? '' : 's'})`.slice(0, 150),
+          placeholder: `${inventoryName} Options (${inventoryEmoji} ${itemCount} item${itemCount === 1 ? '' : 's'})`.slice(0, 150),
           min_values: 1,
           max_values: 1,
           options
@@ -674,7 +674,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
       const pSafari = playerData[guildId]?.players?.[targetMember.id]?.safari;
       const pMap = mapActiveId ? pSafari?.mapProgress?.[mapActiveId] : null;
       const currentLocation = pMap?.currentLocation;
-      const isInit = pSafari !== undefined;
+      const isInit = pSafari?.points !== undefined; // truly initialized (matches isPlayerInitialized)
       const isPaused = pSafari?.isPaused === true;
 
       // Option 1 (both): Show Navigate Pane.
@@ -707,7 +707,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
         components: [{
           type: 3, // String Select
           custom_id: selectCustomId,
-          placeholder: `Map Options (${currentLocation ? '📍Current Location: ' + currentLocation : 'Uninitialized'})`.slice(0, 150),
+          placeholder: `Map Options (${currentLocation ? '📍Current Location: ' + currentLocation : (isInit ? 'Initialized' : 'Uninitialized')})`.slice(0, 150),
           min_values: 1,
           max_values: 1,
           options
