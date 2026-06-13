@@ -9735,13 +9735,13 @@ To fix this:
           if (selectedValue === 'starting_location') {
             const { createStartingInfoModal } = await import('./safariMapAdmin.js');
             const modal = await createStartingInfoModal(targetUserId, pMap?.startingLocation || '');
-            modal.setCustomId(`spm_starting_info_modal_${targetUserId}`);
-            return { type: 9, data: modal.toJSON() };
+            modal.custom_id = `spm_starting_info_modal_${targetUserId}`; // plain object (Label modal), not a ModalBuilder
+            return { type: 9, data: modal };
           }
           const { createCoordinateModal } = await import('./safariMapAdmin.js');
           const modal = await createCoordinateModal(targetUserId, pMap?.currentLocation || '');
-          modal.setCustomId(`spm_move_modal_${targetUserId}`);
-          return { type: 9, data: modal.toJSON() };
+          modal.custom_id = `spm_move_modal_${targetUserId}`; // plain object (Label modal), not a ModalBuilder
+          return { type: 9, data: modal };
         }})(req, res, client);
       }
       // All other map actions update the menu message in place (deferred — several are slow).
