@@ -707,7 +707,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
         components: [{
           type: 3, // String Select
           custom_id: selectCustomId,
-          placeholder: `Click here to view map options... (${currentLocation ? '📍Current Location: ' + currentLocation : 'Uninitialized'})`.slice(0, 150),
+          placeholder: `Map Options (${currentLocation ? '📍Current Location: ' + currentLocation : 'Uninitialized'})`.slice(0, 150),
           min_values: 1,
           max_values: 1,
           options
