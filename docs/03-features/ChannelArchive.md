@@ -118,10 +118,22 @@ Errors are caught per-channel: a red error message is posted to the channel and 
 **Empirically measured** (CastBot-Dev, 2026-06-04): `GET /channels/{id}/messages?limit=100` → per-channel bucket, **limit 5 / window ≈5s**, sustainable ≈1 req/s, 429 `retry_after` ≈0.357s, scope `user`. Paced at the header rate, **zero 429s** across the test runs. The live archive in prod logs (2026-06-13) fetched a 2,721-message channel in 28 batches with **0 rate-limit waits**.
 
 ### `channelExport.js` — HTML generator
-`generateExportHTML(channelName, messages)` → a single self-contained HTML document (all CSS inline, no external deps), Discord dark-theme styled, with a client-side search bar, author/avatar rendering, message grouping (same author within 7 min), date separators, embeds, image/file attachments, and reactions.
+`generateExportHTML(channelName, messages, resolver)` → a single self-contained HTML document (all CSS inline, no external deps), Discord dark-theme styled, with a client-side search bar, author/avatar rendering, message grouping (same author within 7 min), date separators, embeds, image/file attachments, and reactions.
 
 - **`extractComponentText(components)`** walks the Components V2 tree (type-10 Text Display + type-2 Button labels, recursing into containers/sections/action-rows and Section accessories) so **CastBot's own messages render** — their text lives in `components`, not `content`, and would otherwise show `[no content]`.
-- `markdownToHtml()` handles bold/italic/strikethrough/inline-code/URLs/newlines.
+- **`renderContent(text, ctx)` / `renderInline(text, ctx)`** — a small Discord-flavoured markdown renderer (replaced the old `markdownToHtml`). Handles bold/italic/underline/strike/inline-code/URLs, **fenced code blocks**, **headings/blockquotes/lists**, **spoilers** (`||…||`, click/hover to reveal), **custom emoji** (`<:name:id>` → CDN `<img>`), **timestamps** (`<t:unix:style>`), and **mentions** (see below). HTML-token outputs are stashed behind `\x00`/`\x01` sentinels before escaping and restored after — chosen specifically so bare digits in real text (e.g. "Top 5 players", code-block contents) can't collide with placeholders.
+
+#### Mention resolution — names baked at archive time
+Mentions render as Discord-style pills with **real names**, resolved **when the archive is generated** and baked into the static HTML. The opened file makes **no live calls** (it can't — no auth/CORS); an archive is therefore a point-in-time snapshot (later renames/deletes don't change it).
+
+| Token | Resolved from | Cost |
+|---|---|---|
+| User `<@id>` / `<@!id>` | the message's own `mentions[]` (already in the fetched JSON), seeded by guild member cache | free |
+| Role `<@&id>` | bot `guild.roles.cache` (name + colour) via the `resolver` built in `channelArchiver.js` | free (cache) |
+| Channel `<#id>` | bot `guild.channels.cache` | free (cache) |
+| `@everyone` / `@here`, emoji, timestamps | special-cased / parsed | free |
+
+`channelArchiver.js` builds the `resolver = { users, roles, channels }` **once per run** from `client.guilds.cache.get(guildId)` (passed in from `archive_confirm` as `client` + `guildId`). Unresolvable IDs fall back to `unknown-user` / `deleted-role` / `deleted-channel`. **No per-mention REST calls** — important given the write-path rate-limit work.
 
 ---
 

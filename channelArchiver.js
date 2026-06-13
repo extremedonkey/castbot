@@ -57,9 +57,9 @@ function buildContainer(displayName, count, cbEmojiStr, filename, nowUnix) {
  * Both POSTs go through the paced/retrying `post`. Throws on a non-recoverable file
  * POST failure so the caller can report it (no silent skips).
  */
-async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, precomputedHtml) {
+async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, precomputedHtml, resolver) {
   const displayName = partLabel ? `${channelName} (Part ${partLabel.i}/${partLabel.n})` : channelName;
-  const html = precomputedHtml ?? generateExportHTML(displayName, msgs);
+  const html = precomputedHtml ?? generateExportHTML(displayName, msgs, resolver);
   const today = new Date().toISOString().slice(0, 10);
   const filename = `${channelName}-export-${today}${partLabel ? `-part${partLabel.i}` : ''}.html`;
   const fileBuffer = Buffer.from(html, 'utf-8');
@@ -146,11 +146,26 @@ async function postSummary(container, { interactionToken, applicationId, post })
  * @param {object} [opts]
  * @param {string} [opts.interactionToken] - to send the final summary as an ephemeral followup
  * @param {string} [opts.applicationId]
+ * @param {object} [opts.client] - Discord client, for resolving role/channel mention names from cache
+ * @param {string} [opts.guildId]
  */
-export async function archiveChannels(channels, invokedChannelId, { interactionToken, applicationId } = {}) {
+export async function archiveChannels(channels, invokedChannelId, { interactionToken, applicationId, client, guildId } = {}) {
   const post = createMessagePoster(invokedChannelId);
   const cbEmoji = getBotEmoji('cb_blue');
   const cbEmojiStr = cbEmoji?.id ? `<:cb_blue:${cbEmoji.id}>` : '🗄️';
+
+  // Build the mention name-resolver ONCE from the bot's in-memory guild cache (no REST).
+  // User names are also auto-filled per-message from each message's `mentions[]` in the generator.
+  const resolver = { users: {}, roles: {}, channels: {} };
+  const guild = client?.guilds?.cache?.get(guildId);
+  if (guild) {
+    for (const r of guild.roles.cache.values()) resolver.roles[r.id] = { name: r.name, color: r.color };
+    for (const c of guild.channels.cache.values()) resolver.channels[c.id] = c.name;
+    for (const m of guild.members.cache.values()) resolver.users[m.id] = m.displayName || m.user?.globalName || m.user?.username;
+    console.log(`🔖 Mention resolver: ${Object.keys(resolver.roles).length} roles, ${Object.keys(resolver.channels).length} channels, ${Object.keys(resolver.users).length} cached members`);
+  } else {
+    console.warn(`⚠️ No guild in cache for ${guildId} — role/channel mentions will fall back to generic labels`);
+  }
 
   let succeeded = 0;
   let failed = 0;
@@ -165,11 +180,11 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
       console.log(`📥 Fetch complete: ${messages.length} messages in ${batches} batches (${total429} rate-limit waits)`);
 
       // Generate once to size; single message if it fits, else split into parts under the cap.
-      const fullHtml = generateExportHTML(channel.name, messages);
+      const fullHtml = generateExportHTML(channel.name, messages, resolver);
       const fullBytes = Buffer.byteLength(fullHtml, 'utf-8');
 
       if (fullBytes <= SAFE_UPLOAD_BYTES || messages.length <= 1) {
-        await postOneArchive(post, channel.name, messages, cbEmojiStr, null, fullHtml);
+        await postOneArchive(post, channel.name, messages, cbEmojiStr, null, fullHtml, resolver);
       } else {
         const parts = Math.ceil(fullBytes / SAFE_UPLOAD_BYTES);
         const perChunk = Math.ceil(messages.length / parts);
@@ -177,7 +192,7 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
         for (let i = 0; i < parts; i++) {
           const slice = messages.slice(i * perChunk, (i + 1) * perChunk);
           if (!slice.length) break;
-          await postOneArchive(post, channel.name, slice, cbEmojiStr, { i: i + 1, n: parts });
+          await postOneArchive(post, channel.name, slice, cbEmojiStr, { i: i + 1, n: parts }, undefined, resolver);
         }
       }
       succeeded++;

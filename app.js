@@ -36999,12 +36999,12 @@ Your server is now ready for Tycoons gameplay!`;
           const applicationId = req.body.application_id || process.env.APP_ID;
 
           // Background archive run — fires after factory sends the "started" response.
-          // All fetch/render/post logic (incl. write-path rate-limit pacing + 413 splitting)
-          // lives in channelArchiver.js. app.js stays a router.
+          // All fetch/render/post logic (incl. write-path rate-limit pacing, 413 splitting,
+          // and archive-time mention resolution) lives in channelArchiver.js. app.js stays a router.
           setTimeout(async () => {
             try {
               const { archiveChannels } = await import('./channelArchiver.js');
-              await archiveChannels(channels, invokedChannelId, { interactionToken, applicationId });
+              await archiveChannels(channels, invokedChannelId, { interactionToken, applicationId, client, guildId });
             } catch (err) {
               console.error('❌ archiveChannels fatal:', err);
             }
