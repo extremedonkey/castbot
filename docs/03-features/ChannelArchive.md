@@ -13,7 +13,7 @@
 
 A popular host (whom Reece helps) reuses the **same Discord server season after season**, creating **300+ channels per season × ~6 seasons/year**. Discord caps a guild at **500 channels**, so the server fills up. The long-term goal is to free channel slots by exporting a channel's full history, storing it permanently, and (eventually) deleting the original.
 
-**What ships today:** an admin selects a channel *or a whole category*, confirms, and the bot fetches every message via REST, renders a self-contained Discord-styled HTML file, and posts it back into the invoking channel as a downloadable attachment plus a "View Online" link button. Categories are expanded and archived channel-by-channel in one background pass.
+**What ships today:** an admin **multi-selects** any mix of channels and/or categories (up to 25 picks), confirms, and the bot fetches every message via REST, renders a self-contained Discord-styled HTML file, and posts it back into the invoking channel as a downloadable attachment plus a "View #channel Online" link button. Categories are expanded to their text channels, the combined set is de-duped, and everything is archived channel-by-channel in one background pass.
 
 **What it does NOT do yet:** it does not delete the original channel, and it does not move archives into a dedicated storage/index channel. So it produces archives but does not yet *reclaim* slots — see [Not Yet Built](#-not-yet-built).
 
@@ -41,12 +41,9 @@ A popular host (whom Reece helps) reuses the **same Discord server season after 
 
 ```mermaid
 flowchart TD
-  A["data_admin menu<br/>🧹 Archive Channels button"] -->|archive_channel| B["Channel/Category select (type 8)<br/>+ time & intent warning"]
-  B -->|archive_channel_select| C{"Category?"}
-  C -->|"yes (type 4)"| D["Expand to child text/announcement channels<br/>sorted by position"]
-  C -->|no| E["Single channel"]
-  D --> F["Confirmation screen<br/>channel list (≤20) + est. time<br/>📦 Archive (danger) / ← Back"]
-  E --> F
+  A["data_admin menu<br/>🧹 Archive Channels button"] -->|archive_channel| B["Multi-select channel/category (type 8)<br/>max_values 25 + time & intent warning"]
+  B -->|archive_channel_select| C["expandArchiveSelection:<br/>per pick → category expands to children,<br/>channel adds itself; dedupe by id"]
+  C --> F["Confirmation screen<br/>N channels + (categories expanded) + est. time<br/>📦 Archive (danger) / ← Back"]
   F -->|archive_confirm| G["Green 'Archiving…' ack<br/>(immediate, deferred)"]
   G --> H["setTimeout(0) background loop<br/>per channel"]
   H --> I["Fetch all messages (REST, paced)"]
@@ -56,13 +53,14 @@ flowchart TD
   L --> M["POST 'View Online' link button"]
 ```
 
-1. **`archive_channel`** (`updateMessage: true`) — renders a **channel/category select** (type 8, `channel_types: [0, 4, 5]` = Text + Category + Announcement) with the warning:
-   > ⚠️ Large channels take time (~1 min per 3,000 messages — a 13k channel ≈ 4 min). Requires the **Message Content Intent** to be enabled, or message text will be blank.
+1. **`archive_channel`** (`updateMessage: true`) — renders a **multi-select channel/category select** (type 8, `channel_types: [0, 4, 5]` = Text + Category + Announcement, `min_values: 1`, `max_values: 25`) with the warning:
+   > ⚠️ Large/many channels take time (~1 min per 3,000 messages). Pick up to 25 items. Requires the **Message Content Intent** enabled, or message text will be blank.
 2. **`archive_channel_select`** (`deferred: true`, `updateMessage: true`) —
-   - Fetches the selection. If it's a **category (type 4)**, expands to all child text/announcement channels (types `0`, `5`) sorted by `position`; otherwise wraps the single channel in an array.
+   - Resolves the guild's full channel list **once** — from the bot's `guild.channels.cache` (zero REST) with a single `GET guilds/{id}/channels` fallback if the cache is cold.
+   - Calls the pure `expandArchiveSelection(selectedIds, allChannels, resolved)` (in `channelArchiver.js`): for each picked id, a **category (type 4)** expands to its child text/announcement channels (`0`/`5`, sorted by `position`); a channel adds itself. Results are **de-duped by id** (a `Map`), so picking a category *and* a channel inside it won't archive it twice. Selected-item types come from `req.body.data.resolved.channels` — no per-item fetch.
    - Stashes `{ channels, invokedChannelId }` in `global.pendingArchive` keyed by `${guildId}:${userId}`.
-   - Renders a **confirmation screen**: channel list (up to 20, with overflow count), estimated time (`1–5 min` single / `N×1–N×5 min` for N channels), a red **📦 Archive** button (style 4), and **← Back**.
-   - Edge case: empty category → orange "No text channels found" with a back button.
+   - Renders a **confirmation screen**: total count + `(incl. N categories expanded)` note, channel list (up to 20, with overflow count), estimated time (`1–5 min` single / `N×1–N×5 min` for N channels), a red **📦 Archive** button (style 4), and **← Back**.
+   - Edge case: nothing resolvable (e.g. only empty categories) → orange "No text channels found in your selection" with a back button.
 3. **`archive_confirm`** (`deferred: true`, `updateMessage: true`) —
    - Pops the stashed state (deletes the map entry). If missing → red "Session expired — please start over."
    - Returns an **immediate green "📦 Archiving…" ack** with a ← Data button.
@@ -109,7 +107,8 @@ Errors are caught per-channel: a red error message is posted to the channel and 
 ## 🧩 Modules
 
 ### `channelArchiver.js` — background run orchestrator
-`archiveChannels(channels, invokedChannelId)` — the whole per-channel loop (fetch → render → size-split → paced POST file → resolve CDN → paced POST button), per-channel error reporting, and the final run summary. Extracted from `app.js` so the router stays thin. Pure-ish glue; the rate-limit primitives it uses are unit-tested in the fetcher.
+`archiveChannels(channels, invokedChannelId, { interactionToken, applicationId, client, guildId })` — the whole per-channel loop (fetch → render → size-split → paced POST file → resolve CDN → paced POST button), per-channel error reporting, mention-resolver setup, and the final ephemeral run summary. Extracted from `app.js` so the router stays thin.
+- **`expandArchiveSelection(selectedIds, allChannels, resolved)`** — pure, unit-tested helper for the multi-select: expands categories, dedupes by id, returns `{ channels, categoryCount }`. Used by `archive_channel_select`.
 
 ### `channelExportFetcher.js` — rate-limited REST (read **and** write)
 - **`fetchAllChannelMessages(channelId, { onProgress, maxConsecutive429 = 10 })`** — read path. Header-driven pacing via pure, unit-tested `computeRateLimitDelay({ remaining, resetAfter })`: bursts the per-channel request budget, then sleeps `reset-after` (+150ms buffer) when exhausted. **429 backstop:** reads `retry_after`, sleeps, retries the *same* cursor; aborts after 10 consecutive 429s (Discord's invalid-request ceiling is 10,000 × 401/403/429 per 10 min → temporary Cloudflare IP ban, so it never blind-retries). Returns `{ messages, total429, batches }`, oldest-first.

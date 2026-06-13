@@ -25,6 +25,38 @@ const EPHEMERAL = 1 << 6;
 // Stay comfortably under Discord's base upload cap (~10 MiB at boost level 0).
 const SAFE_UPLOAD_BYTES = 9 * 1024 * 1024;
 
+/**
+ * Expand an archive multi-selection into a flat, de-duplicated list of channels.
+ * Pure function — unit tested in tests/channelArchiver.test.js.
+ *
+ * @param {string[]} selectedIds - the channel/category IDs picked in the select
+ * @param {Array<{id,name,type,parent_id,position}>} allChannels - the guild's channels
+ *   (from the bot cache or one REST call), normalized to these fields
+ * @param {object} [resolved] - req.body.data.resolved.channels (fallback for selected items)
+ * @returns {{channels: Array<{id,name}>, categoryCount: number}}
+ *   channels de-duped by id (category + a child inside it won't archive twice)
+ */
+export function expandArchiveSelection(selectedIds, allChannels, resolved = {}) {
+  const byId = new Map((allChannels || []).map(c => [c.id, c]));
+  const childrenOf = (catId) => (allChannels || [])
+    .filter(c => c.parent_id === catId && [0, 5].includes(c.type))
+    .sort((a, b) => (a.position || 0) - (b.position || 0));
+
+  const picked = new Map(); // id → {id, name} — Map gives us dedupe + insertion order
+  let categoryCount = 0;
+  for (const id of (selectedIds || [])) {
+    const ch = byId.get(id) || resolved[id];
+    if (!ch) continue;
+    if (ch.type === 4) { // category → expand to its text/announcement children
+      categoryCount++;
+      for (const kid of childrenOf(id)) picked.set(kid.id, { id: kid.id, name: kid.name });
+    } else if ([0, 5].includes(ch.type)) { // text / announcement channel
+      picked.set(ch.id, { id: ch.id, name: ch.name });
+    }
+  }
+  return { channels: [...picked.values()], categoryCount };
+}
+
 /** Recursively find the resolved CDN URL inside a type-13 (File) component tree. */
 function findType13Url(comps) {
   for (const c of (comps || [])) {

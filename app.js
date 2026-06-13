@@ -36881,15 +36881,15 @@ Your server is now ready for Tycoons gameplay!`;
               type: 17,
               accent_color: 0x3498db,
               components: [
-                { type: 10, content: `## 🧹 Archive Channels\n\nSelect a channel to archive its full message history as a styled HTML file.\n\n-# ⚠️ Large channels take time (~1 min per 3,000 messages — a 13k channel ≈ 4 min). Requires the **Message Content Intent** to be enabled, or message text will be blank.` },
+                { type: 10, content: `## 🧹 Archive Channels\n\nSelect one or more channels and/or categories to archive their full message history as styled HTML files. Categories are expanded to all their text channels.\n\n-# ⚠️ Large/many channels take time (~1 min per 3,000 messages). Pick up to 25 items. Requires the **Message Content Intent** enabled, or message text will be blank.` },
                 { type: 14 },
                 { type: 1, components: [{
                   type: 8, // Channel Select
                   custom_id: 'archive_channel_select',
-                  placeholder: 'Select a channel or category...',
+                  placeholder: 'Select channels and/or categories...',
                   channel_types: [0, 4, 5], // Text + Category + Announcement
                   min_values: 1,
-                  max_values: 1
+                  max_values: 25 // multi-select (Discord cap); categories expand to many more
                 }]},
                 { type: 14 },
                 { type: 1, components: [{ type: 2, style: 2, label: '← Back', custom_id: 'data_admin' }] }
@@ -36906,25 +36906,25 @@ Your server is now ready for Tycoons gameplay!`;
         deferred: true,
         handler: async (context) => {
           const { guildId, userId } = context;
-          const selectedId = req.body.data.values?.[0];
+          const selectedIds = req.body.data.values || [];
           const invokedChannelId = req.body.channel?.id || req.body.channel_id;
 
-          // Fetch selected channel/category info
-          const chanData = await DiscordRequest(`channels/${selectedId}`, { method: 'GET' });
-          let channels = [];
-          let selectionLabel = '';
-
-          if (chanData?.type === 4) {
-            // Category: expand to child text/announcement channels
-            const allChannels = await DiscordRequest(`guilds/${guildId}/channels`, { method: 'GET' });
-            channels = (allChannels || [])
-              .filter(c => c.parent_id === selectedId && [0, 5].includes(c.type))
-              .sort((a, b) => (a.position || 0) - (b.position || 0));
-            selectionLabel = `📁 **${chanData.name}** — ${channels.length} channel${channels.length !== 1 ? 's' : ''}`;
+          // Resolve the full channel list ONCE: bot cache (zero REST) → fallback to one REST call.
+          const guild = client?.guilds?.cache?.get(guildId);
+          let allChannels;
+          if (guild && guild.channels.cache.size > 0) {
+            allChannels = [...guild.channels.cache.values()].map(c => ({
+              id: c.id, name: c.name, type: c.type, parent_id: c.parentId || null, position: c.rawPosition ?? 0
+            }));
           } else {
-            channels = [chanData];
-            selectionLabel = `📄 **#${chanData.name}**`;
+            allChannels = (await DiscordRequest(`guilds/${guildId}/channels`, { method: 'GET' })) || [];
           }
+
+          // Expand categories + dedupe (pure, tested). Selected item types come from resolved.channels.
+          const { expandArchiveSelection } = await import('./channelArchiver.js');
+          const { channels, categoryCount } = expandArchiveSelection(
+            selectedIds, allChannels, req.body.data.resolved?.channels || {}
+          );
 
           if (channels.length === 0) {
             return {
@@ -36932,7 +36932,7 @@ Your server is now ready for Tycoons gameplay!`;
                 type: 17,
                 accent_color: 0xe67e22,
                 components: [
-                  { type: 10, content: `## 🧹 Archive Channels\n\n⚠️ No text channels found in that category.` },
+                  { type: 10, content: `## 🧹 Archive Channels\n\n⚠️ No text channels found in your selection.` },
                   { type: 14 },
                   { type: 1, components: [{ type: 2, style: 2, label: '← Back', custom_id: 'archive_channel' }] }
                 ]
@@ -36949,13 +36949,14 @@ Your server is now ready for Tycoons gameplay!`;
           const channelList = displayChannels.map(c => `- #${c.name}`).join('\n');
           const overflow = channels.length > 20 ? `\n-# ...and ${channels.length - 20} more` : '';
           const estMin = channels.length === 1 ? '1–5 min' : `${channels.length * 1}–${channels.length * 5} min`;
+          const catNote = categoryCount > 0 ? ` (incl. ${categoryCount} categor${categoryCount !== 1 ? 'ies' : 'y'} expanded)` : '';
 
           return {
             components: [{
               type: 17,
               accent_color: 0x3498db,
               components: [
-                { type: 10, content: `## 🧹 Archive Channels\n\n${selectionLabel}\n\n${channelList}${overflow}\n\n-# ⏱️ Estimated time: ${estMin} (varies by message count)` },
+                { type: 10, content: `## 🧹 Archive Channels\n\n**${channels.length} channel${channels.length !== 1 ? 's' : ''}** will be archived${catNote}:\n\n${channelList}${overflow}\n\n-# ⏱️ Estimated time: ${estMin} (varies by message count)` },
                 { type: 14 },
                 { type: 1, components: [
                   { type: 2, style: 4, label: '📦 Archive', custom_id: 'archive_confirm' },
