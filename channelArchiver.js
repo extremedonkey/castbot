@@ -209,36 +209,36 @@ async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, pr
 }
 
 /**
- * Post the run summary as an EPHEMERAL interaction followup (only the invoking user
- * sees it) — the archives themselves are public by design, but this status message is
- * not. Falls back to a public channel post if the interaction token is missing/expired
- * (tokens live ~15 min; a very long run could outlast it), so a run never ends silently.
+ * Post the run summary as an EPHEMERAL interaction followup (only the invoking user sees it).
+ * The archives themselves are public by design, but this status message must stay private —
+ * so it is NEVER posted publicly. If the ephemeral followup can't be sent (no token, or the
+ * interaction token expired because the run outlasted the ~15-min window), the summary is
+ * simply skipped and logged — the per-channel archive posts already show the result in-channel.
  */
-async function postSummary(container, { interactionToken, applicationId, post }) {
-  if (interactionToken && applicationId) {
-    try {
-      const res = await fetch(`https://discord.com/api/v10/webhooks/${applicationId}/${interactionToken}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ flags: IS_CV2 | EPHEMERAL, components: [container] })
-      });
-      if (res.ok) return;
-      const body = await res.text();
-      // 401 / code 50027 (Invalid Webhook Token) = the interaction token expired because the
-      // run outlasted the 15-min window. Expected on long runs — log as info (not an error, so
-      // the PM2 error logger ignores it) and fall back to a public summary post.
-      if (res.status === 401) {
-        console.log(`ℹ️ Archive summary: interaction token expired (long run) — posting summary publicly instead.`);
-      } else {
-        console.error(`⚠️ Ephemeral summary followup failed: ${res.status} ${body} — falling back to public post`);
-      }
-    } catch (err) {
-      console.error(`⚠️ Ephemeral summary followup error: ${err.message} — falling back to public post`);
-    }
+async function postSummary(container, { interactionToken, applicationId }) {
+  if (!interactionToken || !applicationId) {
+    console.log('ℹ️ Archive summary skipped — no interaction token (kept private, not posted publicly).');
+    return;
   }
   try {
-    await post({ body: JSON.stringify({ flags: IS_CV2, components: [container] }), headers: { 'Content-Type': 'application/json' } });
-  } catch { /* summary is best-effort */ }
+    const res = await fetch(`https://discord.com/api/v10/webhooks/${applicationId}/${interactionToken}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ flags: IS_CV2 | EPHEMERAL, components: [container] })
+    });
+    if (res.ok) return;
+    const body = await res.text();
+    // 401 / code 50027 (Invalid Webhook Token) = the token expired because the run outlasted
+    // the 15-min window. Expected on long runs — log as info (not an error) and skip; we do NOT
+    // fall back to a public post, since this message is meant to be ephemeral-only.
+    if (res.status === 401) {
+      console.log('ℹ️ Archive summary skipped — interaction token expired on a long run (archives are posted in-channel above).');
+    } else {
+      console.error(`⚠️ Archive summary followup failed: ${res.status} ${body} — skipped (kept private).`);
+    }
+  } catch (err) {
+    console.error(`⚠️ Archive summary followup error: ${err.message} — skipped (kept private).`);
+  }
 }
 
 /**
@@ -320,7 +320,7 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
       accent_color: failed ? 0xe67e22 : 0x2ecc71,
       components: [{ type: 10, content: `## ${failed ? '⚠️' : '✅'} Archive run complete\n${succeeded} archived${failed ? `, ${failed} failed` : ''} (of ${channels.length}).` }]
     };
-    await postSummary(summaryContainer, { interactionToken, applicationId, post });
+    await postSummary(summaryContainer, { interactionToken, applicationId });
   }
 
   console.log(`🏁 Archive run done: ${succeeded} ok, ${failed} failed (of ${channels.length})`);
