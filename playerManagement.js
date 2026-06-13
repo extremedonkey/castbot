@@ -161,11 +161,34 @@ export async function createPlayerDisplaySection(player, playerData, guildId) {
     }
   };
 
-  // Override the card's name line (line 1) with a clickable user mention + tribe role tag(s).
-  // e.g. "<@userId> (<@&tribeRoleId>)". Player-menu only — castlist cards are unaffected.
+  // Build the safari stats line: currencyEmoji XX • inventoryEmoji X • 📍 location
+  // Currency + item count always shown; 📍 location only if the player is initialized & on the map.
+  let statsLine = '';
+  try {
+    const ct = await getCustomTerms(guildId);
+    const sp = playerData[guildId]?.players?.[player.id]?.safari || {};
+    const currency = sp.currency ?? 0;
+    const inv = sp.inventory || {};
+    const itemTotal = Object.values(inv).reduce((sum, v) => sum + (typeof v === 'object' ? (v?.quantity || 0) : (v || 0)), 0);
+    const parts = [`${ct.currencyEmoji || '🪙'} ${currency}`, `${ct.inventoryEmoji || '🧰'} ${itemTotal}`];
+    if (sp.points !== undefined) { // initialized
+      const { loadSafariContent } = await import('./safariManager.js');
+      const safariData = await loadSafariContent();
+      const activeMapId = safariData[guildId]?.maps?.active;
+      const currentLocation = activeMapId ? sp.mapProgress?.[activeMapId]?.currentLocation : null;
+      if (currentLocation) parts.push(`📍 ${currentLocation}`);
+    }
+    statsLine = parts.join(' • ');
+  } catch (e) {
+    console.warn(`⚠️ createPlayerDisplaySection: could not build stats line for ${player.id}: ${e.message}`);
+  }
+
+  // Override the card's name line (line 1) with a clickable user mention + tribe role tag(s),
+  // and append the safari stats line below the vanity roles. Player-menu only — castlist cards unaffected.
   if (result.components?.[0]?.content) {
     const lines = result.components[0].content.split('\n');
     lines[0] = `**<@${userId}>${tribeTags ? ` (${tribeTags})` : ''}**`;
+    if (statsLine) lines.push(statsLine);
     result.components[0].content = lines.join('\n');
   }
 
