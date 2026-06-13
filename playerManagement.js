@@ -1399,7 +1399,7 @@ export async function createPlayerManagementUI(options) {
   if (!hideBottomButtons) {
     // Row 1: Castlists & Profile
     const row1 = buildSectionRow(
-      ['castlists', 'pronouns', 'timezone', 'age'],
+      ['castlists', 'pronouns', 'timezone', 'age', 'vanity'],
       targetUserId, activeCategory, visibility, mode
     );
     if (row1) {
@@ -1426,7 +1426,8 @@ export async function createPlayerManagementUI(options) {
 
     // Row 3: Advanced (conditional — hide if no buttons visible)
     // 'navigate' removed — superseded by the Map category's "Show Navigate Pane" option.
-    const row3Ids = ['attributes', 'commands', 'vanity'];
+    // 'vanity' moved to row 1 (Castlists & Profile) as the 5th button.
+    const row3Ids = ['attributes', 'commands'];
     const row3HasAny = row3Ids.some(id => visibility[id]?.show);
     if (row3HasAny) {
       const row3 = buildSectionRow(row3Ids, targetUserId, activeCategory, visibility, mode);
