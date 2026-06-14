@@ -122,10 +122,21 @@ flowchart TD
 
 ## ✅ Phased Plan
 
-- **Phase 0 — Prereqs (DONE 2026-06-14):** `sudo npm i -g @anthropic-ai/claude-code` → `claude` 2.1.177 at `/usr/bin/claude`. *Pending:* interactive headless login as `ubuntu` (Reece-driven, paste-code flow). On login → **Moai works** (no restart, no code change).
-- **Phase 1 — Basic remote dev (today):** `ssh castbot-blue` → `tmux new -s vibe` → `claude` in `/home/ubuntu/castbot`. Adopt commit-before-switch.
-- **Phase 2 — Mobile UX (later):** `claude remote-control`; optionally `mosh` + Tailscale.
-- **Phase 3 — Hardening:** ✅ **swapfile done (2026-06-15):** 2 GB `/swapfile`, persistent in `/etc/fstab`, `vm.swappiness=10` (`/etc/sysctl.d/99-swappiness.conf`). *Pending:* dirty-tree guard in the box pull path; optional `box-restart.sh` (`npm test && commit && push && pm2 restart castbot-pm` — test box already self-announces restarts).
+- **Phase 0 — Prereqs (DONE 2026-06-15):** `sudo npm i -g @anthropic-ai/claude-code` → `claude` 2.1.177 at `/usr/bin/claude`; interactive headless login complete → **Moai works** + Remote Control confirmed.
+- **Phase 1 — Basic remote dev (DONE):** `ssh castbot-blue` → `tmux attach -t vibe` → `claude` in `/home/ubuntu/castbot`.
+- **Phase 2 — Mobile UX:** Remote Control confirmed working. *Optional later:* `mosh` + Tailscale.
+- **Phase 3 — Hardening:**
+  - ✅ **Swapfile (2026-06-15):** 2 GB `/swapfile`, persistent in `/etc/fstab`, `vm.swappiness=10` (`/etc/sysctl.d/99-swappiness.conf`).
+  - ✅ **`box-restart.sh` (2026-06-15):** box-side twin of `dev-restart.sh` (commit → pull --rebase → push → tests → `pm2 restart castbot-pm`).
+  - ✅ **Enforcement hooks (2026-06-15):** registered in `.claude/settings.local.json` (committed + deployed), both path-gated to `/home/ubuntu/*` so they no-op on the laptop:
+    - `box-session-sync.sh` (**SessionStart**) — auto `pull --rebase` when the box tree is clean.
+    - `check-box-clean.sh` (**Stop**) — blocks finishing with uncommitted tracked changes; tells Claude to run `box-restart.sh`. Loop-guarded + fail-open.
+  - ✅ **`dev-restart.sh` auto-stash backstop (2026-06-15):** stashes a dirty *tracked* box tree before its deploy-pull.
+  - 🔴 **PENDING — box push auth (the one remaining gap):** the box's remote is HTTPS with no creds (`fatal: could not read Username`), so `box-restart.sh`'s push can't reach GitHub. **An ed25519 deploy key is generated at `/home/ubuntu/.ssh/github-castbot.pub`** — Reece must add it to the repo as a **write-enabled deploy key** (GitHub → repo → Settings → Deploy keys → Add → paste → ✅ *Allow write access*), then flip the remote to SSH (`git remote set-url origin git@github.com:extremedonkey/castbot.git`) + configure SSH to use the key. Until then box-Claude commits land locally and must be rescued via the laptop (see below). Do NOT flip the remote before the key is added — it would break the working HTTPS *fetch* the deploy path relies on.
+
+## 🧪 Live Validation (2026-06-15)
+
+The two-tree problem fired for real during this very rollout: commit `71d8c8cd` ("Fix restart notification time… GMT+8") had been made **directly on castbot-blue** in an earlier session and was stranded (no push creds), so the laptop's deploy hit *"divergent branches."* Rescued by fetching the box over SSH, cherry-picking onto `main` (dropping an accidental 569 KB temp jpg), pushing from the laptop, then `git reset --hard origin/main` on the box. This is exactly the failure the enforcement above prevents — and proof the push-auth gap is real, not theoretical.
 
 ---
 
