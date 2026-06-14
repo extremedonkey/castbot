@@ -16,7 +16,7 @@
  */
 import FormData from 'form-data';
 import fetch from 'node-fetch';
-import { fetchAllChannelMessages, createMessagePoster } from './channelExportFetcher.js';
+import { fetchAllChannelMessages, createMessagePoster, fetchGuildActiveThreads, fetchChannelThreads } from './channelExportFetcher.js';
 import { generateExportHTML } from './channelExport.js';
 import { getBotEmoji } from './botEmojis.js';
 
@@ -152,14 +152,17 @@ export function setLinkButtonUrl(components, newUrl) {
 }
 
 /** Build the Components V2 container that wraps the archive file. */
-function buildContainer(displayName, count, cbEmojiStr, filename, nowUnix, firstUnix, lastUnix) {
+function buildContainer(displayName, count, cbEmojiStr, filename, nowUnix, firstUnix, lastUnix, threads = []) {
+  const threadCount = threads.length;
+  const threadMsgCount = threads.reduce((n, t) => n + (t.messages?.length || 0), 0);
+  const threadLine = threadCount > 0 ? `\n🧵 Threads: **${threadCount}** (${threadMsgCount} messages)` : '';
   return {
     type: 17,
     accent_color: 0x3498db,
     components: [
       { type: 10, content: `## 📂 #${displayName}\n-# ${cbEmojiStr} CastBot Archive` },
       { type: 14 },
-      { type: 10, content: `✉️ Number of Messages: **${count}**\n🗂️ Archive date: <t:${nowUnix}:F>\n📅 First message: <t:${firstUnix}:F>\n📅 Last message: <t:${lastUnix}:F>` },
+      { type: 10, content: `✉️ Number of Messages: **${count}**\n🗂️ Archive date: <t:${nowUnix}:F>\n📅 First message: <t:${firstUnix}:F>\n📅 Last message: <t:${lastUnix}:F>${threadLine}` },
       { type: 14 },
       { type: 10, content: `## 🔍 Viewing the archive` },
       { type: 13, file: { url: `attachment://${filename}` } },
@@ -173,9 +176,9 @@ function buildContainer(displayName, count, cbEmojiStr, filename, nowUnix, first
  * Both POSTs go through the paced/retrying `post`. Throws on a non-recoverable file
  * POST failure so the caller can report it (no silent skips).
  */
-async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, precomputedHtml, resolver) {
+async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, precomputedHtml, resolver, threads = []) {
   const displayName = partLabel ? `${channelName} (Part ${partLabel.i}/${partLabel.n})` : channelName;
-  const html = precomputedHtml ?? generateExportHTML(displayName, msgs, resolver);
+  const html = precomputedHtml ?? generateExportHTML(displayName, msgs, resolver, threads);
   const today = new Date().toISOString().slice(0, 10);
   const filename = `${channelName}-export-${today}${partLabel ? `-part${partLabel.i}` : ''}.html`;
   const fileBuffer = Buffer.from(html, 'utf-8');
@@ -185,7 +188,7 @@ async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, pr
   const firstUnix = msgs.length ? toUnix(msgs[0].timestamp) : nowUnix;
   const lastUnix = msgs.length ? toUnix(msgs[msgs.length - 1].timestamp) : nowUnix;
 
-  const container = buildContainer(displayName, msgs.length, cbEmojiStr, filename, nowUnix, firstUnix, lastUnix);
+  const container = buildContainer(displayName, msgs.length, cbEmojiStr, filename, nowUnix, firstUnix, lastUnix, threads);
 
   // POST 1 — multipart file + container
   const form = new FormData();
@@ -306,6 +309,10 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
     console.warn(`⚠️ No guild in cache for ${guildId} — role/channel mentions will fall back to generic labels`);
   }
 
+  // Guild active threads — fetched once and reused across all channels in this run.
+  let activeThreads = [];
+  if (guild) { try { activeThreads = await fetchGuildActiveThreads(guildId); } catch (e) { console.warn(`⚠️ active threads fetch failed: ${e.message}`); } }
+
   let succeeded = 0;
   let failed = 0;
 
@@ -318,20 +325,42 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
       });
       console.log(`📥 Fetch complete: ${messages.length} messages in ${batches} batches (${total429} rate-limit waits)`);
 
+      // Discover + fetch this channel's threads (active + public/private archived). Each thread
+      // is a channel → reuse fetchAllChannelMessages. Render-only (not restored).
+      let threads = [];
+      try {
+        const threadChannels = await fetchChannelThreads(channel.id, { activeThreads });
+        for (const tc of threadChannels) {
+          const tr = await fetchAllChannelMessages(tc.id, {});
+          threads.push({ id: tc.id, name: tc.name, messages: tr.messages });
+        }
+        if (threads.length) {
+          const tMsgs = threads.reduce((n, t) => n + t.messages.length, 0);
+          console.log(`  🧵 ${threads.length} thread(s), ${tMsgs} messages`);
+        }
+      } catch (e) {
+        console.warn(`⚠️ thread fetch failed for #${channel.name}: ${e.message}`);
+      }
+
       // Generate once to size; single message if it fits, else split into parts under the cap.
-      const fullHtml = generateExportHTML(channel.name, messages, resolver);
+      const fullHtml = generateExportHTML(channel.name, messages, resolver, threads);
       const fullBytes = Buffer.byteLength(fullHtml, 'utf-8');
 
       if (fullBytes <= SAFE_UPLOAD_BYTES || messages.length <= 1) {
-        await postOneArchive(post, channel.name, messages, cbEmojiStr, null, fullHtml, resolver);
+        await postOneArchive(post, channel.name, messages, cbEmojiStr, null, fullHtml, resolver, threads);
       } else {
         const parts = Math.ceil(fullBytes / SAFE_UPLOAD_BYTES);
         const perChunk = Math.ceil(messages.length / parts);
         console.log(`  ✂️ #${channel.name} is ${(fullBytes / 1048576).toFixed(1)} MB — splitting into ${parts} parts`);
+        const parentIds = new Set(messages.map(m => m.id));
+        const orphanThreads = threads.filter(t => !parentIds.has(t.id)); // parent not in any slice → last part
         for (let i = 0; i < parts; i++) {
           const slice = messages.slice(i * perChunk, (i + 1) * perChunk);
           if (!slice.length) break;
-          await postOneArchive(post, channel.name, slice, cbEmojiStr, { i: i + 1, n: parts }, undefined, resolver);
+          const sliceIds = new Set(slice.map(m => m.id));
+          let sliceThreads = threads.filter(t => sliceIds.has(t.id));
+          if (i === parts - 1) sliceThreads = sliceThreads.concat(orphanThreads);
+          await postOneArchive(post, channel.name, slice, cbEmojiStr, { i: i + 1, n: parts }, undefined, resolver, sliceThreads);
         }
       }
       succeeded++;

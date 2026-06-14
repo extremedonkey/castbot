@@ -85,6 +85,20 @@ Errors are caught per-channel: a red error message is posted to the channel and 
 
 ---
 
+## 🧵 Threads
+
+Threads are **separate channels**, so `GET /channels/{id}/messages` never includes them — the original export silently dropped all thread content (e.g. the S13/S14 graphics award threads). Now captured:
+
+**Discovery** (`channelExportFetcher.js`): `fetchGuildActiveThreads(guildId)` runs **once per run** (guild-wide active threads, filtered by `parent_id`); `fetchChannelThreads(channelId, { activeThreads })` adds **public archived** (paginated on `has_more`, cursor = `thread_metadata.archive_timestamp`) and **private archived** (skipped gracefully with an `ℹ️` log if the bot lacks `MANAGE_THREADS`), deduped by id. Each thread is itself a channel, so `fetchAllChannelMessages(thread.id)` fetches its messages (same per-channel paced bucket).
+
+**Rendering** (`channelExport.js`): a thread attaches under the message that started it — **`thread.id === the source message's id`** ([Discord docs](https://docs.discord.com/developers/resources/channel)). It renders as a **Discord-style collapsible card** (native `<details>`, collapsed by default): `🧵 {name} · N messages`, expanding to the thread's messages (same renderer, indented with a left accent border). Threads whose parent message isn't in the export → a trailing **🧵 Threads** section. Search **auto-expands** any collapsed thread containing a match. Every `.msg` now carries `data-mid="{id}"` (anchoring + future deep-links).
+
+**Metadata:** the archive post adds a `🧵 Threads: N (M messages)` line when present.
+
+**Caveats:** thread-heavy channels add many paced GETs (one discovery pass + one message-fetch per thread) → noticeably longer runs. On split (>9MB) archives, each thread rides with the part containing its parent message; orphans go to the last part. **Threads are render-only** — they are *not* in the restore embed, so **Unarchive does not recreate threads** (out of scope for now).
+
+---
+
 ## ⚡ Write-Path Rate Limits
 
 > **Refined assumption (2026-06-13).** The original design assumed the bottleneck was the **read** path (`GET …/messages`) and paced *that*. In practice reads were never the problem — live runs show "0 rate-limit waits" on fetch. The bottleneck is the **write** path: posting archives back into the invoking channel.
@@ -115,12 +129,15 @@ Errors are caught per-channel: a red error message is posted to the channel and 
 ### `channelExportFetcher.js` — rate-limited REST (read **and** write)
 - **`fetchAllChannelMessages(channelId, { onProgress, maxConsecutive429 = 10 })`** — read path. Header-driven pacing via pure, unit-tested `computeRateLimitDelay({ remaining, resetAfter })`: bursts the per-channel request budget, then sleeps `reset-after` (+150ms buffer) when exhausted. **429 backstop:** reads `retry_after`, sleeps, retries the *same* cursor; aborts after 10 consecutive 429s (Discord's invalid-request ceiling is 10,000 × 401/403/429 per 10 min → temporary Cloudflare IP ban, so it never blind-retries). Returns `{ messages, total429, batches }`, oldest-first.
 - **`createMessagePoster(channelId, { maxRetries = 8 })`** — write path. Returns a bound poster that paces from response headers and transparently retries 429s (pure, unit-tested `computePostPacing()`). Handles both multipart (FormData) and JSON bodies; caller passes content headers only, the poster adds `Authorization`. See [Write-Path Rate Limits](#-write-path-rate-limits).
+- **`fetchGuildActiveThreads(guildId)`** / **`fetchChannelThreads(channelId, { activeThreads })`** — thread discovery (active + public/private archived, paginated, deduped). See [Threads](#-threads).
 
 **Empirically measured** (CastBot-Dev, 2026-06-04): `GET /channels/{id}/messages?limit=100` → per-channel bucket, **limit 5 / window ≈5s**, sustainable ≈1 req/s, 429 `retry_after` ≈0.357s, scope `user`. Paced at the header rate, **zero 429s** across the test runs. The live archive in prod logs (2026-06-13) fetched a 2,721-message channel in 28 batches with **0 rate-limit waits**.
 
 ### `channelExport.js` — HTML generator
-`generateExportHTML(channelName, messages, resolver)` → a single self-contained HTML document (all CSS inline, no external deps), Discord dark-theme styled, with a client-side search bar, author/avatar rendering, message grouping (same author within 7 min), date separators, embeds, image/file attachments, and reactions.
+`generateExportHTML(channelName, messages, resolver, threads)` → a single self-contained HTML document (all CSS inline, no external deps), Discord dark-theme styled, with a client-side search bar, author/avatar rendering, message grouping (same author within 7 min), date separators, embeds, image/file attachments, reactions, and **threads** (collapsible cards).
 
+- **`renderMessageList(messages, ctx, threadsByParentId?, restoreSink?)`** — shared message renderer used for the channel body **and** each thread's contents; attaches a thread collapsible after its parent message.
+- **`partitionThreads(messages, threads)`** (pure, tested) — splits threads into `{ byParentId, orphans }` by `thread.id === message.id`.
 - **`extractComponentText(components)`** walks the Components V2 tree (type-10 Text Display + type-2 Button labels, recursing into containers/sections/action-rows and Section accessories) so **CastBot's own messages render** — their text lives in `components`, not `content`, and would otherwise show `[no content]`.
 - **`renderContent(text, ctx)` / `renderInline(text, ctx)`** — a small Discord-flavoured markdown renderer (replaced the old `markdownToHtml`). Handles bold/italic/underline/strike/inline-code/URLs, **fenced code blocks**, **headings/blockquotes/lists**, **spoilers** (`||…||`, click/hover to reveal), **custom emoji** (`<:name:id>` → CDN `<img>`), **timestamps** (`<t:unix:style>`), and **mentions** (see below). HTML-token outputs are stashed behind `\x00`/`\x01` sentinels before escaping and restored after — chosen specifically so bare digits in real text (e.g. "Top 5 players", code-block contents) can't collide with placeholders.
 

@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { generateExportHTML } from '../channelExport.js';
+import { generateExportHTML, partitionThreads } from '../channelExport.js';
 
 // Render a single message's content and return the generated HTML.
 function render(content, { mentions = [], resolver = {} } = {}) {
@@ -93,5 +93,56 @@ describe('channelExport — no placeholder/digit corruption', () => {
   it('escapes HTML in plain content', () => {
     const html = render('a < b & c > d');
     assert.match(html, /a &lt; b &amp; c &gt; d/);
+  });
+});
+
+describe('channelExport — partitionThreads', () => {
+  const messages = [{ id: '100' }, { id: '200' }];
+  it('attaches a thread to its parent message (thread.id === message.id)', () => {
+    const { byParentId, orphans } = partitionThreads(messages, [{ id: '100', name: 'T', messages: [] }]);
+    assert.equal(byParentId.get('100')?.name, 'T');
+    assert.deepEqual(orphans, []);
+  });
+  it('treats a thread with no matching parent as an orphan', () => {
+    const { byParentId, orphans } = partitionThreads(messages, [{ id: '999', name: 'Orphan', messages: [] }]);
+    assert.equal(byParentId.size, 0);
+    assert.equal(orphans[0].name, 'Orphan');
+  });
+  it('dedupes threads by id', () => {
+    const { byParentId } = partitionThreads(messages, [{ id: '100', name: 'A' }, { id: '100', name: 'B' }]);
+    assert.equal(byParentId.size, 1);
+    assert.equal(byParentId.get('100').name, 'A'); // first wins
+  });
+  it('handles empty/undefined threads', () => {
+    assert.equal(partitionThreads(messages, []).orphans.length, 0);
+    assert.equal(partitionThreads(messages, undefined).orphans.length, 0);
+  });
+});
+
+describe('channelExport — thread rendering', () => {
+  const parent = { id: '500', author: { id: '1', username: 'A' }, timestamp: '2026-06-13T12:00:00Z', content: 'parent msg' };
+  const thread = {
+    id: '500', name: 'S14 AWARD GRAPHICS',
+    messages: [{ id: '501', author: { id: '2', username: 'Red' }, timestamp: '2026-06-13T13:00:00Z', content: 'HOGUE wins' }],
+  };
+
+  it('renders an attached thread as a collapsible card with name + count', () => {
+    const html = generateExportHTML('graphics', [parent], {}, [thread]);
+    assert.match(html, /<details class="thread" data-tid="500">/);
+    assert.match(html, /S14 AWARD GRAPHICS/);
+    assert.match(html, /1 message<\/span>/);
+    assert.match(html, /HOGUE wins/);          // thread content present
+    assert.match(html, /data-mid="501"/);      // thread message carries its id
+  });
+
+  it('puts a thread with no parent in the orphan Threads section', () => {
+    const html = generateExportHTML('graphics', [{ id: '999', author: { id: '1', username: 'A' }, timestamp: '2026-06-13T12:00:00Z', content: 'x' }], {}, [thread]);
+    assert.match(html, /🧵 Threads<\/span>/);   // orphan section header
+    assert.match(html, /HOGUE wins/);
+  });
+
+  it('adds data-mid to top-level messages', () => {
+    const html = generateExportHTML('graphics', [parent], {}, []);
+    assert.match(html, /data-mid="500"/);
   });
 });

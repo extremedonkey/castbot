@@ -187,3 +187,66 @@ export async function fetchAllChannelMessages(channelId, { onProgress, maxConsec
   all.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
   return { messages: all, total429, batches };
 }
+
+/**
+ * List ALL active threads in a guild (one call per archive run).
+ * GET /guilds/{guildId}/threads/active → returns the raw `threads` array (filter by parent_id).
+ */
+export async function fetchGuildActiveThreads(guildId) {
+  const token = process.env.DISCORD_TOKEN;
+  if (!token) throw new Error('DISCORD_TOKEN not set');
+  const res = await fetch(`${BASE}/guilds/${guildId}/threads/active`, { headers: { Authorization: `Bot ${token}` } });
+  if (!res.ok) { console.warn(`⚠️ active threads fetch ${res.status} for guild ${guildId}`); return []; }
+  const body = await res.json().catch(() => ({}));
+  return Array.isArray(body.threads) ? body.threads : [];
+}
+
+/**
+ * Discover all threads belonging to a channel: active (from the guild list) + public archived
+ * + private archived (skipped gracefully without Manage Threads). Deduped by thread id.
+ * Each thread is itself a channel — fetch its messages with fetchAllChannelMessages(thread.id).
+ *
+ * @param {string} channelId
+ * @param {object} [opts]
+ * @param {string} [opts.guildId]
+ * @param {Array}  [opts.activeThreads] - result of fetchGuildActiveThreads (reused across channels)
+ * @returns {Promise<Array>} thread channel objects ({ id, name, parent_id, thread_metadata, ... })
+ */
+export async function fetchChannelThreads(channelId, { activeThreads = [] } = {}) {
+  const token = process.env.DISCORD_TOKEN;
+  if (!token) throw new Error('DISCORD_TOKEN not set');
+  const byId = new Map();
+  for (const t of activeThreads) if (t?.parent_id === channelId) byId.set(t.id, t);
+
+  const listArchived = async (kind) => {
+    let before = null;
+    for (let guard = 0; guard < 50; guard++) {
+      const params = new URLSearchParams({ limit: '100' });
+      if (before) params.set('before', before);
+      const res = await fetch(`${BASE}/channels/${channelId}/threads/archived/${kind}?${params}`, { headers: { Authorization: `Bot ${token}` } });
+      if (res.status === 401 || res.status === 403) {
+        if (kind === 'private') console.log(`ℹ️ private threads skipped for ${channelId} (bot lacks Manage Threads)`);
+        return;
+      }
+      if (!res.ok) { console.warn(`⚠️ archived/${kind} threads ${res.status} for ${channelId}`); return; }
+      const body = await res.json().catch(() => ({}));
+      const threads = Array.isArray(body.threads) ? body.threads : [];
+      for (const t of threads) if (!byId.has(t.id)) byId.set(t.id, t);
+      if (!body.has_more || threads.length === 0) return;
+      before = threads[threads.length - 1]?.thread_metadata?.archive_timestamp || null;
+      if (!before) return;
+      // Light header-aware pacing between pages (low volume).
+      const remaining = parseInt(res.headers.get('x-ratelimit-remaining'), 10);
+      const resetAfter = parseFloat(res.headers.get('x-ratelimit-reset-after'));
+      const delay = computeRateLimitDelay({
+        remaining: Number.isNaN(remaining) ? null : remaining,
+        resetAfter: Number.isNaN(resetAfter) ? null : resetAfter,
+      });
+      if (delay > 0) await sleep(delay);
+    }
+  };
+
+  await listArchived('public');
+  await listArchived('private');
+  return [...byId.values()];
+}

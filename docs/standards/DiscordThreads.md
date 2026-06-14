@@ -2,11 +2,16 @@
 
 ## Overview
 
-Threads are **planned future features** for CastBot, already outlined in `discordMessenger.js` as "FUTURE FEATURE". Understanding Discord's thread system is essential for implementing application discussion threads, Safari event threads, and voting discussion threads.
+Threads are **mostly planned future features** for CastBot (application discussion threads, Safari event threads, voting discussion threads — outlined in `discordMessenger.js` as "FUTURE FEATURE").
 
-While not currently implemented, thread support will enhance CastBot's organizational capabilities and user experience for complex discussions.
+**✅ Implemented today — thread READING for Channel Archive.** The [Channel Archive](../03-features/ChannelArchive.md) feature discovers and reads a channel's threads and renders them in the export HTML as collapsible cards. The reusable thread-discovery helpers live in `channelExportFetcher.js`:
+- **`fetchGuildActiveThreads(guildId)`** → `GET /guilds/{guildId}/threads/active` (one call; filter by `parent_id`).
+- **`fetchChannelThreads(channelId, { activeThreads })`** → adds `GET /channels/{id}/threads/archived/public` and `…/private` (paginated on `has_more` via `thread_metadata.archive_timestamp`; private skipped gracefully without `MANAGE_THREADS`), deduped by id.
+- A thread is a channel, so `fetchAllChannelMessages(thread.id)` reads its messages. Key linkage: **`thread.id === the source message's id`**.
 
-**Source**: [Discord Developer Documentation - Threads](https://discord.com/developers/docs/topics/threads)
+Thread *creation/management* (the class below) remains unbuilt.
+
+**Source**: [Discord Developer Documentation - Threads](https://docs.discord.com/developers/topics/threads)
 
 ## 🚨 CRITICAL: CastBot Thread Vision
 
