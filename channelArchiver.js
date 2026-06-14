@@ -16,7 +16,7 @@
  */
 import FormData from 'form-data';
 import fetch from 'node-fetch';
-import { fetchAllChannelMessages, createMessagePoster, fetchGuildActiveThreads, fetchChannelThreads } from './channelExportFetcher.js';
+import { fetchAllChannelMessages, createMessagePoster, fetchGuildActiveThreads, fetchChannelThreads, fetchImageData } from './channelExportFetcher.js';
 import { generateExportHTML } from './channelExport.js';
 import { getBotEmoji } from './botEmojis.js';
 
@@ -31,8 +31,10 @@ const SAFE_UPLOAD_BYTES = 9 * 1024 * 1024;
  * (the select re-renders with a "coming soon" note and stays on Archive Only).
  */
 export const ARCHIVE_MODES = [
-  { value: 'archive_only', label: 'Archive Only', emoji: '📥', implemented: true,
-    description: 'Save channels/categories as HTML, posted in this channel' },
+  { value: 'archive_only', label: 'Archive', emoji: '📥', implemented: true,
+    description: 'Save as HTML (fast, small; image links expire ~24h)' },
+  { value: 'archive_embed', label: 'Archive (Self-Contained)', emoji: '🖼️', implemented: true,
+    description: 'Embed images so they never expire — slower, larger; non-image files not kept' },
   { value: 'archive_delete', label: 'Archive + Delete', emoji: '🗑️',
     description: 'Archive, then delete the originals to free channel slots' },
   { value: 'category_archive', label: 'Category Archive', emoji: '📁',
@@ -84,6 +86,41 @@ export function buildArchiveScreen(mode = 'archive_only', note = '') {
         { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 4, emoji: { name: '🧹' } } // copy of Nuke/Delete Category button (self-contained flow)
       ] }
     ]
+  };
+}
+
+/**
+ * Build the archive's action-buttons container (posted as a 2nd message beside the file).
+ * Two states solve the ~24h CDN-link expiry without a stale link ever sitting public:
+ *  - LOCKED (default): [🔐 Unlock Archive] [✨ Unarchive] — no link present, nothing to go stale.
+ *  - UNLOCKED (after Unlock mints a FRESH link): [🔓 View Archive] [✨ Unarchive] + "active ~10 min".
+ * A durable scheduler job (archive_relock) reverts UNLOCKED → LOCKED after ~10 min.
+ * @param {string} fileMsgId - the type-13 file message id (re-fetched for a fresh URL on Unlock)
+ * @param {object} [opts]
+ * @param {string} [opts.viewUrl] - present → render the UNLOCKED state with this link
+ */
+export function buildArchiveButtons(fileMsgId, { viewUrl = null } = {}) {
+  const unarchive = { type: 2, style: 1, custom_id: `archive_restore_${fileMsgId}`, label: 'Unarchive', emoji: { name: '✨' } };
+  if (viewUrl) {
+    return {
+      type: 17,
+      components: [
+        { type: 10, content: `-# 🔓 Link active for ~10 minutes` },
+        { type: 1, components: [
+          { type: 2, style: 5, label: 'View Archive', url: viewUrl },
+          unarchive,
+        ] },
+      ],
+    };
+  }
+  return {
+    type: 17,
+    components: [
+      { type: 1, components: [
+        { type: 2, style: 2, custom_id: `archive_unlock_${fileMsgId}`, label: 'Unlock Archive', emoji: { name: '🔐' } },
+        unarchive,
+      ] },
+    ],
   };
 }
 
@@ -176,9 +213,9 @@ function buildContainer(displayName, count, cbEmojiStr, filename, nowUnix, first
  * Both POSTs go through the paced/retrying `post`. Throws on a non-recoverable file
  * POST failure so the caller can report it (no silent skips).
  */
-async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, precomputedHtml, resolver, threads = []) {
+async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, precomputedHtml, resolver, threads = [], imageData = null) {
   const displayName = partLabel ? `${channelName} (Part ${partLabel.i}/${partLabel.n})` : channelName;
-  const html = precomputedHtml ?? generateExportHTML(displayName, msgs, resolver, threads);
+  const html = precomputedHtml ?? generateExportHTML(displayName, msgs, resolver, threads, { imageData });
   const today = new Date().toISOString().slice(0, 10);
   const filename = `${channelName}-export-${today}${partLabel ? `-part${partLabel.i}` : ''}.html`;
   const fileBuffer = Buffer.from(html, 'utf-8');
@@ -207,38 +244,14 @@ async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, pr
     throw err;
   }
   const postData = await fileRes.json();
-  const fileMsgId = postData.id; // the file message — Refresh Link re-fetches it for a fresh URL
+  const fileMsgId = postData.id;
+  if (!fileMsgId) { console.warn(`⚠️ No message id for #${displayName} — buttons skipped.`); return; }
 
-  // Resolve CDN URL — for CV2 + type-13, Discord puts it inside the component, not attachments[].
-  let cdnUrl = postData.attachments?.[0]?.url || findType13Url(postData.components);
-  if (!cdnUrl) {
-    console.warn(`⚠️ No CDN URL for #${displayName} — button skipped.`);
-    return;
-  }
-
-  // POST 2 — separate message: [🔄 Refresh Link] [View #channel Online].
-  // The htmlpreview URL wraps a signed Discord CDN URL that expires (~24h); Refresh Link
-  // (custom_id carries the file message id) re-fetches that message for a fresh URL and
-  // rewrites this button's link in place. See archive_refresh_* handler.
-  const viewUrl = `https://htmlpreview.github.io/?${cdnUrl}`;
-  const maxNameLen = 80 - 'View #'.length - ' Online'.length; // 67 chars (account for the # prefix)
-  const truncName = displayName.length > maxNameLen ? displayName.slice(0, maxNameLen - 1) + '…' : displayName;
-
-  const row = { type: 1, components: [] };
-  if (fileMsgId) {
-    row.components.push({ type: 2, style: 2, custom_id: `archive_refresh_${fileMsgId}`, label: 'Refresh Link', emoji: { name: '🔄' } });
-  }
-  row.components.push({ type: 2, style: 5, label: `View #${truncName} Online`, url: viewUrl });
-  if (fileMsgId) {
-    // 🧪 EXPERIMENTAL: rebuild this channel from the archive (see channelRestore.js)
-    row.components.push({ type: 2, style: 1, custom_id: `archive_restore_${fileMsgId}`, label: 'Unarchive', emoji: { name: '✨' } });
-  }
-
+  // POST 2 — the action buttons in the LOCKED state ([🔐 Unlock Archive] [✨ Unarchive]).
+  // No link is posted now → no stale ~24h link ever sits public. Unlock mints a fresh one
+  // on demand (archive_unlock_* handler), and a scheduler job reverts it after ~10 min.
   const btnRes = await post({
-    body: JSON.stringify({
-      flags: IS_CV2,
-      components: [{ type: 17, components: [row] }]
-    }),
+    body: JSON.stringify({ flags: IS_CV2, components: [buildArchiveButtons(fileMsgId)] }),
     headers: { 'Content-Type': 'application/json' }
   });
   if (!btnRes.ok) {
@@ -290,11 +303,15 @@ async function postSummary(container, { interactionToken, applicationId }) {
  * @param {string} [opts.applicationId]
  * @param {object} [opts.client] - Discord client, for resolving role/channel mention names from cache
  * @param {string} [opts.guildId]
+ * @param {boolean} [opts.embedImages] - base64-embed images so they never expire ("Self-Contained" mode)
+ * @param {string} [opts.abortKey] - key into global.abortArchive; set true to halt the run (🚧 Abandon)
  */
-export async function archiveChannels(channels, invokedChannelId, { interactionToken, applicationId, client, guildId } = {}) {
+export async function archiveChannels(channels, invokedChannelId, { interactionToken, applicationId, client, guildId, embedImages = false, abortKey = null } = {}) {
   const post = createMessagePoster(invokedChannelId);
   const cbEmoji = getBotEmoji('cb_blue');
   const cbEmojiStr = cbEmoji?.id ? `<:cb_blue:${cbEmoji.id}>` : '🗄️';
+  const isAborted = () => !!(abortKey && global.abortArchive?.get(abortKey));
+  let abandoned = false;
 
   // Build the mention name-resolver ONCE from the bot's in-memory guild cache (no REST).
   // User names are also auto-filled per-message from each message's `mentions[]` in the generator.
@@ -317,13 +334,16 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
   let failed = 0;
 
   for (const channel of channels) {
+    if (isAborted()) { abandoned = true; break; } // 🚧 user abandoned → stop before the next channel
     try {
       console.log(`📥 START archive: #${channel.name} (${channel.id})`);
 
       const { messages, total429, batches } = await fetchAllChannelMessages(channel.id, {
-        onProgress: (n) => { if (n % 500 === 0) console.log(`  📥 Fetched ${n} messages...`); }
+        onProgress: (n) => { if (n % 500 === 0) console.log(`  📥 Fetched ${n} messages...`); },
+        shouldAbort: isAborted,
       });
       console.log(`📥 Fetch complete: ${messages.length} messages in ${batches} batches (${total429} rate-limit waits)`);
+      if (isAborted()) { abandoned = true; break; }
 
       // Discover + fetch this channel's threads (active + public/private archived). Each thread
       // is a channel → reuse fetchAllChannelMessages. Render-only (not restored).
@@ -331,7 +351,8 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
       try {
         const threadChannels = await fetchChannelThreads(channel.id, { activeThreads });
         for (const tc of threadChannels) {
-          const tr = await fetchAllChannelMessages(tc.id, {});
+          if (isAborted()) break;
+          const tr = await fetchAllChannelMessages(tc.id, { shouldAbort: isAborted });
           threads.push({ id: tc.id, name: tc.name, messages: tr.messages });
         }
         if (threads.length) {
@@ -342,12 +363,20 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
         console.warn(`⚠️ thread fetch failed for #${channel.name}: ${e.message}`);
       }
 
+      // "Self-Contained" mode: base64-embed images so they never expire (slower, larger).
+      let imageData = null;
+      if (embedImages) {
+        const all = [...messages, ...threads.flatMap(t => t.messages || [])];
+        imageData = await fetchImageData(all);
+        console.log(`  🖼️ embedded ${Object.keys(imageData).length} image(s)`);
+      }
+
       // Generate once to size; single message if it fits, else split into parts under the cap.
-      const fullHtml = generateExportHTML(channel.name, messages, resolver, threads);
+      const fullHtml = generateExportHTML(channel.name, messages, resolver, threads, { imageData });
       const fullBytes = Buffer.byteLength(fullHtml, 'utf-8');
 
       if (fullBytes <= SAFE_UPLOAD_BYTES || messages.length <= 1) {
-        await postOneArchive(post, channel.name, messages, cbEmojiStr, null, fullHtml, resolver, threads);
+        await postOneArchive(post, channel.name, messages, cbEmojiStr, null, fullHtml, resolver, threads, imageData);
       } else {
         const parts = Math.ceil(fullBytes / SAFE_UPLOAD_BYTES);
         const perChunk = Math.ceil(messages.length / parts);
@@ -360,7 +389,7 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
           const sliceIds = new Set(slice.map(m => m.id));
           let sliceThreads = threads.filter(t => sliceIds.has(t.id));
           if (i === parts - 1) sliceThreads = sliceThreads.concat(orphanThreads);
-          await postOneArchive(post, channel.name, slice, cbEmojiStr, { i: i + 1, n: parts }, undefined, resolver, sliceThreads);
+          await postOneArchive(post, channel.name, slice, cbEmojiStr, { i: i + 1, n: parts }, undefined, resolver, sliceThreads, imageData);
         }
       }
       succeeded++;
@@ -380,15 +409,19 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
   }
 
   // Final summary (ephemeral — only the invoking user) so the run never "silently" ends.
-  if (channels.length > 1) {
+  if (channels.length > 1 || abandoned) {
+    const remaining = channels.length - succeeded - failed;
+    const head = abandoned ? '🛑 Archiving abandoned' : (failed ? '⚠️ Archive run complete' : '✅ Archive run complete');
+    const tail = abandoned && remaining > 0 ? `\n-# Stopped — re-run to finish the remaining ${remaining} channel${remaining !== 1 ? 's' : ''}.` : '';
     const summaryContainer = {
       type: 17,
-      accent_color: failed ? 0xe67e22 : 0x2ecc71,
-      components: [{ type: 10, content: `## ${failed ? '⚠️' : '✅'} Archive run complete\n${succeeded} archived${failed ? `, ${failed} failed` : ''} (of ${channels.length}).` }]
+      accent_color: abandoned || failed ? 0xe67e22 : 0x2ecc71,
+      components: [{ type: 10, content: `## ${head}\n${succeeded} archived${failed ? `, ${failed} failed` : ''} (of ${channels.length}).${tail}` }]
     };
     await postSummary(summaryContainer, { interactionToken, applicationId });
   }
 
-  console.log(`🏁 Archive run done: ${succeeded} ok, ${failed} failed (of ${channels.length})`);
-  return { succeeded, failed, total: channels.length };
+  if (abortKey) global.abortArchive?.delete(abortKey);
+  console.log(`🏁 Archive run done: ${succeeded} ok, ${failed} failed${abandoned ? ', ABANDONED' : ''} (of ${channels.length})`);
+  return { succeeded, failed, total: channels.length, abandoned };
 }

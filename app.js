@@ -1717,6 +1717,21 @@ scheduler.registerAction('execute_custom_action', async (payload, schedulerClien
   }
 });
 
+// Archive: revert an Unlocked "🔓 View Archive" message back to the locked "🔐 Unlock Archive"
+// state ~10 min after unlock, so a stale ~24h link never sits public. Durable (survives restart).
+scheduler.registerAction('archive_relock', async (payload) => {
+  const { channelId, messageId, fileMsgId } = payload || {};
+  try {
+    const { buildArchiveButtons } = await import('./channelArchiver.js');
+    await DiscordRequest(`channels/${channelId}/messages/${messageId}`, {
+      method: 'PATCH',
+      body: { flags: (1 << 15), components: [buildArchiveButtons(fileMsgId)] }
+    });
+  } catch (e) {
+    console.log(`ℹ️ [SCHEDULER] archive_relock skipped (${messageId}): ${e.message}`);
+  }
+});
+
 // Add these event handlers after client initialization
 client.once('ready', async () => {
   console.log('Discord client is ready!');
@@ -37079,6 +37094,8 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'archive_channel',
         updateMessage: true,
         handler: async (context) => {
+          global.pendingArchiveMode = global.pendingArchiveMode || new Map();
+          global.pendingArchiveMode.delete(`${context.guildId}:${context.userId}`); // reset to default on (re)open
           const { buildArchiveScreen } = await import('./channelArchiver.js');
           const container = buildArchiveScreen('archive_only');
           const { countComponents } = await import('./utils.js');
@@ -37088,7 +37105,8 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
 
     } else if (custom_id === 'archive_mode_select') {
-      // Archive Mode string select — only 'archive_only' is implemented; others are stubs.
+      // Archive Mode select: archive_only (default) + archive_embed (base64) implemented; stubs revert.
+      // Chosen mode remembered per-user (global.pendingArchiveMode), applied at archive_confirm.
       return ButtonHandlerFactory.create({
         id: 'archive_mode_select',
         updateMessage: true,
@@ -37096,10 +37114,15 @@ Your server is now ready for Tycoons gameplay!`;
           const selected = req.body.data.values?.[0] || 'archive_only';
           const { buildArchiveScreen, ARCHIVE_MODES } = await import('./channelArchiver.js');
           const mode = ARCHIVE_MODES.find(m => m.value === selected);
-          // Stub modes: re-render with a "coming soon" note and stay on Archive Only.
-          const note = mode?.implemented
-            ? ''
-            : `-# 🚧 **${mode?.label || 'That mode'}** is coming soon — using **Archive Only** for now.`;
+          global.pendingArchiveMode = global.pendingArchiveMode || new Map();
+          const key = `${context.guildId}:${context.userId}`;
+          if (mode?.implemented) {
+            global.pendingArchiveMode.set(key, selected);
+            return { components: [buildArchiveScreen(selected)] };
+          }
+          // Stub modes: keep Archive Only, show a coming-soon note.
+          global.pendingArchiveMode.set(key, 'archive_only');
+          const note = `-# 🚧 **${mode?.label || 'That mode'}** is coming soon — using **Archive** for now.`;
           return { components: [buildArchiveScreen('archive_only', note)] };
         }
       })(req, res, client);
@@ -37137,6 +37160,43 @@ Your server is now ready for Tycoons gameplay!`;
 
           setLinkButtonUrl(components, `https://htmlpreview.github.io/?${freshUrl}`);
           return { components };
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('archive_unlock_')) {
+      // 🔐 Unlock → mint a FRESH View Archive link + schedule a durable ~10-min revert (channelArchiver.js)
+      return ButtonHandlerFactory.create({
+        id: 'archive_unlock',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const fileMsgId = custom_id.replace('archive_unlock_', '');
+          const channelId = req.body.channel_id || req.body.channel?.id;
+          const buttonsMsgId = req.body.message?.id;
+          const { getArchiveFileUrl, buildArchiveButtons } = await import('./channelArchiver.js');
+
+          let freshUrl = null;
+          try {
+            const msg = await DiscordRequest(`channels/${channelId}/messages/${fileMsgId}`, { method: 'GET' });
+            freshUrl = getArchiveFileUrl(msg);
+          } catch (err) {
+            console.log(`ℹ️ Unlock: could not fetch archive file message ${fileMsgId}: ${err.message}`);
+          }
+
+          if (!freshUrl) {
+            const locked = buildArchiveButtons(fileMsgId);
+            locked.components.unshift({ type: 10, content: '-# ⚠️ Could not unlock — the archive file may have been deleted.' });
+            return { components: [locked] };
+          }
+
+          // Durable revert (survives bot restarts) back to the locked state after ~10 min.
+          try {
+            await scheduler.schedule('archive_relock',
+              { channelId, messageId: buttonsMsgId, fileMsgId },
+              { delayMs: 10 * 60 * 1000, guildId: context.guildId, channelId, description: 'Re-lock archive view link' });
+          } catch (e) { console.log(`ℹ️ archive relock not scheduled: ${e.message}`); }
+
+          return { components: [buildArchiveButtons(fileMsgId, { viewUrl: `https://htmlpreview.github.io/?${freshUrl}` })] };
         }
       })(req, res, client);
 
@@ -37218,9 +37278,12 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
 
+          // Selected Archive Mode (default archive_only) — remembered from archive_mode_select.
+          const mode = global.pendingArchiveMode?.get(`${guildId}:${userId}`) || 'archive_only';
+
           // Stash pending archive state for archive_confirm to pick up
           global.pendingArchive = global.pendingArchive || new Map();
-          global.pendingArchive.set(`${guildId}:${userId}`, { channels, invokedChannelId });
+          global.pendingArchive.set(`${guildId}:${userId}`, { channels, invokedChannelId, mode });
 
           // Channel list (up to 20 shown)
           const displayChannels = channels.slice(0, 20);
@@ -37228,13 +37291,14 @@ Your server is now ready for Tycoons gameplay!`;
           const overflow = channels.length > 20 ? `\n-# ...and ${channels.length - 20} more` : '';
           const estMin = channels.length === 1 ? '1–5 min' : `${channels.length * 1}–${channels.length * 5} min`;
           const catNote = categoryCount > 0 ? ` (incl. ${categoryCount} categor${categoryCount !== 1 ? 'ies' : 'y'} expanded)` : '';
+          const modeNote = mode === 'archive_embed' ? `\n-# 🖼️ Self-Contained mode: images embedded (slower & larger; non-image files not kept).` : '';
 
           return {
             components: [{
               type: 17,
               accent_color: 0x3498db,
               components: [
-                { type: 10, content: `## 🧹 Archive Channels\n\n**${channels.length} channel${channels.length !== 1 ? 's' : ''}** will be archived${catNote}:\n\n${channelList}${overflow}\n\n-# ⏱️ Estimated time: ${estMin} (varies by message count)` },
+                { type: 10, content: `## 🧹 Archive Channels\n\n**${channels.length} channel${channels.length !== 1 ? 's' : ''}** will be archived${catNote}:\n\n${channelList}${overflow}\n\n-# ⏱️ Estimated time: ${estMin} (varies by message count)${modeNote}` },
                 { type: 14 },
                 { type: 1, components: [
                   { type: 2, style: 4, label: '📦 Archive', custom_id: 'archive_confirm' },
@@ -37272,30 +37336,62 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
 
-          const { channels, invokedChannelId } = pending;
+          const { channels, invokedChannelId, mode } = pending;
+          const embedImages = mode === 'archive_embed';
           // Captured for the EPHEMERAL run-summary followup (token lives ~15 min).
           const interactionToken = req.body.token;
           const applicationId = req.body.application_id || process.env.APP_ID;
+          // Cancellation key for the 🚧 Abandon button (loop checks global.abortArchive).
+          const abortKey = `${guildId}:${userId}`;
+          global.abortArchive = global.abortArchive || new Map();
+          global.abortArchive.delete(abortKey); // clear any stale flag from a previous run
 
           // Background archive run — fires after factory sends the "started" response.
           // All fetch/render/post logic (incl. write-path rate-limit pacing, 413 splitting,
-          // and archive-time mention resolution) lives in channelArchiver.js. app.js stays a router.
+          // mention resolution, threads, image-embedding) lives in channelArchiver.js.
           setTimeout(async () => {
             try {
               const { archiveChannels } = await import('./channelArchiver.js');
-              await archiveChannels(channels, invokedChannelId, { interactionToken, applicationId, client, guildId });
+              await archiveChannels(channels, invokedChannelId, { interactionToken, applicationId, client, guildId, embedImages, abortKey });
             } catch (err) {
               console.error('❌ archiveChannels fatal:', err);
             }
           }, 0);
 
           // Immediate "started" response (factory sends this, then background loop runs)
+          const modeLine = embedImages ? ` -# 🖼️ Self-Contained (images embedded — slower).\n` : '';
           return {
             components: [{
               type: 17,
               accent_color: 0x2ecc71,
               components: [
-                { type: 10, content: `## 📦 Archiving ${channels.length === 1 ? `**#${channels[0].name}**` : `**${channels.length} channels**`}\n\n-# Archive messages will appear in this channel as each one completes.` },
+                { type: 10, content: `## 📦 Archiving ${channels.length === 1 ? `**#${channels[0].name}**` : `**${channels.length} channels**`}\n${modeLine}-# Archive messages will appear in this channel as each one completes.` },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, style: 4, label: 'Abandon Archiving', custom_id: 'archive_abandon', emoji: { name: '🚧' } },
+                  { type: 2, style: 2, label: '← Data', custom_id: 'data_admin' }
+                ] }
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'archive_abandon') {
+      // 🚧 Halt the in-progress archive run (flag checked between channels/threads/fetch batches).
+      // The background loop posts the "Archiving abandoned" summary when it sees the flag.
+      return ButtonHandlerFactory.create({
+        id: 'archive_abandon',
+        updateMessage: true,
+        handler: async (context) => {
+          global.abortArchive = global.abortArchive || new Map();
+          global.abortArchive.set(`${context.guildId}:${context.userId}`, true);
+          return {
+            components: [{
+              type: 17,
+              accent_color: 0xe67e22,
+              components: [
+                { type: 10, content: `## 🛑 Abandoning…\n-# Stopping after the current channel/fetch. A summary will follow shortly.` },
                 { type: 14 },
                 { type: 1, components: [{ type: 2, style: 2, label: '← Data', custom_id: 'data_admin' }] }
               ]

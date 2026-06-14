@@ -54,7 +54,7 @@ flowchart TD
 ```
 
 1. **`archive_channel`** (`updateMessage: true`) — renders the main archive screen via `buildArchiveScreen()` (in `channelArchiver.js`): an **Archive Mode** string select (`archive_mode_select`) followed by a **multi-select channel/category select** (type 8, `channel_types: [0, 4, 5]`, `min_values: 1`, `max_values: 25`), plus **← Back** and a **Nuke Category** button (a copy of `prod_nuke_category`). LEAN-sectioned (`⚙️ Archive Mode` / `📁 Select Channels`), 14/40 components.
-   - **Archive Mode** (`ARCHIVE_MODES`): only **Archive Only** (📥) is implemented — *"Save channels/categories as HTML, posted in this channel."* The rest are **stubs for future expansion**, shown with a "🚧 Coming soon" option description: Archive + Delete (🗑️), Category Archive (📁), Category Archive + Delete (🗂️), Clone Archive (📋), Move Archive (📦). Selecting a stub (`archive_mode_select`) re-renders the screen with a "coming soon" note and stays on Archive Only.
+   - **Archive Mode** (`ARCHIVE_MODES`): two implemented modes — **📥 Archive** (default; link-based, fast/small; image links expire ~24h) and **🖼️ Archive (Self-Contained)** (`archive_embed`; base64-embeds images so they never expire — slower, larger, splits more, non-image files not kept). The rest are **stubs** ("🚧 Coming soon"): Archive + Delete, Category Archive, Category Archive + Delete, Clone Archive, Move Archive. The chosen mode is remembered per-user in `global.pendingArchiveMode` (set in `archive_mode_select`) and applied at `archive_confirm` (`embedImages = mode === 'archive_embed'`); stubs revert to default.
 2. **`archive_channel_select`** (`deferred: true`, `updateMessage: true`) —
    - Resolves the guild's full channel list **once** — from the bot's `guild.channels.cache` (zero REST) with a single `GET guilds/{id}/channels` fallback if the cache is cold.
    - Calls the pure `expandArchiveSelection(selectedIds, allChannels, resolved)` (in `channelArchiver.js`): for each picked id, a **category (type 4)** expands to its child text/announcement channels (`0`/`5`, sorted by `position`); a channel adds itself. Results are **de-duped by id** (a `Map`), so picking a category *and* a channel inside it won't archive it twice. Selected-item types come from `req.body.data.resolved.channels` — no per-item fetch.
@@ -78,10 +78,23 @@ flowchart TD
 4. **Build container** — Components V2 type-17 container: channel header, a metadata block (✉️ message count, 🗂️ archive date, 📅 first/last message — all `<t:unix:F>` hammertimes), a **type-13 (File) component** referencing `attachment://${filename}`, and the Option 1/2/3 caption.
 5. **POST file (paced + retried)** — `multipart/form-data` to `POST /channels/{invokedChannelId}/messages` via the shared **`createMessagePoster`** (see [Write-path rate limits](#-write-path-rate-limits)), with `payload_json` carrying `flags: 1<<15` (IS_COMPONENTS_V2), `components: [container]`, and `attachments: [{ id: 0, filename }]`.
 6. **Resolve CDN URL** — ⚠️ **for Components V2 + type-13 messages, Discord resolves the `attachment://` URL *inside the component* (`postData.components[...].file.url`), NOT in the top-level `attachments[]` array.** The code tries `attachments[0].url` first (fallback in case Discord changes behaviour), then recursively walks `components` for a type-13 whose `file.url` no longer starts with `attachment://`. This was the key gotcha — see commit `9de60a7e`.
-7. **POST link button (paced + retried)** — a **second POST** (JSON, not a PATCH of the first message) creates a separate message with a row of `[🔄 Refresh Link] [View #{channelName} Online] [✨ Restore]` (link button truncated to Discord's 80-char limit). (A separate POST was needed because editing/PATCHing the file message to add the button didn't work reliably — commit `9de60a7e`.)
-   - **Refresh Link** (`archive_refresh_{fileMessageId}`): the htmlpreview link wraps a signed Discord CDN URL that expires (~24h). A link button (style 5) has no `custom_id` and can't refresh itself, so this sibling real button does it: on click (`archive_refresh_*` handler, `updateMessage`), it re-`GET`s the **file message** (Discord re-signs attachment URLs on every fetch via `getArchiveFileUrl`), then `setLinkButtonUrl` rewrites the link button's URL in place on this message. Works indefinitely as long as the file message exists; if it's been deleted, the message shows a "could not refresh" note. The file message id is baked into the refresh button's `custom_id` (~35 chars).
+7. **POST buttons (paced + retried)** — a **second POST** (JSON) creates a separate message with the **locked** action buttons `[🔐 Unlock Archive] [✨ Unarchive]` (`buildArchiveButtons(fileMsgId)`). **No link is posted up front**, so no stale ~24h link ever sits public. See [Link freshness](#-link-freshness-unlock--view) below. (A separate message is used because PATCHing the file message to add buttons didn't work reliably — commit `9de60a7e`.)
 
-Errors are caught per-channel: a red error message is posted to the channel and the loop continues. After the run, if more than one channel was requested, a **final summary** (`✅ N archived` / `⚠️ N archived, M failed`) is sent as an **ephemeral interaction followup** — only the invoking user sees it, and it is **never posted publicly**. On runs that outlast the ~15-min interaction token, the followup returns **401 / `Invalid Webhook Token` (50027)** — this is *expected* (a 263-channel run took ~24 min), so the summary is **silently skipped** and logged as an `ℹ️` info line (not an error → the PM2 error logger ignores it). The per-channel archive posts already show the result in-channel, so nothing public is leaked.
+Errors are caught per-channel: a red error message is posted to the channel and the loop continues. After the run, a **final summary** (`✅ N archived` / `⚠️ N archived, M failed`) is sent as an **ephemeral interaction followup** — only the invoking user sees it, and it is **never posted publicly**. On runs that outlast the ~15-min interaction token, the followup returns **401 / `Invalid Webhook Token` (50027)** — this is *expected* (a 263-channel run took ~24 min), so the summary is **silently skipped** and logged as an `ℹ️` info line. The per-channel archive posts already show the result in-channel, so nothing public is leaked.
+
+The "📦 Archiving…" ephemeral carries a **`🚧 Abandon Archiving`** button (`archive_abandon`) → sets `global.abortArchive[guildId:userId]`, which the loop checks **between channels, between threads, and on each fetch batch** (`fetchAllChannelMessages({ shouldAbort })`) and halts promptly, then posts a **🛑 Archiving abandoned** summary (X of N done, "re-run to finish").
+
+---
+
+## 🔓 Link freshness (Unlock ⇄ View)
+
+Discord attachment URLs are **signed and expire ~24h** (since Dec 2023 — no non-expiring schema exists for arbitrary files). The downloadable HTML attachment is permanent (Discord re-signs it whenever the message is viewed), but a *stored* "View Online" htmlpreview link goes stale. Since a Discord **link button (style 5) has no `custom_id`** and can't refresh itself or be minted "live" on click, the solution is a two-state toggle:
+
+- **Locked** (default): `[🔐 Unlock Archive] [✨ Unarchive]` — no link present, nothing to go stale.
+- Click **🔐 Unlock** (`archive_unlock_{fileMsgId}`, `updateMessage`): re-`GET`s the file message → **fresh** signed URL (`getArchiveFileUrl`), flips the message to **`[🔓 View Archive] [✨ Unarchive]`** + `-# active ~10 min`, and schedules a **durable** revert (`scheduler.schedule('archive_relock', …, { delayMs: 10min })`).
+- **`archive_relock`** (registered at startup, survives restarts via `scheduledJobs.json`) PATCHes the message back to **Locked** after 10 min — so a stale link is *never* left public.
+
+Net: set-and-forget — the link is only ever shown freshly-minted, and the download is permanent regardless. This **replaced** the old always-on link + `🔄 Refresh` button (the `archive_refresh_*` handler is kept only for archives posted before this change). Image permanence is the separate **Self-Contained** mode (base64) — see [Modules](#-modules) / Archive Mode.
 
 ---
 
@@ -124,12 +137,15 @@ Threads are **separate channels**, so `GET /channels/{id}/messages` never includ
 ### `channelArchiver.js` — background run orchestrator
 `archiveChannels(channels, invokedChannelId, { interactionToken, applicationId, client, guildId })` — the whole per-channel loop (fetch → render → size-split → paced POST file → resolve CDN → paced POST button), per-channel error reporting, mention-resolver setup, and the final ephemeral run summary. Extracted from `app.js` so the router stays thin.
 - **`expandArchiveSelection(selectedIds, allChannels, resolved)`** — pure, unit-tested helper for the multi-select: expands categories, dedupes by id, returns `{ channels, categoryCount }`. Used by `archive_channel_select`.
-- **`buildArchiveScreen(mode, note)`** + **`ARCHIVE_MODES`** — builds the main archive screen container (Archive Mode select + channel select + nav). Shared by `archive_channel` and `archive_mode_select`. Only `archive_only` is implemented; other modes are stubs.
+- **`buildArchiveScreen(mode, note)`** + **`ARCHIVE_MODES`** — builds the main archive screen (Archive Mode select + channel select + nav). Two implemented modes: `archive_only` (default), `archive_embed` (Self-Contained/base64).
+- **`buildArchiveButtons(fileMsgId, { viewUrl })`** — the per-archive action buttons message: Locked `[🔐 Unlock][✨ Unarchive]` or Unlocked `[🔓 View][✨ Unarchive]`. See [Link freshness](#-link-freshness-unlock--view).
 
 ### `channelExportFetcher.js` — rate-limited REST (read **and** write)
 - **`fetchAllChannelMessages(channelId, { onProgress, maxConsecutive429 = 10 })`** — read path. Header-driven pacing via pure, unit-tested `computeRateLimitDelay({ remaining, resetAfter })`: bursts the per-channel request budget, then sleeps `reset-after` (+150ms buffer) when exhausted. **429 backstop:** reads `retry_after`, sleeps, retries the *same* cursor; aborts after 10 consecutive 429s (Discord's invalid-request ceiling is 10,000 × 401/403/429 per 10 min → temporary Cloudflare IP ban, so it never blind-retries). Returns `{ messages, total429, batches }`, oldest-first.
 - **`createMessagePoster(channelId, { maxRetries = 8 })`** — write path. Returns a bound poster that paces from response headers and transparently retries 429s (pure, unit-tested `computePostPacing()`). Handles both multipart (FormData) and JSON bodies; caller passes content headers only, the poster adds `Authorization`. See [Write-Path Rate Limits](#-write-path-rate-limits).
 - **`fetchGuildActiveThreads(guildId)`** / **`fetchChannelThreads(channelId, { activeThreads })`** — thread discovery (active + public/private archived, paginated, deduped). See [Threads](#-threads).
+- **`fetchImageData(allMessages, { maxBytes = 6MiB })`** — Self-Contained mode: concurrency-limited fetch of image attachments → `{ url: data:URI }` for base64 embedding; skips images over the cap (they fall back to expiring links).
+- **`fetchAllChannelMessages`** also accepts **`shouldAbort`** — checked each batch so the 🚧 Abandon button can stop a long fetch mid-channel.
 
 **Empirically measured** (CastBot-Dev, 2026-06-04): `GET /channels/{id}/messages?limit=100` → per-channel bucket, **limit 5 / window ≈5s**, sustainable ≈1 req/s, 429 `retry_after` ≈0.357s, scope `user`. Paced at the header rate, **zero 429s** across the test runs. The live archive in prod logs (2026-06-13) fetched a 2,721-message channel in 28 batches with **0 rate-limit waits**.
 
@@ -173,10 +189,15 @@ Registered in `buttonHandlerFactory.js` `BUTTON_REGISTRY`:
 | custom_id | Label | Style | Parent |
 |---|---|---|---|
 | `archive_channel` | Archive Channels | Secondary 🧹 | `data_admin` |
-| `archive_channel_select` | Archive Channel Select | Secondary 🧹 | `archive_channel` |
+| `archive_mode_select` | Archive Mode | select | `archive_channel` |
+| `archive_channel_select` | Archive Channel Select | Channel select | `archive_channel` |
 | `archive_confirm` | Confirm Archive | Danger 📦 | `archive_channel_select` |
+| `archive_abandon` | Abandon Archiving | Danger 🚧 | `archive_confirm` |
+| `archive_unlock_*` | Unlock Archive | Secondary 🔐 | `archive_channel` |
+| `archive_restore_*` | Unarchive | Primary ✨ | `archive_channel` |
+| `archive_refresh_*` | Refresh Link (legacy) | Secondary 🔄 | `archive_channel` |
 
-All three use `ButtonHandlerFactory.create()` (`[✨ FACTORY]` in logs). The two file/button POSTs in the background loop are raw `node-fetch` calls (not interactions), so they don't appear in the factory.
+All use `ButtonHandlerFactory.create()` (`[✨ FACTORY]` in logs). The file/buttons POSTs in the background loop are raw `node-fetch`/`DiscordRequest` calls (not interactions), so they don't appear in the factory. `archive_relock` is a durable **scheduler** action (not a button).
 
 ---
 
@@ -202,7 +223,7 @@ Rebuilds a channel from its archive. The **✨ Unarchive** button (Option 3; 3rd
 ## ⚠️ Risks / Notes
 
 - **Privacy/retention.** Archiving persists another server's message content to Discord's CDN (and the htmlpreview proxy reads it). The feature is gated behind Reece's Stuff (`data_admin`, super-admin only).
-- **"View Online" link expiry — mitigated by Refresh Link.** It proxies a signed Discord CDN URL through `htmlpreview.github.io`, and that signed URL **expires ~24h**. The **🔄 Refresh Link** button next to it re-mints a working URL on demand (re-GETs the file message → fresh signed URL → rewrites the link), so it's recoverable indefinitely. The downloadable HTML attachment from the Discord message is permanent regardless (Discord re-signs on view). *Note: inline images **inside** the HTML (message attachments) use the same expiring URLs and are NOT covered by Refresh — they'd need base64 embedding to persist; avatars/emoji/default-avatars use unsigned CDN URLs and don't time-expire.*
+- **CDN link expiry — solved.** Signed Discord URLs expire ~24h (no permanent schema exists for arbitrary files). Two-part fix: the **🔐 Unlock ⇄ 🔓 View** toggle (see [Link freshness](#-link-freshness-unlock--view)) means the online link is only ever shown freshly-minted and auto-reverts, so it's never stale; and the **🖼️ Self-Contained** Archive Mode base64-embeds *inline images* so they don't expire either. Avatars/emoji/default-avatars use unsigned CDN paths and never time-expire. The downloadable HTML attachment is permanent regardless. Non-image attachments still use expiring links (rare; not embedded).
 - **Message Content Intent at 100+ guilds** would require Discord verification — not a concern at current guild counts.
 - **No slot reclamation yet** — original channels are never deleted, so this doesn't address the 500-channel cap on its own.
 

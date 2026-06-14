@@ -4372,11 +4372,27 @@ export const BUTTON_REGISTRY = {
   },
   'archive_refresh_*': {
     label: 'Refresh Link',
-    description: 'Re-mint the archive View Online link (signed CDN URLs expire ~24h)',
+    description: 'Legacy: re-mint the archive View Online link (kept for archives posted pre-Unlock)',
     emoji: '🔄',
     style: 'Secondary',
     category: 'admin',
     parent: 'archive_channel'
+  },
+  'archive_unlock_*': {
+    label: 'Unlock Archive',
+    description: 'Mint a fresh ~24h View Archive link on demand; auto-reverts after 10 min',
+    emoji: '🔐',
+    style: 'Secondary',
+    category: 'admin',
+    parent: 'archive_channel'
+  },
+  'archive_abandon': {
+    label: 'Abandon Archiving',
+    description: 'Halt an in-progress archive run',
+    emoji: '🚧',
+    style: 'Danger',
+    category: 'admin',
+    parent: 'archive_confirm'
   },
   'archive_restore_*': {
     label: 'Unarchive',

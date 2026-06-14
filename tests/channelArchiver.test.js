@@ -120,3 +120,40 @@ describe('channelArchiver — setLinkButtonUrl (Refresh Link)', () => {
     assert.equal(setLinkButtonUrl(undefined, 'u'), false);
   });
 });
+
+// Keep in sync with channelArchiver.js → buildArchiveButtons.
+function buildArchiveButtons(fileMsgId, { viewUrl = null } = {}) {
+  const unarchive = { type: 2, style: 1, custom_id: `archive_restore_${fileMsgId}`, label: 'Unarchive', emoji: { name: '✨' } };
+  if (viewUrl) {
+    return { type: 17, components: [
+      { type: 10, content: `-# 🔓 Link active for ~10 minutes` },
+      { type: 1, components: [{ type: 2, style: 5, label: 'View Archive', url: viewUrl }, unarchive] },
+    ] };
+  }
+  return { type: 17, components: [
+    { type: 1, components: [
+      { type: 2, style: 2, custom_id: `archive_unlock_${fileMsgId}`, label: 'Unlock Archive', emoji: { name: '🔐' } },
+      unarchive,
+    ] },
+  ] };
+}
+
+describe('channelArchiver — buildArchiveButtons (Unlock ⇄ View)', () => {
+  it('LOCKED: shows Unlock + Unarchive, no link button', () => {
+    const c = buildArchiveButtons('500');
+    const s = JSON.stringify(c);
+    assert.match(s, /archive_unlock_500/);
+    assert.match(s, /archive_restore_500/);
+    assert.doesNotMatch(s, /"style":5/); // no link button while locked
+  });
+  it('UNLOCKED: shows a style-5 View Archive link + Unarchive + 10-min note', () => {
+    const c = buildArchiveButtons('500', { viewUrl: 'https://htmlpreview.github.io/?u' });
+    const s = JSON.stringify(c);
+    assert.match(s, /"style":5/);
+    assert.match(s, /View Archive/);
+    assert.match(s, /htmlpreview\.github\.io/);
+    assert.match(s, /archive_restore_500/);
+    assert.match(s, /active for ~10 minutes/);
+    assert.doesNotMatch(s, /archive_unlock_/); // unlock button gone while unlocked
+  });
+});

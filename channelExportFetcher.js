@@ -127,7 +127,7 @@ export function createMessagePoster(channelId, { token = process.env.DISCORD_TOK
  * @param {number} [opts.maxConsecutive429] - abort after this many back-to-back 429s
  * @returns {Promise<{messages: Array, total429: number, batches: number}>}
  */
-export async function fetchAllChannelMessages(channelId, { onProgress, maxConsecutive429 = 10 } = {}) {
+export async function fetchAllChannelMessages(channelId, { onProgress, maxConsecutive429 = 10, shouldAbort = null } = {}) {
   const token = process.env.DISCORD_TOKEN;
   if (!token) throw new Error('DISCORD_TOKEN not set');
 
@@ -138,6 +138,7 @@ export async function fetchAllChannelMessages(channelId, { onProgress, maxConsec
   let consecutive429 = 0;
 
   while (true) {
+    if (shouldAbort && shouldAbort()) break; // user abandoned the run → return what we have
     const params = new URLSearchParams({ limit: '100' });
     if (before) params.set('before', before);
 
@@ -249,4 +250,43 @@ export async function fetchChannelThreads(channelId, { activeThreads = [] } = {}
   await listArchived('public');
   await listArchived('private');
   return [...byId.values()];
+}
+
+/**
+ * Fetch image attachments and return a map of { originalUrl → data:URI } for base64 embedding
+ * (the "Self-Contained" archive mode — images then never expire). Skips images over `maxBytes`
+ * (base64 inflates ~33%, so cap raw size to keep a single message's HTML under the upload limit).
+ * Concurrency-limited; failures are skipped (those images fall back to their expiring link).
+ *
+ * @param {Array} allMessages - main + thread messages
+ * @param {object} [opts]
+ * @param {number} [opts.maxBytes] - skip images larger than this (raw bytes)
+ * @param {number} [opts.concurrency]
+ * @returns {Promise<Object>} { [url]: dataUri }
+ */
+export async function fetchImageData(allMessages, { maxBytes = 6 * 1024 * 1024, concurrency = 5 } = {}) {
+  const urls = [];
+  const seen = new Set();
+  for (const m of (allMessages || [])) {
+    for (const a of (m.attachments || [])) {
+      if (a.content_type?.startsWith('image/') && a.url && !seen.has(a.url)) { seen.add(a.url); urls.push(a.url); }
+    }
+  }
+  const map = {};
+  let idx = 0;
+  const worker = async () => {
+    while (idx < urls.length) {
+      const url = urls[idx++];
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const buf = Buffer.from(await res.arrayBuffer());
+        if (buf.length > maxBytes) continue; // too big → leave as (expiring) link
+        const ct = res.headers.get('content-type') || 'image/png';
+        map[url] = `data:${ct};base64,${buf.toString('base64')}`;
+      } catch { /* skip on error → falls back to link */ }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, urls.length) }, worker));
+  return map;
 }
