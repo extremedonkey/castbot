@@ -1245,8 +1245,7 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setDisabled(!hasSafariData)
   ];
   
-  // Cleanup & Restart section — maintenance tools + process controls
-  const envLabel = process.env.INSTANCE_ROLE === 'test' ? 'Test' : process.env.NODE_ENV === 'production' ? 'Prod' : 'Dev';
+  // Cleanup section — maintenance tools (restart controls moved to Reece's Stuff → 📺 Restart)
   const cleanupButtons = [
     new ButtonBuilder()
       .setCustomId('archive_channel')
@@ -1257,17 +1256,7 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setCustomId('data_clear_vanity')
       .setLabel('Clear Vanity Roles')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🧹'),
-    new ButtonBuilder()
-      .setCustomId('restart_bot')
-      .setLabel(`Restart ${envLabel}`)
-      .setStyle(ButtonStyle.Danger)
-      .setEmoji('🔄'),
-    new ButtonBuilder()
-      .setCustomId('restart_prod')
-      .setLabel('Restart Prod')
-      .setStyle(ButtonStyle.Danger)
-      .setEmoji('🔁')
+      .setEmoji('🧹')
   ];
 
   const analyticsRow = new ActionRowBuilder().addComponents(analyticsButtons);
@@ -1290,14 +1279,14 @@ async function createReeceStuffMenu(guildId, channelId = null) {
     { type: 10, content: `### \`\`\`📊 Analytics\`\`\`` },
     analyticsRow.toJSON(),
     { type: 14 },
+    { type: 10, content: `### \`\`\`🧹 Cleanup\`\`\`` },
+    cleanupRow.toJSON(),
+    { type: 14 },
     { type: 10, content: `### \`\`\`📥 Import & Tools\`\`\`` },
     dataActionsRow.toJSON(),
     { type: 14 },
     { type: 10, content: `### \`\`\`📤 Export & Actions\`\`\`` },
     exportDataRow.toJSON(),
-    { type: 14 },
-    { type: 10, content: `### \`\`\`🧹 Cleanup & Restart\`\`\`` },
-    cleanupRow.toJSON(),
     { type: 14 },
     { type: 10, content: `### \`\`\`☢️ Danger Zone\`\`\`` },
     dangerZoneRow.toJSON(),
@@ -8250,7 +8239,7 @@ To fix this:
           if (process.env.INSTANCE_ROLE !== 'test') {
             return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
               { type: 10, content: '⛔ **Restart Prod** is only available on the TEST instance.' },
-              { type: 1, components: [{ type: 2, custom_id: 'data_admin', label: '← Back', style: 2 }] }
+              { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }] }
             ] }] };
           }
           return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
@@ -8258,7 +8247,7 @@ To fix this:
             { type: 14 },
             { type: 1, components: [
               { type: 2, custom_id: 'restart_prod_confirm', label: 'Confirm Restart Prod', style: 4, emoji: { name: '⚠️' } },
-              { type: 2, custom_id: 'data_admin', label: 'Cancel', style: 2 }
+              { type: 2, custom_id: 'reeces_stuff', label: 'Cancel', style: 2 }
             ] }
           ] }] };
         }
@@ -8280,7 +8269,7 @@ To fix this:
           if (process.env.INSTANCE_ROLE !== 'test') {
             return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
               { type: 10, content: '⛔ Only available on the TEST instance.' },
-              { type: 1, components: [{ type: 2, custom_id: 'data_admin', label: '← Back', style: 2 }] }
+              { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }] }
             ] }] };
           }
           const { execFile } = await import('node:child_process');
@@ -8298,7 +8287,7 @@ To fix this:
           const trimmed = (output || '(no output)').slice(0, 1500);
           return { components: [{ type: 17, accent_color: 0x2ecc71, components: [
             { type: 10, content: `## 🔁 Prod Remediation Complete\n\`\`\`\n${trimmed}\n\`\`\`` },
-            { type: 1, components: [{ type: 2, custom_id: 'data_admin', label: '← Back', style: 2 }] }
+            { type: 1, components: [{ type: 2, custom_id: 'reeces_stuff', label: '← Back', style: 2 }] }
           ] }] };
         }
       })(req, res, client);
@@ -14731,7 +14720,7 @@ Your server is now ready for Tycoons gameplay!`;
                 type: 1,
                 components: [
                   { type: 2, custom_id: 'restart_bot_confirm', label: 'Yes, Restart Now', style: 4, emoji: { name: '🔄' } },
-                  { type: 2, custom_id: 'data_admin', label: '← Cancel', style: 2 }
+                  { type: 2, custom_id: 'reeces_stuff', label: '← Cancel', style: 2 }
                 ]
               }
             ]

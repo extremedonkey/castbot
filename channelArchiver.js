@@ -68,7 +68,7 @@ export function buildArchiveScreen(mode = 'archive_only', note = '') {
     components: [
       { type: 10, content: `## 🧹 Archive Channels\n\nArchive full message history as styled HTML files.${note ? `\n\n${note}` : ''}` },
       { type: 14 },
-      { type: 10, content: `### \`\`\`⚙️ Archive Mode\`\`\`` },
+      { type: 10, content: `### \`\`\`⚙️ Archive Mode\`\`\`\n-# How images are stored: **Archive** keeps links (fast, small) · **Self-Contained** embeds them so they never expire (slower, larger).` },
       { type: 1, components: [{ type: 3, custom_id: 'archive_mode_select', placeholder: 'Archive mode...', min_values: 1, max_values: 1, options }] },
       { type: 14 },
       { type: 10, content: `### \`\`\`📁 Select Channels\`\`\`\n-# Up to 25 channels/categories — categories expand to all their text channels. Large/many channels take time (~1 min per 3,000 msgs). Needs the **Message Content Intent**, or text is blank.` },
@@ -100,7 +100,7 @@ export function buildArchiveScreen(mode = 'archive_only', note = '') {
  * @param {string} [opts.viewUrl] - present → render the UNLOCKED state with this link
  */
 export function buildArchiveButtons(fileMsgId, { viewUrl = null } = {}) {
-  const unarchive = { type: 2, style: 1, custom_id: `archive_restore_${fileMsgId}`, label: 'Unarchive', emoji: { name: '✨' } };
+  const unarchive = { type: 2, style: 2, custom_id: `archive_restore_${fileMsgId}`, label: 'Unarchive', emoji: { name: '✨' } }; // grey
   if (viewUrl) {
     return {
       type: 17,
@@ -117,7 +117,7 @@ export function buildArchiveButtons(fileMsgId, { viewUrl = null } = {}) {
     type: 17,
     components: [
       { type: 1, components: [
-        { type: 2, style: 2, custom_id: `archive_unlock_${fileMsgId}`, label: 'Unlock Archive', emoji: { name: '🔐' } },
+        { type: 2, style: 1, custom_id: `archive_unlock_${fileMsgId}`, label: 'Unlock Archive', emoji: { name: '🔐' } }, // blue
         unarchive,
       ] },
     ],

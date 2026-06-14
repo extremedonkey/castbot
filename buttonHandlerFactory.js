@@ -746,7 +746,7 @@ export const BUTTON_REGISTRY = {
     description: 'Restart CastBot process (PM2 auto-restarts in prod)',
     emoji: '🔄',
     style: 'Danger',
-    parent: 'data_admin',
+    parent: 'reeces_stuff',
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
@@ -1189,7 +1189,7 @@ export const BUTTON_REGISTRY = {
     emoji: '🔁',
     style: 'Danger',
     category: 'admin',
-    parent: 'data_admin',
+    parent: 'reeces_stuff',
     restrictedUser: '391415444084490240'
   },
   'restart_prod_confirm': {

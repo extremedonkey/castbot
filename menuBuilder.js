@@ -139,6 +139,7 @@ export class MenuBuilder {
    * Build Reece's Stuff menu — secret admin tools
    */
   static buildReecesStuffMenu(menuConfig, context) {
+    const envLabel = process.env.INSTANCE_ROLE === 'test' ? 'Test' : process.env.NODE_ENV === 'production' ? 'Prod' : 'Dev';
     const components = [
       { type: 10, content: `## ${menuConfig.title}` },
       { type: 14 },
@@ -161,6 +162,14 @@ export class MenuBuilder {
           { type: 2, custom_id: 'admin_populate_logs', label: 'Populate Logs', style: 2, emoji: { name: '📜' } },
           { type: 2, custom_id: 'admin_backfill_channel_logs', label: 'Backfill Channel', style: 2, emoji: { name: '📡' } },
           { type: 2, custom_id: 'emergency_app_reinit', label: 'App Re-Init', style: 2, emoji: { name: '🚨' } }
+        ]
+      },
+      { type: 10, content: `### \`\`\`📺 Restart\`\`\`` },
+      {
+        type: 1,
+        components: [
+          { type: 2, custom_id: 'restart_bot', label: `Restart ${envLabel}`, style: 4, emoji: { name: '🔄' } },
+          { type: 2, custom_id: 'restart_prod', label: 'Restart Prod', style: 4, emoji: { name: '🔁' } }
         ]
       },
       { type: 10, content: `### \`\`\`🗺️ Map Tools\`\`\`` },
