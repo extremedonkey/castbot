@@ -138,6 +138,8 @@ flowchart TD
 
 The two-tree problem fired for real during this very rollout: commit `71d8c8cd` ("Fix restart notification time… GMT+8") had been made **directly on castbot-blue** in an earlier session and was stranded (no push creds), so the laptop's deploy hit *"divergent branches."* Rescued by fetching the box over SSH, cherry-picking onto `main` (dropping an accidental 569 KB temp jpg), pushing from the laptop, then `git reset --hard origin/main` on the box. This is exactly the failure the enforcement above prevents — and proof the push-auth gap is real, not theoretical.
 
+**First real box-agent run — the cwd-rooting gotcha (2026-06-15).** On the first genuine box vibe-coding session, the agent made its edit but *asked the user to deploy* instead of self-deploying — and neither hook fired. Root cause: **SSH lands in `/home/ubuntu`, not the repo, and the agent ran `claude` there.** From `/home/ubuntu`, (a) Claude Code loads no project CLAUDE.md (it's in the `castbot/` subdir) so the agent had zero project context, and (b) both hooks silently no-op'd because they gated on `git rev-parse --show-toplevel` resolving — which it doesn't from a non-repo cwd. Fixes: hooks now detect the box by the canonical path `/home/ubuntu/castbot/.git` (cwd-independent) and operate via `git -C`; `box-restart.sh` resolves its repo root from `${BASH_SOURCE}`; the box's `~/.bashrc` auto-`cd`s into the repo so `claude` always roots there; CLAUDE.md states the box-agent deploys *itself*. **Lesson: anything gated on session cwd is fragile — gate enforcement on absolute paths, and ensure the agent's cwd loads the project context in the first place.**
+
 ---
 
 <details>
