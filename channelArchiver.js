@@ -209,9 +209,22 @@ function buildContainer(displayName, count, cbEmojiStr, filename, nowUnix, first
 }
 
 /**
- * Post a single archive message (file + container) and its "View Online" button.
- * Both POSTs go through the paced/retrying `post`. Throws on a non-recoverable file
- * POST failure so the caller can report it (no silent skips).
+ * Rough per-message HTML byte estimate for byte-aware splitting. In Self-Contained mode the
+ * embedded image **data-URI lengths are exact** (and dominate); text is small. Pure.
+ */
+export function estimateMessageBytes(msg, imageData = null) {
+  let n = 600; // markup/header/avatar overhead
+  n += (msg.content?.length || 0) * 1.2;
+  if (msg.components?.length) n += 400;
+  for (const e of (msg.embeds || [])) n += (e.title?.length || 0) + (e.description?.length || 0) + 100;
+  for (const a of (msg.attachments || [])) n += imageData?.[a.url] ? imageData[a.url].length : 300;
+  return Math.ceil(n);
+}
+
+/**
+ * Post a single archive message (file + container) and its action buttons.
+ * Both POSTs go through the paced/retrying `post`. A 413 (oversized part) is handled gracefully
+ * in-place; other file-POST failures throw so the caller can report them.
  */
 async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, precomputedHtml, resolver, threads = [], imageData = null) {
   const displayName = partLabel ? `${channelName} (Part ${partLabel.i}/${partLabel.n})` : channelName;
@@ -239,6 +252,19 @@ async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, pr
   const fileRes = await post({ body: form, headers: form.getHeaders() });
   if (!fileRes.ok) {
     const errText = await fileRes.text();
+    // 413 = this part still exceeded Discord's upload cap (rare after byte-split: a single message
+    // with many big embedded images). Skip THIS part gracefully (note in-channel) — don't fail the
+    // whole channel/run, so sibling parts still post.
+    if (fileRes.status === 413) {
+      console.warn(`⚠️ ${displayName}: part too large (413) — skipped. ${(fileBuffer.length / 1048576).toFixed(1)} MB`);
+      try {
+        await post({
+          body: JSON.stringify({ flags: IS_CV2, components: [{ type: 17, accent_color: 0xe67e22, components: [{ type: 10, content: `## ⚠️ #${displayName} — part skipped\n-# This part (${(fileBuffer.length / 1048576).toFixed(1)} MB) exceeded Discord's upload limit. Try **📥 Archive** mode (image links instead of embeds) for this channel.` }] }] }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch { /* note is best-effort */ }
+      return;
+    }
     const err = new Error(`file POST ${fileRes.status}: ${errText.slice(0, 200)}`);
     err.status = fileRes.status;
     throw err;
@@ -378,18 +404,34 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
       if (fullBytes <= SAFE_UPLOAD_BYTES || messages.length <= 1) {
         await postOneArchive(post, channel.name, messages, cbEmojiStr, null, fullHtml, resolver, threads, imageData);
       } else {
-        const parts = Math.ceil(fullBytes / SAFE_UPLOAD_BYTES);
-        const perChunk = Math.ceil(messages.length / parts);
-        console.log(`  ✂️ #${channel.name} is ${(fullBytes / 1048576).toFixed(1)} MB — splitting into ${parts} parts`);
+        // Byte-aware greedy split: pack messages (incl. each one's attached thread) into parts that
+        // each stay under the cap. Message-count splitting failed when embedded images clustered into
+        // one half (→ a >10 MB part → 413). Embedded image data-URI lengths are known exactly.
+        const TARGET = Math.floor(SAFE_UPLOAD_BYTES * 0.8); // headroom for CSS/template/overhead
         const parentIds = new Set(messages.map(m => m.id));
+        const threadById = new Map(threads.map(t => [t.id, t]));
         const orphanThreads = threads.filter(t => !parentIds.has(t.id)); // parent not in any slice → last part
-        for (let i = 0; i < parts; i++) {
-          const slice = messages.slice(i * perChunk, (i + 1) * perChunk);
-          if (!slice.length) break;
+        const msgBytes = (m) => {
+          let b = estimateMessageBytes(m, imageData);
+          const thr = threadById.get(m.id);
+          if (thr) for (const tm of (thr.messages || [])) b += estimateMessageBytes(tm, imageData);
+          return b;
+        };
+        const chunks = [];
+        let cur = [], curBytes = 0;
+        for (const m of messages) {
+          const b = msgBytes(m);
+          if (cur.length && curBytes + b > TARGET) { chunks.push(cur); cur = []; curBytes = 0; }
+          cur.push(m); curBytes += b;
+        }
+        if (cur.length) chunks.push(cur);
+        console.log(`  ✂️ #${channel.name} is ${(fullBytes / 1048576).toFixed(1)} MB — splitting into ${chunks.length} parts`);
+        for (let i = 0; i < chunks.length; i++) {
+          const slice = chunks[i];
           const sliceIds = new Set(slice.map(m => m.id));
           let sliceThreads = threads.filter(t => sliceIds.has(t.id));
-          if (i === parts - 1) sliceThreads = sliceThreads.concat(orphanThreads);
-          await postOneArchive(post, channel.name, slice, cbEmojiStr, { i: i + 1, n: parts }, undefined, resolver, sliceThreads, imageData);
+          if (i === chunks.length - 1) sliceThreads = sliceThreads.concat(orphanThreads);
+          await postOneArchive(post, channel.name, slice, cbEmojiStr, { i: i + 1, n: chunks.length }, undefined, resolver, sliceThreads, imageData);
         }
       }
       succeeded++;
