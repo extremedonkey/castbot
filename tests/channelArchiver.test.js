@@ -77,3 +77,46 @@ describe('channelArchiver — expandArchiveSelection', () => {
     assert.deepEqual(expandArchiveSelection(undefined, GUILD).channels, []);
   });
 });
+
+// Keep in sync with channelArchiver.js → setLinkButtonUrl.
+// Rewrites the first link button (type 2, style 5) URL anywhere in a components tree.
+function setLinkButtonUrl(components, newUrl) {
+  for (const c of (components || [])) {
+    if (c?.type === 2 && c?.style === 5) { c.url = newUrl; return true; }
+    if (Array.isArray(c?.components) && setLinkButtonUrl(c.components, newUrl)) return true;
+  }
+  return false;
+}
+
+describe('channelArchiver — setLinkButtonUrl (Refresh Link)', () => {
+  const make = () => ([{
+    type: 17,
+    components: [{
+      type: 1,
+      components: [
+        { type: 2, style: 2, custom_id: 'archive_refresh_123', label: 'Refresh Link' },
+        { type: 2, style: 5, label: 'View #x Online', url: 'https://htmlpreview.github.io/?OLD' },
+      ],
+    }],
+  }]);
+
+  it('updates the link button url and leaves the refresh button untouched', () => {
+    const comps = make();
+    const ok = setLinkButtonUrl(comps, 'https://htmlpreview.github.io/?NEW');
+    assert.equal(ok, true);
+    const row = comps[0].components[0].components;
+    assert.equal(row[1].url, 'https://htmlpreview.github.io/?NEW'); // link button updated
+    assert.equal(row[0].custom_id, 'archive_refresh_123');         // refresh button intact
+    assert.equal(row[0].url, undefined);                            // non-link button never gets a url
+  });
+
+  it('returns false when there is no link button', () => {
+    const comps = [{ type: 17, components: [{ type: 1, components: [{ type: 2, style: 2, custom_id: 'x' }] }] }];
+    assert.equal(setLinkButtonUrl(comps, 'https://new'), false);
+  });
+
+  it('handles empty/undefined input', () => {
+    assert.equal(setLinkButtonUrl([], 'u'), false);
+    assert.equal(setLinkButtonUrl(undefined, 'u'), false);
+  });
+});

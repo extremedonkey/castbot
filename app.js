@@ -37104,6 +37104,42 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
 
+    } else if (custom_id.startsWith('archive_refresh_')) {
+      // Refresh Link: the View Online link wraps a signed Discord CDN URL that expires (~24h).
+      // Re-GET the archive's file message (Discord re-signs the URL on fetch) and rewrite the
+      // link button's URL in place. Edits this (public) button message via UPDATE_MESSAGE.
+      return ButtonHandlerFactory.create({
+        id: 'archive_refresh',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const fileMsgId = custom_id.replace('archive_refresh_', '');
+          const channelId = req.body.channel_id || req.body.channel?.id;
+          const { getArchiveFileUrl, setLinkButtonUrl } = await import('./channelArchiver.js');
+
+          let freshUrl = null;
+          try {
+            const msg = await DiscordRequest(`channels/${channelId}/messages/${fileMsgId}`, { method: 'GET' });
+            freshUrl = getArchiveFileUrl(msg);
+          } catch (err) {
+            console.log(`ℹ️ Refresh Link: could not fetch archive file message ${fileMsgId}: ${err.message}`);
+          }
+
+          const components = req.body.message?.components || [];
+          if (!freshUrl) {
+            const container = components[0];
+            const warn = '-# ⚠️ Could not refresh — the archive file may have been deleted.';
+            if (container?.components && container.components[0]?.content !== warn) {
+              container.components.unshift({ type: 10, content: warn });
+            }
+            return { components };
+          }
+
+          setLinkButtonUrl(components, `https://htmlpreview.github.io/?${freshUrl}`);
+          return { components };
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'archive_channel_select') {
       return ButtonHandlerFactory.create({
         id: 'archive_channel_select',

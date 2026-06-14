@@ -4370,6 +4370,14 @@ export const BUTTON_REGISTRY = {
     category: 'admin',
     parent: 'archive_channel'
   },
+  'archive_refresh_*': {
+    label: 'Refresh Link',
+    description: 'Re-mint the archive View Online link (signed CDN URLs expire ~24h)',
+    emoji: '🔄',
+    style: 'Secondary',
+    category: 'admin',
+    parent: 'archive_channel'
+  },
   'archive_confirm': {
     label: 'Confirm Archive',
     description: 'Confirms and starts the background channel archive loop',

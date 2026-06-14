@@ -129,6 +129,28 @@ function findType13Url(comps) {
   return null;
 }
 
+/**
+ * Pull a FRESH signed CDN URL for the archive HTML out of a fetched message object.
+ * Discord re-signs attachment URLs on every message GET, so this is how the Refresh Link
+ * button mints a working URL again after the original expired (~24h). Returns null if gone.
+ */
+export function getArchiveFileUrl(message) {
+  return findType13Url(message?.components) || message?.attachments?.[0]?.url || null;
+}
+
+/**
+ * Recursively set the `url` of the first link button (type 2, style 5) found in a
+ * components tree. Pure (mutates in place) — unit tested. Returns true if one was updated.
+ * Used by the Refresh Link handler to rewrite the "View Online" button's URL on its own message.
+ */
+export function setLinkButtonUrl(components, newUrl) {
+  for (const c of (components || [])) {
+    if (c?.type === 2 && c?.style === 5) { c.url = newUrl; return true; }
+    if (Array.isArray(c?.components) && setLinkButtonUrl(c.components, newUrl)) return true;
+  }
+  return false;
+}
+
 /** Build the Components V2 container that wraps the archive file. */
 function buildContainer(displayName, count, cbEmojiStr, filename, nowUnix) {
   return {
@@ -178,6 +200,7 @@ async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, pr
     throw err;
   }
   const postData = await fileRes.json();
+  const fileMsgId = postData.id; // the file message — Refresh Link re-fetches it for a fresh URL
 
   // Resolve CDN URL — for CV2 + type-13, Discord puts it inside the component, not attachments[].
   let cdnUrl = postData.attachments?.[0]?.url || findType13Url(postData.components);
@@ -186,18 +209,24 @@ async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, pr
     return;
   }
 
-  // POST 2 — separate message with the "View Online" link button
+  // POST 2 — separate message: [🔄 Refresh Link] [View #channel Online].
+  // The htmlpreview URL wraps a signed Discord CDN URL that expires (~24h); Refresh Link
+  // (custom_id carries the file message id) re-fetches that message for a fresh URL and
+  // rewrites this button's link in place. See archive_refresh_* handler.
   const viewUrl = `https://htmlpreview.github.io/?${cdnUrl}`;
   const maxNameLen = 80 - 'View #'.length - ' Online'.length; // 67 chars (account for the # prefix)
   const truncName = displayName.length > maxNameLen ? displayName.slice(0, maxNameLen - 1) + '…' : displayName;
 
+  const row = { type: 1, components: [] };
+  if (fileMsgId) {
+    row.components.push({ type: 2, style: 2, custom_id: `archive_refresh_${fileMsgId}`, label: 'Refresh Link', emoji: { name: '🔄' } });
+  }
+  row.components.push({ type: 2, style: 5, label: `View #${truncName} Online`, url: viewUrl });
+
   const btnRes = await post({
     body: JSON.stringify({
       flags: IS_CV2,
-      components: [{
-        type: 17,
-        components: [{ type: 1, components: [{ type: 2, style: 5, label: `View #${truncName} Online`, url: viewUrl }] }]
-      }]
+      components: [{ type: 17, components: [row] }]
     }),
     headers: { 'Content-Type': 'application/json' }
   });
