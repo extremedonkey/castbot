@@ -152,18 +152,18 @@ export function setLinkButtonUrl(components, newUrl) {
 }
 
 /** Build the Components V2 container that wraps the archive file. */
-function buildContainer(displayName, count, cbEmojiStr, filename, nowUnix) {
+function buildContainer(displayName, count, cbEmojiStr, filename, nowUnix, firstUnix, lastUnix) {
   return {
     type: 17,
     accent_color: 0x3498db,
     components: [
       { type: 10, content: `## 📂 #${displayName}\n-# ${cbEmojiStr} CastBot Archive` },
       { type: 14 },
-      { type: 10, content: `📄 **${count} messages**\n📅 <t:${nowUnix}:F>` },
+      { type: 10, content: `✉️ Number of Messages: **${count}**\n🗂️ Archive date: <t:${nowUnix}:F>\n📅 First message: <t:${firstUnix}:F>\n📅 Last message: <t:${lastUnix}:F>` },
       { type: 14 },
       { type: 10, content: `## 🔍 Viewing the archive` },
       { type: 13, file: { url: `attachment://${filename}` } },
-      { type: 10, content: `-# **Option 1** — Download and open the HTML file above\n-# **Option 2** — Use the link button below to view online *(expires ~24h)*` }
+      { type: 10, content: `-# **Option 1** — Download and open the HTML file above\n-# **Option 2** — Use the link button below to view online *(expires ~24h, use 🔄 Refresh Link)*\n-# **Option 3** — ✨ **Unarchive** recreates the entire channel. Very slow even for one channel — use sparingly, it defeats the purpose of archiving.` }
     ]
   };
 }
@@ -180,8 +180,12 @@ async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, pr
   const filename = `${channelName}-export-${today}${partLabel ? `-part${partLabel.i}` : ''}.html`;
   const fileBuffer = Buffer.from(html, 'utf-8');
   const nowUnix = Math.floor(Date.now() / 1000);
+  // msgs are sorted oldest-first → first/last message timestamps for the metadata block.
+  const toUnix = (ts) => { const u = Math.floor(new Date(ts).getTime() / 1000); return Number.isNaN(u) ? nowUnix : u; };
+  const firstUnix = msgs.length ? toUnix(msgs[0].timestamp) : nowUnix;
+  const lastUnix = msgs.length ? toUnix(msgs[msgs.length - 1].timestamp) : nowUnix;
 
-  const container = buildContainer(displayName, msgs.length, cbEmojiStr, filename, nowUnix);
+  const container = buildContainer(displayName, msgs.length, cbEmojiStr, filename, nowUnix, firstUnix, lastUnix);
 
   // POST 1 — multipart file + container
   const form = new FormData();
@@ -224,7 +228,7 @@ async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, pr
   row.components.push({ type: 2, style: 5, label: `View #${truncName} Online`, url: viewUrl });
   if (fileMsgId) {
     // 🧪 EXPERIMENTAL: rebuild this channel from the archive (see channelRestore.js)
-    row.components.push({ type: 2, style: 1, custom_id: `archive_restore_${fileMsgId}`, label: 'Restore', emoji: { name: '✨' } });
+    row.components.push({ type: 2, style: 1, custom_id: `archive_restore_${fileMsgId}`, label: 'Unarchive', emoji: { name: '✨' } });
   }
 
   const btnRes = await post({

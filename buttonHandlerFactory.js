@@ -4379,8 +4379,8 @@ export const BUTTON_REGISTRY = {
     parent: 'archive_channel'
   },
   'archive_restore_*': {
-    label: 'Restore',
-    description: 'EXPERIMENTAL: rebuild a channel from its archive under 📂 CastBot Archives',
+    label: 'Unarchive',
+    description: 'EXPERIMENTAL: rebuild the entire channel from its archive under 📂 CastBot Archives',
     emoji: '✨',
     style: 'Primary',
     category: 'admin',

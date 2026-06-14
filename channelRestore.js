@@ -25,7 +25,6 @@ import { getArchiveFileUrl } from './channelArchiver.js';
 const IS_CV2 = 1 << 15;
 const ARCHIVE_CATEGORY_BASE = '📂 CastBot Archives';
 const CATEGORY_CHILD_LIMIT = 50;        // Discord caps a category at 50 channels
-const MAX_RESTORE_MESSAGES = 2000;      // safety cap for an experimental feature (raise if needed)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
@@ -153,9 +152,8 @@ export async function restoreFromArchiveMessage({ client, guildId, archiveChanne
     throw new Error('This archive has no restore data — it was created before Restore support. Re-archive the channel to enable Restore.');
   }
   const channelName = (data.channel || 'restored-archive').slice(0, 100);
-  const allMessages = data.messages;
-  const messages = allMessages.slice(0, MAX_RESTORE_MESSAGES);
-  const truncated = allMessages.length > messages.length;
+  // Restore the ENTIRE channel (Option 3 is "Unarchive" — slow but complete). No cap.
+  const messages = data.messages;
 
   // 3. Ensure the archive category + create the new channel under it
   const categoryId = await ensureArchiveCategory(client, guildId);
@@ -168,7 +166,7 @@ export async function restoreFromArchiveMessage({ client, guildId, archiveChanne
   // 4. Header marker (posted as the bot)
   await botPost(newChannel.id, {
     type: 17, accent_color: 0x9b59b6,
-    components: [{ type: 10, content: `## ♻️ Restored archive — #${channelName}\n-# Rebuilt by CastBot from an archive. Reconstructed messages (not original timestamps); pings are suppressed.${truncated ? `\n-# ⚠️ Truncated to the first ${MAX_RESTORE_MESSAGES} of ${allMessages.length} messages.` : ''}` }],
+    components: [{ type: 10, content: `## ♻️ Restored archive — #${channelName}\n-# Rebuilt by CastBot from an archive (${messages.length} messages). Reconstructed live; pings are suppressed and timestamps shown as "Originally Posted".` }],
   });
 
   // 5. Create a webhook and re-post messages through it (username/avatar per author), paced.

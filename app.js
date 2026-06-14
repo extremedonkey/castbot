@@ -37171,7 +37171,7 @@ Your server is now ready for Tycoons gameplay!`;
             components: [{
               type: 17,
               accent_color: 0x9b59b6,
-              components: [{ type: 10, content: `## ✨ Restore started\n-# The rebuilt channel will appear under **📂 CastBot Archives** shortly. Large channels take a while (rate-limited); a ✅ marker is posted in the new channel when done.` }]
+              components: [{ type: 10, content: `## ✨ Unarchive started\n-# The rebuilt (private) channel will appear under **📂 CastBot Archives** shortly. This recreates the **entire** channel and is slow (rate-limited); a ✅ marker is posted in the new channel when done.` }]
             }]
           };
         }
