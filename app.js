@@ -37316,7 +37316,7 @@ Your server is now ready for Tycoons gameplay!`;
           const overflow = channels.length > 20 ? `\n-# ...and ${channels.length - 20} more` : '';
           const estMin = channels.length === 1 ? '1–5 min' : `${channels.length * 1}–${channels.length * 5} min`;
           const catNote = categoryCount > 0 ? ` (incl. ${categoryCount} categor${categoryCount !== 1 ? 'ies' : 'y'} expanded)` : '';
-          const modeNote = mode === 'archive_embed' ? `\n-# 🖼️ Self-Contained mode: images embedded (slower & larger; non-image files not kept).` : '';
+          const modeNote = mode === 'archive_embed' ? `\n-# 🖼️ Self-Contained mode: images embedded as compressed WebP (survives source deletion; slower; non-image files not kept).` : '';
 
           return {
             components: [{

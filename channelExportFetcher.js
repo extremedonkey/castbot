@@ -15,6 +15,7 @@
  */
 import 'dotenv/config';
 import fetch from 'node-fetch';
+import sharp from 'sharp';
 
 const BASE = 'https://discord.com/api/v10';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -253,18 +254,22 @@ export async function fetchChannelThreads(channelId, { activeThreads = [] } = {}
 }
 
 /**
- * Fetch image attachments and return a map of { originalUrl → data:URI } for base64 embedding
- * (the "Self-Contained" archive mode — images then never expire). Skips images over `maxBytes`
- * (base64 inflates ~33%, so cap raw size to keep a single message's HTML under the upload limit).
- * Concurrency-limited; failures are skipped (those images fall back to their expiring link).
+ * Fetch image attachments, **recompress them to WebP** (resize + quality via sharp), and return a
+ * map of { originalUrl → data:image/webp;base64 } for the "Self-Contained" archive mode. The bytes
+ * are baked into the HTML so the archive survives source-channel deletion — and WebP recompression
+ * keeps the file small (a 1–3 MB screenshot → ~100–250 KB) instead of bloating it like raw base64.
+ * Concurrency-limited; anything sharp can't process or that's still over `maxBytes` is skipped
+ * (those images fall back to their original expiring link).
  *
  * @param {Array} allMessages - main + thread messages
  * @param {object} [opts]
- * @param {number} [opts.maxBytes] - skip images larger than this (raw bytes)
+ * @param {number} [opts.maxWidth] - downscale wider images to this (no upscaling)
+ * @param {number} [opts.quality]  - WebP quality 1–100
+ * @param {number} [opts.maxBytes] - skip if STILL larger than this after recompression
  * @param {number} [opts.concurrency]
  * @returns {Promise<Object>} { [url]: dataUri }
  */
-export async function fetchImageData(allMessages, { maxBytes = 6 * 1024 * 1024, concurrency = 5 } = {}) {
+export async function fetchImageData(allMessages, { maxWidth = 1280, quality = 72, maxBytes = 2 * 1024 * 1024, concurrency = 4 } = {}) {
   const urls = [];
   const seen = new Set();
   for (const m of (allMessages || [])) {
@@ -280,10 +285,19 @@ export async function fetchImageData(allMessages, { maxBytes = 6 * 1024 * 1024, 
       try {
         const res = await fetch(url);
         if (!res.ok) continue;
-        const buf = Buffer.from(await res.arrayBuffer());
-        if (buf.length > maxBytes) continue; // too big → leave as (expiring) link
-        const ct = res.headers.get('content-type') || 'image/png';
-        map[url] = `data:${ct};base64,${buf.toString('base64')}`;
+        const raw = Buffer.from(await res.arrayBuffer());
+        let out, mime;
+        try {
+          // rotate() auto-orients from EXIF; first frame only (no animated-webp bloat).
+          out = await sharp(raw, { animated: false }).rotate()
+            .resize({ width: maxWidth, withoutEnlargement: true })
+            .webp({ quality }).toBuffer();
+          mime = 'image/webp';
+        } catch {
+          out = raw; mime = res.headers.get('content-type') || 'image/png'; // sharp couldn't decode → original
+        }
+        if (out.length > maxBytes) continue; // still too big → leave as a link
+        map[url] = `data:${mime};base64,${out.toString('base64')}`;
       } catch { /* skip on error → falls back to link */ }
     }
   };
