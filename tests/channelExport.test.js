@@ -76,6 +76,33 @@ describe('channelExport — markdown & tokens', () => {
     assert.match(render('- item'), /<ul><li>item<\/li><\/ul>/);
     assert.match(render('1. first'), /<ol><li>first<\/li><\/ol>/);
   });
+
+  it('renders -# subtext as small muted text (not raw)', () => {
+    const html = render('-# Thursday 21st May 2026');
+    assert.match(html, /<div class="md-sub">Thursday 21st May 2026<\/div>/);
+    assert.doesNotMatch(html.replace(/"c":"[\s\S]*?"}/, ''), /-# /); // no raw -# in displayed body
+  });
+});
+
+describe('channelExport — image lightbox', () => {
+  function withImage() {
+    return generateExportHTML('test', [{
+      author: { id: '1', username: 'A' }, timestamp: '2026-06-13T12:00:00Z',
+      attachments: [{ url: 'https://cdn.example/x.png', filename: 'x.png', content_type: 'image/png', size: 100 }],
+    }], {});
+  }
+  it('includes the lightbox overlay markup', () => {
+    const html = withImage();
+    assert.match(html, /<div class="lightbox" id="lightbox">/);
+    assert.match(html, /id="lbImg"/);
+    assert.match(html, /id="lbClose"/);
+  });
+  it('wires attachment/embed images to open the lightbox and closes on Escape', () => {
+    const html = withImage();
+    assert.match(html, /\.attachment img, \.embed img/);
+    assert.match(html, /lb\.classList\.add\('open'\)/);
+    assert.match(html, /e\.key === 'Escape'/);
+  });
 });
 
 describe('channelExport — no placeholder/digit corruption', () => {
