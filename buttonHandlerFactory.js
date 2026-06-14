@@ -4385,6 +4385,22 @@ export const BUTTON_REGISTRY = {
     category: 'admin',
     parent: 'archive_channel'
   },
+  'archive_retrieve': {
+    label: 'Retrieve Archive',
+    description: 'Cross-server: list your registered archive runs to re-post into this channel',
+    emoji: '📥',
+    style: 'Secondary',
+    category: 'admin',
+    parent: 'archive_channel'
+  },
+  'archive_retrieve_select': {
+    label: 'Retrieve Archive Select',
+    description: 'Pick a registered archive run to re-post into this channel',
+    emoji: '📥',
+    style: 'Secondary',
+    category: 'admin',
+    parent: 'archive_retrieve'
+  },
   'archive_abandon': {
     label: 'Abandon Archiving',
     description: 'Halt an in-progress archive run',

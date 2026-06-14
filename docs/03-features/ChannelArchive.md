@@ -220,6 +220,23 @@ Rebuilds a channel from its archive. The **✨ Unarchive** button (Option 3; 3rd
 
 ---
 
+## 🌐 Cross-server retrieval (🧪 experimental)
+
+Re-post an archive created in **Server A** into a channel in **Server B** — the *output* (containers + banners + buttons), not the channel itself. Works because the bot shares one `playerData.json` across all its servers and the **host is the same Discord user** in both.
+
+**Registry (pointers only).** When an archive run finishes, it's recorded under the host's player record — `playerData[guildId].players[userId].archives[]` (kept ≤50). No HTML stored, just where the file messages live:
+```
+{ id, label, sourceGuildId, sourceGuildName, archiveChannelId, createdAt,
+  channels: [ { name, category, partMessageIds:[…] } ] }
+```
+(Nested under the player record — *not* a top-level key — so the guild-keyed iteration everywhere else is unaffected.)
+
+**Retrieve (in Server B).** Archive screen → **📥 Retrieve Archive** → `buildRetrieveScreen` scans `playerData[*].players[userId].archives` (newest 25) → string select. Picking a run runs `repostArchiveRun(run, hereChannelId)`: for each channel/part it re-`GET`s the original file message in A (fresh signed URL), downloads the HTML, and re-uploads it under the **original container verbatim** (the type-13 is reset to `attachment://`) with a fresh Unlock/Unarchive button set and category banners. Result: the A archive's posts reappear in B's channel.
+
+**Scope/limits:** retrievable only by the **same user** who created it (it's under their record); the bot must be in both servers; if a source file message was deleted, that part is skipped. TEST-only (it's reached via the TEST-gated archive screen).
+
+---
+
 ## ⚠️ Risks / Notes
 
 - **Privacy/retention.** Archiving persists another server's message content to Discord's CDN (and the htmlpreview proxy reads it). The feature is gated behind Reece's Stuff (`data_admin`, super-admin only).

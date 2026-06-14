@@ -163,3 +163,23 @@ describe('channelArchiver — buildArchiveButtons (Unlock ⇄ View)', () => {
     assert.doesNotMatch(s, /archive_unlock_/); // unlock button gone while unlocked
   });
 });
+
+// Mirrors buildRetrieveScreen's selection: newest-first, capped at 25.
+function pickRecent(runs) {
+  return (runs || []).slice().sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 25);
+}
+
+describe('channelArchiver — retrieve list (cross-server)', () => {
+  it('orders runs newest-first', () => {
+    const runs = [
+      { id: 'a', createdAt: '2026-06-01T00:00:00Z' },
+      { id: 'b', createdAt: '2026-06-14T00:00:00Z' },
+      { id: 'c', createdAt: '2026-06-10T00:00:00Z' },
+    ];
+    assert.deepEqual(pickRecent(runs).map(r => r.id), ['b', 'c', 'a']);
+  });
+  it('caps the list at 25 (string-select limit)', () => {
+    const runs = Array.from({ length: 40 }, (_, i) => ({ id: String(i), createdAt: `2026-06-${String((i % 28) + 1).padStart(2, '0')}T00:00:00Z` }));
+    assert.equal(pickRecent(runs).length, 25);
+  });
+});

@@ -37079,6 +37079,56 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
 
+    } else if (custom_id === 'archive_retrieve') {
+      // Cross-server: list THIS user's registered archive runs (from any server) to re-post here.
+      return ButtonHandlerFactory.create({
+        id: 'archive_retrieve',
+        updateMessage: true,
+        handler: async (context) => {
+          const { loadPlayerData } = await import('./storage.js');
+          const data = await loadPlayerData();
+          const runs = [];
+          for (const [gid, g] of Object.entries(data)) {
+            const arr = g?.players?.[context.userId]?.archives;
+            if (Array.isArray(arr)) for (const r of arr) runs.push({ ...r, _sourceGuildId: r.sourceGuildId || gid });
+          }
+          const { buildRetrieveScreen } = await import('./channelArchiver.js');
+          return { components: [buildRetrieveScreen(runs)] };
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'archive_retrieve_select') {
+      // Re-post the chosen archive run into THIS channel (background; cross-server).
+      return ButtonHandlerFactory.create({
+        id: 'archive_retrieve_select',
+        updateMessage: true,
+        handler: async (context) => {
+          const [sourceGuildId, runId] = (req.body.data.values?.[0] || '').split(':');
+          const destChannelId = req.body.channel_id || req.body.channel?.id;
+          const userId = context.userId;
+          setTimeout(async () => {
+            try {
+              const { loadPlayerData } = await import('./storage.js');
+              const { repostArchiveRun } = await import('./channelArchiver.js');
+              const data = await loadPlayerData();
+              const run = (data?.[sourceGuildId]?.players?.[userId]?.archives || []).find(r => r.id === runId);
+              if (!run) { console.warn(`⚠️ Retrieve: run ${runId} not found for user ${userId}`); return; }
+              await repostArchiveRun(run, destChannelId);
+            } catch (err) { console.error('❌ Retrieve fatal:', err); }
+          }, 0);
+          return {
+            components: [{
+              type: 17, accent_color: 0x3498db,
+              components: [
+                { type: 10, content: `## 📥 Retrieving…\n-# Re-posting the archive into this channel — containers and banners will appear shortly.` },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, style: 2, label: '← Back', custom_id: 'archive_channel' }] }
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'archive_mode_select') {
       // Archive Mode select: archive_only (default) + archive_embed (base64) implemented; stubs revert.
       // Chosen mode remembered per-user (global.pendingArchiveMode), applied at archive_confirm.
@@ -37327,7 +37377,7 @@ Your server is now ready for Tycoons gameplay!`;
           setTimeout(async () => {
             try {
               const { archiveChannels } = await import('./channelArchiver.js');
-              await archiveChannels(channels, invokedChannelId, { interactionToken, applicationId, client, guildId, embedImages, abortKey });
+              await archiveChannels(channels, invokedChannelId, { interactionToken, applicationId, client, guildId, embedImages, abortKey, userId });
             } catch (err) {
               console.error('❌ archiveChannels fatal:', err);
             }

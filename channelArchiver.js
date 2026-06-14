@@ -82,8 +82,9 @@ export function buildArchiveScreen(mode = 'archive_only', note = '') {
       }] },
       { type: 14 },
       { type: 1, components: [
-        { type: 2, style: 2, label: '← Back', custom_id: 'data_admin' },
-        { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 2, emoji: { name: '☢️' } } // copy of Nuke/Delete Category button (self-contained flow)
+        { type: 2, style: 2, label: '← Back', custom_id: 'castbot_tools' },
+        { type: 2, custom_id: 'archive_retrieve', label: 'Retrieve Archive', style: 2, emoji: { name: '📥' } },
+        { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 2, emoji: { name: '☢️' } }
       ] }
     ]
   };
@@ -273,7 +274,7 @@ async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, pr
           headers: { 'Content-Type': 'application/json' }
         });
       } catch { /* note is best-effort */ }
-      return;
+      return null;
     }
     const err = new Error(`file POST ${fileRes.status}: ${errText.slice(0, 200)}`);
     err.status = fileRes.status;
@@ -281,7 +282,7 @@ async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, pr
   }
   const postData = await fileRes.json();
   const fileMsgId = postData.id;
-  if (!fileMsgId) { console.warn(`⚠️ No message id for #${displayName} — buttons skipped.`); return; }
+  if (!fileMsgId) { console.warn(`⚠️ No message id for #${displayName} — buttons skipped.`); return null; }
 
   // POST 2 — the action buttons in the LOCKED state ([🔐 Unlock Archive] [✨ Unarchive]).
   // No link is posted now → no stale ~24h link ever sits public. Unlock mints a fresh one
@@ -295,6 +296,7 @@ async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, pr
   } else {
     console.log(`✅ Archive complete: #${displayName} (${msgs.length} messages)`);
   }
+  return fileMsgId; // captured into the cross-server archive registry
 }
 
 /**
@@ -337,13 +339,15 @@ async function updateRunMessage(container, { interactionToken, applicationId }) 
  * @param {string} [opts.guildId]
  * @param {boolean} [opts.embedImages] - base64-embed images so they never expire ("Self-Contained" mode)
  * @param {string} [opts.abortKey] - key into global.abortArchive; set true to halt the run (🚧 Abandon)
+ * @param {string} [opts.userId] - host who ran it; the run is registered under their player record for cross-server retrieval
  */
-export async function archiveChannels(channels, invokedChannelId, { interactionToken, applicationId, client, guildId, embedImages = false, abortKey = null } = {}) {
+export async function archiveChannels(channels, invokedChannelId, { interactionToken, applicationId, client, guildId, embedImages = false, abortKey = null, userId = null } = {}) {
   const post = createMessagePoster(invokedChannelId);
   const cbEmoji = getBotEmoji('cb_blue');
   const cbEmojiStr = cbEmoji?.id ? `<:cb_blue:${cbEmoji.id}>` : '🗄️';
   const isAborted = () => !!(abortKey && global.abortArchive?.get(abortKey));
   let abandoned = false;
+  const runChannels = []; // { name, category, partMessageIds } — for the cross-server archive registry
 
   // Build the mention name-resolver ONCE from the bot's in-memory guild cache (no REST).
   // User names are also auto-filled per-message from each message's `mentions[]` in the generator.
@@ -418,8 +422,10 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
       const fullHtml = generateExportHTML(channel.name, messages, resolver, threads, { imageData });
       const fullBytes = Buffer.byteLength(fullHtml, 'utf-8');
 
+      const partMessageIds = []; // file-message ids for the cross-server archive registry
       if (fullBytes <= SAFE_UPLOAD_BYTES || messages.length <= 1) {
-        await postOneArchive(post, channel.name, messages, cbEmojiStr, null, fullHtml, resolver, threads, imageData);
+        const id = await postOneArchive(post, channel.name, messages, cbEmojiStr, null, fullHtml, resolver, threads, imageData);
+        if (id) partMessageIds.push(id);
       } else {
         // Byte-aware greedy split: pack messages (incl. each one's attached thread) into parts that
         // each stay under the cap. Message-count splitting failed when embedded images clustered into
@@ -448,9 +454,11 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
           const sliceIds = new Set(slice.map(m => m.id));
           let sliceThreads = threads.filter(t => sliceIds.has(t.id));
           if (i === chunks.length - 1) sliceThreads = sliceThreads.concat(orphanThreads);
-          await postOneArchive(post, channel.name, slice, cbEmojiStr, { i: i + 1, n: chunks.length }, undefined, resolver, sliceThreads, imageData);
+          const id = await postOneArchive(post, channel.name, slice, cbEmojiStr, { i: i + 1, n: chunks.length }, undefined, resolver, sliceThreads, imageData);
+          if (id) partMessageIds.push(id);
         }
       }
+      if (partMessageIds.length) runChannels.push({ name: channel.name, category: channel.category || null, partMessageIds });
       succeeded++;
       totalMsgs += messages.length;
       totalThreads += threads.length;
@@ -467,6 +475,36 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
           headers: { 'Content-Type': 'application/json' }
         });
       } catch { /* posting the error failed too — nothing more to do */ }
+    }
+  }
+
+  // Register the run under the host's player record so they can re-post it in ANOTHER server
+  // (cross-server retrieval). Pointers only (source guild + per-channel file-message ids).
+  if (userId && runChannels.length) {
+    try {
+      const { loadPlayerData, savePlayerData } = await import('./storage.js');
+      const data = await loadPlayerData();
+      const g = data[guildId] = data[guildId] || {};
+      g.players = g.players || {};
+      const p = g.players[userId] = g.players[userId] || {};
+      p.archives = Array.isArray(p.archives) ? p.archives : [];
+      const cats = new Set(runChannels.map(c => c.category).filter(Boolean));
+      const label = cats.size === 1 ? [...cats][0]
+        : (runChannels.length === 1 ? runChannels[0].name : `${runChannels.length} channels`);
+      p.archives.push({
+        id: `${Date.now()}`,
+        label,
+        sourceGuildId: guildId,
+        sourceGuildName: guild?.name || guildId,
+        archiveChannelId: invokedChannelId,
+        createdAt: new Date().toISOString(),
+        channels: runChannels,
+      });
+      if (p.archives.length > 50) p.archives = p.archives.slice(-50); // keep it lightweight
+      await savePlayerData(data);
+      console.log(`🗂️ Registered archive run "${label}" (${runChannels.length} channels) for user ${userId}`);
+    } catch (e) {
+      console.error(`⚠️ Archive registry write failed: ${e.message}`);
     }
   }
 
@@ -492,4 +530,90 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
   if (abortKey) global.abortArchive?.delete(abortKey);
   console.log(`🏁 Archive run done: ${succeeded} ok, ${failed} failed${abandoned ? ', ABANDONED' : ''} (of ${channels.length})`);
   return { succeeded, failed, total: channels.length, abandoned };
+}
+
+// ── Cross-server retrieval ──────────────────────────────────────────────────────
+// An archive run created in Server A is registered under the host's player record. The same
+// host, in Server B, picks it from a string select and we re-post the original containers here.
+
+/** Recursively reset the first type-13 (File) component back to the attachment:// protocol for re-upload. */
+function setType13Attachment(comps, filename) {
+  for (const c of (comps || [])) {
+    if (c?.type === 13 && c.file) { c.file = { url: `attachment://${filename}` }; return true; }
+    if (Array.isArray(c?.components) && setType13Attachment(c.components, filename)) return true;
+  }
+  return false;
+}
+
+/**
+ * Build the "Retrieve Archive" screen — a string select of the host's registered runs (newest first,
+ * max 25). Each option re-posts a whole run into the current channel. Pure.
+ * @param {Array} runs - registry records (with `_sourceGuildId` injected for the select value)
+ */
+export function buildRetrieveScreen(runs) {
+  const recent = (runs || []).slice().sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 25);
+  const components = [
+    { type: 10, content: `## 📥 Retrieve Archive\n-# Re-post an archive **you created** (in any server) into **this** channel — containers, banners and all.` },
+    { type: 14 },
+  ];
+  if (!recent.length) {
+    components.push({ type: 10, content: `-# No archives found. Run an archive first (its run is remembered against your account).` });
+  } else {
+    components.push({
+      type: 1,
+      components: [{
+        type: 3, custom_id: 'archive_retrieve_select', placeholder: 'Pick an archive to re-post here…',
+        min_values: 1, max_values: 1,
+        options: recent.map(r => ({
+          label: `${r.label}`.slice(0, 100),
+          value: `${r._sourceGuildId}:${r.id}`,
+          description: `${r.sourceGuildName} · ${(r.channels || []).length} channel(s) · ${(r.createdAt || '').slice(0, 10)}`.slice(0, 100),
+          emoji: { name: '📂' },
+        })),
+      }],
+    });
+  }
+  components.push({ type: 14 }, { type: 1, components: [{ type: 2, style: 2, label: '← Back', custom_id: 'archive_channel' }] });
+  return { type: 17, accent_color: 0x3498db, components };
+}
+
+/**
+ * Re-post a registered archive run into `destChannelId` (in any server the bot is in). Re-fetches
+ * each original file message (fresh signed URL), downloads the HTML, and re-uploads it under the
+ * ORIGINAL container (verbatim) + a fresh Unlock/Unarchive button set, with category banners.
+ * @returns {Promise<{posted:number, failed:number}>}
+ */
+export async function repostArchiveRun(run, destChannelId) {
+  const token = process.env.DISCORD_TOKEN;
+  const post = createMessagePoster(destChannelId);
+  let lastCategory = null, posted = 0, failed = 0;
+  for (const ch of (run.channels || [])) {
+    if (ch.category && ch.category !== lastCategory) {
+      lastCategory = ch.category;
+      try { await post({ body: JSON.stringify({ flags: IS_CV2, components: [buildCategoryBanner(ch.category)] }), headers: { 'Content-Type': 'application/json' } }); } catch { /* banner best-effort */ }
+    }
+    for (const msgId of (ch.partMessageIds || [])) {
+      try {
+        const srcRes = await fetch(`https://discord.com/api/v10/channels/${run.archiveChannelId}/messages/${msgId}`, { headers: { Authorization: `Bot ${token}` } });
+        if (!srcRes.ok) { failed++; console.log(`ℹ️ Retrieve: source message ${msgId} unavailable (${srcRes.status})`); continue; }
+        const src = await srcRes.json();
+        const url = getArchiveFileUrl(src);
+        const filename = src.attachments?.[0]?.filename || `${ch.name}-archive.html`;
+        if (!url) { failed++; continue; }
+        const buf = Buffer.from(await (await fetch(url)).arrayBuffer());
+        const container = JSON.parse(JSON.stringify(src.components?.[0] || { type: 17, components: [] }));
+        setType13Attachment(container.components, filename); // re-point the file component for re-upload
+        const form = new FormData();
+        form.append('files[0]', buf, { filename, contentType: 'text/html' });
+        form.append('payload_json', JSON.stringify({ flags: IS_CV2, components: [container], attachments: [{ id: 0, filename }] }));
+        const res = await post({ body: form, headers: form.getHeaders() });
+        if (!res.ok) { failed++; console.error(`⚠️ Retrieve: re-post failed for #${ch.name}: ${res.status}`); continue; }
+        const newId = (await res.json()).id;
+        if (newId) await post({ body: JSON.stringify({ flags: IS_CV2, components: [buildArchiveButtons(newId)] }), headers: { 'Content-Type': 'application/json' } });
+        posted++;
+      } catch (e) { failed++; console.error(`⚠️ Retrieve error for #${ch.name}: ${e.message}`); }
+    }
+  }
+  console.log(`📥 Retrieve done: ${posted} re-posted, ${failed} failed (from "${run.label}")`);
+  return { posted, failed };
 }
