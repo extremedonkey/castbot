@@ -712,7 +712,7 @@ export const BUTTON_REGISTRY = {
     label: 'Nuke Category',
     description: 'Select and delete all channels in a Discord category',
     emoji: '☢️',
-    style: 'Danger',
+    style: 'Secondary',
     parent: 'castbot_tools',
     category: 'admin'
   },
