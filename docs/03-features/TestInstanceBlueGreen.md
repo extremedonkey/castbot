@@ -201,6 +201,7 @@ Host castbot-blue
 
 - `~/.ssh/castbot-blue-key.pem` — laptop → test box (full SSH).
 - `/home/ubuntu/.ssh/prod-remediate-key` (on the test box) — test box → prod, **forced-command only** (`remediate-castbot.sh`).
+- `/home/ubuntu/.ssh/github-castbot` (on the test box) — test box → GitHub, **write-enabled deploy key** (`castbot-blue`). Lets `box-restart.sh` push commits made on the box. Box `~/.ssh/config` routes `github.com` to this key; `origin` is the SSH URL `git@github.com:extremedonkey/castbot.git`. Added 2026-06-15 (RaP 0913).
 
 ---
 

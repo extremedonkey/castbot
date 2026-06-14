@@ -132,7 +132,7 @@ flowchart TD
     - `box-session-sync.sh` (**SessionStart**) — auto `pull --rebase` when the box tree is clean.
     - `check-box-clean.sh` (**Stop**) — blocks finishing with uncommitted tracked changes; tells Claude to run `box-restart.sh`. Loop-guarded + fail-open.
   - ✅ **`dev-restart.sh` auto-stash backstop (2026-06-15):** stashes a dirty *tracked* box tree before its deploy-pull.
-  - 🔴 **PENDING — box push auth (the one remaining gap):** the box's remote is HTTPS with no creds (`fatal: could not read Username`), so `box-restart.sh`'s push can't reach GitHub. **An ed25519 deploy key is generated at `/home/ubuntu/.ssh/github-castbot.pub`** — Reece must add it to the repo as a **write-enabled deploy key** (GitHub → repo → Settings → Deploy keys → Add → paste → ✅ *Allow write access*), then flip the remote to SSH (`git remote set-url origin git@github.com:extremedonkey/castbot.git`) + configure SSH to use the key. Until then box-Claude commits land locally and must be rescued via the laptop (see below). Do NOT flip the remote before the key is added — it would break the working HTTPS *fetch* the deploy path relies on.
+  - ✅ **Box push auth (DONE 2026-06-15):** ed25519 deploy key `/home/ubuntu/.ssh/github-castbot` added to the repo as a **write-enabled deploy key** (`castbot-blue`). Box `~/.ssh/config` has a `github.com` host entry pointing at it (`IdentitiesOnly yes`); remote flipped HTTPS→SSH (`git@github.com:extremedonkey/castbot.git`). Verified: `ssh -T git@github.com` authenticates to the repo, and `git push --dry-run` reaches `git-receive-pack` cleanly (a read-only key would be rejected there). `box-restart.sh` push now works end-to-end — no more stranded commits.
 
 ## 🧪 Live Validation (2026-06-15)
 
