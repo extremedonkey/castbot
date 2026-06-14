@@ -14483,6 +14483,8 @@ Your server is now ready for Tycoons gameplay!`;
           const containerComponents = [
             { type: 10, content: `## 🧹 Nuke Category\nSelect a category to delete all its channels.\n\n**${categories.size}** categories found in this server.` },
             { type: 14 },
+            { type: 10, content: `> ⚠️ **Caution:** this permanently deletes every channel in the chosen category — **there is no undo**. You are responsible for backing up your own channels first (e.g. **🧹 Cleanup → Archive Channels**). Use at your own risk.` },
+            { type: 14 },
             {
               type: 1,
               components: [{
