@@ -37348,7 +37348,7 @@ Your server is now ready for Tycoons gameplay!`;
           }, 0);
 
           // Immediate "started" response (factory sends this, then background loop runs)
-          const modeLine = embedImages ? ` -# 🖼️ Self-Contained (images embedded — slower).\n` : '';
+          const modeLine = embedImages ? `-# 🖼️ Self-Contained (images embedded — slower).\n` : '';
           return {
             components: [{
               type: 17,
