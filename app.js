@@ -1245,25 +1245,12 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setDisabled(!hasSafariData)
   ];
   
-  // Cleanup section — maintenance tools (restart controls moved to Reece's Stuff → 📺 Restart)
-  const cleanupButtons = [
-    new ButtonBuilder()
-      .setCustomId('archive_channel')
-      .setLabel('Archive Channels')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🧹'),
-    new ButtonBuilder()
-      .setCustomId('data_clear_vanity')
-      .setLabel('Clear Vanity Roles')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🧹')
-  ];
+  // (Cleanup section moved to the Tools menu — buildSetupMenu in menuBuilder.js)
 
   const analyticsRow = new ActionRowBuilder().addComponents(analyticsButtons);
   const dangerZoneRow = new ActionRowBuilder().addComponents(dangerZoneButtons);
   const dataActionsRow = new ActionRowBuilder().addComponents(dataActionsButtons);
   const exportDataRow = new ActionRowBuilder().addComponents(exportDataButtons);
-  const cleanupRow = new ActionRowBuilder().addComponents(cleanupButtons);
 
   const backRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -1278,9 +1265,6 @@ async function createReeceStuffMenu(guildId, channelId = null) {
     { type: 14 },
     { type: 10, content: `### \`\`\`📊 Analytics\`\`\`` },
     analyticsRow.toJSON(),
-    { type: 14 },
-    { type: 10, content: `### \`\`\`🧹 Cleanup\`\`\`` },
-    cleanupRow.toJSON(),
     { type: 14 },
     { type: 10, content: `### \`\`\`📥 Import & Tools\`\`\`` },
     dataActionsRow.toJSON(),

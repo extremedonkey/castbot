@@ -72,7 +72,16 @@ export class MenuBuilder {
    * @returns {Object} Menu container
    */
   static buildSetupMenu(menuConfig, context) {
-    const isReece = ['391415444084490240', '1086246253819613274', '468655730975703041'].includes(context?.userId);
+    const isReece = ['391415444084490240', '1086246253819613274'].includes(context?.userId);
+    const isTest = process.env.INSTANCE_ROLE === 'test';
+
+    // Cleanup section — admin maintenance tools. Archive Channels is TEST-only for now.
+    const cleanupButtons = [];
+    if (isTest) cleanupButtons.push({ type: 2, custom_id: 'archive_channel', label: 'Archive Channels', style: 2, emoji: { name: '🧹' } });
+    cleanupButtons.push(
+      { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 4, emoji: { name: '☢️' } },
+      { type: 2, custom_id: 'data_clear_vanity', label: 'Clear Vanity Roles', style: 2, emoji: { name: '💅' } }
+    );
 
     const components = [
       { type: 10, content: `## ${menuConfig.title}` },
@@ -87,22 +96,23 @@ export class MenuBuilder {
           { type: 2, custom_id: 'tycoons_legacy', label: 'Tycoons', style: 2, emoji: { name: '💼' } }
         ]
       },
-      { type: 10, content: `### \`\`\`🔮 Roles & Utilities\`\`\`` },
-      {
-        type: 1,
-        components: [
-          { type: 2, custom_id: 'prod_availability', label: 'Availability', style: 2, emoji: { name: '🕐' } },
-          { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } },
-          { type: 2, custom_id: 'map_admin_refresh_anchors', label: 'Refresh Anchors', style: 2, emoji: { name: '🔄' } },
-          { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 4, emoji: { name: '🧹' } }
-        ]
-      },
-      { type: 10, content: `### \`\`\`❄️ Snowflake\`\`\`` },
+      { type: 10, content: `### \`\`\`🧹 Cleanup\`\`\`` },
+      { type: 1, components: cleanupButtons },
+      { type: 10, content: `### \`\`\`❄️ Timers (Snowflake)\`\`\`` },
       {
         type: 1,
         components: [
           { type: 2, custom_id: 'snowflake_calculator', label: 'Calculator', style: 2, emoji: { name: '⏱️' } },
           { type: 2, custom_id: 'snowflake_lookup', label: 'Lookup', style: 2, emoji: { name: '🔍' } }
+        ]
+      },
+      { type: 10, content: `### \`\`\`🔮 Utilities\`\`\`` },
+      {
+        type: 1,
+        components: [
+          { type: 2, custom_id: 'prod_availability', label: 'Availability', style: 2, emoji: { name: '🕐' } },
+          { type: 2, custom_id: 'emoji_editor', label: 'Emoji Editor', style: 2, emoji: { name: '🎨' } },
+          { type: 2, custom_id: 'map_admin_refresh_anchors', label: 'Refresh Anchors', style: 2, emoji: { name: '🔄' } }
         ]
       },
       { type: 10, content: `### \`\`\`📜 Info & Support\`\`\`` }

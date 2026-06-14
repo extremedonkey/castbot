@@ -37,10 +37,9 @@ export const BUTTON_REGISTRY = {
   'data_clear_vanity': {
     label: 'Clear Vanity Roles',
     description: 'Pick a role; wipe all vanity roles from every member who has it',
-    emoji: '🧹',
+    emoji: '💅',
     style: 'Secondary',
-    parent: 'data_admin',
-    restrictedUser: '391415444084490240',
+    parent: 'castbot_tools',
     category: 'admin'
   },
   'data_clear_vanity_select': {
@@ -712,7 +711,7 @@ export const BUTTON_REGISTRY = {
   'prod_nuke_category': {
     label: 'Nuke Category',
     description: 'Select and delete all channels in a Discord category',
-    emoji: '🧹',
+    emoji: '☢️',
     style: 'Danger',
     parent: 'castbot_tools',
     category: 'admin'
@@ -4348,11 +4347,11 @@ export const BUTTON_REGISTRY = {
   },
   'archive_channel': {
     label: 'Archive Channels',
-    description: 'Archive all messages from a channel as a styled HTML file',
+    description: 'Archive all messages from a channel as a styled HTML file (TEST-only)',
     emoji: '🧹',
     style: 'Secondary',
     category: 'admin',
-    parent: 'data_admin'
+    parent: 'castbot_tools'
   },
   'archive_mode_select': {
     label: 'Archive Mode',

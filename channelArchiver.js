@@ -83,7 +83,7 @@ export function buildArchiveScreen(mode = 'archive_only', note = '') {
       { type: 14 },
       { type: 1, components: [
         { type: 2, style: 2, label: '← Back', custom_id: 'data_admin' },
-        { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 4, emoji: { name: '🧹' } } // copy of Nuke/Delete Category button (self-contained flow)
+        { type: 2, custom_id: 'prod_nuke_category', label: 'Nuke Category', style: 4, emoji: { name: '☢️' } } // copy of Nuke/Delete Category button (self-contained flow)
       ] }
     ]
   };
@@ -463,7 +463,7 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
       { type: 14 },
       { type: 1, components: [
         { type: 2, style: 1, custom_id: 'archive_channel', label: 'Archive Another', emoji: { name: '📂' } },
-        { type: 2, style: 4, custom_id: 'prod_nuke_category', label: 'Nuke Category', emoji: { name: '🧹' } },
+        { type: 2, style: 4, custom_id: 'prod_nuke_category', label: 'Nuke Category', emoji: { name: '☢️' } },
       ] },
     ]
   };
