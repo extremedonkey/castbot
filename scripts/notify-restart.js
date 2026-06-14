@@ -114,7 +114,7 @@ async function sendRestartNotification() {
         });
 
         // Build message content with new formatting
-        let messageContent = `> # \`🖥️ ${environment} Server Restart!                                                \`
+        let messageContent = `> # \`🖥️ ${environment} Server Restart                                                \`
 
 <@391415444084490240>
 
