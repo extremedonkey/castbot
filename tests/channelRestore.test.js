@@ -99,6 +99,22 @@ describe('channelRestore — splitContent', () => {
   });
 });
 
+function formatOriginallyPosted(isoTime) {
+  const unix = Math.floor(new Date(isoTime).getTime() / 1000);
+  if (Number.isNaN(unix)) return '';
+  return `-# Originally Posted: <t:${unix}:f>`;
+}
+
+describe('channelRestore — formatOriginallyPosted', () => {
+  it('renders a hammertime subtext line from an ISO timestamp', () => {
+    assert.equal(formatOriginallyPosted('2026-05-03T08:08:00.000Z'), '-# Originally Posted: <t:1777795680:f>');
+  });
+  it('returns empty string for missing/invalid timestamps', () => {
+    assert.equal(formatOriginallyPosted(undefined), '');
+    assert.equal(formatOriginallyPosted('not-a-date'), '');
+  });
+});
+
 describe('channelRestore — extractArchiveData', () => {
   it('parses the embedded payload (with escaped <)', () => {
     const payload = { v: 1, channel: 'x', messages: [{ n: 'A', a: 'u', c: 'hi <@123>' }] };

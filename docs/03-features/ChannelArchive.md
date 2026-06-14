@@ -165,7 +165,7 @@ All three use `ButtonHandlerFactory.create()` (`[✨ FACTORY]` in logs). The two
 
 ## ✨ Restore (🧪 experimental, reversible)
 
-Rebuilds a channel from its archive. The **✨ Restore** button (3rd in the archive button row, `archive_restore_{fileMessageId}`) is gated to **Manage Channels**.
+Rebuilds a channel from its archive. The **✨ Restore** button (3rd in the archive button row, `archive_restore_{fileMessageId}`) is **visible to everyone**, but only **admins / prod team** (`hasAdminPermissions`) can run it — non-admins get a generic ephemeral "Restricted — contact the Production team" message. Restored channels (and the **📂 CastBot Archives** category) are created **private** (deny `VIEW_CHANNEL` for `@everyone`, bot keeps access).
 
 **Data source:** every archive HTML now embeds a compact JSON payload — `<script id="cb-archive-data">{ v, channel, messages:[{n,a,c}] }` — written by `generateExportHTML` (n=author name, a=avatar URL, c=raw text). Restore reads *that*, not the rendered DOM. Archives created **before** this feature have no payload → Restore returns a clear "re-archive to enable" message.
 
@@ -173,7 +173,7 @@ Rebuilds a channel from its archive. The **✨ Restore** button (3rd in the arch
 1. Re-`GET` the file message → fresh HTML URL (via `getArchiveFileUrl`) → download HTML → `extractArchiveData`.
 2. `ensureArchiveCategory` — find a **📂 CastBot Archives** category with <50 channels (Discord's category cap), else create **📂 CastBot Archives** / **(2)** / **(3)**… (`pickArchiveCategory`, pure + tested).
 3. Create a text channel named after the original under that category.
-4. Create a **webhook**, re-post each message through it with the original **username + avatar** (best-effort impersonation), `allowed_mentions: { parse: [] }` so **no pings fire**, content split to ≤1950 chars. Posting is **header-paced + 429-retried** via the same `computePostPacing` as the write path (webhook execute has its own per-webhook bucket).
+4. Create a **webhook**, re-post each message through it with the original **username + avatar** (best-effort impersonation), `allowed_mentions: { parse: [] }` so **no pings fire**, content split to ≤1950 chars. Posting is **header-paced + 429-retried** via the same `computePostPacing` as the write path (webhook execute has its own per-webhook bucket). Because Discord groups consecutive same-username webhook posts, the **first message of each author group** is prefixed with `-# Originally Posted: <t:unix:f>` (the embed now carries each message's `t`) — restored messages get *current* timestamps, so this preserves the original time as a hammertime in the viewer's local zone (`formatOriginallyPosted`).
 5. Delete the webhook; post header/footer markers in the new channel.
 
 **Limits & caveats:** capped at `MAX_RESTORE_MESSAGES = 2000` per restore (truncation noted in the header); messages get **current timestamps** (Discord can't backdate) and **no attachments/images** (those URLs had expired); empty/image-only messages are skipped.

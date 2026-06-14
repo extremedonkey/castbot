@@ -54,6 +54,23 @@ export function pickArchiveCategory(allChannels) {
   return { createName: `${ARCHIVE_CATEGORY_BASE} (${maxNum + 1})` };
 }
 
+/** Format the "Originally Posted" subtext line (hammertime → viewer's local time). Pure — tested. */
+export function formatOriginallyPosted(isoTime) {
+  const unix = Math.floor(new Date(isoTime).getTime() / 1000);
+  if (Number.isNaN(unix)) return '';
+  return `-# Originally Posted: <t:${unix}:f>`;
+}
+
+// Permission bits (BigInt) — VIEW_CHANNEL, SEND_MESSAGES, MANAGE_WEBHOOKS
+const VIEW = 1n << 10n, SEND = 1n << 11n, MANAGE_WH = 1n << 29n;
+
+/** Overwrites that make a channel/category private: hide from @everyone, keep bot access. */
+function privateOverwrites(guildId, botId) {
+  const ow = [{ id: guildId, type: 0, deny: String(VIEW) }]; // @everyone: deny View Channel
+  if (botId) ow.push({ id: botId, type: 1, allow: String(VIEW | SEND | MANAGE_WH) }); // bot: keep access
+  return ow;
+}
+
 /** Split text into <=max-char chunks (webhook/message content cap is 2000). Pure — unit tested. */
 export function splitContent(text, max = 1950) {
   const out = [];
@@ -80,7 +97,10 @@ async function ensureArchiveCategory(client, guildId) {
   const all = await getGuildChannels(client, guildId);
   const pick = pickArchiveCategory(all);
   if (pick.categoryId) return pick.categoryId;
-  const created = await DiscordRequest(`guilds/${guildId}/channels`, { method: 'POST', body: { name: pick.createName, type: 4 } });
+  const created = await DiscordRequest(`guilds/${guildId}/channels`, {
+    method: 'POST',
+    body: { name: pick.createName, type: 4, permission_overwrites: privateOverwrites(guildId, client?.user?.id) },
+  });
   return created.id;
 }
 
@@ -140,7 +160,8 @@ export async function restoreFromArchiveMessage({ client, guildId, archiveChanne
   // 3. Ensure the archive category + create the new channel under it
   const categoryId = await ensureArchiveCategory(client, guildId);
   const newChannel = await DiscordRequest(`guilds/${guildId}/channels`, {
-    method: 'POST', body: { name: channelName, type: 0, parent_id: categoryId },
+    method: 'POST',
+    body: { name: channelName, type: 0, parent_id: categoryId, permission_overwrites: privateOverwrites(guildId, client?.user?.id) },
   });
   console.log(`♻️ Restore: created #${newChannel.name} (${newChannel.id}) — ${messages.length} messages`);
 
@@ -154,12 +175,16 @@ export async function restoreFromArchiveMessage({ client, guildId, archiveChanne
   const webhook = await DiscordRequest(`channels/${newChannel.id}/webhooks`, { method: 'POST', body: { name: 'CastBot Archive' } });
   const whUrl = `https://discord.com/api/v10/webhooks/${webhook.id}/${webhook.token}`;
   const state = { wait: 0 };
-  let posted = 0, failed = 0;
+  let posted = 0, failed = 0, prevAuthor = null;
   for (const m of messages) {
     const text = (m.c || '').trim();
     if (!text) continue; // nothing recoverable for this message (image-only, etc.)
     const username = (m.n || 'Unknown').slice(0, 80);
-    for (const chunk of splitContent(text)) {
+    // New author = new visual group (webhook posts group by username) → stamp the original time once.
+    const header = (m.n !== prevAuthor) ? formatOriginallyPosted(m.t) : '';
+    prevAuthor = m.n;
+    const body = header ? `${header}\n${text}` : text;
+    for (const chunk of splitContent(body)) {
       const res = await execWebhook(whUrl, {
         username, avatar_url: m.a || undefined, content: chunk, allowed_mentions: { parse: [] },
       }, state);

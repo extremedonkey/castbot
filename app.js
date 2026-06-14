@@ -37145,9 +37145,17 @@ Your server is now ready for Tycoons gameplay!`;
       return ButtonHandlerFactory.create({
         id: 'archive_restore',
         ephemeral: true,
-        requiresPermission: PermissionFlagsBits.ManageChannels,
-        permissionName: 'Manage Channels',
         handler: async (context) => {
+          // Button is visible to everyone (it's on a public message), but only admins/prod team can run it.
+          if (!hasAdminPermissions(context.member)) {
+            return {
+              components: [{
+                type: 17,
+                accent_color: 0xe74c3c,
+                components: [{ type: 10, content: `## 🚫 Restricted\n-# Restoring archives is limited to the **Production team**. Please reach out to them if you need this done.` }]
+              }]
+            };
+          }
           const fileMessageId = custom_id.replace('archive_restore_', '');
           const archiveChannelId = req.body.channel_id || req.body.channel?.id;
           const guildId = context.guildId;
