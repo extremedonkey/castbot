@@ -11425,7 +11425,7 @@ To fix this:
                     type: 4, // Text Input
                     custom_id: 'season_name',
                     style: 1, // Short
-                    placeholder: 'e.g., "Season 12 - Jurassic Park"',
+                    placeholder: 'e.g., "Season 12 - Zelda: Ocarina of Time"',
                     required: true,
                     max_length: 100,
                     value: config.seasonName || '' // Pre-populate with existing value
@@ -28596,7 +28596,7 @@ Your server is now ready for Tycoons gameplay!`;
                         type: 4, // Text Input
                         custom_id: 'season_name',
                         style: 1, // Short
-                        placeholder: 'e.g., "Season 12 - Jurassic Park"',
+                        placeholder: 'e.g., "Season 12 - Zelda: Ocarina of Time"',
                         required: true,
                         max_length: 100
                       }

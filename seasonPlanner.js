@@ -264,7 +264,7 @@ export function buildSeasonPlannerModal(existing = null) {
         label: 'Season Name',
         component: {
           type: 4, custom_id: 'season_name', style: 1,
-          placeholder: 'e.g., "Season 12 - Jurassic Park"',
+          placeholder: 'e.g., "Season 12 - Zelda: Ocarina of Time"',
           required: true, max_length: 100,
           ...(existing?.seasonName ? { value: existing.seasonName } : {})
         }
