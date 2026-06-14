@@ -16,9 +16,9 @@ function expandArchiveSelection(selectedIds, allChannels, resolved = {}) {
     if (!ch) continue;
     if (ch.type === 4) {
       categoryCount++;
-      for (const kid of childrenOf(id)) picked.set(kid.id, { id: kid.id, name: kid.name });
+      for (const kid of childrenOf(id)) picked.set(kid.id, { id: kid.id, name: kid.name, category: ch.name });
     } else if ([0, 5].includes(ch.type)) {
-      picked.set(ch.id, { id: ch.id, name: ch.name });
+      picked.set(ch.id, { id: ch.id, name: ch.name, category: null });
     }
   }
   return { channels: [...picked.values()], categoryCount };
@@ -39,6 +39,12 @@ describe('channelArchiver — expandArchiveSelection', () => {
     const { channels, categoryCount } = expandArchiveSelection(['cat'], GUILD);
     assert.deepEqual(channels.map(c => c.name), ['alpha', 'beta', 'announce']);
     assert.equal(categoryCount, 1);
+  });
+
+  it('tags category children with the category name (for the divider) and loose channels with null', () => {
+    const { channels } = expandArchiveSelection(['cat', 'loose'], GUILD);
+    assert.equal(channels.find(c => c.id === 'c1').category, 'Season'); // child carries its category
+    assert.equal(channels.find(c => c.id === 'loose').category, null);  // directly-picked → no divider
   });
 
   it('excludes non-text channel types (voice) from a category', () => {

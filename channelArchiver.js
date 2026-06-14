@@ -125,6 +125,16 @@ export function buildArchiveButtons(fileMsgId, { viewUrl = null } = {}) {
 }
 
 /**
+ * Build a full-width "category" divider banner posted above a category's channel archives.
+ * Uses the notify-restart.js trick: `> # \`text + padding\`` renders an H1 monospace bar.
+ */
+function buildCategoryBanner(name) {
+  const clean = String(name || 'Category').replace(/`/g, '');
+  const padded = `${clean}${' '.repeat(Math.max(0, 40 - clean.length))}`;
+  return { type: 17, accent_color: 0x3498db, components: [{ type: 10, content: `> # \`📂 ${padded}\`` }] };
+}
+
+/**
  * Expand an archive multi-selection into a flat, de-duplicated list of channels.
  * Pure function — unit tested in tests/channelArchiver.test.js.
  *
@@ -141,16 +151,16 @@ export function expandArchiveSelection(selectedIds, allChannels, resolved = {}) 
     .filter(c => c.parent_id === catId && [0, 5].includes(c.type))
     .sort((a, b) => (a.position || 0) - (b.position || 0));
 
-  const picked = new Map(); // id → {id, name} — Map gives us dedupe + insertion order
+  const picked = new Map(); // id → {id, name, category} — Map gives us dedupe + insertion order
   let categoryCount = 0;
   for (const id of (selectedIds || [])) {
     const ch = byId.get(id) || resolved[id];
     if (!ch) continue;
-    if (ch.type === 4) { // category → expand to its text/announcement children
+    if (ch.type === 4) { // category → expand to its text/announcement children (tagged with the category name)
       categoryCount++;
-      for (const kid of childrenOf(id)) picked.set(kid.id, { id: kid.id, name: kid.name });
-    } else if ([0, 5].includes(ch.type)) { // text / announcement channel
-      picked.set(ch.id, { id: ch.id, name: ch.name });
+      for (const kid of childrenOf(id)) picked.set(kid.id, { id: kid.id, name: kid.name, category: ch.name });
+    } else if ([0, 5].includes(ch.type)) { // directly-picked channel → no category divider
+      picked.set(ch.id, { id: ch.id, name: ch.name, category: null });
     }
   }
   return { channels: [...picked.values()], categoryCount };
@@ -203,7 +213,7 @@ function buildContainer(displayName, count, cbEmojiStr, filename, nowUnix, first
       { type: 14 },
       { type: 10, content: `## 🔍 Viewing the archive` },
       { type: 13, file: { url: `attachment://${filename}` } },
-      { type: 10, content: `-# **Option 1** — Download and open the HTML file above\n-# **Option 2** — Use the link button below to view online *(expires ~24h, use 🔄 Refresh Link)*\n-# **Option 3** — ✨ **Unarchive** recreates the entire channel. Very slow even for one channel — use sparingly, it defeats the purpose of archiving.` }
+      { type: 10, content: `-# **Option 1: 💽 Download and view** — download the file above and open it locally on your computer.\n-# **Option 2: 🌍 View Online** (recommended) — click the **🔐 Unlock Archive** button, then **View Archive** to view it online without downloading.\n-# **Option 3: 📤 Unarchive** — recreates the entire channel. Very slow even for one channel (hours for a large channel) — use sparingly, it defeats the purpose of archiving.` }
     ]
   };
 }
@@ -356,8 +366,18 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
   let failed = 0;
   let totalMsgs = 0, totalThreads = 0, totalThreadMsgs = 0; // aggregated for the completion summary
 
+  let lastCategory = null;
   for (const channel of channels) {
     if (isAborted()) { abandoned = true; break; } // 🚧 user abandoned → stop before the next channel
+
+    // Entering a new category (channels are grouped by category) → post a divider banner above it.
+    if (channel.category && channel.category !== lastCategory) {
+      lastCategory = channel.category;
+      try {
+        await post({ body: JSON.stringify({ flags: IS_CV2, components: [buildCategoryBanner(channel.category)] }), headers: { 'Content-Type': 'application/json' } });
+      } catch (e) { console.warn(`⚠️ category banner failed for "${channel.category}": ${e.message}`); }
+    }
+
     try {
       console.log(`📥 START archive: #${channel.name} (${channel.id})`);
 
