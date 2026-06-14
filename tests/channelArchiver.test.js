@@ -123,7 +123,7 @@ describe('channelArchiver — setLinkButtonUrl (Refresh Link)', () => {
 
 // Keep in sync with channelArchiver.js → buildArchiveButtons.
 function buildArchiveButtons(fileMsgId, { viewUrl = null } = {}) {
-  const unarchive = { type: 2, style: 1, custom_id: `archive_restore_${fileMsgId}`, label: 'Unarchive', emoji: { name: '✨' } };
+  const unarchive = { type: 2, style: 2, custom_id: `archive_restore_${fileMsgId}`, label: 'Unarchive', emoji: { name: '📤' } };
   if (viewUrl) {
     return { type: 17, components: [
       { type: 10, content: `-# 🔓 Link active for ~10 minutes` },

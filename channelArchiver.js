@@ -100,7 +100,7 @@ export function buildArchiveScreen(mode = 'archive_only', note = '') {
  * @param {string} [opts.viewUrl] - present → render the UNLOCKED state with this link
  */
 export function buildArchiveButtons(fileMsgId, { viewUrl = null } = {}) {
-  const unarchive = { type: 2, style: 2, custom_id: `archive_restore_${fileMsgId}`, label: 'Unarchive', emoji: { name: '✨' } }; // grey
+  const unarchive = { type: 2, style: 2, custom_id: `archive_restore_${fileMsgId}`, label: 'Unarchive', emoji: { name: '📤' } }; // grey
   if (viewUrl) {
     return {
       type: 17,
@@ -288,35 +288,31 @@ async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, pr
 }
 
 /**
- * Post the run summary as an EPHEMERAL interaction followup (only the invoking user sees it).
- * The archives themselves are public by design, but this status message must stay private —
- * so it is NEVER posted publicly. If the ephemeral followup can't be sent (no token, or the
- * interaction token expired because the run outlasted the ~15-min window), the summary is
- * simply skipped and logged — the per-channel archive posts already show the result in-channel.
+ * Replace the original "📦 Archiving…" ephemeral (the interaction @original) with the run's
+ * Archive-Complete summary — this both clears the now-stale Abandon button and shows the result.
+ * Edits in place via PATCH /webhooks/{app}/{token}/messages/@original (stays ephemeral). On token
+ * expiry (long run >15 min) it's logged and skipped — the per-channel archive posts remain.
  */
-async function postSummary(container, { interactionToken, applicationId }) {
+async function updateRunMessage(container, { interactionToken, applicationId }) {
   if (!interactionToken || !applicationId) {
-    console.log('ℹ️ Archive summary skipped — no interaction token (kept private, not posted publicly).');
+    console.log('ℹ️ Archive: no interaction token — run message not updated.');
     return;
   }
   try {
-    const res = await fetch(`https://discord.com/api/v10/webhooks/${applicationId}/${interactionToken}`, {
-      method: 'POST',
+    const res = await fetch(`https://discord.com/api/v10/webhooks/${applicationId}/${interactionToken}/messages/@original`, {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ flags: IS_CV2 | EPHEMERAL, components: [container] })
+      body: JSON.stringify({ flags: IS_CV2, components: [container] })
     });
     if (res.ok) return;
     const body = await res.text();
-    // 401 / code 50027 (Invalid Webhook Token) = the token expired because the run outlasted
-    // the 15-min window. Expected on long runs — log as info (not an error) and skip; we do NOT
-    // fall back to a public post, since this message is meant to be ephemeral-only.
     if (res.status === 401) {
-      console.log('ℹ️ Archive summary skipped — interaction token expired on a long run (archives are posted in-channel above).');
+      console.log('ℹ️ Archive: run message not updated — interaction token expired on a long run.');
     } else {
-      console.error(`⚠️ Archive summary followup failed: ${res.status} ${body} — skipped (kept private).`);
+      console.error(`⚠️ Archive: run message update failed: ${res.status} ${body}`);
     }
   } catch (err) {
-    console.error(`⚠️ Archive summary followup error: ${err.message} — skipped (kept private).`);
+    console.error(`⚠️ Archive: run message update error: ${err.message}`);
   }
 }
 
@@ -358,6 +354,7 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
 
   let succeeded = 0;
   let failed = 0;
+  let totalMsgs = 0, totalThreads = 0, totalThreadMsgs = 0; // aggregated for the completion summary
 
   for (const channel of channels) {
     if (isAborted()) { abandoned = true; break; } // 🚧 user abandoned → stop before the next channel
@@ -435,6 +432,9 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
         }
       }
       succeeded++;
+      totalMsgs += messages.length;
+      totalThreads += threads.length;
+      totalThreadMsgs += threads.reduce((n, t) => n + (t.messages?.length || 0), 0);
     } catch (err) {
       failed++;
       console.error(`❌ Archive error for #${channel.name}:`, err);
@@ -450,18 +450,24 @@ export async function archiveChannels(channels, invokedChannelId, { interactionT
     }
   }
 
-  // Final summary (ephemeral — only the invoking user) so the run never "silently" ends.
-  if (channels.length > 1 || abandoned) {
-    const remaining = channels.length - succeeded - failed;
-    const head = abandoned ? '🛑 Archiving abandoned' : (failed ? '⚠️ Archive run complete' : '✅ Archive run complete');
-    const tail = abandoned && remaining > 0 ? `\n-# Stopped — re-run to finish the remaining ${remaining} channel${remaining !== 1 ? 's' : ''}.` : '';
-    const summaryContainer = {
-      type: 17,
-      accent_color: abandoned || failed ? 0xe67e22 : 0x2ecc71,
-      components: [{ type: 10, content: `## ${head}\n${succeeded} archived${failed ? `, ${failed} failed` : ''} (of ${channels.length}).${tail}` }]
-    };
-    await postSummary(summaryContainer, { interactionToken, applicationId });
-  }
+  // Replace the "📦 Archiving…" ephemeral with the completion summary (clears the Abandon button,
+  // styled like the archive posts) + [📂 Archive Another] [🧹 Nuke Category] actions.
+  const remaining = channels.length - succeeded - failed;
+  const head = abandoned ? '🛑 Archiving abandoned' : (failed ? '⚠️ Archive complete' : '✅ Archive complete');
+  const tail = abandoned && remaining > 0 ? `\n-# Stopped — re-run to finish the remaining ${remaining} channel${remaining !== 1 ? 's' : ''}.` : '';
+  const summaryContainer = {
+    type: 17,
+    accent_color: abandoned || failed ? 0xe67e22 : 0x2ecc71,
+    components: [
+      { type: 10, content: `## ${head}\n-# ${cbEmojiStr} CastBot Archive\n\n📂 **${succeeded}** channel${succeeded !== 1 ? 's' : ''} archived${failed ? `, ⚠️ ${failed} failed` : ''} (of ${channels.length})\n✉️ ${totalMsgs} message${totalMsgs !== 1 ? 's' : ''}${totalThreads ? `\n🧵 ${totalThreads} thread${totalThreads !== 1 ? 's' : ''} (${totalThreadMsgs} messages)` : ''}${tail}` },
+      { type: 14 },
+      { type: 1, components: [
+        { type: 2, style: 1, custom_id: 'archive_channel', label: 'Archive Another', emoji: { name: '📂' } },
+        { type: 2, style: 4, custom_id: 'prod_nuke_category', label: 'Nuke Category', emoji: { name: '🧹' } },
+      ] },
+    ]
+  };
+  await updateRunMessage(summaryContainer, { interactionToken, applicationId });
 
   if (abortKey) global.abortArchive?.delete(abortKey);
   console.log(`🏁 Archive run done: ${succeeded} ok, ${failed} failed${abandoned ? ', ABANDONED' : ''} (of ${channels.length})`);
