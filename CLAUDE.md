@@ -248,8 +248,9 @@ const dynamicPatterns = [
 
 **🛰️ Two working trees — sync ONLY through GitHub `main`:** the repo now lives in **two** places that both push to `main`: the **dev laptop** (`/home/reece/castbot`, WSL) and the **test box** (`/home/ubuntu/castbot` on castbot-blue, which is *also* the deploy target `dev-restart.sh` pulls into). GitHub is the only sync layer — see [RemoteDevTestBox RaP 0913](docs/01-RaP/0913_20260614_RemoteDevTestBox_Analysis.md).
 - **On the laptop** (your usual session) → `dev-restart.sh` as above. Unchanged.
-- **ON the test box** (you'll know: cwd `/home/ubuntu/castbot`, user `ubuntu`, `INSTANCE_ROLE=test`) → use **`./scripts/dev/box-restart.sh "msg"`** instead. It commits → `pull --rebase` → pushes → tests → `pm2 restart castbot-pm`. **Never run `dev-restart.sh` on the box.**
-- **Iron rule:** never end a task with uncommitted changes in the test-box tree — always finish via `box-restart.sh`, so the laptop's next pull is clean. (`dev-restart.sh` auto-stashes a dirty box tree as a backstop, but don't rely on it.)
+- **ON the test box** (you'll know: user `ubuntu`, repo at `/home/ubuntu/castbot`, `INSTANCE_ROLE=test`) → **YOU run `./scripts/dev/box-restart.sh "msg"` yourself** to finish — do NOT tell the user to deploy; deploying is your job, exactly like `dev-restart.sh` is on the laptop. It commits → `pull --rebase` → pushes → tests → `pm2 restart castbot-pm` (which IS the TEST deploy). **Never run `dev-restart.sh` on the box.**
+- **Iron rule:** never end a task with uncommitted changes in the test-box tree — always finish by running `box-restart.sh` *yourself*. The **Stop hook** (`.claude/hooks/check-box-clean.sh`) enforces this; `dev-restart.sh` auto-stashes a dirty box tree as a further backstop.
+- **Box sessions must root in the repo:** the box's `~/.bashrc` auto-`cd`s into `/home/ubuntu/castbot` so `claude` loads this CLAUDE.md + the hooks. If you ever find yourself rooted at `/home/ubuntu` (no project context, hooks silent), `cd ~/castbot` and relaunch.
 
 **⚠️ This is NOT optional — run it after EVERY code change** (button/modal/UI handlers, config, data-structure changes, new features, bug fixes, refactors, ANY `.js` change).
 

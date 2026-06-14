@@ -133,6 +133,8 @@ Since 2026-06-14 the box hosts a `claude` CLI (`/usr/bin/claude`, 2.1.177), so C
 
 **Connect:** `ssh castbot-blue` → `tmux attach -t vibe` (or `tmux new -s vibe`) → `claude`. Or `claude remote-control` to drive from the claude.ai / mobile UI. Box has a 2 GB swapfile (RaP 0913) so a heavy session can't OOM the watchdog.
 
+> **⚠️ Sessions MUST root in the repo.** SSH drops you in `/home/ubuntu`, but `claude` only loads this project's CLAUDE.md + the SessionStart/Stop hooks when launched from inside `/home/ubuntu/castbot`. The box's `~/.bashrc` auto-`cd`s into the repo for exactly this reason — if it's ever lost (box rebuild), re-add `cd ~/castbot` to `~/.bashrc`. The hooks also self-detect the box by path (`/home/ubuntu/castbot/.git`) as a backstop, but CLAUDE.md context only loads from the repo cwd.
+
 ---
 
 ## Restart Prod — Manual Out-of-Band Remediation

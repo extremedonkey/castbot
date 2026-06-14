@@ -25,7 +25,10 @@ if [ "$INSTANCE_ROLE" != "test" ] && [ ! -d /home/ubuntu/castbot ]; then
     exit 1
 fi
 
-cd "$(git rev-parse --show-toplevel)"
+# Resolve the repo root from THIS script's location, so it works from any cwd
+# (e.g. invoked as ~/castbot/scripts/dev/box-restart.sh from /home/ubuntu).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR/../.." || { echo "❌ cannot locate repo root from $SCRIPT_DIR"; exit 1; }
 COMMIT_MESSAGE="${1:-Box checkpoint - $(date '+%H:%M:%S')}"
 
 echo "=== CastBot TEST-box Restart ==="
