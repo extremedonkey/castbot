@@ -125,7 +125,7 @@ flowchart TD
 - **Phase 0 — Prereqs (DONE 2026-06-14):** `sudo npm i -g @anthropic-ai/claude-code` → `claude` 2.1.177 at `/usr/bin/claude`. *Pending:* interactive headless login as `ubuntu` (Reece-driven, paste-code flow). On login → **Moai works** (no restart, no code change).
 - **Phase 1 — Basic remote dev (today):** `ssh castbot-blue` → `tmux new -s vibe` → `claude` in `/home/ubuntu/castbot`. Adopt commit-before-switch.
 - **Phase 2 — Mobile UX (later):** `claude remote-control`; optionally `mosh` + Tailscale.
-- **Phase 3 — Hardening (later):** add swapfile; dirty-tree guard in the box pull path; optional `box-restart.sh` (`npm test && commit && push && pm2 restart castbot-pm` — test box already self-announces restarts).
+- **Phase 3 — Hardening:** ✅ **swapfile done (2026-06-15):** 2 GB `/swapfile`, persistent in `/etc/fstab`, `vm.swappiness=10` (`/etc/sysctl.d/99-swappiness.conf`). *Pending:* dirty-tree guard in the box pull path; optional `box-restart.sh` (`npm test && commit && push && pm2 restart castbot-pm` — test box already self-announces restarts).
 
 ---
 

@@ -193,6 +193,26 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/box-session-sync.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/check-box-clean.sh"
+          }
+        ]
+      }
     ]
   },
   "outputStyle": "default"

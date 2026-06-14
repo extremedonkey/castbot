@@ -246,6 +246,11 @@ const dynamicPatterns = [
 
 > **⚠️ Restart notification caveat:** the Discord `#💎deploy` notification is sent by `notify-restart.js` running **on the laptop (dev)**, so it always shows the **"DEVELOPMENT Server Restart!"** header even when test was restarted — the test deploy only appears in the "Deployed To: dev + test" line. The test box (`INSTANCE_ROLE=test`) does **not** yet announce its own restarts, so any test restart NOT triggered from the laptop (PM2 auto-restart, ProdWatchdog, crash) is silent. Known gap — fix is a test-side startup self-announce gated to `INSTANCE_ROLE==='test'`.
 
+**🛰️ Two working trees — sync ONLY through GitHub `main`:** the repo now lives in **two** places that both push to `main`: the **dev laptop** (`/home/reece/castbot`, WSL) and the **test box** (`/home/ubuntu/castbot` on castbot-blue, which is *also* the deploy target `dev-restart.sh` pulls into). GitHub is the only sync layer — see [RemoteDevTestBox RaP 0913](docs/01-RaP/0913_20260614_RemoteDevTestBox_Analysis.md).
+- **On the laptop** (your usual session) → `dev-restart.sh` as above. Unchanged.
+- **ON the test box** (you'll know: cwd `/home/ubuntu/castbot`, user `ubuntu`, `INSTANCE_ROLE=test`) → use **`./scripts/dev/box-restart.sh "msg"`** instead. It commits → `pull --rebase` → pushes → tests → `pm2 restart castbot-pm`. **Never run `dev-restart.sh` on the box.**
+- **Iron rule:** never end a task with uncommitted changes in the test-box tree — always finish via `box-restart.sh`, so the laptop's next pull is clean. (`dev-restart.sh` auto-stashes a dirty box tree as a backstop, but don't rely on it.)
+
 **⚠️ This is NOT optional — run it after EVERY code change** (button/modal/UI handlers, config, data-structure changes, new features, bug fixes, refactors, ANY `.js` change).
 
 **🚫 Do NOT** run `npm run deploy-test` separately after `dev-restart.sh` — the restart script already deployed to test. (The standalone `npm run deploy-test` is only for a full re-deploy: forced npm install + command re-registration.)

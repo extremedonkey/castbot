@@ -118,6 +118,23 @@ The **`dev-restart.sh` auto-deploy** (the common path) is lighter than a full `d
 
 ---
 
+## Developing ON the Test Box (remote Claude Code)
+
+Since 2026-06-14 the box hosts a `claude` CLI (`/usr/bin/claude`, 2.1.177), so Claude Code can run **on the box** for always-on remote dev — and the in-Discord **Moai** advisor (`spawn('claude', …)` at `app.js:39659`) now works there too, same binary + `~/.claude` creds. Full analysis: [RaP 0913](../01-RaP/0913_20260614_RemoteDevTestBox_Analysis.md).
+
+**Two working trees, one sync layer.** The repo lives on the dev laptop *and* on the box (`/home/ubuntu/castbot`, which is also the deploy target). Both push to GitHub `main`; that's the only sync path.
+
+| You are… | Finish a change with | It does |
+|---|---|---|
+| on the **laptop** | `./scripts/dev/dev-restart.sh "msg"` | tests → commit → push → restart dev → deploy to box |
+| on the **box** | `./scripts/dev/box-restart.sh "msg"` | commit → `pull --rebase` → push → tests → `pm2 restart castbot-pm` |
+
+**Iron rule:** never leave uncommitted changes in the box tree — always finish via `box-restart.sh`. If you forget, the laptop's `dev-restart.sh` auto-stashes the dirty box tree before pulling (recover with `git stash list` on the box) — a backstop, not a substitute.
+
+**Connect:** `ssh castbot-blue` → `tmux attach -t vibe` (or `tmux new -s vibe`) → `claude`. Or `claude remote-control` to drive from the claude.ai / mobile UI. Box has a 2 GB swapfile (RaP 0913) so a heavy session can't OOM the watchdog.
+
+---
+
 ## Restart Prod — Manual Out-of-Band Remediation
 
 When prod's bot is down, prod's own buttons are dead — but the test bot is a separate app on a separate box, so its buttons keep working. The **Restart Prod** button lives in the **Data menu (`data_admin`) → Cleanup & Restart** row.

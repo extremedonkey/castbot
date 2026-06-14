@@ -104,6 +104,13 @@ if [ "$DEPLOY_TEST" = true ]; then
     echo "🟦 Deploying to TEST (castbot-blue)..."
     if ssh -o ConnectTimeout=15 castbot-blue 'set -e
         cd /home/ubuntu/castbot
+        # Guard: if Claude edited files ON the box and forgot to commit (should have used
+        # box-restart.sh), auto-stash so this pull never clobbers that work. Recover via
+        # `git stash list` on the box.
+        if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+            echo "  ⚠️  uncommitted tracked changes on box — auto-stashing before pull (git stash list to recover)"
+            git stash push -m "dev-restart auto-stash" >/dev/null
+        fi
         BEFORE=$(git rev-parse HEAD)
         git pull --quiet origin main
         AFTER=$(git rev-parse HEAD)
