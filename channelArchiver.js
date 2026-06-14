@@ -34,7 +34,7 @@ export const ARCHIVE_MODES = [
   { value: 'archive_only', label: 'Archive', emoji: '📥', implemented: true,
     description: 'Save as HTML (fast, small; image links expire ~24h)' },
   { value: 'archive_embed', label: 'Archive (Self-Contained)', emoji: '🖼️', implemented: true,
-    description: 'Embed images (compressed to WebP) so they survive even if you delete the source — slower; non-image files not kept' },
+    description: 'Embed images (WebP-compressed) so they survive source deletion — slower' },
   { value: 'archive_delete', label: 'Archive + Delete', emoji: '🗑️',
     description: 'Archive, then delete the originals to free channel slots' },
   { value: 'category_archive', label: 'Category Archive', emoji: '📁',
@@ -57,7 +57,7 @@ export function buildArchiveScreen(mode = 'archive_only', note = '') {
   const options = ARCHIVE_MODES.map(m => ({
     label: m.label,
     value: m.value,
-    description: m.implemented ? m.description : `🚧 Coming soon — ${m.description}`.slice(0, 100),
+    description: (m.implemented ? m.description : `🚧 Coming soon — ${m.description}`).slice(0, 100), // Discord caps option descriptions at 100
     emoji: { name: m.emoji },
     default: m.value === mode,
   }));
