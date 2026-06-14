@@ -222,6 +222,10 @@ async function postOneArchive(post, channelName, msgs, cbEmojiStr, partLabel, pr
     row.components.push({ type: 2, style: 2, custom_id: `archive_refresh_${fileMsgId}`, label: 'Refresh Link', emoji: { name: '🔄' } });
   }
   row.components.push({ type: 2, style: 5, label: `View #${truncName} Online`, url: viewUrl });
+  if (fileMsgId) {
+    // 🧪 EXPERIMENTAL: rebuild this channel from the archive (see channelRestore.js)
+    row.components.push({ type: 2, style: 1, custom_id: `archive_restore_${fileMsgId}`, label: 'Restore', emoji: { name: '✨' } });
+  }
 
   const btnRes = await post({
     body: JSON.stringify({

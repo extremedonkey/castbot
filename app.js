@@ -37140,6 +37140,35 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
 
+    } else if (custom_id.startsWith('archive_restore_')) {
+      // 🧪 EXPERIMENTAL: rebuild a channel from its archive (channelRestore.js) — bg job
+      return ButtonHandlerFactory.create({
+        id: 'archive_restore',
+        ephemeral: true,
+        requiresPermission: PermissionFlagsBits.ManageChannels,
+        permissionName: 'Manage Channels',
+        handler: async (context) => {
+          const fileMessageId = custom_id.replace('archive_restore_', '');
+          const archiveChannelId = req.body.channel_id || req.body.channel?.id;
+          const guildId = context.guildId;
+          setTimeout(async () => {
+            try {
+              const { restoreFromArchiveMessage } = await import('./channelRestore.js');
+              await restoreFromArchiveMessage({ client, guildId, archiveChannelId, fileMessageId });
+            } catch (err) {
+              console.error('❌ Restore failed:', err);
+            }
+          }, 0);
+          return {
+            components: [{
+              type: 17,
+              accent_color: 0x9b59b6,
+              components: [{ type: 10, content: `## ✨ Restore started\n-# The rebuilt channel will appear under **📂 CastBot Archives** shortly. Large channels take a while (rate-limited); a ✅ marker is posted in the new channel when done.` }]
+            }]
+          };
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'archive_channel_select') {
       return ButtonHandlerFactory.create({
         id: 'archive_channel_select',

@@ -78,7 +78,7 @@ flowchart TD
 4. **Build container** — Components V2 type-17 container holding the channel header, message count + `<t:...:F>` timestamp, and a **type-13 (File) component** referencing `attachment://${filename}`.
 5. **POST file (paced + retried)** — `multipart/form-data` to `POST /channels/{invokedChannelId}/messages` via the shared **`createMessagePoster`** (see [Write-path rate limits](#-write-path-rate-limits)), with `payload_json` carrying `flags: 1<<15` (IS_COMPONENTS_V2), `components: [container]`, and `attachments: [{ id: 0, filename }]`.
 6. **Resolve CDN URL** — ⚠️ **for Components V2 + type-13 messages, Discord resolves the `attachment://` URL *inside the component* (`postData.components[...].file.url`), NOT in the top-level `attachments[]` array.** The code tries `attachments[0].url` first (fallback in case Discord changes behaviour), then recursively walks `components` for a type-13 whose `file.url` no longer starts with `attachment://`. This was the key gotcha — see commit `9de60a7e`.
-7. **POST link button (paced + retried)** — a **second POST** (JSON, not a PATCH of the first message) creates a separate message with a row of `[🔄 Refresh Link]` + a style-5 link button `View #{channelName} Online` → `https://htmlpreview.github.io/?${cdnUrl}`. The label is truncated to fit Discord's 80-char button-label limit. (A separate POST was needed because editing/PATCHing the file message to add the button didn't work reliably — commit `9de60a7e`.)
+7. **POST link button (paced + retried)** — a **second POST** (JSON, not a PATCH of the first message) creates a separate message with a row of `[🔄 Refresh Link] [View #{channelName} Online] [✨ Restore]` (link button truncated to Discord's 80-char limit). (A separate POST was needed because editing/PATCHing the file message to add the button didn't work reliably — commit `9de60a7e`.)
    - **Refresh Link** (`archive_refresh_{fileMessageId}`): the htmlpreview link wraps a signed Discord CDN URL that expires (~24h). A link button (style 5) has no `custom_id` and can't refresh itself, so this sibling real button does it: on click (`archive_refresh_*` handler, `updateMessage`), it re-`GET`s the **file message** (Discord re-signs attachment URLs on every fetch via `getArchiveFileUrl`), then `setLinkButtonUrl` rewrites the link button's URL in place on this message. Works indefinitely as long as the file message exists; if it's been deleted, the message shows a "could not refresh" note. The file message id is baked into the refresh button's `custom_id` (~35 chars).
 
 Errors are caught per-channel: a red error message is posted to the channel and the loop continues. After the run, if more than one channel was requested, a **final summary** (`✅ N archived` / `⚠️ N archived, M failed`) is sent as an **ephemeral interaction followup** — only the invoking user sees it, and it is **never posted publicly**. On runs that outlast the ~15-min interaction token, the followup returns **401 / `Invalid Webhook Token` (50027)** — this is *expected* (a 263-channel run took ~24 min), so the summary is **silently skipped** and logged as an `ℹ️` info line (not an error → the PM2 error logger ignores it). The per-channel archive posts already show the result in-channel, so nothing public is leaked.
@@ -160,6 +160,25 @@ Registered in `buttonHandlerFactory.js` `BUTTON_REGISTRY`:
 | `archive_confirm` | Confirm Archive | Danger 📦 | `archive_channel_select` |
 
 All three use `ButtonHandlerFactory.create()` (`[✨ FACTORY]` in logs). The two file/button POSTs in the background loop are raw `node-fetch` calls (not interactions), so they don't appear in the factory.
+
+---
+
+## ✨ Restore (🧪 experimental, reversible)
+
+Rebuilds a channel from its archive. The **✨ Restore** button (3rd in the archive button row, `archive_restore_{fileMessageId}`) is gated to **Manage Channels**.
+
+**Data source:** every archive HTML now embeds a compact JSON payload — `<script id="cb-archive-data">{ v, channel, messages:[{n,a,c}] }` — written by `generateExportHTML` (n=author name, a=avatar URL, c=raw text). Restore reads *that*, not the rendered DOM. Archives created **before** this feature have no payload → Restore returns a clear "re-archive to enable" message.
+
+**Flow** (`channelRestore.js` → `restoreFromArchiveMessage`, run in the background after an ephemeral ack):
+1. Re-`GET` the file message → fresh HTML URL (via `getArchiveFileUrl`) → download HTML → `extractArchiveData`.
+2. `ensureArchiveCategory` — find a **📂 CastBot Archives** category with <50 channels (Discord's category cap), else create **📂 CastBot Archives** / **(2)** / **(3)**… (`pickArchiveCategory`, pure + tested).
+3. Create a text channel named after the original under that category.
+4. Create a **webhook**, re-post each message through it with the original **username + avatar** (best-effort impersonation), `allowed_mentions: { parse: [] }` so **no pings fire**, content split to ≤1950 chars. Posting is **header-paced + 429-retried** via the same `computePostPacing` as the write path (webhook execute has its own per-webhook bucket).
+5. Delete the webhook; post header/footer markers in the new channel.
+
+**Limits & caveats:** capped at `MAX_RESTORE_MESSAGES = 2000` per restore (truncation noted in the header); messages get **current timestamps** (Discord can't backdate) and **no attachments/images** (those URLs had expired); empty/image-only messages are skipped.
+
+**Reversibility (it's experimental):** Restore only **creates** — never deletes. To undo the *content*, delete the 📂 CastBot Archives categories. To remove the *feature*, see the removal checklist at the top of `channelRestore.js` (delete the module, the `archive_restore_*` handler + registry entry, the Restore button in `postOneArchive`, and optionally the HTML embed).
 
 ---
 
