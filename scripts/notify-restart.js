@@ -101,12 +101,16 @@ async function sendRestartNotification() {
         const environment = process.env.INSTANCE_ROLE === 'test' ? 'TEST'
             : isProduction ? 'PRODUCTION' : 'DEVELOPMENT';
         
-        // Get current time
+        // Get current time — pinned to GMT+8 (Reece's local time) so it renders
+        // correctly regardless of which box runs this script. The dev notify runs on
+        // the laptop (GMT+8) but the test self-announce runs on the AWS box (UTC),
+        // which otherwise showed UTC. Asia/Singapore is a fixed GMT+8 zone (no DST).
         const now = new Date();
-        const timeString = now.toLocaleTimeString('en-US', { 
-            hour: 'numeric', 
+        const timeString = now.toLocaleTimeString('en-US', {
+            hour: 'numeric',
             minute: '2-digit',
-            hour12: true 
+            hour12: true,
+            timeZone: 'Asia/Singapore'
         });
 
         // Build message content with new formatting
