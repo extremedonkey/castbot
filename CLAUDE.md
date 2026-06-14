@@ -615,8 +615,10 @@ Create `/docs/01-RaP/[NUM]_[DATE]_[Feature]_Analysis.md` when facing:
 **Not for**: Simple fixes, routine changes, or single-file updates
 
 ### RaP Document Standards
-1. **Numbering**: Start at 1000, count DOWN (newest on top in VS Code)
-   - Check `/docs/01-RaP/.counter` for last used number
+1. **Numbering**: Start at 1000, count DOWN (newest = lowest number, sorts to top in VS Code)
+   - The next number is **one below the lowest-numbered file** already in `docs/01-RaP/`. Find it:
+     `ls docs/01-RaP/ | grep -E '^[0-9]{4}_' | sort | head -1` → subtract 1.
+   - Derive from filenames, **not** a counter file — a shared `.counter` collided across the dev-laptop and test-box working trees (see [RaP 0913](docs/01-RaP/0913_20260614_RemoteDevTestBox_Analysis.md)).
    - Format: `0999_20250926_FeatureName_Analysis.md`
 
 2. **Context Preservation**: When a RaP is triggered by a user prompt:

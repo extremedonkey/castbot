@@ -58,3 +58,6 @@ challengeLibrary.json
 
 # Runtime-generated map overlays (the box's bot writes these; tracked temp/ overlays are .png assets)
 temp/map_overlay_*.jpg
+
+# RaP numbering is derived from filenames, not a tracked counter (it collided across two working trees — RaP 0913)
+docs/01-RaP/.counter
