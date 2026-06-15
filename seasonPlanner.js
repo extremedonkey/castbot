@@ -574,32 +574,21 @@ function buildRoundOptions(round, dates, challenges = {}) {
  * @returns {Object} Components V2 response
  */
 export async function buildPlannerSelector(guildId) {
-  const { createSeasonSelector } = await import('./seasonSelector.js');
+  const { createSeasonSelector, seasonConfigIndicators } = await import('./seasonSelector.js');
 
-  // Reuse the shared season selector, decorated with planner-setup status.
+  // Reuse the shared season selector with config-indicator descriptions + a Search option (>10 seasons).
   // Emits the unified 'create_new_season' sentinel (handled in app.js alongside legacy 'planner_create_new').
   const selector = await createSeasonSelector(guildId, {
     customId: 'planner_select_season',
     placeholder: 'Select a season to manage...',
     requireSeasonName: true,
     showRowEmoji: false, // drop the stage-emoji prefix — the config indicators carry the meaning now
+    includeSearch: true,
     createNewLabel: 'Create New Season',
     createNewEmoji: { name: '➕' },
     createNewDescription: 'Create and configure a new season',
-    // Config indicators: show which subsystems are set up per season (room to expand)
-    decorateSeason: (configId, season, guildData) => {
-      const parts = [];
-      const appsConfigured = !!season.targetChannelId
-        || (season.questions || []).some(q => q.questionType !== 'completion' && q.questionTitle && q.questionTitle !== 'Click here to set first question');
-      if (appsConfigured) parts.push('📝 Apps');
-      // Cast Ranking: any application in this season has a score or casting decision recorded
-      const hasRankings = Object.values(guildData?.applications || {}).some(app =>
-        app.configId === configId && ((app.rankings && Object.keys(app.rankings).length > 0) || app.castingStatus)
-      );
-      if (hasRankings) parts.push('🏆 Ranking');
-      if (guildData?.seasonRounds?.[season.seasonId]) parts.push('📅 Planner');
-      return { description: parts.length ? parts.join(' • ') : '⚠️ Not configured yet' };
-    }
+    // Config indicators (shared with search results via seasonConfigIndicators)
+    decorateSeason: (configId, season, guildData) => ({ description: seasonConfigIndicators(configId, season, guildData) })
   });
 
   const container = {
@@ -616,6 +605,27 @@ export async function buildPlannerSelector(guildId) {
   };
 
   return { components: [container] };
+}
+
+/**
+ * Search modal for the Season Manager — routes to the shared entity_search_modal_seasons handler.
+ */
+export function buildSeasonSearchModal() {
+  return {
+    custom_id: 'entity_search_modal_seasons',
+    title: 'Search Seasons',
+    components: [
+      {
+        type: 18,
+        label: 'Season name',
+        component: {
+          type: 4, custom_id: 'search_term', style: 1,
+          placeholder: 'e.g. "S55" or "Unify"',
+          required: true, max_length: 100
+        }
+      }
+    ]
+  };
 }
 
 // ─────────────────────────────────────────────

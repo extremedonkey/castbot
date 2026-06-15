@@ -56,6 +56,27 @@ export function getSeasonStageName(stage) {
 }
 
 /**
+ * Compute the per-season config indicators shown in the Season Manager selector and search results.
+ * e.g. "📝 Apps • 🏆 Ranking • 📅 Planner" or "⚠️ Not configured yet".
+ * @param {string} configId
+ * @param {Object} season - applicationConfigs[configId]
+ * @param {Object} guildData - playerData[guildId]
+ * @returns {string}
+ */
+export function seasonConfigIndicators(configId, season, guildData) {
+  const parts = [];
+  const appsConfigured = !!season.targetChannelId
+    || (season.questions || []).some(q => q.questionType !== 'completion' && q.questionTitle && q.questionTitle !== 'Click here to set first question');
+  if (appsConfigured) parts.push('📝 Apps');
+  const hasRankings = Object.values(guildData?.applications || {}).some(app =>
+    app.configId === configId && ((app.rankings && Object.keys(app.rankings).length > 0) || app.castingStatus)
+  );
+  if (hasRankings) parts.push('🏆 Ranking');
+  if (guildData?.seasonRounds?.[season.seasonId]) parts.push('📅 Planner');
+  return parts.length ? parts.join(' • ') : '⚠️ Not configured yet';
+}
+
+/**
  * Creates a reusable season select dropdown component
  * 
  * @param {string} guildId - Discord guild ID
@@ -87,7 +108,8 @@ export async function createSeasonSelector(guildId, options = {}) {
     createNewEmoji = { name: '✨' },
     createNewDescription = 'Start planning a new season',
     decorateSeason = null,
-    showRowEmoji = true
+    showRowEmoji = true,
+    includeSearch = false
   } = options;
 
   const playerData = await loadPlayerData();
@@ -116,7 +138,7 @@ export async function createSeasonSelector(guildId, options = {}) {
   
   // Build options array
   const seasonOptions = [];
-  
+
   // Add "Create New Season" if requested
   if (includeCreateNew) {
     seasonOptions.push({
@@ -126,9 +148,23 @@ export async function createSeasonSelector(guildId, options = {}) {
       description: createNewDescription
     });
   }
-  
-  // Calculate how many seasons we can show
-  const maxSeasons = includeCreateNew ? 24 : 25;
+
+  // Add the Search option when the list is large enough to need it (mirrors Safari entity search).
+  // Selecting 'search_entities' opens the shared entity_search_modal flow.
+  const hasSearch = includeSearch && seasonList.length > 10;
+  if (hasSearch) {
+    seasonOptions.push({
+      label: '🔍 Search seasons...',
+      value: 'search_entities',
+      description: 'Search by season name'
+    });
+  }
+
+  // Calculate how many seasons we can show (25 total − control options − overflow slot if truncating)
+  const controlSlots = (includeCreateNew ? 1 : 0) + (hasSearch ? 1 : 0);
+  const capacity = 25 - controlSlots;
+  const willOverflow = seasonList.length > capacity;
+  const maxSeasons = willOverflow ? capacity - 1 : capacity;
   const showingSeasons = seasonList.slice(0, maxSeasons);
   const remainingSeasons = seasonList.length - showingSeasons.length;
   
@@ -178,7 +214,7 @@ export async function createSeasonSelector(guildId, options = {}) {
     seasonOptions.push({
       label: '📦 More Seasons Available',
       value: 'view_more_seasons',
-      description: `${remainingSeasons} more seasons (use archive to manage)`,
+      description: hasSearch ? `${remainingSeasons} more — use 🔍 Search to find them` : `${remainingSeasons} more seasons (use archive to manage)`,
       emoji: { name: '📂' }
     });
   }

@@ -209,6 +209,54 @@ describe('Season Manager — config indicators', () => {
     assert.equal(computeIndicators('cfg', season, guildData), '📅 Planner');
   });
 
+});
+
+// ─────────────────────────────────────────────
+// Search option + capacity math (never exceed 25 options)
+// ─────────────────────────────────────────────
+
+function selectorMeta(seasonCount, { includeCreateNew = true, includeSearch = false } = {}) {
+  const hasSearch = includeSearch && seasonCount > 10;
+  const controlSlots = (includeCreateNew ? 1 : 0) + (hasSearch ? 1 : 0);
+  const capacity = 25 - controlSlots;
+  const willOverflow = seasonCount > capacity;
+  const maxSeasons = willOverflow ? capacity - 1 : capacity;
+  const shown = Math.min(seasonCount, maxSeasons);
+  const total = controlSlots + shown + (willOverflow ? 1 : 0);
+  return { hasSearch, total, shown, willOverflow };
+}
+
+describe('Season selector — search option + capacity', () => {
+  it('no search option below the 10-season threshold', () => {
+    const m = selectorMeta(5, { includeSearch: true });
+    assert.equal(m.hasSearch, false);
+    assert.equal(m.total, 6); // create + 5
+    assert.equal(m.willOverflow, false);
+  });
+
+  it('adds search option above threshold, no overflow when it fits', () => {
+    const m = selectorMeta(20, { includeSearch: true });
+    assert.equal(m.hasSearch, true);
+    assert.equal(m.shown, 20);
+    assert.equal(m.total, 22); // create + search + 20
+  });
+
+  it('never exceeds 25 options when overflowing with search', () => {
+    const m = selectorMeta(30, { includeSearch: true });
+    assert.equal(m.hasSearch, true);
+    assert.equal(m.willOverflow, true);
+    assert.equal(m.total, 25); // create + search + 22 + overflow
+    assert.ok(m.total <= 25);
+  });
+
+  it('never exceeds 25 options when overflowing without search', () => {
+    const m = selectorMeta(30, { includeSearch: false });
+    assert.equal(m.total, 25); // create + 23 + overflow
+    assert.ok(m.total <= 25);
+  });
+});
+
+describe('Season Manager — indicator ordering', () => {
   it('combines all three in order: Apps • Ranking • Planner', () => {
     const guildData = {
       applications: { chan1: { configId: 'cfg', rankings: { admin1: 4 } } },

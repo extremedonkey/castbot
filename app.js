@@ -8350,6 +8350,20 @@ To fix this:
             return { type: 9, data: buildSeasonPlannerModal() };
           }
 
+          // Search — open the shared entity search modal (routes to entity_search_modal_seasons)
+          if (selectedValue === 'search_entities') {
+            const { buildSeasonSearchModal } = await import('./seasonPlanner.js');
+            return { type: 9, data: buildSeasonSearchModal() };
+          }
+
+          // Back to all — re-render the full Season Manager selector
+          if (selectedValue === 'back_to_all') {
+            const { InteractionResponseType: IRT } = await import('discord-interactions');
+            const { buildPlannerSelector } = await import('./seasonPlanner.js');
+            const view = await buildPlannerSelector(context.guildId);
+            return { type: IRT.UPDATE_MESSAGE, data: view };
+          }
+
           // Existing season — wrap in UPDATE_MESSAGE since requiresModal sends raw
           const { InteractionResponseType: IRT } = await import('discord-interactions');
           const { loadPlayerData } = await import('./storage.js');
@@ -49947,9 +49961,14 @@ Your server is now ready for Tycoons gameplay!`;
       try {
         // Parse entity type from custom_id: entity_search_modal_{entityType}
         const entityType = custom_id.replace('entity_search_modal_', '');
-        
-        // Get search term from modal
-        const searchTerm = data.components[0]?.components[0]?.value?.toLowerCase().trim();
+
+        // Get search term from modal — robust to both Label (type 18) and legacy ActionRow structures
+        let rawTerm;
+        for (const row of (data.components || [])) {
+          const c = row.component || (row.components && row.components[0]);
+          if (c && c.value != null && c.value !== '') { rawTerm = c.value; break; }
+        }
+        const searchTerm = rawTerm?.toLowerCase().trim();
         
         if (!searchTerm) {
           return res.send({
@@ -50020,6 +50039,27 @@ Your server is now ready for Tycoons gameplay!`;
             }
             break;
             
+          case 'seasons': {
+            // Search seasons — applicationConfigs live in playerData, not safariContent
+            const { loadPlayerData } = await import('./storage.js');
+            const { seasonConfigIndicators } = await import('./seasonSelector.js');
+            const pd = await loadPlayerData();
+            const gd = pd[req.body.guild_id] || {};
+            const seasonConfigs = gd.applicationConfigs || {};
+            entities = Object.entries(seasonConfigs)
+              .filter(([id, s]) => {
+                if (!s.seasonName) return false;
+                const text = [s.seasonName, s.explanatoryText || ''].join(' ').toLowerCase();
+                return text.includes(searchTerm);
+              })
+              .map(([id, s]) => ({
+                value: id,
+                label: s.seasonName.substring(0, 100),
+                description: seasonConfigIndicators(id, s, gd)
+              }));
+            break;
+          }
+
           case 'item':
             // Search items
             if (guildData.items) {
@@ -50143,13 +50183,21 @@ Your server is now ready for Tycoons gameplay!`;
             });
         }
         
+        // Result-target routing — seasons render back into the Season Manager (planner) flow;
+        // entityDisplay fixes pluralization ('seasons' is already plural).
+        const resultSelectId = entityType === 'seasons' ? 'planner_select_season' : `entity_select_${entityType}`;
+        const backToMenuId = entityType === 'seasons'
+          ? 'reeces_season_planner_mockup'
+          : `safari_manage_${entityType === 'item' ? 'items' : entityType === 'store' ? 'stores' : entityType === 'safari_button' ? 'safari_buttons' : 'items'}`;
+        const entityDisplay = entityType === 'seasons' ? 'season' : entityType;
+
         console.log(`🔍 DEBUG: Found ${entities.length} matching ${entityType}s`);
         
         if (entities.length === 0) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: `❌ No ${entityType}s found matching "${searchTerm}".`,
+              content: `❌ No ${entityDisplay}s found matching "${searchTerm}".`,
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -50166,7 +50214,7 @@ Your server is now ready for Tycoons gameplay!`;
             components: [
               {
                 type: 10, // Text Display
-                content: `## 🔍 Too Many Search Results\n\nFound **${entities.length}** ${entityType}s matching "${searchTerm}"\n\n⚠️ Please make your search more specific to see results (max 24 results).`
+                content: `## 🔍 Too Many Search Results\n\nFound **${entities.length}** ${entityDisplay}s matching "${searchTerm}"\n\n⚠️ Please make your search more specific to see results (max 24 results).`
               },
               { type: 14 }, // Separator
               {
@@ -50183,7 +50231,7 @@ Your server is now ready for Tycoons gameplay!`;
                     type: 2, // Button
                     style: 2, // Secondary
                     label: '🏠 Back to Menu',
-                    custom_id: `safari_manage_${entityType === 'item' ? 'items' : entityType === 'store' ? 'stores' : entityType === 'safari_button' ? 'safari_buttons' : 'items'}`
+                    custom_id: backToMenuId
                   }
                 ]
               }
@@ -50237,7 +50285,7 @@ Your server is now ready for Tycoons gameplay!`;
         
         const selectMenu = {
           type: 3, // String Select
-          custom_id: `entity_select_${entityType}`,
+          custom_id: resultSelectId,
           placeholder: `${entities.length} result${entities.length !== 1 ? 's' : ''} for "${searchTerm}"`,
           options: options
         };
@@ -50250,7 +50298,7 @@ Your server is now ready for Tycoons gameplay!`;
             components: [
               {
                 type: 10, // Text Display
-                content: `## Search Results: ${entityType}\nFound ${entities.length} matching "${searchTerm}"`
+                content: `## Search Results: ${entityDisplay}s\nFound ${entities.length} matching "${searchTerm}"`
               },
               { type: 14 }, // Separator
               {
