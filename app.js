@@ -229,12 +229,11 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   refreshedComponents.push({ type: 14 });
 
-  // Season action buttons (Planner, Post, Ranking, Edit)
+  // Season action buttons (Planner, Ranking, Edit) — consistent with the Planner view's cross-link row
   refreshedComponents.push({
     type: 1,
     components: [
       { type: 2, custom_id: `apps_planner_${configId}`, label: 'Planner', style: 2, emoji: { name: '📅' } },
-      { type: 2, custom_id: `season_post_button_${configId}_${currentPage}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
       { type: 2, custom_id: `season_app_ranking_${configId}`, label: 'Ranking', style: 2, emoji: { name: '🏆' } },
       { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } }
     ]
@@ -372,13 +371,21 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
     });
   }
 
+  // Post / Import / Export row — sits directly above the divider above the Back row
+  refreshedComponents.push({
+    type: 1,
+    components: [
+      { type: 2, custom_id: `season_post_button_${configId}_${currentPage}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
+      { type: 2, custom_id: `season_export_questions_${configId}`, label: ' ', style: 2, emoji: { name: '📤' } },
+      { type: 2, custom_id: `season_import_questions_${configId}`, label: ' ', style: 2, emoji: { name: '📥' } },
+    ]
+  });
+
   refreshedComponents.push({ type: 14 });
 
-  // Bottom row: Export, Import, Back (+ pagination if needed)
+  // Bottom row: Seasons (+ pagination if needed)
   const bottomButtons = [
-    { type: 2, custom_id: `season_management_menu`, label: '← Back', style: 2 },
-    { type: 2, custom_id: `season_export_questions_${configId}`, label: ' ', style: 2, emoji: { name: '📤' } },
-    { type: 2, custom_id: `season_import_questions_${configId}`, label: ' ', style: 2, emoji: { name: '📥' } },
+    { type: 2, custom_id: `season_management_menu`, label: '← Seasons', style: 2 },
   ];
   if (regularQuestions.length > questionsPerPage) {
     const prevDisabled = currentPage === 0;
