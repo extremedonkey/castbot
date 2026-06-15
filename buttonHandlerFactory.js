@@ -2798,6 +2798,20 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari_admin'
   },
+  'spm_map_pause_confirm_*': {
+    label: 'Confirm Pause',
+    description: 'Confirm pausing a player from the Player Manager map options',
+    emoji: '⏸️',
+    style: 'Primary',
+    category: 'safari_admin'
+  },
+  'spm_map_unpause_confirm_*': {
+    label: 'Confirm Unpause',
+    description: 'Confirm unpausing a player from the Player Manager map options',
+    emoji: '▶️',
+    style: 'Success',
+    category: 'safari_admin'
+  },
   'safari_unpause_player_*': {
     label: 'Unpause',
     description: 'Restore player access to map channel',
