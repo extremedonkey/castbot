@@ -224,7 +224,7 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   refreshedComponents.push({
     type: 10,
-    content: `## :pencil: Season Applications\n> ${config.seasonName}`
+    content: `## :pencil: Season Applications\n> ### ${config.seasonName}`
   });
 
   // Season action buttons (Planner, Ranking, Edit) — consistent with the Planner view's cross-link row
