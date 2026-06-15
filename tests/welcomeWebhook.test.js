@@ -47,6 +47,40 @@ describe('Welcome webhook — payload routing', () => {
   });
 });
 
+// ── Replicated from DiscordMessenger.sendWelcomeDM dedupe guard ──
+// Returns true if a welcome DM should be sent (and records it), false if it's a recent dupe.
+function shouldSendWelcomeDM(map, userId, now, windowMs = 60_000) {
+  const last = map.get(userId);
+  if (last && (now - last) < windowMs) return false;
+  map.set(userId, now);
+  return true;
+}
+
+describe('Welcome DM — per-user dedupe', () => {
+  it('sends the first welcome DM to a user', () => {
+    const map = new Map();
+    assert.equal(shouldSendWelcomeDM(map, 'u1', 1000), true);
+  });
+
+  it('skips a second DM to the same user within the window', () => {
+    const map = new Map();
+    shouldSendWelcomeDM(map, 'u1', 1000);
+    assert.equal(shouldSendWelcomeDM(map, 'u1', 1000 + 5_000), false); // owner + installer both fire
+  });
+
+  it('allows a DM again after the window elapses', () => {
+    const map = new Map();
+    shouldSendWelcomeDM(map, 'u1', 1000);
+    assert.equal(shouldSendWelcomeDM(map, 'u1', 1000 + 61_000), true);
+  });
+
+  it('DMs owner and installer separately when they differ', () => {
+    const map = new Map();
+    assert.equal(shouldSendWelcomeDM(map, 'owner', 1000), true);
+    assert.equal(shouldSendWelcomeDM(map, 'installer', 1000), true);
+  });
+});
+
 describe('Welcome webhook — who receives the DM', () => {
   it('DMs the installing user for a guild install (integration_type 0)', () => {
     const r = decideWelcome({ integration_type: 0, user: { id: '12345', username: 'reece' } });

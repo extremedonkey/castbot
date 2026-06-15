@@ -18,6 +18,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MESSAGE_HISTORY_PATH = path.join(__dirname, 'messageHistory.json');
 const MAX_HISTORY_ENTRIES = 1000;
 
+// Dedupe welcome DMs: on install, the owner path (guildCreate → sendWelcomePackage)
+// and the installer path (APPLICATION_AUTHORIZED webhook) can both target the same
+// user. Track recent welcome-DM userIds so the second one within the window is skipped.
+// Keyed per-user, so owner ≠ installer still gets one DM each.
+const recentWelcomeDMs = new Map(); // userId -> timestamp (ms)
+const WELCOME_DM_DEDUPE_MS = 60_000;
+
 class DiscordMessenger {
   /**
    * Core message sending to a user via DM
@@ -338,8 +345,8 @@ class DiscordMessenger {
 
     // Channel (Setup Wizard) content - new instructional copy
     const channelContent = {
-      title: '## 🧙🏽 CastBot Setup Wizard\n\nWelcome to CastBot - your one stop shop for managing your Cast Experience! Manage your Season Applications, create Castlists, create Idol Hunts & Safaris, and much more!',
-      instructions: '> **`How to get started`**\n\n**1. Click the 🪛 Run Setup button below**\nCastBot uses Discord Roles for player Pronouns and Timezones. Setup will automatically create pronoun and timezone roles in your server, and add them to CastBot. Don\'t worry if you already have some - CastBot will detect and add them to CastBot.\n\n**2. Create your first Castlist**\nOnce you\'ve ran setup, click Castlist Manager and create your first castlist. CastBot also uses roles to manage castlists - during a season you\'ll simply add your tribe roles to CastBot and it will do the rest! We recommend testing this out with your production team role before your season starts to get used to it.',
+      title: '# 🧙🏽 CastBot Setup Wizard\nWelcome to CastBot - your one stop shop for managing your Cast Experience! Manage your Season Applications, create Castlists, create Idol Hunts & Safaris, and much more!',
+      instructions: '## How to get started\n\n## ``` 🪛 1. Click the Run Setup button below```\n-# > ⌚ Takes 30 seconds\nCastBot uses Discord Roles for player Pronouns and Timezones. Setup will automatically create pronoun and timezone roles in your server, and add them to CastBot. Don\'t worry if you already have some - CastBot will detect and add them to CastBot.\n## ``` 📋 2. Create your first Castlist```\n-# > ⌚ Takes 2 minutes\nOnce you\'ve ran setup, click **Castlist Manager** below and create your first castlist. CastBot also uses roles to manage castlists - during a season you\'ll simply add your tribe roles to CastBot and it will do the rest!\n> **💡Hot Tip:** We recommend testing this out with your production team role before your season starts to get used to it.',
       footer: 'To get back to CastBot, type `/menu` from any channel in your server! Once your season is up and running, use `/castlist` to summon the active castlist showing players. You can get back to this menu from /menu → Tools'
     };
 
@@ -383,6 +390,20 @@ class DiscordMessenger {
    * @returns {Promise<{success: boolean, messageId?: string, error?: string}>}
    */
   static async sendWelcomeDM(client, userId) {
+    // Dedupe: skip if this user was already sent a welcome DM very recently
+    // (handles owner-path + installer-path both firing on a single install)
+    const now = Date.now();
+    const last = recentWelcomeDMs.get(userId);
+    if (last && (now - last) < WELCOME_DM_DEDUPE_MS) {
+      console.log(`🔁 Welcome DM to ${userId} skipped (already sent ${Math.round((now - last) / 1000)}s ago)`);
+      return { success: true, skipped: 'duplicate' };
+    }
+    recentWelcomeDMs.set(userId, now);
+    // Opportunistic cleanup of stale entries
+    for (const [uid, ts] of recentWelcomeDMs) {
+      if (now - ts > WELCOME_DM_DEDUPE_MS) recentWelcomeDMs.delete(uid);
+    }
+
     try {
       const user = await client.users.fetch(userId);
       const dmChannel = await user.createDM();
