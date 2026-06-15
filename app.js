@@ -229,13 +229,14 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   refreshedComponents.push({ type: 14 });
 
-  // Season action buttons (Post, Ranking, Edit)
+  // Season action buttons (Planner, Post, Ranking, Edit)
   refreshedComponents.push({
     type: 1,
     components: [
+      { type: 2, custom_id: `apps_planner_${configId}`, label: 'Planner', style: 2, emoji: { name: '📅' } },
       { type: 2, custom_id: `season_post_button_${configId}_${currentPage}`, label: 'Post to Channel', style: 2, emoji: { name: '#️⃣' } },
-      { type: 2, custom_id: `season_app_ranking_${configId}`, label: 'Cast Ranking', style: 2, emoji: { name: '🏆' } },
-      { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit Season', style: 2, emoji: { name: '✏️' } }
+      { type: 2, custom_id: `season_app_ranking_${configId}`, label: 'Ranking', style: 2, emoji: { name: '🏆' } },
+      { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } }
     ]
   });
 
@@ -8576,6 +8577,37 @@ To fix this:
           return await buildQuestionManagementUI(config, configId, 0);
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('apps_planner_')) {
+      // Season Apps → Planner: navigate to the Season Planner view for this season
+      const configId = custom_id.replace('apps_planner_', '');
+      return ButtonHandlerFactory.create({
+        id: 'apps_planner',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { loadPlayerData } = await import('./storage.js');
+          const { buildPlannerView } = await import('./seasonPlanner.js');
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[configId];
+          if (!config) return { content: '❌ Season not found' };
+
+          const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId];
+          if (!seasonRounds) {
+            // Name-only season (no planner data yet) — offer setup, back returns to Apps
+            return { components: [{ type: 17, accent_color: 0xf39c12, components: [
+              { type: 10, content: `## ⚠️ Set Up Season Planner\n**${config.seasonName}** doesn't have planner data yet.\nClick below to configure round structure.` },
+              { type: 14 },
+              { type: 1, components: [
+                { type: 2, custom_id: `planner_force_setup_${configId}`, label: 'Set Up Planner', style: 1, emoji: { name: '📅' } },
+                { type: 2, custom_id: `planner_apps_${configId}`, label: '← Apps', style: 2 }
+              ]}
+            ]}]};
+          }
+
+          const startDate = new Date(config.estimatedStartDate);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges);
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('planner_ranking_')) {
       // Legacy fallback: old planner messages had planner_ranking_ buttons, now using season_app_ranking_ directly
       // Redirect to the season selector so the message re-renders with the correct button IDs
@@ -11412,42 +11444,22 @@ To fix this:
 
           console.log(`✅ SUCCESS: season_edit_info - showing edit modal for ${config.seasonName}`);
 
-          // Show modal with pre-populated values using modern Label components (Type 18)
+          // Unified edit modal: Name + optional planner estimates, NO description (RaP 0910).
+          // Routes to season_modal:{configId} so it lands back on the question management UI.
+          const { buildSeasonPlannerModal } = await import('./seasonPlanner.js');
           return res.send({
             type: InteractionResponseType.MODAL,
-            data: {
-              custom_id: `season_modal:${configId}`,
-              title: 'Manage Season Details',
-              components: [
-                {
-                  type: 18, // Label component
-                  label: 'Season Name',
-                  component: {
-                    type: 4, // Text Input
-                    custom_id: 'season_name',
-                    style: 1, // Short
-                    placeholder: 'e.g., "Season 12 - Zelda: Ocarina of Time"',
-                    required: true,
-                    max_length: 100,
-                    value: config.seasonName || '' // Pre-populate with existing value
-                  }
-                },
-                {
-                  type: 18, // Label component
-                  label: 'Season Description',
-                  description: 'Brief description of this season (optional)',
-                  component: {
-                    type: 4, // Text Input
-                    custom_id: 'season_description',
-                    style: 2, // Paragraph
-                    placeholder: 'Describe your season...',
-                    required: false,
-                    max_length: 500,
-                    value: config.explanatoryText || '' // Pre-populate with existing value
-                  }
-                }
-              ]
-            }
+            data: buildSeasonPlannerModal(
+              {
+                configId,
+                seasonName: config.seasonName,
+                estimatedTotalPlayers: config.estimatedTotalPlayers,
+                estimatedSwaps: config.estimatedSwaps,
+                estimatedFTCPlayers: config.estimatedFTCPlayers,
+                estimatedStartDate: config.estimatedStartDate
+              },
+              { editCustomId: `season_modal:${configId}` }
+            )
           });
         }
       })(req, res, client);
@@ -40527,7 +40539,7 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'planner_modal_submit',
         updateMessage: true,
         handler: async (context) => {
-          const { validatePlannerFields, createSeason, setupPlannerForExistingSeason, buildPlannerView } = await import('./seasonPlanner.js');
+          const { validatePlannerFields, createSeason, updateSeason, buildPlannerView } = await import('./seasonPlanner.js');
           const { loadPlayerData } = await import('./storage.js');
 
           // Extract fields from Label components
@@ -40556,20 +40568,27 @@ Your server is now ready for Tycoons gameplay!`;
           const guildId = context.guildId;
           const userId = context.userId;
 
-          // SETUP existing season — modal requires estimates, so planner data is expected
+          // SETUP / EDIT existing season (planner_setup_modal:{configId}) — estimates optional (RaP 0910).
+          // updateSeason() updates name and generates rounds only on first-time setup (preserves existing rounds).
           if (custom_id.startsWith('planner_setup_modal:')) {
-            if (!validation.hasPlannerData) {
-              return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
-                { type: 10, content: '## ❌ Please provide all planner estimates to set up the planner.' },
-                { type: 14 },
-                { type: 1, components: [{ type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Back', style: 2 }] }
-              ]}]};
-            }
             const configId = custom_id.split(':')[1];
-            const result = await setupPlannerForExistingSeason(guildId, configId, validation.data);
+            await updateSeason(guildId, configId, validation.data);
             const playerData = await loadPlayerData();
             const config = playerData[guildId].applicationConfigs[configId];
-            const seasonRounds = playerData[guildId].seasonRounds[result.seasonId];
+            const seasonRounds = playerData[guildId]?.seasonRounds?.[config.seasonId];
+
+            if (!seasonRounds || Object.keys(seasonRounds).length === 0) {
+              // Name-only edit — no planner data yet; offer setup
+              return { components: [{ type: 17, accent_color: 0xf39c12, components: [
+                { type: 10, content: `## ⚠️ Set Up Season Planner\n**${config.seasonName}** doesn't have planner data yet.\nEnter your estimates below to generate the round structure.` },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, custom_id: `planner_force_setup_${configId}`, label: 'Set Up Planner', style: 1, emoji: { name: '📅' } },
+                  { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Back', style: 2 }
+                ]}
+              ]}]};
+            }
+
             const startDate = new Date(config.estimatedStartDate);
             return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[guildId]?.challenges);
           }
@@ -43700,14 +43719,12 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         const components = req.body.data.components;
 
-        // Parse Label components (Type 18) BY custom_id — the create modal carries planner
-        // estimates (no description); the edit modal carries season_description (RaP 0910).
+        // Parse Label components (Type 18) BY custom_id — both create and edit modals carry
+        // Season Name + optional planner estimates (no description field) (RaP 0910).
         const fields = {};
         for (const comp of (components || [])) {
           if (comp.component?.custom_id) fields[comp.component.custom_id] = comp.component.value;
         }
-        const seasonName = fields.season_name;
-        const seasonDescription = fields.season_description || '';
 
         // Parse custom_id to detect create vs edit mode
         // Format: 'season_modal:create' or 'season_modal:{configId}'
@@ -43751,7 +43768,8 @@ Your server is now ready for Tycoons gameplay!`;
         }
 
         if (isEditMode) {
-          // EDIT MODE: Update existing season config
+          // EDIT MODE: unified update (Name + optional planner estimates, no description) — RaP 0910.
+          // updateSeason() updates name and only generates rounds on first-time setup (never wipes existing rounds).
           const config = playerData[guildId].applicationConfigs?.[configId];
 
           if (!config) {
@@ -43764,27 +43782,21 @@ Your server is now ready for Tycoons gameplay!`;
             });
           }
 
-          // Update season name and description
-          config.seasonName = seasonName;
-          config.explanatoryText = seasonDescription || `Join ${seasonName}!`;
-
-          // Truncate button text if needed (Discord limit: 80 chars)
-          // "Apply to " = 9 chars, leaving 71 chars for season name
-          let buttonText = `Apply to ${seasonName}`;
-          if (buttonText.length > 80) {
-            // Truncate season name to 68 chars (9 + 68 + 2 = 79 for "..")
-            const truncatedName = seasonName.substring(0, 68) + '..';
-            buttonText = `Apply to ${truncatedName}`;
+          const { validatePlannerFields, updateSeason } = await import('./seasonPlanner.js');
+          const validation = validatePlannerFields(fields);
+          if (!validation.valid) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: `❌ ${validation.errors.join('\n❌ ')}`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
           }
-          config.buttonText = buttonText;
-          config.lastUpdated = Date.now();
 
-          await savePlayerData(playerData);
-
-          console.log(`✅ SUCCESS: Season "${seasonName}" updated (configId: ${configId})`);
-
-          // Return to question management UI (UPDATE_MESSAGE pattern)
-          return refreshQuestionManagementUI(res, config, configId, 0);
+          await updateSeason(guildId, configId, validation.data);
+          const fresh = await loadPlayerData();
+          return refreshQuestionManagementUI(res, fresh[guildId].applicationConfigs[configId], configId, 0);
 
         } else {
           // CREATE MODE: unified season creation (Name required + optional planner estimates).

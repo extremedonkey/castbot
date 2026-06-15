@@ -348,6 +348,14 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
+  'apps_planner_*': {
+    label: 'Planner',
+    description: 'Jump from Season Applications to the Season Planner for this season',
+    emoji: '📅',
+    style: 'Secondary',
+    parent: 'season_management_menu',
+    category: 'season_applications'
+  },
   'planner_tribes_*': {
     label: 'Tribes',
     description: 'Tribe management (not yet implemented)',

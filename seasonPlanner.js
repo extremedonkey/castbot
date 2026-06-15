@@ -240,12 +240,12 @@ export function parseStartDate(dateStr) {
  * @returns {Object} Modal interaction response data
  */
 export function buildSeasonPlannerModal(existing = null, opts = {}) {
-  // Setup-existing flow requires estimates (you explicitly clicked "Set Up Planner").
-  // Create flow makes them OPTIONAL — name-only seasons are allowed; rounds generate only
-  // when all estimates are supplied (RaP 0910, Layer B).
+  // Estimates are OPTIONAL in every mode — create AND edit (RaP 0910). Season Name is the only
+  // required field; rounds generate only when all estimates are supplied.
   const isSetup = !!existing?.configId;
-  const estRequired = isSetup;
+  const estRequired = false;
   const createCustomId = opts.createCustomId || 'planner_create_modal';
+  const editCustomId = opts.editCustomId || `planner_setup_modal:${existing?.configId}`;
 
   // Format start date for pre-fill: Unix timestamp → mm/dd/yyyy, or today for create mode
   let startDateValue = null;
@@ -272,7 +272,7 @@ export function buildSeasonPlannerModal(existing = null, opts = {}) {
   };
 
   return {
-    custom_id: isSetup ? `planner_setup_modal:${existing.configId}` : createCustomId,
+    custom_id: isSetup ? editCustomId : createCustomId,
     title: isSetup ? 'Edit Season' : 'Create New Season',
     components: [
       {
@@ -618,6 +618,44 @@ export async function buildPlannerSelector(guildId) {
 // ─────────────────────────────────────────────
 
 /**
+ * Generate the round structure + one challenge per round (except F1 reunion) and store them
+ * on playerData. Shared by createSeason() and updateSeason(). Mutates playerData in place.
+ * @returns {{ roundCount: number, chalCount: number }}
+ */
+async function generateAndStoreRounds(playerData, guildId, seasonId, data, createdBy) {
+  const { default: crypto } = await import('crypto');
+  if (!playerData[guildId].seasonRounds) playerData[guildId].seasonRounds = {};
+  if (!playerData[guildId].challenges) playerData[guildId].challenges = {};
+
+  const rounds = generateSeasonRounds(data.estimatedTotalPlayers, data.estimatedSwaps, data.estimatedFTCPlayers);
+  playerData[guildId].seasonRounds[seasonId] = rounds;
+
+  let chalCount = 0;
+  for (const [, round] of Object.entries(rounds)) {
+    if (round.fNumber === 1) continue; // Skip reunion — no challenge
+    const chalId = `challenge_${crypto.randomUUID().replace(/-/g, '').substring(0, 12)}`;
+    const chalTitle = round.ftcRound
+      ? `Challenge ${round.seasonRoundNo} (FTC Speech)`
+      : `Challenge ${round.seasonRoundNo} (TBC)`;
+    playerData[guildId].challenges[chalId] = {
+      title: chalTitle,
+      description: '',
+      image: '',
+      accentColor: 0x5865F2,
+      creationHost: createdBy || null,
+      runningHost: null,
+      seasonId,
+      createdAt: Date.now(),
+      lastUpdated: Date.now(),
+    };
+    round.challengeIDs = { primary: chalId };
+    chalCount++;
+  }
+
+  return { roundCount: Object.keys(rounds).length, chalCount };
+}
+
+/**
  * Create a new season (unified create path — RaP 0910, Layer B).
  * Always seeds default application questions. Generates rounds/challenges only when
  * data.hasPlannerData is true (all estimates supplied).
@@ -698,33 +736,7 @@ export async function createSeason(guildId, userId, data) {
 
   let roundCount = 0, chalCount = 0;
   if (hasPlannerData) {
-    if (!playerData[guildId].seasonRounds) playerData[guildId].seasonRounds = {};
-    const rounds = generateSeasonRounds(data.estimatedTotalPlayers, data.estimatedSwaps, data.estimatedFTCPlayers);
-    playerData[guildId].seasonRounds[seasonId] = rounds;
-    roundCount = Object.keys(rounds).length;
-
-    // Bulk-create challenges for each round and link them
-    if (!playerData[guildId].challenges) playerData[guildId].challenges = {};
-    for (const [, round] of Object.entries(rounds)) {
-      if (round.fNumber === 1) continue; // Skip reunion — no challenge
-      const chalId = `challenge_${crypto.randomUUID().replace(/-/g, '').substring(0, 12)}`;
-      const chalTitle = round.ftcRound
-        ? `Challenge ${round.seasonRoundNo} (FTC Speech)`
-        : `Challenge ${round.seasonRoundNo} (TBC)`;
-      playerData[guildId].challenges[chalId] = {
-        title: chalTitle,
-        description: '',
-        image: '',
-        accentColor: 0x5865F2,
-        creationHost: userId,
-        runningHost: null,
-        seasonId,
-        createdAt: Date.now(),
-        lastUpdated: Date.now(),
-      };
-      round.challengeIDs = { primary: chalId };
-      chalCount++;
-    }
+    ({ roundCount, chalCount } = await generateAndStoreRounds(playerData, guildId, seasonId, data, userId));
   }
 
   await savePlayerData(playerData);
@@ -734,62 +746,50 @@ export async function createSeason(guildId, userId, data) {
 }
 
 /**
- * Set up planner data for an existing season that doesn't have it yet.
+ * Update an existing season (unified edit path — RaP 0910).
+ * Always updates name + apply-button text. When estimates are supplied (data.hasPlannerData),
+ * persists them on the config and generates rounds ONLY for first-time setup (season has no
+ * rounds yet). Existing rounds are preserved — manual round/challenge edits are never wiped.
  * @param {string} guildId
  * @param {string} configId - Existing applicationConfigs key
- * @param {Object} data - Validated planner fields
- * @returns {{ seasonId: string }}
+ * @param {Object} data - validatePlannerFields().data (seasonName + optional estimates)
+ * @returns {{ seasonId: string, hasPlannerData: boolean, generatedRounds: boolean }}
  */
-export async function setupPlannerForExistingSeason(guildId, configId, data) {
+export async function updateSeason(guildId, configId, data) {
   const playerData = await loadPlayerData();
   const config = playerData[guildId]?.applicationConfigs?.[configId];
   if (!config) throw new Error(`Config ${configId} not found`);
 
-  if (!playerData[guildId].seasonRounds) {
-    playerData[guildId].seasonRounds = {};
-  }
-
-  // Update config with planner fields
+  // Name + apply-button text (explanatoryText is intentionally left untouched — it's the
+  // apply-button blurb, set during app-button setup, not here)
   config.seasonName = data.seasonName;
-  config.estimatedStartDate = data.estimatedStartDate;
-  config.estimatedTotalPlayers = data.estimatedTotalPlayers;
-  config.estimatedSwaps = data.estimatedSwaps;
-  config.estimatedFTCPlayers = data.estimatedFTCPlayers;
-  config.currentSeasonRoundID = config.currentSeasonRoundID || 1;
-  config.seasonIdeas = config.seasonIdeas || 'Free-form section to brainstorm season themes, twists and challenges before assigning to rounds.';
+  let buttonText = `Apply to ${data.seasonName}`;
+  if (buttonText.length > 80) buttonText = `Apply to ${data.seasonName.substring(0, 68)}..`;
+  config.buttonText = buttonText;
   config.lastUpdated = Date.now();
 
-  // Generate rounds
-  const rounds = generateSeasonRounds(data.estimatedTotalPlayers, data.estimatedSwaps, data.estimatedFTCPlayers);
-  playerData[guildId].seasonRounds[config.seasonId] = rounds;
+  let generatedRounds = false;
+  if (data.hasPlannerData) {
+    config.estimatedStartDate = data.estimatedStartDate;
+    config.estimatedTotalPlayers = data.estimatedTotalPlayers;
+    config.estimatedSwaps = data.estimatedSwaps;
+    config.estimatedFTCPlayers = data.estimatedFTCPlayers;
+    config.currentSeasonRoundID = config.currentSeasonRoundID || 1;
+    config.seasonIdeas = config.seasonIdeas || 'Free-form section to brainstorm season themes, twists and challenges before assigning to rounds.';
+    if (config.stage === 'draft') config.stage = 'planning';
 
-  // Bulk-create challenges for each round and link them
-  if (!playerData[guildId].challenges) playerData[guildId].challenges = {};
-  const { default: crypto } = await import('crypto');
-  for (const [roundId, round] of Object.entries(rounds)) {
-    if (round.fNumber === 1) continue;
-    const chalId = `challenge_${crypto.randomUUID().replace(/-/g, '').substring(0, 12)}`;
-    const chalTitle = round.ftcRound
-      ? `Challenge ${round.seasonRoundNo} (FTC Speech)`
-      : `Challenge ${round.seasonRoundNo} (TBC)`;
-    playerData[guildId].challenges[chalId] = {
-      title: chalTitle,
-      description: '',
-      image: '',
-      accentColor: 0x5865F2,
-      creationHost: config.createdBy || null,
-      runningHost: null,
-      seasonId: config.seasonId,
-      createdAt: Date.now(),
-      lastUpdated: Date.now(),
-    };
-    round.challengeIDs = { primary: chalId };
+    const existingRounds = playerData[guildId]?.seasonRounds?.[config.seasonId];
+    if (!existingRounds || Object.keys(existingRounds).length === 0) {
+      // First-time setup — safe to generate. Existing rounds are NEVER regenerated here.
+      await generateAndStoreRounds(playerData, guildId, config.seasonId, data, config.createdBy);
+      generatedRounds = true;
+    }
   }
 
   await savePlayerData(playerData);
-  console.log(`✅ Season Planner: Set up "${data.seasonName}" (${configId}) with ${Object.keys(rounds).length} rounds + challenges`);
+  console.log(`✅ Season updated: "${data.seasonName}" (${configId})${generatedRounds ? ' — generated rounds + challenges' : ''}`);
 
-  return { seasonId: config.seasonId };
+  return { seasonId: config.seasonId, hasPlannerData: !!data.hasPlannerData, generatedRounds };
 }
 
 // ─────────────────────────────────────────────
