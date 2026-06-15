@@ -18,15 +18,9 @@ const isProduction = process.env.PRODUCTION === 'TRUE';
 const CASTLIST_COMMAND = {
 	name: 'castlist',
 	description: 'Display your CastBot castlist(s).',
-	type: 1,
-	options: [
-		{
-			name: 'castlist',
-			description: 'Select which castlist to display (if left blank, will display default castlist)',
-			type: 3, // STRING type
-			required: false
-		}
-	]
+	type: 1
+	// No options: the legacy `castlist` arg (v0.1) was removed 2026-06-16.
+	// The /castlist handler still defaults to 'default' when no option is present.
 };
 
 // Legacy commands - REMOVED
