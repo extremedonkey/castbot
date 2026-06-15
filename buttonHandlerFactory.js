@@ -1555,6 +1555,14 @@ export const BUTTON_REGISTRY = {
     parent: 'prod_setup_wizard',
     category: 'castlist'
   },
+  'wizard_post_castlist': {
+    label: 'Post Castlist',
+    description: 'Setup Wizard: publicly post the default castlist (reuses /castlist) + record setupProgress.castlistPosted',
+    emoji: '📃',
+    style: 'Secondary',
+    parent: 'prod_setup_wizard',
+    category: 'castlist'
+  },
   'castlist_select': {
     label: 'Select Castlist',
     description: 'Select a castlist to view or manage',

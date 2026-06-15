@@ -286,6 +286,7 @@ class DiscordMessenger {
    * @param {string} options.context - 'dm' or 'channel' - affects button visibility and messaging
    * @param {boolean} options.hasSetup - Whether server has at least 1 pronoun AND 1 timezone (drives Run Setup / Castlist Manager state)
    * @param {boolean} options.hasCastlist - Whether the active/default castlist has any tribes assigned (drives Castlist Manager "done" state)
+   * @param {boolean} options.hasPostedCastlist - Whether this server has ever clicked Post Castlist (drives Post Castlist "done" state)
    * @param {boolean} options.setupInProgress - Render Run Setup as a green "⏳ Setting up..." (disabled) while setup runs
    * @param {string} options.serverName - Guild name to personalize the DM copy
    * @returns {Array} Components V2 container array for Discord
@@ -294,6 +295,7 @@ class DiscordMessenger {
     const isDM = options.context === 'dm';
     const hasSetup = options.hasSetup || false;
     const hasCastlist = options.hasCastlist || false;
+    const hasPostedCastlist = options.hasPostedCastlist || false;
     const setupInProgress = options.setupInProgress || false;
 
     // Channel-only task buttons — rendered as Section (type 9) accessories, one per task.
@@ -345,6 +347,30 @@ class DiscordMessenger {
           disabled: !hasSetup
         };
 
+    // Season Manager — opens the season application management menu (optional task, no done-state)
+    const seasonManagerButton = {
+      type: 2, custom_id: 'season_management_menu',
+      label: 'Season Manager',
+      style: 2, // Secondary (grey)
+      emoji: { name: '📅' }
+    };
+
+    // Post Castlist — posts the default castlist publicly (reuses /castlist display).
+    // Once a server has ever posted, show a green "✅ Castlist Posted" (still navigable).
+    const postCastlistButton = hasPostedCastlist
+      ? {
+          type: 2, custom_id: 'wizard_post_castlist',
+          label: 'Castlist Posted',
+          style: 3, // Success (green)
+          emoji: { name: '✅' }
+        }
+      : {
+          type: 2, custom_id: 'wizard_post_castlist',
+          label: 'Post Castlist',
+          style: 2, // Secondary (grey)
+          emoji: { name: '📃' }
+        };
+
     // Row (both contexts): Castbot Features (first) + CastBot Help Server link
     const featuresRow = [
       {
@@ -380,8 +406,12 @@ class DiscordMessenger {
       howTo: '## How to get started',
       setupHeader: '## ``` 🪛 1. Click the Run Setup button```',
       setupBody: '-# > ⌚ Takes 30 seconds\nCastBot uses Discord Roles for player Pronouns and Timezones. Setup will automatically create pronoun and timezone roles in your server, and add them to CastBot. Don\'t worry if you already have some - CastBot will detect and add them to CastBot.',
-      castlistHeader: '## ``` 📋 2. Create your first Castlist```',
+      seasonHeader: '## ``` 📅 2. Create a Season Application process (optional)```',
+      seasonBody: 'Click **Season Manager**, create a season, add some questions and then click **Post to Channel**. If you aren\'t ready to open your applications, you can test this out in a production bots / testing channel.',
+      castlistHeader: '## ``` ✏️ 3. Create your first Castlist```',
       castlistBody: '-# > ⌚ Takes 2 minutes\nClick the **Castlist Manager** button to the right, then under *Select a castlist to manage..* choose ✅ Active Castlist. In the \'Tribe Roles\' pop-up, select a role to add to the castlist. If you are just testing the feature out ahead of the season, choose a role like your @Production role.',
+      displayHeader: '## ``` 📋 4. Display your Castlist```',
+      displayBody: 'In any Discord channel (including this one), type <:cb_blue> `/castlist` to display the castlist you just made. You can also click the 📃 Post Castlist button to the right.',
       footer: 'To get back to CastBot, type `/menu` from any channel in your server! Once your season is up and running, use `/castlist` to summon the active castlist showing players. You can get back to this menu from /menu → Tools'
     };
 
@@ -405,12 +435,26 @@ class DiscordMessenger {
             components: [{ type: 10, content: channelContent.setupBody }],
             accessory: runSetupButton
           },
-          // Task 2 — full-width header, then Section (body + Castlist accessory)
+          // Task 2 — full-width header, then Section (body + Season Manager accessory)
+          { type: 10, content: channelContent.seasonHeader },
+          {
+            type: 9, // Section
+            components: [{ type: 10, content: channelContent.seasonBody }],
+            accessory: seasonManagerButton
+          },
+          // Task 3 — full-width header, then Section (body + Castlist accessory)
           { type: 10, content: channelContent.castlistHeader },
           {
             type: 9, // Section
             components: [{ type: 10, content: channelContent.castlistBody }],
             accessory: castlistButton
+          },
+          // Task 3 — full-width header, then Section (body + Post Castlist accessory)
+          { type: 10, content: channelContent.displayHeader },
+          {
+            type: 9, // Section
+            components: [{ type: 10, content: expandBotEmojis(channelContent.displayBody) }],
+            accessory: postCastlistButton
           },
           { type: 14 },
           { type: 10, content: channelContent.footer },

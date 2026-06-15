@@ -83,7 +83,7 @@ describe('Setup Wizard — channel layout uses Section + button accessory', () =
 
   it('renders one Section per task, each with a single Text child + a button accessory', () => {
     const sections = channel({ hasSetup: false, hasCastlist: false }).filter(c => c.type === 9);
-    assert.equal(sections.length, 2, 'expected 2 task sections (Setup + Castlist)');
+    assert.equal(sections.length, 4, 'expected 4 task sections (Setup, Season, Castlist, Display)');
     for (const s of sections) {
       assert.equal(s.components.length, 1, 'Section must have EXACTLY one child (Discord limit)');
       assert.equal(s.components[0].type, 10, 'Section child must be a Text Display');
@@ -91,10 +91,12 @@ describe('Setup Wizard — channel layout uses Section + button accessory', () =
     }
   });
 
-  it('wires the right button to each task section', () => {
+  it('wires the right button to each task section, in order', () => {
     const sections = channel({ hasSetup: true, hasCastlist: true }).filter(c => c.type === 9);
     assert.equal(sections[0].accessory.custom_id, 'setup_castbot');
-    assert.equal(sections[1].accessory.custom_id, 'castlist_hub_main_new');
+    assert.equal(sections[1].accessory.custom_id, 'season_management_menu');
+    assert.equal(sections[2].accessory.custom_id, 'castlist_hub_main_new');
+    assert.equal(sections[3].accessory.custom_id, 'wizard_post_castlist');
   });
 
   it('keeps Features + Help as the only action row, Features first', () => {
@@ -107,6 +109,15 @@ describe('Setup Wizard — channel layout uses Section + button accessory', () =
   it('DM context has no task sections (channel-only)', () => {
     const dm = DiscordMessenger.createWelcomeComponents({ context: 'dm' })[0].components;
     assert.equal(dm.filter(c => c.type === 9).length, 0);
+  });
+
+  it('Post Castlist reflects hasPostedCastlist (grey 📃 → green ✅ Castlist Posted)', () => {
+    const post = (flag) => DiscordMessenger.createWelcomeComponents({ context: 'channel', hasPostedCastlist: flag })[0]
+      .components.filter(c => c.type === 9).find(s => s.accessory.custom_id === 'wizard_post_castlist').accessory;
+    assert.equal(post(false).label, 'Post Castlist');
+    assert.equal(post(false).style, 2);
+    assert.equal(post(true).label, 'Castlist Posted');
+    assert.equal(post(true).style, 3); // green
   });
 });
 

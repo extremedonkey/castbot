@@ -866,12 +866,14 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     const { default: DiscordMessenger } = await import('./discordMessenger.js');
     const { castlistManager } = await import('./castlistManager.js');
     const hasCastlist = await castlistManager.defaultCastlistHasTribes(guildId);
+    const hasPostedCastlist = playerData[guildId]?.setupProgress?.castlistPosted === true;
 
-    // Return Setup Wizard components (hasSetup + hasCastlist drive the button states)
+    // Return Setup Wizard components (hasSetup + hasCastlist + hasPostedCastlist drive button states)
     const wizardComponents = DiscordMessenger.createWelcomeComponents({
       context: 'channel',
       hasSetup,
       hasCastlist,
+      hasPostedCastlist,
       serverName: guild?.name
     });
 
@@ -7648,8 +7650,9 @@ To fix this:
               const playerData = await loadPlayerData();
               const hasSetup = hasCompletedSetup(playerData[guildId]);
               const freshCastlist = await castlistManager.defaultCastlistHasTribes(guildId);
+              const hasPostedCastlist = playerData[guildId]?.setupProgress?.castlistPosted === true;
               await createFollowupMessage(token, {
-                components: DiscordMessenger.createWelcomeComponents({ context: 'channel', hasSetup, hasCastlist: freshCastlist, serverName: guild?.name }),
+                components: DiscordMessenger.createWelcomeComponents({ context: 'channel', hasSetup, hasCastlist: freshCastlist, hasPostedCastlist, serverName: guild?.name }),
                 ephemeral: true
               });
 
@@ -7674,6 +7677,31 @@ To fix this:
             flags: InteractionResponseFlags.EPHEMERAL | (1 << 15), // factory strips flags for UPDATE_MESSAGE
             components: DiscordMessenger.createWelcomeComponents({ context: 'channel', setupInProgress: true, hasCastlist, serverName: guild?.name })
           };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'wizard_post_castlist') {
+      // Setup Wizard "Post Castlist" — publicly post the default castlist (reuses /castlist
+      // display) and record that this server has posted at least once (setupProgress flag).
+      return ButtonHandlerFactory.create({
+        id: 'wizard_post_castlist',
+        deferred: true,
+        ephemeral: false, // Castlist is public — visible to everyone in the channel
+        handler: async (context) => {
+          const { guildId } = context;
+
+          // Record first-ever post for this server (drives the wizard's green "Castlist Posted" state)
+          const playerData = await loadPlayerData();
+          if (!playerData[guildId]) playerData[guildId] = {};
+          if (!playerData[guildId].setupProgress) playerData[guildId].setupProgress = {};
+          if (!playerData[guildId].setupProgress.castlistPosted) {
+            playerData[guildId].setupProgress.castlistPosted = true;
+            await savePlayerData(playerData);
+            console.log(`📃 wizard_post_castlist: marked castlistPosted=true for guild ${guildId}`);
+          }
+
+          // Display the default castlist publicly (same path as the show_castlist2 button)
+          const { displayCastlist } = await import('./castlistDisplay.js');
+          return displayCastlist(context, 'default', 'view', buildNoTribesContainer, canSendMessagesInChannel);
         }
       })(req, res, client);
     } else if (custom_id === 'castbot_tools') {
@@ -12040,12 +12068,14 @@ To fix this:
           const { default: DiscordMessenger } = await import('./discordMessenger.js');
           const { castlistManager } = await import('./castlistManager.js');
           const hasCastlist = await castlistManager.defaultCastlistHasTribes(context.guildId);
+          const hasPostedCastlist = playerData[context.guildId]?.setupProgress?.castlistPosted === true;
 
-          // Get components in 'channel' context (hasSetup + hasCastlist drive button states)
+          // Get components in 'channel' context (hasSetup + hasCastlist + hasPostedCastlist drive button states)
           const welcomeComponents = DiscordMessenger.createWelcomeComponents({
             context: 'channel',
             hasSetup,
             hasCastlist,
+            hasPostedCastlist,
             serverName: context.guild?.name
           });
 
