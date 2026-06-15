@@ -8496,34 +8496,19 @@ To fix this:
           // Existing season — wrap in UPDATE_MESSAGE since requiresModal sends raw
           const { InteractionResponseType: IRT } = await import('discord-interactions');
           const { loadPlayerData } = await import('./storage.js');
-          const { buildPlannerView } = await import('./seasonPlanner.js');
           const playerData = await loadPlayerData();
           const config = playerData[context.guildId]?.applicationConfigs?.[selectedValue];
           if (!config) {
             return { type: IRT.UPDATE_MESSAGE, data: { components: [{ type: 17, accent_color: 0xe74c3c, components: [
               { type: 10, content: '## ❌ Season not found' },
               { type: 14 },
-              { type: 1, components: [{ type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Back', style: 2 }] }
+              { type: 1, components: [{ type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Seasons', style: 2 }] }
             ]}]}};
           }
 
-          const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId];
-          if (!seasonRounds) {
-            return { type: IRT.UPDATE_MESSAGE, data: { components: [{ type: 17, accent_color: 0xf39c12, components: [
-              { type: 10, content: `## ⚠️ Set Up Season Planner\n**${config.seasonName}** was created without planner data.\nClick below to configure round structure.` },
-              { type: 14 },
-              { type: 1, components: [
-                { type: 2, custom_id: `planner_force_setup_${selectedValue}`, label: 'Set Up Planner', style: 1, emoji: { name: '📅' } },
-                { type: 2, custom_id: `planner_apps_${selectedValue}`, label: 'Apps', style: 2, emoji: { name: '📝' } },
-                { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Seasons', style: 2 }
-              ]}
-            ]}]}};
-          }
-
-          const startDate = new Date(config.estimatedStartDate);
-          const view = buildPlannerView(config.seasonName, seasonRounds, startDate, selectedValue, 0, config.seasonIdeas, playerData[context.guildId]?.challenges);
-          // Send as NEW non-ephemeral message so hosts can share the planner view
-          return { type: IRT.CHANNEL_MESSAGE_WITH_SOURCE, data: { ...view, flags: (1 << 15) } };
+          // Default to the Apps (question management) view — more popular and works without planner data.
+          // The planner is one click away via the 📅 Planner cross-link in that view.
+          return { type: IRT.UPDATE_MESSAGE, data: await buildQuestionManagementUI(config, selectedValue, 0) };
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_force_setup_')) {
