@@ -366,7 +366,7 @@ class DiscordMessenger {
       title: '# 🧙🏽 CastBot Setup Wizard\nWelcome to CastBot - your one stop shop for managing your Cast Experience! Manage your Season Applications, create Castlists, create Idol Hunts & Safaris, and much more!',
       howTo: '## How to get started',
       setupTask: '## ``` 🪛 1. Click the Run Setup button to the right```\n-# > ⌚ Takes 30 seconds\nCastBot uses Discord Roles for player Pronouns and Timezones. Setup will automatically create pronoun and timezone roles in your server, and add them to CastBot. Don\'t worry if you already have some - CastBot will detect and add them to CastBot.',
-      castlistTask: '## ``` 📋 2. Create your first Castlist```\n-# > ⌚ Takes 2 minutes\nOnce you\'ve ran setup, click the **Castlist Manager** button to the right and create your first castlist. CastBot also uses roles to manage castlists - during a season you\'ll simply add your tribe roles to CastBot and it will do the rest!\n> **💡Hot Tip:** We recommend testing this out with your production team role before your season starts to get used to it.',
+      castlistTask: '## ``` 📋 2. Create your first Castlist```\n-# > ⌚ Takes 2 minutes\nClick the **Castlist Manager** button to the right, then under *Select a castlist to manage..* choose ✅ Active Castlist. In the \'Tribe Roles\' pop-up, select a role to add to the castlist. If you are just testing the feature out ahead of the season, choose a role like your @Production role.',
       footer: 'To get back to CastBot, type `/menu` from any channel in your server! Once your season is up and running, use `/castlist` to summon the active castlist showing players. You can get back to this menu from /menu → Tools'
     };
 
