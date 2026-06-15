@@ -449,8 +449,7 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
   const container = {
     type: 17, accent_color: 0x9b59b6,
     components: [
-      { type: 10, content: `## 📅 Season Planner\n### ${seasonName}` },
-      { type: 14 },
+      { type: 10, content: `## 📅 Season Planner\n> ${seasonName}` },
       { type: 1, components: [
         { type: 2, custom_id: `planner_apps_${configId}`, label: 'Apps', style: 2, emoji: { name: '📝' } },
         { type: 2, custom_id: `season_app_ranking_${configId}`, label: 'Ranking', style: 2, emoji: { name: '🏆' } },
