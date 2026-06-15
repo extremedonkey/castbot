@@ -916,14 +916,14 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setCustomId('reeces_season_planner_mockup')
       .setLabel('Season Manager')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📝')
+      .setEmoji('📅')
   );
 
   // Standard admin buttons
   adminButtons.push(
     new ButtonBuilder()
       .setCustomId('admin_manage_player')
-      .setLabel('Player Admin')
+      .setLabel('Player Manager')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🧑‍🤝‍🧑')
     // Challenges moved to Safari row, Donate moved to Advanced Features row
