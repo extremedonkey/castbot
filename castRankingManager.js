@@ -97,12 +97,12 @@ export async function generateSeasonAppRankingUI({
       new ButtonBuilder()
         .setCustomId(`ranking_prev_${appIndex}_${configId}${ephemeralSuffix}`)
         .setLabel('◀ Previous')
-        .setStyle(ButtonStyle.Secondary)
+        .setStyle(appIndex === 0 ? ButtonStyle.Secondary : ButtonStyle.Primary)
         .setDisabled(appIndex === 0),
       new ButtonBuilder()
         .setCustomId(`ranking_next_${appIndex}_${configId}${ephemeralSuffix}`)
         .setLabel('Next ▶')
-        .setStyle(ButtonStyle.Secondary)
+        .setStyle(appIndex === allApplications.length - 1 ? ButtonStyle.Secondary : ButtonStyle.Primary)
         .setDisabled(appIndex === allApplications.length - 1)
     );
   }
@@ -259,9 +259,19 @@ export async function generateSeasonAppRankingUI({
   const containerComponents = [
     {
       type: 10, // Text Display component
-      content: `## Cast Ranking - ${seasonName} | ${guild.name}`
+      content: `## 🏆 Cast Ranking\n> ### ${seasonName}`
     },
-    navRow.toJSON(), // Navigation controls above applicant info
+    // Cross-link/back row — converges with the Apps/Planner views (Ranking excluded; we're in it)
+    {
+      type: 1,
+      components: [
+        { type: 2, custom_id: `planner_apps_${configId}`, label: 'Apps', style: 2, emoji: { name: '📝' } },
+        { type: 2, custom_id: `apps_planner_${configId}`, label: 'Planner', style: 2, emoji: { name: '📅' } },
+        { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
+        { type: 2, custom_id: `reeces_season_planner_mockup`, label: '← Seasons', style: 2 }
+      ]
+    },
+    navRow.toJSON(), // Applicant navigation (prev/next/view-all)
   ];
 
   // DNC conflict warnings (above applicant info for visibility)
@@ -453,8 +463,8 @@ export async function generateSeasonAppRankingUI({
           .setStyle(ButtonStyle.Primary)
           .toJSON(),
         new ButtonBuilder()
-          .setCustomId(`personal_ranker_${currentApp.channelId}_${appIndex}_${configId}`)
-          .setLabel('🤸 Personal Ranker')
+          .setCustomId(`ranking_public_warn_${appIndex}_${configId}`)
+          .setLabel('📢 Public Ranking')
           .setStyle(ButtonStyle.Secondary)
           .toJSON(),
         new ButtonBuilder()
@@ -490,6 +500,38 @@ export async function generateSeasonAppRankingUI({
     flags: ephemeral ? ((1 << 15) | (1 << 6)) : (1 << 15), // IS_COMPONENTS_V2 + EPHEMERAL if personal
     components: [castRankingContainer]
   };
+}
+
+/**
+ * Rebuild the Cast Ranking screen at a given applicant index. Reused by Public Ranking
+ * (cancel/confirm) so the dense per-applicant setup lives in one place.
+ * @returns the generateSeasonAppRankingUI response, or null if the season has no applications.
+ */
+export async function buildRankingScreen({ guildId, userId, configId, appIndex = 0, guild }) {
+  const { getApplicationsForSeason, loadPlayerData } = await import('./storage.js');
+  const playerData = await loadPlayerData();
+  const allApplications = await getApplicationsForSeason(guildId, configId);
+  if (!allApplications || allApplications.length === 0) return null;
+
+  const idx = Math.max(0, Math.min(appIndex || 0, allApplications.length - 1));
+  const currentApp = allApplications[idx];
+
+  let applicantMember;
+  try {
+    applicantMember = await guild.members.fetch(currentApp.userId);
+  } catch {
+    applicantMember = {
+      displayName: currentApp.displayName,
+      user: { username: currentApp.username },
+      displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/0.png`
+    };
+  }
+
+  const seasonName = playerData[guildId]?.applicationConfigs?.[configId]?.seasonName || 'Unknown Season';
+  return generateSeasonAppRankingUI({
+    guildId, userId, configId, allApplications, currentApp, appIndex: idx,
+    applicantMember, guild, seasonName, playerData
+  });
 }
 
 /**

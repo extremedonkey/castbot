@@ -5630,6 +5630,72 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           return result;
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('ranking_public_warn_')) {
+      // Public Ranking — step 1: warn that the ranking will be posted publicly (LEAN warning)
+      return ButtonHandlerFactory.create({
+        id: 'ranking_public_warn',
+        updateMessage: true,
+        handler: async (context) => {
+          const rest = context.customId.replace('ranking_public_warn_', '');
+          const appIndex = parseInt(rest.split('_')[0]) || 0;
+          const configId = rest.substring(rest.indexOf('_') + 1);
+          return {
+            components: [{
+              type: 17, accent_color: 0xf39c12, // orange — warning/caution
+              components: [
+                { type: 10, content: `## ⚠️ Post Ranking Publicly?` },
+                { type: 14 },
+                { type: 10, content: `This posts the **Cast Ranking** to this channel as a **public message** that anyone who can see the channel will be able to read — including:\n• Applicant scores & average ratings\n• Casting decisions (Cast / Tentative / Don't Cast)\n• Player notes\n\nRanking is normally kept private to hosts. Continue?` },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, custom_id: `ranking_public_cancel_${appIndex}_${configId}`, label: 'Cancel', style: 2, emoji: { name: '❌' } },
+                  { type: 2, custom_id: `ranking_public_post_${appIndex}_${configId}`, label: 'Post Publicly', style: 1, emoji: { name: '📢' } }
+                ]}
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('ranking_public_cancel_')) {
+      // Public Ranking — cancel: restore the (private) ranking in place
+      return ButtonHandlerFactory.create({
+        id: 'ranking_public_cancel',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const rest = context.customId.replace('ranking_public_cancel_', '');
+          const appIndex = parseInt(rest.split('_')[0]) || 0;
+          const configId = rest.substring(rest.indexOf('_') + 1);
+          const guild = await context.client.guilds.fetch(context.guildId);
+          const member = await guild.members.fetch(context.userId);
+          if (!hasCastRankingPermissions(member, context.guildId)) {
+            return { content: '❌ You need Manage Roles or Manage Channels permissions to access Cast Ranking.' };
+          }
+          const { buildRankingScreen } = await import('./castRankingManager.js');
+          const ui = await buildRankingScreen({ guildId: context.guildId, userId: context.userId, configId, appIndex, guild });
+          return ui || { content: '❌ No applications found for this season.' };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('ranking_public_post_')) {
+      // Public Ranking — confirm: post the ranking as a NEW PUBLIC (non-ephemeral) message
+      return ButtonHandlerFactory.create({
+        id: 'ranking_public_post',
+        deferred: true,
+        ephemeral: false, // PUBLIC — explicitly confirmed via the warning
+        handler: async (context) => {
+          const rest = context.customId.replace('ranking_public_post_', '');
+          const appIndex = parseInt(rest.split('_')[0]) || 0;
+          const configId = rest.substring(rest.indexOf('_') + 1);
+          const guild = await context.client.guilds.fetch(context.guildId);
+          const member = await guild.members.fetch(context.userId);
+          if (!hasCastRankingPermissions(member, context.guildId)) {
+            return { content: '❌ You need Manage Roles or Manage Channels permissions to post a public ranking.', ephemeral: true };
+          }
+          const { buildRankingScreen } = await import('./castRankingManager.js');
+          const ui = await buildRankingScreen({ guildId: context.guildId, userId: context.userId, configId, appIndex, guild });
+          return ui || { content: '❌ No applications found for this season.', ephemeral: true };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('ranking_scores_back_')) {
       // Handle ranking scores summary back button - restore original Cast Ranking UI
       return ButtonHandlerFactory.create({
@@ -13491,8 +13557,12 @@ To fix this:
         });
       }
     } else if (custom_id.startsWith('season_app_ranking_')) {
+      // Default ephemeral (holds applicant scores/notes); morph in place ONLY from an ephemeral source.
       return ButtonHandlerFactory.create({
         id: 'season_app_ranking',
+        deferred: true,
+        updateMessage: !!(req.body.message?.flags & (1 << 6)), // morph only when the source message is ephemeral
+        ephemeral: true,
         handler: async (context) => {
           console.log(`🔍 START: season_app_ranking - user ${context.userId}`);
           const { guildId, userId, client } = context;
@@ -13537,8 +13607,21 @@ To fix this:
 
           if (allApplications.length === 0) {
             return {
-              content: `📝 No applications found for season "${seasonName}". \n\nApplicants need to use the application button for this specific season to appear in Cast Ranking.`,
-              ephemeral: true
+              flags: (1 << 15), // IS_COMPONENTS_V2 (factory handles ephemeral / strips for updateMessage)
+              components: [{
+                type: 17,
+                components: [
+                  { type: 10, content: `## 🏆 Cast Ranking\n> ### ${seasonName}` },
+                  { type: 1, components: [
+                    { type: 2, custom_id: `planner_apps_${configId}`, label: 'Apps', style: 2, emoji: { name: '📝' } },
+                    { type: 2, custom_id: `apps_planner_${configId}`, label: 'Planner', style: 2, emoji: { name: '📅' } },
+                    { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
+                    { type: 2, custom_id: `reeces_season_planner_mockup`, label: '← Seasons', style: 2 }
+                  ]},
+                  { type: 14 },
+                  { type: 10, content: `📭 **No applications yet** for this season.\n-# Applicants appear here once they apply via this season's application button.` }
+                ]
+              }]
             };
           }
 
