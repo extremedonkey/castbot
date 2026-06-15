@@ -165,22 +165,54 @@ export function createNukeConfirmationUI(dataType, guildId, serverName) {
 }
 
 /**
- * Create success message after nuking data
+ * Action Row with a single "← Data" button returning to the Data Management menu.
+ * @returns {Object} Components V2 Action Row
+ */
+function backToDataRow() {
+  return {
+    type: 1, // Action Row
+    components: [
+      { type: 2, style: 2, label: '← Data', custom_id: 'data_admin' } // Secondary
+    ]
+  };
+}
+
+/**
+ * Create success message after nuking data (LeanUI conventions).
  * @param {string} dataType - Type of data nuked
  * @param {string} serverName - Server name
  * @param {string} guildId - Guild ID
+ * @param {Object} [results] - Optional results (roles nuke): { rolesDeleted, pronounsCleared, timezonesCleared, errors }
  * @returns {Object} Components V2 Container structure
  */
-export function createNukeSuccessUI(dataType, serverName, guildId) {
+export function createNukeSuccessUI(dataType, serverName, guildId, results = null) {
   const config = DATA_CONFIGS[dataType];
-  
+
+  const lines = [`-# Server: **${serverName}** \`${guildId}\``, ''];
+  if (results) {
+    // Roles nuke — show deletion counts
+    lines.push(`• Roles Deleted: **${results.rolesDeleted}**`);
+    lines.push(`• Pronouns Cleared: **${results.pronounsCleared}**`);
+    lines.push(`• Timezones Cleared: **${results.timezonesCleared}**`);
+    if (results.errors?.length > 0) {
+      lines.push('', `**Errors:**`, ...results.errors.map(e => `• ${e}`));
+    }
+  } else {
+    // File-based nuke — generic reset confirmation
+    lines.push(`All ${config.displayName} entries for this guild have been permanently deleted.`);
+    lines.push(`The guild is now reset to a blank state in ${config.displayName}.`);
+  }
+
   return {
     type: 17, // Container
+    accent_color: 0x27ae60, // Green — completed
     components: [
-      {
-        type: 10, // Text Display
-        content: `☢️ **DATA NUKED SUCCESSFULLY**\n\nAll ${config.displayName} entries for **${serverName}** (Guild ID: ${guildId}) have been permanently deleted.\n\nThe guild has been completely reset to a blank state in ${config.displayName}.`
-      }
+      { type: 10, content: `## ☢️ ${config.displayName} Nuked` },
+      { type: 14 },
+      { type: 10, content: '### ```📊 Results```' },
+      { type: 10, content: lines.join('\n') },
+      { type: 14 },
+      backToDataRow()
     ]
   };
 }
@@ -193,14 +225,16 @@ export function createNukeSuccessUI(dataType, serverName, guildId) {
  */
 export function createNoDataUI(dataType, guildId) {
   const config = DATA_CONFIGS[dataType];
-  
+
   return {
     type: 17, // Container
+    accent_color: 0xf39c12, // Orange — caution/no-op
     components: [
-      {
-        type: 10, // Text Display
-        content: `⚠️ No data found for guild ${guildId} in ${config.displayName}. Nothing to nuke.`
-      }
+      { type: 10, content: `## ⚠️ Nothing to Nuke` },
+      { type: 14 },
+      { type: 10, content: `-# Guild \`${guildId}\`\n\nNo data found in **${config.displayName}**. Nothing was deleted.` },
+      { type: 14 },
+      backToDataRow()
     ]
   };
 }
@@ -212,11 +246,13 @@ export function createNoDataUI(dataType, guildId) {
 export function createNukeCancelUI() {
   return {
     type: 17, // Container
+    accent_color: 0x3498DB, // Blue — neutral
     components: [
-      {
-        type: 10, // Text Display
-        content: '❌ **Data nuke cancelled**\n\nNo data was deleted. The guild data remains intact.'
-      }
+      { type: 10, content: `## ❌ Nuke Cancelled` },
+      { type: 14 },
+      { type: 10, content: '-# No data was deleted. The guild data remains intact.' },
+      { type: 14 },
+      backToDataRow()
     ]
   };
 }
@@ -294,27 +330,25 @@ export async function handleNukeConfirm(dataType, context) {
     try {
       // Execute the role nuke
       const results = await config.deleteData({}, context.guildId, context);
-      
-      // Create custom success message for roles (deferred response doesn't use Container)
+
+      // Components V2 success Container (PATCHes the parent confirmation message in place)
       return {
-        content: [
-          `☢️ **ROLES NUKED SUCCESSFULLY**`,
-          ``,
-          `Server: **${serverName}** (Guild ID: ${context.guildId})`,
-          ``,
-          `**Results:**`,
-          `• Roles Deleted: **${results.rolesDeleted}**`,
-          `• Pronouns Cleared: **${results.pronounsCleared}**`,
-          `• Timezones Cleared: **${results.timezonesCleared}**`,
-          results.errors.length > 0 ? `\n**Errors:**\n${results.errors.map(e => `• ${e}`).join('\n')}` : '',
-          ``,
-          `🎯 **Next Step:** Run \`/menu\` → Production Menu → Setup to configure fresh roles!`
-        ].filter(Boolean).join('\n')
+        components: [createNukeSuccessUI('roles', serverName, context.guildId, results)]
       };
     } catch (error) {
       console.error(`❌ ERROR nuking roles: ${error.message}`);
       return {
-        content: `❌ **Error nuking roles:** ${error.message}`
+        components: [{
+          type: 17, // Container
+          accent_color: 0xe74c3c, // Red — error
+          components: [
+            { type: 10, content: `## ❌ Error Nuking Roles` },
+            { type: 14 },
+            { type: 10, content: `-# ${error.message}` },
+            { type: 14 },
+            backToDataRow()
+          ]
+        }]
       };
     }
   }
