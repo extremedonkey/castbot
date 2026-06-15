@@ -2,6 +2,7 @@
 // Pure logic replicated inline per TestingStandards.md.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import DiscordMessenger from '../discordMessenger.js';
 
 // ── Replicated from roleManager.hasCompletedSetup (single source of truth) ──
 function hasCompletedSetup(guildData) {
@@ -65,6 +66,38 @@ describe('Setup Wizard — button state reflects hasSetup', () => {
       assert.equal(runSetup.disabled, hasSetup);
       assert.equal(castlist.disabled, !hasSetup);
     }
+  });
+});
+
+describe('Setup Wizard — channel layout uses Section + button accessory', () => {
+  const channel = (opts) => DiscordMessenger.createWelcomeComponents({ context: 'channel', ...opts })[0].components;
+
+  it('renders one Section per task, each with a single Text child + a button accessory', () => {
+    const sections = channel({ hasSetup: false, hasCastlist: false }).filter(c => c.type === 9);
+    assert.equal(sections.length, 2, 'expected 2 task sections (Setup + Castlist)');
+    for (const s of sections) {
+      assert.equal(s.components.length, 1, 'Section must have EXACTLY one child (Discord limit)');
+      assert.equal(s.components[0].type, 10, 'Section child must be a Text Display');
+      assert.equal(s.accessory.type, 2, 'Section accessory must be a Button');
+    }
+  });
+
+  it('wires the right button to each task section', () => {
+    const sections = channel({ hasSetup: true, hasCastlist: true }).filter(c => c.type === 9);
+    assert.equal(sections[0].accessory.custom_id, 'setup_castbot');
+    assert.equal(sections[1].accessory.custom_id, 'castlist_hub_main_new');
+  });
+
+  it('keeps Features + Help as the only action row, Features first', () => {
+    const rows = channel({ hasSetup: true, hasCastlist: false }).filter(c => c.type === 1);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].components[0].custom_id, 'dm_view_tips');
+    assert.equal(rows[0].components[1].style, 5); // link button
+  });
+
+  it('DM context has no task sections (channel-only)', () => {
+    const dm = DiscordMessenger.createWelcomeComponents({ context: 'dm' })[0].components;
+    assert.equal(dm.filter(c => c.type === 9).length, 0);
   });
 });
 

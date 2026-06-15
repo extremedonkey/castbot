@@ -294,46 +294,46 @@ class DiscordMessenger {
     const hasSetup = options.hasSetup || false;
     const hasCastlist = options.hasCastlist || false;
 
-    // Row 1 (channel only): the setup-flow buttons — Run Setup + Castlist Manager
-    const setupRow = [];
-    if (!isDM) {
-      // Run Setup — reflects setup state (single source of truth: hasSetup).
-      // Not yet set up → blue "Run Setup". Already set up → green "✅ Setup Complete" (disabled).
-      setupRow.push(hasSetup
-        ? {
-            type: 2, custom_id: 'setup_castbot',
-            label: 'Setup Complete',
-            style: 3, // Success (green)
-            emoji: { name: '✅' },
-            disabled: true
-          }
-        : {
-            type: 2, custom_id: 'setup_castbot',
-            label: 'Run Setup',
-            style: 1, // Primary (blue)
-            emoji: { name: '🪛' }
-          });
+    // Channel-only task buttons — rendered as Section (type 9) accessories, one per task.
+    // Each task is a Section: nested Text Display (left) + its action button (accessory, right).
+    // This mirrors the /castlist Section pattern (castlistV2.js:312) but with a button
+    // accessory instead of a thumbnail. More tasks can be added as additional Sections.
 
-      // Castlist Manager — if the default castlist already has tribes, show a green
-      // "✅ First Castlist Made" (still navigable); otherwise existing logic
-      // (grey, disabled until setup is complete).
-      setupRow.push(hasCastlist
-        ? {
-            type: 2, custom_id: 'castlist_hub_main_new',
-            label: 'First Castlist Made',
-            style: 3, // Success (green)
-            emoji: { name: '✅' }
-          }
-        : {
-            type: 2, custom_id: 'castlist_hub_main_new',  // Creates new ephemeral message instead of replacing
-            label: 'Castlist Manager',
-            style: 2, // Secondary (grey)
-            emoji: { name: '📋' },
-            disabled: !hasSetup
-          });
-    }
+    // Run Setup — single source of truth: hasSetup. Not set up → blue "Run Setup";
+    // set up → green "✅ Setup Complete" (disabled).
+    const runSetupButton = hasSetup
+      ? {
+          type: 2, custom_id: 'setup_castbot',
+          label: 'Setup Complete',
+          style: 3, // Success (green)
+          emoji: { name: '✅' },
+          disabled: true
+        }
+      : {
+          type: 2, custom_id: 'setup_castbot',
+          label: 'Run Setup',
+          style: 1, // Primary (blue)
+          emoji: { name: '🪛' }
+        };
 
-    // Row 2 (both contexts): Castbot Features (first) + CastBot Help Server link
+    // Castlist Manager — default castlist has tribes → green "✅ First Castlist Made"
+    // (still navigable); otherwise grey "Castlist Manager", disabled until setup is complete.
+    const castlistButton = hasCastlist
+      ? {
+          type: 2, custom_id: 'castlist_hub_main_new',
+          label: 'First Castlist Made',
+          style: 3, // Success (green)
+          emoji: { name: '✅' }
+        }
+      : {
+          type: 2, custom_id: 'castlist_hub_main_new',  // Creates new ephemeral message instead of replacing
+          label: 'Castlist Manager',
+          style: 2, // Secondary (grey)
+          emoji: { name: '📋' },
+          disabled: !hasSetup
+        };
+
+    // Row (both contexts): Castbot Features (first) + CastBot Help Server link
     const featuresRow = [
       {
         type: 2, custom_id: 'dm_view_tips',
@@ -361,10 +361,12 @@ class DiscordMessenger {
       instructions: '## ```🏁 What to do next```\n1. Go to any channel in ' + serverRef + ' and type <:cb_blue> `/menu` to run the setup wizard and get started!\n2. Join the CastBot help server below for the latest updates, tips and support.'
     };
 
-    // Channel (Setup Wizard) content - new instructional copy
+    // Channel (Setup Wizard) content — each task's text is the nested Text Display of a Section
     const channelContent = {
       title: '# 🧙🏽 CastBot Setup Wizard\nWelcome to CastBot - your one stop shop for managing your Cast Experience! Manage your Season Applications, create Castlists, create Idol Hunts & Safaris, and much more!',
-      instructions: '## How to get started\n\n## ``` 🪛 1. Click the Run Setup button below```\n-# > ⌚ Takes 30 seconds\nCastBot uses Discord Roles for player Pronouns and Timezones. Setup will automatically create pronoun and timezone roles in your server, and add them to CastBot. Don\'t worry if you already have some - CastBot will detect and add them to CastBot.\n## ``` 📋 2. Create your first Castlist```\n-# > ⌚ Takes 2 minutes\nOnce you\'ve ran setup, click **Castlist Manager** below and create your first castlist. CastBot also uses roles to manage castlists - during a season you\'ll simply add your tribe roles to CastBot and it will do the rest!\n> **💡Hot Tip:** We recommend testing this out with your production team role before your season starts to get used to it.',
+      howTo: '## How to get started',
+      setupTask: '## ``` 🪛 1. Click the Run Setup button to the right```\n-# > ⌚ Takes 30 seconds\nCastBot uses Discord Roles for player Pronouns and Timezones. Setup will automatically create pronoun and timezone roles in your server, and add them to CastBot. Don\'t worry if you already have some - CastBot will detect and add them to CastBot.',
+      castlistTask: '## ``` 📋 2. Create your first Castlist```\n-# > ⌚ Takes 2 minutes\nOnce you\'ve ran setup, click the **Castlist Manager** button to the right and create your first castlist. CastBot also uses roles to manage castlists - during a season you\'ll simply add your tribe roles to CastBot and it will do the rest!\n> **💡Hot Tip:** We recommend testing this out with your production team role before your season starts to get used to it.',
       footer: 'To get back to CastBot, type `/menu` from any channel in your server! Once your season is up and running, use `/castlist` to summon the active castlist showing players. You can get back to this menu from /menu → Tools'
     };
 
@@ -380,11 +382,22 @@ class DiscordMessenger {
       : [
           { type: 10, content: channelContent.title },
           { type: 14 },
-          { type: 10, content: channelContent.instructions },
+          { type: 10, content: channelContent.howTo },
+          // Task 1 — Run Setup (button accessory to the right)
+          {
+            type: 9, // Section
+            components: [{ type: 10, content: channelContent.setupTask }],
+            accessory: runSetupButton
+          },
+          // Task 2 — Create your first Castlist (button accessory to the right)
+          {
+            type: 9, // Section
+            components: [{ type: 10, content: channelContent.castlistTask }],
+            accessory: castlistButton
+          },
           { type: 14 },
           { type: 10, content: channelContent.footer },
           { type: 14 },
-          { type: 1, components: setupRow },
           { type: 1, components: featuresRow }
         ];
 
