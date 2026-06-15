@@ -2757,10 +2757,62 @@ async function updateReactionMappingsForRole(guildId, oldRoleId, newRoleId, flag
     return updated;
 }
 
+/**
+ * SINGLE SOURCE OF TRUTH: has this guild completed CastBot first-run setup?
+ *
+ * A guild is "set up" when it has at least 1 pronoun role AND at least 1 timezone
+ * configured. This is the SAME check that decides whether `/menu` shows the Setup
+ * Wizard (instead of the Production Menu), and it drives the wizard's button state
+ * (Run Setup vs ✅ Setup Complete, Castlist Manager enabled/disabled). Keep this the
+ * only place this determination is made.
+ *
+ * @param {Object} guildData - playerData[guildId]
+ * @returns {boolean}
+ */
+function hasCompletedSetup(guildData) {
+    const hasPronouns = guildData?.pronounRoleIDs?.length > 0;
+    const hasTimezones = !!(guildData?.timezones && Object.keys(guildData.timezones).length > 0);
+    return hasPronouns && hasTimezones;
+}
+
+/**
+ * Run the full CastBot setup: create/adopt pronoun + timezone roles, then auto-consolidate
+ * duplicate timezone roles. Wraps executeSetup + consolidateTimezoneRoles so callers
+ * (the setup_castbot button handler) stay lean.
+ *
+ * @param {string} guildId
+ * @param {Guild} guild - Discord.js guild
+ * @returns {Promise<Object>} setupResults (with .timezones.consolidation when merges happened)
+ */
+async function runFullSetup(guildId, guild) {
+    const setupResults = await executeSetup(guildId, guild);
+
+    // Auto-consolidate duplicate timezone roles (scans Discord + playerData)
+    const playerData = await loadPlayerData();
+    const timezones = playerData[guildId]?.timezones || {};
+    const consolidationResults = await consolidateTimezoneRoles(guild, timezones);
+
+    if (consolidationResults.merged.length > 0) {
+        for (const deleted of consolidationResults.deleted) {
+            delete playerData[guildId].timezones[deleted.roleId];
+        }
+        await savePlayerData(playerData);
+        setupResults.timezones = setupResults.timezones || {};
+        setupResults.timezones.consolidation = consolidationResults;
+        console.log(`✅ Consolidated ${consolidationResults.merged.length} groups, deleted ${consolidationResults.deleted.length} roles`);
+    } else {
+        console.log(`✅ No duplicates found (consolidation scanned Discord and playerData)`);
+    }
+
+    return setupResults;
+}
+
 export {
     STANDARD_PRONOUN_ROLES,
     STANDARD_TIMEZONE_ROLES,
     REACTION_EMOJIS,
+    hasCompletedSetup,
+    runFullSetup,
     executeSetup,
     generateSetupResponse,
     generateSetupResponseV2,

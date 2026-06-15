@@ -296,16 +296,26 @@ class DiscordMessenger {
 
     // Channel-only buttons for Setup Wizard
     if (!isDM) {
-      // Run Setup button - always available in channel context
-      actionButtons.push({
-        type: 2, // Button
-        custom_id: 'setup_castbot',
-        label: 'Run Setup',
-        style: 1, // Primary (blue)
-        emoji: { name: '🪛' }
-      });
+      // Run Setup button — reflects setup state (single source of truth: hasSetup).
+      // Not yet set up → blue "Run Setup". Already set up → green "✅ Setup Complete" (disabled).
+      actionButtons.push(hasSetup
+        ? {
+            type: 2, // Button
+            custom_id: 'setup_castbot',
+            label: 'Setup Complete',
+            style: 3, // Success (green)
+            emoji: { name: '✅' },
+            disabled: true
+          }
+        : {
+            type: 2, // Button
+            custom_id: 'setup_castbot',
+            label: 'Run Setup',
+            style: 1, // Primary (blue)
+            emoji: { name: '🪛' }
+          });
 
-      // Castlist Manager - disabled if no pronouns/timezones
+      // Castlist Manager - disabled until setup is complete
       actionButtons.push({
         type: 2, // Button
         custom_id: 'castlist_hub_main_new',  // NEW: Creates new ephemeral message instead of replacing

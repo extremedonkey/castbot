@@ -99,6 +99,8 @@ import {
 } from './playerManagement.js';
 import {
   executeSetup,
+  runFullSetup,
+  hasCompletedSetup,
   generateSetupResponse,
   generateSetupResponseV2,
   checkRoleHierarchy,
@@ -853,22 +855,21 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Track legacy menu usage
   MenuBuilder.trackLegacyMenu('createProductionMenuInterface', 'Main production menu');
 
-  // Check if server has completed initial setup (at least 1 pronoun AND 1 timezone)
+  // Check if server has completed initial setup (single source of truth: hasCompletedSetup)
   // If not, show Setup Wizard instead of Production Menu
-  const hasPronouns = playerData[guildId]?.pronounRoleIDs?.length > 0;
-  const hasTimezones = playerData[guildId]?.timezones && Object.keys(playerData[guildId].timezones).length > 0;
-  const hasSetup = hasPronouns && hasTimezones;
+  const hasSetup = hasCompletedSetup(playerData[guildId]);
 
   if (!hasSetup) {
-    console.log(`🧙 First-run detected: pronouns=${hasPronouns}, timezones=${hasTimezones} - showing Setup Wizard instead of Production Menu`);
+    console.log(`🧙 First-run detected: hasSetup=${hasSetup} - showing Setup Wizard instead of Production Menu`);
 
     // Import Discord Messenger service for reusable components
     const { default: DiscordMessenger } = await import('./discordMessenger.js');
 
-    // Return Setup Wizard components with hasSetup status
+    // Return Setup Wizard components with hasSetup status (drives Run Setup / Castlist Manager button state)
     const wizardComponents = DiscordMessenger.createWelcomeComponents({
       context: 'channel',
-      hasSetup
+      hasSetup,
+      serverName: guild?.name
     });
 
     // Return in same format as Production Menu expects
@@ -7597,88 +7598,55 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'setup_castbot') {
-      // Execute setup using new roleManager module
-      try {
-        console.log('🔍 DEBUG: Starting setup_castbot handler');
-        
-        // Send deferred response first
-        await res.send({
-          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: InteractionResponseFlags.EPHEMERAL
+      // Run Setup (from the Setup Wizard). Flow:
+      //  1. DEFERRED_UPDATE_MESSAGE — silently ack the wizard message
+      //  2. Run full setup (roles + consolidation)
+      //  3. PATCH @original → replace the wizard in place with the "✅ Setup Complete" results
+      //  4. Post a FRESH Setup Wizard as a NEW ephemeral message (now setup-complete:
+      //     Castlist Manager enabled, Run Setup → ✅ Setup Complete) so the user isn't
+      //     left scrolling up to a stale, half-disabled wizard.
+      return ButtonHandlerFactory.create({
+        id: 'setup_castbot',
+        deferred: true,
+        updateMessage: true, // DEFERRED_UPDATE_MESSAGE → PATCH @original replaces the wizard
+        ephemeral: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const { guildId, guild, token, member } = context;
+          console.log(`🪛 START: setup_castbot - user ${context.userId}`);
+
+          // Run roles + timezone consolidation (orchestrated in roleManager)
+          const setupResults = await runFullSetup(guildId, guild);
+
+          // Analytics (best-effort — never block setup)
+          try {
+            const { logSetupRun } = await import('./src/analytics/analyticsLogger.js');
+            await logSetupRun(guild, context.userId, member.user.global_name || member.user.username);
+          } catch (error) {
+            console.error('⚠️ Failed to log setup run announcement:', error);
           }
-        });
 
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        
-        // Execute comprehensive setup using roleManager
-        console.log('🔍 DEBUG: Calling executeSetup from roleManager');
-        const setupResults = await executeSetup(guildId, guild);
+          // Re-send the Setup Wizard as a NEW ephemeral message, now setup-complete.
+          // hasSetup uses the SAME source of truth as /menu first-run detection.
+          const playerData = await loadPlayerData();
+          const hasSetup = hasCompletedSetup(playerData[guildId]);
+          const { default: DiscordMessenger } = await import('./discordMessenger.js');
+          const { createFollowupMessage } = await import('./buttonHandlerFactory.js');
+          await createFollowupMessage(token, {
+            components: DiscordMessenger.createWelcomeComponents({ context: 'channel', hasSetup, serverName: guild?.name }),
+            ephemeral: true
+          });
 
-        // NEW: Auto-consolidate duplicate timezone roles (Phase 2 integration)
-        // Always run consolidation - it scans Discord for unregistered roles and has smart early-exit per timezone
-        const playerData = await loadPlayerData();
-        const timezones = playerData[guildId]?.timezones || {};
+          console.log(`✅ SUCCESS: setup_castbot - results PATCHed, fresh wizard re-sent (hasSetup=${hasSetup})`);
 
-        console.log(`🔀 Running timezone consolidation (includes Discord scan for unregistered roles)...`);
-        const consolidationResults = await consolidateTimezoneRoles(guild, timezones);
-
-        // Only update playerData and results if consolidation actually merged roles
-        if (consolidationResults.merged.length > 0) {
-          // Clean up deleted roles from playerData
-          for (const deleted of consolidationResults.deleted) {
-            delete playerData[guildId].timezones[deleted.roleId];
-          }
-          await savePlayerData(playerData);
-
-          // Add consolidation results to setup results for display
-          setupResults.timezones = setupResults.timezones || {};
-          setupResults.timezones.consolidation = consolidationResults;
-
-          console.log(`✅ Consolidated ${consolidationResults.merged.length} groups, deleted ${consolidationResults.deleted.length} roles`);
-        } else {
-          console.log(`✅ No duplicates found (consolidation scanned Discord and playerData)`);
+          // Returned value PATCHes @original (the wizard) → setup-complete results
+          return {
+            flags: InteractionResponseFlags.EPHEMERAL | (1 << 15), // EPHEMERAL + IS_COMPONENTS_V2
+            components: [generateSetupResponseV2(setupResults)]
+          };
         }
-
-        // Generate detailed Components V2 response
-        const componentsV2Response = generateSetupResponseV2(setupResults);
-        
-        // Send response with Components V2 formatting
-        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-        await DiscordRequest(endpoint, {
-          method: 'PATCH',
-          body: {
-            content: '', // Empty content as we're using Components V2
-            components: [componentsV2Response], // Wrap in array as Discord expects
-            flags: InteractionResponseFlags.EPHEMERAL | (1 << 15) // Add IS_COMPONENTS_V2 flag
-          }
-        });
-
-        console.log('✅ DEBUG: Setup completed successfully');
-
-        // Post setup run announcement to Discord analytics channel
-        try {
-          const { logSetupRun } = await import('./src/analytics/analyticsLogger.js');
-          const userId = req.body.member.user.id;
-          const userName = req.body.member.user.global_name || req.body.member.user.username;
-          await logSetupRun(guild, userId, userName);
-        } catch (error) {
-          console.error('⚠️ Failed to log setup run announcement:', error);
-          // Don't break setup if announcement fails
-        }
-
-      } catch (error) {
-        console.error('❌ ERROR: setup_castbot handler failed:', error);
-        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-        await DiscordRequest(endpoint, {
-          method: 'PATCH',
-          body: {
-            content: '❌ Error during role setup. Please check bot permissions and try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id === 'castbot_tools') {
       // Setup - always show setup interface (no "subsequent run" detection)
       return ButtonHandlerFactory.create({
@@ -12033,21 +12001,20 @@ To fix this:
         handler: async (context) => {
           console.log(`🧙 Setup Wizard requested by user ${context.userId}`);
 
-          // Check if server has completed setup (at least 1 pronoun AND 1 timezone)
+          // Check if server has completed setup (single source of truth: hasCompletedSetup)
           const playerData = await loadPlayerData();
-          const hasPronouns = playerData[context.guildId]?.pronounRoleIDs?.length > 0;
-          const hasTimezones = playerData[context.guildId]?.timezones && Object.keys(playerData[context.guildId].timezones).length > 0;
-          const hasSetup = hasPronouns && hasTimezones;
+          const hasSetup = hasCompletedSetup(playerData[context.guildId]);
 
-          console.log(`🧙 Setup status: pronouns=${hasPronouns}, timezones=${hasTimezones}, hasSetup=${hasSetup}`);
+          console.log(`🧙 Setup status: hasSetup=${hasSetup}`);
 
           // Import Discord Messenger service for reusable components
           const { default: DiscordMessenger } = await import('./discordMessenger.js');
 
-          // Get components in 'channel' context with setup status
+          // Get components in 'channel' context with setup status (drives button state)
           const welcomeComponents = DiscordMessenger.createWelcomeComponents({
             context: 'channel',
-            hasSetup
+            hasSetup,
+            serverName: context.guild?.name
           });
 
           console.log(`✅ Setup Wizard: Returning ephemeral response with ${welcomeComponents.length} container(s)`);
