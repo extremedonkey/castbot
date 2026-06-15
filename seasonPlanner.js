@@ -582,6 +582,7 @@ export async function buildPlannerSelector(guildId) {
     customId: 'planner_select_season',
     placeholder: 'Select a season to manage...',
     requireSeasonName: true,
+    showRowEmoji: false, // drop the stage-emoji prefix — the config indicators carry the meaning now
     createNewLabel: 'Create New Season',
     createNewEmoji: { name: '➕' },
     createNewDescription: 'Create and configure a new season',
@@ -591,6 +592,11 @@ export async function buildPlannerSelector(guildId) {
       const appsConfigured = !!season.targetChannelId
         || (season.questions || []).some(q => q.questionType !== 'completion' && q.questionTitle && q.questionTitle !== 'Click here to set first question');
       if (appsConfigured) parts.push('📝 Apps');
+      // Cast Ranking: any application in this season has a score or casting decision recorded
+      const hasRankings = Object.values(guildData?.applications || {}).some(app =>
+        app.configId === configId && ((app.rankings && Object.keys(app.rankings).length > 0) || app.castingStatus)
+      );
+      if (hasRankings) parts.push('🏆 Ranking');
       if (guildData?.seasonRounds?.[season.seasonId]) parts.push('📅 Planner');
       return { description: parts.length ? parts.join(' • ') : '⚠️ Not configured yet' };
     }

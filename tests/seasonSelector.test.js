@@ -151,3 +151,70 @@ describe('Season Selector — Planner mode (Layer A unification)', () => {
     assert.equal(opts[0].label, 'Create New Season');
   });
 });
+
+// ─────────────────────────────────────────────
+// Season Manager config indicators (📝 Apps • 🏆 Ranking • 📅 Planner)
+// ─────────────────────────────────────────────
+
+function computeIndicators(configId, season, guildData) {
+  const parts = [];
+  const appsConfigured = !!season.targetChannelId
+    || (season.questions || []).some(q => q.questionType !== 'completion' && q.questionTitle && q.questionTitle !== 'Click here to set first question');
+  if (appsConfigured) parts.push('📝 Apps');
+  const hasRankings = Object.values(guildData?.applications || {}).some(app =>
+    app.configId === configId && ((app.rankings && Object.keys(app.rankings).length > 0) || app.castingStatus)
+  );
+  if (hasRankings) parts.push('🏆 Ranking');
+  if (guildData?.seasonRounds?.[season.seasonId]) parts.push('📅 Planner');
+  return parts.length ? parts.join(' • ') : '⚠️ Not configured yet';
+}
+
+describe('Season Manager — config indicators', () => {
+  it('shows "not configured" for a bare name-only season', () => {
+    const season = { seasonId: 'season_x', questions: [{ questionType: 'completion', questionTitle: 'Thanks' }, { questionTitle: 'Click here to set first question' }] };
+    assert.equal(computeIndicators('cfg', season, {}), '⚠️ Not configured yet');
+  });
+
+  it('shows 📝 Apps when the application is posted (targetChannelId)', () => {
+    const season = { seasonId: 'season_x', targetChannelId: '123' };
+    assert.equal(computeIndicators('cfg', season, {}), '📝 Apps');
+  });
+
+  it('shows 📝 Apps when a real (non-placeholder) question exists', () => {
+    const season = { seasonId: 'season_x', questions: [{ questionTitle: 'What is your name?' }] };
+    assert.equal(computeIndicators('cfg', season, {}), '📝 Apps');
+  });
+
+  it('shows 🏆 Ranking when an application has ranking scores', () => {
+    const guildData = { applications: { chan1: { configId: 'cfg', rankings: { admin1: 5 } } } };
+    const season = { seasonId: 'season_x' };
+    assert.equal(computeIndicators('cfg', season, guildData), '🏆 Ranking');
+  });
+
+  it('shows 🏆 Ranking when an application has a casting decision', () => {
+    const guildData = { applications: { chan1: { configId: 'cfg', castingStatus: 'cast' } } };
+    const season = { seasonId: 'season_x' };
+    assert.equal(computeIndicators('cfg', season, guildData), '🏆 Ranking');
+  });
+
+  it('does NOT show 🏆 Ranking for rankings belonging to a different season', () => {
+    const guildData = { applications: { chan1: { configId: 'other', rankings: { admin1: 5 } } } };
+    const season = { seasonId: 'season_x' };
+    assert.equal(computeIndicators('cfg', season, guildData), '⚠️ Not configured yet');
+  });
+
+  it('shows 📅 Planner when rounds exist', () => {
+    const guildData = { seasonRounds: { season_x: { r1: {} } } };
+    const season = { seasonId: 'season_x' };
+    assert.equal(computeIndicators('cfg', season, guildData), '📅 Planner');
+  });
+
+  it('combines all three in order: Apps • Ranking • Planner', () => {
+    const guildData = {
+      applications: { chan1: { configId: 'cfg', rankings: { admin1: 4 } } },
+      seasonRounds: { season_x: { r1: {} } }
+    };
+    const season = { seasonId: 'season_x', targetChannelId: '123' };
+    assert.equal(computeIndicators('cfg', season, guildData), '📝 Apps • 🏆 Ranking • 📅 Planner');
+  });
+});

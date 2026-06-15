@@ -86,7 +86,8 @@ export async function createSeasonSelector(guildId, options = {}) {
     createNewValue = 'create_new_season',
     createNewEmoji = { name: '✨' },
     createNewDescription = 'Start planning a new season',
-    decorateSeason = null
+    decorateSeason = null,
+    showRowEmoji = true
   } = options;
 
   const playerData = await loadPlayerData();
@@ -162,9 +163,9 @@ export async function createSeasonSelector(guildId, options = {}) {
       truncatedName = truncatedName.substring(0, maxNameLength - 2) + '..';
     }
 
-    // Build option object
+    // Build option object (showRowEmoji=false drops the stage-emoji prefix, e.g. Season Manager)
     const option = {
-      label: `${emoji} ${truncatedName}`,
+      label: showRowEmoji ? `${emoji} ${truncatedName}` : truncatedName,
       value: configId
     };
     if (description) option.description = description;
