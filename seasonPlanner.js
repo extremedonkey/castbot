@@ -413,6 +413,8 @@ const SELECTS_PER_PAGE = 10;
  * @returns {Object} Components V2 response
  */
 export function buildPlannerView(seasonName, rounds, startDate, configId, page = 0, ideas = '', challenges = {}) {
+  // Guard a missing/invalid start date so round dates never render as "undefined NaN undefined"
+  if (!(startDate instanceof Date) || isNaN(startDate.getTime())) startDate = new Date();
   const roundIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
   const totalPages = Math.ceil(roundIds.length / SELECTS_PER_PAGE);
   if (page < 0 || page >= totalPages) page = 0;

@@ -106,16 +106,9 @@ export async function generateSeasonAppRankingUI({
         .setDisabled(appIndex === allApplications.length - 1)
     );
   }
-  
-  // Add View All Scores button (season-scoped)
-  navButtons.push(
-    new ButtonBuilder()
-      .setCustomId(`ranking_view_all_scores_${configId}${ephemeralSuffix}`)
-      .setLabel('📊 View All Scores')
-      .setStyle(ButtonStyle.Primary)
-  );
-  
-  const navRow = new ActionRowBuilder().addComponents(navButtons);
+
+  // View All Scores moved to the bottom navigation row. navRow now holds only applicant prev/next.
+  const navRow = navButtons.length > 0 ? new ActionRowBuilder().addComponents(navButtons) : null;
   
   // Calculate average score for current applicant
   const allRankings = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings || {};
@@ -261,18 +254,17 @@ export async function generateSeasonAppRankingUI({
       type: 10, // Text Display component
       content: `## 🏆 Cast Ranking\n> ### ${seasonName}`
     },
-    // Cross-link/back row — converges with the Apps/Planner views (Ranking excluded; we're in it)
+    // Cross-link row — Apps + Edit (Planner is the "← Season Planner" back button in the bottom row;
+    // a second apps_planner_ button here would be a duplicate custom_id)
     {
       type: 1,
       components: [
         { type: 2, custom_id: `planner_apps_${configId}`, label: 'Apps', style: 2, emoji: { name: '📝' } },
-        { type: 2, custom_id: `apps_planner_${configId}`, label: 'Planner', style: 2, emoji: { name: '📅' } },
-        { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
-        { type: 2, custom_id: `reeces_season_planner_mockup`, label: '← Seasons', style: 2 }
+        { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } }
       ]
     },
-    navRow.toJSON(), // Applicant navigation (prev/next/view-all)
   ];
+  if (navRow) containerComponents.push(navRow.toJSON()); // Applicant prev/next (only when >1 applicant)
 
   // DNC conflict warnings (above applicant info for visibility)
   if (dncWarningText) {
@@ -459,23 +451,23 @@ export async function generateSeasonAppRankingUI({
       components: [
         new ButtonBuilder()
           .setCustomId(`edit_player_notes_${currentApp.channelId}_${appIndex}_${configId}`)
-          .setLabel('✏️ Edit Player Notes')
+          .setLabel('✏️ Edit Notes')
           .setStyle(ButtonStyle.Primary)
           .toJSON(),
         new ButtonBuilder()
           .setCustomId(`ranking_public_warn_${appIndex}_${configId}`)
-          .setLabel('📢 Public Ranking')
+          .setLabel('📢 Shared Ranker')
           .setStyle(ButtonStyle.Secondary)
           .toJSON(),
         new ButtonBuilder()
           .setCustomId(`dnc_overview_${configId}`)
-          .setLabel('DNC List')
+          .setLabel('DNC')
           .setStyle(ButtonStyle.Secondary)
           .setEmoji('🚷')
           .toJSON(),
         new ButtonBuilder()
           .setCustomId(`delete_application_mode_${currentApp.channelId}_${appIndex}_${configId}`)
-          .setLabel('Delete App')
+          .setLabel('Delete')
           .setStyle(ButtonStyle.Danger)
           .setEmoji('🗑️')
           .toJSON()
@@ -483,6 +475,15 @@ export async function generateSeasonAppRankingUI({
     }
   );
   
+  // Bottom navigation row — back to Season Planner + View All Scores (LEAN: back first, far-left)
+  containerComponents.push({
+    type: 1,
+    components: [
+      { type: 2, custom_id: `apps_planner_${configId}`, label: '← Season Planner', style: 2 },
+      { type: 2, custom_id: `ranking_view_all_scores_${configId}${ephemeralSuffix}`, label: 'View All Scores', style: 1, emoji: { name: '📊' } }
+    ]
+  });
+
   // Create main container
   const castRankingContainer = {
     type: 17, // Container
