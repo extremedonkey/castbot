@@ -916,7 +916,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setCustomId('reeces_season_planner_mockup')
       .setLabel('Season Manager')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📅')
+      .setEmoji('📝')
   );
 
   // Standard admin buttons
