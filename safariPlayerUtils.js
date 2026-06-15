@@ -8,15 +8,51 @@ import { loadPlayerData } from './storage.js';
 import { loadSafariContent, getCustomTerms } from './safariManager.js';
 
 /**
- * Check if a player is initialized on Safari.
- * Single source of truth — a player is initialized when they have safari.points,
- * which is ONLY set by initializePlayerOnMap() during explicit initialization.
- * Currency and inventory can exist pre-initialization (via Edit Gil / Edit Items).
+ * The three player states relative to the Safari map.
+ * Paused is a sub-state of initialized (on the map, but movement frozen).
  */
-export function isPlayerInitialized(player) {
+export const PLAYER_SAFARI_STATE = {
+  UNINITIALIZED: 'uninitialized', // not on the map (never placed, or de-initialized)
+  INITIALIZED: 'initialized',     // placed on the active map, free to move
+  PAUSED: 'paused',               // placed on the active map, movement frozen
+};
+
+/**
+ * Objectively classify a player's Safari/map state — the single source of truth.
+ *
+ * "On the map" is determined by `mapProgress[activeMapId].currentLocation`, NOT by
+ * `safari.points` (stamina). Stamina is being decoupled from Safari so it can be used
+ * independently (lean games, the action system), so its presence must NOT imply map
+ * initialization. The map renderer / location manager already key off currentLocation,
+ * so this aligns every surface on the same signal.
+ *
+ * Note: `safari.points` can linger after a de-init from older code / map migrations —
+ * that stale value is exactly why the points-based check mislabels players (e.g. shows
+ * "Initialized" + a De-initialize option for someone who isn't on the map).
+ *
+ * @param {Object} player - playerData[guildId].players[userId]
+ * @param {string} [activeMapId] - safariData[guildId].maps.active
+ * @returns {'uninitialized'|'initialized'|'paused'}
+ */
+export function getPlayerSafariState(player, activeMapId) {
   const safari = player?.safari;
-  if (!safari) return false;
-  return safari.points !== undefined;
+  if (!safari) return PLAYER_SAFARI_STATE.UNINITIALIZED;
+
+  const onMap = activeMapId
+    ? !!safari.mapProgress?.[activeMapId]?.currentLocation
+    : (safari.points !== undefined); // no active map (lean game) → fall back to legacy profile signal
+
+  if (!onMap) return PLAYER_SAFARI_STATE.UNINITIALIZED;
+  return safari.isPaused === true ? PLAYER_SAFARI_STATE.PAUSED : PLAYER_SAFARI_STATE.INITIALIZED;
+}
+
+/**
+ * Check if a player is initialized on Safari (i.e. placed on the active map).
+ * Returns true for both INITIALIZED and PAUSED. Single source of truth via
+ * getPlayerSafariState — pass the active map id so map presence drives the result.
+ */
+export function isPlayerInitialized(player, activeMapId) {
+  return getPlayerSafariState(player, activeMapId) !== PLAYER_SAFARI_STATE.UNINITIALIZED;
 }
 
 /**
@@ -40,7 +76,7 @@ export async function getInitializedPlayers(guildId, client = null) {
   for (const [userId, player] of Object.entries(players)) {
     // Skip non-snowflake keys (e.g. "admin")
     if (!/^\d{17,20}$/.test(userId)) continue;
-    if (!isPlayerInitialized(player)) continue;
+    if (!isPlayerInitialized(player, activeMapId)) continue;
 
     const safari = player.safari;
     const location = activeMapId

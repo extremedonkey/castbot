@@ -3695,7 +3695,8 @@ async function executeManagePlayerState(config, guildId, userId, interaction) {
         const { isPlayerInitialized } = await import('./safariPlayerUtils.js');
         const playerData = await loadPlayerData();
         const player = playerData[guildId]?.players?.[userId];
-        const initialized = isPlayerInitialized(player);
+        const activeMapIdForState = (await loadSafariContent())[guildId]?.maps?.active;
+        const initialized = isPlayerInitialized(player, activeMapIdForState);
 
         // Helper: resolve channel link for a coordinate
         const getChannelLink = async (coord) => {

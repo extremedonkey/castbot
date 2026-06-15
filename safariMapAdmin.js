@@ -13,7 +13,7 @@ import { setEntityPoints } from './pointsManager.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { getCustomTerms } from './safariManager.js';
 import { logger } from './logger.js';
-import { isPlayerInitialized } from './safariPlayerUtils.js';
+import { isPlayerInitialized, getPlayerSafariState, PLAYER_SAFARI_STATE } from './safariPlayerUtils.js';
 
 /**
  * Create the main Safari Map Admin interface
@@ -139,9 +139,10 @@ async function createPlayerViewUI(guildId, userId) {
   statusText += `**Player:** <@${userId}>\n`;
 
   // Show Safari-specific info
-  // A player is "initialized" when they have safari.points (set only by initializePlayerOnMap)
-  // Currency and inventory can exist pre-initialization via Edit Gil / Edit Items
-  const isInitialized = safari && safari.points !== undefined;
+  // "Initialized" = placed on the active map (currentLocation), via canonical getPlayerSafariState.
+  // Stamina (safari.points) is decoupled and must NOT imply initialization.
+  const safariState = getPlayerSafariState(player, activeMapId);
+  const isInitialized = safariState !== PLAYER_SAFARI_STATE.UNINITIALIZED;
 
   if (isInitialized) {
     // Show current values for initialized players
@@ -1059,7 +1060,7 @@ export async function bulkInitializePlayers(guildId, userIds, client) {
       // Check if already initialized (canonical check via safariPlayerUtils)
       const player = playerData[guildId]?.players?.[userId];
 
-      if (isPlayerInitialized(player)) {
+      if (isPlayerInitialized(player, activeMapId)) {
         // Already initialized — get current location for display
         const currentLocation = activeMapId
           ? player.safari.mapProgress?.[activeMapId]?.currentLocation || '?'

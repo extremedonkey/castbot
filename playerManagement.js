@@ -161,8 +161,9 @@ export async function createPlayerDisplaySection(player, playerData, guildId) {
     }
   };
 
-  // Build the safari stats line: currencyEmoji XX • inventoryEmoji X • 📍 location
-  // Currency + item count always shown; 📍 location only if the player is initialized & on the map.
+  // Build the safari stats line: currencyEmoji XX • inventoryEmoji X • 📍 location • ⚡ stamina
+  // Currency + items always shown. Location shows only when on the active map (paused → ⏸️ suffix).
+  // Stamina is decoupled from initialization: shown whenever a value is recorded for the player.
   let statsLine = '';
   try {
     const ct = await getCustomTerms(guildId);
@@ -171,13 +172,35 @@ export async function createPlayerDisplaySection(player, playerData, guildId) {
     const inv = sp.inventory || {};
     const itemTotal = Object.values(inv).reduce((sum, v) => sum + (typeof v === 'object' ? (v?.quantity || 0) : (v || 0)), 0);
     const parts = [`${ct.currencyEmoji || '🪙'} ${currency}`, `${ct.inventoryEmoji || '🧰'} ${itemTotal}`];
-    if (sp.points !== undefined) { // initialized
-      const { loadSafariContent } = await import('./safariManager.js');
-      const safariData = await loadSafariContent();
-      const activeMapId = safariData[guildId]?.maps?.active;
-      const currentLocation = activeMapId ? sp.mapProgress?.[activeMapId]?.currentLocation : null;
-      if (currentLocation) parts.push(`📍 ${currentLocation}`);
+
+    const { loadSafariContent } = await import('./safariManager.js');
+    const safariData = await loadSafariContent();
+    const activeMapId = safariData[guildId]?.maps?.active;
+
+    // 📍 Location — only when actually on the active map (initialized/paused). Pause → ⏸️ suffix.
+    const { getPlayerSafariState, PLAYER_SAFARI_STATE } = await import('./safariPlayerUtils.js');
+    const state = getPlayerSafariState(playerData[guildId]?.players?.[player.id], activeMapId);
+    const currentLocation = activeMapId ? sp.mapProgress?.[activeMapId]?.currentLocation : null;
+    if (currentLocation && state !== PLAYER_SAFARI_STATE.UNINITIALIZED) {
+      parts.push(`📍 ${currentLocation}${state === PLAYER_SAFARI_STATE.PAUSED ? ' (⏸️)' : ''}`);
     }
+
+    // ⚡ Stamina — decoupled: show whatever value is recorded for the player, irrespective of state.
+    if (sp.points?.stamina !== undefined) {
+      try {
+        const { getEntityPoints, getTimeUntilRegeneration } = await import('./pointsManager.js');
+        const entityStamina = await getEntityPoints(guildId, `player_${player.id}`, 'stamina');
+        const stamina = entityStamina
+          ? { current: entityStamina.current, maximum: entityStamina.max }
+          : sp.points.stamina;
+        const regenTime = await getTimeUntilRegeneration(guildId, `player_${player.id}`, 'stamina');
+        const regenDisplay = (regenTime === 'Full' || regenTime === 'Ready!') ? 'MAX' : regenTime;
+        parts.push(`⚡ ${stamina.current}/${stamina.maximum} (♻️ ${regenDisplay})`);
+      } catch (e) {
+        console.warn(`⚠️ createPlayerDisplaySection: stamina lookup failed for ${player.id}: ${e.message}`);
+      }
+    }
+
     statsLine = parts.join(' • ');
   } catch (e) {
     console.warn(`⚠️ createPlayerDisplaySection: could not build stats line for ${player.id}: ${e.message}`);
@@ -408,6 +431,8 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   const activeMapId = safariData[guildId]?.maps?.active;
   const playerMapData = activeMapId ? playerData[guildId]?.players?.[targetUserId]?.safari?.mapProgress?.[activeMapId] : null;
   const hasMapLocation = playerMapData?.currentLocation !== undefined;
+  // Canonical "initialized" = on the active map (currentLocation); no active map → legacy points fallback.
+  const onMap = activeMapId ? hasMapLocation : hasPoints;
 
   // Feature configuration checks
   const pronounRoleIds = playerData[guildId]?.pronounRoleIDs || [];
@@ -506,7 +531,7 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   vis.navigate = { show: hasTarget && isInitialized && hasMapLocation, disabled: false, label: 'Navigate', emoji: '🗺️', immediate: true, coordinate: currentCoordinate };
 
   // Metadata for footer
-  vis._meta = { isInitialized: hasPoints, hasTarget, isAdmin };
+  vis._meta = { isInitialized: onMap, hasTarget, isAdmin };
 
   console.log(`📊 Visibility calc for ${guildId}/${targetUserId || 'none'}: ${Object.entries(vis).filter(([k,v]) => k !== '_meta' && v.show).map(([k]) => k).join(', ')}`);
 
@@ -720,8 +745,11 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
       const pSafari = playerData[guildId]?.players?.[targetMember.id]?.safari;
       const pMap = mapActiveId ? pSafari?.mapProgress?.[mapActiveId] : null;
       const currentLocation = pMap?.currentLocation;
-      const isInit = pSafari?.points !== undefined; // truly initialized (matches isPlayerInitialized)
-      const isPaused = pSafari?.isPaused === true;
+      // Canonical state — initialized = placed on the active map (currentLocation), NOT stamina/points.
+      const { getPlayerSafariState, PLAYER_SAFARI_STATE } = await import('./safariPlayerUtils.js');
+      const mapState = getPlayerSafariState(playerData[guildId]?.players?.[targetMember.id], mapActiveId);
+      const isInit = mapState !== PLAYER_SAFARI_STATE.UNINITIALIZED;
+      const isPaused = mapState === PLAYER_SAFARI_STATE.PAUSED;
 
       // Option 1 (both): Show Navigate Pane.
       const options = [{
@@ -753,7 +781,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
         components: [{
           type: 3, // String Select
           custom_id: selectCustomId,
-          placeholder: `Map Options (${currentLocation ? '📍Current Location: ' + currentLocation : (isInit ? 'Initialized' : 'Uninitialized')})`.slice(0, 150),
+          placeholder: `Map Options (${currentLocation ? '📍Current Location: ' + currentLocation + (isPaused ? ' ⏸️' : '') : 'Uninitialized'})`.slice(0, 150),
           min_values: 1,
           max_values: 1,
           options
