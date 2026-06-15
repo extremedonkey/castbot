@@ -416,6 +416,7 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
   const roundIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
   const totalPages = Math.ceil(roundIds.length / SELECTS_PER_PAGE);
   if (page < 0 || page >= totalPages) page = 0;
+  const pageInfo = totalPages > 1 ? ` (Pg ${page + 1}/${totalPages})` : '';
 
   const skippedMap = getSkippedRounds(rounds);
   const dates = calculateRoundDates(rounds, startDate, skippedMap);
@@ -460,6 +461,7 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
       { type: 14 },
       { type: 10, content: `### 💡 Season Concepts / Ideas\n${ideas || '*Click the 💡 Ideas button above to use this free-form section to brainstorm season themes, twists and challenges before assigning to rounds.*'}` },
       { type: 14 },
+      { type: 10, content: `### \`\`\`📅 Manage Season Schedule${pageInfo}\`\`\`` },
       ...selectRows,
       { type: 1, components: [
         { type: 2, custom_id: `planner_schedule_${configId}`, label: 'Schedule', style: 2, emoji: { name: '📋' } },
