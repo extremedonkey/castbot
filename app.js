@@ -9,6 +9,7 @@ import {
   MessageComponentTypes,
   ButtonStyleTypes,
   verifyKeyMiddleware,
+  verifyKey,
 } from 'discord-interactions';
 import { 
   Client, 
@@ -1965,8 +1966,8 @@ app.get("/interactions", (req, res) => {
  * The /interactions endpoint needs raw buffer access for discord-interactions package
  */
 app.use((req, res, next) => {
-  if (req.path === '/interactions') {
-    // Skip JSON parsing for interactions endpoint
+  if (req.path === '/interactions' || req.path === '/webhooks') {
+    // Skip JSON parsing — these endpoints need the raw body for Ed25519 signature verification
     next();
   } else {
     // Apply JSON parsing for other routes
@@ -1976,6 +1977,57 @@ app.use((req, res, next) => {
 
 // Serve static files from img directory for map images
 app.use('/img', express.static('./img'));
+
+/**
+ * Discord Event Webhooks endpoint (separate from gateway events / interactions).
+ * Receives APPLICATION_AUTHORIZED on install — the one event that identifies the
+ * installing user (gateway GUILD_CREATE does not). Uses the same Ed25519 PUBLIC_KEY
+ * as /interactions. See discordMessenger.handleApplicationAuthorized().
+ *
+ * Body shape: { version, application_id, type, event: { type, timestamp, data } }
+ *   type 0 = PING (verification handshake) → must reply 204
+ *   type 1 = Event  → ACK 204 within 3s, then do work async
+ */
+app.post('/webhooks', express.raw({ type: 'application/json' }), async (req, res) => {
+  const signature = req.get('X-Signature-Ed25519');
+  const timestamp = req.get('X-Signature-Timestamp');
+
+  // req.body is a raw Buffer here (express.raw)
+  const isValid = signature && timestamp &&
+    await verifyKey(req.body, signature, timestamp, process.env.PUBLIC_KEY);
+  if (!isValid) {
+    console.warn('🚫 /webhooks: invalid or missing signature');
+    return res.status(401).send('invalid request signature');
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(req.body.toString('utf8'));
+  } catch (err) {
+    console.error('❌ /webhooks: failed to parse body:', err.message);
+    return res.status(400).send('bad request');
+  }
+
+  // PING handshake (sent when you save the URL in the Developer Portal)
+  if (payload.type === 0) {
+    console.log('🤝 /webhooks: PING handshake verified — replying 204');
+    return res.status(204).end();
+  }
+
+  // Event — ACK immediately, then process asynchronously (3s budget)
+  res.status(204).end();
+
+  try {
+    const event = payload.event;
+    console.log(`📨 /webhooks: received event ${event?.type}`);
+    if (event?.type === 'APPLICATION_AUTHORIZED') {
+      const { default: DiscordMessenger } = await import('./discordMessenger.js');
+      await DiscordMessenger.handleApplicationAuthorized(client, event.data);
+    }
+  } catch (err) {
+    console.error('❌ /webhooks: event handler failed:', err);
+  }
+});
 
 // Keep track of processed interactions to prevent duplicates
 const processedInteractions = new Map();

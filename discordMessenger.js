@@ -430,30 +430,27 @@ class DiscordMessenger {
   }
 
   /**
-   * Send a test message (used by Msg Test button)
+   * Send the Components V2 welcome message to a user's DMs.
+   * Shared by msg_test (manual) and the APPLICATION_AUTHORIZED webhook (on install).
+   * Uses the REST API directly (Components V2 over Discord.js).
+   *
    * @param {Client} client - Discord.js client
-   * @param {string} userId - Discord user ID
-   * @returns {Object} Result with response for button interaction
+   * @param {string} userId - Discord user ID to DM
+   * @returns {Promise<{success: boolean, messageId?: string, error?: string}>}
    */
-  static async sendTestMessage(client, userId) {
-    console.log(`🔍 PoC: Sending ComponentsV2 via Discord REST API (bypassing Discord.js)`);
-
+  static async sendWelcomeDM(client, userId) {
     try {
-      // Step 1: Get or create DM channel
       const user = await client.users.fetch(userId);
       const dmChannel = await user.createDM();
-      console.log(`📬 DM Channel ID: ${dmChannel.id}`);
+      console.log(`📬 Welcome DM channel for ${userId}: ${dmChannel.id}`);
 
-      // Step 2: Prepare Components V2 welcome message using reusable components
-      // CRITICAL: Must include flags field with IS_COMPONENTS_V2 flag!
+      // CRITICAL: IS_COMPONENTS_V2 flag required for Container (type 17)
       const v2Message = {
-        flags: 1 << 15, // IS_COMPONENTS_V2 (32768) - REQUIRED for Container type 17!
+        flags: 1 << 15, // IS_COMPONENTS_V2 (32768)
         components: this.createWelcomeComponents({ context: 'dm' })
       };
 
-      // Step 3: Send via Discord REST API
-      const discordApiUrl = `https://discord.com/api/v10/channels/${dmChannel.id}/messages`;
-      const response = await fetch(discordApiUrl, {
+      const response = await fetch(`https://discord.com/api/v10/channels/${dmChannel.id}/messages`, {
         method: 'POST',
         headers: {
           'Authorization': `Bot ${process.env.DISCORD_TOKEN}`,
@@ -463,13 +460,64 @@ class DiscordMessenger {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ Discord API error:', errorData);
-        throw new Error(`Discord API returned ${response.status}: ${JSON.stringify(errorData)}`);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Welcome DM API error:', errorData);
+        return { success: false, error: `Discord API ${response.status}: ${JSON.stringify(errorData)}` };
       }
 
       const messageData = await response.json();
-      console.log(`✅ REST API success! Message ID: ${messageData.id}`);
+      console.log(`✅ Welcome DM sent to ${userId}! Message ID: ${messageData.id}`);
+      return { success: true, messageId: messageData.id };
+    } catch (error) {
+      console.error(`❌ Failed to send welcome DM to ${userId}:`, error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Handle a Discord APPLICATION_AUTHORIZED webhook event (fired on install).
+   * Unlike gateway GUILD_CREATE, this event's payload identifies the installing user,
+   * so we can DM the welcome message directly to whoever added the bot.
+   *
+   * @param {Client} client - Discord.js client
+   * @param {Object} data - event.data from the webhook payload
+   *   { integration_type: 0|1, user: {id, ...}, guild?: {...}, scopes: [...] }
+   * @returns {Promise<{success: boolean, skipped?: string}>}
+   */
+  static async handleApplicationAuthorized(client, data = {}) {
+    const { integration_type, user, guild } = data;
+
+    // integration_type: 0 = guild install, 1 = user install (no guild)
+    if (integration_type !== 0) {
+      console.log(`🔕 APPLICATION_AUTHORIZED: skipping user-install (integration_type=${integration_type})`);
+      return { success: false, skipped: 'user_install' };
+    }
+    if (!user?.id) {
+      console.warn('⚠️ APPLICATION_AUTHORIZED: no installing user in payload, cannot DM');
+      return { success: false, skipped: 'no_user' };
+    }
+
+    console.log(`🎉 APPLICATION_AUTHORIZED: ${user.username || user.id} installed CastBot${guild ? ` to guild ${guild.id}` : ''}`);
+    const result = await this.sendWelcomeDM(client, user.id);
+    return { success: result.success };
+  }
+
+  /**
+   * Send a test message (used by Msg Test button)
+   * @param {Client} client - Discord.js client
+   * @param {string} userId - Discord user ID
+   * @returns {Object} Result with response for button interaction
+   */
+  static async sendTestMessage(client, userId) {
+    console.log(`🔍 PoC: Sending ComponentsV2 welcome DM via REST API`);
+
+    try {
+      // Delegate the actual DM send to the shared helper
+      const dmResult = await this.sendWelcomeDM(client, userId);
+      if (!dmResult.success) {
+        throw new Error(dmResult.error || 'Welcome DM failed');
+      }
+      const dmChannel = await (await client.users.fetch(userId)).createDM();
 
       return {
         success: true,
