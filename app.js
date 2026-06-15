@@ -8401,6 +8401,56 @@ To fix this:
           return previewTribePlannerAction(context);
         }
       })(req, res, client);
+    } else if (custom_id === 'season_delete_mode') {
+      // Delete Mode — render the red delete selector (with search); back to Season Manager
+      return ButtonHandlerFactory.create({
+        id: 'season_delete_mode',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const { buildSeasonDeleteSelector } = await import('./seasonPlanner.js');
+          return await buildSeasonDeleteSelector(context.guildId);
+        }
+      })(req, res, client);
+    } else if (custom_id === 'season_delete_select') {
+      // Delete Mode — season picked (or search / back-to-all)
+      return ButtonHandlerFactory.create({
+        id: 'season_delete_select',
+        requiresModal: true,
+        handler: async (context) => {
+          const selectedValue = req.body.data.values?.[0];
+          if (selectedValue === 'search_entities') {
+            const { buildSeasonSearchModal } = await import('./seasonPlanner.js');
+            return { type: 9, data: buildSeasonSearchModal('delete') };
+          }
+          const { InteractionResponseType: IRT } = await import('discord-interactions');
+          const { buildSeasonDeleteSelector, buildSeasonDeleteConfirm } = await import('./seasonPlanner.js');
+          if (selectedValue === 'back_to_all') {
+            return { type: IRT.UPDATE_MESSAGE, data: await buildSeasonDeleteSelector(context.guildId) };
+          }
+          const confirm = await buildSeasonDeleteConfirm(context.guildId, selectedValue);
+          return { type: IRT.UPDATE_MESSAGE, data: confirm || await buildSeasonDeleteSelector(context.guildId) };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('season_delete_confirm_')) {
+      // Delete Mode — confirm (STUBBED: no data deleted yet; see RaP 0908)
+      return ButtonHandlerFactory.create({
+        id: 'season_delete_confirm',
+        updateMessage: true,
+        deferred: true,
+        handler: async (context) => {
+          const configId = context.customId.replace('season_delete_confirm_', '');
+          const { deleteSeason } = await import('./seasonPlanner.js');
+          await deleteSeason(context.guildId, configId);
+          return { components: [{ type: 17, accent_color: 0xf39c12, components: [
+            { type: 10, content: '## 🚧 Deletion not wired up yet' },
+            { type: 14 },
+            { type: 10, content: 'No data was deleted. The delete pipeline (data cascade + Discord resource cleanup) is still being built — see RaP 0908.' },
+            { type: 14 },
+            { type: 1, components: [{ type: 2, custom_id: 'season_delete_mode', label: '← Back', style: 2 }] }
+          ]}]};
+        }
+      })(req, res, client);
     } else if (custom_id === 'planner_select_season') {
       // Season Planner — season selected from dropdown
       return ButtonHandlerFactory.create({
@@ -50174,7 +50224,8 @@ Your server is now ready for Tycoons gameplay!`;
             }
             break;
             
-          case 'seasons': {
+          case 'seasons':
+          case 'seasons_delete': {
             // Search seasons — applicationConfigs live in playerData, not safariContent
             const { loadPlayerData } = await import('./storage.js');
             const { seasonConfigIndicators } = await import('./seasonSelector.js');
@@ -50320,11 +50371,13 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Result-target routing — seasons render back into the Season Manager (planner) flow;
         // entityDisplay fixes pluralization ('seasons' is already plural).
-        const resultSelectId = entityType === 'seasons' ? 'planner_select_season' : `entity_select_${entityType}`;
-        const backToMenuId = entityType === 'seasons'
-          ? 'reeces_season_planner_mockup'
+        const resultSelectId = entityType === 'seasons' ? 'planner_select_season'
+          : entityType === 'seasons_delete' ? 'season_delete_select'
+          : `entity_select_${entityType}`;
+        const backToMenuId = entityType === 'seasons' ? 'reeces_season_planner_mockup'
+          : entityType === 'seasons_delete' ? 'season_delete_mode'
           : `safari_manage_${entityType === 'item' ? 'items' : entityType === 'store' ? 'stores' : entityType === 'safari_button' ? 'safari_buttons' : 'items'}`;
-        const entityDisplay = entityType === 'seasons' ? 'season' : entityType;
+        const entityDisplay = (entityType === 'seasons' || entityType === 'seasons_delete') ? 'season' : entityType;
 
         console.log(`🔍 DEBUG: Found ${entities.length} matching ${entityType}s`);
         

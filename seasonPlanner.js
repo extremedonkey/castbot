@@ -601,7 +601,8 @@ export async function buildPlannerSelector(guildId) {
       { type: 1, components: [selector.toJSON()] },
       { type: 14 },
       { type: 1, components: [
-        { type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 }
+        { type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 },
+        { type: 2, custom_id: 'season_delete_mode', label: 'Delete Mode', style: 4, emoji: { name: '🗑️' } }
       ]}
     ]
   };
@@ -610,12 +611,14 @@ export async function buildPlannerSelector(guildId) {
 }
 
 /**
- * Search modal for the Season Manager — routes to the shared entity_search_modal_seasons handler.
+ * Search modal for the Season Manager — routes to the shared entity_search_modal_seasons[_delete] handler.
+ * @param {string} mode - '' for manage, 'delete' for the Delete Mode flow
  */
-export function buildSeasonSearchModal() {
+export function buildSeasonSearchModal(mode = '') {
+  const entityType = mode === 'delete' ? 'seasons_delete' : 'seasons';
   return {
-    custom_id: 'entity_search_modal_seasons',
-    title: 'Search Seasons',
+    custom_id: `entity_search_modal_${entityType}`,
+    title: mode === 'delete' ? 'Search Seasons to Delete' : 'Search Seasons',
     components: [
       {
         type: 18,
@@ -628,6 +631,92 @@ export function buildSeasonSearchModal() {
       }
     ]
   };
+}
+
+// ─────────────────────────────────────────────
+// Delete Mode (season deletion — confirmation built, actual delete STUBBED; see RaP 0908)
+// ─────────────────────────────────────────────
+
+/**
+ * Build the Delete Mode selector — red-accented season picker (with search) for choosing a
+ * season to delete. No "Create New". Selecting a season routes to the delete confirmation.
+ */
+export async function buildSeasonDeleteSelector(guildId) {
+  const { createSeasonSelector, seasonConfigIndicators } = await import('./seasonSelector.js');
+  const selector = await createSeasonSelector(guildId, {
+    customId: 'season_delete_select',
+    placeholder: 'Select a season to delete...',
+    requireSeasonName: true,
+    showRowEmoji: false,
+    includeCreateNew: false,
+    includeSearch: true,
+    decorateSeason: (configId, season, guildData) => ({ description: seasonConfigIndicators(configId, season, guildData) })
+  });
+
+  const container = {
+    type: 17, accent_color: 0xe74c3c, // red — danger
+    components: [
+      { type: 10, content: "## 🗑️ Delete a Season\n-# Pick a season to permanently delete — you'll see exactly what's affected before confirming." },
+      { type: 14 },
+      { type: 1, components: [selector.toJSON()] },
+      { type: 14 },
+      { type: 1, components: [
+        { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Manage', style: 2 }
+      ]}
+    ]
+  };
+  return { components: [container] };
+}
+
+/**
+ * Build the LEAN deletion confirmation for a season, with a real impact summary (counts).
+ * Returns null if the config doesn't exist.
+ */
+export async function buildSeasonDeleteConfirm(guildId, configId) {
+  const playerData = await loadPlayerData();
+  const g = playerData[guildId] || {};
+  const config = g.applicationConfigs?.[configId];
+  if (!config) return null;
+
+  const seasonId = config.seasonId;
+  const apps = Object.values(g.applications || {}).filter(a => a.configId === configId);
+  const rounds = seasonId ? Object.keys(g.seasonRounds?.[seasonId] || {}).length : 0;
+  const challenges = Object.values(g.challenges || {}).filter(c => c.seasonId === seasonId).length;
+  const castlists = Object.values(g.castlistConfigs || {}).filter(cl => cl.seasonId === seasonId).length;
+  const plural = (n) => (n === 1 ? '' : 's');
+
+  const lines = [`• Season config + ${apps.length} applicant record${plural(apps.length)} (scores, notes, casting decisions)`];
+  if (rounds) lines.push(`• ${rounds} planner round${plural(rounds)} + ${challenges} challenge${plural(challenges)}`);
+  if (castlists) lines.push(`• ⚠️ ${castlists} castlist${plural(castlists)} link to this season (placement sorting will reset)`);
+  if (apps.length) lines.push(`• ${apps.length} application channel${plural(apps.length)} in Discord (orphaned — not auto-deleted yet)`);
+
+  return {
+    components: [{
+      type: 17, accent_color: 0xe74c3c,
+      components: [
+        { type: 10, content: `## ⚠️ Delete "${config.seasonName}"` },
+        { type: 14 },
+        { type: 10, content: `**This action cannot be undone.** The following will be permanently deleted:\n${lines.join('\n')}` },
+        { type: 14 },
+        { type: 1, components: [
+          { type: 2, custom_id: 'season_delete_mode', label: 'Cancel', style: 2, emoji: { name: '❌' } },
+          { type: 2, custom_id: `season_delete_confirm_${configId}`, label: 'Yes, Delete Season', style: 4, emoji: { name: '🗑️' } }
+        ]}
+      ]
+    }]
+  };
+}
+
+/**
+ * STUB — actual season deletion is intentionally NOT implemented yet.
+ * Deletion spans applicationConfigs + applications + seasonRounds + challenges + castlist links,
+ * plus Discord resources (channels, category, role, apply button). Each needs case-by-case handling.
+ * See RaP 0908 (docs/01-RaP/0908_20260615_SeasonDeletion_Analysis.md).
+ * @returns {{ deleted: boolean, stub: boolean }}
+ */
+export async function deleteSeason(guildId, configId) {
+  console.warn(`🚧 STUB deleteSeason(${guildId}, ${configId}) — not implemented. No data deleted.`);
+  return { deleted: false, stub: true };
 }
 
 // ─────────────────────────────────────────────
