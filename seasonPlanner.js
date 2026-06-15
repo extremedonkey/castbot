@@ -449,7 +449,7 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
   const container = {
     type: 17, accent_color: 0x9b59b6,
     components: [
-      { type: 10, content: `## 📝 Season Planner | ${seasonName}` },
+      { type: 10, content: `## 📅 Season Planner\n### ${seasonName}` },
       { type: 14 },
       { type: 1, components: [
         { type: 2, custom_id: `planner_apps_${configId}`, label: 'Apps', style: 2, emoji: { name: '📝' } },
@@ -600,7 +600,7 @@ export async function buildPlannerSelector(guildId) {
   const container = {
     type: 17, accent_color: 0x9b59b6,
     components: [
-      { type: 10, content: '## 📝 Season Planner\n-# Select a season to plan or create a new one' },
+      { type: 10, content: '## 📅 Season Planner\n-# Select a season to plan or create a new one' },
       { type: 14 },
       { type: 1, components: [selector.toJSON()] },
       { type: 14 },
