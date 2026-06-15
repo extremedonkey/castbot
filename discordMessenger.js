@@ -13,6 +13,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { PermissionFlagsBits } from 'discord.js';
+import { expandBotEmojis } from './botEmojis.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MESSAGE_HISTORY_PATH = path.join(__dirname, 'messageHistory.json');
@@ -155,7 +156,7 @@ class DiscordMessenger {
     try {
       // 1. DM the server owner the Components V2 welcome (shared helper)
       const owner = await guild.fetchOwner();
-      const dmResult = await this.sendWelcomeDM(client, owner.id);
+      const dmResult = await this.sendWelcomeDM(client, owner.id, { serverName: guild.name });
       dmSent = dmResult.success;
 
       // 2. Best-effort post the channel-context wizard to the system channel
@@ -336,11 +337,12 @@ class DiscordMessenger {
     // Note: Main Menu button removed from Setup Wizard - it's now on the subsequent screens
     // (setup_castbot completion, castlist_hub, etc.) to avoid redundancy
 
-    // DM content uses the original demo message
+    // DM content (welcome message sent on install + msg_test demo)
+    // serverName is filled when we know which guild the bot was added to; falls back to generic.
+    const serverRef = options.serverName ? `**${options.serverName}**` : 'your server';
     const dmContent = {
-      title: '## 🎭 Welcome to CastBot!\n\nThank you for trying the DM demo! CastBot helps you run online reality game seasons with powerful features:',
-      features: '> **`💚 Key Features`**\n• 🎬 Season management & applications\n• 🏆 Cast rankings & voting systems\n• 🦁 Safari adventure challenges\n• 📋 Dynamic castlist displays\n• ⏰ Timezone & pronoun roles',
-      help: '> **`💬 Need Help?`**\nJoin our support server for:\n• ✅ Feature tutorials & guides\n• 🔧 Technical support\n• 🎯 New feature announcements\n• 👥 Community discussions'
+      title: '# <:cb_blue> Welcome to CastBot!\nWelcome to CastBot - your one stop shop for managing your Cast Experience! Manage your Season Applications, create Castlists, create Idol Hunts & Safaris, and much more!',
+      instructions: '## ```🏁 What to do next```\n1. Go to any channel in ' + serverRef + ' and type <:cb_blue> `/menu` to run the setup wizard and get started!\n2. Join the CastBot help server below for the latest updates, tips and support.'
     };
 
     // Channel (Setup Wizard) content - new instructional copy
@@ -353,11 +355,9 @@ class DiscordMessenger {
     // Build components based on context
     const components = isDM
       ? [
-          { type: 10, content: dmContent.title },
+          { type: 10, content: expandBotEmojis(dmContent.title) },
           { type: 14 },
-          { type: 10, content: dmContent.features },
-          { type: 14 },
-          { type: 10, content: dmContent.help },
+          { type: 10, content: expandBotEmojis(dmContent.instructions) },
           { type: 14 },
           { type: 1, components: actionButtons }
         ]
@@ -387,9 +387,11 @@ class DiscordMessenger {
    *
    * @param {Client} client - Discord.js client
    * @param {string} userId - Discord user ID to DM
+   * @param {Object} [opts]
+   * @param {string} [opts.serverName] - Guild name to personalize the message (falls back to generic)
    * @returns {Promise<{success: boolean, messageId?: string, error?: string}>}
    */
-  static async sendWelcomeDM(client, userId) {
+  static async sendWelcomeDM(client, userId, { serverName = null } = {}) {
     // Dedupe: skip if this user was already sent a welcome DM very recently
     // (handles owner-path + installer-path both firing on a single install)
     const now = Date.now();
@@ -412,7 +414,7 @@ class DiscordMessenger {
       // CRITICAL: IS_COMPONENTS_V2 flag required for Container (type 17)
       const v2Message = {
         flags: 1 << 15, // IS_COMPONENTS_V2 (32768)
-        components: this.createWelcomeComponents({ context: 'dm' })
+        components: this.createWelcomeComponents({ context: 'dm', serverName })
       };
 
       const response = await fetch(`https://discord.com/api/v10/channels/${dmChannel.id}/messages`, {
@@ -463,7 +465,7 @@ class DiscordMessenger {
     }
 
     console.log(`🎉 APPLICATION_AUTHORIZED: ${user.username || user.id} installed CastBot${guild ? ` to guild ${guild.id}` : ''}`);
-    const result = await this.sendWelcomeDM(client, user.id);
+    const result = await this.sendWelcomeDM(client, user.id, { serverName: guild?.name || null });
     return { success: result.success };
   }
 

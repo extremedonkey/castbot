@@ -24,6 +24,23 @@ function decideWelcome(data = {}) {
   return { action: 'dm', userId: user.id };
 }
 
+// ── Replicated from createWelcomeComponents: server-name personalization ──
+function serverRef(serverName) {
+  return serverName ? `**${serverName}**` : 'your server';
+}
+
+describe('Welcome DM — server name personalization', () => {
+  it('bolds the guild name when known', () => {
+    assert.equal(serverRef('Survivor ORG'), '**Survivor ORG**');
+  });
+
+  it('falls back to a generic phrase when unknown', () => {
+    assert.equal(serverRef(null), 'your server');
+    assert.equal(serverRef(undefined), 'your server');
+    assert.equal(serverRef(''), 'your server');
+  });
+});
+
 describe('Welcome webhook — payload routing', () => {
   it('treats type 0 as the PING handshake', () => {
     assert.equal(routeWebhookPayload({ type: 0 }), 'ping');
