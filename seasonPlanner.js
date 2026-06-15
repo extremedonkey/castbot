@@ -685,18 +685,32 @@ export async function buildSeasonDeleteConfirm(guildId, configId) {
   const castlists = Object.values(g.castlistConfigs || {}).filter(cl => cl.seasonId === seasonId).length;
   const plural = (n) => (n === 1 ? '' : 's');
 
-  const lines = [`• Season config + ${apps.length} applicant record${plural(apps.length)} (scores, notes, casting decisions)`];
-  if (rounds) lines.push(`• ${rounds} planner round${plural(rounds)} + ${challenges} challenge${plural(challenges)}`);
-  if (castlists) lines.push(`• ⚠️ ${castlists} castlist${plural(castlists)} link to this season (placement sorting will reset)`);
-  if (apps.length) lines.push(`• ${apps.length} application channel${plural(apps.length)} in Discord (orphaned — not auto-deleted yet)`);
+  // 🗑️ Permanently deleted (Tier 1 — atomic data cascade)
+  const deleted = [`• Season config + **${apps.length}** application${plural(apps.length)} (scores, notes, casting decisions)`];
+  if (rounds) deleted.push(`• **${rounds}** planner round${plural(rounds)} + **${challenges}** challenge${plural(challenges)}`);
+
+  // 🔗 Also affected (Tier 2 — castlists auto-unlinked, kept)
+  const also = [];
+  if (castlists) also.push(`• **${castlists}** castlist${plural(castlists)} unlinked from this season *(kept — placement sorting resets to default)*`);
+
+  // 📌 Kept / not touched (Discord resources — no channel deletion)
+  const kept = [];
+  if (apps.length) kept.push(`• **${apps.length}** application channel${plural(apps.length)} in Discord *(delete manually if you want them gone)*`);
+  if (config.targetChannelId) kept.push(`• The posted **"Apply" button** *(players could still click it — remove the post manually)*`);
+
+  const sections = [`### \`\`\`🗑️ Permanently deleted\`\`\`\n${deleted.join('\n')}`];
+  if (also.length) sections.push(`### \`\`\`🔗 Also affected\`\`\`\n${also.join('\n')}`);
+  if (kept.length) sections.push(`### \`\`\`📌 Kept — not touched\`\`\`\n${kept.join('\n')}`);
 
   return {
     components: [{
-      type: 17, accent_color: 0xe74c3c,
+      type: 17, accent_color: 0xe74c3c, // red — irreversible
       components: [
-        { type: 10, content: `## ⚠️ Delete "${config.seasonName}"` },
+        { type: 10, content: `## ⚠️ Delete "${config.seasonName}"?` },
         { type: 14 },
-        { type: 10, content: `**This action cannot be undone.** The following will be permanently deleted:\n${lines.join('\n')}` },
+        { type: 10, content: sections.join('\n\n') },
+        { type: 14 },
+        { type: 10, content: `**This cannot be undone.**` },
         { type: 14 },
         { type: 1, components: [
           { type: 2, custom_id: 'season_delete_mode', label: 'Cancel', style: 2, emoji: { name: '❌' } },
