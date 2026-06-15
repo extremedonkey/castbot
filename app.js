@@ -864,11 +864,14 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
 
     // Import Discord Messenger service for reusable components
     const { default: DiscordMessenger } = await import('./discordMessenger.js');
+    const { castlistManager } = await import('./castlistManager.js');
+    const hasCastlist = await castlistManager.defaultCastlistHasTribes(guildId);
 
-    // Return Setup Wizard components with hasSetup status (drives Run Setup / Castlist Manager button state)
+    // Return Setup Wizard components (hasSetup + hasCastlist drive the button states)
     const wizardComponents = DiscordMessenger.createWelcomeComponents({
       context: 'channel',
       hasSetup,
+      hasCastlist,
       serverName: guild?.name
     });
 
@@ -7610,8 +7613,9 @@ To fix this:
         deferred: true,
         updateMessage: true, // DEFERRED_UPDATE_MESSAGE → PATCH @original replaces the wizard
         ephemeral: true,
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
+        // No requiresPermission: Discord role management is nuanced (role hierarchy,
+        // Administrator, owner) and ManageRoles alone over/under-gates. Setup surfaces
+        // any hierarchy issues in its own results instead.
         handler: async (context) => {
           const { guildId, guild, token, member } = context;
           console.log(`🪛 START: setup_castbot - user ${context.userId}`);
@@ -7632,9 +7636,11 @@ To fix this:
           const playerData = await loadPlayerData();
           const hasSetup = hasCompletedSetup(playerData[guildId]);
           const { default: DiscordMessenger } = await import('./discordMessenger.js');
+          const { castlistManager } = await import('./castlistManager.js');
           const { createFollowupMessage } = await import('./buttonHandlerFactory.js');
+          const hasCastlist = await castlistManager.defaultCastlistHasTribes(guildId);
           await createFollowupMessage(token, {
-            components: DiscordMessenger.createWelcomeComponents({ context: 'channel', hasSetup, serverName: guild?.name }),
+            components: DiscordMessenger.createWelcomeComponents({ context: 'channel', hasSetup, hasCastlist, serverName: guild?.name }),
             ephemeral: true
           });
 
@@ -12009,11 +12015,14 @@ To fix this:
 
           // Import Discord Messenger service for reusable components
           const { default: DiscordMessenger } = await import('./discordMessenger.js');
+          const { castlistManager } = await import('./castlistManager.js');
+          const hasCastlist = await castlistManager.defaultCastlistHasTribes(context.guildId);
 
-          // Get components in 'channel' context with setup status (drives button state)
+          // Get components in 'channel' context (hasSetup + hasCastlist drive button states)
           const welcomeComponents = DiscordMessenger.createWelcomeComponents({
             context: 'channel',
             hasSetup,
+            hasCastlist,
             serverName: context.guild?.name
           });
 

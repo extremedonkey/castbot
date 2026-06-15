@@ -11,11 +11,13 @@ function hasCompletedSetup(guildData) {
 }
 
 // ── Replicated from createWelcomeComponents: Run Setup + Castlist Manager button state ──
-function wizardButtons(hasSetup) {
+function wizardButtons(hasSetup, hasCastlist = false) {
   const runSetup = hasSetup
     ? { custom_id: 'setup_castbot', label: 'Setup Complete', style: 3, disabled: true }
     : { custom_id: 'setup_castbot', label: 'Run Setup', style: 1, disabled: false };
-  const castlist = { custom_id: 'castlist_hub_main_new', label: 'Castlist Manager', style: 2, disabled: !hasSetup };
+  const castlist = hasCastlist
+    ? { custom_id: 'castlist_hub_main_new', label: 'First Castlist Made', style: 3, disabled: false }
+    : { custom_id: 'castlist_hub_main_new', label: 'Castlist Manager', style: 2, disabled: !hasSetup };
   return { runSetup, castlist };
 }
 
@@ -58,10 +60,33 @@ describe('Setup Wizard — button state reflects hasSetup', () => {
 
   it('both buttons key off the same hasSetup flag (no independent drift)', () => {
     for (const hasSetup of [true, false]) {
-      const { runSetup, castlist } = wizardButtons(hasSetup);
+      const { runSetup, castlist } = wizardButtons(hasSetup); // hasCastlist defaults false
       // Run Setup disabled-when-complete must mirror Castlist Manager enabled-when-complete
       assert.equal(runSetup.disabled, hasSetup);
       assert.equal(castlist.disabled, !hasSetup);
     }
+  });
+});
+
+describe('Setup Wizard — Castlist Manager reflects hasCastlist', () => {
+  it('default castlist has tribes: green ✅ First Castlist Made, still navigable', () => {
+    const { castlist } = wizardButtons(true, true);
+    assert.equal(castlist.label, 'First Castlist Made');
+    assert.equal(castlist.style, 3);        // Success / green
+    assert.equal(castlist.disabled, false); // still clickable to manage castlists
+    assert.equal(castlist.custom_id, 'castlist_hub_main_new'); // same destination
+  });
+
+  it('no tribes yet but set up: grey Castlist Manager, enabled', () => {
+    const { castlist } = wizardButtons(true, false);
+    assert.equal(castlist.label, 'Castlist Manager');
+    assert.equal(castlist.style, 2);
+    assert.equal(castlist.disabled, false);
+  });
+
+  it('hasCastlist wins even before setup completes (edge case)', () => {
+    const { castlist } = wizardButtons(false, true);
+    assert.equal(castlist.label, 'First Castlist Made');
+    assert.equal(castlist.style, 3);
   });
 });

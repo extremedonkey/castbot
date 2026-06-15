@@ -454,7 +454,20 @@ export class CastlistManager {
   async getTribesUsingCastlist(guildId, castlistId) {
     return await castlistVirtualAdapter.getTribesUsingCastlist(guildId, castlistId);
   }
-  
+
+  /**
+   * Does the active/default castlist have any tribes (tribe roles) assigned?
+   * Wraps the canonical getTribesUsingCastlist so there's one source of truth for
+   * tribe→castlist membership (handles castlistIds[] / castlistId / legacy string formats).
+   * Used by the Setup Wizard to render the Castlist Manager "First Castlist Made" state.
+   * @param {string} guildId
+   * @returns {Promise<boolean>}
+   */
+  async defaultCastlistHasTribes(guildId) {
+    const tribeRoleIds = await this.getTribesUsingCastlist(guildId, 'default');
+    return tribeRoleIds.length > 0;
+  }
+
   /**
    * Import castlist from season applications
    * @param {string} guildId - The guild ID

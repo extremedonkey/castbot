@@ -284,65 +284,71 @@ class DiscordMessenger {
    *
    * @param {Object} options - Configuration options
    * @param {string} options.context - 'dm' or 'channel' - affects button visibility and messaging
-   * @param {boolean} options.hasSetup - Whether server has at least 1 pronoun AND 1 timezone (enables Castlist Manager)
+   * @param {boolean} options.hasSetup - Whether server has at least 1 pronoun AND 1 timezone (drives Run Setup / Castlist Manager state)
+   * @param {boolean} options.hasCastlist - Whether the active/default castlist has any tribes assigned (drives Castlist Manager "done" state)
+   * @param {string} options.serverName - Guild name to personalize the DM copy
    * @returns {Array} Components V2 container array for Discord
    */
   static createWelcomeComponents(options = { context: 'dm', hasSetup: false }) {
     const isDM = options.context === 'dm';
     const hasSetup = options.hasSetup || false;
+    const hasCastlist = options.hasCastlist || false;
 
-    // Build action row components based on context
-    const actionButtons = [];
-
-    // Channel-only buttons for Setup Wizard
+    // Row 1 (channel only): the setup-flow buttons — Run Setup + Castlist Manager
+    const setupRow = [];
     if (!isDM) {
-      // Run Setup button — reflects setup state (single source of truth: hasSetup).
+      // Run Setup — reflects setup state (single source of truth: hasSetup).
       // Not yet set up → blue "Run Setup". Already set up → green "✅ Setup Complete" (disabled).
-      actionButtons.push(hasSetup
+      setupRow.push(hasSetup
         ? {
-            type: 2, // Button
-            custom_id: 'setup_castbot',
+            type: 2, custom_id: 'setup_castbot',
             label: 'Setup Complete',
             style: 3, // Success (green)
             emoji: { name: '✅' },
             disabled: true
           }
         : {
-            type: 2, // Button
-            custom_id: 'setup_castbot',
+            type: 2, custom_id: 'setup_castbot',
             label: 'Run Setup',
             style: 1, // Primary (blue)
             emoji: { name: '🪛' }
           });
 
-      // Castlist Manager - disabled until setup is complete
-      actionButtons.push({
-        type: 2, // Button
-        custom_id: 'castlist_hub_main_new',  // NEW: Creates new ephemeral message instead of replacing
-        label: 'Castlist Manager',
-        style: 2, // Secondary (grey)
-        emoji: { name: '📋' },
-        disabled: !hasSetup
-      });
+      // Castlist Manager — if the default castlist already has tribes, show a green
+      // "✅ First Castlist Made" (still navigable); otherwise existing logic
+      // (grey, disabled until setup is complete).
+      setupRow.push(hasCastlist
+        ? {
+            type: 2, custom_id: 'castlist_hub_main_new',
+            label: 'First Castlist Made',
+            style: 3, // Success (green)
+            emoji: { name: '✅' }
+          }
+        : {
+            type: 2, custom_id: 'castlist_hub_main_new',  // Creates new ephemeral message instead of replacing
+            label: 'Castlist Manager',
+            style: 2, // Secondary (grey)
+            emoji: { name: '📋' },
+            disabled: !hasSetup
+          });
     }
 
-    // Castbot Features (View Tips) - available in both contexts
-    actionButtons.push({
-      type: 2, // Button
-      custom_id: 'dm_view_tips',
-      label: 'Castbot Features',
-      style: 2, // Secondary (grey)
-      emoji: { name: '✨' }
-    });
-
-    // Support server link - always available
-    actionButtons.push({
-      type: 2, // Link Button
-      label: 'CastBot Help Server',
-      style: 5, // Link style
-      url: 'https://discord.gg/H7MpJEjkwT',
-      emoji: { name: '💬' }
-    });
+    // Row 2 (both contexts): Castbot Features (first) + CastBot Help Server link
+    const featuresRow = [
+      {
+        type: 2, custom_id: 'dm_view_tips',
+        label: 'Castbot Features',
+        style: 2, // Secondary (grey)
+        emoji: { name: '✨' }
+      },
+      {
+        type: 2, // Link Button
+        label: 'CastBot Help Server',
+        style: 5, // Link style
+        url: 'https://discord.gg/H7MpJEjkwT',
+        emoji: { name: '💬' }
+      }
+    ];
 
     // Note: Main Menu button removed from Setup Wizard - it's now on the subsequent screens
     // (setup_castbot completion, castlist_hub, etc.) to avoid redundancy
@@ -369,7 +375,7 @@ class DiscordMessenger {
           { type: 14 },
           { type: 10, content: expandBotEmojis(dmContent.instructions) },
           { type: 14 },
-          { type: 1, components: actionButtons }
+          { type: 1, components: featuresRow }
         ]
       : [
           { type: 10, content: channelContent.title },
@@ -378,7 +384,8 @@ class DiscordMessenger {
           { type: 14 },
           { type: 10, content: channelContent.footer },
           { type: 14 },
-          { type: 1, components: actionButtons }
+          { type: 1, components: setupRow },
+          { type: 1, components: featuresRow }
         ];
 
     return [
