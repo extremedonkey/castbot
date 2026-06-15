@@ -140,101 +140,45 @@ class DiscordMessenger {
    * @returns {Object} Result object with success status
    */
   static async sendWelcomePackage(client, guild) {
-    // TEMPORARILY DISABLED - Welcome messages are ready but not launched yet
-    console.log(`🔕 Welcome messages temporarily disabled for ${guild.name} (${guild.id})`);
-    return {
-      success: true,
-      dmSent: false,
-      channelMessageSent: false,
-      note: 'Welcome messages temporarily disabled'
-    };
-    
-    /* READY FOR LAUNCH - Uncomment when ready to enable welcome messages
     console.log(`🎉 Sending welcome package for ${guild.name} (${guild.id})`);
-    
+
+    let dmSent = false;
+    let channelMessageSent = false;
+
     try {
-      // Fetch the guild owner
+      // 1. DM the server owner the Components V2 welcome (shared helper)
       const owner = await guild.fetchOwner();
-      
-      // Create welcome message using Components V2
-      const welcomeMessage = {
-        embeds: [{
-          color: 0x00FF00,
-          title: '🎉 Welcome to CastBot!',
-          description: `Thank you for adding CastBot to **${guild.name}**!\n\nHere's how to get started:`,
-          fields: [
-            {
-              name: '🚀 Quick Start',
-              value: '• Use `/menu` to open the main menu\n• Use `/castlist` to see your server members\n• Server admins can access production tools via `/menu`',
-              inline: false
-            },
-            {
-              name: '📋 Key Features',
-              value: '• Season application management\n• Cast ranking and voting system\n• Safari adventure system\n• Player profiles and timezones',
-              inline: false
-            },
-            {
-              name: '⚙️ Admin Setup',
-              value: 'Access the Production Menu through `/menu` to:\n• Configure application systems\n• Set up cast rankings\n• Manage Safari content\n• View analytics',
-              inline: false
-            },
-            {
-              name: '💡 Need Help?',
-              value: 'Report issues at: https://github.com/anthropics/claude-code/issues',
-              inline: false
-            }
-          ],
-          footer: {
-            text: 'CastBot - Reality TV Server Management',
-            icon_url: 'https://cdn.discordapp.com/app-icons/1331671251038740611/9e13ab7c1fe0e2c59c4f55d5f1e4c303.png'
-          },
-          timestamp: new Date().toISOString()
-        }]
-      };
-      
-      // Send DM to owner
-      const dmResult = await this.sendDM(client, owner.id, {
-        content: `Hello ${owner.user.username}! 👋`,
-        ...welcomeMessage
-      });
-      
-      // Try to send to system channel as well
+      const dmResult = await this.sendWelcomeDM(client, owner.id);
+      dmSent = dmResult.success;
+
+      // 2. Best-effort post the channel-context wizard to the system channel
       if (guild.systemChannel) {
-        const systemChannelMessage = {
-          embeds: [{
-            color: 0x00FF00,
-            title: '👋 CastBot is here!',
-            description: 'Thank you for inviting me! Use `/menu` to get started.',
-            fields: [
-              {
-                name: 'First Steps',
-                value: '• `/menu` - Open the main interface\n• `/castlist` - View server members\n• Admins: Access Production Menu via `/menu`',
-                inline: false
-              }
-            ],
-            footer: {
-              text: 'CastBot',
-              icon_url: 'https://cdn.discordapp.com/app-icons/1331671251038740611/9e13ab7c1fe0e2c59c4f55d5f1e4c303.png'
-            }
-          }]
-        };
-        
-        await this.sendToChannel(client, guild.systemChannel.id, systemChannelMessage);
+        try {
+          const response = await fetch(`https://discord.com/api/v10/channels/${guild.systemChannel.id}/messages`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bot ${process.env.DISCORD_TOKEN}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              flags: 1 << 15, // IS_COMPONENTS_V2
+              components: this.createWelcomeComponents({ context: 'channel', hasSetup: false })
+            })
+          });
+          channelMessageSent = response.ok;
+          if (!response.ok) {
+            console.warn(`⚠️ System-channel welcome failed (${response.status}) for ${guild.name}`);
+          }
+        } catch (chErr) {
+          console.warn(`⚠️ System-channel welcome error for ${guild.name}:`, chErr.message);
+        }
       }
-      
-      return {
-        success: true,
-        dmSent: dmResult.success,
-        channelMessageSent: guild.systemChannel ? true : false
-      };
+
+      return { success: true, dmSent, channelMessageSent };
     } catch (error) {
       console.error(`❌ Failed to send welcome package:`, error);
-      return {
-        success: false,
-        error: error.message
-      };
+      return { success: false, dmSent, channelMessageSent, error: error.message };
     }
-    */
   }
   
   /**
