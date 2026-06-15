@@ -286,6 +286,7 @@ class DiscordMessenger {
    * @param {string} options.context - 'dm' or 'channel' - affects button visibility and messaging
    * @param {boolean} options.hasSetup - Whether server has at least 1 pronoun AND 1 timezone (drives Run Setup / Castlist Manager state)
    * @param {boolean} options.hasCastlist - Whether the active/default castlist has any tribes assigned (drives Castlist Manager "done" state)
+   * @param {boolean} options.setupInProgress - Render Run Setup as a green "⏳ Setting up..." (disabled) while setup runs
    * @param {string} options.serverName - Guild name to personalize the DM copy
    * @returns {Array} Components V2 container array for Discord
    */
@@ -293,15 +294,26 @@ class DiscordMessenger {
     const isDM = options.context === 'dm';
     const hasSetup = options.hasSetup || false;
     const hasCastlist = options.hasCastlist || false;
+    const setupInProgress = options.setupInProgress || false;
 
     // Channel-only task buttons — rendered as Section (type 9) accessories, one per task.
     // Each task is a Section: nested Text Display (left) + its action button (accessory, right).
     // This mirrors the /castlist Section pattern (castlistV2.js:312) but with a button
     // accessory instead of a thumbnail. More tasks can be added as additional Sections.
 
-    // Run Setup — single source of truth: hasSetup. Not set up → blue "Run Setup";
-    // set up → green "✅ Setup Complete" (disabled).
-    const runSetupButton = hasSetup
+    // Run Setup — single source of truth: hasSetup.
+    //   setup running → green "⏳ Setting up..." (disabled) — instant feedback while roles are created
+    //   set up        → green "✅ Setup Complete" (disabled)
+    //   not set up    → blue "🪛 Run Setup"
+    const runSetupButton = setupInProgress
+      ? {
+          type: 2, custom_id: 'setup_castbot',
+          label: 'Setting up...',
+          style: 3, // Success (green)
+          emoji: { name: '⏳' },
+          disabled: true
+        }
+      : hasSetup
       ? {
           type: 2, custom_id: 'setup_castbot',
           label: 'Setup Complete',

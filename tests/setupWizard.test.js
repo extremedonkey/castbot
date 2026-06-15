@@ -12,8 +12,10 @@ function hasCompletedSetup(guildData) {
 }
 
 // ── Replicated from createWelcomeComponents: Run Setup + Castlist Manager button state ──
-function wizardButtons(hasSetup, hasCastlist = false) {
-  const runSetup = hasSetup
+function wizardButtons(hasSetup, hasCastlist = false, setupInProgress = false) {
+  const runSetup = setupInProgress
+    ? { custom_id: 'setup_castbot', label: 'Setting up...', style: 3, disabled: true }
+    : hasSetup
     ? { custom_id: 'setup_castbot', label: 'Setup Complete', style: 3, disabled: true }
     : { custom_id: 'setup_castbot', label: 'Run Setup', style: 1, disabled: false };
   const castlist = hasCastlist
@@ -57,6 +59,13 @@ describe('Setup Wizard — button state reflects hasSetup', () => {
     assert.equal(runSetup.style, 3);       // Success / green
     assert.equal(runSetup.disabled, true);
     assert.equal(castlist.disabled, false);
+  });
+
+  it('setup in progress: Run Setup shows green "Setting up..." + disabled (instant feedback)', () => {
+    const { runSetup } = wizardButtons(false, false, true);
+    assert.equal(runSetup.label, 'Setting up...');
+    assert.equal(runSetup.style, 3);       // Success / green
+    assert.equal(runSetup.disabled, true);
   });
 
   it('both buttons key off the same hasSetup flag (no independent drift)', () => {

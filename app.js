@@ -7601,55 +7601,78 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'setup_castbot') {
-      // Run Setup (from the Setup Wizard). Flow:
-      //  1. DEFERRED_UPDATE_MESSAGE — silently ack the wizard message
-      //  2. Run full setup (roles + consolidation)
+      // Run Setup (from the Setup Wizard). Setup takes 15+ seconds (creates many roles),
+      // so instead of a silent deferred ack we give INSTANT feedback then finish in the background:
+      //  1. IMMEDIATE UPDATE_MESSAGE — re-render the wizard with Run Setup → green "⏳ Setting up..."
+      //  2. (background, via setTimeout) Run full setup (roles + consolidation)
       //  3. PATCH @original → replace the wizard in place with the "✅ Setup Complete" results
       //  4. Post a FRESH Setup Wizard as a NEW ephemeral message (now setup-complete:
       //     Castlist Manager enabled, Run Setup → ✅ Setup Complete) so the user isn't
       //     left scrolling up to a stale, half-disabled wizard.
       return ButtonHandlerFactory.create({
         id: 'setup_castbot',
-        deferred: true,
-        updateMessage: true, // DEFERRED_UPDATE_MESSAGE → PATCH @original replaces the wizard
+        updateMessage: true, // immediate UPDATE_MESSAGE (in-progress wizard), NOT deferred
         ephemeral: true,
         // No requiresPermission: Discord role management is nuanced (role hierarchy,
         // Administrator, owner) and ManageRoles alone over/under-gates. Setup surfaces
         // any hierarchy issues in its own results instead.
         handler: async (context) => {
-          const { guildId, guild, token, member } = context;
-          console.log(`🪛 START: setup_castbot - user ${context.userId}`);
+          const { guildId, guild, token, member, userId } = context;
+          console.log(`🪛 START: setup_castbot - user ${userId}`);
 
-          // Run roles + timezone consolidation (orchestrated in roleManager)
-          const setupResults = await runFullSetup(guildId, guild);
-
-          // Analytics (best-effort — never block setup)
-          try {
-            const { logSetupRun } = await import('./src/analytics/analyticsLogger.js');
-            await logSetupRun(guild, context.userId, member.user.global_name || member.user.username);
-          } catch (error) {
-            console.error('⚠️ Failed to log setup run announcement:', error);
-          }
-
-          // Re-send the Setup Wizard as a NEW ephemeral message, now setup-complete.
-          // hasSetup uses the SAME source of truth as /menu first-run detection.
-          const playerData = await loadPlayerData();
-          const hasSetup = hasCompletedSetup(playerData[guildId]);
           const { default: DiscordMessenger } = await import('./discordMessenger.js');
           const { castlistManager } = await import('./castlistManager.js');
-          const { createFollowupMessage } = await import('./buttonHandlerFactory.js');
+          const { updateDeferredResponse, createFollowupMessage } = await import('./buttonHandlerFactory.js');
           const hasCastlist = await castlistManager.defaultCastlistHasTribes(guildId);
-          await createFollowupMessage(token, {
-            components: DiscordMessenger.createWelcomeComponents({ context: 'channel', hasSetup, hasCastlist, serverName: guild?.name }),
-            ephemeral: true
-          });
 
-          console.log(`✅ SUCCESS: setup_castbot - results PATCHed, fresh wizard re-sent (hasSetup=${hasSetup})`);
+          // Do the slow work AFTER the immediate "Setting up..." response is sent.
+          setTimeout(async () => {
+            try {
+              const setupResults = await runFullSetup(guildId, guild);
 
-          // Returned value PATCHes @original (the wizard) → setup-complete results
+              // Analytics (best-effort — never block setup)
+              try {
+                const { logSetupRun } = await import('./src/analytics/analyticsLogger.js');
+                await logSetupRun(guild, userId, member.user.global_name || member.user.username);
+              } catch (error) {
+                console.error('⚠️ Failed to log setup run announcement:', error);
+              }
+
+              // PATCH @original (the in-progress wizard) → setup-complete results
+              await updateDeferredResponse(token, {
+                flags: InteractionResponseFlags.EPHEMERAL | (1 << 15),
+                components: [generateSetupResponseV2(setupResults)]
+              });
+
+              // Re-send a FRESH wizard, now setup-complete (same source of truth as /menu)
+              const playerData = await loadPlayerData();
+              const hasSetup = hasCompletedSetup(playerData[guildId]);
+              const freshCastlist = await castlistManager.defaultCastlistHasTribes(guildId);
+              await createFollowupMessage(token, {
+                components: DiscordMessenger.createWelcomeComponents({ context: 'channel', hasSetup, hasCastlist: freshCastlist, serverName: guild?.name }),
+                ephemeral: true
+              });
+
+              console.log(`✅ SUCCESS: setup_castbot - results PATCHed, fresh wizard re-sent (hasSetup=${hasSetup})`);
+            } catch (error) {
+              console.error('❌ setup_castbot background work failed:', error);
+              try {
+                await updateDeferredResponse(token, {
+                  flags: InteractionResponseFlags.EPHEMERAL | (1 << 15),
+                  components: [{ type: 17, accent_color: 0xe74c3c, components: [
+                    { type: 10, content: '## ❌ Setup failed\n\nSomething went wrong creating roles. Please check the bot can manage roles and try again.' }
+                  ] }]
+                });
+              } catch (reportErr) {
+                console.error('Failed to report setup error to user:', reportErr);
+              }
+            }
+          }, 250);
+
+          // Immediate UX cue: re-render wizard with Run Setup → green "⏳ Setting up..."
           return {
-            flags: InteractionResponseFlags.EPHEMERAL | (1 << 15), // EPHEMERAL + IS_COMPONENTS_V2
-            components: [generateSetupResponseV2(setupResults)]
+            flags: InteractionResponseFlags.EPHEMERAL | (1 << 15), // factory strips flags for UPDATE_MESSAGE
+            components: DiscordMessenger.createWelcomeComponents({ context: 'channel', setupInProgress: true, hasCastlist, serverName: guild?.name })
           };
         }
       })(req, res, client);
