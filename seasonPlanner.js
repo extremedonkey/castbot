@@ -443,8 +443,8 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
 
   const navButtons = [
     { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Seasons', style: 2 },
-    { type: 2, custom_id: `planner_page_${page - 1}_${configId}`, label: '◀', style: 2, disabled: page === 0 },
-    { type: 2, custom_id: `planner_page_${page + 1}_${configId}`, label: '▶', style: 2, disabled: page >= totalPages - 1 },
+    { type: 2, custom_id: `planner_page_${page - 1}_${configId}`, label: '◀', style: page === 0 ? 2 : 1, disabled: page === 0 },
+    { type: 2, custom_id: `planner_page_${page + 1}_${configId}`, label: '▶', style: page >= totalPages - 1 ? 2 : 1, disabled: page >= totalPages - 1 },
   ];
 
   const container = {
@@ -455,11 +455,7 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
         { type: 2, custom_id: `planner_apps_${configId}`, label: 'Apps', style: 2, emoji: { name: '📝' } },
         { type: 2, custom_id: `season_app_ranking_${configId}`, label: 'Ranking', style: 2, emoji: { name: '🏆' } },
         { type: 2, custom_id: `planner_edit_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
-        { type: 2, custom_id: `planner_ideas_${configId}`, label: 'Ideas', style: 2, emoji: { name: '💡' } },
-        { type: 2, custom_id: `planner_tribes_${configId}`, label: 'Tribes', style: 2, emoji: { name: '🔥' } },
       ]},
-      { type: 14 },
-      { type: 10, content: `### 💡 Season Concepts / Ideas\n${ideas || '*Click the 💡 Ideas button above to use this free-form section to brainstorm season themes, twists and challenges before assigning to rounds.*'}` },
       { type: 14 },
       { type: 10, content: `### \`\`\`📅 Manage Season Schedule${pageInfo}\`\`\`` },
       ...selectRows,
@@ -584,24 +580,26 @@ export async function buildPlannerSelector(guildId) {
   // Emits the unified 'create_new_season' sentinel (handled in app.js alongside legacy 'planner_create_new').
   const selector = await createSeasonSelector(guildId, {
     customId: 'planner_select_season',
-    placeholder: 'Select a season...',
+    placeholder: 'Select a season to manage...',
     requireSeasonName: true,
     createNewLabel: 'Create New Season',
     createNewEmoji: { name: '➕' },
-    createNewDescription: 'Start planning a new season from scratch',
+    createNewDescription: 'Create and configure a new season',
+    // Config indicators: show which subsystems are set up per season (room to expand)
     decorateSeason: (configId, season, guildData) => {
-      const hasPlanner = !!guildData?.seasonRounds?.[season.seasonId];
-      return {
-        emoji: hasPlanner ? '📅' : '⚠️',
-        description: hasPlanner ? '📅 Planner configured' : '⚠️ Needs setup'
-      };
+      const parts = [];
+      const appsConfigured = !!season.targetChannelId
+        || (season.questions || []).some(q => q.questionType !== 'completion' && q.questionTitle && q.questionTitle !== 'Click here to set first question');
+      if (appsConfigured) parts.push('📝 Apps');
+      if (guildData?.seasonRounds?.[season.seasonId]) parts.push('📅 Planner');
+      return { description: parts.length ? parts.join(' • ') : '⚠️ Not configured yet' };
     }
   });
 
   const container = {
     type: 17, accent_color: 0x9b59b6,
     components: [
-      { type: 10, content: '## 📅 Season Planner\n-# Select a season to plan or create a new one' },
+      { type: 10, content: '## 📅 Season Manager\n-# Select a season to manage or create a new one' },
       { type: 14 },
       { type: 1, components: [selector.toJSON()] },
       { type: 14 },

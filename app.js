@@ -381,9 +381,9 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   refreshedComponents.push({ type: 14 });
 
-  // Bottom row: Seasons (+ pagination if needed)
+  // Bottom row: Seasons (+ pagination if needed) — back to the unified Season Manager selector
   const bottomButtons = [
-    { type: 2, custom_id: `season_management_menu`, label: '← Seasons', style: 2 },
+    { type: 2, custom_id: `reeces_season_planner_mockup`, label: '← Seasons', style: 2 },
   ];
   if (regularQuestions.length > questionsPerPage) {
     const prevDisabled = currentPage === 0;
@@ -910,18 +910,13 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setEmoji('📋')
   );
 
-  // Season Planner + Season Applications
+  // Season Manager (unified entry — selector leads to Planner ⇄ Apps views)
   adminButtons.push(
     new ButtonBuilder()
       .setCustomId('reeces_season_planner_mockup')
-      .setLabel('Season Planner')
+      .setLabel('Season Manager')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📅'),
-    new ButtonBuilder()
-      .setCustomId('season_management_menu')
-      .setLabel('Apps')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📝')
+      .setEmoji('📅')
   );
 
   // Standard admin buttons
@@ -8376,7 +8371,8 @@ To fix this:
               { type: 14 },
               { type: 1, components: [
                 { type: 2, custom_id: `planner_force_setup_${selectedValue}`, label: 'Set Up Planner', style: 1, emoji: { name: '📅' } },
-                { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Back', style: 2 }
+                { type: 2, custom_id: `planner_apps_${selectedValue}`, label: 'Apps', style: 2, emoji: { name: '📝' } },
+                { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Seasons', style: 2 }
               ]}
             ]}]}};
           }
