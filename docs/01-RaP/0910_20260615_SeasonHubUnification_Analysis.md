@@ -1,6 +1,6 @@
 # Season Hub Unification — Collapsing Apps + Planner into One Season Management Interface
 
-**Status:** Analysis — design agreed, ready to plan implementation
+**Status:** Layers A + B shipped (2026-06-15) — selector unified + create modal/creation unified. Layer C (Season Hub) pending.
 **Date:** 2026-06-15
 **Author:** Reece + Claude
 **Related:** [Season Planner RaP 0947](0947_20260315_SeasonPlanner_Analysis.md) · [Season Apps String Select RaP 0939](0939_20260320_SeasonAppsStringSelect_Analysis.md) · [SeasonAppBuilder](../03-features/SeasonAppBuilder.md) · [SeasonLifecycle](../concepts/SeasonLifecycle.md)

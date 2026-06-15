@@ -28583,40 +28583,12 @@ Your server is now ready for Tycoons gameplay!`;
           // Handle seasons entity type specially
           if (entityType === 'seasons') {
             if (selectedValue === 'create_new_season') {
-              // Show season creation modal using modern Label components (Type 18)
+              // Unified season-create modal: Name (required) + optional planner estimates (RaP 0910, Layer B).
+              // Routes to the season_modal:create submit handler, which lands on the question management UI.
+              const { buildSeasonPlannerModal } = await import('./seasonPlanner.js');
               return res.send({
                 type: InteractionResponseType.MODAL,
-                data: {
-                  custom_id: 'season_modal:create',
-                  title: 'Manage Season Details',
-                  components: [
-                    {
-                      type: 18, // Label component
-                      label: 'Season Name',
-                      component: {
-                        type: 4, // Text Input
-                        custom_id: 'season_name',
-                        style: 1, // Short
-                        placeholder: 'e.g., "Season 12 - Zelda: Ocarina of Time"',
-                        required: true,
-                        max_length: 100
-                      }
-                    },
-                    {
-                      type: 18, // Label component
-                      label: 'Season Description',
-                      description: 'Brief description of this season (optional)',
-                      component: {
-                        type: 4, // Text Input
-                        custom_id: 'season_description',
-                        style: 2, // Paragraph
-                        placeholder: 'Describe your season...',
-                        required: false,
-                        max_length: 500
-                      }
-                    }
-                  ]
-                }
+                data: buildSeasonPlannerModal(null, { createCustomId: 'season_modal:create' })
               });
             } else {
               // Selected an existing season - show season management UI
@@ -40555,7 +40527,7 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'planner_modal_submit',
         updateMessage: true,
         handler: async (context) => {
-          const { validatePlannerFields, createPlannerSeason, setupPlannerForExistingSeason, buildPlannerView } = await import('./seasonPlanner.js');
+          const { validatePlannerFields, createSeason, setupPlannerForExistingSeason, buildPlannerView } = await import('./seasonPlanner.js');
           const { loadPlayerData } = await import('./storage.js');
 
           // Extract fields from Label components
@@ -40583,23 +40555,45 @@ Your server is now ready for Tycoons gameplay!`;
 
           const guildId = context.guildId;
           const userId = context.userId;
-          let configId, seasonId;
 
+          // SETUP existing season — modal requires estimates, so planner data is expected
           if (custom_id.startsWith('planner_setup_modal:')) {
-            configId = custom_id.split(':')[1];
+            if (!validation.hasPlannerData) {
+              return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
+                { type: 10, content: '## ❌ Please provide all planner estimates to set up the planner.' },
+                { type: 14 },
+                { type: 1, components: [{ type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Back', style: 2 }] }
+              ]}]};
+            }
+            const configId = custom_id.split(':')[1];
             const result = await setupPlannerForExistingSeason(guildId, configId, validation.data);
-            seasonId = result.seasonId;
-          } else {
-            const result = await createPlannerSeason(guildId, userId, validation.data);
-            configId = result.configId;
-            seasonId = result.seasonId;
+            const playerData = await loadPlayerData();
+            const config = playerData[guildId].applicationConfigs[configId];
+            const seasonRounds = playerData[guildId].seasonRounds[result.seasonId];
+            const startDate = new Date(config.estimatedStartDate);
+            return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[guildId]?.challenges);
           }
 
+          // CREATE — unified season creation (name-only allowed; rounds only if estimates supplied)
+          const result = await createSeason(guildId, userId, validation.data);
           const playerData = await loadPlayerData();
-          const config = playerData[guildId].applicationConfigs[configId];
-          const seasonRounds = playerData[guildId].seasonRounds[seasonId];
+          const config = playerData[guildId].applicationConfigs[result.configId];
+
+          if (!result.hasPlannerData) {
+            // Name-only season — no rounds yet; offer planner setup
+            return { components: [{ type: 17, accent_color: 0xf39c12, components: [
+              { type: 10, content: `## ⚠️ Set Up Season Planner\n**${config.seasonName}** was created without planner data.\nClick below to configure round structure.` },
+              { type: 14 },
+              { type: 1, components: [
+                { type: 2, custom_id: `planner_force_setup_${result.configId}`, label: 'Set Up Planner', style: 1, emoji: { name: '📅' } },
+                { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Back', style: 2 }
+              ]}
+            ]}]};
+          }
+
+          const seasonRounds = playerData[guildId].seasonRounds[result.seasonId];
           const startDate = new Date(config.estimatedStartDate);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[guildId]?.challenges);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, result.configId, 0, config.seasonIdeas, playerData[guildId]?.challenges);
         }
       })(req, res, client);
 
@@ -43706,10 +43700,14 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         const components = req.body.data.components;
 
-        // Parse values from Label components (Type 18)
-        // Label structure: components[i].component.value (singular 'component')
-        const seasonName = components[0].component.value;
-        const seasonDescription = components[1].component.value || '';
+        // Parse Label components (Type 18) BY custom_id — the create modal carries planner
+        // estimates (no description); the edit modal carries season_description (RaP 0910).
+        const fields = {};
+        for (const comp of (components || [])) {
+          if (comp.component?.custom_id) fields[comp.component.custom_id] = comp.component.value;
+        }
+        const seasonName = fields.season_name;
+        const seasonDescription = fields.season_description || '';
 
         // Parse custom_id to detect create vs edit mode
         // Format: 'season_modal:create' or 'season_modal:{configId}'
@@ -43789,59 +43787,25 @@ Your server is now ready for Tycoons gameplay!`;
           return refreshQuestionManagementUI(res, config, configId, 0);
 
         } else {
-          // CREATE MODE: Create new season config
-          // Generate UUID-based season ID
-          const seasonId = `season_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`;
-          configId = `config_${Date.now()}_${req.body.member.user.id}`;
-
-          // Truncate button text if needed (Discord limit: 80 chars)
-          let buttonText = `Apply to ${seasonName}`;
-          if (buttonText.length > 80) {
-            const truncatedName = seasonName.substring(0, 68) + '..';
-            buttonText = `Apply to ${truncatedName}`;
+          // CREATE MODE: unified season creation (Name required + optional planner estimates).
+          // createSeason() seeds default questions and generates rounds only if all estimates given.
+          const { validatePlannerFields, createSeason } = await import('./seasonPlanner.js');
+          const validation = validatePlannerFields(fields);
+          if (!validation.valid) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: `❌ ${validation.errors.join('\n❌ ')}`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
           }
 
-          // Create the new config with season data
-          playerData[guildId].applicationConfigs[configId] = {
-            buttonText: buttonText,
-            explanatoryText: seasonDescription || `Join ${seasonName}!`,
-            completionDescription: 'Thank you for completing your application! A host will review it soon.',
-            completionImage: null,
-            channelFormat: '📝%name%-app',
-            targetChannelId: null,
-            categoryId: null,
-            buttonStyle: 'Primary',
-            createdBy: req.body.member.user.id,
-            stage: 'draft', // Start as draft since it needs channel/category setup
-            createdAt: Date.now(),
-            lastUpdated: Date.now(),
-            seasonId: seasonId,
-            seasonName: seasonName,
-            questions: [
-              {
-                id: `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`,
-                order: 1,
-                questionTitle: 'Click here to set first question',
-                questionText: 'Edit this question or add more using the menu below.',
-                questionStyle: 1,
-                createdAt: Date.now()
-              },
-              {
-                id: `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`,
-                questionType: 'completion',
-                questionTitle: 'Thank you for applying to the season!',
-                questionText: 'Include information such as next steps on casting process, casting decision dates and marooning / season start dates.',
-                createdAt: Date.now()
-              }
-            ]
-          };
+          const result = await createSeason(guildId, req.body.member.user.id, validation.data);
+          const fresh = await loadPlayerData();
 
-          await savePlayerData(playerData);
-
-          console.log(`✅ SUCCESS: Season "${seasonName}" created (configId: ${configId})`);
-
-          // Use the refreshQuestionManagementUI function for consistent UI
-          return refreshQuestionManagementUI(res, playerData[guildId].applicationConfigs[configId], configId, 0);
+          // Land on the question management UI (Apps origin)
+          return refreshQuestionManagementUI(res, fresh[guildId].applicationConfigs[result.configId], result.configId, 0);
         }
 
       } catch (error) {

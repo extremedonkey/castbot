@@ -239,7 +239,14 @@ export function parseStartDate(dateStr) {
  * @param {Object} [existing] - Pre-fill values from existing season (for setup flow)
  * @returns {Object} Modal interaction response data
  */
-export function buildSeasonPlannerModal(existing = null) {
+export function buildSeasonPlannerModal(existing = null, opts = {}) {
+  // Setup-existing flow requires estimates (you explicitly clicked "Set Up Planner").
+  // Create flow makes them OPTIONAL — name-only seasons are allowed; rounds generate only
+  // when all estimates are supplied (RaP 0910, Layer B).
+  const isSetup = !!existing?.configId;
+  const estRequired = isSetup;
+  const createCustomId = opts.createCustomId || 'planner_create_modal';
+
   // Format start date for pre-fill: Unix timestamp → mm/dd/yyyy, or today for create mode
   let startDateValue = null;
   if (existing?.estimatedStartDate) {
@@ -247,7 +254,7 @@ export function buildSeasonPlannerModal(existing = null) {
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     startDateValue = `${mm}/${dd}/${d.getFullYear()}`;
-  } else if (!existing?.configId) {
+  } else if (!isSetup) {
     // Create mode: default to today
     const now = new Date();
     const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -255,9 +262,18 @@ export function buildSeasonPlannerModal(existing = null) {
     startDateValue = `${mm}/${dd}/${now.getFullYear()}`;
   }
 
+  // Estimate text input — required on setup, optional on create
+  const estField = (custom_id, { max_length, min_length, placeholder, value }) => {
+    const c = { type: 4, custom_id, style: 1, required: estRequired, placeholder };
+    if (max_length) c.max_length = max_length;
+    if (estRequired && min_length) c.min_length = min_length;
+    if (value != null) c.value = String(value);
+    return c;
+  };
+
   return {
-    custom_id: existing?.configId ? `planner_setup_modal:${existing.configId}` : 'planner_create_modal',
-    title: existing?.configId ? 'Edit Season' : 'Create New Season',
+    custom_id: isSetup ? `planner_setup_modal:${existing.configId}` : createCustomId,
+    title: isSetup ? 'Edit Season' : 'Create New Season',
     components: [
       {
         type: 18,
@@ -272,46 +288,26 @@ export function buildSeasonPlannerModal(existing = null) {
       {
         type: 18,
         label: 'Estimated Number of Players',
-        description: 'Enter your total estimated players you will cast',
-        component: {
-          type: 4, custom_id: 'est_players', style: 1,
-          placeholder: '18',
-          required: true, max_length: 2, min_length: 1,
-          ...(existing?.estimatedTotalPlayers ? { value: String(existing.estimatedTotalPlayers) } : {})
-        }
+        description: estRequired ? 'Total estimated players you will cast' : 'Optional — fill all 4 estimates to auto-generate rounds',
+        component: estField('est_players', { max_length: 2, min_length: 1, placeholder: '18', value: existing?.estimatedTotalPlayers })
       },
       {
         type: 18,
         label: 'Estimated Number of Swaps',
-        description: 'Enter number of swaps you have planned, no need to include merge',
-        component: {
-          type: 4, custom_id: 'est_swaps', style: 1,
-          placeholder: '2',
-          required: true, max_length: 1, min_length: 1,
-          ...(existing?.estimatedSwaps != null ? { value: String(existing.estimatedSwaps) } : {})
-        }
+        description: estRequired ? 'Swaps planned, no need to include merge' : 'Optional — swaps planned (excl. merge)',
+        component: estField('est_swaps', { max_length: 1, min_length: 1, placeholder: '2', value: existing?.estimatedSwaps })
       },
       {
         type: 18,
         label: 'Estimated # FTC Players',
-        description: "Enter '2' for Final 2, '3' for final 3 — used to pre-populate data",
-        component: {
-          type: 4, custom_id: 'est_ftc', style: 1,
-          placeholder: '3',
-          required: true, max_length: 1, min_length: 1,
-          ...(existing?.estimatedFTCPlayers ? { value: String(existing.estimatedFTCPlayers) } : {})
-        }
+        description: estRequired ? "'2' for Final 2, '3' for Final 3" : "Optional — '2' for Final 2, '3' for Final 3",
+        component: estField('est_ftc', { max_length: 1, min_length: 1, placeholder: '3', value: existing?.estimatedFTCPlayers })
       },
       {
         type: 18,
         label: 'Estimated Start Date',
-        description: 'Enter in mm/dd/yyyy',
-        component: {
-          type: 4, custom_id: 'est_start_date', style: 1,
-          placeholder: '03/07/2026',
-          required: true,
-          ...(startDateValue ? { value: startDateValue } : {})
-        }
+        description: estRequired ? 'Enter in mm/dd/yyyy' : 'Optional — mm/dd/yyyy',
+        component: estField('est_start_date', { placeholder: '03/07/2026', value: startDateValue })
       },
     ]
   };
@@ -328,27 +324,42 @@ export function buildSeasonPlannerModal(existing = null) {
  */
 export function validatePlannerFields(fields) {
   const errors = [];
-  const players = parseInt(fields.est_players);
-  const swaps = parseInt(fields.est_swaps);
-  const ftc = parseInt(fields.est_ftc);
-  const startDate = parseStartDate(fields.est_start_date);
+  const seasonName = fields.season_name?.trim();
+  if (!seasonName) errors.push('Season name is required');
 
-  if (!fields.season_name?.trim()) errors.push('Season name is required');
-  if (isNaN(players) || players < 1) errors.push('Players must be a number > 0');
-  if (isNaN(swaps) || swaps < 0) errors.push('Swaps must be a number ≥ 0');
-  if (isNaN(ftc) || ftc < 1) errors.push('FTC players must be a number > 0');
-  if (!startDate) errors.push('Start date must be in mm/dd/yyyy format');
-  if (!isNaN(players) && !isNaN(ftc) && ftc >= players) errors.push('FTC players must be less than total players');
+  // Estimates are OPTIONAL (RaP 0910, Layer B). Rounds are only generated when ALL four are
+  // supplied & valid. Partial/invalid estimates are an error so the user can fix or clear them.
+  const anyEstimate = [fields.est_players, fields.est_swaps, fields.est_ftc, fields.est_start_date]
+    .some(v => v != null && String(v).trim() !== '');
+
+  let hasPlannerData = false;
+  let players, swaps, ftc, startDate;
+  if (anyEstimate) {
+    players = parseInt(fields.est_players);
+    swaps = parseInt(fields.est_swaps);
+    ftc = parseInt(fields.est_ftc);
+    startDate = parseStartDate(fields.est_start_date);
+
+    if (isNaN(players) || players < 1) errors.push('Players must be a number > 0');
+    if (isNaN(swaps) || swaps < 0) errors.push('Swaps must be a number ≥ 0');
+    if (isNaN(ftc) || ftc < 1) errors.push('FTC players must be a number > 0');
+    if (!startDate) errors.push('Start date must be in mm/dd/yyyy format');
+    if (!isNaN(players) && !isNaN(ftc) && ftc >= players) errors.push('FTC players must be less than total players');
+
+    hasPlannerData = errors.length === 0;
+  }
 
   return {
     valid: errors.length === 0,
     errors,
+    hasPlannerData,
     data: {
-      seasonName: fields.season_name?.trim(),
-      estimatedTotalPlayers: players,
-      estimatedSwaps: swaps,
-      estimatedFTCPlayers: ftc,
-      estimatedStartDate: startDate ? startDate.getTime() : null,
+      seasonName,
+      hasPlannerData,
+      estimatedTotalPlayers: hasPlannerData ? players : null,
+      estimatedSwaps: hasPlannerData ? swaps : null,
+      estimatedFTCPlayers: hasPlannerData ? ftc : null,
+      estimatedStartDate: hasPlannerData && startDate ? startDate.getTime() : null,
     }
   };
 }
@@ -607,13 +618,15 @@ export async function buildPlannerSelector(guildId) {
 // ─────────────────────────────────────────────
 
 /**
- * Create a new season with planner data and generate rounds.
+ * Create a new season (unified create path — RaP 0910, Layer B).
+ * Always seeds default application questions. Generates rounds/challenges only when
+ * data.hasPlannerData is true (all estimates supplied).
  * @param {string} guildId
  * @param {string} userId
- * @param {Object} data - Validated planner fields
- * @returns {{ configId: string, seasonId: string }}
+ * @param {Object} data - Validated fields from validatePlannerFields().data
+ * @returns {{ configId: string, seasonId: string, hasPlannerData: boolean }}
  */
-export async function createPlannerSeason(guildId, userId, data) {
+export async function createSeason(guildId, userId, data) {
   const { default: crypto } = await import('crypto');
   const playerData = await loadPlayerData();
 
@@ -623,20 +636,19 @@ export async function createPlannerSeason(guildId, userId, data) {
   if (!playerData[guildId].applicationConfigs) {
     playerData[guildId].applicationConfigs = {};
   }
-  if (!playerData[guildId].seasonRounds) {
-    playerData[guildId].seasonRounds = {};
-  }
 
   const seasonId = `season_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`;
   const configId = `config_${Date.now()}_${userId}`;
+  const hasPlannerData = !!data.hasPlannerData;
 
-  // Create applicationConfigs entry (compatible with existing flow)
   let buttonText = `Apply to ${data.seasonName}`;
   if (buttonText.length > 80) {
     buttonText = `Apply to ${data.seasonName.substring(0, 68)}..`;
   }
 
-  playerData[guildId].applicationConfigs[configId] = {
+  // Base config — every season is application-ready (seeded with default questions).
+  // explanatoryText is the apply-button blurb; it's set later during app-button setup, not at birth.
+  const config = {
     buttonText,
     explanatoryText: '',
     completionDescription: 'Thank you for completing your application! A host will review it soon.',
@@ -646,52 +658,79 @@ export async function createPlannerSeason(guildId, userId, data) {
     categoryId: null,
     buttonStyle: 'Primary',
     createdBy: userId,
-    stage: 'planning',
+    stage: hasPlannerData ? 'planning' : 'draft',
     createdAt: Date.now(),
     lastUpdated: Date.now(),
     seasonId,
     seasonName: data.seasonName,
-    questions: [],
-    // New planner fields
-    estimatedStartDate: data.estimatedStartDate,
-    estimatedTotalPlayers: data.estimatedTotalPlayers,
-    estimatedSwaps: data.estimatedSwaps,
-    estimatedFTCPlayers: data.estimatedFTCPlayers,
-    currentSeasonRoundID: 1,
-    seasonIdeas: 'Free-form section to brainstorm season themes, twists and challenges before assigning to rounds.',
+    questions: [
+      {
+        id: `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`,
+        order: 1,
+        questionTitle: 'Click here to set first question',
+        questionText: 'Edit this question or add more using the menu below.',
+        questionStyle: 1,
+        createdAt: Date.now()
+      },
+      {
+        id: `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`,
+        questionType: 'completion',
+        questionTitle: 'Thank you for applying to the season!',
+        questionText: 'Include information such as next steps on casting process, casting decision dates and marooning / season start dates.',
+        createdAt: Date.now()
+      }
+    ],
   };
 
-  // Generate rounds
-  const rounds = generateSeasonRounds(data.estimatedTotalPlayers, data.estimatedSwaps, data.estimatedFTCPlayers);
-  playerData[guildId].seasonRounds[seasonId] = rounds;
+  // Planner fields + round/challenge generation only when full estimates were supplied
+  if (hasPlannerData) {
+    Object.assign(config, {
+      estimatedStartDate: data.estimatedStartDate,
+      estimatedTotalPlayers: data.estimatedTotalPlayers,
+      estimatedSwaps: data.estimatedSwaps,
+      estimatedFTCPlayers: data.estimatedFTCPlayers,
+      currentSeasonRoundID: 1,
+      seasonIdeas: 'Free-form section to brainstorm season themes, twists and challenges before assigning to rounds.',
+    });
+  }
 
-  // Bulk-create challenges for each round and link them
-  if (!playerData[guildId].challenges) playerData[guildId].challenges = {};
-  for (const [roundId, round] of Object.entries(rounds)) {
-    if (round.fNumber === 1) continue; // Skip reunion — no challenge
-    const chalId = `challenge_${crypto.randomUUID().replace(/-/g, '').substring(0, 12)}`;
-    const chalTitle = round.ftcRound
-      ? `Challenge ${round.seasonRoundNo} (FTC Speech)`
-      : `Challenge ${round.seasonRoundNo} (TBC)`;
-    playerData[guildId].challenges[chalId] = {
-      title: chalTitle,
-      description: '',
-      image: '',
-      accentColor: 0x5865F2,
-      creationHost: userId,
-      runningHost: null,
-      seasonId,
-      createdAt: Date.now(),
-      lastUpdated: Date.now(),
-    };
-    round.challengeIDs = { primary: chalId };
+  playerData[guildId].applicationConfigs[configId] = config;
+
+  let roundCount = 0, chalCount = 0;
+  if (hasPlannerData) {
+    if (!playerData[guildId].seasonRounds) playerData[guildId].seasonRounds = {};
+    const rounds = generateSeasonRounds(data.estimatedTotalPlayers, data.estimatedSwaps, data.estimatedFTCPlayers);
+    playerData[guildId].seasonRounds[seasonId] = rounds;
+    roundCount = Object.keys(rounds).length;
+
+    // Bulk-create challenges for each round and link them
+    if (!playerData[guildId].challenges) playerData[guildId].challenges = {};
+    for (const [, round] of Object.entries(rounds)) {
+      if (round.fNumber === 1) continue; // Skip reunion — no challenge
+      const chalId = `challenge_${crypto.randomUUID().replace(/-/g, '').substring(0, 12)}`;
+      const chalTitle = round.ftcRound
+        ? `Challenge ${round.seasonRoundNo} (FTC Speech)`
+        : `Challenge ${round.seasonRoundNo} (TBC)`;
+      playerData[guildId].challenges[chalId] = {
+        title: chalTitle,
+        description: '',
+        image: '',
+        accentColor: 0x5865F2,
+        creationHost: userId,
+        runningHost: null,
+        seasonId,
+        createdAt: Date.now(),
+        lastUpdated: Date.now(),
+      };
+      round.challengeIDs = { primary: chalId };
+      chalCount++;
+    }
   }
 
   await savePlayerData(playerData);
-  const chalCount = Object.keys(rounds).length - (data.estimatedFTCPlayers > 1 ? 1 : 0);
-  console.log(`✅ Season Planner: Created "${data.seasonName}" (${configId}) with ${Object.keys(rounds).length} rounds and ${chalCount} challenges`);
+  console.log(`✅ Season created: "${data.seasonName}" (${configId})${hasPlannerData ? ` with ${roundCount} rounds and ${chalCount} challenges` : ' (name only)'}`);
 
-  return { configId, seasonId };
+  return { configId, seasonId, hasPlannerData };
 }
 
 /**
