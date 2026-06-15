@@ -65,6 +65,13 @@ export function getSeasonStageName(stage) {
  * @param {boolean} options.includeCreateNew - Include "Create New Season" option (default: true)
  * @param {boolean} options.showArchived - Include archived seasons (default: false)
  * @param {string} options.filterStage - Only show seasons in specific stage (optional)
+ * @param {boolean} options.requireSeasonName - Skip configs without a seasonName (default: false)
+ * @param {string} options.createNewLabel - Label for the "Create New" option
+ * @param {string} options.createNewValue - Value emitted for "Create New" (default: 'create_new_season')
+ * @param {Object} options.createNewEmoji - Emoji object for the "Create New" option
+ * @param {string} options.createNewDescription - Description for the "Create New" option
+ * @param {Function} options.decorateSeason - (configId, season, guildData) => { emoji?, description? }
+ *        Overrides the per-row emoji prefix and/or description (e.g. planner-setup status).
  * @returns {Promise<StringSelectMenuBuilder>} Configured select menu
  */
 export async function createSeasonSelector(guildId, options = {}) {
@@ -73,18 +80,26 @@ export async function createSeasonSelector(guildId, options = {}) {
     placeholder = 'Select your season...',
     includeCreateNew = true,
     showArchived = false,
-    filterStage = null
+    filterStage = null,
+    requireSeasonName = false,
+    createNewLabel = '➕ Create New Season',
+    createNewValue = 'create_new_season',
+    createNewEmoji = { name: '✨' },
+    createNewDescription = 'Start planning a new season',
+    decorateSeason = null
   } = options;
 
   const playerData = await loadPlayerData();
   const guildData = playerData[guildId] || {};
-  
+
   // applicationConfigs ARE our seasons (just poorly named)
   const seasons = guildData.applicationConfigs || {};
-  
+
   // Filter and sort seasons
   let seasonList = Object.entries(seasons)
     .filter(([_, season]) => {
+      // Skip nameless configs if caller requires a name (e.g. Season Planner)
+      if (requireSeasonName && !season.seasonName) return false;
       // Filter archived if needed
       if (!showArchived && season.archived) return false;
       // Filter by stage if specified
@@ -104,10 +119,10 @@ export async function createSeasonSelector(guildId, options = {}) {
   // Add "Create New Season" if requested
   if (includeCreateNew) {
     seasonOptions.push({
-      label: '➕ Create New Season',
-      value: 'create_new_season',
-      emoji: { name: '✨' },
-      description: 'Start planning a new season'
+      label: createNewLabel,
+      value: createNewValue,
+      emoji: createNewEmoji,
+      description: createNewDescription
     });
   }
   
@@ -119,7 +134,25 @@ export async function createSeasonSelector(guildId, options = {}) {
   // Add existing seasons
   showingSeasons.forEach(([configId, season]) => {
     const stage = season.stage || 'planning';
-    const emoji = getSeasonStageEmoji(stage);
+    let emoji = getSeasonStageEmoji(stage);
+
+    // Default description: the season's explanatoryText (if any)
+    let description;
+    if (season.explanatoryText && season.explanatoryText.trim().length > 0) {
+      description = season.explanatoryText;
+      // Discord select option descriptions max at 100 characters
+      if (description.length > 100) {
+        description = description.substring(0, 98) + '..';
+      }
+    }
+
+    // Allow caller to override the emoji prefix and/or description
+    // (e.g. Season Planner shows "📅 configured" / "⚠️ needs setup" status)
+    if (decorateSeason) {
+      const deco = decorateSeason(configId, season, guildData) || {};
+      if (deco.emoji !== undefined) emoji = deco.emoji;
+      if (deco.description !== undefined) description = deco.description;
+    }
 
     // Truncate season name to ensure label doesn't exceed 100 chars
     // Emoji is 2 chars + space is 1 char = 3 chars reserved
@@ -134,18 +167,7 @@ export async function createSeasonSelector(guildId, options = {}) {
       label: `${emoji} ${truncatedName}`,
       value: configId
     };
-
-    // Only add description if it exists and has content
-    // Discord requires description to be either undefined or length >= 1
-    // Season data stores this in 'explanatoryText' field
-    if (season.explanatoryText && season.explanatoryText.trim().length > 0) {
-      let description = season.explanatoryText;
-      // Discord select option descriptions max at 100 characters
-      if (description.length > 100) {
-        description = description.substring(0, 98) + '..';
-      }
-      option.description = description;
-    }
+    if (description) option.description = description;
 
     seasonOptions.push(option);
   });

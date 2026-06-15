@@ -566,46 +566,32 @@ function buildRoundOptions(round, dates, challenges = {}) {
  * @returns {Object} Components V2 response
  */
 export async function buildPlannerSelector(guildId) {
-  const playerData = await loadPlayerData();
-  const configs = playerData[guildId]?.applicationConfigs || {};
+  const { createSeasonSelector } = await import('./seasonSelector.js');
 
-  const options = [];
-
-  // Add existing seasons
-  for (const [configId, config] of Object.entries(configs)) {
-    if (!config.seasonName) continue;
-    const hasPlanner = !!playerData[guildId]?.seasonRounds?.[config.seasonId];
-    const label = config.seasonName.substring(0, 100);
-    const desc = hasPlanner ? '📅 Planner configured' : '⚠️ Needs setup';
-    options.push({
-      label, value: configId,
-      description: desc,
-      emoji: { name: hasPlanner ? '📅' : '⚠️' }
-    });
-  }
-
-  // Add "Create New" at the top
-  options.unshift({
-    label: 'Create New Season',
-    value: 'planner_create_new',
-    description: 'Start planning a new season from scratch',
-    emoji: { name: '➕' }
+  // Reuse the shared season selector, decorated with planner-setup status.
+  // Emits the unified 'create_new_season' sentinel (handled in app.js alongside legacy 'planner_create_new').
+  const selector = await createSeasonSelector(guildId, {
+    customId: 'planner_select_season',
+    placeholder: 'Select a season...',
+    requireSeasonName: true,
+    createNewLabel: 'Create New Season',
+    createNewEmoji: { name: '➕' },
+    createNewDescription: 'Start planning a new season from scratch',
+    decorateSeason: (configId, season, guildData) => {
+      const hasPlanner = !!guildData?.seasonRounds?.[season.seasonId];
+      return {
+        emoji: hasPlanner ? '📅' : '⚠️',
+        description: hasPlanner ? '📅 Planner configured' : '⚠️ Needs setup'
+      };
+    }
   });
-
-  // Cap at 25 (Discord limit)
-  if (options.length > 25) options.length = 25;
 
   const container = {
     type: 17, accent_color: 0x9b59b6,
     components: [
       { type: 10, content: '## 📝 Season Planner\n-# Select a season to plan or create a new one' },
       { type: 14 },
-      { type: 1, components: [{
-        type: 3,
-        custom_id: 'planner_select_season',
-        placeholder: 'Select a season...',
-        options
-      }]},
+      { type: 1, components: [selector.toJSON()] },
       { type: 14 },
       { type: 1, components: [
         { type: 2, custom_id: 'prod_menu_back', label: '← Menu', style: 2 }

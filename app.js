@@ -8342,7 +8342,8 @@ To fix this:
         handler: async (context) => {
           const selectedValue = req.body.data.values?.[0];
 
-          if (selectedValue === 'planner_create_new') {
+          // Unified 'create_new_season' sentinel (shared selector); 'planner_create_new' kept for in-flight cached messages
+          if (selectedValue === 'create_new_season' || selectedValue === 'planner_create_new') {
             // Show create modal directly
             const { buildSeasonPlannerModal } = await import('./seasonPlanner.js');
             return { type: 9, data: buildSeasonPlannerModal() };
