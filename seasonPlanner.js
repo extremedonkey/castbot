@@ -722,15 +722,49 @@ export async function buildSeasonDeleteConfirm(guildId, configId) {
 }
 
 /**
- * STUB — actual season deletion is intentionally NOT implemented yet.
- * Deletion spans applicationConfigs + applications + seasonRounds + challenges + castlist links,
- * plus Discord resources (channels, category, role, apply button). Each needs case-by-case handling.
- * See RaP 0908 (docs/01-RaP/0908_20260615_SeasonDeletion_Analysis.md).
- * @returns {{ deleted: boolean, stub: boolean }}
+ * Delete a season — Tier 1 atomic data cascade + Tier 2 castlist unlink (RaP 0908).
+ * Deletes: applicationConfigs[configId], its applications (scores/notes/casting), seasonRounds,
+ * and season-owned challenges. Unlinks (keeps) castlists referencing this season.
+ * Does NOT touch Discord resources (channels/category/role/apply post) — decided 2026-06-15.
+ * All writes via savePlayerData (atomicSave under the hood).
+ * @returns {{ deleted: boolean, notFound?: boolean, seasonName?, apps?, rounds?, challenges?, castlists? }}
  */
 export async function deleteSeason(guildId, configId) {
-  console.warn(`🚧 STUB deleteSeason(${guildId}, ${configId}) — not implemented. No data deleted.`);
-  return { deleted: false, stub: true };
+  const playerData = await loadPlayerData();
+  const g = playerData[guildId];
+  const config = g?.applicationConfigs?.[configId];
+  if (!config) return { deleted: false, notFound: true };
+
+  const seasonId = config.seasonId;
+  let apps = 0, rounds = 0, challenges = 0, castlists = 0;
+
+  // Applicant records for this season (scores, notes, casting decisions live here)
+  for (const [channelId, app] of Object.entries(g.applications || {})) {
+    if (app.configId === configId) { delete g.applications[channelId]; apps++; }
+  }
+
+  // Planner rounds
+  if (seasonId && g.seasonRounds?.[seasonId]) {
+    rounds = Object.keys(g.seasonRounds[seasonId]).length;
+    delete g.seasonRounds[seasonId];
+  }
+
+  // Season-owned challenges
+  for (const [chalId, chal] of Object.entries(g.challenges || {})) {
+    if (seasonId && chal.seasonId === seasonId) { delete g.challenges[chalId]; challenges++; }
+  }
+
+  // Castlists — unlink (keep the castlist, clear its season link so placement sorting falls back)
+  for (const cl of Object.values(g.castlistConfigs || {})) {
+    if (seasonId && cl.seasonId === seasonId) { delete cl.seasonId; castlists++; }
+  }
+
+  // The season config itself
+  delete g.applicationConfigs[configId];
+
+  await savePlayerData(playerData);
+  console.log(`🗑️ Season deleted: "${config.seasonName}" (${configId}) — ${apps} apps, ${rounds} rounds, ${challenges} challenges, ${castlists} castlists unlinked`);
+  return { deleted: true, seasonName: config.seasonName, apps, rounds, challenges, castlists };
 }
 
 // ─────────────────────────────────────────────

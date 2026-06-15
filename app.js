@@ -8433,7 +8433,7 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id.startsWith('season_delete_confirm_')) {
-      // Delete Mode — confirm (STUBBED: no data deleted yet; see RaP 0908)
+      // Delete Mode — confirm: Tier 1 atomic delete + castlist unlink (Discord resources kept; RaP 0908)
       return ButtonHandlerFactory.create({
         id: 'season_delete_confirm',
         updateMessage: true,
@@ -8441,13 +8441,26 @@ To fix this:
         handler: async (context) => {
           const configId = context.customId.replace('season_delete_confirm_', '');
           const { deleteSeason } = await import('./seasonPlanner.js');
-          await deleteSeason(context.guildId, configId);
-          return { components: [{ type: 17, accent_color: 0xf39c12, components: [
-            { type: 10, content: '## 🚧 Deletion not wired up yet' },
+          const r = await deleteSeason(context.guildId, configId);
+          if (!r.deleted) {
+            return { components: [{ type: 17, accent_color: 0xe74c3c, components: [
+              { type: 10, content: '## ❌ Season not found\n-# It may already have been deleted.' },
+              { type: 14 },
+              { type: 1, components: [{ type: 2, custom_id: 'season_delete_mode', label: '🗑️ Delete another', style: 2 }] }
+            ]}]};
+          }
+          const removed = [`• ${r.apps} application${r.apps === 1 ? '' : 's'}`];
+          if (r.rounds) removed.push(`• ${r.rounds} round${r.rounds === 1 ? '' : 's'} + ${r.challenges} challenge${r.challenges === 1 ? '' : 's'}`);
+          if (r.castlists) removed.push(`• ${r.castlists} castlist${r.castlists === 1 ? '' : 's'} unlinked`);
+          return { components: [{ type: 17, accent_color: 0x27ae60, components: [
+            { type: 10, content: `## ✅ Deleted "${r.seasonName}"` },
             { type: 14 },
-            { type: 10, content: 'No data was deleted. The delete pipeline (data cascade + Discord resource cleanup) is still being built — see RaP 0908.' },
+            { type: 10, content: `Removed:\n${removed.join('\n')}\n\n-# Application channels and the Apply post (if any) were left in Discord — remove them manually.` },
             { type: 14 },
-            { type: 1, components: [{ type: 2, custom_id: 'season_delete_mode', label: '← Back', style: 2 }] }
+            { type: 1, components: [
+              { type: 2, custom_id: 'season_delete_mode', label: '🗑️ Delete another', style: 2 },
+              { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Manage', style: 2 }
+            ]}
           ]}]};
         }
       })(req, res, client);
