@@ -361,12 +361,15 @@ class DiscordMessenger {
       instructions: '## ```🏁 What to do next```\n1. Go to any channel in ' + serverRef + ' and type <:cb_blue> `/menu` to run the setup wizard and get started!\n2. Join the CastBot help server below for the latest updates, tips and support.'
     };
 
-    // Channel (Setup Wizard) content — each task's text is the nested Text Display of a Section
+    // Channel (Setup Wizard) content — each task is a full-width header Text Display
+    // ABOVE a Section (body text + its button accessory), so the header reads flush.
     const channelContent = {
       title: '# 🧙🏽 CastBot Setup Wizard\nWelcome to CastBot - your one stop shop for managing your Cast Experience! Manage your Season Applications, create Castlists, create Idol Hunts & Safaris, and much more!',
       howTo: '## How to get started',
-      setupTask: '## ``` 🪛 1. Click the Run Setup button to the right```\n-# > ⌚ Takes 30 seconds\nCastBot uses Discord Roles for player Pronouns and Timezones. Setup will automatically create pronoun and timezone roles in your server, and add them to CastBot. Don\'t worry if you already have some - CastBot will detect and add them to CastBot.',
-      castlistTask: '## ``` 📋 2. Create your first Castlist```\n-# > ⌚ Takes 2 minutes\nClick the **Castlist Manager** button to the right, then under *Select a castlist to manage..* choose ✅ Active Castlist. In the \'Tribe Roles\' pop-up, select a role to add to the castlist. If you are just testing the feature out ahead of the season, choose a role like your @Production role.',
+      setupHeader: '## ``` 🪛 1. Click the Run Setup button```',
+      setupBody: '-# > ⌚ Takes 30 seconds\nCastBot uses Discord Roles for player Pronouns and Timezones. Setup will automatically create pronoun and timezone roles in your server, and add them to CastBot. Don\'t worry if you already have some - CastBot will detect and add them to CastBot.',
+      castlistHeader: '## ``` 📋 2. Create your first Castlist```',
+      castlistBody: '-# > ⌚ Takes 2 minutes\nClick the **Castlist Manager** button to the right, then under *Select a castlist to manage..* choose ✅ Active Castlist. In the \'Tribe Roles\' pop-up, select a role to add to the castlist. If you are just testing the feature out ahead of the season, choose a role like your @Production role.',
       footer: 'To get back to CastBot, type `/menu` from any channel in your server! Once your season is up and running, use `/castlist` to summon the active castlist showing players. You can get back to this menu from /menu → Tools'
     };
 
@@ -383,16 +386,18 @@ class DiscordMessenger {
           { type: 10, content: channelContent.title },
           { type: 14 },
           { type: 10, content: channelContent.howTo },
-          // Task 1 — Run Setup (button accessory to the right)
+          // Task 1 — full-width header, then Section (body + Run Setup accessory)
+          { type: 10, content: channelContent.setupHeader },
           {
             type: 9, // Section
-            components: [{ type: 10, content: channelContent.setupTask }],
+            components: [{ type: 10, content: channelContent.setupBody }],
             accessory: runSetupButton
           },
-          // Task 2 — Create your first Castlist (button accessory to the right)
+          // Task 2 — full-width header, then Section (body + Castlist accessory)
+          { type: 10, content: channelContent.castlistHeader },
           {
             type: 9, // Section
-            components: [{ type: 10, content: channelContent.castlistTask }],
+            components: [{ type: 10, content: channelContent.castlistBody }],
             accessory: castlistButton
           },
           { type: 14 },
