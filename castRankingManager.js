@@ -452,7 +452,7 @@ export async function generateSeasonAppRankingUI({
         new ButtonBuilder()
           .setCustomId(`edit_player_notes_${currentApp.channelId}_${appIndex}_${configId}`)
           .setLabel('✏️ Edit Notes')
-          .setStyle(ButtonStyle.Primary)
+          .setStyle(ButtonStyle.Secondary)
           .toJSON(),
         new ButtonBuilder()
           .setCustomId(`ranking_public_warn_${appIndex}_${configId}`)
@@ -480,7 +480,7 @@ export async function generateSeasonAppRankingUI({
     type: 1,
     components: [
       { type: 2, custom_id: `reeces_season_planner_mockup`, label: '← Seasons', style: 2 },
-      { type: 2, custom_id: `ranking_view_all_scores_${configId}${ephemeralSuffix}`, label: 'View All Scores', style: 1, emoji: { name: '📊' } }
+      { type: 2, custom_id: `ranking_view_all_scores_${configId}${ephemeralSuffix}`, label: 'View All Scores', style: 2, emoji: { name: '📊' } }
     ]
   });
 
