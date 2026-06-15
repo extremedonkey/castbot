@@ -182,7 +182,7 @@ export async function buildEditInfoModal(guildId, castlistId) {
 
   // Tribe Roles selector
   const linkedTribeRoleIds = await castlistManager.getTribesUsingCastlist(guildId, castlistId);
-  modalComponents.push({
+  const tribeRolesComponent = {
     type: 18, label: 'Tribe Roles',
     description: 'Select roles to add as tribes. Leave blank if you haven\'t made roles yet (can set on next screen).',
     component: {
@@ -190,7 +190,14 @@ export async function buildEditInfoModal(guildId, castlistId) {
       required: false, min_values: 0, max_values: 8,
       default_values: linkedTribeRoleIds.map(id => ({ id, type: 'role' }))
     }
-  });
+  };
+  // Default castlist: surface Tribe Roles first (the most actionable field — no Name to set).
+  // Other castlists keep Name-first ordering with Tribe Roles last.
+  if (isDefaultCastlist) {
+    modalComponents.unshift(tribeRolesComponent);
+  } else {
+    modalComponents.push(tribeRolesComponent);
+  }
 
   return {
     type: 9,
