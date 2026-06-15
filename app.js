@@ -6773,7 +6773,7 @@ To fix this:
             userId,
             showUserSelect: true,
             showVanityRoles: true,
-            title: `Player Management | ${guild.name}`,
+            title: `Player Manager | ${guild.name}`,
             client
           });
 
@@ -9880,11 +9880,37 @@ To fix this:
           const { initializePlayerOnMap } = await import('./safariMapAdmin.js');
           await initializePlayerOnMap(context.guildId, targetUserId, null, context.client);
         } else if (selectedValue === 'pause') {
-          const { pauseSinglePlayer } = await import('./pausedPlayersManager.js');
-          await pauseSinglePlayer(context.guildId, targetUserId, context.client);
+          // Show a pause confirmation (copy adapted from the map_explorer bulk-pause UI) — buttons route back here.
+          return {
+            flags: (1 << 15),
+            components: [{
+              type: 17, accent_color: 0x95a5a6,
+              components: [
+                { type: 10, content: `## ⏸️ Pause <@${targetUserId}>?\n\nThis temporarily removes the player from their current safari channel. They keep their location, currency, and any interactions they've already completed — they just can't see or act in the channel until you unpause them. Use this to suspend a player (e.g. voted out) or to freeze activity (e.g. during swaps).` },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, style: 1, label: 'Confirm Pause', custom_id: `spm_map_pause_confirm_${targetUserId}`, emoji: { name: '⏸️' } },
+                  { type: 2, style: 2, label: '← Cancel', custom_id: `admin_set_map_${targetUserId}`, emoji: { name: '🧑‍🤝‍🧑' } }
+                ]}
+              ]
+            }]
+          };
         } else if (selectedValue === 'unpause') {
-          const { unpauseSinglePlayer } = await import('./pausedPlayersManager.js');
-          await unpauseSinglePlayer(context.guildId, targetUserId, context.client);
+          // Show an unpause confirmation — buttons route back here.
+          return {
+            flags: (1 << 15),
+            components: [{
+              type: 17, accent_color: 0x95a5a6,
+              components: [
+                { type: 10, content: `## ▶️ Unpause <@${targetUserId}>?\n\nThis restores the player's access to their current safari channel so they can see and act in it again. Their location, currency, and progress are unchanged.` },
+                { type: 14 },
+                { type: 1, components: [
+                  { type: 2, style: 3, label: 'Confirm Unpause', custom_id: `spm_map_unpause_confirm_${targetUserId}`, emoji: { name: '▶️' } },
+                  { type: 2, style: 2, label: '← Cancel', custom_id: `admin_set_map_${targetUserId}`, emoji: { name: '🧑‍🤝‍🧑' } }
+                ]}
+              ]
+            }]
+          };
         } else if (selectedValue === 'reset_explored') {
           const { resetPlayerExploration } = await import('./safariMapAdmin.js');
           await resetPlayerExploration(context.guildId, targetUserId);
@@ -9921,6 +9947,32 @@ To fix this:
         } catch (e) { console.error('Activity log error:', e); }
         const { deinitializePlayer } = await import('./safariDeinitialization.js');
         await deinitializePlayer(context.guildId, targetUserId, context.client);
+        const { buildAdminPlayerMenu } = await import('./playerManagement.js');
+        return await buildAdminPlayerMenu(context.client, context.guildId, targetUserId, context.userId, 'map');
+      }})(req, res, client);
+
+    } else if (custom_id.startsWith('spm_map_pause_confirm_')) {
+      return ButtonHandlerFactory.create({ id: 'spm_map_pause_confirm', deferred: true, updateMessage: true, requiresPermission: PermissionFlagsBits.ManageRoles, permissionName: 'Manage Roles', handler: async (context) => {
+        const targetUserId = context.customId.replace('spm_map_pause_confirm_', '');
+        const { pauseSinglePlayer } = await import('./pausedPlayersManager.js');
+        await pauseSinglePlayer(context.guildId, targetUserId, context.client);
+        try {
+          const { addActivityEntryAndSave, ACTIVITY_TYPES } = await import('./activityLogger.js');
+          addActivityEntryAndSave(context.guildId, targetUserId, ACTIVITY_TYPES.admin, `[ADMIN] Player paused`);
+        } catch (e) { console.error('Activity log error:', e); }
+        const { buildAdminPlayerMenu } = await import('./playerManagement.js');
+        return await buildAdminPlayerMenu(context.client, context.guildId, targetUserId, context.userId, 'map');
+      }})(req, res, client);
+
+    } else if (custom_id.startsWith('spm_map_unpause_confirm_')) {
+      return ButtonHandlerFactory.create({ id: 'spm_map_unpause_confirm', deferred: true, updateMessage: true, requiresPermission: PermissionFlagsBits.ManageRoles, permissionName: 'Manage Roles', handler: async (context) => {
+        const targetUserId = context.customId.replace('spm_map_unpause_confirm_', '');
+        const { unpauseSinglePlayer } = await import('./pausedPlayersManager.js');
+        await unpauseSinglePlayer(context.guildId, targetUserId, context.client);
+        try {
+          const { addActivityEntryAndSave, ACTIVITY_TYPES } = await import('./activityLogger.js');
+          addActivityEntryAndSave(context.guildId, targetUserId, ACTIVITY_TYPES.admin, `[ADMIN] Player unpaused`);
+        } catch (e) { console.error('Activity log error:', e); }
         const { buildAdminPlayerMenu } = await import('./playerManagement.js');
         return await buildAdminPlayerMenu(context.client, context.guildId, targetUserId, context.userId, 'map');
       }})(req, res, client);
@@ -26344,7 +26396,7 @@ Your server is now ready for Tycoons gameplay!`;
             showUserSelect: mode === 'admin',
             showVanityRoles: mode === 'admin',
             title: mode === 'admin' ?
-              `Player Management | ${targetMember.displayName}` :
+              `Player Manager | ${targetMember.displayName}` :
               customTitle,
             activeButton,
             hideBottomButtons: mode === 'player' ? hideBottomButtons : false,
@@ -26532,7 +26584,7 @@ Your server is now ready for Tycoons gameplay!`;
           showUserSelect: mode === 'admin',
           showVanityRoles: mode === 'admin',
           title: mode === 'admin' ? 
-            `Player Management | ${targetMember.displayName}` : 
+            `Player Manager | ${targetMember.displayName}` : 
             customTitle,
           activeButton,
           hideBottomButtons: mode === 'player' ? hideBottomButtons : false,
@@ -39113,7 +39165,7 @@ Your server is now ready for Tycoons gameplay!`;
           // Load player data
           const playerData = await loadPlayerData();
           let targetMember = null;
-          let titleContent = `Player Management | ${guild.name}`;
+          let titleContent = `Player Manager | ${guild.name}`;
 
           // Handle player selection/deselection
           if (selectedPlayerIds.length > 0) {
@@ -39122,7 +39174,7 @@ Your server is now ready for Tycoons gameplay!`;
             // Get selected player info
             try {
               targetMember = await guild.members.fetch(selectedPlayerId);
-              titleContent = `Player Management | ${targetMember.displayName}`;
+              titleContent = `Player Manager | ${targetMember.displayName}`;
             } catch (error) {
               console.log('Player not found, keeping no selection');
               targetMember = null;
@@ -45577,7 +45629,7 @@ Your server is now ready for Tycoons gameplay!`;
           userId: req.body.member?.user?.id,
           showUserSelect: true,
           showVanityRoles: true,
-          title: `Player Management | ${targetMember.displayName}`,
+          title: `Player Manager | ${targetMember.displayName}`,
           activeButton: 'currency',
           client,
           channelId: req.body.channel_id
@@ -45760,7 +45812,7 @@ Your server is now ready for Tycoons gameplay!`;
           userId: req.body.member?.user?.id,
           showUserSelect: true,
           showVanityRoles: true,
-          title: `Player Management | ${targetMember.displayName}`,
+          title: `Player Manager | ${targetMember.displayName}`,
           activeButton: 'inventory',
           client,
           channelId: req.body.channel_id

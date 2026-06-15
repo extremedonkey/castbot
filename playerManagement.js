@@ -763,14 +763,15 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
           options.push({ label: 'Initialize Safari', value: 'init', description: 'Initialise this player into Safari', emoji: { name: '🚀' } });
         } else {
           options.push({ label: 'De-initialize from Safari', value: 'deinit', description: 'Remove this player from Safari (backs up first)', emoji: { name: '🛬' } });
+          // Pause/Unpause sits directly under De-initialize — initialized players only.
+          options.push(isPaused
+            ? { label: 'Unpause Player', value: 'unpause', description: 'Restore their access to their safari channel', emoji: { name: '▶️' } }
+            : { label: 'Pause Player', value: 'pause', description: 'Temporarily remove them from their safari channel', emoji: { name: '⏸️' } });
         }
         // Starting location works pre-init (sets where they'll spawn).
         options.push({ label: 'Starting Location', value: 'starting_location', description: 'Set where this player starts on the map', emoji: { name: '🚩' } });
         if (isInit) {
           options.push({ label: 'Move Player', value: 'move', description: 'Move this player to a coordinate', emoji: { name: '📍' } });
-          options.push(isPaused
-            ? { label: 'Unpause player in Safari', value: 'unpause', description: "Resume this player's movement", emoji: { name: '⏯️' } }
-            : { label: 'Pause player in Safari', value: 'pause', description: "Freeze this player's movement", emoji: { name: '⏸️' } });
           options.push({ label: 'Reset Explored locations', value: 'reset_explored', description: 'Clear explored coordinates (keeps current)', emoji: { name: '🔄' } });
         }
       }
@@ -1366,7 +1367,7 @@ export async function createPlayerManagementUI(options) {
     userId,
     showUserSelect = (mode === PlayerManagementMode.ADMIN),
     showVanityRoles = (mode === PlayerManagementMode.ADMIN),
-    title = mode === PlayerManagementMode.ADMIN ? 'CastBot | Player Management' : 'CastBot | Player Menu',
+    title = mode === PlayerManagementMode.ADMIN ? 'CastBot | Player Manager' : 'CastBot | Player Menu',
     activeButton = null, // Which button/category is currently active
     client = null, // Discord client for fetching data
     channelId = null, // Discord channel ID for location context
@@ -1632,7 +1633,7 @@ export async function buildAdminPlayerMenu(client, guildId, targetUserId, adminU
     userId: adminUserId,
     showUserSelect: true,
     showVanityRoles: true,
-    title: `Player Management | ${targetMember.displayName}`,
+    title: `Player Manager | ${targetMember.displayName}`,
     activeButton,
     client
   });
@@ -1734,7 +1735,7 @@ export async function handlePlayerButtonClick(req, res, customId, playerData, cl
   // Use custom title and hide bottom buttons if in application context
   const applicationTitle = 'Set your age, pronouns and timezone.';
   const defaultTitle = mode === PlayerManagementMode.ADMIN ? 
-    `Player Management | ${targetMember.displayName}` : 
+    `Player Manager | ${targetMember.displayName}` : 
     'CastBot | Player Menu';
   
   const title = isApplicationChannel ? applicationTitle : defaultTitle;

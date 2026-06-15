@@ -254,12 +254,12 @@ export async function generateSeasonAppRankingUI({
       type: 10, // Text Display component
       content: `## 🏆 Cast Ranking\n> ### ${seasonName}`
     },
-    // Cross-link row — Apps + Edit (Planner is the "← Season Planner" back button in the bottom row;
-    // a second apps_planner_ button here would be a duplicate custom_id)
+    // Cross-link row — Apps · Planner · Edit (converges with the Apps/Planner views)
     {
       type: 1,
       components: [
         { type: 2, custom_id: `planner_apps_${configId}`, label: 'Apps', style: 2, emoji: { name: '📝' } },
+        { type: 2, custom_id: `apps_planner_${configId}`, label: 'Planner', style: 2, emoji: { name: '📅' } },
         { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } }
       ]
     },
@@ -475,11 +475,11 @@ export async function generateSeasonAppRankingUI({
     }
   );
   
-  // Bottom navigation row — back to Season Planner + View All Scores (LEAN: back first, far-left)
+  // Bottom navigation row — ← Seasons (Season Manager selector) + View All Scores (LEAN: back first)
   containerComponents.push({
     type: 1,
     components: [
-      { type: 2, custom_id: `apps_planner_${configId}`, label: '← Season Planner', style: 2 },
+      { type: 2, custom_id: `reeces_season_planner_mockup`, label: '← Seasons', style: 2 },
       { type: 2, custom_id: `ranking_view_all_scores_${configId}${ephemeralSuffix}`, label: 'View All Scores', style: 1, emoji: { name: '📊' } }
     ]
   });
