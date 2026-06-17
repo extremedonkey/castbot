@@ -41,10 +41,11 @@ const WELCOME_DM_DEDUPE_MS = 60_000;
 //   hasSetup          ≥1 pronoun AND ≥1 timezone role   (roleManager.hasCompletedSetup)
 //   hasCastlist       default castlist has ≥1 tribe role (castlistManager.defaultCastlistHasTribes)
 //   hasPostedCastlist server ever clicked Post Castlist  (playerData[g].setupProgress.castlistPosted)
+//   hasSeason         guild has ≥1 season               (playerData[g].applicationConfigs has any key)
 //
 //   Task             gate         done (green ✅)                  notes
 //   1 Run Setup      (special)    hasSetup                        action button; extra "⏳ Setting up..." state
-//   2 Season Manager hasSetup     —                               gated nav, no done-state
+//   2 Season Manager hasSetup     hasSeason                       gated nav + done ("✅ Season Created")
 //   3 Castlist Mgr   hasSetup     hasCastlist                     gated nav + done
 //   4 Post Castlist  hasCastlist  hasPostedCastlist && hasCastlist gated nav + done (green only once a tribe exists too)
 //
@@ -331,6 +332,7 @@ class DiscordMessenger {
     const hasSetup = options.hasSetup || false;
     const hasCastlist = options.hasCastlist || false;
     const hasPostedCastlist = options.hasPostedCastlist || false;
+    const hasSeason = options.hasSeason || false;
     const setupInProgress = options.setupInProgress || false;
     const banner = options.banner || null; // optional code-block banner above the title (channel only)
 
@@ -349,10 +351,11 @@ class DiscordMessenger {
       ? { type: 2, custom_id: 'setup_castbot', label: 'Setup Complete', style: 3, emoji: { name: '✅' }, disabled: true }
       : { type: 2, custom_id: 'setup_castbot', label: 'Run Setup', style: 1, emoji: { name: '🪛' } };
 
-    // Task 2 — Season Manager: gated on hasSetup, no done-state (optional task)
+    // Task 2 — Season Manager: gated on hasSetup, done (green ✅ Season Created) when a season exists.
+    // Opens as a NEW ephemeral message (season_manager_new), like Castlist Manager.
     const seasonManagerButton = buildWizardTaskButton({
-      customId: 'season_manager', emoji: '📅', label: 'Season Manager',
-      gate: hasSetup
+      customId: 'season_manager_new', emoji: '📅', label: 'Season Manager',
+      gate: hasSetup, done: hasSeason, doneLabel: 'Season Created'
     });
 
     // Task 3 — Castlist Manager: gated on hasSetup, done when default castlist has tribes
@@ -404,12 +407,12 @@ class DiscordMessenger {
       howTo: '## How to get started',
       setupHeader: '## ``` 🪛 1. Click the Run Setup button```',
       setupBody: '-# > ⌚ Takes 30 seconds\nCastBot uses Discord Roles for player Pronouns and Timezones. Setup will automatically create pronoun and timezone roles in your server, and add them to CastBot. Don\'t worry if you already have some - CastBot will detect and add them to CastBot.',
-      seasonHeader: '## ``` 📅 2. Create a Season Application process (optional)```',
-      seasonBody: 'Click 📅 `Season Manager`, create a season, add some questions and then click `#️⃣ Post to Channel`. If you aren\'t ready to open your applications, you can test this out in a production bots / testing channel.',
+      seasonHeader: '## ``` 📅️ 2. Create a Season Application process (optional)```',
+      seasonBody: '-# > ⌚ Takes 2 minutes\nClick 📅 `Season Manager`, create a season, add some questions and then click `#️⃣ Post to Channel`. If you aren\'t ready to open your applications, you can test this out in a production bots / testing channel.',
       castlistHeader: '## ``` ✏️ 3. Create your first Castlist```',
       castlistBody: '-# > ⌚ Takes 2 minutes\nClick the `📋 Castlist Manager` button to the right, then under *Select a castlist to manage..* choose ✅ Active Castlist. In the \'Tribe Roles\' pop-up, select a role to add to the castlist. If you are just testing the feature out ahead of the season, choose a role like your @Production role.',
       displayHeader: '## ``` 📋 4. Display your Castlist```',
-      displayBody: 'In any Discord channel (including this one), type <:cb_blue> `/castlist` to display the castlist you just made. You can also click the `📃 Post Castlist` button to the right.',
+      displayBody: '-# > ⌚ Takes 5 seconds\nIn any Discord channel (including this one), type <:cb_blue> `/castlist` to display the castlist you just made. You can also click the `📃 Post Castlist` button to the right.',
       footer: 'To get back to CastBot, type `/menu` from any channel in your server! Once your season is up and running, use `/castlist` to summon the active castlist showing players. You can get back to this menu from `/menu` → `🪛 Tools`'
     };
 

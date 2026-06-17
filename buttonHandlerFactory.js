@@ -106,6 +106,14 @@ export const BUTTON_REGISTRY = {
     parent: 'viral_menu',
     category: 'season_management'
   },
+  'season_manager_new': {
+    label: 'Season Manager',
+    description: 'Open Season Manager as a NEW ephemeral message (from Setup Wizard)',
+    emoji: '📅',
+    style: 'Secondary',
+    parent: 'prod_setup_wizard',
+    category: 'season_management'
+  },
   'planner_select_season': {
     label: 'Season Select',
     description: 'Select a season to plan or create new',

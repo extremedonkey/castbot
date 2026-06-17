@@ -861,13 +861,15 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     const { castlistManager } = await import('./castlistManager.js');
     const hasCastlist = await castlistManager.defaultCastlistHasTribes(guildId);
     const hasPostedCastlist = playerData[guildId]?.setupProgress?.castlistPosted === true;
+    const hasSeason = Object.keys(playerData[guildId]?.applicationConfigs || {}).length > 0;
 
-    // Return Setup Wizard components (hasSetup + hasCastlist + hasPostedCastlist drive button states)
+    // Return Setup Wizard components (signals drive button states / green done-ticks)
     const wizardComponents = DiscordMessenger.createWelcomeComponents({
       context: 'channel',
       hasSetup,
       hasCastlist,
       hasPostedCastlist,
+      hasSeason,
       serverName: guild?.name
     });
 
@@ -2837,6 +2839,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Fast check only (no member fetch): admin + DEFAULT castlist + zero tribe roles + setup incomplete.
       let wizardNudge = false;
       let wizardHasPostedCastlist = false;
+      let wizardHasSeason = false;
       {
         const ADMIN_MASK = PermissionFlagsBits.Administrator | PermissionFlagsBits.ManageGuild | PermissionFlagsBits.ManageRoles;
         const isAdmin = !!member?.permissions && (BigInt(member.permissions) & ADMIN_MASK) !== 0n;
@@ -2848,6 +2851,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             if (!hasCompletedSetup(pd[guildId])) {
               wizardNudge = true;
               wizardHasPostedCastlist = pd[guildId]?.setupProgress?.castlistPosted === true;
+              wizardHasSeason = Object.keys(pd[guildId]?.applicationConfigs || {}).length > 0;
             }
           }
         }
@@ -2882,7 +2886,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             method: 'PATCH',
             body: {
               components: DiscordMessenger.createWelcomeComponents({
-                context: 'channel', hasSetup: false, hasCastlist: false, hasPostedCastlist: wizardHasPostedCastlist
+                context: 'channel', hasSetup: false, hasCastlist: false, hasPostedCastlist: wizardHasPostedCastlist, hasSeason: wizardHasSeason
               }),
               flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
             }
@@ -7694,9 +7698,10 @@ To fix this:
               const hasSetup = hasCompletedSetup(playerData[guildId]);
               const freshCastlist = await castlistManager.defaultCastlistHasTribes(guildId);
               const hasPostedCastlist = playerData[guildId]?.setupProgress?.castlistPosted === true;
+              const hasSeason = Object.keys(playerData[guildId]?.applicationConfigs || {}).length > 0;
               await createFollowupMessage(token, {
                 // Banner makes it crystal-clear the (text-heavy) setup results above = success
-                components: DiscordMessenger.createWelcomeComponents({ context: 'channel', hasSetup, hasCastlist: freshCastlist, hasPostedCastlist, serverName: guild?.name, banner: '```✅ Setup Complete```' }),
+                components: DiscordMessenger.createWelcomeComponents({ context: 'channel', hasSetup, hasCastlist: freshCastlist, hasPostedCastlist, hasSeason, serverName: guild?.name, banner: '```✅ Setup Complete```' }),
                 ephemeral: true
               });
 
@@ -8494,6 +8499,19 @@ To fix this:
         handler: async (context) => {
           const { buildPlannerSelector } = await import('./seasonPlanner.js');
           return buildPlannerSelector(context.guildId);
+        }
+      })(req, res, client);
+    } else if (custom_id === 'season_manager_new') {
+      // Season Manager from the Setup Wizard — opens as a NEW ephemeral message (like
+      // castlist_hub_main_new), so it doesn't replace/overwrite the wizard message.
+      return ButtonHandlerFactory.create({
+        id: 'season_manager_new',
+        deferred: true,
+        ephemeral: true, // NEW ephemeral message (no updateMessage)
+        handler: async (context) => {
+          const { buildPlannerSelector } = await import('./seasonPlanner.js');
+          const view = await buildPlannerSelector(context.guildId);
+          return { ...view, ephemeral: true };
         }
       })(req, res, client);
     } else if (
@@ -12073,13 +12091,15 @@ To fix this:
           const { castlistManager } = await import('./castlistManager.js');
           const hasCastlist = await castlistManager.defaultCastlistHasTribes(context.guildId);
           const hasPostedCastlist = playerData[context.guildId]?.setupProgress?.castlistPosted === true;
+          const hasSeason = Object.keys(playerData[context.guildId]?.applicationConfigs || {}).length > 0;
 
-          // Get components in 'channel' context (hasSetup + hasCastlist + hasPostedCastlist drive button states)
+          // Get components in 'channel' context (signals drive button states / green done-ticks)
           const welcomeComponents = DiscordMessenger.createWelcomeComponents({
             context: 'channel',
             hasSetup,
             hasCastlist,
             hasPostedCastlist,
+            hasSeason,
             serverName: context.guild?.name
           });
 
