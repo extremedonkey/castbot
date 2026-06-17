@@ -966,6 +966,13 @@ export async function updateSeason(guildId, configId, data) {
   config.buttonText = buttonText;
   config.lastUpdated = Date.now();
 
+  // Capture the STRUCTURAL estimates before merging so we can detect a change that requires the
+  // round structure to be recalculated (players/swaps/FTC). The start date is NOT structural — round
+  // dates are recomputed from it on every render, so a date-only edit must NOT regenerate rounds.
+  const prevPlayers = config.estimatedTotalPlayers;
+  const prevSwaps = config.estimatedSwaps;
+  const prevFtc = config.estimatedFTCPlayers;
+
   // MERGE each PROVIDED estimate into the config (incremental planner setup). NEVER wipe a
   // previously-saved value on a blank field — the modal pre-fill can be imperfect, so a host
   // "adding players" must not clear swaps/ftc/date. This is the real fix for the partial-save bug.
@@ -974,9 +981,13 @@ export async function updateSeason(guildId, configId, data) {
   if (data.estimatedFTCPlayers != null) config.estimatedFTCPlayers = data.estimatedFTCPlayers;
   if (data.estimatedStartDate != null) config.estimatedStartDate = data.estimatedStartDate;
 
-  // Rounds generate once the merged CONFIG (not just this single submit) holds all four estimates —
-  // and only if it has no rounds yet. Existing rounds are never regenerated. This lets a host
-  // complete the planner across several edits (players in one, swaps in another, …).
+  const structuralChanged = config.estimatedTotalPlayers !== prevPlayers
+    || config.estimatedSwaps !== prevSwaps
+    || config.estimatedFTCPlayers !== prevFtc;
+
+  // Rounds generate once the merged CONFIG holds all four estimates. Regenerate on FIRST-TIME setup
+  // OR when a structural estimate changed (e.g. more players → more elimination rounds, FTC 3→2 adds
+  // an F2 round, both push the end date back). A name/date-only edit leaves the rounds untouched.
   const configComplete = config.estimatedTotalPlayers != null && config.estimatedSwaps != null
     && config.estimatedFTCPlayers != null && config.estimatedStartDate != null;
 
@@ -987,8 +998,18 @@ export async function updateSeason(guildId, configId, data) {
     if (config.stage === 'draft') config.stage = 'planning';
 
     const existingRounds = playerData[guildId]?.seasonRounds?.[config.seasonId];
-    if (!existingRounds || Object.keys(existingRounds).length === 0) {
-      // First-time setup — generate from the MERGED config values (not the single submit's data).
+    const noRounds = !existingRounds || Object.keys(existingRounds).length === 0;
+
+    if (noRounds || structuralChanged) {
+      // Regenerating REPLACES seasonRounds[seasonId] and creates fresh auto-challenges. Remove the
+      // old season-owned challenges first so they don't orphan (mirrors deleteSeason's cascade).
+      // NOTE: this discards manual round/challenge edits for this season — inherent to recalculating
+      // the whole structure (RaP 0947 backlog: cast-size recalibration).
+      if (!noRounds && playerData[guildId]?.challenges) {
+        for (const [chalId, chal] of Object.entries(playerData[guildId].challenges)) {
+          if (chal?.seasonId === config.seasonId) delete playerData[guildId].challenges[chalId];
+        }
+      }
       await generateAndStoreRounds(playerData, guildId, config.seasonId, {
         estimatedTotalPlayers: config.estimatedTotalPlayers,
         estimatedSwaps: config.estimatedSwaps,

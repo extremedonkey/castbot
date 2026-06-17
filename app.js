@@ -914,18 +914,18 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   const adminButtons = [
     new ButtonBuilder().setCustomId('castlist_hub_main').setLabel('Castlist Manager').setStyle(ButtonStyle.Primary).setEmoji('📋'),
     new ButtonBuilder().setCustomId('season_manager').setLabel('Season Manager').setStyle(ButtonStyle.Secondary).setEmoji('📅'),
-    new ButtonBuilder().setCustomId('admin_manage_player').setLabel('Player Manager').setStyle(ButtonStyle.Secondary).setEmoji('🧑‍🤝‍🧑'),
+    new ButtonBuilder().setCustomId('admin_manage_player').setLabel('Players').setStyle(ButtonStyle.Secondary).setEmoji('🧑‍🤝‍🧑'),
     new ButtonBuilder().setCustomId('challenge_screen').setLabel('Challenges').setStyle(ButtonStyle.Secondary).setEmoji('🏃‍♀️')
   ];
   const adminRow = new ActionRowBuilder().addComponents(adminButtons);
 
-  // Idol Hunts, Challenges and Safari row (+ Actions and Map, moved down from Advanced; Map is blue)
+  // Idol Hunts, Challenges and Safari row (+ Actions and Map, moved down from Advanced; Map is grey)
   const safariFeatureButtons = [
     new ButtonBuilder().setCustomId('safari_store_manage_items').setLabel('Stores').setStyle(ButtonStyle.Primary).setEmoji('🏪'),
     new ButtonBuilder().setCustomId('safari_manage_items').setLabel('Items').setStyle(ButtonStyle.Secondary).setEmoji('📦'),
     new ButtonBuilder().setCustomId('safari_manage_currency').setLabel('Currency').setStyle(ButtonStyle.Secondary).setEmoji('💰'),
     new ButtonBuilder().setCustomId('safari_action_editor').setLabel('Actions').setStyle(ButtonStyle.Secondary).setEmoji('⚡'),
-    new ButtonBuilder().setCustomId('safari_map_explorer').setLabel('Map').setStyle(ButtonStyle.Primary).setEmoji('🗺️')
+    new ButtonBuilder().setCustomId('safari_map_explorer').setLabel('Map').setStyle(ButtonStyle.Secondary).setEmoji('🗺️')
   ];
   const safariFeatureRow = new ActionRowBuilder().addComponents(safariFeatureButtons);
 
