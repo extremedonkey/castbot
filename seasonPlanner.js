@@ -2,7 +2,7 @@
  * Season Planner — round generation, swap/merge placement, and planner UI
  *
  * Parallel build: does NOT touch existing Season Apps flow.
- * Entry point: reeces_season_planner_mockup button in Reece's Stuff.
+ * Entry point: season_manager button in Reece's Stuff.
  * Spec: docs/01-RaP/0947_20260315_SeasonPlanner_Analysis.md
  */
 
@@ -444,7 +444,7 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
   });
 
   const navButtons = [
-    { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Seasons', style: 2 },
+    { type: 2, custom_id: 'season_manager', label: '← Seasons', style: 2 },
     { type: 2, custom_id: `planner_page_${page - 1}_${configId}`, label: '◀', style: page === 0 ? 2 : 1, disabled: page === 0 },
     { type: 2, custom_id: `planner_page_${page + 1}_${configId}`, label: '▶', style: page >= totalPages - 1 ? 2 : 1, disabled: page >= totalPages - 1 },
   ];
@@ -661,7 +661,7 @@ export async function buildSeasonDeleteSelector(guildId) {
       { type: 1, components: [selector.toJSON()] },
       { type: 14 },
       { type: 1, components: [
-        { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Manage', style: 2 }
+        { type: 2, custom_id: 'season_manager', label: '← Manage', style: 2 }
       ]}
     ]
   };

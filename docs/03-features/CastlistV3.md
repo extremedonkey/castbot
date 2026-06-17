@@ -250,6 +250,15 @@ const isVirtual = castlistVirtualAdapter.isVirtualId(id);
 | CastlistV3 Hub | ✅ Full | Both | Admin only |
 | Production Menu | ❌ No | Legacy only | Production team |
 
+### Empty State & First-Run Onboarding
+
+When `/castlist` finds **zero tribes** it shows the audience-aware "🏕️ No tribes added yet" screen (`buildNoTribesContainer()`) — not an error. Additionally, if an **admin** runs `/castlist` on the **default** castlist before completing setup, the Setup Wizard is surfaced as an **ephemeral follow-up** (admin-only nudge).
+
+- Gated by `isAdmin && castlistIdentifier === 'default' && !hasCompletedSetup(...)` — the **same** `hasCompletedSetup` signal as the `/menu` → Setup Wizard redirect.
+- **Never gates the castlist display on `hasSetup`** (pronoun/timezone roles ≠ "has a castlist"), so a server with tribes but no pronoun/timezone setup still displays normally. The nudge only fires when there are already zero tribes to show.
+- Delivered as an ephemeral follow-up (not a `@original` replace) so the wizard's Run Setup button is never publicly clickable.
+- Full rationale + guardrails: [CastlistArchitecture.md → Empty State & First-Run Onboarding](CastlistArchitecture.md#empty-state--first-run-onboarding-castlist).
+
 ## 💡 Key Architectural Decisions
 
 ### 1. Virtual Adapter Pattern

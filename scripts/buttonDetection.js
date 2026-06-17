@@ -62,7 +62,7 @@ const SAFE_TEST_BUTTONS = {
     priority: 5
   },
   'season_planner': {
-    custom_id: 'reeces_season_planner_mockup',
+    custom_id: 'season_manager',
     label: '📝 Season Planner',
     style: 1, // Primary (blue)
     priority: 2

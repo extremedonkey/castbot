@@ -327,7 +327,7 @@ export function handleEditSeasonSubmit(fields) {
       },
       { type: 14 },
       { type: 1, components: [
-        { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Season Planner', style: 2 }
+        { type: 2, custom_id: 'season_manager', label: '← Season Planner', style: 2 }
       ]}
     ]
   };

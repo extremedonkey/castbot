@@ -479,7 +479,7 @@ export async function generateSeasonAppRankingUI({
   containerComponents.push({
     type: 1,
     components: [
-      { type: 2, custom_id: `reeces_season_planner_mockup`, label: '← Seasons', style: 2 },
+      { type: 2, custom_id: `season_manager`, label: '← Seasons', style: 2 },
       { type: 2, custom_id: `ranking_view_all_scores_${configId}${ephemeralSuffix}`, label: 'View All Scores', style: 2, emoji: { name: '📊' } }
     ]
   });

@@ -386,7 +386,7 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   // Bottom row: Seasons (+ pagination if needed) — back to the unified Season Manager selector
   const bottomButtons = [
-    { type: 2, custom_id: `reeces_season_planner_mockup`, label: '← Seasons', style: 2 },
+    { type: 2, custom_id: `season_manager`, label: '← Seasons', style: 2 },
   ];
   if (regularQuestions.length > questionsPerPage) {
     const prevDisabled = currentPage === 0;
@@ -920,7 +920,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Season Manager (unified entry — selector leads to Planner ⇄ Apps views)
   adminButtons.push(
     new ButtonBuilder()
-      .setCustomId('reeces_season_planner_mockup')
+      .setCustomId('season_manager')
       .setLabel('Season Manager')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('📅')
@@ -2848,6 +2848,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
       if (validTribes.length === 0) {
         const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+
+        // Audience-safe empty state for everyone (unchanged behavior).
         await DiscordRequest(endpoint, {
           method: 'PATCH',
           body: {
@@ -2855,6 +2857,32 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
           }
         });
+
+        // First-run nudge: if an ADMIN runs /castlist on the DEFAULT castlist before completing
+        // setup, also surface the Setup Wizard as an EPHEMERAL FOLLOW-UP (admin-only).
+        // Guardrails: admin-only + default-castlist-only + setup-not-complete. It NEVER hides a
+        // real castlist (only fires when there are zero tribes to show). Why a follow-up rather
+        // than replacing @original: the deferred response's ephemerality is fixed earlier (before
+        // we know the castlist is empty), so a public defer can't be made ephemeral retroactively —
+        // and the wizard's Run Setup button must never be publicly clickable.
+        const ADMIN_MASK = PermissionFlagsBits.Administrator | PermissionFlagsBits.ManageGuild | PermissionFlagsBits.ManageRoles;
+        const isAdmin = !!member?.permissions && (BigInt(member.permissions) & ADMIN_MASK) !== 0n;
+        const isDefault = castlistIdentifier === 'default';
+        if (isAdmin && isDefault) {
+          const playerData = await loadPlayerData();
+          if (!hasCompletedSetup(playerData[guildId])) {
+            const { default: DiscordMessenger } = await import('./discordMessenger.js');
+            const { createFollowupMessage } = await import('./buttonHandlerFactory.js');
+            const hasPostedCastlist = playerData[guildId]?.setupProgress?.castlistPosted === true;
+            await createFollowupMessage(req.body.token, {
+              components: DiscordMessenger.createWelcomeComponents({
+                context: 'channel', hasSetup: false, hasCastlist: false, hasPostedCastlist
+              }),
+              ephemeral: true
+            });
+            console.log(`🧙 /castlist first-run: nudged admin with Setup Wizard (empty default castlist, guild ${guildId})`);
+          }
+        }
         return;
       }
 
@@ -8442,10 +8470,10 @@ To fix this:
           return buildProdGuidePage(page);
         }
       })(req, res, client);
-    } else if (custom_id === 'reeces_season_planner_mockup') {
-      // Season Planner — entry point: show season selector
+    } else if (custom_id === 'season_manager' || custom_id === 'reeces_season_planner_mockup') {
+      // Season Manager entry — show the season selector. ('reeces_season_planner_mockup' = legacy id, kept for cached messages.)
       return ButtonHandlerFactory.create({
-        id: 'reeces_season_planner_mockup',
+        id: 'season_manager',
         updateMessage: true,
         deferred: true,
         handler: async (context) => {
@@ -8537,7 +8565,7 @@ To fix this:
             { type: 14 },
             { type: 1, components: [
               { type: 2, custom_id: 'season_delete_mode', label: '🗑️ Delete another', style: 2 },
-              { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Manage', style: 2 }
+              { type: 2, custom_id: 'season_manager', label: '← Manage', style: 2 }
             ]}
           ]}]};
         }
@@ -8580,7 +8608,7 @@ To fix this:
             return { type: IRT.UPDATE_MESSAGE, data: { components: [{ type: 17, accent_color: 0xe74c3c, components: [
               { type: 10, content: '## ❌ Season not found' },
               { type: 14 },
-              { type: 1, components: [{ type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Seasons', style: 2 }] }
+              { type: 1, components: [{ type: 2, custom_id: 'season_manager', label: '← Seasons', style: 2 }] }
             ]}]}};
           }
 
@@ -10995,10 +11023,10 @@ To fix this:
 
           // ⚠️ DEPRECATED: this is the OLD "Apps" season picker. It now REDIRECTS to the unified
           // Season Manager (buildPlannerSelector) — which already defaults to the Apps view on select.
-          // New code MUST use 'reeces_season_planner_mockup' / buildPlannerSelector(), NOT this handler
+          // New code MUST use 'season_manager' / buildPlannerSelector(), NOT this handler
           // and NOT the 'entity_select_seasons' selector. Kept only to migrate legacy configs + redirect
           // anything still linking here. See RaP 0910 (Season Hub unification).
-          console.warn(`⚠️ DEPRECATED season_management_menu hit (user ${userId}) — redirecting to the Season Manager. Update the caller to use reeces_season_planner_mockup / buildPlannerSelector().`);
+          console.warn(`⚠️ DEPRECATED season_management_menu hit (user ${userId}) — redirecting to the Season Manager. Update the caller to use season_manager / buildPlannerSelector().`);
 
           const { buildPlannerSelector } = await import('./seasonPlanner.js');
           const plannerView = await buildPlannerSelector(guildId);
@@ -13758,7 +13786,7 @@ To fix this:
                     { type: 2, custom_id: `planner_apps_${configId}`, label: 'Apps', style: 2, emoji: { name: '📝' } },
                     { type: 2, custom_id: `apps_planner_${configId}`, label: 'Planner', style: 2, emoji: { name: '📅' } },
                     { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
-                    { type: 2, custom_id: `reeces_season_planner_mockup`, label: '← Seasons', style: 2 }
+                    { type: 2, custom_id: `season_manager`, label: '← Seasons', style: 2 }
                   ]},
                   { type: 14 },
                   { type: 10, content: `📭 **No applications yet** for this season.\n-# Applicants appear here once they apply via this season's application button.` }
@@ -40804,7 +40832,7 @@ Your server is now ready for Tycoons gameplay!`;
               components: [{ type: 17, accent_color: 0xe74c3c, components: [
                 { type: 10, content: `## ❌ Validation Errors\n${validation.errors.map(e => `- ${e}`).join('\n')}` },
                 { type: 14 },
-                { type: 1, components: [{ type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Try Again', style: 2 }] }
+                { type: 1, components: [{ type: 2, custom_id: 'season_manager', label: '← Try Again', style: 2 }] }
               ]}]
             };
           }
@@ -40828,7 +40856,7 @@ Your server is now ready for Tycoons gameplay!`;
                 { type: 14 },
                 { type: 1, components: [
                   { type: 2, custom_id: `planner_force_setup_${configId}`, label: 'Set Up Planner', style: 1, emoji: { name: '📅' } },
-                  { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Back', style: 2 }
+                  { type: 2, custom_id: 'season_manager', label: '← Back', style: 2 }
                 ]}
               ]}]};
             }
@@ -40849,7 +40877,7 @@ Your server is now ready for Tycoons gameplay!`;
               { type: 14 },
               { type: 1, components: [
                 { type: 2, custom_id: `planner_force_setup_${result.configId}`, label: 'Set Up Planner', style: 1, emoji: { name: '📅' } },
-                { type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Back', style: 2 }
+                { type: 2, custom_id: 'season_manager', label: '← Back', style: 2 }
               ]}
             ]}]};
           }
@@ -40910,7 +40938,7 @@ Your server is now ready for Tycoons gameplay!`;
           return { components: [{ type: 17, accent_color: 0x9b59b6, components: [
             { type: 10, content: '📝 Season Planner has been upgraded! Use the new Season Planner button.' },
             { type: 14 },
-            { type: 1, components: [{ type: 2, custom_id: 'reeces_season_planner_mockup', label: '← Season Planner', style: 2 }] }
+            { type: 1, components: [{ type: 2, custom_id: 'season_manager', label: '← Season Planner', style: 2 }] }
           ]}]};
         }
       })(req, res, client);
@@ -50418,7 +50446,7 @@ Your server is now ready for Tycoons gameplay!`;
         const resultSelectId = entityType === 'seasons' ? 'planner_select_season'
           : entityType === 'seasons_delete' ? 'season_delete_select'
           : `entity_select_${entityType}`;
-        const backToMenuId = entityType === 'seasons' ? 'reeces_season_planner_mockup'
+        const backToMenuId = entityType === 'seasons' ? 'season_manager'
           : entityType === 'seasons_delete' ? 'season_delete_mode'
           : `safari_manage_${entityType === 'item' ? 'items' : entityType === 'store' ? 'stores' : entityType === 'safari_button' ? 'safari_buttons' : 'items'}`;
         const entityDisplay = (entityType === 'seasons' || entityType === 'seasons_delete') ? 'season' : entityType;

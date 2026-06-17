@@ -351,7 +351,7 @@ class DiscordMessenger {
 
     // Task 2 — Season Manager: gated on hasSetup, no done-state (optional task)
     const seasonManagerButton = buildWizardTaskButton({
-      customId: 'season_management_menu', emoji: '📅', label: 'Season Manager',
+      customId: 'season_manager', emoji: '📅', label: 'Season Manager',
       gate: hasSetup
     });
 

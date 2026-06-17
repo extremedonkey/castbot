@@ -98,21 +98,20 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
-  'reeces_season_planner_mockup': {
-    label: 'Season Planner',
-    description: 'Season Planner — plan rounds, swaps, merge, FTC for a season',
-    emoji: '📝',
-    style: 'Primary',
-    parent: 'reeces_stuff',
-    restrictedUser: '391415444084490240',
-    category: 'experimental'
+  'season_manager': {
+    label: 'Season Manager',
+    description: 'Season Manager — unified entry for a season (Applications, Planner, Ranking, delete)',
+    emoji: '📅',
+    style: 'Secondary',
+    parent: 'viral_menu',
+    category: 'season_management'
   },
   'planner_select_season': {
     label: 'Season Select',
     description: 'Select a season to plan or create new',
     emoji: '📅',
     style: 'String Select',
-    parent: 'reeces_season_planner_mockup',
+    parent: 'season_manager',
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
@@ -121,7 +120,7 @@ export const BUTTON_REGISTRY = {
     description: 'Pagination for Season Planner rounds view',
     emoji: '📄',
     style: 'Secondary',
-    parent: 'reeces_season_planner_mockup',
+    parent: 'season_manager',
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
@@ -130,7 +129,7 @@ export const BUTTON_REGISTRY = {
     description: 'Select a round action in Season Planner',
     emoji: '📝',
     style: 'String Select',
-    parent: 'reeces_season_planner_mockup',
+    parent: 'season_manager',
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
@@ -297,7 +296,7 @@ export const BUTTON_REGISTRY = {
     description: 'Edit free-form season ideas and brainstorming notes',
     emoji: '💡',
     style: 'Secondary',
-    parent: 'reeces_season_planner_mockup',
+    parent: 'season_manager',
     requiresModal: true,
     category: 'experimental'
   },
@@ -306,7 +305,7 @@ export const BUTTON_REGISTRY = {
     description: 'Edit season details in Season Planner',
     emoji: '✏️',
     style: 'Secondary',
-    parent: 'reeces_season_planner_mockup',
+    parent: 'season_manager',
     requiresModal: true,
     restrictedUser: '391415444084490240',
     category: 'experimental'
@@ -316,7 +315,7 @@ export const BUTTON_REGISTRY = {
     description: 'Set up planner data for existing season',
     emoji: '📅',
     style: 'Primary',
-    parent: 'reeces_season_planner_mockup',
+    parent: 'season_manager',
     requiresModal: true,
     restrictedUser: '391415444084490240',
     category: 'experimental'
@@ -326,7 +325,7 @@ export const BUTTON_REGISTRY = {
     description: 'Post schedule timeline image to channel',
     emoji: '📋',
     style: 'Secondary',
-    parent: 'reeces_season_planner_mockup',
+    parent: 'season_manager',
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
@@ -335,7 +334,7 @@ export const BUTTON_REGISTRY = {
     description: 'Post calendar image to channel',
     emoji: '📅',
     style: 'Secondary',
-    parent: 'reeces_season_planner_mockup',
+    parent: 'season_manager',
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
@@ -344,7 +343,7 @@ export const BUTTON_REGISTRY = {
     description: 'Season applications (not yet implemented)',
     emoji: '📝',
     style: 'Secondary',
-    parent: 'reeces_season_planner_mockup',
+    parent: 'season_manager',
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
@@ -353,7 +352,7 @@ export const BUTTON_REGISTRY = {
     description: 'Jump from Season Applications to the Season Planner for this season',
     emoji: '📅',
     style: 'Secondary',
-    parent: 'reeces_season_planner_mockup',
+    parent: 'season_manager',
     category: 'season_applications'
   },
   'planner_tribes_*': {
@@ -361,7 +360,7 @@ export const BUTTON_REGISTRY = {
     description: 'Tribe management (not yet implemented)',
     emoji: '🔥',
     style: 'Secondary',
-    parent: 'reeces_season_planner_mockup',
+    parent: 'season_manager',
     restrictedUser: '391415444084490240',
     category: 'experimental'
   },
@@ -370,7 +369,7 @@ export const BUTTON_REGISTRY = {
     description: 'Legacy mockup pagination — redirects to planner selector',
     emoji: '📄',
     style: 'Secondary',
-    parent: 'reeces_season_planner_mockup',
+    parent: 'season_manager',
     restrictedUser: '391415444084490240',
     category: 'legacy'
   },
@@ -379,7 +378,7 @@ export const BUTTON_REGISTRY = {
     description: 'Legacy mockup select — redirects to planner selector',
     emoji: '📝',
     style: 'Secondary',
-    parent: 'reeces_season_planner_mockup',
+    parent: 'season_manager',
     restrictedUser: '391415444084490240',
     category: 'legacy'
   },
@@ -388,7 +387,7 @@ export const BUTTON_REGISTRY = {
     description: 'Legacy mockup edit — redirects to planner selector',
     emoji: '✏️',
     style: 'Secondary',
-    parent: 'reeces_season_planner_mockup',
+    parent: 'season_manager',
     restrictedUser: '391415444084490240',
     category: 'legacy'
   },
@@ -3108,7 +3107,7 @@ export const BUTTON_REGISTRY = {
   // === APPLICATION MANAGEMENT SYSTEM ===
   'season_management_menu': {
     label: 'Apps (deprecated)',
-    description: '⚠️ DEPRECATED old Apps season picker — redirects to the Season Manager. Use reeces_season_planner_mockup / buildPlannerSelector() instead.',
+    description: '⚠️ DEPRECATED old Apps season picker — redirects to the Season Manager. Use season_manager / buildPlannerSelector() instead.',
     emoji: '📝',
     style: 'Primary',
     category: 'application_management'

@@ -369,6 +369,27 @@ function getGuildTribes(guildId, castlistName) {
 | Placement edit | getTribesForCastlist() | UPDATE_MESSAGE | [Placements.md](Placements.md) |
 | 🍒 Compact Castlist | getTribesForCastlist() | Public PNG + ephemeral confirmation | [CompactCastlist.md](CompactCastlist.md) |
 
+## Empty State & First-Run Onboarding (`/castlist`)
+
+When `/castlist` resolves **zero tribes** for the requested castlist (`validTribes.length === 0`, app.js), it does **not** error — it PATCHes in `buildNoTribesContainer()`: the audience-aware "🏕️ No tribes added yet" screen (a "🎬 Prod Team Member?" section with the **Castlist Manager** button, and a "🍿 Spectator / Player?" section telling non-admins to ping production). This is the empty-state for **everyone** and is unchanged.
+
+### Admin first-run Setup Wizard nudge (June 2026)
+
+In that same empty branch, if an **admin** runs `/castlist` on the **default** castlist **before completing setup**, CastBot *additionally* surfaces the Setup Wizard as an **ephemeral follow-up** (admin-only).
+
+```
+gate = isAdmin && castlistIdentifier === 'default' && !hasCompletedSetup(playerData[guildId])
+```
+
+- `hasCompletedSetup` is the **same `roleManager.hasCompletedSetup`** gate used by the `/menu` → Setup Wizard redirect (`createProductionMenuInterface`, ≥1 pronoun + ≥1 timezone role). One source of truth.
+- `isAdmin` = `Administrator | ManageGuild | ManageRoles` bit on the interaction member.
+
+**Why `hasSetup` is NOT used to gate the castlist *display* itself** (only the nudge): `hasSetup` (pronoun/timezone roles) is independent of "has a displayable castlist." A server can have tribes but never configure pronouns/timezones — gating display on `hasSetup` would **hide a working castlist**. The nudge avoids this entirely because it only fires when there are already **zero tribes to show**.
+
+**Why an ephemeral follow-up, not a replacement of `@original`:** the deferred response's ephemerality is fixed earlier (app.js, by `canSendMessagesInChannel`) — *before* we know the castlist is empty — so a public defer can't be made ephemeral retroactively. The wizard's **Run Setup** button must never be publicly clickable, so the wizard is delivered as an ephemeral follow-up (only the invoking admin sees/clicks it); the public/channel still gets the safe no-tribes container.
+
+**Guardrails (all three required):** admin-only · default-castlist-only · setup-not-complete. The "hide a real castlist" failure mode is structurally impossible (only fires on zero tribes). Performance impact is negligible — the extra `loadPlayerData` + follow-up happen only in the rare admin-on-empty-default-before-setup case. Gate predicate is unit-tested in `tests/castlistFirstRun.test.js`.
+
 ## Critical Implementation Notes
 
 ### Discord.js Member Caching

@@ -65,10 +65,10 @@ describe('Setup Wizard — Run Setup (Task 1) action button', () => {
 describe('Setup Wizard — gating model (gate disables, done greens)', () => {
   // gate signals: Season+Castlist = hasSetup, Post = hasCastlist
   it('Season Manager (Task 2) gated on hasSetup, no done-state', () => {
-    assert.equal(taskButton('season_management_menu', { hasSetup: false }).disabled, true);
-    assert.equal(taskButton('season_management_menu', { hasSetup: true }).disabled, false);
+    assert.equal(taskButton('season_manager', { hasSetup: false }).disabled, true);
+    assert.equal(taskButton('season_manager', { hasSetup: true }).disabled, false);
     // never goes green (no done-state)
-    assert.equal(taskButton('season_management_menu', { hasSetup: true }).style, 2);
+    assert.equal(taskButton('season_manager', { hasSetup: true }).style, 2);
   });
 
   it('Castlist Manager (Task 3) gated on hasSetup, green when default castlist has tribes', () => {
@@ -117,7 +117,7 @@ describe('Setup Wizard — channel layout uses Section + button accessory', () =
   it('wires the right button to each task section, in order', () => {
     const sections = channel({ hasSetup: true, hasCastlist: true }).filter(c => c.type === 9);
     assert.equal(sections[0].accessory.custom_id, 'setup_castbot');
-    assert.equal(sections[1].accessory.custom_id, 'season_management_menu');
+    assert.equal(sections[1].accessory.custom_id, 'season_manager');
     assert.equal(sections[2].accessory.custom_id, 'castlist_hub_main_new');
     assert.equal(sections[3].accessory.custom_id, 'wizard_post_castlist');
   });
