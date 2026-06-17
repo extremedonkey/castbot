@@ -43965,9 +43965,16 @@ Your server is now ready for Tycoons gameplay!`;
 
         // Parse Label components (Type 18) BY custom_id — both create and edit modals carry
         // Season Name + optional planner estimates (no description field) (RaP 0910).
+        // Defensive: handle BOTH submit shapes — Label ({component}) and ActionRow ({components}).
         const fields = {};
         for (const comp of (components || [])) {
-          if (comp.component?.custom_id) fields[comp.component.custom_id] = comp.component.value;
+          if (comp.component?.custom_id) {
+            fields[comp.component.custom_id] = comp.component.value;
+          } else if (comp.components) {
+            for (const c of comp.components) {
+              if (c.custom_id) fields[c.custom_id] = c.value;
+            }
+          }
         }
 
         // Parse custom_id to detect create vs edit mode

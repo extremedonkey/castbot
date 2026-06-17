@@ -175,6 +175,50 @@ describe('Incremental planner setup — partial estimates are persisted (the sav
   });
 });
 
+describe('updateSeason merge — completing the planner across separate edits', () => {
+  // Mirror of updateSeason's merge: only PROVIDED estimates are written; rounds generate when the
+  // merged CONFIG (not one submit) holds all four.
+  function applyEdit(config, fields) {
+    const { data } = validatePlannerFields({ season_name: 'S', ...fields });
+    if (data.estimatedTotalPlayers != null) config.estimatedTotalPlayers = data.estimatedTotalPlayers;
+    if (data.estimatedSwaps != null) config.estimatedSwaps = data.estimatedSwaps;
+    if (data.estimatedFTCPlayers != null) config.estimatedFTCPlayers = data.estimatedFTCPlayers;
+    if (data.estimatedStartDate != null) config.estimatedStartDate = data.estimatedStartDate;
+    return config.estimatedTotalPlayers != null && config.estimatedSwaps != null
+      && config.estimatedFTCPlayers != null && config.estimatedStartDate != null; // configComplete
+  }
+
+  it('accumulates estimates across edits and only completes on the last field', () => {
+    const config = {};
+    assert.equal(applyEdit(config, { est_swaps: '2' }), false);
+    assert.equal(applyEdit(config, { est_ftc: '3' }), false);
+    assert.equal(applyEdit(config, { est_start_date: '03/07/2026' }), false);
+    // matches the real "nbj" data: swaps/ftc/date set, players still missing, no rounds
+    assert.equal(config.estimatedSwaps, 2);
+    assert.equal(config.estimatedFTCPlayers, 3);
+    assert.equal(config.estimatedTotalPlayers, undefined);
+    // adding players finally completes it → rounds would generate
+    assert.equal(applyEdit(config, { est_players: '18' }), true);
+    assert.equal(config.estimatedTotalPlayers, 18);
+  });
+
+  it('adding one estimate never wipes the others (blank fields ignored — the bug)', () => {
+    const config = { estimatedSwaps: 2, estimatedFTCPlayers: 3, estimatedStartDate: 123 };
+    const complete = applyEdit(config, { est_players: '18' }); // only players provided; rest blank
+    assert.equal(config.estimatedSwaps, 2);
+    assert.equal(config.estimatedFTCPlayers, 3);
+    assert.equal(config.estimatedStartDate, 123);
+    assert.equal(config.estimatedTotalPlayers, 18);
+    assert.equal(complete, true);
+  });
+
+  it('a blank submit does not wipe existing estimates', () => {
+    const config = { estimatedTotalPlayers: 18, estimatedSwaps: 2, estimatedFTCPlayers: 3, estimatedStartDate: 123 };
+    assert.equal(applyEdit(config, {}), true);
+    assert.equal(config.estimatedTotalPlayers, 18);
+  });
+});
+
 describe('Modal start-date pre-fill — create mode stays blank (regression: title-only create)', () => {
   // Mirrors buildSeasonPlannerModal's start-date pre-fill: existing season → its date, create → BLANK.
   function startDateValue(existing) {

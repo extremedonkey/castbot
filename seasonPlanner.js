@@ -918,13 +918,13 @@ export async function createSeason(guildId, userId, data) {
     ],
   };
 
-  // Persist whatever estimates were provided (may be partial — incremental planner setup). The
-  // Planner view prompts for whatever is still null. Round/challenge generation happens only when
-  // ALL FOUR are present & valid (hasPlannerData).
-  config.estimatedTotalPlayers = data.estimatedTotalPlayers;
-  config.estimatedSwaps = data.estimatedSwaps;
-  config.estimatedFTCPlayers = data.estimatedFTCPlayers;
-  config.estimatedStartDate = data.estimatedStartDate;
+  // Persist only the estimates that were PROVIDED (may be partial — incremental planner setup); never
+  // write null placeholders. The Planner view prompts for whatever is still missing. Round/challenge
+  // generation happens only when ALL FOUR are present & valid (hasPlannerData).
+  if (data.estimatedTotalPlayers != null) config.estimatedTotalPlayers = data.estimatedTotalPlayers;
+  if (data.estimatedSwaps != null) config.estimatedSwaps = data.estimatedSwaps;
+  if (data.estimatedFTCPlayers != null) config.estimatedFTCPlayers = data.estimatedFTCPlayers;
+  if (data.estimatedStartDate != null) config.estimatedStartDate = data.estimatedStartDate;
   if (hasPlannerData) {
     config.currentSeasonRoundID = 1;
     config.seasonIdeas = 'Free-form section to brainstorm season themes, twists and challenges before assigning to rounds.';
@@ -966,24 +966,35 @@ export async function updateSeason(guildId, configId, data) {
   config.buttonText = buttonText;
   config.lastUpdated = Date.now();
 
-  // Persist each estimate individually so partial progress is saved (incremental planner setup —
-  // this is the actual fix for "adding one estimate didn't save"). null clears the field, matching
-  // the pre-filled modal the host just submitted.
-  config.estimatedTotalPlayers = data.estimatedTotalPlayers;
-  config.estimatedSwaps = data.estimatedSwaps;
-  config.estimatedFTCPlayers = data.estimatedFTCPlayers;
-  config.estimatedStartDate = data.estimatedStartDate;
+  // MERGE each PROVIDED estimate into the config (incremental planner setup). NEVER wipe a
+  // previously-saved value on a blank field — the modal pre-fill can be imperfect, so a host
+  // "adding players" must not clear swaps/ftc/date. This is the real fix for the partial-save bug.
+  if (data.estimatedTotalPlayers != null) config.estimatedTotalPlayers = data.estimatedTotalPlayers;
+  if (data.estimatedSwaps != null) config.estimatedSwaps = data.estimatedSwaps;
+  if (data.estimatedFTCPlayers != null) config.estimatedFTCPlayers = data.estimatedFTCPlayers;
+  if (data.estimatedStartDate != null) config.estimatedStartDate = data.estimatedStartDate;
+
+  // Rounds generate once the merged CONFIG (not just this single submit) holds all four estimates —
+  // and only if it has no rounds yet. Existing rounds are never regenerated. This lets a host
+  // complete the planner across several edits (players in one, swaps in another, …).
+  const configComplete = config.estimatedTotalPlayers != null && config.estimatedSwaps != null
+    && config.estimatedFTCPlayers != null && config.estimatedStartDate != null;
 
   let generatedRounds = false;
-  if (data.hasPlannerData) {
+  if (configComplete) {
     config.currentSeasonRoundID = config.currentSeasonRoundID || 1;
     config.seasonIdeas = config.seasonIdeas || 'Free-form section to brainstorm season themes, twists and challenges before assigning to rounds.';
     if (config.stage === 'draft') config.stage = 'planning';
 
     const existingRounds = playerData[guildId]?.seasonRounds?.[config.seasonId];
     if (!existingRounds || Object.keys(existingRounds).length === 0) {
-      // First-time setup — safe to generate. Existing rounds are NEVER regenerated here.
-      await generateAndStoreRounds(playerData, guildId, config.seasonId, data, config.createdBy);
+      // First-time setup — generate from the MERGED config values (not the single submit's data).
+      await generateAndStoreRounds(playerData, guildId, config.seasonId, {
+        estimatedTotalPlayers: config.estimatedTotalPlayers,
+        estimatedSwaps: config.estimatedSwaps,
+        estimatedFTCPlayers: config.estimatedFTCPlayers,
+        estimatedStartDate: config.estimatedStartDate,
+      }, config.createdBy);
       generatedRounds = true;
     }
   }
@@ -991,7 +1002,7 @@ export async function updateSeason(guildId, configId, data) {
   await savePlayerData(playerData);
   console.log(`✅ Season updated: "${data.seasonName}" (${configId})${generatedRounds ? ' — generated rounds + challenges' : ''}`);
 
-  return { seasonId: config.seasonId, hasPlannerData: !!data.hasPlannerData, generatedRounds };
+  return { seasonId: config.seasonId, hasPlannerData: configComplete, generatedRounds };
 }
 
 // ─────────────────────────────────────────────
