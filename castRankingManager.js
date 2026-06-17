@@ -13,6 +13,33 @@
 import { ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
 import { loadPlayerData } from './storage.js';
 
+// Shared Cast Ranking header — used by both the populated view and the empty state (no duplication)
+const rankingHeader = (seasonName) => ({ type: 10, content: `## 🏆 Cast Ranking\n> ### ${seasonName}` });
+
+/**
+ * Empty-state Cast Ranking screen (season has no applications yet). Reuses the shared header +
+ * the active-tab nav row so it's identical chrome to the populated view (Ranking tab shaded blue).
+ * @param {string} seasonName
+ * @param {string} configId
+ */
+export async function buildRankingEmptyState(seasonName, configId) {
+  const { buildSeasonNavRow } = await import('./seasonSelector.js');
+  return {
+    flags: (1 << 15), // IS_COMPONENTS_V2 (factory adds ephemeral / strips for updateMessage)
+    components: [{
+      type: 17,
+      components: [
+        rankingHeader(seasonName),
+        buildSeasonNavRow(configId, 'ranking'),
+        { type: 14 },
+        { type: 10, content: `📭 **No applications yet** for this season.\n-# Applicants appear here once they apply via this season's application button.` },
+        { type: 14 },
+        { type: 1, components: [{ type: 2, custom_id: 'season_manager', label: '← Seasons', style: 2 }] }
+      ]
+    }]
+  };
+}
+
 /**
  * Generate complete Cast Ranking UI for a specific applicant
  * 
@@ -251,10 +278,7 @@ export async function generateSeasonAppRankingUI({
 
   const { buildSeasonNavRow } = await import('./seasonSelector.js');
   const containerComponents = [
-    {
-      type: 10, // Text Display component
-      content: `## 🏆 Cast Ranking\n> ### ${seasonName}`
-    },
+    rankingHeader(seasonName),
     // Active-tab nav row — Apps · Planner · Ranking · Edit (current view = Ranking, shaded blue)
     buildSeasonNavRow(configId, 'ranking'),
   ];

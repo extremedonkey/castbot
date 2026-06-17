@@ -13795,23 +13795,9 @@ To fix this:
           }
 
           if (allApplications.length === 0) {
-            return {
-              flags: (1 << 15), // IS_COMPONENTS_V2 (factory handles ephemeral / strips for updateMessage)
-              components: [{
-                type: 17,
-                components: [
-                  { type: 10, content: `## 🏆 Cast Ranking\n> ### ${seasonName}` },
-                  { type: 1, components: [
-                    { type: 2, custom_id: `planner_apps_${configId}`, label: 'Apps', style: 2, emoji: { name: '📝' } },
-                    { type: 2, custom_id: `apps_planner_${configId}`, label: 'Planner', style: 2, emoji: { name: '📅' } },
-                    { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
-                    { type: 2, custom_id: `season_manager`, label: '← Seasons', style: 2 }
-                  ]},
-                  { type: 14 },
-                  { type: 10, content: `📭 **No applications yet** for this season.\n-# Applicants appear here once they apply via this season's application button.` }
-                ]
-              }]
-            };
+            // Reuse the shared Ranking chrome (header + active-tab nav row) — no duplicated UI
+            const { buildRankingEmptyState } = await import('./castRankingManager.js');
+            return await buildRankingEmptyState(seasonName, configId);
           }
 
           // Get first application for initial display
