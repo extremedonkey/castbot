@@ -400,12 +400,12 @@ class DiscordMessenger {
       setupHeader: '## ``` 🪛 1. Click the Run Setup button```',
       setupBody: '-# > ⌚ Takes 30 seconds\nCastBot uses Discord Roles for player Pronouns and Timezones. Setup will automatically create pronoun and timezone roles in your server, and add them to CastBot. Don\'t worry if you already have some - CastBot will detect and add them to CastBot.',
       seasonHeader: '## ``` 📅 2. Create a Season Application process (optional)```',
-      seasonBody: 'Click **Season Manager**, create a season, add some questions and then click **Post to Channel**. If you aren\'t ready to open your applications, you can test this out in a production bots / testing channel.',
+      seasonBody: 'Click `📅 Season Manager`, create a season, add some questions and then click `#️⃣ Post to Channel`. If you aren\'t ready to open your applications, you can test this out in a production bots / testing channel.',
       castlistHeader: '## ``` ✏️ 3. Create your first Castlist```',
-      castlistBody: '-# > ⌚ Takes 2 minutes\nClick the **Castlist Manager** button to the right, then under *Select a castlist to manage..* choose ✅ Active Castlist. In the \'Tribe Roles\' pop-up, select a role to add to the castlist. If you are just testing the feature out ahead of the season, choose a role like your @Production role.',
+      castlistBody: '-# > ⌚ Takes 2 minutes\nClick the `📋 Castlist Manager` button to the right, then under *Select a castlist to manage..* choose ✅ Active Castlist. In the \'Tribe Roles\' pop-up, select a role to add to the castlist. If you are just testing the feature out ahead of the season, choose a role like your @Production role.',
       displayHeader: '## ``` 📋 4. Display your Castlist```',
-      displayBody: 'In any Discord channel (including this one), type <:cb_blue> `/castlist` to display the castlist you just made. You can also click the 📃 Post Castlist button to the right.',
-      footer: 'To get back to CastBot, type `/menu` from any channel in your server! Once your season is up and running, use `/castlist` to summon the active castlist showing players. You can get back to this menu from /menu → Tools'
+      displayBody: 'In any Discord channel (including this one), type <:cb_blue> `/castlist` to display the castlist you just made. You can also click the `📃 Post Castlist` button to the right.',
+      footer: 'To get back to CastBot, type `/menu` from any channel in your server! Once your season is up and running, use `/castlist` to summon the active castlist showing players. You can get back to this menu from `/menu` → `🪛 Tools`'
     };
 
     // Build components based on context
