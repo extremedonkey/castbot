@@ -2873,47 +2873,20 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       if (validTribes.length === 0) {
         const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
 
-        // First-run nudge gate: ADMIN runs /castlist on the DEFAULT castlist before completing setup.
-        // Guardrails: admin-only + default-castlist-only + setup-not-complete. NEVER hides a real
-        // castlist (only fires when there are zero tribes to show). Predicate tested in tests/castlistFirstRun.test.js.
-        const ADMIN_MASK = PermissionFlagsBits.Administrator | PermissionFlagsBits.ManageGuild | PermissionFlagsBits.ManageRoles;
-        const isAdmin = !!member?.permissions && (BigInt(member.permissions) & ADMIN_MASK) !== 0n;
-        const isDefault = castlistIdentifier === 'default';
-        let showWizard = false;
-        let hasPostedCastlist = false;
-        if (isAdmin && isDefault) {
-          const playerData = await loadPlayerData();
-          if (!hasCompletedSetup(playerData[guildId])) {
-            showWizard = true;
-            hasPostedCastlist = playerData[guildId]?.setupProgress?.castlistPosted === true;
-          }
-        }
-
-        if (showWizard) {
-          // Show ONLY the Setup Wizard, and ONLY ephemerally. Why this dance: /castlist fixes the
-          // response's ephemerality at defer time (before emptiness is known), so a public defer
-          // can't be made ephemeral retroactively — and the wizard's Run Setup button must never be
-          // publicly clickable. So we post the wizard as an EPHEMERAL follow-up (admin-only) and then
-          // DELETE the public deferred placeholder so the wizard is the only message left.
+        if (wizardNudge) {
+          // We deferred EPHEMERAL for this case (admin + default + no tribes + setup incomplete),
+          // so PATCH @original with the Setup Wizard → it IS the ephemeral, admin-only response.
+          // No follow-up + delete (Discord clears ephemeral follow-ups when @original is deleted).
           const { default: DiscordMessenger } = await import('./discordMessenger.js');
-          const { createFollowupMessage } = await import('./buttonHandlerFactory.js');
-          await createFollowupMessage(req.body.token, {
-            components: DiscordMessenger.createWelcomeComponents({
-              context: 'channel', hasSetup: false, hasCastlist: false, hasPostedCastlist
-            }),
-            ephemeral: true
+          await DiscordRequest(endpoint, {
+            method: 'PATCH',
+            body: {
+              components: DiscordMessenger.createWelcomeComponents({
+                context: 'channel', hasSetup: false, hasCastlist: false, hasPostedCastlist: wizardHasPostedCastlist
+              }),
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+            }
           });
-          try {
-            await DiscordRequest(endpoint, { method: 'DELETE' });
-          } catch (delErr) {
-            // Couldn't delete the placeholder — resolve it to the no-tribes container so it isn't
-            // stuck on "thinking..." (graceful fallback: wizard + no-tribes, like before).
-            console.warn('⚠️ /castlist first-run: could not delete placeholder, falling back to no-tribes:', delErr.message);
-            await DiscordRequest(endpoint, {
-              method: 'PATCH',
-              body: { components: [buildNoTribesContainer()], flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL }
-            }).catch(() => {});
-          }
           console.log(`🧙 /castlist first-run: showing Setup Wizard only (empty default castlist, guild ${guildId})`);
         } else {
           // Audience-safe empty state for everyone else (unchanged behavior).
