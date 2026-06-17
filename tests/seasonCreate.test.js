@@ -219,6 +219,65 @@ describe('updateSeason merge — completing the planner across separate edits', 
   });
 });
 
+describe('updateSeason — structural estimate change triggers round regeneration', () => {
+  // Mirror of updateSeason: merge estimates, then decide whether the round STRUCTURE must regenerate.
+  // Players/swaps/FTC are structural; the start date is not (dates recompute on render).
+  function editAndCheckStructural(config, fields) {
+    const { data } = validatePlannerFields({ season_name: 'S', ...fields });
+    const prevPlayers = config.estimatedTotalPlayers;
+    const prevSwaps = config.estimatedSwaps;
+    const prevFtc = config.estimatedFTCPlayers;
+    if (data.estimatedTotalPlayers != null) config.estimatedTotalPlayers = data.estimatedTotalPlayers;
+    if (data.estimatedSwaps != null) config.estimatedSwaps = data.estimatedSwaps;
+    if (data.estimatedFTCPlayers != null) config.estimatedFTCPlayers = data.estimatedFTCPlayers;
+    if (data.estimatedStartDate != null) config.estimatedStartDate = data.estimatedStartDate;
+    return config.estimatedTotalPlayers !== prevPlayers
+      || config.estimatedSwaps !== prevSwaps
+      || config.estimatedFTCPlayers !== prevFtc;
+  }
+
+  const base = () => ({ estimatedTotalPlayers: 18, estimatedSwaps: 2, estimatedFTCPlayers: 3, estimatedStartDate: 100 });
+
+  it('regenerates when player count changes (18 → 20)', () => {
+    assert.equal(editAndCheckStructural(base(), { est_players: '20', est_swaps: '2', est_ftc: '3', est_start_date: '03/07/2026' }), true);
+  });
+  it('regenerates when FTC changes (3 → 2)', () => {
+    assert.equal(editAndCheckStructural(base(), { est_players: '18', est_swaps: '2', est_ftc: '2', est_start_date: '03/07/2026' }), true);
+  });
+  it('regenerates when swaps change (2 → 1)', () => {
+    assert.equal(editAndCheckStructural(base(), { est_players: '18', est_swaps: '1', est_ftc: '3', est_start_date: '03/07/2026' }), true);
+  });
+  it('does NOT regenerate on a date-only change (structure unchanged)', () => {
+    assert.equal(editAndCheckStructural(base(), { est_players: '18', est_swaps: '2', est_ftc: '3', est_start_date: '08/01/2027' }), false);
+  });
+  it('does NOT regenerate when re-submitting identical estimates', () => {
+    assert.equal(editAndCheckStructural(base(), { est_players: '18', est_swaps: '2', est_ftc: '3', est_start_date: '03/07/2026' }), false);
+  });
+  it('does NOT regenerate when a field comes back blank (merge keeps old value)', () => {
+    assert.equal(editAndCheckStructural(base(), { est_start_date: '03/07/2026' }), false); // only date present
+  });
+});
+
+describe('generateSeasonRounds round count — FTC F2 adds a round vs F3 (user-described logic)', () => {
+  // Playable rounds = F{totalPlayers}..F{ftcPlayers} inclusive, plus the F1 reunion.
+  function roundCount(totalPlayers, ftcPlayers) {
+    let n = 0;
+    for (let f = totalPlayers; f >= ftcPlayers; f--) n++;
+    return n + 1; // + reunion
+  }
+
+  it('F2 has exactly one more round than F3 (the extra F2 tribal/challenge)', () => {
+    assert.equal(roundCount(18, 2) - roundCount(18, 3), 1);
+  });
+  it('more players → more rounds (end date pushed back)', () => {
+    assert.ok(roundCount(20, 3) > roundCount(18, 3));
+    assert.equal(roundCount(20, 3) - roundCount(18, 3), 2);
+  });
+  it('18 players / F3 = 17 rounds (16 playable + reunion)', () => {
+    assert.equal(roundCount(18, 3), 17);
+  });
+});
+
 describe('Modal start-date pre-fill — create mode stays blank (regression: title-only create)', () => {
   // Mirrors buildSeasonPlannerModal's start-date pre-fill: existing season → its date, create → BLANK.
   function startDateValue(existing) {
