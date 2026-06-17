@@ -901,113 +901,41 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // hasRoles kept for backward compatibility but will always be true here
   const hasRoles = true;
 
-  // Create admin control buttons (reorganized for Castlists, Applications and Season Management section)
-  const adminButtons = [];
+  // Setup completion signals — the Setup button (Advanced row) is RED until ALL onboarding
+  // steps are done, then grey. hasSetup is already true here (we return the wizard early otherwise),
+  // so this reduces to: a castlist with tribes + a posted castlist + a season created.
+  const { castlistManager } = await import('./castlistManager.js');
+  const setupHasCastlist = await castlistManager.defaultCastlistHasTribes(guildId);
+  const setupHasPostedCastlist = playerData[guildId]?.setupProgress?.castlistPosted === true;
+  const setupHasSeason = Object.keys(playerData[guildId]?.applicationConfigs || {}).length > 0;
+  const setupAllComplete = hasSetup && setupHasCastlist && setupHasPostedCastlist && setupHasSeason;
 
-  // Castlist Hub - now available to all production team members
-  adminButtons.push(
-    new ButtonBuilder()
-      .setCustomId('castlist_hub_main')
-      .setLabel('Castlist Manager')
-      .setStyle(ButtonStyle.Primary)
-      .setEmoji('📋')
-  );
-
-  // Season Manager (unified entry — selector leads to Planner ⇄ Apps views)
-  adminButtons.push(
-    new ButtonBuilder()
-      .setCustomId('season_manager')
-      .setLabel('Season Manager')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📅')
-  );
-
-  // Standard admin buttons
-  adminButtons.push(
-    new ButtonBuilder()
-      .setCustomId('admin_manage_player')
-      .setLabel('Player Manager')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🧑‍🤝‍🧑')
-    // Challenges moved to Safari row, Donate moved to Advanced Features row
-  );
-  
-  // Live Analytics button moved to Reece Stuff submenu
-  
+  // Castlists, Applications and Season Management row (+ Challenges, moved up from Idol Hunts)
+  const adminButtons = [
+    new ButtonBuilder().setCustomId('castlist_hub_main').setLabel('Castlist Manager').setStyle(ButtonStyle.Primary).setEmoji('📋'),
+    new ButtonBuilder().setCustomId('season_manager').setLabel('Season Manager').setStyle(ButtonStyle.Secondary).setEmoji('📅'),
+    new ButtonBuilder().setCustomId('admin_manage_player').setLabel('Player Manager').setStyle(ButtonStyle.Secondary).setEmoji('🧑‍🤝‍🧑'),
+    new ButtonBuilder().setCustomId('challenge_screen').setLabel('Challenges').setStyle(ButtonStyle.Secondary).setEmoji('🏃‍♀️')
+  ];
   const adminRow = new ActionRowBuilder().addComponents(adminButtons);
 
-  // Create Safari features row (Idol Hunts, Challenges and Safari section)
+  // Idol Hunts, Challenges and Safari row (+ Actions and Map, moved down from Advanced; Map is blue)
   const safariFeatureButtons = [
-    new ButtonBuilder()
-      .setCustomId('safari_store_manage_items')
-      .setLabel('Stores')
-      .setStyle(ButtonStyle.Primary)
-      .setEmoji('🏪'),
-    new ButtonBuilder()
-      .setCustomId('safari_manage_items')
-      .setLabel('Items')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📦'),
-    // 🗿 DEPRECATED: legacy "Player Admin" (safari_map_admin) moved to Reece's Stuff → Legacy.
-    // Superseded by the Player Manager (playerManagement.js createPlayerManagementUI / buildAdminPlayerMenu),
-    // reached via /menu → Manage Players (admin_manage_player). Do NOT re-add this to the main menu.
-    new ButtonBuilder()
-      .setCustomId('challenge_screen')
-      .setLabel('Challenges')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🏃‍♀️'),
-    new ButtonBuilder()
-      .setCustomId('safari_manage_currency')
-      .setLabel('Currency')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💰')
-    // Settings moved to Advanced Features row
+    new ButtonBuilder().setCustomId('safari_store_manage_items').setLabel('Stores').setStyle(ButtonStyle.Primary).setEmoji('🏪'),
+    new ButtonBuilder().setCustomId('safari_manage_items').setLabel('Items').setStyle(ButtonStyle.Secondary).setEmoji('📦'),
+    new ButtonBuilder().setCustomId('safari_manage_currency').setLabel('Currency').setStyle(ButtonStyle.Secondary).setEmoji('💰'),
+    new ButtonBuilder().setCustomId('safari_action_editor').setLabel('Actions').setStyle(ButtonStyle.Secondary).setEmoji('⚡'),
+    new ButtonBuilder().setCustomId('safari_map_explorer').setLabel('Map').setStyle(ButtonStyle.Primary).setEmoji('🗺️')
   ];
-
   const safariFeatureRow = new ActionRowBuilder().addComponents(safariFeatureButtons);
 
-  // Create Advanced Features row (Map Explorer + Analytics + Action Editor + Tools)
+  // 💎 Advanced row (+ Setup, moved from Tools menu — red until onboarding complete, else grey)
   const advancedFeaturesButtons = [
-    new ButtonBuilder()
-      .setCustomId('safari_map_explorer')
-      .setLabel('Map Admin')
-      .setStyle(ButtonStyle.Primary)
-      .setEmoji('🗺️')
+    new ButtonBuilder().setCustomId('prod_donate').setLabel('Donate').setStyle(ButtonStyle.Secondary).setEmoji('☕'),
+    new ButtonBuilder().setCustomId('castbot_settings').setLabel('Settings').setStyle(ButtonStyle.Secondary).setEmoji('⚙️'),
+    new ButtonBuilder().setCustomId('castbot_tools').setLabel('Tools').setStyle(ButtonStyle.Secondary).setEmoji('🪛'),
+    new ButtonBuilder().setCustomId('prod_setup_wizard').setLabel('Setup').setStyle(setupAllComplete ? ButtonStyle.Secondary : ButtonStyle.Danger).setEmoji('🧙')
   ];
-
-  // Analytics moved to Reece's Stuff menu (Tools → Reece's Stuff → Analytics)
-
-  // Add Actions button
-  advancedFeaturesButtons.push(
-    new ButtonBuilder()
-      .setCustomId('safari_action_editor')
-      .setLabel('Actions')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⚡')
-  );
-
-  // safari_rounds_menu moved to adminButtons row (relabeled to "Challenges")
-  // prod_safari_menu removed - buttons distributed to Production Menu and Map Explorer
-
-  // Add Donate, Settings, Tools
-  advancedFeaturesButtons.push(
-    new ButtonBuilder()
-      .setCustomId('prod_donate')
-      .setLabel('Donate')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('☕'),
-    new ButtonBuilder()
-      .setCustomId('castbot_settings')
-      .setLabel('Settings')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⚙️'),
-    new ButtonBuilder()
-      .setCustomId('castbot_tools')
-      .setLabel('Tools')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🪛')
-  );
-
   const advancedFeaturesRow = new ActionRowBuilder().addComponents(advancedFeaturesButtons);
   
   // Component validation moved to utils.js - use countComponents() or validateComponentLimit()

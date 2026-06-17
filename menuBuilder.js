@@ -86,11 +86,10 @@ export class MenuBuilder {
     const components = [
       { type: 10, content: `## ${menuConfig.title}` },
       { type: 14 },
-      { type: 10, content: `### \`\`\`🧙 Setup & Configuration\`\`\`` },
+      { type: 10, content: `### \`\`\`🐙 Special Features\`\`\`` },
       {
         type: 1,
         components: [
-          { type: 2, custom_id: 'prod_setup_wizard', label: 'Setup Wizard', style: 1, emoji: { name: '🧙' } },
           { type: 2, custom_id: 'attribute_management', label: 'Attributes', style: 2, emoji: { name: '📊' } },
           { type: 2, custom_id: 'safari_manage_enemies', label: 'Enemies', style: 2, emoji: { name: '🐙' } },
           { type: 2, custom_id: 'tycoons_legacy', label: 'Tycoons', style: 2, emoji: { name: '💼' } }
