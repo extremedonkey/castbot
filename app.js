@@ -13303,7 +13303,7 @@ To fix this:
                 {
                   type: 18, // Label
                   label: 'Tribe Name',
-                  description: 'New role with this name, added as a tribe. Already have the role? Add it from the previous screen.',
+                  description: 'CastBot will create the Discord role for you. Already have the role? Add via previous screen.',
                   component: {
                     type: 4, // Text Input
                     custom_id: 'tribe_name',

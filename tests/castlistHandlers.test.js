@@ -64,7 +64,7 @@ describe('Castlist modal — Associated Season default', () => {
 
 describe('Add New Tribe modal — description copy', () => {
   it('stays within Discord Label description 100-char limit', () => {
-    const desc = 'New role with this name, added as a tribe. Already have the role? Add it from the previous screen.';
+    const desc = 'CastBot will create the Discord role for you. Already have the role? Add via previous screen.';
     assert.ok(desc.length <= 100, `description is ${desc.length} chars`);
   });
 });
