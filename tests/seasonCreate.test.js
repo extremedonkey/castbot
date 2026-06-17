@@ -278,6 +278,88 @@ describe('generateSeasonRounds round count — FTC F2 adds a round vs F3 (user-d
   });
 });
 
+describe('Round regeneration — challenge carry-over by seasonRoundNo (earliest-first)', () => {
+  // Replicates generateAndStoreRounds' carry logic: align new rounds to old by seasonRoundNo, reuse
+  // the old challenge object, refresh default titles, drop surplus season-owned challenges.
+  function regenWithCarry(oldRounds, challenges, newRoundDefs) {
+    const carriedByRoundNo = {};
+    for (const old of Object.values(oldRounds)) {
+      const cid = old.challengeIDs?.primary;
+      if (cid) carriedByRoundNo[old.seasonRoundNo] = cid;
+    }
+    const rounds = {};
+    const linked = new Set();
+    let nextId = 1;
+    for (const def of newRoundDefs) {
+      const r = { ...def, challengeIDs: {} };
+      rounds[`r${def.seasonRoundNo}`] = r;
+      if (def.fNumber === 1) continue; // reunion
+      const defaultTitle = def.ftcRound ? `Challenge ${def.seasonRoundNo} (FTC Speech)` : `Challenge ${def.seasonRoundNo} (TBC)`;
+      const carryId = carriedByRoundNo[def.seasonRoundNo];
+      const carried = carryId ? challenges[carryId] : null;
+      if (carried) {
+        if (carried.title === `Challenge ${def.seasonRoundNo} (TBC)` || carried.title === `Challenge ${def.seasonRoundNo} (FTC Speech)`) carried.title = defaultTitle;
+        r.challengeIDs = { primary: carryId };
+        linked.add(carryId);
+      } else {
+        const cid = `fresh_${nextId++}`;
+        challenges[cid] = { title: defaultTitle, seasonId: 'S' };
+        r.challengeIDs = { primary: cid };
+        linked.add(cid);
+      }
+    }
+    for (const [cid, chal] of Object.entries(challenges)) {
+      if (chal.seasonId === 'S' && !linked.has(cid)) delete challenges[cid];
+    }
+    return { rounds, challenges };
+  }
+
+  // Old: 18 players → rounds r1(F18 marooning) r2(F17) r3(F16) … host edited r2's challenge.
+  const oldRounds = () => ({
+    r1: { seasonRoundNo: 1, fNumber: 18, challengeIDs: { primary: 'c1' } },
+    r2: { seasonRoundNo: 2, fNumber: 17, challengeIDs: { primary: 'c2' } },
+    r3: { seasonRoundNo: 3, fNumber: 16, challengeIDs: { primary: 'c3' } },
+  });
+  const challengesSeed = () => ({
+    c1: { title: 'Challenge 1 (TBC)', seasonId: 'S' },
+    c2: { title: "Claude's Cool Challenge", seasonId: 'S' }, // host-edited
+    c3: { title: 'Challenge 3 (TBC)', seasonId: 'S' },
+  });
+
+  it('INCREASE: the round-2 challenge moves to new round 2 (F17 → F23) keeping its custom title', () => {
+    const challenges = challengesSeed();
+    // 24 players: r1(F24) r2(F23) r3(F22) r4(F21) r5(F20)
+    const newDefs = [
+      { seasonRoundNo: 1, fNumber: 24 }, { seasonRoundNo: 2, fNumber: 23 },
+      { seasonRoundNo: 3, fNumber: 22 }, { seasonRoundNo: 4, fNumber: 21 }, { seasonRoundNo: 5, fNumber: 20 },
+    ];
+    const { rounds, challenges: out } = regenWithCarry(oldRounds(), challenges, newDefs);
+    assert.equal(rounds.r2.challengeIDs.primary, 'c2');          // carried to new round 2
+    assert.equal(rounds.r2.fNumber, 23);                          // which is now F23
+    assert.equal(out.c2.title, "Claude's Cool Challenge");        // custom title preserved
+    assert.equal(rounds.r1.challengeIDs.primary, 'c1');           // r1 carried too
+    assert.ok(rounds.r4.challengeIDs.primary.startsWith('fresh_')); // extra rounds get fresh challenges
+  });
+
+  it('DECREASE: surplus challenges beyond the new round count are dropped', () => {
+    const challenges = challengesSeed();
+    const newDefs = [{ seasonRoundNo: 1, fNumber: 12 }, { seasonRoundNo: 2, fNumber: 11 }]; // only 2 rounds
+    const { rounds, challenges: out } = regenWithCarry(oldRounds(), challenges, newDefs);
+    assert.equal(rounds.r1.challengeIDs.primary, 'c1');
+    assert.equal(rounds.r2.challengeIDs.primary, 'c2');
+    assert.equal(out.c2.title, "Claude's Cool Challenge"); // still carried
+    assert.equal(out.c3, undefined);                        // surplus round-3 challenge dropped
+  });
+
+  it('refreshes a DEFAULT title when a carried round changes role (FTC → regular)', () => {
+    const challenges = { c1: { title: 'Challenge 1 (FTC Speech)', seasonId: 'S' } };
+    const old = { r1: { seasonRoundNo: 1, fNumber: 2, ftcRound: true, challengeIDs: { primary: 'c1' } } };
+    const newDefs = [{ seasonRoundNo: 1, fNumber: 18, ftcRound: false }];
+    const { challenges: out } = regenWithCarry(old, challenges, newDefs);
+    assert.equal(out.c1.title, 'Challenge 1 (TBC)'); // default refreshed for the new (non-FTC) role
+  });
+});
+
 describe('Modal start-date pre-fill — create mode stays blank (regression: title-only create)', () => {
   // Mirrors buildSeasonPlannerModal's start-date pre-fill: existing season → its date, create → BLANK.
   function startDateValue(existing) {

@@ -815,9 +815,22 @@ export async function deleteSeason(guildId, configId) {
 // Data Persistence
 // ─────────────────────────────────────────────
 
+/** True if a challenge title is still the auto-generated default for the given round number. */
+function isDefaultChallengeTitle(title, seasonRoundNo) {
+  return title === `Challenge ${seasonRoundNo} (TBC)` || title === `Challenge ${seasonRoundNo} (FTC Speech)`;
+}
+
 /**
- * Generate the round structure + one challenge per round (except F1 reunion) and store them
- * on playerData. Shared by createSeason() and updateSeason(). Mutates playerData in place.
+ * Generate the round structure + one challenge per round (except F1 reunion) and store them on
+ * playerData. Shared by createSeason() (first-time) and updateSeason() (structural regeneration).
+ *
+ * CARRY-OVER (RaP 0947): on regeneration we align NEW rounds to OLD rounds by seasonRoundNo from the
+ * earliest (r1→r1, r2→r2, …) and REUSE the old round's challenge object, so host edits (challenge
+ * title, host, description, image) survive. Hosts plan earliest-first, so e.g. 18→24 players moves
+ * the challenge edited on round 2 (was F17) onto the new round 2 (now F23). Extra new rounds get a
+ * fresh challenge; surplus old challenges (when the count shrinks) are dropped. A carried challenge
+ * whose title is still an auto-default is refreshed for its new round role; custom titles are kept.
+ * Mutates playerData in place.
  * @returns {{ roundCount: number, chalCount: number }}
  */
 async function generateAndStoreRounds(playerData, guildId, seasonId, data, createdBy) {
@@ -825,31 +838,64 @@ async function generateAndStoreRounds(playerData, guildId, seasonId, data, creat
   if (!playerData[guildId].seasonRounds) playerData[guildId].seasonRounds = {};
   if (!playerData[guildId].challenges) playerData[guildId].challenges = {};
 
-  const rounds = generateSeasonRounds(data.estimatedTotalPlayers, data.estimatedSwaps, data.estimatedFTCPlayers);
-  playerData[guildId].seasonRounds[seasonId] = rounds;
+  // Capture existing challenge links by seasonRoundNo BEFORE replacing the rounds (first-time create
+  // has none, so this is empty and everything is generated fresh).
+  const oldRounds = playerData[guildId].seasonRounds[seasonId] || {};
+  const carriedChalIdByRoundNo = {};
+  for (const old of Object.values(oldRounds)) {
+    const chalId = old.challengeIDs?.primary;
+    if (chalId) carriedChalIdByRoundNo[old.seasonRoundNo] = chalId;
+  }
 
+  const rounds = generateSeasonRounds(data.estimatedTotalPlayers, data.estimatedSwaps, data.estimatedFTCPlayers);
+
+  const linkedChalIds = new Set(); // every challenge linked to a NEW round (carried + fresh)
   let chalCount = 0;
-  for (const [, round] of Object.entries(rounds)) {
+  for (const round of Object.values(rounds)) {
     if (round.fNumber === 1) continue; // Skip reunion — no challenge
-    const chalId = `challenge_${crypto.randomUUID().replace(/-/g, '').substring(0, 12)}`;
-    const chalTitle = round.ftcRound
+
+    const defaultTitle = round.ftcRound
       ? `Challenge ${round.seasonRoundNo} (FTC Speech)`
       : `Challenge ${round.seasonRoundNo} (TBC)`;
-    playerData[guildId].challenges[chalId] = {
-      title: chalTitle,
-      description: '',
-      image: '',
-      accentColor: 0x5865F2,
-      creationHost: createdBy || null,
-      runningHost: null,
-      seasonId,
-      createdAt: Date.now(),
-      lastUpdated: Date.now(),
-    };
-    round.challengeIDs = { primary: chalId };
+
+    const carryId = carriedChalIdByRoundNo[round.seasonRoundNo];
+    const carried = carryId ? playerData[guildId].challenges[carryId] : null;
+
+    if (carried) {
+      // Reuse the host's existing challenge — preserves title/host/description/image edits.
+      if (isDefaultChallengeTitle(carried.title, round.seasonRoundNo)) carried.title = defaultTitle;
+      carried.seasonId = seasonId;
+      carried.lastUpdated = Date.now();
+      round.challengeIDs = { primary: carryId };
+      linkedChalIds.add(carryId);
+    } else {
+      const chalId = `challenge_${crypto.randomUUID().replace(/-/g, '').substring(0, 12)}`;
+      playerData[guildId].challenges[chalId] = {
+        title: defaultTitle,
+        description: '',
+        image: '',
+        accentColor: 0x5865F2,
+        creationHost: createdBy || null,
+        runningHost: null,
+        seasonId,
+        createdAt: Date.now(),
+        lastUpdated: Date.now(),
+      };
+      round.challengeIDs = { primary: chalId };
+      linkedChalIds.add(chalId);
+    }
     chalCount++;
   }
 
+  // Drop season-owned challenges no longer linked to any new round (surplus on shrink / stale
+  // leftovers). Mirrors deleteSeason's cascade and keeps playerData.challenges tidy.
+  for (const [chalId, chal] of Object.entries(playerData[guildId].challenges)) {
+    if (chal?.seasonId === seasonId && !linkedChalIds.has(chalId)) {
+      delete playerData[guildId].challenges[chalId];
+    }
+  }
+
+  playerData[guildId].seasonRounds[seasonId] = rounds;
   return { roundCount: Object.keys(rounds).length, chalCount };
 }
 
@@ -1001,15 +1047,10 @@ export async function updateSeason(guildId, configId, data) {
     const noRounds = !existingRounds || Object.keys(existingRounds).length === 0;
 
     if (noRounds || structuralChanged) {
-      // Regenerating REPLACES seasonRounds[seasonId] and creates fresh auto-challenges. Remove the
-      // old season-owned challenges first so they don't orphan (mirrors deleteSeason's cascade).
-      // NOTE: this discards manual round/challenge edits for this season — inherent to recalculating
-      // the whole structure (RaP 0947 backlog: cast-size recalibration).
-      if (!noRounds && playerData[guildId]?.challenges) {
-        for (const [chalId, chal] of Object.entries(playerData[guildId].challenges)) {
-          if (chal?.seasonId === config.seasonId) delete playerData[guildId].challenges[chalId];
-        }
-      }
+      // generateAndStoreRounds rebuilds the round STRUCTURE and CARRIES challenge edits over by
+      // seasonRoundNo from the earliest (host title/host survive; see its docblock). It also drops
+      // surplus challenges when the count shrinks. NOTE: round-LEVEL edits (tribal duration,
+      // eliminations, swap/merge tweaks) are NOT carried — they reset on a structural change.
       await generateAndStoreRounds(playerData, guildId, config.seasonId, {
         estimatedTotalPlayers: config.estimatedTotalPlayers,
         estimatedSwaps: config.estimatedSwaps,
