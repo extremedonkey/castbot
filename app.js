@@ -2829,18 +2829,41 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const canSendMessages = await canSendMessagesInChannel(member, channelId, client);
       console.log(`Pre-deferred permission check: User ${member?.user?.username} can send messages in channel ${channelId}: ${canSendMessages}`);
 
-      // Send appropriate deferred response based on permissions
-      if (canSendMessages) {
-        // User can send messages - public deferred response
+      // First-run wizard nudge — decided BEFORE deferring so the defer can be EPHEMERAL.
+      // We can't make a public defer ephemeral after the fact, and the wizard's Run Setup button
+      // must never be publicly clickable. Deciding here lets the wizard simply BE the ephemeral
+      // @original response (a plain PATCH) — avoiding the fragile "ephemeral follow-up + DELETE
+      // @original" dance, which Discord clears (ephemeral follow-ups are bound to @original).
+      // Fast check only (no member fetch): admin + DEFAULT castlist + zero tribe roles + setup incomplete.
+      let wizardNudge = false;
+      let wizardHasPostedCastlist = false;
+      {
+        const ADMIN_MASK = PermissionFlagsBits.Administrator | PermissionFlagsBits.ManageGuild | PermissionFlagsBits.ManageRoles;
+        const isAdmin = !!member?.permissions && (BigInt(member.permissions) & ADMIN_MASK) !== 0n;
+        if (isAdmin && castlistIdentifier === 'default') {
+          const { castlistManager } = await import('./castlistManager.js');
+          const tribeRoleIds = await castlistManager.getTribesUsingCastlist(guildId, 'default'); // fast: playerData only
+          if (tribeRoleIds.length === 0) {
+            const pd = await loadPlayerData();
+            if (!hasCompletedSetup(pd[guildId])) {
+              wizardNudge = true;
+              wizardHasPostedCastlist = pd[guildId]?.setupProgress?.castlistPosted === true;
+            }
+          }
+        }
+      }
+
+      // Send appropriate deferred response: ephemeral for the wizard nudge (and for users who
+      // can't post in this channel); public otherwise so the castlist is visible to everyone.
+      if (canSendMessages && !wizardNudge) {
         res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
         console.log('[CASTLIST] Sent deferred response');
       } else {
-        // User cannot send messages - ephemeral deferred response
         res.send({
           type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
           data: { flags: InteractionResponseFlags.EPHEMERAL }
         });
-        console.log('[CASTLIST] Sent ephemeral deferred response');
+        console.log(`[CASTLIST] Sent ephemeral deferred response${wizardNudge ? ' (wizard nudge)' : ''}`);
       }
 
       // Get tribes via unified data access (handles legacy + modern castlists)
@@ -13746,12 +13769,11 @@ To fix this:
         });
       }
     } else if (custom_id.startsWith('season_app_ranking_')) {
-      // Default ephemeral (holds applicant scores/notes); morph in place ONLY from an ephemeral source.
+      // Always updateMessage (webhook PATCH in place) — every season view is ephemeral now, so the old ephemeral-source guard is moot.
       return ButtonHandlerFactory.create({
         id: 'season_app_ranking',
         deferred: true,
-        updateMessage: !!(req.body.message?.flags & (1 << 6)), // morph only when the source message is ephemeral
-        ephemeral: true,
+        updateMessage: true,
         handler: async (context) => {
           console.log(`🔍 START: season_app_ranking - user ${context.userId}`);
           const { guildId, userId, client } = context;
