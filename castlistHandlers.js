@@ -102,11 +102,18 @@ export async function buildEditInfoModal(guildId, castlistId) {
   const allSeasons = Object.entries(seasons)
     .sort(([,a], [,b]) => (b.lastUpdated || b.createdAt || 0) - (a.lastUpdated || a.createdAt || 0));
 
+  // Default the Associated Season: keep the castlist's existing link if it has one,
+  // otherwise pre-select the most-recently-updated season (allSeasons is sorted desc
+  // by lastUpdated||createdAt, so index 0 is the most recent). "No Season" only
+  // defaults when the guild has zero seasons configured.
+  const mostRecentSeasonId = allSeasons.length > 0 ? allSeasons[0][1].seasonId : null;
+  const effectiveSeasonId = currentSeasonId || mostRecentSeasonId;
+
   const seasonOptions = [{
     label: '🌟 No Season (Winners, Alumni, etc.)',
     value: 'none',
     description: 'Used where players are across multiple seasons',
-    default: !currentSeasonId
+    default: !effectiveSeasonId
   }];
 
   if (allSeasons.length > 0) {
@@ -117,7 +124,7 @@ export async function buildEditInfoModal(guildId, castlistId) {
         label: `${getSeasonStageEmoji(stage)} ${season.seasonName}`.substring(0, 100),
         value: season.seasonId,
         description: `${getSeasonStageName(stage)} • Updated: ${new Date(season.lastUpdated || season.createdAt || 0).toLocaleDateString()}`.substring(0, 100),
-        default: season.seasonId === currentSeasonId
+        default: season.seasonId === effectiveSeasonId
       };
     }));
   }
@@ -247,12 +254,17 @@ export async function createEditInfoModalForNew(guildId) {
       return bTime - aTime;
     });
 
+  // Pre-select the most-recently-updated season for a new castlist (allSeasons is
+  // sorted desc by lastUpdated||createdAt, so index 0 is the most recent). "No Season"
+  // only defaults when the guild has zero seasons configured.
+  const mostRecentSeasonId = allSeasons.length > 0 ? allSeasons[0][1].seasonId : null;
+
   // Initialize with "No Season" option to ensure we always have at least one option
   const seasonOptions = [{
     label: '🌟 No Season (Winners, Alumni, etc.)',
     value: 'none',
-    description: 'Used where players are across multiple seasons'
-    // No default when min_values is 0 - user can choose to have no season
+    description: 'Used where players are across multiple seasons',
+    default: !mostRecentSeasonId
   }];
 
   // Add actual seasons if they exist (limit to 24 to stay within Discord's 25 option limit)
@@ -269,8 +281,8 @@ export async function createEditInfoModalForNew(guildId) {
       return {
         label: `${emoji} ${season.seasonName}`.substring(0, 100),
         value: season.seasonId,
-        description: `${stageName} • Updated: ${lastUpdate.toLocaleDateString()}`.substring(0, 100)
-        // No default property when min_values is 0
+        description: `${stageName} • Updated: ${lastUpdate.toLocaleDateString()}`.substring(0, 100),
+        default: season.seasonId === mostRecentSeasonId
       };
     });
 
