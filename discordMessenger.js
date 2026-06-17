@@ -393,7 +393,7 @@ class DiscordMessenger {
     // serverName is filled when we know which guild the bot was added to; falls back to generic.
     const serverRef = options.serverName ? `**${options.serverName}**` : 'your server';
     const dmContent = {
-      title: '# <:cb_blue> Welcome to CastBot!\nWelcome to CastBot - your one stop shop for managing your Cast Experience! Manage your Season Applications, create Castlists, create Idol Hunts & Safaris, and much more!',
+      title: '# <:cb_blue> Welcome to CastBot!\nCastBot is your one-stop shop for managing your Cast Experience! Manage your Season Applications, create Castlists, create Idol Hunts & Safaris, and much more!',
       instructions: '## ```🏁 What to do next```\n1. Go to any channel in ' + serverRef + ' and type <:cb_blue> `/menu` to run the setup wizard and get started!\n2. Join the CastBot help server below for the latest updates, tips and support.'
     };
 
