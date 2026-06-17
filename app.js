@@ -230,15 +230,9 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
     content: `## :pencil: Season Applications\n> ### ${config.seasonName}`
   });
 
-  // Season action buttons (Planner, Ranking, Edit) — consistent with the Planner view's cross-link row
-  refreshedComponents.push({
-    type: 1,
-    components: [
-      { type: 2, custom_id: `apps_planner_${configId}`, label: 'Planner', style: 2, emoji: { name: '📅' } },
-      { type: 2, custom_id: `season_app_ranking_${configId}`, label: 'Ranking', style: 2, emoji: { name: '🏆' } },
-      { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } }
-    ]
-  });
+  // Active-tab nav row — Apps · Planner · Ranking · Edit (current view = Apps, shaded blue)
+  const { buildSeasonNavRow } = await import('./seasonSelector.js');
+  refreshedComponents.push(buildSeasonNavRow(configId, 'apps'));
 
   refreshedComponents.push({
     type: 10,

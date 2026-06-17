@@ -77,6 +77,32 @@ export function seasonConfigIndicators(configId, season, guildData) {
 }
 
 /**
+ * Active-tab navigation row shared by every Season Manager view (Apps / Planner / Ranking).
+ * Identical ordering [Apps · Planner · Ranking · Edit] everywhere; the CURRENT view's tab is
+ * Primary (blue, still clickable — reloads), the rest Secondary (grey). Edit is an action, never active.
+ * Adopts the Player Manager active-button convention. Single source of truth so the row can never drift.
+ * @param {string} configId
+ * @param {'apps'|'planner'|'ranking'} active
+ * @returns {Object} a type-1 ActionRow
+ */
+export function buildSeasonNavRow(configId, active) {
+  const tab = (key, customId, label, emoji) => ({
+    type: 2, custom_id: customId, label,
+    style: active === key ? 1 : 2, // Primary (blue) when this is the current view, else Secondary (grey)
+    emoji: { name: emoji }
+  });
+  return {
+    type: 1,
+    components: [
+      tab('apps', `planner_apps_${configId}`, 'Apps', '📝'),
+      tab('planner', `apps_planner_${configId}`, 'Planner', '📅'),
+      tab('ranking', `season_app_ranking_${configId}`, 'Ranking', '🏆'),
+      { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } }
+    ]
+  };
+}
+
+/**
  * Creates a reusable season select dropdown component.
  *
  * ⚠️ For SEASON MANAGEMENT UI, do NOT call this directly with the default customId — that's the

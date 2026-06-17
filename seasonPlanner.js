@@ -8,6 +8,7 @@
 
 import { countComponents, validateComponentLimit } from './utils.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
+import { buildSeasonNavRow } from './seasonSelector.js';
 
 const DOT = '\u2981'; // ⦁
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -453,11 +454,8 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
     type: 17, accent_color: 0x9b59b6,
     components: [
       { type: 10, content: `## 📅 Season Planner\n> ### ${seasonName}` },
-      { type: 1, components: [
-        { type: 2, custom_id: `planner_apps_${configId}`, label: 'Apps', style: 2, emoji: { name: '📝' } },
-        { type: 2, custom_id: `season_app_ranking_${configId}`, label: 'Ranking', style: 2, emoji: { name: '🏆' } },
-        { type: 2, custom_id: `planner_edit_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
-      ]},
+      // Active-tab nav row — Apps · Planner · Ranking · Edit (current view = Planner, shaded blue)
+      buildSeasonNavRow(configId, 'planner'),
       { type: 14 },
       { type: 10, content: `### \`\`\`📅 Manage Season Schedule${pageInfo}\`\`\`` },
       ...selectRows,

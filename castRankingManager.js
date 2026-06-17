@@ -249,20 +249,14 @@ export async function generateSeasonAppRankingUI({
   // IMPORTANT: This follows the current layout pattern with navigation above applicant info
   const applicantInfo = `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${nameDisplay}${demographicInfo}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>\n${dncSummaryText}`;
 
+  const { buildSeasonNavRow } = await import('./seasonSelector.js');
   const containerComponents = [
     {
       type: 10, // Text Display component
       content: `## 🏆 Cast Ranking\n> ### ${seasonName}`
     },
-    // Cross-link row — Apps · Planner · Edit (converges with the Apps/Planner views)
-    {
-      type: 1,
-      components: [
-        { type: 2, custom_id: `planner_apps_${configId}`, label: 'Apps', style: 2, emoji: { name: '📝' } },
-        { type: 2, custom_id: `apps_planner_${configId}`, label: 'Planner', style: 2, emoji: { name: '📅' } },
-        { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } }
-      ]
-    },
+    // Active-tab nav row — Apps · Planner · Ranking · Edit (current view = Ranking, shaded blue)
+    buildSeasonNavRow(configId, 'ranking'),
   ];
   if (navRow) containerComponents.push(navRow.toJSON()); // Applicant prev/next (only when >1 applicant)
 
@@ -393,11 +387,7 @@ export async function generateSeasonAppRankingUI({
       type: 14 // Separator - single divider after applicant info
     },
     avatarDisplayComponent, // Applicant avatar display
-    {
-      type: 10, // Text Display component  
-      content: `> **Rate this applicant (1-5)**`
-    },
-    rankingRow.toJSON(), // Ranking buttons
+    rankingRow.toJSON(), // Ranking buttons (1-5 — self-explanatory; instructional line trimmed for the +1 nav button)
     {
       type: 14 // Separator
     },
