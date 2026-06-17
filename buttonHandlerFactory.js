@@ -2608,11 +2608,12 @@ export const BUTTON_REGISTRY = {
 
   // Safari Player Admin
   'safari_map_admin': {
-    label: 'Player Admin',
-    description: 'Admin panel for managing player map states',
-    emoji: '🛡️',
-    style: 'Danger',
-    category: 'safari',
+    label: 'Player Admin (Legacy)',
+    description: '🗿 DEPRECATED — legacy player/map admin panel. Superseded by the Player Manager (playerManagement.js → createPlayerManagementUI / buildAdminPlayerMenu, /menu → Manage Players). Moved to Reece\'s Stuff → Legacy. Do NOT build new features on this.',
+    emoji: '🧭',
+    style: 'Secondary',
+    category: 'safari_map_admin',
+    parent: 'reeces_stuff',
     requiresPermission: 'ManageRoles'
   },
   

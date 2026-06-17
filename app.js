@@ -36246,13 +36246,16 @@ Your server is now ready for Tycoons gameplay!`;
     // ==================== END MAP EXPLORER HANDLERS ====================
     
     // ==================== START MAP ADMIN HANDLERS ====================
+    // 🗿 DEPRECATED legacy "Player Admin" entry (now under Reece's Stuff → Legacy, hidden from main menu).
+    // ⛔ Superseded by the Player Manager — see admin_manage_player + playerManagement.js
+    //    (createPlayerManagementUI / buildAdminPlayerMenu). Do NOT extend this for new features.
     } else if (custom_id === 'safari_map_admin') {
       return ButtonHandlerFactory.create({
         id: 'safari_map_admin',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
-          console.log(`🛡️ START: safari_map_admin - user ${context.userId}`);
+          console.log(`🛡️ START: safari_map_admin [DEPRECATED] - user ${context.userId}`);
           
           const { createMapAdminUI } = await import('./safariMapAdmin.js');
           

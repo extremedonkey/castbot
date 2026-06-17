@@ -16,12 +16,23 @@ import { logger } from './logger.js';
 import { isPlayerInitialized, getPlayerSafariState, PLAYER_SAFARI_STATE } from './safariPlayerUtils.js';
 
 /**
+ * 🗿 DEPRECATED — legacy "Player Admin" interface (button `safari_map_admin`, now under
+ * Reece's Stuff → Legacy, hidden from the main menu).
+ *
+ * ⛔ DO NOT use, extend, or pattern-match this for new work. It is superseded by the
+ * **Player Manager** in playerManagement.js:
+ *   - `createPlayerManagementUI(...)` — the full menu (admin + player modes)
+ *   - `buildAdminPlayerMenu(client, guildId, targetUserId, adminUserId, activeButton)` — admin re-render
+ * reached via /menu → Manage Players (`admin_manage_player`). Add new player/map admin
+ * features there, not here. Kept active only for Reece's fallback access.
+ *
  * Create the main Safari Map Admin interface
  * @param {Object} params - Parameters for the interface
  * @param {string} params.guildId - Discord guild ID
  * @param {string} params.userId - Selected user ID (if any)
  * @param {string} params.mode - Interface mode (user_select, player_view, etc.)
  * @returns {Object} Discord Components V2 interface
+ * @deprecated Use playerManagement.js createPlayerManagementUI / buildAdminPlayerMenu instead.
  */
 export async function createMapAdminUI(params) {
   const { guildId, userId, mode = 'user_select' } = params;
@@ -83,6 +94,9 @@ function createUserSelectUI(guildId) {
 }
 
 /**
+ * 🗿 DEPRECATED — legacy per-player admin view (the `## 🧭 Player Admin` screen).
+ * ⛔ Superseded by the Player Manager: playerManagement.js `createPlayerDisplaySection` +
+ * `buildAdminPlayerMenu` (/menu → Manage Players). Do NOT add features here.
  * Create player view/edit interface
  */
 async function createPlayerViewUI(guildId, userId) {

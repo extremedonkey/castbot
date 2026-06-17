@@ -200,6 +200,14 @@ export class MenuBuilder {
           { type: 2, custom_id: 'reeces_radio_mockup', label: 'Radio PoC (Mockup)', style: 2, emoji: { name: '📻' } }
         ]
       },
+      {
+        // 🗿 DEPRECATED legacy Player Admin — superseded by the Player Manager (/menu → Manage Players).
+        // Kept here (Reece-only) for fallback access; hidden from the main menu.
+        type: 1,
+        components: [
+          { type: 2, custom_id: 'safari_map_admin', label: 'Player Admin (Legacy)', style: 2, emoji: { name: '🧭' } }
+        ]
+      },
       { type: 10, content: `### \`\`\`🎯 Prototypes\`\`\`` },
       {
         type: 1,
