@@ -470,6 +470,7 @@ When a feature is **deployed to production and working**, move/rename its doc in
 **Core Systems:**
 - **📋 CASTLIST** → [docs/03-features/CastlistArchitecture.md](docs/03-features/CastlistArchitecture.md) - Castlist system reference (parent doc)
 - **🦁 SAFARI** → [docs/03-features/Safari.md](docs/03-features/Safari.md) - Safari system overview
+- **📅 SEASON MANAGER** → [docs/03-features/SeasonManager.md](docs/03-features/SeasonManager.md) - Unified season admin (`season_manager`): Apps/Planner/Ranking/Edit active-tab nav, search, Delete Mode. Old `season_management_menu` / `entity_select_seasons` / `reeces_season_planner_mockup` are DEPRECATED
 - **📝 SEASON APPLICATIONS** → [docs/03-features/SeasonAppBuilder.md](docs/03-features/SeasonAppBuilder.md)
 - **🏆 CAST RANKING** → [docs/03-features/CastRanking.md](docs/03-features/CastRanking.md)
 - **🚷 DNC OVERVIEW** → [docs/03-features/DNCOverview.md](docs/03-features/DNCOverview.md) - Global DNC conflict detection, mutual/one-way classification, season-wide view
@@ -534,7 +535,7 @@ When a feature is **deployed to production and working**, move/rename its doc in
 - **📋 APPLICATION COMMANDS** (context menus) → [docs/standards/DiscordApplicationCommands.md](docs/standards/DiscordApplicationCommands.md) - Slash commands, user/message context menus, registration, guild vs global
 
 **UI/UX Design:**
-- **📐 LEAN USER INTERFACE DESIGN** → [docs/ui/LeanUserInterfaceDesign.md](docs/ui/LeanUserInterfaceDesign.md)
+- **📐 LEAN USER INTERFACE DESIGN** → [docs/ui/LeanUserInterfaceDesign.md](docs/ui/LeanUserInterfaceDesign.md) - Incl. 🗂️ Multi-Featured Menus (active-tab pattern): one shared nav-row builder, identical tab order, active tab `style:1` (clickable, not disabled), all tabs `updateMessage:true`
 - **📋 MENU HIERARCHY** → [docs/ui/MenuHierarchy.md](docs/ui/MenuHierarchy.md) - Visual menu tree and navigation flow
 
 ## 🛠️ Development Standards

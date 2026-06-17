@@ -874,6 +874,22 @@ return res.send({
 - Components V2 context is inherited automatically
 - Container (type 17) works without re-specifying the flag
 
+### 2. updateMessage ↔ Ephemerality Inheritance (CRITICAL)
+
+UPDATE_MESSAGE doesn't just inherit the Components V2 flag — it inherits the **EPHEMERAL** flag too. You **cannot morph a public message into ephemeral via `updateMessage`, or vice versa**. The webhook PATCHes the *same* message, and a message's ephemerality is fixed at creation.
+
+**Implication for menu families:** if any view exposes private data (e.g. Cast Ranking scores), the *entire* family must originate from an ephemeral message so every tab can safely `updateMessage: true`. A consistently-ephemeral family means every tab is a fast PATCH and never a CREATE.
+
+```javascript
+// ❌ ANTI-PATTERN: conditional updateMessage to "fix" ephemerality
+updateMessage: !!(req.body.message?.flags & (1 << 6))  // can't actually morph it
+
+// ✅ Design the family ephemeral from the start, then always:
+updateMessage: true
+```
+
+This is why all Season Manager views (Apps / Planner / Ranking / Edit) are ephemeral — see [Multi-Featured Menus](../ui/LeanUserInterfaceDesign.md#-multi-featured-menus-active-tab-pattern).
+
 **ButtonHandlerFactory Auto-Handles This:**
 ```javascript
 // ButtonHandlerFactory automatically detects button clicks and uses UPDATE_MESSAGE
@@ -902,7 +918,7 @@ return res.send({
 - ✅ Creating new ephemeral messages
 - ✅ When you want to keep the original message intact
 
-### 2. Mixing Legacy and V2
+### 3. Mixing Legacy and V2
 **❌ WRONG:** Using `content` with V2 flag
 ```javascript
 {
@@ -913,7 +929,7 @@ return res.send({
 ```
 
 
-### 3. Exceeding Limits
+### 4. Exceeding Limits
 **❌ WRONG:** More than 5 buttons in action row
 ```javascript
 {
@@ -924,7 +940,7 @@ return res.send({
 }
 ```
 
-### 4. Incorrect Nesting
+### 5. Incorrect Nesting
 **❌ WRONG:** Components outside container
 ```javascript
 {

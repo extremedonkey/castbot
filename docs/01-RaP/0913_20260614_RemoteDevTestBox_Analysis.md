@@ -97,6 +97,8 @@ flowchart TD
 
 **Recommended guard (small, deferred):** make the box-side `git pull` in the deploy path **abort loudly or auto-stash** on a dirty tree, so a forgotten commit can never silently clobber in-progress box work. This is the only "context-aware script" change worth making — not a redesign.
 
+**Push-side collision (observed, not just theoretical):** the pull guard above protects the box *receiving* a clobber. The *other* half of the same problem is on the **commit/push side** — `dev-restart.sh:39` runs `git add .`, which stages the **entire** working tree. When two agent/Claude sessions share one tree (or the box has unrelated uncommitted work), one session's `dev-restart.sh` bundles the **other** session's edits into its commit and pushes them. This bit us repeatedly during the Season Manager work (edits appeared "lost" — they'd been swept into a sibling agent's commit). Mitigation: when a concurrent session is possible, stage only your own files (`git add <file> …`) and commit manually before letting `dev-restart.sh` run. A warning comment now sits above the `git add .` line.
+
 ---
 
 ## 🛰️ Remote Access Options (how Reece reaches the box)

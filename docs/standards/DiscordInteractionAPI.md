@@ -100,6 +100,7 @@ return res.send({
   }
 });
 ```
+> **Ephemerality is inherited, not chosen here.** UPDATE_MESSAGE PATCHes the *same* message, so it keeps the original's ephemeral (or public) state — you can't flip one to the other. Design a menu family to be consistently ephemeral from creation if any view is sensitive. See [ComponentsV2 § updateMessage ↔ Ephemerality](ComponentsV2.md#2-updatemessage--ephemerality-inheritance-critical).
 
 #### Pattern 2: New Messages (Commands)
 ```javascript

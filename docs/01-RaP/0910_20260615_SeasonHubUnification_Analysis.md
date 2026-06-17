@@ -1,9 +1,9 @@
 # Season Hub Unification — Collapsing Apps + Planner into One Season Management Interface
 
-**Status:** Layers A + B shipped (2026-06-15) — selector unified + create modal/creation unified. Layer C (Season Hub) pending.
+**Status:** SHIPPED (2026-06-15/16) — all three layers. Layer A (unified selector) + Layer B (unified create/edit modal) + Layer C (the Season Hub: one `season_manager` entry, the four-view active-tab nav via `buildSeasonNavRow`, search, and Delete Mode). Documented as a feature in [SeasonManager](../03-features/SeasonManager.md).
 **Date:** 2026-06-15
 **Author:** Reece + Claude
-**Related:** [Season Planner RaP 0947](0947_20260315_SeasonPlanner_Analysis.md) · [Season Apps String Select RaP 0939](0939_20260320_SeasonAppsStringSelect_Analysis.md) · [SeasonAppBuilder](../03-features/SeasonAppBuilder.md) · [SeasonLifecycle](../concepts/SeasonLifecycle.md)
+**Related:** [Season Manager feature](../03-features/SeasonManager.md) · [Season Planner RaP 0947](0947_20260315_SeasonPlanner_Analysis.md) · [Season Apps String Select RaP 0939](0939_20260320_SeasonAppsStringSelect_Analysis.md) · [SeasonAppBuilder](../03-features/SeasonAppBuilder.md) · [SeasonLifecycle](../concepts/SeasonLifecycle.md)
 
 ---
 

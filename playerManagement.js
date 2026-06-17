@@ -518,7 +518,9 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   vis.currency = { show: isAdmin ? showInventory : (showInventory && hasTarget), disabled: isAdmin && !hasTarget, label: customTerms.currencyName || 'Currency', emoji: customTerms.currencyEmoji || '🪙' };
   vis.inventory = { show: isAdmin ? showInventory : (showInventory && hasTarget), disabled: isAdmin && !hasTarget, label: customTerms.inventoryName || 'Inventory', emoji: customTerms.inventoryEmoji || '🧰' };
   // Map: admins see it whenever a map exists (to init/manage); players only when on the map.
-  vis.map = { show: isAdmin ? !!activeMapId : (hasTarget && isInitialized && hasMapLocation), disabled: isAdmin && !hasTarget, label: 'Map', emoji: '🗺️', coordinate: currentCoordinate };
+  vis.map = { show: isAdmin ? !!activeMapId : (hasTarget && isInitialized && hasMapLocation), disabled: isAdmin && !hasTarget, label: 'Safari Map', emoji: '🗺️', coordinate: currentCoordinate };
+  // Stamina (admin-only): grant/edit a player's stamina. Sits right of Safari Map; shown when a map exists.
+  vis.stamina = { show: isAdmin && !!activeMapId, disabled: isAdmin && !hasTarget, label: 'Stamina', emoji: '⚡' };
   vis.challenges = { show: isAdmin ? hasChallengeActions : hasChallengeActions, disabled: isAdmin && !hasTarget, label: 'Challenges', emoji: '🏃' };
   vis.crafting = { show: isAdmin ? hasCraftingConfigured : hasCraftingConfigured, disabled: isAdmin && !hasTarget, label: customTerms.craftingName || 'Crafting', emoji: customTerms.craftingEmoji || '🛠️' };
   vis.actions = { show: isAdmin ? hasActionsConfigured : hasActionsConfigured, disabled: isAdmin && !hasTarget, label: 'Actions', emoji: '⚡' };
@@ -585,12 +587,16 @@ function buildSectionRow(buttonIds, targetUserId, activeCategory, visibility, mo
     components.push(button);
   }
 
-  if (components.length === 0) return null;
+  if (components.length === 0) return [];
 
-  return {
-    type: 1, // ActionRow
-    components
-  };
+  // Discord allows max 5 buttons per ActionRow — chunk into multiple rows so a section
+  // (e.g. Safari with currency/inventory/map/stamina/challenges/crafting/actions/stores)
+  // never exceeds the limit. Returns an array of ActionRows (callers iterate).
+  const rows = [];
+  for (let i = 0; i < components.length; i += 5) {
+    rows.push({ type: 1, components: components.slice(i, i + 5) });
+  }
+  return rows;
 }
 
 /**
@@ -786,6 +792,29 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
           min_values: 1,
           max_values: 1,
           options
+        }]
+      };
+    }
+
+    // ─── Stamina ─────────────────────────────────────────────────────────
+    case 'stamina': {
+      const selectCustomId = mode === PlayerManagementMode.ADMIN && targetMember
+        ? `player_menu_sel_stamina_${targetMember.id}`
+        : 'player_menu_sel_stamina';
+      return {
+        type: 1,
+        components: [{
+          type: 3, // String Select
+          custom_id: selectCustomId,
+          placeholder: 'Stamina Options',
+          min_values: 1,
+          max_values: 1,
+          options: [{
+            label: 'Modify Stamina',
+            value: 'modify_stamina',
+            description: 'Modify current and max stamina',
+            emoji: { name: '⚡' }
+          }]
         }]
       };
     }
@@ -1454,42 +1483,36 @@ export async function createPlayerManagementUI(options) {
       ['castlists', 'pronouns', 'timezone', 'age', 'vanity'],
       targetUserId, activeCategory, visibility, mode
     );
-    if (row1) {
+    if (row1.length) {
       container.components.push({
         type: 10,
         content: '### ```✏️ Castlists & Profile```'
       });
-      container.components.push(row1);
+      row1.forEach(r => container.components.push(r));
     }
 
-    // Row 2: Safari (conditional — hide if no buttons visible)
-    const row2Ids = ['currency', 'inventory', 'map', 'challenges', 'crafting', 'actions', 'stores'];
-    const row2HasAny = row2Ids.some(id => visibility[id]?.show);
-    if (row2HasAny) {
-      const row2 = buildSectionRow(row2Ids, targetUserId, activeCategory, visibility, mode);
-      if (row2) {
-        container.components.push({
-          type: 10,
-          content: '### ```🦁 Idol Hunts, Challenges and Safari```'
-        });
-        container.components.push(row2);
-      }
+    // Row 2: Safari (conditional — hide if no buttons visible). May span multiple ActionRows.
+    const row2Ids = ['currency', 'inventory', 'map', 'stamina', 'challenges', 'crafting', 'actions', 'stores'];
+    const row2 = buildSectionRow(row2Ids, targetUserId, activeCategory, visibility, mode);
+    if (row2.length) {
+      container.components.push({
+        type: 10,
+        content: '### ```🦁 Idol Hunts, Challenges and Safari```'
+      });
+      row2.forEach(r => container.components.push(r));
     }
 
     // Row 3: Advanced (conditional — hide if no buttons visible)
     // 'navigate' removed — superseded by the Map category's "Show Navigate Pane" option.
     // 'vanity' moved to row 1 (Castlists & Profile) as the 5th button.
     const row3Ids = ['attributes', 'commands'];
-    const row3HasAny = row3Ids.some(id => visibility[id]?.show);
-    if (row3HasAny) {
-      const row3 = buildSectionRow(row3Ids, targetUserId, activeCategory, visibility, mode);
-      if (row3) {
-        container.components.push({
-          type: 10,
-          content: '### ```💎 Advanced```'
-        });
-        container.components.push(row3);
-      }
+    const row3 = buildSectionRow(row3Ids, targetUserId, activeCategory, visibility, mode);
+    if (row3.length) {
+      container.components.push({
+        type: 10,
+        content: '### ```💎 Advanced```'
+      });
+      row3.forEach(r => container.components.push(r));
     }
   } else {
     // hideBottomButtons mode (application context) — just show Row 1 essentials
@@ -1497,9 +1520,7 @@ export async function createPlayerManagementUI(options) {
       ['pronouns', 'timezone', 'age'],
       targetUserId, activeCategory, visibility, mode
     );
-    if (row1) {
-      container.components.push(row1);
-    }
+    row1.forEach(r => container.components.push(r));
   }
 
   // ════════════════════════════════════════════════════════════════════════

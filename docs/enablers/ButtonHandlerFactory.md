@@ -975,6 +975,29 @@ The button uses ButtonHandlerFactory but is NOT in BUTTON_REGISTRY.
 - `[📝 MODAL]` buttons — these use direct `res.send()` by design (modals require `type: 9` response)
 - Register with `requiresModal: true` in BUTTON_REGISTRY to suppress false [🪨 LEGACY] warnings
 
+### 🗿 Moai Pre-Commit Hook — the 3-Line Window Gotcha
+
+The pre-commit hook (`scripts/hooks/pre-commit`) blocks new legacy handlers by counting any `} else if (custom_id` whose `ButtonHandlerFactory.create` does **not** appear **within 3 lines** (`handler_line + 3`, AWK at pre-commit:40-45). It compares the count to a `BASELINE` that only ever goes down.
+
+**The trap:** a **2+ line comment between the `else if` and the `.create(` call pushes `.create` outside the 3-line window**, so a perfectly correct factory handler is miscounted as legacy and the commit is rejected:
+
+```javascript
+} else if (custom_id === 'foo') {        // handler_line
+  // a long explanatory
+  // multi-line comment                  // handler_line + 2
+  return ButtonHandlerFactory.create({   // handler_line + 3+ → counted as LEGACY ❌
+```
+
+**Fix:** keep the comment to **≤1 line**, or move it *inside* the handler body / above the `else if`:
+
+```javascript
+} else if (custom_id === 'foo') {        // handler_line
+  return ButtonHandlerFactory.create({   // within 3 lines → [✨ FACTORY] ✅
+    // long explanation lives here instead
+```
+
+(Hit repeatedly during the Season Manager work — every false positive was a multi-line comment in the gap.)
+
 ### Interpreting Failed Factories
 
 When a button shows `[✨ FACTORY]` but still fails with "This interaction failed":

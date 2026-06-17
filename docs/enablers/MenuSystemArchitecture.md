@@ -22,6 +22,7 @@ The Menu System Architecture provides a centralized, standardized approach to me
 - Button styling hierarchy
 - Space optimization techniques
 - Component structure templates
+- 🗂️ **Multi-featured menus / active-tab pattern** — one shared nav-row builder, identical tab ordering, active tab `style:1` (clickable, not disabled), all tabs `updateMessage:true`; reuse the same header+nav for empty states (e.g. `buildSeasonNavRow`)
 
 ## Problem Solved
 

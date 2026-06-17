@@ -1,9 +1,9 @@
 # Season Deletion — Dependency Map & Case-by-Case Handling
 
-**Status:** Scoping — dependency map complete; handling decisions pending Reece
+**Status:** Tier-1 cascade SHIPPED (2026-06-15). `deleteSeason()` (seasonPlanner.js:730) atomically removes the config, applications (scores/notes/casting), seasonRounds, and season-owned challenges, and unlinks castlists. Decisions settled: **no** Discord channel/category/role deletion, **yes** auto-unlink castlists, two-step warning (no type-to-confirm). **Outstanding gap:** the live "Apply" button is not disabled on delete — needs the Apply-post message id stored at post time. See [SeasonManager](../03-features/SeasonManager.md#deletion-delete-mode).
 **Date:** 2026-06-15
 **Author:** Reece + Claude
-**Related:** [Season Hub Unification RaP 0910](0910_20260615_SeasonHubUnification_Analysis.md) · [Season Selector Search RaP 0909](0909_20260615_SeasonSelectorSearch_Analysis.md)
+**Related:** [Season Manager feature](../03-features/SeasonManager.md) · [Season Hub Unification RaP 0910](0910_20260615_SeasonHubUnification_Analysis.md) · [Season Selector Search RaP 0909](0909_20260615_SeasonSelectorSearch_Analysis.md)
 
 ---
 

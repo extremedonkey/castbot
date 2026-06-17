@@ -10010,6 +10010,18 @@ To fix this:
         return { type: 9, data: modal.toJSON() };
       }})(req, res, client);
 
+    } else if (custom_id === 'player_menu_sel_stamina' || custom_id.startsWith('player_menu_sel_stamina_')) {
+      // Stamina Options select → open the Set Player Stamina modal, retagged spm_ so its submit returns to THIS menu.
+      return ButtonHandlerFactory.create({ id: 'player_menu_sel_stamina_modal', requiresPermission: PermissionFlagsBits.ManageRoles, permissionName: 'Manage Roles', handler: async (context) => {
+        const targetUserId = context.customId.startsWith('player_menu_sel_stamina_')
+          ? context.customId.replace('player_menu_sel_stamina_', '')
+          : context.userId;
+        const { createStaminaModal } = await import('./safariMapAdmin.js');
+        const modal = await createStaminaModal(targetUserId, context.guildId);
+        modal.custom_id = `spm_stamina_modal_${targetUserId}`; // plain object (Label modal), routes submit back to this menu
+        return { type: 9, data: modal };
+      }})(req, res, client);
+
     } else if (custom_id === 'player_menu_sel_map' || custom_id.startsWith('player_menu_sel_map_')) {
       const selectedValue = req.body.data.values?.[0];
       if (selectedValue === 'move' || selectedValue === 'starting_location') {
@@ -45884,6 +45896,33 @@ Your server is now ready for Tycoons gameplay!`;
         await updateDeferredResponse(req.body.token, await buildAdminPlayerMenu(client, guildId, targetUserId, req.body.member?.user?.id, 'map'));
       } catch (error) {
         console.error('Error in spm_move_modal:', error);
+        await updateDeferredResponse(req.body.token, { components: [{ type: 17, accent_color: 0xe74c3c, components: [{ type: 10, content: `❌ Error: ${error.message}` }] }] });
+      }
+
+    } else if (custom_id.startsWith('spm_stamina_modal_')) {
+      // Stamina set from the Player Manager → set, then WEBHOOK-PATCH the menu (Stamina category active).
+      const targetUserId = custom_id.replace('spm_stamina_modal_', '');
+      const guildId = req.body.guild_id;
+      const getModalVal = (comp) => comp?.component?.value ?? comp?.components?.[0]?.value;
+      const amount = parseInt(getModalVal(components[0])?.trim());
+      const maxRaw = getModalVal(components[1])?.trim();
+      const maxAmount = maxRaw ? parseInt(maxRaw) : null;
+
+      if (isNaN(amount) || amount < 0 || amount > 999) {
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Invalid current stamina. Enter a number between 0 and 999.', flags: InteractionResponseFlags.EPHEMERAL } });
+      }
+      if (maxAmount !== null && (isNaN(maxAmount) || maxAmount < 1 || maxAmount > 999)) {
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Invalid max stamina. Enter a number between 1 and 999.', flags: InteractionResponseFlags.EPHEMERAL } });
+      }
+
+      await res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+      try {
+        const { setPlayerStamina } = await import('./safariMapAdmin.js');
+        await setPlayerStamina(guildId, targetUserId, amount, maxAmount);
+        const { buildAdminPlayerMenu } = await import('./playerManagement.js');
+        await updateDeferredResponse(req.body.token, await buildAdminPlayerMenu(client, guildId, targetUserId, req.body.member?.user?.id, 'stamina'));
+      } catch (error) {
+        console.error('Error in spm_stamina_modal:', error);
         await updateDeferredResponse(req.body.token, { components: [{ type: 17, accent_color: 0xe74c3c, components: [{ type: 10, content: `❌ Error: ${error.message}` }] }] });
       }
 

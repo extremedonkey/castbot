@@ -36,6 +36,11 @@ CUSTOM_MESSAGE="${2}" # Optional custom message for Discord notification
 
 # Git operations (safety net) - non-blocking
 echo "🔄 Handling git operations..."
+# ⚠️ MULTI-AGENT COLLISION: `git add .` stages the ENTIRE working tree. If another
+# Claude/agent session shares this tree (or the test box has uncommitted work), THEIR
+# changes get bundled into THIS commit and pushed. If you suspect a concurrent session,
+# stage only your own files first (`git add <file> ...`) and commit manually, then run
+# this with no new changes. See RaP 0913 (RemoteDevTestBox).
 git add .
 
 # Capture changed files BEFORE commit (--cached is empty after commit)

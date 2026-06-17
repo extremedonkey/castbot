@@ -205,6 +205,16 @@ Host castbot-blue
 - `/home/ubuntu/.ssh/prod-remediate-key` (on the test box) — test box → prod, **forced-command only** (`remediate-castbot.sh`).
 - `/home/ubuntu/.ssh/github-castbot` (on the test box) — test box → GitHub, **write-enabled deploy key** (`castbot-blue`). Lets `box-restart.sh` push commits made on the box. Box `~/.ssh/config` routes `github.com` to this key; `origin` is the SSH URL `git@github.com:extremedonkey/castbot.git`. Added 2026-06-15 (RaP 0913).
 
+### System packages — fonts for image rendering (REQUIRED)
+
+`sharp`/`libvips` rasterises SVG text (Season Planner cards, etc.) through **fontconfig**. A fresh Ubuntu box has **no fonts**, so generated images render as tofu/garbled boxes — the bot doesn't error, the images just come out mangled. Install once:
+
+```bash
+sudo apt-get install -y fontconfig fonts-dejavu-core fonts-liberation
+```
+
+This is **not yet captured in any provisioning script**, so it is lost on a rebuild/re-image. If a future flip rebuilds the box (or prod moves onto this stack), re-run the above, or add it to the box's setup. Symptom of the gap: SVG-derived images show empty/boxed glyphs where text should be. (Installed manually on castbot-blue 2026-06-16.)
+
 ---
 
 ## Data Seeding & Safety
