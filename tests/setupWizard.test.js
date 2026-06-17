@@ -134,5 +134,13 @@ describe('Setup Wizard — channel layout uses Section + button accessory', () =
     assert.equal(dm.filter(c => c.type === 9).length, 0);
   });
 
+  it('banner option shows above the title, only when passed (post-Run-Setup re-post)', () => {
+    const noBanner = channel({})[0].content;
+    assert.match(noBanner, /CastBot Setup Wizard/); // title is first when no banner
+
+    const withBanner = DiscordMessenger.createWelcomeComponents({ context: 'channel', banner: '```✅ Setup Complete```' })[0].components;
+    assert.equal(withBanner[0].content, '```✅ Setup Complete```');       // banner first
+    assert.match(withBanner[1].content, /CastBot Setup Wizard/);          // then the title
+  });
 });
 

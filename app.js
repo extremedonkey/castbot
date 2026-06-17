@@ -7652,7 +7652,8 @@ To fix this:
               const freshCastlist = await castlistManager.defaultCastlistHasTribes(guildId);
               const hasPostedCastlist = playerData[guildId]?.setupProgress?.castlistPosted === true;
               await createFollowupMessage(token, {
-                components: DiscordMessenger.createWelcomeComponents({ context: 'channel', hasSetup, hasCastlist: freshCastlist, hasPostedCastlist, serverName: guild?.name }),
+                // Banner makes it crystal-clear the (text-heavy) setup results above = success
+                components: DiscordMessenger.createWelcomeComponents({ context: 'channel', hasSetup, hasCastlist: freshCastlist, hasPostedCastlist, serverName: guild?.name, banner: '```✅ Setup Complete```' }),
                 ephemeral: true
               });
 

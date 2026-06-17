@@ -321,6 +321,8 @@ class DiscordMessenger {
    * @param {boolean} options.hasCastlist - Whether the active/default castlist has any tribes assigned (drives Castlist Manager "done" state)
    * @param {boolean} options.hasPostedCastlist - Whether this server has ever clicked Post Castlist (drives Post Castlist "done" state)
    * @param {boolean} options.setupInProgress - Render Run Setup as a green "⏳ Setting up..." (disabled) while setup runs
+   * @param {string} options.banner - Optional small text banner shown ABOVE the title (channel only).
+   *   Used only by the post-Run-Setup fresh wizard to show "✅ Setup Complete" for clarity.
    * @param {string} options.serverName - Guild name to personalize the DM copy
    * @returns {Array} Components V2 container array for Discord
    */
@@ -330,6 +332,7 @@ class DiscordMessenger {
     const hasCastlist = options.hasCastlist || false;
     const hasPostedCastlist = options.hasPostedCastlist || false;
     const setupInProgress = options.setupInProgress || false;
+    const banner = options.banner || null; // optional code-block banner above the title (channel only)
 
     // Channel-only task buttons — rendered as Section (type 9) accessories, one per task.
     // Each task is a Section: nested Text Display (left) + its action button (accessory, right).
@@ -420,6 +423,8 @@ class DiscordMessenger {
           { type: 1, components: featuresRow }
         ]
       : [
+          // Optional banner above the title (e.g. "✅ Setup Complete" on the post-Run-Setup re-post)
+          ...(banner ? [{ type: 10, content: banner }] : []),
           { type: 10, content: channelContent.title },
           { type: 14 },
           { type: 10, content: channelContent.howTo },
