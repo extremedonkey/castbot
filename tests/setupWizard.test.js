@@ -11,17 +11,12 @@ function hasCompletedSetup(guildData) {
   return hasPronouns && hasTimezones;
 }
 
-// ── Replicated from createWelcomeComponents: Run Setup + Castlist Manager button state ──
-function wizardButtons(hasSetup, hasCastlist = false, setupInProgress = false) {
-  const runSetup = setupInProgress
-    ? { custom_id: 'setup_castbot', label: 'Setting up...', style: 3, disabled: true }
-    : hasSetup
-    ? { custom_id: 'setup_castbot', label: 'Setup Complete', style: 3, disabled: true }
-    : { custom_id: 'setup_castbot', label: 'Run Setup', style: 1, disabled: false };
-  const castlist = hasCastlist
-    ? { custom_id: 'castlist_hub_main_new', label: 'First Castlist Made', style: 3, disabled: false }
-    : { custom_id: 'castlist_hub_main_new', label: 'Castlist Manager', style: 2, disabled: !hasSetup };
-  return { runSetup, castlist };
+// Assert button states against the REAL builder (no replica → can't drift from the state model).
+// Returns the accessory button for a given task custom_id under the given signals.
+function taskButton(customId, opts = {}) {
+  return DiscordMessenger.createWelcomeComponents({ context: 'channel', ...opts })[0]
+    .components.filter(c => c.type === 9)
+    .find(s => s.accessory.custom_id === customId).accessory;
 }
 
 describe('hasCompletedSetup — single source of truth', () => {
@@ -44,37 +39,59 @@ describe('hasCompletedSetup — single source of truth', () => {
   });
 });
 
-describe('Setup Wizard — button state reflects hasSetup', () => {
-  it('not set up: Run Setup is blue + enabled, Castlist Manager disabled', () => {
-    const { runSetup, castlist } = wizardButtons(false);
-    assert.equal(runSetup.label, 'Run Setup');
-    assert.equal(runSetup.style, 1);       // Primary / blue
-    assert.equal(runSetup.disabled, false);
-    assert.equal(castlist.disabled, true);
+describe('Setup Wizard — Run Setup (Task 1) action button', () => {
+  it('not set up: blue 🪛 Run Setup, enabled', () => {
+    const b = taskButton('setup_castbot', { hasSetup: false });
+    assert.equal(b.label, 'Run Setup');
+    assert.equal(b.style, 1);        // Primary / blue
+    assert.ok(!b.disabled);          // enabled (field may be absent = enabled)
   });
 
-  it('set up: Run Setup becomes green ✅ Setup Complete + disabled, Castlist Manager enabled', () => {
-    const { runSetup, castlist } = wizardButtons(true);
-    assert.equal(runSetup.label, 'Setup Complete');
-    assert.equal(runSetup.style, 3);       // Success / green
-    assert.equal(runSetup.disabled, true);
-    assert.equal(castlist.disabled, false);
+  it('set up: green ✅ Setup Complete, disabled', () => {
+    const b = taskButton('setup_castbot', { hasSetup: true });
+    assert.equal(b.label, 'Setup Complete');
+    assert.equal(b.style, 3);        // Success / green
+    assert.equal(b.disabled, true);
   });
 
-  it('setup in progress: Run Setup shows green "Setting up..." + disabled (instant feedback)', () => {
-    const { runSetup } = wizardButtons(false, false, true);
-    assert.equal(runSetup.label, 'Setting up...');
-    assert.equal(runSetup.style, 3);       // Success / green
-    assert.equal(runSetup.disabled, true);
+  it('setup in progress: green ⏳ Setting up..., disabled (instant feedback)', () => {
+    const b = taskButton('setup_castbot', { setupInProgress: true });
+    assert.equal(b.label, 'Setting up...');
+    assert.equal(b.style, 3);
+    assert.equal(b.disabled, true);
+  });
+});
+
+describe('Setup Wizard — gating model (gate disables, done greens)', () => {
+  // gate signals: Season+Castlist = hasSetup, Post = hasCastlist
+  it('Season Manager (Task 2) gated on hasSetup, no done-state', () => {
+    assert.equal(taskButton('season_management_menu', { hasSetup: false }).disabled, true);
+    assert.equal(taskButton('season_management_menu', { hasSetup: true }).disabled, false);
+    // never goes green (no done-state)
+    assert.equal(taskButton('season_management_menu', { hasSetup: true }).style, 2);
   });
 
-  it('both buttons key off the same hasSetup flag (no independent drift)', () => {
-    for (const hasSetup of [true, false]) {
-      const { runSetup, castlist } = wizardButtons(hasSetup); // hasCastlist defaults false
-      // Run Setup disabled-when-complete must mirror Castlist Manager enabled-when-complete
-      assert.equal(runSetup.disabled, hasSetup);
-      assert.equal(castlist.disabled, !hasSetup);
-    }
+  it('Castlist Manager (Task 3) gated on hasSetup, green when default castlist has tribes', () => {
+    assert.equal(taskButton('castlist_hub_main_new', { hasSetup: false }).disabled, true);
+    const enabled = taskButton('castlist_hub_main_new', { hasSetup: true, hasCastlist: false });
+    assert.equal(enabled.label, 'Castlist Manager');
+    assert.equal(enabled.disabled, false);
+    const done = taskButton('castlist_hub_main_new', { hasSetup: true, hasCastlist: true });
+    assert.equal(done.label, 'First Castlist Made');
+    assert.equal(done.style, 3);     // green
+    assert.equal(done.disabled, false);
+  });
+
+  it('Post Castlist (Task 4) gated on hasCastlist, green when ever posted', () => {
+    // disabled until the default castlist has tribes (can't display an empty castlist)
+    assert.equal(taskButton('wizard_post_castlist', { hasSetup: true, hasCastlist: false }).disabled, true);
+    const enabled = taskButton('wizard_post_castlist', { hasCastlist: true, hasPostedCastlist: false });
+    assert.equal(enabled.label, 'Post Castlist');
+    assert.equal(enabled.style, 2);
+    assert.equal(enabled.disabled, false);
+    const done = taskButton('wizard_post_castlist', { hasCastlist: true, hasPostedCastlist: true });
+    assert.equal(done.label, 'Castlist Posted');
+    assert.equal(done.style, 3);     // green
   });
 });
 
@@ -121,25 +138,3 @@ describe('Setup Wizard — channel layout uses Section + button accessory', () =
   });
 });
 
-describe('Setup Wizard — Castlist Manager reflects hasCastlist', () => {
-  it('default castlist has tribes: green ✅ First Castlist Made, still navigable', () => {
-    const { castlist } = wizardButtons(true, true);
-    assert.equal(castlist.label, 'First Castlist Made');
-    assert.equal(castlist.style, 3);        // Success / green
-    assert.equal(castlist.disabled, false); // still clickable to manage castlists
-    assert.equal(castlist.custom_id, 'castlist_hub_main_new'); // same destination
-  });
-
-  it('no tribes yet but set up: grey Castlist Manager, enabled', () => {
-    const { castlist } = wizardButtons(true, false);
-    assert.equal(castlist.label, 'Castlist Manager');
-    assert.equal(castlist.style, 2);
-    assert.equal(castlist.disabled, false);
-  });
-
-  it('hasCastlist wins even before setup completes (edge case)', () => {
-    const { castlist } = wizardButtons(false, true);
-    assert.equal(castlist.label, 'First Castlist Made');
-    assert.equal(castlist.style, 3);
-  });
-});

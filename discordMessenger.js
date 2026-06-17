@@ -26,6 +26,39 @@ const MAX_HISTORY_ENTRIES = 1000;
 const recentWelcomeDMs = new Map(); // userId -> timestamp (ms)
 const WELCOME_DM_DEDUPE_MS = 60_000;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SETUP WIZARD — BUTTON STATE MODEL (single source of truth for task-button gating)
+//
+// Every wizard task button is driven by TWO independent booleans:
+//   • gate → is the prerequisite met? ENABLED when true, disabled/greyed when false.
+//   • done → is the task complete? Green "✅ <doneLabel>" when true (still clickable),
+//            otherwise grey "<emoji> <label>". Omit doneLabel for tasks with no
+//            completion state (they're just gated grey buttons).
+//
+// The gate/done SIGNALS are computed by the callers and passed into
+// createWelcomeComponents() — see createProductionMenuInterface, prod_setup_wizard,
+// and setup_castbot in app.js. The signals themselves:
+//   hasSetup          ≥1 pronoun AND ≥1 timezone role   (roleManager.hasCompletedSetup)
+//   hasCastlist       default castlist has ≥1 tribe role (castlistManager.defaultCastlistHasTribes)
+//   hasPostedCastlist server ever clicked Post Castlist  (playerData[g].setupProgress.castlistPosted)
+//
+//   Task             gate         done (green ✅)      notes
+//   1 Run Setup      (special)    hasSetup            action button; extra "⏳ Setting up..." state
+//   2 Season Manager hasSetup     —                   gated nav, no done-state
+//   3 Castlist Mgr   hasSetup     hasCastlist         gated nav + done
+//   4 Post Castlist  hasCastlist  hasPostedCastlist   gated nav + done
+//
+// To add a task: pick its gate + (optional) done signal, then add one buildWizardTaskButton.
+// ─────────────────────────────────────────────────────────────────────────────
+function buildWizardTaskButton({ customId, emoji, label, gate, done = false, doneLabel }) {
+  if (done && doneLabel) {
+    // Completed: green ✅ badge, still navigable (disabled only if the gate isn't met)
+    return { type: 2, custom_id: customId, label: doneLabel, style: 3, emoji: { name: '✅' }, disabled: !gate };
+  }
+  // Not done: grey button, enabled only when its prerequisite (gate) is met
+  return { type: 2, custom_id: customId, label, style: 2, emoji: { name: emoji }, disabled: !gate };
+}
+
 class DiscordMessenger {
   /**
    * Core message sending to a user via DM
@@ -303,73 +336,33 @@ class DiscordMessenger {
     // This mirrors the /castlist Section pattern (castlistV2.js:312) but with a button
     // accessory instead of a thumbnail. More tasks can be added as additional Sections.
 
-    // Run Setup — single source of truth: hasSetup.
-    //   setup running → green "⏳ Setting up..." (disabled) — instant feedback while roles are created
-    //   set up        → green "✅ Setup Complete" (disabled)
-    //   not set up    → blue "🪛 Run Setup"
+    // Per the BUTTON STATE MODEL above (top of file). Signals: hasSetup / hasCastlist / hasPostedCastlist.
+
+    // Task 1 — Run Setup: the one ACTION button (not a gated nav button).
+    //   not set up → blue "🪛 Run Setup"; running → green "⏳ Setting up..."; set up → green "✅ Setup Complete".
     const runSetupButton = setupInProgress
-      ? {
-          type: 2, custom_id: 'setup_castbot',
-          label: 'Setting up...',
-          style: 3, // Success (green)
-          emoji: { name: '⏳' },
-          disabled: true
-        }
+      ? { type: 2, custom_id: 'setup_castbot', label: 'Setting up...', style: 3, emoji: { name: '⏳' }, disabled: true }
       : hasSetup
-      ? {
-          type: 2, custom_id: 'setup_castbot',
-          label: 'Setup Complete',
-          style: 3, // Success (green)
-          emoji: { name: '✅' },
-          disabled: true
-        }
-      : {
-          type: 2, custom_id: 'setup_castbot',
-          label: 'Run Setup',
-          style: 1, // Primary (blue)
-          emoji: { name: '🪛' }
-        };
+      ? { type: 2, custom_id: 'setup_castbot', label: 'Setup Complete', style: 3, emoji: { name: '✅' }, disabled: true }
+      : { type: 2, custom_id: 'setup_castbot', label: 'Run Setup', style: 1, emoji: { name: '🪛' } };
 
-    // Castlist Manager — default castlist has tribes → green "✅ First Castlist Made"
-    // (still navigable); otherwise grey "Castlist Manager", disabled until setup is complete.
-    const castlistButton = hasCastlist
-      ? {
-          type: 2, custom_id: 'castlist_hub_main_new',
-          label: 'First Castlist Made',
-          style: 3, // Success (green)
-          emoji: { name: '✅' }
-        }
-      : {
-          type: 2, custom_id: 'castlist_hub_main_new',  // Creates new ephemeral message instead of replacing
-          label: 'Castlist Manager',
-          style: 2, // Secondary (grey)
-          emoji: { name: '📋' },
-          disabled: !hasSetup
-        };
+    // Task 2 — Season Manager: gated on hasSetup, no done-state (optional task)
+    const seasonManagerButton = buildWizardTaskButton({
+      customId: 'season_management_menu', emoji: '📅', label: 'Season Manager',
+      gate: hasSetup
+    });
 
-    // Season Manager — opens the season application management menu (optional task, no done-state)
-    const seasonManagerButton = {
-      type: 2, custom_id: 'season_management_menu',
-      label: 'Season Manager',
-      style: 2, // Secondary (grey)
-      emoji: { name: '📅' }
-    };
+    // Task 3 — Castlist Manager: gated on hasSetup, done when default castlist has tribes
+    const castlistButton = buildWizardTaskButton({
+      customId: 'castlist_hub_main_new', emoji: '📋', label: 'Castlist Manager',
+      gate: hasSetup, done: hasCastlist, doneLabel: 'First Castlist Made'
+    });
 
-    // Post Castlist — posts the default castlist publicly (reuses /castlist display).
-    // Once a server has ever posted, show a green "✅ Castlist Posted" (still navigable).
-    const postCastlistButton = hasPostedCastlist
-      ? {
-          type: 2, custom_id: 'wizard_post_castlist',
-          label: 'Castlist Posted',
-          style: 3, // Success (green)
-          emoji: { name: '✅' }
-        }
-      : {
-          type: 2, custom_id: 'wizard_post_castlist',
-          label: 'Post Castlist',
-          style: 2, // Secondary (grey)
-          emoji: { name: '📃' }
-        };
+    // Task 4 — Post Castlist: gated on hasCastlist (can't display an empty castlist), done when ever posted
+    const postCastlistButton = buildWizardTaskButton({
+      customId: 'wizard_post_castlist', emoji: '📃', label: 'Post Castlist',
+      gate: hasCastlist, done: hasPostedCastlist, doneLabel: 'Castlist Posted'
+    });
 
     // Row (both contexts): Castbot Features (first) + CastBot Help Server link
     const featuresRow = [
