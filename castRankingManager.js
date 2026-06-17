@@ -41,6 +41,52 @@ export async function buildRankingEmptyState(seasonName, configId) {
 }
 
 /**
+ * Build the full Season Cast Ranking view response (first applicant card, or the empty state when a
+ * season has no applications). Shared by the Ranking tab handler AND the Edit-modal context-aware
+ * refresh so both render identically. Returns Components V2 response data ({ flags, components }) —
+ * the caller sends it (factory return for buttons, or res.send UPDATE_MESSAGE for modal submits).
+ * Permission is enforced by the CALLER (both entry points are already gated).
+ * @param {Object} p
+ * @param {string} p.guildId
+ * @param {string} p.userId - admin viewing the ranking
+ * @param {string} p.configId
+ * @param {Object} p.client - Discord client (for guild/member fetch)
+ * @param {Object} [p.guild] - pre-fetched guild (optional)
+ * @param {Object} [p.playerData] - pre-loaded player data (optional)
+ */
+export async function buildSeasonRankingResponse({ guildId, userId, configId, client, guild, playerData }) {
+  const { loadPlayerData, getApplicationsForSeason } = await import('./storage.js');
+  playerData = playerData || await loadPlayerData();
+  guild = guild || await client.guilds.fetch(guildId);
+
+  const seasonConfig = playerData[guildId]?.applicationConfigs?.[configId];
+  const seasonName = seasonConfig?.seasonName || 'Unknown Season';
+  const allApplications = await getApplicationsForSeason(guildId, configId);
+
+  if (allApplications.length === 0) {
+    return await buildRankingEmptyState(seasonName, configId);
+  }
+
+  const currentApp = allApplications[0];
+  const appIndex = 0;
+  let applicantMember;
+  try {
+    applicantMember = await guild.members.fetch(currentApp.userId);
+  } catch (error) {
+    // Fallback: minimal object sufficient for avatar URL generation
+    applicantMember = {
+      displayName: currentApp.displayName,
+      user: { username: currentApp.username },
+      displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
+    };
+  }
+
+  return await generateSeasonAppRankingUI({
+    guildId, userId, configId, allApplications, currentApp, appIndex, applicantMember, guild, seasonName, playerData
+  });
+}
+
+/**
  * Generate complete Cast Ranking UI for a specific applicant
  * 
  * MINIMAL TEST APPROACH: Start with just the main season_app_ranking handler UI generation.

@@ -13729,72 +13729,13 @@ To fix this:
             };
           }
 
-          // Load season configuration to get season name
+          // Build via the shared helper (also used by the Edit-modal context-aware refresh) so the
+          // Ranking tab and a post-edit ranking refresh render identically.
           const playerData = await loadPlayerData();
-          const seasonConfig = playerData[guildId]?.applicationConfigs?.[configId];
-          const seasonName = seasonConfig?.seasonName || 'Unknown Season';
-          
-          // Load applications data filtered by season
-          const allApplications = await getApplicationsForSeason(guildId, configId);
-          
-          console.log(`Found ${allApplications.length} applications for ranking`);
-          console.log('Debug - Guild ID:', guildId);
-          
-          // Debug: Check what's actually in playerData
-          console.log('Debug - Guild exists in playerData:', !!playerData[guildId]);
-          console.log('Debug - Applications section exists:', !!playerData[guildId]?.applications);
-          if (playerData[guildId]?.applications) {
-            console.log('Debug - Application keys:', Object.keys(playerData[guildId].applications));
-            console.log('Debug - Application data:', JSON.stringify(playerData[guildId].applications, null, 2));
-          }
-          
-          if (allApplications.length > 0) {
-            console.log('Applications:', allApplications.map(app => `${app.displayName} (${app.channelName})`).join(', '));
-          }
+          const { buildSeasonRankingResponse } = await import('./castRankingManager.js');
+          const uiResponse = await buildSeasonRankingResponse({ guildId, userId, configId, client: context.client, guild, playerData });
 
-          if (allApplications.length === 0) {
-            // Reuse the shared Ranking chrome (header + active-tab nav row) — no duplicated UI
-            const { buildRankingEmptyState } = await import('./castRankingManager.js');
-            return await buildRankingEmptyState(seasonName, configId);
-          }
-
-          // Get first application for initial display
-          const currentApp = allApplications[0];
-          const appIndex = 0;
-          
-          // Fetch the applicant as a guild member to get their current avatar
-          let applicantMember;
-          try {
-            applicantMember = await guild.members.fetch(currentApp.userId);
-            console.log('🔍 DEBUG: Successfully fetched applicant member:', applicantMember.displayName || applicantMember.user.username);
-          } catch (error) {
-            console.log('🔍 DEBUG: Could not fetch applicant member, using fallback:', error.message);
-            // Fallback: create a basic user object for avatar URL generation
-            applicantMember = {
-              displayName: currentApp.displayName,
-              user: { username: currentApp.username },
-              displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
-            };
-          }
-          
-          // Import and use the new castRankingManager for UI generation
-          const { generateSeasonAppRankingUI } = await import('./castRankingManager.js');
-          
-          console.log('🔧 PHASE 2 TEST: Using castRankingManager for UI generation');
-          const uiResponse = await generateSeasonAppRankingUI({
-            guildId,
-            userId,
-            configId,
-            allApplications,
-            currentApp,
-            appIndex,
-            applicantMember,
-            guild,
-            seasonName,
-            playerData
-          });
-          
-          console.log(`✅ SUCCESS: season_app_ranking - castRankingManager generated interface`);
+          console.log(`✅ SUCCESS: season_app_ranking - rendered via buildSeasonRankingResponse`);
           return uiResponse;
         }
       })(req, res, client);
@@ -44051,7 +43992,13 @@ Your server is now ready for Tycoons gameplay!`;
             const plannerView = buildPlannerView(freshConfig.seasonName, seasonRounds, startDate, configId, 0, freshConfig.seasonIdeas, fresh[guildId]?.challenges, freshConfig);
             return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { flags: (1 << 15), ...plannerView } });
           }
-          // apps (default) + ranking-origin → question management UI (ranking rebuild needs heavy context)
+          if (originMode === 'ranking') {
+            const { buildSeasonRankingResponse } = await import('./castRankingManager.js');
+            const rankingView = await buildSeasonRankingResponse({ guildId, userId: req.body.member.user.id, configId, client, playerData: fresh });
+            // Keep IS_COMPONENTS_V2; never carry EPHEMERAL into UPDATE_MESSAGE (inherits the source).
+            return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...rankingView, flags: (1 << 15) } });
+          }
+          // apps (default) → question management UI
           return refreshQuestionManagementUI(res, freshConfig, configId, 0);
 
         } else {
