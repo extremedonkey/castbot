@@ -324,27 +324,21 @@ export function validatePlannerFields(fields) {
   const seasonName = fields.season_name?.trim();
   if (!seasonName) errors.push('Season name is required');
 
-  // Estimates are OPTIONAL (RaP 0910, Layer B). Rounds are only generated when ALL four are
-  // supplied & valid. Partial/invalid estimates are an error so the user can fix or clear them.
-  const anyEstimate = [fields.est_players, fields.est_swaps, fields.est_ftc, fields.est_start_date]
-    .some(v => v != null && String(v).trim() !== '');
+  // Estimates NEVER block the save (2026-06-17 host-edit fix — a host must ALWAYS be able to edit the
+  // title). Each estimate is parsed independently; rounds are generated ONLY when ALL FOUR are present
+  // & valid. Anything partial or malformed is simply ignored (no error) and the season is saved
+  // name-only — the Season Planner view then prompts for whatever estimates are still missing.
+  // The ONLY thing that can make a submit invalid is a missing season name.
+  const players = parseInt(fields.est_players);
+  const swaps = parseInt(fields.est_swaps);
+  const ftc = parseInt(fields.est_ftc);
+  const startDate = parseStartDate(fields.est_start_date);
 
-  let hasPlannerData = false;
-  let players, swaps, ftc, startDate;
-  if (anyEstimate) {
-    players = parseInt(fields.est_players);
-    swaps = parseInt(fields.est_swaps);
-    ftc = parseInt(fields.est_ftc);
-    startDate = parseStartDate(fields.est_start_date);
-
-    if (isNaN(players) || players < 1) errors.push('Players must be a number > 0');
-    if (isNaN(swaps) || swaps < 0) errors.push('Swaps must be a number ≥ 0');
-    if (isNaN(ftc) || ftc < 1) errors.push('FTC players must be a number > 0');
-    if (!startDate) errors.push('Start date must be in mm/dd/yyyy format');
-    if (!isNaN(players) && !isNaN(ftc) && ftc >= players) errors.push('FTC players must be less than total players');
-
-    hasPlannerData = errors.length === 0;
-  }
+  const hasPlannerData =
+    !isNaN(players) && players >= 1 &&
+    !isNaN(swaps) && swaps >= 0 &&
+    !isNaN(ftc) && ftc >= 1 && ftc < players &&
+    !!startDate;
 
   return {
     valid: errors.length === 0,

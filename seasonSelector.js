@@ -97,7 +97,9 @@ export function buildSeasonNavRow(configId, active) {
       tab('apps', `planner_apps_${configId}`, 'Apps', '📝'),
       tab('planner', `apps_planner_${configId}`, 'Planner', '📅'),
       tab('ranking', `season_app_ranking_${configId}`, 'Ranking', '🏆'),
-      { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } }
+      // Edit custom_id carries the ORIGIN view (active) so the modal submit refreshes THAT same view
+      // (e.g. edit from Planner → watch the planner repopulate). Parsed back in the season_edit_info handler.
+      { type: 2, custom_id: `season_edit_info_${active}_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } }
     ]
   };
 }

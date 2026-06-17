@@ -30,25 +30,17 @@ function validatePlannerFields(fields) {
   const seasonName = fields.season_name?.trim();
   if (!seasonName) errors.push('Season name is required');
 
-  const anyEstimate = [fields.est_players, fields.est_swaps, fields.est_ftc, fields.est_start_date]
-    .some(v => v != null && String(v).trim() !== '');
+  // Estimates NEVER block the save (host-edit fix). Only a missing name makes the submit invalid.
+  const players = parseInt(fields.est_players);
+  const swaps = parseInt(fields.est_swaps);
+  const ftc = parseInt(fields.est_ftc);
+  const startDate = parseStartDate(fields.est_start_date);
 
-  let hasPlannerData = false;
-  let players, swaps, ftc, startDate;
-  if (anyEstimate) {
-    players = parseInt(fields.est_players);
-    swaps = parseInt(fields.est_swaps);
-    ftc = parseInt(fields.est_ftc);
-    startDate = parseStartDate(fields.est_start_date);
-
-    if (isNaN(players) || players < 1) errors.push('Players must be a number > 0');
-    if (isNaN(swaps) || swaps < 0) errors.push('Swaps must be a number ≥ 0');
-    if (isNaN(ftc) || ftc < 1) errors.push('FTC players must be a number > 0');
-    if (!startDate) errors.push('Start date must be in mm/dd/yyyy format');
-    if (!isNaN(players) && !isNaN(ftc) && ftc >= players) errors.push('FTC players must be less than total players');
-
-    hasPlannerData = errors.length === 0;
-  }
+  const hasPlannerData =
+    !isNaN(players) && players >= 1 &&
+    !isNaN(swaps) && swaps >= 0 &&
+    !isNaN(ftc) && ftc >= 1 && ftc < players &&
+    !!startDate;
 
   return {
     valid: errors.length === 0,
@@ -115,27 +107,33 @@ describe('Unified season create — full estimates', () => {
   });
 });
 
-describe('Unified season create — partial/invalid estimates are rejected', () => {
-  it('rejects partial estimates (players given, others blank)', () => {
+describe('Unified season — partial/invalid estimates are IGNORED, never block the save (host-edit fix)', () => {
+  it('saves name-only (valid) when estimates are partial — players given, others blank', () => {
     const r = validatePlannerFields({ season_name: 'Partial', est_players: '18' });
-    assert.equal(r.valid, false);
-    assert.equal(r.hasPlannerData, false);
+    assert.equal(r.valid, true);          // editing/creating is NOT blocked
+    assert.equal(r.hasPlannerData, false); // ...but no rounds until all four are valid
+    assert.deepEqual(r.errors, []);
   });
 
-  it('rejects FTC >= players', () => {
+  it('saves (valid) but skips planner data when FTC >= players', () => {
     const r = validatePlannerFields({
       season_name: 'Bad', est_players: '5', est_swaps: '1', est_ftc: '5', est_start_date: '03/07/2026'
     });
-    assert.equal(r.valid, false);
-    assert.ok(r.errors.some(e => /FTC/i.test(e)));
+    assert.equal(r.valid, true);
+    assert.equal(r.hasPlannerData, false);
   });
 
-  it('rejects a malformed start date', () => {
+  it('saves (valid) but skips planner data on a malformed start date', () => {
     const r = validatePlannerFields({
       season_name: 'BadDate', est_players: '18', est_swaps: '2', est_ftc: '3', est_start_date: '3/7/26'
     });
-    assert.equal(r.valid, false);
-    assert.ok(r.errors.some(e => /date/i.test(e)));
+    assert.equal(r.valid, true);
+    assert.equal(r.hasPlannerData, false);
+  });
+
+  it('the ONLY thing that blocks a submit is a missing season name', () => {
+    assert.equal(validatePlannerFields({ season_name: '' }).valid, false);
+    assert.equal(validatePlannerFields({ season_name: 'X', est_players: '18' }).valid, true);
   });
 });
 
@@ -160,10 +158,12 @@ describe('Modal start-date pre-fill — create mode stays blank (regression: tit
     assert.equal(startDateValue({ estimatedStartDate: ts }), '03/07/2026');
   });
 
-  it('a lone pre-filled date would block title-only create (the bug we fixed)', () => {
-    // Old modal defaulted the date to today; with empty players/swaps/ftc that submit is INVALID...
-    assert.equal(validatePlannerFields({ season_name: 'X', est_start_date: '06/17/2026' }).valid, false);
-    // ...whereas with the date left blank (current behaviour) a title-only submit is valid.
+  it('title-only create stays valid even with a stray date (defence in depth)', () => {
+    // Two independent guards now protect title-only create: the modal no longer pre-fills the date,
+    // AND validation never blocks on estimates. So even a stray date submit is valid (just no rounds).
+    const r = validatePlannerFields({ season_name: 'X', est_start_date: '06/17/2026' });
+    assert.equal(r.valid, true);
+    assert.equal(r.hasPlannerData, false);
     assert.equal(validatePlannerFields({ season_name: 'X' }).valid, true);
   });
 });

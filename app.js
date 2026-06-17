@@ -11718,8 +11718,13 @@ To fix this:
         handler: async (context, req, res) => {
           console.log(`✏️ START: season_edit_info - user ${context.userId}`);
 
-          // Extract configId: season_edit_info_{configId}
-          const configId = context.customId.replace('season_edit_info_', '');
+          // Extract origin view + configId: season_edit_info_{mode}_{configId} (mode ∈ apps|planner|ranking).
+          // Legacy buttons without a mode prefix fall back to 'apps'. A configId always starts with
+          // "config_", so it can never be mistaken for a mode token.
+          const rawEdit = context.customId.replace('season_edit_info_', '');
+          const editModeMatch = rawEdit.match(/^(apps|planner|ranking)_(.+)$/);
+          const originMode = editModeMatch ? editModeMatch[1] : 'apps';
+          const configId = editModeMatch ? editModeMatch[2] : rawEdit;
 
           // Load player data to get existing season details
           const playerData = await loadPlayerData();
@@ -11748,7 +11753,7 @@ To fix this:
                 estimatedFTCPlayers: config.estimatedFTCPlayers,
                 estimatedStartDate: config.estimatedStartDate
               },
-              { editCustomId: `season_modal:${configId}` }
+              { editCustomId: `season_modal:${configId}:${originMode}` }
             )
           });
         }
@@ -44042,27 +44047,20 @@ Your server is now ready for Tycoons gameplay!`;
         let isEditMode = false;
         let configId = null;
 
+        // Format: 'season_modal:create' | 'season_modal:{configId}' | 'season_modal:{configId}:{originMode}'
+        // originMode (apps|planner|ranking) tells the edit path which view to refresh after saving.
+        let originMode = 'apps';
         if (custom_id.startsWith('season_modal:')) {
           const parts = custom_id.split(':');
-          if (parts.length !== 2) {
-            console.error(`❌ Invalid season_modal custom_id format: ${custom_id}`);
-            return res.send({
-              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-              data: {
-                content: '❌ Invalid modal format. Please try again.',
-                flags: InteractionResponseFlags.EPHEMERAL
-              }
-            });
-          }
-
-          const mode = parts[1];
-          if (mode === 'create') {
+          const second = parts[1];
+          if (parts[2]) originMode = parts[2];
+          if (second === 'create') {
             isEditMode = false;
             console.log('📝 Processing season creation (new pattern)');
           } else {
             isEditMode = true;
-            configId = mode;
-            console.log(`✏️ Processing season edit for configId: ${configId}`);
+            configId = second;
+            console.log(`✏️ Processing season edit for configId: ${configId} (origin: ${originMode})`);
           }
         } else {
           // Legacy 'create_season_modal' pattern
@@ -44107,7 +44105,19 @@ Your server is now ready for Tycoons gameplay!`;
 
           await updateSeason(guildId, configId, validation.data);
           const fresh = await loadPlayerData();
-          return refreshQuestionManagementUI(res, fresh[guildId].applicationConfigs[configId], configId, 0);
+          const freshConfig = fresh[guildId].applicationConfigs[configId];
+
+          // Context-aware refresh: webhook-update the SAME view the modal was launched from, so the
+          // user watches that view repopulate (e.g. the Planner gains its round string selects).
+          if (originMode === 'planner') {
+            const { buildPlannerView } = await import('./seasonPlanner.js');
+            const seasonRounds = fresh[guildId]?.seasonRounds?.[freshConfig.seasonId] || {};
+            const startDate = new Date(freshConfig.estimatedStartDate);
+            const plannerView = buildPlannerView(freshConfig.seasonName, seasonRounds, startDate, configId, 0, freshConfig.seasonIdeas, fresh[guildId]?.challenges, freshConfig);
+            return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { flags: (1 << 15), ...plannerView } });
+          }
+          // apps (default) + ranking-origin → question management UI (ranking rebuild needs heavy context)
+          return refreshQuestionManagementUI(res, freshConfig, configId, 0);
 
         } else {
           // CREATE MODE: unified season creation (Name required + optional planner estimates).
