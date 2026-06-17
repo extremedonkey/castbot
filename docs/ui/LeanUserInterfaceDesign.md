@@ -420,6 +420,35 @@ Use `buildRichCardModal()` to create the edit modal and `extractRichCardValues()
 
 ---
 
+## 🗂️ Multi-Featured Menus (active-tab pattern)
+
+When one entity (e.g. a Season) has multiple peer "views" (Apps / Planner / Ranking), give every view an **identical nav row** with the **current view's tab shaded blue (Primary)**, the rest grey (Secondary). Adopted from Player Manager.
+
+**Rules**
+- **One shared builder** is the single source of truth so the row can never drift across views. Seasons: `buildSeasonNavRow(configId, active)` in `seasonSelector.js`. Player Manager: category buttons in `playerManagement.js`.
+- **Identical ordering everywhere** — `[Apps · Planner · Ranking · Edit]`. Same custom_ids, labels, emoji, order.
+- **Active tab = `style: 1` (Primary/blue), still clickable** (reloads). Inactive = `style: 2`. Don't `disabled` the active one (the Player Manager `disabled` is a *data-gate*, not "am I active").
+- **Actions vs views**: action buttons (Edit) live in the same row but are never "active"/blue.
+- **In-place nav**: every tab uses `updateMessage: true` (webhook PATCH) so views morph the same ephemeral message — never CREATE a new one. Don't use a conditional `updateMessage` based on source flags; if all views are ephemeral, just always update.
+- **No duplicated chrome**: the empty/zero-state of a view must reuse the same header + nav row helper, not hand-roll its own (e.g. `buildRankingEmptyState` reuses `buildSeasonNavRow`).
+- **Emoji in headers/prose**: emoji inside ``` code blocks ``` / `` ` `` spans render muted/monospace and WON'T match a button's full-color emoji. To match a button, place the emoji **outside** the code formatting.
+- **Component budget**: adding a tab is +1; trim a low-value line (e.g. instructional text) to stay ≤40.
+
+```javascript
+function buildSeasonNavRow(configId, active) {
+  const tab = (key, id, label, emoji) =>
+    ({ type: 2, custom_id: id, label, style: active === key ? 1 : 2, emoji: { name: emoji } });
+  return { type: 1, components: [
+    tab('apps', `planner_apps_${configId}`, 'Apps', '📝'),
+    tab('planner', `apps_planner_${configId}`, 'Planner', '📅'),
+    tab('ranking', `season_app_ranking_${configId}`, 'Ranking', '🏆'),
+    { type: 2, custom_id: `season_edit_info_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } } // action, never active
+  ]};
+}
+```
+
+---
+
 ## 🔧 Implementation
 
 **For technical implementation using MenuBuilder**, see **[MenuSystemArchitecture.md](../enablers/MenuSystemArchitecture.md)**:
