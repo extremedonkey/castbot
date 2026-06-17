@@ -10993,67 +10993,27 @@ To fix this:
             await savePlayerData(playerData);
           }
 
-          // Use our new reusable season selector
-          const { createSeasonSelector } = await import('./seasonSelector.js');
-          const seasonSelectDropdown = await createSeasonSelector(guildId, {
-            customId: 'entity_select_seasons',
-            // Uses default placeholder: 'Select your season...'
-            includeCreateNew: true,
-            showArchived: false
-          });
+          // ⚠️ DEPRECATED: this is the OLD "Apps" season picker. It now REDIRECTS to the unified
+          // Season Manager (buildPlannerSelector) — which already defaults to the Apps view on select.
+          // New code MUST use 'reeces_season_planner_mockup' / buildPlannerSelector(), NOT this handler
+          // and NOT the 'entity_select_seasons' selector. Kept only to migrate legacy configs + redirect
+          // anything still linking here. See RaP 0910 (Season Hub unification).
+          console.warn(`⚠️ DEPRECATED season_management_menu hit (user ${userId}) — redirecting to the Season Manager. Update the caller to use reeces_season_planner_mockup / buildPlannerSelector().`);
 
-          const selectRow = new ActionRowBuilder().addComponents(seasonSelectDropdown);
+          const { buildPlannerSelector } = await import('./seasonPlanner.js');
+          const plannerView = await buildPlannerSelector(guildId);
 
-          // Create Components V2 interface following Safari pattern
-          const seasonManagementComponents = [
-            {
-              type: 10, // Text Display
-              content: `## :pencil: Season Applications | Manage Season Casting`
-            },
-            {
-              type: 14 // Separator
-            },
-            selectRow.toJSON()
-          ];
-
-          // Add Back to Main Menu button (using centralized factory)
-          const backRow = new ActionRowBuilder()
-            .addComponents(createBackButton('prod_menu_back'));
-
-          seasonManagementComponents.push(
-            { type: 14 }, // Separator
-            backRow.toJSON()
-          );
-
-          const seasonManagementContainer = {
-            type: 17, // Container
-            accent_color: 0xf39c12, // Orange like Safari
-            components: seasonManagementComponents
-          };
-
-          // For submenu navigation, always update if it's a CastBot message with components
+          // For submenu navigation, update in place if the last message is a CastBot component message
           const channel = await client.channels.fetch(channelId);
           const lastMessages = await channel.messages.fetch({ limit: 1 });
           const lastMessage = lastMessages.first();
-          
-          const shouldUpdateMessage = lastMessage && 
-            lastMessage.author.id === client.user.id && 
-            lastMessage.components && 
+          const shouldUpdateMessage = lastMessage &&
+            lastMessage.author.id === client.user.id &&
+            lastMessage.components &&
             lastMessage.components.length > 0;
-            
-          console.log(`🔍 DEBUG: Season submenu - shouldUpdate: ${shouldUpdateMessage}`);
 
-          // Count components for debugging (must wrap in array to count Container itself!)
-          const { countComponents } = await import('./utils.js');
-          countComponents([seasonManagementContainer], {
-            enableLogging: true,
-            verbosity: "full",
-            label: 'Season Management Menu Components'
-          });
-
-          console.log(`✅ SUCCESS: season_management_menu - completed`);
-
-          return await sendProductionSubmenuResponse(res, channelId, [seasonManagementContainer], shouldUpdateMessage);
+          console.log(`✅ SUCCESS: season_management_menu - redirected to Season Manager`);
+          return await sendProductionSubmenuResponse(res, channelId, plannerView.components, shouldUpdateMessage);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('question_special_player_setup_')) {
@@ -28873,7 +28833,10 @@ Your server is now ready for Tycoons gameplay!`;
         
           console.log(`📋 DEBUG: Entity select - Type: ${entityType}, Value: ${selectedValue}`);
           
-          // Handle seasons entity type specially
+          // Handle seasons entity type specially.
+          // ⚠️ DEPRECATED PATH: 'entity_select_seasons' is the OLD Apps picker. The current season UI
+          // uses 'planner_select_season' (buildPlannerSelector / Season Manager). Kept only for stale
+          // or cached messages — do NOT render new 'entity_select_seasons' selectors.
           if (entityType === 'seasons') {
             if (selectedValue === 'create_new_season') {
               // Unified season-create modal: Name (required) + optional planner estimates (RaP 0910, Layer B).

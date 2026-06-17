@@ -77,11 +77,16 @@ export function seasonConfigIndicators(configId, season, guildData) {
 }
 
 /**
- * Creates a reusable season select dropdown component
- * 
+ * Creates a reusable season select dropdown component.
+ *
+ * ⚠️ For SEASON MANAGEMENT UI, do NOT call this directly with the default customId — that's the
+ * DEPRECATED "Apps" picker ('entity_select_seasons'). Use buildPlannerSelector() (the Season Manager)
+ * instead, which wraps this with the right customId, search, and config indicators. Direct callers
+ * with custom customIds (alumni/active/castlist selectors) are fine.
+ *
  * @param {string} guildId - Discord guild ID
  * @param {Object} options - Configuration options
- * @param {string} options.customId - Custom ID for the select menu (default: 'entity_select_seasons')
+ * @param {string} options.customId - Custom ID for the select menu (default: 'entity_select_seasons' — DEPRECATED Apps picker)
  * @param {string} options.placeholder - Placeholder text (default: 'Select a season...')
  * @param {boolean} options.includeCreateNew - Include "Create New Season" option (default: true)
  * @param {boolean} options.showArchived - Include archived seasons (default: false)

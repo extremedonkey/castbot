@@ -353,7 +353,7 @@ export const BUTTON_REGISTRY = {
     description: 'Jump from Season Applications to the Season Planner for this season',
     emoji: '📅',
     style: 'Secondary',
-    parent: 'season_management_menu',
+    parent: 'reeces_season_planner_mockup',
     category: 'season_applications'
   },
   'planner_tribes_*': {
@@ -3107,8 +3107,8 @@ export const BUTTON_REGISTRY = {
 
   // === APPLICATION MANAGEMENT SYSTEM ===
   'season_management_menu': {
-    label: 'Apps',
-    description: 'Comprehensive season-based application management system',
+    label: 'Apps (deprecated)',
+    description: '⚠️ DEPRECATED old Apps season picker — redirects to the Season Manager. Use reeces_season_planner_mockup / buildPlannerSelector() instead.',
     emoji: '📝',
     style: 'Primary',
     category: 'application_management'
