@@ -389,12 +389,170 @@ export async function handleNukeCancel(context) {
   };
 }
 
+/* ============================================================================
+ * SUPER NUKE — runs ALL guild nukes (Map → Roles → safariContent → playerData)
+ * for the currently loaded guild. Reuses each individual nuke's underlying
+ * function so they keep working discretely; this just orchestrates them.
+ * ========================================================================== */
+
+const SUPER_NUKE_USER = '391415444084490240'; // Reece only — same gate as individual nukes
+
+/**
+ * Confirmation dialog for superNuke (full server wipe).
+ * @param {string} guildId
+ * @param {string} serverName
+ * @returns {Object} Components V2 Container
+ */
+export function createSuperNukeConfirmUI(guildId, serverName) {
+  return {
+    type: 17, // Container
+    accent_color: 0xe74c3c, // Red — danger
+    components: [
+      { type: 10, content: `## ☢️☢️ superNuke — Full Server Wipe` },
+      { type: 14 },
+      {
+        type: 10,
+        content: [
+          `⚠️ This runs **EVERY** nuke for **${serverName}** \`${guildId}\`:`,
+          `• 🗺️ **Map** — deletes the map's Discord channels + map data`,
+          `• 💥 **Roles** — deletes all CastBot-managed Discord roles`,
+          `• ☢️ **safariContent** — clears this guild from safariContent.json`,
+          `• ☢️ **playerData** — clears this guild from playerData.json`,
+          ``,
+          `**This CANNOT be undone.**`
+        ].join('\n')
+      },
+      { type: 14 },
+      {
+        type: 1, // Action Row
+        components: [
+          { type: 2, style: 4, label: 'Yes, superNuke Everything', custom_id: 'super_nuke_confirm', emoji: { name: '☢️' } },
+          { type: 2, style: 2, label: 'Cancel', custom_id: 'data_admin', emoji: { name: '❌' } }
+        ]
+      }
+    ]
+  };
+}
+
+/**
+ * Success summary for superNuke.
+ * @param {string} serverName
+ * @param {string} guildId
+ * @param {Object} results - { map, roles, safari, player, errors[] }
+ * @returns {Object} Components V2 Container
+ */
+export function createSuperNukeSuccessUI(serverName, guildId, results) {
+  const roles = results.roles || {};
+  const lines = [
+    `-# Server: **${serverName}** \`${guildId}\``,
+    '',
+    `🗺️ **Map:** ${results.map || '—'}`,
+    `💥 **Roles:** ${roles.rolesDeleted ?? 0} deleted · ${roles.pronounsCleared ?? 0} pronouns · ${roles.timezonesCleared ?? 0} timezones`,
+    `☢️ **safariContent:** ${results.safari || '—'}`,
+    `☢️ **playerData:** ${results.player || '—'}`
+  ];
+  if (results.errors?.length > 0) {
+    lines.push('', `**Errors:**`, ...results.errors.map(e => `• ${e}`));
+  }
+
+  return {
+    type: 17, // Container
+    accent_color: results.errors?.length > 0 ? 0xf39c12 : 0x27ae60, // Orange if errors, else green
+    components: [
+      { type: 10, content: `## ☢️☢️ superNuke Complete` },
+      { type: 14 },
+      { type: 10, content: '### ```📊 Results```' },
+      { type: 10, content: lines.join('\n') },
+      { type: 14 },
+      backToDataRow()
+    ]
+  };
+}
+
+/**
+ * Execute superNuke — all guild nukes in dependency-safe order.
+ * Order matters: Map (needs safariContent.maps) → Roles (needs playerData configs)
+ * → safariContent → playerData (last, since roles nuke writes playerData).
+ * Each step is error-isolated so one failure doesn't abort the rest.
+ * @param {Object} context - Button context (guildId, userId, client)
+ * @returns {Object} Response object for Discord
+ */
+export async function handleSuperNuke(context) {
+  console.log(`☢️☢️ SUPER NUKE CONFIRMED for Guild ${context.guildId}, User ${context.userId}`);
+
+  // Security check — Reece only (same gate as individual nukes)
+  if (context.userId !== SUPER_NUKE_USER) {
+    console.log(`❌ ACCESS DENIED: super_nuke - user ${context.userId} not authorized`);
+    return { components: [createNoDataUI('playerData', context.guildId)] };
+  }
+
+  const guildId = context.guildId;
+  const pd = await loadPlayerData();
+  const serverName = pd[guildId]?.serverName || 'Unknown Server';
+
+  const results = { map: null, roles: null, safari: null, player: null, errors: [] };
+
+  // 1. Map — delete Discord channels + map data (must run while safariContent.maps intact)
+  try {
+    const guild = await context.client.guilds.fetch(guildId);
+    const { deleteMapGrid } = await import('./mapExplorer.js');
+    const r = await deleteMapGrid(guild);
+    results.map = r?.success ? (r.message?.split('\n')[0] || 'Map deleted.') : (r?.message || 'No map to delete.');
+  } catch (e) {
+    results.map = `⚠️ ${e.message}`;
+    results.errors.push(`Map: ${e.message}`);
+  }
+
+  // 2. Roles — delete Discord roles + clear pronoun/timezone (must run while playerData configs intact)
+  try {
+    results.roles = await nukeRoles(guildId, context.client);
+    if (results.roles?.errors?.length > 0) {
+      results.errors.push(...results.roles.errors.map(e => `Roles: ${e}`));
+    }
+  } catch (e) {
+    results.roles = { rolesDeleted: 0, pronounsCleared: 0, timezonesCleared: 0, errors: [e.message] };
+    results.errors.push(`Roles: ${e.message}`);
+  }
+
+  // 3. safariContent — clear guild entry
+  try {
+    const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+    const safari = await loadSafariContent();
+    const existed = !!safari[guildId];
+    delete safari[guildId];
+    await saveSafariContent(safari);
+    results.safari = existed ? 'Cleared.' : 'Nothing to clear.';
+  } catch (e) {
+    results.safari = `⚠️ ${e.message}`;
+    results.errors.push(`safariContent: ${e.message}`);
+  }
+
+  // 4. playerData — clear guild entry LAST (roles nuke writes playerData, so do this after)
+  try {
+    const data = await loadPlayerData();
+    const existed = !!data[guildId];
+    delete data[guildId];
+    await savePlayerData(data);
+    results.player = existed ? 'Cleared.' : 'Nothing to clear.';
+  } catch (e) {
+    results.player = `⚠️ ${e.message}`;
+    results.errors.push(`playerData: ${e.message}`);
+  }
+
+  console.log(`☢️☢️ SUPER NUKE COMPLETE for ${serverName} (${guildId}): ${results.errors.length} error(s)`);
+
+  return { components: [createSuperNukeSuccessUI(serverName, guildId, results)] };
+}
+
 export default {
   handleNukeRequest,
   handleNukeConfirm,
   handleNukeCancel,
+  handleSuperNuke,
   createNukeConfirmationUI,
   createNukeSuccessUI,
   createNoDataUI,
-  createNukeCancelUI
+  createNukeCancelUI,
+  createSuperNukeConfirmUI,
+  createSuperNukeSuccessUI
 };

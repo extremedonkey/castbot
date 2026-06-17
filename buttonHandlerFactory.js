@@ -847,6 +847,24 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
+  'super_nuke': {
+    label: 'superNuke',
+    description: 'Full server wipe — runs ALL nukes (Map, Roles, playerData, safariContent) (EXTREMELY DANGEROUS)',
+    emoji: '☢️',
+    style: 'Danger',
+    parent: 'data_admin',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
+  'super_nuke_confirm': {
+    label: 'superNuke Confirm',
+    description: 'Execute the full server wipe',
+    emoji: '☢️',
+    style: 'Danger',
+    parent: 'super_nuke',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
   'emergency_app_reinit': {
     label: 'Emergency Re-Init',
     description: 'Emergency re-initialization of season applications',

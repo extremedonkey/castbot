@@ -1041,7 +1041,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       components: [
         {
           type: 10, // Text Display
-          content: `> **📅 Season Planner & Challenges** are here!`
+          content: `> **📅 Season Apps** has been moved to Season Manager below`
         }
       ],
       accessory: {
@@ -1217,34 +1217,41 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setEmoji('📝'),
   ];
 
-  // Danger Zone section buttons
+  // Danger Zone section buttons (compact labels so all 5 fit in one row)
   const deleteMapButton = new ButtonBuilder()
     .setCustomId('map_delete')
-    .setLabel('Delete Map')
+    .setLabel('Map')
     .setStyle(ButtonStyle.Danger)
     .setEmoji('🗑️')
     .setDisabled(!hasActiveMap);  // Disable if no active map
-  
+
   const dangerZoneButtons = [
     deleteMapButton,  // First button in the row
     new ButtonBuilder()
       .setCustomId('nuke_roles')
-      .setLabel('Nuke Roles')
+      .setLabel('Roles')
       .setStyle(ButtonStyle.Danger)
       .setEmoji('💥')
       .setDisabled(!hasRolesInData),
     new ButtonBuilder()
       .setCustomId('nuke_player_data')
-      .setLabel('Nuke playerData')
+      .setLabel('playerData')
       .setStyle(ButtonStyle.Danger)
       .setEmoji('☢️')
       .setDisabled(!hasPlayerData),
     new ButtonBuilder()
       .setCustomId('nuke_safari_content')
-      .setLabel('Nuke safariContent')
+      .setLabel('safariContent')
       .setStyle(ButtonStyle.Danger)
       .setEmoji('☢️')
-      .setDisabled(!hasSafariData)
+      .setDisabled(!hasSafariData),
+    new ButtonBuilder()
+      .setCustomId('super_nuke')
+      .setLabel('superNuke')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('☢️')
+      // Runs ALL nukes; only disabled when there is literally nothing to nuke
+      .setDisabled(!hasActiveMap && !hasRolesInData && !hasPlayerData && !hasSafariData)
   ];
   
   // (Cleanup section moved to the Tools menu — buildSetupMenu in menuBuilder.js)
@@ -1274,7 +1281,7 @@ async function createReeceStuffMenu(guildId, channelId = null) {
     { type: 10, content: `### \`\`\`📤 Export & Actions\`\`\`` },
     exportDataRow.toJSON(),
     { type: 14 },
-    { type: 10, content: `### \`\`\`☢️ Danger Zone\`\`\`` },
+    { type: 10, content: `### \`\`\`☢️ Danger Zone (Server Nuke Controls)\`\`\`` },
     dangerZoneRow.toJSON(),
     { type: 14 },
     backRow.toJSON()
@@ -15273,6 +15280,34 @@ Your server is now ready for Tycoons gameplay!`;
             ...reeceMenuData,
             ephemeral: true
           };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'super_nuke') {
+      // superNuke — show confirmation for full server wipe (DELEGATED TO MODULE)
+      return ButtonHandlerFactory.create({
+        id: 'super_nuke',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const { createSuperNukeConfirmUI } = await import('./dataNuker.js');
+          const playerData = await loadPlayerData();
+          const serverName = playerData[context.guildId]?.serverName || 'Unknown Server';
+          return { components: [createSuperNukeConfirmUI(context.guildId, serverName)] };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'super_nuke_confirm') {
+      // superNuke — execute ALL nukes (Map→Roles→safariContent→playerData) (DELEGATED TO MODULE)
+      // deferred + updateMessage: silent ACK, then webhook PATCH of the parent once done (role/channel deletes are slow)
+      return ButtonHandlerFactory.create({
+        id: 'super_nuke_confirm',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        deferred: true,
+        updateMessage: true,
+        handler: async (context) => {
+          const { handleSuperNuke } = await import('./dataNuker.js');
+          return handleSuperNuke(context);
         }
       })(req, res, client);
     } else if (custom_id === 'safari_create_button') {
@@ -40894,9 +40929,9 @@ Your server is now ready for Tycoons gameplay!`;
             ]}]};
           }
 
-          const seasonRounds = playerData[guildId].seasonRounds[result.seasonId];
-          const startDate = new Date(config.estimatedStartDate);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, result.configId, 0, config.seasonIdeas, playerData[guildId]?.challenges);
+          // Default to the Apps (question management) view — same as selecting an existing season.
+          // Apps is the more widely-used feature; the Planner is one click away via its cross-link.
+          return await buildQuestionManagementUI(config, result.configId, 0);
         }
       })(req, res, client);
 
