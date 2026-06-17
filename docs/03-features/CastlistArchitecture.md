@@ -375,7 +375,7 @@ When `/castlist` resolves **zero tribes** for the requested castlist (`validTrib
 
 ### Admin first-run Setup Wizard nudge (June 2026)
 
-In that same empty branch, if an **admin** runs `/castlist` on the **default** castlist **before completing setup**, CastBot *additionally* surfaces the Setup Wizard as an **ephemeral follow-up** (admin-only).
+In that same empty branch, if an **admin** runs `/castlist` on the **default** castlist **before completing setup**, CastBot shows **only the Setup Wizard** (ephemeral, admin-only) *instead of* the no-tribes container.
 
 ```
 gate = isAdmin && castlistIdentifier === 'default' && !hasCompletedSetup(playerData[guildId])
@@ -386,9 +386,9 @@ gate = isAdmin && castlistIdentifier === 'default' && !hasCompletedSetup(playerD
 
 **Why `hasSetup` is NOT used to gate the castlist *display* itself** (only the nudge): `hasSetup` (pronoun/timezone roles) is independent of "has a displayable castlist." A server can have tribes but never configure pronouns/timezones — gating display on `hasSetup` would **hide a working castlist**. The nudge avoids this entirely because it only fires when there are already **zero tribes to show**.
 
-**Why an ephemeral follow-up, not a replacement of `@original`:** the deferred response's ephemerality is fixed earlier (app.js, by `canSendMessagesInChannel`) — *before* we know the castlist is empty — so a public defer can't be made ephemeral retroactively. The wizard's **Run Setup** button must never be publicly clickable, so the wizard is delivered as an ephemeral follow-up (only the invoking admin sees/clicks it); the public/channel still gets the safe no-tribes container.
+**How "only the wizard, only ephemeral" is achieved (the `@original` dance):** `/castlist` fixes the deferred response's ephemerality at defer time (app.js, via `canSendMessagesInChannel`) — *before* it knows the castlist is empty — so a public defer can't be made ephemeral retroactively, and the wizard's **Run Setup** button must never be publicly clickable. So the nudge path: (1) posts the wizard as an **ephemeral follow-up** (admin-only), then (2) **DELETEs the public deferred placeholder** (`DELETE …/messages/@original`) so the wizard is the only message that remains. If the delete fails, it gracefully falls back to resolving the placeholder to the no-tribes container (wizard + no-tribes). Non-nudge invocations keep the no-tribes container unchanged.
 
-**Guardrails (all three required):** admin-only · default-castlist-only · setup-not-complete. The "hide a real castlist" failure mode is structurally impossible (only fires on zero tribes). Performance impact is negligible — the extra `loadPlayerData` + follow-up happen only in the rare admin-on-empty-default-before-setup case. Gate predicate is unit-tested in `tests/castlistFirstRun.test.js`.
+**Guardrails (all three required):** admin-only · default-castlist-only · setup-not-complete. The "hide a real castlist" failure mode is structurally impossible (only fires on zero tribes). Performance impact is negligible — the extra `loadPlayerData` + follow-up + delete happen only in the rare admin-on-empty-default-before-setup case. Gate predicate is unit-tested in `tests/castlistFirstRun.test.js`.
 
 ## Critical Implementation Notes
 
