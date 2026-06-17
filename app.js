@@ -948,11 +948,9 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setLabel('Items')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('📦'),
-    new ButtonBuilder()
-      .setCustomId('safari_map_admin')
-      .setLabel('Player Admin')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🧭'),
+    // 🗿 DEPRECATED: legacy "Player Admin" (safari_map_admin) moved to Reece's Stuff → Legacy.
+    // Superseded by the Player Manager (playerManagement.js createPlayerManagementUI / buildAdminPlayerMenu),
+    // reached via /menu → Manage Players (admin_manage_player). Do NOT re-add this to the main menu.
     new ButtonBuilder()
       .setCustomId('challenge_screen')
       .setLabel('Challenges')
