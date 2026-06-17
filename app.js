@@ -7655,16 +7655,18 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'wizard_post_castlist') {
-      // Setup Wizard "Post Castlist" — publicly post the default castlist (reuses /castlist
-      // display) and record that this server has posted at least once (setupProgress flag).
+      // Post Castlist — the click IS the completion: update the wizard live + post the castlist.
       return ButtonHandlerFactory.create({
         id: 'wizard_post_castlist',
         deferred: true,
-        ephemeral: false, // Castlist is public — visible to everyone in the channel
+        updateMessage: true, // DEFERRED_UPDATE_MESSAGE → @original = the wizard (turn button green in place)
         handler: async (context) => {
-          const { guildId } = context;
+          // 1. record castlistPosted; 2. post castlist as a PUBLIC channel message (the interaction
+          // response updates the ephemeral wizard, so the public castlist is a real bot message);
+          // 3. return the refreshed wizard → factory PATCHes @original (wizard) → Post Castlist green.
+          const { guildId, channelId } = context;
 
-          // Record first-ever post for this server (drives the wizard's green "Castlist Posted" state)
+          // Record first-ever post for this server (drives the green "Castlist Posted" state)
           const playerData = await loadPlayerData();
           if (!playerData[guildId]) playerData[guildId] = {};
           if (!playerData[guildId].setupProgress) playerData[guildId].setupProgress = {};
@@ -7674,9 +7676,32 @@ To fix this:
             console.log(`📃 wizard_post_castlist: marked castlistPosted=true for guild ${guildId}`);
           }
 
-          // Display the default castlist publicly (same path as the show_castlist2 button)
+          // Build the default castlist and post it as a PUBLIC channel message (the interaction
+          // response is reserved for updating the ephemeral wizard).
           const { displayCastlist } = await import('./castlistDisplay.js');
-          return displayCastlist(context, 'default', 'view', buildNoTribesContainer, canSendMessagesInChannel);
+          const castlistData = await displayCastlist(context, 'default', 'view', buildNoTribesContainer, canSendMessagesInChannel);
+          try {
+            await DiscordRequest(`channels/${channelId}/messages`, {
+              method: 'POST',
+              body: { flags: (1 << 15), components: castlistData.components }
+            });
+            console.log(`📋 wizard_post_castlist: posted default castlist to channel ${channelId}`);
+          } catch (postErr) {
+            console.error('❌ wizard_post_castlist: failed to post castlist:', postErr);
+          }
+
+          // Refresh the wizard in place — recompute ALL signals so every tick is correct.
+          const fresh = await loadPlayerData();
+          const { castlistManager } = await import('./castlistManager.js');
+          const { default: DiscordMessenger } = await import('./discordMessenger.js');
+          const hasSetup = hasCompletedSetup(fresh[guildId]);
+          const hasCastlist = await castlistManager.defaultCastlistHasTribes(guildId);
+          const hasPostedCastlist = fresh[guildId]?.setupProgress?.castlistPosted === true;
+          const hasSeason = Object.keys(fresh[guildId]?.applicationConfigs || {}).length > 0;
+          return {
+            flags: (1 << 15),
+            components: DiscordMessenger.createWelcomeComponents({ context: 'channel', hasSetup, hasCastlist, hasPostedCastlist, hasSeason })
+          };
         }
       })(req, res, client);
     } else if (custom_id === 'castbot_tools') {
