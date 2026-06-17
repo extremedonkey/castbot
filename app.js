@@ -9610,12 +9610,22 @@ To fix this:
         return ButtonHandlerFactory.create({ id: 'player_menu_sel_castlists_compact', deferred: true, updateMessage: true, handler: async (context) => {
           const castlistId = selectedValue.replace('compact_castlist_', '');
           const { generateCastlistImage } = await import('./castlistImageGenerator.js');
-          const pngBuffer = await generateCastlistImage(context.guildId, castlistId, context.client);
-          const { AttachmentBuilder } = await import('discord.js');
-          const attachment = new AttachmentBuilder(pngBuffer, { name: 'castlist.png' });
-          const channelId = req.body.channel?.id || req.body.channel_id;
-          const channel = await context.client.channels.fetch(channelId);
-          await channel.send({ files: [attachment] });
+          try {
+            const pngBuffer = await generateCastlistImage(context.guildId, castlistId, context.client);
+            const { AttachmentBuilder } = await import('discord.js');
+            const attachment = new AttachmentBuilder(pngBuffer, { name: 'castlist.png' });
+            const channelId = req.body.channel?.id || req.body.channel_id;
+            const channel = await context.client.channels.fetch(channelId);
+            await channel.send({ files: [attachment] });
+          } catch (error) {
+            // Same graceful path as the standard castlist (displayCastlist) and the
+            // compact_castlist_* button handler: missing prerequisites → onboarding UI.
+            if (error.message?.includes('No tribes found')) {
+              console.log(`[COMPACT-CASTLIST] No tribes found — showing onboarding UI (player menu)`);
+              return { components: [buildNoTribesContainer()] };
+            }
+            throw error; // let the factory render unexpected errors
+          }
           // Rebuild menu
           const playerData = await loadPlayerData();
           const guild = await context.client.guilds.fetch(context.guildId);
