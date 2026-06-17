@@ -30,17 +30,18 @@ function validatePlannerFields(fields) {
   const seasonName = fields.season_name?.trim();
   if (!seasonName) errors.push('Season name is required');
 
-  // Estimates NEVER block the save (host-edit fix). Only a missing name makes the submit invalid.
-  const players = parseInt(fields.est_players);
-  const swaps = parseInt(fields.est_swaps);
-  const ftc = parseInt(fields.est_ftc);
+  // Each estimate validated INDEPENDENTLY so partial progress persists. Only a missing name fails.
+  const playersRaw = parseInt(fields.est_players);
+  const swapsRaw = parseInt(fields.est_swaps);
+  const ftcRaw = parseInt(fields.est_ftc);
   const startDate = parseStartDate(fields.est_start_date);
 
-  const hasPlannerData =
-    !isNaN(players) && players >= 1 &&
-    !isNaN(swaps) && swaps >= 0 &&
-    !isNaN(ftc) && ftc >= 1 && ftc < players &&
-    !!startDate;
+  const players = (!isNaN(playersRaw) && playersRaw >= 1) ? playersRaw : null;
+  const swaps = (!isNaN(swapsRaw) && swapsRaw >= 0) ? swapsRaw : null;
+  const ftc = (!isNaN(ftcRaw) && ftcRaw >= 1 && (players == null || ftcRaw < players)) ? ftcRaw : null;
+  const estimatedStartDate = startDate ? startDate.getTime() : null;
+
+  const hasPlannerData = players != null && swaps != null && ftc != null && estimatedStartDate != null;
 
   return {
     valid: errors.length === 0,
@@ -49,10 +50,10 @@ function validatePlannerFields(fields) {
     data: {
       seasonName,
       hasPlannerData,
-      estimatedTotalPlayers: hasPlannerData ? players : null,
-      estimatedSwaps: hasPlannerData ? swaps : null,
-      estimatedFTCPlayers: hasPlannerData ? ftc : null,
-      estimatedStartDate: hasPlannerData && startDate ? startDate.getTime() : null,
+      estimatedTotalPlayers: players,
+      estimatedSwaps: swaps,
+      estimatedFTCPlayers: ftc,
+      estimatedStartDate,
     }
   };
 }
@@ -134,6 +135,43 @@ describe('Unified season — partial/invalid estimates are IGNORED, never block 
   it('the ONLY thing that blocks a submit is a missing season name', () => {
     assert.equal(validatePlannerFields({ season_name: '' }).valid, false);
     assert.equal(validatePlannerFields({ season_name: 'X', est_players: '18' }).valid, true);
+  });
+});
+
+describe('Incremental planner setup — partial estimates are persisted (the save bug)', () => {
+  it('persists a lone players estimate (others stay null)', () => {
+    const { data } = validatePlannerFields({ season_name: 'S', est_players: '18' });
+    assert.equal(data.estimatedTotalPlayers, 18); // saved, not discarded
+    assert.equal(data.estimatedSwaps, null);
+    assert.equal(data.estimatedFTCPlayers, null);
+    assert.equal(data.estimatedStartDate, null);
+    assert.equal(data.hasPlannerData, false);     // ...but no rounds yet
+  });
+
+  it('persists players + 0 swaps incrementally, still no rounds until all four', () => {
+    const { data } = validatePlannerFields({ season_name: 'S', est_players: '18', est_swaps: '0' });
+    assert.equal(data.estimatedTotalPlayers, 18);
+    assert.equal(data.estimatedSwaps, 0); // 0 is a real value, not "missing"
+    assert.equal(data.hasPlannerData, false);
+  });
+
+  it('keeps the valid fields and drops only the invalid one (FTC >= players)', () => {
+    const { data } = validatePlannerFields({
+      season_name: 'S', est_players: '5', est_swaps: '1', est_ftc: '5', est_start_date: '03/07/2026'
+    });
+    assert.equal(data.estimatedTotalPlayers, 5);
+    assert.equal(data.estimatedSwaps, 1);
+    assert.equal(data.estimatedFTCPlayers, null); // 5 is not < 5 → dropped, not blocking
+    assert.ok(typeof data.estimatedStartDate === 'number');
+    assert.equal(data.hasPlannerData, false);
+  });
+
+  it('generates planner data once all four are present & valid', () => {
+    const { data } = validatePlannerFields({
+      season_name: 'S', est_players: '18', est_swaps: '2', est_ftc: '3', est_start_date: '03/07/2026'
+    });
+    assert.equal(data.hasPlannerData, true);
+    assert.equal(data.estimatedFTCPlayers, 3);
   });
 });
 

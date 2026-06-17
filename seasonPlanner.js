@@ -324,21 +324,22 @@ export function validatePlannerFields(fields) {
   const seasonName = fields.season_name?.trim();
   if (!seasonName) errors.push('Season name is required');
 
-  // Estimates NEVER block the save (2026-06-17 host-edit fix — a host must ALWAYS be able to edit the
-  // title). Each estimate is parsed independently; rounds are generated ONLY when ALL FOUR are present
-  // & valid. Anything partial or malformed is simply ignored (no error) and the season is saved
-  // name-only — the Season Planner view then prompts for whatever estimates are still missing.
-  // The ONLY thing that can make a submit invalid is a missing season name.
-  const players = parseInt(fields.est_players);
-  const swaps = parseInt(fields.est_swaps);
-  const ftc = parseInt(fields.est_ftc);
+  // Each estimate is parsed & validated INDEPENDENTLY so partial progress is saved (incremental planner
+  // setup — add players now, swaps later). Rounds generate ONLY when ALL FOUR are present & valid.
+  // Nothing here blocks the save — the ONLY thing that makes a submit invalid is a missing season name.
+  // null = not provided / invalid this submit (the value is then cleared on save, matching the modal).
+  const playersRaw = parseInt(fields.est_players);
+  const swapsRaw = parseInt(fields.est_swaps);
+  const ftcRaw = parseInt(fields.est_ftc);
   const startDate = parseStartDate(fields.est_start_date);
 
-  const hasPlannerData =
-    !isNaN(players) && players >= 1 &&
-    !isNaN(swaps) && swaps >= 0 &&
-    !isNaN(ftc) && ftc >= 1 && ftc < players &&
-    !!startDate;
+  const players = (!isNaN(playersRaw) && playersRaw >= 1) ? playersRaw : null;
+  const swaps = (!isNaN(swapsRaw) && swapsRaw >= 0) ? swapsRaw : null;
+  // FTC must be a positive int and (when total players is known) strictly fewer than total players.
+  const ftc = (!isNaN(ftcRaw) && ftcRaw >= 1 && (players == null || ftcRaw < players)) ? ftcRaw : null;
+  const estimatedStartDate = startDate ? startDate.getTime() : null;
+
+  const hasPlannerData = players != null && swaps != null && ftc != null && estimatedStartDate != null;
 
   return {
     valid: errors.length === 0,
@@ -347,10 +348,11 @@ export function validatePlannerFields(fields) {
     data: {
       seasonName,
       hasPlannerData,
-      estimatedTotalPlayers: hasPlannerData ? players : null,
-      estimatedSwaps: hasPlannerData ? swaps : null,
-      estimatedFTCPlayers: hasPlannerData ? ftc : null,
-      estimatedStartDate: hasPlannerData && startDate ? startDate.getTime() : null,
+      // Individually-valid estimates (may be partial); null = not provided/invalid this submit.
+      estimatedTotalPlayers: players,
+      estimatedSwaps: swaps,
+      estimatedFTCPlayers: ftc,
+      estimatedStartDate,
     }
   };
 }
@@ -916,16 +918,16 @@ export async function createSeason(guildId, userId, data) {
     ],
   };
 
-  // Planner fields + round/challenge generation only when full estimates were supplied
+  // Persist whatever estimates were provided (may be partial — incremental planner setup). The
+  // Planner view prompts for whatever is still null. Round/challenge generation happens only when
+  // ALL FOUR are present & valid (hasPlannerData).
+  config.estimatedTotalPlayers = data.estimatedTotalPlayers;
+  config.estimatedSwaps = data.estimatedSwaps;
+  config.estimatedFTCPlayers = data.estimatedFTCPlayers;
+  config.estimatedStartDate = data.estimatedStartDate;
   if (hasPlannerData) {
-    Object.assign(config, {
-      estimatedStartDate: data.estimatedStartDate,
-      estimatedTotalPlayers: data.estimatedTotalPlayers,
-      estimatedSwaps: data.estimatedSwaps,
-      estimatedFTCPlayers: data.estimatedFTCPlayers,
-      currentSeasonRoundID: 1,
-      seasonIdeas: 'Free-form section to brainstorm season themes, twists and challenges before assigning to rounds.',
-    });
+    config.currentSeasonRoundID = 1;
+    config.seasonIdeas = 'Free-form section to brainstorm season themes, twists and challenges before assigning to rounds.';
   }
 
   playerData[guildId].applicationConfigs[configId] = config;
@@ -964,12 +966,16 @@ export async function updateSeason(guildId, configId, data) {
   config.buttonText = buttonText;
   config.lastUpdated = Date.now();
 
+  // Persist each estimate individually so partial progress is saved (incremental planner setup —
+  // this is the actual fix for "adding one estimate didn't save"). null clears the field, matching
+  // the pre-filled modal the host just submitted.
+  config.estimatedTotalPlayers = data.estimatedTotalPlayers;
+  config.estimatedSwaps = data.estimatedSwaps;
+  config.estimatedFTCPlayers = data.estimatedFTCPlayers;
+  config.estimatedStartDate = data.estimatedStartDate;
+
   let generatedRounds = false;
   if (data.hasPlannerData) {
-    config.estimatedStartDate = data.estimatedStartDate;
-    config.estimatedTotalPlayers = data.estimatedTotalPlayers;
-    config.estimatedSwaps = data.estimatedSwaps;
-    config.estimatedFTCPlayers = data.estimatedFTCPlayers;
     config.currentSeasonRoundID = config.currentSeasonRoundID || 1;
     config.seasonIdeas = config.seasonIdeas || 'Free-form section to brainstorm season themes, twists and challenges before assigning to rounds.';
     if (config.stage === 'draft') config.stage = 'planning';
