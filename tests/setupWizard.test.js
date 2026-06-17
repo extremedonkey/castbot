@@ -82,7 +82,7 @@ describe('Setup Wizard — gating model (gate disables, done greens)', () => {
     assert.equal(done.disabled, false);
   });
 
-  it('Post Castlist (Task 4) gated on hasCastlist, green when ever posted', () => {
+  it('Post Castlist (Task 4) gated on hasCastlist, green only when posted AND a tribe exists', () => {
     // disabled until the default castlist has tribes (can't display an empty castlist)
     assert.equal(taskButton('wizard_post_castlist', { hasSetup: true, hasCastlist: false }).disabled, true);
     const enabled = taskButton('wizard_post_castlist', { hasCastlist: true, hasPostedCastlist: false });
@@ -92,6 +92,12 @@ describe('Setup Wizard — gating model (gate disables, done greens)', () => {
     const done = taskButton('wizard_post_castlist', { hasCastlist: true, hasPostedCastlist: true });
     assert.equal(done.label, 'Castlist Posted');
     assert.equal(done.style, 3);     // green
+
+    // BUG GUARD: a stale "posted" flag with NO tribes must NOT show green (regression from screenshot)
+    const stale = taskButton('wizard_post_castlist', { hasCastlist: false, hasPostedCastlist: true });
+    assert.equal(stale.label, 'Post Castlist');
+    assert.notEqual(stale.style, 3); // not green
+    assert.equal(stale.disabled, true);
   });
 });
 
@@ -128,13 +134,5 @@ describe('Setup Wizard — channel layout uses Section + button accessory', () =
     assert.equal(dm.filter(c => c.type === 9).length, 0);
   });
 
-  it('Post Castlist reflects hasPostedCastlist (grey 📃 → green ✅ Castlist Posted)', () => {
-    const post = (flag) => DiscordMessenger.createWelcomeComponents({ context: 'channel', hasPostedCastlist: flag })[0]
-      .components.filter(c => c.type === 9).find(s => s.accessory.custom_id === 'wizard_post_castlist').accessory;
-    assert.equal(post(false).label, 'Post Castlist');
-    assert.equal(post(false).style, 2);
-    assert.equal(post(true).label, 'Castlist Posted');
-    assert.equal(post(true).style, 3); // green
-  });
 });
 

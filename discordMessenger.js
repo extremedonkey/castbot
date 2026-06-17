@@ -42,11 +42,11 @@ const WELCOME_DM_DEDUPE_MS = 60_000;
 //   hasCastlist       default castlist has ≥1 tribe role (castlistManager.defaultCastlistHasTribes)
 //   hasPostedCastlist server ever clicked Post Castlist  (playerData[g].setupProgress.castlistPosted)
 //
-//   Task             gate         done (green ✅)      notes
-//   1 Run Setup      (special)    hasSetup            action button; extra "⏳ Setting up..." state
-//   2 Season Manager hasSetup     —                   gated nav, no done-state
-//   3 Castlist Mgr   hasSetup     hasCastlist         gated nav + done
-//   4 Post Castlist  hasCastlist  hasPostedCastlist   gated nav + done
+//   Task             gate         done (green ✅)                  notes
+//   1 Run Setup      (special)    hasSetup                        action button; extra "⏳ Setting up..." state
+//   2 Season Manager hasSetup     —                               gated nav, no done-state
+//   3 Castlist Mgr   hasSetup     hasCastlist                     gated nav + done
+//   4 Post Castlist  hasCastlist  hasPostedCastlist && hasCastlist gated nav + done (green only once a tribe exists too)
 //
 // To add a task: pick its gate + (optional) done signal, then add one buildWizardTaskButton.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -358,10 +358,12 @@ class DiscordMessenger {
       gate: hasSetup, done: hasCastlist, doneLabel: 'First Castlist Made'
     });
 
-    // Task 4 — Post Castlist: gated on hasCastlist (can't display an empty castlist), done when ever posted
+    // Task 4 — Post Castlist: gated on hasCastlist (can't display an empty castlist).
+    // Green "Castlist Posted" only once the button has been clicked AND a tribe exists in
+    // the default castlist (otherwise a stale click flag would show green with no castlist).
     const postCastlistButton = buildWizardTaskButton({
       customId: 'wizard_post_castlist', emoji: '📃', label: 'Post Castlist',
-      gate: hasCastlist, done: hasPostedCastlist, doneLabel: 'Castlist Posted'
+      gate: hasCastlist, done: hasPostedCastlist && hasCastlist, doneLabel: 'Castlist Posted'
     });
 
     // Row (both contexts): Castbot Features (first) + CastBot Help Server link
