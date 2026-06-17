@@ -801,6 +801,14 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
       const selectCustomId = mode === PlayerManagementMode.ADMIN && targetMember
         ? `player_menu_sel_stamina_${targetMember.id}`
         : 'player_menu_sel_stamina';
+      // Editing stamina requires the player to be on the map. If not initialized, show a guard
+      // option (pre-selected, no-op) prompting initialization instead of "Modify Stamina".
+      const stMapActive = safariData[guildId]?.maps?.active;
+      const { getPlayerSafariState, PLAYER_SAFARI_STATE } = await import('./safariPlayerUtils.js');
+      const stInitialized = getPlayerSafariState(playerData[guildId]?.players?.[targetMember.id], stMapActive) !== PLAYER_SAFARI_STATE.UNINITIALIZED;
+      const stOption = stInitialized
+        ? { label: 'Modify Stamina', value: 'modify_stamina', description: 'Modify current and max stamina', emoji: { name: '⚡' } }
+        : { label: 'Initialize player on the map first', value: 'stamina_noop', description: 'Set up the player on the map before editing stamina', emoji: { name: '🚀' }, default: true };
       return {
         type: 1,
         components: [{
@@ -809,12 +817,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
           placeholder: 'Stamina Options',
           min_values: 1,
           max_values: 1,
-          options: [{
-            label: 'Modify Stamina',
-            value: 'modify_stamina',
-            description: 'Modify current and max stamina',
-            emoji: { name: '⚡' }
-          }]
+          options: [stOption]
         }]
       };
     }

@@ -248,19 +248,15 @@ export function buildSeasonPlannerModal(existing = null, opts = {}) {
   const createCustomId = opts.createCustomId || 'planner_create_modal';
   const editCustomId = opts.editCustomId || `planner_setup_modal:${existing?.configId}`;
 
-  // Format start date for pre-fill: Unix timestamp → mm/dd/yyyy, or today for create mode
+  // Pre-fill the start date ONLY from an existing season. In create mode it stays BLANK on purpose:
+  // a pre-filled date counts as a supplied estimate, which would trip the all-or-nothing validation
+  // (validatePlannerFields) and block title-only season creation (RaP 0910).
   let startDateValue = null;
   if (existing?.estimatedStartDate) {
     const d = new Date(existing.estimatedStartDate);
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     startDateValue = `${mm}/${dd}/${d.getFullYear()}`;
-  } else if (!isSetup) {
-    // Create mode: default to today
-    const now = new Date();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    startDateValue = `${mm}/${dd}/${now.getFullYear()}`;
   }
 
   // Estimate text input — required on setup, optional on create
@@ -404,6 +400,41 @@ export function getSkippedRounds(rounds) {
 
 const SELECTS_PER_PAGE = 10;
 
+// Planner estimate fields the user must supply (via the Edit modal) before the schedule/calendar is
+// usable. Order = display order in the setup prompt. estimatedSwaps can legitimately be 0, so
+// presence is checked with `== null` (0 counts as supplied, only null/undefined count as missing).
+const PLANNER_FIELD_PROMPTS = {
+  estimatedTotalPlayers: 'Add estimated number of total players in the season',
+  estimatedSwaps: 'Add estimated number of swaps',
+  estimatedFTCPlayers: 'Add indicative Final Tribal Council players (e.g. F2 vs. F3)',
+  estimatedStartDate: 'Set an indicative Season Start date',
+};
+const ALL_PLANNER_FIELDS = Object.keys(PLANNER_FIELD_PROMPTS);
+
+/**
+ * Which planner estimate fields are still missing. Prefers the live config (per-field check), and
+ * falls back to the all-or-nothing rounds invariant when no config is passed (rounds exist ⟺ all
+ * estimates were supplied).
+ */
+export function getMissingPlannerFields(config, rounds) {
+  if (config) return ALL_PLANNER_FIELDS.filter(k => config[k] == null);
+  return (rounds && Object.keys(rounds).length > 0) ? [] : ALL_PLANNER_FIELDS;
+}
+
+/** Plain-text setup prompt shown in the planner when estimates are missing (lists only what's left). */
+export function buildPlannerSetupPrompt(missing) {
+  const fields = missing && missing.length ? missing : ALL_PLANNER_FIELDS;
+  const bullets = fields.map(k => `* ${PLANNER_FIELD_PROMPTS[k]}`).join('\n');
+  return [
+    '## 📅 Set up Season Planner',
+    '',
+    'Season Planner lets you plan out your rounds, swaps and challenges and view a season schedule / calendar showing key dates. To use Season Planner, click the `✏️ Edit` button above and input the following details:',
+    bullets,
+    '',
+    "Once these details are populated, you'll be able to use Season Planner!",
+  ].join('\n');
+}
+
 /**
  * Build the Season Planner view for a real season.
  * @param {string} seasonName - Display name
@@ -411,9 +442,10 @@ const SELECTS_PER_PAGE = 10;
  * @param {Date} startDate - Season start date
  * @param {string} configId - applicationConfigs key (for back navigation)
  * @param {number} page - 0-indexed page
+ * @param {Object} [config] - applicationConfigs entry; enables per-field "set up planner" detection
  * @returns {Object} Components V2 response
  */
-export function buildPlannerView(seasonName, rounds, startDate, configId, page = 0, ideas = '', challenges = {}) {
+export function buildPlannerView(seasonName, rounds, startDate, configId, page = 0, ideas = '', challenges = {}, config = null) {
   // Guard a missing/invalid start date so round dates never render as "undefined NaN undefined"
   if (!(startDate instanceof Date) || isNaN(startDate.getTime())) startDate = new Date();
   const roundIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
@@ -444,6 +476,28 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
     };
   });
 
+  // Planner readiness: per-field when a config is supplied, else inferred from generated rounds.
+  const missing = getMissingPlannerFields(config, rounds);
+  const plannerReady = missing.length === 0;
+
+  // Schedule body: round selects + active actions when set up; otherwise a setup prompt with the
+  // Schedule/Calendar actions disabled until every estimate is supplied via the Edit modal.
+  const scheduleBody = plannerReady
+    ? [
+        ...selectRows,
+        { type: 1, components: [
+          { type: 2, custom_id: `planner_schedule_${configId}`, label: 'Schedule', style: 2, emoji: { name: '📋' } },
+          { type: 2, custom_id: `planner_calendar_${configId}`, label: 'Calendar', style: 2, emoji: { name: '📅' } },
+        ]},
+      ]
+    : [
+        { type: 10, content: buildPlannerSetupPrompt(missing) },
+        { type: 1, components: [
+          { type: 2, custom_id: `planner_schedule_${configId}`, label: 'Schedule', style: 2, emoji: { name: '📋' }, disabled: true },
+          { type: 2, custom_id: `planner_calendar_${configId}`, label: 'Calendar', style: 2, emoji: { name: '📅' }, disabled: true },
+        ]},
+      ];
+
   const navButtons = [
     { type: 2, custom_id: 'season_manager', label: '← Seasons', style: 2 },
     { type: 2, custom_id: `planner_page_${page - 1}_${configId}`, label: '◀', style: page === 0 ? 2 : 1, disabled: page === 0 },
@@ -458,11 +512,7 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
       buildSeasonNavRow(configId, 'planner'),
       { type: 14 },
       { type: 10, content: `### \`\`\`📅 Manage Season Schedule${pageInfo}\`\`\`` },
-      ...selectRows,
-      { type: 1, components: [
-        { type: 2, custom_id: `planner_schedule_${configId}`, label: 'Schedule', style: 2, emoji: { name: '📋' } },
-        { type: 2, custom_id: `planner_calendar_${configId}`, label: 'Calendar', style: 2, emoji: { name: '📅' } },
-      ]},
+      ...scheduleBody,
       { type: 14 },
       { type: 1, components: navButtons },
     ]

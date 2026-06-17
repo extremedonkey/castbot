@@ -8859,21 +8859,11 @@ To fix this:
           const config = playerData[context.guildId]?.applicationConfigs?.[configId];
           if (!config) return { content: '❌ Season not found' };
 
-          const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId];
-          if (!seasonRounds) {
-            // Name-only season (no planner data yet) — offer setup, back returns to Apps
-            return { components: [{ type: 17, accent_color: 0xf39c12, components: [
-              { type: 10, content: `## ⚠️ Set Up Season Planner\n**${config.seasonName}** doesn't have planner data yet.\nClick below to configure round structure.` },
-              { type: 14 },
-              { type: 1, components: [
-                { type: 2, custom_id: `planner_force_setup_${configId}`, label: 'Set Up Planner', style: 1, emoji: { name: '📅' } },
-                { type: 2, custom_id: `planner_apps_${configId}`, label: '← Apps', style: 2 }
-              ]}
-            ]}]};
-          }
-
+          // Planner view renders its own not-set-up state (setup prompt + disabled Schedule/Calendar),
+          // so pass an empty rounds object and the config for per-field missing-estimate detection.
+          const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId] || {};
           const startDate = new Date(config.estimatedStartDate);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, config);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_ranking_')) {
@@ -10011,15 +10001,25 @@ To fix this:
       }})(req, res, client);
 
     } else if (custom_id === 'player_menu_sel_stamina' || custom_id.startsWith('player_menu_sel_stamina_')) {
-      // Stamina Options select → open the Set Player Stamina modal, retagged spm_ so its submit returns to THIS menu.
-      return ButtonHandlerFactory.create({ id: 'player_menu_sel_stamina_modal', requiresPermission: PermissionFlagsBits.ManageRoles, permissionName: 'Manage Roles', handler: async (context) => {
+      const staminaSelectedValue = req.body.data.values?.[0];
+      if (staminaSelectedValue === 'modify_stamina') { // → open Set Player Stamina modal (retagged spm_ to return here)
+        return ButtonHandlerFactory.create({ id: 'player_menu_sel_stamina_modal', requiresPermission: PermissionFlagsBits.ManageRoles, permissionName: 'Manage Roles', handler: async (context) => {
+          const targetUserId = context.customId.startsWith('player_menu_sel_stamina_')
+            ? context.customId.replace('player_menu_sel_stamina_', '')
+            : context.userId;
+          const { createStaminaModal } = await import('./safariMapAdmin.js');
+          const modal = await createStaminaModal(targetUserId, context.guildId);
+          modal.custom_id = `spm_stamina_modal_${targetUserId}`; // plain object (Label modal), routes submit back to this menu
+          return { type: 9, data: modal };
+        }})(req, res, client);
+      }
+      // Guard option ('stamina_noop' — "Initialize player on the map first"): re-render in place, no modal, no change.
+      return ButtonHandlerFactory.create({ id: 'player_menu_sel_stamina_noop', deferred: true, updateMessage: true, requiresPermission: PermissionFlagsBits.ManageRoles, permissionName: 'Manage Roles', handler: async (context) => {
         const targetUserId = context.customId.startsWith('player_menu_sel_stamina_')
           ? context.customId.replace('player_menu_sel_stamina_', '')
           : context.userId;
-        const { createStaminaModal } = await import('./safariMapAdmin.js');
-        const modal = await createStaminaModal(targetUserId, context.guildId);
-        modal.custom_id = `spm_stamina_modal_${targetUserId}`; // plain object (Label modal), routes submit back to this menu
-        return { type: 9, data: modal };
+        const { buildAdminPlayerMenu } = await import('./playerManagement.js');
+        return await buildAdminPlayerMenu(context.client, context.guildId, targetUserId, context.userId, 'stamina');
       }})(req, res, client);
 
     } else if (custom_id === 'player_menu_sel_map' || custom_id.startsWith('player_menu_sel_map_')) {
@@ -26318,7 +26318,7 @@ Your server is now ready for Tycoons gameplay!`;
           };
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('admin_set_pronouns_') || custom_id.startsWith('admin_set_timezone_') || custom_id.startsWith('admin_set_age_') || custom_id.startsWith('admin_manage_vanity_') || custom_id.startsWith('admin_set_attributes_') || custom_id.startsWith('admin_set_castlists_') || custom_id.startsWith('admin_set_challenges_') || custom_id.startsWith('admin_set_crafting_') || custom_id.startsWith('admin_set_actions_') || custom_id.startsWith('admin_set_stores_') || custom_id.startsWith('admin_set_currency_') || custom_id.startsWith('admin_set_inventory_') || custom_id.startsWith('admin_set_map_')) {
+    } else if (custom_id.startsWith('admin_set_pronouns_') || custom_id.startsWith('admin_set_timezone_') || custom_id.startsWith('admin_set_age_') || custom_id.startsWith('admin_manage_vanity_') || custom_id.startsWith('admin_set_attributes_') || custom_id.startsWith('admin_set_castlists_') || custom_id.startsWith('admin_set_challenges_') || custom_id.startsWith('admin_set_crafting_') || custom_id.startsWith('admin_set_actions_') || custom_id.startsWith('admin_set_stores_') || custom_id.startsWith('admin_set_currency_') || custom_id.startsWith('admin_set_inventory_') || custom_id.startsWith('admin_set_map_') || custom_id.startsWith('admin_set_stamina_')) {
       // 🔘 Convert to ButtonHandlerFactory
       return ButtonHandlerFactory.create({
         id: custom_id,
@@ -40907,22 +40907,11 @@ Your server is now ready for Tycoons gameplay!`;
             await updateSeason(guildId, configId, validation.data);
             const playerData = await loadPlayerData();
             const config = playerData[guildId].applicationConfigs[configId];
-            const seasonRounds = playerData[guildId]?.seasonRounds?.[config.seasonId];
-
-            if (!seasonRounds || Object.keys(seasonRounds).length === 0) {
-              // Name-only edit — no planner data yet; offer setup
-              return { components: [{ type: 17, accent_color: 0xf39c12, components: [
-                { type: 10, content: `## ⚠️ Set Up Season Planner\n**${config.seasonName}** doesn't have planner data yet.\nEnter your estimates below to generate the round structure.` },
-                { type: 14 },
-                { type: 1, components: [
-                  { type: 2, custom_id: `planner_force_setup_${configId}`, label: 'Set Up Planner', style: 1, emoji: { name: '📅' } },
-                  { type: 2, custom_id: 'season_manager', label: '← Back', style: 2 }
-                ]}
-              ]}]};
-            }
-
+            // Planner view renders its own setup prompt when estimates are still missing, so route
+            // both the name-only edit and the full edit through it (config drives per-field display).
+            const seasonRounds = playerData[guildId]?.seasonRounds?.[config.seasonId] || {};
             const startDate = new Date(config.estimatedStartDate);
-            return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[guildId]?.challenges);
+            return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[guildId]?.challenges, config);
           }
 
           // CREATE — unified season creation (name-only allowed; rounds only if estimates supplied)
@@ -40930,20 +40919,9 @@ Your server is now ready for Tycoons gameplay!`;
           const playerData = await loadPlayerData();
           const config = playerData[guildId].applicationConfigs[result.configId];
 
-          if (!result.hasPlannerData) {
-            // Name-only season — no rounds yet; offer planner setup
-            return { components: [{ type: 17, accent_color: 0xf39c12, components: [
-              { type: 10, content: `## ⚠️ Set Up Season Planner\n**${config.seasonName}** was created without planner data.\nClick below to configure round structure.` },
-              { type: 14 },
-              { type: 1, components: [
-                { type: 2, custom_id: `planner_force_setup_${result.configId}`, label: 'Set Up Planner', style: 1, emoji: { name: '📅' } },
-                { type: 2, custom_id: 'season_manager', label: '← Back', style: 2 }
-              ]}
-            ]}]};
-          }
-
-          // Default to the Apps (question management) view — same as selecting an existing season.
-          // Apps is the more widely-used feature; the Planner is one click away via its cross-link.
+          // Default to the Apps (question management) view for ALL new seasons — name-only or full.
+          // Apps is the more widely-used feature and works without planner data; the Planner is one
+          // click away via its cross-link and shows its own setup prompt when estimates are missing.
           return await buildQuestionManagementUI(config, result.configId, 0);
         }
       })(req, res, client);

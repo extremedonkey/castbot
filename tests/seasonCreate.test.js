@@ -138,3 +138,60 @@ describe('Unified season create — partial/invalid estimates are rejected', () 
     assert.ok(r.errors.some(e => /date/i.test(e)));
   });
 });
+
+describe('Modal start-date pre-fill — create mode stays blank (regression: title-only create)', () => {
+  // Mirrors buildSeasonPlannerModal's start-date pre-fill: existing season → its date, create → BLANK.
+  function startDateValue(existing) {
+    if (existing?.estimatedStartDate) {
+      const d = new Date(existing.estimatedStartDate);
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${mm}/${dd}/${d.getFullYear()}`;
+    }
+    return null; // create mode: blank — NO default-to-today (that tripped the all-or-nothing validation)
+  }
+
+  it('leaves the date blank when creating a new season', () => {
+    assert.equal(startDateValue(null), null);
+  });
+
+  it('pre-fills the date from an existing season when editing', () => {
+    const ts = new Date(2026, 2, 7).getTime(); // 03/07/2026
+    assert.equal(startDateValue({ estimatedStartDate: ts }), '03/07/2026');
+  });
+
+  it('a lone pre-filled date would block title-only create (the bug we fixed)', () => {
+    // Old modal defaulted the date to today; with empty players/swaps/ftc that submit is INVALID...
+    assert.equal(validatePlannerFields({ season_name: 'X', est_start_date: '06/17/2026' }).valid, false);
+    // ...whereas with the date left blank (current behaviour) a title-only submit is valid.
+    assert.equal(validatePlannerFields({ season_name: 'X' }).valid, true);
+  });
+});
+
+describe('Planner empty-state — getMissingPlannerFields', () => {
+  const ALL = ['estimatedTotalPlayers', 'estimatedSwaps', 'estimatedFTCPlayers', 'estimatedStartDate'];
+  // Replicated from seasonPlanner.js
+  function getMissingPlannerFields(config, rounds) {
+    if (config) return ALL.filter(k => config[k] == null);
+    return (rounds && Object.keys(rounds).length > 0) ? [] : ALL;
+  }
+
+  it('reports all 4 fields missing for a name-only season', () => {
+    assert.deepEqual(getMissingPlannerFields({ seasonName: 'X' }, {}), ALL);
+  });
+
+  it('reports none missing when all estimates are present (0 swaps counts as present)', () => {
+    const cfg = { estimatedTotalPlayers: 12, estimatedSwaps: 0, estimatedFTCPlayers: 2, estimatedStartDate: 123 };
+    assert.deepEqual(getMissingPlannerFields(cfg, {}), []);
+  });
+
+  it('reports only the missing subset (per-field)', () => {
+    const cfg = { estimatedTotalPlayers: 12, estimatedStartDate: 123 };
+    assert.deepEqual(getMissingPlannerFields(cfg, {}), ['estimatedSwaps', 'estimatedFTCPlayers']);
+  });
+
+  it('falls back to the rounds invariant when no config is passed', () => {
+    assert.deepEqual(getMissingPlannerFields(null, {}), ALL);        // no rounds → not set up
+    assert.deepEqual(getMissingPlannerFields(null, { r1: {} }), []); // rounds exist → set up
+  });
+});
