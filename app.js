@@ -49491,6 +49491,7 @@ Your server is now ready for Tycoons gameplay!`;
       return processAsPlayer();
     } else if (custom_id.startsWith('entity_modal_submit_')) {
       // Handle modal submission for field editing
+      let deferredModalSubmit = false; // tracks whether we've already sent the deferred ack
       try {
         // Parse: entity_modal_submit_{entityType}_{entityId}_{fieldGroup}
         const withoutPrefix = custom_id.replace('entity_modal_submit_', '');
@@ -49526,10 +49527,21 @@ Your server is now ready for Tycoons gameplay!`;
             }
           });
         }
-        
+
+        // 🔑 DEFER NOW (type 6, silent update-ack) — validation is the last thing that must
+        // respond synchronously. Everything below (safariContent save, anchor-message REST
+        // PATCH chain, channel rename) easily exceeds Discord's 3s ack window, which is why
+        // map-cell EMOJI edits showed "This interaction failed": deriveChannelName puts the
+        // emoji in the channel name, so an emoji change ALWAYS triggers channel.setName, and
+        // Discord rate-limits renames to 2 per 10 min — discord.js blocks on that for minutes.
+        // Deferring buys a 15-minute window; the rename is also made fire-and-forget below so
+        // it can never hold up the UI refresh.
+        res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+        deferredModalSubmit = true;
+
         // Update entity
         await updateEntityFields(guildId, entityType, entityId, fields);
-        
+
         // Special handling for map_cell - update anchor message
         if (entityType === 'map_cell') {
           try {
@@ -49540,7 +49552,9 @@ Your server is now ready for Tycoons gameplay!`;
             console.error('Error updating anchor message:', error);
           }
 
-          // Auto-rename channel to match title + emoji (only on info edits)
+          // Auto-rename channel to match title + emoji (only on info edits).
+          // FIRE-AND-FORGET: channel.setName can block for minutes on Discord's
+          // 2-renames-per-10-min limit, so never await it — let the UI refresh return now.
           if (fieldGroup === 'info') {
             try {
               const { loadSafariContent: loadSC, deriveChannelName } = await import('./mapExplorer.js');
@@ -49551,8 +49565,9 @@ Your server is now ready for Tycoons gameplay!`;
                 const newName = deriveChannelName(entityId, coordData.baseContent?.title, coordData.emoji);
                 const channel = await client.channels.fetch(coordData.channelId);
                 if (channel && channel.name !== newName) {
-                  await channel.setName(newName);
-                  console.log(`📍 Renamed channel ${entityId}: → ${newName}`);
+                  channel.setName(newName)
+                    .then(() => console.log(`📍 Renamed channel ${entityId}: → ${newName}`))
+                    .catch(renameError => console.warn(`⚠️ Channel rename for ${entityId}: ${renameError.message}`));
                 }
               }
             } catch (renameError) {
@@ -49560,8 +49575,8 @@ Your server is now ready for Tycoons gameplay!`;
             }
           }
         }
-        
-        // Refresh UI
+
+        // Refresh UI — PATCH the original message (we already deferred above)
         const uiResponse = await createEntityManagementUI({
           entityType: entityType,
           guildId: guildId,
@@ -49570,14 +49585,29 @@ Your server is now ready for Tycoons gameplay!`;
           searchTerm: '',
           mode: 'edit'
         });
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: uiResponse
-        });
-        
+
+        const { updateDeferredResponse } = await import('./buttonHandlerFactory.js');
+        await updateDeferredResponse(req.body.token, uiResponse);
+        return;
+
       } catch (error) {
         console.error('Error handling modal submission:', error);
+        // If we already deferred, we can't send a fresh interaction response — PATCH the
+        // original with the error instead so the user isn't left on a stale "saving" UI.
+        if (deferredModalSubmit) {
+          try {
+            const { updateDeferredResponse } = await import('./buttonHandlerFactory.js');
+            await updateDeferredResponse(req.body.token, {
+              flags: InteractionResponseFlags.EPHEMERAL | (1 << 15),
+              components: [{ type: 17, accent_color: 0xe74c3c, components: [
+                { type: 10, content: `❌ Error saving changes: ${error.message}` }
+              ] }]
+            });
+          } catch (reportErr) {
+            console.error('Failed to report modal error to user:', reportErr);
+          }
+          return;
+        }
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
