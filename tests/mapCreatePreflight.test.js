@@ -17,6 +17,29 @@ function mapPreflightMissing(me) {
 // Minimal stand-in for guild.members.me.permissions (.has(flag))
 const memberWithPerms = (flags) => ({ permissions: { has: (f) => flags.includes(f) } });
 
+// ── Replicated from mapExplorer.createMapGridWithCustomImage catch ──
+// After a passing server-wide pre-flight, a 50013 is contextual (overwrites / 2FA /
+// hierarchy) and gets a richer diagnostic; other errors get the generic message.
+function mapErrorMessage(error) {
+  if (error?.code === 50013) {
+    return `## ❌ Can't create the map — Discord blocked it (Missing Permissions)\n\n...contextual: overrides / 2FA / hierarchy...\n\n_Raw error: ${error.message}_`;
+  }
+  return `❌ Error creating map: ${error.message}`;
+}
+
+describe('Map create — error message selection', () => {
+  it('50013 (after pre-flight passes) → contextual diagnostic', () => {
+    const msg = mapErrorMessage({ code: 50013, message: 'Missing Permissions' });
+    assert.match(msg, /contextual/);
+    assert.match(msg, /Raw error: Missing Permissions/);
+  });
+
+  it('non-50013 → generic message with the raw error', () => {
+    const msg = mapErrorMessage({ code: 50001, message: 'Missing Access' });
+    assert.equal(msg, '❌ Error creating map: Missing Access');
+  });
+});
+
 describe('Map create — bot permission pre-flight', () => {
   it('no missing perms when the bot has both Manage Channels and Manage Roles', () => {
     assert.deepEqual(mapPreflightMissing(memberWithPerms(['ManageChannels', 'ManageRoles'])), []);

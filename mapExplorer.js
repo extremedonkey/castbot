@@ -1662,6 +1662,21 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
     
   } catch (error) {
     console.error('Error creating map grid with custom image:', error);
+    // A 50013 here (after the server-wide pre-flight passed) means the block is
+    // CONTEXTUAL — guild.members.me.permissions only reflects role-based server-wide
+    // perms, not channel/category overwrites, 2FA-for-moderation, or hierarchy. Spell
+    // those out so the admin isn't left staring at a bare "Missing Permissions".
+    if (error?.code === 50013) {
+      return {
+        success: false,
+        message: `## ❌ Can't create the map — Discord blocked it (Missing Permissions)\n\n` +
+          `CastBot has Manage Channels + Manage Roles server-wide, so the block is **contextual**. Most likely one of:\n\n` +
+          `1. **A category/channel permission override** denies CastBot Manage Channels or Manage Roles (a channel-level *deny* overrides a server-wide *allow*). Check overrides on the category/channels it's creating in.\n` +
+          `2. **Server requires 2FA for moderation** (Server Settings → Safety Setup). If on, the bot owner's account must have 2FA enabled or every moderation action returns this error.\n` +
+          `3. **Role hierarchy** — CastBot's role must sit **above** the roles/channels it manages.\n\n` +
+          `_Raw error: ${error.message}_`
+      };
+    }
     return {
       success: false,
       message: `❌ Error creating map: ${error.message}`
