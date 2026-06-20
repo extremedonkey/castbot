@@ -1259,7 +1259,30 @@ async function updateMapImage(guild, userId, mapUrl) {
 async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7, gridHeight = 7, defaultEmoji = '📍') {
   try {
     console.log(`🏗️ Creating map grid with custom image for guild ${guild.id} - dimensions: ${gridWidth}x${gridHeight}`);
-    
+
+    // Pre-flight: map creation makes a category + N private channels (each with
+    // @everyone ViewChannel-deny overwrites), which needs BOTH Manage Channels and
+    // Manage Roles. Without them every channels.create() throws DiscordAPIError 50013.
+    // Fail fast with a clear, actionable message instead of a cryptic "Missing Permissions".
+    // NOTE: this checks the BOT's permissions — granting these on an unassigned role does
+    // nothing; the CastBot integration role (the one actually on the bot member) must have them.
+    const me = guild.members?.me ?? (await guild.members.fetchMe().catch(() => null));
+    const missing = [];
+    if (!me?.permissions?.has(PermissionFlagsBits.ManageChannels)) missing.push('Manage Channels');
+    if (!me?.permissions?.has(PermissionFlagsBits.ManageRoles)) missing.push('Manage Roles');
+    if (missing.length > 0) {
+      console.warn(`⚠️ Map create aborted — bot missing permissions: ${missing.join(', ')} (guild ${guild.id})`);
+      return {
+        success: false,
+        message: `## ❌ Can't create the map yet\n\nCastBot is missing the **${missing.join('** and **')}** permission${missing.length > 1 ? 's' : ''}, which it needs to create the map category and location channels.\n\n` +
+          `**How to fix:**\n` +
+          `1. Go to **Server Settings → Roles**\n` +
+          `2. Open the **CastBot** role (the bot's own role — not another admin role) and enable **${missing.join('** + **')}**\n` +
+          `3. Make sure the **CastBot** role sits **above** the roles/channels it manages\n` +
+          `4. Try creating the map again`
+      };
+    }
+
     // Load safari content data
     let safariData = await loadSafariContent();
     
