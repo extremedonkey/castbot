@@ -176,6 +176,40 @@ function buildNoTribesContainer() {
  * @param {number} currentPage - Current page number
  * @returns {Object} Components data structure (no response wrapper)
  */
+/**
+ * Ensure a season config has exactly one `completion` question, MUTATING config.questions.
+ *
+ * Legacy seasons (created before the completion-question model) have none. buildQuestionManagementUI
+ * used to compensate by converting the last question to completion AT RENDER TIME — in memory, never
+ * saved. That silently broke the add flow: the add-handlers insert "before completion", but with no
+ * persisted completion they push to the end, then the render converted that brand-new question INTO
+ * the completion message → the new question vanished and pagination math went out of range (blank page).
+ *
+ * Call this in the add-handlers and PERSIST (savePlayerData) so the data is consistent before inserting.
+ * Returns true if it changed config.questions (caller should save). Never absorbs a special question
+ * (e.g. 'dnc') — only a trailing PLAIN question becomes completion; otherwise a default is appended.
+ */
+async function ensureCompletionQuestion(config) {
+  if (!config.questions) config.questions = [];
+  if (config.questions.find(q => q.questionType === 'completion')) return false;
+  const last = config.questions[config.questions.length - 1];
+  if (last && !last.questionType) {
+    // Legacy: a trailing plain question was the de-facto completion message.
+    last.questionType = 'completion';
+  } else {
+    // Empty season, or trailing special question — append a fresh default completion.
+    const crypto = await import('crypto');
+    config.questions.push({
+      id: `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`,
+      questionType: 'completion',
+      questionTitle: 'Thank you for applying to the season!',
+      questionText: 'Include information such as next steps on casting process, casting decision dates and marooning / season start dates.',
+      createdAt: Date.now()
+    });
+  }
+  return true;
+}
+
 async function buildQuestionManagementUI(config, configId, currentPage = 0) {
   console.log(`🔧 DEBUG: buildQuestionManagementUI called with configId: ${configId}, currentPage: ${currentPage}`);
 
@@ -188,23 +222,9 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
     };
   }
 
-  // Auto-inject completion question for old seasons that don't have one
-  if (!config.questions.find(q => q.questionType === 'completion')) {
-    if (config.questions.length > 0) {
-      // Convert the last question to completion (old seasons treated the last question as completion)
-      config.questions[config.questions.length - 1].questionType = 'completion';
-    } else {
-      // Empty season — add a default completion
-      const crypto = await import('crypto');
-      config.questions.push({
-        id: `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`,
-        questionType: 'completion',
-        questionTitle: 'Thank you for applying to the season!',
-        questionText: 'Include information such as next steps on casting process, casting decision dates and marooning / season start dates.',
-        createdAt: Date.now()
-      });
-    }
-  }
+  // Render-time safety net (in-memory): ensure a completion question exists. The add-handlers
+  // persist this; here it just guarantees the render is coherent even for an untouched legacy season.
+  await ensureCompletionQuestion(config);
 
   // Separate regular questions from completion question
   const regularQuestions = config.questions
@@ -215,6 +235,9 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   const questionsPerPage = QUESTIONS_PER_PAGE;
   const totalPages = Math.max(1, Math.ceil(regularQuestions.length / questionsPerPage));
+  // Clamp to a valid page — a caller asking for an out-of-range page (off-by-one in page math,
+  // or a question count that shrank) must never render a blank screen; show the last real page.
+  currentPage = Math.max(0, Math.min(currentPage, totalPages - 1));
   const startIndex = currentPage * questionsPerPage;
   const endIndex = Math.min(startIndex + questionsPerPage, regularQuestions.length);
 
@@ -11284,7 +11307,12 @@ To fix this:
           if (!config) return { content: '❌ Season not found' };
           if (!config.questions) config.questions = [];
 
+          // Persist a real completion question FIRST so "insert before completion" works and the
+          // new DNC isn't absorbed by the render-time conversion (legacy-season bug).
+          const completionChanged = await ensureCompletionQuestion(config);
+
           if (config.questions.find(q => q.questionType === 'dnc')) {
+            if (completionChanged) await savePlayerData(playerData);
             return await buildQuestionManagementUI(config, qConfigId, 0);
           }
 
@@ -44122,7 +44150,11 @@ Your server is now ready for Tycoons gameplay!`;
         if (!config.questions) {
           config.questions = [];
         }
-        
+
+        // Persist a real completion question FIRST (legacy seasons have none) so the insert-before-
+        // completion below targets it and the new question isn't absorbed by the render-time conversion.
+        await ensureCompletionQuestion(config);
+
         // Create new question with unique ID
         const questionId = `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`;
         const newQuestion = {
