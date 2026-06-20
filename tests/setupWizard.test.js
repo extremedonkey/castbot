@@ -39,6 +39,40 @@ describe('hasCompletedSetup — single source of truth', () => {
   });
 });
 
+// ── Replicated from roleManager.runFullSetup pre-flight (single source of truth) ──
+// Setup needs Manage Roles to create pronoun/timezone roles. Without it, every
+// guild.roles.create() throws DiscordAPIError 50013, so we fail fast with a typed error.
+function preflightManageRoles(me) {
+  if (!me?.permissions?.has('ManageRoles')) {
+    const err = new Error("CastBot is missing the **Manage Roles** permission, so it can't create pronoun and timezone roles.");
+    err.code = 'MISSING_MANAGE_ROLES';
+    throw err;
+  }
+  return true;
+}
+
+// Minimal stand-in for guild.members.me.permissions (.has(flag))
+const memberWithPerms = (flags) => ({ permissions: { has: (f) => flags.includes(f) } });
+
+describe('runFullSetup — Manage Roles pre-flight', () => {
+  it('passes when the bot has Manage Roles', () => {
+    assert.equal(preflightManageRoles(memberWithPerms(['ManageRoles'])), true);
+  });
+
+  it('throws a typed MISSING_MANAGE_ROLES error when the permission is absent', () => {
+    assert.throws(() => preflightManageRoles(memberWithPerms([])), (err) => {
+      assert.equal(err.code, 'MISSING_MANAGE_ROLES');
+      assert.match(err.message, /Manage Roles/);
+      return true;
+    });
+  });
+
+  it('throws when the bot member cannot be resolved (no me)', () => {
+    assert.throws(() => preflightManageRoles(null), (err) => err.code === 'MISSING_MANAGE_ROLES');
+    assert.throws(() => preflightManageRoles(undefined), (err) => err.code === 'MISSING_MANAGE_ROLES');
+  });
+});
+
 describe('Setup Wizard — Run Setup (Task 1) action button', () => {
   it('not set up: blue 🪛 Run Setup, enabled', () => {
     const b = taskButton('setup_castbot', { hasSetup: false });

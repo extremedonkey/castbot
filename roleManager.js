@@ -1797,7 +1797,7 @@ function generateSetupResponseV2(results) {
             sections.push('### ❌ Failed Operations:');
             sections.push('The following roles could not be created or added:\n');
             allFailed.forEach(role => {
-                sections.push(`• ${role.name} - ${role.reason || 'Unknown error'}`);
+                sections.push(`• ${role.name} - ${role.reason || role.error || 'Unknown error'}`);
             });
             sections.push('\n**Possible causes:** Insufficient bot permissions, role limit reached, or Discord API issues.\n');
         }
@@ -2785,6 +2785,17 @@ function hasCompletedSetup(guildData) {
  * @returns {Promise<Object>} setupResults (with .timezones.consolidation when merges happened)
  */
 async function runFullSetup(guildId, guild) {
+    // Pre-flight: creating pronoun/timezone roles needs the Manage Roles permission.
+    // Without it, EVERY guild.roles.create() throws DiscordAPIError 50013 (Missing
+    // Permissions) — ~25 failed API calls that spam the prod error log. Fail fast with
+    // a clear, actionable error instead so the caller can show a friendly message.
+    const me = guild.members?.me ?? (await guild.members.fetchMe().catch(() => null));
+    if (!me?.permissions?.has(PermissionFlagsBits.ManageRoles)) {
+        const err = new Error("CastBot is missing the **Manage Roles** permission, so it can't create pronoun and timezone roles.");
+        err.code = 'MISSING_MANAGE_ROLES';
+        throw err;
+    }
+
     const setupResults = await executeSetup(guildId, guild);
 
     // Auto-consolidate duplicate timezone roles (scans Discord + playerData)

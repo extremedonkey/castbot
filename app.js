@@ -7634,11 +7634,24 @@ To fix this:
               console.log(`✅ SUCCESS: setup_castbot - results PATCHed, fresh wizard re-sent (hasSetup=${hasSetup})`);
             } catch (error) {
               console.error('❌ setup_castbot background work failed:', error);
+              // Missing "Manage Roles" is the common, fixable case — give clear steps
+              // instead of a generic failure. runFullSetup pre-flights this and throws
+              // a typed error so we don't spam ~25 failed roles.create() calls.
+              const missingPerms = error?.code === 'MISSING_MANAGE_ROLES';
+              const content = missingPerms
+                ? "## ❌ Setup can't run yet\n\n" +
+                  error.message + '\n\n' +
+                  "**How to fix:**\n" +
+                  "1. Go to **Server Settings → Roles**\n" +
+                  "2. Open the **CastBot** role and enable **Manage Roles** (or grant it via the bot's role/Administrator)\n" +
+                  "3. Make sure the **CastBot** role sits **above** the roles it manages\n" +
+                  "4. Re-run setup\n"
+                : '## ❌ Setup failed\n\nSomething went wrong creating roles. Please check the bot can manage roles and try again.';
               try {
                 await updateDeferredResponse(token, {
                   flags: InteractionResponseFlags.EPHEMERAL | (1 << 15),
                   components: [{ type: 17, accent_color: 0xe74c3c, components: [
-                    { type: 10, content: '## ❌ Setup failed\n\nSomething went wrong creating roles. Please check the bot can manage roles and try again.' }
+                    { type: 10, content }
                   ] }]
                 });
               } catch (reportErr) {
