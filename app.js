@@ -11303,7 +11303,12 @@ To fix this:
           }
           await savePlayerData(playerData);
           console.log(`🚫 Added DNC question to ${qConfigId}`);
-          return await buildQuestionManagementUI(config, qConfigId, 0);
+          // Land on the page that CONTAINS the new DNC question, not page 0. DNC is spliced
+          // before completion → it's the LAST regular question, so with >8 questions it lives
+          // on the last page. Hardcoding 0 made it invisible until a later action (the "lag").
+          const dncRegularCount = config.questions.filter(q => q.questionType !== 'completion').length;
+          const dncPage = Math.floor(Math.max(0, dncRegularCount - 1) / QUESTIONS_PER_PAGE);
+          return await buildQuestionManagementUI(config, qConfigId, dncPage);
         }
       })(req, res, client);
 
@@ -44138,11 +44143,14 @@ Your server is now ready for Tycoons gameplay!`;
         }
         await savePlayerData(playerData);
 
-        // Calculate the page for the new question (stay on current page, not jump to last)
+        // Land on the page that CONTAINS the new question. New questions are spliced before
+        // completion → they're the LAST regular question, always on the last page. The old
+        // Math.min(currentPage, ...) "stayed put" and hid the new question when it landed on a
+        // later page (same bug class as the DNC add). Jump to it so the user sees what they added.
         const regularCount = config.questions.filter(q => q.questionType !== 'completion').length;
         const questionsPerPage = QUESTIONS_PER_PAGE;
-        const newQuestionPage = Math.min(currentPage, Math.floor((regularCount - 1) / questionsPerPage));
-        
+        const newQuestionPage = Math.floor(Math.max(0, regularCount - 1) / questionsPerPage);
+
         // Refresh the UI on the page containing the new question
         return refreshQuestionManagementUI(res, config, configId, newQuestionPage);
         
