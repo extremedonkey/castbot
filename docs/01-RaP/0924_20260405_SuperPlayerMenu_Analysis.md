@@ -123,12 +123,20 @@ Same as current implementation. Hot-swap select shows role select (pronouns/time
 
 ### 4B. ```🦁 Idol Hunts, Challenges and Safari```
 
-**Conditional section:** If no buttons would render (no inventory, no challenges, no crafting, no actions, no stores), hide the entire section heading + action row.
+**Conditional section:** If no buttons would render (no currency, no inventory, no challenges, no crafting, no actions, no stores), hide the entire section heading + action row. This is enforced by `if (row2.length)` in `createPlayerManagementUI` — the heading TextDisplay is only pushed when the row produced ≥1 button. **There is no separate "hide heading" flag; hide the buttons and the heading follows.**
+
+> 📌 **Single source of truth for all of these rules:** `calculateVisibility()` in `playerManagement.js` (see the big doc-comment above the function). The list below is the human-readable mirror — if they disagree, the code wins.
 
 **Buttons (each conditional):**
 
+#### 0. Currency + Inventory — economy gate (Jason feedback 2026-06-18)
+- **PLAYER mode:** the Currency (💰 Dollars) and Inventory buttons show only when BOTH (a) the config gate `showInventory` allows it (`inventoryVisibilityMode`), AND (b) `hasEconomyActivity` — the player actually has `currency > 0` OR at least one item. The pair shows/hides **together**.
+- **Why:** before Safari is live for a player, a profile/menu full of `🪙 0 • 🧰 0` and dead Dollars/Inventory buttons is noise. They now appear the moment the player earns currency or receives an item — and when both (and the rest of the Safari group) are hidden, the `🦁 Idol Hunts, Challenges and Safari` heading auto-hides with them.
+- **ADMIN mode (Player Manager / "prod view"):** NOT gated on economy — admins always see Currency/Inventory (when `showInventory`) so they can grant currency/items to a player sitting at zero.
+- **Mirrors** the player-card economy line (`createPlayerDisplaySection`) which uses the same `currency > 0 || itemTotal > 0` test.
+
 #### 1. Inventory Button
-- **Shows when:** Player is initialized AND inventory visibility mode allows it (respects `inventoryVisibilityMode` setting from `safari_player_menu_config`)
+- **Shows when:** (player mode) the economy gate above passes; otherwise as before — player initialized AND `inventoryVisibilityMode` allows it (from `safari_player_menu_config`)
 - **Label:** Uses server-specific `inventoryName` and `inventoryEmoji` from `getCustomTerms(guildId)`
 - **On click:** IMMEDIATE-NEW, EPHEMERAL — opens full inventory display (same as current `safari_player_inventory`)
 - **Does NOT hot-swap** — inventory is its own full-screen ephemeral message

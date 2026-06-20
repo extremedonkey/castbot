@@ -412,6 +412,43 @@ export function createManagementButtons(targetUserId, mode, enabled = true, acti
 
 /**
  * Pre-calculates which buttons should be visible/enabled in the player menu.
+ *
+ * ════════════════ PLAYER-MENU BUTTON VISIBILITY — SINGLE SOURCE OF TRUTH ════════════════
+ * This is the ONLY place that decides which buttons/sections the player menu shows. It returns
+ * a flat `vis` map; `buildSectionRow` drops any id whose `vis.show` is false, and each section
+ * HEADING auto-hides when its row ends up empty (see createPlayerManagementUI `if (rowN.length)`).
+ * So to hide a section heading, you hide its buttons here — there is no separate heading flag.
+ *
+ * Two modes (param `mode`): PLAYER (a player viewing their own `/menu`) vs ADMIN (Player Manager /
+ * "prod view" managing someone else). Admins generally see a feature whenever it's CONFIGURED so
+ * they can manage from zero; players see it only when it's actually USABLE/relevant to them.
+ *
+ * Per-feature rules:
+ *   Row 1 · Castlists & Profile
+ *     • castlists  — always shown
+ *     • pronouns   — shown when the guild has pronoun roles configured
+ *     • timezone   — shown when the guild has timezone roles configured
+ *     • age        — always shown
+ *   Row 2 · 🦁 Idol Hunts, Challenges and Safari   (heading hides if ALL of these hide)
+ *     • currency   — config gate `showInventory` (inventoryVisibilityMode) AND, in PLAYER mode only,
+ *                    `hasEconomyActivity` (currency > 0 OR any items). Admins: config gate only.
+ *     • inventory  — same gate as currency (the pair shows/hides together).
+ *     • map        — admin: any active map exists; player: initialized AND on the map.
+ *     • stamina    — admin-only, when an active map exists.
+ *     • challenges — any challenge action is visible to this player.
+ *     • crafting   — any action has menuVisibility === 'crafting_menu'.
+ *     • actions    — any action has menuVisibility === 'player_menu'.
+ *     • stores     — config gate `showStores` AND at least one global store exists.
+ *   Row 3 · 💎 Advanced
+ *     • attributes — attribute definitions exist (Stats button).
+ *     • commands   — safariConfig.enableGlobalCommands !== false.
+ *     • vanity     — admin-only.
+ *     • navigate   — player on the map (immediate map-move button).
+ *
+ * The currency/inventory PLAYER-mode economy gate (hasEconomyActivity) keeps menus clean before
+ * Safari is live for a player — Jason feedback 2026-06-18, mirrors the player-card economy line.
+ * ════════════════════════════════════════════════════════════════════════════════════════
+ *
  * @param {string} guildId
  * @param {string} targetUserId - The user being viewed (may be null in admin mode)
  * @param {Object} playerData
@@ -459,6 +496,15 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
     case 'initialized_only': showInventory = isInitialized; break;
     case 'standard': default: showInventory = isInitialized && currentRound && currentRound !== 0; break;
   }
+
+  // Economy activity: does this player actually HAVE money or items? (Jason feedback 2026-06-18)
+  // In PLAYER mode the Currency + Inventory buttons (and their 🦁 section heading) stay hidden until
+  // the player has some — so menus stay clean before Safari is live for them. Mirrors the player-card
+  // economy line gate (createPlayerDisplaySection). Admins/Player Manager are exempt (see vis.currency).
+  const currencyBalance = safariObj?.currency ?? 0;
+  const itemTotal = Object.values(safariObj?.inventory || {})
+    .reduce((sum, v) => sum + (typeof v === 'object' ? (v?.quantity || 0) : (v || 0)), 0);
+  const hasEconomyActivity = currencyBalance > 0 || itemTotal > 0;
 
   // Challenges — check if any have actions visible to this player
   const challenges = playerData[guildId]?.challenges || {};
@@ -520,9 +566,11 @@ async function calculateVisibility(guildId, targetUserId, playerData, safariData
   vis.age = { show: true, disabled: isAdmin && !hasTarget, label: 'Age', emoji: '🎂' };
 
   // === Row 2: Safari ===
-  // Currency mirrors inventory's visibility for now (both core safari concepts). Refine gate later if needed.
-  vis.currency = { show: isAdmin ? showInventory : (showInventory && hasTarget), disabled: isAdmin && !hasTarget, label: customTerms.currencyName || 'Currency', emoji: customTerms.currencyEmoji || '🪙' };
-  vis.inventory = { show: isAdmin ? showInventory : (showInventory && hasTarget), disabled: isAdmin && !hasTarget, label: customTerms.inventoryName || 'Inventory', emoji: customTerms.inventoryEmoji || '🧰' };
+  // Currency mirrors inventory's visibility (both core safari concepts), and in PLAYER mode both
+  // ALSO require hasEconomyActivity (money OR items) so they hide until Safari is live for the player.
+  // Admins keep the config-only gate (showInventory) so they can manage a player from zero.
+  vis.currency = { show: isAdmin ? showInventory : (showInventory && hasTarget && hasEconomyActivity), disabled: isAdmin && !hasTarget, label: customTerms.currencyName || 'Currency', emoji: customTerms.currencyEmoji || '🪙' };
+  vis.inventory = { show: isAdmin ? showInventory : (showInventory && hasTarget && hasEconomyActivity), disabled: isAdmin && !hasTarget, label: customTerms.inventoryName || 'Inventory', emoji: customTerms.inventoryEmoji || '🧰' };
   // Map: admins see it whenever a map exists (to init/manage); players only when on the map.
   vis.map = { show: isAdmin ? !!activeMapId : (hasTarget && isInitialized && hasMapLocation), disabled: isAdmin && !hasTarget, label: 'Safari Map', emoji: '🗺️', coordinate: currentCoordinate };
   // Stamina (admin-only): grant/edit a player's stamina. Sits right of Safari Map; shown when a map exists.
