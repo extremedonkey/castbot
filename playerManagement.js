@@ -162,8 +162,10 @@ export async function createPlayerDisplaySection(player, playerData, guildId) {
   };
 
   // Build the safari stats line: currencyEmoji XX • inventoryEmoji X • 📍 location • ⚡ stamina
-  // Currency + items always shown. Location shows only when on the active map (paused → ⏸️ suffix).
-  // Stamina is decoupled from initialization: shown whenever a value is recorded for the player.
+  // Currency + items are shown ONLY once the player has some money or at least one item —
+  // so profiles stay clean in servers where Safari hasn't started (no pointless "🪙 0 • 🧰 0").
+  // The pair shows/hides together (money OR items). Location shows only when on the active map
+  // (paused → ⏸️ suffix). Stamina is decoupled: shown whenever a value is recorded for the player.
   let statsLine = '';
   try {
     const ct = await getCustomTerms(guildId);
@@ -171,7 +173,11 @@ export async function createPlayerDisplaySection(player, playerData, guildId) {
     const currency = sp.currency ?? 0;
     const inv = sp.inventory || {};
     const itemTotal = Object.values(inv).reduce((sum, v) => sum + (typeof v === 'object' ? (v?.quantity || 0) : (v || 0)), 0);
-    const parts = [`${ct.currencyEmoji || '🪙'} ${currency}`, `${ct.inventoryEmoji || '🧰'} ${itemTotal}`];
+    // Gate the currency/inventory pair on actual economy activity (Jason feedback 2026-06-18).
+    const showEconomy = currency > 0 || itemTotal > 0;
+    const parts = showEconomy
+      ? [`${ct.currencyEmoji || '🪙'} ${currency}`, `${ct.inventoryEmoji || '🧰'} ${itemTotal}`]
+      : [];
 
     const { loadSafariContent } = await import('./safariManager.js');
     const safariData = await loadSafariContent();
