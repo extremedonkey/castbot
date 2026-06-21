@@ -294,7 +294,9 @@ export async function generateSeasonAppRankingUI({
     }
 
     // Placeholder doubles as the position indicator (the "Applicant N of M" text was removed above).
-    let selectPlaceholder = `Applicant ${appIndex + 1} of ${allApplications.length} - ${guild?.name || 'Server'}`;
+    // Name = the applicant's per-server display name (nickname), falling back to global/username.
+    const placeholderName = applicantMember?.displayName || currentApp.displayName || currentApp.username || 'Applicant';
+    let selectPlaceholder = `Applicant ${appIndex + 1} of ${allApplications.length} - ${placeholderName}`;
     if (totalPages > 1) selectPlaceholder += ` · page ${currentPage + 1}/${totalPages}`;
 
     containerComponents.push({
