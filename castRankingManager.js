@@ -155,26 +155,10 @@ export async function generateSeasonAppRankingUI({
   
   const rankingRow = new ActionRowBuilder().addComponents(rankingButtons);
   
-  // Create navigation buttons if there are multiple applications
-  const navButtons = [];
-  if (allApplications.length > 1) {
-    navButtons.push(
-      new ButtonBuilder()
-        .setCustomId(`ranking_prev_${appIndex}_${configId}${ephemeralSuffix}`)
-        .setLabel('◀ Previous')
-        .setStyle(appIndex === 0 ? ButtonStyle.Secondary : ButtonStyle.Primary)
-        .setDisabled(appIndex === 0),
-      new ButtonBuilder()
-        .setCustomId(`ranking_next_${appIndex}_${configId}${ephemeralSuffix}`)
-        .setLabel('Next ▶')
-        .setStyle(appIndex === allApplications.length - 1 ? ButtonStyle.Secondary : ButtonStyle.Primary)
-        .setDisabled(appIndex === allApplications.length - 1)
-    );
-  }
+  // NOTE: the old ◀ Previous / Next ▶ row was removed — the always-on jump-select below provides
+  // full navigation (any applicant + paging), and dropping it keeps the card under Discord's hard
+  // 40-component limit now that the card carries the identity Section + casting workflow row.
 
-  // View All Scores moved to the bottom navigation row. navRow now holds only applicant prev/next.
-  const navRow = navButtons.length > 0 ? new ActionRowBuilder().addComponents(navButtons) : null;
-  
   // Per-admin scores for this applicant — used by the Votes breakdown below.
   const allRankings = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings || {};
 
@@ -193,7 +177,9 @@ export async function generateSeasonAppRankingUI({
     const scores = rankingEntries.map(([_, score]) => score);
     const avgScore = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
     
-    let votingText = `### 🗳️ Votes\n> **Average:** ${avgScore}/5.0 (${scores.length} vote${scores.length !== 1 ? 's' : ''})\n`;
+    // Header is rendered as a standalone "### 🗳️ Votes" component (above the 1-5 buttons), so the
+    // tally text starts at the average line.
+    let votingText = `> **Average:** ${avgScore}/5.0 (${scores.length} vote${scores.length !== 1 ? 's' : ''})\n`;
     
     // Build vote list with member names
     for (const [userId, score] of rankingEntries) {
@@ -225,39 +211,24 @@ export async function generateSeasonAppRankingUI({
   const dncWarningText = buildDncWarnings(dncConflicts);
   const dncSummaryText = buildDncSummary(appData);
 
-  // Create Components V2 Container for Casting interface
-  // IMPORTANT: This follows the current layout pattern with navigation above applicant info
-  // Trimmed: Name/pronouns/tz → now in the identity Section; Average & Your Score → shown in the
-  // Votes section + the highlighted 1-5 button; Casting Status → shown by the coloured casting
-  // buttons. We keep only the position, the app-channel link, and any DNC summary.
-  const applicantInfo = `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**App:** <#${currentApp.channelId}>${dncSummaryText ? `\n${dncSummaryText}` : ''}`;
+  // ===== Build the Casting card (Components V2) =====
+  // Layout: header → tab nav → jump-select → identity Section → [DNC warning] →
+  //         Casting (status + workflow) → Votes (1-5 + tally) → Player Notes → bottom nav.
+  // Applicant meta (position / app link / DNC summary) is folded into the identity Section to save
+  // components (Discord's hard limit is 40 per message).
+  const applicantInfo = `> **Applicant ${appIndex + 1} of ${allApplications.length}** · **App:** <#${currentApp.channelId}>${dncSummaryText ? `\n${dncSummaryText}` : ''}`;
 
   const { buildSeasonNavRow } = await import('./seasonSelector.js');
   const containerComponents = [
     rankingHeader(seasonName),
-    // Active-tab nav row — Apps · Planner · Ranking · Edit (current view = Ranking, shaded blue)
+    // Active-tab nav row — Apps · Planner · Casting · Edit (current view = Casting, shaded blue)
     buildSeasonNavRow(configId, 'ranking'),
   ];
-  if (navRow) containerComponents.push(navRow.toJSON()); // Applicant prev/next (only when >1 applicant)
 
-  // DNC conflict warnings (above applicant info for visibility)
-  if (dncWarningText) {
-    containerComponents.push({
-      type: 10,
-      content: dncWarningText
-    });
-  }
-
-  containerComponents.push({
-    type: 10, // Text Display component
-    content: applicantInfo
-  });
-  
-  // Applicant jump select — ALWAYS rendered (even for a single applicant). A state-aware placeholder
-  // means the control is never a confusing empty/why-is-it-here element. (Discord requires ≥1 option,
-  // so the only time it's absent is the 0-applicant empty state, which is a different screen.)
+  // Applicant jump-select — ALWAYS rendered (state-aware placeholder). Discord requires ≥1 option,
+  // so it's only ever absent on the 0-applicant empty state (a separate screen). It also replaces
+  // the old ◀/▶ prev/next row for navigation.
   {
-    // Calculate current page based on appIndex
     const itemsPerPage = 23;
     const totalPages = Math.ceil(allApplications.length / itemsPerPage);
     const currentPage = Math.floor(appIndex / itemsPerPage);
@@ -265,8 +236,7 @@ export async function generateSeasonAppRankingUI({
     const endIdx = Math.min(startIdx + itemsPerPage, allApplications.length);
 
     const options = [];
-    
-    // Add "Previous page" option if not on first page
+
     if (currentPage > 0) {
       const prevStart = (currentPage - 1) * itemsPerPage + 1;
       const prevEnd = currentPage * itemsPerPage;
@@ -277,58 +247,41 @@ export async function generateSeasonAppRankingUI({
         emoji: { name: '📄' }
       });
     }
-    
-    // Add applicant options for current page
+
     for (let i = startIdx; i < endIdx; i++) {
       const app = allApplications[i];
       const rankings = playerData[guildId]?.applications?.[app.channelId]?.rankings || {};
       const voteCount = Object.keys(rankings).length;
-      const castingStatus = playerData[guildId]?.applications?.[app.channelId]?.castingStatus;
+      const cStatus = playerData[guildId]?.applications?.[app.channelId]?.castingStatus;
       const hasNotes = !!playerData[guildId]?.applications?.[app.channelId]?.playerNotes;
-      
-      // Determine icon based on priority
-      let icon = '🗳️'; // Default: not enough votes
-      if (castingStatus === 'cast') {
-        icon = '✅';
-      } else if (castingStatus === 'reject') {
-        icon = '❌';
-      } else if (voteCount >= 2) {
-        icon = '☑️';
-      }
-      
-      // Format label (max 100 chars)
+
+      let icon = '🗳️';
+      if (cStatus === 'cast') icon = '✅';
+      else if (cStatus === 'reject') icon = '❌';
+      else if (voteCount >= 2) icon = '☑️';
+
       const position = i + 1;
       const displayName = app.displayName || 'Unknown';
       const username = app.username || 'unknown';
       const voteText = voteCount === 1 ? '1 vote' : `${voteCount} votes`;
       const notesIndicator = hasNotes ? ' 💬' : '';
-      
-      // Build initial label
+
       let label = `${icon} ${position}. ${displayName} (${username}) - ${voteText}${notesIndicator}`;
-      
-      // Truncate if too long (Discord limit is 100 chars)
       if (label.length > 100) {
-        // Calculate how much space we have for username
         const fixedParts = `${icon} ${position}. ${displayName} () - ${voteText}${notesIndicator}`;
         const availableSpace = 100 - fixedParts.length;
-        
         if (availableSpace > 0) {
-          const truncatedUsername = username.length > availableSpace ? 
+          const truncatedUsername = username.length > availableSpace ?
             username.substring(0, availableSpace - 1) + '…' : username;
           label = `${icon} ${position}. ${displayName} (${truncatedUsername}) - ${voteText}${notesIndicator}`;
         } else {
           label = label.substring(0, 97) + '...';
         }
       }
-      
-      options.push({
-        label: label,
-        value: i.toString(),
-        description: `Jump to ${displayName}'s application`
-      });
+
+      options.push({ label, value: i.toString(), description: `Jump to ${displayName}'s application` });
     }
-    
-    // Add "Next page" option if more items exist
+
     if (endIdx < allApplications.length) {
       const nextStart = endIdx + 1;
       const nextEnd = Math.min(endIdx + itemsPerPage, allApplications.length);
@@ -339,63 +292,59 @@ export async function generateSeasonAppRankingUI({
         emoji: { name: '📄' }
       });
     }
-    
-    // State-aware placeholder so an always-present control still reads clearly.
-    let selectPlaceholder;
-    if (allApplications.length === 1) {
-      selectPlaceholder = '🔍 1 applicant so far';
-    } else if (totalPages === 1) {
-      selectPlaceholder = `🔍 Jump to applicant… (${allApplications.length} total)`;
-    } else {
-      selectPlaceholder = `🔍 Jump to applicant… (page ${currentPage + 1}/${totalPages}, ${allApplications.length} total)`;
-    }
 
-    const applicantSelectRow = {
-      type: 1, // Action Row
+    let selectPlaceholder;
+    if (allApplications.length === 1) selectPlaceholder = '🔍 1 applicant so far';
+    else if (totalPages === 1) selectPlaceholder = `🔍 Jump to applicant… (${allApplications.length} total)`;
+    else selectPlaceholder = `🔍 Jump to applicant… (page ${currentPage + 1}/${totalPages}, ${allApplications.length} total)`;
+
+    containerComponents.push({
+      type: 1,
       components: [{
-        type: 3, // String Select
+        type: 3,
         custom_id: `ranking_select_${appIndex}_${configId}_${currentPage}`,
         placeholder: selectPlaceholder,
-        options: options,
+        options,
         min_values: 1,
         max_values: 1
       }]
-    };
-    // Insert select menu right after navigation buttons but before applicant info
-    containerComponents.splice(-1, 0, applicantSelectRow);
-    // Add separator after the select menu
-    containerComponents.splice(-1, 0, {
-      type: 14 // Separator
     });
   }
   
-  // Build the SHARED identity Section (same builder as the Player Menu / application-channel card)
-  // for identical UI: **name** • pronouns • age • timezone • 🕛 local-time clock + avatar thumbnail.
-  // Returns null when the applicant can't be resolved as a guild member (e.g. they left the server);
-  // fall back to a minimal name + avatar Section so the card never renders blank.
+  // Identity Section (shared player-card builder: name • pronouns • age • timezone • 🕛 local time +
+  // avatar thumbnail) with the applicant meta folded into its text. Returns null when the applicant
+  // can't be resolved as a guild member (e.g. they left); fall back to a minimal name + avatar Section.
   const { createPlayerDisplaySection } = await import('./playerManagement.js');
   let identitySection = await createPlayerDisplaySection(applicantMember, playerData, guildId);
   if (!identitySection) {
     identitySection = {
-      type: 9, // Section
+      type: 9,
       components: [{ type: 10, content: `**${currentApp.displayName || currentApp.username}**\n-# ⚠️ Left server` }],
       accessory: { type: 11, media: { url: applicantAvatarURL }, description: 'Applicant avatar' }
     };
   }
+  if (identitySection.components?.[0]?.content !== undefined) {
+    identitySection.components[0].content += `\n${applicantInfo}`;
+  }
 
-  // Add remaining interface components after applicant info
+  containerComponents.push(
+    { type: 14 }, // divider after the nav / select cluster
+    identitySection
+  );
+
+  // DNC conflict warning — prominent, only when this applicant cross-lists someone.
+  if (dncWarningText) {
+    containerComponents.push({ type: 10, content: dncWarningText });
+  }
+
+  // ---- Casting: draft status + workflow ----
   containerComponents.push(
     {
-      type: 14 // Separator - single divider after applicant info
+      type: 10,
+      content: `### Casting\nSet your draft casting status below — change it as many times as you like; players are **not** notified. When you've decided who to cast, click **📨 Send Invitations**.`
     },
-    identitySection, // Applicant identity card (Section + avatar thumbnail) — replaces Media Gallery
-    rankingRow.toJSON(), // Ranking buttons (1-5 — self-explanatory; instructional line trimmed for the +1 nav button)
     {
-      type: 14 // Separator
-    },
-    // Inline implementation of createCastingButtons for now
-    {
-      type: 1, // Action Row
+      type: 1, // Draft casting status
       components: [
         new ButtonBuilder()
           .setCustomId(`cast_player_${currentApp.channelId}_${appIndex}_${configId}`)
@@ -413,33 +362,47 @@ export async function generateSeasonAppRankingUI({
           .setStyle(castingStatus === 'reject' ? ButtonStyle.Danger : ButtonStyle.Secondary)
           .toJSON()
       ]
-    }
-  );
-  
-  // Add voting breakdown if there are votes
-  if (votingBreakdown) {
-    containerComponents.push(
-      {
-        type: 14 // Separator
-      },
-      votingBreakdown
-    );
-  }
-  
-  // Add player notes section
-  const existingNotes = playerData[guildId]?.applications?.[currentApp.channelId]?.playerNotes;
-  const notesText = existingNotes || 'Record casting notes, connections or potential issues...';
-
-  containerComponents.push(
-    {
-      type: 14 // Separator
     },
     {
-      type: 10, // Text Display component
+      type: 1, // Casting workflow — stubs for now
+      components: [
+        new ButtonBuilder()
+          .setCustomId(`casting_messages_${configId}`)
+          .setLabel('Casting Messages')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('✒️')
+          .toJSON(),
+        new ButtonBuilder()
+          .setCustomId(`send_invitations_${configId}`)
+          .setLabel('Send Invitations')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('📨')
+          .toJSON()
+      ]
+    }
+  );
+
+  // ---- Votes: header + 1-5 rating buttons (moved here from up top) + tally ----
+  containerComponents.push(
+    { type: 10, content: `### 🗳️ Votes` },
+    rankingRow.toJSON()
+  );
+  if (votingBreakdown) {
+    containerComponents.push(votingBreakdown);
+  } else {
+    containerComponents.push({ type: 10, content: `-# No scores yet — click 1–5 above to rate this applicant.` });
+  }
+
+  // ---- Player notes ----
+  const existingNotes = playerData[guildId]?.applications?.[currentApp.channelId]?.playerNotes;
+  const notesText = existingNotes || 'Record casting notes, connections or potential issues...';
+  containerComponents.push(
+    {
+      type: 10, // ### header provides the visual break (no extra separator — component budget)
       content: `### ✏️ Player Notes\n${notesText}`
     },
     {
-      type: 1, // Action Row for notes button
+      type: 1, // Action Row for notes buttons
       components: [
         new ButtonBuilder()
           .setCustomId(`edit_player_notes_${currentApp.channelId}_${appIndex}_${configId}`)
