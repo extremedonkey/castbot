@@ -332,7 +332,7 @@ export async function generateSeasonAppRankingUI({
           .setLabel('✏️ Edit Notes')
           .setStyle(ButtonStyle.Secondary)
           .toJSON(),
-        { type: 2, style: 5, label: 'View Application', emoji: { name: '📄' }, url: `https://discord.com/channels/${guildId}/${currentApp.channelId}` },
+        { type: 2, style: 5, label: 'View App', emoji: { name: '📄' }, url: `https://discord.com/channels/${guildId}/${currentApp.channelId}` },
         new ButtonBuilder()
           .setCustomId(`delete_application_mode_${currentApp.channelId}_${appIndex}_${configId}`)
           .setLabel('Delete')
