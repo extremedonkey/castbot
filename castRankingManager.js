@@ -493,6 +493,55 @@ export async function buildRankingScreen({ guildId, userId, configId, appIndex =
 }
 
 /**
+ * Set an applicant's casting status and re-render the Casting card. Shared by the casting status
+ * string-select handler and the legacy cast_* button handler so the load/save/regenerate lives in
+ * one place (keeps app.js a router).
+ * @param {Object} p
+ * @param {string} p.customId - casting_status_{channelId}_{appIndex}_{configId}
+ * @param {string} p.value - 'cast' | 'tentative' | 'reject'
+ * @param {string} p.guildId
+ * @param {string} p.userId
+ * @param {Object} p.guild - pre-fetched Discord guild
+ * @returns the generateSeasonAppRankingUI response, or an error payload.
+ */
+export async function handleCastingStatus({ customId, value, guildId, userId, guild }) {
+  const m = customId.match(/^casting_status_(\d+)_(\d+)_(.+)$/);
+  if (!m) return { content: '❌ Invalid casting status select.', ephemeral: true };
+  const channelId = m[1];
+  const appIndex = parseInt(m[2]);
+  const configId = m[3];
+
+  const { loadPlayerData, savePlayerData, getApplicationsForSeason } = await import('./storage.js');
+  const playerData = await loadPlayerData();
+  if (!playerData[guildId]?.applications?.[channelId]) {
+    return { content: '❌ Application not found.', ephemeral: true };
+  }
+  playerData[guildId].applications[channelId].castingStatus = value;
+  await savePlayerData(playerData);
+
+  const allApplications = await getApplicationsForSeason(guildId, configId);
+  const currentApp = allApplications[appIndex];
+  if (!currentApp) return { content: '❌ Application not found.', ephemeral: true };
+
+  let applicantMember;
+  try {
+    applicantMember = await guild.members.fetch(currentApp.userId);
+  } catch {
+    applicantMember = {
+      displayName: currentApp.displayName,
+      user: { username: currentApp.username },
+      displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/0.png`,
+      roles: []
+    };
+  }
+  const seasonName = playerData[guildId]?.applicationConfigs?.[configId]?.seasonName || 'Current Season';
+  console.log(`✅ handleCastingStatus - ${value} for ${currentApp.displayName}`);
+  return generateSeasonAppRankingUI({
+    guildId, userId, configId, allApplications, currentApp, appIndex, applicantMember, guild, seasonName, playerData
+  });
+}
+
+/**
  * Generate the DNC Overview screen — global view of all DNC entries and conflicts.
  * Always returns a new ephemeral message (does not update the Casting card).
  *
