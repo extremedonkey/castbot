@@ -361,7 +361,7 @@ export async function generateSeasonAppRankingUI({
     : castingStatus === 'reject' ? "🗑️ Don't Cast"
     : null;
   containerComponents.push(
-    { type: 14 }, // divider above the Casting section
+    // No divider — the code-block header provides the visual break.
     {
       type: 10,
       content: `### \`\`\`🎭 Casting\`\`\`\n-# Set your draft casting status below — change it as many times as you like; players are not notified. When you've decided who to cast, click 📨 Send Invitations.`
@@ -387,7 +387,7 @@ export async function generateSeasonAppRankingUI({
   // ---- Votes: header (with applicant name) + 1-5 rating buttons + tally ----
   const voteeName = applicantMember?.displayName || currentApp.displayName || currentApp.username || 'Applicant';
   containerComponents.push(
-    { type: 14 }, // divider above the Votes section
+    // No divider — the code-block header provides the visual break.
     { type: 10, content: `### \`\`\`🗳️ Votes for ${voteeName}\`\`\`` },
     rankingRow.toJSON()
   );
@@ -401,7 +401,7 @@ export async function generateSeasonAppRankingUI({
   const existingNotes = playerData[guildId]?.applications?.[currentApp.channelId]?.playerNotes;
   const notesText = existingNotes || 'Record casting notes, connections or potential issues...';
   containerComponents.push(
-    { type: 14 }, // divider above the Player Notes section
+    // No divider — the code-block header provides the visual break.
     {
       type: 10,
       content: `### \`\`\`✏️ Player Notes\`\`\`\n${notesText}`
