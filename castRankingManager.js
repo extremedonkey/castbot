@@ -325,6 +325,17 @@ export async function generateSeasonAppRankingUI({
     { type: 14 }, // divider after the nav / select cluster
     { type: 10, content: identityText },
     {
+      type: 1, // Applicant actions — Edit Notes + View Application (link to the app channel)
+      components: [
+        new ButtonBuilder()
+          .setCustomId(`edit_player_notes_${currentApp.channelId}_${appIndex}_${configId}`)
+          .setLabel('✏️ Edit Notes')
+          .setStyle(ButtonStyle.Secondary)
+          .toJSON(),
+        { type: 2, style: 5, label: 'View Application', emoji: { name: '📄' }, url: `https://discord.com/channels/${guildId}/${currentApp.channelId}` }
+      ]
+    },
+    {
       type: 12, // Media Gallery — full-size applicant avatar
       items: [{ media: { url: applicantAvatarURL }, description: `Avatar of ${currentApp.displayName || currentApp.username}` }]
     },
@@ -345,18 +356,10 @@ export async function generateSeasonAppRankingUI({
   const existingNotes = playerData[guildId]?.applications?.[currentApp.channelId]?.playerNotes;
   const notesText = existingNotes || 'Record casting notes, connections or potential issues...';
 
-  // ---- Player Notes — Section: notes text + Edit Notes button accessory (sits ABOVE Casting) ----
+  // ---- Player Notes — plain Text Display (Edit Notes button moved to the applicant actions row) ----
   containerComponents.push({
-    type: 9, // Section
-    components: [
-      { type: 10, content: `### \`\`\`✏️ Player Notes\`\`\`\n${notesText}` }
-    ],
-    accessory: {
-      type: 2, // Button accessory
-      custom_id: `edit_player_notes_${currentApp.channelId}_${appIndex}_${configId}`,
-      label: '✏️ Edit Notes',
-      style: 2
-    }
+    type: 10,
+    content: `### \`\`\`✏️ Player Notes\`\`\`\n${notesText}`
   });
 
   // ---- Casting: header + status (string select) ----
@@ -393,13 +396,10 @@ export async function generateSeasonAppRankingUI({
     containerComponents.push({ type: 10, content: `-# No scores yet — click 1–5 above to rate this applicant.` });
   }
 
-  // ---- Utility actions (App link + formerly part of the notes row) ----
+  // ---- Utility actions ----
   containerComponents.push({
     type: 1,
     components: [
-      // Link button → jumps straight to the applicant's application channel (replaces the old
-      // inline <#channel> text). Link buttons (style 5) use a url, fire no interaction, need no handler.
-      { type: 2, style: 5, label: 'App', emoji: { name: '📄' }, url: `https://discord.com/channels/${guildId}/${currentApp.channelId}` },
       new ButtonBuilder()
         .setCustomId(`ranking_public_warn_${appIndex}_${configId}`)
         .setLabel('📢 Shared Ranker')
