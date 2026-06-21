@@ -403,7 +403,8 @@ export async function generateSeasonAppRankingUI({
     containerComponents.push({ type: 10, content: `-# No scores yet — click 1–5 above to rate this applicant.` });
   }
 
-  // ---- Utility actions ----
+  // ---- Utility actions (divider above) ----
+  containerComponents.push({ type: 14 }); // divider above Shared Ranker / utility row
   containerComponents.push({
     type: 1,
     components: [
@@ -423,16 +424,13 @@ export async function generateSeasonAppRankingUI({
     ]
   });
 
-  // Bottom navigation — divider + ← Seasons (back to Season Manager)
-  containerComponents.push(
-    { type: 14 },
-    {
-      type: 1,
-      components: [
-        { type: 2, custom_id: `season_manager`, label: '← Seasons', style: 2 }
-      ]
-    }
-  );
+  // Bottom navigation — ← Seasons (back to Season Manager)
+  containerComponents.push({
+    type: 1,
+    components: [
+      { type: 2, custom_id: `season_manager`, label: '← Seasons', style: 2 }
+    ]
+  });
 
   // Create main container
   const castRankingContainer = {
