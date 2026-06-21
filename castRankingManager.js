@@ -327,7 +327,8 @@ export async function generateSeasonAppRankingUI({
     {
       type: 12, // Media Gallery — full-size applicant avatar
       items: [{ media: { url: applicantAvatarURL }, description: `Avatar of ${currentApp.displayName || currentApp.username}` }]
-    }
+    },
+    rankingRow.toJSON() // 1-5 rating buttons — directly under the avatar
   );
 
   // DNC conflict warning — prominent, only when this applicant cross-lists someone.
@@ -382,10 +383,9 @@ export async function generateSeasonAppRankingUI({
     }
   );
 
-  // ---- Votes: header (with applicant name) + 1-5 rating buttons + tally ----
+  // ---- Votes: header (with applicant name) + tally (the 1-5 buttons live under the gallery) ----
   containerComponents.push(
-    { type: 10, content: `### \`\`\`🗳️ Votes for ${applicantDisplayName}\`\`\`` },
-    rankingRow.toJSON()
+    { type: 10, content: `### \`\`\`🗳️ Votes for ${applicantDisplayName}\`\`\`` }
   );
   if (votingBreakdown) {
     containerComponents.push(votingBreakdown);
