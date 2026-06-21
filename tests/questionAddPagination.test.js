@@ -99,6 +99,53 @@ describe('ensureCompletionQuestion — legacy seasons get a persisted completion
   });
 });
 
+// ── Replicated DNC insert logic from app.js question_add_dnc (no singleton guard) ──
+// DNC is NOT a config-level singleton: a host may add it more than once. All DNC questions
+// share the applicant's single dncEntries[] list (one DNC list per player — by design).
+function addDncQuestion(config, id = 'dnc_new') {
+  if (!config.questions) config.questions = [];
+  ensureCompletionQuestion(config);
+  const dnc = { id, questionType: 'dnc' };
+  const completionIdx = config.questions.findIndex(q => q.questionType === 'completion');
+  if (completionIdx >= 0) config.questions.splice(completionIdx, 0, dnc);
+  else config.questions.push(dnc);
+  return config;
+}
+
+describe('DNC question — NOT a singleton (host may add it multiple times)', () => {
+  it('adds a DNC question to a fresh season (before the completion)', () => {
+    const config = { questions: [{ id: 'a' }, { id: 'b' }] };
+    addDncQuestion(config, 'dnc1');
+    const types = config.questions.map(q => q.questionType);
+    assert.deepEqual(types, [undefined, 'completion', 'dnc']); // last plain → completion, dnc before it
+    // dnc sits immediately before completion
+    const dncIdx = config.questions.findIndex(q => q.id === 'dnc1');
+    const compIdx = config.questions.findIndex(q => q.questionType === 'completion');
+    assert.equal(dncIdx, compIdx - 1);
+  });
+
+  it('allows a SECOND DNC question (regression: old guard silently blocked this)', () => {
+    const config = { questions: [{ id: 'a', questionType: 'dnc' }, { id: 'c', questionType: 'completion' }] };
+    addDncQuestion(config, 'dnc2');
+    const dncCount = config.questions.filter(q => q.questionType === 'dnc').length;
+    assert.equal(dncCount, 2); // both DNCs coexist — no silent no-op
+    // newest DNC is inserted before completion, completion stays last
+    assert.equal(config.questions[config.questions.length - 1].questionType, 'completion');
+  });
+
+  it('each added DNC lands before the completion, never after it', () => {
+    const config = { questions: [{ id: 'a' }] };
+    addDncQuestion(config, 'dnc1');
+    addDncQuestion(config, 'dnc2');
+    addDncQuestion(config, 'dnc3');
+    const compIdx = config.questions.findIndex(q => q.questionType === 'completion');
+    config.questions.forEach((q, i) => {
+      if (q.questionType === 'dnc') assert.ok(i < compIdx, `dnc at ${i} must precede completion at ${compIdx}`);
+    });
+    assert.equal(config.questions.filter(q => q.questionType === 'dnc').length, 3);
+  });
+});
+
 describe('Page clamp — out-of-range page never renders blank', () => {
   it('clamps page 1 down to 0 when only one page of questions exists', () => {
     // The exact prod failure: handler navigated to page 1, but after completion-conversion

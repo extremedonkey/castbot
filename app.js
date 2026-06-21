@@ -11309,12 +11309,12 @@ To fix this:
 
           // Persist a real completion question FIRST so "insert before completion" works and the
           // new DNC isn't absorbed by the render-time conversion (legacy-season bug).
-          const completionChanged = await ensureCompletionQuestion(config);
+          await ensureCompletionQuestion(config);
 
-          if (config.questions.find(q => q.questionType === 'dnc')) {
-            if (completionChanged) await savePlayerData(playerData);
-            return await buildQuestionManagementUI(config, qConfigId, 0);
-          }
+          // DNC is intentionally NOT a config-level singleton. A host may add the "Do Not Cast"
+          // question more than once; all DNC questions share the applicant's single dncEntries[]
+          // list (one DNC list per player — by design). The old guard here silently no-op'd a 2nd
+          // add, which just looked broken; letting it through is clearer for hosts to untangle.
 
           const crypto = await import('crypto');
           const dncQuestion = {
