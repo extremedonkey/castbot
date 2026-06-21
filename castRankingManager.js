@@ -324,8 +324,13 @@ export async function generateSeasonAppRankingUI({
   containerComponents.push(
     { type: 14 }, // divider after the nav / select cluster
     { type: 10, content: identityText },
+    rankingRow.toJSON(), // 1-5 rating buttons — directly under the identity text
     {
-      type: 1, // Applicant actions — Edit Notes + View Application (link) + Delete
+      type: 12, // Media Gallery — full-size applicant avatar
+      items: [{ media: { url: applicantAvatarURL }, description: `Avatar of ${currentApp.displayName || currentApp.username}` }]
+    },
+    {
+      type: 1, // Applicant actions — Edit Notes + View App (link) + Delete — directly under the avatar
       components: [
         new ButtonBuilder()
           .setCustomId(`edit_player_notes_${currentApp.channelId}_${appIndex}_${configId}`)
@@ -340,12 +345,7 @@ export async function generateSeasonAppRankingUI({
           .setEmoji('🗑️')
           .toJSON()
       ]
-    },
-    {
-      type: 12, // Media Gallery — full-size applicant avatar
-      items: [{ media: { url: applicantAvatarURL }, description: `Avatar of ${currentApp.displayName || currentApp.username}` }]
-    },
-    rankingRow.toJSON() // 1-5 rating buttons — directly under the avatar
+    }
   );
 
   // DNC conflict warning — prominent, only when this applicant cross-lists someone.
