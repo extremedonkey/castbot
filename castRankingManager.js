@@ -294,7 +294,7 @@ export async function generateSeasonAppRankingUI({
     }
 
     // Placeholder doubles as the position indicator (the "Applicant N of M" text was removed above).
-    let selectPlaceholder = `Applicant ${appIndex + 1} of ${allApplications.length}`;
+    let selectPlaceholder = `Applicant ${appIndex + 1} of ${allApplications.length} - ${guild?.name || 'Server'}`;
     if (totalPages > 1) selectPlaceholder += ` · page ${currentPage + 1}/${totalPages}`;
 
     containerComponents.push({
