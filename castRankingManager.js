@@ -310,25 +310,22 @@ export async function generateSeasonAppRankingUI({
     });
   }
   
-  // Identity Section (shared player-card builder: name • pronouns • age • timezone • 🕛 local time +
-  // avatar thumbnail) with the applicant meta folded into its text. Returns null when the applicant
-  // can't be resolved as a guild member (e.g. they left); fall back to a minimal name + avatar Section.
+  // Identity: reuse the shared player-card builder for the TEXT (name • pronouns • age • timezone •
+  // 🕛 local time), but render it as a Text Display + full-size Media Gallery avatar (rather than a
+  // Section + thumbnail accessory). Falls back to a minimal name when the member can't be resolved.
   const { createPlayerDisplaySection } = await import('./playerManagement.js');
-  let identitySection = await createPlayerDisplaySection(applicantMember, playerData, guildId);
-  if (!identitySection) {
-    identitySection = {
-      type: 9,
-      components: [{ type: 10, content: `**${currentApp.displayName || currentApp.username}**\n-# ⚠️ Left server` }],
-      accessory: { type: 11, media: { url: applicantAvatarURL }, description: 'Applicant avatar' }
-    };
-  }
-  if (applicantInfo && identitySection.components?.[0]?.content !== undefined) {
-    identitySection.components[0].content += `\n${applicantInfo}`;
-  }
+  const identityCard = await createPlayerDisplaySection(applicantMember, playerData, guildId);
+  let identityText = identityCard?.components?.[0]?.content
+    || `**${currentApp.displayName || currentApp.username}**\n-# ⚠️ Left server`;
+  if (applicantInfo) identityText += `\n${applicantInfo}`;
 
   containerComponents.push(
     { type: 14 }, // divider after the nav / select cluster
-    identitySection
+    { type: 10, content: identityText },
+    {
+      type: 12, // Media Gallery — full-size applicant avatar
+      items: [{ media: { url: applicantAvatarURL }, description: `Avatar of ${currentApp.displayName || currentApp.username}` }]
+    }
   );
 
   // DNC conflict warning — prominent, only when this applicant cross-lists someone.
