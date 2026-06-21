@@ -5609,18 +5609,64 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           return result;
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('casting_messages_')) {
-      // STUB — Casting Messages (configure invitation / rejection messages). New ephemeral message.
+    } else if (custom_id.startsWith('casting_messages_') && !custom_id.startsWith('casting_messages_save:')) {
+      // Invites button → open the Casting Invites modal. custom_id: casting_messages_{appIndex}_{configId}
       return ButtonHandlerFactory.create({
         id: 'casting_messages',
-        ephemeral: true,
+        requiresModal: true,
+        handler: async (context) => {
+          const guild = await context.client.guilds.fetch(context.guildId);
+          const member = await guild.members.fetch(context.userId);
+          if (!hasCastRankingPermissions(member, context.guildId)) {
+            return { content: '❌ You need Manage Roles or Manage Channels permissions for this.', ephemeral: true };
+          }
+          const m = context.customId.match(/^casting_messages_(\d+)_(.+)$/);
+          const appIndex = m ? parseInt(m[1]) : 0;
+          const configId = m ? m[2] : context.customId.replace('casting_messages_', '');
+          const { buildCastingInvitesModal } = await import('./castRankingManager.js');
+          const playerData = await loadPlayerData();
+          return { type: 9, data: buildCastingInvitesModal(playerData, context.guildId, appIndex, configId) };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('casting_invites_cancel')) {
+      // Cancel the pending invite send (dismiss the confirmation).
+      return ButtonHandlerFactory.create({
+        id: 'casting_invites_cancel',
+        updateMessage: true,
+        handler: async () => ({ components: [{ type: 17, components: [{ type: 10, content: '❌ Cancelled — no invites sent.' }] }] })
+      })(req, res, client);
+    } else if (custom_id.startsWith('casting_invites_confirm:')) {
+      // Confirmed → send the invites (deferred; bulk channel sends are slow).
+      return ButtonHandlerFactory.create({
+        id: 'casting_invites_confirm',
+        deferred: true,
+        updateMessage: true,
         handler: async (context) => {
           const guild = await context.client.guilds.fetch(context.guildId);
           const member = await guild.members.fetch(context.userId);
           if (!hasCastRankingPermissions(member, context.guildId)) {
             return { content: '❌ You need Manage Roles or Manage Channels permissions for this.' };
           }
-          return { content: '✒️ **Invitations** — coming soon!\nThis will let you customise and send the cast / cut messages applicants receive, based on their casting status (🎬 Cast · ❓ Tentative · 🗑️ Don\'t Cast).' };
+          // casting_invites_confirm:{mode}:{appIndex}:{configId}
+          const rest = context.customId.slice('casting_invites_confirm:'.length);
+          const firstColon = rest.indexOf(':');
+          const secondColon = rest.indexOf(':', firstColon + 1);
+          const mode = rest.slice(0, firstColon);
+          const appIndex = parseInt(rest.slice(firstColon + 1, secondColon));
+          const configId = rest.slice(secondColon + 1);
+
+          const { sendCastingInvites, getCastingMessages } = await import('./castRankingManager.js');
+          const playerData = await loadPlayerData();
+          const messages = getCastingMessages(playerData, context.guildId, configId);
+          const r = await sendCastingInvites({ client: context.client, guildId: context.guildId, configId, mode, appIndex, messages });
+
+          const parts = [];
+          if (r.perType.successful) parts.push(`🎬 Successful → ${r.perType.successful}`);
+          if (r.perType.alternative) parts.push(`🔄 Alternative → ${r.perType.alternative}`);
+          if (r.perType.unsuccessful) parts.push(`🗑️ Unsuccessful → ${r.perType.unsuccessful}`);
+          const extra = [r.failed ? `⚠️ ${r.failed} failed` : null, r.skippedEmpty ? `${r.skippedEmpty} skipped (empty template)` : null].filter(Boolean);
+          const summary = `## 📨 Invites Sent\n**${r.sent}** message${r.sent !== 1 ? 's' : ''} delivered.\n${parts.join(' · ') || '-# Nothing to send.'}${extra.length ? `\n-# ${extra.join(' · ')}` : ''}`;
+          return { components: [{ type: 17, accent_color: 0x27ae60, components: [{ type: 10, content: summary }] }] };
         }
       })(req, res, client);
     } else if (custom_id.startsWith('ranking_prev_') || custom_id.startsWith('ranking_next_') || custom_id.startsWith('ranking_view_all_scores')) {
@@ -40033,7 +40079,48 @@ Your server is now ready for Tycoons gameplay!`;
     const { custom_id, components } = data;
     console.log(`🔍 DEBUG: MODAL_SUBMIT received - custom_id: ${custom_id}`);
 
-    if (custom_id === 'moai_ask_modal' || custom_id.startsWith('moai_ask_modal_')) {
+    if (custom_id.startsWith('casting_messages_save:')) {
+      // Casting Invites modal submit. custom_id: casting_messages_save:{appIndex}:{configId}
+      return ButtonHandlerFactory.create({
+        id: 'casting_messages_save',
+        ephemeral: true,
+        handler: async (context) => {
+          const guild = await context.client.guilds.fetch(context.guildId);
+          const member = await guild.members.fetch(context.userId);
+          if (!hasCastRankingPermissions(member, context.guildId)) {
+            return { content: '❌ You need Manage Roles or Manage Channels permissions for this.' };
+          }
+          const idPart = custom_id.slice('casting_messages_save:'.length);
+          const appIndex = parseInt(idPart.slice(0, idPart.indexOf(':')));
+          const configId = idPart.slice(idPart.indexOf(':') + 1);
+
+          // Parse Label-wrapped fields: text inputs via .value, the select via .values[0]
+          const fields = {};
+          for (const row of (components || [])) {
+            if (row?.type === 18 && row.component?.custom_id) {
+              const c = row.component;
+              fields[c.custom_id] = Array.isArray(c.values) ? c.values[0] : (c.value ?? '');
+            }
+          }
+          const messages = { successful: fields.msg_successful || '', alternative: fields.msg_alternative || '', unsuccessful: fields.msg_unsuccessful || '' };
+          const mode = fields.invite_mode || 'draft';
+
+          const { saveCastingMessages, selectInviteTargets, buildInvitesConfirm } = await import('./castRankingManager.js');
+          await saveCastingMessages(context.guildId, configId, messages, context.userId, Date.now());
+
+          if (mode === 'draft') {
+            return { flags: (1 << 15), components: [{ type: 17, accent_color: 0x27ae60, components: [{ type: 10, content: '💾 **Templates saved.** No messages were sent.' }] }] };
+          }
+
+          // Compute targets and show the confirmation before sending.
+          const playerData = await loadPlayerData();
+          const { getApplicationsForSeason } = await import('./storage.js');
+          const allApplications = await getApplicationsForSeason(context.guildId, configId);
+          const targets = selectInviteTargets(allApplications, playerData, context.guildId, mode, appIndex);
+          return buildInvitesConfirm({ mode, appIndex, configId, targets });
+        }
+      })(req, res, client);
+    } else if (custom_id === 'moai_ask_modal' || custom_id.startsWith('moai_ask_modal_')) {
       // 🗿 The Moai — execute Claude CLI with the user's query
       // Extract previous context from modal fields (if "Ask Another" with context)
       const modalComponents = req.body.data.components || [];
@@ -44415,6 +44502,8 @@ Your server is now ready for Tycoons gameplay!`;
         let castingStatusText = '';
         if (castingStatus === 'cast') {
           castingStatusText = '✅ Cast';
+        } else if (castingStatus === 'alternative') {
+          castingStatusText = '🔄 Alternate';
         } else if (castingStatus === 'tentative') {
           castingStatusText = '❓ Tentative';
         } else if (castingStatus === 'reject') {

@@ -239,7 +239,7 @@ function getCastRankedApplicants(guildData, configId) {
     });
   }
   out.sort((a, b) => {
-    const rank = s => (s === 'cast' ? 0 : s === 'tentative' ? 1 : s === 'reject' ? 3 : 2);
+    const rank = s => (s === 'cast' ? 0 : s === 'alternative' ? 1 : s === 'tentative' ? 2 : s === 'reject' ? 4 : 3);
     if (rank(a.castingStatus) !== rank(b.castingStatus)) return rank(a.castingStatus) - rank(b.castingStatus);
     return (b.avgScore || 0) - (a.avgScore || 0);
   });
@@ -498,7 +498,7 @@ function buildHierarchyOptions({ season, castlists, castlist, phases, phase, tri
       opts.push({ label: '(No applicants for this season — start Season Apps)', value: 'noop', emoji: { name: '⚠️' } });
       return opts;
     }
-    const statusEmoji = { cast: '✅', tentative: '🟦', reject: '⛔' };
+    const statusEmoji = { cast: '✅', alternative: '🔄', tentative: '🟦', reject: '⛔' };
     for (const a of applicants) {
       const score = a.avgScore != null ? `★ ${a.avgScore.toFixed(1)} (${a.voteCount})` : 'unranked';
       const status = a.castingStatus ? a.castingStatus.toUpperCase() : 'PENDING';

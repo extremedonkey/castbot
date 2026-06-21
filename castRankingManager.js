@@ -258,6 +258,7 @@ export async function generateSeasonAppRankingUI({
 
       let icon = '🗳️';
       if (cStatus === 'cast') icon = '✅';
+      else if (cStatus === 'alternative') icon = '🔄';
       else if (cStatus === 'reject') icon = '❌';
       else if (voteCount >= 2) icon = '☑️';
 
@@ -360,7 +361,7 @@ export async function generateSeasonAppRankingUI({
   // it CLEARS any existing castingStatus (see handleCastingStatus) — undecided is never stored, it's
   // simply the absence of castingStatus, so this stays backwards compatible with existing data.
   const applicantDisplayName = applicantMember?.displayName || currentApp.displayName || currentApp.username || 'Applicant';
-  const isUndecided = !['cast', 'tentative', 'reject'].includes(castingStatus);
+  const isUndecided = !['cast', 'tentative', 'reject', 'alternative'].includes(castingStatus);
   const existingNotes = playerData[guildId]?.applications?.[currentApp.channelId]?.playerNotes;
   const notesText = existingNotes || 'Record casting notes, connections or potential issues...';
 
@@ -388,7 +389,8 @@ export async function generateSeasonAppRankingUI({
           { label: 'Still Deciding', value: 'undecided', emoji: { name: '❔' }, default: isUndecided },
           { label: `Cast ${applicantDisplayName}`, value: 'cast', emoji: { name: '🎬' }, default: castingStatus === 'cast' },
           { label: `Don't Cast ${applicantDisplayName}`, value: 'reject', emoji: { name: '🗑️' }, default: castingStatus === 'reject' },
-          { label: `Tentatively Cast ${applicantDisplayName}`, value: 'tentative', emoji: { name: '❓' }, default: castingStatus === 'tentative' }
+          { label: `Tentatively Cast ${applicantDisplayName}`, value: 'tentative', emoji: { name: '❓' }, default: castingStatus === 'tentative' },
+          { label: `Alternative — ${applicantDisplayName}`, value: 'alternative', emoji: { name: '🔄' }, default: castingStatus === 'alternative' }
         ]
       }]
     }
@@ -421,7 +423,7 @@ export async function generateSeasonAppRankingUI({
         .setEmoji('🚷')
         .toJSON(),
       { type: 2, custom_id: `ranking_view_all_scores_${configId}${ephemeralSuffix}`, label: 'Casting Summary', style: 2, emoji: { name: '⭐' } },
-      { type: 2, custom_id: `casting_messages_${configId}`, label: 'Invites', style: 2, emoji: { name: '✒️' } }
+      { type: 2, custom_id: `casting_messages_${appIndex}_${configId}`, label: 'Invites', style: 2, emoji: { name: '✒️' } }
     ]
   });
 
@@ -544,6 +546,188 @@ export async function handleCastingStatus({ customId, value, channelId, appIndex
   return generateSeasonAppRankingUI({
     guildId, userId, configId, allApplications, currentApp, appIndex, applicantMember, guild, seasonName, playerData
   });
+}
+
+// ============================================================================
+// CASTING INVITES — author message templates + send outcome messages to applicants
+// (Invites button → modal → confirm → send). See RaP 0906.
+// ============================================================================
+
+/** Which casting status receives which message template (Tentative/undecided → none). */
+export const CASTING_STATUS_TO_MESSAGE = { cast: 'successful', alternative: 'alternative', reject: 'unsuccessful' };
+
+/** Accent colours per message type for the V2 invite card. */
+const INVITE_ACCENT = { successful: 0x27ae60, alternative: 0xf1c40f, unsuccessful: 0xe74c3c };
+
+/** Default starter templates, pre-filled when a guild has none saved yet. `@Player` → applicant mention. */
+export const DEFAULT_CASTING_MESSAGES = {
+  successful: `@Player Congratulations! You've been selected for a spot in the cast!\n\nTo accept this offer, please confirm your preferred name, age, pronouns, and timezone.\n\nIf you'd like a photo other than your profile picture for your casting card, send it here — and include a hex code for your name-role colour.\n\nWe can't wait to have you! Please confirm your acceptance and provide this info before the deadline.`,
+  alternative: `@Player Thank you for applying! While we couldn't offer you a main cast spot this time, we'd love to offer you an alternate (backup) spot.\n\nIf you're willing to be an alternate, please let us know — we may still be able to bring you into the game!`,
+  unsuccessful: `@Player Thank you so much for applying. Unfortunately, we're unable to offer you a spot in the cast this time.\n\nWe really appreciate the effort you put into your application, and we hope you'll apply again for a future season!`
+};
+
+/**
+ * Read the guild's saved casting message templates, falling back to defaults.
+ * `configId` is accepted now (unused) so this can become per-season later without touching callers.
+ */
+export function getCastingMessages(playerData, guildId, configId) {
+  const saved = playerData?.[guildId]?.castingMessages;
+  return {
+    successful: saved?.successful ?? DEFAULT_CASTING_MESSAGES.successful,
+    alternative: saved?.alternative ?? DEFAULT_CASTING_MESSAGES.alternative,
+    unsuccessful: saved?.unsuccessful ?? DEFAULT_CASTING_MESSAGES.unsuccessful
+  };
+}
+
+/** Neutralize mass-ping tokens in host-authored templates (V2 cards can't carry allowed_mentions). */
+function sanitizeTemplate(text) {
+  return (text || '').replace(/@(everyone|here)/gi, '@​$1');
+}
+
+/** Persist the three templates to the guild node (future: per-season under applicationConfigs[configId]). */
+export async function saveCastingMessages(guildId, configId, messages, userId, tsMs) {
+  const { loadPlayerData, savePlayerData } = await import('./storage.js');
+  const playerData = await loadPlayerData();
+  if (!playerData[guildId]) playerData[guildId] = {};
+  playerData[guildId].castingMessages = {
+    successful: sanitizeTemplate(messages.successful),
+    alternative: sanitizeTemplate(messages.alternative),
+    unsuccessful: sanitizeTemplate(messages.unsuccessful),
+    updatedAt: tsMs || 0,
+    updatedBy: userId
+  };
+  await savePlayerData(playerData);
+  return playerData[guildId].castingMessages;
+}
+
+/** Substitute the @Player token with the applicant's mention. */
+export function renderInviteMessage(template, userId) {
+  return (template || '').replace(/@Player\b/g, `<@${userId}>`);
+}
+
+/**
+ * Compute which applicants get which message type for a given send mode.
+ * Returns [{ channelId, userId, displayName, messageType }]. Tentative + undecided are always skipped.
+ */
+export function selectInviteTargets(allApplications, playerData, guildId, mode, appIndex) {
+  const statusOf = (app) => playerData?.[guildId]?.applications?.[app.channelId]?.castingStatus;
+  const typeFor = (status) => CASTING_STATUS_TO_MESSAGE[status] || null;
+  const make = (app, messageType) => ({ channelId: app.channelId, userId: app.userId, displayName: app.displayName || app.username, messageType });
+
+  if (mode === 'selected') {
+    const app = allApplications[appIndex];
+    if (!app) return [];
+    const mt = typeFor(statusOf(app));
+    return mt ? [make(app, mt)] : [];
+  }
+  const wanted = mode === 'all' ? ['successful', 'alternative', 'unsuccessful'] : [mode]; // mode is a message type for the single-type modes
+  const targets = [];
+  for (const app of allApplications) {
+    const mt = typeFor(statusOf(app));
+    if (mt && wanted.includes(mt)) targets.push(make(app, mt));
+  }
+  return targets;
+}
+
+/**
+ * Build the Casting Invites modal (3 templates + a required "what to do on submit" select).
+ * Pre-fills templates from saved guild messages (or defaults).
+ */
+export function buildCastingInvitesModal(playerData, guildId, appIndex, configId) {
+  const msgs = getCastingMessages(playerData, guildId, configId);
+  const input = (custom_id, label, description, value) => ({
+    type: 18, label, description,
+    component: { type: 4, custom_id, style: 2, max_length: 4000, required: false, ...(value ? { value } : {}) }
+  });
+  return {
+    custom_id: `casting_messages_save:${appIndex}:${configId}`,
+    title: 'Casting Invites',
+    components: [
+      input('msg_successful', 'Successful Message (Cast)', 'Sent to 🎬 Cast applicants. Use @Player to tag each player.', msgs.successful),
+      input('msg_alternative', 'Alternative / Backup Message', 'Sent to 🔄 Alternative applicants. Use @Player to tag each player.', msgs.alternative),
+      input('msg_unsuccessful', "Unsuccessful Message (Don't Cast)", 'Sent to 🗑️ Don\'t Cast applicants. Use @Player to tag each player.', msgs.unsuccessful),
+      {
+        type: 18,
+        label: 'What to do when you submit this?',
+        description: 'Tentative & Still Deciding applicants are never messaged.',
+        component: {
+          type: 3, custom_id: 'invite_mode', required: true, min_values: 1, max_values: 1,
+          options: [
+            { label: 'Save as draft only', value: 'draft', emoji: { name: '💾' }, description: 'Save the templates, send nothing', default: true },
+            { label: 'Send ALL now (Cast + Alternate + Reject)', value: 'all', emoji: { name: '📨' } },
+            { label: 'Send Successful only', value: 'successful', emoji: { name: '🎬' } },
+            { label: "Send Unsuccessful only", value: 'unsuccessful', emoji: { name: '🗑️' } },
+            { label: 'Send Alternative only', value: 'alternative', emoji: { name: '🔄' } },
+            { label: 'Send to currently selected applicant only', value: 'selected', emoji: { name: '👤' } }
+          ]
+        }
+      }
+    ]
+  };
+}
+
+/** Build the ephemeral confirmation card shown before a send actually fires. */
+export function buildInvitesConfirm({ mode, appIndex, configId, targets }) {
+  const counts = targets.reduce((a, t) => { a[t.messageType] = (a[t.messageType] || 0) + 1; return a; }, {});
+  const lines = [
+    counts.successful ? `🎬 Successful → **${counts.successful}**` : null,
+    counts.alternative ? `🔄 Alternative → **${counts.alternative}**` : null,
+    counts.unsuccessful ? `🗑️ Unsuccessful → **${counts.unsuccessful}**` : null
+  ].filter(Boolean);
+  const body = targets.length === 0
+    ? `⚠️ No applicants match this option (Tentative & Still Deciding are never messaged). Nothing will be sent.`
+    : `You're about to message **${targets.length}** applicant${targets.length !== 1 ? 's' : ''} in their application channels:\n${lines.join('\n')}\n\n-# This pings each applicant and cannot be undone.`;
+  const components = [
+    { type: 10, content: `## 📨 Send Casting Invites?` },
+    { type: 14 },
+    { type: 10, content: body }
+  ];
+  if (targets.length > 0) {
+    components.push({
+      type: 1,
+      components: [
+        { type: 2, custom_id: `casting_invites_cancel`, label: 'Cancel', style: 2, emoji: { name: '❌' } },
+        { type: 2, custom_id: `casting_invites_confirm:${mode}:${appIndex}:${configId}`, label: 'Confirm Send', style: 3, emoji: { name: '📨' } }
+      ]
+    });
+  }
+  return { flags: (1 << 15) | (1 << 6), components: [{ type: 17, accent_color: 0xf39c12, components }] };
+}
+
+/**
+ * Send casting invite messages to the targeted applicants' channels (throttled, V2 cards).
+ * Returns { sent, failed, skippedEmpty, perType }.
+ */
+export async function sendCastingInvites({ client, guildId, configId, mode, appIndex, messages }) {
+  const { loadPlayerData, getApplicationsForSeason } = await import('./storage.js');
+  const playerData = await loadPlayerData();
+  const allApplications = await getApplicationsForSeason(guildId, configId);
+  const targets = selectInviteTargets(allApplications, playerData, guildId, mode, appIndex);
+
+  const result = { sent: 0, failed: 0, skippedEmpty: 0, perType: { successful: 0, alternative: 0, unsuccessful: 0 } };
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  for (let i = 0; i < targets.length; i++) {
+    const t = targets[i];
+    const template = messages[t.messageType];
+    if (!template || !template.trim()) { result.skippedEmpty++; continue; }
+    const content = renderInviteMessage(sanitizeTemplate(template), t.userId);
+    try {
+      const channel = await client.channels.fetch(t.channelId);
+      await channel.send({
+        flags: (1 << 15),
+        components: [{ type: 17, accent_color: INVITE_ACCENT[t.messageType], components: [{ type: 10, content }] }]
+      });
+      result.sent++;
+      result.perType[t.messageType]++;
+    } catch (err) {
+      console.log(`⚠️ sendCastingInvites: failed to message channel ${t.channelId}: ${err.message}`);
+      result.failed++;
+    }
+    if (i < targets.length - 1) await sleep(700); // rate-limit-safe spacing
+  }
+  console.log(`📨 sendCastingInvites [${mode}] guild ${guildId}: sent ${result.sent}, failed ${result.failed}, skippedEmpty ${result.skippedEmpty}`);
+  return result;
 }
 
 /**
@@ -703,19 +887,21 @@ export async function handleRankingNavigation({
     // Group by casting status
     const castGroups = {
       cast: applicantData.filter(app => app.castingStatus === 'cast'),
-      tentative: applicantData.filter(app => app.castingStatus === 'tentative'), 
+      tentative: applicantData.filter(app => app.castingStatus === 'tentative'),
+      alternative: applicantData.filter(app => app.castingStatus === 'alternative'),
       reject: applicantData.filter(app => app.castingStatus === 'reject'),
       undecided: applicantData.filter(app => app.castingStatus === 'undecided')
     };
-    
+
     // Sort each group by average score (highest first)
     Object.values(castGroups).forEach(group => {
       group.sort((a, b) => b.avgScore - a.avgScore);
     });
-    
+
     // Build status sections
     const statusSections = [
       { key: 'cast', title: '✅ **CAST PLAYERS**', color: '🟢', group: castGroups.cast },
+      { key: 'alternative', title: '🔄 **ALTERNATE**', color: '🟡', group: castGroups.alternative },
       { key: 'tentative', title: '❓ **TENTATIVE**', color: '🔵', group: castGroups.tentative },
       { key: 'reject', title: '🗑️ **DON\'T CAST**', color: '🔴', group: castGroups.reject },
       { key: 'undecided', title: '⚪ **UNDECIDED**', color: '⚫', group: castGroups.undecided }
@@ -736,7 +922,7 @@ export async function handleRankingNavigation({
     // Add overall statistics
     scoreSummary += `### 📊 **SUMMARY**\n`;
     scoreSummary += `> **Total Applicants:** ${allApplications.length}\n`;
-    scoreSummary += `> **Cast:** ${castGroups.cast.length} | **Tentative:** ${castGroups.tentative.length} | **Rejected:** ${castGroups.reject.length} | **Undecided:** ${castGroups.undecided.length}\n`;
+    scoreSummary += `> **Cast:** ${castGroups.cast.length} | **Alternate:** ${castGroups.alternative.length} | **Tentative:** ${castGroups.tentative.length} | **Rejected:** ${castGroups.reject.length} | **Undecided:** ${castGroups.undecided.length}\n`;
     
     const totalScored = applicantData.filter(app => app.voteCount > 0).length;
     scoreSummary += `> **Scored:** ${totalScored}/${allApplications.length} applicants`;
