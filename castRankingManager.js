@@ -225,19 +225,6 @@ export async function generateSeasonAppRankingUI({
     buildSeasonNavRow(configId, 'ranking'),
   ];
 
-  // Casting workflow button — sits below the nav row (Edit) and above the applicant jump-select.
-  containerComponents.push({
-    type: 1,
-    components: [
-      new ButtonBuilder()
-        .setCustomId(`casting_messages_${configId}`)
-        .setLabel('Invites')
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji('✒️')
-        .toJSON()
-    ]
-  });
-
   // Applicant jump-select — ALWAYS rendered (state-aware placeholder). Discord requires ≥1 option,
   // so it's only ever absent on the 0-applicant empty state (a separate screen). It also replaces
   // the old ◀/▶ prev/next row for navigation.
@@ -407,10 +394,16 @@ export async function generateSeasonAppRankingUI({
     containerComponents.push({ type: 10, content: `-# No scores yet — click 1–5 above to rate this applicant.` });
   }
 
-  // ---- Utility actions (formerly part of the notes row) ----
+  // ---- Utility actions (Invites + formerly part of the notes row) ----
   containerComponents.push({
     type: 1,
     components: [
+      new ButtonBuilder()
+        .setCustomId(`casting_messages_${configId}`)
+        .setLabel('Invites')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('✒️')
+        .toJSON(),
       new ButtonBuilder()
         .setCustomId(`ranking_public_warn_${appIndex}_${configId}`)
         .setLabel('📢 Shared Ranker')
