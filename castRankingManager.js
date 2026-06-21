@@ -324,6 +324,7 @@ export async function generateSeasonAppRankingUI({
 
   containerComponents.push(
     { type: 14 }, // divider after the nav / select cluster
+    { type: 10, content: `### \`\`\`📃 Application\`\`\`` },
     { type: 10, content: identityText },
     rankingRow.toJSON(), // 1-5 rating buttons — directly under the identity text
     {
