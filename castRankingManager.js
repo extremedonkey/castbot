@@ -216,7 +216,7 @@ export async function generateSeasonAppRankingUI({
   //         Casting (status + workflow) → Votes (1-5 + tally) → Player Notes → bottom nav.
   // Applicant meta (position / app link / DNC summary) is folded into the identity Section to save
   // components (Discord's hard limit is 40 per message).
-  const applicantInfo = `> **Applicant ${appIndex + 1} of ${allApplications.length}** · **App:** <#${currentApp.channelId}>${dncSummaryText ? `\n${dncSummaryText}` : ''}`;
+  const applicantInfo = `**App:** <#${currentApp.channelId}>${dncSummaryText ? `\n${dncSummaryText}` : ''}`;
 
   const { buildSeasonNavRow } = await import('./seasonSelector.js');
   const containerComponents = [
@@ -293,10 +293,9 @@ export async function generateSeasonAppRankingUI({
       });
     }
 
-    let selectPlaceholder;
-    if (allApplications.length === 1) selectPlaceholder = '🔍 1 applicant so far';
-    else if (totalPages === 1) selectPlaceholder = `🔍 Jump to applicant… (${allApplications.length} total)`;
-    else selectPlaceholder = `🔍 Jump to applicant… (page ${currentPage + 1}/${totalPages}, ${allApplications.length} total)`;
+    // Placeholder doubles as the position indicator (the "Applicant N of M" text was removed above).
+    let selectPlaceholder = `Applicant ${appIndex + 1} of ${allApplications.length}`;
+    if (totalPages > 1) selectPlaceholder += ` · page ${currentPage + 1}/${totalPages}`;
 
     containerComponents.push({
       type: 1,
@@ -337,7 +336,11 @@ export async function generateSeasonAppRankingUI({
     containerComponents.push({ type: 10, content: dncWarningText });
   }
 
-  // ---- Casting: divider + header + status & workflow (single 5-button row for budget) ----
+  // ---- Casting: divider + header + status (string select) + workflow buttons ----
+  const castingStatusLabel = castingStatus === 'cast' ? '🎬 Cast Player'
+    : castingStatus === 'tentative' ? '❓ Tentative'
+    : castingStatus === 'reject' ? "🗑️ Don't Cast"
+    : null;
   containerComponents.push(
     { type: 14 }, // divider above the Casting section
     {
@@ -345,23 +348,23 @@ export async function generateSeasonAppRankingUI({
       content: `### 🎭 Casting\nSet your draft casting status below — change it as many times as you like; players are **not** notified. When you've decided who to cast, click **📨 Send Invitations**.`
     },
     {
-      type: 1, // Casting status + workflow — 5 buttons (Discord action-row max)
+      type: 1, // Casting status — string select (replaces the 3 status buttons, frees a component)
+      components: [{
+        type: 3,
+        custom_id: `casting_status_${currentApp.channelId}_${appIndex}_${configId}`,
+        placeholder: castingStatusLabel ? `Casting status: ${castingStatusLabel}` : '🎭 Set casting status…',
+        min_values: 1,
+        max_values: 1,
+        options: [
+          { label: 'Cast Player', value: 'cast', emoji: { name: '🎬' }, default: castingStatus === 'cast' },
+          { label: 'Tentative', value: 'tentative', emoji: { name: '❓' }, default: castingStatus === 'tentative' },
+          { label: "Don't Cast", value: 'reject', emoji: { name: '🗑️' }, default: castingStatus === 'reject' }
+        ]
+      }]
+    },
+    {
+      type: 1, // Casting workflow — stubs for now
       components: [
-        new ButtonBuilder()
-          .setCustomId(`cast_player_${currentApp.channelId}_${appIndex}_${configId}`)
-          .setLabel('🎬 Cast Player')
-          .setStyle(castingStatus === 'cast' ? ButtonStyle.Success : ButtonStyle.Secondary)
-          .toJSON(),
-        new ButtonBuilder()
-          .setCustomId(`cast_tentative_${currentApp.channelId}_${appIndex}_${configId}`)
-          .setLabel('❓ Tentative')
-          .setStyle(castingStatus === 'tentative' ? ButtonStyle.Primary : ButtonStyle.Secondary)
-          .toJSON(),
-        new ButtonBuilder()
-          .setCustomId(`cast_reject_${currentApp.channelId}_${appIndex}_${configId}`)
-          .setLabel('🗑️ Don\'t Cast')
-          .setStyle(castingStatus === 'reject' ? ButtonStyle.Danger : ButtonStyle.Secondary)
-          .toJSON(),
         new ButtonBuilder()
           .setCustomId(`casting_messages_${configId}`)
           .setLabel('Casting Messages')
@@ -378,10 +381,11 @@ export async function generateSeasonAppRankingUI({
     }
   );
 
-  // ---- Votes: header + 1-5 rating buttons (moved here from up top) + tally ----
+  // ---- Votes: header (with applicant name) + 1-5 rating buttons + tally ----
+  const voteeName = applicantMember?.displayName || currentApp.displayName || currentApp.username || 'Applicant';
   containerComponents.push(
     { type: 14 }, // divider above the Votes section
-    { type: 10, content: `### 🗳️ Votes` },
+    { type: 10, content: `### 🗳️ Votes for ${voteeName}` },
     rankingRow.toJSON()
   );
   if (votingBreakdown) {

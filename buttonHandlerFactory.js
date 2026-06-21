@@ -4559,6 +4559,7 @@ export const BUTTON_REGISTRY = {
   'rank_applicant_*': { label: 'Rank Applicant', emoji: '⭐', category: 'seasons' },
   'ranking_navigation_*': { label: 'Casting Navigation', emoji: '🔄', category: 'seasons' },
   'ranking_select_*': { label: 'Casting Select', emoji: '🏆', category: 'seasons' },
+  'casting_status_*': { label: 'Casting Status', description: 'Set draft casting status (Cast / Tentative / Don\'t Cast) via string select', emoji: '🎭', category: 'seasons' },
   'casting_messages_*': { label: 'Casting Messages', description: 'Configure invitation/cut messages (coming soon)', emoji: '✒️', style: 'Secondary', category: 'seasons' },
   'send_invitations_*': { label: 'Send Invitations', description: 'Notify applicants of casting decisions (coming soon)', emoji: '📨', style: 'Secondary', category: 'seasons' },
   'save_player_notes_*': { label: 'Save Player Notes', emoji: '📝', category: 'seasons' },
