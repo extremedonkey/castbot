@@ -394,19 +394,13 @@ export async function generateSeasonAppRankingUI({
     containerComponents.push({ type: 10, content: `-# No scores yet — click 1–5 above to rate this applicant.` });
   }
 
-  // ---- Utility actions (App link + Invites + formerly part of the notes row) ----
+  // ---- Utility actions (App link + formerly part of the notes row) ----
   containerComponents.push({
     type: 1,
     components: [
       // Link button → jumps straight to the applicant's application channel (replaces the old
       // inline <#channel> text). Link buttons (style 5) use a url, fire no interaction, need no handler.
       { type: 2, style: 5, label: 'App', emoji: { name: '📄' }, url: `https://discord.com/channels/${guildId}/${currentApp.channelId}` },
-      new ButtonBuilder()
-        .setCustomId(`casting_messages_${configId}`)
-        .setLabel('Invites')
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji('✒️')
-        .toJSON(),
       new ButtonBuilder()
         .setCustomId(`ranking_public_warn_${appIndex}_${configId}`)
         .setLabel('📢 Shared Ranker')
@@ -432,7 +426,8 @@ export async function generateSeasonAppRankingUI({
     type: 1,
     components: [
       { type: 2, custom_id: `season_manager`, label: '← Seasons', style: 2 },
-      { type: 2, custom_id: `ranking_view_all_scores_${configId}${ephemeralSuffix}`, label: 'View All Scores', style: 2, emoji: { name: '📊' } }
+      { type: 2, custom_id: `ranking_view_all_scores_${configId}${ephemeralSuffix}`, label: 'View All Scores', style: 2, emoji: { name: '📊' } },
+      { type: 2, custom_id: `casting_messages_${configId}`, label: 'Invites', style: 2, emoji: { name: '✒️' } }
     ]
   });
 
