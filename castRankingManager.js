@@ -214,9 +214,9 @@ export async function generateSeasonAppRankingUI({
   // ===== Build the Casting card (Components V2) =====
   // Layout: header → tab nav → jump-select → identity Section → [DNC warning] →
   //         Casting (status + workflow) → Votes (1-5 + tally) → Player Notes → bottom nav.
-  // Applicant meta (position / app link / DNC summary) is folded into the identity Section to save
-  // components (Discord's hard limit is 40 per message).
-  const applicantInfo = `**App:** <#${currentApp.channelId}>${dncSummaryText ? `\n${dncSummaryText}` : ''}`;
+  // Applicant DNC summary is folded into the identity Section. The app-channel link is now a Link
+  // button in the utility row (see below) instead of an inline <#channel> mention.
+  const applicantInfo = dncSummaryText || '';
 
   const { buildSeasonNavRow } = await import('./seasonSelector.js');
   const containerComponents = [
@@ -322,7 +322,7 @@ export async function generateSeasonAppRankingUI({
       accessory: { type: 11, media: { url: applicantAvatarURL }, description: 'Applicant avatar' }
     };
   }
-  if (identitySection.components?.[0]?.content !== undefined) {
+  if (applicantInfo && identitySection.components?.[0]?.content !== undefined) {
     identitySection.components[0].content += `\n${applicantInfo}`;
   }
 
@@ -394,10 +394,13 @@ export async function generateSeasonAppRankingUI({
     containerComponents.push({ type: 10, content: `-# No scores yet — click 1–5 above to rate this applicant.` });
   }
 
-  // ---- Utility actions (Invites + formerly part of the notes row) ----
+  // ---- Utility actions (App link + Invites + formerly part of the notes row) ----
   containerComponents.push({
     type: 1,
     components: [
+      // Link button → jumps straight to the applicant's application channel (replaces the old
+      // inline <#channel> text). Link buttons (style 5) use a url, fire no interaction, need no handler.
+      { type: 2, style: 5, label: 'App', emoji: { name: '📄' }, url: `https://discord.com/channels/${guildId}/${currentApp.channelId}` },
       new ButtonBuilder()
         .setCustomId(`casting_messages_${configId}`)
         .setLabel('Invites')
