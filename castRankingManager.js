@@ -225,6 +225,25 @@ export async function generateSeasonAppRankingUI({
     buildSeasonNavRow(configId, 'ranking'),
   ];
 
+  // Casting workflow buttons — sit below the nav row (Edit) and above the applicant jump-select.
+  containerComponents.push({
+    type: 1,
+    components: [
+      new ButtonBuilder()
+        .setCustomId(`casting_messages_${configId}`)
+        .setLabel('Casting Messages')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('✒️')
+        .toJSON(),
+      new ButtonBuilder()
+        .setCustomId(`send_invitations_${configId}`)
+        .setLabel('Send Invitations')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('📨')
+        .toJSON()
+    ]
+  });
+
   // Applicant jump-select — ALWAYS rendered (state-aware placeholder). Discord requires ≥1 option,
   // so it's only ever absent on the 0-applicant empty state (a separate screen). It also replaces
   // the old ◀/▶ prev/next row for navigation.
@@ -361,24 +380,8 @@ export async function generateSeasonAppRankingUI({
           { label: "Don't Cast", value: 'reject', emoji: { name: '🗑️' }, default: castingStatus === 'reject' }
         ]
       }]
-    },
-    {
-      type: 1, // Casting workflow — stubs for now
-      components: [
-        new ButtonBuilder()
-          .setCustomId(`casting_messages_${configId}`)
-          .setLabel('Casting Messages')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('✒️')
-          .toJSON(),
-        new ButtonBuilder()
-          .setCustomId(`send_invitations_${configId}`)
-          .setLabel('Send Invitations')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('📨')
-          .toJSON()
-      ]
     }
+    // (Casting Messages / Send Invitations workflow row moved up to below the nav row.)
   );
 
   // ---- Votes: header (with applicant name) + 1-5 rating buttons + tally ----
