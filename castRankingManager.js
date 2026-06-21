@@ -364,7 +364,7 @@ export async function generateSeasonAppRankingUI({
     { type: 14 }, // divider above the Casting section
     {
       type: 10,
-      content: `### 🎭 Casting\nSet your draft casting status below — change it as many times as you like; players are **not** notified. When you've decided who to cast, click **📨 Send Invitations**.`
+      content: `### \`\`\`🎭 Casting\`\`\`\n-# Set your draft casting status below — change it as many times as you like; players are not notified. When you've decided who to cast, click 📨 Send Invitations.`
     },
     {
       type: 1, // Casting status — string select (replaces the 3 status buttons, frees a component)
@@ -388,7 +388,7 @@ export async function generateSeasonAppRankingUI({
   const voteeName = applicantMember?.displayName || currentApp.displayName || currentApp.username || 'Applicant';
   containerComponents.push(
     { type: 14 }, // divider above the Votes section
-    { type: 10, content: `### 🗳️ Votes for ${voteeName}` },
+    { type: 10, content: `### \`\`\`🗳️ Votes for ${voteeName}\`\`\`` },
     rankingRow.toJSON()
   );
   if (votingBreakdown) {
@@ -404,7 +404,7 @@ export async function generateSeasonAppRankingUI({
     { type: 14 }, // divider above the Player Notes section
     {
       type: 10,
-      content: `### ✏️ Player Notes\n${notesText}`
+      content: `### \`\`\`✏️ Player Notes\`\`\`\n${notesText}`
     },
     {
       type: 1, // Action Row for notes buttons
