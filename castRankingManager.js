@@ -204,12 +204,13 @@ export async function generateSeasonAppRankingUI({
   //  shared player-card Section built below, so the old inline demographic + name computation was
   //  removed. createPlayerDisplaySection derives all of it from the guild member + playerData.)
 
-  // Build DNC warnings and summary for this applicant
-  const { findDncConflicts, buildDncWarnings, buildDncSummary } = await import('./dncManager.js');
+  // Build DNC warnings and summary for this applicant. The summary is only shown when the applicant
+  // actually has DNC entries — no "No DNC list provided" placeholder clutter on the card.
+  const { findDncConflicts, buildDncWarnings, buildDncSummary, getDncEntries } = await import('./dncManager.js');
   const appData = playerData[guildId]?.applications?.[currentApp.channelId] || {};
   const dncConflicts = findDncConflicts(appData, allApplications, playerData, guildId);
   const dncWarningText = buildDncWarnings(dncConflicts);
-  const dncSummaryText = buildDncSummary(appData);
+  const dncSummaryText = getDncEntries(appData).length > 0 ? buildDncSummary(appData) : '';
 
   // ===== Build the Casting card (Components V2) =====
   // Layout: header → tab nav → jump-select → identity Section → [DNC warning] →
