@@ -5669,6 +5669,61 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           return { components: [{ type: 17, accent_color: 0x27ae60, components: [{ type: 10, content: summary }] }] };
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('placement_accept:') || custom_id.startsWith('placement_decline:')) {
+      // Applicant responds to their casting placement (buttons on the Successful/Alternative invite card).
+      return ButtonHandlerFactory.create({
+        id: 'placement_response',
+        updateMessage: true, // edit the invite card in-place (public message in the app channel)
+        handler: async (context) => {
+          const accepted = context.customId.startsWith('placement_accept:');
+          const offerType = context.customId.split(':')[1]; // 'successful' | 'alternative'
+          const guildId = context.guildId;
+          const channelId = req.body.channel_id;
+
+          const playerData = await loadPlayerData();
+          const appRec = playerData[guildId]?.applications?.[channelId];
+          if (!appRec) return { content: '❌ Application not found for this channel.', ephemeral: true };
+          // Only the applicant may respond.
+          if (context.userId !== appRec.userId) {
+            return { content: `❌ Only <@${appRec.userId}> can respond to this placement.`, ephemeral: true };
+          }
+
+          appRec.placementResponse = accepted ? 'accepted' : 'declined';
+          await savePlayerData(playerData);
+
+          const { DiscordRequest } = await import('./utils.js');
+          const offerLabel = offerType === 'alternative' ? 'the alternate spot' : 'their cast placement';
+          let prodPing = '';
+          try {
+            const cfg = appRec.configId ? await getApplicationConfig(guildId, appRec.configId) : null;
+            if (cfg?.productionRole) prodPing = ` <@&${cfg.productionRole}>`;
+          } catch {}
+          const publicText = accepted
+            ? `## ✅ Placement Accepted\n<@${appRec.userId}> has **accepted** ${offerLabel}!${prodPing}`
+            : `## ❌ Placement Declined\n<@${appRec.userId}> has **declined** ${offerLabel}.${prodPing}`;
+
+          // Post a new PUBLIC message for production to read.
+          try {
+            await DiscordRequest(`channels/${channelId}/messages`, {
+              method: 'POST',
+              body: { flags: (1 << 15), components: [{ type: 17, accent_color: accepted ? 0x27ae60 : 0xe74c3c, components: [{ type: 10, content: publicText }] }] }
+            });
+          } catch (e) { console.log(`⚠️ placement_response: failed to post public message: ${e.message}`); }
+
+          // Update the channel emoji: ✅ accepted / ❌ declined (✖️ is reserved for withdrawn).
+          try {
+            const channel = await context.client.channels.fetch(channelId);
+            const stripped = channel.name.replace(/^[📝☑️✖️✅❌]+/, '');
+            await channel.setName(`${accepted ? '✅' : '❌'}${stripped}`);
+          } catch (e) { console.log(`⚠️ placement_response: failed to rename channel: ${e.message}`); }
+
+          // Edit the invite card: drop the buttons, append the applicant's choice.
+          const container = req.body.message?.components?.[0];
+          const kept = (container?.components || []).filter(c => c.type !== 1);
+          kept.push({ type: 10, content: accepted ? '✅ **You accepted this placement.**' : '❌ **You declined this placement.**' });
+          return { components: [{ type: 17, accent_color: container?.accent_color ?? (accepted ? 0x27ae60 : 0xe74c3c), components: kept }] };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('ranking_prev_') || custom_id.startsWith('ranking_next_') || custom_id.startsWith('ranking_view_all_scores')) {
       // Handle ranking navigation and view all scores - USING CAST RANKING MANAGER
       const isEphemeral = custom_id.includes('_ephemeral');
@@ -27154,9 +27209,9 @@ Your server is now ready for Tycoons gameplay!`;
             const channel = await client.channels.fetch(channelId);
             let currentName = channel.name;
             
-            // Remove document emoji if it exists
-            currentName = currentName.replace(/^📝/, '');
-            
+            // Remove any existing status emoji if it exists
+            currentName = currentName.replace(/^[📝☑️✖️✅❌]+/, '');
+
             // Only update if it doesn't already have a checkmark
             if (!currentName.startsWith('☑️') && !currentName.startsWith('✅')) {
               await channel.setName(`☑️${currentName}`);
@@ -27209,12 +27264,12 @@ Your server is now ready for Tycoons gameplay!`;
           const channel = await client.channels.fetch(channelId);
           let currentName = channel.name;
           
-          // Remove ALL existing prefixes if they exist
-          currentName = currentName.replace(/^[📝☑️❌]+/, '');
-          
-          // Add withdrawal prefix
-          await channel.setName(`❌${currentName}`);
-          console.log(`📝 Updated channel name to: ❌${currentName}`);
+          // Remove ALL existing status prefixes if they exist
+          currentName = currentName.replace(/^[📝☑️✖️✅❌]+/, '');
+
+          // Add withdrawal prefix (✖️ purple cross — distinct from ❌ "declined placement")
+          await channel.setName(`✖️${currentName}`);
+          console.log(`📝 Updated channel name to: ✖️${currentName}`);
           
           // Get application config to include production role
           const playerData = await loadPlayerData();
@@ -27249,7 +27304,7 @@ Your server is now ready for Tycoons gameplay!`;
                     custom_id: 'app_withdraw',
                     label: 'Withdraw your application',
                     style: 2, // Secondary (grey)
-                    emoji: { name: '❌' },
+                    emoji: { name: '✖️' },
                     disabled: true // Disable since already withdrawn
                   }
                 ]
@@ -27277,7 +27332,7 @@ Your server is now ready for Tycoons gameplay!`;
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ **Application Withdrawn**\n\nYour application has been withdrawn. If you change your mind, you can re-apply using the button above.',
+              content: '✖️ **Application Withdrawn**\n\nYour application has been withdrawn. If you change your mind, you can re-apply using the button above.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -27316,9 +27371,9 @@ Your server is now ready for Tycoons gameplay!`;
           const channel = await client.channels.fetch(channelId);
           let currentName = channel.name;
           
-          // Remove ALL existing prefixes if they exist
-          currentName = currentName.replace(/^[📝☑️❌]+/, '');
-          
+          // Remove ALL existing status prefixes if they exist
+          currentName = currentName.replace(/^[📝☑️✖️✅❌]+/, '');
+
           // Add document prefix
           await channel.setName(`📝${currentName}`);
           console.log(`📝 Updated channel name to: 📝${currentName}`);
@@ -27356,7 +27411,7 @@ Your server is now ready for Tycoons gameplay!`;
                     custom_id: 'app_withdraw',
                     label: 'Withdraw your application',
                     style: 2, // Secondary (grey)
-                    emoji: { name: '❌' },
+                    emoji: { name: '✖️' },
                     disabled: false // Enable since re-applied
                   }
                 ]

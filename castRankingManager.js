@@ -164,7 +164,9 @@ export async function generateSeasonAppRankingUI({
 
   // Casting status — drives the coloured casting buttons + select icons (no longer a text line).
   const castingStatus = playerData[guildId]?.applications?.[currentApp.channelId]?.castingStatus;
-  
+  // Applicant's response to a sent invite (Accept/Decline), if any.
+  const placementResponse = playerData[guildId]?.applications?.[currentApp.channelId]?.placementResponse;
+
   // Create voting breakdown if there are votes - inline implementation for now
   let votingBreakdown = null;
   const rankingEntries = Object.entries(allRankings).filter(([_, score]) => score !== undefined);
@@ -254,10 +256,14 @@ export async function generateSeasonAppRankingUI({
       const rankings = playerData[guildId]?.applications?.[app.channelId]?.rankings || {};
       const voteCount = Object.keys(rankings).length;
       const cStatus = playerData[guildId]?.applications?.[app.channelId]?.castingStatus;
+      const pResp = playerData[guildId]?.applications?.[app.channelId]?.placementResponse;
       const hasNotes = !!playerData[guildId]?.applications?.[app.channelId]?.playerNotes;
 
+      // Applicant's placement response (if any) takes priority in the icon.
       let icon = '🗳️';
-      if (cStatus === 'cast') icon = '✅';
+      if (pResp === 'accepted') icon = '🎉';
+      else if (pResp === 'declined') icon = '🚫';
+      else if (cStatus === 'cast') icon = '✅';
       else if (cStatus === 'alternative') icon = '🔄';
       else if (cStatus === 'reject') icon = '❌';
       else if (voteCount >= 2) icon = '☑️';
@@ -375,7 +381,7 @@ export async function generateSeasonAppRankingUI({
   containerComponents.push(
     {
       type: 10,
-      content: `### \`\`\`🎭 Casting Status\`\`\`\n-# Set your draft casting status below — change it as many times as you like; players are not notified. When you've decided who to cast, click ✒️ Invites.`
+      content: `### \`\`\`🎭 Casting Status\`\`\`\n-# Set your draft casting status below — change it as many times as you like; players are not notified. When you've decided who to cast, click ✒️ Invites.${placementResponse ? `\n-# 📣 Applicant response: ${placementResponse === 'accepted' ? '🎉 Accepted placement' : '🚫 Declined placement'}` : ''}`
     },
     {
       type: 1, // Casting status — string select
@@ -713,11 +719,22 @@ export async function sendCastingInvites({ client, guildId, configId, mode, appI
     const template = messages[t.messageType];
     if (!template || !template.trim()) { result.skippedEmpty++; continue; }
     const content = renderInviteMessage(sanitizeTemplate(template), t.userId);
+    // Cast & Alternative offers carry Accept/Decline buttons for the applicant. Unsuccessful does not.
+    const cardComponents = [{ type: 10, content }];
+    if (t.messageType === 'successful' || t.messageType === 'alternative') {
+      cardComponents.push({
+        type: 1,
+        components: [
+          { type: 2, style: 3, label: 'Accept Placement', emoji: { name: '✅' }, custom_id: `placement_accept:${t.messageType}` },
+          { type: 2, style: 4, label: 'Decline Placement', emoji: { name: '❌' }, custom_id: `placement_decline:${t.messageType}` }
+        ]
+      });
+    }
     try {
       // Raw REST — discord.js channel.send() rejects raw Components V2 objects ("toJSON is not a function").
       await DiscordRequest(`channels/${t.channelId}/messages`, {
         method: 'POST',
-        body: { flags: (1 << 15), components: [{ type: 17, accent_color: INVITE_ACCENT[t.messageType], components: [{ type: 10, content }] }] }
+        body: { flags: (1 << 15), components: [{ type: 17, accent_color: INVITE_ACCENT[t.messageType], components: cardComponents }] }
       });
       result.sent++;
       result.perType[t.messageType]++;
@@ -873,12 +890,14 @@ export async function handleRankingNavigation({
       const scores = Object.values(rankings).filter(r => r !== undefined);
       const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
       const castingStatus = playerData[guildId]?.applications?.[app.channelId]?.castingStatus || 'undecided';
-      
+      const placementResponse = playerData[guildId]?.applications?.[app.channelId]?.placementResponse;
+
       return {
         name: app.displayName || app.username,
         avgScore,
         voteCount: scores.length,
         castingStatus,
+        placementResponse,
         index: index + 1
       };
     });
@@ -914,7 +933,8 @@ export async function handleRankingNavigation({
         section.group.forEach((applicant, index) => {
           const ranking = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
           const scoreDisplay = applicant.avgScore > 0 ? applicant.avgScore.toFixed(1) : 'Unrated';
-          scoreSummary += `${ranking} **${applicant.name}** - ${scoreDisplay}/5.0 (${applicant.voteCount} vote${applicant.voteCount !== 1 ? 's' : ''})\n`;
+          const resp = applicant.placementResponse === 'accepted' ? ' · 🎉 Accepted' : applicant.placementResponse === 'declined' ? ' · 🚫 Declined' : '';
+          scoreSummary += `${ranking} **${applicant.name}** - ${scoreDisplay}/5.0 (${applicant.voteCount} vote${applicant.voteCount !== 1 ? 's' : ''})${resp}\n`;
         });
         scoreSummary += '\n';
       }

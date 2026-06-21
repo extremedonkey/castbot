@@ -106,6 +106,29 @@ describe('Casting Invites — send-mode target selection', () => {
   });
 });
 
+describe('Placement response — invite cards carry Accept/Decline only for Cast & Alternative', () => {
+  const hasResponseButtons = (messageType) => messageType === 'successful' || messageType === 'alternative';
+  it('successful (Cast) → buttons', () => assert.equal(hasResponseButtons('successful'), true));
+  it('alternative → buttons', () => assert.equal(hasResponseButtons('alternative'), true));
+  it('unsuccessful (Reject) → NO buttons', () => assert.equal(hasResponseButtons('unsuccessful'), false));
+});
+
+describe('Placement response — jump-select icon priority', () => {
+  // Mirrors the icon logic: placementResponse beats castingStatus
+  function icon({ pResp, cStatus, voteCount = 0 }) {
+    if (pResp === 'accepted') return '🎉';
+    if (pResp === 'declined') return '🚫';
+    if (cStatus === 'cast') return '✅';
+    if (cStatus === 'alternative') return '🔄';
+    if (cStatus === 'reject') return '❌';
+    if (voteCount >= 2) return '☑️';
+    return '🗳️';
+  }
+  it('accepted → 🎉 (overrides cast)', () => assert.equal(icon({ pResp: 'accepted', cStatus: 'cast' }), '🎉'));
+  it('declined → 🚫 (overrides reject)', () => assert.equal(icon({ pResp: 'declined', cStatus: 'reject' }), '🚫'));
+  it('no response falls back to casting status', () => assert.equal(icon({ cStatus: 'alternative' }), '🔄'));
+});
+
 describe('Casting Summary — Alternate bucket', () => {
   // Mirrors the castGroups grouping in handleRankingNavigation
   function group(applicantData) {

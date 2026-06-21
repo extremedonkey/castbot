@@ -404,7 +404,7 @@ Click the button below to get started!`
                             custom_id: 'app_withdraw',
                             label: 'Withdraw your application',
                             style: 2, // Secondary (grey)
-                            emoji: { name: '❌' },
+                            emoji: { name: '✖️' },
                             disabled: false
                         }
                     ]
