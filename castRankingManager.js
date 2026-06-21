@@ -337,14 +337,15 @@ export async function generateSeasonAppRankingUI({
     containerComponents.push({ type: 10, content: dncWarningText });
   }
 
-  // ---- Casting: draft status + workflow ----
+  // ---- Casting: divider + header + status & workflow (single 5-button row for budget) ----
   containerComponents.push(
+    { type: 14 }, // divider above the Casting section
     {
       type: 10,
-      content: `### Casting\nSet your draft casting status below — change it as many times as you like; players are **not** notified. When you've decided who to cast, click **📨 Send Invitations**.`
+      content: `### 🎭 Casting\nSet your draft casting status below — change it as many times as you like; players are **not** notified. When you've decided who to cast, click **📨 Send Invitations**.`
     },
     {
-      type: 1, // Draft casting status
+      type: 1, // Casting status + workflow — 5 buttons (Discord action-row max)
       components: [
         new ButtonBuilder()
           .setCustomId(`cast_player_${currentApp.channelId}_${appIndex}_${configId}`)
@@ -360,12 +361,7 @@ export async function generateSeasonAppRankingUI({
           .setCustomId(`cast_reject_${currentApp.channelId}_${appIndex}_${configId}`)
           .setLabel('🗑️ Don\'t Cast')
           .setStyle(castingStatus === 'reject' ? ButtonStyle.Danger : ButtonStyle.Secondary)
-          .toJSON()
-      ]
-    },
-    {
-      type: 1, // Casting workflow — stubs for now
-      components: [
+          .toJSON(),
         new ButtonBuilder()
           .setCustomId(`casting_messages_${configId}`)
           .setLabel('Casting Messages')
