@@ -384,6 +384,7 @@ export async function generateSeasonAppRankingUI({
 
   // ---- Votes: header + 1-5 rating buttons (moved here from up top) + tally ----
   containerComponents.push(
+    { type: 14 }, // divider above the Votes section
     { type: 10, content: `### 🗳️ Votes` },
     rankingRow.toJSON()
   );
@@ -397,8 +398,9 @@ export async function generateSeasonAppRankingUI({
   const existingNotes = playerData[guildId]?.applications?.[currentApp.channelId]?.playerNotes;
   const notesText = existingNotes || 'Record casting notes, connections or potential issues...';
   containerComponents.push(
+    { type: 14 }, // divider above the Player Notes section
     {
-      type: 10, // ### header provides the visual break (no extra separator — component budget)
+      type: 10,
       content: `### ✏️ Player Notes\n${notesText}`
     },
     {
