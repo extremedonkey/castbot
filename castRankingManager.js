@@ -132,18 +132,10 @@ export async function generateSeasonAppRankingUI({
     console.log('🔍 DEBUG: generateSeasonAppRankingUI - Applicant avatar pre-fetch failed (non-critical):', error.message);
   }
   
-  // Create Media Gallery component for displaying applicant avatar
-  const avatarDisplayComponent = {
-    type: 12, // Media Gallery component
-    items: [
-      {
-        media: {
-          url: applicantAvatarURL
-        },
-        description: `Avatar of applicant ${currentApp.displayName || currentApp.username}`
-      }
-    ]
-  };
+  // Applicant identity (avatar + name/pronouns/age/timezone/local-time) is rendered via the SHARED
+  // player-card Section (createPlayerDisplaySection) — built just before container assembly below.
+  // It replaces the old big Media Gallery avatar with a compact Section + Thumbnail, identical to
+  // the Player Menu / application-channel card.
 
   // Create ranking buttons (1-5)
   const ephemeralSuffix = ephemeral ? '_ephemeral' : '';
@@ -183,23 +175,11 @@ export async function generateSeasonAppRankingUI({
   // View All Scores moved to the bottom navigation row. navRow now holds only applicant prev/next.
   const navRow = navButtons.length > 0 ? new ActionRowBuilder().addComponents(navButtons) : null;
   
-  // Calculate average score for current applicant
+  // Per-admin scores for this applicant — used by the Votes breakdown below.
   const allRankings = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings || {};
-  const rankings = Object.values(allRankings).filter(r => r !== undefined);
-  const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
-  
-  // Get casting status for display
+
+  // Casting status — drives the coloured casting buttons + select icons (no longer a text line).
   const castingStatus = playerData[guildId]?.applications?.[currentApp.channelId]?.castingStatus;
-  let castingStatusText = '';
-  if (castingStatus === 'cast') {
-    castingStatusText = '✅ Cast';
-  } else if (castingStatus === 'tentative') {
-    castingStatusText = '❓ Tentative';
-  } else if (castingStatus === 'reject') {
-    castingStatusText = '🗑️ Don\'t Cast';
-  } else {
-    castingStatusText = '⚪ Undecided';
-  }
   
   // Create voting breakdown if there are votes - inline implementation for now
   let votingBreakdown = null;
@@ -234,83 +214,10 @@ export async function generateSeasonAppRankingUI({
     };
   }
   
-  // Get applicant's age from playerData
-  const applicantAge = playerData[guildId]?.players?.[currentApp.userId]?.age;
-  console.log(`🔍 DEBUG: Demographics - User ${currentApp.userId} age: ${applicantAge || 'not set'}`);
-  
-  // Get applicant's pronoun and timezone roles
-  let pronounRoleId = null;
-  let timezoneRoleId = null;
-  
-  // Check if applicantMember has roles (it should if fetched successfully)
-  if (applicantMember && applicantMember.roles) {
-    console.log(`🔍 DEBUG: Demographics - Member has roles:`, applicantMember.roles);
-    // Get guild's configured pronoun and timezone roles
-    const guildPronouns = playerData[guildId]?.pronounRoleIDs || [];
-    const guildTimezones = Object.keys(playerData[guildId]?.timezones || {}); // Get timezone role IDs from keys
-    console.log(`🔍 DEBUG: Demographics - Guild timezones configured: ${guildTimezones.length} roles`);
-    console.log(`🔍 DEBUG: Demographics - Guild pronouns configured: ${guildPronouns.length} roles`);
-    
-    // Find if user has any of these roles
-    const memberRoles = applicantMember.roles.cache ? 
-      Array.from(applicantMember.roles.cache.keys()) : // If it's a full member object
-      applicantMember.roles; // If it's just an array of role IDs
-    
-    // Find first matching pronoun role
-    for (const roleId of memberRoles) {
-      if (guildPronouns.includes(roleId)) {
-        pronounRoleId = roleId;
-        break;
-      }
-    }
-    
-    // Find first matching timezone role  
-    for (const roleId of memberRoles) {
-      if (guildTimezones.includes(roleId)) {
-        timezoneRoleId = roleId;
-        console.log(`🔍 DEBUG: Demographics - Found timezone role: ${roleId}`);
-        break;
-      }
-    }
-  }
-  
-  // Build the demographic info string
-  let demographicInfo = '';
-  const infoParts = [];
-  
-  if (applicantAge) {
-    infoParts.push(applicantAge);
-  }
-  
-  if (pronounRoleId) {
-    infoParts.push(`<@&${pronounRoleId}>`);
-  }
-  
-  if (timezoneRoleId) {
-    infoParts.push(`<@&${timezoneRoleId}>`);
-  }
-  
-  console.log(`🔍 DEBUG: Demographics - Building info: Age=${applicantAge}, Pronoun=${pronounRoleId}, Timezone=${timezoneRoleId}`);
-  
-  // Only add brackets if there's any demographic info
-  if (infoParts.length > 0) {
-    demographicInfo = ` (${infoParts.join(', ')})`;
-  }
-  
-  console.log(`🔍 DEBUG: Demographics - Final info string: "${demographicInfo}"`);
-  
-  // Determine name display format - use Discord mention if member is still in server, fallback if they left
-  let nameDisplay;
-  if (applicantMember.id && applicantMember.guild) {
-    // Member is still in server - use Discord mention syntax for clickable profile
-    nameDisplay = `<@${currentApp.userId}>`;
-    console.log(`🔍 DEBUG: Name Display - Using mention syntax for active member: ${currentApp.userId}`);
-  } else {
-    // Member has left server - use fallback with displayName and indicator
-    nameDisplay = `${currentApp.displayName || currentApp.username} - left server`;
-    console.log(`🔍 DEBUG: Name Display - Using fallback for left member: ${currentApp.displayName || currentApp.username}`);
-  }
-  
+  // (Applicant identity — name / pronouns / age / timezone / local time — is now rendered by the
+  //  shared player-card Section built below, so the old inline demographic + name computation was
+  //  removed. createPlayerDisplaySection derives all of it from the guild member + playerData.)
+
   // Build DNC warnings and summary for this applicant
   const { findDncConflicts, buildDncWarnings, buildDncSummary } = await import('./dncManager.js');
   const appData = playerData[guildId]?.applications?.[currentApp.channelId] || {};
@@ -320,7 +227,10 @@ export async function generateSeasonAppRankingUI({
 
   // Create Components V2 Container for Casting interface
   // IMPORTANT: This follows the current layout pattern with navigation above applicant info
-  const applicantInfo = `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${nameDisplay}${demographicInfo}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>\n${dncSummaryText}`;
+  // Trimmed: Name/pronouns/tz → now in the identity Section; Average & Your Score → shown in the
+  // Votes section + the highlighted 1-5 button; Casting Status → shown by the coloured casting
+  // buttons. We keep only the position, the app-channel link, and any DNC summary.
+  const applicantInfo = `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**App:** <#${currentApp.channelId}>${dncSummaryText ? `\n${dncSummaryText}` : ''}`;
 
   const { buildSeasonNavRow } = await import('./seasonSelector.js');
   const containerComponents = [
@@ -343,14 +253,17 @@ export async function generateSeasonAppRankingUI({
     content: applicantInfo
   });
   
-  // Add applicant jump select menu if there are multiple applications
-  if (allApplications.length > 1) {
+  // Applicant jump select — ALWAYS rendered (even for a single applicant). A state-aware placeholder
+  // means the control is never a confusing empty/why-is-it-here element. (Discord requires ≥1 option,
+  // so the only time it's absent is the 0-applicant empty state, which is a different screen.)
+  {
     // Calculate current page based on appIndex
     const itemsPerPage = 23;
+    const totalPages = Math.ceil(allApplications.length / itemsPerPage);
     const currentPage = Math.floor(appIndex / itemsPerPage);
     const startIdx = currentPage * itemsPerPage;
     const endIdx = Math.min(startIdx + itemsPerPage, allApplications.length);
-    
+
     const options = [];
     
     // Add "Previous page" option if not on first page
@@ -427,12 +340,22 @@ export async function generateSeasonAppRankingUI({
       });
     }
     
+    // State-aware placeholder so an always-present control still reads clearly.
+    let selectPlaceholder;
+    if (allApplications.length === 1) {
+      selectPlaceholder = '🔍 1 applicant so far';
+    } else if (totalPages === 1) {
+      selectPlaceholder = `🔍 Jump to applicant… (${allApplications.length} total)`;
+    } else {
+      selectPlaceholder = `🔍 Jump to applicant… (page ${currentPage + 1}/${totalPages}, ${allApplications.length} total)`;
+    }
+
     const applicantSelectRow = {
       type: 1, // Action Row
       components: [{
         type: 3, // String Select
         custom_id: `ranking_select_${appIndex}_${configId}_${currentPage}`,
-        placeholder: '🔍 Jump to applicant...',
+        placeholder: selectPlaceholder,
         options: options,
         min_values: 1,
         max_values: 1
@@ -444,19 +367,28 @@ export async function generateSeasonAppRankingUI({
     containerComponents.splice(-1, 0, {
       type: 14 // Separator
     });
-  } else {
-    // If no select menu, still add separator after navigation
-    containerComponents.splice(-1, 0, {
-      type: 14 // Separator
-    });
   }
   
+  // Build the SHARED identity Section (same builder as the Player Menu / application-channel card)
+  // for identical UI: **name** • pronouns • age • timezone • 🕛 local-time clock + avatar thumbnail.
+  // Returns null when the applicant can't be resolved as a guild member (e.g. they left the server);
+  // fall back to a minimal name + avatar Section so the card never renders blank.
+  const { createPlayerDisplaySection } = await import('./playerManagement.js');
+  let identitySection = await createPlayerDisplaySection(applicantMember, playerData, guildId);
+  if (!identitySection) {
+    identitySection = {
+      type: 9, // Section
+      components: [{ type: 10, content: `**${currentApp.displayName || currentApp.username}**\n-# ⚠️ Left server` }],
+      accessory: { type: 11, media: { url: applicantAvatarURL }, description: 'Applicant avatar' }
+    };
+  }
+
   // Add remaining interface components after applicant info
   containerComponents.push(
     {
       type: 14 // Separator - single divider after applicant info
     },
-    avatarDisplayComponent, // Applicant avatar display
+    identitySection, // Applicant identity card (Section + avatar thumbnail) — replaces Media Gallery
     rankingRow.toJSON(), // Ranking buttons (1-5 — self-explanatory; instructional line trimmed for the +1 nav button)
     {
       type: 14 // Separator
