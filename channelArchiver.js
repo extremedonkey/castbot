@@ -31,10 +31,10 @@ const SAFE_UPLOAD_BYTES = 9 * 1024 * 1024;
  * (the select re-renders with a "coming soon" note and stays on Archive Only).
  */
 export const ARCHIVE_MODES = [
-  { value: 'archive_only', label: 'Archive', emoji: '📥', implemented: true,
-    description: 'Save as HTML (fast, small; image links expire ~24h)' },
-  { value: 'archive_embed', label: 'Archive (Self-Contained)', emoji: '🖼️', implemented: true,
-    description: 'Embed images (WebP-compressed) so they survive source deletion — slower' },
+  { value: 'archive_only', label: 'Fast Archive', emoji: '📥', implemented: true,
+    description: 'Archives fast; text permanent but images expire in 24hrs. HTML file that can also be viewed online.' },
+  { value: 'archive_embed', label: 'Full Archive', emoji: '🖼️', implemented: true,
+    description: 'Slower but permanently saves image which last forever and survives channel deletion.' },
   { value: 'archive_delete', label: 'Archive + Delete', emoji: '🗑️',
     description: 'Archive, then delete the originals to free channel slots' },
   { value: 'category_archive', label: 'Category Archive', emoji: '📁',
@@ -68,7 +68,7 @@ export function buildArchiveScreen(mode = 'archive_only', note = '') {
     components: [
       { type: 10, content: `## 🧹 Archive Channels\n\nArchive full message history as styled HTML files.${note ? `\n\n${note}` : ''}` },
       { type: 14 },
-      { type: 10, content: `### \`\`\`⚙️ Archive Mode\`\`\`\n-# How images are stored: **Archive** keeps links (fast, small) · **Self-Contained** embeds them so they never expire (slower, larger).` },
+      { type: 10, content: `### \`\`\`⚙️ Archive Mode\`\`\`\n-# How images are stored: **Fast Archive** keeps links (fast; images expire ~24h) · **Full Archive** embeds them so they never expire (slower, larger).` },
       { type: 1, components: [{ type: 3, custom_id: 'archive_mode_select', placeholder: 'Archive mode...', min_values: 1, max_values: 1, options }] },
       { type: 14 },
       { type: 10, content: `### \`\`\`📁 Select Channels\`\`\`\n-# Up to 25 channels/categories — categories expand to all their text channels. Large/many channels take time (~1 min per 3,000 msgs). Needs the **Message Content Intent**, or text is blank.` },
