@@ -387,10 +387,10 @@ export async function generateSeasonAppRankingUI({
         min_values: 1,
         max_values: 1,
         options: [
+          { label: 'Still Deciding', value: 'undecided', emoji: { name: '❔' }, default: isUndecided },
           { label: `Cast ${applicantDisplayName}`, value: 'cast', emoji: { name: '🎬' }, default: castingStatus === 'cast' },
           { label: `Don't Cast ${applicantDisplayName}`, value: 'reject', emoji: { name: '🗑️' }, default: castingStatus === 'reject' },
-          { label: `Tentatively Cast ${applicantDisplayName}`, value: 'tentative', emoji: { name: '❓' }, default: castingStatus === 'tentative' },
-          { label: 'Still Deciding', value: 'undecided', emoji: { name: '❔' }, default: isUndecided }
+          { label: `Tentatively Cast ${applicantDisplayName}`, value: 'tentative', emoji: { name: '❓' }, default: castingStatus === 'tentative' }
         ]
       }]
     }
