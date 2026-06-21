@@ -349,14 +349,31 @@ export async function generateSeasonAppRankingUI({
     containerComponents.push({ type: 10, content: dncWarningText });
   }
 
-  // ---- Casting: header + status (string select) ----
-  // "Still Deciding" (value 'undecided') is the default when no status is set, and selecting it
-  // CLEARS any existing castingStatus (see handleCastingStatus) — undecided is never stored, it's
+  // Applicant display name + notes text (used by the sections below).
+  // "Still Deciding" (value 'undecided') is the casting default when no status is set, and selecting
+  // it CLEARS any existing castingStatus (see handleCastingStatus) — undecided is never stored, it's
   // simply the absence of castingStatus, so this stays backwards compatible with existing data.
   const applicantDisplayName = applicantMember?.displayName || currentApp.displayName || currentApp.username || 'Applicant';
   const isUndecided = !['cast', 'tentative', 'reject'].includes(castingStatus);
+  const existingNotes = playerData[guildId]?.applications?.[currentApp.channelId]?.playerNotes;
+  const notesText = existingNotes || 'Record casting notes, connections or potential issues...';
+
+  // ---- Player Notes — Section: notes text + Edit Notes button accessory (sits ABOVE Casting) ----
+  containerComponents.push({
+    type: 9, // Section
+    components: [
+      { type: 10, content: `### \`\`\`✏️ Player Notes\`\`\`\n${notesText}` }
+    ],
+    accessory: {
+      type: 2, // Button accessory
+      custom_id: `edit_player_notes_${currentApp.channelId}_${appIndex}_${configId}`,
+      label: '✏️ Edit Notes',
+      style: 2
+    }
+  });
+
+  // ---- Casting: header + status (string select) ----
   containerComponents.push(
-    // No divider — the code-block header provides the visual break.
     {
       type: 10,
       content: `### \`\`\`🎭 Casting\`\`\`\n-# Set your draft casting status below — change it as many times as you like; players are not notified. When you've decided who to cast, click ✒️ Invites.`
@@ -381,7 +398,6 @@ export async function generateSeasonAppRankingUI({
 
   // ---- Votes: header (with applicant name) + 1-5 rating buttons + tally ----
   containerComponents.push(
-    // No divider — the code-block header provides the visual break.
     { type: 10, content: `### \`\`\`🗳️ Votes for ${applicantDisplayName}\`\`\`` },
     rankingRow.toJSON()
   );
@@ -391,43 +407,29 @@ export async function generateSeasonAppRankingUI({
     containerComponents.push({ type: 10, content: `-# No scores yet — click 1–5 above to rate this applicant.` });
   }
 
-  // ---- Player notes ----
-  const existingNotes = playerData[guildId]?.applications?.[currentApp.channelId]?.playerNotes;
-  const notesText = existingNotes || 'Record casting notes, connections or potential issues...';
-  containerComponents.push(
-    // No divider — the code-block header provides the visual break.
-    {
-      type: 10,
-      content: `### \`\`\`✏️ Player Notes\`\`\`\n${notesText}`
-    },
-    {
-      type: 1, // Action Row for notes buttons
-      components: [
-        new ButtonBuilder()
-          .setCustomId(`edit_player_notes_${currentApp.channelId}_${appIndex}_${configId}`)
-          .setLabel('✏️ Edit Notes')
-          .setStyle(ButtonStyle.Secondary)
-          .toJSON(),
-        new ButtonBuilder()
-          .setCustomId(`ranking_public_warn_${appIndex}_${configId}`)
-          .setLabel('📢 Shared Ranker')
-          .setStyle(ButtonStyle.Secondary)
-          .toJSON(),
-        new ButtonBuilder()
-          .setCustomId(`dnc_overview_${configId}`)
-          .setLabel('DNC')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('🚷')
-          .toJSON(),
-        new ButtonBuilder()
-          .setCustomId(`delete_application_mode_${currentApp.channelId}_${appIndex}_${configId}`)
-          .setLabel('Delete')
-          .setStyle(ButtonStyle.Danger)
-          .setEmoji('🗑️')
-          .toJSON()
-      ]
-    }
-  );
+  // ---- Utility actions (formerly part of the notes row) ----
+  containerComponents.push({
+    type: 1,
+    components: [
+      new ButtonBuilder()
+        .setCustomId(`ranking_public_warn_${appIndex}_${configId}`)
+        .setLabel('📢 Shared Ranker')
+        .setStyle(ButtonStyle.Secondary)
+        .toJSON(),
+      new ButtonBuilder()
+        .setCustomId(`dnc_overview_${configId}`)
+        .setLabel('DNC')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('🚷')
+        .toJSON(),
+      new ButtonBuilder()
+        .setCustomId(`delete_application_mode_${currentApp.channelId}_${appIndex}_${configId}`)
+        .setLabel('Delete')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('🗑️')
+        .toJSON()
+    ]
+  });
   
   // Bottom navigation row — ← Seasons (Season Manager selector) + View All Scores (LEAN: back first)
   containerComponents.push({
