@@ -325,14 +325,20 @@ export async function generateSeasonAppRankingUI({
     { type: 14 }, // divider after the nav / select cluster
     { type: 10, content: identityText },
     {
-      type: 1, // Applicant actions — Edit Notes + View Application (link to the app channel)
+      type: 1, // Applicant actions — Edit Notes + View Application (link) + Delete
       components: [
         new ButtonBuilder()
           .setCustomId(`edit_player_notes_${currentApp.channelId}_${appIndex}_${configId}`)
           .setLabel('✏️ Edit Notes')
           .setStyle(ButtonStyle.Secondary)
           .toJSON(),
-        { type: 2, style: 5, label: 'View Application', emoji: { name: '📄' }, url: `https://discord.com/channels/${guildId}/${currentApp.channelId}` }
+        { type: 2, style: 5, label: 'View Application', emoji: { name: '📄' }, url: `https://discord.com/channels/${guildId}/${currentApp.channelId}` },
+        new ButtonBuilder()
+          .setCustomId(`delete_application_mode_${currentApp.channelId}_${appIndex}_${configId}`)
+          .setLabel('Delete')
+          .setStyle(ButtonStyle.Danger)
+          .setEmoji('🗑️')
+          .toJSON()
       ]
     },
     {
@@ -411,24 +417,21 @@ export async function generateSeasonAppRankingUI({
         .setStyle(ButtonStyle.Secondary)
         .setEmoji('🚷')
         .toJSON(),
-      new ButtonBuilder()
-        .setCustomId(`delete_application_mode_${currentApp.channelId}_${appIndex}_${configId}`)
-        .setLabel('Delete')
-        .setStyle(ButtonStyle.Danger)
-        .setEmoji('🗑️')
-        .toJSON()
-    ]
-  });
-  
-  // Bottom navigation row — ← Seasons (Season Manager selector) + View All Scores (LEAN: back first)
-  containerComponents.push({
-    type: 1,
-    components: [
-      { type: 2, custom_id: `season_manager`, label: '← Seasons', style: 2 },
       { type: 2, custom_id: `ranking_view_all_scores_${configId}${ephemeralSuffix}`, label: 'View All Scores', style: 2, emoji: { name: '📊' } },
       { type: 2, custom_id: `casting_messages_${configId}`, label: 'Invites', style: 2, emoji: { name: '✒️' } }
     ]
   });
+
+  // Bottom navigation — divider + ← Seasons (back to Season Manager)
+  containerComponents.push(
+    { type: 14 },
+    {
+      type: 1,
+      components: [
+        { type: 2, custom_id: `season_manager`, label: '← Seasons', style: 2 }
+      ]
+    }
+  );
 
   // Create main container
   const castRankingContainer = {
