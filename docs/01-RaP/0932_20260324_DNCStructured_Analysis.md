@@ -284,6 +284,6 @@ With a max of ~10 entries in the select (each being 2 lines of label), we stay w
 ## 📎 Related Documents
 
 - [SeasonAppBuilder.md](../03-features/SeasonAppBuilder.md) — Season application system
-- [CastRanking.md](../03-features/CastRanking.md) — Cast ranking feature
+- [CastRanking.md](../archive/CastRanking.md) — Cast ranking feature (archived; now Casting in SeasonManager.md)
 - [ComponentsV2.md](../standards/ComponentsV2.md) — Modal components (Labels, User Select, Text Input)
 - [SeasonPlanner Analysis](0947_20260315_SeasonPlanner_Analysis.md) — String-select list UI pattern reference

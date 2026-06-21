@@ -136,7 +136,7 @@
 │  ├─ Select Season (dropdown)
 │  ├─ ✨ New Question
 │  ├─ 📤 Post Apps Button
-│  ├─ 🏆 Cast Ranking
+│  ├─ 🏆 Casting
 │  ├─ ✏️ Edit Season
 │  ├─ 🗑️ Delete Season
 │  └─ ← Menu [Back]

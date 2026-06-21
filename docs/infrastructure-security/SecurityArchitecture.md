@@ -36,7 +36,7 @@ function hasAdminPermissions(member) {
 }
 ```
 
-**What admins can access**: Production Menu (full server management), Safari management, store creation/editing, custom actions, cast ranking, player management, data import/export.
+**What admins can access**: Production Menu (full server management), Safari management, store creation/editing, custom actions, casting, player management, data import/export.
 
 ### Tier 2: Player (Default)
 

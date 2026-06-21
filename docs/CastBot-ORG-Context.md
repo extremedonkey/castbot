@@ -132,11 +132,11 @@ CastBot's feature set (tribes, castlists, seasons, challenges, custom actions, c
 
 **What they do**:
 - **Pre-season (30-90 days before launch)**: Design the season theme, create challenges, plan twists (tribe swaps, special advantages, hidden idols), build Safari maps and content, configure the bot
-- **Casting (2-4 weeks)**: Open applications, review and rank applicants using CastBot's Cast Ranking system (multi-admin 1-5 voting scale), select the final cast
+- **Casting (2-4 weeks)**: Open applications, review and rank applicants using CastBot's Casting system (multi-admin 1-5 voting scale), select the final cast
 - **During the season (~30 days)**: Run daily challenge cycles, manage Tribal Councils, create alliance channels on request, monitor confessionals, handle rule violations, post results and dramatic reveals
 - **Post-season**: Archive the season, compile highlights, begin planning the next one
 
-**Why they matter to CastBot**: Production members are the primary decision-makers who choose to install CastBot and leverage its features. They are the bot's core audience. Every admin-facing feature (Production Menu, tribe management, Safari builder, cast ranking, season applications) is designed for their workflow.
+**Why they matter to CastBot**: Production members are the primary decision-makers who choose to install CastBot and leverage its features. They are the bot's core audience. Every admin-facing feature (Production Menu, tribe management, Safari builder, casting, season applications) is designed for their workflow.
 
 **Key terminology they use**:
 - **"Episode"**: One game cycle (typically 24-48 real-world hours)

@@ -371,7 +371,7 @@ function matchEntry(entry, targetUserId, targetUsername, targetDisplayName) {
 }
 
 /**
- * Build DNC warning text for Cast Ranking display.
+ * Build DNC warning text for Casting display.
  */
 export function buildDncWarnings(conflicts) {
   if (conflicts.length === 0) return '';
@@ -389,7 +389,7 @@ export function buildDncWarnings(conflicts) {
 }
 
 /**
- * Build DNC summary for Cast Ranking applicant card.
+ * Build DNC summary for Casting applicant card.
  */
 export function buildDncSummary(application) {
   const entries = getDncEntries(application);

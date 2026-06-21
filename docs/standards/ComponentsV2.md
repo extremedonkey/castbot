@@ -878,7 +878,7 @@ return res.send({
 
 UPDATE_MESSAGE doesn't just inherit the Components V2 flag — it inherits the **EPHEMERAL** flag too. You **cannot morph a public message into ephemeral via `updateMessage`, or vice versa**. The webhook PATCHes the *same* message, and a message's ephemerality is fixed at creation.
 
-**Implication for menu families:** if any view exposes private data (e.g. Cast Ranking scores), the *entire* family must originate from an ephemeral message so every tab can safely `updateMessage: true`. A consistently-ephemeral family means every tab is a fast PATCH and never a CREATE.
+**Implication for menu families:** if any view exposes private data (e.g. Casting scores), the *entire* family must originate from an ephemeral message so every tab can safely `updateMessage: true`. A consistently-ephemeral family means every tab is a fast PATCH and never a CREATE.
 
 ```javascript
 // ❌ ANTI-PATTERN: conditional updateMessage to "fix" ephemerality

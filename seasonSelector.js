@@ -57,7 +57,7 @@ export function getSeasonStageName(stage) {
 
 /**
  * Compute the per-season config indicators shown in the Season Manager selector and search results.
- * e.g. "📝 Apps • 🏆 Ranking • 📅 Planner" or "⚠️ Not configured yet".
+ * e.g. "📝 Apps • 🏆 Casting • 📅 Planner" or "⚠️ Not configured yet".
  * @param {string} configId
  * @param {Object} season - applicationConfigs[configId]
  * @param {Object} guildData - playerData[guildId]
@@ -71,14 +71,14 @@ export function seasonConfigIndicators(configId, season, guildData) {
   const hasRankings = Object.values(guildData?.applications || {}).some(app =>
     app.configId === configId && ((app.rankings && Object.keys(app.rankings).length > 0) || app.castingStatus)
   );
-  if (hasRankings) parts.push('🏆 Ranking');
+  if (hasRankings) parts.push('🏆 Casting');
   if (guildData?.seasonRounds?.[season.seasonId]) parts.push('📅 Planner');
   return parts.length ? parts.join(' • ') : '⚠️ Not configured yet';
 }
 
 /**
- * Active-tab navigation row shared by every Season Manager view (Apps / Planner / Ranking).
- * Identical ordering [Apps · Planner · Ranking · Edit] everywhere; the CURRENT view's tab is
+ * Active-tab navigation row shared by every Season Manager view (Apps / Planner / Casting).
+ * Identical ordering [Apps · Planner · Casting · Edit] everywhere; the CURRENT view's tab is
  * Primary (blue, still clickable — reloads), the rest Secondary (grey). Edit is an action, never active.
  * Adopts the Player Manager active-button convention. Single source of truth so the row can never drift.
  * @param {string} configId
@@ -96,7 +96,7 @@ export function buildSeasonNavRow(configId, active) {
     components: [
       tab('apps', `planner_apps_${configId}`, 'Apps', '📝'),
       tab('planner', `apps_planner_${configId}`, 'Planner', '📅'),
-      tab('ranking', `season_app_ranking_${configId}`, 'Ranking', '🏆'),
+      tab('ranking', `season_app_ranking_${configId}`, 'Casting', '🏆'),
       // Edit custom_id carries the ORIGIN view (active) so the modal submit refreshes THAT same view
       // (e.g. edit from Planner → watch the planner repopulate). Parsed back in the season_edit_info handler.
       { type: 2, custom_id: `season_edit_info_${active}_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } }

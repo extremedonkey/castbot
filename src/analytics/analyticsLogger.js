@@ -45,7 +45,7 @@ const BUTTON_LABEL_MAP = {
   
   // Season applications
   'season_app_creation': 'App Creation',
-  'season_app_ranking': '🏆 Cast Ranking',
+  'season_app_ranking': '🏆 Casting',
   'ranking_view_all_scores': 'View All Scores',
 
   // Castlist display

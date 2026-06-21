@@ -138,7 +138,7 @@ The notification uses Discord's Components V2 architecture:
 Based on changed files, the second button may be:
 - **🦁 Safari** (`prod_safari_menu`) - Safari system changes
 - **📋 Castlist** (`show_castlist`) - Castlist changes
-- **🏆 Cast Ranking** (`ranking_menu`) - Ranking system changes
+- **🏆 Casting** (`ranking_menu`) - Ranking system changes
 
 ### Button State Management
 

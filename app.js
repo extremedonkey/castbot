@@ -826,17 +826,17 @@ async function canSendMessagesInChannel(member, channelId, client) {
  */
 
 /**
- * Check if user has Cast Ranking permissions (with special exception for server 1331657596087566398)
+ * Check if user has Casting permissions (with special exception for server 1331657596087566398)
  * @param {Object} member - Discord member object from interaction
  * @param {string} guildId - Discord guild ID
- * @returns {boolean} True if user has cast ranking permissions
+ * @returns {boolean} True if user has casting permissions
  */
 function hasCastRankingPermissions(member, guildId) {
   if (!member || !member.permissions) return false;
   
   // Special exception for server 1331657596087566398 - allow all users
   if (guildId === '1331657596087566398') {
-    console.log(`🏆 Cast Ranking: Special permission granted for server ${guildId}`);
+    console.log(`🏆 Casting: Special permission granted for server ${guildId}`);
     return true;
   }
   
@@ -847,7 +847,7 @@ function hasCastRankingPermissions(member, guildId) {
     PermissionFlagsBits.ManageChannels;
   
   const hasPermission = (permissions & BigInt(castRankingPermissions)) !== 0n;
-  console.log(`🏆 Cast Ranking: Standard permission check for server ${guildId}: ${hasPermission}`);
+  console.log(`🏆 Casting: Standard permission check for server ${guildId}: ${hasPermission}`);
   return hasPermission;
 }
 
@@ -2108,7 +2108,7 @@ function generateTipsScreen(index, discordCdnUrls) {
     },
     {
       filename: '4.png',
-      title: '🏆 Cast Rankings',
+      title: '🏆 Casting',
       description: 'Let players anonymously vote on applicants with visual ranking interface'
     },
     {
@@ -2235,7 +2235,7 @@ async function generateInitialTipsScreen(interaction, client) {
     { title: '🦁 Safari System', description: 'Create adventure challenges with maps, items, and player progression' },
     { title: '📋 Dynamic Castlists', description: 'Organize cast members with placements, alumni, and custom formatting' },
     { title: '📊 Production Menu', description: 'Comprehensive admin interface for managing all CastBot features' },
-    { title: '🏆 Cast Rankings', description: 'Let players anonymously vote on applicants with visual ranking interface' },
+    { title: '🏆 Casting', description: 'Let players anonymously vote on applicants with visual casting interface' },
     { title: '🎬 Season Management', description: 'Configure applications, questions, and production workflows' },
     { title: '📱 Mobile View', description: 'CastBot works seamlessly on mobile devices with responsive design' },
     { title: '🎮 Player Menu', description: 'Access your profile, seasons, and interactive features from one place' },
@@ -2413,7 +2413,7 @@ function generateTipsScreenNavigation(index) {
     { title: '🦁 Safari System', description: 'Create adventure challenges with maps, items, and player progression' },
     { title: '📋 Dynamic Castlists', description: 'Organize cast members with placements, alumni, and custom formatting' },
     { title: '📊 Production Menu', description: 'Comprehensive admin interface for managing all CastBot features' },
-    { title: '🏆 Cast Rankings', description: 'Let players anonymously vote on applicants with visual ranking interface' },
+    { title: '🏆 Casting', description: 'Let players anonymously vote on applicants with visual casting interface' },
     { title: '🎬 Season Management', description: 'Configure applications, questions, and production workflows' },
     { title: '📱 Mobile View', description: 'CastBot works seamlessly on mobile devices with responsive design' },
     { title: '🎮 Player Menu', description: 'Access your profile, seasons, and interactive features from one place' },
@@ -5510,7 +5510,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const guild = await client.guilds.fetch(guildId);
           const member = await guild.members.fetch(userId);
           
-          // Check Cast Ranking permissions (includes special exception for server 1331657596087566398)
+          // Check Casting permissions (includes special exception for server 1331657596087566398)
           if (!hasCastRankingPermissions(member, guildId)) {
             return {
               content: '❌ You need Manage Roles or Manage Channels permissions to rate applicants.',
@@ -5534,7 +5534,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
       })(req, res, client);
     } else if (custom_id.startsWith('personal_ranker_')) {
-      // Handle Personal Ranker button - creates ephemeral Cast Ranking interface
+      // Handle Personal Ranker button - creates ephemeral Casting interface
       return ButtonHandlerFactory.create({
         id: 'personal_ranker',
         updateMessage: false, // Always create new ephemeral message
@@ -5568,7 +5568,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             };
           }
           
-          // Generate ephemeral Cast Ranking UI
+          // Generate ephemeral Casting UI
           const { generateSeasonAppRankingUI } = await import('./castRankingManager.js');
           const result = await generateSeasonAppRankingUI({
             guildId, userId, configId, allApplications, currentApp, appIndex, applicantMember, guild,
@@ -5585,7 +5585,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // DNC Overview — global DNC conflict view for all season applicants (new ephemeral message)
       return ButtonHandlerFactory.create({
         id: 'dnc_overview',
-        updateMessage: false, // New ephemeral message, don't replace Cast Ranking card
+        updateMessage: false, // New ephemeral message, don't replace Casting card
         handler: async (context) => {
           console.log(`🔍 START: dnc_overview - user ${context.userId}`);
 
@@ -5593,7 +5593,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const guild = await client.guilds.fetch(guildId);
           const member = await guild.members.fetch(userId);
 
-          // Permission check — same as all Cast Ranking handlers
+          // Permission check — same as all Casting handlers
           if (!hasCastRankingPermissions(member, guildId)) {
             return {
               content: '❌ You need Manage Roles or Manage Channels permissions to access the DNC Overview.',
@@ -5622,10 +5622,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const guild = await client.guilds.fetch(guildId);
           const member = await guild.members.fetch(userId);
           
-          // Check Cast Ranking permissions (includes special exception for server 1331657596087566398)
+          // Check Casting permissions (includes special exception for server 1331657596087566398)
           if (!hasCastRankingPermissions(member, guildId)) {
             return {
-              content: '❌ You need Manage Roles or Manage Channels permissions to access Cast Ranking.',
+              content: '❌ You need Manage Roles or Manage Channels permissions to access Casting.',
               ephemeral: true
             };
           }
@@ -5659,7 +5659,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const guild = await client.guilds.fetch(guildId);
           const member = await guild.members.fetch(userId);
           
-          // Check Cast Ranking permissions
+          // Check Casting permissions
           if (!hasCastRankingPermissions(member, guildId)) {
             return {
               content: '❌ You need Manage Roles or Manage Channels permissions to navigate applicants.',
@@ -5699,7 +5699,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               components: [
                 { type: 10, content: `## ⚠️ Post Ranking Publicly?` },
                 { type: 14 },
-                { type: 10, content: `This posts the **Cast Ranking** to this channel as a **public message** that anyone who can see the channel will be able to read — including:\n• Applicant scores & average ratings\n• Casting decisions (Cast / Tentative / Don't Cast)\n• Player notes\n\nRanking is normally kept private to hosts. Continue?` },
+                { type: 10, content: `This posts the **Casting** to this channel as a **public message** that anyone who can see the channel will be able to read — including:\n• Applicant scores & average ratings\n• Casting decisions (Cast / Tentative / Don't Cast)\n• Player notes\n\nRanking is normally kept private to hosts. Continue?` },
                 { type: 14 },
                 { type: 1, components: [
                   { type: 2, custom_id: `ranking_public_cancel_${appIndex}_${configId}`, label: 'Cancel', style: 2, emoji: { name: '❌' } },
@@ -5723,7 +5723,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const guild = await context.client.guilds.fetch(context.guildId);
           const member = await guild.members.fetch(context.userId);
           if (!hasCastRankingPermissions(member, context.guildId)) {
-            return { content: '❌ You need Manage Roles or Manage Channels permissions to access Cast Ranking.' };
+            return { content: '❌ You need Manage Roles or Manage Channels permissions to access Casting.' };
           }
           const { buildRankingScreen } = await import('./castRankingManager.js');
           const ui = await buildRankingScreen({ guildId: context.guildId, userId: context.userId, configId, appIndex, guild });
@@ -5751,10 +5751,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
       })(req, res, client);
     } else if (custom_id.startsWith('ranking_scores_back_')) {
-      // Handle ranking scores summary back button - restore original Cast Ranking UI
+      // Handle ranking scores summary back button - restore original Casting UI
       return ButtonHandlerFactory.create({
         id: 'ranking_scores_back',
-        updateMessage: true, // Replace View All Scores with Cast Ranking UI
+        updateMessage: true, // Replace View All Scores with Casting UI
         handler: async (context) => {
           console.log(`🔍 START: ranking_scores_back - user ${context.userId}`);
           
@@ -5771,7 +5771,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const [, configId, originalUserId] = backMatch;
           console.log(`🔍 DEBUG: ranking_scores_back - configId: ${configId}, originalUserId: ${originalUserId}`);
           
-          // Import cast ranking functions
+          // Import casting functions
           const { getAllApplicationsFromData, getApplicationsForSeason } = await import('./storage.js');
           const { generateSeasonAppRankingUI } = await import('./castRankingManager.js');
           
@@ -5806,7 +5806,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             };
           }
           
-          // Restore the original Cast Ranking UI
+          // Restore the original Casting UI
           const guild = await client.guilds.fetch(context.guildId);
           const seasonName = 'Current Season'; // TODO: Get actual season name
           const result = await generateSeasonAppRankingUI({
@@ -5822,7 +5822,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             playerData: await import('./storage.js').then(m => m.loadPlayerData())
           });
           
-          console.log(`✅ SUCCESS: ranking_scores_back - restored Cast Ranking UI`);
+          console.log(`✅ SUCCESS: ranking_scores_back - restored Casting UI`);
           return result;
         }
       })(req, res, client);
@@ -5838,10 +5838,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const guild = await client.guilds.fetch(guildId);
           const member = await guild.members.fetch(userId);
           
-          // Check Cast Ranking permissions
+          // Check Casting permissions
           if (!hasCastRankingPermissions(member, guildId)) {
             return {
-              content: '❌ You need Manage Roles or Manage Channels permissions to refresh cast ranking data.',
+              content: '❌ You need Manage Roles or Manage Channels permissions to refresh casting data.',
               ephemeral: true
             };
           }
@@ -5881,7 +5881,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const guild = await client.guilds.fetch(guildId);
           const member = await guild.members.fetch(userId);
           
-          // Check Cast Ranking permissions (includes special exception for server 1331657596087566398)
+          // Check Casting permissions (includes special exception for server 1331657596087566398)
           if (!hasCastRankingPermissions(member, guildId)) {
             return {
               content: '❌ You need Manage Roles or Manage Channels permissions to set casting status.',
@@ -6240,7 +6240,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const newApp = allApplications[newIndex];
           console.log(`🧭 Navigating to application ${newIndex + 1} of ${allApplications.length}: ${newApp.displayName}`);
 
-          // Regenerate Cast Ranking interface using castRankingManager
+          // Regenerate Casting interface using castRankingManager
           const { generateSeasonAppRankingUI } = await import('./castRankingManager.js');
 
           // Fetch applicant member
@@ -6318,7 +6318,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             };
           }
 
-          // Regenerate Cast Ranking interface using castRankingManager
+          // Regenerate Casting interface using castRankingManager
           const { generateSeasonAppRankingUI } = await import('./castRankingManager.js');
 
           // Fetch applicant member
@@ -12507,7 +12507,7 @@ To fix this:
                     { type: 14 },
                     {
                       type: 10,
-                      content: '> **`💚 Key Features`**\n• 🎬 Season management & applications\n• 🏆 Cast rankings & voting systems\n• 🦁 Safari adventure challenges\n• 📋 Dynamic castlist displays\n• ⏰ Timezone & pronoun roles'
+                      content: '> **`💚 Key Features`**\n• 🎬 Season management & applications\n• 🏆 Casting & voting systems\n• 🦁 Safari adventure challenges\n• 📋 Dynamic castlist displays\n• ⏰ Timezone & pronoun roles'
                     },
                     { type: 14 },
                     {
@@ -13797,15 +13797,15 @@ To fix this:
           
           // Extract configId from custom_id: season_app_ranking_{configId}
           const configId = context.customId.replace('season_app_ranking_', '');
-          console.log(`🏆 Cast Ranking for season: ${configId}`);
+          console.log(`🏆 Casting for season: ${configId}`);
           
           const guild = await client.guilds.fetch(guildId);
           const member = await guild.members.fetch(userId);
           
-          // Check Cast Ranking permissions (includes special exception for server 1331657596087566398)
+          // Check Casting permissions (includes special exception for server 1331657596087566398)
           if (!hasCastRankingPermissions(member, guildId)) {
             return {
-              content: '❌ You need Manage Roles or Manage Channels permissions to access Cast Ranking.',
+              content: '❌ You need Manage Roles or Manage Channels permissions to access Casting.',
               ephemeral: true
             };
           }
@@ -44471,7 +44471,7 @@ Your server is now ready for Tycoons gameplay!`;
           castingStatusText = '⚪ Undecided';
         }
         
-        // Use Cast Ranking Manager to regenerate the UI with updated notes
+        // Use Casting Manager to regenerate the UI with updated notes
         const { generateSeasonAppRankingUI } = await import('./castRankingManager.js');
         const result = await generateSeasonAppRankingUI({
           guildId,

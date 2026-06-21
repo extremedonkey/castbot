@@ -101,7 +101,7 @@ This document serves as the source of truth for the Season Application Builder f
 4. Create button becomes active when all selections complete
 5. Manual click creates and posts the application button
 
-#### **🏆 Cast Ranking** (`season_app_ranking`) 
+#### **🏆 Casting** (`season_app_ranking`) 
 **Status:** Fully implemented and operational
 **Function:** Comprehensive applicant ranking and evaluation system
 
@@ -423,7 +423,7 @@ await updateSeason(guildId, seasonId, {
 |---------|---------|---------|---------|---------|
 | Basic Apply Button | ✅ | ✅ | ✅ | ✅ |
 | Welcome Messages | ✅ | ✅ | ✅ | ✅ |
-| Cast Ranking | ✅ | ✅ | ✅ | ✅ |
+| Casting | ✅ | ✅ | ✅ | ✅ |
 | Season Metadata | ❌ | ❌ | ✅ | ✅ |
 | Dynamic Questions | ❌ | ❌ | ❌ | ✅ |
 | Response Collection | ❌ | ❌ | ❌ | ✅ |
@@ -807,21 +807,21 @@ The system follows the architectural patterns outlined in the [Architecture & Pa
 - **External User Entry**: Name/username for non-server members
 - **Bidirectional Detection**: Alert when mutual DNCs apply
 - **Admin Integration**: Proactive notifications for casting conflicts
-- **Cast Ranking Integration**: Visual warnings in ranking interface
+- **Casting Integration**: Visual warnings in ranking interface
 
 **Configuration Requirements:**
 - Question text customization
 - Maximum DNC selections (recommended: 3-5)
 - Include external users option (enabled/disabled)
 - Alert thresholds for admin notifications
-- Integration with Cast Ranking system
+- Integration with Casting system
 
 **Implementation Details:**
 - **Components V2 User Select**: Multi-user selection interface
 - **External User Modal**: Name + Username fields with validation
 - **Conflict Detection Engine**: Real-time bidirectional DNC checking
 - **Admin Alert System**: Automated notifications via Discord DM or channel
-- **Visual Indicators**: Red warning badges in Cast Ranking interface
+- **Visual Indicators**: Red warning badges in Casting interface
 - **Data Privacy**: DNC lists visible only to admins and applicant
 
 **Data Structure:**
@@ -860,7 +860,7 @@ The system follows the architectural patterns outlined in the [Architecture & Pa
 
 **Admin Alert Features:**
 - **Mutual DNC Detection**: "⚠️ Mutual DNC Alert: Player A and Player B have each other on DNC lists"
-- **Cast Ranking Integration**: Red warning badges next to conflicting applicants
+- **Casting Integration**: Red warning badges next to conflicting applicants
 - **Threshold Alerts**: Notify when applicant has unusually high DNC count
 - **Casting Suggestions**: Highlight potential DNC-free casting combinations
 
@@ -869,7 +869,7 @@ The system follows the architectural patterns outlined in the [Architecture & Pa
 **Core Features:**
 - **Predefined Options**: Common accommodations in string select
 - **Custom Entry**: Free-text for specific needs
-- **Admin Integration**: Accommodations visible in Cast Ranking
+- **Admin Integration**: Accommodations visible in Casting
 - **Challenge Integration**: Future integration with challenge design
 - **Privacy Controls**: Accommodation visibility settings
 
@@ -877,7 +877,7 @@ The system follows the architectural patterns outlined in the [Architecture & Pa
 - Predefined accommodation list management
 - Custom entry enabled/disabled
 - Privacy settings (admin-only vs. host-visible)
-- Integration with Cast Ranking display
+- Integration with Casting display
 - Future challenge system hooks
 
 **Predefined Accommodations List:**
@@ -896,7 +896,7 @@ The system follows the architectural patterns outlined in the [Architecture & Pa
 - **String Select Menu**: Predefined options with multi-select capability
 - **Custom Modal**: Free-text entry for specific accommodations
 - **Privacy Controls**: Admin-only vs. host-visible settings
-- **Admin Dashboard**: Accommodation summary in Cast Ranking
+- **Admin Dashboard**: Accommodation summary in Casting
 - **Challenge Integration**: Future hooks for challenge design considerations
 
 **Data Structure:**
@@ -1070,14 +1070,14 @@ registerQuestionType('multiChoice', MultiChoiceQuestionHandler);
 - **Application Channel Integration**: All communications sent directly to applicant's private channel
 
 **Casting Workflow:**
-1. **Selection Interface**: Multi-select from ranked applicants in Cast Ranking
+1. **Selection Interface**: Multi-select from ranked applicants in Casting
 2. **Bulk Action Buttons**: "📤 Send Cast Invites", "⏸️ Mark as HOLD", "❌ Send Rejections"
 3. **Message Customization**: Season-specific templates with personalization
 4. **Status Tracking**: Application status updates (Pending → Cast/Hold/Rejected)
 5. **Confirmation Workflow**: Applicants confirm acceptance within application channel
 
 **Implementation Details:**
-- **Multi-Select Interface**: Checkbox selection in Cast Ranking dashboard
+- **Multi-Select Interface**: Checkbox selection in Casting dashboard
 - **Template System**: Customizable message templates per season
 - **Status Management**: Persistent application status tracking
 - **Channel Messaging**: Direct communication via application channels
@@ -1160,7 +1160,7 @@ Thank you for your interest, and we hope to see you in future seasons!
 - Severity scoring based on mutual vs. unidirectional DNCs
 - Admin notification through Discord DM or dedicated channel
 
-**Cast Ranking Integration:**
+**Casting Integration:**
 - Visual DNC conflict indicators in ranking interface
 - Red warning badges for conflicted applicants
 - Conflict details on hover/click
@@ -1180,7 +1180,7 @@ Thank you for your interest, and we hope to see you in future seasons!
 • Both applications completed
 
 **Actions:**
-🔍 View in Cast Ranking
+🔍 View in Casting
 📋 Review Applications
 ⚠️ Consider for Casting
 ```
@@ -1188,7 +1188,7 @@ Thank you for your interest, and we hope to see you in future seasons!
 #### Accommodation Management
 
 **Admin Dashboard Integration:**
-- Accommodation summary in Cast Ranking interface
+- Accommodation summary in Casting interface
 - Privacy-controlled visibility (admin-only vs. host-visible)
 - Accommodation type filtering for casting decisions
 - Challenge design integration hooks for future development
@@ -1243,7 +1243,7 @@ Thank you for your interest, and we hope to see you in future seasons!
 
 **Phase 3: Admin Enhancement (Sprint 3)**
 - DNC conflict detection & alerts
-- Cast Ranking integration
+- Casting integration
 - **Bulk casting operations** (CAST/HOLD/REJECT)
 - **Message template system** for casting communications
 - Admin dashboard enhancements
@@ -1463,7 +1463,7 @@ This analysis demonstrates how the Dynamic Question Builder System directly addr
 **Status:** ❌ Not started
 **Features:**
 - [ ] DNC conflict detection and alert system
-- [ ] Cast Ranking integration with DNC warnings
+- [ ] Casting integration with DNC warnings
 - [ ] **Bulk casting operations (CAST/HOLD/REJECT)**
 - [ ] **Message template system for casting communications**
 - [ ] Response filtering and search capabilities

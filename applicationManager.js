@@ -429,7 +429,7 @@ Click the button below to get started!`
             })
         });
 
-        // Store application data in playerData for cast ranking system (reuse data from cleanup above)
+        // Store application data in playerData for casting system (reuse data from cleanup above)
         if (!data[guild.id]) data[guild.id] = {};
         if (!data[guild.id].applications) data[guild.id].applications = {};
         

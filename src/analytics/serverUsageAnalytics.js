@@ -358,7 +358,7 @@ function detectFeatureUsage(entries) {
       features.safari++;
     }
     
-    // 🏆 Cast Ranking - ranking_* and rank_* buttons
+    // 🏆 Casting - ranking_* and rank_* buttons
     if (customId.includes('ranking_') || customId.includes('rank_') || customId.includes('season_app_ranking')) {
       features.castRanking++;
     }
@@ -1110,7 +1110,7 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0, playerDat
         featureList.push(`🦁 safari (x${features.safari})`);
       }
       if (features.castRanking > 0) {
-        featureList.push(`🏆 ranking (x${features.castRanking})`);
+        featureList.push(`🏆 casting (x${features.castRanking})`);
       }
       if (features.reactForRoles > 0) {
         featureList.push(`💜 r4r (x${features.reactForRoles})`);

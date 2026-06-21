@@ -470,9 +470,9 @@ When a feature is **deployed to production and working**, move/rename its doc in
 **Core Systems:**
 - **📋 CASTLIST** → [docs/03-features/CastlistArchitecture.md](docs/03-features/CastlistArchitecture.md) - Castlist system reference (parent doc)
 - **🦁 SAFARI** → [docs/03-features/Safari.md](docs/03-features/Safari.md) - Safari system overview
-- **📅 SEASON MANAGER** → [docs/03-features/SeasonManager.md](docs/03-features/SeasonManager.md) - Unified season admin (`season_manager`): Apps/Planner/Ranking/Edit active-tab nav, search, Delete Mode. Old `season_management_menu` / `entity_select_seasons` / `reeces_season_planner_mockup` are DEPRECATED
+- **📅 SEASON MANAGER** → [docs/03-features/SeasonManager.md](docs/03-features/SeasonManager.md) - Unified season admin (`season_manager`): Apps/Planner/Casting/Edit active-tab nav, search, Delete Mode. Old `season_management_menu` / `entity_select_seasons` / `reeces_season_planner_mockup` are DEPRECATED
 - **📝 SEASON APPLICATIONS** → [docs/03-features/SeasonAppBuilder.md](docs/03-features/SeasonAppBuilder.md)
-- **🏆 CAST RANKING** → [docs/03-features/CastRanking.md](docs/03-features/CastRanking.md)
+- **🏆 CASTING** (formerly "Cast Ranking") → [docs/03-features/SeasonManager.md#-casting-the-former-ranking-tab](docs/03-features/SeasonManager.md#-casting-the-former-ranking-tab) - 1-5 scoring, Cast/Tentative/Don't Cast decisions, notes, applicant jump-select. Old `CastRanking.md` / `CastRankingNavigation.md` archived
 - **🚷 DNC OVERVIEW** → [docs/03-features/DNCOverview.md](docs/03-features/DNCOverview.md) - Global DNC conflict detection, mutual/one-way classification, season-wide view
 - **🐙 ENEMIES** → [docs/03-features/EnemySystem.md](docs/03-features/EnemySystem.md) - Enemy entities, fight_enemy outcome, combat resolution
 - **🧑‍🤝‍🧑 PLAYER MANAGEMENT** → [playerManagement.js](playerManagement.js) - Pronouns, timezones, age, vanity roles, attributes display

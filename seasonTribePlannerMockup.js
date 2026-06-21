@@ -57,7 +57,7 @@ function patchState(userId, patch) {
 
 /**
  * Returns the deepest selected level: 0=none, 1=season, 2=castlist, 3=phase, 4=tribe-or-cast-ranking.
- * Cast Ranking sits at the SAME depth as Tribe (both are siblings of the Phase node).
+ * Casting sits at the SAME depth as Tribe (both are siblings of the Phase node).
  * Conceptual flow: applicants → cast-ranked → cast → assigned to tribes.
  */
 function depth(state) {
@@ -304,7 +304,7 @@ export async function buildTribePlannerView(guildId, userId, client = null) {
   if (castlist) breadcrumbParts.push(`${castlist.emoji} ${castlist.name}`);
   if (phase) breadcrumbParts.push(`${phase.emoji} ${phase.label}`);
   if (tribe) breadcrumbParts.push(`${tribe.emoji} ${tribe.name}`);
-  if (state.castRankingView) breadcrumbParts.push(`🏆 Cast Ranking`);
+  if (state.castRankingView) breadcrumbParts.push(`🏆 Casting`);
   const breadcrumb = breadcrumbParts.join(`  ${DOT}  `);
 
   // ── Season select (always visible, search via Discord typeahead) ──
@@ -349,7 +349,7 @@ export async function buildTribePlannerView(guildId, userId, client = null) {
 
   // ── Action buttons (greyed by level) ──
   // canCreateTribe needs a phase. Edit/Assign/Remove need a tribe selected (NOT castRankingView).
-  // Open Cast Ranking launches the REAL season_app_ranking_<configId> handler when a season is picked.
+  // Open Casting launches the REAL season_app_ranking_<configId> handler when a season is picked.
   const inTribe = !!state.tribeId;
   const canCreateTribe   = lvl >= 3 && !state.castRankingView;
   const canEditTribe     = inTribe;
@@ -357,7 +357,7 @@ export async function buildTribePlannerView(guildId, userId, client = null) {
   const canRemoveTribe   = inTribe;
   const canOpenCastRank  = !!state.configId;
 
-  // The Cast Ranking button is the ONLY non-mockup action — it hands off to the real
+  // The Casting button is the ONLY non-mockup action — it hands off to the real
   // ranking UI by using its registered custom_id. Falls back to a no-op if no season.
   const castRankCustomId = canOpenCastRank
     ? `season_app_ranking_${state.configId}`
@@ -369,7 +369,7 @@ export async function buildTribePlannerView(guildId, userId, client = null) {
       { type: 2, custom_id: 'tribeplan_act_create_tribe', label: 'Create Tribe',     style: 1, emoji: { name: '➕' }, disabled: !canCreateTribe },
       { type: 2, custom_id: 'tribeplan_act_edit_tribe',   label: 'Edit Tribe',       style: 2, emoji: { name: '✏️' }, disabled: !canEditTribe },
       { type: 2, custom_id: 'tribeplan_act_assign',       label: 'Assign Players',   style: 1, emoji: { name: '👥' }, disabled: !canAssignPlayers },
-      { type: 2, custom_id: castRankCustomId,             label: 'Open Cast Ranking',style: 2, emoji: { name: '🏆' }, disabled: !canOpenCastRank },
+      { type: 2, custom_id: castRankCustomId,             label: 'Open Casting',style: 2, emoji: { name: '🏆' }, disabled: !canOpenCastRank },
       { type: 2, custom_id: 'tribeplan_act_remove',       label: 'Remove Tribe',     style: 4, emoji: { name: '🗑️' }, disabled: !canRemoveTribe },
     ],
   };
@@ -419,15 +419,15 @@ export async function buildTribePlannerView(guildId, userId, client = null) {
 function hierarchyPlaceholder({ castlist, phase, tribe, state }) {
   if (state?.castRankingView) return `🏆 Pick an applicant to focus… (or ↑ Up)`;
   if (tribe) return `👤 Cast players for this tribe… (or ↑ Up)`;
-  if (phase) return `🏆 Cast Ranking — or pick a tribe… (or ↑ Up)`;
+  if (phase) return `🏆 Casting — or pick a tribe… (or ↑ Up)`;
   if (castlist) return `🔀 Pick a game phase… (or ↑ Up)`;
   return `📋 Pick a castlist…`;
 }
 
 function hierarchyHelp({ castlist, phase, tribe, state }) {
-  if (state?.castRankingView) return `-# Full **Cast Ranking** pool for the season. Sorted: cast → tentative → pending → reject, then by avg score.`;
-  if (tribe) return `-# Live members of the **${tribe.name}** Discord role. Glue logic to cross-reference with Cast Ranking is TBD.`;
-  if (phase) return `-# At Phase level you have two sibling drilldowns: 🏆 **Cast Ranking** (the full applicant pool) and 🏕️ **Tribes** (containers). Both lead to depth 4.`;
+  if (state?.castRankingView) return `-# Full **Casting** pool for the season. Sorted: cast → tentative → pending → reject, then by avg score.`;
+  if (tribe) return `-# Live members of the **${tribe.name}** Discord role. Glue logic to cross-reference with Casting is TBD.`;
+  if (phase) return `-# At Phase level you have two sibling drilldowns: 🏆 **Casting** (the full applicant pool) and 🏕️ **Tribes** (containers). Both lead to depth 4.`;
   if (castlist) return `-# Showing **game phase** rounds only (marooning, swap, merge, FTC, reunion). Standard challenge rounds are hidden.`;
   return `-# Pick a castlist to start. Default is always available.`;
 }
@@ -439,11 +439,11 @@ function hierarchyHelp({ castlist, phase, tribe, state }) {
  *   depth 0  → none
  *   depth 1  → season picked, no castlist          → shows castlists
  *   depth 2  → castlist picked, no phase           → shows phases
- *   depth 3  → phase picked, no tribe/castRanking  → shows [🏆 Cast Ranking, 🏕️ Tribes]  ← SIBLINGS
+ *   depth 3  → phase picked, no tribe/castRanking  → shows [🏆 Casting, 🏕️ Tribes]  ← SIBLINGS
  *   depth 4  → tribe selected                      → shows cast players (placeholder for assignment-TBD)
  *   depth 4  → castRankingView                     → shows full ranked applicant pool
  *
- * Cast Ranking and Tribe drilldowns are at the SAME depth (4) — both children of Phase.
+ * Casting and Tribe drilldowns are at the SAME depth (4) — both children of Phase.
  *
  * Option value namespace: `up` | `cl:<id>` | `ph:<id>` | `tr:<id>` | `cr:open` | `noop`
  */
@@ -491,7 +491,7 @@ function buildHierarchyOptions({ season, castlists, castlist, phases, phase, tri
   if (state?.castRankingView) {
     opts.push({
       label: '↑ Back to Phase Contents', value: 'up', emoji: { name: '⬆️' },
-      description: `Currently in 🏆 Cast Ranking for ${phase.label}`,
+      description: `Currently in 🏆 Casting for ${phase.label}`,
     });
     const applicants = getCastRankedApplicants(guildData, state.configId).slice(0, 24);
     if (applicants.length === 0) {
@@ -512,18 +512,18 @@ function buildHierarchyOptions({ season, castlists, castlist, phases, phase, tri
     return opts;
   }
 
-  // Depth 3 → phase picked, no tribe and no castRankingView. Show [Cast Ranking, Tribes]
+  // Depth 3 → phase picked, no tribe and no castRankingView. Show [Casting, Tribes]
   if (!tribe) {
     opts.push({
       label: '↑ Back to Game Phases', value: 'up', emoji: { name: '⬆️' },
       description: `Currently in ${castlist.name} ${DOT} ${phase.label}`,
     });
 
-    // Cast Ranking sentinel — sibling of Tribes, leads to depth 4 alt path
+    // Casting sentinel — sibling of Tribes, leads to depth 4 alt path
     const allApplicants = getCastRankedApplicants(guildData, state.configId);
     const castCount = allApplicants.filter(a => a.castingStatus === 'cast').length;
     opts.push({
-      label: trunc(`🏆 Cast Ranking  (${allApplicants.length} applicant${allApplicants.length === 1 ? '' : 's'}, ${castCount} cast)`, 95),
+      label: trunc(`🏆 Casting  (${allApplicants.length} applicant${allApplicants.length === 1 ? '' : 's'}, ${castCount} cast)`, 95),
       value: 'cr:open',
       description: trunc(`Source-of-truth ranking pool for the season ${DOT} sibling of Tribes below`, 95),
       emoji: { name: '🏆' },
@@ -533,7 +533,7 @@ function buildHierarchyOptions({ season, castlists, castlist, phases, phase, tri
       opts.push({ label: '(No tribes on this castlist — use Create Tribe)', value: 'noop', emoji: { name: '⚠️' } });
       return opts;
     }
-    for (const t of tribes.slice(0, 23)) {  // 25 - 1 (up) - 1 (cast ranking) = 23 tribe slots
+    for (const t of tribes.slice(0, 23)) {  // 25 - 1 (up) - 1 (casting) = 23 tribe slots
       // Prefer LIVE Discord role member count over the cached field — that's the truth
       const liveMembers = getTribeRoleMembers(client, guildId, t.id);
       const count = Array.isArray(liveMembers) ? liveMembers.length : (t.memberCount || 0);
@@ -577,7 +577,7 @@ function buildHierarchyOptions({ season, castlists, castlist, phases, phase, tri
     opts.push({
       label: trunc(`${IND}${m.displayName}`, 95),
       value: `pl:${m.userId}`,
-      description: trunc(`Discord role member ${m.isBot ? '(bot)' : ''} ${DOT} TBD: cross-reference with Cast Ranking`, 95),
+      description: trunc(`Discord role member ${m.isBot ? '(bot)' : ''} ${DOT} TBD: cross-reference with Casting`, 95),
       emoji: { name: m.isBot ? '🤖' : '👤' },
     });
   }
@@ -665,7 +665,7 @@ function describeAction(action, state) {
     case 'edit_tribe':
       return `✏️ **Edit Tribe** (mockup) — would open the tribe editor (name/emoji/color/vanity roles) for ${scope}.`;
     case 'assign':
-      return `👥 **Assign Players** (mockup) — would open a multi-select of CAST applicants from Cast Ranking, then write the tribe ↔ player mapping (the "glue logic" that doesn't exist yet) for ${scope}.`;
+      return `👥 **Assign Players** (mockup) — would open a multi-select of CAST applicants from Casting, then write the tribe ↔ player mapping (the "glue logic" that doesn't exist yet) for ${scope}.`;
     case 'remove':
       return `🗑️ **Remove Tribe** (mockup) — would prompt for confirmation, then detach ${scope} from the phase (Discord role kept).`;
     default:

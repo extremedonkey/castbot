@@ -2,20 +2,20 @@
 
 **Version:** 1.0  
 **Status:** Active  
-**Dependencies:** Cast Ranking, Season Applications, dncManager.js  
+**Dependencies:** Casting, Season Applications, dncManager.js  
 **Permissions:** Admin (ManageRoles, ManageChannels, ManageGuild, Administrator)
 
 ## Overview
 
-The DNC Overview provides a **global, season-wide view** of all Do Not Cast entries and cross-listed conflicts. Accessed via a button in the Cast Ranking card, it opens a new ephemeral message that highlights casting risks at a glance.
+The DNC Overview provides a **global, season-wide view** of all Do Not Cast entries and cross-listed conflicts. Accessed via a button in the Casting card, it opens a new ephemeral message that highlights casting risks at a glance.
 
 ### Problem Solved
 
-Cast Ranking already shows DNC warnings per-applicant, but with 40+ applicants an admin must click through every single card to piece together who conflicts with whom. The DNC Overview eliminates this manual cross-referencing by computing a full conflict matrix and presenting it in a single screen.
+Casting already shows DNC warnings per-applicant, but with 40+ applicants an admin must click through every single card to piece together who conflicts with whom. The DNC Overview eliminates this manual cross-referencing by computing a full conflict matrix and presenting it in a single screen.
 
 ### Access Path
 
-`/menu` > Production Menu > Season Applications > Cast Ranking > `🚷 DNC List` button
+`/menu` > Production Menu > Season Applications > Casting > `🚷 DNC List` button
 
 ## Three UI States
 
@@ -79,11 +79,11 @@ New ephemeral message (CHANNEL_MESSAGE_WITH_SOURCE)
 
 ### Key Design Decisions
 
-- **New ephemeral message** (not `updateMessage`) — admin keeps their place in the Cast Ranking flow, and confidential DNC data is never written to a shared message
+- **New ephemeral message** (not `updateMessage`) — admin keeps their place in the Casting flow, and confidential DNC data is never written to a shared message
 - **Button placement**: `[Edit Notes] [Personal Ranker] [🚷 DNC List] [🗑️ Delete App]` — informational action before the danger action
 - **Custom ID**: `dnc_overview_{configId}` — season-scoped, no per-applicant context needed
 - **Component count**: ~11 worst case (well under 40 limit)
-- **Reasons truncated to 100 chars** in overview — full text visible in per-applicant Cast Ranking view
+- **Reasons truncated to 100 chars** in overview — full text visible in per-applicant Casting view
 
 ### File Locations
 
@@ -97,7 +97,7 @@ New ephemeral message (CHANNEL_MESSAGE_WITH_SOURCE)
 
 ### Security
 
-- **Permission**: `hasCastRankingPermissions()` — same gate as all Cast Ranking handlers (ManageRoles OR ManageChannels OR ManageGuild OR Administrator)
+- **Permission**: `hasCastRankingPermissions()` — same gate as all Casting handlers (ManageRoles OR ManageChannels OR ManageGuild OR Administrator)
 - **Always ephemeral** — only the clicking admin sees the DNC data
 - **Confidentiality preserved** — DNC reasons were submitted by applicants under the "only hosts will see this" disclosure
 
@@ -112,5 +112,5 @@ When additional sections are added, the button could be renamed from "DNC List" 
 
 ---
 
-**Related:** [DNC Structured System](../01-RaP/0932_20260324_DNCStructured_Analysis.md) | [Cast Ranking](CastRanking.md) | [Season Application Builder](SeasonAppBuilder.md)  
+**Related:** [DNC Structured System](../01-RaP/0932_20260324_DNCStructured_Analysis.md) | [Casting](SeasonManager.md) | [Season Application Builder](SeasonAppBuilder.md)  
 **Design Analysis:** [RaP 0923](../01-RaP/0923_20260407_DNCOverviewScreen_Analysis.md)

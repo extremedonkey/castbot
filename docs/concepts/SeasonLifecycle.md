@@ -96,7 +96,7 @@ Seasons (stored in `applicationConfigs`) progress through distinct stages:
 ### Future Integrations
 - **Castlist System**: Will use active season for default cast selection
 - **Safari System**: Tie safari rounds to active season
-- **Cast Ranking**: Default to active season's cast
+- **Casting**: Default to active season's cast
 - **Player Stats**: Filter by active season
 - **Whisper System**: Season-specific whisper channels
 

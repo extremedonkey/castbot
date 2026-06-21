@@ -205,7 +205,7 @@ graph TB
         AC --> SE[Season Entity]
         SE --> AP[Applications]
         AP --> TR[Tribes/Castlist]
-        TR --> CR[Cast Rankings]
+        TR --> CR[Casting]
     end
     
     subgraph "Data Relations"

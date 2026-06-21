@@ -118,7 +118,7 @@ The system intelligently detects usage of specific CastBot features by analyzing
 - **🖼️ Castlist**: `/castlist` commands and `show_castlist*` buttons
 - **📝 Season Applications**: Application button clicks and modals
 - **🦁 Safari**: All safari-related interactions (movement, attacks, items, etc.)
-- **🏆 Cast Ranking**: Ranking button interactions
+- **🏆 Casting**: Ranking button interactions
 - **💜 React for Roles (R4R)**: Role reaction system usage
 - **😀 Player Emojis**: Custom emoji creation and management
 - **✨ Vanity Roles**: Custom role features

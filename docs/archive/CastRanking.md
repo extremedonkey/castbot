@@ -1,7 +1,9 @@
 # Cast Ranking System
 
+> ⚠️ **ARCHIVED 2026-06-21.** "Cast Ranking" is now called **Casting** and lives as a tab in the Season Manager. This document was stale (Jan-2025 app.js line numbers, pre-`castRankingManager.js` handler map). The current, code-validated reference is **[SeasonManager.md → 🏆 Casting](../03-features/SeasonManager.md#-casting-the-former-ranking-tab)**. Kept for history only.
+
 **Version:** 2.0  
-**Status:** ✅ Production Ready  
+**Status:** 📦 Archived (superseded by SeasonManager.md)  
 **Dependencies:** Season Applications, Components V2, Button Handler Factory  
 **Permissions:** Admin (ManageRoles, ManageChannels, ManageGuild, Administrator)
 

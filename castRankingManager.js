@@ -1,7 +1,7 @@
 /**
- * Cast Ranking Manager
+ * Casting Manager
  * 
- * Centralized UI generation for the Cast Ranking system.
+ * Centralized UI generation for the Casting system.
  * This module eliminates code duplication across 8+ handlers in app.js.
  * 
  * PHASE 2: Option A - Dedicated Module
@@ -13,11 +13,11 @@
 import { ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
 import { loadPlayerData } from './storage.js';
 
-// Shared Cast Ranking header — used by both the populated view and the empty state (no duplication)
-const rankingHeader = (seasonName) => ({ type: 10, content: `## 🏆 Cast Ranking\n> ### ${seasonName}` });
+// Shared Casting header — used by both the populated view and the empty state (no duplication)
+const rankingHeader = (seasonName) => ({ type: 10, content: `## 🏆 Casting\n> ### ${seasonName}` });
 
 /**
- * Empty-state Cast Ranking screen (season has no applications yet). Reuses the shared header +
+ * Empty-state Casting screen (season has no applications yet). Reuses the shared header +
  * the active-tab nav row so it's identical chrome to the populated view (Ranking tab shaded blue).
  * @param {string} seasonName
  * @param {string} configId
@@ -41,7 +41,7 @@ export async function buildRankingEmptyState(seasonName, configId) {
 }
 
 /**
- * Build the full Season Cast Ranking view response (first applicant card, or the empty state when a
+ * Build the full Season Casting view response (first applicant card, or the empty state when a
  * season has no applications). Shared by the Ranking tab handler AND the Edit-modal context-aware
  * refresh so both render identically. Returns Components V2 response data ({ flags, components }) —
  * the caller sends it (factory return for buttons, or res.send UPDATE_MESSAGE for modal submits).
@@ -87,7 +87,7 @@ export async function buildSeasonRankingResponse({ guildId, userId, configId, cl
 }
 
 /**
- * Generate complete Cast Ranking UI for a specific applicant
+ * Generate complete Casting UI for a specific applicant
  * 
  * MINIMAL TEST APPROACH: Start with just the main season_app_ranking handler UI generation.
  * Keep existing helper functions in app.js for now - we can extract them later if this works.
@@ -318,7 +318,7 @@ export async function generateSeasonAppRankingUI({
   const dncWarningText = buildDncWarnings(dncConflicts);
   const dncSummaryText = buildDncSummary(appData);
 
-  // Create Components V2 Container for Cast Ranking interface
+  // Create Components V2 Container for Casting interface
   // IMPORTANT: This follows the current layout pattern with navigation above applicant info
   const applicantInfo = `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${nameDisplay}${demographicInfo}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>\n${dncSummaryText}`;
 
@@ -564,7 +564,7 @@ export async function generateSeasonAppRankingUI({
 }
 
 /**
- * Rebuild the Cast Ranking screen at a given applicant index. Reused by Public Ranking
+ * Rebuild the Casting screen at a given applicant index. Reused by Public Ranking
  * (cancel/confirm) so the dense per-applicant setup lives in one place.
  * @returns the generateSeasonAppRankingUI response, or null if the season has no applications.
  */
@@ -597,7 +597,7 @@ export async function buildRankingScreen({ guildId, userId, configId, appIndex =
 
 /**
  * Generate the DNC Overview screen — global view of all DNC entries and conflicts.
- * Always returns a new ephemeral message (does not update the Cast Ranking card).
+ * Always returns a new ephemeral message (does not update the Casting card).
  *
  * @param {Object} params
  * @param {string} params.guildId - Discord guild ID
@@ -649,7 +649,7 @@ export async function generateDncOverviewUI({ guildId, configId, guild }) {
     );
   }
 
-  // Navigation — back to Cast Ranking
+  // Navigation — back to Casting
   components.push(
     { type: 14 },
     {
@@ -657,7 +657,7 @@ export async function generateDncOverviewUI({ guildId, configId, guild }) {
       components: [
         new ButtonBuilder()
           .setCustomId(`season_app_ranking_${configId}`)
-          .setLabel('← Cast Ranking')
+          .setLabel('← Casting')
           .setStyle(ButtonStyle.Secondary)
           .toJSON()
       ]
@@ -729,7 +729,7 @@ export async function handleRankingNavigation({
       }
     }
     
-    let scoreSummary = `## Cast Ranking Summary\n### ${seasonName}\n\n`;
+    let scoreSummary = `## Casting Summary\n### ${seasonName}\n\n`;
     
     // Calculate scores and casting status for each applicant
     const applicantData = allApplications.map((app, index) => {
@@ -799,7 +799,7 @@ export async function handleRankingNavigation({
     const actionButtons = [
       new ButtonBuilder()
         .setCustomId(`ranking_scores_back_${backContextId}`)
-        .setLabel('← Cast Ranking')
+        .setLabel('← Casting')
         .setStyle(ButtonStyle.Secondary)
         .setEmoji('🏆'),
       new ButtonBuilder()

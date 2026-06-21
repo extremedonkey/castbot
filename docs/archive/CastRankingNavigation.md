@@ -1,7 +1,9 @@
 # Cast Ranking Navigation System
 
+> ⚠️ **ARCHIVED 2026-06-21.** Superseded by **[SeasonManager.md → Applicant jump-select rendering logic](../03-features/SeasonManager.md#applicant-jump-select-rendering-logic)**. This doc described a `createApplicantSelectOptions()` helper and "24 items/page" that **no longer exist** — the real code inlines options at **23/page** in `castRankingManager.js`. Kept for history only.
+
 **Version:** 1.0  
-**Status:** ✅ Production Ready  
+**Status:** 📦 Archived (superseded by SeasonManager.md)  
 **Created:** January 2025  
 **Dependencies:** Cast Ranking System, Components V2, Button Handler Factory
 

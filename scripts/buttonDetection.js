@@ -33,7 +33,7 @@ const SAFE_TEST_BUTTONS = {
   },
   'ranking': {
     custom_id: 'season_app_ranking',
-    label: '🏆 Ranking',
+    label: '🏆 Casting',
     style: 1, // Primary (blue)
     priority: 2
   },

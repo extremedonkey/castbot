@@ -878,7 +878,7 @@ export async function archiveSeason(guildId, seasonId) {
     dependencies.push(`${season.linkedEntities.tribes.length} castlist tribes`);
   }
   if (season.linkedEntities.castRankings?.length > 0) {
-    dependencies.push(`${season.linkedEntities.castRankings.length} cast rankings`);
+    dependencies.push(`${season.linkedEntities.castRankings.length} casting entries`);
   }
   
   if (dependencies.length > 0) {

@@ -533,4 +533,4 @@ For now, the DNC-only branding is correct. Don't over-engineer for hypothetical 
 
 ---
 
-Related: [DNC Structured System](/docs/01-RaP/0932_20260324_DNCStructured_Analysis.md) | [Cast Ranking](/docs/03-features/CastRanking.md) | [Security Architecture](/docs/infrastructure-security/SecurityArchitecture.md)
+Related: [DNC Structured System](/docs/01-RaP/0932_20260324_DNCStructured_Analysis.md) | [Cast Ranking](/docs/archive/CastRanking.md) | [Security Architecture](/docs/infrastructure-security/SecurityArchitecture.md)

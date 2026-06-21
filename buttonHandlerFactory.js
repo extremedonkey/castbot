@@ -1542,15 +1542,15 @@ export const BUTTON_REGISTRY = {
     category: 'ranking'
   },
   'ranking_scores_back': {
-    label: '← Cast Ranking',
-    description: 'Return to Cast Ranking interface',
+    label: '← Casting',
+    description: 'Return to Casting interface',
     emoji: '🏆',
     style: 'Secondary',
     category: 'ranking'
   },
   'personal_ranker': {
     label: '🤸 Personal Ranker',
-    description: 'Open ephemeral personal Cast Ranking interface',
+    description: 'Open ephemeral personal Casting interface',
     emoji: '🤸',
     style: 'Secondary',
     category: 'ranking'
@@ -3154,7 +3154,7 @@ export const BUTTON_REGISTRY = {
     category: 'application_management'
   },
   'season_app_ranking_*': {
-    label: 'Cast Ranking',
+    label: 'Casting',
     description: 'Comprehensive applicant ranking and evaluation system for specific season',
     emoji: '🏆',
     style: 'Secondary',
@@ -4557,8 +4557,8 @@ export const BUTTON_REGISTRY = {
   'question_add_dnc': { label: 'Add DNC Question', emoji: '🚷', category: 'seasons' },
   'question_select_*': { label: 'Question Select', emoji: '📝', category: 'seasons' },
   'rank_applicant_*': { label: 'Rank Applicant', emoji: '⭐', category: 'seasons' },
-  'ranking_navigation_*': { label: 'Ranking Navigation', emoji: '🔄', category: 'seasons' },
-  'ranking_select_*': { label: 'Ranking Select', emoji: '🏆', category: 'seasons' },
+  'ranking_navigation_*': { label: 'Casting Navigation', emoji: '🔄', category: 'seasons' },
+  'ranking_select_*': { label: 'Casting Select', emoji: '🏆', category: 'seasons' },
   'save_player_notes_*': { label: 'Save Player Notes', emoji: '📝', category: 'seasons' },
   'season_new_question_config_*': { label: 'New Question Config', emoji: '⚙️', category: 'seasons' },
   'season_post_button_config_*': { label: 'Post Button Config', emoji: '📮', category: 'seasons' },
@@ -4567,7 +4567,7 @@ export const BUTTON_REGISTRY = {
   'planner_challenge_edit_*': { label: 'Planner Challenge Edit', emoji: '🏃', category: 'planner' },
   'planner_ideas_save': { label: 'Planner Ideas Save', emoji: '💡', category: 'planner' },
   'planner_modal_submit': { label: 'Planner Modal Submit', emoji: '📋', category: 'planner' },
-  'planner_ranking_legacy_*': { label: 'Planner Ranking', emoji: '🏆', category: 'planner' },
+  'planner_ranking_legacy_*': { label: 'Planner Casting', emoji: '🏆', category: 'planner' },
   'planner_round_action_*': { label: 'Planner Round Action', emoji: '🎯', category: 'planner' },
   'planner_round_edit_submit': { label: 'Planner Round Edit Submit', emoji: '✏️', category: 'planner' },
   'planner_toolbar_noop': { label: 'Planner Toolbar', emoji: '🔧', category: 'planner' },
