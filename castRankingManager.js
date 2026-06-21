@@ -726,7 +726,7 @@ export async function sendCastingInvites({ client, guildId, configId, mode, appI
         type: 1,
         components: [
           { type: 2, style: 3, label: 'Accept Placement', emoji: { name: '✅' }, custom_id: `placement_accept:${t.messageType}` },
-          { type: 2, style: 4, label: 'Decline Placement', emoji: { name: '❌' }, custom_id: `placement_decline:${t.messageType}` }
+          { type: 2, style: 2, label: 'Decline Placement', emoji: { name: '❌' }, custom_id: `placement_decline:${t.messageType}` }
         ]
       });
     }

@@ -4564,7 +4564,7 @@ export const BUTTON_REGISTRY = {
   'casting_invites_confirm_*': { label: 'Confirm Send Invites', description: 'Confirm and send casting outcome messages to applicant channels', emoji: '📨', style: 'Success', category: 'seasons' },
   'casting_invites_cancel': { label: 'Cancel Send Invites', description: 'Dismiss the casting invites confirmation', emoji: '❌', style: 'Secondary', category: 'seasons' },
   'placement_accept_*': { label: 'Accept Placement', description: 'Applicant accepts their cast/alternate placement', emoji: '✅', style: 'Success', category: 'seasons' },
-  'placement_decline_*': { label: 'Decline Placement', description: 'Applicant declines their cast/alternate placement', emoji: '❌', style: 'Danger', category: 'seasons' },
+  'placement_decline_*': { label: 'Decline Placement', description: 'Applicant declines their cast/alternate placement', emoji: '❌', style: 'Secondary', category: 'seasons' },
   'save_player_notes_*': { label: 'Save Player Notes', emoji: '📝', category: 'seasons' },
   'season_new_question_config_*': { label: 'New Question Config', emoji: '⚙️', category: 'seasons' },
   'season_post_button_config_*': { label: 'Post Button Config', emoji: '📮', category: 'seasons' },
