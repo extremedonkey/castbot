@@ -418,7 +418,7 @@ export async function generateSeasonAppRankingUI({
         .setStyle(ButtonStyle.Secondary)
         .setEmoji('🚷')
         .toJSON(),
-      { type: 2, custom_id: `ranking_view_all_scores_${configId}${ephemeralSuffix}`, label: 'View All Scores', style: 2, emoji: { name: '📊' } },
+      { type: 2, custom_id: `ranking_view_all_scores_${configId}${ephemeralSuffix}`, label: 'Casting Summary', style: 2, emoji: { name: '⭐' } },
       { type: 2, custom_id: `casting_messages_${configId}`, label: 'Invites', style: 2, emoji: { name: '✒️' } }
     ]
   });
