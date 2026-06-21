@@ -5900,108 +5900,30 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
       })(req, res, client);
     } else if (custom_id.startsWith('cast_player_') || custom_id.startsWith('cast_tentative_') || custom_id.startsWith('cast_reject_')) {
-      // Handle casting status buttons - USING CAST RANKING MANAGER
+      // LEGACY casting status BUTTONS — compat path for casting cards posted before the string-select
+      // redesign. New cards use the casting_status_ select. Logic lives in castRankingManager.
       return ButtonHandlerFactory.create({
         id: 'casting_status',
-        updateMessage: true, // This is an UPDATE_MESSAGE response
+        updateMessage: true,
         handler: async (context) => {
-          console.log(`🎬 START: casting_status - user ${context.userId}, button ${context.customId}`);
-          
           const { guildId, userId, client } = context;
           const guild = await client.guilds.fetch(guildId);
           const member = await guild.members.fetch(userId);
-          
-          // Check Casting permissions (includes special exception for server 1331657596087566398)
           if (!hasCastRankingPermissions(member, guildId)) {
-            return {
-              content: '❌ You need Manage Roles or Manage Channels permissions to set casting status.',
-              ephemeral: true
-            };
+            return { content: '❌ You need Manage Roles or Manage Channels permissions to set casting status.', ephemeral: true };
           }
-          
-          // Parse button ID: cast_[status]_[channelId]_[appIndex]_[configId] (new format) or cast_[status]_[channelId]_[appIndex] (legacy)
+          // cast_[status]_[channelId]_[appIndex]_[configId]
           const parts = context.customId.split('_');
-          const status = parts[1]; // player, tentative, or reject
-          const channelId = parts[2];
-          const appIndex = parseInt(parts[3]);
-          
-          // Extract configId properly: cast_player_1398865589887434783_0_config_1749305698427_391415444084490240
-          let configId = null;
+          const statusMap = { player: 'cast', tentative: 'tentative', reject: 'reject' };
           const configMatch = context.customId.match(/cast_\w+_\d+_\d+_(.+)$/);
-          if (configMatch) {
-            configId = configMatch[1]; // Everything after the appIndex
-          }
-          
-          // Map button status to database status
-          const statusMap = {
-            'player': 'cast',
-            'tentative': 'tentative', 
-            'reject': 'reject'
-          };
-          const castingStatus = statusMap[status];
-          
-          // Load and update player data
-          const playerData = await loadPlayerData();
-          
-          // Ensure application exists
-          if (!playerData[guildId]?.applications?.[channelId]) {
-            return {
-              content: '❌ Application not found.',
-              ephemeral: true
-            };
-          }
-          
-          // Update casting status
-          playerData[guildId].applications[channelId].castingStatus = castingStatus;
-          await savePlayerData(playerData);
-          
-          // Use castRankingManager to regenerate UI with updated casting status
-          console.log('🔧 Using castRankingManager.generateSeasonAppRankingUI() after casting status update');
-          const { generateSeasonAppRankingUI } = await import('./castRankingManager.js');
-          
-          // Get application data for UI regeneration
-          const { getAllApplicationsFromData, getApplicationsForSeason } = await import('./storage.js');
-          const allApplications = configId 
-            ? await getApplicationsForSeason(guildId, configId)
-            : await getAllApplicationsFromData(guildId);
-          const currentApp = allApplications[appIndex];
-          
-          if (!currentApp) {
-            return {
-              content: '❌ Application not found.',
-              ephemeral: true
-            };
-          }
-          
-          // Fetch the applicant member
-          let applicantMember;
-          try {
-            applicantMember = await guild.members.fetch(currentApp.userId);
-          } catch (error) {
-            applicantMember = {
-              displayName: currentApp.displayName,
-              user: { username: currentApp.username },
-              displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`,
-              roles: []
-            };
-          }
-          
-          // Generate UI using castRankingManager
-          const result = await generateSeasonAppRankingUI({
-            guildId,
-            userId,
-            configId: configId || 'casting',
-            allApplications,
-            currentApp,
-            appIndex,
-            applicantMember,
-            guild,
-            seasonName: 'Current Season', // TODO: Get actual season name
-            playerData
+          const { handleCastingStatus } = await import('./castRankingManager.js');
+          return handleCastingStatus({
+            value: statusMap[parts[1]],
+            channelId: parts[2],
+            appIndex: parseInt(parts[3]),
+            configId: configMatch ? configMatch[1] : null,
+            guildId, userId, guild
           });
-          
-          console.log(`✅ SUCCESS: casting_status - status set to ${castingStatus} for ${currentApp.displayName} via castRankingManager`);
-          return result;
         }
       })(req, res, client);
     } else if (custom_id.startsWith('edit_player_notes_')) {

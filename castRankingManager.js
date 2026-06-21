@@ -231,7 +231,7 @@ export async function generateSeasonAppRankingUI({
     components: [
       new ButtonBuilder()
         .setCustomId(`casting_messages_${configId}`)
-        .setLabel('Invitations')
+        .setLabel('Invites')
         .setStyle(ButtonStyle.Secondary)
         .setEmoji('✒️')
         .toJSON()
@@ -349,40 +349,40 @@ export async function generateSeasonAppRankingUI({
     containerComponents.push({ type: 10, content: dncWarningText });
   }
 
-  // ---- Casting: divider + header + status (string select) + workflow buttons ----
-  const castingStatusLabel = castingStatus === 'cast' ? '🎬 Cast Player'
-    : castingStatus === 'tentative' ? '❓ Tentative'
-    : castingStatus === 'reject' ? "🗑️ Don't Cast"
-    : null;
+  // ---- Casting: header + status (string select) ----
+  // "Still Deciding" (value 'undecided') is the default when no status is set, and selecting it
+  // CLEARS any existing castingStatus (see handleCastingStatus) — undecided is never stored, it's
+  // simply the absence of castingStatus, so this stays backwards compatible with existing data.
+  const applicantDisplayName = applicantMember?.displayName || currentApp.displayName || currentApp.username || 'Applicant';
+  const isUndecided = !['cast', 'tentative', 'reject'].includes(castingStatus);
   containerComponents.push(
     // No divider — the code-block header provides the visual break.
     {
       type: 10,
-      content: `### \`\`\`🎭 Casting\`\`\`\n-# Set your draft casting status below — change it as many times as you like; players are not notified. When you've decided who to cast, click ✒️ Invitations.`
+      content: `### \`\`\`🎭 Casting\`\`\`\n-# Set your draft casting status below — change it as many times as you like; players are not notified. When you've decided who to cast, click ✒️ Invites.`
     },
     {
-      type: 1, // Casting status — string select (replaces the 3 status buttons, frees a component)
+      type: 1, // Casting status — string select
       components: [{
         type: 3,
         custom_id: `casting_status_${currentApp.channelId}_${appIndex}_${configId}`,
-        placeholder: castingStatusLabel ? `Casting status: ${castingStatusLabel}` : '🎭 Set casting status…',
+        placeholder: '🎭 Casting status',
         min_values: 1,
         max_values: 1,
         options: [
-          { label: 'Cast Player', value: 'cast', emoji: { name: '🎬' }, default: castingStatus === 'cast' },
-          { label: 'Tentative', value: 'tentative', emoji: { name: '❓' }, default: castingStatus === 'tentative' },
-          { label: "Don't Cast", value: 'reject', emoji: { name: '🗑️' }, default: castingStatus === 'reject' }
+          { label: `Cast ${applicantDisplayName}`, value: 'cast', emoji: { name: '🎬' }, default: castingStatus === 'cast' },
+          { label: `Don't Cast ${applicantDisplayName}`, value: 'reject', emoji: { name: '🗑️' }, default: castingStatus === 'reject' },
+          { label: `Tentatively Cast ${applicantDisplayName}`, value: 'tentative', emoji: { name: '❓' }, default: castingStatus === 'tentative' },
+          { label: 'Still Deciding', value: 'undecided', emoji: { name: '❔' }, default: isUndecided }
         ]
       }]
     }
-    // (Casting Messages / Send Invitations workflow row moved up to below the nav row.)
   );
 
   // ---- Votes: header (with applicant name) + 1-5 rating buttons + tally ----
-  const voteeName = applicantMember?.displayName || currentApp.displayName || currentApp.username || 'Applicant';
   containerComponents.push(
     // No divider — the code-block header provides the visual break.
-    { type: 10, content: `### \`\`\`🗳️ Votes for ${voteeName}\`\`\`` },
+    { type: 10, content: `### \`\`\`🗳️ Votes for ${applicantDisplayName}\`\`\`` },
     rankingRow.toJSON()
   );
   if (votingBreakdown) {
@@ -501,19 +501,32 @@ export async function buildRankingScreen({ guildId, userId, configId, appIndex =
  * @param {Object} p.guild - pre-fetched Discord guild
  * @returns the generateSeasonAppRankingUI response, or an error payload.
  */
-export async function handleCastingStatus({ customId, value, guildId, userId, guild }) {
-  const m = customId.match(/^casting_status_(\d+)_(\d+)_(.+)$/);
-  if (!m) return { content: '❌ Invalid casting status select.', ephemeral: true };
-  const channelId = m[1];
-  const appIndex = parseInt(m[2]);
-  const configId = m[3];
+export async function handleCastingStatus({ customId, value, channelId, appIndex, configId, guildId, userId, guild }) {
+  // Accept either the select's custom_id (casting_status_{channelId}_{appIndex}_{configId}) or
+  // explicit channelId/appIndex/configId (used by the legacy cast_* button handler).
+  if (customId) {
+    const m = customId.match(/^casting_status_(\d+)_(\d+)_(.+)$/);
+    if (!m) return { content: '❌ Invalid casting status select.', ephemeral: true };
+    channelId = m[1];
+    appIndex = parseInt(m[2]);
+    configId = m[3];
+  }
+  if (!channelId || appIndex == null || Number.isNaN(appIndex) || !configId) {
+    return { content: '❌ Invalid casting status request.', ephemeral: true };
+  }
 
   const { loadPlayerData, savePlayerData, getApplicationsForSeason } = await import('./storage.js');
   const playerData = await loadPlayerData();
   if (!playerData[guildId]?.applications?.[channelId]) {
     return { content: '❌ Application not found.', ephemeral: true };
   }
-  playerData[guildId].applications[channelId].castingStatus = value;
+  // "undecided" is never stored — clearing castingStatus IS undecided (backwards compatible with
+  // existing data, where absence of castingStatus already meant undecided).
+  if (value === 'undecided') {
+    delete playerData[guildId].applications[channelId].castingStatus;
+  } else {
+    playerData[guildId].applications[channelId].castingStatus = value;
+  }
   await savePlayerData(playerData);
 
   const allApplications = await getApplicationsForSeason(guildId, configId);
