@@ -700,6 +700,7 @@ export function buildInvitesConfirm({ mode, appIndex, configId, targets }) {
  */
 export async function sendCastingInvites({ client, guildId, configId, mode, appIndex, messages }) {
   const { loadPlayerData, getApplicationsForSeason } = await import('./storage.js');
+  const { DiscordRequest } = await import('./utils.js');
   const playerData = await loadPlayerData();
   const allApplications = await getApplicationsForSeason(guildId, configId);
   const targets = selectInviteTargets(allApplications, playerData, guildId, mode, appIndex);
@@ -713,10 +714,10 @@ export async function sendCastingInvites({ client, guildId, configId, mode, appI
     if (!template || !template.trim()) { result.skippedEmpty++; continue; }
     const content = renderInviteMessage(sanitizeTemplate(template), t.userId);
     try {
-      const channel = await client.channels.fetch(t.channelId);
-      await channel.send({
-        flags: (1 << 15),
-        components: [{ type: 17, accent_color: INVITE_ACCENT[t.messageType], components: [{ type: 10, content }] }]
+      // Raw REST — discord.js channel.send() rejects raw Components V2 objects ("toJSON is not a function").
+      await DiscordRequest(`channels/${t.channelId}/messages`, {
+        method: 'POST',
+        body: { flags: (1 << 15), components: [{ type: 17, accent_color: INVITE_ACCENT[t.messageType], components: [{ type: 10, content }] }] }
       });
       result.sent++;
       result.perType[t.messageType]++;
