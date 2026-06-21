@@ -5620,21 +5620,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           if (!hasCastRankingPermissions(member, context.guildId)) {
             return { content: '❌ You need Manage Roles or Manage Channels permissions for this.' };
           }
-          return { content: '✒️ **Casting Messages** — coming soon!\nThis will let you customise the invitation (cast) and cut messages applicants receive when you click **Send Invitations**.' };
-        }
-      })(req, res, client);
-    } else if (custom_id.startsWith('send_invitations_')) {
-      // STUB — Send Invitations (notify applicants based on casting status). New ephemeral message.
-      return ButtonHandlerFactory.create({
-        id: 'send_invitations',
-        ephemeral: true,
-        handler: async (context) => {
-          const guild = await context.client.guilds.fetch(context.guildId);
-          const member = await guild.members.fetch(context.userId);
-          if (!hasCastRankingPermissions(member, context.guildId)) {
-            return { content: '❌ You need Manage Roles or Manage Channels permissions for this.' };
-          }
-          return { content: '📨 **Send Invitations** — coming soon!\nThis will send cast / cut notifications to applicants based on their casting status (🎬 Cast · ❓ Tentative · 🗑️ Don\'t Cast).' };
+          return { content: '✒️ **Invitations** — coming soon!\nThis will let you customise and send the cast / cut messages applicants receive, based on their casting status (🎬 Cast · ❓ Tentative · 🗑️ Don\'t Cast).' };
         }
       })(req, res, client);
     } else if (custom_id.startsWith('ranking_prev_') || custom_id.startsWith('ranking_next_') || custom_id.startsWith('ranking_view_all_scores')) {

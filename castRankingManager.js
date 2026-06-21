@@ -225,21 +225,15 @@ export async function generateSeasonAppRankingUI({
     buildSeasonNavRow(configId, 'ranking'),
   ];
 
-  // Casting workflow buttons — sit below the nav row (Edit) and above the applicant jump-select.
+  // Casting workflow button — sits below the nav row (Edit) and above the applicant jump-select.
   containerComponents.push({
     type: 1,
     components: [
       new ButtonBuilder()
         .setCustomId(`casting_messages_${configId}`)
-        .setLabel('Casting Messages')
+        .setLabel('Invitations')
         .setStyle(ButtonStyle.Secondary)
         .setEmoji('✒️')
-        .toJSON(),
-      new ButtonBuilder()
-        .setCustomId(`send_invitations_${configId}`)
-        .setLabel('Send Invitations')
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji('📨')
         .toJSON()
     ]
   });
@@ -364,7 +358,7 @@ export async function generateSeasonAppRankingUI({
     // No divider — the code-block header provides the visual break.
     {
       type: 10,
-      content: `### \`\`\`🎭 Casting\`\`\`\n-# Set your draft casting status below — change it as many times as you like; players are not notified. When you've decided who to cast, click 📨 Send Invitations.`
+      content: `### \`\`\`🎭 Casting\`\`\`\n-# Set your draft casting status below — change it as many times as you like; players are not notified. When you've decided who to cast, click ✒️ Invitations.`
     },
     {
       type: 1, // Casting status — string select (replaces the 3 status buttons, frees a component)
