@@ -4,6 +4,13 @@ import { shouldLog } from '../utils/logConfig.js';
 
 const ANALYTICS_LOG_FILE = './logs/user-analytics.log';
 
+// Reece (@extremedonkey) — pinged on lifecycle announcements (server install / setup run).
+// Same ID hardcoded in prodWatchdog.js:REECE_USER_ID, menuBuilder.js, dataNuker.js.
+const REECE_USER_ID = '391415444084490240';
+// Restrict mentions to ONLY Reece so a user-controlled guild/owner name (e.g. a server literally
+// named "@everyone") interpolated into the message can never ping the whole analytics server.
+const REECE_ONLY_MENTIONS = { users: [REECE_USER_ID] };
+
 // Server name cache to eliminate 739KB file reads per interaction
 const serverNameCache = new Map();
 
@@ -648,7 +655,9 @@ class QueueProcessor {
         console.log(`📊 DEBUG: QueueProcessor - Processing ${queueLength} queued messages`);
         
         const message = runtimeState.rateLimitQueue.shift();
-        await targetChannel.send(message.message);
+        // Rate-limited install/setup messages flow through here too — keep mentions restricted to
+        // Reece so the ping survives the queue and a malicious name still can't ping @everyone.
+        await targetChannel.send({ content: message.message, allowedMentions: REECE_ONLY_MENTIONS });
         
         runtimeState.lastMessageTime = Date.now();
         console.log(`📊 DEBUG: QueueProcessor - Sent message, ${runtimeState.rateLimitQueue.length} remaining`);
@@ -745,7 +754,7 @@ async function logNewServerInstall(guild, ownerInfo = null) {
     }
 
     // Create the announcement message in the same format as regular logs
-    const announcementMessage = `# ${timestamp} | 🎉🥳 **New Server Install**: \`${guild.name}\` (${guild.id}) | Owner: ${ownerDisplay}`;
+    const announcementMessage = `# ${timestamp} | 🎉🥳 **New Server Install**: \`${guild.name}\` (${guild.id}) | Owner: ${ownerDisplay} <@${REECE_USER_ID}>`;
     
     // Also write to analytics log file for server usage tracking
     const analyticsLogEntry = `${timestamp} | SERVER_INSTALL | ${guild.name} (${guild.id}) | Owner: ${ownerDisplay}\n`;
@@ -798,8 +807,8 @@ async function logNewServerInstall(guild, ownerInfo = null) {
     // Update last message time
     runtimeState.lastMessageTime = now;
     
-    // Send announcement to Discord
-    await targetChannel.send(announcementMessage);
+    // Send announcement to Discord (mentions restricted to Reece — see REECE_ONLY_MENTIONS)
+    await targetChannel.send({ content: announcementMessage, allowedMentions: REECE_ONLY_MENTIONS });
     
     // Start queue processing if needed (singleton ensures only one processor runs)
     if (runtimeState.rateLimitQueue.length > 0) {
@@ -866,7 +875,7 @@ async function logSetupRun(guild, userId, userName) {
     const timestamp = `[${timeStr}] ${dateStr}`;
 
     // Create the announcement message in the same format as server install
-    const announcementMessage = `# ${timestamp} | 🛠️✨ **Setup Run**: \`${guild.name}\` (${guild.id}) | User: ${userName} (${userId}) <@1331657596087566398>`;
+    const announcementMessage = `# ${timestamp} | 🛠️✨ **Setup Run**: \`${guild.name}\` (${guild.id}) | User: ${userName} (${userId}) <@${REECE_USER_ID}>`;
 
     // Also write to analytics log file
     const analyticsLogEntry = `${timestamp} | SETUP_RUN | ${guild.name} (${guild.id}) | User: ${userName} (${userId})\n`;
@@ -908,8 +917,8 @@ async function logSetupRun(guild, userId, userName) {
       return;
     }
 
-    // Post to Discord channel
-    await targetChannel.send(announcementMessage);
+    // Post to Discord channel (mentions restricted to Reece — see REECE_ONLY_MENTIONS)
+    await targetChannel.send({ content: announcementMessage, allowedMentions: REECE_ONLY_MENTIONS });
     runtimeState.lastMessageTime = now;
 
     // Start queue processing if needed (singleton ensures only one processor runs)
