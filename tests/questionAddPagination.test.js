@@ -117,7 +117,7 @@ describe('DNC question — NOT a singleton (host may add it multiple times)', ()
     const config = { questions: [{ id: 'a' }, { id: 'b' }] };
     addDncQuestion(config, 'dnc1');
     const types = config.questions.map(q => q.questionType);
-    assert.deepEqual(types, [undefined, 'completion', 'dnc']); // last plain → completion, dnc before it
+    assert.deepEqual(types, [undefined, 'dnc', 'completion']); // last plain → completion, dnc spliced before it
     // dnc sits immediately before completion
     const dncIdx = config.questions.findIndex(q => q.id === 'dnc1');
     const compIdx = config.questions.findIndex(q => q.questionType === 'completion');
