@@ -130,6 +130,7 @@ function checkCustomGate(limit, userId, nowMs) {
   const rel = relevantClaims(limit, nowMs);
   const timing = () => {
     const r = {};
+    if (limit.reset === 'fixed_window' || limit.reset === 'rolling') r.periodMs = limit.periodMs || 0;
     if (limit.reset === 'fixed_window') r.windowResetMs = windowResetMs(limit, nowMs);
     if (limit.reset === 'rolling' && rel.length) r.cooldownMs = Math.min(...rel.map(c => c.t)) + (limit.periodMs || 0) - nowMs;
     return r;
@@ -244,7 +245,7 @@ export function recordLimitClaim(limit, userId, nowMs = Date.now()) {
  * @param {string} [options.periodDescription] - Override description for once_per_period option
  * @returns {Array} Array of select option objects
  */
-export function buildLimitOptions({ currentLimit, periodMs, periodDescription, includeCustom = true, templates = [], currentTemplateId } = {}) {
+export function buildLimitOptions({ currentLimit, periodMs, periodDescription, includeCustom = true, templates = [], currentTemplateId, customSummary } = {}) {
   const options = [
     { label: 'Unlimited', value: 'unlimited', description: 'Can be used infinite times', emoji: { name: '♾️' }, default: currentLimit === 'unlimited' },
     { label: 'Once Per Player', value: 'once_per_player', description: 'Each player can use once', emoji: { name: '👤' }, default: currentLimit === 'once_per_player' },
@@ -252,7 +253,12 @@ export function buildLimitOptions({ currentLimit, periodMs, periodDescription, i
     { label: currentLimit === 'once_per_period' && periodMs ? `Once Per Period (${formatPeriod(periodMs)})` : 'Once Per Period', value: 'once_per_period', description: periodDescription || 'Cooldown period before player can reuse', emoji: { name: '⏱️' }, default: currentLimit === 'once_per_period' }
   ];
   if (includeCustom) {
-    options.push({ label: 'Custom…', value: 'custom', description: 'N players, global caps, fixed time windows & more', emoji: { name: '⚙️' }, default: currentLimit === 'custom' && !currentTemplateId });
+    // When a Custom limit is already configured on this outcome, surface its summary so the
+    // admin can see the current settings without opening the sub-screen.
+    const customDesc = (currentLimit === 'custom' && !currentTemplateId && customSummary)
+      ? `Current: ${customSummary}`
+      : 'N players, global caps, fixed time windows & more';
+    options.push({ label: 'Custom…', value: 'custom', description: customDesc.slice(0, 100), emoji: { name: '⚙️' }, default: currentLimit === 'custom' && !currentTemplateId });
   }
   // Saved server templates (max 5) — each a one-click reusable Custom config
   for (const t of (templates || []).slice(0, 5)) {

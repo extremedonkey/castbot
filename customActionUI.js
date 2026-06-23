@@ -4451,7 +4451,7 @@ export async function showModifyAttributeConfig(guildId, buttonId, actionIndex) 
             type: 3, // String Select
             custom_id: `safari_modify_attr_limit_${buttonId}_${actionIndex}`,
             placeholder: 'Select usage limit...',
-            options: await (await import('./customUsageLimitUI.js')).buildLimitSelectOptions({ guildId, currentLimit, periodMs: action?.config?.limit?.periodMs, currentTemplateId: action?.config?.limit?.templateId })
+            options: await (await import('./customUsageLimitUI.js')).buildLimitSelectOptions({ guildId, currentLimit, periodMs: action?.config?.limit?.periodMs, currentTemplateId: action?.config?.limit?.templateId, limitObj: action?.config?.limit })
           }]
         },
 
@@ -4857,7 +4857,7 @@ export async function showFightEnemyConfig(guildId, buttonId, actionIndex) {
         type: 3,
         custom_id: `safari_fight_enemy_limit_${buttonId}_${actionIndex}`,
         placeholder: 'Select usage limit...',
-        options: await (await import('./customUsageLimitUI.js')).buildLimitSelectOptions({ guildId, currentLimit, periodMs: action?.config?.limit?.periodMs, currentTemplateId: action?.config?.limit?.templateId })
+        options: await (await import('./customUsageLimitUI.js')).buildLimitSelectOptions({ guildId, currentLimit, periodMs: action?.config?.limit?.periodMs, currentTemplateId: action?.config?.limit?.templateId, limitObj: action?.config?.limit })
       }]
     }
   );

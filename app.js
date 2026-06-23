@@ -22118,7 +22118,13 @@ Your server is now ready for Tycoons gameplay!`;
               limit: (() => {
                 const lt = state.limit || 'unlimited';
                 if (lt === 'unlimited') return { type: 'unlimited' };
-                if (lt === 'custom') return buildCustomLimit(state.customConfig, state.customConfig?.templateId);
+                if (lt === 'custom') {
+                  // Prefer the freshly-edited working config; if state was lost (restart/edit),
+                  // preserve the existing saved custom limit (incl. its claims) rather than reset to defaults.
+                  if (state.customConfig) return buildCustomLimit(state.customConfig, state.customConfig?.templateId);
+                  const existingLimit = button.actions?.[actionIndex]?.config?.limit;
+                  return existingLimit?.type === 'custom' ? existingLimit : buildCustomLimit();
+                }
                 if (lt === 'once_per_period') return { type: 'once_per_period', periodMs: state.periodMs, claimedBy: {} };
                 return { type: lt, claimedBy: lt === 'once_per_player' ? [] : null };
               })()
@@ -22377,7 +22383,13 @@ Your server is now ready for Tycoons gameplay!`;
               limit: (() => {
                 const lt = state.limit || 'unlimited';
                 if (lt === 'unlimited') return { type: 'unlimited' };
-                if (lt === 'custom') return buildCustomLimit(state.customConfig, state.customConfig?.templateId);
+                if (lt === 'custom') {
+                  // Prefer the freshly-edited working config; if state was lost (restart/edit),
+                  // preserve the existing saved custom limit (incl. its claims) rather than reset to defaults.
+                  if (state.customConfig) return buildCustomLimit(state.customConfig, state.customConfig?.templateId);
+                  const existingLimit = button.actions?.[actionIndex]?.config?.limit;
+                  return existingLimit?.type === 'custom' ? existingLimit : buildCustomLimit();
+                }
                 if (lt === 'once_per_period') return { type: 'once_per_period', periodMs: state.periodMs, claimedBy: {} };
                 return { type: lt, claimedBy: lt === 'once_per_player' ? [] : null };
               })()
@@ -52721,6 +52733,20 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
       operation: 'give',          // Default to give (not remove)
       executeOn: global.pendingExecuteOn?.get(`${guildId}_${buttonId}`) || 'true'
     };
+    // Hydrate from the saved action so re-editing reflects current config (esp. custom limits)
+    try {
+      const { loadSafariContent } = await import('./safariManager.js');
+      const existing = (await loadSafariContent())[guildId]?.buttons?.[buttonId]?.actions?.[actionIndex];
+      const lim = existing?.config?.limit;
+      if (lim?.type) {
+        state.limit = lim.type;
+        if (lim.type === 'once_per_period') state.periodMs = lim.periodMs;
+        if (lim.type === 'custom') {
+          const { customConfigFromLimit } = await import('./customUsageLimitUI.js');
+          state.customConfig = customConfigFromLimit(lim);
+        }
+      }
+    } catch (e) { console.error('Hydrate give_item state error:', e); }
     // CRITICAL: Save the default state so it's available when user clicks Save
     dropConfigState.set(stateKey, state);
   }
@@ -52777,7 +52803,7 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
             type: 3, // String Select
             custom_id: `safari_item_limit_${buttonId}_${itemId}_${actionIndex}`,
             placeholder: 'Select usage limit...',
-            options: await (await import('./customUsageLimitUI.js')).buildLimitSelectOptions({ guildId, currentLimit: state.limit, periodMs: state.periodMs, currentTemplateId: state.customConfig?.templateId })
+            options: await (await import('./customUsageLimitUI.js')).buildLimitSelectOptions({ guildId, currentLimit: state.limit, periodMs: state.periodMs, currentTemplateId: state.customConfig?.templateId, limitObj: state.limit === 'custom' && state.customConfig ? { type: 'custom', ...state.customConfig } : undefined })
           }]
         },
 
@@ -52887,11 +52913,26 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
 async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerms) {
   // Get or create state for this configuration
   const stateKey = `${guildId}_${buttonId}_currency_${actionIndex}`;
-  const state = dropConfigState.get(stateKey) || {
-    limit: null,   // null means no selection made yet
-    style: null,
-    amount: null
-  };
+  let state = dropConfigState.get(stateKey);
+  if (!state) {
+    state = { limit: null, style: null, amount: null };
+    // Hydrate from the saved action so re-editing reflects current config (esp. custom limits)
+    try {
+      const { loadSafariContent } = await import('./safariManager.js');
+      const existing = (await loadSafariContent())[guildId]?.buttons?.[buttonId]?.actions?.[actionIndex];
+      const lim = existing?.config?.limit;
+      if (lim?.type) {
+        state.limit = lim.type;
+        if (lim.type === 'once_per_period') state.periodMs = lim.periodMs;
+        if (lim.type === 'custom') {
+          const { customConfigFromLimit } = await import('./customUsageLimitUI.js');
+          state.customConfig = customConfigFromLimit(lim);
+        }
+      }
+      if (existing?.config?.amount != null) state.amount = existing.config.amount;
+    } catch (e) { console.error('Hydrate give_currency state error:', e); }
+    dropConfigState.set(stateKey, state);
+  }
 
   // Check if there are existing claims to enable/disable reset button
   let claimsExist = false;
@@ -52953,7 +52994,7 @@ async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerm
             type: 3, // String Select
             custom_id: `safari_currency_limit_${buttonId}_${actionIndex}`,
             placeholder: 'Select usage limit...',
-            options: await (await import('./customUsageLimitUI.js')).buildLimitSelectOptions({ guildId, currentLimit: state.limit, periodMs: state.periodMs, currentTemplateId: state.customConfig?.templateId })
+            options: await (await import('./customUsageLimitUI.js')).buildLimitSelectOptions({ guildId, currentLimit: state.limit, periodMs: state.periodMs, currentTemplateId: state.customConfig?.templateId, limitObj: state.limit === 'custom' && state.customConfig ? { type: 'custom', ...state.customConfig } : undefined })
           }]
         },
 

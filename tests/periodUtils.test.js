@@ -514,3 +514,37 @@ describe('anchorMsFromHHMM', () => {
     assert.ok(now - anchor < 86400000);
   });
 });
+
+describe('custom limit — verdict carries periodMs for time messages', () => {
+  it('rolling block includes periodMs so the message can say "every X"', () => {
+    const limit = { type: 'custom', scope: 'per_player', reset: 'rolling', maxClaims: 1, periodMs: 60000, claims: [{ u: 'u1', t: 1000 }] };
+    const v = gate(limit, 'u1', 2000);
+    assert.equal(v.blocked, true);
+    assert.equal(v.reason, 'custom_cooldown');
+    assert.equal(v.remaining.periodMs, 60000);
+    assert.ok(v.remaining.cooldownMs > 0);
+  });
+  it('fixed_window block includes periodMs + windowResetMs', () => {
+    const limit = { type: 'custom', scope: 'global', unique: true, reset: 'fixed_window', maxClaims: 1, periodMs: 60000, anchorMs: 0, claims: [{ u: 'u1', t: 1000 }] };
+    const v = gate(limit, 'u2', 2000);
+    assert.equal(v.reason, 'custom_window');
+    assert.equal(v.remaining.periodMs, 60000);
+    assert.ok(v.remaining.windowResetMs > 0);
+  });
+});
+
+describe('buildLimitOptions — custom option reflects current config', () => {
+  it('shows the configured summary on the Custom option when active', async () => {
+    const { buildLimitOptions } = await import('../utils/periodUtils.js');
+    const opts = buildLimitOptions({ currentLimit: 'custom', customSummary: '5 unique players (global), resets every 1d 0h 0m' });
+    const custom = opts.find(o => o.value === 'custom');
+    assert.ok(custom.default);
+    assert.match(custom.description, /Current: 5 unique players/);
+  });
+  it('falls back to generic text when no custom configured', async () => {
+    const { buildLimitOptions } = await import('../utils/periodUtils.js');
+    const opts = buildLimitOptions({ currentLimit: 'once_per_player' });
+    const custom = opts.find(o => o.value === 'custom');
+    assert.match(custom.description, /global caps/);
+  });
+});

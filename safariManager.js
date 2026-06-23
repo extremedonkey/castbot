@@ -46,16 +46,27 @@ import { checkLimitGate, recordLimitClaim, formatCountdown } from './utils/perio
  * @returns {Object} Components V2 ephemeral response
  */
 function buildCustomLimitRejection(verdict, label) {
+    const r = verdict.remaining || {};
+    const everyStr = r.periodMs ? formatPeriod(r.periodMs) : null;
     let msg;
     switch (verdict.reason) {
         case 'custom_already_claimed':
-            msg = `❌ You've already claimed **${label}**.`;
+            // Player already claimed; if it's windowed, tell them when it comes back
+            if (r.windowResetMs != null) {
+                msg = `⏱️ **${label}** — you've already claimed this. Resets in **${formatCountdown(r.windowResetMs)}**.`;
+            } else {
+                msg = `❌ You've already claimed **${label}**.`;
+            }
             break;
         case 'custom_window':
-            msg = `⏱️ **${label}** — all claims for this window have been taken. Resets in **${formatCountdown(verdict.remaining?.windowResetMs)}**.`;
+            msg = everyStr
+                ? `⏱️ **${label}** — you can only claim this every **${everyStr}**. Resets in **${formatCountdown(r.windowResetMs)}**.`
+                : `⏱️ **${label}** — all claims for this window have been taken.`;
             break;
         case 'custom_cooldown':
-            msg = `⏱️ **${label}** — you're on cooldown. Try again in **${formatCountdown(verdict.remaining?.cooldownMs)}**.`;
+            msg = everyStr
+                ? `⏱️ **${label}** — you can only claim this every **${everyStr}**. Try again in **${formatCountdown(r.cooldownMs)}**.`
+                : `⏱️ **${label}** — you're on cooldown.`;
             break;
         case 'custom_exhausted':
         default:

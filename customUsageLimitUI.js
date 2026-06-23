@@ -167,12 +167,13 @@ export function listUsageTemplates(safariData, guildId) {
  * Build the Usage Limit String Select options for an outcome editor, including the
  * ⚙️ Custom option and the guild's saved templates. Loads safariContent internally.
  */
-export async function buildLimitSelectOptions({ guildId, currentLimit, periodMs, currentTemplateId, includeCustom = true }) {
-  const { buildLimitOptions } = await import('./utils/periodUtils.js');
+export async function buildLimitSelectOptions({ guildId, currentLimit, periodMs, currentTemplateId, includeCustom = true, limitObj }) {
+  const { buildLimitOptions, summarizeLimit } = await import('./utils/periodUtils.js');
   const { loadSafariContent } = await import('./safariManager.js');
   const sd = await loadSafariContent();
   const templates = listUsageTemplates(sd, guildId);
-  return buildLimitOptions({ currentLimit, periodMs, includeCustom, templates, currentTemplateId });
+  const customSummary = (limitObj && limitObj.type === 'custom') ? summarizeLimit(limitObj) : undefined;
+  return buildLimitOptions({ currentLimit, periodMs, includeCustom, templates, currentTemplateId, customSummary });
 }
 
 /**
