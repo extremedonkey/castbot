@@ -332,21 +332,15 @@ export async function generateSeasonAppRankingUI({
   containerComponents.push(
     { type: 14 }, // divider after the nav / select cluster
     { type: 10, content: `### \`\`\`📃 Application\`\`\`` },
-    { type: 10, content: identityText },
-    rankingRow.toJSON(), // 1-5 rating buttons — directly under the identity text
     {
-      type: 12, // Media Gallery — full-size applicant avatar
-      items: [{ media: { url: applicantAvatarURL }, description: `Avatar of ${currentApp.displayName || currentApp.username}` }]
-    },
-    {
-      type: 1, // Applicant actions — Edit Notes + View App (link) + Delete — directly under the avatar
+      type: 1, // Applicant actions — View App (link) + Edit Notes + Delete — directly under the header
       components: [
+        { type: 2, style: 5, label: 'View App', emoji: { name: '📄' }, url: `https://discord.com/channels/${guildId}/${currentApp.channelId}` },
         new ButtonBuilder()
           .setCustomId(`edit_player_notes_${currentApp.channelId}_${appIndex}_${configId}`)
           .setLabel('✏️ Edit Notes')
           .setStyle(ButtonStyle.Secondary)
           .toJSON(),
-        { type: 2, style: 5, label: 'View App', emoji: { name: '📄' }, url: `https://discord.com/channels/${guildId}/${currentApp.channelId}` },
         new ButtonBuilder()
           .setCustomId(`delete_application_mode_${currentApp.channelId}_${appIndex}_${configId}`)
           .setLabel('Delete')
@@ -354,6 +348,12 @@ export async function generateSeasonAppRankingUI({
           .setEmoji('🗑️')
           .toJSON()
       ]
+    },
+    { type: 10, content: identityText },
+    rankingRow.toJSON(), // 1-5 rating buttons — directly under the identity text
+    {
+      type: 12, // Media Gallery — full-size applicant avatar
+      items: [{ media: { url: applicantAvatarURL }, description: `Avatar of ${currentApp.displayName || currentApp.username}` }]
     }
   );
 
