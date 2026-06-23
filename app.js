@@ -34,6 +34,7 @@ import {
 } from 'discord.js';
 import { capitalize, DiscordRequest } from './utils.js';
 import { discordLogTags } from './src/utils/discordLogTags.js';  // Educational logging tags
+import { buildCustomLimit } from './customUsageLimitUI.js';  // ⚙️ Custom usage-limit builder
 import { 
   loadPlayerData, 
   updatePlayer, 
@@ -21666,6 +21667,12 @@ Your server is now ready for Tycoons gameplay!`;
           const limitType = context.values[0];
           console.log(`🎯 LIMIT: safari_item_limit - ${limitType} for ${buttonId}[${actionIndex}]`);
 
+          // ⚙️ Custom / 📋 Template → open the Custom config sub-screen
+          if (limitType === 'custom' || limitType.startsWith('tmpl:')) {
+            const parsed = { type: 'item', buttonId, actionIndex, itemId };
+            return await openCustomLimitScreen(context.guildId, parsed, limitType, safariData);
+          }
+
           // Once Per Period: show modal to collect days/hours/minutes
           if (limitType === 'once_per_period') {
             const { buildPeriodModalComponents } = await import('./utils/periodUtils.js');
@@ -22111,6 +22118,7 @@ Your server is now ready for Tycoons gameplay!`;
               limit: (() => {
                 const lt = state.limit || 'unlimited';
                 if (lt === 'unlimited') return { type: 'unlimited' };
+                if (lt === 'custom') return buildCustomLimit(state.customConfig, state.customConfig?.templateId);
                 if (lt === 'once_per_period') return { type: 'once_per_period', periodMs: state.periodMs, claimedBy: {} };
                 return { type: lt, claimedBy: lt === 'once_per_player' ? [] : null };
               })()
@@ -22226,6 +22234,11 @@ Your server is now ready for Tycoons gameplay!`;
           const limitType = context.values[0];
           
           console.log(`🎯 LIMIT: safari_currency_limit - ${limitType} for ${buttonId}[${actionIndex}]`);
+
+          // ⚙️ Custom / 📋 Template → open the Custom config sub-screen
+          if (limitType === 'custom' || limitType.startsWith('tmpl:')) {
+            return await openCustomLimitScreen(context.guildId, { type: 'currency', buttonId, actionIndex }, limitType);
+          }
 
           // Once Per Period: show modal to collect days/hours/minutes
           if (limitType === 'once_per_period') {
@@ -22364,6 +22377,7 @@ Your server is now ready for Tycoons gameplay!`;
               limit: (() => {
                 const lt = state.limit || 'unlimited';
                 if (lt === 'unlimited') return { type: 'unlimited' };
+                if (lt === 'custom') return buildCustomLimit(state.customConfig, state.customConfig?.templateId);
                 if (lt === 'once_per_period') return { type: 'once_per_period', periodMs: state.periodMs, claimedBy: {} };
                 return { type: lt, claimedBy: lt === 'once_per_player' ? [] : null };
               })()
@@ -24070,6 +24084,101 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
 
+    } else if (custom_id.startsWith('cl:')) {
+      // ⚙️ Custom Usage Limit sub-config screen — unified dispatcher for all field
+      // selects/buttons. ctx = "<type>:<buttonId>:<actionIndex>[:<itemId>]".
+      return ButtonHandlerFactory.create({
+        id: 'custom_limit_config',
+        updateMessage: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const rest = context.customId.slice(3); // drop "cl:"
+          const firstColon = rest.indexOf(':');
+          const sub = rest.slice(0, firstColon);
+          const ctx = rest.slice(firstColon + 1);
+          const value = context.values?.[0];
+          const guildId = context.guildId;
+
+          // deltmpl: ctx is the templateId, not a real ctx
+          if (sub === 'deltmpl') {
+            const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+            const { findTemplateUsages, getUsageTemplates } = await import('./customUsageLimitUI.js');
+            const templateId = ctx;
+            const safariData = await loadSafariContent();
+            const usages = findTemplateUsages(safariData, guildId, templateId);
+            if (usages.length > 0) {
+              const list = usages.slice(0, 15).map(u => `• **${u.buttonName}** — outcome #${u.actionIndex + 1} (${u.actionType})`).join('\n');
+              const more = usages.length > 15 ? `\n…and ${usages.length - 15} more` : '';
+              return {
+                flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+                components: [{ type: 17, accent_color: 0xf39c12, components: [{ type: 10, content: `## ⚠️ Template In Use\n\nThis template is used by **${usages.length}** outcome${usages.length === 1 ? '' : 's'}:\n${list}${more}\n\nChange or remove the limit on those outcomes first, then delete the template.` }] }]
+              };
+            }
+            const templates = getUsageTemplates(safariData, guildId);
+            delete templates[templateId];
+            await saveSafariContent(safariData);
+            return { flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, components: [{ type: 17, accent_color: 0x27ae60, components: [{ type: 10, content: '🗑️ **Template deleted.**' }] }] };
+          }
+
+          const parsed = parseCustomCtx(ctx);
+          const cfg = await getCustomWorkingConfig(guildId, parsed);
+
+          // Modal-opening subcommands
+          if (sub === 'mc' && value === 'other') {
+            return { type: InteractionResponseType.MODAL, data: {
+              custom_id: `clm:mc:${ctx}`, title: 'Custom Max Claims',
+              components: [{ type: 18, label: 'Maximum claims', description: 'A whole number (e.g. 5), or 0 for unlimited',
+                component: { type: 4, custom_id: 'maxclaims', style: 1, placeholder: '5', max_length: 6, required: true, ...(cfg.maxClaims != null ? { value: String(cfg.maxClaims) } : {}) } }]
+            }};
+          }
+          if (sub === 'per') {
+            const { buildPeriodModalComponents } = await import('./utils/periodUtils.js');
+            return { type: InteractionResponseType.MODAL, data: {
+              custom_id: `clm:per:${ctx}`, title: 'Window Length',
+              components: buildPeriodModalComponents({ currentPeriodMs: cfg.periodMs || 0 })
+            }};
+          }
+          if (sub === 'rt') {
+            const { buildResetTimeModalComponents } = await import('./utils/periodUtils.js');
+            return { type: InteractionResponseType.MODAL, data: {
+              custom_id: `clm:rt:${ctx}`, title: 'Daily Reset Time',
+              components: buildResetTimeModalComponents({ currentAnchorMs: cfg.anchorMs })
+            }};
+          }
+          if (sub === 'savetmpl') {
+            return { type: InteractionResponseType.MODAL, data: {
+              custom_id: `clm:tmpl:${ctx}`, title: 'Save Usage Template',
+              components: [
+                { type: 18, label: 'Template name', component: { type: 4, custom_id: 'tname', style: 1, placeholder: 'e.g. Daily 5 Unique', max_length: 50, required: true } },
+                { type: 18, label: 'Emoji (optional)', description: 'A single emoji shown in the menu', component: { type: 4, custom_id: 'temoji', style: 1, placeholder: '🗓️', max_length: 8, required: false } }
+              ]
+            }};
+          }
+
+          // Field-mutation subcommands → mutate working config, persist, re-render
+          if (sub === 'mc') {
+            cfg.maxClaims = value === 'inf' ? null : parseInt(value.split(':')[1]);
+          } else if (sub === 'sc') {
+            cfg.scope = value;
+            if (value === 'global' && cfg.unique === undefined) cfg.unique = true;
+          } else if (sub === 'un') {
+            cfg.unique = value === 'unique';
+          } else if (sub === 'rs') {
+            cfg.reset = value;
+            if (value !== 'none' && !cfg.periodMs) cfg.periodMs = 86400000;
+          }
+          await setCustomWorkingConfig(guildId, parsed, cfg);
+
+          if (sub === 'save') {
+            // For attr/enemy the limit is already persisted; for item/currency it lives in
+            // dropConfigState and is committed when the outcome editor saves.
+            return await rerenderOutcomeEditor(guildId, parsed);
+          }
+          return await renderCustomConfigScreen(guildId, parsed);
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('safari_fight_enemy_limit_')) {
       return ButtonHandlerFactory.create({
         id: 'safari_fight_enemy_limit',
@@ -24088,6 +24197,11 @@ Your server is now ready for Tycoons gameplay!`;
 
           if (!button || !button.actions?.[actionIndex]) {
             return { content: '❌ Action not found.', ephemeral: true };
+          }
+
+          // ⚙️ Custom / 📋 Template → open the Custom config sub-screen
+          if (limitValue === 'custom' || limitValue.startsWith('tmpl:')) {
+            return await openCustomLimitScreen(context.guildId, { type: 'enemy', buttonId, actionIndex }, limitValue, safariData);
           }
 
           // Once Per Period: show modal to collect days/hours/minutes
@@ -24491,6 +24605,11 @@ Your server is now ready for Tycoons gameplay!`;
           const limitValue = context.values[0];
 
           console.log(`📊 LIMIT: safari_modify_attr_limit - setting to ${limitValue} for ${buttonId}[${actionIndex}]`);
+
+          // ⚙️ Custom / 📋 Template → open the Custom config sub-screen
+          if (limitValue === 'custom' || limitValue.startsWith('tmpl:')) {
+            return await openCustomLimitScreen(context.guildId, { type: 'attr', buttonId, actionIndex }, limitValue);
+          }
 
           // Once Per Period: show modal to collect days/hours/minutes
           if (limitValue === 'once_per_period') {
@@ -48114,11 +48233,15 @@ Your server is now ready for Tycoons gameplay!`;
         // Deep clone helper function
         const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
 
-        // Clone actions with claimedBy arrays reset
+        // Clone actions with claim tracking reset (don't carry claimants to the clone)
         const clonedActions = Array.isArray(sourceAction.actions) ? deepClone(sourceAction.actions).map(action => {
           // Reset claimedBy arrays in limit configs
           if (action.config?.limit?.claimedBy) {
             action.config.limit.claimedBy = [];
+          }
+          // Reset custom-limit claims[] (templateId is preserved as provenance)
+          if (action.config?.limit?.type === 'custom') {
+            action.config.limit.claims = [];
           }
           return action;
         }) : [];
@@ -49971,6 +50094,92 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
       
+    } else if (custom_id.startsWith('clm:')) {
+      // ⚙️ Custom Usage Limit modal submits: clm:mc / clm:per / clm:rt / clm:tmpl
+      try {
+        const guildId = req.body.guild_id;
+        const rest = custom_id.slice(4);
+        const firstColon = rest.indexOf(':');
+        const sub = rest.slice(0, firstColon);
+        const ctx = rest.slice(firstColon + 1);
+        const parsed = parseCustomCtx(ctx);
+        const cfg = await getCustomWorkingConfig(guildId, parsed);
+
+        // Helper: read a Label-wrapped (or legacy) modal field
+        const readField = (id) => {
+          for (const comp of (data.components || [])) {
+            const child = comp.component || comp.components?.[0];
+            if (child?.custom_id === id) return child.value;
+          }
+          return undefined;
+        };
+
+        if (sub === 'mc') {
+          const raw = parseInt((readField('maxclaims') || '').trim());
+          if (Number.isNaN(raw) || raw < 0) {
+            return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Enter a whole number (0 = unlimited).', flags: InteractionResponseFlags.EPHEMERAL } });
+          }
+          cfg.maxClaims = raw === 0 ? null : raw;
+          await setCustomWorkingConfig(guildId, parsed, cfg);
+          return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: await renderCustomConfigScreen(guildId, parsed) });
+        }
+
+        if (sub === 'per') {
+          const { parsePeriodFromModal } = await import('./utils/periodUtils.js');
+          const { totalMs } = parsePeriodFromModal(data.components);
+          if (!totalMs || totalMs < 60000) {
+            return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Window must be at least 1 minute.', flags: InteractionResponseFlags.EPHEMERAL } });
+          }
+          cfg.periodMs = totalMs;
+          if (!cfg.reset || cfg.reset === 'none') cfg.reset = 'rolling';
+          await setCustomWorkingConfig(guildId, parsed, cfg);
+          return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: await renderCustomConfigScreen(guildId, parsed) });
+        }
+
+        if (sub === 'rt') {
+          const { anchorMsFromHHMM } = await import('./utils/periodUtils.js');
+          const h = parseInt((readField('resettime_hours') || '').trim());
+          const m = parseInt((readField('resettime_minutes') || '0').trim()) || 0;
+          if (Number.isNaN(h) || h < 0 || h > 23 || m < 0 || m > 59) {
+            return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Enter a valid time (hour 0-23, minute 0-59).', flags: InteractionResponseFlags.EPHEMERAL } });
+          }
+          cfg.reset = 'fixed_window';
+          if (!cfg.periodMs) cfg.periodMs = 86400000;
+          cfg.anchorMs = anchorMsFromHHMM(h, m);
+          await setCustomWorkingConfig(guildId, parsed, cfg);
+          return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: await renderCustomConfigScreen(guildId, parsed) });
+        }
+
+        if (sub === 'tmpl') {
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const { getUsageTemplates, MAX_USAGE_TEMPLATES, buildCustomLimit } = await import('./customUsageLimitUI.js');
+          const name = (readField('tname') || '').trim();
+          const emoji = (readField('temoji') || '').trim();
+          if (!name) {
+            return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Template name required.', flags: InteractionResponseFlags.EPHEMERAL } });
+          }
+          const safariData = await loadSafariContent();
+          const templates = getUsageTemplates(safariData, guildId);
+          if (Object.keys(templates).length >= MAX_USAGE_TEMPLATES) {
+            return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ You already have the maximum of ${MAX_USAGE_TEMPLATES} usage templates. Delete one first.`, flags: InteractionResponseFlags.EPHEMERAL } });
+          }
+          const id = `tmpl_${Date.now()}`;
+          const built = buildCustomLimit(cfg);
+          const { type, claims, templateId, ...templateConfig } = built;
+          templates[id] = { id, name: name.slice(0, 50), emoji: emoji || '📋', config: templateConfig, metadata: { createdBy: req.body.member?.user?.id, createdAt: Date.now(), lastModified: Date.now() } };
+          await saveSafariContent(safariData);
+          // Tag the working config with the new template's provenance and re-render
+          cfg.templateId = id;
+          await setCustomWorkingConfig(guildId, parsed, cfg);
+          return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: await renderCustomConfigScreen(guildId, parsed, { note: `📋 Saved as template “${name}” (now selectable in the Usage Limit menu).` }) });
+        }
+
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Unknown custom-limit modal.', flags: InteractionResponseFlags.EPHEMERAL } });
+      } catch (err) {
+        console.error('Error handling clm: modal submit:', err);
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Error saving custom limit settings.', flags: InteractionResponseFlags.EPHEMERAL } });
+      }
+
     } else if (custom_id.startsWith('period_modal_')) {
       // Handle Once Per Period cooldown configuration modal submission
       try {
@@ -52378,6 +52587,123 @@ async function showDropConfiguration(guildId, buttonId, actionIndex) {
 // Temporary state storage for give_item/give_currency configuration
 const dropConfigState = new Map();
 
+// ─── Custom Usage Limit (⚙️) working-state plumbing ───────────────────────
+// ctx encodes the outcome: "<type>:<buttonId>:<actionIndex>[:<itemId>]" where
+// type ∈ {currency,item,attr,enemy}. item/currency use deferred dropConfigState;
+// attr/enemy save immediately to safariContent (matches their existing editors).
+function parseCustomCtx(ctx) {
+  const parts = ctx.split(':');
+  const type = parts[0];
+  if (type === 'item') {
+    const itemId = parts[parts.length - 1];
+    const actionIndex = parseInt(parts[parts.length - 2]);
+    const buttonId = parts.slice(1, -2).join(':');
+    return { type, buttonId, actionIndex, itemId };
+  }
+  const actionIndex = parseInt(parts[parts.length - 1]);
+  const buttonId = parts.slice(1, -1).join(':');
+  return { type, buttonId, actionIndex };
+}
+
+function customCtxOf(type, buttonId, actionIndex, itemId) {
+  return type === 'item' ? `item:${buttonId}:${actionIndex}:${itemId}` : `${type}:${buttonId}:${actionIndex}`;
+}
+
+function customStateKey(guildId, parsed) {
+  if (parsed.type === 'item') return `${guildId}_${parsed.buttonId}_${parsed.itemId}_${parsed.actionIndex}`;
+  if (parsed.type === 'currency') return `${guildId}_${parsed.buttonId}_currency_${parsed.actionIndex}`;
+  return null;
+}
+
+async function getCustomWorkingConfig(guildId, parsed) {
+  const { customConfigFromLimit, defaultCustomConfig } = await import('./customUsageLimitUI.js');
+  if (parsed.type === 'item' || parsed.type === 'currency') {
+    const state = dropConfigState.get(customStateKey(guildId, parsed));
+    return (state && state.customConfig) ? state.customConfig : defaultCustomConfig();
+  }
+  const { loadSafariContent } = await import('./safariManager.js');
+  const safariData = await loadSafariContent();
+  const limit = safariData[guildId]?.buttons?.[parsed.buttonId]?.actions?.[parsed.actionIndex]?.config?.limit;
+  return customConfigFromLimit(limit);
+}
+
+async function setCustomWorkingConfig(guildId, parsed, customConfig) {
+  const { buildCustomLimit } = await import('./customUsageLimitUI.js');
+  if (parsed.type === 'item' || parsed.type === 'currency') {
+    const key = customStateKey(guildId, parsed);
+    const state = dropConfigState.get(key) || {};
+    state.limit = 'custom';
+    state.customConfig = customConfig;
+    dropConfigState.set(key, state);
+    return;
+  }
+  // attr/enemy: immediate save to safariContent (preserve existing claims on edit)
+  const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+  const safariData = await loadSafariContent();
+  const button = safariData[guildId]?.buttons?.[parsed.buttonId];
+  const action = button?.actions?.[parsed.actionIndex];
+  if (action) {
+    if (!action.config) action.config = {};
+    const existing = action.config.limit;
+    const newLimit = buildCustomLimit(customConfig, customConfig.templateId);
+    if (existing?.type === 'custom' && Array.isArray(existing.claims)) newLimit.claims = existing.claims;
+    action.config.limit = newLimit;
+    if (button.metadata) button.metadata.lastModified = Date.now();
+    await saveSafariContent(safariData);
+  }
+}
+
+async function rerenderOutcomeEditor(guildId, parsed) {
+  if (parsed.type === 'item') {
+    const { loadSafariContent } = await import('./safariManager.js');
+    const safariData = await loadSafariContent();
+    const item = safariData[guildId]?.items?.[parsed.itemId];
+    return await showGiveItemConfig(guildId, parsed.buttonId, parsed.itemId, item, parsed.actionIndex);
+  }
+  if (parsed.type === 'currency') {
+    const { getCustomTerms } = await import('./safariManager.js');
+    const customTerms = await getCustomTerms(guildId);
+    return await showGiveCurrencyConfig(guildId, parsed.buttonId, parsed.actionIndex, customTerms);
+  }
+  if (parsed.type === 'attr') {
+    const { showModifyAttributeConfig } = await import('./customActionUI.js');
+    return await showModifyAttributeConfig(guildId, parsed.buttonId, parsed.actionIndex);
+  }
+  if (parsed.type === 'enemy') {
+    const { showFightEnemyConfig } = await import('./customActionUI.js');
+    return await showFightEnemyConfig(guildId, parsed.buttonId, parsed.actionIndex);
+  }
+  return { content: '✅ Saved.', flags: InteractionResponseFlags.EPHEMERAL };
+}
+
+/** Render the Custom config screen for a ctx (reads current working config). */
+async function renderCustomConfigScreen(guildId, parsed, opts = {}) {
+  const { buildCustomLimitConfigUI } = await import('./customUsageLimitUI.js');
+  const customConfig = await getCustomWorkingConfig(guildId, parsed);
+  const ctx = customCtxOf(parsed.type, parsed.buttonId, parsed.actionIndex, parsed.itemId);
+  return buildCustomLimitConfigUI({ ctx, customConfig, ...opts });
+}
+
+/** Entry from a limit String Select choosing ⚙️ Custom or a 📋 Template. */
+async function openCustomLimitScreen(guildId, parsed, limitValue, safariData) {
+  const { getUsageTemplates } = await import('./customUsageLimitUI.js');
+  if (limitValue.startsWith('tmpl:')) {
+    const templateId = limitValue.slice('tmpl:'.length);
+    if (!safariData) {
+      const { loadSafariContent } = await import('./safariManager.js');
+      safariData = await loadSafariContent();
+    }
+    const tmpl = getUsageTemplates(safariData, guildId)[templateId];
+    if (!tmpl) return renderCustomConfigScreen(guildId, parsed, { note: '⚠️ Template not found — configure manually.' });
+    await setCustomWorkingConfig(guildId, parsed, { ...tmpl.config, templateId });
+    return renderCustomConfigScreen(guildId, parsed, { templateMode: true, templateId, title: tmpl.name, note: `From template “${tmpl.name}”` });
+  }
+  // plain ⚙️ Custom — keep existing custom config if present, else defaults; persist so attr/enemy gets a custom limit
+  const cfg = await getCustomWorkingConfig(guildId, parsed);
+  await setCustomWorkingConfig(guildId, parsed, cfg);
+  return renderCustomConfigScreen(guildId, parsed);
+}
+
 /**
  * Show configuration UI for give_item action
  */
@@ -52415,6 +52741,8 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
           claimsExist = claimedBy !== null && claimedBy !== undefined;
         } else if (action.config.limit.type === 'once_per_period') {
           claimsExist = typeof claimedBy === 'object' && !Array.isArray(claimedBy) && Object.keys(claimedBy).length > 0;
+        } else if (action.config.limit.type === 'custom') {
+          claimsExist = Array.isArray(action.config.limit.claims) && action.config.limit.claims.length > 0;
         }
       }
     }
@@ -52449,7 +52777,7 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
             type: 3, // String Select
             custom_id: `safari_item_limit_${buttonId}_${itemId}_${actionIndex}`,
             placeholder: 'Select usage limit...',
-            options: (await import('./utils/periodUtils.js')).buildLimitOptions({ currentLimit: state.limit, periodMs: state.periodMs })
+            options: await (await import('./customUsageLimitUI.js')).buildLimitSelectOptions({ guildId, currentLimit: state.limit, periodMs: state.periodMs, currentTemplateId: state.customConfig?.templateId })
           }]
         },
 
@@ -52583,6 +52911,8 @@ async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerm
           claimsExist = claimedBy !== null && claimedBy !== undefined;
         } else if (action.config.limit.type === 'once_per_period') {
           claimsExist = typeof claimedBy === 'object' && !Array.isArray(claimedBy) && Object.keys(claimedBy).length > 0;
+        } else if (action.config.limit.type === 'custom') {
+          claimsExist = Array.isArray(action.config.limit.claims) && action.config.limit.claims.length > 0;
         }
       }
     }
@@ -52623,7 +52953,7 @@ async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerm
             type: 3, // String Select
             custom_id: `safari_currency_limit_${buttonId}_${actionIndex}`,
             placeholder: 'Select usage limit...',
-            options: (await import('./utils/periodUtils.js')).buildLimitOptions({ currentLimit: state.limit, periodMs: state.periodMs })
+            options: await (await import('./customUsageLimitUI.js')).buildLimitSelectOptions({ guildId, currentLimit: state.limit, periodMs: state.periodMs, currentTemplateId: state.customConfig?.templateId })
           }]
         },
 

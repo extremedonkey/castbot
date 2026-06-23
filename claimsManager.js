@@ -12,7 +12,7 @@
  * (`resolveNames`) only reads from a passed-in guild object.
  */
 
-import { formatCountdown } from './utils/periodUtils.js';
+import { formatCountdown, relevantCustomClaims, customWindowResetMs, summarizeLimit } from './utils/periodUtils.js';
 
 /** Coerce to a non-negative number (cooldown remaining can exceed the period — admin override). */
 function nonNeg(n, fallback = 0) {
@@ -20,9 +20,11 @@ function nonNeg(n, fallback = 0) {
   return Number.isNaN(n) ? fallback : Math.max(0, n);
 }
 
-/** True when the outcome uses a time-based (cooldown) limit. */
+/** True when the outcome uses a time-based (cooldown/window) limit. */
 export function isTimed(limit) {
-  return limit?.type === 'once_per_period';
+  if (limit?.type === 'once_per_period') return true;
+  if (limit?.type === 'custom') return limit.reset === 'rolling' || limit.reset === 'fixed_window';
+  return false;
 }
 
 /**
@@ -59,6 +61,25 @@ export function getClaimants(limit, now = Date.now()) {
     });
   }
 
+  if (limit.type === 'custom') {
+    // Show one entry per distinct LIVE claimant, with their claim count in the current window/period.
+    const rel = relevantCustomClaims(limit, now);
+    const byUser = new Map();
+    for (const c of rel) {
+      const e = byUser.get(c.u) || { count: 0, earliest: c.t };
+      e.count += 1;
+      if (c.t < e.earliest) e.earliest = c.t;
+      byUser.set(c.u, e);
+    }
+    const windowReset = limit.reset === 'fixed_window' ? customWindowResetMs(limit, now) : null;
+    return [...byUser.entries()].map(([userId, e]) => {
+      let remainingMs = null;
+      if (limit.reset === 'fixed_window') remainingMs = windowReset;
+      else if (limit.reset === 'rolling') remainingMs = Math.max(0, e.earliest + (limit.periodMs || 0) - now);
+      return { userId, claimedAt: e.earliest, count: e.count, remainingMs, onCooldown: remainingMs != null && remainingMs > 0 };
+    });
+  }
+
   return [];
 }
 
@@ -69,6 +90,12 @@ export function claimStatusLine(claimant, limit) {
       ? `🧊 On Cooldown | ${formatCountdown(claimant.remainingMs)} remaining`
       : '✅ Available';
   }
+  if (limit?.type === 'custom') {
+    const c = claimant.count ? `${claimant.count}× claimed` : 'Claimed';
+    if (limit.reset === 'fixed_window' && claimant.remainingMs != null) return `${c} | resets in ${formatCountdown(claimant.remainingMs)}`;
+    if (limit.reset === 'rolling' && claimant.onCooldown) return `${c} | frees in ${formatCountdown(claimant.remainingMs)}`;
+    return `🔒 ${c}`;
+  }
   return '🔒 Claimed';
 }
 
@@ -78,6 +105,12 @@ export function claimStatusLine(claimant, limit) {
  */
 export function addClaim(limit, userId, { remainingMs, now = Date.now() } = {}) {
   if (!limit) return limit;
+
+  if (limit.type === 'custom') {
+    if (!Array.isArray(limit.claims)) limit.claims = [];
+    limit.claims.push({ u: userId, t: now });
+    return limit;
+  }
 
   if (limit.type === 'once_per_player') {
     if (!Array.isArray(limit.claimedBy)) limit.claimedBy = limit.claimedBy ? [limit.claimedBy] : [];
@@ -100,6 +133,11 @@ export function addClaim(limit, userId, { remainingMs, now = Date.now() } = {}) 
 /** Remove a single player's claim (type-aware). */
 export function clearClaim(limit, userId) {
   if (!limit) return limit;
+
+  if (limit.type === 'custom') {
+    limit.claims = Array.isArray(limit.claims) ? limit.claims.filter(c => c.u !== userId) : [];
+    return limit;
+  }
 
   if (limit.type === 'once_per_player') {
     limit.claimedBy = Array.isArray(limit.claimedBy) ? limit.claimedBy.filter(id => id !== userId) : [];
@@ -134,7 +172,8 @@ export function setCooldown(limit, userId, remainingMs, now = Date.now()) {
 /** Reset all claims for an outcome to its empty state (standardises once_globally → null). */
 export function clearAllClaims(limit) {
   if (!limit) return limit;
-  if (limit.type === 'once_per_player') limit.claimedBy = [];
+  if (limit.type === 'custom') limit.claims = [];
+  else if (limit.type === 'once_per_player') limit.claimedBy = [];
   else if (limit.type === 'once_globally') limit.claimedBy = null;
   else if (limit.type === 'once_per_period') limit.claimedBy = {};
   return limit;

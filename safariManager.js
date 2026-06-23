@@ -37,6 +37,67 @@ import {
     getMovementDisplay,
     initializePlayerOnMap
 } from './mapMovement.js';
+import { checkLimitGate, recordLimitClaim, formatCountdown } from './utils/periodUtils.js';
+
+/**
+ * Build an ephemeral rejection card for a blocked CUSTOM usage limit.
+ * @param {Object} verdict - from checkLimitGate (reason + remaining)
+ * @param {string} label - human label for the thing (e.g. "🪙 25 Coins", "⚔️ Sword x1")
+ * @returns {Object} Components V2 ephemeral response
+ */
+function buildCustomLimitRejection(verdict, label) {
+    let msg;
+    switch (verdict.reason) {
+        case 'custom_already_claimed':
+            msg = `❌ You've already claimed **${label}**.`;
+            break;
+        case 'custom_window':
+            msg = `⏱️ **${label}** — all claims for this window have been taken. Resets in **${formatCountdown(verdict.remaining?.windowResetMs)}**.`;
+            break;
+        case 'custom_cooldown':
+            msg = `⏱️ **${label}** — you're on cooldown. Try again in **${formatCountdown(verdict.remaining?.cooldownMs)}**.`;
+            break;
+        case 'custom_exhausted':
+        default:
+            msg = `❌ **${label}** — no claims remaining.`;
+            break;
+    }
+    return {
+        flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+        components: [{ type: 17, accent_color: 0xE74C3C, components: [{ type: 10, content: msg }] }]
+    };
+}
+
+/**
+ * Read the LIVE limit object for an action from safariContent (custom counters
+ * change every claim, so we must read fresh rather than trust the passed config).
+ * @returns {Object|null} the live config.limit or null
+ */
+async function getLiveActionLimit(guildId, buttonId, actionIndex, expectedType) {
+    if (!buttonId || actionIndex == null) return null;
+    const safariData = await loadSafariContent();
+    const action = safariData[guildId]?.buttons?.[buttonId]?.actions?.[actionIndex];
+    if (!action) return null;
+    if (expectedType && action.type !== expectedType) return null;
+    return action.config?.limit || null;
+}
+
+/**
+ * Persist a custom claim for an action (load fresh → record → save).
+ */
+async function persistCustomClaim(guildId, buttonId, actionIndex, userId, expectedType) {
+    if (!buttonId || actionIndex == null) {
+        console.warn(`⚠️ custom limit but no buttonId/actionIndex — claim NOT recorded for ${expectedType}`);
+        return;
+    }
+    const safariData = await loadSafariContent();
+    const action = safariData[guildId]?.buttons?.[buttonId]?.actions?.[actionIndex];
+    if (action && (!expectedType || action.type === expectedType) && action.config?.limit?.type === 'custom') {
+        recordLimitClaim(action.config.limit, userId);
+        await saveSafariContent(safariData);
+        console.log(`✅ Recorded custom claim for ${expectedType} ${buttonId}[${actionIndex}] (${action.config.limit.claims?.length} total)`);
+    }
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -979,9 +1040,19 @@ async function executeGiveCurrency(config, userId, guildId, interaction, buttonI
     const customTerms = await getCustomTerms(guildId);
     
     console.log(`💰 DEBUG: Executing give currency: ${config.amount} for user ${userId}`);
-    
+
+    // Custom usage limit (type: 'custom') — read LIVE claims and gate
+    if (config.limit?.type === 'custom') {
+        const liveLimit = await getLiveActionLimit(guildId, buttonId, actionIndex, 'give_currency') || config.limit;
+        const verdict = checkLimitGate(liveLimit, userId);
+        if (verdict.blocked) {
+            const amountStr = config.amount > 0 ? `+${config.amount}` : `${config.amount}`;
+            return buildCustomLimitRejection(verdict, `${customTerms.currencyEmoji || '🪙'} ${amountStr} ${customTerms.currencyName}`);
+        }
+    }
+
     // Check usage limits
-    if (config.limit && config.limit.type !== 'unlimited') {
+    if (config.limit && config.limit.type !== 'unlimited' && config.limit.type !== 'custom') {
         const claimedBy = config.limit.claimedBy;
 
         // Normalize claimedBy to check actual claims, not just truthiness
@@ -1048,9 +1119,14 @@ async function executeGiveCurrency(config, userId, guildId, interaction, buttonI
         channelName: interaction?.channel?.name || null
     };
     const newBalance = await updateCurrency(guildId, userId, config.amount, context);
-    
+
+    // Custom usage limit: record claim into the live action's claims[]
+    if (config.limit?.type === 'custom') {
+        await persistCustomClaim(guildId, buttonId, actionIndex, userId, 'give_currency');
+    }
+
     // Update claim tracking persistently - use specific button and action if provided
-    if (config.limit && config.limit.type !== 'unlimited') {
+    if (config.limit && config.limit.type !== 'unlimited' && config.limit.type !== 'custom') {
         const safariData = await loadSafariContent();
         
         if (buttonId && actionIndex !== null) {
@@ -1149,8 +1225,17 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
     const itemName = item?.name || config.itemId;
     const itemEmoji = item?.emoji || '📦';
 
+    // Custom usage limit (type: 'custom') — read LIVE claims and gate
+    if (config.limit?.type === 'custom') {
+        const liveLimit = await getLiveActionLimit(guildId, buttonId, actionIndex, 'give_item') || config.limit;
+        const verdict = checkLimitGate(liveLimit, userId);
+        if (verdict.blocked) {
+            return buildCustomLimitRejection(verdict, `${itemEmoji} ${quantity}x ${itemName}`);
+        }
+    }
+
     // Check usage limits using live data from safariContent
-    if (config.limit && config.limit.type !== 'unlimited') {
+    if (config.limit && config.limit.type !== 'unlimited' && config.limit.type !== 'custom') {
         const safariData = await loadSafariContent();
 
         // Get live claim data from the actual button action
@@ -1297,8 +1382,13 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
         };
     }
 
+    // Custom usage limit: record claim into the live action's claims[]
+    if (config.limit?.type === 'custom') {
+        await persistCustomClaim(guildId, buttonId, actionIndex, userId, 'give_item');
+    }
+
     // Update claim tracking persistently - use specific button and action if provided
-    if (config.limit && config.limit.type !== 'unlimited') {
+    if (config.limit && config.limit.type !== 'unlimited' && config.limit.type !== 'custom') {
         const safariData = await loadSafariContent();
 
         if (buttonId && actionIndex !== null) {
@@ -3469,8 +3559,17 @@ async function executeModifyAttribute(config, guildId, userId, interaction, butt
             return null;
         }
 
+        // Custom usage limit (type: 'custom') — read LIVE claims and gate
+        if (config.limit?.type === 'custom') {
+            const liveLimit = await getLiveActionLimit(guildId, buttonId, actionIndex, 'modify_attribute') || config.limit;
+            const verdict = checkLimitGate(liveLimit, userId);
+            if (verdict.blocked) {
+                return buildCustomLimitRejection(verdict, `${attributeDef.emoji || '📊'} ${attributeDef.name}`);
+            }
+        }
+
         // Check usage limits (like give_item/give_currency)
-        if (config.limit && config.limit.type !== 'unlimited') {
+        if (config.limit && config.limit.type !== 'unlimited' && config.limit.type !== 'custom') {
             // Get live claimedBy from safariData for accurate tracking
             let liveClaimedBy = null;
             if (buttonId !== null && actionIndex !== null) {
@@ -3585,8 +3684,13 @@ async function executeModifyAttribute(config, guildId, userId, interaction, butt
         await setEntityPoints(guildId, entityId, attributeId, newCurrent, currentPoints.max);
         console.log(`📊 SUCCESS: Modified ${attributeId} for ${entityId}: ${currentPoints.current} → ${newCurrent}`);
 
+        // Custom usage limit: record claim into the live action's claims[]
+        if (config.limit?.type === 'custom') {
+            await persistCustomClaim(guildId, buttonId, actionIndex, userId, 'modify_attribute');
+        }
+
         // Update claim tracking if limits are configured
-        if (config.limit && config.limit.type !== 'unlimited' && buttonId !== null && actionIndex !== null) {
+        if (config.limit && config.limit.type !== 'unlimited' && config.limit.type !== 'custom' && buttonId !== null && actionIndex !== null) {
             const button = safariData[guildId]?.buttons?.[buttonId];
             if (button && button.actions && button.actions[actionIndex]) {
                 const action = button.actions[actionIndex];
@@ -7868,6 +7972,10 @@ function hasUnclaimedSubActions(action, userId) {
         if (limit.type === 'once_globally') {
             return !limit.claimedBy;
         }
+        if (limit.type === 'custom') {
+            // Unclaimed = the engine would still let this player claim
+            return !checkLimitGate(limit, userId).blocked;
+        }
         return false;
     });
 }
@@ -9836,21 +9944,24 @@ async function executeFightEnemy(config, guildId, userId, interaction, client, b
     // Enforce usage limit BEFORE any side effects (HP loss, weapon consumption, combat).
     // Treated as a "can't fight" case (fightResult: false) — consistent with the HP/weapon guards below.
     if (config?.limit && config.limit.type !== 'unlimited') {
-        const { checkLimitGate, formatCountdown } = await import('./utils/periodUtils.js');
-        const gate = checkLimitGate(config.limit, userId);
+        // Custom limits track live counters — read fresh from the live action.
+        const liveLimit = config.limit.type === 'custom'
+            ? (await getLiveActionLimit(guildId, buttonId, actionIndex, null) || config.limit)
+            : config.limit;
+        const gate = checkLimitGate(liveLimit, userId);
         if (gate.blocked) {
-            const msg = gate.reason === 'once_globally'
-                ? `❌ **${enemy.name}** has already been fought and cannot be challenged again.`
-                : gate.reason === 'once_per_period'
-                    ? `⏱️ **You can fight ${enemy.name} again in ${formatCountdown(gate.remainingMs)}.**`
-                    : `❌ **You've already fought ${enemy.name}!**`;
-            return {
-                fightResult: false,
-                display: {
-                    flags: (1 << 15),
-                    components: [{ type: 17, accent_color: 0xED4245, components: [{ type: 10, content: msg }] }]
-                }
-            };
+            let display;
+            if (String(gate.reason || '').startsWith('custom')) {
+                display = buildCustomLimitRejection(gate, enemy.name);
+            } else {
+                const msg = gate.reason === 'once_globally'
+                    ? `❌ **${enemy.name}** has already been fought and cannot be challenged again.`
+                    : gate.reason === 'once_per_period'
+                        ? `⏱️ **You can fight ${enemy.name} again in ${formatCountdown(gate.remainingMs)}.**`
+                        : `❌ **You've already fought ${enemy.name}!**`;
+                display = { flags: (1 << 15), components: [{ type: 17, accent_color: 0xED4245, components: [{ type: 10, content: msg }] }] };
+            }
+            return { fightResult: false, display };
         }
     }
 

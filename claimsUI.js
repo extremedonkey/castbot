@@ -7,7 +7,7 @@
  * All claim state mutation lives in claimsManager.js; this module only renders.
  */
 
-import { formatPeriod } from './utils/periodUtils.js';
+import { formatPeriod, summarizeLimit } from './utils/periodUtils.js';
 import { getClaimants, claimStatusLine, isTimed, resolveNames } from './claimsManager.js';
 
 const CLAIMANTS_PER_PAGE = 10;
@@ -92,7 +92,8 @@ export async function buildClaimsManagerUI({ client, guildId, buttonId, actionIn
     unlimited: '♾️ **Unlimited** — no claim restrictions',
     once_per_player: '👤 **Once Per Player** — each player can claim once',
     once_globally: '🌍 **Once Globally** — first player to claim gets it, nobody else can',
-    once_per_period: `⏱️ **Once Per Period** — every **${formatPeriod(limit.periodMs || 0)}**`
+    once_per_period: `⏱️ **Once Per Period** — every **${formatPeriod(limit.periodMs || 0)}**`,
+    custom: `⚙️ **Custom** — ${summarizeLimit(limit)}`
   };
   const outcomeDesc = await describeOutcome(safariData, guildId, action, actionIndex);
 
@@ -129,7 +130,7 @@ export async function buildClaimsManagerUI({ client, guildId, buttonId, actionIn
         { label: summary, value: 'summary', default: true, emoji: { name: '▫️' } },
         { label: 'Clear', value: 'clear', emoji: { name: '🔥' }, description: "Remove this player's claim" }
       ];
-      if (timed) {
+      if (limit.type === 'once_per_period') {
         options.push({ label: 'Set Cooldown', value: 'set_cooldown', emoji: { name: '⏲️' }, description: 'Set remaining cooldown time' });
       }
       components.push({ type: 1, components: [{

@@ -1,5 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+// Real engine functions for the custom-limit suite (module is pure, no heavy imports)
+import { checkLimitGate as gate, recordLimitClaim as record, windowIndexOf, pruneCustomClaims, summarizeLimit, anchorMsFromHHMM } from '../utils/periodUtils.js';
 
 // Replicate pure logic inline to avoid importing heavy modules
 
@@ -366,5 +368,149 @@ describe('recordLimitClaim', () => {
     assert.equal(checkLimitGate(limit, 'u1', NOW).blocked, false);
     recordLimitClaim(limit, 'u1', NOW);
     assert.equal(checkLimitGate(limit, 'u1', NOW).blocked, true);
+  });
+});
+
+// --- Custom usage-limit engine (type: 'custom') ---
+
+describe('custom limit — per_player scope', () => {
+  const base = { type: 'custom', scope: 'per_player', reset: 'none', maxClaims: 3 };
+
+  it('allows up to N claims per player, then blocks', () => {
+    const limit = { ...base, claims: [] };
+    for (let i = 0; i < 3; i++) {
+      assert.equal(gate(limit, 'u1', 1000).blocked, false);
+      record(limit, 'u1', 1000);
+    }
+    const v = gate(limit, 'u1', 1000);
+    assert.equal(v.blocked, true);
+    assert.equal(v.reason, 'custom_exhausted');
+    assert.equal(v.remaining.claimsLeft, 0);
+  });
+
+  it('counts each player independently', () => {
+    const limit = { ...base, maxClaims: 1, claims: [] };
+    record(limit, 'u1', 1000);
+    assert.equal(gate(limit, 'u1', 1000).blocked, true);
+    assert.equal(gate(limit, 'u2', 1000).blocked, false);
+  });
+});
+
+describe('custom limit — global unique', () => {
+  const base = { type: 'custom', scope: 'global', unique: true, reset: 'none', maxClaims: 5 };
+
+  it('allows up to N distinct players (first-N-players use case)', () => {
+    const limit = { ...base, claims: [] };
+    for (let i = 0; i < 5; i++) {
+      const u = `u${i}`;
+      assert.equal(gate(limit, u, 1000).blocked, false);
+      record(limit, u, 1000);
+    }
+    const v = gate(limit, 'u_late', 1000);
+    assert.equal(v.blocked, true);
+    assert.equal(v.reason, 'custom_exhausted');
+  });
+
+  it('blocks a player who already claimed with custom_already_claimed', () => {
+    const limit = { ...base, claims: [] };
+    record(limit, 'u1', 1000);
+    const v = gate(limit, 'u1', 1000);
+    assert.equal(v.blocked, true);
+    assert.equal(v.reason, 'custom_already_claimed');
+  });
+});
+
+describe('custom limit — global non-unique', () => {
+  it('lets one player take all N slots', () => {
+    const limit = { type: 'custom', scope: 'global', unique: false, reset: 'none', maxClaims: 5, claims: [] };
+    for (let i = 0; i < 5; i++) {
+      assert.equal(gate(limit, 'u1', 1000).blocked, false);
+      record(limit, 'u1', 1000);
+    }
+    assert.equal(gate(limit, 'u1', 1000).blocked, true);
+    assert.equal(gate(limit, 'u2', 1000).blocked, true);
+  });
+});
+
+describe('custom limit — fixed_window reset', () => {
+  const base = { type: 'custom', scope: 'global', unique: true, reset: 'fixed_window', maxClaims: 2, periodMs: 86400000, anchorMs: 0 };
+
+  it('windowIndexOf floors correctly', () => {
+    assert.equal(windowIndexOf(0, 0, 86400000), 0);
+    assert.equal(windowIndexOf(86399999, 0, 86400000), 0);
+    assert.equal(windowIndexOf(86400000, 0, 86400000), 1);
+  });
+
+  it('blocks within a window once N distinct claimed, resets next window', () => {
+    const limit = { ...base, claims: [] };
+    const day0 = 1000;
+    record(limit, 'u1', day0); record(limit, 'u2', day0);
+    const v = gate(limit, 'u3', day0);
+    assert.equal(v.blocked, true);
+    assert.equal(v.reason, 'custom_window');
+    assert.ok(v.remaining.windowResetMs > 0 && v.remaining.windowResetMs <= 86400000);
+
+    const day1 = 86400000 + 1000;
+    assert.equal(gate(limit, 'u3', day1).blocked, false);
+    assert.equal(gate(limit, 'u1', day1).blocked, false);
+  });
+
+  it('prunes stale claims on record', () => {
+    const limit = { ...base, claims: [{ u: 'old', t: 1000 }] };
+    record(limit, 'u1', 86400000 + 5000);
+    assert.equal(limit.claims.length, 1);
+    assert.equal(limit.claims[0].u, 'u1');
+  });
+});
+
+describe('custom limit — rolling reset (N>1 sliding window)', () => {
+  const base = { type: 'custom', scope: 'per_player', reset: 'rolling', maxClaims: 2, periodMs: 10000 };
+
+  it('allows N within the trailing period, blocks the N+1th, frees as claims age out', () => {
+    const limit = { ...base, claims: [] };
+    record(limit, 'u1', 1000);
+    record(limit, 'u1', 2000);
+    const v = gate(limit, 'u1', 3000);
+    assert.equal(v.blocked, true);
+    assert.equal(v.reason, 'custom_cooldown');
+    assert.ok(v.remaining.cooldownMs > 0);
+    assert.equal(gate(limit, 'u1', 11001).blocked, false);
+  });
+});
+
+describe('custom limit — uncapped (maxClaims null)', () => {
+  it('never blocks on count', () => {
+    const limit = { type: 'custom', scope: 'global', unique: false, reset: 'none', maxClaims: null, claims: [] };
+    for (let i = 0; i < 50; i++) record(limit, `u${i}`, 1000);
+    const v = gate(limit, 'uX', 1000);
+    assert.equal(v.blocked, false);
+    assert.equal(v.remaining.claimsLeft, Infinity);
+  });
+});
+
+describe('summarizeLimit', () => {
+  it('describes presets', () => {
+    assert.equal(summarizeLimit({ type: 'unlimited' }), 'Unlimited');
+    assert.equal(summarizeLimit({ type: 'once_per_player' }), 'Once per player');
+    assert.equal(summarizeLimit({ type: 'once_globally' }), 'Once globally (one player total)');
+  });
+  it('describes a custom daily-5-unique config', () => {
+    const s = summarizeLimit({ type: 'custom', scope: 'global', unique: true, maxClaims: 5, reset: 'fixed_window', periodMs: 86400000 });
+    assert.match(s, /5 unique players/);
+    assert.match(s, /resets every 1d/);
+  });
+  it('describes per-player rolling', () => {
+    const s = summarizeLimit({ type: 'custom', scope: 'per_player', maxClaims: 3, reset: 'rolling', periodMs: 43200000 });
+    assert.match(s, /3 per player/);
+    assert.match(s, /rolling 12h/);
+  });
+});
+
+describe('anchorMsFromHHMM', () => {
+  it('returns the most-recent occurrence at/before now', () => {
+    const now = 1750000000000;
+    const anchor = anchorMsFromHHMM(9, 0, now);
+    assert.ok(anchor <= now);
+    assert.ok(now - anchor < 86400000);
   });
 });

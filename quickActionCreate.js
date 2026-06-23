@@ -10,8 +10,10 @@ import { InteractionResponseType } from 'discord-interactions';
 import { parseAndValidateEmoji } from './utils/emojiUtils.js';
 import { buildLimitOptions } from './utils/periodUtils.js';
 
-// Quick create defaults: once_per_player is pre-selected
-const LIMIT_OPTIONS = buildLimitOptions({ currentLimit: 'once_per_player', periodDescription: 'Defaults to 1d in Quick Edit, change in Outcome Config' });
+// Quick create defaults: once_per_player is pre-selected. Custom/templates are excluded here
+// because a single quick-create modal can't host the multi-step Custom config sub-screen —
+// users pick Custom from the full Outcome Config editor instead.
+const LIMIT_OPTIONS = buildLimitOptions({ currentLimit: 'once_per_player', periodDescription: 'Defaults to 1d in Quick Edit, change in Outcome Config', includeCustom: false });
 
 const COLOR_OPTIONS = [
     { label: 'Blue (Primary)', value: 'Primary', emoji: { name: '🔵' }, default: true },
