@@ -1030,7 +1030,7 @@ export async function handleRankingNavigation({
   }
   
   // Use the main UI generation function with navigation parameters
-  const seasonName = 'Current Season'; // TODO: Get actual season name
+  const seasonName = playerData[guildId]?.applicationConfigs?.[navConfigId]?.seasonName || 'Current Season';
   return await generateSeasonAppRankingUI({
     guildId,
     userId,
@@ -1119,7 +1119,7 @@ export async function handleRankingSelect({
     }
     
     // Use main UI generation function
-    const seasonName = 'Current Season'; // TODO: Get actual season name
+    const seasonName = playerData[guildId]?.applicationConfigs?.[configId]?.seasonName || 'Current Season';
     return await generateSeasonAppRankingUI({
       guildId,
       userId,
@@ -1161,7 +1161,7 @@ export async function handleRankingSelect({
     }
     
     // Use main UI generation function
-    const seasonName = 'Current Season'; // TODO: Get actual season name
+    const seasonName = playerData[guildId]?.applicationConfigs?.[configId]?.seasonName || 'Current Season';
     return await generateSeasonAppRankingUI({
       guildId,
       userId,
@@ -1250,7 +1250,7 @@ export async function handleRankingButton({
   }
   
   // Use the main UI generation function with updated data
-  const seasonName = 'Current Season'; // TODO: Get actual season name
+  const seasonName = playerData[guildId]?.applicationConfigs?.[configId]?.seasonName || 'Current Season';
   return await generateSeasonAppRankingUI({
     guildId,
     userId,
