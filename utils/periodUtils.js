@@ -70,6 +70,69 @@ export function parsePeriodFromModal(components, fieldIds = {}) {
 }
 
 /**
+ * Check whether a usage limit blocks this user from executing an outcome.
+ * Pure read — does NOT mutate. Pair with recordLimitClaim() after a successful execution.
+ * Mirrors the inline check semantics in executeGiveCurrency/executeGiveItem/executeModifyAttribute.
+ * @param {Object} limit - The config.limit object ({ type, claimedBy, periodMs })
+ * @param {string} userId
+ * @param {number} [nowMs] - Current time (injectable for tests)
+ * @returns {{ blocked: boolean, reason?: 'once_per_player'|'once_globally'|'once_per_period', remainingMs?: number }}
+ */
+export function checkLimitGate(limit, userId, nowMs = Date.now()) {
+  if (!limit || limit.type === 'unlimited') return { blocked: false };
+  const claimedBy = limit.claimedBy;
+
+  if (limit.type === 'once_per_player') {
+    const claimedList = Array.isArray(claimedBy) ? claimedBy : (claimedBy ? [claimedBy] : []);
+    if (claimedList.includes(userId)) return { blocked: true, reason: 'once_per_player' };
+    return { blocked: false };
+  }
+
+  if (limit.type === 'once_globally') {
+    // Empty arrays/strings are truthy but mean "no claims" — check actual content.
+    const hasClaims = Array.isArray(claimedBy) ? claimedBy.length > 0
+      : typeof claimedBy === 'string' ? claimedBy.length > 0
+      : false;
+    if (hasClaims) return { blocked: true, reason: 'once_globally' };
+    return { blocked: false };
+  }
+
+  if (limit.type === 'once_per_period') {
+    const lastUsed = (typeof claimedBy === 'object' && !Array.isArray(claimedBy)) ? claimedBy?.[userId] : undefined;
+    if (lastUsed && (nowMs - lastUsed < limit.periodMs)) {
+      return { blocked: true, reason: 'once_per_period', remainingMs: limit.periodMs - (nowMs - lastUsed) };
+    }
+    return { blocked: false };
+  }
+
+  return { blocked: false };
+}
+
+/**
+ * Record a usage claim on a limit object after a successful execution.
+ * Mutates limit.claimedBy in place (polymorphic by type) — caller persists via saveSafariContent().
+ * Mirrors the inline claim semantics in executeGiveCurrency/executeGiveItem/executeModifyAttribute.
+ * @param {Object} limit - The config.limit object (mutated in place)
+ * @param {string} userId
+ * @param {number} [nowMs] - Current time (injectable for tests)
+ */
+export function recordLimitClaim(limit, userId, nowMs = Date.now()) {
+  if (!limit || limit.type === 'unlimited') return;
+
+  if (limit.type === 'once_per_player') {
+    if (!Array.isArray(limit.claimedBy)) limit.claimedBy = [];
+    if (!limit.claimedBy.includes(userId)) limit.claimedBy.push(userId);
+  } else if (limit.type === 'once_globally') {
+    limit.claimedBy = userId;
+  } else if (limit.type === 'once_per_period') {
+    if (!limit.claimedBy || typeof limit.claimedBy !== 'object' || Array.isArray(limit.claimedBy)) {
+      limit.claimedBy = {};
+    }
+    limit.claimedBy[userId] = nowMs;
+  }
+}
+
+/**
  * Build usage limit options for string selects and radio groups.
  * Single source of truth — used by all outcome editors and quick create modals.
  * @param {Object} [options]

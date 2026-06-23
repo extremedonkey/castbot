@@ -1731,7 +1731,9 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
         for (const action of sortedAlways) {
             if (action.type === ACTION_TYPES.FIGHT_ENEMY || action.type === 'fight_enemy') {
                 try {
-                    const fightResponse = await executeFightEnemy(action.config, guildId, userId, interaction, client);
+                    // Resolve original index in unsorted button.actions for claim tracking
+                    const fightActionIndex = button.actions.findIndex(a => a === action);
+                    const fightResponse = await executeFightEnemy(action.config, guildId, userId, interaction, client, buttonId, fightActionIndex);
                     phase1FightResults.set(action, fightResponse);
                     if (fightResponse?.fightResult !== undefined) {
                         fightResult = fightResponse.fightResult;
@@ -2072,7 +2074,9 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
                             result = phase1FightResults.get(action);
                         } else {
                             console.log(`🐙 DEBUG: Executing fight_enemy action for guild ${guildId}`);
-                            result = await executeFightEnemy(action.config, guildId, userId, interaction, client);
+                            // Resolve original index in unsorted button.actions for claim tracking
+                            const fightActionIndex = button.actions.findIndex(a => a === action);
+                            result = await executeFightEnemy(action.config, guildId, userId, interaction, client, buttonId, fightActionIndex);
                         }
                         // Extract the display container from the fight result
                         if (result?.display) {
@@ -9812,7 +9816,7 @@ async function toggleAttributeTrigger(guildId, triggerId) {
  * Execute a fight_enemy outcome — load enemy, resolve combat, update player HP
  * @returns {Object} { fightResult: boolean, display: Components V2 container }
  */
-async function executeFightEnemy(config, guildId, userId, interaction, client) {
+async function executeFightEnemy(config, guildId, userId, interaction, client, buttonId = null, actionIndex = null) {
     const safariData = await loadSafariContent();
     const pData = await loadPlayerData();
 
@@ -9827,6 +9831,27 @@ async function executeFightEnemy(config, guildId, userId, interaction, client) {
                 components: [{ type: 17, accent_color: 0xED4245, components: [{ type: 10, content: '⚠️ **Enemy not found.** It may have been deleted.' }] }]
             }
         };
+    }
+
+    // Enforce usage limit BEFORE any side effects (HP loss, weapon consumption, combat).
+    // Treated as a "can't fight" case (fightResult: false) — consistent with the HP/weapon guards below.
+    if (config?.limit && config.limit.type !== 'unlimited') {
+        const { checkLimitGate, formatCountdown } = await import('./utils/periodUtils.js');
+        const gate = checkLimitGate(config.limit, userId);
+        if (gate.blocked) {
+            const msg = gate.reason === 'once_globally'
+                ? `❌ **${enemy.name}** has already been fought and cannot be challenged again.`
+                : gate.reason === 'once_per_period'
+                    ? `⏱️ **You can fight ${enemy.name} again in ${formatCountdown(gate.remainingMs)}.**`
+                    : `❌ **You've already fought ${enemy.name}!**`;
+            return {
+                fightResult: false,
+                display: {
+                    flags: (1 << 15),
+                    components: [{ type: 17, accent_color: 0xED4245, components: [{ type: 10, content: msg }] }]
+                }
+            };
+        }
     }
 
     // Check HP attribute exists and get player HP
@@ -9925,6 +9950,23 @@ async function executeFightEnemy(config, guildId, userId, interaction, client) {
     const display = buildCombatDisplay(enemy, combatResult, playerName);
 
     console.log(`🐙 Combat resolved: ${playerName} vs ${enemy.name} — ${combatResult.playerWon ? 'WIN' : 'LOSE'} in ${combatResult.totalTurns} turns`);
+
+    // Record usage claim after a completed fight (win or lose counts as a use).
+    // Persist to the specific action so re-fights are blocked. Requires buttonId + actionIndex.
+    if (config?.limit && config.limit.type !== 'unlimited') {
+        if (buttonId && actionIndex !== null) {
+            const { recordLimitClaim } = await import('./utils/periodUtils.js');
+            const freshData = await loadSafariContent();
+            const action = freshData[guildId]?.buttons?.[buttonId]?.actions?.[actionIndex];
+            if (action && (action.type === 'fight_enemy' || action.type === ACTION_TYPES.FIGHT_ENEMY) && action.config?.limit) {
+                recordLimitClaim(action.config.limit, userId);
+                await saveSafariContent(freshData);
+                console.log(`✅ Updated claim tracking for fight_enemy action ${buttonId}[${actionIndex}]`);
+            }
+        } else {
+            console.warn(`⚠️ fight_enemy has a usage limit but no buttonId/actionIndex was passed — claim NOT recorded (re-fights possible)`);
+        }
+    }
 
     return {
         fightResult: combatResult.playerWon,

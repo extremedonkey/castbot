@@ -41,6 +41,47 @@ function checkPeriodLimit(claimedBy, userId, periodMs, now) {
   return { blocked: false };
 }
 
+// Inline copies of checkLimitGate / recordLimitClaim from utils/periodUtils.js
+function checkLimitGate(limit, userId, nowMs) {
+  if (!limit || limit.type === 'unlimited') return { blocked: false };
+  const claimedBy = limit.claimedBy;
+  if (limit.type === 'once_per_player') {
+    const claimedList = Array.isArray(claimedBy) ? claimedBy : (claimedBy ? [claimedBy] : []);
+    if (claimedList.includes(userId)) return { blocked: true, reason: 'once_per_player' };
+    return { blocked: false };
+  }
+  if (limit.type === 'once_globally') {
+    const hasClaims = Array.isArray(claimedBy) ? claimedBy.length > 0
+      : typeof claimedBy === 'string' ? claimedBy.length > 0
+      : false;
+    if (hasClaims) return { blocked: true, reason: 'once_globally' };
+    return { blocked: false };
+  }
+  if (limit.type === 'once_per_period') {
+    const lastUsed = (typeof claimedBy === 'object' && !Array.isArray(claimedBy)) ? claimedBy?.[userId] : undefined;
+    if (lastUsed && (nowMs - lastUsed < limit.periodMs)) {
+      return { blocked: true, reason: 'once_per_period', remainingMs: limit.periodMs - (nowMs - lastUsed) };
+    }
+    return { blocked: false };
+  }
+  return { blocked: false };
+}
+
+function recordLimitClaim(limit, userId, nowMs) {
+  if (!limit || limit.type === 'unlimited') return;
+  if (limit.type === 'once_per_player') {
+    if (!Array.isArray(limit.claimedBy)) limit.claimedBy = [];
+    if (!limit.claimedBy.includes(userId)) limit.claimedBy.push(userId);
+  } else if (limit.type === 'once_globally') {
+    limit.claimedBy = userId;
+  } else if (limit.type === 'once_per_period') {
+    if (!limit.claimedBy || typeof limit.claimedBy !== 'object' || Array.isArray(limit.claimedBy)) {
+      limit.claimedBy = {};
+    }
+    limit.claimedBy[userId] = nowMs;
+  }
+}
+
 // --- formatPeriod ---
 
 describe('formatPeriod', () => {
@@ -213,5 +254,117 @@ describe('once_per_period enforcement', () => {
     const result = checkPeriodLimit({ user1: lastUsed }, 'user1', periodMs, now);
     assert.equal(result.blocked, true);
     assert.equal(result.remainingMs, periodMs - 10000000);
+  });
+});
+
+// --- checkLimitGate (generic gate used by fight_enemy + future outcomes) ---
+
+describe('checkLimitGate', () => {
+  const NOW = 1_700_000_000_000;
+
+  it('never blocks when limit is missing', () => {
+    assert.equal(checkLimitGate(null, 'u1', NOW).blocked, false);
+    assert.equal(checkLimitGate(undefined, 'u1', NOW).blocked, false);
+  });
+
+  it('never blocks when unlimited', () => {
+    assert.equal(checkLimitGate({ type: 'unlimited' }, 'u1', NOW).blocked, false);
+  });
+
+  describe('once_per_player', () => {
+    it('allows a fresh user', () => {
+      assert.equal(checkLimitGate({ type: 'once_per_player', claimedBy: ['u2'] }, 'u1', NOW).blocked, false);
+    });
+    it('allows when claimedBy is an empty array', () => {
+      assert.equal(checkLimitGate({ type: 'once_per_player', claimedBy: [] }, 'u1', NOW).blocked, false);
+    });
+    it('allows when claimedBy is null (freshly set)', () => {
+      assert.equal(checkLimitGate({ type: 'once_per_player', claimedBy: null }, 'u1', NOW).blocked, false);
+    });
+    it('blocks a user already in the array', () => {
+      const r = checkLimitGate({ type: 'once_per_player', claimedBy: ['u1', 'u2'] }, 'u1', NOW);
+      assert.equal(r.blocked, true);
+      assert.equal(r.reason, 'once_per_player');
+    });
+    it('treats a legacy string claimedBy as a single claim', () => {
+      assert.equal(checkLimitGate({ type: 'once_per_player', claimedBy: 'u1' }, 'u1', NOW).blocked, true);
+      assert.equal(checkLimitGate({ type: 'once_per_player', claimedBy: 'u1' }, 'u2', NOW).blocked, false);
+    });
+  });
+
+  describe('once_globally', () => {
+    it('allows when unclaimed (null / empty)', () => {
+      assert.equal(checkLimitGate({ type: 'once_globally', claimedBy: null }, 'u1', NOW).blocked, false);
+      assert.equal(checkLimitGate({ type: 'once_globally', claimedBy: '' }, 'u1', NOW).blocked, false);
+      assert.equal(checkLimitGate({ type: 'once_globally', claimedBy: [] }, 'u1', NOW).blocked, false);
+    });
+    it('blocks everyone once claimed — including the original claimer', () => {
+      assert.equal(checkLimitGate({ type: 'once_globally', claimedBy: 'u1' }, 'u1', NOW).blocked, true);
+      assert.equal(checkLimitGate({ type: 'once_globally', claimedBy: 'u1' }, 'u2', NOW).reason, 'once_globally');
+    });
+  });
+
+  describe('once_per_period', () => {
+    it('allows first use (empty object)', () => {
+      assert.equal(checkLimitGate({ type: 'once_per_period', periodMs: 1000, claimedBy: {} }, 'u1', NOW).blocked, false);
+    });
+    it('does not crash on null claimedBy', () => {
+      assert.equal(checkLimitGate({ type: 'once_per_period', periodMs: 1000, claimedBy: null }, 'u1', NOW).blocked, false);
+    });
+    it('blocks within the cooldown and reports remaining', () => {
+      const r = checkLimitGate({ type: 'once_per_period', periodMs: 10000, claimedBy: { u1: NOW - 3000 } }, 'u1', NOW);
+      assert.equal(r.blocked, true);
+      assert.equal(r.reason, 'once_per_period');
+      assert.equal(r.remainingMs, 7000);
+    });
+    it('allows after the cooldown expires', () => {
+      assert.equal(checkLimitGate({ type: 'once_per_period', periodMs: 10000, claimedBy: { u1: NOW - 20000 } }, 'u1', NOW).blocked, false);
+    });
+  });
+});
+
+// --- recordLimitClaim ---
+
+describe('recordLimitClaim', () => {
+  const NOW = 1_700_000_000_000;
+
+  it('is a no-op for unlimited / missing limits', () => {
+    const limit = { type: 'unlimited' };
+    recordLimitClaim(limit, 'u1', NOW);
+    assert.deepEqual(limit, { type: 'unlimited' });
+    assert.doesNotThrow(() => recordLimitClaim(null, 'u1', NOW));
+  });
+
+  it('appends to a once_per_player array without duplicating', () => {
+    const limit = { type: 'once_per_player', claimedBy: [] };
+    recordLimitClaim(limit, 'u1', NOW);
+    recordLimitClaim(limit, 'u1', NOW);
+    recordLimitClaim(limit, 'u2', NOW);
+    assert.deepEqual(limit.claimedBy, ['u1', 'u2']);
+  });
+
+  it('coerces a non-array once_per_player claimedBy to an array', () => {
+    const limit = { type: 'once_per_player', claimedBy: null };
+    recordLimitClaim(limit, 'u1', NOW);
+    assert.deepEqual(limit.claimedBy, ['u1']);
+  });
+
+  it('sets the userId string for once_globally', () => {
+    const limit = { type: 'once_globally', claimedBy: null };
+    recordLimitClaim(limit, 'u1', NOW);
+    assert.equal(limit.claimedBy, 'u1');
+  });
+
+  it('stamps the timestamp for once_per_period', () => {
+    const limit = { type: 'once_per_period', periodMs: 1000, claimedBy: {} };
+    recordLimitClaim(limit, 'u1', NOW);
+    assert.equal(limit.claimedBy.u1, NOW);
+  });
+
+  it('round-trips with checkLimitGate (claim then blocked)', () => {
+    const limit = { type: 'once_per_player', claimedBy: [] };
+    assert.equal(checkLimitGate(limit, 'u1', NOW).blocked, false);
+    recordLimitClaim(limit, 'u1', NOW);
+    assert.equal(checkLimitGate(limit, 'u1', NOW).blocked, true);
   });
 });
