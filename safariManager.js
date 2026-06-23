@@ -37,7 +37,7 @@ import {
     getMovementDisplay,
     initializePlayerOnMap
 } from './mapMovement.js';
-import { checkLimitGate, recordLimitClaim, formatCountdown } from './utils/periodUtils.js';
+import { checkLimitGate, recordLimitClaim, formatCountdown, formatPeriod } from './utils/periodUtils.js';
 
 /**
  * Build an ephemeral rejection card for a blocked CUSTOM usage limit.
