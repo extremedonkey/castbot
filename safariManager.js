@@ -37,7 +37,7 @@ import {
     getMovementDisplay,
     initializePlayerOnMap
 } from './mapMovement.js';
-import { checkLimitGate, recordLimitClaim, formatCountdown, formatPeriod } from './utils/periodUtils.js';
+import { checkLimitGate, recordLimitClaim, formatCountdown, formatPeriod, formatPeriodVerbose, formatCountdownVerbose } from './utils/periodUtils.js';
 
 /**
  * Build an ephemeral rejection card for a blocked CUSTOM usage limit.
@@ -47,25 +47,26 @@ import { checkLimitGate, recordLimitClaim, formatCountdown, formatPeriod } from 
  */
 function buildCustomLimitRejection(verdict, label) {
     const r = verdict.remaining || {};
-    const everyStr = r.periodMs ? formatPeriod(r.periodMs) : null;
+    const everyStr = r.periodMs ? formatPeriodVerbose(r.periodMs) : null;
     let msg;
     switch (verdict.reason) {
         case 'custom_already_claimed':
-            // Player already claimed; if it's windowed, tell them when it comes back
+            // THIS player already claimed; if it's windowed, tell them when it comes back
             if (r.windowResetMs != null) {
-                msg = `⏱️ **${label}** — you've already claimed this. Resets in **${formatCountdown(r.windowResetMs)}**.`;
+                msg = `⏱️ **${label}** — you've already claimed this. Resets in **${formatCountdownVerbose(r.windowResetMs)}**.`;
             } else {
                 msg = `❌ You've already claimed **${label}**.`;
             }
             break;
         case 'custom_window':
+            // Global window cap exhausted (by anyone) — NOT necessarily this player
             msg = everyStr
-                ? `⏱️ **${label}** — you can only claim this every **${everyStr}**. Resets in **${formatCountdown(r.windowResetMs)}**.`
+                ? `⏱️ **${label}** — the maximum amount available every **${everyStr}** has already been claimed. Resets in **${formatCountdownVerbose(r.windowResetMs)}**.`
                 : `⏱️ **${label}** — all claims for this window have been taken.`;
             break;
         case 'custom_cooldown':
             msg = everyStr
-                ? `⏱️ **${label}** — you can only claim this every **${everyStr}**. Try again in **${formatCountdown(r.cooldownMs)}**.`
+                ? `⏱️ **${label}** — you can only claim this every **${everyStr}**. Try again in **${formatCountdownVerbose(r.cooldownMs)}**.`
                 : `⏱️ **${label}** — you're on cooldown.`;
             break;
         case 'custom_exhausted':

@@ -515,6 +515,21 @@ describe('anchorMsFromHHMM', () => {
   });
 });
 
+describe('verbose duration formatters (player-facing copy)', () => {
+  it('spells out minutes/hours/days', async () => {
+    const { formatPeriodVerbose, formatCountdownVerbose } = await import('../utils/periodUtils.js');
+    assert.equal(formatPeriodVerbose(120000), '2 minutes');
+    assert.equal(formatPeriodVerbose(60000), '1 minute');
+    assert.equal(formatPeriodVerbose(3600000), '1 hour');
+    assert.equal(formatPeriodVerbose(86400000), '1 day');
+    assert.equal(formatPeriodVerbose(90 * 60000), '1 hour 30 minutes');
+    assert.equal(formatPeriodVerbose(0), '0 minutes');
+    // countdown rounds UP to the next minute
+    assert.equal(formatCountdownVerbose(61000), '2 minutes');
+    assert.equal(formatCountdownVerbose(1), '1 minute');
+  });
+});
+
 describe('custom limit — verdict carries periodMs for time messages', () => {
   it('rolling block includes periodMs so the message can say "every X"', () => {
     const limit = { type: 'custom', scope: 'per_player', reset: 'rolling', maxClaims: 1, periodMs: 60000, claims: [{ u: 'u1', t: 1000 }] };

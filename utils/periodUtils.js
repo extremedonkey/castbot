@@ -236,6 +236,31 @@ export function recordLimitClaim(limit, userId, nowMs = Date.now()) {
   }
 }
 
+/** Spell out minutes into natural language: "2 minutes", "1 hour 30 minutes", "1 day". */
+function verboseFromMinutes(totalMinutes) {
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  const parts = [];
+  if (days) parts.push(`${days} day${days === 1 ? '' : 's'}`);
+  if (hours) parts.push(`${hours} hour${hours === 1 ? '' : 's'}`);
+  if (minutes) parts.push(`${minutes} minute${minutes === 1 ? '' : 's'}`);
+  if (!parts.length) parts.push('0 minutes');
+  return parts.join(' ');
+}
+
+/** Verbose form of formatPeriod — "2 minutes", "1 hour 30 minutes". For player-facing copy. */
+export function formatPeriodVerbose(ms) {
+  if (!ms || ms <= 0) return '0 minutes';
+  return verboseFromMinutes(Math.floor(ms / 60000));
+}
+
+/** Verbose form of formatCountdown (rounds up) — "2 minutes" remaining. For player-facing copy. */
+export function formatCountdownVerbose(ms) {
+  if (!ms || ms <= 0) return '0 minutes';
+  return verboseFromMinutes(Math.ceil(ms / 60000));
+}
+
 /**
  * Build usage limit options for string selects and radio groups.
  * Single source of truth — used by all outcome editors and quick create modals.
