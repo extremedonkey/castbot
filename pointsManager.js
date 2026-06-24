@@ -372,9 +372,15 @@ async function calculateRegenerationWithCharges(pointData, config, guildId, enti
     } else {
         // Phase 1: Amount-aware regeneration with continuous ticking
 
-        // Diagnostic: log when stored max doesn't match server config
+        // Reconcile stored max to the server's effective max. The charges path (Phase 2) already
+        // does this unconditionally; Phase 1 previously only updated max INSIDE the regen block
+        // below — so a player whose stored max was stale (e.g. initialized at 1 before the admin
+        // configured maxStamina) stayed stuck at 1 whenever no regen period had elapsed (e.g. a
+        // 720-min interval). Always snap max to config so initialization settings are respected.
         if (newData.max !== effectiveMax) {
-            console.log(`⚠️ STAMINA CONFIG MISMATCH: stored max=${newData.max}, server config effectiveMax=${effectiveMax} (config.defaultMax=${config.defaultMax}, permanentBoost=${config.permanentBoost || 0}), current=${newData.current}`);
+            console.log(`⚠️ STAMINA CONFIG MISMATCH: stored max=${newData.max} → ${effectiveMax} (config.defaultMax=${config.defaultMax}, permanentBoost=${config.permanentBoost || 0}), current=${newData.current} — reconciling`);
+            newData.max = effectiveMax;
+            hasChanged = true;
         }
 
         if (config.regeneration.type === 'full_reset') {

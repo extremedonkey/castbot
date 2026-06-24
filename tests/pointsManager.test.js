@@ -24,6 +24,13 @@ function calculatePhase1Regen(pointData, config, now) {
     let newData = { ...pointData };
     const effectiveMax = config.defaultMax + (config.permanentBoost || 0);
 
+    // Reconcile stored max to effectiveMax regardless of regen (the fix — mirrors Phase 2 charges).
+    // Without this, a player stuck at an old max (e.g. 1) is never corrected when no regen fires.
+    if (newData.max !== effectiveMax) {
+        newData.max = effectiveMax;
+        hasChanged = true;
+    }
+
     const regenAmount = (config.regeneration.amount === 'max' || !config.regeneration.amount)
         ? effectiveMax
         : config.regeneration.amount;
@@ -261,5 +268,42 @@ describe('Phase 1 Regen — immediate effect on config change', () => {
         const result = calculatePhase1Regen(data, makeConfig(8, 3), now);
         assert.equal(result.data.current, 3);
         assert.ok(result.data.lastRegeneration); // should be set now
+    });
+});
+
+describe('Phase 1 — stored max reconciles to configured max (init settings respected)', () => {
+    it('heals a player stuck at max=1 to the configured max even when no regen fires', () => {
+        // Repro of the prod bug: player initialized at 1/1 when maxStamina defaulted to 1,
+        // admin later configured max=99, regen interval 12h so no period has elapsed.
+        const now = 1000000;
+        const TWELVE_H = 720 * 60000;
+        const data = makePointData(1, 1, now - 1000, now - 1000); // used 1s ago → periods=0
+        const result = calculatePhase1Regen(data, makeConfig(99, 'max', TWELVE_H), now);
+        assert.equal(result.data.max, 99, 'max should snap to configured value');
+        assert.equal(result.data.current, 1, 'current is preserved (regen refills over time)');
+        assert.equal(result.hasChanged, true, 'change must persist');
+    });
+
+    it('reconciles to a new lower configured max (50/51 case)', () => {
+        const now = 1000000;
+        const data = makePointData(1, 1, now - 1000, now - 1000);
+        const result = calculatePhase1Regen(data, makeConfig(51, 'max', 720 * 60000), now);
+        assert.equal(result.data.max, 51);
+        assert.equal(result.hasChanged, true);
+    });
+
+    it('no spurious change when stored max already matches config', () => {
+        const now = 1000000;
+        const data = makePointData(99, 99, now - 1000, now - 1000);
+        const result = calculatePhase1Regen(data, makeConfig(99, 'max', 720 * 60000), now);
+        assert.equal(result.data.max, 99);
+        assert.equal(result.hasChanged, false);
+    });
+
+    it('includes permanentBoost in the reconciled max', () => {
+        const now = 1000000;
+        const data = makePointData(1, 1, now - 1000, now - 1000);
+        const result = calculatePhase1Regen(data, makeConfig(99, 'max', 720 * 60000, 10), now);
+        assert.equal(result.data.max, 109, 'effectiveMax = defaultMax + permanentBoost');
     });
 });
