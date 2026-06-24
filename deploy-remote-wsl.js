@@ -193,8 +193,16 @@ async function deployToProduction() {
             log('RISK: Low - Safety measure, creates backup of current code', 'risk-low');
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
             await execSSH(
-                `cd ${REMOTE_PATH} && rsync -av --exclude='node_modules' --exclude='.git' . ../castbot-backup-${timestamp}/`,
-                'Backing up current version (excluding node_modules)',
+                // Exclude regenerable bloat (temp activity-overlays, generated map images) — they
+                // were the bulk of each ~800MB backup and once filled the disk mid-deploy.
+                `cd ${REMOTE_PATH} && rsync -av --exclude='node_modules' --exclude='.git' --exclude='temp' --exclude='img' . ../castbot-backup-${timestamp}/`,
+                'Backing up current version (excluding node_modules, temp, img)',
+                'risk-low'
+            );
+            // Auto-prune: keep only the 3 most recent backups so they can't accumulate and fill the disk.
+            await execSSH(
+                `cd ${REMOTE_PATH}/.. && ls -dt castbot-backup-* 2>/dev/null | tail -n +4 | xargs -r sudo rm -rf; true`,
+                'Pruning old backups (keeping 3 most recent)',
                 'risk-low'
             );
             

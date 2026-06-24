@@ -53,12 +53,21 @@ if ! git diff --staged --quiet; then
     git commit -m "$COMMIT_MESSAGE"
 
     echo "🚀 Pushing to GitHub ($CURRENT_BRANCH)..."
+    # TWO-WORKING-TREES SAFETY (RaP 0913): the test-box tree also pushes to main. Reconcile
+    # with any remote commits via rebase BEFORE pushing, so a diverged remote can't silently
+    # reject our push (non-fast-forward) and leave the deploy targets on STALE code.
+    git fetch --quiet origin $CURRENT_BRANCH
+    if ! git pull --rebase origin $CURRENT_BRANCH; then
+        echo "❌ Rebase onto origin/$CURRENT_BRANCH hit conflicts — resolve them, then re-run."
+        echo "ℹ️  Your changes are committed locally; nothing was pushed or deployed."
+        exit 1
+    fi
     if git push origin $CURRENT_BRANCH; then
         echo "✅ Changes pushed to GitHub successfully"
     else
-        echo "❌ Push failed - check authentication"
-        echo "💡 Run 'git push' manually or check GitHub token"
-        echo "ℹ️  Changes are committed locally, safe to continue"
+        echo "❌ Push FAILED — deploy targets would receive STALE code. Aborting."
+        echo "💡 Fix auth / 'git push' manually, then re-run dev-restart."
+        exit 1
     fi
 else
     echo "📝 No changes to commit"
