@@ -190,10 +190,13 @@ export function validateComponentEmoji(emoji, fallback = '📦', client = null) 
  * @param {string} fallback
  * @returns {Object} safe emoji object
  */
-// Unicode emoji that Discord's component validator has REJECTED at runtime (e.g. brand-new
-// codepoints like 🪎 U+1FA8E that are valid Unicode but not yet in Discord's allowed set).
-// Populated reactively by stripErroredComponentEmojis() so we proactively avoid them next time.
-const _rejectedUnicodeEmojis = new Set();
+// Unicode emoji that Discord's component validator REJECTS (valid Unicode but not in Discord's
+// allowed component-emoji set — typically brand-new codepoints). Seeded with known offenders and
+// extended at runtime by stripErroredComponentEmojis() when Discord rejects one (so immediate
+// res.send responses, which can't reactively retry, are still protected after first sight).
+const _rejectedUnicodeEmojis = new Set([
+  '🪎', // U+1FA8E "harp" (Unicode 16.0, 2024) — Discord rejects with COMPONENT_INVALID_EMOJI
+]);
 
 function safeComponentEmoji(emoji, fallback = '📦') {
     if (!emoji || typeof emoji !== 'object') return emoji;

@@ -4,6 +4,7 @@ import {
 } from 'discord-interactions';
 import { PermissionFlagsBits } from 'discord.js';
 import { DiscordRequest } from './utils.js';
+import { sanitizeComponentEmojis } from './utils/emojiUtils.js';
 
 /**
  * Button Handler Factory System
@@ -4933,6 +4934,14 @@ export function sendPermissionDenied(res, permissionName) {
  * @param {boolean} updateMessage - Whether to update existing message
  */
 export function sendResponse(res, data, updateMessage = false) {
+  // Proactive emoji safety for IMMEDIATE responses: res.send goes straight to Discord and
+  // (unlike DiscordRequest) can't reactively retry, so scrub invalid/inaccessible/known-bad
+  // emoji here. Covers the data.components tree for UPDATE_MESSAGE and CHANNEL_MESSAGE alike.
+  if (data && Array.isArray(data.components)) {
+    try { sanitizeComponentEmojis(data.components); }
+    catch (e) { console.error('⚠️ [EMOJI] sendResponse sanitize failed (continuing):', e?.message); }
+  }
+
   // Response validation - prevent common Discord rejection patterns
   const validateResponse = (responseData) => {
     if (updateMessage) {
