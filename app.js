@@ -631,7 +631,8 @@ import {
   parseAndValidateEmoji,
   sanitizeEmojiName,
   checkRoleHasEmojis,
-  clearEmojisForRole
+  clearEmojisForRole,
+  sanitizeComponentEmojis
 } from './utils/emojiUtils.js';
 import {
   calculateCastlistFields,
@@ -2490,6 +2491,25 @@ function generateTipsScreenNavigation(index) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async function (req, res) {
+    // CENTRAL immediate-response emoji guard. Every interaction reply — whether via the factory's
+    // sendResponse, a raw res.send({type, data}), or any legacy handler — passes through here, so
+    // invalid/inaccessible/Discord-unsupported emoji (e.g. 🪎 U+1FA8E) in ANY components tree are
+    // scrubbed to a safe fallback before reaching Discord (COMPONENT_INVALID_EMOJI 50035). Immediate
+    // responses can't reactively retry like DiscordRequest does, so this proactive pass is the guard.
+    const _origInteractionSend = res.send.bind(res);
+    res.send = (payload) => {
+        try {
+            if (payload && typeof payload === 'object') {
+                const comps = (payload.data && Array.isArray(payload.data.components)) ? payload.data.components
+                    : (Array.isArray(payload.components) ? payload.components : null);
+                if (comps) sanitizeComponentEmojis(comps);
+            }
+        } catch (e) {
+            console.error('⚠️ [EMOJI] interaction res.send sanitize failed (continuing):', e?.message);
+        }
+        return _origInteractionSend(payload);
+    };
+
     // Verbose logging controlled by DEBUG_VERBOSE environment variable
     if (shouldLog('VERBOSE')) {
         console.log("Got headers:", JSON.stringify(req.headers, null, 2));
