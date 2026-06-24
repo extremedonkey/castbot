@@ -92,3 +92,69 @@ describe('sanitizeComponentEmojis', () => {
     assert.deepEqual(clean, [{ type: 10, content: 'just text' }]);
   });
 });
+
+// Inline replica of stripErroredComponentEmojis (reactive self-heal from a 50035 error body)
+function makeStripper() {
+  const rejected = new Set();
+  function strip(bodyNode, errorNode) {
+    let count = 0;
+    if (!bodyNode || !errorNode || typeof errorNode !== 'object') return count;
+    for (const key of Object.keys(errorNode)) {
+      if (key === '_errors') continue;
+      if (key === 'emoji') {
+        if (bodyNode.emoji && typeof bodyNode.emoji === 'object' && !bodyNode.emoji.id && typeof bodyNode.emoji.name === 'string') rejected.add(bodyNode.emoji.name);
+        if (bodyNode.emoji !== undefined) { bodyNode.emoji = { name: '📦' }; count++; }
+        continue;
+      }
+      const errChild = errorNode[key];
+      if (!errChild || typeof errChild !== 'object') continue;
+      const bodyChild = Array.isArray(bodyNode) ? bodyNode[Number(key)] : bodyNode[key];
+      if (bodyChild != null) count += strip(bodyChild, errChild);
+    }
+    return count;
+  }
+  return { strip, rejected };
+}
+
+describe('stripErroredComponentEmojis (reactive 50035 self-heal)', () => {
+  const emojiErr = { emoji: { name: { _errors: [{ code: 'COMPONENT_INVALID_EMOJI' }] } } };
+
+  it('replaces exactly the Discord-flagged option emojis with the fallback, leaves others', () => {
+    const { strip, rejected } = makeStripper();
+    const body = { flags: 32768, components: [{ type: 17, components: [
+      { type: 10, content: 'Items' },
+      { type: 1, components: [{ type: 3, options: [
+        { value: 'a', emoji: { name: '🍆' } },
+        { value: 'b', emoji: { name: '👻' } },
+        { value: 'c', emoji: { name: '🪎' } },
+        { value: 'd', emoji: { name: '🪎' } }
+      ]}]}
+    ]}]};
+    const errors = { components: { '0': { components: { '1': { components: { '0': { options: {
+      '2': emojiErr, '3': emojiErr
+    }}}}}}}};
+    const removed = strip(body, errors);
+    const opts = body.components[0].components[1].components[0].options;
+    assert.equal(removed, 2);
+    assert.deepEqual(opts[0].emoji, { name: '🍆' });   // untouched
+    assert.deepEqual(opts[1].emoji, { name: '👻' });   // untouched
+    assert.deepEqual(opts[2].emoji, { name: '📦' });   // flagged → fallback
+    assert.deepEqual(opts[3].emoji, { name: '📦' });   // flagged → fallback
+    assert.ok(rejected.has('🪎'));                      // learned for proactive future stripping
+  });
+
+  it('handles a flagged button emoji (not just options)', () => {
+    const { strip } = makeStripper();
+    const body = { components: [{ type: 1, components: [{ type: 2, emoji: { name: '🪎' } }] }] };
+    const errors = { components: { '0': { components: { '0': emojiErr } } } };
+    assert.equal(strip(body, errors), 1);
+    assert.deepEqual(body.components[0].components[0].emoji, { name: '📦' });
+  });
+
+  it('returns 0 and mutates nothing when there are no emoji errors', () => {
+    const { strip } = makeStripper();
+    const body = { components: [{ type: 1, components: [{ type: 3, options: [{ value: 'a', emoji: { name: '🍎' } }] }] }] };
+    assert.equal(strip(body, { some_other_field: { _errors: [{ code: 'X' }] } }), 0);
+    assert.deepEqual(body.components[0].components[0].options[0].emoji, { name: '🍎' });
+  });
+});

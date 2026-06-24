@@ -190,13 +190,55 @@ export function validateComponentEmoji(emoji, fallback = '📦', client = null) 
  * @param {string} fallback
  * @returns {Object} safe emoji object
  */
+// Unicode emoji that Discord's component validator has REJECTED at runtime (e.g. brand-new
+// codepoints like 🪎 U+1FA8E that are valid Unicode but not yet in Discord's allowed set).
+// Populated reactively by stripErroredComponentEmojis() so we proactively avoid them next time.
+const _rejectedUnicodeEmojis = new Set();
+
 function safeComponentEmoji(emoji, fallback = '📦') {
     if (!emoji || typeof emoji !== 'object') return emoji;
+    // Learned bad Unicode emoji (Discord rejected it before) → fall back proactively
+    if (!emoji.id && typeof emoji.name === 'string' && _rejectedUnicodeEmojis.has(emoji.name)) {
+        return { name: fallback };
+    }
     // A raw custom/shortcode string mistakenly placed in `name` → normalise, then cache-validate
     if (!emoji.id && typeof emoji.name === 'string' && (emoji.name.includes('<') || /^:\w+:$/.test(emoji.name))) {
         return validateComponentEmoji(resolveEmoji(emoji.name, fallback, 'component'), fallback);
     }
     return validateComponentEmoji(emoji, fallback);
+}
+
+/**
+ * Surgically remove the emoji fields that Discord flagged as invalid, using the precise paths in a
+ * COMPONENT_INVALID_EMOJI (50035) error body. Walks the request body and the error tree in parallel.
+ * Records any rejected Unicode emoji name so future sends strip it proactively (see safeComponentEmoji).
+ * @param {Object} bodyNode - the current node of the REQUEST body (object sent to Discord)
+ * @param {Object} errorNode - the matching node of Discord's `errors` object
+ * @returns {number} count of emoji fields removed
+ */
+export function stripErroredComponentEmojis(bodyNode, errorNode) {
+    let count = 0;
+    if (!bodyNode || !errorNode || typeof errorNode !== 'object') return count;
+    for (const key of Object.keys(errorNode)) {
+        if (key === '_errors') continue;
+        if (key === 'emoji') {
+            // This node (an option or button) has an invalid emoji — record it (so future sends
+            // strip it proactively) and replace with the safe fallback, matching the proactive path.
+            if (bodyNode.emoji && typeof bodyNode.emoji === 'object' && !bodyNode.emoji.id && typeof bodyNode.emoji.name === 'string') {
+                _rejectedUnicodeEmojis.add(bodyNode.emoji.name);
+            }
+            if (bodyNode.emoji !== undefined) { bodyNode.emoji = { name: '📦' }; count++; }
+            continue;
+        }
+        // Otherwise `key` is an array index or a container key (components/options/data) — descend both trees
+        const errChild = errorNode[key];
+        if (!errChild || typeof errChild !== 'object') continue;
+        const bodyChild = Array.isArray(bodyNode) ? bodyNode[Number(key)] : bodyNode[key];
+        if (bodyChild !== undefined && bodyChild !== null) {
+            count += stripErroredComponentEmojis(bodyChild, errChild);
+        }
+    }
+    return count;
 }
 
 /**

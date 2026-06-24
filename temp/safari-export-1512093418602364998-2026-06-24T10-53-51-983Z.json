@@ -1,0 +1,769 @@
+{
+ "stores": {},
+ "items": {
+  "anthony_s_dignity_165851": {
+   "id": "anthony_s_dignity_165851",
+   "name": "Anthony's Dignity",
+   "description": "",
+   "emoji": "🍆",
+   "category": "General",
+   "basePrice": 0,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "anthony_s_soul_462449": {
+   "id": "anthony_s_soul_462449",
+   "name": "Anthony's Soul",
+   "description": "",
+   "emoji": "👻",
+   "category": "General",
+   "basePrice": 0,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "salt_290952": {
+   "id": "salt_290952",
+   "name": "Salt",
+   "description": "Makes things better if you're food or worse in a wound. Perspective!",
+   "emoji": "🧂",
+   "category": "General",
+   "basePrice": 0,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "gold_452391": {
+   "id": "gold_452391",
+   "name": "Gold",
+   "description": "There's gold in them thar hills!",
+   "emoji": "🪎",
+   "category": "General",
+   "basePrice": 0,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "gold_467105": {
+   "id": "gold_467105",
+   "name": "Gold",
+   "description": "There's gold in them thar hills!",
+   "emoji": "🪎",
+   "category": "General",
+   "basePrice": 0,
+   "maxQuantity": -1,
+   "consumable": "No"
+  },
+  "gold_475573": {
+   "id": "gold_475573",
+   "name": "Gold",
+   "description": "There's gold in them thar hills!",
+   "emoji": "🪎",
+   "category": "General",
+   "basePrice": 0,
+   "maxQuantity": -1,
+   "consumable": "No"
+  }
+ },
+ "safariConfig": {
+  "currencyName": "Dollars",
+  "currencyEmoji": "🪙",
+  "inventoryName": "Inventory",
+  "goodEventName": "Good Event",
+  "badEventName": "Bad Event",
+  "goodEventEmoji": "✅",
+  "badEventEmoji": "❌",
+  "round1GoodProbability": 75,
+  "round2GoodProbability": 50,
+  "round3GoodProbability": 25
+ },
+ "maps": {
+  "active": "map_8x5_1782293501195",
+  "map_8x5_1782293501195": {
+   "id": "map_8x5_1782293501195",
+   "name": "EpochORG S14: Empire of Mali",
+   "gridSize": 8,
+   "coordinates": {
+    "A1": {
+     "baseContent": {
+      "title": "A1",
+      "description": "You are at grid location A1.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "B1": {
+     "baseContent": {
+      "title": "Fez",
+      "description": "You are at grid location B1.",
+      "image": "",
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "C1": {
+     "baseContent": {
+      "title": "C1",
+      "description": "You are at grid location C1.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "D1": {
+     "baseContent": {
+      "title": "D1",
+      "description": "You are at grid location D1.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "E1": {
+     "baseContent": {
+      "title": "E1",
+      "description": "You are at grid location E1.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "F1": {
+     "baseContent": {
+      "title": "F1",
+      "description": "You are at grid location F1.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "G1": {
+     "baseContent": {
+      "title": "G1",
+      "description": "You are at grid location G1.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "H1": {
+     "baseContent": {
+      "title": "H1",
+      "description": "You are at grid location H1.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "A2": {
+     "baseContent": {
+      "title": "Salt Mines",
+      "description": "Here, merchants gather the desert's most precious resource: salt, the lifeblood of trans-Saharan trade.",
+      "image": "",
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "B2": {
+     "baseContent": {
+      "title": "B2",
+      "description": "You are at grid location B2.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "C2": {
+     "baseContent": {
+      "title": "C2",
+      "description": "You are at grid location C2.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "D2": {
+     "baseContent": {
+      "title": "D2",
+      "description": "You are at grid location D2.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "E2": {
+     "baseContent": {
+      "title": "E2",
+      "description": "You are at grid location E2.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "F2": {
+     "baseContent": {
+      "title": "F2",
+      "description": "You are at grid location F2.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "G2": {
+     "baseContent": {
+      "title": "G2",
+      "description": "You are at grid location G2.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "H2": {
+     "baseContent": {
+      "title": "H2",
+      "description": "You are at grid location H2.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "A3": {
+     "baseContent": {
+      "title": "A3",
+      "description": "You are at grid location A3.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "B3": {
+     "baseContent": {
+      "title": "B3",
+      "description": "You are at grid location B3.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "C3": {
+     "baseContent": {
+      "title": "C3",
+      "description": "You are at grid location C3.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "D3": {
+     "baseContent": {
+      "title": "D3",
+      "description": "You are at grid location D3.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "E3": {
+     "baseContent": {
+      "title": "E3",
+      "description": "You are at grid location E3.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "F3": {
+     "baseContent": {
+      "title": "F3",
+      "description": "You are at grid location F3.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "G3": {
+     "baseContent": {
+      "title": "G3",
+      "description": "You are at grid location G3.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "H3": {
+     "baseContent": {
+      "title": "H3",
+      "description": "You are at grid location H3.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "A4": {
+     "baseContent": {
+      "title": "A4",
+      "description": "You are at grid location A4.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "B4": {
+     "baseContent": {
+      "title": "B4",
+      "description": "You are at grid location B4.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "C4": {
+     "baseContent": {
+      "title": "C4",
+      "description": "You are at grid location C4.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "D4": {
+     "baseContent": {
+      "title": "D4",
+      "description": "You are at grid location D4.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "E4": {
+     "baseContent": {
+      "title": "E4",
+      "description": "You are at grid location E4.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "F4": {
+     "baseContent": {
+      "title": "F4",
+      "description": "You are at grid location F4.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "G4": {
+     "baseContent": {
+      "title": "G4",
+      "description": "You are at grid location G4.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "H4": {
+     "baseContent": {
+      "title": "H4",
+      "description": "You are at grid location H4.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "A5": {
+     "baseContent": {
+      "title": "A5",
+      "description": "You are at grid location A5.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "B5": {
+     "baseContent": {
+      "title": "B5",
+      "description": "You are at grid location B5.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "C5": {
+     "baseContent": {
+      "title": "C5",
+      "description": "You are at grid location C5.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "D5": {
+     "baseContent": {
+      "title": "D5",
+      "description": "You are at grid location D5.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [
+      "view_mission_board_876529"
+     ],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "E5": {
+     "baseContent": {
+      "title": "E5",
+      "description": "You are at grid location E5.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "F5": {
+     "baseContent": {
+      "title": "F5",
+      "description": "You are at grid location F5.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "G5": {
+     "baseContent": {
+      "title": "G5",
+      "description": "You are at grid location G5.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    },
+    "H5": {
+     "baseContent": {
+      "title": "H5",
+      "description": "You are at grid location H5.",
+      "image": null,
+      "clues": []
+     },
+     "buttons": [],
+     "cellType": "unexplored",
+     "discovered": false,
+     "hiddenCommands": {},
+     "specialEvents": []
+    }
+   },
+   "blacklistedCoordinates": []
+  }
+ },
+ "customActions": {
+  "give_epoch_prod_free_074159": {
+   "id": "give_epoch_prod_free_074159",
+   "name": "Give epoch prod free money",
+   "label": "Give epoch prod free money",
+   "emoji": "💰",
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "give_currency",
+     "order": 0,
+     "config": {
+      "amount": 100,
+      "limit": {
+       "type": "once_per_player"
+      }
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "style": "Primary"
+    }
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "take_anthony_s_digni_208713": {
+   "id": "take_anthony_s_digni_208713",
+   "name": "Take Anthony's Dignity (once per minute)",
+   "label": "Take Anthony's Dignity (once per minute)",
+   "emoji": null,
+   "style": "Danger",
+   "actions": [
+    {
+     "type": "give_item",
+     "order": 0,
+     "config": {
+      "itemId": "anthony_s_dignity_165851",
+      "quantity": 1,
+      "operation": "give",
+      "limit": {
+       "type": "once_per_period",
+       "periodMs": 60000
+      }
+     },
+     "executeOn": "true"
+    },
+    {
+     "type": "give_item",
+     "order": 1,
+     "config": {
+      "itemId": "anthony_s_soul_462449",
+      "quantity": 1,
+      "operation": "give",
+      "limit": {
+       "type": "once_per_period",
+       "periodMs": 60000
+      }
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "style": "Danger"
+    }
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "give_reece_a_public__748523": {
+   "id": "give_reece_a_public__748523",
+   "name": "Give Reece a public shout out",
+   "label": "Give Reece a public shout out",
+   "emoji": "💯",
+   "style": "Secondary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "Give Reece a public shout out",
+      "content": "Reece is cool!",
+      "image": "",
+      "color": "95a5a6"
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "style": "Secondary",
+     "label": "Give Reece a public shout out",
+     "emoji": "💯"
+    }
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [],
+   "metadata": {
+    "tags": []
+   }
+  },
+  "view_mission_board_876529": {
+   "id": "view_mission_board_876529",
+   "name": "View Mission Board",
+   "label": "View Mission Board",
+   "emoji": "📜",
+   "style": "Primary",
+   "actions": [
+    {
+     "type": "display_text",
+     "order": 0,
+     "config": {
+      "title": "📜 Mission Board",
+      "content": "* Take **1x Salt** and **1x Pepper** to *Fez*",
+      "image": "",
+      "color": "3498db"
+     },
+     "executeOn": "true"
+    }
+   ],
+   "trigger": {
+    "type": "button",
+    "button": {
+     "style": "Primary"
+    }
+   },
+   "conditions": {
+    "logic": "AND",
+    "items": []
+   },
+   "coordinates": [
+    "D5"
+   ],
+   "metadata": {
+    "tags": []
+   }
+  }
+ }
+}

@@ -3,33 +3,35 @@ import fetch from 'node-fetch';
 
 export async function DiscordRequest(endpoint, options, context = null) {
   const url = `https://discord.com/api/v10/${endpoint}`;
-  if (options.body) {
-    // Defense-in-depth: scrub invalid/inaccessible emoji from any outgoing components tree so a
-    // single bad emoji can't make Discord reject the whole message (COMPONENT_INVALID_EMOJI 50035).
-    // Only runs on object bodies that actually carry components; never allowed to break a send.
-    if (typeof options.body === 'object') {
-      try {
-        const body = options.body;
-        if (Array.isArray(body.components) || Array.isArray(body.data?.components)) {
-          const { sanitizeComponentEmojis } = await import('./utils/emojiUtils.js');
-          if (Array.isArray(body.components)) sanitizeComponentEmojis(body.components);
-          if (Array.isArray(body.data?.components)) sanitizeComponentEmojis(body.data.components);
-        }
-      } catch (e) {
-        console.error('⚠️ [EMOJI] sanitizeComponentEmojis failed (continuing send):', e?.message);
-      }
+
+  // Keep a reference to the OBJECT body (before stringify) so we can surgically strip
+  // Discord-rejected emojis and retry. `bodyObj` carries the live components tree.
+  const bodyObj = (options.body && typeof options.body === 'object') ? options.body : null;
+  const hasComponents = !!(bodyObj && (Array.isArray(bodyObj.components) || Array.isArray(bodyObj.data?.components)));
+
+  if (hasComponents) {
+    // Defense-in-depth (proactive): scrub invalid/inaccessible/learned-bad emoji so a single bad
+    // emoji can't make Discord reject the whole message (COMPONENT_INVALID_EMOJI 50035).
+    try {
+      const { sanitizeComponentEmojis } = await import('./utils/emojiUtils.js');
+      if (Array.isArray(bodyObj.components)) sanitizeComponentEmojis(bodyObj.components);
+      if (Array.isArray(bodyObj.data?.components)) sanitizeComponentEmojis(bodyObj.data.components);
+    } catch (e) {
+      console.error('⚠️ [EMOJI] sanitizeComponentEmojis failed (continuing send):', e?.message);
     }
-    options.body = typeof options.body === 'string'
-      ? options.body
-      : JSON.stringify(options.body);
   }
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
-      'Content-Type': 'application/json; charset=UTF-8',
-    },
+
+  const baseHeaders = {
+    Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+    'Content-Type': 'application/json; charset=UTF-8',
+  };
+  const doFetch = (body) => fetch(url, {
     ...options,
+    headers: baseHeaders,
+    body: body === undefined ? undefined : (typeof body === 'string' ? body : JSON.stringify(body)),
   });
+
+  let res = await doFetch(options.body);
 
   // For DELETE requests, return early since they don't return content
   if (options.method === 'DELETE') {
@@ -38,8 +40,30 @@ export async function DiscordRequest(endpoint, options, context = null) {
 
   // Handle non-ok responses
   if (!res.ok) {
-    const error = await res.text();
-    
+    let error = await res.text();
+
+    // Reactive self-heal: Discord rejects some valid-Unicode-but-unsupported emoji (e.g. brand-new
+    // codepoints like 🪎 U+1FA8E) with COMPONENT_INVALID_EMOJI. The error body pinpoints each bad
+    // emoji — strip exactly those (recording them so future sends avoid them) and retry ONCE.
+    if (hasComponents && error.includes('COMPONENT_INVALID_EMOJI')) {
+      try {
+        const parsed = JSON.parse(error);
+        const { stripErroredComponentEmojis } = await import('./utils/emojiUtils.js');
+        const removed = stripErroredComponentEmojis(bodyObj, parsed.errors || {});
+        if (removed > 0) {
+          console.log(`🔧 [EMOJI] Discord rejected ${removed} emoji(s)${context ? ` [${context}]` : ''} — stripped and retrying`);
+          res = await doFetch(bodyObj);
+          if (res.ok) {
+            const okText = await res.text();
+            return okText ? JSON.parse(okText) : null;
+          }
+          error = await res.text(); // retry also failed — fall through with the new error
+        }
+      } catch (e) {
+        console.error('⚠️ [EMOJI] emoji-retry failed (continuing with original error):', e?.message);
+      }
+    }
+
     // Graceful handling for webhook errors (Discord interaction token expiry/invalid)
     if (error.includes('Unknown Webhook') ||
         error.includes('Invalid Webhook Token') ||
