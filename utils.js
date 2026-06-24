@@ -4,6 +4,21 @@ import fetch from 'node-fetch';
 export async function DiscordRequest(endpoint, options, context = null) {
   const url = `https://discord.com/api/v10/${endpoint}`;
   if (options.body) {
+    // Defense-in-depth: scrub invalid/inaccessible emoji from any outgoing components tree so a
+    // single bad emoji can't make Discord reject the whole message (COMPONENT_INVALID_EMOJI 50035).
+    // Only runs on object bodies that actually carry components; never allowed to break a send.
+    if (typeof options.body === 'object') {
+      try {
+        const body = options.body;
+        if (Array.isArray(body.components) || Array.isArray(body.data?.components)) {
+          const { sanitizeComponentEmojis } = await import('./utils/emojiUtils.js');
+          if (Array.isArray(body.components)) sanitizeComponentEmojis(body.components);
+          if (Array.isArray(body.data?.components)) sanitizeComponentEmojis(body.data.components);
+        }
+      } catch (e) {
+        console.error('⚠️ [EMOJI] sanitizeComponentEmojis failed (continuing send):', e?.message);
+      }
+    }
     options.body = typeof options.body === 'string'
       ? options.body
       : JSON.stringify(options.body);

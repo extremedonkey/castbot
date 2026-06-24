@@ -298,9 +298,10 @@ function createEntitySelector(entities, selectedId, entityType, searchTerm) {
             emoji = entity.emoji || getDefaultEmoji(entityType);
         }
         
-        // Use parseTextEmoji (no cache validation) for String Select options —
-        // selects gracefully handle missing emojis, unlike buttons which crash
-        const { cleanText, emoji: parsedEmoji } = parseTextEmoji(`${emoji} ${name}`, getDefaultEmoji(entityType));
+        // Validate against the emoji cache — a deleted/foreign custom emoji on ANY option
+        // makes Discord reject the whole select (COMPONENT_INVALID_EMOJI). parseAndValidateEmoji
+        // falls back to the default emoji per-option instead. (DiscordRequest also scrubs as a backstop.)
+        const { cleanText, emoji: parsedEmoji } = parseAndValidateEmoji(`${emoji} ${name}`, getDefaultEmoji(entityType));
         const safeCleanText = cleanText || `${emoji} ${name}`;
         options.push({
             label: safeCleanText.substring(0, 100),

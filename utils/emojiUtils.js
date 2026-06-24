@@ -182,6 +182,55 @@ export function validateComponentEmoji(emoji, fallback = '📦', client = null) 
 }
 
 /**
+ * Coerce a single component `emoji` object to a safe form:
+ *  - name carrying a raw custom string `<:x:id>` / `<a:x:id>` or a `:shortcode:` → re-resolve
+ *  - custom emoji (has id) → validate against the client cache, fall back if inaccessible
+ *  - plain Unicode → unchanged
+ * @param {Object} emoji
+ * @param {string} fallback
+ * @returns {Object} safe emoji object
+ */
+function safeComponentEmoji(emoji, fallback = '📦') {
+    if (!emoji || typeof emoji !== 'object') return emoji;
+    // A raw custom/shortcode string mistakenly placed in `name` → normalise, then cache-validate
+    if (!emoji.id && typeof emoji.name === 'string' && (emoji.name.includes('<') || /^:\w+:$/.test(emoji.name))) {
+        return validateComponentEmoji(resolveEmoji(emoji.name, fallback, 'component'), fallback);
+    }
+    return validateComponentEmoji(emoji, fallback);
+}
+
+/**
+ * Recursively sanitize every `emoji` field in a Discord components tree IN PLACE.
+ * Defense-in-depth: a single deleted/foreign/malformed emoji can otherwise make Discord
+ * reject the ENTIRE message with COMPONENT_INVALID_EMOJI (50035). Called centrally in
+ * DiscordRequest so no individual menu builder can take down a whole screen.
+ * Handles: action rows / containers (`components`), selects (`options`), sections
+ * (`accessory`), modal labels (`component`), and direct button `emoji`.
+ * @param {Array|Object} node - a components array or a single component node
+ * @param {string} [fallback='📦']
+ * @returns {Array|Object} the same node (mutated)
+ */
+export function sanitizeComponentEmojis(node, fallback = '📦') {
+    if (!node || typeof node !== 'object') return node;
+    if (Array.isArray(node)) {
+        for (const child of node) sanitizeComponentEmojis(child, fallback);
+        return node;
+    }
+    if (node.emoji && typeof node.emoji === 'object') {
+        node.emoji = safeComponentEmoji(node.emoji, fallback);
+    }
+    if (Array.isArray(node.options)) {
+        for (const opt of node.options) {
+            if (opt?.emoji && typeof opt.emoji === 'object') opt.emoji = safeComponentEmoji(opt.emoji, fallback);
+        }
+    }
+    if (Array.isArray(node.components)) sanitizeComponentEmojis(node.components, fallback);
+    if (node.accessory) sanitizeComponentEmojis(node.accessory, fallback);
+    if (node.component) sanitizeComponentEmojis(node.component, fallback);
+    return node;
+}
+
+/**
  * Parse text emoji AND validate it exists. Convenience wrapper combining parseTextEmoji + validateComponentEmoji.
  * @param {string} text - Text potentially containing emoji
  * @param {string} fallback - Fallback Unicode emoji
