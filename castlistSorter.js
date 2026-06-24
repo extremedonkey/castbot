@@ -256,9 +256,42 @@ function sortAlphabetical(members, reverse = false) {
   });
 }
 
+// Word-to-number lookup for spelled-out season numbers ("Season Ten" → 10)
+const NUMBER_WORDS = {
+  one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
+  ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15,
+  sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19
+};
+const TENS_WORDS = {
+  twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90
+};
+
+/**
+ * Convert a spelled-out number phrase to an integer, or null if not fully recognized.
+ * Handles "one".."nineteen", tens ("twenty"), and compounds ("twenty one", "thirty-five").
+ * Returns null for any unrecognized token so non-number role names are left untouched.
+ */
+function wordsToNumber(phrase) {
+  const tokens = phrase.toLowerCase().trim().split(/[\s-]+/).filter(Boolean);
+  if (tokens.length === 0 || tokens.length > 2) return null;
+
+  if (tokens.length === 1) {
+    const w = tokens[0];
+    if (NUMBER_WORDS[w] !== undefined) return NUMBER_WORDS[w];
+    if (TENS_WORDS[w] !== undefined) return TENS_WORDS[w];
+    return null;
+  }
+
+  // Two tokens: must be tens + ones (e.g. "twenty one")
+  const tens = TENS_WORDS[tokens[0]];
+  const ones = NUMBER_WORDS[tokens[1]];
+  if (tens !== undefined && ones !== undefined && ones < 10) return tens + ones;
+  return null;
+}
+
 /**
  * Parse season number from vanity role name
- * Handles patterns like "S1", "S6.5", "S11", "Season 1", "Season 6.5"
+ * Handles patterns like "S1", "S6.5", "S11", "Season 1", "Season 6.5", "Season Ten"
  * @param {string} roleName - The role name to parse
  * @returns {Object|null} { type: 'season', number: 1 } or null if not a season role
  */
@@ -277,6 +310,18 @@ function parseSeasonNumber(roleName) {
   const seasonMatch = roleName.match(seasonPattern);
   if (seasonMatch) {
     return { type: 'season', number: parseFloat(seasonMatch[1]) };
+  }
+
+  // Pattern 3: "Season One", "Season Ten", "Season Twenty One" (Season followed by a spelled-out number)
+  // Only matches when the remainder is a fully-recognized number word — otherwise returns null
+  // so ordinary role names ("Season Pass", "Seasonal Vibes") are unaffected.
+  const wordPattern = /^Season\s+([A-Za-z][A-Za-z\s-]*)$/i;
+  const wordMatch = roleName.match(wordPattern);
+  if (wordMatch) {
+    const num = wordsToNumber(wordMatch[1]);
+    if (num !== null) {
+      return { type: 'season', number: num };
+    }
   }
 
   return null;
