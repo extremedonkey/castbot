@@ -77,8 +77,11 @@ function buildCustomLimitRejection(verdict, label, opts = {}) {
     // Optional small-text "qty remaining" line for fixed-window limits (the reward comes back at reset).
     // When blocked, the viewer can claim 0 more right now, so remaining is 0 of `unitName` until the window resets.
     const lines = [msg];
-    if (opts.unitName && r.windowResetMs != null) {
-        lines.push(`-# > 0x ${opts.unitName} remaining until reset.`);
+    // Global limits only: once THIS player has claimed, surface how many slots remain for everyone else.
+    // r.claimsLeft = maxClaims − distinct claimants so far (0 once the global cap is hit; Infinity if uncapped).
+    if (verdict.reason === 'custom_already_claimed' && opts.unitNoun && Number.isFinite(r.claimsLeft)) {
+        const tail = r.windowResetMs != null ? ' until reset' : '';
+        lines.push(`-# > ${r.claimsLeft}x ${opts.unitNoun} remaining for other players${tail}.`);
     }
     return {
         flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
@@ -1065,7 +1068,7 @@ async function executeGiveCurrency(config, userId, guildId, interaction, buttonI
         const verdict = checkLimitGate(liveLimit, userId);
         if (verdict.blocked) {
             const amountStr = config.amount > 0 ? `+${config.amount}` : `${config.amount}`;
-            return buildCustomLimitRejection(verdict, `${customTerms.currencyEmoji || '🪙'} ${amountStr} ${customTerms.currencyName}`);
+            return buildCustomLimitRejection(verdict, `${customTerms.currencyEmoji || '🪙'} ${amountStr} ${customTerms.currencyName}`, { unitNoun: `stash of ${customTerms.currencyEmoji || '🪙'} ${customTerms.currencyName}` });
         }
     }
 
@@ -1248,7 +1251,7 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
         const liveLimit = await getLiveActionLimit(guildId, buttonId, actionIndex, 'give_item') || config.limit;
         const verdict = checkLimitGate(liveLimit, userId);
         if (verdict.blocked) {
-            return buildCustomLimitRejection(verdict, `${itemEmoji} ${quantity}x ${itemName}`, { unitName: itemName });
+            return buildCustomLimitRejection(verdict, `${itemEmoji} ${quantity}x ${itemName}`, { unitNoun: itemName });
         }
     }
 
