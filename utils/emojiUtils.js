@@ -2,6 +2,7 @@
 // Handles emoji creation, parsing, and cleanup operations
 
 import { loadPlayerData, savePlayerData, getPlayer } from '../storage.js';
+import { isBotEmojiId } from '../botEmojis.js';
 
 // Module-level Discord client reference for emoji validation
 let _emojiClient = null;
@@ -168,11 +169,17 @@ export function validateComponentEmoji(emoji, fallback = '📦', client = null) 
     // Unicode emojis are always safe
     if (!emoji.id) return emoji;
 
-    // Custom emoji — validate against client emoji cache
+    // CastBot's OWN application emojis (botEmojis.js) are always usable by the bot but live in
+    // client.application.emojis — NOT client.emojis.cache (guild emojis). Trust them so we don't
+    // strip the logo/icons (e.g. cb_transparent) down to 📦.
+    if (isBotEmojiId(emoji.id)) return emoji;
+
+    // Custom emoji — validate against guild emoji cache, then the application-emoji cache
     const effectiveClient = client || _emojiClient;
     if (effectiveClient?.emojis?.cache) {
-        const exists = effectiveClient.emojis.cache.get(emoji.id);
-        if (!exists) {
+        const inGuildCache = effectiveClient.emojis.cache.get(emoji.id);
+        const inAppCache = effectiveClient.application?.emojis?.cache?.get?.(emoji.id);
+        if (!inGuildCache && !inAppCache) {
             console.log(`⚠️ [EMOJI] Custom emoji ${emoji.name}:${emoji.id} not found in cache, falling back to ${fallback}`);
             return { name: fallback };
         }

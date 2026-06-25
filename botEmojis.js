@@ -85,6 +85,24 @@ const BOT_EMOJIS = {
   // }
 };
 
+// Flat set of EVERY bot-emoji id across all envs (dev/test/prod) — the authoritative list of
+// CastBot's own application emojis. Used to stop the component-emoji sanitizer from falsely
+// stripping them: app emojis live in client.application.emojis, NOT client.emojis.cache (guild
+// emojis), so a cache-only check wrongly fell them back to 📦.
+const _allBotEmojiIds = new Set();
+for (const e of Object.values(BOT_EMOJIS)) {
+  for (const id of [e.dev, e.test, e.prod]) if (id) _allBotEmojiIds.add(id);
+}
+
+/**
+ * Is this emoji id one of CastBot's own application emojis (any env)?
+ * @param {string} id
+ * @returns {boolean}
+ */
+export function isBotEmojiId(id) {
+  return !!id && _allBotEmojiIds.has(String(id));
+}
+
 /**
  * Get the appropriate emoji ID for the current environment
  * @param {string} emojiName - The name of the emoji in BOT_EMOJIS
