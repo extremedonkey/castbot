@@ -45,7 +45,7 @@ import { checkLimitGate, recordLimitClaim, formatCountdown, formatPeriod, format
  * @param {string} label - human label for the thing (e.g. "🪙 25 Coins", "⚔️ Sword x1")
  * @returns {Object} Components V2 ephemeral response
  */
-function buildCustomLimitRejection(verdict, label) {
+function buildCustomLimitRejection(verdict, label, opts = {}) {
     const r = verdict.remaining || {};
     const everyStr = r.periodMs ? formatPeriodVerbose(r.periodMs) : null;
     let msg;
@@ -74,9 +74,15 @@ function buildCustomLimitRejection(verdict, label) {
             msg = `❌ **${label}** — no claims remaining.`;
             break;
     }
+    // Optional small-text "qty remaining" line for fixed-window limits (the reward comes back at reset).
+    // When blocked, the viewer can claim 0 more right now, so remaining is 0 of `unitName` until the window resets.
+    const lines = [msg];
+    if (opts.unitName && r.windowResetMs != null) {
+        lines.push(`-# > 0x ${opts.unitName} remaining until reset.`);
+    }
     return {
         flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
-        components: [{ type: 17, accent_color: 0xE74C3C, components: [{ type: 10, content: msg }] }]
+        components: [{ type: 17, accent_color: 0xE74C3C, components: [{ type: 10, content: lines.join('\n') }] }]
     };
 }
 
@@ -1242,7 +1248,7 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
         const liveLimit = await getLiveActionLimit(guildId, buttonId, actionIndex, 'give_item') || config.limit;
         const verdict = checkLimitGate(liveLimit, userId);
         if (verdict.blocked) {
-            return buildCustomLimitRejection(verdict, `${itemEmoji} ${quantity}x ${itemName}`);
+            return buildCustomLimitRejection(verdict, `${itemEmoji} ${quantity}x ${itemName}`, { unitName: itemName });
         }
     }
 
