@@ -95,6 +95,18 @@ export async function setPlayerLocation(guildId, userId, coordinate, mapId = nul
     return player.safari.mapProgress[activeMapId];
 }
 
+// SINGLE SOURCE OF TRUTH for movement-button labels (emoji + short text).
+// Cardinals are single-letter (N/W/E/S) so buttons fit on mobile; diagonals stay two-letter.
+// Used by BOTH movement-button paths: getValidMoves().label and getMovementDisplay()'s grid.
+// NOTE: the verbose `moves[dir].direction` strings below are intentionally kept — they're parsed
+// for the direction key in getMovementDisplay and used in movement notifications; only the LABELS
+// shown on buttons come from here.
+export const DIRECTION_LABELS = {
+    northwest: '↖️ NW', north: '⬆️ N', northeast: '↗️ NE',
+    west: '⬅️ W',                       east: '➡️ E',
+    southwest: '↙️ SW', south: '⬇️ S', southeast: '↘️ SE'
+};
+
 // Get valid moves from current position based on movement schema
 export async function getValidMoves(currentCoordinate, movementSchema = 'adjacent_8', guildId = null) {
     const col = currentCoordinate.charCodeAt(0) - 65; // A=0, B=1, etc.
@@ -136,8 +148,8 @@ export async function getValidMoves(currentCoordinate, movementSchema = 'adjacen
                 direction: move.direction,
                 coordinate: coordinate,
                 customId: `safari_move_${coordinate}`,
-                // Add label with coordinate for button display
-                label: `${move.direction.split(' ')[1]} (${coordinate})`,
+                // Add label with coordinate for button display (short labels via DIRECTION_LABELS)
+                label: `${DIRECTION_LABELS[direction]} (${coordinate})`,
                 disabled: isBlacklisted, // Mark as disabled if blacklisted
                 blacklisted: isBlacklisted // Additional flag for UI handling
             });
@@ -436,8 +448,9 @@ export async function getMovementDisplay(guildId, userId, coordinate, isDeferred
         movesByDirection[directionKey] = move;
     });
 
-    // Helper to create button for direction
-    const createButton = (dir, dirLabel, targetCol, targetRow) => {
+    // Helper to create button for direction (label comes from the single-source DIRECTION_LABELS map)
+    const createButton = (dir, targetCol, targetRow) => {
+        const dirLabel = DIRECTION_LABELS[dir] || dir;
         const isOutOfBounds = targetCol < 0 || targetCol >= gridDimensions.width || targetRow < 0 || targetRow >= gridDimensions.height;
         const targetCoordinate = !isOutOfBounds ? String.fromCharCode(65 + targetCol) + (targetRow + 1) : null;
 
@@ -494,9 +507,9 @@ export async function getMovementDisplay(guildId, userId, coordinate, isDeferred
     const row1 = {
         type: 1, // Action Row
         components: [
-            createButton('northwest', '↖️ NW', col - 1, row - 1),
-            createButton('north', '⬆️ North', col, row - 1),
-            createButton('northeast', '↗️ NE', col + 1, row - 1)
+            createButton('northwest', col - 1, row - 1),
+            createButton('north', col, row - 1),
+            createButton('northeast', col + 1, row - 1)
         ]
     };
     
@@ -504,7 +517,7 @@ export async function getMovementDisplay(guildId, userId, coordinate, isDeferred
     const row2 = {
         type: 1, // Action Row
         components: [
-            createButton('west', '⬅️ West', col - 1, row),
+            createButton('west', col - 1, row),
             {
                 type: 2,
                 custom_id: 'current_position',
@@ -512,7 +525,7 @@ export async function getMovementDisplay(guildId, userId, coordinate, isDeferred
                 style: 2, // Secondary
                 disabled: true
             },
-            createButton('east', '➡️ East', col + 1, row)
+            createButton('east', col + 1, row)
         ]
     };
     
@@ -520,9 +533,9 @@ export async function getMovementDisplay(guildId, userId, coordinate, isDeferred
     const row3 = {
         type: 1, // Action Row
         components: [
-            createButton('southwest', '↙️ SW', col - 1, row + 1),
-            createButton('south', '⬇️ South', col, row + 1),
-            createButton('southeast', '↘️ SE', col + 1, row + 1)
+            createButton('southwest', col - 1, row + 1),
+            createButton('south', col, row + 1),
+            createButton('southeast', col + 1, row + 1)
         ]
     };
     

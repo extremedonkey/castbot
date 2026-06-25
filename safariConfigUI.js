@@ -96,7 +96,7 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
     fieldGroupButtons.push({
         type: 2, // Button
         custom_id: 'stamina_location_config',
-        label: 'Stamina Settings',
+        label: 'Settings',
         style: 2, // Secondary
         emoji: { name: '⚡' }
     });

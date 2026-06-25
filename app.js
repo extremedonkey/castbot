@@ -16632,15 +16632,15 @@ Your server is now ready for Tycoons gameplay!`;
               // Label 4: Regeneration Amount
               {
                 type: 18, // Label
-                label: 'Regeneration Amount',
-                description: 'How much stamina regenerates each cooldown. Leave blank = full reset to max. Can exceed max stamina.',
+                label: 'Regen Amount (optional)',
+                description: 'Recommended: leave blank = full refill to max each cooldown. Or enter a number for partial regen.',
                 component: {
                   type: 4, // Text Input
                   custom_id: 'regen_amount',
                   style: 1, // Short
                   min_length: 0,
                   max_length: 2,
-                  placeholder: 'Blank = full reset',
+                  placeholder: 'Recommended: leave blank for full reset',
                   value: currentConfig.regenerationAmount?.toString() || '',
                   required: false
                 }
