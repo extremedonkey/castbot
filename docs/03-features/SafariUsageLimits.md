@@ -1,8 +1,120 @@
-# Custom Usage Limits + Usage Templates — Analysis (RaP 0905)
+# Safari Usage Limits
 
-**Status**: Implementing (2026-06-23)
-**Related**: Usage-limit system (`once_per_player` / `once_globally` / `once_per_period` / `unlimited`), Tier B fight_enemy fix (prior commit), [SafariCustomActions](../03-features/SafariCustomActions.md)
-**Code**: `utils/periodUtils.js` (engine), `safariManager.js` (executors), `customUsageLimitUI.js` (new — sub-config + template UI), `claimsManager.js` / `claimsUI.js` (admin), `app.js` (routing)
+**Status**: ✅ Active (in production since 2026-06-23)
+**Scope**: Claim-gating for Safari **outcomes** — `give_currency`, `give_item`, `modify_attribute`, `fight_enemy`
+**Related**: [SafariCustomActions](SafariCustomActions.md) (the Actions/Outcomes system limits attach to), [Attributes](Attributes.md), [EnemySystem](EnemySystem.md)
+**Code**:
+- `utils/periodUtils.js` — pure engine (`checkLimitGate` / `recordLimitClaim` + custom-window math) **and** the shared option/summary builders
+- `safariManager.js` — the four outcome executors + `buildCustomLimitRejection` (player-facing copy)
+- `customUsageLimitUI.js` — the ⚙️ Custom sub-config screen + Usage Template storage
+- `claimsManager.js` / `claimsUI.js` — the admin "Player Claims" surface
+- `app.js` — routing (`cl:` selects/buttons, `clm:` modal submits)
+- Tests: `tests/periodUtils.test.js`, `tests/claimsManager.test.js`
+
+> **Promotion note:** this document began as **RaP 0905** (deep analysis, 2026-06-23) and was promoted to a feature doc once the work shipped. The original design analysis and the verbatim trigger prompts are preserved below under [Design & Rationale](#-design--rationale-from-rap-0905).
+
+---
+
+## Overview
+
+A **usage limit** lives at `action.config.limit` on a rewarding outcome and decides whether a given player may claim that outcome *right now*. There are five types — four fixed **presets** plus the configurable **Custom** type that exposes the whole design space — and a server-level **Usage Template** facility for saving and reusing Custom configs.
+
+| Type | What it does | Tracking field | Scope |
+|---|---|---|---|
+| `unlimited` | Fire forever, no tracking | — | — |
+| `once_per_player` | Each player once, ever | `claimedBy: []` (array of userIds) | per-player |
+| `once_globally` | One player ever, total | `claimedBy: "userId"` (string) | global |
+| `once_per_period` | Per-player rolling cooldown (e.g. once every 12h from *your* last use) | `claimedBy: { uid: ts }` (object) | per-player |
+| `custom` | Orthogonal `maxClaims × scope × unique × reset` — covers everything above **and** new shapes | `claims: [{u,t}]` (array) | per-player or global |
+
+The four presets are just specific corners of the Custom space (see [Custom limits](#custom-limits)). They are kept as first-class types for backward compatibility and zero-regression risk — **custom is additive**, the preset code paths are untouched.
+
+### Where limits are enforced
+
+```mermaid
+flowchart TD
+    P[Player triggers outcome] --> EX{Outcome executor<br/>give_currency / give_item /<br/>modify_attribute / fight_enemy}
+    EX --> T{limit.type}
+    T -->|custom| LIVE[getLiveActionLimit<br/>re-read claims from disk]
+    LIVE --> GATE[checkLimitGate → verdict]
+    GATE -->|blocked| REJ[buildCustomLimitRejection<br/>ephemeral card]
+    GATE -->|allowed| DO[apply reward] --> REC[persistCustomClaim<br/>→ recordLimitClaim → save]
+    T -->|preset| INLINE[inline claimedBy check<br/>per executor]
+    INLINE -->|blocked| REJP[preset rejection copy]
+    INLINE -->|allowed| DOP[apply reward] --> RECP[update claimedBy + save]
+    style GATE fill:#bfb
+    style LIVE fill:#bfb
+    style INLINE fill:#ffb
+```
+
+> **Architecture note:** the **custom** type is fully delegated to the shared pure engine in `periodUtils.js`. The four **presets** still use their own inline `claimedBy` logic inside each executor (a known duplication — full migration onto the engine is deferred). `fight_enemy` was the first consumer of the shared engine (Tier B fix); this feature made it the path for custom across all four outcomes.
+
+## The four presets
+
+- **Unlimited** — default; no tracking, always allowed.
+- **Once Per Player** — `claimedBy` is an array of userIds; blocked if the player is in it.
+- **Once Globally** — `claimedBy` is a single userId; blocked for *everyone* once set (including the original claimer). Empty array/string are treated as "no claims" (the **empty-but-truthy hazard** — `[]`/`''` are truthy but mean unclaimed).
+- **Once Per Period** — `claimedBy` is `{ userId: lastClaimMs }`; blocked while `now - last < periodMs`, reported with a countdown. This is a **per-player** rolling cooldown; `custom` with `scope:per_player, reset:rolling, maxClaims:1` reduces to exactly this.
+
+## Custom limits
+
+The Custom type (`type: 'custom'`) decomposes a usage limit into four orthogonal dimensions:
+
+| Dimension | Values | Notes |
+|---|---|---|
+| **maxClaims (N)** | `1`, `N`, or `null` (uncapped) | how many claims allowed |
+| **scope** | `per_player` · `global` | each player gets own N, or N shared server-wide |
+| **unique** | `true` (distinct players) · `false` (total claims) | **global only**; ignored for per-player |
+| **reset** | `none` · `rolling` · `fixed_window` | never resets / per-claim sliding window / shared recurring window |
+
+New capabilities this unlocks that the presets can't express: *"first N players globally, no time limit"*, *"N unique players per fixed daily window"*, *"each player N times per fixed window"*, *"N claims per player on a rolling cooldown"*.
+
+Custom tracking uses a dedicated `claims: [{u, t}]` array (never `claimedBy`) — this sidesteps the empty-but-truthy hazard entirely and keeps the presets byte-for-byte unchanged. The window a claim belongs to is **derived** from its timestamp `t`, never stored; stale claims are pruned lazily on each record (no cron). See **⚙️ Engine Logic** in the Design & Rationale section below for the math.
+
+### The ⚙️ Custom sub-config screen
+
+Selecting **⚙️ Custom…** in any outcome's Usage Limit select opens a dedicated LEAN Components V2 screen (`buildCustomLimitConfigUI` in `customUsageLimitUI.js`, routed under `cl:`):
+- **Max Claims** select (1/2/3/5/10/25 + Unlimited + Other→modal)
+- **Scope** select (Per Player / Global)
+- **Unique** select (Distinct players / Total claims) — shown only when scope is Global; *distinct* is the recommended default
+- **Reset** select (Never / Rolling cooldown / Fixed window) → reveals timing buttons:
+  - **Window Length** (D/H/M modal, default 24h)
+  - **Reset Time** (hh:mm modal, fixed_window only) — server-local time-of-day, anchored to the most-recent boundary ≤ now so it's active immediately on save
+- **← Save & Back**, **Save as Template**, and (in template-edit mode) **Delete Template**
+
+## Usage Templates
+
+A **Usage Template** is a server-saved Custom config (stored at `safariData[guildId].usageTemplates`, capped at `MAX_USAGE_TEMPLATES = 5`). Once saved, the template appears as its own option in every outcome's Usage Limit select, so a complex config can be applied in one click.
+
+- **Save** — "Save as Template" on the Custom screen captures the current config (strips `type`/`claims`/`templateId`) under a name + emoji.
+- **Apply** — selecting a `tmpl:<id>` option copies the template's config onto the outcome (`{ type:'custom', ...template.config, templateId:id, claims:[] }`). Templates are stored as **copies** — editing a template never retro-mutates live outcomes, and `templateId` is provenance only (never affects behavior).
+- **Delete** — runs a **usage scan** (`findTemplateUsages`): if the template is referenced by any outcome it **refuses** and lists where it's used, telling the admin to deal with those first (no cascade delete).
+
+## Player Claims (admin)
+
+The "Player Claims" admin surface (`claimsManager.js` / `claimsUI.js`) lets admins inspect and reset who has claimed an outcome, for **all** limit types including custom:
+- View claimants with per-window claim counts and reset/cooldown countdowns
+- **Manual Claim** (add a claim for a player), **Reset All**, and per-player clear
+- For `once_per_period` / custom-timed limits, set a player's remaining cooldown (admin override may exceed the period via a future timestamp)
+
+## Player-facing rejection messages
+
+When a custom limit blocks a claim, `buildCustomLimitRejection` (in `safariManager.js`) returns an ephemeral card. Copy is tailored by verdict reason:
+
+| Reason | When | Message shape |
+|---|---|---|
+| `custom_already_claimed` | global+unique, this player already claimed (others may still have slots) | `⏱️ **<label>** — you've already claimed this. Resets in **<countdown>**.`<br/>`-# > Nx <unit> remaining for other players until reset.` |
+| `custom_window` | global window cap exhausted by anyone | `⏱️ **<label>** — the maximum amount available every **<period>** has already been claimed. Resets in **<countdown>**.` |
+| `custom_cooldown` | rolling cooldown, this player | `⏱️ **<label>** — you can only claim this every **<period>**. Try again in **<countdown>**.` |
+| `custom_exhausted` | permanent (reset:none) cap reached | `❌ **<label>** — no claims remaining.` |
+
+The **"Nx \<unit\> remaining for other players until reset"** sub-line (added 2026-06-25) appears only on `custom_already_claimed` (a global type), where `N = verdict.remaining.claimsLeft` = `maxClaims − distinct claimants so far`. The unit noun is the item name for `give_item` (`3x Salt …`) and `stash of <currencyEmoji> <currencyName>` for `give_currency` (`3x stash of 🪙 Coins …`) — currency always uses the **per-server custom currency name/emoji** from `getCustomTerms()`, never a hardcoded "Coins". Durations are spelled out ("3 hours 5 minutes") via `formatCountdownVerbose`.
+
+---
+
+## 🤔 Design & Rationale (from RaP 0905)
+
+> The remainder of this document is the original RaP 0905 deep analysis (2026-06-23), preserved verbatim for design context. Line numbers and "Implementing" status references are historical.
 
 ---
 

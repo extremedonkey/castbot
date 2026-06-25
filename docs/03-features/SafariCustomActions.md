@@ -253,21 +253,17 @@ When adding Give Item or Give Currency actions:
 
 ## Usage Limits
 
-### Unlimited
-- Default for backward compatibility
-- Players can trigger repeatedly
-- No tracking required
+Every rewarding outcome can be claim-gated via `action.config.limit`. There are four presets plus a configurable **Custom** type and server-saved **Usage Templates**.
 
-### Once Per Player
-- Each player can claim once
-- Tracked in `claimedBy` array
-- Shows "Already claimed" when limit reached
+| Type | Summary |
+|---|---|
+| `unlimited` | No tracking, always allowed (default) |
+| `once_per_player` | Each player once, ever (`claimedBy` array) |
+| `once_globally` | One player ever, total (`claimedBy` string) |
+| `once_per_period` | Per-player rolling cooldown (`claimedBy` `{uid:ts}`) |
+| `custom` | Orthogonal `maxClaims × scope × unique × reset` + the ⚙️ Custom UI |
 
-### Once Globally
-- First player to claim gets the reward
-- Tracked with single user ID
-- Button shows as disabled after claimed
-- Text: "[Reward] - Already claimed"
+📖 **Full reference — types, the custom engine, Usage Templates, the Player Claims admin, and player-facing copy — lives in [SafariUsageLimits.md](SafariUsageLimits.md).**
 
 ## Drop Configuration UI
 

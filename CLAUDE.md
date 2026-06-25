@@ -484,6 +484,7 @@ When a feature is **deployed to production and working**, move/rename its doc in
 
 **Safari Subsystems:**
 - **⚡ ACTIONS** (formerly Custom Actions) → [docs/03-features/SafariCustomActions.md](docs/03-features/SafariCustomActions.md) - Action system (triggers, outcomes, conditions). See [Terminology](docs/01-RaP/0956_20260308_ActionTerminology_Analysis.md) for naming conventions
+- **🚦 USAGE LIMITS** → [docs/03-features/SafariUsageLimits.md](docs/03-features/SafariUsageLimits.md) - Claim-gating for outcomes: `unlimited`/`once_per_player`/`once_globally`/`once_per_period` presets + the orthogonal `custom` type (maxClaims×scope×unique×reset), Usage Templates, Player Claims admin. Engine: [periodUtils.js](utils/periodUtils.js). Was RaP 0905
 - **🏃 CHALLENGES** → [docs/03-features/Challenges.md](docs/03-features/Challenges.md) - Configurable challenge/rounds system (decoupled from map)
 - **🏪 STORES** → [docs/03-features/StoreManagementArchitecture.md](docs/03-features/StoreManagementArchitecture.md) - Store management, global stores, stock limits
 - **📦 ITEMS** → [docs/03-features/SafariImportExport.md](docs/03-features/SafariImportExport.md) - Items, stock management, import/export
