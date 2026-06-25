@@ -266,3 +266,54 @@ describe('Season Manager — indicator ordering', () => {
     assert.equal(computeIndicators('cfg', season, guildData), '📝 Apps • 🏆 Ranking • 📅 Planner');
   });
 });
+
+// ─────────────────────────────────────────────
+// Shared Season Manager header (seasonManagerHeader) — single source of truth
+// for the two lines above the nav row on every tab. Mirrors seasonSelector.js.
+// ─────────────────────────────────────────────
+
+function seasonManagerHeader(active, seasonName) {
+  const titles = {
+    apps: '📝 Season Applications',
+    planner: '📅 Season Planner',
+    ranking: '🏆 Casting'
+  };
+  const title = titles[active] || '📋 Season Manager';
+  return { type: 10, content: `## ${title}\n> ### ${seasonName}` };
+}
+
+describe('Season Manager — shared header', () => {
+  it('line 2 (season name) is byte-identical across all tabs', () => {
+    const name = 'S14: Empire of Mali';
+    const line2 = (h) => h.content.split('\n')[1];
+    const apps = seasonManagerHeader('apps', name);
+    const planner = seasonManagerHeader('planner', name);
+    const ranking = seasonManagerHeader('ranking', name);
+    assert.equal(line2(apps), '> ### S14: Empire of Mali');
+    assert.equal(line2(apps), line2(planner));
+    assert.equal(line2(planner), line2(ranking));
+  });
+
+  it('only line 1 (title) differs between tabs', () => {
+    const name = 'X';
+    const line1 = (a) => seasonManagerHeader(a, name).content.split('\n')[0];
+    assert.equal(line1('apps'), '## 📝 Season Applications');
+    assert.equal(line1('planner'), '## 📅 Season Planner');
+    assert.equal(line1('ranking'), '## 🏆 Casting');
+  });
+
+  it('uses Unicode emoji (no :pencil: shortcode regression)', () => {
+    const all = ['apps', 'planner', 'ranking'].map(a => seasonManagerHeader(a, 'X').content).join('');
+    assert.ok(!/:[a-z_]+:/.test(all), 'header must not contain Discord emoji shortcodes');
+  });
+
+  it('falls back to a generic title for an unknown tab', () => {
+    assert.equal(seasonManagerHeader('bogus', 'X').content.split('\n')[0], '## 📋 Season Manager');
+  });
+
+  it('always emits a type-10 Text Display with the h3 blockquote season line', () => {
+    const h = seasonManagerHeader('ranking', 'Season Z');
+    assert.equal(h.type, 10);
+    assert.match(h.content, /^## .+\n> ### Season Z$/);
+  });
+});

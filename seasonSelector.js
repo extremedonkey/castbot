@@ -105,6 +105,26 @@ export function buildSeasonNavRow(configId, active) {
 }
 
 /**
+ * Shared Season Manager header — the two lines that sit directly ABOVE buildSeasonNavRow on every
+ * tab (Apps / Planner / Casting). Single source of truth so the three tab screens can't drift:
+ *   • Line 1 = the per-tab title (the ONLY part that differs between tabs; emoji matches the tab's nav button)
+ *   • Line 2 = the season name, ALWAYS the same format everywhere (`> ### ${seasonName}`)
+ * Mirrors how buildSeasonNavRow centralizes the nav row. Edit has no screen, so no 'edit' title.
+ * @param {'apps'|'planner'|'ranking'} active
+ * @param {string} seasonName - applicationConfigs[configId].seasonName (carries any "S14:" prefix itself)
+ * @returns {Object} a type-10 Text Display
+ */
+export function seasonManagerHeader(active, seasonName) {
+  const titles = {
+    apps: '📝 Season Applications',
+    planner: '📅 Season Planner',
+    ranking: '🏆 Casting'
+  };
+  const title = titles[active] || '📋 Season Manager';
+  return { type: 10, content: `## ${title}\n> ### ${seasonName}` };
+}
+
+/**
  * Creates a reusable season select dropdown component.
  *
  * ⚠️ For SEASON MANAGEMENT UI, do NOT call this directly with the default customId — that's the

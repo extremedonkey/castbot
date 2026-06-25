@@ -250,13 +250,9 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
     ? ` (Pg ${currentPage + 1}/${totalPages})`
     : '';
 
-  refreshedComponents.push({
-    type: 10,
-    content: `## :pencil: Season Applications\n> ### ${config.seasonName}`
-  });
-
-  // Active-tab nav row — Apps · Planner · Ranking · Edit (current view = Apps, shaded blue)
-  const { buildSeasonNavRow } = await import('./seasonSelector.js');
+  // Shared Season Manager header + active-tab nav row (current view = Apps, shaded blue)
+  const { buildSeasonNavRow, seasonManagerHeader } = await import('./seasonSelector.js');
+  refreshedComponents.push(seasonManagerHeader('apps', config.seasonName));
   refreshedComponents.push(buildSeasonNavRow(configId, 'apps'));
 
   refreshedComponents.push({

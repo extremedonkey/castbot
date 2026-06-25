@@ -14,7 +14,8 @@ import { ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
 import { loadPlayerData } from './storage.js';
 
 // Shared Casting header — used by both the populated view and the empty state (no duplication)
-const rankingHeader = (seasonName) => ({ type: 10, content: `## 🏆 Casting\n> ### ${seasonName}` });
+// Casting header is now the SHARED seasonManagerHeader('ranking', …) from seasonSelector.js
+// (imported alongside buildSeasonNavRow at each render site) so all tabs stay in lockstep.
 
 /**
  * Empty-state Casting screen (season has no applications yet). Reuses the shared header +
@@ -23,13 +24,13 @@ const rankingHeader = (seasonName) => ({ type: 10, content: `## 🏆 Casting\n> 
  * @param {string} configId
  */
 export async function buildRankingEmptyState(seasonName, configId) {
-  const { buildSeasonNavRow } = await import('./seasonSelector.js');
+  const { buildSeasonNavRow, seasonManagerHeader } = await import('./seasonSelector.js');
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2 (factory adds ephemeral / strips for updateMessage)
     components: [{
       type: 17,
       components: [
-        rankingHeader(seasonName),
+        seasonManagerHeader('ranking', seasonName),
         buildSeasonNavRow(configId, 'ranking'),
         { type: 14 },
         { type: 10, content: `📭 **No applications yet** for this season.\n-# Applicants appear here once they apply via this season's application button.` },
@@ -253,9 +254,9 @@ export async function generateSeasonAppRankingUI({
   // button in the utility row (see below) instead of an inline <#channel> mention.
   const applicantInfo = dncSummaryText || '';
 
-  const { buildSeasonNavRow } = await import('./seasonSelector.js');
+  const { buildSeasonNavRow, seasonManagerHeader } = await import('./seasonSelector.js');
   const containerComponents = [
-    rankingHeader(seasonName),
+    seasonManagerHeader('ranking', seasonName),
     // Active-tab nav row — Apps · Planner · Casting · Edit (current view = Casting, shaded blue)
     buildSeasonNavRow(configId, 'ranking'),
   ];
