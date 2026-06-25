@@ -360,17 +360,45 @@ export async function generateSeasonAppRankingUI({
   const identityCard = await createPlayerDisplaySection(applicantMember, playerData, guildId);
   let identityText = identityCard?.components?.[0]?.content
     || `**${currentApp.displayName || currentApp.username}**\n-# ⚠️ Left server`;
+  // Remove the local-time line (user request — semi-revert). Keeps the name + Discord role tags.
+  identityText = identityText.split('\n').filter(line => !line.includes('🕛 Local time 🕛')).join('\n');
   if (applicantInfo) identityText += `\n${applicantInfo}`;
 
-  // Derived single status + player notes, appended to the identity block so they sit directly
-  // below the local-time line and above the 1-5 ratings. Status collapses all status dimensions
-  // (see deriveApplicationStatus); notes is a compact quoted subtext line.
+  // Derived single status line — kept (sits in the identity block above the 1-5 ratings).
   const appRecord = playerData[guildId]?.applications?.[currentApp.channelId] || {};
   const liveChannelName = guild?.channels?.cache?.get(currentApp.channelId)?.name || '';
   const derivedStatus = deriveApplicationStatus(appRecord, liveChannelName);
   identityText += `\nStatus: ${derivedStatus.icon} ${derivedStatus.name}`;
-  const notesLineText = appRecord.playerNotes || 'Record casting notes, connections or potential issues...';
-  identityText += `\n> -# ✏️Player Notes: ${notesLineText}`;
+
+  // ---- Restored OLD detailed info block (single Text Display under the Delete button) ----
+  // Name = clickable mention (fallback when the member left). Demographics use ROLE TAG mentions
+  // (age, <@&pronoun>, <@&timezone>) — restoring the old colored role pills.
+  const nameDisplay = (applicantMember?.id && applicantMember?.guild)
+    ? `<@${currentApp.userId}>`
+    : `${currentApp.displayName || currentApp.username} - left server`;
+  const applicantAge = playerData[guildId]?.players?.[currentApp.userId]?.age;
+  let pronounRoleId = null, timezoneRoleId = null;
+  if (applicantMember?.roles) {
+    const guildPronouns = playerData[guildId]?.pronounRoleIDs || [];
+    const guildTimezones = Object.keys(playerData[guildId]?.timezones || {});
+    const memberRoles = applicantMember.roles.cache ? Array.from(applicantMember.roles.cache.keys()) : applicantMember.roles;
+    for (const roleId of memberRoles) { if (guildPronouns.includes(roleId)) { pronounRoleId = roleId; break; } }
+    for (const roleId of memberRoles) { if (guildTimezones.includes(roleId)) { timezoneRoleId = roleId; break; } }
+  }
+  const infoParts = [];
+  if (applicantAge) infoParts.push(applicantAge);
+  if (pronounRoleId) infoParts.push(`<@&${pronounRoleId}>`);
+  if (timezoneRoleId) infoParts.push(`<@&${timezoneRoleId}>`);
+  const demographicInfo = infoParts.length > 0 ? ` (${infoParts.join(', ')})` : '';
+  const infoRankings = Object.values(allRankings).filter(r => r !== undefined);
+  const infoAvg = infoRankings.length > 0 ? (infoRankings.reduce((a, b) => a + b, 0) / infoRankings.length).toFixed(1) : 'No scores';
+  let infoCastingText;
+  if (castingStatus === 'cast') infoCastingText = '✅ Cast';
+  else if (castingStatus === 'alternative') infoCastingText = '🔄 Alternate';
+  else if (castingStatus === 'tentative') infoCastingText = '❓ Tentative';
+  else if (castingStatus === 'reject') infoCastingText = '🗑️ Don\'t Cast';
+  else infoCastingText = '⚪ Undecided';
+  const oldInfoBlock = `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${nameDisplay}${demographicInfo}\n**Average Score:** ${infoAvg} (${infoRankings.length} vote${infoRankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${infoCastingText}\n**App:** <#${currentApp.channelId}>`;
 
   containerComponents.push(
     { type: 14 }, // divider after the nav / select cluster
@@ -392,6 +420,7 @@ export async function generateSeasonAppRankingUI({
           .toJSON()
       ]
     },
+    { type: 10, content: oldInfoBlock }, // restored old info block — directly under the Delete button
     { type: 10, content: identityText },
     rankingRow.toJSON(), // 1-5 rating buttons — directly under the identity text
     {
@@ -447,6 +476,10 @@ export async function generateSeasonAppRankingUI({
   } else {
     containerComponents.push({ type: 10, content: `-# No scores yet — click 1–5 above to rate this applicant.` });
   }
+
+  // ---- Player Notes — old-style heading + plain text, moved down to the bottom (user request) ----
+  const notesText = appRecord.playerNotes || 'Record casting notes, connections or potential issues...';
+  containerComponents.push({ type: 10, content: `### ✏️ Player Notes\n${notesText}` });
 
   // ---- Utility actions (divider above) ----
   containerComponents.push({ type: 14 }); // divider above Shared Ranker / utility row
