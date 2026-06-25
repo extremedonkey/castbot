@@ -30,6 +30,13 @@ export const SAFARI_LIMITS = {
   MAX_ENEMY_NAME_LENGTH: 80,
   MAX_ENEMY_DESCRIPTION_LENGTH: 500,
 
+  // Stamina — single source of truth for the highest stamina value an admin may enter,
+  // for BOTH current (numerator) and max (denominator), in the server config AND the
+  // per-player set modal. Change this one number to raise/lower the ceiling everywhere.
+  // (current min = 0, max min = 1; over-max above the denominator is still allowed via
+  // consumable item boosts — this only bounds what can be TYPED.)
+  MAX_STAMINA: 999,
+
   // General limits
   MAX_TAG_LENGTH: 30,
   MAX_TAGS_PER_ITEM: 5,
@@ -43,6 +50,8 @@ export const SAFARI_LIMITS = {
 // Semantic aliases — use these in new code
 export const MAX_OUTCOMES_PER_ACTION = SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON;
 export const MAX_ACTIONS_PER_GUILD = SAFARI_LIMITS.MAX_BUTTONS_PER_GUILD;
+export const MAX_STAMINA = SAFARI_LIMITS.MAX_STAMINA;          // highest typeable stamina (current & max)
+export const MAX_STAMINA_DIGITS = String(SAFARI_LIMITS.MAX_STAMINA).length; // modal max_length
 
 export const EDIT_TYPES = {
   BUTTON: 'button',

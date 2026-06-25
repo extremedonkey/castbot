@@ -12,6 +12,7 @@ import { loadSafariContent, saveSafariContent } from './safariManager.js';
 import { setEntityPoints } from './pointsManager.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { getCustomTerms } from './safariManager.js';
+import { MAX_STAMINA, MAX_STAMINA_DIGITS } from './config/safariLimits.js';
 import { logger } from './logger.js';
 import { isPlayerInitialized, getPlayerSafariState, PLAYER_SAFARI_STATE } from './safariPlayerUtils.js';
 
@@ -635,10 +636,7 @@ export async function setPlayerStamina(guildId, userId, amount, maxAmount = null
   // Use the new entity points system that the movement system uses
   const entityId = `player_${userId}`;
 
-  // Special test mode: 99 sets stamina to a very high value for unlimited testing
-  if (amount === 99) {
-    await setEntityPoints(guildId, entityId, 'stamina', 999, 999);
-  } else if (maxAmount !== null) {
+  if (maxAmount !== null) {
     // Set both current and max (base max — item boosts are added on top by getEntityPoints)
     // allowOverMax: true so admin can set current above max (like granting bonus stamina)
     await setEntityPoints(guildId, entityId, 'stamina', amount, maxAmount, true);
@@ -654,13 +652,8 @@ export async function setPlayerStamina(guildId, userId, amount, maxAmount = null
 
   if (player?.safari?.points?.stamina) {
     const stamina = player.safari.points.stamina;
-    if (amount === 99) {
-      stamina.current = 999;
-      stamina.maximum = 999;
-    } else {
-      if (maxAmount !== null) stamina.maximum = maxAmount;
-      stamina.current = amount;
-    }
+    if (maxAmount !== null) stamina.maximum = maxAmount;
+    stamina.current = amount;
     stamina.lastRegeneration = new Date().toISOString();
     staminaResult = stamina;
     await savePlayerData(playerData);
@@ -806,7 +799,7 @@ export async function createStaminaModal(userId, guildId) {
       {
         type: 18, // Label
         label: 'Current stamina',
-        description: `How much stamina the player has right now. Use 99 for unlimited test mode.`,
+        description: `How much stamina the player has right now (0-${MAX_STAMINA}).`,
         component: {
           type: 4, // Text Input
           custom_id: 'amount',
@@ -814,7 +807,7 @@ export async function createStaminaModal(userId, guildId) {
           placeholder: `e.g. ${serverMax}`,
           value: currentStamina,
           required: true,
-          max_length: 3
+          max_length: MAX_STAMINA_DIGITS
         }
       },
       {
@@ -828,7 +821,7 @@ export async function createStaminaModal(userId, guildId) {
           placeholder: `Server default: ${serverMax}`,
           value: playerMax,
           required: true,
-          max_length: 3
+          max_length: MAX_STAMINA_DIGITS
         }
       }
     ]

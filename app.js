@@ -35,6 +35,7 @@ import {
 import { capitalize, DiscordRequest } from './utils.js';
 import { discordLogTags } from './src/utils/discordLogTags.js';  // Educational logging tags
 import { buildCustomLimit } from './customUsageLimitUI.js';  // ⚙️ Custom usage-limit builder
+import { MAX_STAMINA, MAX_STAMINA_DIGITS } from './config/safariLimits.js';  // single source: stamina input ceiling
 import { 
   loadPlayerData, 
   updatePlayer, 
@@ -16579,13 +16580,13 @@ Your server is now ready for Tycoons gameplay!`;
               {
                 type: 18, // Label
                 label: 'Starting Stamina',
-                description: 'Initial stamina for new players (0-99)',
+                description: `Initial stamina for new players (0-${MAX_STAMINA})`,
                 component: {
                   type: 4, // Text Input
                   custom_id: 'starting_stamina',
                   style: 1, // Short
                   min_length: 1,
-                  max_length: 2,
+                  max_length: MAX_STAMINA_DIGITS,
                   placeholder: currentConfig.startingStamina.toString(),
                   value: currentConfig.startingStamina.toString(),
                   required: true
@@ -16596,13 +16597,13 @@ Your server is now ready for Tycoons gameplay!`;
               {
                 type: 18, // Label
                 label: 'Max Stamina',
-                description: 'Maximum stamina capacity (1-99)',
+                description: `Maximum stamina capacity (1-${MAX_STAMINA})`,
                 component: {
                   type: 4, // Text Input
                   custom_id: 'max_stamina',
                   style: 1, // Short
                   min_length: 1,
-                  max_length: 2,
+                  max_length: MAX_STAMINA_DIGITS,
                   placeholder: currentConfig.maxStamina.toString(),
                   value: currentConfig.maxStamina.toString(),
                   required: true
@@ -45878,20 +45879,20 @@ Your server is now ready for Tycoons gameplay!`;
       console.log(`🛡️ Processing stamina set: current=${amount}, max=${maxAmount} for user ${targetUserId}`);
 
       // Validate amount immediately
-      if (isNaN(amount) || amount < 0 || amount > 999) {
+      if (isNaN(amount) || amount < 0 || amount > MAX_STAMINA) {
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Invalid current stamina. Please enter a number between 0 and 999.',
+            content: `❌ Invalid current stamina. Please enter a number between 0 and ${MAX_STAMINA}.`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
       }
-      if (maxAmount !== null && (isNaN(maxAmount) || maxAmount < 1 || maxAmount > 999)) {
+      if (maxAmount !== null && (isNaN(maxAmount) || maxAmount < 1 || maxAmount > MAX_STAMINA)) {
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Invalid max stamina. Please enter a number between 1 and 999.',
+            content: `❌ Invalid max stamina. Please enter a number between 1 and ${MAX_STAMINA}.`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -46114,11 +46115,11 @@ Your server is now ready for Tycoons gameplay!`;
       const maxRaw = getModalVal(components[1])?.trim();
       const maxAmount = maxRaw ? parseInt(maxRaw) : null;
 
-      if (isNaN(amount) || amount < 0 || amount > 999) {
-        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Invalid current stamina. Enter a number between 0 and 999.', flags: InteractionResponseFlags.EPHEMERAL } });
+      if (isNaN(amount) || amount < 0 || amount > MAX_STAMINA) {
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Invalid current stamina. Enter a number between 0 and ${MAX_STAMINA}.`, flags: InteractionResponseFlags.EPHEMERAL } });
       }
-      if (maxAmount !== null && (isNaN(maxAmount) || maxAmount < 1 || maxAmount > 999)) {
-        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Invalid max stamina. Enter a number between 1 and 999.', flags: InteractionResponseFlags.EPHEMERAL } });
+      if (maxAmount !== null && (isNaN(maxAmount) || maxAmount < 1 || maxAmount > MAX_STAMINA)) {
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `❌ Invalid max stamina. Enter a number between 1 and ${MAX_STAMINA}.`, flags: InteractionResponseFlags.EPHEMERAL } });
       }
 
       await res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
@@ -47918,14 +47919,14 @@ Your server is now ready for Tycoons gameplay!`;
         // Validation Chain
         const errors = [];
 
-        // 1. Starting Stamina (0-99)
-        if (isNaN(startingStamina) || startingStamina < 0 || startingStamina > 99) {
-          errors.push(`Starting Stamina must be 0-99 (got "${startingStaminaValue}")`);
+        // 1. Starting Stamina (0-MAX_STAMINA)
+        if (isNaN(startingStamina) || startingStamina < 0 || startingStamina > MAX_STAMINA) {
+          errors.push(`Starting Stamina must be 0-${MAX_STAMINA} (got "${startingStaminaValue}")`);
         }
 
-        // 2. Max Stamina (1-99, must be >= starting)
-        if (isNaN(maxStamina) || maxStamina < 1 || maxStamina > 99) {
-          errors.push(`Max Stamina must be 1-99 (got "${maxStaminaValue}")`);
+        // 2. Max Stamina (1-MAX_STAMINA, must be >= starting)
+        if (isNaN(maxStamina) || maxStamina < 1 || maxStamina > MAX_STAMINA) {
+          errors.push(`Max Stamina must be 1-${MAX_STAMINA} (got "${maxStaminaValue}")`);
         } else if (maxStamina < startingStamina) {
           errors.push(`Max Stamina (${maxStamina}) must be >= Starting Stamina (${startingStamina})`);
         }
