@@ -410,6 +410,14 @@ async function calculateRegenerationWithCharges(pointData, config, guildId, enti
                     appliedPeriods++;
                 }
 
+                // "max" mode is a FULL RESET — fill TO max, never overshoot. Without this, a
+                // partially-full player regenerating in max mode mints over-max (e.g. 98 + 99 = 197).
+                // "amount" mode (numeric per-tick) intentionally adds the flat amount and MAY exceed
+                // max (see tests "does NOT cap at max") — so only clamp the max-mode/full-reset case.
+                if (config.regeneration.amount === 'max' || !config.regeneration.amount) {
+                    newData.current = Math.min(newData.current, effectiveMax);
+                }
+
                 newData.max = effectiveMax;
                 // Preserve fractional period for accuracy
                 newData.lastRegeneration = regenTimestamp + (appliedPeriods * config.regeneration.interval);
@@ -605,7 +613,12 @@ export async function setEntityPoints(guildId, entityId, pointType, current, max
         }
     }
 
+    // Reset BOTH regen anchors to now. The Phase-1 full_reset regen anchors to `lastUse`, so if we
+    // only reset lastRegeneration (as before), a stale lastUse made the very next read think a full
+    // period had elapsed and immediately regenerate the admin's value away (e.g. set 98 → instantly
+    // refilled). Treat an explicit set as a fresh anchor so the value sticks until the next interval.
     points.lastRegeneration = Date.now();
+    points.lastUse = Date.now();
 
     // Sync charges array with new current value (prevents Phase 2 from overriding admin-set values)
     if (points.charges) {

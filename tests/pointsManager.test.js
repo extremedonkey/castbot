@@ -45,6 +45,10 @@ function calculatePhase1Regen(pointData, config, now, pointType = 'stamina') {
             newData.current += regenAmount;
             appliedPeriods++;
         }
+        // 'max' mode (full reset) clamps; numeric 'amount' mode intentionally may overshoot.
+        if (config.regeneration.amount === 'max' || !config.regeneration.amount) {
+            newData.current = Math.min(newData.current, effectiveMax);
+        }
         newData.max = effectiveMax;
         newData.lastRegeneration = regenTimestamp + (appliedPeriods * config.regeneration.interval);
         hasChanged = true;
@@ -141,6 +145,21 @@ describe('Phase 1 Regen — amount=max (backward compat)', () => {
         const result = calculatePhase1Regen(data, makeConfig(8, 'max'), now);
         assert.equal(result.data.current, 8);
         assert.equal(result.hasChanged, true);
+    });
+
+    it('FULL RESET fills TO max, never overshoots (regression: 98 must not become 197)', () => {
+        // Exact prod repro: admin set 98/99, regen interval elapsed, amount=max.
+        const now = 1000000;
+        const data = makePointData(98, 99, now - INTERVAL_30MIN);
+        const result = calculatePhase1Regen(data, makeConfig(99, 'max'), now);
+        assert.equal(result.data.current, 99, 'must clamp to max, not 98+99=197');
+    });
+
+    it('max mode from a partial value clamps (6/8 max-mode → 8, not 14)', () => {
+        const now = 1000000;
+        const data = makePointData(6, 8, now - INTERVAL_30MIN);
+        const result = calculatePhase1Regen(data, makeConfig(8, 'max'), now);
+        assert.equal(result.data.current, 8);
     });
 
     it('does not fire when already at max', () => {
