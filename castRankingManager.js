@@ -105,6 +105,38 @@ export async function buildSeasonRankingResponse({ guildId, userId, configId, cl
  * @param {Object} params.playerData - Pre-loaded player data
  * @returns {Object} Complete UI response object
  */
+
+/**
+ * Collapse the six independent application-status dimensions into ONE salient
+ * status for the Casting card's "Status:" line. Priority mirrors the jump-select
+ * icon logic (placementResponse → castingStatus → votes, castRankingManager.js
+ * ~262) so the line and the jump-select never disagree — extended with a
+ * ✖️ Withdrawn lifecycle override (the only dimension siloed in the channel name)
+ * and human-readable names.
+ *
+ * @param {Object} app - application record (playerData[guildId].applications[channelId])
+ * @param {string} [liveChannelName] - the channel's CURRENT name (carries the ✖️ withdrawn marker)
+ * @returns {{icon: string, name: string}}
+ */
+export function deriveApplicationStatus(app = {}, liveChannelName = '') {
+  const castingStatus = app.castingStatus;
+  const placementResponse = app.placementResponse;
+  const voteCount = Object.keys(app.rankings || {}).length;
+
+  // Withdrawn (✖️) is the latest lifecycle action — overrides any casting state.
+  if (/^✖️/.test(liveChannelName)) return { icon: '✖️', name: 'Withdrawn' };
+
+  if (placementResponse === 'accepted') return { icon: '🎉', name: 'Accepted Placement' };
+  if (placementResponse === 'declined') return { icon: '🚫', name: 'Declined Placement' };
+  if (castingStatus === 'cast')        return { icon: '✅', name: 'Cast' };
+  if (castingStatus === 'alternative') return { icon: '🔄', name: 'Alternate' };
+  if (castingStatus === 'tentative')   return { icon: '❓', name: 'Tentatively Cast' };
+  if (castingStatus === 'reject')      return { icon: '❌', name: 'Not Cast' };
+  if (voteCount >= 2)                  return { icon: '☑️', name: 'Reviewed' };
+  if (voteCount >= 1)                  return { icon: '🗳️', name: `Scoring (${voteCount} vote${voteCount === 1 ? '' : 's'})` };
+  return { icon: '📝', name: 'Awaiting Votes' };
+}
+
 export async function generateSeasonAppRankingUI({
   guildId,
   userId,
@@ -329,6 +361,16 @@ export async function generateSeasonAppRankingUI({
     || `**${currentApp.displayName || currentApp.username}**\n-# ⚠️ Left server`;
   if (applicantInfo) identityText += `\n${applicantInfo}`;
 
+  // Derived single status + player notes, appended to the identity block so they sit directly
+  // below the local-time line and above the 1-5 ratings. Status collapses all status dimensions
+  // (see deriveApplicationStatus); notes is a compact quoted subtext line.
+  const appRecord = playerData[guildId]?.applications?.[currentApp.channelId] || {};
+  const liveChannelName = guild?.channels?.cache?.get(currentApp.channelId)?.name || '';
+  const derivedStatus = deriveApplicationStatus(appRecord, liveChannelName);
+  identityText += `\nStatus: ${derivedStatus.icon} ${derivedStatus.name}`;
+  const notesLineText = appRecord.playerNotes || 'Record casting notes, connections or potential issues...';
+  identityText += `\n> -# ✏️Player Notes: ${notesLineText}`;
+
   containerComponents.push(
     { type: 14 }, // divider after the nav / select cluster
     { type: 10, content: `### \`\`\`📃 Application\`\`\`` },
@@ -368,14 +410,7 @@ export async function generateSeasonAppRankingUI({
   // simply the absence of castingStatus, so this stays backwards compatible with existing data.
   const applicantDisplayName = applicantMember?.displayName || currentApp.displayName || currentApp.username || 'Applicant';
   const isUndecided = !['cast', 'tentative', 'reject', 'alternative'].includes(castingStatus);
-  const existingNotes = playerData[guildId]?.applications?.[currentApp.channelId]?.playerNotes;
-  const notesText = existingNotes || 'Record casting notes, connections or potential issues...';
-
-  // ---- Player Notes — plain Text Display (Edit Notes button moved to the applicant actions row) ----
-  containerComponents.push({
-    type: 10,
-    content: `### \`\`\`✏️ Player Notes\`\`\`\n${notesText}`
-  });
+  // (Player Notes moved up into the identity block — see the `> -# ✏️Player Notes:` line above.)
 
   // ---- Casting: header + status (string select) ----
   containerComponents.push(
