@@ -19,14 +19,14 @@ function formatStaminaTag(snapshot) {
 }
 
 // Replicate Phase 1 regen logic inline for testing
-function calculatePhase1Regen(pointData, config, now) {
+function calculatePhase1Regen(pointData, config, now, pointType = 'stamina') {
     let hasChanged = false;
     let newData = { ...pointData };
     const effectiveMax = config.defaultMax + (config.permanentBoost || 0);
 
-    // Reconcile stored max to effectiveMax regardless of regen (the fix — mirrors Phase 2 charges).
-    // Without this, a player stuck at an old max (e.g. 1) is never corrected when no regen fires.
-    if (newData.max !== effectiveMax) {
+    // Reconcile stored max to effectiveMax — STAMINA ONLY (the fix). Attributes preserve a possible
+    // admin-set custom max, so they are NOT reconciled here.
+    if (pointType === 'stamina' && newData.max !== effectiveMax) {
         newData.max = effectiveMax;
         hasChanged = true;
     }
@@ -305,5 +305,15 @@ describe('Phase 1 — stored max reconciles to configured max (init settings res
         const data = makePointData(1, 1, now - 1000, now - 1000);
         const result = calculatePhase1Regen(data, makeConfig(99, 'max', 720 * 60000, 10), now);
         assert.equal(result.data.max, 109, 'effectiveMax = defaultMax + permanentBoost');
+    });
+
+    it('does NOT reconcile non-stamina attributes (preserves admin-set custom max)', () => {
+        // Regression guard: an admin-set custom HP max (200) must survive a read even though it
+        // differs from the attribute config default (100). Only stamina reconciles.
+        const now = 1000000;
+        const data = makePointData(150, 200, now - 1000, now - 1000); // current 150, custom max 200
+        const result = calculatePhase1Regen(data, makeConfig(100, 'max', 720 * 60000), now, 'hp');
+        assert.equal(result.data.max, 200, 'custom attribute max must be preserved');
+        assert.equal(result.hasChanged, false, 'no spurious save/clobber for attributes');
     });
 });

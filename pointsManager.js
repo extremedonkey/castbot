@@ -278,7 +278,7 @@ export async function getEntityPoints(guildId, entityId, pointType) {
     }
 
     // Apply regeneration based on elapsed time
-    const regenerated = await calculateRegenerationWithCharges(pointData, config, guildId, entityId);
+    const regenerated = await calculateRegenerationWithCharges(pointData, config, guildId, entityId, pointType);
 
     if (regenerated.hasChanged) {
         safariData[guildId].entityPoints[entityId][pointType] = regenerated.data;
@@ -289,7 +289,7 @@ export async function getEntityPoints(guildId, entityId, pointType) {
 }
 
 // New regeneration with individual charge tracking (Phase 2) and permanent boosts
-async function calculateRegenerationWithCharges(pointData, config, guildId, entityId) {
+async function calculateRegenerationWithCharges(pointData, config, guildId, entityId, pointType = null) {
     const now = Date.now();
     let hasChanged = false;
     let newData = { ...pointData };
@@ -372,15 +372,19 @@ async function calculateRegenerationWithCharges(pointData, config, guildId, enti
     } else {
         // Phase 1: Amount-aware regeneration with continuous ticking
 
-        // Reconcile stored max to the server's effective max. The charges path (Phase 2) already
-        // does this unconditionally; Phase 1 previously only updated max INSIDE the regen block
-        // below — so a player whose stored max was stale (e.g. initialized at 1 before the admin
-        // configured maxStamina) stayed stuck at 1 whenever no regen period had elapsed (e.g. a
-        // 720-min interval). Always snap max to config so initialization settings are respected.
-        if (newData.max !== effectiveMax) {
+        // Reconcile stored max to the server's effective max — STAMINA ONLY.
+        // Stamina max is purely config-derived (staminaConfig.maxStamina + item boosts), so snapping
+        // it to effectiveMax is always correct and fixes players stuck at a stale max (e.g. 1, set
+        // before the admin configured maxStamina) that no regen period would otherwise correct.
+        // NOT applied to attributes (hp/mana/stats): those support an admin-set custom per-player max
+        // (setPlayerAttribute), which this would clobber. Their prior Phase-1 behaviour is preserved.
+        if (pointType === 'stamina' && newData.max !== effectiveMax) {
             console.log(`⚠️ STAMINA CONFIG MISMATCH: stored max=${newData.max} → ${effectiveMax} (config.defaultMax=${config.defaultMax}, permanentBoost=${config.permanentBoost || 0}), current=${newData.current} — reconciling`);
             newData.max = effectiveMax;
             hasChanged = true;
+        } else if (newData.max !== effectiveMax) {
+            // Non-stamina: log-only (unchanged from original behaviour)
+            console.log(`⚠️ POINTS CONFIG MISMATCH (${pointType}): stored max=${newData.max}, effectiveMax=${effectiveMax} — leaving as-is (may be an admin-set custom max)`);
         }
 
         if (config.regeneration.type === 'full_reset') {
