@@ -342,7 +342,7 @@ export async function generateSeasonAppRankingUI({
     let selectPlaceholder = `Applicant ${appIndex + 1} of ${allApplications.length} - ${placeholderName}`;
     if (totalPages > 1) selectPlaceholder += ` · page ${currentPage + 1}/${totalPages}`;
 
-    containerComponents.push({
+    jumpSelectRow = {
       type: 1,
       components: [{
         type: 3,
@@ -352,9 +352,9 @@ export async function generateSeasonAppRankingUI({
         min_values: 1,
         max_values: 1
       }]
-    });
+    };
   }
-  
+
   // Identity: reuse the shared player-card builder for the TEXT (name • pronouns • age • timezone •
   // 🕛 local time), but render it as a Text Display + full-size Media Gallery avatar (rather than a
   // Section + thumbnail accessory). Falls back to a minimal name when the member can't be resolved.
