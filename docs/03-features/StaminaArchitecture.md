@@ -22,7 +22,7 @@ Stamina is the **movement budget** of the Safari map game. Every map move costs 
 
 ```
 effectiveMax = serverConfig.maxStamina + permanentBoostFromItems
-current can EXCEED effectiveMax — but only via consumables / admin / drip-mode (see §7)
+current can EXCEED effectiveMax — but only via consumables / admin / drip-mode (see Consumable Boosts below)
 ```
 
 ### The glass-of-water metaphor
@@ -32,7 +32,7 @@ Think of stamina as a **glass of water**:
 - **`max` is the height of the glass.** A permanent item (a Horse 🐎) gives you a *taller glass*. The server config sets the default glass height.
 - **`current` is how much water is in it.** Moving pours water out. Regeneration pours water back in.
 - **Full-reset regen** = a tap that, every cycle, fills the glass **right to the brim and stops**.
-- **Drip regen** = a tap that adds **a fixed splash** each cycle — and (today) will *overflow the glass* if you let it (a known inconsistency — see §10).
+- **Drip regen** = a tap that adds **a fixed splash** each cycle — and (today) will *overflow the glass* if you let it (a known inconsistency — see item (e) in Recent Changes).
 - **A consumable** = pouring an *extra bottle* in. The water can rise **above the rim** (over-max). It just sits there above the brim until you drink it down.
 
 ---
@@ -84,7 +84,7 @@ flowchart TD
 | # | Scenario | Config | Walk-through |
 |---|----------|--------|--------------|
 | **(a)** | **Spend 1 → full reset** | max 1, regen 12h, blank amount | `⚡ 1/1` → move → `⚡ 0/1` → wait 12h → **`⚡ 1/1`** (refilled to max, stops there). |
-| **(b)** | **Drip climbing** | max 10, regen 60m, amount **3** | `⚡ 0/10` → +60m → `⚡ 3/10` → +60m → `⚡ 6/10` → +60m → `⚡ 9/10` → +60m → **`⚡ 12/10`** ⚠️ (drip overshoots — see §10). |
+| **(b)** | **Drip climbing** | max 10, regen 60m, amount **3** | `⚡ 0/10` → +60m → `⚡ 3/10` → +60m → `⚡ 6/10` → +60m → `⚡ 9/10` → +60m → **`⚡ 12/10`** ⚠️ (drip overshoots — see item (e) in Recent Changes). |
 | **(c)** | **Consumable over-max then deplete** | max 119 (e.g. big config), Energy Drink +2 | `⚡ 119/119` → use drink → **`⚡ 121/119`** → move → `120/119` → move → `119/119` → move → `118/119` (now back under max, normal regen resumes). |
 | **(d)** | **Permanent +10 ring** | base max 99, Ring of Vigor (non-consumable, staminaBoost 10) | `effectiveMax = 99 + 10 = 109`. Display `⚡ 99/109`. Charge system activates: a 109-slot `charges[]` array, each bonus charge regenerating on its **own** timer. |
 | **(e)** | **Admin set sticks** | admin types 98 via Player Admin | `setEntityPoints(…, 98, …, allowOverMax)` resets **both** `lastUse` and `lastRegeneration` to now, so the value **holds** for a full interval instead of being instantly regenerated away. On the next read, `max` is reconciled to the server's `effectiveMax`. |
@@ -206,9 +206,9 @@ const config = {
 | Stored value | Meaning | Mode |
 |---|---|---|
 | `null` / `undefined` (field deleted) | "max" | **Full reset** — refill to `effectiveMax` each interval, clamped. |
-| a number `N` (1–99) | `N` | **Drip** — add `N` each interval (can overshoot — §10). |
+| a number `N` (1–99) | `N` | **Drip** — add `N` each interval (can overshoot — item (e) in Recent Changes). |
 
-The admin sets this via the **Regeneration Amount** field in the Stamina config modal. Blank or `0` → stored as `null` (the `delete` branch). A number → stored as that number (`app.js:47917`, save at `app.js:47969-47974`).
+The admin sets this via the **Regen Amount (optional)** field in the Stamina config modal (its help text recommends leaving it blank = full reset). Blank or `0` → stored as `null` (the `delete` branch). A number → stored as that number (`app.js:47917`, save at `app.js:47969-47974`).
 
 ---
 
@@ -309,7 +309,7 @@ graph TB
 |---|---|---|
 | Config field | blank / `0` | a number 1–99 |
 | Per interval | refill to `effectiveMax` | `+N` |
-| Can exceed max? | **No** (clamped, `pointsManager.js:417-419`) | **Yes** (intentional today — §10) |
+| Can exceed max? | **No** (clamped, `pointsManager.js:417-419`) | **Yes** (intentional today — item (e) in Recent Changes) |
 | Use case | classic "1 move per 12h" | "give 5 moves per cycle even if max is 1" |
 | Anchor | `lastUse` | elapsed periods since anchor |
 
@@ -505,7 +505,7 @@ graph LR
 | **`permanentBoost`** | Sum of `staminaBoost` across all **non-consumable** held items. Raises `effectiveMax`; activates the charge system. |
 | **`charges[]`** | Phase-2 array (length `effectiveMax`). `null` = available, timestamp = in-use & regenerating individually. Created lazily once a permanent boost exists. |
 | **Full reset** | Regen mode (amount = blank/null): each interval refills `current` to `effectiveMax`, **clamped** — never over-max. |
-| **Drip** | Regen mode (amount = N): each interval adds `N` to `current`. Currently **not clamped** (can overshoot — §10). |
+| **Drip** | Regen mode (amount = N): each interval adds `N` to `current`. Currently **not clamped** (can overshoot — item (e) in Recent Changes). |
 | **`lastUse`** | ms epoch of the player's last *spend*. **Anchors Phase-1 full-reset regen.** Reset by admin set. |
 | **`lastRegeneration`** | ms epoch used for Phase-2 charge ticking and partial-period accounting. Goes stale at MAX (hence full-reset uses `lastUse` instead). |
 | **Consumable boost** | A used-up item that adds to `current`, may exceed max, and does **not** reset the regen timer. |
