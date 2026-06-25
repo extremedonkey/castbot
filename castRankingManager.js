@@ -263,7 +263,9 @@ export async function generateSeasonAppRankingUI({
 
   // Applicant jump-select — ALWAYS rendered (state-aware placeholder). Discord requires ≥1 option,
   // so it's only ever absent on the 0-applicant empty state (a separate screen). It also replaces
-  // the old ◀/▶ prev/next row for navigation.
+  // the old ◀/▶ prev/next row for navigation. Built here but PUSHED later (directly below the
+  // Delete button) — the placeholder already shows "Applicant N of M", so the info block drops it.
+  let jumpSelectRow = null;
   {
     const itemsPerPage = 23;
     const totalPages = Math.ceil(allApplications.length / itemsPerPage);
