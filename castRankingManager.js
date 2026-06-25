@@ -165,10 +165,9 @@ export async function generateSeasonAppRankingUI({
     console.log('🔍 DEBUG: generateSeasonAppRankingUI - Applicant avatar pre-fetch failed (non-critical):', error.message);
   }
   
-  // Applicant identity (avatar + name/pronouns/age/timezone/local-time) is rendered via the SHARED
-  // player-card Section (createPlayerDisplaySection) — built just before container assembly below.
-  // It replaces the old big Media Gallery avatar with a compact Section + Thumbnail, identical to
-  // the Player Menu / application-channel card.
+  // Applicant identity = the detailed info block (Name + role-tag demographics + scores + casting
+  // status + app link + Status), built below as `oldInfoBlock`. The avatar is a full-size Media
+  // Gallery using applicantAvatarURL (pre-fetched above).
 
   // Create ranking buttons (1-5)
   const ephemeralSuffix = ephemeral ? '_ephemeral' : '';
@@ -248,11 +247,9 @@ export async function generateSeasonAppRankingUI({
   const dncSummaryText = getDncEntries(appData).length > 0 ? buildDncSummary(appData) : '';
 
   // ===== Build the Casting card (Components V2) =====
-  // Layout: header → tab nav → jump-select → identity Section → [DNC warning] →
-  //         Casting (status + workflow) → Votes (1-5 + tally) → Player Notes → bottom nav.
-  // Applicant DNC summary is folded into the identity Section. The app-channel link is now a Link
-  // button in the utility row (see below) instead of an inline <#channel> mention.
-  const applicantInfo = dncSummaryText || '';
+  // Layout: header → tab nav → 📃 Application (actions + jump-select) → info block (+ DNC + Status)
+  //         → avatar → Rate (1-5) → Casting status → Votes → Player Notes → utility → bottom nav.
+  // The applicant DNC summary is folded into the info block (oldInfoBlock).
 
   const { buildSeasonNavRow, seasonManagerHeader } = await import('./seasonSelector.js');
   const containerComponents = [
@@ -355,26 +352,16 @@ export async function generateSeasonAppRankingUI({
     };
   }
 
-  // Identity: reuse the shared player-card builder for the TEXT (name • pronouns • age • timezone •
-  // 🕛 local time), but render it as a Text Display + full-size Media Gallery avatar (rather than a
-  // Section + thumbnail accessory). Falls back to a minimal name when the member can't be resolved.
-  const { createPlayerDisplaySection } = await import('./playerManagement.js');
-  const identityCard = await createPlayerDisplaySection(applicantMember, playerData, guildId);
-  let identityText = identityCard?.components?.[0]?.content
-    || `**${currentApp.displayName || currentApp.username}**\n-# ⚠️ Left server`;
-  // Remove the local-time line (user request — semi-revert). Keeps the name + Discord role tags.
-  identityText = identityText.split('\n').filter(line => !line.includes('🕛 Local time 🕛')).join('\n');
-  if (applicantInfo) identityText += `\n${applicantInfo}`;
-
-  // Derived single status line — kept (sits in the identity block above the 1-5 ratings).
+  // Derived single status line — appended to the info block below (the old createPlayerDisplaySection
+  // identity Text Display was removed: its name was a redundant "orphan" next to the info block's Name).
   const appRecord = playerData[guildId]?.applications?.[currentApp.channelId] || {};
   const liveChannelName = guild?.channels?.cache?.get(currentApp.channelId)?.name || '';
   const derivedStatus = deriveApplicationStatus(appRecord, liveChannelName);
-  identityText += `\nStatus: ${derivedStatus.icon} ${derivedStatus.name}`;
 
   // ---- Restored OLD detailed info block (single Text Display under the Delete button) ----
   // Name = clickable mention (fallback when the member left). Demographics use ROLE TAG mentions
-  // (age, <@&pronoun>, <@&timezone>) — restoring the old colored role pills.
+  // (age, <@&pronoun>, <@&timezone>) — the old colored role pills. The "Applicant N of M" line was
+  // dropped — the jump-select placeholder (now directly above this) already shows it.
   const nameDisplay = (applicantMember?.id && applicantMember?.guild)
     ? `<@${currentApp.userId}>`
     : `${currentApp.displayName || currentApp.username} - left server`;
@@ -400,7 +387,9 @@ export async function generateSeasonAppRankingUI({
   else if (castingStatus === 'tentative') infoCastingText = '❓ Tentative';
   else if (castingStatus === 'reject') infoCastingText = '🗑️ Don\'t Cast';
   else infoCastingText = '⚪ Undecided';
-  const oldInfoBlock = `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${nameDisplay}${demographicInfo}\n**Average Score:** ${infoAvg} (${infoRankings.length} vote${infoRankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${infoCastingText}\n**App:** <#${currentApp.channelId}>`;
+  let oldInfoBlock = `**Name:** ${nameDisplay}${demographicInfo}\n**Average Score:** ${infoAvg} (${infoRankings.length} vote${infoRankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${infoCastingText}\n**App:** <#${currentApp.channelId}>`;
+  if (dncSummaryText) oldInfoBlock += `\n${dncSummaryText}`;
+  oldInfoBlock += `\nStatus: ${derivedStatus.icon} ${derivedStatus.name}`;
 
   containerComponents.push(
     { type: 14 }, // divider after the nav / select cluster
@@ -422,13 +411,14 @@ export async function generateSeasonAppRankingUI({
           .toJSON()
       ]
     },
-    { type: 10, content: oldInfoBlock }, // restored old info block — directly under the Delete button
-    { type: 10, content: identityText },
-    rankingRow.toJSON(), // 1-5 rating buttons — directly under the identity text
+    ...(jumpSelectRow ? [jumpSelectRow] : []), // jump-select — directly below the Delete button
+    { type: 10, content: oldInfoBlock }, // restored old info block + Status line
     {
       type: 12, // Media Gallery — full-size applicant avatar
       items: [{ media: { url: applicantAvatarURL }, description: `Avatar of ${currentApp.displayName || currentApp.username}` }]
-    }
+    },
+    { type: 10, content: `> **Rate this applicant (1-5)**` }, // header directly above the ratings
+    rankingRow.toJSON() // 1-5 rating buttons — moved underneath the avatar
   );
 
   // DNC conflict warning — prominent, only when this applicant cross-lists someone.
