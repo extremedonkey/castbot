@@ -822,7 +822,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
         if (!isInit) {
           options.push({ label: 'Initialize Safari', value: 'init', description: 'Initialise this player into Safari', emoji: { name: '🚀' } });
         } else {
-          options.push({ label: 'De-initialize from Safari', value: 'deinit', description: 'Remove this player from Safari (backs up first)', emoji: { name: '🛬' } });
+          options.push({ label: 'De-initialize from Safari', value: 'deinit', description: 'Permanently wipe this player from Safari — cannot be undone', emoji: { name: '🛬' } });
           // Pause/Unpause sits directly under De-initialize — initialized players only.
           options.push(isPaused
             ? { label: 'Unpause Player', value: 'unpause', description: 'Restore their access to their safari channel', emoji: { name: '▶️' } }

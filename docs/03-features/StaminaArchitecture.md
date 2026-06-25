@@ -438,6 +438,39 @@ sequenceDiagram
 
 ---
 
+## Relationship to the generic Points / Attribute system (`pointsManager.js`)
+
+**Stamina is not special infrastructure — it is one *instance* of a generic per-entity "points" engine.** `pointsManager.js` runs HP, mana, and every custom attribute (Strength, Luck, …) through the **exact same** functions stamina uses: `initializeEntityPoints`, `getEntityPoints`, `calculateRegenerationWithCharges`, `usePoints`, `setEntityPoints`. They all live side-by-side under one record:
+
+```mermaid
+graph TD
+    EP["safariContent[guild].entityPoints[player_X]"]
+    EP --> S["stamina { current, max, lastUse, lastRegeneration, charges? }"]
+    EP --> H["hp { current, max, ... }"]
+    EP --> M["mana { current, max, ... }"]
+    EP --> ST["strength { current, max, ... }"]
+    S -. "config from" .-> SC["getStaminaConfig() — safariConfig"]
+    H -. "config from" .-> AD["attributeDefinitions[hp]"]
+    M -. "config from" .-> AD
+    ST -. "config from" .-> AD
+    style S fill:#bfdbfe,stroke:#3b82f6,stroke-width:2px
+```
+
+**Where they diverge today** (the things to reconcile if/when they're aligned):
+
+| Aspect | Stamina | Other points/attributes (HP, mana, stats) |
+|---|---|---|
+| Config source | `getStaminaConfig()` → `safariConfig.{startingStamina,maxStamina,…}` | `attributeDefinitions[type]` (per-attribute `defaultMax`, regeneration) |
+| Max-reconcile on read | **Yes** — `max` snapped to `effectiveMax` (stamina-only branch) | **No** — preserves admin-set custom `max` (`setPlayerAttribute`) |
+| Per-player custom max | Not a concept (max is config-derived) | Supported via `setPlayerAttribute` / `attr_max` |
+| Input ceiling | `MAX_STAMINA` (`config/safariLimits.js`) | Per-attribute, validated separately |
+| Regen "amount=max" semantics | Full reset, now clamped | Same engine; depends on the attribute's `regeneration` block |
+| Default fallback | `STAMINA_MAX ‖ 1` (the `||1` footgun) | `attrDef.defaultMax ?? defaultValue ?? 100` |
+
+> 🎯 **Future goal (Reece):** *align* stamina with the generic points/attribute model so there's one consistent config surface, one reconcile policy, and one over-max rule across stamina + HP + mana + custom stats — rather than stamina carrying its own parallel config (`getStaminaConfig`), its own reconcile branch, and the `||1` default. The open drip-mode over-max decision (item **e** below) and the stamina-only reconcile (item **d**) are the main divergences to settle first. See [Attributes.md](Attributes.md) for the attribute side.
+
+---
+
 ## Recent Changes & Known Inconsistencies
 
 | Item | What changed / status | Reference |
@@ -447,6 +480,7 @@ sequenceDiagram
 | **(c) `MAX_STAMINA` single constant** 🟢 | Replaced scattered magic `99`s with one `MAX_STAMINA = 999` ceiling used by every stamina input + derived `MAX_STAMINA_DIGITS`. | `config/safariLimits.js:38,53-54` |
 | **(d) Max-reconcile scoped to stamina** 🟢 | Stamina `max` is snapped to `effectiveMax` on read; attributes (hp/mana) are left alone to preserve admin-set custom maxes. | commits `869c03df`, `242fea63`; `pointsManager.js:381-388` |
 | **(e) ⚠️ Drip mode still overshoots max** 🔴 **OPEN** | In drip mode, `current += N` is **not** clamped, and the config field's own help text says *"Can exceed max stamina."* This **contradicts the stated design rule** that *only consumables* should exceed max. It is currently *intentional* (a way to hand out multiple moves per cycle even when max is low), but it muddies the over-max model. **Pending decision:** either (1) keep drip-over-max and document it as a third legitimate over-max source, or (2) clamp drip to `effectiveMax` and force hosts to raise max instead. Flagged for Reece. | `pointsManager.js:373-432` (no clamp in drip branch); `app.js:16634` (field text); tests note "does NOT cap at max" |
+| **(f) De-init now clears stamina/attributes** 🟢 | De-initialize previously deleted only `playerData.players[userId].safari` — it left `safariContent.entityPoints[player_X]` (the authoritative stamina/HP/attribute store) behind. A later re-init then *skipped* re-creating the existing record (`initializeEntityPoints` only creates when absent), keeping the OLD `current` while the max-reconcile patched `max` to the new config → e.g. **`3/999` after a config change + de-init + re-init** instead of `999/999`. `deinitializePlayer` now also deletes `entityPoints[player_X]` and saves — a true blank slate. (Also: the de-init "backup" is an **in-memory snapshot for success-message counts only — never persisted, not restorable**; the misleading "A backup is taken first" UI text was removed.) | commit `c9c0df65`; `safariDeinitialization.js` (`deinitializePlayer`) |
 
 ```mermaid
 graph LR

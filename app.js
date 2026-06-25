@@ -10197,7 +10197,7 @@ To fix this:
               components: [
                 { type: 10, content: `## ⚠️ De-initialize <@${targetUserId}>?` },
                 { type: 14 },
-                { type: 10, content: `**This permanently wipes the player from Safari and CANNOT be undone.** The following will be deleted:\n• **Currency** — all coins/points\n• **Inventory** — all items\n• **Stamina & attributes** — all balances (HP, etc.) reset\n• **Map progress** — location & explored areas; channel access revoked\n• **Safari history** — interactions, cooldowns, button uses\n\n💡 To *temporarily* suspend a player (e.g. season break), use **Pause** instead — it keeps everything.` },
+                { type: 10, content: `**This permanently wipes the player from Safari and CANNOT be undone.** The following will be deleted:\n• **Currency** — all coins/points\n• **Inventory** — all items\n• **Stamina & attributes** — all balances (HP, etc.) reset\n• **Map progress** — location & explored areas; channel access revoked\n• **Safari history** — interactions, cooldowns, button uses\n\n💡 To temporarily suspend a player (e.g. season break), use **Pause** instead — it keeps everything but stops the player from being able to move on the map.` },
                 { type: 14 },
                 { type: 1, components: [
                   { type: 2, style: 2, label: 'Cancel', custom_id: `admin_set_map_${targetUserId}`, emoji: { name: '❌' } },
