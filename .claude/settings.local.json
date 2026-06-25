@@ -179,7 +179,8 @@
       "Bash(/home/reece/castbot/scripts/dev/dev-restart.sh Move Nuke Category from Data menu to Castbot Tools → Roles & Utilities \\(Reece-only\\) *)",
       "Bash(/home/reece/castbot/scripts/dev/dev-restart.sh Open Nuke Category to all admins \\(ManageChannels gate\\) — remove Reece-only restriction *)",
       "Bash(aws configure *)",
-      "Bash(dangerously_skip)"
+      "Bash(dangerously_skip)",
+      "Read(//home/reece/.vscode-server/extensions/**)"
     ],
     "deny": []
   },

@@ -10195,11 +10195,13 @@ To fix this:
             components: [{
               type: 17, accent_color: 0xed4245,
               components: [
-                { type: 10, content: `## 🛬 De-initialize <@${targetUserId}>?\n\nThis removes the player from Safari (currency, inventory, stamina, map progress). A backup is taken first.` },
+                { type: 10, content: `## ⚠️ De-initialize <@${targetUserId}>?` },
+                { type: 14 },
+                { type: 10, content: `**This permanently wipes the player from Safari and CANNOT be undone.** The following will be deleted:\n• **Currency** — all coins/points\n• **Inventory** — all items\n• **Stamina & attributes** — all balances (HP, etc.) reset\n• **Map progress** — location & explored areas; channel access revoked\n• **Safari history** — interactions, cooldowns, button uses\n\n💡 To *temporarily* suspend a player (e.g. season break), use **Pause** instead — it keeps everything.` },
                 { type: 14 },
                 { type: 1, components: [
-                  { type: 2, style: 4, label: 'Confirm De-initialize', custom_id: `spm_map_deinit_confirm_${targetUserId}`, emoji: { name: '🛬' } },
-                  { type: 2, style: 2, label: '← Cancel', custom_id: `admin_set_map_${targetUserId}`, emoji: { name: '🧑‍🤝‍🧑' } }
+                  { type: 2, style: 2, label: 'Cancel', custom_id: `admin_set_map_${targetUserId}`, emoji: { name: '❌' } },
+                  { type: 2, style: 4, label: 'Yes, De-initialize', custom_id: `spm_map_deinit_confirm_${targetUserId}`, emoji: { name: '🗑️' } }
                 ]}
               ]
             }]

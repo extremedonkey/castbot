@@ -7,12 +7,16 @@
  * Features:
  * - Safe de-initialization with confirmation
  * - Map-aware cleanup (channels, locations, etc.)
- * - Data backup before deletion
+ * - Clears BOTH stores: playerData.safari AND safariContent.entityPoints (stamina/HP/attributes)
  * - Audit logging
+ *
+ * NOTE: `backupData` captured during deletion is an IN-MEMORY snapshot used only to report
+ * removed counts in the success UI. It is NOT persisted and CANNOT be restored — there is no
+ * real backup/undo. (See `deinitializePlayer`.)
  */
 
 import { loadPlayerData, savePlayerData } from './storage.js';
-import { loadSafariContent } from './safariManager.js';
+import { loadSafariContent, saveSafariContent } from './safariManager.js';
 import { PermissionFlagsBits } from 'discord.js';
 import { logger } from './logger.js';
 
@@ -273,7 +277,19 @@ export async function deinitializePlayer(guildId, userId, client = null) {
 
     // Save updated data
     await savePlayerData(playerData);
-    
+
+    // CRITICAL: stamina, HP, and ALL other points/attributes live in safariContent.entityPoints
+    // (the pointsManager store) — NOT in playerData.safari. Deleting only playerData.safari left the
+    // stamina record behind, so a later re-init (initializeEntityPoints only creates when ABSENT)
+    // skipped it, keeping the OLD current while the max-reconcile patched max to the new config — the
+    // "3/999 after re-init" bug. De-init means blank slate, so clear the entityPoints record too.
+    const entityId = `player_${userId}`;
+    if (safariData[guildId]?.entityPoints?.[entityId]) {
+      delete safariData[guildId].entityPoints[entityId];
+      await saveSafariContent(safariData);
+      logger.info('DEINIT', 'Cleared entityPoints (stamina + attributes)', { guildId, userId });
+    }
+
     // Log the de-initialization
     logger.info('DEINIT', 'Player de-initialized from Safari', {
       guildId,
