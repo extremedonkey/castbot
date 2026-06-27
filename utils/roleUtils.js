@@ -74,25 +74,33 @@ export async function checkRoleHierarchyPermission(guild, roleId, client = null)
  *                                            where ButtonHandlerFactory strips flags anyway)
  * @returns {Object} a Components V2 response object: { flags, components: [container] }
  */
-export function buildRoleErrorResponse({ roleType = 'these', roleName, code, ephemeral = false } = {}) {
+export function roleErrorText({ roleType = 'these', roleName, code } = {}) {
   const what = roleName ? `the **${roleName}** role` : `${roleType} roles`;
-  let flags = (1 << 15); // IS_COMPONENTS_V2
-  if (ephemeral) flags |= (1 << 6); // EPHEMERAL
-
-  const content = code === 50013
+  return code === 50013
     ? `### ⚠️ CastBot can't manage ${what}\n` +
-      `Discord blocked the change because **CastBot's role is below ${what}** in the server's role list.\n\n` +
+      `Discord blocked the change because **CastBot's role is below ${what}** in the server's role list.\n` +
       `**Production team fix:** Server Settings → **Roles** → drag the **CastBot** role *above* ` +
       `${roleName ? `**${roleName}**` : `your ${roleType} roles`}, then try again.`
     : `### ❌ Couldn't update ${roleType}\n` +
       `Something went wrong assigning ${what} — the role may have been deleted. Please try again or ask the production team.`;
+}
 
+/**
+ * Wraps roleErrorText() in a full Components V2 Container response — for STANDALONE contexts (a new
+ * ephemeral message, or a handler that has nothing else to show). For handlers that re-render a menu,
+ * prefer prepending `{ type: 10, content: roleErrorText(...) }` as a BANNER so the menu stays intact.
+ * @param {Object} [opts] - { roleType, roleName, code, ephemeral }
+ * @returns {Object} Components V2 response: { flags, components: [container] }
+ */
+export function buildRoleErrorResponse({ roleType = 'these', roleName, code, ephemeral = false } = {}) {
+  let flags = (1 << 15); // IS_COMPONENTS_V2
+  if (ephemeral) flags |= (1 << 6); // EPHEMERAL
   return {
     flags,
     components: [{
       type: 17, // Container
       accent_color: 0xED4245, // Discord red
-      components: [{ type: 10, content }] // Text Display
+      components: [{ type: 10, content: roleErrorText({ roleType, roleName, code }) }] // Text Display
     }]
   };
 }

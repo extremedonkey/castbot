@@ -535,7 +535,14 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
   });
 }
 
-// Helper function to show application questions
+// Helper function to show application questions.
+//
+// 🔭 FORWARD-LOOKING DESIGN HOOK (RaP 0905): today EVERY question renders as a NEW message
+// (CHANNEL_MESSAGE_WITH_SOURCE) — free-text, DNC, completion screen alike — and the "Next" button must
+// NEVER update its own/parent message (if we wanted that we'd use a separate, purpose-built button).
+// When we add structured question types that want to edit IN PLACE (a stepper, an inline builder), make the
+// response type a PROPERTY OF THE QUESTION TYPE here, rather than branching response types inside the
+// handler (that's RaP 0933 Gap 4 — "response type redirect"). i.e. `question.renderMode: 'new' | 'update'`.
 async function showApplicationQuestion(res, config, channelId, questionIndex) {
   const question = config.questions[questionIndex];
   if (!question) {
@@ -640,7 +647,7 @@ import {
 import {
   checkRoleHierarchyPermission,
   handleSetupTycoons,
-  buildRoleErrorResponse
+  roleErrorText
 } from './utils/roleUtils.js';
 import {
   requirePermission,
@@ -26622,6 +26629,10 @@ Your server is now ready for Tycoons gameplay!`;
 
           const targetMember = await guild.members.fetch(targetPlayerId);
 
+          // If a role op fails (e.g. 50013 hierarchy), we keep the menu and prepend this as a banner
+          // (graceful) rather than replacing the whole menu with a bare error.
+          let roleErrorBanner = null;
+
           // Handle the selection based on type
           if (actionType === 'pronouns') {
             try {
@@ -26639,9 +26650,8 @@ Your server is now ready for Tycoons gameplay!`;
               }
             } catch (error) {
               console.error('❌ Pronoun role assignment failed:', error);
-              // Standardised Components V2 error. A plain { content } return can't UPDATE a Components V2
-              // message (this handler is updateMessage:true) → Discord rejects it → "interaction failed".
-              return buildRoleErrorResponse({ roleType: 'pronoun', code: error.code });
+              // Graceful: keep the menu, surface a banner (don't replace the whole menu with a bare error).
+              roleErrorBanner = roleErrorText({ roleType: 'pronoun', code: error.code });
             }
           } else if (actionType === 'timezone') {
             // Remove current + add new timezone role. Unified try/catch (mirrors pronouns) so a hierarchy
@@ -26661,7 +26671,8 @@ Your server is now ready for Tycoons gameplay!`;
               }
             } catch (error) {
               console.error('❌ Timezone role assignment failed:', error);
-              return buildRoleErrorResponse({ roleType: 'timezone', code: error.code });
+              // Graceful: keep the menu, surface a banner (see pronouns above).
+              roleErrorBanner = roleErrorText({ roleType: 'timezone', code: error.code });
             }
           } else if (actionType === 'age') {
             // Handle age selection (modal case handled separately above)
@@ -26723,6 +26734,11 @@ Your server is now ready for Tycoons gameplay!`;
             isApplicationContext: mode === 'player' ? isApplicationChannel : false,
             client
           });
+
+          // Graceful role-error handling: keep the menu intact, prepend a banner if a role op failed.
+          if (roleErrorBanner && updatedUI?.components?.[0]?.components) {
+            updatedUI.components[0].components.unshift({ type: 10, content: roleErrorBanner });
+          }
 
           // Return UI for UPDATE_MESSAGE (ButtonHandlerFactory handles the response type)
           return updatedUI;
