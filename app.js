@@ -26649,7 +26649,13 @@ Your server is now ready for Tycoons gameplay!`;
                 await targetMember.roles.add(selectedValues);
               }
             } catch (error) {
-              console.error('❌ Pronoun role assignment failed:', error);
+              // 50013 = role hierarchy (CastBot below the target role): a KNOWN, handled condition — log a
+              // clean one-liner (no scary stack trace). Keep full stacks only for genuinely unexpected errors.
+              if (error.code === 50013) {
+                console.warn('⚠️ Pronoun roles not assigned — CastBot is below the pronoun roles in the hierarchy (showing banner).');
+              } else {
+                console.error('❌ Pronoun role assignment failed:', error);
+              }
               // Graceful: keep the menu, surface a banner (don't replace the whole menu with a bare error).
               roleErrorBanner = roleErrorText({ roleType: 'pronoun', code: error.code });
             }
@@ -26670,7 +26676,12 @@ Your server is now ready for Tycoons gameplay!`;
                 await targetMember.roles.add(selectedValues[0]);
               }
             } catch (error) {
-              console.error('❌ Timezone role assignment failed:', error);
+              // 50013 = role hierarchy (known, handled) → clean one-liner; full stack only for the unexpected.
+              if (error.code === 50013) {
+                console.warn('⚠️ Timezone role not assigned — CastBot is below the timezone roles in the hierarchy (showing banner).');
+              } else {
+                console.error('❌ Timezone role assignment failed:', error);
+              }
               // Graceful: keep the menu, surface a banner (see pronouns above).
               roleErrorBanner = roleErrorText({ roleType: 'timezone', code: error.code });
             }
