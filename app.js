@@ -587,7 +587,7 @@ async function showApplicationQuestion(res, config, channelId, questionIndex) {
         type: 2,
         custom_id: `app_next_question_${channelId}_${questionIndex}`,
         label: isSecondToLast ? 'Complete' : 'Next',
-        style: isSecondToLast ? 3 : 2
+        style: isSecondToLast ? 3 : 1 // Complete = green, Next = blue (was grey — players kept missing it)
       }
     });
   }
@@ -27340,6 +27340,11 @@ Your server is now ready for Tycoons gameplay!`;
         if (!config || !config.questions || nextIndex >= config.questions.length) {
           // No more questions - application is complete
           console.log(`✅ APPLICATION COMPLETE: No more questions to show`);
+          // Record the completion fact (configs WITHOUT a completion screen end here). First completion wins.
+          if (application && !application.completedAt) {
+            application.completedAt = new Date().toISOString();
+            await savePlayerData(playerData);
+          }
           // Simply return success - the last question handles completion
           return res.send({
             type: InteractionResponseType.UPDATE_MESSAGE,
@@ -27350,22 +27355,23 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        // Check if we're on the second-to-last question clicking to the last
+        // Reaching the completion screen (= clicking "Complete" on the last real question).
         const isGoingToLastQuestion = nextIndex === config.questions.length - 1;
-        
-        // Update channel name when going to the last question
+
+        // Record completion + mark the channel ☑️ when reaching the completion screen.
         if (isGoingToLastQuestion) {
+          // Persist completion as DATA (edit-proof; survives later question add/remove). First completion wins.
+          if (!application.completedAt) application.completedAt = new Date().toISOString();
           try {
             const channel = await client.channels.fetch(channelId);
-            let currentName = channel.name;
-            
-            // Remove any existing status emoji if it exists
-            currentName = currentName.replace(/^[📝☑️✖️✅❌]+/, '');
-
-            // Only update if it doesn't already have a checkmark
-            if (!currentName.startsWith('☑️') && !currentName.startsWith('✅')) {
-              await channel.setName(`☑️${currentName}`);
-              console.log(`📝 Updated channel name to: ☑️${currentName}`);
+            const rawName = channel.name;
+            // Guard checks the RAW name: don't downgrade a channel that's already complete (☑️) or
+            // placement-decided (✅ accepted / ❌ declined). The OLD code stripped the emoji BEFORE checking,
+            // so the guard never fired and re-clicking an old question button clobbered ✅ → ☑️.
+            if (!/^[☑️✅❌]/.test(rawName)) {
+              const stripped = rawName.replace(/^[📝☑️✖️✅❌]+/, '');
+              await channel.setName(`☑️${stripped}`);
+              console.log(`📝 Updated channel name to: ☑️${stripped}`);
             }
           } catch (channelError) {
             console.error('Error updating channel name:', channelError);
@@ -27519,19 +27525,19 @@ Your server is now ready for Tycoons gameplay!`;
         // Update channel name to restore document prefix
         try {
           const channel = await client.channels.fetch(channelId);
-          let currentName = channel.name;
-          
-          // Remove ALL existing status prefixes if they exist
-          currentName = currentName.replace(/^[📝☑️✖️✅❌]+/, '');
+          const stripped = channel.name.replace(/^[📝☑️✖️✅❌]+/, '');
 
-          // Add document prefix
-          await channel.setName(`📝${currentName}`);
-          console.log(`📝 Updated channel name to: 📝${currentName}`);
-          
-          // Get application config to include production role
+          // Re-apply = un-withdraw → RESUME prior state. Load the application BEFORE renaming so we restore
+          // the correct prefix (☑️ if they'd already completed, else 📝 New) rather than blindly resetting to
+          // 📝. We do NOT reset their progress — their answers (channel messages) and currentQuestion persist.
           const playerData = await loadPlayerData();
           const applications = playerData[guildId]?.applications || {};
           const appData = Object.values(applications).find(app => app.channelId === channelId);
+
+          const resumeEmoji = appData?.completedAt ? '☑️' : '📝';
+          await channel.setName(`${resumeEmoji}${stripped}`);
+          console.log(`${resumeEmoji} Re-apply: restored channel to ${resumeEmoji}${stripped} (completed=${!!appData?.completedAt})`);
+
           let config = null;
           if (appData?.configId) {
             config = await getApplicationConfig(guildId, appData.configId);

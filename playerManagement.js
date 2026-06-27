@@ -1611,14 +1611,14 @@ export async function createPlayerManagementUI(options) {
   if (isApplicationContext) {
     container.components.push({ type: 14 }); // Separator
     container.components.push({
-      type: 1, // ActionRow
-      components: [{
+      type: 9, // Section — mirrors the application-question layout (TextDisplay + button accessory)
+      components: [{ type: 10, content: '👆 Set your details above and click next' }],
+      accessory: {
         type: 2, // Button
         custom_id: `app_continue_${guildId}_${userId}`,
-        label: 'Move on to the main questions',
-        style: 1, // Primary
-        emoji: { name: '❔' }
-      }]
+        label: 'Next',
+        style: 1 // Primary (blue)
+      }
     });
   }
 
