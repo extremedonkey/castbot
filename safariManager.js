@@ -3844,7 +3844,15 @@ async function executeManagePlayerState(config, guildId, userId, interaction) {
             const channelId = resolvedCoord && safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[resolvedCoord]?.channelId;
             const locationLink = channelId ? ` Head to <#${channelId}> to start exploring!` : '';
             const coordMsg = resolvedCoord ? ` at **${resolvedCoord}**` : '';
-            return `✅ Welcome to the Safari! You have been placed on the map${coordMsg}.${locationLink}`;
+            // Greet by Discord display name (server nickname / display name, NOT username). Optional — falls
+            // back to no name if the member can't be resolved.
+            let namePart = '';
+            try {
+                const guild = client.guilds.cache.get(guildId) || await client.guilds.fetch(guildId);
+                const member = guild.members.cache.get(userId) || await guild.members.fetch(userId);
+                if (member?.displayName) namePart = ` ${member.displayName}`;
+            } catch { /* name is optional */ }
+            return `✅ Welcome to the Safari${namePart}! You have been placed on the map${coordMsg}.${locationLink}`;
         };
 
         switch (mode) {
