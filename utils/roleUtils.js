@@ -56,6 +56,48 @@ export async function checkRoleHierarchyPermission(guild, roleId, client = null)
 }
 
 /**
+ * Standardised Components V2 error shown when CastBot can't manage a role.
+ *
+ * Use this anywhere we add/remove Discord roles (pronouns, timezone, vanity sync, ban roles, etc.).
+ * Returns a FULL Container response so it renders correctly on BOTH new messages AND UPDATE_MESSAGE —
+ * returning a plain `{ content }` to UPDATE a Components V2 message is silently rejected by Discord,
+ * producing the classic "This interaction failed" with no visible message (see ComponentsV2Issues.md §7).
+ *
+ * Most failures are code 50013 (Missing Permissions), which for role assignment almost always means a
+ * role-hierarchy problem: CastBot's role sits below the role it's trying to manage.
+ *
+ * @param {Object} [opts]
+ * @param {string} [opts.roleType='these'] - human label for the role family, e.g. 'pronoun' / 'timezone'
+ * @param {string} [opts.roleName] - the specific role CastBot couldn't manage (optional, sharpens the copy)
+ * @param {number} [opts.code] - the Discord error code (50013 → hierarchy guidance; anything else → generic)
+ * @param {boolean} [opts.ephemeral=false] - add EPHEMERAL flag (for NEW messages; OMIT for UPDATE_MESSAGE,
+ *                                            where ButtonHandlerFactory strips flags anyway)
+ * @returns {Object} a Components V2 response object: { flags, components: [container] }
+ */
+export function buildRoleErrorResponse({ roleType = 'these', roleName, code, ephemeral = false } = {}) {
+  const what = roleName ? `the **${roleName}** role` : `${roleType} roles`;
+  let flags = (1 << 15); // IS_COMPONENTS_V2
+  if (ephemeral) flags |= (1 << 6); // EPHEMERAL
+
+  const content = code === 50013
+    ? `### ⚠️ CastBot can't manage ${what}\n` +
+      `Discord blocked the change because **CastBot's role is below ${what}** in the server's role list.\n\n` +
+      `**Production team fix:** Server Settings → **Roles** → drag the **CastBot** role *above* ` +
+      `${roleName ? `**${roleName}**` : `your ${roleType} roles`}, then try again.`
+    : `### ❌ Couldn't update ${roleType}\n` +
+      `Something went wrong assigning ${what} — the role may have been deleted. Please try again or ask the production team.`;
+
+  return {
+    flags,
+    components: [{
+      type: 17, // Container
+      accent_color: 0xED4245, // Discord red
+      components: [{ type: 10, content }] // Text Display
+    }]
+  };
+}
+
+/**
  * Setup specialized Tycoons game roles
  * @param {Object} guild - Discord guild object
  * @returns {Object} Result object with created role IDs and formatted output

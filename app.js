@@ -639,7 +639,8 @@ import {
 } from './utils/castlistUtils.js';
 import {
   checkRoleHierarchyPermission,
-  handleSetupTycoons
+  handleSetupTycoons,
+  buildRoleErrorResponse
 } from './utils/roleUtils.js';
 import {
   requirePermission,
@@ -26638,45 +26639,29 @@ Your server is now ready for Tycoons gameplay!`;
               }
             } catch (error) {
               console.error('❌ Pronoun role assignment failed:', error);
-              if (error.code === 50013) {
-                // Discord permission error - send non-ephemeral message
-                return {
-                  content: '⚠️ **Permission Error**: Unable to assign pronoun roles. Please advise the production team to move the CastBot role to the top of the Discord hierarchy, above pronoun roles.',
-                  flags: 0 // Non-ephemeral message
-                };
-              } else {
-                // Other errors - send ephemeral message
-                return {
-                  content: '❌ Failed to update pronoun roles. Please try again.',
-                  flags: InteractionResponseFlags.EPHEMERAL
-                };
-              }
+              // Standardised Components V2 error. A plain { content } return can't UPDATE a Components V2
+              // message (this handler is updateMessage:true) → Discord rejects it → "interaction failed".
+              return buildRoleErrorResponse({ roleType: 'pronoun', code: error.code });
             }
           } else if (actionType === 'timezone') {
-            // Remove current timezone role
-            const timezones = await getGuildTimezones(guildId);
-            const timezoneRoleIds = Object.keys(timezones);
-            const currentTimezoneRole = targetMember.roles.cache.find(role =>
-              timezoneRoleIds.includes(role.id)
-            );
-            if (currentTimezoneRole) {
-              try {
+            // Remove current + add new timezone role. Unified try/catch (mirrors pronouns) so a hierarchy
+            // failure on EITHER op surfaces the standardised Components V2 error instead of silently leaving
+            // a stale role / returning plain content that can't update a V2 message ("interaction failed").
+            try {
+              const timezones = await getGuildTimezones(guildId);
+              const timezoneRoleIds = Object.keys(timezones);
+              const currentTimezoneRole = targetMember.roles.cache.find(role =>
+                timezoneRoleIds.includes(role.id)
+              );
+              if (currentTimezoneRole) {
                 await targetMember.roles.remove(currentTimezoneRole.id);
-              } catch (error) {
-                console.warn(`🚨 Could not remove timezone role ${currentTimezoneRole.id}:`, error.message);
               }
-            }
-            // Add new timezone
-            if (selectedValues.length > 0) {
-              try {
+              if (selectedValues.length > 0) {
                 await targetMember.roles.add(selectedValues[0]);
-              } catch (error) {
-                console.error(`❌ Failed to add timezone role ${selectedValues[0]}:`, error.message);
-                return {
-                  content: '❌ Failed to update timezone. The selected role may no longer exist.',
-                  flags: InteractionResponseFlags.EPHEMERAL
-                };
               }
+            } catch (error) {
+              console.error('❌ Timezone role assignment failed:', error);
+              return buildRoleErrorResponse({ roleType: 'timezone', code: error.code });
             }
           } else if (actionType === 'age') {
             // Handle age selection (modal case handled separately above)
@@ -27338,19 +27323,25 @@ Your server is now ready for Tycoons gameplay!`;
         console.log(`🔍 COMPLETION CHECK: config exists=${!!config}, questions exist=${!!config?.questions}, questions length=${config?.questions?.length}, nextIndex=${nextIndex}, should complete=${nextIndex >= (config?.questions?.length || 0)}`);
         
         if (!config || !config.questions || nextIndex >= config.questions.length) {
-          // No more questions - application is complete
+          // Defensive guard (NOT the normal completion path — that's the completion screen via the branch
+          // below). We only land here on a STALE "Next" button (questions deleted after the message was
+          // posted) or a missing/empty config. Record completion, then reply with a friendly EPHEMERAL
+          // message — a NEW message, never an UPDATE of the parent. (The Next button must never update its
+          // own message; if we ever wanted that it'd be a separate button. RaP 0905.)
           console.log(`✅ APPLICATION COMPLETE: No more questions to show`);
-          // Record the completion fact (configs WITHOUT a completion screen end here). First completion wins.
           if (application && !application.completedAt) {
             application.completedAt = new Date().toISOString();
             await savePlayerData(playerData);
           }
-          // Simply return success - the last question handles completion
           return res.send({
-            type: InteractionResponseType.UPDATE_MESSAGE,
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '', // Clear the message since we're done
-              components: [] // Remove all components
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+              components: [{
+                type: 17,
+                accent_color: 0x2ECC71,
+                components: [{ type: 10, content: "### ✅ All done!\nYou've reached the end of this application — there are no more questions, and your responses are saved." }]
+              }]
             }
           });
         }
