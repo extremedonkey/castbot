@@ -106,6 +106,37 @@ export function buildRoleErrorResponse({ roleType = 'these', roleName, code, eph
 }
 
 /**
+ * REUSABLE: send the standardised role error as its OWN standalone ephemeral message (an interaction
+ * followup) — never inline into whatever menu the interaction was on. Call this from ANY handler that
+ * manages Discord roles (pronouns, timezone, vanity sync, ban roles…). Fire-and-forget.
+ *
+ * Why a followup + setTimeout: the interaction's initial response (e.g. the menu UPDATE_MESSAGE) must be
+ * sent FIRST — a followup posted before that ACK is rejected. We brief-delay so the caller can just
+ * `return` its normal response, then this lands a moment later.
+ *
+ * Why console.log (not warn/error): a role-hierarchy block is **BAU, not a crash**. console.warn/error go
+ * to stderr → pm2-error.log → posted to #error by pm2ErrorLogger (which posts ALL error-log lines). We log
+ * to STDOUT with a pattern-free message so it stays out of the #error channel.
+ *
+ * @param {Object} context - ButtonHandlerFactory context (must have `.token`)
+ * @param {Object} [opts] - { roleType, roleName, code }
+ */
+export function sendRoleErrorFollowup(context, { roleType = 'these', roleName, code } = {}) {
+  console.log(`ℹ️ Role op blocked (code ${code ?? '?'}) — sending the host a standalone ${roleType} fix-it message.`);
+  setTimeout(async () => {
+    try {
+      const { DiscordRequest } = await import('../utils.js');
+      await DiscordRequest(`webhooks/${process.env.APP_ID}/${context.token}`, {
+        method: 'POST',
+        body: buildRoleErrorResponse({ roleType, roleName, code, ephemeral: true })
+      });
+    } catch (e) {
+      console.log('Role-error followup not delivered:', e.message);
+    }
+  }, 700);
+}
+
+/**
  * Setup specialized Tycoons game roles
  * @param {Object} guild - Discord guild object
  * @returns {Object} Result object with created role IDs and formatted output

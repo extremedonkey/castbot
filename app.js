@@ -647,7 +647,7 @@ import {
 import {
   checkRoleHierarchyPermission,
   handleSetupTycoons,
-  roleErrorText
+  sendRoleErrorFollowup
 } from './utils/roleUtils.js';
 import {
   requirePermission,
@@ -26629,9 +26629,9 @@ Your server is now ready for Tycoons gameplay!`;
 
           const targetMember = await guild.members.fetch(targetPlayerId);
 
-          // If a role op fails (e.g. 50013 hierarchy), we keep the menu and prepend this as a banner
-          // (graceful) rather than replacing the whole menu with a bare error.
-          let roleErrorBanner = null;
+          // If a role op fails (e.g. 50013 hierarchy), record it; we re-render the menu cleanly and send the
+          // error as its OWN standalone ephemeral followup (see sendRoleErrorFollowup) — never inline.
+          let roleError = null;
 
           // Handle the selection based on type
           if (actionType === 'pronouns') {
@@ -26649,15 +26649,9 @@ Your server is now ready for Tycoons gameplay!`;
                 await targetMember.roles.add(selectedValues);
               }
             } catch (error) {
-              // 50013 = role hierarchy (CastBot below the target role): a KNOWN, handled condition — log a
-              // clean one-liner (no scary stack trace). Keep full stacks only for genuinely unexpected errors.
-              if (error.code === 50013) {
-                console.warn('⚠️ Pronoun roles not assigned — CastBot is below the pronoun roles in the hierarchy (showing banner).');
-              } else {
-                console.error('❌ Pronoun role assignment failed:', error);
-              }
-              // Graceful: keep the menu, surface a banner (don't replace the whole menu with a bare error).
-              roleErrorBanner = roleErrorText({ roleType: 'pronoun', code: error.code });
+              // 50013 (role hierarchy) is BAU → no stderr log. Only log a stack for genuinely unexpected errors.
+              if (error.code !== 50013) console.error('❌ Pronoun role assignment failed:', error);
+              roleError = { roleType: 'pronoun', code: error.code };
             }
           } else if (actionType === 'timezone') {
             // Remove current + add new timezone role. Unified try/catch (mirrors pronouns) so a hierarchy
@@ -26676,14 +26670,9 @@ Your server is now ready for Tycoons gameplay!`;
                 await targetMember.roles.add(selectedValues[0]);
               }
             } catch (error) {
-              // 50013 = role hierarchy (known, handled) → clean one-liner; full stack only for the unexpected.
-              if (error.code === 50013) {
-                console.warn('⚠️ Timezone role not assigned — CastBot is below the timezone roles in the hierarchy (showing banner).');
-              } else {
-                console.error('❌ Timezone role assignment failed:', error);
-              }
-              // Graceful: keep the menu, surface a banner (see pronouns above).
-              roleErrorBanner = roleErrorText({ roleType: 'timezone', code: error.code });
+              // 50013 (role hierarchy) is BAU → no stderr log. Only log a stack for genuinely unexpected errors.
+              if (error.code !== 50013) console.error('❌ Timezone role assignment failed:', error);
+              roleError = { roleType: 'timezone', code: error.code };
             }
           } else if (actionType === 'age') {
             // Handle age selection (modal case handled separately above)
@@ -26746,10 +26735,9 @@ Your server is now ready for Tycoons gameplay!`;
             client
           });
 
-          // Graceful role-error handling: keep the menu intact, prepend a banner if a role op failed.
-          if (roleErrorBanner && updatedUI?.components?.[0]?.components) {
-            updatedUI.components[0].components.unshift({ type: 10, content: roleErrorBanner });
-          }
+          // Role-error handling: re-render the menu cleanly (above) and, if a role op failed, send the error
+          // as its OWN standalone ephemeral followup — fires after this UPDATE_MESSAGE lands. Reusable.
+          if (roleError) sendRoleErrorFollowup(context, roleError);
 
           // Return UI for UPDATE_MESSAGE (ButtonHandlerFactory handles the response type)
           return updatedUI;
