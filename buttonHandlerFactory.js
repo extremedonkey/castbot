@@ -1574,7 +1574,7 @@ export const BUTTON_REGISTRY = {
     category: 'application'
   },
   'app_reapply': {
-    label: 'Re-apply',
+    label: 'Resume',
     description: 'Applicant un-withdraws / reactivates their application; resumes prior state (☑️/📝)',
     emoji: '🔄',
     style: 'Primary',

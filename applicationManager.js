@@ -32,7 +32,7 @@ import fetch from 'node-fetch';
 export function buildApplicationWelcome({ userId, productionRoleId, withdrawn = false }) {
   const team = productionRoleId ? `production team (<@&${productionRoleId}>)` : 'admin team';
   const primary = withdrawn
-    ? { type: 2, custom_id: 'app_reapply', label: 'Re-apply', style: 1, emoji: { name: '🔄' } }
+    ? { type: 2, custom_id: 'app_reapply', label: 'Resume', style: 1, emoji: { name: '🔄' } }
     : { type: 2, custom_id: 'player_menu', label: 'Start your application', style: 1, emoji: { name: '🚀' } };
   return {
     type: 17, // Container
