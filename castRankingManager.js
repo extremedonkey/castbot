@@ -390,10 +390,12 @@ export async function generateSeasonAppRankingUI({
   let oldInfoBlock = `**Name:** ${nameDisplay}${demographicInfo}\n**Average Score:** ${infoAvg} (${infoRankings.length} vote${infoRankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${infoCastingText}\n**App:** <#${currentApp.channelId}>`;
   if (dncSummaryText) oldInfoBlock += `\n${dncSummaryText}`;
   oldInfoBlock += `\nStatus: ${derivedStatus.icon} ${derivedStatus.name}`;
-  // 🌈 TEMP scaffold (RaP 0905): placeholder for the future unified getPlayerSeasonStatus() output.
-  // Replace 'XX' with the engine's resolved status once it exists — lets us compare it against the 3
-  // status fields currently shown above. Remove when the Status Engine lands.
-  oldInfoBlock += `\n🌈 ÜberStatus: XX`;
+  // 🌈 ÜberStatus: output of the unified Status Engine (RaP 0905). SKELETON — today it only resolves the
+  // 3 Stage-0 statuses (📝 New / ☑️ Application Complete / ✖️ Withdrawn); other dimensions land per-feature.
+  // We already hold appRecord + liveChannelName, so use the app-direct convenience (no re-lookup).
+  const { getApplicationStatus } = await import('./playerStatus.js');
+  const uber = getApplicationStatus(appRecord, liveChannelName);
+  oldInfoBlock += `\n🌈 ÜberStatus: ${uber.emoji} ${uber.label}`;
 
   containerComponents.push(
     { type: 14 }, // divider after the nav / select cluster
