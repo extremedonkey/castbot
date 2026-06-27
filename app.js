@@ -497,7 +497,7 @@ async function buildDncPreview(questionIndex, totalQuestions) {
 }
 
 // Show DNC question during the player application flow
-async function showDncQuestion(res, config, channelId, questionIndex) {
+async function showDncQuestion(config, channelId, questionIndex) {
   const guildId = config.guildId || Object.keys(config).find(k => k.match(/^\d+$/)) || null;
   const { buildDncQuestionUI } = await import('./dncManager.js');
 
@@ -514,13 +514,7 @@ async function showDncQuestion(res, config, channelId, questionIndex) {
 
   const container = buildDncQuestionUI(config, channelId, questionIndex, application);
 
-  return res.send({
-    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-    data: {
-      flags: (1 << 15),
-      components: [container]
-    }
-  });
+  return { flags: (1 << 15), components: [container] };
 }
 
 async function refreshQuestionManagementUI(res, config, configId, currentPage = 0) {
@@ -543,21 +537,15 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
 // When we add structured question types that want to edit IN PLACE (a stepper, an inline builder), make the
 // response type a PROPERTY OF THE QUESTION TYPE here, rather than branching response types inside the
 // handler (that's RaP 0933 Gap 4 — "response type redirect"). i.e. `question.renderMode: 'new' | 'update'`.
-async function showApplicationQuestion(res, config, channelId, questionIndex) {
+async function showApplicationQuestion(config, channelId, questionIndex) {
   const question = config.questions[questionIndex];
   if (!question) {
-    return res.send({
-      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-      data: {
-        content: '❌ Question not found.',
-        flags: InteractionResponseFlags.EPHEMERAL
-      }
-    });
+    return { content: '❌ Question not found.', ephemeral: true };
   }
 
-  // DNC question — uses its own renderer
+  // DNC question — uses its own renderer (also returns response data)
   if (question.questionType === 'dnc') {
-    return showDncQuestion(res, config, channelId, questionIndex);
+    return showDncQuestion(config, channelId, questionIndex);
   }
   
   const isLastQuestion = questionIndex === config.questions.length - 1;
@@ -605,14 +593,8 @@ async function showApplicationQuestion(res, config, channelId, questionIndex) {
     accent_color: isLastQuestion ? 0x2ecc71 : 0x3498db, // Green for last question, blue for others
     components: questionComponents
   };
-  
-  return res.send({
-    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-    data: {
-      flags: (1 << 15), // IS_COMPONENTS_V2
-      components: [questionContainer]
-    }
-  });
+
+  return { flags: (1 << 15), components: [questionContainer] };
 }
 
 import { 
@@ -12144,8 +12126,8 @@ To fix this:
           
           console.log(`🔄 Emergency re-init successful for ${application.displayName} in channel ${context.channelId}`);
           
-          // Show first question (same as app_continue flow) - this handles its own response
-          return showApplicationQuestion(res, config, context.channelId, 0);
+          // Show first question (same as app_continue flow) — builder returns response data, factory sends it
+          return await showApplicationQuestion(config, context.channelId, 0);
         }
       })(req, res, client);
 
@@ -27218,199 +27200,74 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
 
     } else if (custom_id.startsWith('app_continue_')) {
-      // Handle "Move on to main questions" button click in application channels
-      try {
-        // Extract guildId and userId from custom_id: app_continue_{guildId}_{userId}
-        const parts = custom_id.split('_');
-        const guildId = parts[2];
-        const userId = parts[3];
-        const channelId = req.body.channel_id;
-        
-        console.log(`🔍 App Continue: Guild ${guildId}, User ${userId}, Channel ${channelId}`);
-        
-        // Load player data to find the application and its configId
-        const playerData = await loadPlayerData();
-        const application = playerData[guildId]?.applications?.[channelId];
-        
-        if (!application) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Application data not found for this channel.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        const configId = application.configId;
-        console.log(`🔍 Found configId: ${configId}`);
-        
-        // Get the application configuration to retrieve questions
-        const config = await getApplicationConfig(guildId, configId);
-        
-        if (!config) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Application configuration not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Check if there are questions configured
-        if (!config.questions || config.questions.length === 0) {
-          // Fall back to legacy welcome message if no questions
-          const welcomeTitle = config.welcomeTitle || 'Next Steps';
-          const welcomeDescription = config.welcomeDescription || 'No additional instructions configured - ask your hosts what to do next!';
-          
-          const customWelcomeContainer = {
-            type: 17, // Container
-            accent_color: 0x3498db, // Blue color
-            components: [
-              {
-                type: 10, // Text Display
-                content: `## ${welcomeTitle}\n\n${welcomeDescription}`
-              }
-            ]
-          };
-          
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              flags: (1 << 15), // IS_COMPONENTS_V2
-              components: [customWelcomeContainer]
-            }
-          });
-        }
-        
-        // Initialize progress tracker (backwards compatible)
-        if (!application.currentQuestion) {
-          application.currentQuestion = 0; // Initialize for existing applications
-        }
-        
-        // Save updated progress
-        await savePlayerData(playerData);
-        
-        // Show first question
-        return showApplicationQuestion(res, config, channelId, 0);
-        
-      } catch (error) {
-        console.error('Error in app_continue handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error loading next steps. Please contact an admin.',
-            flags: InteractionResponseFlags.EPHEMERAL
+      // "Move on to main questions" — posts the FIRST question as a new message (RaP 0933 IMMEDIATE-NEW). [✨ FACTORY]
+      return ButtonHandlerFactory.create({
+        id: 'app_continue',
+        handler: async (context) => {
+          const guildId = context.customId.split('_')[2]; // app_continue_{guildId}_{userId}
+          const channelId = context.channelId;
+          console.log(`🔍 App Continue: Guild ${guildId}, Channel ${channelId}`);
+          const playerData = await loadPlayerData();
+          const application = playerData[guildId]?.applications?.[channelId];
+          if (!application) return { content: '❌ Application data not found for this channel.', ephemeral: true };
+          const config = await getApplicationConfig(guildId, application.configId);
+          if (!config) return { content: '❌ Application configuration not found.', ephemeral: true };
+          // No questions configured → simple "next steps" fallback (public new message).
+          if (!config.questions || config.questions.length === 0) {
+            const welcomeTitle = config.welcomeTitle || 'Next Steps';
+            const welcomeDescription = config.welcomeDescription || 'No additional instructions configured - ask your hosts what to do next!';
+            return { flags: (1 << 15), components: [{ type: 17, accent_color: 0x3498db, components: [{ type: 10, content: `## ${welcomeTitle}\n\n${welcomeDescription}` }] }] };
           }
-        });
-      }
+          if (!application.currentQuestion) application.currentQuestion = 0; // init for existing apps
+          await savePlayerData(playerData);
+          return await showApplicationQuestion(config, channelId, 0); // first question (public new message)
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('app_next_question_')) {
-      // Handle next question navigation
-      try {
-        // Extract channelId and index: app_next_question_{channelId}_{index}
-        const prefix = 'app_next_question_';
-        const remaining = custom_id.replace(prefix, '');
-        const lastUnderscoreIndex = remaining.lastIndexOf('_');
-        const channelId = remaining.substring(0, lastUnderscoreIndex);
-        const currentIndex = parseInt(remaining.substring(lastUnderscoreIndex + 1));
-        const nextIndex = currentIndex + 1;
-        const guildId = req.body.guild_id;
-        
-        console.log(`🔍 Next Question: Channel ${channelId}, Current: ${currentIndex}, Next: ${nextIndex}`);
-        
-        // Load player data to find the application and its configId
-        const playerData = await loadPlayerData();
-        const application = playerData[guildId]?.applications?.[channelId];
-        
-        if (!application) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Application data not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        const config = await getApplicationConfig(guildId, application.configId);
-        
-        console.log(`🔍 COMPLETION CHECK: config exists=${!!config}, questions exist=${!!config?.questions}, questions length=${config?.questions?.length}, nextIndex=${nextIndex}, should complete=${nextIndex >= (config?.questions?.length || 0)}`);
-        
-        if (!config || !config.questions || nextIndex >= config.questions.length) {
-          // Defensive guard (NOT the normal completion path — that's the completion screen via the branch
-          // below). We only land here on a STALE "Next" button (questions deleted after the message was
-          // posted) or a missing/empty config. Record completion, then reply with a friendly EPHEMERAL
-          // message — a NEW message, never an UPDATE of the parent. (The Next button must never update its
-          // own message; if we ever wanted that it'd be a separate button. RaP 0905.)
-          console.log(`✅ APPLICATION COMPLETE: No more questions to show`);
-          if (application && !application.completedAt) {
-            application.completedAt = new Date().toISOString();
-            await savePlayerData(playerData);
-          }
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
-              components: [{
-                type: 17,
-                accent_color: 0x2ECC71,
-                components: [{ type: 10, content: "### ✅ All done!\nYou've reached the end of this application — there are no more questions, and your responses are saved." }]
-              }]
-            }
-          });
-        }
-        
-        // Reaching the completion screen (= clicking "Complete" on the last real question).
-        const isGoingToLastQuestion = nextIndex === config.questions.length - 1;
+      // Posts the NEXT question as a new message (RaP 0933 IMMEDIATE-NEW). On reaching the completion screen it
+      // records completedAt + renames the channel ☑️ NON-BLOCKING (rate-limit safe). [✨ FACTORY]
+      return ButtonHandlerFactory.create({
+        id: 'app_next_question',
+        handler: async (context) => {
+          const { guildId, client } = context;
+          // custom_id: app_next_question_{channelId}_{index}
+          const remaining = context.customId.replace('app_next_question_', '');
+          const lastUnderscore = remaining.lastIndexOf('_');
+          const channelId = remaining.substring(0, lastUnderscore);
+          const nextIndex = parseInt(remaining.substring(lastUnderscore + 1)) + 1;
+          console.log(`🔍 Next Question: Channel ${channelId}, Next: ${nextIndex}`);
+          const playerData = await loadPlayerData();
+          const application = playerData[guildId]?.applications?.[channelId];
+          if (!application) return { content: '❌ Application data not found.', ephemeral: true };
+          const config = await getApplicationConfig(guildId, application.configId);
 
-        // Record completion + mark the channel ☑️ when reaching the completion screen.
-        if (isGoingToLastQuestion) {
-          // Persist completion as DATA (edit-proof; survives later question add/remove). First completion wins.
-          if (!application.completedAt) application.completedAt = new Date().toISOString();
-          try {
-            const channel = await client.channels.fetch(channelId);
-            const rawName = channel.name;
-            // Guard checks the RAW name: don't downgrade a channel that's already complete (☑️) or
-            // placement-decided (✅ accepted / ❌ declined). The OLD code stripped the emoji BEFORE checking,
-            // so the guard never fired and re-clicking an old question button clobbered ✅ → ☑️.
-            if (!/^[☑️✅❌]/.test(rawName)) {
-              const stripped = rawName.replace(/^[📝☑️✖️✅❌]+/, '');
-              await channel.setName(`☑️${stripped}`);
-              console.log(`📝 Updated channel name to: ☑️${stripped}`);
-            }
-          } catch (channelError) {
-            console.error('Error updating channel name:', channelError);
+          // Defensive guard: stale "Next" button (questions deleted after posting) or missing/empty config →
+          // record completion + a friendly EPHEMERAL "all done" (a NEW message — Next never updates its own). RaP 0905.
+          if (!config || !config.questions || nextIndex >= config.questions.length) {
+            console.log('✅ APPLICATION COMPLETE: No more questions to show');
+            if (!application.completedAt) { application.completedAt = new Date().toISOString(); await savePlayerData(playerData); }
+            return {
+              ephemeral: true,
+              components: [{ type: 17, accent_color: 0x2ECC71, components: [{ type: 10, content: "### ✅ All done!\nYou've reached the end of this application — there are no more questions, and your responses are saved." }] }]
+            };
           }
-        }
-        
-        // Update progress tracker (backwards compatible)
-        if (!application.currentQuestion) {
-          application.currentQuestion = 0; // Initialize for existing applications
-        }
-        application.currentQuestion = nextIndex;
-        
-        // Save updated progress
-        await savePlayerData(playerData);
-        
-        // Show next question
-        return showApplicationQuestion(res, config, channelId, nextIndex);
-        
-      } catch (error) {
-        console.error('❌ CRITICAL ERROR in app_next_question handler:', error);
-        console.error('❌ Error stack:', error.stack);
-        console.error('❌ Channel ID:', channelId);
-        console.error('❌ Current Index:', currentIndex);
-        console.error('❌ Next Index:', nextIndex);
-        console.error('❌ Application data:', application);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error loading next question. Please contact an admin.',
-            flags: InteractionResponseFlags.EPHEMERAL
+
+          // Reaching the completion screen (clicking "Complete" on the last real question).
+          if (nextIndex === config.questions.length - 1) {
+            if (!application.completedAt) application.completedAt = new Date().toISOString(); // edit-proof completion fact
+            // Mark channel ☑️ — NON-BLOCKING (renames are rate-limited). Guard checks the RAW name so we never
+            // downgrade a ☑️/✅/❌ channel (the old strip-then-check let re-clicks clobber ✅ → ☑️).
+            client.channels.fetch(channelId)
+              .then(ch => { if (!/^[☑️✅❌]/.test(ch.name)) return ch.setName(`☑️${ch.name.replace(/^[📝☑️✖️✅❌]+/, '')}`).then(() => console.log('📝 channel → ☑️')); })
+              .catch(e => console.log(`Completion rename skipped (rate limit?): ${e.message}`));
           }
-        });
-      }
+
+          if (!application.currentQuestion) application.currentQuestion = 0;
+          application.currentQuestion = nextIndex;
+          await savePlayerData(playerData);
+          return await showApplicationQuestion(config, channelId, nextIndex); // next question (public new message)
+        }
+      })(req, res, client);
     } else if (custom_id === 'app_withdraw') {
       // Applicant withdraws — the Withdraw button is on the welcome message, so updateMessage swaps it for
       // Re-apply in place (replaces the old raw fetch PATCH). Channel rename fired NON-BLOCKING (renames are

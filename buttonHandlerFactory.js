@@ -1566,6 +1566,20 @@ export const BUTTON_REGISTRY = {
   },
 
   // === APPLICATION CHANNEL (applicant-facing welcome buttons) ===
+  'app_continue_*': {
+    label: 'Move on to the main questions',
+    description: 'Applicant starts the main application questions (posts the first question)',
+    emoji: '❔',
+    style: 'Primary',
+    category: 'application'
+  },
+  'app_next_question_*': {
+    label: 'Next / Complete',
+    description: 'Applicant advances to the next application question (posts it as a new message)',
+    emoji: '➡️',
+    style: 'Primary',
+    category: 'application'
+  },
   'app_withdraw': {
     label: 'Withdraw your application',
     description: 'Applicant withdraws their application (✖️); swaps the welcome to a Re-apply button',
