@@ -27412,219 +27412,48 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'app_withdraw') {
-      // Handle application withdrawal
-      try {
-        const channelId = req.body.channel_id;
-        const guildId = req.body.guild_id;
-        const messageId = req.body.message.id;
-        const userId = req.body.member.user.id;
-        
-        console.log(`❌ Application withdrawal requested for channel ${channelId}`);
-        
-        // Update channel name to show withdrawal
-        try {
-          const channel = await client.channels.fetch(channelId);
-          let currentName = channel.name;
-          
-          // Remove ALL existing status prefixes if they exist
-          currentName = currentName.replace(/^[📝☑️✖️✅❌]+/, '');
-
-          // Add withdrawal prefix (✖️ purple cross — distinct from ❌ "declined placement")
-          await channel.setName(`✖️${currentName}`);
-          console.log(`📝 Updated channel name to: ✖️${currentName}`);
-          
-          // Get application config to include production role
+      // Applicant withdraws — the Withdraw button is on the welcome message, so updateMessage swaps it for
+      // Re-apply in place (replaces the old raw fetch PATCH). Channel rename fired NON-BLOCKING (renames are
+      // rate-limited ~2/10min; the old await-before-ack was the "interaction failed" bug). [✨ FACTORY]
+      return ButtonHandlerFactory.create({
+        id: 'app_withdraw',
+        updateMessage: true,
+        handler: async (context) => {
+          const { guildId, userId, channelId, client } = context;
+          const { buildApplicationWelcome } = await import('./applicationManager.js');
           const playerData = await loadPlayerData();
-          const applications = playerData[guildId]?.applications || {};
-          const appData = Object.values(applications).find(app => app.channelId === channelId);
-          let config = null;
-          if (appData?.configId) {
-            config = await getApplicationConfig(guildId, appData.configId);
-          }
-          
-          // Update the original message with new button states
-          const welcomeContainer = {
-            type: 17, // Container
-            accent_color: 0x3498db, // Blue color (#3498db)
-            components: [
-              {
-                type: 10, // Text Display
-                content: `## 🚀 Get Started with Your Application\n\nWelcome <@${userId}>! This is your private application channel.\n\nOnly you and the ${config?.productionRole ? `production team (<@&${config.productionRole}>)` : 'admin team'} can see this channel.\n\nTo get your application started, please set up your basic information using the button above:\n\n• **Pronouns** - Let us know your preferred pronouns\n• **Timezone** - Help other players understand your availability\n• **Age** - Set how old you are\n\nClick the button above to get started!`
-              },
-              {
-                type: 1, // Action Row
-                components: [
-                  {
-                    type: 2, // Button
-                    custom_id: 'app_reapply',
-                    label: 'Re-apply',
-                    style: 1, // Primary
-                    emoji: { name: '🔄' }
-                  },
-                  {
-                    type: 2, // Button
-                    custom_id: 'app_withdraw',
-                    label: 'Withdraw your application',
-                    style: 2, // Secondary (grey)
-                    emoji: { name: '✖️' },
-                    disabled: true // Disable since already withdrawn
-                  }
-                ]
-              },
-              {
-                type: 10, // Text Display
-                content: `-# You can update this information from any channel at any time by typing \\\`/menu\\\``
-              }
-            ]
-          };
-          
-          // Update the original message
-          await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${messageId}`, {
-            method: 'PATCH',
-            headers: {
-              'Authorization': `Bot ${process.env.DISCORD_TOKEN}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              flags: (1 << 15), // IS_COMPONENTS_V2
-              components: [welcomeContainer]
-            })
-          });
-          
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '✖️ **Application Withdrawn**\n\nYour application has been withdrawn. If you change your mind, you can re-apply using the button above.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        } catch (channelError) {
-          console.error('Error updating channel name for withdrawal:', channelError);
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Error withdrawing application. Please contact an admin.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
+          const appData = Object.values(playerData[guildId]?.applications || {}).find(app => app.channelId === channelId);
+          const config = appData?.configId ? await getApplicationConfig(guildId, appData.configId) : null;
+          console.log(`❌ Application withdrawal requested for channel ${channelId}`);
+          client.channels.fetch(channelId)
+            .then(ch => ch.setName(`✖️${ch.name.replace(/^[📝☑️✖️✅❌]+/, '')}`)) // ✖️ purple cross = withdrawn
+            .then(() => console.log('✖️ Withdraw: channel renamed'))
+            .catch(e => console.log(`Withdraw rename skipped (rate limit?): ${e.message}`));
+          return { components: [buildApplicationWelcome({ userId: appData?.userId || userId, productionRoleId: config?.productionRole, withdrawn: true })] };
         }
-      } catch (error) {
-        console.error('❌ ERROR in app_withdraw handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error withdrawing application. Please contact an admin.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id === 'app_reapply') {
-      // Handle application re-apply
-      try {
-        const channelId = req.body.channel_id;
-        const guildId = req.body.guild_id;
-        const messageId = req.body.message.id;
-        const userId = req.body.member.user.id;
-        
-        console.log(`🔄 Application re-apply requested for channel ${channelId}`);
-        
-        // Update channel name to restore document prefix
-        try {
-          const channel = await client.channels.fetch(channelId);
-          const stripped = channel.name.replace(/^[📝☑️✖️✅❌]+/, '');
-
-          // Re-apply = un-withdraw → RESUME prior state. Load the application BEFORE renaming so we restore
-          // the correct prefix (☑️ if they'd already completed, else 📝 New) rather than blindly resetting to
-          // 📝. We do NOT reset their progress — their answers (channel messages) and currentQuestion persist.
+      // Applicant un-withdraws — RESUMES prior state (☑️ if completed else 📝) and updateMessage swaps the
+      // Re-apply button back to Start + re-enables Withdraw, in place. Rename NON-BLOCKING (rate-limit safe —
+      // this exact handler was throwing "interaction failed" on the rate-limited await). [✨ FACTORY]
+      return ButtonHandlerFactory.create({
+        id: 'app_reapply',
+        updateMessage: true,
+        handler: async (context) => {
+          const { guildId, userId, channelId, client } = context;
+          const { buildApplicationWelcome } = await import('./applicationManager.js');
           const playerData = await loadPlayerData();
-          const applications = playerData[guildId]?.applications || {};
-          const appData = Object.values(applications).find(app => app.channelId === channelId);
-
-          const resumeEmoji = appData?.completedAt ? '☑️' : '📝';
-          await channel.setName(`${resumeEmoji}${stripped}`);
-          console.log(`${resumeEmoji} Re-apply: restored channel to ${resumeEmoji}${stripped} (completed=${!!appData?.completedAt})`);
-
-          let config = null;
-          if (appData?.configId) {
-            config = await getApplicationConfig(guildId, appData.configId);
-          }
-          
-          // Update the original message with new button states
-          const welcomeContainer = {
-            type: 17, // Container
-            accent_color: 0x3498db, // Blue color (#3498db)
-            components: [
-              {
-                type: 10, // Text Display
-                content: `## 🚀 Get Started with Your Application\n\nWelcome <@${userId}>! This is your private application channel.\n\nOnly you and the ${config?.productionRole ? `production team (<@&${config.productionRole}>)` : 'admin team'} can see this channel.\n\nTo get your application started, please set up your basic information using the button above:\n\n• **Pronouns** - Let us know your preferred pronouns\n• **Timezone** - Help other players understand your availability\n• **Age** - Set how old you are\n\nClick the button above to get started!`
-              },
-              {
-                type: 1, // Action Row
-                components: [
-                  {
-                    type: 2, // Button
-                    custom_id: 'player_menu',
-                    label: 'Start your application',
-                    style: 1, // Primary
-                    emoji: { name: '🚀' }
-                  },
-                  {
-                    type: 2, // Button
-                    custom_id: 'app_withdraw',
-                    label: 'Withdraw your application',
-                    style: 2, // Secondary (grey)
-                    emoji: { name: '✖️' },
-                    disabled: false // Enable since re-applied
-                  }
-                ]
-              },
-              {
-                type: 10, // Text Display
-                content: `-# You can update this information from any channel at any time by typing \\\`/menu\\\``
-              }
-            ]
-          };
-          
-          // Update the original message
-          await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${messageId}`, {
-            method: 'PATCH',
-            headers: {
-              'Authorization': `Bot ${process.env.DISCORD_TOKEN}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              flags: (1 << 15), // IS_COMPONENTS_V2
-              components: [welcomeContainer]
-            })
-          });
-          
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '🔄 **Application Reactivated**\n\nYour application has been reactivated. You can now continue with your application process.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        } catch (channelError) {
-          console.error('Error updating channel name for re-apply:', channelError);
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Error reactivating application. Please contact an admin.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
+          const appData = Object.values(playerData[guildId]?.applications || {}).find(app => app.channelId === channelId);
+          const config = appData?.configId ? await getApplicationConfig(guildId, appData.configId) : null;
+          const resumeEmoji = appData?.completedAt ? '☑️' : '📝'; // re-apply = un-withdraw, restore prior state
+          console.log(`🔄 Application re-apply requested for channel ${channelId} (resume ${resumeEmoji})`);
+          client.channels.fetch(channelId)
+            .then(ch => ch.setName(`${resumeEmoji}${ch.name.replace(/^[📝☑️✖️✅❌]+/, '')}`))
+            .then(() => console.log(`${resumeEmoji} Re-apply: channel restored`))
+            .catch(e => console.log(`Re-apply rename skipped (rate limit?): ${e.message}`));
+          return { components: [buildApplicationWelcome({ userId: appData?.userId || userId, productionRoleId: config?.productionRole, withdrawn: false })] };
         }
-      } catch (error) {
-        console.error('❌ ERROR in app_reapply handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error reactivating application. Please contact an admin.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id === 'player_menu_test') {
       // TEST HANDLER: Proof of concept for new parameters (custom title + hidden bottom buttons)
       try {

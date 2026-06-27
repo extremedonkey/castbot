@@ -18,6 +18,42 @@ import fetch from 'node-fetch';
  * Handles application button creation and channel management for prospective players
  */
 
+/**
+ * Build the application-channel welcome message (Components V2 container). Shared by the app_withdraw /
+ * app_reapply handlers so the two button states stay in lockstep:
+ *   - withdrawn=false (active / re-applied): [🚀 Start your application] [✖️ Withdraw (enabled)]
+ *   - withdrawn=true:                        [🔄 Re-apply]               [✖️ Withdraw (disabled)]
+ * @param {Object} opts
+ * @param {string} opts.userId - the applicant (for the welcome mention)
+ * @param {string} [opts.productionRoleId] - production role id, for the "who can see this" line
+ * @param {boolean} [opts.withdrawn=false]
+ * @returns {Object} a type-17 Container
+ */
+export function buildApplicationWelcome({ userId, productionRoleId, withdrawn = false }) {
+  const team = productionRoleId ? `production team (<@&${productionRoleId}>)` : 'admin team';
+  const primary = withdrawn
+    ? { type: 2, custom_id: 'app_reapply', label: 'Re-apply', style: 1, emoji: { name: '🔄' } }
+    : { type: 2, custom_id: 'player_menu', label: 'Start your application', style: 1, emoji: { name: '🚀' } };
+  return {
+    type: 17, // Container
+    accent_color: 0x3498db,
+    components: [
+      {
+        type: 10,
+        content: `## 🚀 Get Started with Your Application\n\nWelcome <@${userId}>! This is your private application channel.\n\nOnly you and the ${team} can see this channel.\n\nTo get your application started, please set up your basic information using the button above:\n\n• **Pronouns** - Let us know your preferred pronouns\n• **Timezone** - Help other players understand your availability\n• **Age** - Set how old you are\n\nClick the button above to get started!`
+      },
+      {
+        type: 1, // Action Row
+        components: [
+          primary,
+          { type: 2, custom_id: 'app_withdraw', label: 'Withdraw your application', style: 2, emoji: { name: '✖️' }, disabled: withdrawn }
+        ]
+      },
+      { type: 10, content: "-# You can update this information from any channel at any time by typing `/menu`" }
+    ]
+  };
+}
+
 // Button style mapping for Discord API
 const BUTTON_STYLES = {
     'Primary': ButtonStyle.Primary,

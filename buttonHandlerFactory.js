@@ -1565,6 +1565,22 @@ export const BUTTON_REGISTRY = {
     parent: 'season_app_ranking'
   },
 
+  // === APPLICATION CHANNEL (applicant-facing welcome buttons) ===
+  'app_withdraw': {
+    label: 'Withdraw your application',
+    description: 'Applicant withdraws their application (✖️); swaps the welcome to a Re-apply button',
+    emoji: '✖️',
+    style: 'Secondary',
+    category: 'application'
+  },
+  'app_reapply': {
+    label: 'Re-apply',
+    description: 'Applicant un-withdraws / reactivates their application; resumes prior state (☑️/📝)',
+    emoji: '🔄',
+    style: 'Primary',
+    category: 'application'
+  },
+
   // === CASTLIST HUB ===
   'castlist_hub_main': {
     label: 'Castlist Manager',
