@@ -292,13 +292,22 @@ class RestartScheduler {
               { type: 14 }, // Separator
               {
                 type: 1, // Action Row
-                components: [{
-                  type: 2, // Button
-                  custom_id: `restart_sched_cancel_${fireEpoch}`,
-                  label: 'Cancel This Restart',
-                  style: 4, // Danger
-                  emoji: { name: '🌙' }
-                }]
+                components: [
+                  {
+                    type: 2, // Button
+                    custom_id: `restart_sched_cancel_${fireEpoch}`,
+                    label: 'Cancel This Restart',
+                    style: 4, // Danger
+                    emoji: { name: '🌙' }
+                  },
+                  {
+                    type: 2, // Button — quick access to the config modal (same handler as the Data menu)
+                    custom_id: 'restart_scheduler',
+                    label: 'Auto-Restart',
+                    style: 2, // Secondary
+                    emoji: { name: '⚙️' }
+                  }
+                ]
               }
             ]
           }],
