@@ -1580,12 +1580,18 @@ scheduler.registerAction('execute_custom_action', async (payload, schedulerClien
 
     const result = await executeButtonActions(guildId, actionId, userId, interactionData, schedulerClient);
 
-    // Check if result is an error/failure — don't post errors to the channel
-    const isError = result?.content?.startsWith('❌') ||
-                    (result?.flags && (result.flags & InteractionResponseFlags.EPHEMERAL));
+    // Check if result is an error/failure — don't post errors to the channel.
+    // executeButtonActions sets EPHEMERAL on EVERY return path (success included,
+    // for its interactive callers), so the flag can NOT signal failure here — the
+    // only failure signal in its contract is an ❌-prefixed content string.
+    const isError = typeof result?.content === 'string' && result.content.startsWith('❌');
     if (isError) {
-      console.warn(`⚠️ [SCHEDULER] Custom Action "${actionName}" returned error: ${result?.content || 'unknown'}`);
+      console.warn(`⚠️ [SCHEDULER] Custom Action "${actionName}" returned error: ${result.content}`);
       return; // Don't post error messages to channel via webhook
+    }
+    if (!result?.components && !result?.content) {
+      console.log(`ℹ️ [SCHEDULER] Custom Action "${actionName}" produced no postable output — skipping webhook`);
+      return;
     }
 
     // Post successful result to channel via webhook
