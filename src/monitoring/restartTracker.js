@@ -28,7 +28,7 @@ export async function recordRestart() {
     }
 
     // If the RestartScheduler left a fresh planned-restart marker, label this
-    // entry so Ultrathink can tell planned restarts from crashes (RaP 0904)
+    // entry so Ultrathink can tell planned restarts from crashes (RaP 0903)
     let planned = false;
     const markerPath = path.join(__dirname, '..', '..', 'logs', 'planned-restart.json');
     try {

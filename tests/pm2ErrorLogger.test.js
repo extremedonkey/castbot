@@ -1,6 +1,6 @@
 /**
  * Tests for PM2ErrorLogger tail-read (readNewBytes) — the memory-footprint fix
- * that replaced whole-file readFileSync with positional fd reads (RaP 0904).
+ * that replaced whole-file readFileSync with positional fd reads (RaP 0903).
  *
  * The module has no top-level Discord/network imports, so we import the real
  * class and exercise readNewBytes against temp files.

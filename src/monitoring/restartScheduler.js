@@ -1,7 +1,7 @@
 /**
  * Restart Scheduler — planned, cancellable self-restarts to reset the V8 heap
  * before the multi-day drift reaches the 320MB ceiling (OOM every ~3-5 days).
- * Design + rationale: docs/01-RaP/0904_20260706_MemoryFootprint_Analysis.md
+ * Design + rationale: docs/01-RaP/0903_20260706_MemoryFootprint_Analysis.md
  * Feature doc: docs/03-features/ScheduledRestart.md
  *
  * Flow: arm() → [T-warnMinutes] postWarning() (Components V2, tags Reece,
@@ -225,7 +225,7 @@ class RestartScheduler {
           components: [
             {
               type: 10, // Text Display
-              content: `<@${tagUserId}>\n## 🌙 Scheduled Restart <t:${fireEpoch}:R>\nCastBot will restart at <t:${fireEpoch}:t> to reset the V8 heap (OOM prevention — RaP 0904). PM2 revives it in ~50s.\n-# Recurs every ${formatInterval(config.intervalMs)}. Cancel skips this one only.`
+              content: `<@${tagUserId}>\n## 🌙 Scheduled Restart <t:${fireEpoch}:R>\nCastBot will restart at <t:${fireEpoch}:t> to reset the V8 heap (OOM prevention — RaP 0903). PM2 revives it in ~50s.\n-# Recurs every ${formatInterval(config.intervalMs)}. Cancel skips this one only.`
             },
             { type: 14 }, // Separator
             {

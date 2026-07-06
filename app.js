@@ -1841,7 +1841,7 @@ client.once('ready', async () => {
     console.error('[ProdWatchdog] Failed to start:', err.message);
   }
 
-  // Restart scheduler — planned, cancellable heap-reset restarts (RaP 0904). Ships disabled;
+  // Restart scheduler — planned, cancellable heap-reset restarts (RaP 0903). Ships disabled;
   // configured via Data menu → Auto-Restart. Re-arms from playerData environmentConfig.
   try {
     const { getRestartScheduler } = await import('./src/monitoring/restartScheduler.js');
@@ -14406,7 +14406,7 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id === 'restart_scheduler') {
-      // Scheduled Auto-Restart config modal (RaP 0904 / ScheduledRestart.md)
+      // Scheduled Auto-Restart config modal (RaP 0903 / ScheduledRestart.md)
       return ButtonHandlerFactory.create({
         id: 'restart_scheduler',
         updateMessage: false,
@@ -51441,7 +51441,7 @@ Your server is now ready for Tycoons gameplay!`;
       }
 
     } else if (custom_id === 'restart_sched_modal') {
-      // Scheduled Auto-Restart config submission (RaP 0904 / ScheduledRestart.md)
+      // Scheduled Auto-Restart config submission (RaP 0903 / ScheduledRestart.md)
       try {
         const channelId = req.body.channel_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
@@ -51517,7 +51517,7 @@ Your server is now ready for Tycoons gameplay!`;
               components: [
                 { type: 10, content: `## 🌙 Scheduled Auto-Restart\n✅ **Enabled** by <@${userId}>` },
                 { type: 14 },
-                { type: 10, content: `**Interval:** every ${formatInterval(config.intervalMs)} (recurs until disabled)\n**Next restart:** <t:${fireEpoch}:F> — <t:${fireEpoch}:R>\n**Warning:** <#${config.channelId}> gets a ping + Cancel button 30 min before each restart\n-# Resets the V8 heap before it drifts to the OOM ceiling (RaP 0904). Survives restarts. ~50s downtime per cycle.` }
+                { type: 10, content: `**Interval:** every ${formatInterval(config.intervalMs)} (recurs until disabled)\n**Next restart:** <t:${fireEpoch}:F> — <t:${fireEpoch}:R>\n**Warning:** <#${config.channelId}> gets a ping + Cancel button 30 min before each restart\n-# Resets the V8 heap before it drifts to the OOM ceiling (RaP 0903). Survives restarts. ~50s downtime per cycle.` }
               ]
             }]
           }

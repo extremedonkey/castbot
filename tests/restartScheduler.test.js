@@ -1,5 +1,5 @@
 /**
- * Tests for RestartScheduler pure logic (RaP 0904 / ScheduledRestart.md).
+ * Tests for RestartScheduler pure logic (RaP 0903 / ScheduledRestart.md).
  * The module has no top-level Discord/storage imports, so the pure functions
  * are imported directly (no inline replication needed).
  */

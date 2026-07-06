@@ -1,12 +1,12 @@
 # Scheduled Auto-Restart (🌙)
 
 **Status:** Built 2026-07-06, ships **disabled** — enable via the Data menu. Not yet enabled on prod.
-**Design/rationale:** [RaP 0904 — Memory Footprint Analysis](../01-RaP/0904_20260706_MemoryFootprint_Analysis.md)
+**Design/rationale:** [RaP 0903 — Memory Footprint Analysis](../01-RaP/0903_20260706_MemoryFootprint_Analysis.md)
 **Module:** [src/monitoring/restartScheduler.js](../../src/monitoring/restartScheduler.js)
 
 ## What & Why
 
-Prod (448MB Lightsail, V8 heap capped at 320MB) accumulates heap drift and OOM-crashes every ~3–5 days (see [incident 03](../incidents/03-V8HeapOOMCrash.md), RaP 0915/0904). This feature converts those random crashes into **planned, warned, cancellable** restarts: the bot cleanly `process.exit(0)`s on a schedule, PM2 `autorestart: true` revives it in ~50s (the same path that recovers every crash today), and the heap resets to its ~85MB baseline — the OOM ceiling is never reached.
+Prod (448MB Lightsail, V8 heap capped at 320MB) accumulates heap drift and OOM-crashes every ~3–5 days (see [incident 03](../incidents/03-V8HeapOOMCrash.md), RaP 0915/0903). This feature converts those random crashes into **planned, warned, cancellable** restarts: the bot cleanly `process.exit(0)`s on a schedule, PM2 `autorestart: true` revives it in ~50s (the same path that recovers every crash today), and the heap resets to its ~85MB baseline — the OOM ceiling is never reached.
 
 ## Configuration UI
 
