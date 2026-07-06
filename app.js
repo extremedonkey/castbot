@@ -399,19 +399,19 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   refreshedComponents.push({ type: 14 });
 
-  // Bottom row: Seasons (+ pagination if needed) — back to the unified Season Manager selector
-  const bottomButtons = [
-    { type: 2, custom_id: `season_manager`, label: '← Seasons', style: 2 },
-  ];
+  // Shared Season Manager bottom row [← Seasons][✏️ Edit] + pagination (◀ ▶) as extraButtons.
+  // Single source of truth (buildSeasonBottomRow) so Apps matches Planner/Casting/Marooning exactly.
+  const { buildSeasonBottomRow } = await import('./seasonSelector.js');
+  const paginationButtons = [];
   if (regularQuestions.length > questionsPerPage) {
     const prevDisabled = currentPage === 0;
     const nextDisabled = currentPage === totalPages - 1;
-    bottomButtons.push(
+    paginationButtons.push(
       { type: 2, custom_id: `season_nav_prev_${configId}_${currentPage}`, label: '◀', style: prevDisabled ? 2 : 1, disabled: prevDisabled },
       { type: 2, custom_id: `season_nav_next_${configId}_${currentPage}`, label: '▶', style: nextDisabled ? 2 : 1, disabled: nextDisabled },
     );
   }
-  refreshedComponents.push({ type: 1, components: bottomButtons });
+  refreshedComponents.push(buildSeasonBottomRow(configId, 'apps', paginationButtons));
 
   const refreshedContainer = {
     type: 17,
@@ -5891,125 +5891,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const { buildRankingScreen } = await import('./castRankingManager.js');
           const ui = await buildRankingScreen({ guildId: context.guildId, userId: context.userId, configId, appIndex, guild });
           return ui || { content: '❌ No applications found for this season.', ephemeral: true };
-        }
-      })(req, res, client);
-    } else if (custom_id.startsWith('ranking_scores_back_')) {
-      // Handle ranking scores summary back button - restore original Casting UI
-      return ButtonHandlerFactory.create({
-        id: 'ranking_scores_back',
-        updateMessage: true, // Replace View All Scores with Casting UI
-        handler: async (context) => {
-          console.log(`🔍 START: ranking_scores_back - user ${context.userId}`);
-          
-          // Parse context from custom_id: ranking_scores_back_{configId}_{userId}
-          const backMatch = context.customId.match(/^ranking_scores_back_(.+)_(\d+)$/);
-          if (!backMatch) {
-            console.log(`❌ ERROR: ranking_scores_back - invalid custom_id format: ${context.customId}`);
-            return {
-              content: '❌ Error: Invalid back button format.',
-              ephemeral: true
-            };
-          }
-          
-          const [, configId, originalUserId] = backMatch;
-          console.log(`🔍 DEBUG: ranking_scores_back - configId: ${configId}, originalUserId: ${originalUserId}`);
-          
-          // Import casting functions
-          const { getAllApplicationsFromData, getApplicationsForSeason } = await import('./storage.js');
-          const { generateSeasonAppRankingUI } = await import('./castRankingManager.js');
-          
-          // Get applications using season-filtered function when configId is available
-          const allApplications = (configId && configId !== 'none') 
-            ? await getApplicationsForSeason(context.guildId, configId)
-            : await getAllApplicationsFromData(context.guildId);
-          
-          if (!allApplications || allApplications.length === 0) {
-            return {
-              content: '❌ No applications found.',
-              ephemeral: true
-            };
-          }
-          
-          // Default to first applicant for now (we could enhance this to remember the exact applicant later)
-          const appIndex = 0;
-          const currentApp = allApplications[appIndex];
-          
-          // Fetch the applicant as a guild member
-          let applicantMember;
-          try {
-            const guild = await client.guilds.fetch(context.guildId);
-            applicantMember = await guild.members.fetch(currentApp.userId);
-          } catch (error) {
-            // Fallback: create basic user object
-            applicantMember = {
-              displayName: currentApp.displayName,
-              user: { username: currentApp.username },
-              displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`,
-              roles: []
-            };
-          }
-          
-          // Restore the original Casting UI
-          const guild = await client.guilds.fetch(context.guildId);
-          const seasonName = 'Current Season'; // TODO: Get actual season name
-          const result = await generateSeasonAppRankingUI({
-            guildId: context.guildId,
-            userId: context.userId,
-            configId: configId !== 'none' ? configId : 'back',
-            allApplications,
-            currentApp,
-            appIndex,
-            applicantMember,
-            guild,
-            seasonName,
-            playerData: await import('./storage.js').then(m => m.loadPlayerData())
-          });
-          
-          console.log(`✅ SUCCESS: ranking_scores_back - restored Casting UI`);
-          return result;
-        }
-      })(req, res, client);
-    } else if (custom_id.startsWith('ranking_scores_refresh_')) {
-      // Handle ranking scores summary refresh button
-      return ButtonHandlerFactory.create({
-        id: 'ranking_scores_refresh',
-        updateMessage: true,
-        handler: async (context) => {
-          console.log(`🔍 START: ranking_scores_refresh - user ${context.userId}, button ${context.customId}`);
-          
-          const { guildId, userId, client } = context;
-          const guild = await client.guilds.fetch(guildId);
-          const member = await guild.members.fetch(userId);
-          
-          // Check Casting permissions
-          if (!hasCastRankingPermissions(member, guildId)) {
-            return {
-              content: '❌ You need Manage Roles or Manage Channels permissions to refresh casting data.',
-              ephemeral: true
-            };
-          }
-          
-          // Extract configId from button: ranking_scores_refresh_{configId}
-          const configId = context.customId.replace('ranking_scores_refresh_', '');
-          const actualConfigId = configId === 'none' ? null : configId;
-          
-          console.log(`🔄 Refreshing ranking scores for configId: ${actualConfigId || 'all'}`);
-          
-          // Create a synthetic ranking_view_all_scores custom_id to reuse existing logic
-          const syntheticCustomId = actualConfigId ? `ranking_view_all_scores_${actualConfigId}` : 'ranking_view_all_scores';
-          
-          // Import and use castRankingManager.handleRankingNavigation to regenerate the UI
-          const { handleRankingNavigation } = await import('./castRankingManager.js');
-          const result = await handleRankingNavigation({
-            customId: syntheticCustomId,
-            guildId,
-            userId,
-            guild,
-            client
-          });
-          
-          console.log(`✅ SUCCESS: ranking_scores_refresh - data refreshed`);
-          return result;
         }
       })(req, res, client);
     } else if (custom_id.startsWith('casting_status_')) {
@@ -11810,11 +11691,11 @@ To fix this:
         handler: async (context, req, res) => {
           console.log(`✏️ START: season_edit_info - user ${context.userId}`);
 
-          // Extract origin view + configId: season_edit_info_{mode}_{configId} (mode ∈ apps|planner|ranking).
+          // Extract origin view + configId: season_edit_info_{mode}_{configId} (mode ∈ apps|planner|ranking|marooning).
           // Legacy buttons without a mode prefix fall back to 'apps'. A configId always starts with
           // "config_", so it can never be mistaken for a mode token.
           const rawEdit = context.customId.replace('season_edit_info_', '');
-          const editModeMatch = rawEdit.match(/^(apps|planner|ranking)_(.+)$/);
+          const editModeMatch = rawEdit.match(/^(apps|planner|ranking|marooning)_(.+)$/);
           const originMode = editModeMatch ? editModeMatch[1] : 'apps';
           const configId = editModeMatch ? editModeMatch[2] : rawEdit;
 
@@ -13900,6 +13781,38 @@ To fix this:
           const uiResponse = await buildSeasonRankingResponse({ guildId, userId, configId, client: context.client, guild, playerData });
 
           console.log(`✅ SUCCESS: season_app_ranking - rendered via buildSeasonRankingResponse`);
+          return uiResponse;
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('season_marooning_')) {
+      // 🚣 Marooning tab — the season-wide casting-decision summary (formerly the ⭐ Casting Summary
+      // button, id ranking_view_all_scores_*). Now a first-class Season Manager tab, rendered via the
+      // shared buildMarooningView (same header/nav/[← Seasons][Edit] chrome as the other tabs).
+      return ButtonHandlerFactory.create({
+        id: 'season_marooning',
+        deferred: true,
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: season_marooning - user ${context.userId}`);
+          const { guildId, userId, client } = context;
+          const configId = context.customId.replace('season_marooning_', '');
+
+          const guild = await client.guilds.fetch(guildId);
+          const member = await guild.members.fetch(userId);
+          // Same gate as the Casting tab — Marooning exposes the same casting data.
+          if (!hasCastRankingPermissions(member, guildId)) {
+            return {
+              content: '❌ You need Manage Roles or Manage Channels permissions to access Marooning.',
+              ephemeral: true
+            };
+          }
+
+          const playerData = await loadPlayerData();
+          const seasonName = playerData[guildId]?.applicationConfigs?.[configId]?.seasonName || `Season ${configId}`;
+          const { buildMarooningView } = await import('./castRankingManager.js');
+          const uiResponse = await buildMarooningView({ configId, guildId, playerData, seasonName });
+
+          console.log(`✅ SUCCESS: season_marooning - rendered via buildMarooningView`);
           return uiResponse;
         }
       })(req, res, client);
@@ -44166,6 +44079,12 @@ Your server is now ready for Tycoons gameplay!`;
             const rankingView = await buildSeasonRankingResponse({ guildId, userId: req.body.member.user.id, configId, client, playerData: fresh });
             // Keep IS_COMPONENTS_V2; never carry EPHEMERAL into UPDATE_MESSAGE (inherits the source).
             return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...rankingView, flags: (1 << 15) } });
+          }
+          if (originMode === 'marooning') {
+            const { buildMarooningView } = await import('./castRankingManager.js');
+            const marooningView = await buildMarooningView({ configId, guildId, playerData: fresh, seasonName: freshConfig.seasonName });
+            // Keep IS_COMPONENTS_V2; never carry EPHEMERAL into UPDATE_MESSAGE (inherits the source).
+            return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...marooningView, flags: (1 << 15) } });
           }
           // apps (default) → question management UI
           return refreshQuestionManagementUI(res, freshConfig, configId, 0);

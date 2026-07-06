@@ -276,7 +276,8 @@ function seasonManagerHeader(active, seasonName) {
   const titles = {
     apps: '📝 Season Applications',
     planner: '📅 Season Planner',
-    ranking: '🏆 Casting'
+    ranking: '🏆 Casting',
+    marooning: '🚣 Marooning'
   };
   const title = titles[active] || '📋 Season Manager';
   return { type: 10, content: `## ${title}\n> ### ${seasonName}` };
@@ -289,9 +290,11 @@ describe('Season Manager — shared header', () => {
     const apps = seasonManagerHeader('apps', name);
     const planner = seasonManagerHeader('planner', name);
     const ranking = seasonManagerHeader('ranking', name);
+    const marooning = seasonManagerHeader('marooning', name);
     assert.equal(line2(apps), '> ### S14: Empire of Mali');
     assert.equal(line2(apps), line2(planner));
     assert.equal(line2(planner), line2(ranking));
+    assert.equal(line2(ranking), line2(marooning));
   });
 
   it('only line 1 (title) differs between tabs', () => {
@@ -300,10 +303,11 @@ describe('Season Manager — shared header', () => {
     assert.equal(line1('apps'), '## 📝 Season Applications');
     assert.equal(line1('planner'), '## 📅 Season Planner');
     assert.equal(line1('ranking'), '## 🏆 Casting');
+    assert.equal(line1('marooning'), '## 🚣 Marooning');
   });
 
   it('uses Unicode emoji (no :pencil: shortcode regression)', () => {
-    const all = ['apps', 'planner', 'ranking'].map(a => seasonManagerHeader(a, 'X').content).join('');
+    const all = ['apps', 'planner', 'ranking', 'marooning'].map(a => seasonManagerHeader(a, 'X').content).join('');
     assert.ok(!/:[a-z_]+:/.test(all), 'header must not contain Discord emoji shortcodes');
   });
 
@@ -315,5 +319,115 @@ describe('Season Manager — shared header', () => {
     const h = seasonManagerHeader('ranking', 'Season Z');
     assert.equal(h.type, 10);
     assert.match(h.content, /^## .+\n> ### Season Z$/);
+  });
+});
+
+// ─────────────────────────────────────────────
+// Shared Season Manager NAV row (buildSeasonNavRow) + BOTTOM row (buildSeasonBottomRow).
+// Replicated inline from seasonSelector.js — the single source of truth for tab chrome.
+// ─────────────────────────────────────────────
+
+function buildSeasonNavRow(configId, active) {
+  const tab = (key, customId, label, emoji) => ({
+    type: 2, custom_id: customId, label,
+    style: active === key ? 1 : 2,
+    emoji: { name: emoji }
+  });
+  return {
+    type: 1,
+    components: [
+      tab('apps', `planner_apps_${configId}`, 'Apps', '📝'),
+      tab('planner', `apps_planner_${configId}`, 'Planner', '📅'),
+      tab('ranking', `season_app_ranking_${configId}`, 'Casting', '🏆'),
+      tab('marooning', `season_marooning_${configId}`, 'Marooning', '🚣')
+    ]
+  };
+}
+
+function buildSeasonBottomRow(configId, active, extraButtons = []) {
+  return {
+    type: 1,
+    components: [
+      { type: 2, custom_id: 'season_manager', label: '← Seasons', style: 2 },
+      { type: 2, custom_id: `season_edit_info_${active}_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
+      ...extraButtons
+    ]
+  };
+}
+
+describe('Season Manager — nav row (buildSeasonNavRow)', () => {
+  const CID = 'config_123';
+
+  it('has exactly 4 peer tabs in order Apps · Planner · Casting · Marooning', () => {
+    const row = buildSeasonNavRow(CID, 'ranking');
+    assert.equal(row.type, 1);
+    assert.equal(row.components.length, 4);
+    assert.deepEqual(row.components.map(b => b.label), ['Apps', 'Planner', 'Casting', 'Marooning']);
+    assert.deepEqual(row.components.map(b => b.emoji.name), ['📝', '📅', '🏆', '🚣']);
+  });
+
+  it('emits the correct custom_id per tab (Marooning → season_marooning_*)', () => {
+    const row = buildSeasonNavRow(CID, 'apps');
+    assert.deepEqual(row.components.map(b => b.custom_id), [
+      `planner_apps_${CID}`,
+      `apps_planner_${CID}`,
+      `season_app_ranking_${CID}`,
+      `season_marooning_${CID}`
+    ]);
+  });
+
+  it('no longer contains an Edit button (Edit moved to the bottom row)', () => {
+    const row = buildSeasonNavRow(CID, 'marooning');
+    assert.ok(!row.components.some(b => b.label === 'Edit'), 'Edit must not be in the nav row');
+    assert.ok(!row.components.some(b => (b.custom_id || '').startsWith('season_edit_info_')));
+  });
+
+  it('the active tab is Primary (style 1); the rest Secondary (style 2)', () => {
+    for (const active of ['apps', 'planner', 'ranking', 'marooning']) {
+      const row = buildSeasonNavRow(CID, active);
+      const byKey = { apps: 0, planner: 1, ranking: 2, marooning: 3 };
+      row.components.forEach((b, i) => {
+        assert.equal(b.style, i === byKey[active] ? 1 : 2, `tab ${i} style for active=${active}`);
+      });
+    }
+  });
+});
+
+describe('Season Manager — bottom row (buildSeasonBottomRow)', () => {
+  const CID = 'config_123';
+
+  it('is [← Seasons][✏️ Edit] with no extra buttons by default', () => {
+    const row = buildSeasonBottomRow(CID, 'ranking');
+    assert.equal(row.type, 1);
+    assert.equal(row.components.length, 2);
+    assert.equal(row.components[0].custom_id, 'season_manager');
+    assert.equal(row.components[0].label, '← Seasons');
+    assert.equal(row.components[1].label, 'Edit');
+    assert.equal(row.components[1].emoji.name, '✏️');
+  });
+
+  it('Edit carries the CURRENT tab as origin (season_edit_info_{active}_{configId})', () => {
+    for (const active of ['apps', 'planner', 'ranking', 'marooning']) {
+      const row = buildSeasonBottomRow(CID, active);
+      assert.equal(row.components[1].custom_id, `season_edit_info_${active}_${CID}`);
+    }
+  });
+
+  it('appends extra buttons (e.g. pagination) AFTER Edit', () => {
+    const pagination = [
+      { type: 2, custom_id: `planner_page_0_${CID}`, label: '◀', style: 2 },
+      { type: 2, custom_id: `planner_page_2_${CID}`, label: '▶', style: 1 }
+    ];
+    const row = buildSeasonBottomRow(CID, 'planner', pagination);
+    assert.equal(row.components.length, 4);
+    assert.deepEqual(row.components.slice(2), pagination);
+    // stays within the 5-button ActionRow limit
+    assert.ok(row.components.length <= 5);
+  });
+
+  it('both fixed actions are Secondary (grey) — Edit is an action, never an active tab', () => {
+    const row = buildSeasonBottomRow(CID, 'apps');
+    assert.equal(row.components[0].style, 2);
+    assert.equal(row.components[1].style, 2);
   });
 });

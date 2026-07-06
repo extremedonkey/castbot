@@ -1552,20 +1552,9 @@ export const BUTTON_REGISTRY = {
   },
 
   // === RANKING SYSTEM ===
-  'ranking_scores_refresh': {
-    label: 'Refresh',
-    description: 'Refresh the View All Scores summary data',
-    emoji: '🔄',
-    style: 'Secondary', 
-    category: 'ranking'
-  },
-  'ranking_scores_back': {
-    label: '← Casting',
-    description: 'Return to Casting interface',
-    emoji: '🏆',
-    style: 'Secondary',
-    category: 'ranking'
-  },
+  // (ranking_scores_refresh / ranking_scores_back removed — the old "Casting Summary" screen they
+  //  belonged to is now the 🚣 Marooning tab (season_marooning_*), which uses the shared nav +
+  //  [← Seasons][Edit] bottom row instead of a bespoke Back/Refresh chrome.)
   'personal_ranker': {
     label: '🤸 Personal Ranker',
     description: 'Open ephemeral personal Casting interface',
@@ -3206,6 +3195,14 @@ export const BUTTON_REGISTRY = {
     description: 'Comprehensive applicant ranking and evaluation system for specific season',
     emoji: '🏆',
     style: 'Secondary',
+    category: 'application_management'
+  },
+  'season_marooning_*': {
+    label: 'Marooning',
+    description: 'Season-wide casting-decision summary tab (Cast / Alternate / Tentative / Don\'t Cast breakdown)',
+    emoji: '🚣',
+    style: 'Secondary',
+    parent: 'season_app_ranking',
     category: 'application_management'
   },
   'cast_player_*': {

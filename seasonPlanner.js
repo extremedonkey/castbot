@@ -8,7 +8,7 @@
 
 import { countComponents, validateComponentLimit } from './utils.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
-import { buildSeasonNavRow, seasonManagerHeader } from './seasonSelector.js';
+import { buildSeasonNavRow, seasonManagerHeader, buildSeasonBottomRow } from './seasonSelector.js';
 
 const DOT = '\u2981'; // ⦁
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -494,8 +494,8 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
         ]},
       ];
 
-  const navButtons = [
-    { type: 2, custom_id: 'season_manager', label: '← Seasons', style: 2 },
+  // Shared bottom row [← Seasons][✏️ Edit] + planner pagination (◀ ▶) as extraButtons
+  const paginationButtons = [
     { type: 2, custom_id: `planner_page_${page - 1}_${configId}`, label: '◀', style: page === 0 ? 2 : 1, disabled: page === 0 },
     { type: 2, custom_id: `planner_page_${page + 1}_${configId}`, label: '▶', style: page >= totalPages - 1 ? 2 : 1, disabled: page >= totalPages - 1 },
   ];
@@ -504,13 +504,13 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
     type: 17, accent_color: 0x9b59b6,
     components: [
       seasonManagerHeader('planner', seasonName),
-      // Active-tab nav row — Apps · Planner · Ranking · Edit (current view = Planner, shaded blue)
+      // Active-tab nav row — Apps · Planner · Casting · Marooning (current view = Planner, shaded blue)
       buildSeasonNavRow(configId, 'planner'),
       { type: 14 },
       { type: 10, content: `### \`\`\`📅 Manage Season Schedule${pageInfo}\`\`\`` },
       ...scheduleBody,
       { type: 14 },
-      { type: 1, components: navButtons },
+      buildSeasonBottomRow(configId, 'planner', paginationButtons),
     ]
   };
 

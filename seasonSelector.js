@@ -77,12 +77,13 @@ export function seasonConfigIndicators(configId, season, guildData) {
 }
 
 /**
- * Active-tab navigation row shared by every Season Manager view (Apps / Planner / Casting).
- * Identical ordering [Apps · Planner · Casting · Edit] everywhere; the CURRENT view's tab is
- * Primary (blue, still clickable — reloads), the rest Secondary (grey). Edit is an action, never active.
- * Adopts the Player Manager active-button convention. Single source of truth so the row can never drift.
+ * Active-tab navigation row shared by every Season Manager view (Apps / Planner / Casting / Marooning).
+ * Identical ordering [Apps · Planner · Casting · Marooning] everywhere; the CURRENT view's tab is
+ * Primary (blue, still clickable — reloads), the rest Secondary (grey). All four are peer TABS (views).
+ * Edit is NOT here — it's an action, living in the shared bottom row (buildSeasonBottomRow) next to
+ * ← Seasons. Adopts the Player Manager active-button convention. Single source of truth so it can't drift.
  * @param {string} configId
- * @param {'apps'|'planner'|'ranking'} active
+ * @param {'apps'|'planner'|'ranking'|'marooning'} active
  * @returns {Object} a type-1 ActionRow
  */
 export function buildSeasonNavRow(configId, active) {
@@ -97,20 +98,40 @@ export function buildSeasonNavRow(configId, active) {
       tab('apps', `planner_apps_${configId}`, 'Apps', '📝'),
       tab('planner', `apps_planner_${configId}`, 'Planner', '📅'),
       tab('ranking', `season_app_ranking_${configId}`, 'Casting', '🏆'),
-      // Edit custom_id carries the ORIGIN view (active) so the modal submit refreshes THAT same view
-      // (e.g. edit from Planner → watch the planner repopulate). Parsed back in the season_edit_info handler.
-      { type: 2, custom_id: `season_edit_info_${active}_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } }
+      tab('marooning', `season_marooning_${configId}`, 'Marooning', '🚣')
+    ]
+  };
+}
+
+/**
+ * Shared Season Manager BOTTOM row — appears on EVERY tab (single source of truth, mirrors buildSeasonNavRow):
+ *   [← Seasons] [✏️ Edit] [...extraButtons]
+ * ← Seasons (season_manager) returns to the season picker. Edit opens the season edit modal, carrying the
+ * CURRENT view as its origin (`season_edit_info_${active}_${configId}`) so the modal submit refreshes THIS
+ * tab. `extraButtons` is for per-tab pagination (◀ ▶) which follows Edit. Both actions are Secondary (grey).
+ * @param {string} configId
+ * @param {'apps'|'planner'|'ranking'|'marooning'} active - the current tab (Edit returns here after submit)
+ * @param {Array} [extraButtons=[]] - optional trailing buttons (e.g. pagination), max 3 to stay ≤5/row
+ * @returns {Object} a type-1 ActionRow
+ */
+export function buildSeasonBottomRow(configId, active, extraButtons = []) {
+  return {
+    type: 1,
+    components: [
+      { type: 2, custom_id: 'season_manager', label: '← Seasons', style: 2 },
+      { type: 2, custom_id: `season_edit_info_${active}_${configId}`, label: 'Edit', style: 2, emoji: { name: '✏️' } },
+      ...extraButtons
     ]
   };
 }
 
 /**
  * Shared Season Manager header — the two lines that sit directly ABOVE buildSeasonNavRow on every
- * tab (Apps / Planner / Casting). Single source of truth so the three tab screens can't drift:
+ * tab (Apps / Planner / Casting / Marooning). Single source of truth so the tab screens can't drift:
  *   • Line 1 = the per-tab title (the ONLY part that differs between tabs; emoji matches the tab's nav button)
  *   • Line 2 = the season name, ALWAYS the same format everywhere (`> ### ${seasonName}`)
- * Mirrors how buildSeasonNavRow centralizes the nav row. Edit has no screen, so no 'edit' title.
- * @param {'apps'|'planner'|'ranking'} active
+ * Mirrors how buildSeasonNavRow centralizes the nav row.
+ * @param {'apps'|'planner'|'ranking'|'marooning'} active
  * @param {string} seasonName - applicationConfigs[configId].seasonName (carries any "S14:" prefix itself)
  * @returns {Object} a type-10 Text Display
  */
@@ -118,7 +139,8 @@ export function seasonManagerHeader(active, seasonName) {
   const titles = {
     apps: '📝 Season Applications',
     planner: '📅 Season Planner',
-    ranking: '🏆 Casting'
+    ranking: '🏆 Casting',
+    marooning: '🚣 Marooning'
   };
   const title = titles[active] || '📋 Season Manager';
   return { type: 10, content: `## ${title}\n> ### ${seasonName}` };

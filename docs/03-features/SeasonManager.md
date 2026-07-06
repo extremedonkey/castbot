@@ -68,7 +68,7 @@ The **application channel ID is the join key** between Season Applications and C
 - **≥1 applicant** → `generateSeasonAppRankingUI()` (:108) renders the first applicant card (or a specific index on navigation).
 
 ### The applicant card (current render order — the layout has been iterated heavily; code is authoritative)
-1. **Header** `## 🏆 Casting | {season}` + the shared `buildSeasonNavRow(configId,'ranking')` (Apps · Planner · Casting · Edit; Casting tab blue).
+1. **Header** `## 🏆 Casting | {season}` + the shared `buildSeasonNavRow(configId,'ranking')` (Apps · Planner · Casting · Marooning; Casting tab blue). Edit is no longer a nav tab — it lives in the shared bottom row.
 2. **Jump select** (`ranking_select_*`) — **always shown**; placeholder doubles as the position indicator: `Applicant N of X - {applicant per-server name}` (+ `· page X/Y` when paginated, 23/page). Replaces the old ◀/▶ prev-next row.
 3. `### 📃 Application` + **identity text** (reuses the player-card builder: name mention · pronouns • age • timezone · 🕛 local time), plus a DNC summary line **only when the applicant has DNC entries**.
 4. **Score buttons 1–5** (`rank_{n}_*`) — your current score is green + disabled.
@@ -78,13 +78,13 @@ The **application channel ID is the join key** between Season Applications and C
 8. `### ✏️ Player Notes` (plain text).
 9. `### 🎭 Casting Status` + the **status string select** (`casting_status_*`): ❔ Still Deciding (default when unset) · 🎬 Cast · 🗑️ Don't Cast · ❓ Tentatively Cast · 🔄 Alternative. If the applicant has responded, a `📣 Applicant response: 🎉 Accepted / 🚫 Declined` line shows here.
 10. `### 🗳️ Votes for {name}` + tally (or "No scores yet").
-11. **Divider**, then utility row: 📢 Shared Ranker (`ranking_public_warn_*`) · 🚷 DNC (`dnc_overview_*`) · ⭐ Casting Summary (`ranking_view_all_scores_*`) · ✒️ Invites (`casting_messages_{appIndex}_{configId}`).
-12. **Bottom row**: ← Seasons (`season_manager`).
+11. **Divider**, then utility row: 📢 Shared Ranker (`ranking_public_warn_*`) · 🚷 DNC (`dnc_overview_*`) · ✒️ Invites (`casting_messages_{appIndex}_{configId}`). (The old ⭐ Casting Summary button is gone — it's now the 🚣 Marooning nav tab.)
+12. **Bottom row** (shared `buildSeasonBottomRow(configId,'ranking')`): ← Seasons (`season_manager`) · ✏️ Edit (`season_edit_info_ranking_{configId}`).
 
 The jump-select option **icon** reflects the most-decisive state: 🎉 accepted → 🚫 declined → ✅ cast → 🔄 alternative → ❌ reject → ☑️ (≥2 votes) → 🗳️.
 
-### ⭐ Casting Summary (`ranking_view_all_scores_*`)
-`handleRankingNavigation` builds a roster grouped by status — ✅ Cast / 🔄 Alternate / ❓ Tentative / 🗑️ Don't Cast / ⚪ Undecided — each sorted by average score (🥇🥈🥉 then `N.`), with a `· 🎉 Accepted` / `· 🚫 Declined` annotation per applicant who has responded, plus a 📊 summary (per-status totals incl. Alternate + scored count). Back = `ranking_scores_back_*`, Refresh = `ranking_scores_refresh_*`.
+### 🚣 Marooning tab (`season_marooning_*`) — formerly the ⭐ Casting Summary screen
+Now a **first-class Season Manager tab** (peer of Apps · Planner · Casting), rendered by `buildMarooningView` in castRankingManager.js on the shared chrome (`seasonManagerHeader('marooning')` + `buildSeasonNavRow(…,'marooning')` + `buildSeasonBottomRow(…,'marooning')`). Builds a roster grouped by status — ✅ Cast / 🔄 Alternate / ❓ Tentative / 🗑️ Don't Cast / ⚪ Undecided — each sorted by average score (🥇🥈🥉 then `N.`), with a `· 🎉 Accepted` / `· 🚫 Declined` annotation per applicant who has responded, plus a 📊 summary (per-status totals incl. Alternate + scored count). The bespoke Back/Refresh buttons are gone (the shared nav row + ← Seasons replace them). The legacy `ranking_view_all_scores_*` id still routes here via `handleRankingNavigation` (compat shim → `buildMarooningView`).
 
 ### 📨 Casting Invites (outcome messages) — RaP 0906
 The **✒️ Invites** button opens a modal (`buildCastingInvitesModal`, all Label-wrapped per ComponentsV2): three paragraph templates (**Successful** / **Alternative** / **Unsuccessful**, pre-filled from saved guild templates or defaults; `@Player` → applicant mention) + a required select **"What to do when you submit this?"** with `draft / all / successful / unsuccessful / alternative / selected`.

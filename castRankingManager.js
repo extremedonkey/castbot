@@ -24,7 +24,7 @@ import { loadPlayerData } from './storage.js';
  * @param {string} configId
  */
 export async function buildRankingEmptyState(seasonName, configId) {
-  const { buildSeasonNavRow, seasonManagerHeader } = await import('./seasonSelector.js');
+  const { buildSeasonNavRow, seasonManagerHeader, buildSeasonBottomRow } = await import('./seasonSelector.js');
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2 (factory adds ephemeral / strips for updateMessage)
     components: [{
@@ -35,7 +35,7 @@ export async function buildRankingEmptyState(seasonName, configId) {
         { type: 14 },
         { type: 10, content: `📭 **No applications yet** for this season.\n-# Applicants appear here once they apply via this season's application button.` },
         { type: 14 },
-        { type: 1, components: [{ type: 2, custom_id: 'season_manager', label: '← Seasons', style: 2 }] }
+        buildSeasonBottomRow(configId, 'ranking')
       ]
     }]
   };
@@ -251,10 +251,10 @@ export async function generateSeasonAppRankingUI({
   //         → avatar → Rate (1-5) → Casting status → Votes → Player Notes → utility → bottom nav.
   // The applicant DNC summary is folded into the info block (oldInfoBlock).
 
-  const { buildSeasonNavRow, seasonManagerHeader } = await import('./seasonSelector.js');
+  const { buildSeasonNavRow, seasonManagerHeader, buildSeasonBottomRow } = await import('./seasonSelector.js');
   const containerComponents = [
     seasonManagerHeader('ranking', seasonName),
-    // Active-tab nav row — Apps · Planner · Casting · Edit (current view = Casting, shaded blue)
+    // Active-tab nav row — Apps · Planner · Casting · Marooning (current view = Casting, shaded blue)
     buildSeasonNavRow(configId, 'ranking'),
   ];
 
@@ -495,18 +495,12 @@ export async function generateSeasonAppRankingUI({
         .setStyle(ButtonStyle.Secondary)
         .setEmoji('🚷')
         .toJSON(),
-      { type: 2, custom_id: `ranking_view_all_scores_${configId}${ephemeralSuffix}`, label: 'Casting Summary', style: 2, emoji: { name: '⭐' } },
       { type: 2, custom_id: `casting_messages_${appIndex}_${configId}`, label: 'Invites', style: 2, emoji: { name: '✒️' } }
     ]
   });
 
-  // Bottom navigation — ← Seasons (back to Season Manager)
-  containerComponents.push({
-    type: 1,
-    components: [
-      { type: 2, custom_id: `season_manager`, label: '← Seasons', style: 2 }
-    ]
-  });
+  // Shared Season Manager bottom row — [← Seasons] [✏️ Edit] (Marooning is now a nav tab, not here)
+  containerComponents.push(buildSeasonBottomRow(configId, 'ranking'));
 
   // Create main container
   const castRankingContainer = {
@@ -911,10 +905,100 @@ export async function generateDncOverviewUI({ guildId, configId, guild }) {
  * @param {Object} params.client - Discord.js client instance
  * @returns {Object} Complete UI response object for navigation
  */
+/**
+ * 🚣 Marooning tab — the season-wide casting-decision summary (formerly the "Casting Summary" button).
+ * Now a first-class Season Manager tab: shared seasonManagerHeader('marooning') + buildSeasonNavRow(…,
+ * 'marooning') + the casting-status breakdown + the shared [← Seasons][Edit] bottom row. LEAN chrome,
+ * consistent with the Apps/Planner/Casting tabs. Reached via season_marooning_{configId} (and the legacy
+ * ranking_view_all_scores_* which now delegates here). Pure render — caller supplies playerData + seasonName.
+ * @param {Object} p - { configId, guildId, playerData, seasonName }
+ * @returns {Object} { components: [container] } (updateMessage pattern; caller adds ephemeral flags if needed)
+ */
+export async function buildMarooningView({ configId, guildId, playerData, seasonName }) {
+  const { getApplicationsForSeason, getAllApplicationsFromData } = await import('./storage.js');
+  const { buildSeasonNavRow, seasonManagerHeader, buildSeasonBottomRow } = await import('./seasonSelector.js');
+
+  const allApplications = (configId && configId !== 'navigation')
+    ? await getApplicationsForSeason(guildId, configId)
+    : await getAllApplicationsFromData(guildId);
+
+  // Per-applicant score + casting decision
+  const applicantData = allApplications.map((app) => {
+    const rankings = playerData[guildId]?.applications?.[app.channelId]?.rankings || {};
+    const scores = Object.values(rankings).filter(r => r !== undefined);
+    const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+    return {
+      name: app.displayName || app.username,
+      avgScore,
+      voteCount: scores.length,
+      castingStatus: playerData[guildId]?.applications?.[app.channelId]?.castingStatus || 'undecided',
+      placementResponse: playerData[guildId]?.applications?.[app.channelId]?.placementResponse
+    };
+  });
+
+  const castGroups = {
+    cast: applicantData.filter(a => a.castingStatus === 'cast'),
+    alternative: applicantData.filter(a => a.castingStatus === 'alternative'),
+    tentative: applicantData.filter(a => a.castingStatus === 'tentative'),
+    reject: applicantData.filter(a => a.castingStatus === 'reject'),
+    undecided: applicantData.filter(a => a.castingStatus === 'undecided')
+  };
+  Object.values(castGroups).forEach(g => g.sort((a, b) => b.avgScore - a.avgScore));
+
+  const statusSections = [
+    { title: '✅ **CAST PLAYERS**', group: castGroups.cast },
+    { title: '🔄 **ALTERNATE**', group: castGroups.alternative },
+    { title: '❓ **TENTATIVE**', group: castGroups.tentative },
+    { title: '🗑️ **DON\'T CAST**', group: castGroups.reject },
+    { title: '⚪ **UNDECIDED**', group: castGroups.undecided }
+  ];
+
+  let body = '### ```🎬 Casting Decisions```\n';
+  let anyGroup = false;
+  statusSections.forEach(section => {
+    if (section.group.length > 0) {
+      anyGroup = true;
+      body += `### ${section.title} (${section.group.length})\n`;
+      section.group.forEach((applicant, index) => {
+        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+        const scoreDisplay = applicant.avgScore > 0 ? applicant.avgScore.toFixed(1) : 'Unrated';
+        const resp = applicant.placementResponse === 'accepted' ? ' · 🎉 Accepted'
+          : applicant.placementResponse === 'declined' ? ' · 🚫 Declined' : '';
+        body += `${medal} **${applicant.name}** - ${scoreDisplay}/5.0 (${applicant.voteCount} vote${applicant.voteCount !== 1 ? 's' : ''})${resp}\n`;
+      });
+      body += '\n';
+    }
+  });
+  if (!anyGroup) body += '-# No applicants yet for this season.\n\n';
+  body += `### 📊 **SUMMARY**\n`;
+  body += `> **Total Applicants:** ${allApplications.length}\n`;
+  body += `> **Cast:** ${castGroups.cast.length} | **Alternate:** ${castGroups.alternative.length} | **Tentative:** ${castGroups.tentative.length} | **Rejected:** ${castGroups.reject.length} | **Undecided:** ${castGroups.undecided.length}\n`;
+  const totalScored = applicantData.filter(a => a.voteCount > 0).length;
+  body += `> **Scored:** ${totalScored}/${allApplications.length} applicants`;
+
+  const container = {
+    type: 17,
+    accent_color: 0x9B59B6, // Purple — matches the casting interface
+    components: [
+      seasonManagerHeader('marooning', seasonName),
+      buildSeasonNavRow(configId, 'marooning'),
+      { type: 14 },
+      { type: 10, content: body },
+      { type: 14 },
+      buildSeasonBottomRow(configId, 'marooning')
+    ]
+  };
+
+  const { countComponents } = await import('./utils.js');
+  countComponents([container], { verbosity: 'summary', label: `Marooning - ${seasonName}` });
+
+  return { components: [container] };
+}
+
 export async function handleRankingNavigation({
   customId,
   guildId,
-  userId, 
+  userId,
   guild,
   client,
   ephemeral = false
@@ -934,129 +1018,17 @@ export async function handleRankingNavigation({
     ? await getApplicationsForSeason(guildId, extractedConfigId)
     : await getAllApplicationsFromData(guildId);
 
-  // Handle "view all scores" button (with or without configId)
+  // Handle "view all scores" (legacy ranking_view_all_scores_*) → now the 🚣 Marooning tab.
+  // Delegates to the shared buildMarooningView so the legacy id and the new season_marooning_* id
+  // render identical chrome (shared header / nav / [← Seasons][Edit] bottom row).
   if (scoresMatch) {
-    console.log(`🔍 DEBUG: Handling view all scores with configId: ${extractedConfigId || 'none'}`);
-    
-    // Get the proper season name from playerData
-    let seasonName = 'Current Season';
-    if (extractedConfigId) {
-      const seasonConfig = playerData[guildId]?.applicationConfigs?.[extractedConfigId];
-      if (seasonConfig && seasonConfig.seasonName) {
-        seasonName = seasonConfig.seasonName;
-      } else {
-        seasonName = `Season ${extractedConfigId}`;
-      }
-    }
-    
-    let scoreSummary = `## Casting Summary\n### ${seasonName}\n\n`;
-    
-    // Calculate scores and casting status for each applicant
-    const applicantData = allApplications.map((app, index) => {
-      const rankings = playerData[guildId]?.applications?.[app.channelId]?.rankings || {};
-      const scores = Object.values(rankings).filter(r => r !== undefined);
-      const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-      const castingStatus = playerData[guildId]?.applications?.[app.channelId]?.castingStatus || 'undecided';
-      const placementResponse = playerData[guildId]?.applications?.[app.channelId]?.placementResponse;
-
-      return {
-        name: app.displayName || app.username,
-        avgScore,
-        voteCount: scores.length,
-        castingStatus,
-        placementResponse,
-        index: index + 1
-      };
-    });
-    
-    console.log(`🔍 DEBUG: View all scores - found ${applicantData.length} applicants with casting status breakdown`);
-    
-    // Group by casting status
-    const castGroups = {
-      cast: applicantData.filter(app => app.castingStatus === 'cast'),
-      tentative: applicantData.filter(app => app.castingStatus === 'tentative'),
-      alternative: applicantData.filter(app => app.castingStatus === 'alternative'),
-      reject: applicantData.filter(app => app.castingStatus === 'reject'),
-      undecided: applicantData.filter(app => app.castingStatus === 'undecided')
-    };
-
-    // Sort each group by average score (highest first)
-    Object.values(castGroups).forEach(group => {
-      group.sort((a, b) => b.avgScore - a.avgScore);
-    });
-
-    // Build status sections
-    const statusSections = [
-      { key: 'cast', title: '✅ **CAST PLAYERS**', color: '🟢', group: castGroups.cast },
-      { key: 'alternative', title: '🔄 **ALTERNATE**', color: '🟡', group: castGroups.alternative },
-      { key: 'tentative', title: '❓ **TENTATIVE**', color: '🔵', group: castGroups.tentative },
-      { key: 'reject', title: '🗑️ **DON\'T CAST**', color: '🔴', group: castGroups.reject },
-      { key: 'undecided', title: '⚪ **UNDECIDED**', color: '⚫', group: castGroups.undecided }
-    ];
-    
-    statusSections.forEach(section => {
-      if (section.group.length > 0) {
-        scoreSummary += `### ${section.title} (${section.group.length})\n`;
-        section.group.forEach((applicant, index) => {
-          const ranking = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
-          const scoreDisplay = applicant.avgScore > 0 ? applicant.avgScore.toFixed(1) : 'Unrated';
-          const resp = applicant.placementResponse === 'accepted' ? ' · 🎉 Accepted' : applicant.placementResponse === 'declined' ? ' · 🚫 Declined' : '';
-          scoreSummary += `${ranking} **${applicant.name}** - ${scoreDisplay}/5.0 (${applicant.voteCount} vote${applicant.voteCount !== 1 ? 's' : ''})${resp}\n`;
-        });
-        scoreSummary += '\n';
-      }
-    });
-    
-    // Add overall statistics
-    scoreSummary += `### 📊 **SUMMARY**\n`;
-    scoreSummary += `> **Total Applicants:** ${allApplications.length}\n`;
-    scoreSummary += `> **Cast:** ${castGroups.cast.length} | **Alternate:** ${castGroups.alternative.length} | **Tentative:** ${castGroups.tentative.length} | **Rejected:** ${castGroups.reject.length} | **Undecided:** ${castGroups.undecided.length}\n`;
-    
-    const totalScored = applicantData.filter(app => app.voteCount > 0).length;
-    scoreSummary += `> **Scored:** ${totalScored}/${allApplications.length} applicants`;
-    
-    // ButtonBuilder and ActionRowBuilder already imported at top of file
-    
-    // Create action buttons (Back and Refresh) - Back button encodes context for restoration
-    // Parse the original request to extract current context for the Back button
-    const backContextId = `${extractedConfigId || 'none'}_${userId}`;
-    
-    const actionButtons = [
-      new ButtonBuilder()
-        .setCustomId(`ranking_scores_back_${backContextId}`)
-        .setLabel('← Casting')
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji('🏆'),
-      new ButtonBuilder()
-        .setCustomId(`ranking_scores_refresh_${extractedConfigId || 'none'}`)
-        .setLabel('Refresh')
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji('🔄')
-    ];
-    
-    const actionRow = new ActionRowBuilder().addComponents(actionButtons);
-    
-    const summaryContainer = {
-      type: 17,
-      accent_color: 0x9B59B6, // Purple to match ranking interface
-      components: [
-        {
-          type: 10,
-          content: scoreSummary
-        },
-        {
-          type: 14 // Separator component to replace ---
-        },
-        actionRow.toJSON() // Action row with Close and Refresh buttons
-      ]
-    };
-    
-    return ephemeral ? {
-      flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 + EPHEMERAL  
-      components: [summaryContainer]
-    } : {
-      components: [summaryContainer] // Plain response for updateMessage pattern
-    };
+    const seasonName = extractedConfigId
+      ? (playerData[guildId]?.applicationConfigs?.[extractedConfigId]?.seasonName || `Season ${extractedConfigId}`)
+      : 'Current Season';
+    const view = await buildMarooningView({ configId: extractedConfigId, guildId, playerData, seasonName });
+    return ephemeral
+      ? { flags: (1 << 15) | (1 << 6), components: view.components } // IS_COMPONENTS_V2 + EPHEMERAL
+      : { components: view.components }; // updateMessage pattern
   }
 
   // Handle navigation (prev/next) with configId support
