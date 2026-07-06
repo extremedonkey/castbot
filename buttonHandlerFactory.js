@@ -3205,6 +3205,15 @@ export const BUTTON_REGISTRY = {
     parent: 'season_app_ranking',
     category: 'application_management'
   },
+  'marooning_draft_tribes_*': {
+    label: 'Draft Tribes',
+    description: 'Privately draft-assign players to the default castlist\'s tribes (host-only, no roles assigned, hidden until marooning)',
+    emoji: '💭',
+    style: 'Secondary',
+    parent: 'season_marooning',
+    category: 'application_management',
+    requiresModal: true
+  },
   'cast_player_*': {
     label: 'Cast Player',
     description: 'Mark applicant as cast',

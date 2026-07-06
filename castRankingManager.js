@@ -924,17 +924,18 @@ export async function buildMarooningView({ configId, guildId, playerData, season
     ? await getApplicationsForSeason(guildId, configId)
     : await getAllApplicationsFromData(guildId);
 
-  // Per-applicant score + casting decision
+  // Per-applicant score + casting decision (userId kept for the private draft-tribe grouping below)
   const applicantData = allApplications.map((app) => {
-    const rankings = playerData[guildId]?.applications?.[app.channelId]?.rankings || {};
-    const scores = Object.values(rankings).filter(r => r !== undefined);
+    const rec = playerData[guildId]?.applications?.[app.channelId] || {};
+    const scores = Object.values(rec.rankings || {}).filter(r => r !== undefined);
     const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
     return {
+      userId: app.userId,
       name: app.displayName || app.username,
       avgScore,
       voteCount: scores.length,
-      castingStatus: playerData[guildId]?.applications?.[app.channelId]?.castingStatus || 'undecided',
-      placementResponse: playerData[guildId]?.applications?.[app.channelId]?.placementResponse
+      castingStatus: rec.castingStatus || 'undecided',
+      placementResponse: rec.placementResponse
     };
   });
 
@@ -948,27 +949,69 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   Object.values(castGroups).forEach(g => g.sort((a, b) => b.avgScore - a.avgScore));
 
   const statusSections = [
-    { title: '✅ **CAST PLAYERS**', group: castGroups.cast },
-    { title: '🔄 **ALTERNATE**', group: castGroups.alternative },
-    { title: '❓ **TENTATIVE**', group: castGroups.tentative },
-    { title: '🗑️ **DON\'T CAST**', group: castGroups.reject },
-    { title: '⚪ **UNDECIDED**', group: castGroups.undecided }
+    { emoji: '✅', title: 'CAST PLAYERS', group: castGroups.cast },
+    { emoji: '🔄', title: 'ALTERNATE', group: castGroups.alternative },
+    { emoji: '❓', title: 'TENTATIVE', group: castGroups.tentative },
+    { emoji: '🗑️', title: "DON'T CAST", group: castGroups.reject },
+    { emoji: '⚪', title: 'UNDECIDED', group: castGroups.undecided }
   ];
+
+  // ===== 🏕️ Tribes (default/active castlist) — loaded up here because the casting list below groups
+  // players by their PRIVATE draft-tribe assignment, and the Draft Tribes button needs the tribe count. =====
+  const { castlistManager } = await import('./castlistManager.js');
+  let tribeRoleIds = [];
+  try {
+    tribeRoleIds = await castlistManager.getTribesUsingCastlist(guildId, 'default');
+  } catch (e) {
+    console.warn(`⚠️ Marooning: could not load default-castlist tribes: ${e.message}`);
+  }
+  const tribes = playerData[guildId]?.tribes || {};
+  const tribesLine = tribeRoleIds.length > 0
+    ? `**Tribes:** ${tribeRoleIds.map(id => `${tribes[id]?.emoji || '🏕️'} <@&${id}>`).join(', ')}`
+    : '**Tribes:** None';
+
+  // Private draft-tribe assignments (season-scoped, HOST-ONLY). Stored under applicationConfigs[configId]
+  // .draftTribes — physically OFF the tribe objects, and NO Discord roles are assigned — so no player-facing
+  // tribe/castlist renderer can ever surface them. userId → first tribe roleId that drafted them.
+  const draftTribes = playerData[guildId]?.applicationConfigs?.[configId]?.draftTribes || {};
+  const userDraftTribe = {};
+  for (const [rid, ids] of Object.entries(draftTribes)) {
+    for (const uid of (ids || [])) { if (!userDraftTribe[uid]) userDraftTribe[uid] = rid; }
+  }
+
+  const renderRow = (p, i) => {
+    const scoreDisplay = p.avgScore > 0 ? p.avgScore.toFixed(1) : 'Unrated';
+    const resp = p.placementResponse === 'accepted' ? ' · 🎉 Accepted'
+      : p.placementResponse === 'declined' ? ' · 🚫 Declined' : '';
+    return `${i + 1}. ${p.name} - ${scoreDisplay}/5.0 (${p.voteCount} vote${p.voteCount !== 1 ? 's' : ''})${resp}`;
+  };
 
   let body = '### ```🎬 Casting Decisions```\n';
   let anyGroup = false;
   statusSections.forEach(section => {
-    if (section.group.length > 0) {
-      anyGroup = true;
-      body += `### ${section.title} (${section.group.length})\n`;
-      section.group.forEach((applicant, index) => {
-        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
-        const scoreDisplay = applicant.avgScore > 0 ? applicant.avgScore.toFixed(1) : 'Unrated';
-        const resp = applicant.placementResponse === 'accepted' ? ' · 🎉 Accepted'
-          : applicant.placementResponse === 'declined' ? ' · 🚫 Declined' : '';
-        body += `${medal} **${applicant.name}** - ${scoreDisplay}/5.0 (${applicant.voteCount} vote${applicant.voteCount !== 1 ? 's' : ''})${resp}\n`;
-      });
-      body += '\n';
+    if (section.group.length === 0) return;
+    anyGroup = true;
+    body += `## ${section.emoji} ${section.title} (${section.group.length})\n`;
+    // Sub-group this status' players by their private draft tribe (castlist order preserved), undrafted last.
+    const perTribe = new Map();
+    const undrafted = [];
+    for (const p of section.group) { // already score-sorted
+      const rid = userDraftTribe[p.userId];
+      if (rid && tribeRoleIds.includes(rid)) {
+        if (!perTribe.has(rid)) perTribe.set(rid, []);
+        perTribe.get(rid).push(p);
+      } else {
+        undrafted.push(p);
+      }
+    }
+    for (const rid of tribeRoleIds) {
+      const players = perTribe.get(rid);
+      if (!players?.length) continue;
+      body += `<@&${rid}> (tentative)\n${players.map(renderRow).join('\n')}\n\n`;
+    }
+    if (undrafted.length) {
+      if (perTribe.size > 0) body += `-# Not yet drafted to a tribe\n`;
+      body += `${undrafted.map(renderRow).join('\n')}\n\n`;
     }
   });
   if (!anyGroup) body += '-# No applicants yet for this season.\n\n';
@@ -978,12 +1021,24 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   const totalScored = applicantData.filter(a => a.voteCount > 0).length;
   body += `> **Scored:** ${totalScored}/${allApplications.length} applicants`;
 
+  // 🏕️ Tribes section — the New Tribe button REUSES the Castlist Hub's button (tribe_add_button|default) so
+  // it's identical in look/feel/function: opens the Add New Tribe modal → creates the role → adds it to the
+  // DEFAULT castlist. 💭 Draft Tribes opens the private draft modal (needs ≥2 tribes, else disabled).
+  const canDraft = tribeRoleIds.length >= 2;
+
   const container = {
     type: 17,
     accent_color: 0x9B59B6, // Purple — matches the casting interface
     components: [
       seasonManagerHeader('marooning', seasonName),
       buildSeasonNavRow(configId, 'marooning'),
+      { type: 14 },
+      { type: 10, content: '### ```🏕️ Tribes```' },
+      { type: 1, components: [
+        { type: 2, custom_id: 'tribe_add_button|default', label: 'New Tribe', style: 2, emoji: { name: '🏕️' } },
+        { type: 2, custom_id: `marooning_draft_tribes_${configId}`, label: 'Draft Tribes', style: 2, emoji: { name: '💭' }, disabled: !canDraft }
+      ]},
+      { type: 10, content: tribesLine },
       { type: 14 },
       { type: 10, content: body },
       { type: 14 },
@@ -995,6 +1050,66 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   countComponents([container], { verbosity: 'summary', label: `Marooning - ${seasonName}` });
 
   return { components: [container] };
+}
+
+/**
+ * 💭 Draft Tribes modal — up to 5 PRIVATE User Selects, one per tribe on the default castlist. Provisional,
+ * host-only assignments: submitting does NOT assign Discord roles and does NOT notify anyone (see the
+ * marooning_draft_tribes_modal submit handler in app.js). Reassuring copy (ComponentsV2) on every label.
+ * Pre-fills each select with the current draft (default_values). Returns null when <2 tribes exist (nothing
+ * meaningful to draft). If >5 tribes, only the first 5 are shown and the LAST label warns to trim the castlist.
+ * @param {Object} p - { configId, guildId, playerData, guild }
+ * @returns {Object|null} a MODAL response ({ type: 9, data }) or null
+ */
+export async function buildDraftTribesModal({ configId, guildId, playerData, guild }) {
+  const { castlistManager } = await import('./castlistManager.js');
+  let tribeRoleIds = [];
+  try {
+    tribeRoleIds = await castlistManager.getTribesUsingCastlist(guildId, 'default');
+  } catch (e) {
+    console.warn(`⚠️ Draft Tribes: could not load default-castlist tribes: ${e.message}`);
+  }
+  if (tribeRoleIds.length < 2) return null; // need ≥2 tribes to draft between
+
+  const tribes = playerData[guildId]?.tribes || {};
+  const draft = playerData[guildId]?.applicationConfigs?.[configId]?.draftTribes || {};
+  const shown = tribeRoleIds.slice(0, 5); // modal cap = 5 components
+  const overflow = tribeRoleIds.length > 5;
+
+  const components = shown.map((roleId, i) => {
+    const t = tribes[roleId] || {};
+    const emoji = t.emoji || '🏕️';
+    const name = guild?.roles?.cache?.get(roleId)?.name || t.analyticsName || t.name || 'Tribe';
+    let description = 'Private draft — no roles are assigned, players aren\'t notified, hidden until marooning.';
+    if (overflow && i === shown.length - 1) {
+      description = `⚠️ Only 5 of ${tribeRoleIds.length} tribes shown — trim tribes in the Castlist Manager to draft the rest.`;
+    }
+    const members = Array.isArray(draft[roleId]) ? draft[roleId] : [];
+    const select = {
+      type: 5, // User Select
+      custom_id: `draft_tribe_sel_${roleId}`,
+      placeholder: 'Draft players to this tribe (private)…',
+      required: false,
+      min_values: 0,
+      max_values: 25
+    };
+    if (members.length > 0) select.default_values = members.map(id => ({ id, type: 'user' }));
+    return {
+      type: 18, // Label
+      label: `${emoji} ${name}`.slice(0, 45),
+      description,
+      component: select
+    };
+  });
+
+  return {
+    type: 9, // MODAL
+    data: {
+      custom_id: `marooning_draft_tribes_modal|${configId}`,
+      title: 'Draft Tribes (private)',
+      components
+    }
+  };
 }
 
 export async function handleRankingNavigation({

@@ -13816,6 +13816,29 @@ To fix this:
           return uiResponse;
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('marooning_draft_tribes_')) {
+      // 💭 Draft Tribes — opens a PRIVATE modal (up to 5 user selects) to provisionally assign players to the
+      // default castlist's tribes. Host-only; submitting assigns NO roles and reveals nothing to players.
+      const configId = custom_id.replace('marooning_draft_tribes_', '');
+      return ButtonHandlerFactory.create({
+        id: 'marooning_draft_tribes',
+        updateMessage: false, // returns a modal
+        handler: async (context) => {
+          console.log(`🔍 START: marooning_draft_tribes - user ${context.userId}`);
+          const { guildId, userId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
+          const member = await guild.members.fetch(userId);
+          if (!hasCastRankingPermissions(member, guildId)) {
+            return { content: '❌ You need Manage Roles or Manage Channels permissions to draft tribes.', ephemeral: true };
+          }
+          const playerData = await loadPlayerData();
+          const { buildDraftTribesModal } = await import('./castRankingManager.js');
+          const modal = await buildDraftTribesModal({ configId, guildId, playerData, guild });
+          if (!modal) return { content: '❌ Add at least 2 tribes to the castlist (via New Tribe) before drafting.', ephemeral: true };
+          console.log(`✅ SUCCESS: marooning_draft_tribes - opening draft modal`);
+          return modal;
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_setup_tycoons') {
       // Execute same logic as setup_tycoons slash command
       try {
@@ -43552,6 +43575,46 @@ Your server is now ready for Tycoons gameplay!`;
             }]
           }]
         });
+      }
+    } else if (custom_id.startsWith('marooning_draft_tribes_modal|')) {
+      // 💭 Draft Tribes submit — PRIVATE, provisional tribe assignments. DELIBERATELY does NOT assign Discord
+      // roles or notify anyone (quite different from the real-time role-based tribe pattern). Stores userIds
+      // per tribe under applicationConfigs[configId].draftTribes (season-scoped, host-only) — physically off
+      // the tribe objects so no player-facing tribe/castlist renderer can surface them. Then webhook-refreshes
+      // the parent (ephemeral) Marooning message. Casting decisions never leave the host-gated Marooning view.
+      const token = req.body.token;
+      res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+      try {
+        const configId = custom_id.split('|')[1];
+        const guildId = req.body.guild_id;
+        const components = req.body.data.components || [];
+        const playerData = await loadPlayerData();
+        const cfg = playerData[guildId]?.applicationConfigs?.[configId];
+        if (!cfg) {
+          return updateDeferredResponse(token, { components: [{ type: 17, components: [{ type: 10, content: '❌ Season not found.' }] }] });
+        }
+
+        // One user select per SHOWN tribe (custom_id draft_tribe_sel_{roleId}); empty = clears that tribe.
+        // Tribes NOT shown (the >5 overflow) are left untouched by merging over the existing draft map.
+        const submitted = {};
+        for (const row of components) {
+          const comp = row?.component;
+          if (comp?.type === 5 && typeof comp.custom_id === 'string' && comp.custom_id.startsWith('draft_tribe_sel_')) {
+            const roleId = comp.custom_id.replace('draft_tribe_sel_', '');
+            submitted[roleId] = Array.isArray(comp.values) ? comp.values : [];
+          }
+        }
+        cfg.draftTribes = { ...(cfg.draftTribes || {}), ...submitted };
+        await savePlayerData(playerData);
+        console.log(`[DRAFT TRIBES] Saved draft for ${Object.keys(submitted).length} tribe(s) in season ${configId}`);
+
+        const seasonName = cfg.seasonName || `Season ${configId}`;
+        const { buildMarooningView } = await import('./castRankingManager.js');
+        const view = await buildMarooningView({ configId, guildId, playerData, seasonName });
+        return updateDeferredResponse(token, { components: view.components });
+      } catch (error) {
+        console.error('[DRAFT TRIBES] Error saving draft:', error);
+        return updateDeferredResponse(token, { components: [{ type: 17, components: [{ type: 10, content: `❌ Error saving draft tribes: ${error.message}` }] }] });
       }
     } else if (custom_id.startsWith('tribe_add_modal|')) {
       // Handle Add Tribe modal submission - creates Discord role and links as tribe
