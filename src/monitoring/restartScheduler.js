@@ -262,38 +262,55 @@ class RestartScheduler {
 
   /**
    * Post the Components V2 warning with ping + Cancel button.
-   * Posting mechanism proven by ProdWatchdog.alert() (prodWatchdog.js:124-141).
+   *
+   * POSTs raw JSON via DiscordRequest (bot-token REST), NOT channel.send():
+   * discord.js v14's MessagePayload wraps raw top-level component objects in
+   * `new ActionRowBuilder(...)`, which blows up on a Components V2 Container
+   * ("ActionRowBuilder is not a constructor" — hit live 2026-07-06). This is
+   * the same reason healthMonitor posts scheduled CV2 reports via webhook
+   * ("no Discord.js builders"). REST-as-bot is used here instead of a channel
+   * webhook because webhook messages can't host working custom_id buttons
+   * (see prodWatchdog.js fallback comment) — and the Cancel button is the point.
    */
   async postWarning(config, fireAt) {
     try {
-      const channel = await this.client.channels.fetch(config.channelId);
       const fireEpoch = Math.floor(fireAt / 1000);
       const tagUserId = config.tagUserId || TAG_USER_ID;
-      const message = await channel.send({
-        flags: 1 << 15, // IS_COMPONENTS_V2
-        components: [{
-          type: 17, // Container
-          accent_color: 0xf39c12, // orange — warning/caution
-          components: [
-            {
-              type: 10, // Text Display
-              content: `<@${tagUserId}>\n## 🌙 Scheduled Restart <t:${fireEpoch}:R>\nCastBot will restart at <t:${fireEpoch}:t> to reset the V8 heap (OOM prevention — RaP 0903). PM2 revives it in ~50s.\n-# Recurs every ${formatInterval(config.intervalMs)}. Cancel skips this one only.`
-            },
-            { type: 14 }, // Separator
-            {
-              type: 1, // Action Row
-              components: [{
-                type: 2, // Button
-                custom_id: `restart_sched_cancel_${fireEpoch}`,
-                label: 'Cancel This Restart',
-                style: 4, // Danger
-                emoji: { name: '🌙' }
-              }]
-            }
-          ]
-        }],
-        allowedMentions: { users: [tagUserId] }
-      });
+      const { DiscordRequest } = await import('../../utils.js');
+      const message = await DiscordRequest(`channels/${config.channelId}/messages`, {
+        method: 'POST',
+        body: {
+          flags: 1 << 15, // IS_COMPONENTS_V2
+          components: [{
+            type: 17, // Container
+            accent_color: 0xf39c12, // orange — warning/caution
+            components: [
+              {
+                type: 10, // Text Display
+                content: `<@${tagUserId}>\n## 🌙 Scheduled Restart <t:${fireEpoch}:R>\nCastBot will restart at <t:${fireEpoch}:t> to reset the V8 heap (OOM prevention — RaP 0903). PM2 revives it in ~50s.\n-# Recurs every ${formatInterval(config.intervalMs)}. Cancel skips this one only.`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 1, // Action Row
+                components: [{
+                  type: 2, // Button
+                  custom_id: `restart_sched_cancel_${fireEpoch}`,
+                  label: 'Cancel This Restart',
+                  style: 4, // Danger
+                  emoji: { name: '🌙' }
+                }]
+              }
+            ]
+          }],
+          allowed_mentions: { users: [tagUserId] }
+        }
+      }, 'RestartScheduler warning');
+      // DiscordRequest returns null (not throw) for deleted channel/message —
+      // treat anything without a message id as a failed warning (→ skip cycle)
+      if (!message?.id) {
+        console.error('[RestartScheduler] postWarning failed: no message returned (channel gone or post rejected)');
+        return false;
+      }
       this.warningMessage = { channelId: config.channelId, messageId: message.id };
       return true;
     } catch (err) {
@@ -344,18 +361,22 @@ class RestartScheduler {
     const nextFireAt = (this.armedFireAt || Date.now()) + config.intervalMs;
     await this.saveConfig({ nextFireAt });
 
-    // Best-effort: mark the warning message as executing
+    // Best-effort: mark the warning message as executing.
+    // Raw REST PATCH — same discord.js MessagePayload/ActionRowBuilder pitfall
+    // as postWarning applies to msg.edit() with raw CV2 components.
     try {
       if (this.warningMessage) {
-        const channel = await this.client.channels.fetch(this.warningMessage.channelId);
-        const msg = await channel.messages.fetch(this.warningMessage.messageId);
-        await msg.edit({
-          components: [{
-            type: 17,
-            accent_color: 0x3498db,
-            components: [{ type: 10, content: `## 🔄 Restarting now…\nBack in ~50s. Next scheduled restart: <t:${Math.floor(nextFireAt / 1000)}:F>.` }]
-          }]
-        });
+        const { DiscordRequest } = await import('../../utils.js');
+        await DiscordRequest(`channels/${this.warningMessage.channelId}/messages/${this.warningMessage.messageId}`, {
+          method: 'PATCH',
+          body: {
+            components: [{
+              type: 17,
+              accent_color: 0x3498db,
+              components: [{ type: 10, content: `## 🔄 Restarting now…\nBack in ~50s. Next scheduled restart: <t:${Math.floor(nextFireAt / 1000)}:F>.` }]
+            }]
+          }
+        }, 'RestartScheduler restarting-edit');
       }
     } catch (e) {
       console.error('[RestartScheduler] Warning-message edit failed (continuing):', e.message);

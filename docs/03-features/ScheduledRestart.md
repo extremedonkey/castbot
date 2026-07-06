@@ -38,7 +38,7 @@ flowchart LR
     style C fill:#2ecc71,color:#000
 ```
 
-- **Warning message** (Components V2, posted via the ProdWatchdog `channel.send` pattern): pings Reece (`allowedMentions`), shows `<t:…:R>` countdown, carries a `restart_sched_cancel_<fireEpoch>` Danger button.
+- **Warning message** (Components V2): pings Reece, shows `<t:…:R>` countdown, carries a `restart_sched_cancel_<fireEpoch>` Danger button. Posted via **raw REST** (`DiscordRequest` → `POST /channels/{id}/messages`), NOT `channel.send()` — discord.js v14's MessagePayload can't take raw CV2 containers ("ActionRowBuilder is not a constructor"; see [ComponentsV2Issues.md #15](../troubleshooting/ComponentsV2Issues.md#15-channelsend--messageedit-reject-raw-components-v2-actionrowbuilder-is-not-a-constructor)). REST-as-bot (rather than the healthMonitor webhook pattern) because webhook messages can't host working custom_id buttons.
 - **Cancel button:** requires Manage Roles; edits the warning in place to "✅ Restart Canceled … next: <t>"; skips **that cycle only**. The fire-epoch in the custom_id makes stale clicks on old warnings inert.
 - **Planned-restart marker:** before exiting, `logs/planned-restart.json` is written; `restartTracker.js` consumes it (<5 min old) and the Ultrathink restart history shows `🌙 planned` on those entries.
 

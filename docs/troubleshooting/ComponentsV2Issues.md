@@ -811,6 +811,44 @@ ButtonHandlerFactory.create({
 - `prod_edit_timezones`
 - `prod_add_timezone`
 
+### 15. channel.send() / message.edit() Reject Raw Components V2 ("ActionRowBuilder is not a constructor")
+
+**Symptom**: `TypeError: ActionRowBuilder is not a constructor` (or similar builder errors) when passing raw Components V2 JSON (`type: 17` Container) to **discord.js methods** — `channel.send()`, `message.edit()`, `webhook.send()` via the discord.js class.
+
+**Root Cause**: discord.js v14's `MessagePayload` assumes top-level components are Action Rows and tries to wrap raw objects in `new ActionRowBuilder(...)`. A Container (type 17) isn't an Action Row, and the wrap path explodes. **This only affects the discord.js client API** — interaction responses (`res.send`) and raw REST calls send JSON straight to Discord and are unaffected. That's why every interaction works but a scheduled `channel.send` dies.
+
+**Discovered**: 2026-07-06, RestartScheduler warning post (`[RestartScheduler] postWarning failed: ActionRowBuilder is not a constructor`). The codebase had already learned this twice without documenting it:
+- `healthMonitor.js postToChannel()` — comments say "Use Safari's webhook pattern for reliable Components V2 posting" + "no Discord.js builders"
+- `prodWatchdog.js alert()` — its `channel.send` bot-post path silently falls back to a webhook ping on error, so it may never have actually delivered the CV2+button variant
+
+**Fix — pick by whether you need working buttons:**
+
+```javascript
+// ✅ Needs working custom_id buttons → raw REST as the bot (message is bot-authored,
+// so button interactions route back to the app). DiscordRequest = bot-token REST.
+const { DiscordRequest } = await import('./utils.js');
+const message = await DiscordRequest(`channels/${channelId}/messages`, {
+  method: 'POST',
+  body: {
+    flags: 1 << 15, // IS_COMPONENTS_V2
+    components: [{ type: 17, components: [...] }],
+    allowed_mentions: { users: [userId] }  // snake_case in raw REST!
+  }
+});
+// Edits likewise: DiscordRequest(`channels/${id}/messages/${msgId}`, { method: 'PATCH', body: {...} })
+
+// ✅ Display-only (no buttons) → healthMonitor's webhook pattern also works
+// (channel.createWebhook → fetch POST raw JSON → delete webhook). But note
+// prodWatchdog.js: "manual webhook can't host a working button".
+
+// ❌ WRONG — discord.js MessagePayload chokes on raw CV2:
+await channel.send({ flags: 1 << 15, components: [{ type: 17, ... }] });
+```
+
+**Gotchas in the REST path**:
+- `allowed_mentions` (snake_case), not discord.js's `allowedMentions`
+- `DiscordRequest` returns the parsed message JSON on success, but `null` (no throw) for deleted channel/message — check `message?.id` if you need delivery confirmation
+
 ## Quick Reference
 
 **Always Remember**:
