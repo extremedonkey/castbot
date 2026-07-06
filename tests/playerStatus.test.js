@@ -1,73 +1,163 @@
-// Tests for the Status Engine SKELETON (playerStatus.js). Pure module → import the real functions directly.
-// Scope: ONLY the 3 Stage-0 statuses are implemented (📝 New / ☑️ Complete / ✖️ Withdrawn). See RaP 0905 §9.
+// Tests for the Status Engine (playerStatus.js). Pure module → import the real functions directly.
+// Scope: the "committed" states are implemented (Withdrawn · Accepted/Declined Placement · Cast/Alternate/
+// Not Cast · Complete · New), byte-matched to the legacy `Status:` line (deriveApplicationStatus). Tentative
+// + the vote-progression "Still Deciding" cluster are DEFERRED (fall through to complete/new). See RaP 0905 §9.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   STATUS_REGISTRY,
-  buildStage0Signals,
+  buildStatusSignals,
   deriveStatus,
   getApplicationStatus,
   getPlayerSeasonStatus
 } from '../playerStatus.js';
 
-describe('Status Engine — registry is skeleton-only (3 active rows)', () => {
-  it('has exactly the 3 Stage-0 rows, in precedence order', () => {
-    assert.deepEqual(STATUS_REGISTRY.map(r => r.id), ['withdrawn', 'complete', 'new']);
+// ── Inline replica of the LEGACY ladder we validate against (castRankingManager.js:122). Kept verbatim so
+//    the parity test below proves the new engine agrees with it for every committed state. ──
+function deriveApplicationStatus(app = {}, liveChannelName = '') {
+  const castingStatus = app.castingStatus;
+  const placementResponse = app.placementResponse;
+  const voteCount = Object.keys(app.rankings || {}).length;
+  if (/^✖️/.test(liveChannelName)) return { icon: '✖️', name: 'Withdrawn' };
+  if (placementResponse === 'accepted') return { icon: '🎉', name: 'Accepted Placement' };
+  if (placementResponse === 'declined') return { icon: '🚫', name: 'Declined Placement' };
+  if (castingStatus === 'cast')        return { icon: '✅', name: 'Cast' };
+  if (castingStatus === 'alternative') return { icon: '🔄', name: 'Alternate' };
+  if (castingStatus === 'tentative')   return { icon: '❓', name: 'Tentatively Cast' };
+  if (castingStatus === 'reject')      return { icon: '❌', name: 'Not Cast' };
+  if (voteCount >= 2)                  return { icon: '☑️', name: 'Reviewed' };
+  if (voteCount >= 1)                  return { icon: '🗳️', name: `Scoring (${voteCount} vote${voteCount === 1 ? '' : 's'})` };
+  return { icon: '📝', name: 'Awaiting Votes' };
+}
+
+describe('Status Engine — registry shape', () => {
+  it('lists the committed rows in precedence order (withdrawn ▸ placement ▸ casting ▸ lifecycle)', () => {
+    assert.deepEqual(STATUS_REGISTRY.map(r => r.id),
+      ['withdrawn', 'accepted', 'declined', 'cast', 'alternate', 'reject', 'complete', 'new']);
+  });
+  it('does NOT yet include the deferred rows (tentative / votes)', () => {
+    const ids = STATUS_REGISTRY.map(r => r.id);
+    for (const deferred of ['tentative', 'reviewed', 'scoring', 'awaiting']) {
+      assert.ok(!ids.includes(deferred), `${deferred} must stay deferred`);
+    }
   });
 });
 
-describe('Status Engine — buildStage0Signals', () => {
+describe('Status Engine — buildStatusSignals', () => {
   it('passes completedAt through and flags hasApplication', () => {
-    const s = buildStage0Signals({ app: { completedAt: '2026-06-27T00:00:00Z' }, liveChannelName: '☑️x-app' });
+    const s = buildStatusSignals({ app: { completedAt: '2026-06-27T00:00:00Z' }, liveChannelName: '☑️x-app' });
     assert.equal(s.hasApplication, true);
     assert.equal(s.completedAt, '2026-06-27T00:00:00Z');
     assert.equal(s.withdrawn, false);
   });
   it('withdrawn is true ONLY for a ✖️ channel prefix', () => {
-    assert.equal(buildStage0Signals({ app: {}, liveChannelName: '✖️x-app' }).withdrawn, true);
+    assert.equal(buildStatusSignals({ app: {}, liveChannelName: '✖️x-app' }).withdrawn, true);
     for (const name of ['📝x-app', '☑️x-app', '✅x-app', '❌x-app', 'x-app']) {
-      assert.equal(buildStage0Signals({ app: {}, liveChannelName: name }).withdrawn, false, name);
+      assert.equal(buildStatusSignals({ app: {}, liveChannelName: name }).withdrawn, false, name);
     }
   });
+  it('surfaces castingStatus + placementResponse (null when absent)', () => {
+    const s = buildStatusSignals({ app: { castingStatus: 'cast', placementResponse: 'accepted' } });
+    assert.equal(s.castingStatus, 'cast');
+    assert.equal(s.placementResponse, 'accepted');
+    const bare = buildStatusSignals({ app: {} });
+    assert.equal(bare.castingStatus, null);
+    assert.equal(bare.placementResponse, null);
+  });
   it('no app → hasApplication false', () => {
-    assert.equal(buildStage0Signals({ app: null }).hasApplication, false);
+    assert.equal(buildStatusSignals({ app: null }).hasApplication, false);
   });
 });
 
-describe('Status Engine — deriveStatus precedence (withdrawn > complete > new)', () => {
-  it('withdrawn wins even when completedAt is set', () => {
-    assert.equal(deriveStatus({ withdrawn: true, completedAt: 'x', hasApplication: true }).statusId, 'withdrawn');
+describe('Status Engine — deriveStatus precedence', () => {
+  it('withdrawn wins over everything (placement + casting + complete)', () => {
+    assert.equal(deriveStatus({ withdrawn: true, placementResponse: 'accepted', castingStatus: 'cast', completedAt: 'x', hasApplication: true }).statusId, 'withdrawn');
+  });
+  it('placement (accepted) outranks a casting decision', () => {
+    assert.equal(deriveStatus({ placementResponse: 'accepted', castingStatus: 'cast', completedAt: 'x', hasApplication: true }).statusId, 'accepted');
+  });
+  it('declined outranks a casting decision', () => {
+    assert.equal(deriveStatus({ placementResponse: 'declined', castingStatus: 'reject', hasApplication: true }).statusId, 'declined');
+  });
+  it('a casting decision outranks Complete', () => {
+    assert.equal(deriveStatus({ castingStatus: 'cast', completedAt: 'x', hasApplication: true }).statusId, 'cast');
+    assert.equal(deriveStatus({ castingStatus: 'reject', completedAt: 'x', hasApplication: true }).statusId, 'reject');
   });
   it('complete beats new', () => {
     assert.equal(deriveStatus({ completedAt: 'x', hasApplication: true }).statusId, 'complete');
   });
-  it('new when an application exists but is neither complete nor withdrawn', () => {
-    assert.equal(deriveStatus({ hasApplication: true }).statusId, 'new');
+  it('deferred tentative falls THROUGH to complete (not a casting row yet)', () => {
+    assert.equal(deriveStatus({ castingStatus: 'tentative', completedAt: 'x', hasApplication: true }).statusId, 'complete');
   });
   it('no application → none', () => {
     assert.deepEqual(deriveStatus({}), { statusId: 'none', label: 'No application', emoji: '—', stage: null, matched: null });
   });
 });
 
-describe('Status Engine — getApplicationStatus (app-direct)', () => {
-  it('New: app exists, no completedAt, 📝 channel', () => {
-    const r = getApplicationStatus({ userId: '1' }, '📝reece-app');
-    assert.equal(r.statusId, 'new');
-    assert.equal(r.emoji, '📝');
-    assert.equal(r.label, 'New');
+describe('Status Engine — getApplicationStatus (casting + placement)', () => {
+  it('Cast: castingStatus=cast', () => {
+    const r = getApplicationStatus({ castingStatus: 'cast', completedAt: 'x' }, '☑️c');
+    assert.equal(r.statusId, 'cast');
+    assert.equal(r.emoji, '✅');
+    assert.equal(r.label, 'Cast');
   });
-  it('Application Complete: completedAt set', () => {
-    const r = getApplicationStatus({ completedAt: '2026-06-27T11:47:21.536Z' }, '☑️reece-app');
-    assert.equal(r.statusId, 'complete');
-    assert.equal(r.emoji, '☑️');
+  it('Alternate: castingStatus=alternative', () => {
+    const r = getApplicationStatus({ castingStatus: 'alternative' }, '📝c');
+    assert.equal(r.emoji, '🔄');
+    assert.equal(r.label, 'Alternate');
   });
-  it('Withdrawn: ✖️ channel', () => {
-    assert.equal(getApplicationStatus({ completedAt: 'x' }, '✖️reece-app').statusId, 'withdrawn');
+  it('Not Cast: castingStatus=reject', () => {
+    const r = getApplicationStatus({ castingStatus: 'reject', completedAt: 'x' }, '☑️c');
+    assert.equal(r.emoji, '❌');
+    assert.equal(r.label, 'Not Cast');
   });
-  it('attaches the raw signals it saw', () => {
-    const r = getApplicationStatus({ completedAt: 'x' }, '📝reece-app');
-    assert.equal(r.signals.completedAt, 'x');
-    assert.equal(r.signals.withdrawn, false);
+  it('Accepted Placement outranks the underlying Cast decision', () => {
+    const r = getApplicationStatus({ castingStatus: 'cast', placementResponse: 'accepted', completedAt: 'x' }, '✅c');
+    assert.equal(r.emoji, '🎉');
+    assert.equal(r.label, 'Accepted Placement');
+  });
+  it('Declined Placement', () => {
+    const r = getApplicationStatus({ placementResponse: 'declined' }, '❌c');
+    assert.equal(r.emoji, '🚫');
+    assert.equal(r.label, 'Declined Placement');
+  });
+  it('a Cast player with NO placement stays Cast (not accepted)', () => {
+    assert.equal(getApplicationStatus({ castingStatus: 'cast' }, '📝c').statusId, 'cast');
+  });
+});
+
+// The automated form of "step 3": the new engine must agree byte-for-byte with the legacy ladder for every
+// COMMITTED state, and must (still) diverge for the deferred ones — so a future dev who fills a deferred rung
+// without updating the engine trips this test.
+describe('Status Engine — parity with legacy deriveApplicationStatus', () => {
+  const committed = [
+    { app: {},                                                              chan: '✖️c' },  // Withdrawn
+    { app: { placementResponse: 'accepted', castingStatus: 'cast', completedAt: 'x' }, chan: '✅c' }, // Accepted
+    { app: { placementResponse: 'declined' },                               chan: '❌c' },  // Declined
+    { app: { castingStatus: 'cast', completedAt: 'x' },                     chan: '☑️c' },  // Cast
+    { app: { castingStatus: 'alternative' },                                chan: '📝c' },  // Alternate
+    { app: { castingStatus: 'reject', completedAt: 'x' },                   chan: '☑️c' },  // Not Cast
+  ];
+  it('agrees (emoji + label) on every committed state', () => {
+    for (const { app, chan } of committed) {
+      const old = deriveApplicationStatus(app, chan);
+      const neu = getApplicationStatus(app, chan);
+      assert.equal(neu.emoji, old.icon, `emoji for ${JSON.stringify(app)}`);
+      assert.equal(neu.label, old.name, `label for ${JSON.stringify(app)}`);
+    }
+  });
+  it('KNOWN deferred gap: tentative + vote-only diverge (engine falls back to lifecycle)', () => {
+    // Tentative — old says Tentatively Cast; engine falls to Complete.
+    const tOld = deriveApplicationStatus({ castingStatus: 'tentative', completedAt: 'x' }, '☑️c');
+    const tNew = getApplicationStatus({ castingStatus: 'tentative', completedAt: 'x' }, '☑️c');
+    assert.equal(tOld.name, 'Tentatively Cast');
+    assert.equal(tNew.statusId, 'complete');
+    assert.notEqual(tNew.label, tOld.name);
+    // Votes only — old says Reviewed; engine falls to Complete.
+    const vOld = deriveApplicationStatus({ rankings: { a: 5, b: 4 }, completedAt: 'x' }, '☑️c');
+    const vNew = getApplicationStatus({ rankings: { a: 5, b: 4 }, completedAt: 'x' }, '☑️c');
+    assert.equal(vOld.name, 'Reviewed');
+    assert.equal(vNew.statusId, 'complete');
   });
 });
 
@@ -79,9 +169,9 @@ describe('Status Engine — getPlayerSeasonStatus (seasonId → app lookup)', ()
         cfg_B: { seasonId: 'season_Y' } // different season
       },
       applications: {
-        ch1: { userId: 'U1', channelId: 'ch1', configId: 'cfg_A', completedAt: 'x' }, // season_X, complete
-        ch2: { userId: 'U2', channelId: 'ch2', configId: 'cfg_A' },                    // season_X, new
-        ch3: { userId: 'U1', channelId: 'ch3', configId: 'cfg_B' }                     // season_Y (must be ignored)
+        ch1: { userId: 'U1', channelId: 'ch1', configId: 'cfg_A', castingStatus: 'cast' }, // season_X, cast
+        ch2: { userId: 'U2', channelId: 'ch2', configId: 'cfg_A' },                          // season_X, new
+        ch3: { userId: 'U1', channelId: 'ch3', configId: 'cfg_B' }                           // season_Y (ignored)
       }
     }
   };
@@ -89,10 +179,9 @@ describe('Status Engine — getPlayerSeasonStatus (seasonId → app lookup)', ()
 
   it('finds the right app for (seasonId, userId) and resolves its status', () => {
     const r = getPlayerSeasonStatus('G', 'season_X', 'U1', { playerData, guild });
-    assert.equal(r.statusId, 'complete'); // ch1, completedAt set
+    assert.equal(r.statusId, 'cast'); // ch1, castingStatus=cast
   });
   it('does not match an app from a different season', () => {
-    // U2 only has a season_X app (ch2, new) → new; and U1's season_Y app (ch3) is excluded above
     assert.equal(getPlayerSeasonStatus('G', 'season_X', 'U2', { playerData, guild }).statusId, 'new');
   });
   it('no app for that (season, user) → none', () => {
