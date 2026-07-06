@@ -54,6 +54,26 @@ export function combineDhm(daysStr, hoursStr, minutesStr) {
   return ms > 0 ? ms : null;
 }
 
+/**
+ * Warn-window rule (Reece, 2026-07-06): IF the restart interval is ≤ 60 minutes
+ * THEN warn at interval/2 (e.g. 3m interval → 90s warning); ELSE the standard
+ * 30 minutes. (Equivalent to min(30, interval/2) — kept as an explicit branch
+ * to match the stated spec.)
+ */
+export function computeWarnMinutes(intervalMs) {
+  const intervalMin = intervalMs / 60000;
+  if (intervalMin <= 60) return intervalMin / 2;
+  return DEFAULT_WARN_MINUTES;
+}
+
+/** Display a warn window: whole minutes as "30 min", short/fractional as "90s" / "2m 30s". */
+export function formatWarnWindow(warnMinutes) {
+  if (Number.isInteger(warnMinutes)) return `${warnMinutes} min`;
+  const totalSec = Math.round(warnMinutes * 60);
+  if (totalSec < 120) return `${totalSec}s`;
+  return `${Math.floor(totalSec / 60)}m ${totalSec % 60}s`;
+}
+
 /** Split ms into { days, hours, minutes } for prefilling the modal inputs. */
 export function splitDhm(ms) {
   if (!Number.isFinite(ms) || ms <= 0) return { days: 0, hours: 0, minutes: 0 };
@@ -63,12 +83,19 @@ export function splitDhm(ms) {
   return { days, hours, minutes };
 }
 
-/** Format ms as the same shorthand the modal accepts ("1d", "12h", "90m"). */
+/**
+ * Format ms as composed d/h/m shorthand ("1d", "12h", "4h 3m") — mirrors the
+ * modal's three inputs so a mixed interval is unmistakable (a flat "243m"
+ * disguised the 4h-prefill + 3m-typed combination incident).
+ */
 export function formatInterval(ms) {
   if (!Number.isFinite(ms) || ms <= 0) return '?';
-  if (ms % 86400000 === 0) return `${ms / 86400000}d`;
-  if (ms % 3600000 === 0) return `${ms / 3600000}h`;
-  return `${Math.round(ms / 60000)}m`;
+  const { days, hours, minutes } = splitDhm(ms);
+  const parts = [];
+  if (days) parts.push(`${days}d`);
+  if (hours) parts.push(`${hours}h`);
+  if (minutes) parts.push(`${minutes}m`);
+  return parts.join(' ') || '?';
 }
 
 /**
@@ -138,9 +165,9 @@ class RestartScheduler {
   async enable({ intervalMs, channelId, updatedBy }) {
     const interval = Math.min(Math.max(intervalMs, getMinIntervalMs()), MAX_INTERVAL_MS);
     const nextFireAt = Date.now() + interval;
-    // Warn window scales down for short dev/test intervals (must stay < interval
-    // or computeNextFire would push the fire time forever). Prod (≥4h) always 30m.
-    const warnMinutes = Math.min(DEFAULT_WARN_MINUTES, (interval / 60000) / 2);
+    // Warn window: interval ≤ 60m → interval/2 (stays < interval, or computeNextFire
+    // would push the fire time forever); longer intervals (all prod) → 30m.
+    const warnMinutes = computeWarnMinutes(interval);
     const config = await this.saveConfig({
       enabled: true,
       intervalMs: interval,

@@ -14330,7 +14330,7 @@ Your server is now ready for Tycoons gameplay!`;
             return { content: '❌ Access denied. This feature is restricted.' };
           }
 
-          const { getRestartScheduler, formatInterval, splitDhm, getMinIntervalMs, MIN_INTERVAL_MS } =
+          const { getRestartScheduler, formatInterval, getMinIntervalMs, MIN_INTERVAL_MS } =
             await import('./src/monitoring/restartScheduler.js');
           const scheduler = getRestartScheduler(client);
           const config = await scheduler.loadConfig();
@@ -14338,9 +14338,11 @@ Your server is now ready for Tycoons gameplay!`;
           const currentStatus = config?.enabled
             ? `Currently ✅ enabled — every ${formatInterval(config.intervalMs)}`
             : 'Currently ⏹️ disabled';
-          const { days, hours, minutes } = splitDhm(config?.intervalMs);
 
-          // Modal cap is 5 top-level components: mode + 3 interval inputs + channel
+          // Modal cap is 5 top-level components: mode + 3 interval inputs + channel.
+          // Interval inputs are deliberately NOT prefilled: a prefilled "4" in hours
+          // plus a typed "3" in minutes silently combined into 4h3m (live incident,
+          // 2026-07-06). What you type IS the whole interval; all-blank keeps current.
           const modalComponents = [
             {
               type: 18, // Label
@@ -14359,13 +14361,12 @@ Your server is now ready for Tycoons gameplay!`;
             {
               type: 18, // Label
               label: 'Restart every… days',
-              description: '0-30 days (leave empty to skip)',
+              description: '0-30 days. Fields combine; leave ALL blank to keep current',
               component: {
                 type: 4, // Text Input
                 custom_id: 'sched_days',
                 style: 1,
-                placeholder: '1',
-                ...(days ? { value: String(days) } : {}),
+                placeholder: '0',
                 max_length: 2,
                 required: false
               }
@@ -14379,7 +14380,6 @@ Your server is now ready for Tycoons gameplay!`;
                 custom_id: 'sched_hours',
                 style: 1,
                 placeholder: '0',
-                ...(hours ? { value: String(hours) } : {}),
                 max_length: 2,
                 required: false
               }
@@ -14393,7 +14393,6 @@ Your server is now ready for Tycoons gameplay!`;
                 custom_id: 'sched_minutes',
                 style: 1,
                 placeholder: '0',
-                ...(minutes ? { value: String(minutes) } : {}),
                 max_length: 2,
                 required: false
               }
@@ -51415,7 +51414,7 @@ Your server is now ready for Tycoons gameplay!`;
           if (comp.custom_id === 'sched_channel') warnChannelId = comp.values?.[0] || null;
         }
 
-        const { getRestartScheduler, combineDhm, formatInterval, getMinIntervalMs, MAX_INTERVAL_MS } =
+        const { getRestartScheduler, combineDhm, formatInterval, formatWarnWindow, getMinIntervalMs, MAX_INTERVAL_MS } =
           await import('./src/monitoring/restartScheduler.js');
         const scheduler = getRestartScheduler(client);
 
@@ -51473,7 +51472,7 @@ Your server is now ready for Tycoons gameplay!`;
               components: [
                 { type: 10, content: `## 🌙 Scheduled Auto-Restart\n✅ **Enabled** by <@${userId}>` },
                 { type: 14 },
-                { type: 10, content: `**Interval:** every ${formatInterval(config.intervalMs)} (recurs until disabled)\n**Next restart:** <t:${fireEpoch}:F> — <t:${fireEpoch}:R>\n**Warning:** <#${config.channelId}> gets a ping + Cancel button ${config.warnMinutes >= 1 ? Math.round(config.warnMinutes) + ' min' : Math.round(config.warnMinutes * 60) + 's'} before each restart\n-# Resets the V8 heap before it drifts to the OOM ceiling (RaP 0903). Survives restarts. ~50s downtime per cycle.` }
+                { type: 10, content: `**Interval:** every ${formatInterval(config.intervalMs)} (recurs until disabled)\n**Next restart:** <t:${fireEpoch}:F> — <t:${fireEpoch}:R>\n**Warning:** <#${config.channelId}> gets a ping + Cancel button ${formatWarnWindow(config.warnMinutes)} before each restart\n-# Resets the V8 heap before it drifts to the OOM ceiling (RaP 0903). Survives restarts. ~50s downtime per cycle.` }
               ]
             }]
           }

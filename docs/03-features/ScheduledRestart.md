@@ -15,10 +15,10 @@ Prod (448MB Lightsail, V8 heap capped at 320MB) accumulates heap drift and OOM-c
 | Field | Component | Notes |
 |---|---|---|
 | Schedule | String Select | `✅ Enable / Update` or `⏹️ Disable` (description shows current state) |
-| Restart every… days / hours / minutes | 3× Text Input | Whole numbers, blanks = 0, combined via `combineDhm()` (same pattern as the Custom Action schedule modal — no format parsing). All three blank keeps the current interval. **Min 4h on prod** (restart-loop guard); **dev/test allow 1m** for flow testing (`getMinIntervalMs()`). Max 30d |
+| Restart every… days / hours / minutes | 3× Text Input | Whole numbers, blanks = 0, combined via `combineDhm()` (same pattern as the Custom Action schedule modal — no format parsing). All three blank keeps the current interval. **Never prefilled** — a prefilled `4` in hours plus a typed `3` in minutes silently produced a 4h3m interval (2026-07-06 live incident); what you type is the whole interval. **Min 4h on prod** (restart-loop guard); **dev/test allow 1m** for flow testing (`getMinIntervalMs()`). Max 30d |
 | Warning channel | Channel Select | Where the pre-restart warning posts. Defaults to the health-monitor channel (`1420926549921763339`) |
 
-The warn window scales for short dev/test intervals: `warnMinutes = min(30, interval/2)` — a 1m test interval warns 30s ahead. Prod intervals (≥4h) always get the full 30-minute warning. (Modals cap at 5 top-level components, which is why current status lives in the select's description rather than a Text Display.)
+The warn window follows an explicit rule (`computeWarnMinutes()`): **interval ≤ 60 min → warn at interval/2** (a 3m test interval warns 90s ahead), **else the standard 30 min**. Prod intervals (≥4h) always get the full 30-minute warning. Displays use `formatWarnWindow()` (`90s`, not a rounded "2 min") and `formatInterval()` composes d/h/m (`4h 3m`, never a flat `243m`). (Modals cap at 5 top-level components, which is why current status lives in the select's description rather than a Text Display.)
 
 On submit, a **non-ephemeral** Components V2 summary posts in the channel the Data menu was used in (interval, next restart timestamps, warning channel). The schedule recurs from submission time in perpetuity until disabled, and **persists across restarts** — including the restarts it causes itself.
 

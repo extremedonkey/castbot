@@ -9,7 +9,9 @@ import {
   combineDhm,
   splitDhm,
   formatInterval,
+  formatWarnWindow,
   computeNextFire,
+  computeWarnMinutes,
   isCancelCurrent,
   getMinIntervalMs,
   MIN_INTERVAL_MS,
@@ -21,6 +23,29 @@ import {
 const H = 3600000;
 const D = 24 * H;
 const M = 60000;
+
+describe('RestartScheduler — computeWarnMinutes (warn-window rule)', () => {
+  it('interval ≤ 60 min → warn at interval/2 (3m interval → 90s warning)', () => {
+    assert.equal(computeWarnMinutes(3 * M), 1.5);   // Reece's example: 90s
+    assert.equal(computeWarnMinutes(1 * M), 0.5);   // dev floor: 30s
+    assert.equal(computeWarnMinutes(40 * M), 20);
+    assert.equal(computeWarnMinutes(60 * M), 30);   // boundary: 60m/2 == 30
+  });
+
+  it('interval > 60 min → standard 30 min', () => {
+    assert.equal(computeWarnMinutes(61 * M), 30);
+    assert.equal(computeWarnMinutes(243 * M), 30);  // the 243m config from live testing
+    assert.equal(computeWarnMinutes(D), 30);
+  });
+
+  it('formatWarnWindow renders the window honestly', () => {
+    assert.equal(formatWarnWindow(30), '30 min');
+    assert.equal(formatWarnWindow(1.5), '90s');     // NOT "2 min"
+    assert.equal(formatWarnWindow(0.5), '30s');
+    assert.equal(formatWarnWindow(2.5), '2m 30s');
+    assert.equal(formatWarnWindow(20), '20 min');
+  });
+});
 
 describe('RestartScheduler — combineDhm (modal Days/Hours/Minutes inputs)', () => {
   it('combines days + hours + minutes', () => {
@@ -52,10 +77,13 @@ describe('RestartScheduler — combineDhm (modal Days/Hours/Minutes inputs)', ()
     assert.deepEqual(splitDhm(null), { days: 0, hours: 0, minutes: 0 });
   });
 
-  it('formatInterval renders combined values', () => {
+  it('formatInterval composes d/h/m so mixed intervals are unmistakable', () => {
     assert.equal(formatInterval(combineDhm('1', '', '')), '1d');
     assert.equal(formatInterval(combineDhm('', '12', '')), '12h');
-    assert.equal(formatInterval(combineDhm('', '', '90')), '90m');
+    assert.equal(formatInterval(combineDhm('', '', '90')), '1h 30m');
+    // The live 243m incident: 4h (prefilled) + 3m (typed) must read as "4h 3m", not "243m"
+    assert.equal(formatInterval(combineDhm('', '4', '3')), '4h 3m');
+    assert.equal(formatInterval(combineDhm('1', '2', '30')), '1d 2h 30m');
   });
 });
 
