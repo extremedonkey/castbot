@@ -1101,7 +1101,12 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setCustomId('prod_ultrathink_monitor')
       .setLabel('Ultramonitor')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🌈')
+      .setEmoji('🌈'),
+    new ButtonBuilder()
+      .setCustomId('restart_scheduler')
+      .setLabel('Auto-Restart')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🌙')
   ];
 
   // Data Actions section buttons (DST + Refresh Tips + Import)
@@ -1834,6 +1839,15 @@ client.once('ready', async () => {
     getProdWatchdog(client).start();
   } catch (err) {
     console.error('[ProdWatchdog] Failed to start:', err.message);
+  }
+
+  // Restart scheduler — planned, cancellable heap-reset restarts (RaP 0904). Ships disabled;
+  // configured via Data menu → Auto-Restart. Re-arms from playerData environmentConfig.
+  try {
+    const { getRestartScheduler } = await import('./src/monitoring/restartScheduler.js');
+    await getRestartScheduler(client).restoreFromConfig();
+  } catch (err) {
+    console.error('[RestartScheduler] Failed to init:', err.message);
   }
 
   // Dev-only: Log test coverage scan
@@ -14388,6 +14402,101 @@ Your server is now ready for Tycoons gameplay!`;
           return {
             type: InteractionResponseType.MODAL,
             data: modal.toJSON()
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'restart_scheduler') {
+      // Scheduled Auto-Restart config modal (RaP 0904 / ScheduledRestart.md)
+      return ButtonHandlerFactory.create({
+        id: 'restart_scheduler',
+        updateMessage: false,
+        ephemeral: true,
+        handler: async (context) => {
+          // Same restriction as the rest of the Data menu
+          if (context.userId !== '391415444084490240') {
+            return { content: '❌ Access denied. This feature is restricted.' };
+          }
+
+          const { getRestartScheduler, formatInterval } = await import('./src/monitoring/restartScheduler.js');
+          const scheduler = getRestartScheduler(client);
+          const config = await scheduler.loadConfig();
+
+          const statusText = config?.enabled
+            ? `### Current: ✅ Enabled\nEvery **${formatInterval(config.intervalMs)}** · next restart <t:${Math.floor((config.nextFireAt || 0) / 1000)}:R>\nWarning → <#${config.channelId}> 30 min prior, with a Cancel button.`
+            : `### Current: ⏹️ Disabled\nWhen enabled, CastBot restarts itself every interval to reset the V8 heap (OOM prevention), warning 30 min prior with a Cancel button.`;
+
+          const modalComponents = [
+            { type: 10, content: statusText }, // Text Display
+            {
+              type: 18, // Label
+              label: 'Schedule',
+              component: {
+                type: 3, // String Select
+                custom_id: 'sched_mode',
+                required: true,
+                options: [
+                  { label: 'Enable / Update', value: 'enable', description: 'Restart every interval from now', emoji: { name: '✅' }, default: true },
+                  { label: 'Disable', value: 'disable', description: 'Stop scheduled restarts', emoji: { name: '⏹️' } }
+                ]
+              }
+            },
+            {
+              type: 18, // Label
+              label: 'Restart every…',
+              description: 'e.g. 1d (every day), 12h, 240m — minimum 4h',
+              component: {
+                type: 4, // Text Input
+                custom_id: 'sched_interval',
+                style: 1, // Short
+                placeholder: '1d',
+                value: config?.intervalMs ? formatInterval(config.intervalMs) : '1d',
+                max_length: 8,
+                required: false
+              }
+            },
+            {
+              type: 18, // Label
+              label: 'Warning channel',
+              description: 'Where the 30-min warning (with Cancel button) is posted',
+              component: {
+                type: 8, // Channel Select
+                custom_id: 'sched_channel',
+                required: false,
+                ...(config?.channelId ? { default_values: [{ id: config.channelId, type: 'channel' }] } : {})
+              }
+            }
+          ];
+
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: 'restart_sched_modal',
+              title: '🌙 Scheduled Auto-Restart',
+              components: modalComponents
+            }
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('restart_sched_cancel_')) {
+      // Cancel button on the pre-restart warning message (public, admin-gated)
+      return ButtonHandlerFactory.create({
+        id: 'restart_sched_cancel',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true, // edit the warning message in place
+        handler: async (context) => {
+          const { getRestartScheduler } = await import('./src/monitoring/restartScheduler.js');
+          const epochSec = parseInt(context.customId.split('_').pop(), 10);
+          const result = await getRestartScheduler(client).cancelTonight(context.userId, epochSec);
+          const content = result.canceled
+            ? `## ✅ Restart Canceled\nCanceled by <@${context.userId}>. Next scheduled restart: <t:${Math.floor(result.nextFireAt / 1000)}:F> (<t:${Math.floor(result.nextFireAt / 1000)}:R>).`
+            : `## ⌛ Warning Expired\nThis warning is no longer active — no restart is armed for it.`;
+          return {
+            components: [{
+              type: 17, // Container
+              accent_color: result.canceled ? 0x27ae60 : 0x95a5a6,
+              components: [{ type: 10, content }]
+            }]
           };
         }
       })(req, res, client);
@@ -51328,6 +51437,96 @@ Your server is now ready for Tycoons gameplay!`;
             content: `❌ Error setting schedule: ${error.message}`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
+        });
+      }
+
+    } else if (custom_id === 'restart_sched_modal') {
+      // Scheduled Auto-Restart config submission (RaP 0904 / ScheduledRestart.md)
+      try {
+        const channelId = req.body.channel_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+
+        if (userId !== '391415444084490240') {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: '❌ Access denied.', flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+
+        // Extract Label-wrapped inputs (type 18 rows)
+        let mode = 'enable', intervalRaw = '', warnChannelId = null;
+        for (const row of (req.body.data.components || [])) {
+          if (row?.type !== 18 || !row.component) continue;
+          const comp = row.component;
+          if (comp.custom_id === 'sched_mode') mode = comp.values?.[0] || 'enable';
+          if (comp.custom_id === 'sched_interval') intervalRaw = (comp.value || '').trim();
+          if (comp.custom_id === 'sched_channel') warnChannelId = comp.values?.[0] || null;
+        }
+
+        const { getRestartScheduler, parseInterval, formatInterval, MIN_INTERVAL_MS, MAX_INTERVAL_MS } =
+          await import('./src/monitoring/restartScheduler.js');
+        const scheduler = getRestartScheduler(client);
+
+        if (mode === 'disable') {
+          await scheduler.disable(userId);
+          console.log(`[RestartScheduler] ⏹️ Disabled via modal by ${userId}`);
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              flags: (1 << 15), // non-ephemeral summary in the parent channel
+              components: [{
+                type: 17,
+                accent_color: 0x95a5a6,
+                components: [{ type: 10, content: `## 🌙 Scheduled Auto-Restart\n⏹️ **Disabled** by <@${userId}>. No automatic restarts are scheduled.` }]
+              }]
+            }
+          });
+        }
+
+        // Enable / Update
+        const existing = await scheduler.loadConfig();
+        const intervalMs = intervalRaw ? parseInterval(intervalRaw) : (existing?.intervalMs || null);
+        if (!intervalMs) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: `❌ Couldn't parse interval \`${intervalRaw}\`. Use formats like \`1d\`, \`12h\`, \`240m\`.`, flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+        if (intervalMs < MIN_INTERVAL_MS || intervalMs > MAX_INTERVAL_MS) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: `❌ Interval \`${intervalRaw}\` out of range — minimum **4h** (restart-loop guard), maximum **30d**.`, flags: InteractionResponseFlags.EPHEMERAL }
+          });
+        }
+
+        const config = await scheduler.enable({
+          intervalMs,
+          channelId: warnChannelId || existing?.channelId,
+          updatedBy: userId
+        });
+
+        const fireEpoch = Math.floor(config.nextFireAt / 1000);
+        console.log(`[RestartScheduler] ✅ Enabled via modal by ${userId}: every ${formatInterval(config.intervalMs)}, warn → #${config.channelId}`);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15), // non-ephemeral summary in the parent channel
+            components: [{
+              type: 17,
+              accent_color: 0x27ae60,
+              components: [
+                { type: 10, content: `## 🌙 Scheduled Auto-Restart\n✅ **Enabled** by <@${userId}>` },
+                { type: 14 },
+                { type: 10, content: `**Interval:** every ${formatInterval(config.intervalMs)} (recurs until disabled)\n**Next restart:** <t:${fireEpoch}:F> — <t:${fireEpoch}:R>\n**Warning:** <#${config.channelId}> gets a ping + Cancel button 30 min before each restart\n-# Resets the V8 heap before it drifts to the OOM ceiling (RaP 0904). Survives restarts. ~50s downtime per cycle.` }
+              ]
+            }]
+          }
+        });
+      } catch (error) {
+        console.error('[RestartScheduler] Modal submit error:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { content: `❌ Error updating schedule: ${error.message}`, flags: InteractionResponseFlags.EPHEMERAL }
         });
       }
 

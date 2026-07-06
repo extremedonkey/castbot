@@ -343,7 +343,7 @@ export class HealthMonitor {
           const gmt8 = new Date(d.getTime() + 8 * 3600000);
           const dateStr = gmt8.toISOString().replace('T', ' ').slice(0, 19);
           const unixSec = Math.floor(r.timestamp / 1000);
-          return `<t:${unixSec}:f> — <t:${unixSec}:R>`;
+          return `<t:${unixSec}:f> — <t:${unixSec}:R>${r.planned ? ' 🌙 planned' : ''}`;
         });
         components.push(
           { type: 14 },

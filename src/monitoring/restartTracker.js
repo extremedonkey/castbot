@@ -27,7 +27,17 @@ export async function recordRestart() {
       }
     }
 
-    history.push({ timestamp: Date.now() });
+    // If the RestartScheduler left a fresh planned-restart marker, label this
+    // entry so Ultrathink can tell planned restarts from crashes (RaP 0904)
+    let planned = false;
+    const markerPath = path.join(__dirname, '..', '..', 'logs', 'planned-restart.json');
+    try {
+      const marker = JSON.parse(await fs.readFile(markerPath, 'utf8'));
+      if (marker?.at && Date.now() - marker.at < 5 * 60 * 1000) planned = true;
+      await fs.unlink(markerPath);
+    } catch { /* no marker — normal (crash or manual restart) */ }
+
+    history.push(planned ? { timestamp: Date.now(), planned: true } : { timestamp: Date.now() });
 
     // Keep only the last MAX_ENTRIES
     if (history.length > MAX_ENTRIES) {

@@ -504,6 +504,7 @@ When a feature is **deployed to production and working**, move/rename its doc in
 - **🌍 INFRASTRUCTURE ARCHITECTURE** → [docs/infrastructure-security/InfrastructureArchitecture.md](docs/infrastructure-security/InfrastructureArchitecture.md)
 - **🧪 TEST INSTANCE (BLUE/GREEN)** → [docs/03-features/TestInstanceBlueGreen.md](docs/03-features/TestInstanceBlueGreen.md) - castbot-blue always-on staging box, `npm run deploy-test`, Restart Prod button + ProdWatchdog, future flip
 - **🎯 PRODUCTION MONITORING** → [docs/infrastructure-security/ProductionMonitoring.md](docs/infrastructure-security/ProductionMonitoring.md)
+- **🌙 SCHEDULED AUTO-RESTART** → [docs/03-features/ScheduledRestart.md](docs/03-features/ScheduledRestart.md) - Planned, cancellable heap-reset restarts (Data menu → Auto-Restart; T-30 warning + Cancel button; ships disabled). Module: [restartScheduler.js](src/monitoring/restartScheduler.js). Design: [RaP 0904](docs/01-RaP/0904_20260706_MemoryFootprint_Analysis.md)
 - **📊 ANALYTICS** → [docs/infrastructure-security/Analytics.md](docs/infrastructure-security/Analytics.md)
 - **📂 CHANNEL ARCHIVE** → [docs/03-features/ChannelArchive.md](docs/03-features/ChannelArchive.md) - Archive a channel/category's full history as on-Discord HTML (rate-limit-safe REST fetch, type-13 file, htmlpreview link). Code: [channelExportFetcher.js](channelExportFetcher.js), [channelExport.js](channelExport.js)
 

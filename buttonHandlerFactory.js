@@ -713,6 +713,23 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'analytics'
   },
+  'restart_scheduler': {
+    label: 'Auto-Restart',
+    description: 'Configure scheduled self-restarts (heap reset / OOM prevention)',
+    emoji: '🌙',
+    style: 'Secondary',
+    parent: 'data_admin',
+    restrictedUser: '391415444084490240',
+    category: 'analytics'
+  },
+  'restart_sched_cancel_*': {
+    label: 'Cancel This Restart',
+    description: 'Cancels the warned scheduled restart (skips one cycle only)',
+    emoji: '🌙',
+    style: 'Danger',
+    requiresPermission: 'ManageRoles',
+    category: 'analytics'
+  },
 
   // Legacy (in Reece's Stuff)
   'prod_toggle_live_analytics': {

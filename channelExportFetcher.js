@@ -16,6 +16,8 @@
 import 'dotenv/config';
 import fetch from 'node-fetch';
 import sharp from 'sharp';
+// No libvips cache — ~0% hit rate, starves the 448MB prod box (RaP 0904)
+sharp.cache(false);
 
 const BASE = 'https://discord.com/api/v10';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

@@ -207,11 +207,17 @@ Shows actual totals alongside percentages (matches Lightsail dashboard):
    📋 Action: Consider immediate restart
 ```
 
+## 🌙 Scheduled Auto-Restart
+
+Planned, cancellable self-restarts that reset the V8 heap before the multi-day drift reaches the OOM ceiling (the every-~3–5-day crash class from [RaP 0904](../01-RaP/0904_20260706_MemoryFootprint_Analysis.md)). Configured via Data menu → **🌙 Auto-Restart** (modal: enable/disable, interval like `1d`, warning channel). Thirty minutes before each restart, the warning channel gets a Components V2 message that pings Reece with a **Cancel** button; at T+0 the bot cleanly exits and PM2 autorestart revives it in ~50s. The Ultrathink restart history labels these `🌙 planned`. Ships disabled; nine runaway-state guards (min interval 4h, no-warning→no-restart, supervision gating, etc.). Full reference: [ScheduledRestart.md](../03-features/ScheduledRestart.md).
+
 ## 📋 PM2 Error Logger
 
 ### Overview
 
 The PM2 Error Logger provides automated monitoring of PM2 process logs with real-time error notifications posted directly to Discord. This system operates continuously in both dev and prod environments, ensuring no critical errors go unnoticed.
+
+> **Memory note (2026-07-06, RaP 0904):** local log reads are positional tail reads (`readNewBytes`: fd + byte offset, 512KB cap) — the logger no longer materializes whole log files every 60s. Positions are byte-based (`_unit: 'bytes'` in `logs/pm2-positions.json`); legacy string-length positions auto-migrate with one silent re-baseline tick.
 
 **Key Features:**
 - **Automated Monitoring**: Checks PM2 logs every 60 seconds

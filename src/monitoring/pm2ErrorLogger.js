@@ -105,25 +105,59 @@ export class PM2ErrorLogger {
   }
 
   /**
+   * Read only the bytes appended to a file since `position` (byte offset).
+   * Never materializes the whole file: reads at most TAIL_READ_CAP bytes via
+   * a positional fd read. Rotation (file shrunk below position) resets to 0.
+   * Returns { text, newPosition } or null if the file doesn't exist.
+   */
+  readNewBytes(filePath, position) {
+    if (!fs.existsSync(filePath)) return null;
+    const fd = fs.openSync(filePath, 'r');
+    try {
+      const size = fs.fstatSync(fd).size;
+      let start = position;
+      if (size < start) {
+        console.log(`[PM2Logger] 🔄 Log rotation detected on ${path.basename(filePath)} - resetting position`);
+        start = 0;
+      }
+      if (size === start) return { text: '', newPosition: size };
+      // Downstream keeps at most the last 50 lines — never read more than the cap
+      const TAIL_READ_CAP = 512 * 1024;
+      if (size - start > TAIL_READ_CAP) start = size - TAIL_READ_CAP;
+      const buf = Buffer.alloc(size - start);
+      const bytesRead = fs.readSync(fd, buf, 0, size - start, start);
+      return { text: buf.toString('utf8', 0, bytesRead), newPosition: size };
+    } finally {
+      fs.closeSync(fd);
+    }
+  }
+
+  /**
    * Read local PM2 logs (dev)
    */
   async readLogsLocal(config, positions) {
     const logs = [];
 
+    // One-time migration: positions used to be JS string lengths (post-UTF-8 decode);
+    // they are now byte offsets. Re-baseline to current file sizes and skip this tick.
+    if (positions._unit !== 'bytes') {
+      try {
+        positions.error = fs.existsSync(config.error) ? fs.statSync(config.error).size : 0;
+        positions.out = fs.existsSync(config.out) ? fs.statSync(config.out).size : 0;
+        positions._unit = 'bytes';
+        console.log('[PM2Logger] 📐 Migrated log positions to byte offsets (re-baselined)');
+      } catch (e) {
+        console.error('[PM2Logger] Position migration failed:', e.message);
+      }
+      return logs;
+    }
+
     // Read error log
     try {
-      if (fs.existsSync(config.error)) {
-        const errorContent = fs.readFileSync(config.error, 'utf8');
-
-        // Detect log rotation - if file size < last position, log was rotated
-        if (errorContent.length < positions.error) {
-          console.log('[PM2Logger] 🔄 Log rotation detected on error log - resetting position');
-          positions.error = 0;
-        }
-
-        if (errorContent.length > positions.error) {
-          const newErrors = errorContent.slice(positions.error);
-          const errorLines = newErrors.split('\n')
+      const errorRead = this.readNewBytes(config.error, positions.error);
+      if (errorRead) {
+        if (errorRead.text.length > 0) {
+          const errorLines = errorRead.text.split('\n')
             .filter(line => line.trim() &&
               !line.includes('ExperimentalWarning') &&
               !line.includes('--trace-warnings'))
@@ -133,8 +167,8 @@ export class PM2ErrorLogger {
             logs.push('=== ERRORS ===');
             logs.push(...errorLines);
           }
-          positions.error = errorContent.length;
         }
+        positions.error = errorRead.newPosition;
       }
     } catch (e) {
       console.error('[PM2Logger] Error reading PM2 error log:', e);
@@ -142,18 +176,10 @@ export class PM2ErrorLogger {
 
     // Read stdout for critical patterns only
     try {
-      if (fs.existsSync(config.out)) {
-        const outContent = fs.readFileSync(config.out, 'utf8');
-
-        // Detect log rotation - if file size < last position, log was rotated
-        if (outContent.length < positions.out) {
-          console.log('[PM2Logger] 🔄 Log rotation detected on output log - resetting position');
-          positions.out = 0;
-        }
-
-        if (outContent.length > positions.out) {
-          const newOut = outContent.slice(positions.out);
-          const criticalLines = newOut.split('\n')
+      const outRead = this.readNewBytes(config.out, positions.out);
+      if (outRead) {
+        if (outRead.text.length > 0) {
+          const criticalLines = outRead.text.split('\n')
             .filter(line =>
               line.trim() && (
                 line.includes('ERROR') ||
@@ -173,8 +199,8 @@ export class PM2ErrorLogger {
             logs.push('=== CRITICAL OUTPUT ===');
             logs.push(...criticalLines);
           }
-          positions.out = outContent.length;
         }
+        positions.out = outRead.newPosition;
       }
     } catch (e) {
       console.error('[PM2Logger] Error reading PM2 output log:', e);

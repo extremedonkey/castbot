@@ -1,5 +1,7 @@
 import { ChannelType, PermissionFlagsBits } from 'discord.js';
 import sharp from 'sharp';
+// No libvips cache — ~0% hit rate, starves the 448MB prod box (RaP 0904)
+sharp.cache(false);
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';

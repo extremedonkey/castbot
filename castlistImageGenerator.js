@@ -5,6 +5,9 @@
  */
 
 import sharp from 'sharp';
+// libvips' default ~50MB operation cache has a ~0% hit rate for CastBot's unique-per-render
+// images and starves the 448MB prod box (RaP 0904). Idempotent — set at every import site.
+sharp.cache(false);
 import { getTribesForCastlist } from './castlistDataAccess.js';
 import { getGuildPronouns, getGuildTimezones, getPlayer, getDSTOffset, loadDSTState } from './storage.js';
 import { castlistManager } from './castlistManager.js';
