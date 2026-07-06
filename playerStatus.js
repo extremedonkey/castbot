@@ -5,15 +5,18 @@
  * (application lifecycle, admin casting decision, player placement response, withdrawal) are collapsed
  * to a SINGLE most-salient status by walking an ordered registry — FIRST matching `test(signals)` wins.
  *
- * Implemented today — the "committed" states, byte-matched to the legacy `Status:` line
- * (deriveApplicationStatus in castRankingManager.js) so ÜberStatus and that line agree exactly:
- *   ✖️ Withdrawn · 🎉 Accepted Placement · 🚫 Declined Placement · ✅ Cast · 🔄 Alternate · ❌ Not Cast
- *   · ☑️ Application Complete · 📝 New.
+ * Implemented today — the "committed" casting/placement states + Tentative, byte-matched to the legacy
+ * `Status:` line (deriveApplicationStatus in castRankingManager.js) so ÜberStatus and that line agree exactly:
+ *   ✖️ Withdrawn · 🎉 Accepted Placement · 🚫 Declined Placement · ✅ Cast · 🔄 Alternate · ❓ Tentatively Cast
+ *   · ❌ Not Cast · ☑️ Application Complete · 📝 New.
  *
- * Still deferred (parked judgment calls, RaP 0905 §4/§6) — they fall THROUGH to complete/new for now:
- *   ❓ Tentative, and the "still deciding" vote-progression cluster (☑️ Reviewed / 🗳️ Scoring / 📝 Awaiting
- *   Votes). Add each as ONE registry row (in its precedence slot) when its meaning is settled — never
- *   scatter status logic back into handlers.
+ * DELIBERATELY NOT a status row (Reece's call): "Undecided / Still Deciding" (castingStatus = null). It is
+ * definitionally the same state as ☑️ Application Complete (submitted, no casting decision), so a submitted-
+ * undecided app reads ☑️ Application Complete here; "Undecided" lives only as the Casting Status field + the
+ * Marooning UNDECIDED group.
+ *
+ * Still deferred (RaP 0905 §4/§6) — falls THROUGH to complete/new for now: the vote-progression cluster
+ *   (☑️ Reviewed / 🗳️ Scoring / 📝 Awaiting Votes). Add as ONE registry row when its meaning is settled.
  *
  * Additive: the legacy `deriveApplicationStatus` still powers today's `Status:` line; this engine only
  * drives the 🌈 ÜberStatus scaffold line until it's proven at parity and that line is retired.
@@ -40,8 +43,7 @@ export const STATUS_REGISTRY = [
   // order among these three is cosmetic; it only matters relative to the other stages.
   { id: 'cast',      stage: 1, emoji: '✅', label: 'Cast',                test: (s) => s.castingStatus === 'cast' },
   { id: 'alternate', stage: 1, emoji: '🔄', label: 'Alternate',           test: (s) => s.castingStatus === 'alternative' },
-  // ❓ tentative (Stage 1) is DEFERRED — it slots HERE (between alternate and reject, mirroring
-  //   deriveApplicationStatus) once its meaning is settled. Do NOT add a row until then.
+  { id: 'tentative', stage: 1, emoji: '❓', label: 'Tentatively Cast',     test: (s) => s.castingStatus === 'tentative' },
   { id: 'reject',    stage: 1, emoji: '❌', label: 'Not Cast',            test: (s) => s.castingStatus === 'reject' },
 
   // Stage 0 lifecycle (the applicant's own journey) — the fall-through once no decision is set.
@@ -51,9 +53,10 @@ export const STATUS_REGISTRY = [
   { id: 'complete',  stage: 0, emoji: '☑️', label: 'Application Complete', test: (s) => !!s.completedAt || s.submitted },
   { id: 'new',       stage: 0, emoji: '📝', label: 'New',                  test: (s) => s.hasApplication },
 
-  // ── STILL DEFERRED (RaP 0905 §4/§6) — the "Still Deciding" cluster; falls through to complete/new: ──
+  // ── STILL DEFERRED (RaP 0905 §4/§6) — the vote-progression cluster; falls through to complete/new: ──
   //   Stage 0.5 votes: ☑️ Reviewed (≥2 votes) / 🗳️ Scoring (≥1 vote) / 📝 Awaiting Votes.
-  //   These + ❓ Tentative are the parked judgment calls — implement one row each when decided.
+  //   NOT here on purpose: "Undecided" (castingStatus null) — Reece's call to leave it AS Application
+  //   Complete rather than add a same-population row (see the module header).
 ];
 
 /**

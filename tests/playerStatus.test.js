@@ -33,12 +33,12 @@ function deriveApplicationStatus(app = {}, liveChannelName = '') {
 describe('Status Engine — registry shape', () => {
   it('lists the committed rows in precedence order (withdrawn ▸ placement ▸ casting ▸ lifecycle)', () => {
     assert.deepEqual(STATUS_REGISTRY.map(r => r.id),
-      ['withdrawn', 'accepted', 'declined', 'cast', 'alternate', 'reject', 'complete', 'new']);
+      ['withdrawn', 'accepted', 'declined', 'cast', 'alternate', 'tentative', 'reject', 'complete', 'new']);
   });
-  it('does NOT yet include the deferred rows (tentative / votes)', () => {
+  it('does NOT include the deferred vote rows, nor an Undecided row (Reece: Undecided = Application Complete)', () => {
     const ids = STATUS_REGISTRY.map(r => r.id);
-    for (const deferred of ['tentative', 'reviewed', 'scoring', 'awaiting']) {
-      assert.ok(!ids.includes(deferred), `${deferred} must stay deferred`);
+    for (const absent of ['undecided', 'reviewed', 'scoring', 'awaiting']) {
+      assert.ok(!ids.includes(absent), `${absent} must not be a status row`);
     }
   });
 });
@@ -98,8 +98,12 @@ describe('Status Engine — deriveStatus precedence', () => {
   it('a casting decision still outranks a submitted (☑️) channel', () => {
     assert.equal(deriveStatus({ submitted: true, castingStatus: 'cast', hasApplication: true }).statusId, 'cast');
   });
-  it('deferred tentative falls THROUGH to complete (not a casting row yet)', () => {
-    assert.equal(deriveStatus({ castingStatus: 'tentative', completedAt: 'x', hasApplication: true }).statusId, 'complete');
+  it('tentative resolves to the tentative casting row (outranks complete)', () => {
+    assert.equal(deriveStatus({ castingStatus: 'tentative', completedAt: 'x', hasApplication: true }).statusId, 'tentative');
+  });
+  it('undecided (castingStatus null) is NOT a distinct row — a submitted app reads complete', () => {
+    assert.equal(deriveStatus({ completedAt: 'x', hasApplication: true }).statusId, 'complete');
+    assert.equal(deriveStatus({ submitted: true, hasApplication: true }).statusId, 'complete');
   });
   it('no application → none', () => {
     assert.deepEqual(deriveStatus({}), { statusId: 'none', label: 'No application', emoji: '—', stage: null, matched: null });
@@ -159,6 +163,7 @@ describe('Status Engine — parity with legacy deriveApplicationStatus', () => {
     { app: { placementResponse: 'declined' },                               chan: '❌c' },  // Declined
     { app: { castingStatus: 'cast', completedAt: 'x' },                     chan: '☑️c' },  // Cast
     { app: { castingStatus: 'alternative' },                                chan: '📝c' },  // Alternate
+    { app: { castingStatus: 'tentative', completedAt: 'x' },                chan: '☑️c' },  // Tentatively Cast
     { app: { castingStatus: 'reject', completedAt: 'x' },                   chan: '☑️c' },  // Not Cast
   ];
   it('agrees (emoji + label) on every committed state', () => {
@@ -169,18 +174,18 @@ describe('Status Engine — parity with legacy deriveApplicationStatus', () => {
       assert.equal(neu.label, old.name, `label for ${JSON.stringify(app)}`);
     }
   });
-  it('KNOWN deferred gap: tentative + vote-only diverge (engine falls back to lifecycle)', () => {
-    // Tentative — old says Tentatively Cast; engine falls to Complete.
-    const tOld = deriveApplicationStatus({ castingStatus: 'tentative', completedAt: 'x' }, '☑️c');
-    const tNew = getApplicationStatus({ castingStatus: 'tentative', completedAt: 'x' }, '☑️c');
-    assert.equal(tOld.name, 'Tentatively Cast');
-    assert.equal(tNew.statusId, 'complete');
-    assert.notEqual(tNew.label, tOld.name);
-    // Votes only — old says Reviewed; engine falls to Complete.
+  it('KNOWN deferred gap: vote-only + undecided diverge (engine falls back to lifecycle)', () => {
+    // Votes only — old ladder says Reviewed; engine has no vote row → falls to Complete (deferred cluster).
     const vOld = deriveApplicationStatus({ rankings: { a: 5, b: 4 }, completedAt: 'x' }, '☑️c');
     const vNew = getApplicationStatus({ rankings: { a: 5, b: 4 }, completedAt: 'x' }, '☑️c');
     assert.equal(vOld.name, 'Reviewed');
     assert.equal(vNew.statusId, 'complete');
+    // Undecided (no casting decision, no votes) — old ladder says Awaiting Votes; engine reads Complete
+    // (Reece's call: Undecided is NOT a distinct row, it IS Application Complete).
+    const uOld = deriveApplicationStatus({ completedAt: 'x' }, '☑️c');
+    const uNew = getApplicationStatus({ completedAt: 'x' }, '☑️c');
+    assert.equal(uOld.name, 'Awaiting Votes');
+    assert.equal(uNew.statusId, 'complete');
   });
 });
 

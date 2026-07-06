@@ -390,11 +390,11 @@ export async function generateSeasonAppRankingUI({
   let oldInfoBlock = `**Name:** ${nameDisplay}${demographicInfo}\n**Average Score:** ${infoAvg} (${infoRankings.length} vote${infoRankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${infoCastingText}\n**App:** <#${currentApp.channelId}>`;
   if (dncSummaryText) oldInfoBlock += `\n${dncSummaryText}`;
   oldInfoBlock += `\nStatus: ${derivedStatus.icon} ${derivedStatus.name}`;
-  // 🌈 ÜberStatus: output of the unified Status Engine (RaP 0905). Now resolves the "committed" states —
-  // ✖️ Withdrawn / 🎉 Accepted / 🚫 Declined / ✅ Cast / 🔄 Alternate / ❌ Not Cast / ☑️ Complete / 📝 New —
-  // byte-matched to the `Status:` line above (parity-tested). ❓ Tentative + the "still deciding" vote
-  // cluster still fall through to Complete/New (deferred). We already hold appRecord + liveChannelName,
-  // so use the app-direct convenience (no re-lookup).
+  // 🌈 ÜberStatus: output of the unified Status Engine (RaP 0905). Resolves the casting/placement states +
+  // Tentative — ✖️ Withdrawn / 🎉 Accepted / 🚫 Declined / ✅ Cast / 🔄 Alternate / ❓ Tentatively Cast /
+  // ❌ Not Cast / ☑️ Complete / 📝 New — byte-matched to the `Status:` line above (parity-tested). "Undecided"
+  // is deliberately NOT a row (it IS Application Complete); the vote cluster still falls through. We already
+  // hold appRecord + liveChannelName, so use the app-direct convenience (no re-lookup).
   const { getApplicationStatus } = await import('./playerStatus.js');
   const uber = getApplicationStatus(appRecord, liveChannelName);
   oldInfoBlock += `\n🌈 ÜberStatus: ${uber.emoji} ${uber.label}`;
