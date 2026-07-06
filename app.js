@@ -14417,47 +14417,78 @@ Your server is now ready for Tycoons gameplay!`;
             return { content: '❌ Access denied. This feature is restricted.' };
           }
 
-          const { getRestartScheduler, formatInterval } = await import('./src/monitoring/restartScheduler.js');
+          const { getRestartScheduler, formatInterval, splitDhm, getMinIntervalMs, MIN_INTERVAL_MS } =
+            await import('./src/monitoring/restartScheduler.js');
           const scheduler = getRestartScheduler(client);
           const config = await scheduler.loadConfig();
+          const devMin = getMinIntervalMs() < MIN_INTERVAL_MS;
+          const currentStatus = config?.enabled
+            ? `Currently ✅ enabled — every ${formatInterval(config.intervalMs)}`
+            : 'Currently ⏹️ disabled';
+          const { days, hours, minutes } = splitDhm(config?.intervalMs);
 
-          const statusText = config?.enabled
-            ? `### Current: ✅ Enabled\nEvery **${formatInterval(config.intervalMs)}** · next restart <t:${Math.floor((config.nextFireAt || 0) / 1000)}:R>\nWarning → <#${config.channelId}> 30 min prior, with a Cancel button.`
-            : `### Current: ⏹️ Disabled\nWhen enabled, CastBot restarts itself every interval to reset the V8 heap (OOM prevention), warning 30 min prior with a Cancel button.`;
-
+          // Modal cap is 5 top-level components: mode + 3 interval inputs + channel
           const modalComponents = [
-            { type: 10, content: statusText }, // Text Display
             {
               type: 18, // Label
               label: 'Schedule',
+              description: currentStatus,
               component: {
                 type: 3, // String Select
                 custom_id: 'sched_mode',
                 required: true,
                 options: [
-                  { label: 'Enable / Update', value: 'enable', description: 'Restart every interval from now', emoji: { name: '✅' }, default: true },
+                  { label: 'Enable / Update', value: 'enable', description: 'Restart every interval from now, in perpetuity', emoji: { name: '✅' }, default: true },
                   { label: 'Disable', value: 'disable', description: 'Stop scheduled restarts', emoji: { name: '⏹️' } }
                 ]
               }
             },
             {
               type: 18, // Label
-              label: 'Restart every…',
-              description: 'e.g. 1d (every day), 12h, 240m — minimum 4h',
+              label: 'Restart every… days',
+              description: '0-30 days (leave empty to skip)',
               component: {
                 type: 4, // Text Input
-                custom_id: 'sched_interval',
-                style: 1, // Short
-                placeholder: '1d',
-                value: config?.intervalMs ? formatInterval(config.intervalMs) : '1d',
-                max_length: 8,
+                custom_id: 'sched_days',
+                style: 1,
+                placeholder: '1',
+                ...(days ? { value: String(days) } : {}),
+                max_length: 2,
+                required: false
+              }
+            },
+            {
+              type: 18, // Label
+              label: 'Restart every… hours',
+              description: '0-23 hours (leave empty to skip)',
+              component: {
+                type: 4, // Text Input
+                custom_id: 'sched_hours',
+                style: 1,
+                placeholder: '0',
+                ...(hours ? { value: String(hours) } : {}),
+                max_length: 2,
+                required: false
+              }
+            },
+            {
+              type: 18, // Label
+              label: 'Restart every… minutes',
+              description: devMin ? '0-59 minutes (dev/test: 1m minimum total)' : '0-59 minutes (prod: 4h minimum total)',
+              component: {
+                type: 4, // Text Input
+                custom_id: 'sched_minutes',
+                style: 1,
+                placeholder: '0',
+                ...(minutes ? { value: String(minutes) } : {}),
+                max_length: 2,
                 required: false
               }
             },
             {
               type: 18, // Label
               label: 'Warning channel',
-              description: 'Where the 30-min warning (with Cancel button) is posted',
+              description: 'Gets the pre-restart warning with the Cancel button',
               component: {
                 type: 8, // Channel Select
                 custom_id: 'sched_channel',
@@ -51454,16 +51485,18 @@ Your server is now ready for Tycoons gameplay!`;
         }
 
         // Extract Label-wrapped inputs (type 18 rows)
-        let mode = 'enable', intervalRaw = '', warnChannelId = null;
+        let mode = 'enable', daysRaw = '', hoursRaw = '', minutesRaw = '', warnChannelId = null;
         for (const row of (req.body.data.components || [])) {
           if (row?.type !== 18 || !row.component) continue;
           const comp = row.component;
           if (comp.custom_id === 'sched_mode') mode = comp.values?.[0] || 'enable';
-          if (comp.custom_id === 'sched_interval') intervalRaw = (comp.value || '').trim();
+          if (comp.custom_id === 'sched_days') daysRaw = (comp.value || '').trim();
+          if (comp.custom_id === 'sched_hours') hoursRaw = (comp.value || '').trim();
+          if (comp.custom_id === 'sched_minutes') minutesRaw = (comp.value || '').trim();
           if (comp.custom_id === 'sched_channel') warnChannelId = comp.values?.[0] || null;
         }
 
-        const { getRestartScheduler, parseInterval, formatInterval, MIN_INTERVAL_MS, MAX_INTERVAL_MS } =
+        const { getRestartScheduler, combineDhm, formatInterval, getMinIntervalMs, MAX_INTERVAL_MS } =
           await import('./src/monitoring/restartScheduler.js');
         const scheduler = getRestartScheduler(client);
 
@@ -51483,19 +51516,23 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
 
-        // Enable / Update
+        // Enable / Update — combine Days/Hours/Minutes; all blank keeps current interval
         const existing = await scheduler.loadConfig();
-        const intervalMs = intervalRaw ? parseInterval(intervalRaw) : (existing?.intervalMs || null);
+        const anyDhm = daysRaw || hoursRaw || minutesRaw;
+        const intervalMs = anyDhm ? combineDhm(daysRaw, hoursRaw, minutesRaw) : (existing?.intervalMs || null);
+        const dhmDisplay = `${daysRaw || 0}d ${hoursRaw || 0}h ${minutesRaw || 0}m`;
         if (!intervalMs) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: { content: `❌ Couldn't parse interval \`${intervalRaw}\`. Use formats like \`1d\`, \`12h\`, \`240m\`.`, flags: InteractionResponseFlags.EPHEMERAL }
+            data: { content: `❌ Couldn't read an interval from \`${dhmDisplay}\` — enter whole numbers in Days/Hours/Minutes (at least one non-zero).`, flags: InteractionResponseFlags.EPHEMERAL }
           });
         }
-        if (intervalMs < MIN_INTERVAL_MS || intervalMs > MAX_INTERVAL_MS) {
+        const minMs = getMinIntervalMs();
+        if (intervalMs < minMs || intervalMs > MAX_INTERVAL_MS) {
+          const minLabel = minMs >= 3600000 ? `${minMs / 3600000}h` : `${minMs / 60000}m`;
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: { content: `❌ Interval \`${intervalRaw}\` out of range — minimum **4h** (restart-loop guard), maximum **30d**.`, flags: InteractionResponseFlags.EPHEMERAL }
+            data: { content: `❌ Interval \`${dhmDisplay}\` out of range — minimum **${minLabel}** (restart-loop guard), maximum **30d**.`, flags: InteractionResponseFlags.EPHEMERAL }
           });
         }
 
@@ -51517,7 +51554,7 @@ Your server is now ready for Tycoons gameplay!`;
               components: [
                 { type: 10, content: `## 🌙 Scheduled Auto-Restart\n✅ **Enabled** by <@${userId}>` },
                 { type: 14 },
-                { type: 10, content: `**Interval:** every ${formatInterval(config.intervalMs)} (recurs until disabled)\n**Next restart:** <t:${fireEpoch}:F> — <t:${fireEpoch}:R>\n**Warning:** <#${config.channelId}> gets a ping + Cancel button 30 min before each restart\n-# Resets the V8 heap before it drifts to the OOM ceiling (RaP 0903). Survives restarts. ~50s downtime per cycle.` }
+                { type: 10, content: `**Interval:** every ${formatInterval(config.intervalMs)} (recurs until disabled)\n**Next restart:** <t:${fireEpoch}:F> — <t:${fireEpoch}:R>\n**Warning:** <#${config.channelId}> gets a ping + Cancel button ${config.warnMinutes >= 1 ? Math.round(config.warnMinutes) + ' min' : Math.round(config.warnMinutes * 60) + 's'} before each restart\n-# Resets the V8 heap before it drifts to the OOM ceiling (RaP 0903). Survives restarts. ~50s downtime per cycle.` }
               ]
             }]
           }

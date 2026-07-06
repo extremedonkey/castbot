@@ -22,23 +22,45 @@
 
 const TAG_USER_ID = '391415444084490240'; // Reece
 const DEFAULT_CHANNEL_ID = '1420926549921763339'; // health monitor channel
-export const MIN_INTERVAL_MS = 4 * 60 * 60 * 1000;  // 4h — restart-loop guard
+export const MIN_INTERVAL_MS = 4 * 60 * 60 * 1000;  // 4h — PROD restart-loop guard
+export const DEV_MIN_INTERVAL_MS = 60 * 1000;        // 1m — dev/test flow testing
 export const MAX_INTERVAL_MS = 30 * 24 * 60 * 60 * 1000; // 30d
 export const DEFAULT_WARN_MINUTES = 30;
 
 /**
- * Parse a human interval like "1d", "12h", "90m" (also "1 d", case-insensitive).
- * Returns ms or null if unparseable. Range is enforced separately so callers
- * can give a specific "too short/long" message.
+ * Environment-aware minimum interval: prod keeps the 4h restart-loop guard;
+ * dev and the test box allow 1 minute so the full warn→fire flow is testable.
  */
-export function parseInterval(input) {
-  const m = String(input ?? '').trim().match(/^(\d+(?:\.\d+)?)\s*([dhm])$/i);
-  if (!m) return null;
-  const value = parseFloat(m[1]);
-  if (!Number.isFinite(value) || value <= 0) return null;
-  const unit = m[2].toLowerCase();
-  const ms = unit === 'd' ? value * 86400000 : unit === 'h' ? value * 3600000 : value * 60000;
-  return Math.round(ms);
+export function getMinIntervalMs() {
+  const isProd = process.env.PRODUCTION === 'TRUE' && process.env.INSTANCE_ROLE !== 'test';
+  return isProd ? MIN_INTERVAL_MS : DEV_MIN_INTERVAL_MS;
+}
+
+/**
+ * Combine the modal's Days/Hours/Minutes text inputs into ms.
+ * Empty/blank fields count as 0; non-numeric or negative input → null;
+ * all-zero → null (callers treat as "no interval given").
+ */
+export function combineDhm(daysStr, hoursStr, minutesStr) {
+  const parse = (s) => {
+    const t = String(s ?? '').trim();
+    if (t === '') return 0;
+    if (!/^\d+$/.test(t)) return null;
+    return parseInt(t, 10);
+  };
+  const d = parse(daysStr), h = parse(hoursStr), m = parse(minutesStr);
+  if (d === null || h === null || m === null) return null;
+  const ms = d * 86400000 + h * 3600000 + m * 60000;
+  return ms > 0 ? ms : null;
+}
+
+/** Split ms into { days, hours, minutes } for prefilling the modal inputs. */
+export function splitDhm(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) return { days: 0, hours: 0, minutes: 0 };
+  const days = Math.floor(ms / 86400000);
+  const hours = Math.floor((ms % 86400000) / 3600000);
+  const minutes = Math.round((ms % 3600000) / 60000);
+  return { days, hours, minutes };
 }
 
 /** Format ms as the same shorthand the modal accepts ("1d", "12h", "90m"). */
@@ -55,8 +77,8 @@ export function formatInterval(ms) {
  * warning window (a restart must always be preceded by the full warning).
  * Pure — exported for tests.
  */
-export function computeNextFire(nowMs, nextFireAt, intervalMs, warnMinutes = DEFAULT_WARN_MINUTES) {
-  const interval = Math.max(intervalMs, MIN_INTERVAL_MS); // corrupted-config clamp
+export function computeNextFire(nowMs, nextFireAt, intervalMs, warnMinutes = DEFAULT_WARN_MINUTES, minIntervalMs = getMinIntervalMs()) {
+  const interval = Math.max(intervalMs, minIntervalMs); // corrupted-config clamp
   let fireAt = Number.isFinite(nextFireAt) && nextFireAt > 0 ? nextFireAt : nowMs + interval;
   if (fireAt > nowMs + MAX_INTERVAL_MS + interval) fireAt = nowMs + interval; // absurd future = reset
   const warnMs = warnMinutes * 60000;
@@ -114,12 +136,15 @@ class RestartScheduler {
    * now ("happens in perpetuity over that interval" anchored at submission).
    */
   async enable({ intervalMs, channelId, updatedBy }) {
-    const interval = Math.min(Math.max(intervalMs, MIN_INTERVAL_MS), MAX_INTERVAL_MS);
+    const interval = Math.min(Math.max(intervalMs, getMinIntervalMs()), MAX_INTERVAL_MS);
     const nextFireAt = Date.now() + interval;
+    // Warn window scales down for short dev/test intervals (must stay < interval
+    // or computeNextFire would push the fire time forever). Prod (≥4h) always 30m.
+    const warnMinutes = Math.min(DEFAULT_WARN_MINUTES, (interval / 60000) / 2);
     const config = await this.saveConfig({
       enabled: true,
       intervalMs: interval,
-      warnMinutes: DEFAULT_WARN_MINUTES,
+      warnMinutes,
       channelId: channelId || DEFAULT_CHANNEL_ID,
       tagUserId: TAG_USER_ID,
       nextFireAt,
@@ -159,7 +184,7 @@ class RestartScheduler {
       this.clearTimers();
       if (!config?.enabled) return;
 
-      if (!Number.isFinite(config.intervalMs) || config.intervalMs < MIN_INTERVAL_MS) {
+      if (!Number.isFinite(config.intervalMs) || config.intervalMs < getMinIntervalMs()) {
         // Corrupted/hand-edited config: refuse to run rather than risk a loop
         console.error(`[RestartScheduler] ⛔ Invalid intervalMs (${config.intervalMs}) — disabling`);
         await this.saveConfig({ enabled: false });

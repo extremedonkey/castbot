@@ -153,16 +153,15 @@ Two different kinds of "memory saving" — **retained** (lowers the resident flo
 
 **Module:** `src/monitoring/restartScheduler.js`, patterned on healthMonitor (config persistence in `playerData.environmentConfig`), prodWatchdog (`channel.send` with Components V2 + `<@user>` ping + working button + `allowedMentions` — proven at `prodWatchdog.js:124-141`), and backupService (chained setTimeout).
 
-**Config UI (per Reece's approval message):** Data menu (`data_admin`) → 🌙 **Auto-Restart** button (Analytics row, next to Ultramonitor) → modal:
-- Text Display: current status (enabled/disabled, interval, next restart, channel)
-- Label + String Select: `Enable / Update schedule` vs `Disable`
-- Label + Text Input: interval — `1d`, `12h`, `90m` formats ("every day / hr / min from now")
+**Config UI (per Reece's approval message + follow-up):** Data menu (`data_admin`) → 🌙 **Auto-Restart** button (Analytics row, next to Ultramonitor) → modal:
+- Label + String Select: `Enable / Update schedule` vs `Disable` (description carries current status — modals cap at 5 top-level components, so no separate Text Display)
+- 3× Label + Text Input: **Days / Hours / Minutes** — same shape and labels as the Custom Action schedule modal, no format parsing (`combineDhm()`). Blank = 0; all blank keeps the current interval
 - Label + Channel Select: warning channel
 
 On submit: **non-ephemeral** Components V2 summary posted in the channel the menu was used in (interval, next restart as `<t:…:F>` / `<t:…:R>`, warning channel, cancel semantics). Recurs in perpetuity from submission time; `nextFireAt` persisted so the schedule **survives restarts** (including its own).
 
 **Runaway-state guards (Reece: "be extra careful… avoid runaway error states"):**
-1. **Minimum interval 4h** — enforced at modal validation AND re-clamped at arm time (a corrupted/hand-edited config can never create a restart loop)
+1. **Minimum interval 4h on prod, 1m on dev/test** (`getMinIntervalMs()`, per Reece's follow-up: "the 4 hour limit isnt gonna work for testing") — enforced at modal validation AND re-clamped at arm time (a corrupted/hand-edited config can never create a restart loop on prod). Warn window scales to `min(30m, interval/2)` so short test intervals still get a proportional warning
 2. **Ships disabled** — `enabled: false` until explicitly configured via the modal
 3. **No warning → no restart** — if the T-30 warning fails to post (channel deleted, missing perms), the cycle is *skipped*, `nextFireAt` advances, error logged. The bot never restarts unannounced
 4. **Boot inside the warn window → push to next cycle** — never restart without the full 30-min warning

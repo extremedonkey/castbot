@@ -6,11 +6,14 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  parseInterval,
+  combineDhm,
+  splitDhm,
   formatInterval,
   computeNextFire,
   isCancelCurrent,
+  getMinIntervalMs,
   MIN_INTERVAL_MS,
+  DEV_MIN_INTERVAL_MS,
   MAX_INTERVAL_MS,
   DEFAULT_WARN_MINUTES
 } from '../src/monitoring/restartScheduler.js';
@@ -19,35 +22,50 @@ const H = 3600000;
 const D = 24 * H;
 const M = 60000;
 
-describe('RestartScheduler — parseInterval', () => {
-  it('parses days, hours, minutes', () => {
-    assert.equal(parseInterval('1d'), D);
-    assert.equal(parseInterval('12h'), 12 * H);
-    assert.equal(parseInterval('240m'), 240 * M);
+describe('RestartScheduler — combineDhm (modal Days/Hours/Minutes inputs)', () => {
+  it('combines days + hours + minutes', () => {
+    assert.equal(combineDhm('1', '0', '0'), D);
+    assert.equal(combineDhm('0', '12', '0'), 12 * H);
+    assert.equal(combineDhm('1', '2', '30'), D + 2 * H + 30 * M);
   });
 
-  it('is case-insensitive and tolerates whitespace', () => {
-    assert.equal(parseInterval(' 2D '), 2 * D);
-    assert.equal(parseInterval('6 H'), 6 * H);
+  it('treats blank fields as zero', () => {
+    assert.equal(combineDhm('', '4', ''), 4 * H);
+    assert.equal(combineDhm('  ', '', '90'), 90 * M);
   });
 
-  it('supports fractional values', () => {
-    assert.equal(parseInterval('1.5d'), 1.5 * D);
+  it('rejects non-numeric and negative input', () => {
+    assert.equal(combineDhm('a', '0', '0'), null);
+    assert.equal(combineDhm('1', '-2', '0'), null);
+    assert.equal(combineDhm('1.5', '0', '0'), null); // whole numbers only
   });
 
-  it('rejects garbage, bare numbers, zero, and negatives', () => {
-    assert.equal(parseInterval('tomorrow'), null);
-    assert.equal(parseInterval('30'), null); // unit required — no ambiguity
-    assert.equal(parseInterval('0h'), null);
-    assert.equal(parseInterval('-4h'), null);
-    assert.equal(parseInterval(''), null);
-    assert.equal(parseInterval(undefined), null);
+  it('all-zero / all-blank → null (no interval given)', () => {
+    assert.equal(combineDhm('0', '0', '0'), null);
+    assert.equal(combineDhm('', '', ''), null);
   });
 
-  it('round-trips with formatInterval', () => {
-    assert.equal(formatInterval(parseInterval('1d')), '1d');
-    assert.equal(formatInterval(parseInterval('12h')), '12h');
-    assert.equal(formatInterval(parseInterval('90m')), '90m');
+  it('round-trips with splitDhm', () => {
+    const ms = combineDhm('2', '5', '45');
+    assert.deepEqual(splitDhm(ms), { days: 2, hours: 5, minutes: 45 });
+    assert.deepEqual(splitDhm(D), { days: 1, hours: 0, minutes: 0 });
+    assert.deepEqual(splitDhm(null), { days: 0, hours: 0, minutes: 0 });
+  });
+
+  it('formatInterval renders combined values', () => {
+    assert.equal(formatInterval(combineDhm('1', '', '')), '1d');
+    assert.equal(formatInterval(combineDhm('', '12', '')), '12h');
+    assert.equal(formatInterval(combineDhm('', '', '90')), '90m');
+  });
+});
+
+describe('RestartScheduler — getMinIntervalMs (env-aware floor)', () => {
+  it('is the 1-minute dev floor outside prod (this test process is not prod)', () => {
+    assert.equal(getMinIntervalMs(), DEV_MIN_INTERVAL_MS);
+  });
+
+  it('prod floor constant remains 4h', () => {
+    assert.equal(MIN_INTERVAL_MS, 4 * H);
   });
 });
 
@@ -85,9 +103,16 @@ describe('RestartScheduler — computeNextFire', () => {
     assert.equal(computeNextFire(now, 0, D), now + D);
   });
 
-  it('clamps a dangerously small interval (restart-loop guard)', () => {
-    const next = computeNextFire(now, now - 10 * M, 1000); // 1s interval — corrupted config
+  it('clamps a dangerously small interval to the PROD floor (restart-loop guard)', () => {
+    // Explicit prod floor — corrupted 1s interval steps at 4h minimum
+    const next = computeNextFire(now, now - 10 * M, 1000, DEFAULT_WARN_MINUTES, MIN_INTERVAL_MS);
     assert.ok(next - now >= MIN_INTERVAL_MS - warnMs, 'steps use at least MIN_INTERVAL_MS');
+  });
+
+  it('dev floor permits 1-minute cadence with a scaled warn window', () => {
+    // 1m interval, 30s warn (as enable() would persist for dev/test)
+    const fireAt = now + M;
+    assert.equal(computeNextFire(now, fireAt, M, 0.5, DEV_MIN_INTERVAL_MS), fireAt);
   });
 
   it('resets an absurdly-far-future fire time back onto the cadence', () => {

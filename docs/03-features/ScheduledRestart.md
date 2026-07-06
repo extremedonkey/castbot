@@ -14,9 +14,11 @@ Prod (448MB Lightsail, V8 heap capped at 320MB) accumulates heap drift and OOM-c
 
 | Field | Component | Notes |
 |---|---|---|
-| Schedule | String Select | `✅ Enable / Update` or `⏹️ Disable` |
-| Restart every… | Text Input | `1d`, `12h`, `240m` formats. **Min 4h** (restart-loop guard), max 30d. Blank keeps the current interval |
+| Schedule | String Select | `✅ Enable / Update` or `⏹️ Disable` (description shows current state) |
+| Restart every… days / hours / minutes | 3× Text Input | Whole numbers, blanks = 0, combined via `combineDhm()` (same pattern as the Custom Action schedule modal — no format parsing). All three blank keeps the current interval. **Min 4h on prod** (restart-loop guard); **dev/test allow 1m** for flow testing (`getMinIntervalMs()`). Max 30d |
 | Warning channel | Channel Select | Where the pre-restart warning posts. Defaults to the health-monitor channel (`1420926549921763339`) |
+
+The warn window scales for short dev/test intervals: `warnMinutes = min(30, interval/2)` — a 1m test interval warns 30s ahead. Prod intervals (≥4h) always get the full 30-minute warning. (Modals cap at 5 top-level components, which is why current status lives in the select's description rather than a Text Display.)
 
 On submit, a **non-ephemeral** Components V2 summary posts in the channel the Data menu was used in (interval, next restart timestamps, warning channel). The schedule recurs from submission time in perpetuity until disabled, and **persists across restarts** — including the restarts it causes itself.
 
@@ -43,7 +45,7 @@ flowchart LR
 ## Runaway-state guards (deliberate — don't simplify away)
 
 1. Ships **disabled**; only the modal enables it
-2. **Minimum interval 4h**, enforced at modal validation AND re-clamped inside `arm()`/`computeNextFire()` — a hand-edited/corrupted config can never restart-loop; an invalid `intervalMs` **disables** the scheduler rather than guessing
+2. **Minimum interval 4h on prod** (1m on dev/test via `getMinIntervalMs()`), enforced at modal validation AND re-clamped inside `arm()`/`computeNextFire()` — a hand-edited/corrupted config can never restart-loop on prod; an invalid `intervalMs` **disables** the scheduler rather than guessing
 3. **No successful warning → no restart.** If the warning post fails (deleted channel, missing perms), the cycle is skipped, `nextFireAt` advances, error logged
 4. **Boot inside the warn window → pushed a full cycle.** The bot never restarts without the complete 30-min warning
 5. `executeRestart()` **re-reads persisted config** at T+0 (`enabled`? `skipNext`?) — defends the cancel/disable race; `cancelTonight()` sets `skipNext` *first* for in-flight defense
@@ -79,8 +81,8 @@ flowchart LR
 
 ## Testing
 
-- `tests/restartScheduler.test.js` — 16 tests over the pure logic (`parseInterval`, `computeNextFire` incl. downtime catch-up/warn-window push/corruption clamps, `isCancelCurrent` stale-click guard)
-- Dev end-to-end: temporarily lower `MIN_INTERVAL_MS` locally or hand-set a near `nextFireAt` in dev playerData, watch the warning post, click Cancel, observe skip + re-arm in `/tmp/castbot-dev.log` (fire time in dev logs instead of exiting)
+- `tests/restartScheduler.test.js` — 20 tests over the pure logic (`combineDhm`/`splitDhm`, `computeNextFire` incl. downtime catch-up/warn-window push/corruption clamps at both prod and dev floors, `isCancelCurrent` stale-click guard)
+- Dev/test end-to-end: enable via the modal with a 1-minute interval (dev/test floor) — warning posts ~30s ahead, click Cancel, observe skip + re-arm in the logs. On dev the fire time logs `DEV — would process.exit(0)` instead of exiting; on the test box it genuinely restarts (PM2-supervised)
 
 ## Related
 
