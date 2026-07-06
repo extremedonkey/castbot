@@ -725,7 +725,7 @@ export const BUTTON_REGISTRY = {
   'restart_sched_cancel_*': {
     label: 'Cancel This Restart',
     description: 'Cancels the warned scheduled restart (skips one cycle only)',
-    emoji: '❌',
+    emoji: '🚫',
     style: 'Danger',
     requiresPermission: 'ManageRoles',
     category: 'analytics'
