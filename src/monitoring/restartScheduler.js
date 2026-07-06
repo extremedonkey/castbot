@@ -305,7 +305,7 @@ class RestartScheduler {
                     custom_id: 'restart_scheduler',
                     label: 'Auto-Restart',
                     style: 2, // Secondary
-                    emoji: { name: '⚙️' }
+                    emoji: { name: '🌙' }
                   }
                 ]
               }
