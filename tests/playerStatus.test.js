@@ -56,6 +56,12 @@ describe('Status Engine — buildStatusSignals', () => {
       assert.equal(buildStatusSignals({ app: {}, liveChannelName: name }).withdrawn, false, name);
     }
   });
+  it('submitted is true ONLY for a ☑️ channel prefix (not 📝/✅/❌/✖️)', () => {
+    assert.equal(buildStatusSignals({ app: {}, liveChannelName: '☑️x-app' }).submitted, true);
+    for (const name of ['📝x-app', '✅x-app', '❌x-app', '✖️x-app', 'x-app']) {
+      assert.equal(buildStatusSignals({ app: {}, liveChannelName: name }).submitted, false, name);
+    }
+  });
   it('surfaces castingStatus + placementResponse (null when absent)', () => {
     const s = buildStatusSignals({ app: { castingStatus: 'cast', placementResponse: 'accepted' } });
     assert.equal(s.castingStatus, 'cast');
@@ -85,6 +91,12 @@ describe('Status Engine — deriveStatus precedence', () => {
   });
   it('complete beats new', () => {
     assert.equal(deriveStatus({ completedAt: 'x', hasApplication: true }).statusId, 'complete');
+  });
+  it('the ☑️ submitted-channel signal resolves complete (no completedAt needed)', () => {
+    assert.equal(deriveStatus({ submitted: true, hasApplication: true }).statusId, 'complete');
+  });
+  it('a casting decision still outranks a submitted (☑️) channel', () => {
+    assert.equal(deriveStatus({ submitted: true, castingStatus: 'cast', hasApplication: true }).statusId, 'cast');
   });
   it('deferred tentative falls THROUGH to complete (not a casting row yet)', () => {
     assert.equal(deriveStatus({ castingStatus: 'tentative', completedAt: 'x', hasApplication: true }).statusId, 'complete');
@@ -123,6 +135,17 @@ describe('Status Engine — getApplicationStatus (casting + placement)', () => {
   });
   it('a Cast player with NO placement stays Cast (not accepted)', () => {
     assert.equal(getApplicationStatus({ castingStatus: 'cast' }, '📝c').statusId, 'cast');
+  });
+  it('Complete via the ☑️ live channel even WITHOUT completedAt (historical apps, pre-2026-06-27)', () => {
+    // Regression: Mark Monty (prod) completed his app, but the record has no completedAt and a stale 📝
+    // stored channelName; the LIVE channel is ☑️. Must resolve Complete, not New.
+    const r = getApplicationStatus({ userId: '1', currentQuestion: 9 }, '☑️markmonty-app');
+    assert.equal(r.statusId, 'complete');
+    assert.equal(r.emoji, '☑️');
+    assert.equal(r.label, 'Application Complete');
+  });
+  it('stays New for an in-progress 📝 channel with no completedAt', () => {
+    assert.equal(getApplicationStatus({ userId: '1' }, '📝markmonty-app').statusId, 'new');
   });
 });
 

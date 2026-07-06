@@ -45,7 +45,10 @@ export const STATUS_REGISTRY = [
   { id: 'reject',    stage: 1, emoji: '❌', label: 'Not Cast',            test: (s) => s.castingStatus === 'reject' },
 
   // Stage 0 lifecycle (the applicant's own journey) — the fall-through once no decision is set.
-  { id: 'complete',  stage: 0, emoji: '☑️', label: 'Application Complete', test: (s) => !!s.completedAt },
+  // Complete fires on EITHER signal: the `completedAt` data field (written since 2026-06-27) OR the ☑️ live
+  // channel emoji (the completion rename — reliable for the ~2 years of apps that predate completedAt, and
+  // for which the stored channelName is stale). Mirrors how `withdrawn` reads the live ✖️ channel emoji.
+  { id: 'complete',  stage: 0, emoji: '☑️', label: 'Application Complete', test: (s) => !!s.completedAt || s.submitted },
   { id: 'new',       stage: 0, emoji: '📝', label: 'New',                  test: (s) => s.hasApplication },
 
   // ── STILL DEFERRED (RaP 0905 §4/§6) — the "Still Deciding" cluster; falls through to complete/new: ──
@@ -64,8 +67,11 @@ export const STATUS_REGISTRY = [
 export function buildStatusSignals({ app, liveChannelName = '' } = {}) {
   return {
     hasApplication: !!app,
-    completedAt: app?.completedAt || null,             // ISO string, written when the completion screen is reached
-    withdrawn: /^✖️/.test(liveChannelName),             // channel-name only — there is NO data field for withdrawn
+    completedAt: app?.completedAt || null,             // ISO string, written when the completion screen is reached (since 2026-06-27)
+    withdrawn: /^✖️/.test(liveChannelName),             // live channel emoji — there is NO data field for withdrawn
+    submitted: /^☑/.test(liveChannelName),             // live channel ☑️ = submitted/complete. The reliable signal for
+                                                       //   apps completed BEFORE completedAt shipped (the stored
+                                                       //   channelName field is stale — not updated on the rename).
     castingStatus: app?.castingStatus || null,         // admin draft: 'cast' | 'alternative' | 'reject' | 'tentative'
     placementResponse: app?.placementResponse || null, // player: 'accepted' | 'declined'
     // TODO (RaP 0905 §4) deferred vote signals — NOT resolved yet:
