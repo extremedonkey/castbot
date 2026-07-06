@@ -13290,8 +13290,11 @@ To fix this:
       })(req, res, client);
     } else if (custom_id.startsWith('tribe_add_button|')) {
       // Handle Add Tribe button - creates a new Discord role and links as tribe
-      // Button ID format: tribe_add_button|{castlistId}
+      // Button ID format: tribe_add_button|{castlistId}[|{origin}]
+      // Optional {origin} (e.g. 'marooning_{configId}') is threaded through to the modal so the SUBMIT
+      // knows which view to refresh. Absent (the normal Castlist Manager flow) = refresh the Castlist Hub.
       const castlistId = custom_id.split('|')[1];
+      const origin = custom_id.split('|')[2]; // optional; undefined for the Castlist Manager flow
 
       if (!castlistId) {
         return res.send({ type: 4, data: { content: '❌ Error: Missing castlist ID', flags: 64 } });
@@ -13307,7 +13310,7 @@ To fix this:
           return {
             type: 9, // MODAL
             data: {
-              custom_id: `tribe_add_modal|${castlistId}`,
+              custom_id: `tribe_add_modal|${castlistId}${origin ? `|${origin}` : ''}`,
               title: 'Add New Tribe',
               components: [
                 {
@@ -43718,7 +43721,21 @@ Your server is now ready for Tycoons gameplay!`;
           console.log(`[TRIBE ADD] Assigned ${selectedMemberIds.length} members to ${tribeName}`);
         }
 
-        // Refresh hub — new role means Role Select needs fresh render
+        // CONTEXT-AWARE post-submit refresh (the tribe itself was already created + linked above; only the
+        // view that gets refreshed differs). Origin is the 3rd custom_id segment carried from the button.
+        const origin = custom_id.split('|')[2];
+        if (origin && origin.startsWith('marooning_')) {
+          // Launched from the 🚣 Marooning tab → refresh the PARENT Marooning message (not the Castlist Hub).
+          const marooningConfigId = origin.slice('marooning_'.length);
+          const fresh = await loadPlayerData();
+          const seasonName = fresh[guildId]?.applicationConfigs?.[marooningConfigId]?.seasonName || `Season ${marooningConfigId}`;
+          const { buildMarooningView } = await import('./castRankingManager.js');
+          const view = await buildMarooningView({ configId: marooningConfigId, guildId, playerData: fresh, seasonName });
+          await updateDeferredResponse(token, { components: view.components });
+          return null;
+        }
+
+        // Normal Castlist Manager flow (origin absent) — refresh the Castlist Hub. UNCHANGED.
         const { twoPhaseHubResponse } = await import('./castlistHandlers.js');
         await twoPhaseHubResponse(token, guildId, {
           message: `✅ Created tribe ${processedEmoji || '🏕️'} **${tribeName}**`,

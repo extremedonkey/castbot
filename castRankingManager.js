@@ -1035,7 +1035,9 @@ export async function buildMarooningView({ configId, guildId, playerData, season
       { type: 14 },
       { type: 10, content: '### ```🏕️ Tribes```' },
       { type: 1, components: [
-        { type: 2, custom_id: 'tribe_add_button|default', label: 'New Tribe', style: 2, emoji: { name: '🏕️' } },
+        // New Tribe reuses the Castlist Hub button, but carries a 'marooning_{configId}' origin so the modal
+        // SUBMIT refreshes THIS Marooning message (not the Castlist Hub). Still adds to the default castlist.
+        { type: 2, custom_id: `tribe_add_button|default|marooning_${configId}`, label: 'New Tribe', style: 2, emoji: { name: '🏕️' } },
         { type: 2, custom_id: `marooning_draft_tribes_${configId}`, label: 'Draft Tribes', style: 2, emoji: { name: '💭' }, disabled: !canDraft }
       ]},
       { type: 10, content: tribesLine },

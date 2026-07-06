@@ -122,3 +122,37 @@ describe('Marooning Draft — modal caps at 5 with an overflow warning', () => {
     assert.equal(overflowWarningIndex(['a', 'b', 'c', 'd', 'e', 'f']), 4); // 5th shown label (index 4)
   });
 });
+
+// ── Context-aware New Tribe: origin threaded button → modal → submit so the submit refreshes the right view ──
+function buildModalCustomId(castlistId, origin) {
+  return `tribe_add_modal|${castlistId}${origin ? `|${origin}` : ''}`;
+}
+function routeTribeAddSubmit(customId) {
+  const origin = customId.split('|')[2];
+  if (origin && origin.startsWith('marooning_')) {
+    return { target: 'marooning', configId: origin.slice('marooning_'.length) };
+  }
+  return { target: 'hub' };
+}
+
+describe('New Tribe — context-aware origin routing', () => {
+  it('Castlist Manager flow (no origin) → modal id unchanged, refresh = Castlist Hub', () => {
+    const id = buildModalCustomId('default', undefined);
+    assert.equal(id, 'tribe_add_modal|default');
+    assert.deepEqual(routeTribeAddSubmit(id), { target: 'hub' });
+  });
+  it('Marooning flow → origin appended, submit routes back to Marooning with the configId', () => {
+    const origin = 'marooning_config_1783203296677_391415444084490240';
+    const id = buildModalCustomId('default', origin);
+    assert.equal(id, 'tribe_add_modal|default|marooning_config_1783203296677_391415444084490240');
+    assert.deepEqual(routeTribeAddSubmit(id), { target: 'marooning', configId: 'config_1783203296677_391415444084490240' });
+  });
+  it('preserves underscores in the configId', () => {
+    const r = routeTribeAddSubmit('tribe_add_modal|default|marooning_config_1_2_3');
+    assert.equal(r.configId, 'config_1_2_3');
+  });
+  it('worst-case modal custom_id stays under Discord\'s 100-char limit', () => {
+    const id = buildModalCustomId('default', 'marooning_config_1783203296677_391415444084490240');
+    assert.ok(id.length < 100, `len ${id.length}`);
+  });
+});
