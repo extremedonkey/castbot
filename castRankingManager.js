@@ -967,7 +967,7 @@ export async function generateDncOverviewUI({ guildId, configId, guild }) {
  * @param {Object} p - { configId, guildId, playerData, seasonName }
  * @returns {Object} { components: [container] } (updateMessage pattern; caller adds ephemeral flags if needed)
  */
-export async function buildMarooningView({ configId, guildId, playerData, seasonName }) {
+export async function buildMarooningView({ configId, guildId, playerData, seasonName, guild }) {
   const { getApplicationsForSeason, getAllApplicationsFromData } = await import('./storage.js');
   const { buildSeasonNavRow, seasonManagerHeader, buildSeasonBottomRow } = await import('./seasonSelector.js');
 
@@ -995,6 +995,17 @@ export async function buildMarooningView({ configId, guildId, playerData, season
     tribeRoleIds = await castlistManager.getTribesUsingCastlist(guildId, 'default');
   } catch (e) {
     console.warn(`⚠️ Marooning: could not load default-castlist tribes: ${e.message}`);
+  }
+  // Gracefully ignore tribes whose Discord role was deleted (would render as @unknown-role).
+  // Display-only filter — the Castlist Hub is the place that detects orphans and CLEANS the data.
+  // With none left this renders exactly like no tribes configured (Tribes: None, Draft disabled,
+  // draftees of the dead tribe fall back to the undrafted list below).
+  if (guild) {
+    const orphaned = tribeRoleIds.filter(rid => !guild.roles.cache.has(rid));
+    if (orphaned.length > 0) {
+      console.log(`⚠️ Marooning: ignoring ${orphaned.length} tribe(s) with deleted Discord role(s): ${orphaned.join(', ')}`);
+      tribeRoleIds = tribeRoleIds.filter(rid => guild.roles.cache.has(rid));
+    }
   }
   const tribes = playerData[guildId]?.tribes || {};
   const tribesLine = tribeRoleIds.length > 0
@@ -1102,6 +1113,8 @@ export async function buildDraftTribesModal({ configId, guildId, playerData, gui
   } catch (e) {
     console.warn(`⚠️ Draft Tribes: could not load default-castlist tribes: ${e.message}`);
   }
+  // Same deleted-role filter as buildMarooningView — a dead tribe would render as "🏕️ Tribe".
+  if (guild) tribeRoleIds = tribeRoleIds.filter(rid => guild.roles.cache.has(rid));
   if (tribeRoleIds.length < 2) return null; // need ≥2 tribes to draft between
 
   const tribes = playerData[guildId]?.tribes || {};
@@ -1175,7 +1188,7 @@ export async function handleRankingNavigation({
     const seasonName = extractedConfigId
       ? (playerData[guildId]?.applicationConfigs?.[extractedConfigId]?.seasonName || `Season ${extractedConfigId}`)
       : 'Current Season';
-    const view = await buildMarooningView({ configId: extractedConfigId, guildId, playerData, seasonName });
+    const view = await buildMarooningView({ configId: extractedConfigId, guildId, playerData, seasonName, guild });
     return ephemeral
       ? { flags: (1 << 15) | (1 << 6), components: view.components } // IS_COMPONENTS_V2 + EPHEMERAL
       : { components: view.components }; // updateMessage pattern

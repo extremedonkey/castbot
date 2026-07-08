@@ -13816,7 +13816,7 @@ To fix this:
           const playerData = await loadPlayerData();
           const seasonName = playerData[guildId]?.applicationConfigs?.[configId]?.seasonName || `Season ${configId}`;
           const { buildMarooningView } = await import('./castRankingManager.js');
-          const uiResponse = await buildMarooningView({ configId, guildId, playerData, seasonName });
+          const uiResponse = await buildMarooningView({ configId, guildId, playerData, seasonName, guild });
 
           console.log(`✅ SUCCESS: season_marooning - rendered via buildMarooningView`);
           return uiResponse;
@@ -43615,8 +43615,9 @@ Your server is now ready for Tycoons gameplay!`;
         console.log(`[DRAFT TRIBES] Saved draft for ${Object.keys(submitted).length} tribe(s) in season ${configId}`);
 
         const seasonName = cfg.seasonName || `Season ${configId}`;
+        const guild = await client.guilds.fetch(guildId).catch(() => null);
         const { buildMarooningView } = await import('./castRankingManager.js');
-        const view = await buildMarooningView({ configId, guildId, playerData, seasonName });
+        const view = await buildMarooningView({ configId, guildId, playerData, seasonName, guild });
         return updateDeferredResponse(token, { components: view.components });
       } catch (error) {
         console.error('[DRAFT TRIBES] Error saving draft:', error);
@@ -43733,7 +43734,7 @@ Your server is now ready for Tycoons gameplay!`;
           const fresh = await loadPlayerData();
           const seasonName = fresh[guildId]?.applicationConfigs?.[marooningConfigId]?.seasonName || `Season ${marooningConfigId}`;
           const { buildMarooningView } = await import('./castRankingManager.js');
-          const view = await buildMarooningView({ configId: marooningConfigId, guildId, playerData: fresh, seasonName });
+          const view = await buildMarooningView({ configId: marooningConfigId, guildId, playerData: fresh, seasonName, guild });
           await updateDeferredResponse(token, { components: view.components });
           return null;
         }
@@ -44164,7 +44165,8 @@ Your server is now ready for Tycoons gameplay!`;
           }
           if (originMode === 'marooning') {
             const { buildMarooningView } = await import('./castRankingManager.js');
-            const marooningView = await buildMarooningView({ configId, guildId, playerData: fresh, seasonName: freshConfig.seasonName });
+            const guild = await client.guilds.fetch(guildId).catch(() => null);
+            const marooningView = await buildMarooningView({ configId, guildId, playerData: fresh, seasonName: freshConfig.seasonName, guild });
             // Keep IS_COMPONENTS_V2; never carry EPHEMERAL into UPDATE_MESSAGE (inherits the source).
             return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...marooningView, flags: (1 << 15) } });
           }

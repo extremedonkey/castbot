@@ -48,6 +48,13 @@ function overflowWarningIndex(tribeRoleIds) {
   return tribeRoleIds.length > 5 ? shown.length - 1 : -1;
 }
 
+// Deleted-role filter: gracefully ignore tribes whose Discord role no longer exists
+// (guard fires only when a guild object is available; display-only, no data mutation).
+function filterDeletedRoles(tribeRoleIds, guild) {
+  if (!guild) return tribeRoleIds;
+  return tribeRoleIds.filter(rid => guild.roles.cache.has(rid));
+}
+
 describe('Marooning Draft — userDraftTribe map (first tribe wins)', () => {
   it('maps each userId to its first drafting tribe', () => {
     const m = buildUserDraftTribe({ roleA: ['u1', 'u2'], roleB: ['u3'] });
@@ -154,5 +161,34 @@ describe('New Tribe — context-aware origin routing', () => {
   it('worst-case modal custom_id stays under Discord\'s 100-char limit', () => {
     const id = buildModalCustomId('default', 'marooning_config_1783203296677_391415444084490240');
     assert.ok(id.length < 100, `len ${id.length}`);
+  });
+});
+
+describe('Marooning — deleted Discord roles are gracefully ignored', () => {
+  const mockGuild = roleIds => ({ roles: { cache: new Map(roleIds.map(id => [id, {}])) } });
+
+  it('deleted roles are filtered out; live roles kept in order', () => {
+    const guild = mockGuild(['roleA', 'roleC']);
+    assert.deepEqual(filterDeletedRoles(['roleA', 'roleB', 'roleC'], guild), ['roleA', 'roleC']);
+  });
+  it('ALL roles deleted → renders exactly like no tribes configured', () => {
+    const filtered = filterDeletedRoles(['roleB'], mockGuild([]));
+    assert.deepEqual(filtered, []);
+    assert.equal(tribesLine(filtered, {}), '**Tribes:** None');
+  });
+  it('no guild available → filter is a no-op (fail open, current behavior)', () => {
+    assert.deepEqual(filterDeletedRoles(['roleA', 'roleB'], null), ['roleA', 'roleB']);
+  });
+  it('draftees of a deleted tribe fall back to the undrafted list', () => {
+    const userDraftTribe = buildUserDraftTribe({ roleDead: ['u1'], roleLive: ['u2'] });
+    const live = filterDeletedRoles(['roleDead', 'roleLive'], mockGuild(['roleLive']));
+    const players = [{ userId: 'u1', name: 'A' }, { userId: 'u2', name: 'B' }];
+    const { perTribe, undrafted } = groupByTribe(players, userDraftTribe, live);
+    assert.deepEqual([...perTribe.keys()], ['roleLive']);
+    assert.deepEqual(undrafted.map(p => p.name), ['A']);
+  });
+  it('Draft Tribes gate: 2 tribes with 1 deleted → below the 2-tribe minimum (button disabled / modal null)', () => {
+    const live = filterDeletedRoles(['roleA', 'roleDead'], mockGuild(['roleA']));
+    assert.ok(live.length < 2);
   });
 });
