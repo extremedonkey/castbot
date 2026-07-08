@@ -323,7 +323,8 @@ class DiscordMessenger {
    * @param {boolean} options.hasPostedCastlist - Whether this server has ever clicked Post Castlist (drives Post Castlist "done" state)
    * @param {boolean} options.setupInProgress - Render Run Setup as a green "⏳ Setting up..." (disabled) while setup runs
    * @param {string} options.banner - Optional small text banner shown ABOVE the title (channel only).
-   *   Used only by the post-Run-Setup fresh wizard to show "✅ Setup Complete" for clarity.
+   *   Used only by the post-Run-Setup fresh wizard: "✅ Setup Complete", or a "⚠️ Setup ran
+   *   with issues" warning when role-hierarchy problems were detected (see buildSetupWizardBanner).
    * @param {string} options.serverName - Guild name to personalize the DM copy
    * @returns {Array} Components V2 container array for Discord
    */

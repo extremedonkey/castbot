@@ -182,3 +182,72 @@ describe('Setup Wizard — channel layout uses Section + button accessory', () =
   });
 });
 
+// ── Replicated from roleManager.buildSetupWizardBanner (single source of truth) ──
+// The post-Run-Setup fresh wizard pushes the setup-results warning panel off-screen,
+// so when hierarchy issues exist the banner must NOT read as an all-clear.
+function buildSetupWizardBanner(results) {
+  const hierarchyWarnings = [
+    ...(results?.pronouns?.hierarchyWarnings || []),
+    ...(results?.timezones?.hierarchyWarnings || [])
+  ];
+  if (hierarchyWarnings.length === 0) {
+    return '```✅ Setup Complete```';
+  }
+  const botRoleName = hierarchyWarnings[0].botRoleName || 'CastBot';
+  return '```⚠️ Setup ran with issues```\n' +
+    `You need to move the **@${botRoleName}** Discord role to the top of your role hierarchy. ` +
+    'Scroll up and read the Setup Wizard panel for detailed instructions.';
+}
+
+// Minimal setupResults stand-in (shape from roleManager.executeSetup)
+const setupResults = ({ pronounWarnings = [], timezoneWarnings = [] } = {}) => ({
+  pronouns: { hierarchyWarnings: pronounWarnings, failed: [] },
+  timezones: { hierarchyWarnings: timezoneWarnings, failed: [] }
+});
+
+describe('Setup Wizard — post-setup banner (buildSetupWizardBanner)', () => {
+  it('all-clear: green Setup Complete when no hierarchy warnings', () => {
+    assert.equal(buildSetupWizardBanner(setupResults()), '```✅ Setup Complete```');
+  });
+
+  it('pronoun hierarchy warnings flip the banner to ⚠️ with scroll-up instructions', () => {
+    const banner = buildSetupWizardBanner(setupResults({
+      pronounWarnings: [{ name: 'She/Her', id: '1', botRoleName: 'CastBot-Test' }]
+    }));
+    assert.match(banner, /^```⚠️ Setup ran with issues```/);
+    assert.match(banner, /move the \*\*@CastBot-Test\*\* Discord role to the top/);
+    assert.match(banner, /Scroll up/);
+  });
+
+  it('timezone-only warnings also trigger the warning banner', () => {
+    const banner = buildSetupWizardBanner(setupResults({
+      timezoneWarnings: [{ name: 'PST', id: '2', botRoleName: 'CastBot' }]
+    }));
+    assert.match(banner, /Setup ran with issues/);
+    assert.match(banner, /\*\*@CastBot\*\*/);
+  });
+
+  it('falls back to "CastBot" when the warning has no botRoleName', () => {
+    const banner = buildSetupWizardBanner(setupResults({
+      pronounWarnings: [{ name: 'He/Him', id: '3' }]
+    }));
+    assert.match(banner, /\*\*@CastBot\*\*/);
+  });
+
+  it('tolerates missing/partial results (defensive)', () => {
+    assert.equal(buildSetupWizardBanner(undefined), '```✅ Setup Complete```');
+    assert.equal(buildSetupWizardBanner({}), '```✅ Setup Complete```');
+  });
+
+  it('parity guard: replica matches the real roleManager export', async () => {
+    const { buildSetupWizardBanner: real } = await import('../roleManager.js');
+    const cases = [
+      setupResults(),
+      setupResults({ pronounWarnings: [{ name: 'She/Her', id: '1', botRoleName: 'CastBot-Test' }] }),
+      setupResults({ timezoneWarnings: [{ name: 'PST', id: '2', botRoleName: 'CastBot' }] }),
+      setupResults({ pronounWarnings: [{ name: 'He/Him', id: '3' }] })
+    ];
+    for (const c of cases) assert.equal(buildSetupWizardBanner(c), real(c));
+  });
+});
+

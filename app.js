@@ -105,6 +105,7 @@ import {
   hasCompletedSetup,
   generateSetupResponse,
   generateSetupResponseV2,
+  buildSetupWizardBanner,
   checkRoleHierarchy,
   REACTION_EMOJIS,
   createTimezoneReactionMessage,
@@ -7611,8 +7612,10 @@ To fix this:
               const hasPostedCastlist = playerData[guildId]?.setupProgress?.castlistPosted === true;
               const hasSeason = Object.keys(playerData[guildId]?.applicationConfigs || {}).length > 0;
               await createFollowupMessage(token, {
-                // Banner makes it crystal-clear the (text-heavy) setup results above = success
-                components: DiscordMessenger.createWelcomeComponents({ context: 'channel', hasSetup, hasCastlist: freshCastlist, hasPostedCastlist, hasSeason, serverName: guild?.name, banner: '```✅ Setup Complete```' }),
+                // Banner makes it crystal-clear the (text-heavy) setup results above = success —
+                // or, when setup found role-hierarchy issues, warns the user to scroll back up
+                // (this fresh wizard pushes the warning panel off-screen otherwise)
+                components: DiscordMessenger.createWelcomeComponents({ context: 'channel', hasSetup, hasCastlist: freshCastlist, hasPostedCastlist, hasSeason, serverName: guild?.name, banner: buildSetupWizardBanner(setupResults) }),
                 ephemeral: true
               });
 

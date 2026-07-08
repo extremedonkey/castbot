@@ -1616,9 +1616,14 @@ function generateSetupResponse(results) {
  */
 function generateSetupResponseV2(results) {
     const sections = [];
-    
-    // Header
-    sections.push('# ✅ CastBot Setup Complete\n');
+
+    // Hierarchy warnings / failures drive the header, accent color and Important Notes below
+    const allWarnings = [...results.pronouns.hierarchyWarnings, ...results.timezones.hierarchyWarnings];
+    const allFailed = [...results.pronouns.failed, ...results.timezones.failed];
+    const hasIssues = allWarnings.length > 0 || allFailed.length > 0;
+
+    // Header — must not read as an all-clear when the Important Notes section needs action
+    sections.push(hasIssues ? '# ⚠️ CastBot Setup Complete — with issues\n' : '# ✅ CastBot Setup Complete\n');
     
     // Pronoun Roles Section - detailed with mentions
     const pronounTotal = results.pronouns.created.length + results.pronouns.existingAdded.length + results.pronouns.alreadyInCastBot.length;
@@ -1775,10 +1780,7 @@ function generateSetupResponseV2(results) {
         }
     }
 
-    // Warnings and Errors Section
-    const allWarnings = [...results.pronouns.hierarchyWarnings, ...results.timezones.hierarchyWarnings];
-    const allFailed = [...results.pronouns.failed, ...results.timezones.failed];
-    
+    // Warnings and Errors Section (allWarnings/allFailed computed at top for the header)
     if (allWarnings.length > 0 || allFailed.length > 0) {
         sections.push('## ⚠️ Important Notes\n');
         
@@ -1830,7 +1832,7 @@ function generateSetupResponseV2(results) {
     // Create Components V2 Container with TextDisplay, Separator, and Main Menu button
     return {
         type: 17, // Container component
-        accent_color: 0x7ED321, // Green accent color
+        accent_color: hasIssues ? 0xf39c12 : 0x7ED321, // Orange when action needed, green otherwise
         components: [
             {
                 type: 10, // TextDisplay component
@@ -1850,6 +1852,30 @@ function generateSetupResponseV2(results) {
             }
         ]
     };
+}
+
+/**
+ * Build the banner shown above the title of the post-Run-Setup fresh wizard
+ * (createWelcomeComponents({ banner })). Normally a green all-clear — but when setup
+ * detected role-hierarchy issues, the re-sent wizard pushes the detailed warning panel
+ * off-screen, so the banner itself must flag the problem and point the user back up.
+ * Pure function of the runFullSetup/executeSetup results (exported for tests).
+ * @param {Object} results - Setup results containing pronouns and timezones data
+ * @returns {string} Banner markdown
+ */
+function buildSetupWizardBanner(results) {
+    const hierarchyWarnings = [
+        ...(results?.pronouns?.hierarchyWarnings || []),
+        ...(results?.timezones?.hierarchyWarnings || [])
+    ];
+    if (hierarchyWarnings.length === 0) {
+        return '```✅ Setup Complete```';
+    }
+    // botRoleName comes from checkRoleHierarchy — names the actual bot role (e.g. "CastBot-Test")
+    const botRoleName = hierarchyWarnings[0].botRoleName || 'CastBot';
+    return '```⚠️ Setup ran with issues```\n' +
+        `You need to move the **@${botRoleName}** Discord role to the top of your role hierarchy. ` +
+        'Scroll up and read the Setup Wizard panel for detailed instructions.';
 }
 
 /**
@@ -2827,6 +2853,7 @@ export {
     executeSetup,
     generateSetupResponse,
     generateSetupResponseV2,
+    buildSetupWizardBanner,
     checkRoleHierarchy,
     createTimezoneReactionMessage,
     createPronounReactionMessage,
