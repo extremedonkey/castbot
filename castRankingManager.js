@@ -403,11 +403,11 @@ export async function generateSeasonAppRankingUI({
     };
   }
 
-  // Derived single status line — appended to the info block below (the old createPlayerDisplaySection
-  // identity Text Display was removed: its name was a redundant "orphan" next to the info block's Name).
+  // ÜberStatus (the unified Status Engine) is now the single status line in the info block. The old
+  // per-dimension lines (Your Score, Casting Status, derived Status:) were removed as redundant — the
+  // score is shown in the Votes section, and casting/derived status collapse into ÜberStatus.
   const appRecord = playerData[guildId]?.applications?.[currentApp.channelId] || {};
   const liveChannelName = guild?.channels?.cache?.get(currentApp.channelId)?.name || '';
-  const derivedStatus = deriveApplicationStatus(appRecord, liveChannelName);
 
   // ---- Restored OLD detailed info block (single Text Display under the Delete button) ----
   // Name = clickable mention (fallback when the member left). Demographics use ROLE TAG mentions
@@ -432,15 +432,8 @@ export async function generateSeasonAppRankingUI({
   const demographicInfo = infoParts.length > 0 ? ` (${infoParts.join(', ')})` : '';
   const infoRankings = Object.values(allRankings).filter(r => r !== undefined);
   const infoAvg = infoRankings.length > 0 ? (infoRankings.reduce((a, b) => a + b, 0) / infoRankings.length).toFixed(1) : 'No scores';
-  let infoCastingText;
-  if (castingStatus === 'cast') infoCastingText = '✅ Cast';
-  else if (castingStatus === 'alternative') infoCastingText = '🔄 Alternate';
-  else if (castingStatus === 'tentative') infoCastingText = '❓ Tentative';
-  else if (castingStatus === 'reject') infoCastingText = '🗑️ Don\'t Cast';
-  else infoCastingText = '⚪ Undecided';
-  let oldInfoBlock = `**Name:** ${nameDisplay}${demographicInfo}\n**Average Score:** ${infoAvg} (${infoRankings.length} vote${infoRankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${infoCastingText}\n**App:** <#${currentApp.channelId}>`;
+  let oldInfoBlock = `**Name:** ${nameDisplay}${demographicInfo}\n**Average Score:** ${infoAvg} (${infoRankings.length} vote${infoRankings.length !== 1 ? 's' : ''})\n**App:** <#${currentApp.channelId}>`;
   if (dncSummaryText) oldInfoBlock += `\n${dncSummaryText}`;
-  oldInfoBlock += `\nStatus: ${derivedStatus.icon} ${derivedStatus.name}`;
   // 🌈 ÜberStatus: output of the unified Status Engine (RaP 0905). Resolves the casting/placement states +
   // Tentative — ✖️ Withdrawn / 🎉 Accepted / 🚫 Declined / ✅ Cast / 🔄 Alternate / ❓ Tentatively Cast /
   // ❌ Not Cast / ☑️ Complete / 📝 New — byte-matched to the `Status:` line above (parity-tested). "Undecided"
