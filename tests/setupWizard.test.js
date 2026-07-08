@@ -194,8 +194,8 @@ function buildSetupWizardBanner(results) {
     return '```✅ Setup Complete```';
   }
   const botRoleName = hierarchyWarnings[0].botRoleName || 'CastBot';
-  return '```⚠️ Setup ran with issues```\n' +
-    `You need to move the **@${botRoleName}** Discord role to the top of your role hierarchy. ` +
+  return '**```⚠️ Setup ran with issues```**\n' +
+    `> You need to move the @${botRoleName} Discord role to the top of your role hierarchy. ` +
     'Scroll up and read the Setup Wizard panel for detailed instructions.';
 }
 
@@ -214,8 +214,8 @@ describe('Setup Wizard — post-setup banner (buildSetupWizardBanner)', () => {
     const banner = buildSetupWizardBanner(setupResults({
       pronounWarnings: [{ name: 'She/Her', id: '1', botRoleName: 'CastBot-Test' }]
     }));
-    assert.match(banner, /^```⚠️ Setup ran with issues```/);
-    assert.match(banner, /move the \*\*@CastBot-Test\*\* Discord role to the top/);
+    assert.match(banner, /^\*\*```⚠️ Setup ran with issues```\*\*/); // bold code-block chip
+    assert.match(banner, /\n> You need to move the @CastBot-Test Discord role to the top/); // blockquote body
     assert.match(banner, /Scroll up/);
   });
 
@@ -224,14 +224,14 @@ describe('Setup Wizard — post-setup banner (buildSetupWizardBanner)', () => {
       timezoneWarnings: [{ name: 'PST', id: '2', botRoleName: 'CastBot' }]
     }));
     assert.match(banner, /Setup ran with issues/);
-    assert.match(banner, /\*\*@CastBot\*\*/);
+    assert.match(banner, /@CastBot Discord role/);
   });
 
   it('falls back to "CastBot" when the warning has no botRoleName', () => {
     const banner = buildSetupWizardBanner(setupResults({
       pronounWarnings: [{ name: 'He/Him', id: '3' }]
     }));
-    assert.match(banner, /\*\*@CastBot\*\*/);
+    assert.match(banner, /@CastBot Discord role/);
   });
 
   it('tolerates missing/partial results (defensive)', () => {

@@ -1873,8 +1873,8 @@ function buildSetupWizardBanner(results) {
     }
     // botRoleName comes from checkRoleHierarchy — names the actual bot role (e.g. "CastBot-Test")
     const botRoleName = hierarchyWarnings[0].botRoleName || 'CastBot';
-    return '```⚠️ Setup ran with issues```\n' +
-        `You need to move the **@${botRoleName}** Discord role to the top of your role hierarchy. ` +
+    return '**```⚠️ Setup ran with issues```**\n' +
+        `> You need to move the @${botRoleName} Discord role to the top of your role hierarchy. ` +
         'Scroll up and read the Setup Wizard panel for detailed instructions.';
 }
 
