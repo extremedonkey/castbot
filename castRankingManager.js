@@ -109,11 +109,11 @@ export async function buildSeasonRankingResponse({ guildId, userId, configId, cl
 
 /**
  * Collapse the six independent application-status dimensions into ONE salient
- * status for the Casting card's "Status:" line. Priority mirrors the jump-select
- * icon logic (placementResponse → castingStatus → votes, castRankingManager.js
- * ~262) so the line and the jump-select never disagree — extended with a
- * ✖️ Withdrawn lifecycle override (the only dimension siloed in the channel name)
- * and human-readable names.
+ * status for the Casting card's "Status:" line AND the jump-select option icons
+ * (the select calls this per option, so the line and the select can never
+ * disagree). Priority: withdrawn → placementResponse → castingStatus → votes,
+ * with the ✖️ Withdrawn lifecycle override (the only dimension siloed in the
+ * channel name) and human-readable names.
  *
  * @param {Object} app - application record (playerData[guildId].applications[channelId])
  * @param {string} [liveChannelName] - the channel's CURRENT name (carries the ✖️ withdrawn marker)
@@ -136,6 +136,56 @@ export function deriveApplicationStatus(app = {}, liveChannelName = '') {
   if (voteCount >= 2)                  return { icon: '☑️', name: 'Reviewed' };
   if (voteCount >= 1)                  return { icon: '🗳️', name: `Scoring (${voteCount} vote${voteCount === 1 ? '' : 's'})` };
   return { icon: '📝', name: 'Awaiting Votes' };
+}
+
+/** Marooning's status-section order — also the jump-select's display order. */
+const CASTING_GROUP_ORDER = ['cast', 'alternative', 'tentative', 'reject', 'undecided'];
+
+/**
+ * Single source of truth for "casting order": group applicants by castingStatus
+ * (cast → alternative → tentative → reject → undecided), then sort each group by
+ * average score descending (stable — ties keep insertion order). Shared by the
+ * Marooning tab (buildMarooningView) and the Casting card's jump-select so the two
+ * views can never disagree.
+ *
+ * Entries carry BOTH `name` (Marooning's displayName||username fallback) and the raw
+ * `app` (the select uses displayName||'Unknown' / username||'unknown') — the two
+ * consumers' fallback strings intentionally differ; do not unify.
+ *
+ * An unrecognized castingStatus is normalized to 'undecided' so no applicant can
+ * vanish from every group (and become unreachable in the jump-select).
+ *
+ * @param {Array} allApplications - insertion-ordered season applications
+ * @param {Object} playerData - pre-loaded player data
+ * @param {string} guildId - guild ID
+ * @returns {{groups: Object<string, Array>, ordered: Array}} groups keyed by status; ordered = groups concatenated in display order. Entry shape: { app, insertionIndex, userId, name, avgScore, voteCount, castingStatus, placementResponse, hasNotes }
+ */
+export function computeCastingOrder(allApplications, playerData, guildId) {
+  const entries = allApplications.map((app, insertionIndex) => {
+    const rec = playerData[guildId]?.applications?.[app.channelId] || {};
+    const scores = Object.values(rec.rankings || {}).filter(r => r !== undefined);
+    const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+    const rawStatus = rec.castingStatus || 'undecided';
+    return {
+      app,
+      insertionIndex,
+      userId: app.userId,
+      name: app.displayName || app.username,
+      avgScore,
+      voteCount: scores.length,
+      castingStatus: CASTING_GROUP_ORDER.includes(rawStatus) ? rawStatus : 'undecided',
+      placementResponse: rec.placementResponse,
+      hasNotes: !!rec.playerNotes
+    };
+  });
+
+  const groups = {};
+  for (const status of CASTING_GROUP_ORDER) {
+    groups[status] = entries.filter(e => e.castingStatus === status);
+    groups[status].sort((a, b) => b.avgScore - a.avgScore);
+  }
+
+  return { groups, ordered: CASTING_GROUP_ORDER.flatMap(status => groups[status]) };
 }
 
 export async function generateSeasonAppRankingUI({
@@ -264,11 +314,19 @@ export async function generateSeasonAppRankingUI({
   // Delete button) — the placeholder already shows "Applicant N of M", so the info block drops it.
   let jumpSelectRow = null;
   {
+    // Display order = Marooning order (status groups → score desc) via computeCastingOrder.
+    // Option VALUES stay insertion-order indices into allApplications — every downstream
+    // handler resolves `allApplications[appIndex]`, and stale selects keep pointing at the
+    // same person even after scores re-sort the display. Only presentation is sorted.
+    const { ordered } = computeCastingOrder(allApplications, playerData, guildId);
+    let sortedPos = ordered.findIndex(e => e.insertionIndex === appIndex);
+    if (sortedPos === -1) sortedPos = 0; // defensive — callers validated currentApp
+
     const itemsPerPage = 23;
-    const totalPages = Math.ceil(allApplications.length / itemsPerPage);
-    const currentPage = Math.floor(appIndex / itemsPerPage);
+    const totalPages = Math.ceil(ordered.length / itemsPerPage);
+    const currentPage = Math.floor(sortedPos / itemsPerPage);
     const startIdx = currentPage * itemsPerPage;
-    const endIdx = Math.min(startIdx + itemsPerPage, allApplications.length);
+    const endIdx = Math.min(startIdx + itemsPerPage, ordered.length);
 
     const options = [];
 
@@ -284,47 +342,39 @@ export async function generateSeasonAppRankingUI({
     }
 
     for (let i = startIdx; i < endIdx; i++) {
-      const app = allApplications[i];
-      const rankings = playerData[guildId]?.applications?.[app.channelId]?.rankings || {};
-      const voteCount = Object.keys(rankings).length;
-      const cStatus = playerData[guildId]?.applications?.[app.channelId]?.castingStatus;
-      const pResp = playerData[guildId]?.applications?.[app.channelId]?.placementResponse;
-      const hasNotes = !!playerData[guildId]?.applications?.[app.channelId]?.playerNotes;
+      const entry = ordered[i];
+      const app = entry.app;
+      // Icon = the Status engine's, literally — same {icon} the card's Status: line shows.
+      const rec = playerData[guildId]?.applications?.[app.channelId] || {};
+      const liveName = guild?.channels?.cache?.get(app.channelId)?.name || '';
+      const icon = deriveApplicationStatus(rec, liveName).icon;
 
-      // Applicant's placement response (if any) takes priority in the icon.
-      let icon = '🗳️';
-      if (pResp === 'accepted') icon = '🎉';
-      else if (pResp === 'declined') icon = '🚫';
-      else if (cStatus === 'cast') icon = '✅';
-      else if (cStatus === 'alternative') icon = '🔄';
-      else if (cStatus === 'reject') icon = '❌';
-      else if (voteCount >= 2) icon = '☑️';
-
-      const position = i + 1;
+      const position = i + 1; // sorted position — continuous across pages, matches placeholder
       const displayName = app.displayName || 'Unknown';
       const username = app.username || 'unknown';
-      const voteText = voteCount === 1 ? '1 vote' : `${voteCount} votes`;
-      const notesIndicator = hasNotes ? ' 💬' : '';
+      const scoreText = entry.avgScore > 0 ? `${entry.avgScore.toFixed(1)}/5.0` : 'Unrated';
+      const voteText = entry.voteCount === 1 ? '1 vote' : `${entry.voteCount} votes`;
+      const notesIndicator = entry.hasNotes ? ' 💬' : '';
 
-      let label = `${icon} ${position}. ${displayName} (${username}) - ${voteText}${notesIndicator}`;
+      let label = `${icon} ${position}. ${displayName} (${username}) - ${scoreText} (${voteText})${notesIndicator}`;
       if (label.length > 100) {
-        const fixedParts = `${icon} ${position}. ${displayName} () - ${voteText}${notesIndicator}`;
+        const fixedParts = `${icon} ${position}. ${displayName} () - ${scoreText} (${voteText})${notesIndicator}`;
         const availableSpace = 100 - fixedParts.length;
         if (availableSpace > 0) {
           const truncatedUsername = username.length > availableSpace ?
             username.substring(0, availableSpace - 1) + '…' : username;
-          label = `${icon} ${position}. ${displayName} (${truncatedUsername}) - ${voteText}${notesIndicator}`;
+          label = `${icon} ${position}. ${displayName} (${truncatedUsername}) - ${scoreText} (${voteText})${notesIndicator}`;
         } else {
           label = label.substring(0, 97) + '...';
         }
       }
 
-      options.push({ label, value: i.toString(), description: `Jump to ${displayName}'s application` });
+      options.push({ label, value: entry.insertionIndex.toString(), description: `Jump to ${displayName}'s application` });
     }
 
-    if (endIdx < allApplications.length) {
+    if (endIdx < ordered.length) {
       const nextStart = endIdx + 1;
-      const nextEnd = Math.min(endIdx + itemsPerPage, allApplications.length);
+      const nextEnd = Math.min(endIdx + itemsPerPage, ordered.length);
       options.push({
         label: `▶ Show Applications ${nextStart}-${nextEnd}`,
         value: `page_${currentPage + 1}`,
@@ -334,9 +384,10 @@ export async function generateSeasonAppRankingUI({
     }
 
     // Placeholder doubles as the position indicator (the "Applicant N of M" text was removed above).
+    // N = SORTED position, so it agrees with the option numbering right below it.
     // Name = the applicant's per-server display name (nickname), falling back to global/username.
     const placeholderName = applicantMember?.displayName || currentApp.displayName || currentApp.username || 'Applicant';
-    let selectPlaceholder = `Applicant ${appIndex + 1} of ${allApplications.length} - ${placeholderName}`;
+    let selectPlaceholder = `Applicant ${sortedPos + 1} of ${ordered.length} - ${placeholderName}`;
     if (totalPages > 1) selectPlaceholder += ` · page ${currentPage + 1}/${totalPages}`;
 
     jumpSelectRow = {
@@ -924,29 +975,9 @@ export async function buildMarooningView({ configId, guildId, playerData, season
     ? await getApplicationsForSeason(guildId, configId)
     : await getAllApplicationsFromData(guildId);
 
-  // Per-applicant score + casting decision (userId kept for the private draft-tribe grouping below)
-  const applicantData = allApplications.map((app) => {
-    const rec = playerData[guildId]?.applications?.[app.channelId] || {};
-    const scores = Object.values(rec.rankings || {}).filter(r => r !== undefined);
-    const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-    return {
-      userId: app.userId,
-      name: app.displayName || app.username,
-      avgScore,
-      voteCount: scores.length,
-      castingStatus: rec.castingStatus || 'undecided',
-      placementResponse: rec.placementResponse
-    };
-  });
-
-  const castGroups = {
-    cast: applicantData.filter(a => a.castingStatus === 'cast'),
-    alternative: applicantData.filter(a => a.castingStatus === 'alternative'),
-    tentative: applicantData.filter(a => a.castingStatus === 'tentative'),
-    reject: applicantData.filter(a => a.castingStatus === 'reject'),
-    undecided: applicantData.filter(a => a.castingStatus === 'undecided')
-  };
-  Object.values(castGroups).forEach(g => g.sort((a, b) => b.avgScore - a.avgScore));
+  // Per-applicant score + casting decision (userId kept for the private draft-tribe grouping below).
+  // Grouping + score sort live in computeCastingOrder — shared with the Casting jump-select.
+  const { ordered: applicantData, groups: castGroups } = computeCastingOrder(allApplications, playerData, guildId);
 
   const statusSections = [
     { emoji: '✅', title: 'CAST PLAYERS', group: castGroups.cast },
@@ -1251,11 +1282,15 @@ export async function handleRankingSelect({
   if (selectedValue.startsWith('page_')) {
     const newPage = parseInt(selectedValue.split('_')[1]);
     console.log(`🔍 DEBUG: handleRankingSelect - Switching to page ${newPage}`);
-    
-    // Show first applicant of the new page
-    const newIndex = newPage * 23;
-    const currentApp = allApplications[newIndex];
-    
+
+    // Show first applicant of the new SORTED page (display order = Marooning order).
+    // Recomputed at click time and clamped — scores/deletions may have shifted boundaries
+    // since render. NaN/negative pages fall through to the error path via undefined target.
+    const { ordered } = computeCastingOrder(allApplications, playerData, guildId);
+    const target = ordered[Math.min(Math.max(newPage, 0) * 23, ordered.length - 1)];
+    const newIndex = target?.insertionIndex;
+    const currentApp = target ? allApplications[newIndex] : undefined;
+
     if (!currentApp) {
       return {
         content: '❌ Error navigating to page.',

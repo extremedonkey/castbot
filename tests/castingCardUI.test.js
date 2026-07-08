@@ -12,12 +12,14 @@ function selectIsRendered(total) {
   return total >= 1;
 }
 
-function selectPlaceholder(total, appIndex) {
+// Placeholder doubles as the position indicator. N = SORTED position (display order),
+// not the insertion-order appIndex, so it agrees with the option numbering below it.
+function selectPlaceholder(total, sortedPos, name) {
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
-  const currentPage = Math.floor(appIndex / ITEMS_PER_PAGE);
-  if (total === 1) return '🔍 1 applicant so far';
-  if (totalPages === 1) return `🔍 Jump to applicant… (${total} total)`;
-  return `🔍 Jump to applicant… (page ${currentPage + 1}/${totalPages}, ${total} total)`;
+  const currentPage = Math.floor(sortedPos / ITEMS_PER_PAGE);
+  let placeholder = `Applicant ${sortedPos + 1} of ${total} - ${name}`;
+  if (totalPages > 1) placeholder += ` · page ${currentPage + 1}/${totalPages}`;
+  return placeholder;
 }
 
 describe('Casting card — jump-select is always rendered (>=1 applicant)', () => {
@@ -32,22 +34,23 @@ describe('Casting card — jump-select is always rendered (>=1 applicant)', () =
   });
 });
 
-describe('Casting card — state-aware select placeholder', () => {
-  it('single applicant → "1 applicant so far"', () => {
-    assert.equal(selectPlaceholder(1, 0), '🔍 1 applicant so far');
+describe('Casting card — position-indicator select placeholder (sorted position)', () => {
+  it('single applicant, single page → no page suffix', () => {
+    assert.equal(selectPlaceholder(1, 0, 'Tuckie'), 'Applicant 1 of 1 - Tuckie');
   });
-  it('few applicants, single page → total only', () => {
-    assert.equal(selectPlaceholder(5, 0), '🔍 Jump to applicant… (5 total)');
+  it('exactly one full page (23) → still no page suffix', () => {
+    assert.equal(selectPlaceholder(23, 4, 'Alice'), 'Applicant 5 of 23 - Alice');
   });
-  it('exactly one full page (23) → single page, no pagination', () => {
-    assert.equal(selectPlaceholder(23, 0), '🔍 Jump to applicant… (23 total)');
+  it('24 applicants → paginated, page suffix appears', () => {
+    assert.equal(selectPlaceholder(24, 0, 'Alice'), 'Applicant 1 of 24 - Alice · page 1/2');
   });
-  it('24 applicants → paginated, page 1/2', () => {
-    assert.equal(selectPlaceholder(24, 0), '🔍 Jump to applicant… (page 1/2, 24 total)');
+  it('deep sorted position reflects the correct current page', () => {
+    // sortedPos 30 → currentPage 1 (0-based) → "page 2/3"
+    assert.equal(selectPlaceholder(50, 30, 'Bob'), 'Applicant 31 of 50 - Bob · page 2/3');
   });
-  it('deep index reflects the correct current page', () => {
-    // idx 30 → currentPage 1 (0-based) → "page 2/3"
-    assert.equal(selectPlaceholder(50, 30), '🔍 Jump to applicant… (page 2/3, 50 total)');
+  it('N is the SORTED position, not the insertion index', () => {
+    // An applicant who applied first (insertionIndex 0) but sorts last of 30
+    assert.equal(selectPlaceholder(30, 29, 'Zed'), 'Applicant 30 of 30 - Zed · page 2/2');
   });
 });
 
