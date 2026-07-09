@@ -461,7 +461,7 @@ export async function generateSeasonAppRankingUI({
   containerComponents.push(
     {
       type: 10,
-      content: `> **🎭 Casting Status**`
+      content: `> **🎭 Casting Decision**`
     },
     // Casting Lifecycle Chevron (RaP 0902) — directly under the 🎭 Casting Status heading, ABOVE the select.
     // The redundant `> Casting Status` sub-header was dropped (this section's 🎭 heading already labels it).
