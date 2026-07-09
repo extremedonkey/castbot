@@ -255,7 +255,7 @@ export async function generateSeasonAppRankingUI({
   if (_voteVals.length > 0) {
     let _avg = (_voteVals.reduce((a, b) => a + b, 0) / _voteVals.length).toFixed(1);
     if (_avg.endsWith('.0')) _avg = _avg.slice(0, -2);
-    avgVotesLabel = `Votes: ${_avg}/5`;
+    avgVotesLabel = `${_avg}/5`; // ⭐ emoji renders before it → "⭐ 5/5" (compact for phone)
   }
   
   // (Applicant identity — name / pronouns / age / timezone / local time — is now rendered by the
@@ -415,8 +415,10 @@ export async function generateSeasonAppRankingUI({
   if (applicantAge) overviewBits.push(`${applicantAge}`);
   if (_pronounName) overviewBits.push(`@${_pronounName}`);
   if (_timezoneName) overviewBits.push(`@${_timezoneName}`);
-  let playerOverview = `> **👤 Player Overview**`;
+  let playerOverview = `> **👤 Overview**`;
   if (overviewBits.length) playerOverview += `\n* ${overviewBits.join(' | ')}`;
+  // Casting Lifecycle Chevron as a bullet (strip its leading "-# " — a subtext marker only works at line start).
+  if (chevron) playerOverview += `\n* ${chevron.replace(/^-# /, '')}`;
   if (dncSummaryText) playerOverview += `\n* ${dncSummaryText}`;
 
   containerComponents.push(
@@ -469,9 +471,6 @@ export async function generateSeasonAppRankingUI({
       type: 10,
       content: `> **🎭 Casting Decision**`
     },
-    // Casting Lifecycle Chevron (RaP 0902) — directly under the 🎭 Casting Status heading, ABOVE the select.
-    // The redundant `> Casting Status` sub-header was dropped (this section's 🎭 heading already labels it).
-    ...(chevron ? [{ type: 10, content: chevron }] : []),
     {
       type: 1, // Casting status — string select
       components: [{

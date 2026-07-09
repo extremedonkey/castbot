@@ -15,13 +15,14 @@ function votesText(applicantDisplayName, voters /* [{name, score}] sorted desc *
   return text;
 }
 
-// Replica of the avgVotesLabel button-label logic (trailing ".0" stripped: 5.0 → 5).
+// Replica of the avgVotesLabel button-label logic. Compact: no "Votes:" word (the ⭐ emoji is the button's
+// emoji, rendered before the label → "⭐ 5/5"). Trailing ".0" stripped: 5.0 → 5. No votes → "No Votes".
 function avgVotesLabel(rankings) {
   const vals = Object.values(rankings).filter(r => r !== undefined);
   if (vals.length === 0) return 'No Votes';
   let s = (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1);
   if (s.endsWith('.0')) s = s.slice(0, -2);
-  return `Votes: ${s}/5`;
+  return `${s}/5`;
 }
 
 describe('Casting Votes — tally text (identical to the old inline block)', () => {
@@ -43,18 +44,18 @@ describe('Casting Votes — tally text (identical to the old inline block)', () 
   });
 });
 
-describe('Casting Votes — ⭐ button label', () => {
+describe('Casting Votes — ⭐ button label (compact, no "Votes:" word)', () => {
   it('shows a non-integer average to 1 dp with /5', () => {
-    assert.equal(avgVotesLabel({ a: 3, b: 2 }), 'Votes: 2.5/5');
+    assert.equal(avgVotesLabel({ a: 3, b: 2 }), '2.5/5');
   });
   it('strips trailing .0 for whole averages (5.0 → 5, matches the screenshot)', () => {
-    assert.equal(avgVotesLabel({ a: 5, b: 5 }), 'Votes: 5/5');
-    assert.equal(avgVotesLabel({ a: 4, b: 4, c: 4 }), 'Votes: 4/5');
+    assert.equal(avgVotesLabel({ a: 5, b: 5 }), '5/5');
+    assert.equal(avgVotesLabel({ a: 4, b: 4, c: 4 }), '4/5');
   });
   it('strips .0 even when rounding produces it (avg 4.96 → "5.0" → "5")', () => {
     // 25 votes: 24 fives + 1 four = 124/25 = 4.96 → toFixed(1) = "5.0" → "5"
     const r = {}; for (let i = 0; i < 24; i++) r['u' + i] = 5; r.z = 4;
-    assert.equal(avgVotesLabel(r), 'Votes: 5/5');
+    assert.equal(avgVotesLabel(r), '5/5');
   });
   it('no votes → "No Votes"', () => {
     assert.equal(avgVotesLabel({}), 'No Votes');
