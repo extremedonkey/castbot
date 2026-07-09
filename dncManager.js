@@ -397,13 +397,20 @@ export function buildDncSummary(application) {
     return '**DNC List:** No DNC list provided';
   }
 
-  const names = entries.map(e => e.name).join(', ');
-  const issues = entries
-    .filter(e => e.issues)
-    .map(e => `${e.name}: ${e.issues}`)
-    .join('; ');
-
-  return `**DNC — Names:** ${names}\n**DNC — Issues:** ${issues || 'No details provided'}`;
+  // One bullet per entry: "* DNC #N: {name} ({userPart}): {issue}". userPart is the linked-user tag when a
+  // Discord user was chosen via the select ("<@id> - {handle}"), else just the typed handle, else omitted.
+  // The <@id> mention renders as a pill but must NOT ping the listed user — the Casting card sets
+  // allowed_mentions: { parse: [] } (they'd otherwise learn they're on someone's DNC list).
+  return entries.map((e, i) => {
+    let userPart = '';
+    if (e.userId && e.username) userPart = `<@${e.userId}> - ${e.username}`;
+    else if (e.userId) userPart = `<@${e.userId}>`;
+    else if (e.username) userPart = e.username;
+    let line = `* DNC #${i + 1}: ${e.name}`;
+    if (userPart) line += ` (${userPart})`;
+    if (e.issues) line += `: ${e.issues}`;
+    return line;
+  }).join('\n');
 }
 
 /**

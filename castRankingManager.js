@@ -417,7 +417,7 @@ export async function generateSeasonAppRankingUI({
   const _username = applicantMember?.user?.username || currentApp.username || 'unknown';
   let playerOverview = `> **👤 Overview**\n* ${headerName} (${_username})`; // display name (username)
   if (overviewBits.length) playerOverview += `\n* ${overviewBits.join(' | ')}`;
-  if (dncSummaryText) playerOverview += `\n* ${dncSummaryText}`;
+  if (dncSummaryText) playerOverview += `\n${dncSummaryText}`; // already formatted as its own "* DNC #N:" bullets
 
   containerComponents.push(
     { type: 14 }, // divider after the nav / select cluster
@@ -475,9 +475,10 @@ export async function generateSeasonAppRankingUI({
         decisionButton('reject', 'n', '🙅', "Don't Cast"),
         decisionButton('alternative', 'a', '🔄', 'Alternate')
       ]
-    },
-    // Casting Lifecycle Chevron (RaP 0902) — BELOW the Casting Decision buttons (subtext `-#` line).
-    ...(chevron ? [{ type: 10, content: chevron }] : [])
+    }
+    // Casting Lifecycle Chevron (RaP 0902) — HIDDEN from the UI for now (Reece's call); the logic is kept
+    // (getCastingChevron in playerStatus.js + `chevron` above) so it can be revived by re-adding:
+    //   ...(chevron ? [{ type: 10, content: chevron }] : [])
   );
 
   // (Votes tally moved off the card into the ⭐ Avg Votes button popup; Player Notes moved above the avatar.)
@@ -488,7 +489,7 @@ export async function generateSeasonAppRankingUI({
     components: [
       new ButtonBuilder()
         .setCustomId(`ranking_public_warn_${appIndex}_${configId}`)
-        .setLabel('📢 Shared Ranker')
+        .setLabel('📢 VC Ranker')
         .setStyle(ButtonStyle.Secondary)
         .toJSON(),
       new ButtonBuilder()
@@ -508,7 +509,9 @@ export async function generateSeasonAppRankingUI({
     ]
   });
 
-  // Shared Season Manager bottom row — [← Seasons] [✏️ Edit] (Marooning is now a nav tab, not here)
+  // Divider above the bottom nav, then the shared Season Manager bottom row — [← Seasons] [✏️ Edit].
+  // (Net component count unchanged vs the chevron being visible: chevron hidden −1, this divider +1.)
+  containerComponents.push({ type: 14 });
   containerComponents.push(buildSeasonBottomRow(configId, 'ranking'));
 
   // Create main container
@@ -526,6 +529,7 @@ export async function generateSeasonAppRankingUI({
 
   return {
     flags: ephemeral ? ((1 << 15) | (1 << 6)) : (1 << 15), // IS_COMPONENTS_V2 + EPHEMERAL if personal
+    allowed_mentions: { parse: [] }, // suppress ALL pings — the DNC summary's <@id> tags must never notify listed users
     components: [castRankingContainer]
   };
 }
