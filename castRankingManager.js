@@ -403,15 +403,21 @@ export async function generateSeasonAppRankingUI({
   const applicantDisplayName = applicantMember?.displayName || currentApp.displayName || currentApp.username || 'Applicant';
   const notesText = appRecord.playerNotes || 'Record casting notes, connections or potential issues...';
 
-  // 📃 Application header — "{Name}'s Application | {age} | @{pronoun} | @{timezone}". Role NAMES are injected
-  // as plain text (a code-block header can't render <@&role> pills); any absent part is omitted.
+  // 📃 header is just "{Name}'s App". The demographics moved into a "👤 Player Overview" block (below the
+  // action row) as bullets: "{age} | @{pronoun} | @{timezone}" + the DNC summary (only if they have any).
+  // Role NAMES are injected as plain text (a code-block header can't render <@&role> pills).
   const headerName = applicantMember?.displayName || currentApp.displayName || currentApp.username || 'Applicant';
   const roleNameOf = (id) => id ? (guild?.roles?.cache?.get(id)?.name || applicantMember?.roles?.cache?.get(id)?.name || null) : null;
-  const headerBits = [`📃 ${headerName}'s Application`];
-  if (applicantAge) headerBits.push(`${applicantAge}`);
-  const _pronounName = roleNameOf(pronounRoleId); if (_pronounName) headerBits.push(`@${_pronounName}`);
-  const _timezoneName = roleNameOf(timezoneRoleId); if (_timezoneName) headerBits.push(`@${_timezoneName}`);
-  const appHeaderContent = `# \`\`\`${headerBits.join(' | ')}\`\`\``;
+  const appHeaderContent = `# \`\`\`📃 ${headerName}'s App\`\`\``;
+  const _pronounName = roleNameOf(pronounRoleId);
+  const _timezoneName = roleNameOf(timezoneRoleId);
+  const overviewBits = [];
+  if (applicantAge) overviewBits.push(`${applicantAge}`);
+  if (_pronounName) overviewBits.push(`@${_pronounName}`);
+  if (_timezoneName) overviewBits.push(`@${_timezoneName}`);
+  let playerOverview = `> **👤 Player Overview**`;
+  if (overviewBits.length) playerOverview += `\n* ${overviewBits.join(' | ')}`;
+  if (dncSummaryText) playerOverview += `\n* ${dncSummaryText}`;
 
   containerComponents.push(
     { type: 14 }, // divider after the nav / select cluster
@@ -437,7 +443,7 @@ export async function generateSeasonAppRankingUI({
           .toJSON()
       ]
     },
-    ...(dncSummaryText ? [{ type: 10, content: dncSummaryText }] : []), // DNC summary keeps the old top slot
+    { type: 10, content: playerOverview }, // 👤 Player Overview — demographics + DNC (moved out of the header)
     { type: 10, content: `> **✏️ Player Notes**\n${notesText}` }, // moved to directly above the avatar
     {
       type: 12, // Media Gallery — full-size applicant avatar
