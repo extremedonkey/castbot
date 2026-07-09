@@ -47,6 +47,35 @@ let monitoringState = {
   }
 };
 
+// ── Noise filters (exported for tests) ──────────────────────────────────────
+// Success summaries like "sent 1, failed 0" or "0 failed, 0 orphaned" contain the
+// keyword 'failed' but are not errors — strip zero-count tokens before matching.
+export function stripZeroCountTokens(line) {
+  return line
+    .replace(/\bfailed\b[:=]?\s*0\b/gi, '')
+    .replace(/\b0\s+failed\b/gi, '');
+}
+
+const CRITICAL_KEYWORDS = [
+  'ERROR', 'FATAL', 'CRITICAL', 'failed', 'Failed',
+  'Error:', 'TypeError', 'ReferenceError', 'SyntaxError'
+];
+
+// A stdout line is worth posting to #error only if a keyword survives the noise strip
+export function isCriticalLine(line) {
+  if (!line.trim()) return false;
+  const stripped = stripZeroCountTokens(line);
+  return CRITICAL_KEYWORDS.some(keyword => stripped.includes(keyword));
+}
+
+// Stderr lines that are deliberate warnings, not errors (logged via console.error by
+// design — e.g. "⚠️ DEPRECATED season_management_menu hit ..." redirect notices)
+export function isBenignStderrLine(line) {
+  return line.includes('ExperimentalWarning') ||
+    line.includes('--trace-warnings') ||
+    line.includes('DEPRECATED');
+}
+
 /**
  * PM2 Error Logger Class - Bulletproof monitoring that can't crash the bot
  */
@@ -158,9 +187,7 @@ export class PM2ErrorLogger {
       if (errorRead) {
         if (errorRead.text.length > 0) {
           const errorLines = errorRead.text.split('\n')
-            .filter(line => line.trim() &&
-              !line.includes('ExperimentalWarning') &&
-              !line.includes('--trace-warnings'))
+            .filter(line => line.trim() && !isBenignStderrLine(line))
             .slice(-50); // Last 50 lines max
 
           if (errorLines.length > 0) {
@@ -180,18 +207,7 @@ export class PM2ErrorLogger {
       if (outRead) {
         if (outRead.text.length > 0) {
           const criticalLines = outRead.text.split('\n')
-            .filter(line =>
-              line.trim() && (
-                line.includes('ERROR') ||
-                line.includes('FATAL') ||
-                line.includes('CRITICAL') ||
-                line.includes('failed') ||
-                line.includes('Failed') ||
-                line.includes('Error:') ||
-                line.includes('TypeError') ||
-                line.includes('ReferenceError') ||
-                line.includes('SyntaxError')
-              ))
+            .filter(isCriticalLine)
             .slice(-30); // Last 30 critical lines max
 
           if (criticalLines.length > 0) {
@@ -224,9 +240,7 @@ export class PM2ErrorLogger {
       const errorResult = execSync(errorCommand, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
 
       const errorLines = errorResult.split('\n')
-        .filter(line => line.trim() && line !== 'No error log' &&
-          !line.includes('ExperimentalWarning') &&
-          !line.includes('--trace-warnings'))
+        .filter(line => line.trim() && line !== 'No error log' && !isBenignStderrLine(line))
         .slice(-50);
 
       if (errorLines.length > 0) {
@@ -239,7 +253,7 @@ export class PM2ErrorLogger {
       const outResult = execSync(outCommand, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
 
       const criticalLines = outResult.split('\n')
-        .filter(line => line.trim() && line !== 'No critical logs')
+        .filter(line => line.trim() && line !== 'No critical logs' && isCriticalLine(line))
         .slice(-30);
 
       if (criticalLines.length > 0) {

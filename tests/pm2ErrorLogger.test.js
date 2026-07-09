@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { PM2ErrorLogger } from '../src/monitoring/pm2ErrorLogger.js';
+import { PM2ErrorLogger, isCriticalLine, isBenignStderrLine, stripZeroCountTokens } from '../src/monitoring/pm2ErrorLogger.js';
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pm2logger-test-'));
 const logger = new PM2ErrorLogger(null);
@@ -100,5 +100,43 @@ describe('PM2ErrorLogger — readLogsLocal position migration', () => {
     const logs2 = await logger.readLogsLocal(config, positions);
     assert.ok(logs2.some(l => l.includes('FRESH ERROR after migration')));
     assert.ok(!logs2.some(l => l.includes('PRE-EXISTING')));
+  });
+});
+
+describe('PM2ErrorLogger — noise filters (false positives in #error channel)', () => {
+  // The three exact lines Reece reported leaking into #error (2026-07-09)
+  it('zero-count success summaries are NOT critical', () => {
+    assert.equal(isCriticalLine('📨 sendCastingInvites [selected] guild 1512093418602364998: sent 1, failed 0, skippedEmpty 0'), false);
+    assert.equal(isCriticalLine('2026-07-08T03:55:08: ✅ Conversion complete: 0 renamed, 16 unchanged, 0 unmapped, 0 failed, 0 orphaned (cleaned up)'), false);
+  });
+
+  it('DEPRECATED redirect warnings are benign stderr, real errors are not', () => {
+    assert.equal(isBenignStderrLine('2026-07-08T03:53:52: ⚠️ DEPRECATED season_management_menu hit (user 391415444084490240) — redirecting to the Season Manager.'), true);
+    assert.equal(isBenignStderrLine('ExperimentalWarning: buffer.File'), true);
+    assert.equal(isBenignStderrLine('TypeError: cannot read properties of undefined'), false);
+  });
+
+  it('real failures still flagged critical', () => {
+    assert.equal(isCriticalLine('📨 sendCastingInvites: sent 0, failed 3, skippedEmpty 0'), true);
+    assert.equal(isCriticalLine('Failed to fetch guild 12345'), true);
+    assert.equal(isCriticalLine('TypeError: x is not a function'), true);
+    assert.equal(isCriticalLine('❌ setup_castbot background work failed: timeout'), true);
+  });
+
+  it('a zero-count token does not mask a real error on the same line', () => {
+    assert.equal(isCriticalLine('sent 1, failed 0 — but ERROR: webhook rejected'), true);
+  });
+
+  it('stripZeroCountTokens handles failed 0 / failed: 0 / 0 failed variants', () => {
+    assert.equal(stripZeroCountTokens('failed 0').includes('failed'), false);
+    assert.equal(stripZeroCountTokens('failed: 0').includes('failed'), false);
+    assert.equal(stripZeroCountTokens('0 failed').includes('failed'), false);
+    assert.equal(stripZeroCountTokens('failed 10').includes('failed'), true); // 10 ≠ 0
+    assert.equal(stripZeroCountTokens('failed 0, failed 2').includes('failed'), true);
+  });
+
+  it('blank lines are never critical', () => {
+    assert.equal(isCriticalLine(''), false);
+    assert.equal(isCriticalLine('   '), false);
   });
 });

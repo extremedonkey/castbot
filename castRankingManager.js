@@ -451,13 +451,12 @@ export async function generateSeasonAppRankingUI({
     containerComponents.push({ type: 10, content: dncWarningText });
   }
 
-  // ---- Casting: header + chevron + status (toggle buttons) ----
-  // Three grey/blue TOGGLE buttons (Cast / Don't Cast / Alternate). Active status = blue (Primary), rest grey
-  // (Secondary) — mirrors the 1-5 rating-button style pattern (isSelected → style). NOT disabled: clicking the
-  // active (blue) button toggles it OFF (handler clears castingStatus → undecided). custom_id status is a single
-  // char (c/n/a) to keep it short (worst-case ~73 chars). "Still Deciding" is now simply no button active.
+  // ---- Casting Decision — three TOGGLE buttons (Cast / Don't Cast / Alternate) ----
   // Active (selected) style is per-decision: Cast=green (Success), Don't Cast=red (Danger), Alternate=blue
-  // (Primary). Inactive = grey (Secondary) for all. Not disabled — clicking the active one toggles it off.
+  // (Primary); inactive = grey (Secondary). NOT disabled — clicking the ACTIVE button toggles it OFF (the
+  // handler clears castingStatus → undecided). There is no "Still Deciding" option: undecided is simply no
+  // button active. custom_id status is a single char (c/n/a) to keep it short (worst-case ~73 chars).
+  // (The Casting Lifecycle Chevron that used to sit here is currently hidden — see the note below.)
   const decisionButton = (value, char, emoji, label, activeStyle) => new ButtonBuilder()
     .setCustomId(`castdec_${char}_${currentApp.channelId}_${appIndex}_${configId}`)
     .setLabel(label)
