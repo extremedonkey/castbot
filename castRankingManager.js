@@ -248,12 +248,15 @@ export async function generateSeasonAppRankingUI({
   const castingStatus = playerData[guildId]?.applications?.[currentApp.channelId]?.castingStatus;
   // (placementResponse is no longer shown on the card as a line — the chevron surfaces it via getCastingChevron.)
 
-  // ⭐ Avg Votes button label — the full tally moved off the card into an ephemeral popup (buildCastingVotesDisplay,
-  // opened by the casting_votes_* button). Only the average is shown on the card, in the button label.
+  // ⭐ Votes button label — the full tally moved off the card into an ephemeral popup (buildCastingVotesDisplay,
+  // opened by the casting_votes_* button). Only the average is shown here. Trailing ".0" is stripped (5.0 → 5).
   const _voteVals = Object.values(allRankings).filter(r => r !== undefined);
-  const avgVotesLabel = _voteVals.length > 0
-    ? `Avg Votes: ${(_voteVals.reduce((a, b) => a + b, 0) / _voteVals.length).toFixed(1)}/5`
-    : 'No Votes';
+  let avgVotesLabel = 'No Votes';
+  if (_voteVals.length > 0) {
+    let _avg = (_voteVals.reduce((a, b) => a + b, 0) / _voteVals.length).toFixed(1);
+    if (_avg.endsWith('.0')) _avg = _avg.slice(0, -2);
+    avgVotesLabel = `Votes: ${_avg}/5`;
+  }
   
   // (Applicant identity — name / pronouns / age / timezone / local time — is now rendered by the
   //  shared player-card Section built below, so the old inline demographic + name computation was
@@ -440,7 +443,7 @@ export async function generateSeasonAppRankingUI({
       type: 12, // Media Gallery — full-size applicant avatar
       items: [{ media: { url: applicantAvatarURL }, description: `Avatar of ${currentApp.displayName || currentApp.username}` }]
     },
-    { type: 10, content: `> **⭐ Rate this applicant (1-5)**` }, // header directly above the ratings
+    { type: 10, content: `> **⭐ Vote on this applicant**` }, // header directly above the ratings
     rankingRow.toJSON() // 1-5 rating buttons — moved underneath the avatar
   );
 
