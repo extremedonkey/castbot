@@ -131,19 +131,18 @@ export function deriveApplicationStatus(app = {}, liveChannelName = '') {
   if (placementResponse === 'declined') return { icon: '🚫', name: 'Declined Placement' };
   if (castingStatus === 'cast')        return { icon: '✅', name: 'Cast' };
   if (castingStatus === 'alternative') return { icon: '🔄', name: 'Alternate' };
-  if (castingStatus === 'tentative')   return { icon: '❓', name: 'Tentatively Cast' };
   if (castingStatus === 'reject')      return { icon: '❌', name: 'Not Cast' };
   if (voteCount >= 2)                  return { icon: '☑️', name: 'Reviewed' };
   if (voteCount >= 1)                  return { icon: '🗳️', name: `Scoring (${voteCount} vote${voteCount === 1 ? '' : 's'})` };
   return { icon: '📝', name: 'Awaiting Votes' };
 }
 
-/** Marooning's status-section order — also the jump-select's display order. */
-const CASTING_GROUP_ORDER = ['cast', 'alternative', 'tentative', 'reject', 'undecided'];
+/** Marooning's status-section order — also the jump-select's display order. (Tentative removed — RaP 0902.) */
+const CASTING_GROUP_ORDER = ['cast', 'alternative', 'reject', 'undecided'];
 
 /**
  * Single source of truth for "casting order": group applicants by castingStatus
- * (cast → alternative → tentative → reject → undecided), then sort each group by
+ * (cast → alternative → reject → undecided), then sort each group by
  * average score descending (stable — ties keep insertion order). Shared by the
  * Marooning tab (buildMarooningView) and the Casting card's jump-select so the two
  * views can never disagree.
@@ -453,42 +452,37 @@ export async function generateSeasonAppRankingUI({
     containerComponents.push({ type: 10, content: dncWarningText });
   }
 
-  // "Still Deciding" (value 'undecided') is the casting default when no status is set, and selecting it CLEARS
-  // any existing castingStatus (see handleCastingStatus) — undecided is never stored, it's simply the absence
-  // of castingStatus. (applicantDisplayName + notesText are computed up top, near the chevron.)
-  const isUndecided = !['cast', 'tentative', 'reject', 'alternative'].includes(castingStatus);
-
-  // ---- Casting: header + chevron + status (string select) ----
+  // ---- Casting: header + chevron + status (toggle buttons) ----
+  // Three grey/blue TOGGLE buttons (Cast / Don't Cast / Alternate). Active status = blue (Primary), rest grey
+  // (Secondary) — mirrors the 1-5 rating-button style pattern (isSelected → style). NOT disabled: clicking the
+  // active (blue) button toggles it OFF (handler clears castingStatus → undecided). custom_id status is a single
+  // char (c/n/a) to keep it short (worst-case ~73 chars). "Still Deciding" is now simply no button active.
+  const decisionButton = (value, char, emoji, label) => new ButtonBuilder()
+    .setCustomId(`castdec_${char}_${currentApp.channelId}_${appIndex}_${configId}`)
+    .setLabel(label)
+    .setEmoji(emoji)
+    .setStyle(castingStatus === value ? ButtonStyle.Primary : ButtonStyle.Secondary)
+    .toJSON();
   containerComponents.push(
     {
       type: 10,
       content: `> **🎭 Casting Decision**`
     },
     {
-      type: 1, // Casting status — string select
-      components: [{
-        type: 3,
-        custom_id: `casting_status_${currentApp.channelId}_${appIndex}_${configId}`,
-        placeholder: '🎭 Casting status',
-        min_values: 1,
-        max_values: 1,
-        options: [
-          { label: 'Still Deciding', value: 'undecided', emoji: { name: '❔' }, default: isUndecided },
-          { label: `Cast ${applicantDisplayName}`, value: 'cast', emoji: { name: '🎬' }, default: castingStatus === 'cast' },
-          { label: `Don't Cast ${applicantDisplayName}`, value: 'reject', emoji: { name: '🗑️' }, default: castingStatus === 'reject' },
-          { label: `Tentatively Cast ${applicantDisplayName}`, value: 'tentative', emoji: { name: '❓' }, default: castingStatus === 'tentative' },
-          { label: `Alternative — ${applicantDisplayName}`, value: 'alternative', emoji: { name: '🔄' }, default: castingStatus === 'alternative' }
-        ]
-      }]
+      type: 1, // Casting decision — toggle buttons
+      components: [
+        decisionButton('cast', 'c', '🎬', 'Cast'),
+        decisionButton('reject', 'n', '🙅', "Don't Cast"),
+        decisionButton('alternative', 'a', '🔄', 'Alternate')
+      ]
     },
-    // Casting Lifecycle Chevron (RaP 0902) — BELOW the Casting Decision select (subtext `-#` line).
+    // Casting Lifecycle Chevron (RaP 0902) — BELOW the Casting Decision buttons (subtext `-#` line).
     ...(chevron ? [{ type: 10, content: chevron }] : [])
   );
 
   // (Votes tally moved off the card into the ⭐ Avg Votes button popup; Player Notes moved above the avatar.)
 
-  // ---- Utility actions (divider above) ----
-  containerComponents.push({ type: 14 }); // divider above Shared Ranker / utility row
+  // ---- Utility actions ---- (separator dropped here to keep the card ≤ 39/40 after the +2 decision buttons)
   containerComponents.push({
     type: 1,
     components: [
@@ -574,7 +568,7 @@ export async function buildRankingScreen({ guildId, userId, configId, appIndex =
  * one place (keeps app.js a router).
  * @param {Object} p
  * @param {string} p.customId - casting_status_{channelId}_{appIndex}_{configId}
- * @param {string} p.value - 'cast' | 'tentative' | 'reject'
+ * @param {string} p.value - 'cast' | 'alternative' | 'reject' | 'undecided'
  * @param {string} p.guildId
  * @param {string} p.userId
  * @param {Object} p.guild - pre-fetched Discord guild
@@ -635,7 +629,7 @@ export async function handleCastingStatus({ customId, value, channelId, appIndex
 // (Invites button → modal → confirm → send). See RaP 0906.
 // ============================================================================
 
-/** Which casting status receives which message template (Tentative/undecided → none). */
+/** Which casting status receives which message template (undecided → none). */
 export const CASTING_STATUS_TO_MESSAGE = { cast: 'successful', alternative: 'alternative', reject: 'unsuccessful' };
 
 /** Accent colours per message type for the V2 invite card. */
@@ -689,7 +683,7 @@ export function renderInviteMessage(template, userId) {
 
 /**
  * Compute which applicants get which message type for a given send mode.
- * Returns [{ channelId, userId, displayName, messageType }]. Tentative + undecided are always skipped.
+ * Returns [{ channelId, userId, displayName, messageType }]. Undecided applicants are always skipped.
  */
 export function selectInviteTargets(allApplications, playerData, guildId, mode, appIndex) {
   const statusOf = (app) => playerData?.[guildId]?.applications?.[app.channelId]?.castingStatus;
@@ -731,7 +725,7 @@ export function buildCastingInvitesModal(playerData, guildId, appIndex, configId
       {
         type: 18,
         label: 'What to do when you submit this?',
-        description: 'Tentative & Still Deciding applicants are never messaged.',
+        description: 'Undecided applicants (no casting decision) are never messaged.',
         component: {
           type: 3, custom_id: 'invite_mode', required: true, min_values: 1, max_values: 1,
           options: [
@@ -757,7 +751,7 @@ export function buildInvitesConfirm({ mode, appIndex, configId, targets }) {
     counts.unsuccessful ? `🗑️ Unsuccessful → **${counts.unsuccessful}**` : null
   ].filter(Boolean);
   const body = targets.length === 0
-    ? `⚠️ No applicants match this option (Tentative & Still Deciding are never messaged). Nothing will be sent.`
+    ? `⚠️ No applicants match this option (Undecided applicants are never messaged). Nothing will be sent.`
     : `You're about to message **${targets.length}** applicant${targets.length !== 1 ? 's' : ''} in their application channels:\n${lines.join('\n')}\n\n-# This pings each applicant and cannot be undone.`;
   const components = [
     { type: 10, content: `## 📨 Send Casting Invites?` },
@@ -977,8 +971,7 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   const statusSections = [
     { emoji: '✅', title: 'CAST PLAYERS', group: castGroups.cast },
     { emoji: '🔄', title: 'ALTERNATE', group: castGroups.alternative },
-    { emoji: '❓', title: 'TENTATIVE', group: castGroups.tentative },
-    { emoji: '🗑️', title: "DON'T CAST", group: castGroups.reject },
+    { emoji: '🙅', title: "DON'T CAST", group: castGroups.reject },
     { emoji: '⚪', title: 'UNDECIDED', group: castGroups.undecided }
   ];
 
@@ -1055,7 +1048,7 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   if (!anyGroup) body += '-# No applicants yet for this season.\n\n';
   body += `### 📊 **SUMMARY**\n`;
   body += `> **Total Applicants:** ${allApplications.length}\n`;
-  body += `> **Cast:** ${castGroups.cast.length} | **Alternate:** ${castGroups.alternative.length} | **Tentative:** ${castGroups.tentative.length} | **Rejected:** ${castGroups.reject.length} | **Undecided:** ${castGroups.undecided.length}\n`;
+  body += `> **Cast:** ${castGroups.cast.length} | **Alternate:** ${castGroups.alternative.length} | **Rejected:** ${castGroups.reject.length} | **Undecided:** ${castGroups.undecided.length}\n`;
   const totalScored = applicantData.filter(a => a.voteCount > 0).length;
   body += `> **Scored:** ${totalScored}/${allApplications.length} applicants`;
 

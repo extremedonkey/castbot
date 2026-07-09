@@ -1,7 +1,7 @@
 // Tests for the Status Engine (playerStatus.js). Pure module → import the real functions directly.
 // Scope: the "committed" states are implemented (Withdrawn · Accepted/Declined Placement · Cast/Alternate/
 // Not Cast · Complete · New), byte-matched to the legacy `Status:` line (deriveApplicationStatus). Tentative
-// + the vote-progression "Still Deciding" cluster are DEFERRED (fall through to complete/new). See RaP 0905 §9.
+// was REMOVED (RaP 0902); the vote-progression cluster is DEFERRED (both fall through to complete/new). RaP 0905 §9.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -23,7 +23,6 @@ function deriveApplicationStatus(app = {}, liveChannelName = '') {
   if (placementResponse === 'declined') return { icon: '🚫', name: 'Declined Placement' };
   if (castingStatus === 'cast')        return { icon: '✅', name: 'Cast' };
   if (castingStatus === 'alternative') return { icon: '🔄', name: 'Alternate' };
-  if (castingStatus === 'tentative')   return { icon: '❓', name: 'Tentatively Cast' };
   if (castingStatus === 'reject')      return { icon: '❌', name: 'Not Cast' };
   if (voteCount >= 2)                  return { icon: '☑️', name: 'Reviewed' };
   if (voteCount >= 1)                  return { icon: '🗳️', name: `Scoring (${voteCount} vote${voteCount === 1 ? '' : 's'})` };
@@ -33,7 +32,7 @@ function deriveApplicationStatus(app = {}, liveChannelName = '') {
 describe('Status Engine — registry shape', () => {
   it('lists the committed rows in precedence order (withdrawn ▸ placement ▸ casting ▸ lifecycle)', () => {
     assert.deepEqual(STATUS_REGISTRY.map(r => r.id),
-      ['withdrawn', 'accepted', 'declined', 'cast', 'alternate', 'tentative', 'reject', 'complete', 'new']);
+      ['withdrawn', 'accepted', 'declined', 'cast', 'alternate', 'reject', 'complete', 'new']);
   });
   it('does NOT include the deferred vote rows, nor an Undecided row (Reece: Undecided = Application Complete)', () => {
     const ids = STATUS_REGISTRY.map(r => r.id);
@@ -98,8 +97,8 @@ describe('Status Engine — deriveStatus precedence', () => {
   it('a casting decision still outranks a submitted (☑️) channel', () => {
     assert.equal(deriveStatus({ submitted: true, castingStatus: 'cast', hasApplication: true }).statusId, 'cast');
   });
-  it('tentative resolves to the tentative casting row (outranks complete)', () => {
-    assert.equal(deriveStatus({ castingStatus: 'tentative', completedAt: 'x', hasApplication: true }).statusId, 'tentative');
+  it('legacy tentative is no longer a row — a submitted tentative app falls through to complete (RaP 0902)', () => {
+    assert.equal(deriveStatus({ castingStatus: 'tentative', completedAt: 'x', hasApplication: true }).statusId, 'complete');
   });
   it('undecided (castingStatus null) is NOT a distinct row — a submitted app reads complete', () => {
     assert.equal(deriveStatus({ completedAt: 'x', hasApplication: true }).statusId, 'complete');
@@ -163,7 +162,6 @@ describe('Status Engine — parity with legacy deriveApplicationStatus', () => {
     { app: { placementResponse: 'declined' },                               chan: '❌c' },  // Declined
     { app: { castingStatus: 'cast', completedAt: 'x' },                     chan: '☑️c' },  // Cast
     { app: { castingStatus: 'alternative' },                                chan: '📝c' },  // Alternate
-    { app: { castingStatus: 'tentative', completedAt: 'x' },                chan: '☑️c' },  // Tentatively Cast
     { app: { castingStatus: 'reject', completedAt: 'x' },                   chan: '☑️c' },  // Not Cast
   ];
   it('agrees (emoji + label) on every committed state', () => {

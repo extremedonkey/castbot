@@ -3199,7 +3199,7 @@ export const BUTTON_REGISTRY = {
   },
   'season_marooning_*': {
     label: 'Marooning',
-    description: 'Season-wide casting-decision summary tab (Cast / Alternate / Tentative / Don\'t Cast breakdown)',
+    description: 'Season-wide casting-decision summary tab (Cast / Alternate / Don\'t Cast breakdown)',
     emoji: '🚣',
     style: 'Secondary',
     parent: 'season_app_ranking',
@@ -3221,17 +3221,17 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'casting_management'
   },
-  'cast_tentative_*': {
-    label: 'Tentative',
-    description: 'Mark applicant as tentative',
-    emoji: '❓',
+  'castdec_*': {
+    label: 'Casting Decision',
+    description: 'Toggle the casting decision (Cast / Don\'t Cast / Alternate); click the active one to clear it',
+    emoji: '🎭',
     style: 'Secondary',
     category: 'casting_management'
   },
   'cast_reject_*': {
     label: 'Don\'t Cast',
     description: 'Mark applicant as not cast',
-    emoji: '🗑️',
+    emoji: '🙅',
     style: 'Secondary',
     category: 'casting_management'
   },
@@ -4613,7 +4613,6 @@ export const BUTTON_REGISTRY = {
   'rank_applicant_*': { label: 'Rank Applicant', emoji: '⭐', category: 'seasons' },
   'ranking_navigation_*': { label: 'Casting Navigation', emoji: '🔄', category: 'seasons' },
   'ranking_select_*': { label: 'Casting Select', emoji: '🏆', category: 'seasons' },
-  'casting_status_*': { label: 'Casting Status', description: 'Set draft casting status (Cast / Alternative / Tentative / Don\'t Cast) via string select', emoji: '🎭', category: 'seasons' },
   'casting_votes_*': { label: 'Avg Votes', description: 'Show the vote tally for this applicant as a private/ephemeral popup', emoji: '⭐', style: 'Primary', category: 'seasons' },
   'casting_messages_*': { label: 'Invites', description: 'Open the Casting Invites modal (author + send outcome messages to applicants)', emoji: '✒️', style: 'Secondary', category: 'seasons' },
   'casting_invites_confirm_*': { label: 'Confirm Send Invites', description: 'Confirm and send casting outcome messages to applicant channels', emoji: '📨', style: 'Success', category: 'seasons' },

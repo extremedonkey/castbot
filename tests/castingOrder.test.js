@@ -1,13 +1,13 @@
 // Tests for computeCastingOrder + the Casting jump-select's sorted display
-// (castRankingManager.js): Marooning-order grouping (cast → alternative → tentative
-// → reject → undecided), score-desc stable sort, sorted-page slicing/sentinels,
-// page_N resolution, Status-engine icons, and label truncation.
+// (castRankingManager.js): Marooning-order grouping (cast → alternative → reject →
+// undecided), score-desc stable sort, sorted-page slicing/sentinels, page_N
+// resolution, Status-engine icons, and label truncation. (Tentative removed — RaP 0902.)
 // Pure logic replicated inline to avoid importing the Discord/file-I/O-heavy module.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 const ITEMS_PER_PAGE = 23;
-const CASTING_GROUP_ORDER = ['cast', 'alternative', 'tentative', 'reject', 'undecided'];
+const CASTING_GROUP_ORDER = ['cast', 'alternative', 'reject', 'undecided'];
 
 // Mirrors computeCastingOrder (castRankingManager.js)
 function computeCastingOrder(allApplications, playerData, guildId) {
@@ -77,7 +77,6 @@ function deriveApplicationStatus(app = {}, liveChannelName = '') {
   if (placementResponse === 'declined') return { icon: '🚫', name: 'Declined Placement' };
   if (castingStatus === 'cast')        return { icon: '✅', name: 'Cast' };
   if (castingStatus === 'alternative') return { icon: '🔄', name: 'Alternate' };
-  if (castingStatus === 'tentative')   return { icon: '❓', name: 'Tentatively Cast' };
   if (castingStatus === 'reject')      return { icon: '❌', name: 'Not Cast' };
   if (voteCount >= 2)                  return { icon: '☑️', name: 'Reviewed' };
   if (voteCount >= 1)                  return { icon: '🗳️', name: `Scoring (${voteCount} vote${voteCount === 1 ? '' : 's'})` };
@@ -133,16 +132,25 @@ function fixture(apps) {
 }
 
 describe('computeCastingOrder — grouping', () => {
-  it('orders groups cast → alternative → tentative → reject → undecided', () => {
+  it('orders groups cast → alternative → reject → undecided', () => {
     const { allApplications, playerData } = fixture([
       { name: 'Und' },
       { name: 'Rej', status: 'reject' },
-      { name: 'Ten', status: 'tentative' },
       { name: 'Alt', status: 'alternative' },
       { name: 'Cast', status: 'cast' }
     ]);
     const { ordered } = computeCastingOrder(allApplications, playerData, GUILD);
-    assert.deepEqual(ordered.map(e => e.name), ['Cast', 'Alt', 'Ten', 'Rej', 'Und']);
+    assert.deepEqual(ordered.map(e => e.name), ['Cast', 'Alt', 'Rej', 'Und']);
+  });
+
+  it('legacy tentative data normalizes into the Undecided group (RaP 0902)', () => {
+    const { allApplications, playerData } = fixture([
+      { name: 'Cast', status: 'cast' },
+      { name: 'Ten', status: 'tentative' } // no longer a group → normalized to undecided
+    ]);
+    const { groups } = computeCastingOrder(allApplications, playerData, GUILD);
+    assert.deepEqual(groups.undecided.map(e => e.name), ['Ten']);
+    assert.equal(groups.tentative, undefined);
   });
 
   it('a high-scored reject never outranks a low-scored cast (group beats score)', () => {
@@ -161,7 +169,7 @@ describe('computeCastingOrder — grouping', () => {
     ]);
     const { ordered, groups } = computeCastingOrder(allApplications, playerData, GUILD);
     assert.equal(ordered.length, 2);
-    assert.equal(groups.tentative.length, 0);
+    assert.equal(groups.alternative.length, 0);
   });
 
   it('undefined AND unknown statuses land in undecided — never dropped', () => {
@@ -203,7 +211,7 @@ describe('computeCastingOrder — completeness invariant', () => {
     const { allApplications, playerData } = fixture(
       Array.from({ length: 40 }, (_, i) => ({
         name: `P${i}`,
-        status: ['cast', 'alternative', 'tentative', 'reject', undefined, 'garbage'][i % 6],
+        status: ['cast', 'alternative', 'reject', undefined, 'garbage'][i % 5],
         scores: i % 3 === 0 ? [((i * 7) % 5) + 1] : undefined
       }))
     );
@@ -308,8 +316,8 @@ describe('Jump-select — page_N resolution (handleRankingSelect)', () => {
 });
 
 describe('Jump-select — Status-engine icons (full alignment)', () => {
-  it('tentative → ❓ (previously fell through to ☑️/🗳️)', () => {
-    assert.equal(deriveApplicationStatus({ castingStatus: 'tentative', rankings: { a: 5, b: 4 } }).icon, '❓');
+  it('legacy tentative now falls through to the vote-based icon (RaP 0902 removal)', () => {
+    assert.equal(deriveApplicationStatus({ castingStatus: 'tentative', rankings: { a: 5, b: 4 } }).icon, '☑️');
   });
   it('zero votes → 📝 (previously 🗳️)', () => {
     assert.equal(deriveApplicationStatus({}).icon, '📝');
@@ -379,7 +387,6 @@ describe('Marooning parity — helper matches the old inline logic', () => {
     const castGroups = {
       cast: applicantData.filter(a => a.castingStatus === 'cast'),
       alternative: applicantData.filter(a => a.castingStatus === 'alternative'),
-      tentative: applicantData.filter(a => a.castingStatus === 'tentative'),
       reject: applicantData.filter(a => a.castingStatus === 'reject'),
       undecided: applicantData.filter(a => a.castingStatus === 'undecided')
     };
@@ -392,7 +399,6 @@ describe('Marooning parity — helper matches the old inline logic', () => {
       { name: 'C1', status: 'cast', scores: [5] },
       { name: 'C2', status: 'cast', scores: [5] },      // tie with C1
       { name: 'A1', status: 'alternative', scores: [3] },
-      { name: 'T1', status: 'tentative' },
       { name: 'R1', status: 'reject', scores: [1, 2] },
       { name: 'U1' },
       { name: 'U2', scores: [4], placementResponse: 'accepted' }

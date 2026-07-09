@@ -65,7 +65,6 @@ function deriveApplicationStatus(app = {}, liveChannelName = '') {
   if (placementResponse === 'declined') return { icon: '🚫', name: 'Declined Placement' };
   if (castingStatus === 'cast')        return { icon: '✅', name: 'Cast' };
   if (castingStatus === 'alternative') return { icon: '🔄', name: 'Alternate' };
-  if (castingStatus === 'tentative')   return { icon: '❓', name: 'Tentatively Cast' };
   if (castingStatus === 'reject')      return { icon: '❌', name: 'Not Cast' };
   if (voteCount >= 2)                  return { icon: '☑️', name: 'Reviewed' };
   if (voteCount >= 1)                  return { icon: '🗳️', name: `Scoring (${voteCount} vote${voteCount === 1 ? '' : 's'})` };
@@ -86,10 +85,13 @@ describe('Casting card — derived Status line priority', () => {
   it('castingStatus beats votes', () => {
     assert.equal(deriveApplicationStatus({ castingStatus: 'reject', rankings: { a: 5, b: 4, c: 3 } }).name, 'Not Cast');
   });
-  it('cast / alternate / tentative map correctly', () => {
+  it('cast / alternate / reject map correctly', () => {
     assert.equal(deriveApplicationStatus({ castingStatus: 'cast' }).icon, '✅');
     assert.equal(deriveApplicationStatus({ castingStatus: 'alternative' }).name, 'Alternate');
-    assert.equal(deriveApplicationStatus({ castingStatus: 'tentative' }).name, 'Tentatively Cast');
+    assert.equal(deriveApplicationStatus({ castingStatus: 'reject' }).name, 'Not Cast');
+  });
+  it('legacy tentative falls through to the vote ladder (RaP 0902 removal)', () => {
+    assert.equal(deriveApplicationStatus({ castingStatus: 'tentative' }).name, 'Awaiting Votes');
   });
   it('>=2 votes → Reviewed', () => {
     assert.deepEqual(deriveApplicationStatus({ rankings: { a: 5, b: 3 } }), { icon: '☑️', name: 'Reviewed' });

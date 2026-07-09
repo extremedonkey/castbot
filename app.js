@@ -5868,7 +5868,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               components: [
                 { type: 10, content: `## ⚠️ Post Ranking Publicly?` },
                 { type: 14 },
-                { type: 10, content: `This posts the **Casting** to this channel as a **public message** that anyone who can see the channel will be able to read — including:\n• Applicant scores & average ratings\n• Casting decisions (Cast / Tentative / Don't Cast)\n• Player notes\n\nRanking is normally kept private to hosts. Continue?` },
+                { type: 10, content: `This posts the **Casting** to this channel as a **public message** that anyone who can see the channel will be able to read — including:\n• Applicant scores & average ratings\n• Casting decisions (Cast / Don't Cast / Alternate)\n• Player notes\n\nRanking is normally kept private to hosts. Continue?` },
                 { type: 14 },
                 { type: 1, components: [
                   { type: 2, custom_id: `ranking_public_cancel_${appIndex}_${configId}`, label: 'Cancel', style: 2, emoji: { name: '❌' } },
@@ -5919,10 +5919,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           return ui || { content: '❌ No applications found for this season.', ephemeral: true };
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('casting_status_')) {
-      // Casting status STRING SELECT (replaces the 3 status buttons) — logic lives in castRankingManager.
+    } else if (custom_id.startsWith('castdec_')) {
+      // Casting Decision TOGGLE BUTTONS (RaP 0902) — castdec_{c|n|a}_{channelId}_{appIndex}_{configId}. Clicking
+      // the ACTIVE (blue) button clears the status (→ undecided); reuses handleCastingStatus (set/save/re-render).
       return ButtonHandlerFactory.create({
-        id: 'casting_status_select',
+        id: 'casting_decide',
         updateMessage: true,
         handler: async (context) => {
           const { guildId, userId, client } = context;
@@ -5931,13 +5932,20 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           if (!hasCastRankingPermissions(member, guildId)) {
             return { content: '❌ You need Manage Roles or Manage Channels permissions to set casting status.', ephemeral: true };
           }
+          const m = context.customId.match(/^castdec_([cna])_(\d+)_(\d+)_(.+)$/);
+          if (!m) return { content: '❌ Invalid casting decision.', ephemeral: true };
+          const clicked = { c: 'cast', n: 'reject', a: 'alternative' }[m[1]];
+          const channelId = m[2], appIndex = parseInt(m[3]), configId = m[4];
+          const playerData = await loadPlayerData();
+          const current = playerData[guildId]?.applications?.[channelId]?.castingStatus;
+          const value = current === clicked ? 'undecided' : clicked; // toggle OFF if already the active status
           const { handleCastingStatus } = await import('./castRankingManager.js');
-          return handleCastingStatus({ customId: context.customId, value: req.body.data.values?.[0], guildId, userId, guild });
+          return handleCastingStatus({ value, channelId, appIndex, configId, guildId, userId, guild });
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('cast_player_') || custom_id.startsWith('cast_tentative_') || custom_id.startsWith('cast_reject_')) {
-      // LEGACY casting status BUTTONS — compat path for casting cards posted before the string-select
-      // redesign. New cards use the casting_status_ select. Logic lives in castRankingManager.
+    } else if (custom_id.startsWith('cast_player_') || custom_id.startsWith('cast_reject_')) {
+      // LEGACY casting status BUTTONS — compat path for casting cards posted before the redesign. New cards use
+      // castdec_ toggle buttons. Logic lives in castRankingManager. (Tentative removed — RaP 0902.)
       return ButtonHandlerFactory.create({
         id: 'casting_status',
         updateMessage: true,
@@ -5950,7 +5958,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
           // cast_[status]_[channelId]_[appIndex]_[configId]
           const parts = context.customId.split('_');
-          const statusMap = { player: 'cast', tentative: 'tentative', reject: 'reject' };
+          const statusMap = { player: 'cast', reject: 'reject' };
           const configMatch = context.customId.match(/cast_\w+_\d+_\d+_(.+)$/);
           const { handleCastingStatus } = await import('./castRankingManager.js');
           return handleCastingStatus({
@@ -44581,10 +44589,8 @@ Your server is now ready for Tycoons gameplay!`;
           castingStatusText = '✅ Cast';
         } else if (castingStatus === 'alternative') {
           castingStatusText = '🔄 Alternate';
-        } else if (castingStatus === 'tentative') {
-          castingStatusText = '❓ Tentative';
         } else if (castingStatus === 'reject') {
-          castingStatusText = '🗑️ Don\'t Cast';
+          castingStatusText = '🙅 Don\'t Cast';
         } else {
           castingStatusText = '⚪ Undecided';
         }

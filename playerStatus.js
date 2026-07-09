@@ -5,10 +5,10 @@
  * (application lifecycle, admin casting decision, player placement response, withdrawal) are collapsed
  * to a SINGLE most-salient status by walking an ordered registry — FIRST matching `test(signals)` wins.
  *
- * Implemented today — the "committed" casting/placement states + Tentative, byte-matched to the legacy
- * `Status:` line (deriveApplicationStatus in castRankingManager.js) so ÜberStatus and that line agree exactly:
- *   ✖️ Withdrawn · 🎉 Accepted Placement · 🚫 Declined Placement · ✅ Cast · 🔄 Alternate · ❓ Tentatively Cast
- *   · ❌ Not Cast · ☑️ Application Complete · 📝 New.
+ * Implemented today — the "committed" casting/placement states, byte-matched to the legacy `Status:` line
+ * (deriveApplicationStatus in castRankingManager.js) so ÜberStatus and that line agree exactly:
+ *   ✖️ Withdrawn · 🎉 Accepted Placement · 🚫 Declined Placement · ✅ Cast · 🔄 Alternate · ❌ Not Cast
+ *   · ☑️ Application Complete · 📝 New. (Tentative was removed — RaP 0902.)
  *
  * DELIBERATELY NOT a status row (Reece's call): "Undecided / Still Deciding" (castingStatus = null). It is
  * definitionally the same state as ☑️ Application Complete (submitted, no casting decision), so a submitted-
@@ -40,10 +40,10 @@ export const STATUS_REGISTRY = [
   { id: 'declined',  stage: 2, emoji: '🚫', label: 'Declined Placement',  test: (s) => s.placementResponse === 'declined' },
 
   // Stage 1 casting decision (the ADMIN committed). Mutually exclusive — one `castingStatus` field, so the
-  // order among these three is cosmetic; it only matters relative to the other stages.
+  // order among these is cosmetic; it only matters relative to the other stages. (Tentative removed — RaP 0902:
+  // any legacy castingStatus='tentative' no longer matches here and falls through to complete/new = Undecided.)
   { id: 'cast',      stage: 1, emoji: '✅', label: 'Cast',                test: (s) => s.castingStatus === 'cast' },
   { id: 'alternate', stage: 1, emoji: '🔄', label: 'Alternate',           test: (s) => s.castingStatus === 'alternative' },
-  { id: 'tentative', stage: 1, emoji: '❓', label: 'Tentatively Cast',     test: (s) => s.castingStatus === 'tentative' },
   { id: 'reject',    stage: 1, emoji: '❌', label: 'Not Cast',            test: (s) => s.castingStatus === 'reject' },
 
   // Stage 0 lifecycle (the applicant's own journey) — the fall-through once no decision is set.
@@ -75,7 +75,7 @@ export function buildStatusSignals({ app, liveChannelName = '' } = {}) {
     submitted: /^☑/.test(liveChannelName),             // live channel ☑️ = submitted/complete. The reliable signal for
                                                        //   apps completed BEFORE completedAt shipped (the stored
                                                        //   channelName field is stale — not updated on the rename).
-    castingStatus: app?.castingStatus || null,         // admin draft: 'cast' | 'alternative' | 'reject' | 'tentative'
+    castingStatus: app?.castingStatus || null,         // admin draft: 'cast' | 'alternative' | 'reject' (or null = undecided)
     offerStatus: app?.offerStatus || null,             // Stage 2 (RaP 0902): 'offer' | 'offer_alternative' | 'offer_rejected' — set when the invite is SENT
     placementResponse: app?.placementResponse || null, // player: 'accepted' | 'accepted_alternative' | 'declined'
     voteCount: Object.keys(app?.rankings || {}).length,
@@ -132,7 +132,7 @@ export function getPlayerSeasonStatus(guildId, seasonId, userId, { playerData, g
 // ────────────────────────────────────────────────────────────────────────────────────────────────
 // Casting Lifecycle Chevron (RaP 0902) — a one-line admin-facing progress bar (NOT applicant-facing).
 // Five public-milestone segments: New App → App Submission → Casting Review → Casting Offer → Casting
-// Accepted. The PRIVATE casting draft (Cast/Alt/Tentative/Not-Cast, Stage 1) does NOT advance the chevron —
+// Accepted. The PRIVATE casting draft (Cast/Alt/Not-Cast, Stage 1) does NOT advance the chevron —
 // only a SENT offer (offerStatus, Stage 2) does. Rendering rules (Reece's spec): the CURRENT segment ONLY
 // gets an emoji, as a bold code-chip `**`🎥 Casting Review`**`; reached segments are plain; future segments
 // are ||spoiler||; terminal-negative states (Not Cast / Declined / Withdrawn) render NO future (adaptive
