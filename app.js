@@ -248,7 +248,7 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   // Title with pagination info
   const pageInfo = regularQuestions.length > questionsPerPage
-    ? ` (Pg ${currentPage + 1}/${totalPages})`
+    ? ` (${currentPage + 1}/${totalPages})`
     : '';
 
   // Shared Season Manager header + active-tab nav row (current view = Apps, shaded blue)
@@ -258,7 +258,7 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
 
   refreshedComponents.push({
     type: 10,
-    content: `### \`\`\`❓ Application Questions${pageInfo}\`\`\``
+    content: `### \`\`\`❓ App Questions${pageInfo}\`\`\``
   });
 
   // Special "Player Setup" component — always shown on page 1
