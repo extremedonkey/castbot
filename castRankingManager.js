@@ -438,7 +438,7 @@ export async function generateSeasonAppRankingUI({
       ]
     },
     { type: 10, content: playerOverview }, // 👤 Player Overview — demographics + DNC (moved out of the header)
-    { type: 10, content: `> **✏️ Player Notes**\n${notesText}` }, // moved to directly above the avatar
+    { type: 10, content: `> **✏️ Applicant Notes**\n${notesText}` }, // moved to directly above the avatar
     {
       type: 12, // Media Gallery — full-size applicant avatar
       items: [{ media: { url: applicantAvatarURL }, description: `Avatar of ${currentApp.displayName || currentApp.username}` }]
