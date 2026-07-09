@@ -215,9 +215,9 @@ export async function generateSeasonAppRankingUI({
     console.log('🔍 DEBUG: generateSeasonAppRankingUI - Applicant avatar pre-fetch failed (non-critical):', error.message);
   }
   
-  // Applicant identity = the detailed info block (Name + role-tag demographics + scores + casting
-  // status + app link + Status), built below as `oldInfoBlock`. The avatar is a full-size Media
-  // Gallery using applicantAvatarURL (pre-fetched above).
+  // Applicant identity now lives in the 📃 header (Name | age | @pronoun | @timezone). Below the action row
+  // is the "Casting Status" block (`castingStatusBlock`): the lifecycle chevron + DNC summary. The avatar is
+  // a full-size Media Gallery using applicantAvatarURL (pre-fetched above).
 
   // Create ranking buttons (1-5)
   const ephemeralSuffix = ephemeral ? '_ephemeral' : '';
@@ -297,9 +297,9 @@ export async function generateSeasonAppRankingUI({
   const dncSummaryText = getDncEntries(appData).length > 0 ? buildDncSummary(appData) : '';
 
   // ===== Build the Casting card (Components V2) =====
-  // Layout: header → tab nav → 📃 Application (actions + jump-select) → info block (+ DNC + Status)
-  //         → avatar → Rate (1-5) → Casting status → Votes → Player Notes → utility → bottom nav.
-  // The applicant DNC summary is folded into the info block (oldInfoBlock).
+  // Layout: 📃 header → tab nav → jump-select → actions → Casting Status (chevron + DNC) → avatar
+  //         → Rate (1-5) → 🎭 Casting status select → Votes → Player Notes → utility → bottom nav.
+  // The applicant DNC summary is folded into the Casting Status block (castingStatusBlock).
 
   const { buildSeasonNavRow, seasonManagerHeader, buildSeasonBottomRow } = await import('./seasonSelector.js');
   const containerComponents = [
@@ -409,13 +409,7 @@ export async function generateSeasonAppRankingUI({
   const appRecord = playerData[guildId]?.applications?.[currentApp.channelId] || {};
   const liveChannelName = guild?.channels?.cache?.get(currentApp.channelId)?.name || '';
 
-  // ---- Restored OLD detailed info block (single Text Display under the Delete button) ----
-  // Name = clickable mention (fallback when the member left). Demographics use ROLE TAG mentions
-  // (age, <@&pronoun>, <@&timezone>) — the old colored role pills. The "Applicant N of M" line was
-  // dropped — the jump-select placeholder (now directly above this) already shows it.
-  const nameDisplay = (applicantMember?.id && applicantMember?.guild)
-    ? `<@${currentApp.userId}>`
-    : `${currentApp.displayName || currentApp.username} - left server`;
+  // ---- Applicant demographics — age + pronoun/timezone role IDs feed the 📃 header below. ----
   const applicantAge = playerData[guildId]?.players?.[currentApp.userId]?.age;
   let pronounRoleId = null, timezoneRoleId = null;
   if (applicantMember?.roles) {
@@ -425,23 +419,15 @@ export async function generateSeasonAppRankingUI({
     for (const roleId of memberRoles) { if (guildPronouns.includes(roleId)) { pronounRoleId = roleId; break; } }
     for (const roleId of memberRoles) { if (guildTimezones.includes(roleId)) { timezoneRoleId = roleId; break; } }
   }
-  const infoParts = [];
-  if (applicantAge) infoParts.push(applicantAge);
-  if (pronounRoleId) infoParts.push(`<@&${pronounRoleId}>`);
-  if (timezoneRoleId) infoParts.push(`<@&${timezoneRoleId}>`);
-  const demographicInfo = infoParts.length > 0 ? ` (${infoParts.join(', ')})` : '';
-  const infoRankings = Object.values(allRankings).filter(r => r !== undefined);
-  const infoAvg = infoRankings.length > 0 ? (infoRankings.reduce((a, b) => a + b, 0) / infoRankings.length).toFixed(1) : 'No scores';
-  let oldInfoBlock = `**Name:** ${nameDisplay}${demographicInfo}\n**Average Score:** ${infoAvg} (${infoRankings.length} vote${infoRankings.length !== 1 ? 's' : ''})\n**App:** <#${currentApp.channelId}>`;
-  if (dncSummaryText) oldInfoBlock += `\n${dncSummaryText}`;
-  // ▶ Casting Lifecycle Chevron (RaP 0902) — REPLACES the old 🌈 ÜberStatus line. A single `-#` progress bar
-  // over New App → App Submission → Casting Review → Casting Offer → Casting Accepted; the current segment
-  // ONLY gets an emoji (bold code-chip), reached = plain, future = ||spoiler||, terminal-negative (Not Cast /
-  // Declined / Withdrawn) = no future (adaptive terminal). The private casting draft (Cast/Alt/Tentative/
-  // Not-Cast) does NOT advance the chevron — only a SENT offer (offerStatus) does. Admin-facing only.
+
+  // ▶ Casting Status block — the Casting Lifecycle Chevron (RaP 0902) under a Rate-styled "Casting Status"
+  // header. The old info block (Name / Average Score / App) was DELETED as redundant: Name/age/pronoun/tz now
+  // live in the 📃 header, and Average Score in the Votes section. DNC summary (if any) is kept beneath it.
   const { getCastingChevron } = await import('./playerStatus.js');
   const chevron = getCastingChevron(appRecord, liveChannelName);
-  if (chevron) oldInfoBlock += `\n${chevron}`;
+  let castingStatusBlock = `> **Casting Status**`;
+  if (chevron) castingStatusBlock += `\n${chevron}`;
+  if (dncSummaryText) castingStatusBlock += `\n${dncSummaryText}`;
 
   // 📃 Application header — "{Name}'s Application | {age} | @{pronoun} | @{timezone}". Role NAMES are injected
   // as plain text (a code-block header can't render <@&role> pills); any absent part is omitted.
@@ -474,7 +460,7 @@ export async function generateSeasonAppRankingUI({
           .toJSON()
       ]
     },
-    { type: 10, content: oldInfoBlock }, // restored old info block + Status line
+    { type: 10, content: castingStatusBlock }, // "Casting Status" header + chevron (+ DNC summary)
     {
       type: 12, // Media Gallery — full-size applicant avatar
       items: [{ media: { url: applicantAvatarURL }, description: `Avatar of ${currentApp.displayName || currentApp.username}` }]
@@ -500,7 +486,7 @@ export async function generateSeasonAppRankingUI({
   containerComponents.push(
     {
       type: 10,
-      content: `### \`\`\`🎭 Casting Status\`\`\`\n-# Set your draft casting status below — change it as many times as you like; players are not notified. When you've decided who to cast, click ✒️ Invites.${placementResponse ? `\n-# 📣 Applicant response: ${placementResponse === 'accepted' ? '🎉 Accepted placement' : placementResponse === 'accepted_alternative' ? '✅ Accepted alternate' : '🚫 Declined placement'}` : ''}`
+      content: `### \`\`\`🎭 Casting Status\`\`\`${placementResponse ? `\n-# 📣 Applicant response: ${placementResponse === 'accepted' ? '🎉 Accepted placement' : placementResponse === 'accepted_alternative' ? '✅ Accepted alternate' : '🚫 Declined placement'}` : ''}`
     },
     {
       type: 1, // Casting status — string select
