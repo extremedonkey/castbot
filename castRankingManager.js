@@ -434,19 +434,29 @@ export async function generateSeasonAppRankingUI({
   const infoAvg = infoRankings.length > 0 ? (infoRankings.reduce((a, b) => a + b, 0) / infoRankings.length).toFixed(1) : 'No scores';
   let oldInfoBlock = `**Name:** ${nameDisplay}${demographicInfo}\n**Average Score:** ${infoAvg} (${infoRankings.length} vote${infoRankings.length !== 1 ? 's' : ''})\n**App:** <#${currentApp.channelId}>`;
   if (dncSummaryText) oldInfoBlock += `\n${dncSummaryText}`;
-  // 🌈 ÜberStatus: output of the unified Status Engine (RaP 0905). Resolves the casting/placement states +
-  // Tentative — ✖️ Withdrawn / 🎉 Accepted / 🚫 Declined / ✅ Cast / 🔄 Alternate / ❓ Tentatively Cast /
-  // ❌ Not Cast / ☑️ Complete / 📝 New — byte-matched to the `Status:` line above (parity-tested). "Undecided"
-  // is deliberately NOT a row (it IS Application Complete); the vote cluster still falls through. We already
-  // hold appRecord + liveChannelName, so use the app-direct convenience (no re-lookup).
-  const { getApplicationStatus } = await import('./playerStatus.js');
-  const uber = getApplicationStatus(appRecord, liveChannelName);
-  oldInfoBlock += `\n🌈 ÜberStatus: ${uber.emoji} ${uber.label}`;
+  // ▶ Casting Lifecycle Chevron (RaP 0902) — REPLACES the old 🌈 ÜberStatus line. A single `-#` progress bar
+  // over New App → App Submission → Casting Review → Casting Offer → Casting Accepted; the current segment
+  // ONLY gets an emoji (bold code-chip), reached = plain, future = ||spoiler||, terminal-negative (Not Cast /
+  // Declined / Withdrawn) = no future (adaptive terminal). The private casting draft (Cast/Alt/Tentative/
+  // Not-Cast) does NOT advance the chevron — only a SENT offer (offerStatus) does. Admin-facing only.
+  const { getCastingChevron } = await import('./playerStatus.js');
+  const chevron = getCastingChevron(appRecord, liveChannelName);
+  if (chevron) oldInfoBlock += `\n${chevron}`;
+
+  // 📃 Application header — "{Name}'s Application | {age} | @{pronoun} | @{timezone}". Role NAMES are injected
+  // as plain text (a code-block header can't render <@&role> pills); any absent part is omitted.
+  const headerName = applicantMember?.displayName || currentApp.displayName || currentApp.username || 'Applicant';
+  const roleNameOf = (id) => id ? (guild?.roles?.cache?.get(id)?.name || applicantMember?.roles?.cache?.get(id)?.name || null) : null;
+  const headerBits = [`📃 ${headerName}'s Application`];
+  if (applicantAge) headerBits.push(`${applicantAge}`);
+  const _pronounName = roleNameOf(pronounRoleId); if (_pronounName) headerBits.push(`@${_pronounName}`);
+  const _timezoneName = roleNameOf(timezoneRoleId); if (_timezoneName) headerBits.push(`@${_timezoneName}`);
+  const appHeaderContent = `# \`\`\`${headerBits.join(' | ')}\`\`\``;
 
   containerComponents.push(
     { type: 14 }, // divider after the nav / select cluster
     ...(jumpSelectRow ? [jumpSelectRow] : []), // jump-select ("Applicant N of M") — above the 📃 Application header
-    { type: 10, content: `### \`\`\`📃 Application\`\`\`` },
+    { type: 10, content: appHeaderContent },
     {
       type: 1, // Applicant actions — View App (link) + Edit Notes + Delete — directly under the header
       components: [
@@ -490,7 +500,7 @@ export async function generateSeasonAppRankingUI({
   containerComponents.push(
     {
       type: 10,
-      content: `### \`\`\`🎭 Casting Status\`\`\`\n-# Set your draft casting status below — change it as many times as you like; players are not notified. When you've decided who to cast, click ✒️ Invites.${placementResponse ? `\n-# 📣 Applicant response: ${placementResponse === 'accepted' ? '🎉 Accepted placement' : '🚫 Declined placement'}` : ''}`
+      content: `### \`\`\`🎭 Casting Status\`\`\`\n-# Set your draft casting status below — change it as many times as you like; players are not notified. When you've decided who to cast, click ✒️ Invites.${placementResponse ? `\n-# 📣 Applicant response: ${placementResponse === 'accepted' ? '🎉 Accepted placement' : placementResponse === 'accepted_alternative' ? '✅ Accepted alternate' : '🚫 Declined placement'}` : ''}`
     },
     {
       type: 1, // Casting status — string select
@@ -812,11 +822,16 @@ export function buildInvitesConfirm({ mode, appIndex, configId, targets }) {
  * Returns { sent, failed, skippedEmpty, perType }.
  */
 export async function sendCastingInvites({ client, guildId, configId, mode, appIndex, messages }) {
-  const { loadPlayerData, getApplicationsForSeason } = await import('./storage.js');
+  const { loadPlayerData, savePlayerData, getApplicationsForSeason } = await import('./storage.js');
   const { DiscordRequest } = await import('./utils.js');
   const playerData = await loadPlayerData();
   const allApplications = await getApplicationsForSeason(guildId, configId);
   const targets = selectInviteTargets(allApplications, playerData, guildId, mode, appIndex);
+
+  // Stage 2 (RaP 0902): a SENT invite stamps offerStatus on the application (drives the Casting chevron).
+  const OFFER_FOR_TYPE = { successful: 'offer', alternative: 'offer_alternative', unsuccessful: 'offer_rejected' };
+  const nowIso = new Date().toISOString();
+  let stampedAny = false;
 
   const result = { sent: 0, failed: 0, skippedEmpty: 0, perType: { successful: 0, alternative: 0, unsuccessful: 0 } };
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -845,12 +860,17 @@ export async function sendCastingInvites({ client, guildId, configId, mode, appI
       });
       result.sent++;
       result.perType[t.messageType]++;
+      // Persist the offer on the application record (chevron Stage 2). Only on a confirmed send.
+      const rec = playerData[guildId]?.applications?.[t.channelId];
+      const offer = OFFER_FOR_TYPE[t.messageType];
+      if (rec && offer) { rec.offerStatus = offer; rec.offerSentAt = nowIso; stampedAny = true; }
     } catch (err) {
       console.log(`⚠️ sendCastingInvites: failed to message channel ${t.channelId}: ${err.message}`);
       result.failed++;
     }
     if (i < targets.length - 1) await sleep(700); // rate-limit-safe spacing
   }
+  if (stampedAny) await savePlayerData(playerData);
   console.log(`📨 sendCastingInvites [${mode}] guild ${guildId}: sent ${result.sent}, failed ${result.failed}, skippedEmpty ${result.skippedEmpty}`);
   return result;
 }
@@ -1017,6 +1037,7 @@ export async function buildMarooningView({ configId, guildId, playerData, season
   const renderRow = (p, i) => {
     const scoreDisplay = p.avgScore > 0 ? p.avgScore.toFixed(1) : 'Unrated';
     const resp = p.placementResponse === 'accepted' ? ' · 🎉 Accepted'
+      : p.placementResponse === 'accepted_alternative' ? ' · ✅ Accepted (Alt)'
       : p.placementResponse === 'declined' ? ' · 🚫 Declined' : '';
     return `${i + 1}. ${p.name} - ${scoreDisplay}/5.0 (${p.voteCount} vote${p.voteCount !== 1 ? 's' : ''})${resp}`;
   };

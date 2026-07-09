@@ -76,9 +76,9 @@ export function buildStatusSignals({ app, liveChannelName = '' } = {}) {
                                                        //   apps completed BEFORE completedAt shipped (the stored
                                                        //   channelName field is stale — not updated on the rename).
     castingStatus: app?.castingStatus || null,         // admin draft: 'cast' | 'alternative' | 'reject' | 'tentative'
-    placementResponse: app?.placementResponse || null, // player: 'accepted' | 'declined'
-    // TODO (RaP 0905 §4) deferred vote signals — NOT resolved yet:
-    //   voteCount: Object.keys(app?.rankings || {}).length,
+    offerStatus: app?.offerStatus || null,             // Stage 2 (RaP 0902): 'offer' | 'offer_alternative' | 'offer_rejected' — set when the invite is SENT
+    placementResponse: app?.placementResponse || null, // player: 'accepted' | 'accepted_alternative' | 'declined'
+    voteCount: Object.keys(app?.rankings || {}).length,
   };
 }
 
@@ -127,4 +127,75 @@ export function getPlayerSeasonStatus(guildId, seasonId, userId, { playerData, g
     .find((a) => a.userId === userId && configIds.includes(a.configId)) || null;
   const liveChannelName = app ? (guild?.channels?.cache?.get(app.channelId)?.name || '') : '';
   return getApplicationStatus(app, liveChannelName);
+}
+
+// ────────────────────────────────────────────────────────────────────────────────────────────────
+// Casting Lifecycle Chevron (RaP 0902) — a one-line admin-facing progress bar (NOT applicant-facing).
+// Five public-milestone segments: New App → App Submission → Casting Review → Casting Offer → Casting
+// Accepted. The PRIVATE casting draft (Cast/Alt/Tentative/Not-Cast, Stage 1) does NOT advance the chevron —
+// only a SENT offer (offerStatus, Stage 2) does. Rendering rules (Reece's spec): the CURRENT segment ONLY
+// gets an emoji, as a bold code-chip `**`🎥 Casting Review`**`; reached segments are plain; future segments
+// are ||spoiler||; terminal-negative states (Not Cast / Declined / Withdrawn) render NO future (adaptive
+// terminal). Separators: ▶ up to & including the current segment, ▷ into the spoilered future.
+// ────────────────────────────────────────────────────────────────────────────────────────────────
+
+const CHEVRON_LABELS = ['New App', 'App Submission', 'Casting Review', 'Casting Offer', 'Casting Accepted'];
+
+/**
+ * Resolve which chevron segment an application currently occupies, plus how the current segment displays.
+ * @param {Object} signals - from buildStatusSignals
+ * @returns {null | {withdrawn:true, completed:boolean} | {index:number, emoji:string, label:string, terminal:boolean}}
+ */
+export function resolveCastingChevron(signals = {}) {
+  const { hasApplication, completedAt, submitted, withdrawn, voteCount = 0, offerStatus, placementResponse } = signals;
+  if (!hasApplication) return null;
+  const completed = !!completedAt || !!submitted;
+  if (withdrawn) return { withdrawn: true, completed };
+  // Stage 3 — placement response (the PLAYER answered; all terminal)
+  if (placementResponse === 'accepted')             return { index: 4, emoji: '🎉', label: 'Casting Accepted',    terminal: true };
+  if (placementResponse === 'accepted_alternative') return { index: 4, emoji: '✅', label: 'Accepted (Alternate)', terminal: true };
+  if (placementResponse === 'declined')             return { index: 4, emoji: '🚫', label: 'Casting Declined',    terminal: true };
+  // Stage 2 — offer sent (the ADMIN messaged them); offer_rejected is terminal
+  if (offerStatus === 'offer')             return { index: 3, emoji: '🦸', label: 'Casting Offer',   terminal: false };
+  if (offerStatus === 'offer_alternative') return { index: 3, emoji: '🕵️', label: 'Alternate Offer', terminal: false };
+  if (offerStatus === 'offer_rejected')    return { index: 3, emoji: '🙅', label: 'Not Cast',        terminal: true };
+  // Stage 0.5 — under review (has ≥1 vote)
+  if (voteCount >= 1) return { index: 2, emoji: '🎥', label: 'Casting Review', terminal: false };
+  // Stage 0 — lifecycle
+  if (completed) return { index: 1, emoji: '☑️', label: 'App Submission', terminal: false };
+  return { index: 0, emoji: '📝', label: 'New App', terminal: false };
+}
+
+/**
+ * Render a resolved chevron to a single `-# …` subtext line. Returns '' when there's no application.
+ * @param {Object|null} resolved - from resolveCastingChevron
+ * @returns {string}
+ */
+export function renderCastingChevron(resolved) {
+  if (!resolved) return '';
+  if (resolved.withdrawn) {
+    const past = resolved.completed ? [CHEVRON_LABELS[0], CHEVRON_LABELS[1]] : [CHEVRON_LABELS[0]];
+    return `-# ${past.join(' ▶ ')} ▶ **\`✖️ Withdrawn\`**`;
+  }
+  const { index, emoji, label, terminal } = resolved;
+  let out = '';
+  for (let i = 0; i < CHEVRON_LABELS.length; i++) {
+    if (i > index && terminal) break; // adaptive terminal — drop the unreachable future
+    let seg;
+    if (i === index) seg = `**\`${emoji} ${label}\`**`;
+    else if (i < index) seg = CHEVRON_LABELS[i];
+    else seg = `||${CHEVRON_LABELS[i]}||`;
+    out += i === 0 ? seg : ` ${i <= index ? '▶' : '▷'} ${seg}`;
+  }
+  return `-# ${out}`;
+}
+
+/**
+ * Convenience: application record + live channel name → rendered chevron line (or '').
+ * @param {Object} app - application record (or null)
+ * @param {string} [liveChannelName]
+ * @returns {string}
+ */
+export function getCastingChevron(app, liveChannelName = '') {
+  return renderCastingChevron(resolveCastingChevron(buildStatusSignals({ app, liveChannelName })));
 }

@@ -5717,7 +5717,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             return { content: `❌ Only <@${appRec.userId}> can respond to this placement.`, ephemeral: true };
           }
 
-          appRec.placementResponse = accepted ? 'accepted' : 'declined';
+          // accepted_alternative (RaP 0902): accepting an ALTERNATE offer is distinct from a main-cast accept.
+          appRec.placementResponse = accepted ? (offerType === 'alternative' ? 'accepted_alternative' : 'accepted') : 'declined';
           await savePlayerData(playerData);
 
           const { DiscordRequest } = await import('./utils.js');
