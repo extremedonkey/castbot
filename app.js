@@ -5662,6 +5662,31 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           return { ephemeral: true, components: [{ type: 17, components: [{ type: 10, content }] }] };
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('casting_send_')) {
+      // ✒️ Per-applicant SINGLE invite → open the SINGLE variant of the Casting Invites modal (context: this
+      // applicant + their casting decision). custom_id: casting_send_{appIndex}_{configId}.
+      return ButtonHandlerFactory.create({
+        id: 'casting_send',
+        requiresModal: true,
+        handler: async (context) => {
+          const guild = await context.client.guilds.fetch(context.guildId);
+          const member = await guild.members.fetch(context.userId);
+          if (!hasCastRankingPermissions(member, context.guildId)) {
+            return { content: '❌ You need Manage Roles or Manage Channels permissions for this.', ephemeral: true };
+          }
+          const m = context.customId.match(/^casting_send_(\d+)_(.+)$/);
+          const appIndex = m ? parseInt(m[1]) : 0;
+          const configId = m ? m[2] : '';
+          const { buildCastingInvitesModal } = await import('./castRankingManager.js');
+          const { getApplicationsForSeason } = await import('./storage.js');
+          const playerData = await loadPlayerData();
+          const allApplications = await getApplicationsForSeason(context.guildId, configId);
+          const app = allApplications[appIndex];
+          const rec = app ? playerData[context.guildId]?.applications?.[app.channelId] : null;
+          const applicantName = app?.displayName || app?.username || 'this applicant';
+          return { type: 9, data: buildCastingInvitesModal(playerData, context.guildId, appIndex, configId, { single: true, applicantName, castingStatus: rec?.castingStatus }) };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('casting_messages_') && !custom_id.startsWith('casting_messages_save:')) {
       // Invites button → open the Casting Invites modal. custom_id: casting_messages_{appIndex}_{configId}
       return ButtonHandlerFactory.create({
@@ -40128,17 +40153,34 @@ Your server is now ready for Tycoons gameplay!`;
           const messages = { successful: fields.msg_successful || '', alternative: fields.msg_alternative || '', unsuccessful: fields.msg_unsuccessful || '' };
           const mode = fields.invite_mode || 'draft';
 
-          const { saveCastingMessages, selectInviteTargets, buildInvitesConfirm } = await import('./castRankingManager.js');
+          const { saveCastingMessages, selectInviteTargets, buildInvitesConfirm, OFFER_FOR_STATUS } = await import('./castRankingManager.js');
           await saveCastingMessages(context.guildId, configId, messages, context.userId, Date.now());
 
           if (mode === 'draft') {
             return { flags: (1 << 15), components: [{ type: 17, accent_color: 0x27ae60, components: [{ type: 10, content: '💾 **Templates saved.** No messages were sent.' }] }] };
           }
 
-          // Compute targets and show the confirmation before sending.
           const playerData = await loadPlayerData();
           const { getApplicationsForSeason } = await import('./storage.js');
           const allApplications = await getApplicationsForSeason(context.guildId, configId);
+
+          if (mode === 'status_only') {
+            // "Update Status Only" (single-invite modal) — stamp offerStatus from the applicant's casting decision
+            // WITHOUT sending a message (host messaged them manually). Mirrors the send path's offerStatus stamp.
+            const app = allApplications[appIndex];
+            const rec = app ? playerData[context.guildId]?.applications?.[app.channelId] : null;
+            const offer = rec ? OFFER_FOR_STATUS[rec.castingStatus] : null;
+            if (!rec || !offer) {
+              return { flags: (1 << 15), components: [{ type: 17, accent_color: 0xe74c3c, components: [{ type: 10, content: '⚠️ No casting decision set for this applicant — nothing to update.' }] }] };
+            }
+            rec.offerStatus = offer;
+            rec.offerSentAt = new Date().toISOString();
+            await savePlayerData(playerData);
+            const name = app.displayName || app.username || 'Applicant';
+            return { flags: (1 << 15), components: [{ type: 17, accent_color: 0x27ae60, components: [{ type: 10, content: `🕵️ **Status updated for ${name}** — recorded the offer as sent (no message was sent).` }] }] };
+          }
+
+          // Compute targets and show the confirmation before sending.
           const targets = selectInviteTargets(allApplications, playerData, context.guildId, mode, appIndex);
           return buildInvitesConfirm({ mode, appIndex, configId, targets });
         }

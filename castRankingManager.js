@@ -443,8 +443,7 @@ export async function generateSeasonAppRankingUI({
       type: 12, // Media Gallery — full-size applicant avatar
       items: [{ media: { url: applicantAvatarURL }, description: `Avatar of ${currentApp.displayName || currentApp.username}` }]
     },
-    { type: 10, content: `> **⭐ Vote on this applicant**` }, // header directly above the ratings
-    rankingRow.toJSON() // 1-5 rating buttons — moved underneath the avatar
+    rankingRow.toJSON() // 1-5 rating buttons (the "⭐ Vote on this applicant" header was removed to reclaim a component for VC Rank)
   );
 
   // DNC conflict warning — prominent, only when this applicant cross-lists someone.
@@ -483,16 +482,25 @@ export async function generateSeasonAppRankingUI({
 
   // (Votes tally moved off the card into the ⭐ Avg Votes button popup; Player Notes moved above the avatar.)
 
-  // ---- Utility actions (divider above, between the Casting Decision buttons and this VC Ranker row) ----
+  // ✒️ Send Invite — context-aware SINGLE invite (left of DNC). Grey + disabled until a casting decision is set;
+  // then blue + active with a label reflecting the decision (Cast→Send Offer, Don't Cast→Send Decline,
+  // Alternate→Send Alternate). Opens the single-invite variant of the Bulk Invites modal (casting_send_).
+  const SEND_INVITE_LABEL = { cast: 'Send Offer', reject: 'Send Decline', alternative: 'Send Alternate' };
+  const sendInviteLabel = SEND_INVITE_LABEL[castingStatus];
+  const sendInviteBtn = new ButtonBuilder()
+    .setCustomId(`casting_send_${appIndex}_${configId}`)
+    .setLabel(sendInviteLabel || 'Send Invite')
+    .setEmoji('✒️')
+    .setStyle(sendInviteLabel ? ButtonStyle.Primary : ButtonStyle.Secondary)
+    .setDisabled(!sendInviteLabel)
+    .toJSON();
+
+  // ---- Utility actions (divider above, between the Casting Decision buttons and this row) ----
   containerComponents.push({ type: 14 });
   containerComponents.push({
     type: 1,
     components: [
-      new ButtonBuilder()
-        .setCustomId(`ranking_public_warn_${appIndex}_${configId}`)
-        .setLabel('📢 VC Ranker')
-        .setStyle(ButtonStyle.Secondary)
-        .toJSON(),
+      sendInviteBtn, // ✒️ Send Invite/Offer/Decline/Alternate — left of DNC
       new ButtonBuilder()
         .setCustomId(`dnc_overview_${configId}`)
         .setLabel('DNC')
@@ -506,14 +514,15 @@ export async function generateSeasonAppRankingUI({
         .setStyle(ButtonStyle.Danger)
         .setEmoji('🗑️')
         .toJSON()
-      // ✒️ Invites moved to the Marooning tab (season-level bulk sends) — see buildMarooningView.
+      // 📢 VC Rank moved to the bottom nav row (right of Edit); ✒️ Bulk Invites lives on the Marooning tab.
     ]
   });
 
-  // Divider above the bottom nav, then the shared Season Manager bottom row — [← Seasons] [✏️ Edit].
-  // (Net component count unchanged vs the chevron being visible: chevron hidden −1, this divider +1.)
+  // Divider above the bottom nav, then the shared Season Manager bottom row — [← Seasons] [✏️ Edit] [📢 VC Rank].
+  // VC Rank (was in the utility row) is passed as an extraButton to the right of Edit (mirrors Apps/Planner).
   containerComponents.push({ type: 14 });
-  containerComponents.push(buildSeasonBottomRow(configId, 'ranking'));
+  const vcRankBtn = { type: 2, custom_id: `ranking_public_warn_${appIndex}_${configId}`, label: 'VC Rank', style: 2, emoji: { name: '📢' } };
+  containerComponents.push(buildSeasonBottomRow(configId, 'ranking', [vcRankBtn]));
 
   // Create main container
   const castRankingContainer = {
@@ -637,6 +646,10 @@ export async function handleCastingStatus({ customId, value, channelId, appIndex
 /** Which casting status receives which message template (undecided → none). */
 export const CASTING_STATUS_TO_MESSAGE = { cast: 'successful', alternative: 'alternative', reject: 'unsuccessful' };
 
+/** castingStatus → offerStatus (Stage 2, RaP 0902). Used by "Update Status Only" (stamp without sending) and
+ *  mirrors the messageType→offerStatus chain used on send (cast→offer, alternative→offer_alternative, reject→offer_rejected). */
+export const OFFER_FOR_STATUS = { cast: 'offer', alternative: 'offer_alternative', reject: 'offer_rejected' };
+
 /** Accent colours per message type for the V2 invite card. */
 const INVITE_ACCENT = { successful: 0x27ae60, alternative: 0xf1c40f, unsuccessful: 0xe74c3c };
 
@@ -710,37 +723,60 @@ export function selectInviteTargets(allApplications, playerData, guildId, mode, 
   return targets;
 }
 
+/** Human words for the single-invite "Send {name} …" option, keyed by the applicant's messageType. */
+const SINGLE_SEND_WORD = { successful: 'Casting Offer', alternative: 'Alternate Message', unsuccessful: 'Unsuccessful Message' };
+
 /**
  * Build the Casting Invites modal (3 templates + a required "what to do on submit" select).
- * Pre-fills templates from saved guild messages (or defaults).
+ * Pre-fills templates from saved guild messages (or defaults). The template fields are identical for both
+ * variants; only the final select differs:
+ *  - BULK (default): 6 options (draft / all / successful / unsuccessful / alternative / selected).
+ *  - SINGLE (opts.single, from the per-applicant ✒️ Send button): 3 options — Save as draft, "Send {name} {msg}"
+ *    (value 'selected', envelope), and "Update Status Only" (value 'status_only', 🕵️ — stamp offerStatus, no send).
+ * @param {Object} [opts] - { single, applicantName, castingStatus } for the single-applicant variant.
  */
-export function buildCastingInvitesModal(playerData, guildId, appIndex, configId) {
+export function buildCastingInvitesModal(playerData, guildId, appIndex, configId, opts = {}) {
   const msgs = getCastingMessages(playerData, guildId, configId);
   const input = (custom_id, label, description, value) => ({
     type: 18, label, description,
     component: { type: 4, custom_id, style: 2, max_length: 4000, required: false, ...(value ? { value } : {}) }
   });
+
+  let modeOptions;
+  if (opts.single) {
+    const word = SINGLE_SEND_WORD[CASTING_STATUS_TO_MESSAGE[opts.castingStatus]] || 'Message';
+    const name = opts.applicantName || 'this applicant';
+    const sendLabel = `Send ${name} ${word}`.slice(0, 100); // select option label cap
+    modeOptions = [
+      { label: 'Save as draft only', value: 'draft', emoji: { name: '💾' }, description: 'Save the templates, send nothing', default: true },
+      { label: sendLabel, value: 'selected', emoji: { name: '📨' }, description: 'Sends the relevant msg above to their app channel (with a Check-In button if Cast/Alternate)'.slice(0, 100) },
+      { label: 'Update Status Only', value: 'status_only', emoji: { name: '🕵️' }, description: "Use to tell CastBot when you've manually messaged an applicant".slice(0, 100) }
+    ];
+  } else {
+    modeOptions = [
+      { label: 'Save as draft only', value: 'draft', emoji: { name: '💾' }, description: 'Save the templates, send nothing', default: true },
+      { label: 'Send ALL now (Cast + Alternate + Reject)', value: 'all', emoji: { name: '📨' } },
+      { label: 'Send Successful only', value: 'successful', emoji: { name: '🎬' } },
+      { label: "Send Unsuccessful only", value: 'unsuccessful', emoji: { name: '🗑️' } },
+      { label: 'Send Alternative only', value: 'alternative', emoji: { name: '🔄' } },
+      { label: 'Send to currently selected applicant only', value: 'selected', emoji: { name: '👤' } }
+    ];
+  }
+
   return {
     custom_id: `casting_messages_save:${appIndex}:${configId}`,
-    title: 'Casting Invites',
+    title: opts.single ? 'Send Casting Invite' : 'Casting Invites',
     components: [
       input('msg_successful', 'Successful Message (Cast)', 'Sent to 🎬 Cast applicants. Use @Player to tag each player.', msgs.successful),
       input('msg_alternative', 'Alternative / Backup Message', 'Sent to 🔄 Alternative applicants. Use @Player to tag each player.', msgs.alternative),
       input('msg_unsuccessful', "Unsuccessful Message (Don't Cast)", 'Sent to 🗑️ Don\'t Cast applicants. Use @Player to tag each player.', msgs.unsuccessful),
       {
         type: 18,
-        label: 'What to do when you submit this?',
+        label: 'What do you want to do when you submit this?',
         description: 'Undecided applicants (no casting decision) are never messaged.',
         component: {
           type: 3, custom_id: 'invite_mode', required: true, min_values: 1, max_values: 1,
-          options: [
-            { label: 'Save as draft only', value: 'draft', emoji: { name: '💾' }, description: 'Save the templates, send nothing', default: true },
-            { label: 'Send ALL now (Cast + Alternate + Reject)', value: 'all', emoji: { name: '📨' } },
-            { label: 'Send Successful only', value: 'successful', emoji: { name: '🎬' } },
-            { label: "Send Unsuccessful only", value: 'unsuccessful', emoji: { name: '🗑️' } },
-            { label: 'Send Alternative only', value: 'alternative', emoji: { name: '🔄' } },
-            { label: 'Send to currently selected applicant only', value: 'selected', emoji: { name: '👤' } }
-          ]
+          options: modeOptions
         }
       }
     ]
@@ -1078,7 +1114,7 @@ export async function buildMarooningView({ configId, guildId, playerData, season
         // ✒️ Invites — moved here from the Casting card. Season-level bulk sends (Cast/Alternate/Reject
         // templates → applicant channels). appIndex is baked as 0: it's only read by the modal's "selected
         // applicant" mode, which is N/A from this season-level view (guarded by a name-showing confirm card).
-        { type: 2, custom_id: `casting_messages_0_${configId}`, label: 'Invites', style: 2, emoji: { name: '✒️' } }
+        { type: 2, custom_id: `casting_messages_0_${configId}`, label: 'Bulk Invites', style: 2, emoji: { name: '✒️' } }
       ]},
       { type: 10, content: tribesLine },
       { type: 14 },
