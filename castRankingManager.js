@@ -440,7 +440,7 @@ export async function generateSeasonAppRankingUI({
       type: 12, // Media Gallery — full-size applicant avatar
       items: [{ media: { url: applicantAvatarURL }, description: `Avatar of ${currentApp.displayName || currentApp.username}` }]
     },
-    { type: 10, content: `> **Rate this applicant (1-5)**` }, // header directly above the ratings
+    { type: 10, content: `> **⭐ Rate this applicant (1-5)**` }, // header directly above the ratings
     rankingRow.toJSON() // 1-5 rating buttons — moved underneath the avatar
   );
 
