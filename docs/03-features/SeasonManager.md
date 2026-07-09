@@ -102,7 +102,7 @@ Flow:
 `📝` in-progress · `☑️` submitted · `✖️` withdrawn (was `❌`; changed so it's distinct from declined) · `✅` placement accepted · `❌` placement declined. Strip regex (app.js withdraw/reapply handlers): `/^[📝☑️✖️✅❌]+/`.
 
 ### Shared (public) vs Personal Ranker
-- Cards are normally **ephemeral** to the host. **📢 Shared Ranker** posts a public copy after a confirmation warning (`ranking_public_warn_*` → `ranking_public_post_*` / `ranking_public_cancel_*`) — it surfaces scores, decisions and notes to everyone in the channel, so it's gated behind the warning.
+- Cards are normally **ephemeral** to the host. **📢 VC Rank** (the button formerly labelled "Shared Ranker"; `ranking_public_warn_*` → `ranking_public_post_*` / `ranking_public_cancel_*`) posts a public copy after a confirmation warning — it surfaces scores, decisions and notes to everyone in the channel, so it's gated behind the warning.
 - A `_ephemeral` custom-id suffix marks the "Personal Ranker" variant; `generateSeasonAppRankingUI({...,ephemeral:true})` adds the EPHEMERAL flag.
 
 ### 🚷 DNC Overview
@@ -121,7 +121,7 @@ The string select (`type: 3`, `custom_id: ranking_select_{appIndex}_{configId}_{
   - if more remain: a trailing **▶ Show Applications X–Y** option (`value: page_{n+1}`).
 - **Selecting a page option** (`page_{n}`) jumps to the **first applicant of that page** (`newIndex = n * 23`); selecting an applicant jumps straight to that index. Both re-render the whole card. (`handleRankingSelect`)
 - **Option label**: `{icon} {position}. {DisplayName} ({username}) - {N vote(s)}{ 💬 if notes}`, truncated to Discord's 100-char limit (username shortened first, else hard-cut to 97 + `...`).
-- **Status icon precedence**: ✅ `cast` → ❌ `reject` → ☑️ ≥2 votes → 🗳️ otherwise. (`tentative` deliberately shows no special icon.)
+- **Status icon precedence** (`deriveApplicationStatus`): 🎉 accepted → 🚫 declined → ✅ `cast` → 🔄 `alternative` → ❌ `reject` → ☑️ ≥2 votes → 🗳️ ≥1 → 📝. (Tentative removed 2026-07-09.)
 
 So: **single applicant → no dropdown** (just the card); **2–23 → one page, no page-nav options**; **24+ → paginated with ◀/▶ rows**.
 

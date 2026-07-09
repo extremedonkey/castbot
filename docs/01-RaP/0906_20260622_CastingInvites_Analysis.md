@@ -1,8 +1,13 @@
 # 🎭 Casting Invites — Modal, Alternative Status & Bulk Messaging
 
+> ⚠️ **EXTENDED 2026-07-09 (RaP 0902).** Since this doc: the on-card Invites button became **Bulk Invites** on
+> the Marooning tab; a per-applicant **Send Invite** button opens a **single-applicant modal variant**
+> (Send Offer/Decline/Alternate + **Update Status Only**); every send now stamps **`offerStatus`**; **Tentative
+> was removed**. Current invite behaviour: [SeasonManager.md → Casting Invites](../03-features/SeasonManager.md#-casting-invites--bulk--single--status-only-rap-0906-extended-2026-07-09).
+
 **Number:** 0906
 **Date:** 2026-06-22
-**Status:** ✅ Implemented (shipped to test; prod pending explicit permission)
+**Status:** ✅ Implemented + extended 2026-07-09 (see banner above); shipped to PROD
 **Related:** [SeasonManager](../03-features/SeasonManager.md) (🏆 Casting tab) · [ComponentsV2](../standards/ComponentsV2.md) · [DiscordInteractionAPI](../standards/DiscordInteractionAPI.md) · [DiscordMessenger](../enablers/DiscordMessenger.md)
 **Code:** `castRankingManager.js` (helpers + send), `app.js` (button → modal → confirm → send routing)
 

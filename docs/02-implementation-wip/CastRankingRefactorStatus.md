@@ -1,5 +1,10 @@
 # Cast Ranking Refactor Status - Phase 2
 
+> ⚠️ **HISTORICAL (Aug 2025) — do not trust the UI details here.** This documents a 2025 handler-migration
+> phase. The Casting UI has since changed substantially (2026-07: the "String Select" for casting status is
+> now **three toggle buttons**; **Tentative was removed**). For current behaviour see
+> [SeasonManager.md → Casting](../03-features/SeasonManager.md#-casting-the-former-ranking-tab).
+
 ## 🔄 Current Status: COMPLETED Phase 2 Full Migration
 
 **Date:** August 10, 2025  

@@ -1,5 +1,11 @@
 # 0905 — Player Status: Unified Status Model Across All Features (Analysis)
 
+> ⚠️ **PARTLY SUPERSEDED (2026-07-09).** The status *engine* (`playerStatus.js`) shipped, but since then:
+> **Tentative was removed** as a casting status; a new **Offer stage** (`offerStatus`) + `accepted_alternative`
+> were added (RaP 0902); the ÜberStatus line and the chevron are **not shown on the Casting card**. For the
+> current casting/status behaviour, trust [SeasonManager.md → Casting](../03-features/SeasonManager.md#-casting-the-former-ranking-tab)
+> and RaP 0902 over the specifics below.
+
 > 🚧 **STATUS: WORKING DRAFT — "as we go".** Living analysis. **No solutions yet** (per trigger prompt) —
 > this maps (a) Reece's mental model, (b) what the code *actually* does, (c) the drift between them, and
 > (d) open questions. The centrepiece is **§4 The Unified Status Table** (every status + its transitions).

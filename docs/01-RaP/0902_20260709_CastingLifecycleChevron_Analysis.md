@@ -1,9 +1,36 @@
 # 0902 — Casting Lifecycle Chevron + Offer Stage + Status Definition Table
 
-**Status:** 🟢 Core shipped (dev+test) — offerStatus + stamp, accepted_alternative, chevron replacing the ÜberStatus line, header. Deferred: fold the two hand-matched status definitions into one STATUS_DEFINITIONS table.
-**Date:** 2026-07-09
-**Related:** [0905 Status Engine](0905_*.md-not-present) · `playerStatus.js` · `castRankingManager.js`
-Follows the ÜberStatus engine (playerStatus.js) and the Casting/Marooning tabs.
+**Status:** 🟢 Shipped to PROD 2026-07-09. **⚠️ The original design below deviated during implementation — read
+the "SHIPPED STATE" box first; the rest is design history.** Canonical current behaviour:
+[SeasonManager.md → Casting](../03-features/SeasonManager.md#-casting-the-former-ranking-tab).
+**Date:** 2026-07-09 · **Related:** RaP 0905 (status engine), 0906 (invites) · `playerStatus.js` · `castRankingManager.js`
+
+---
+
+## ✅ SHIPPED STATE (2026-07-09) — how it actually turned out
+
+The design below proposed a **visible chevron replacing the ÜberStatus line**. In practice, over the same day:
+
+- **Offer stage (Stage 2) — SHIPPED as designed.** `application.offerStatus` ∈ `offer` / `offer_alternative` /
+  `offer_rejected` (renamed from `offer_declined`) + `offerSentAt`, stamped in `sendCastingInvites` on a
+  successful send AND by the new **"Update Status Only"** single-invite mode (no send). `OFFER_FOR_STATUS`
+  (castingStatus→offerStatus) is exported.
+- **`accepted_alternative` placementResponse — SHIPPED as designed.**
+- **The chevron — BUILT then HIDDEN.** `resolveCastingChevron` / `renderCastingChevron` / `getCastingChevron`
+  live in `playerStatus.js` and are tested, but the render line on the Casting card is **commented out**
+  (Reece's call — revivable in one line). Adaptive-terminal + spoiler rules are as designed.
+- **ÜberStatus line — REMOVED from the card entirely** (the chevron briefly replaced it, then the chevron was
+  hidden too). `getApplicationStatus`/`STATUS_REGISTRY` remain for `getPlayerSeasonStatus`/future consumers.
+- **Tentative — REMOVED ENTIRELY** (not just "no offer"). `castingStatus` is now `cast`/`alternative`/`reject`/
+  absent. The Stage-1 line below still lists Tentative — that is **design-time history, no longer true**.
+- **Casting Decision UI — string select → three TOGGLE buttons** (`castdec_*`): 🎬 Cast (active=green) /
+  🙅 Don't Cast (active=red) / 🔄 Alternate (active=blue); grey when inactive; click-active-to-clear.
+- **Invites — bulk + single.** Bulk Invites moved to Marooning; a context-aware **Send Invite** button on the
+  Casting card opens a single-applicant modal variant (Send Offer/Decline/Alternate + Update Status Only).
+- **Status Definition Table — NOT built** (still deferred; `STATUS_REGISTRY` + `deriveApplicationStatus` remain
+  the two hand-matched definitions).
+
+Everything from here down is the **original design/analysis** (kept for the reasoning + the full trigger prompt).
 
 ---
 
