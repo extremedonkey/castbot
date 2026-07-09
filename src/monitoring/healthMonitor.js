@@ -13,8 +13,12 @@ import { getRestartHistory } from './restartTracker.js';
 
 const execAsync = promisify(exec);
 
-// Detect environment for title
-const isProduction = process.env.PRODUCTION === 'TRUE';
+// Detect environment for report title + webhook name. Three-way, matching the canonical
+// pattern in scripts/notify-restart.js — the always-on test box (castbot-blue) sets
+// INSTANCE_ROLE=test with PRODUCTION=FALSE, so a two-way PRODUCTION check mislabels it "Dev".
+function getEnvName(env = process.env) {
+  return env.INSTANCE_ROLE === 'test' ? 'Test' : env.PRODUCTION === 'TRUE' ? 'Prod' : 'Dev';
+}
 
 // Global state for monitoring (survives function calls, cleared on restart)
 let monitoringState = {
@@ -299,7 +303,7 @@ export class HealthMonitor {
 
     // Build environment-aware title
     const envEmoji = getBotEmoji('castbot_logo');
-    const envName = isProduction ? 'Prod' : 'Dev';
+    const envName = getEnvName();
     const titleEmoji = envEmoji ? `<:castbot_logo:${envEmoji.id}>` : '🎯';
 
     const components = [
@@ -578,9 +582,9 @@ export class HealthMonitor {
 
       // Use Safari's webhook pattern for reliable Components V2 posting
       console.log('[HealthMonitor] Creating webhook for scheduled report');
-      const envName = isProduction ? 'Prod' : 'Dev';
+      const envName = getEnvName();
       const webhook = await channel.createWebhook({
-        name: `Ultrathink Health Monitor - ${envName}`,
+        name: `CastBot Health Monitor - ${envName}`,
         reason: 'Scheduled health monitoring report'
       });
 

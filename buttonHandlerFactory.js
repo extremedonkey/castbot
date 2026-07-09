@@ -4614,6 +4614,7 @@ export const BUTTON_REGISTRY = {
   'ranking_navigation_*': { label: 'Casting Navigation', emoji: '🔄', category: 'seasons' },
   'ranking_select_*': { label: 'Casting Select', emoji: '🏆', category: 'seasons' },
   'casting_status_*': { label: 'Casting Status', description: 'Set draft casting status (Cast / Alternative / Tentative / Don\'t Cast) via string select', emoji: '🎭', category: 'seasons' },
+  'casting_votes_*': { label: 'Avg Votes', description: 'Show the vote tally for this applicant as a private/ephemeral popup', emoji: '⭐', style: 'Primary', category: 'seasons' },
   'casting_messages_*': { label: 'Invites', description: 'Open the Casting Invites modal (author + send outcome messages to applicants)', emoji: '✒️', style: 'Secondary', category: 'seasons' },
   'casting_invites_confirm_*': { label: 'Confirm Send Invites', description: 'Confirm and send casting outcome messages to applicant channels', emoji: '📨', style: 'Success', category: 'seasons' },
   'casting_invites_cancel': { label: 'Cancel Send Invites', description: 'Dismiss the casting invites confirmation', emoji: '❌', style: 'Secondary', category: 'seasons' },

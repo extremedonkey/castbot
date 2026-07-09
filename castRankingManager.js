@@ -215,9 +215,9 @@ export async function generateSeasonAppRankingUI({
     console.log('🔍 DEBUG: generateSeasonAppRankingUI - Applicant avatar pre-fetch failed (non-critical):', error.message);
   }
   
-  // Applicant identity now lives in the 📃 header (Name | age | @pronoun | @timezone). Below the action row
-  // is the "Casting Status" block (`castingStatusBlock`): the lifecycle chevron + DNC summary. The avatar is
-  // a full-size Media Gallery using applicantAvatarURL (pre-fetched above).
+  // Applicant identity now lives in the 📃 header (Name | age | @pronoun | @timezone). Below the action row:
+  // DNC summary (if any) → Player Notes → avatar. The lifecycle chevron sits in the 🎭 Casting Status section.
+  // The avatar is a full-size Media Gallery using applicantAvatarURL (pre-fetched above).
 
   // Create ranking buttons (1-5)
   const ephemeralSuffix = ephemeral ? '_ephemeral' : '';
@@ -249,40 +249,12 @@ export async function generateSeasonAppRankingUI({
   // Applicant's response to a sent invite (Accept/Decline), if any.
   const placementResponse = playerData[guildId]?.applications?.[currentApp.channelId]?.placementResponse;
 
-  // Create voting breakdown if there are votes - inline implementation for now
-  let votingBreakdown = null;
-  const rankingEntries = Object.entries(allRankings).filter(([_, score]) => score !== undefined);
-  
-  if (rankingEntries.length > 0) {
-    // Sort by score (highest to lowest)
-    rankingEntries.sort(([_a, scoreA], [_b, scoreB]) => scoreB - scoreA);
-    
-    // Calculate average
-    const scores = rankingEntries.map(([_, score]) => score);
-    const avgScore = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
-    
-    // Header is rendered as a standalone "### 🗳️ Votes" component (above the 1-5 buttons), so the
-    // tally text starts at the average line.
-    let votingText = `> **Average:** ${avgScore}/5.0 (${scores.length} vote${scores.length !== 1 ? 's' : ''})\n`;
-    
-    // Build vote list with member names
-    for (const [userId, score] of rankingEntries) {
-      try {
-        const member = await guild.members.fetch(userId);
-        const displayName = member.displayName || member.user.username;
-        const stars = '⭐'.repeat(score);
-        votingText += `• ${displayName}: ${stars} (${score}/5)\n`;
-      } catch (error) {
-        console.log(`Could not fetch member ${userId} for voting breakdown:`, error.message);
-        votingText += `• Unknown Member: ${'⭐'.repeat(score)} (${score}/5)\n`;
-      }
-    }
-    
-    votingBreakdown = {
-      type: 10, // Text Display
-      content: votingText
-    };
-  }
+  // ⭐ Avg Votes button label — the full tally moved off the card into an ephemeral popup (buildCastingVotesDisplay,
+  // opened by the casting_votes_* button). Only the average is shown on the card, in the button label.
+  const _voteVals = Object.values(allRankings).filter(r => r !== undefined);
+  const avgVotesLabel = _voteVals.length > 0
+    ? `Avg Votes: ${(_voteVals.reduce((a, b) => a + b, 0) / _voteVals.length).toFixed(1)}/5`
+    : 'No Votes';
   
   // (Applicant identity — name / pronouns / age / timezone / local time — is now rendered by the
   //  shared player-card Section built below, so the old inline demographic + name computation was
@@ -297,9 +269,9 @@ export async function generateSeasonAppRankingUI({
   const dncSummaryText = getDncEntries(appData).length > 0 ? buildDncSummary(appData) : '';
 
   // ===== Build the Casting card (Components V2) =====
-  // Layout: 📃 header → tab nav → jump-select → actions → Casting Status (chevron + DNC) → avatar
-  //         → Rate (1-5) → 🎭 Casting status select → Votes → Player Notes → utility → bottom nav.
-  // The applicant DNC summary is folded into the Casting Status block (castingStatusBlock).
+  // Layout: 📃 header → tab nav → jump-select → actions (⭐ Avg Votes/View App/Notes/Delete) → DNC summary
+  //         → Player Notes → avatar → Rate (1-5) → 🎭 Casting Status (chevron + select) → utility → bottom nav.
+  // The vote tally moved to the ⭐ Avg Votes ephemeral popup (buildCastingVotesDisplay).
 
   const { buildSeasonNavRow, seasonManagerHeader, buildSeasonBottomRow } = await import('./seasonSelector.js');
   const containerComponents = [
@@ -424,10 +396,10 @@ export async function generateSeasonAppRankingUI({
   // header. The old info block (Name / Average Score / App) was DELETED as redundant: Name/age/pronoun/tz now
   // live in the 📃 header, and Average Score in the Votes section. DNC summary (if any) is kept beneath it.
   const { getCastingChevron } = await import('./playerStatus.js');
-  const chevron = getCastingChevron(appRecord, liveChannelName);
-  let castingStatusBlock = `> **Casting Status**`;
-  if (chevron) castingStatusBlock += `\n${chevron}`;
-  if (dncSummaryText) castingStatusBlock += `\n${dncSummaryText}`;
+  const chevron = getCastingChevron(appRecord, liveChannelName); // rendered below, INSIDE the 🎭 Casting Status section
+  // Player Notes + applicant display name render above the avatar (moved up) — compute them here.
+  const applicantDisplayName = applicantMember?.displayName || currentApp.displayName || currentApp.username || 'Applicant';
+  const notesText = appRecord.playerNotes || 'Record casting notes, connections or potential issues...';
 
   // 📃 Application header — "{Name}'s Application | {age} | @{pronoun} | @{timezone}". Role NAMES are injected
   // as plain text (a code-block header can't render <@&role> pills); any absent part is omitted.
@@ -444,8 +416,10 @@ export async function generateSeasonAppRankingUI({
     ...(jumpSelectRow ? [jumpSelectRow] : []), // jump-select ("Applicant N of M") — above the 📃 Application header
     { type: 10, content: appHeaderContent },
     {
-      type: 1, // Applicant actions — View App (link) + Edit Notes + Delete — directly under the header
+      type: 1, // Applicant actions — ⭐ Avg Votes (blue) + View App (link) + Edit Notes + Delete
       components: [
+        // ⭐ Avg Votes (blue) — opens the vote tally as a private/ephemeral popup (keeps scores secret).
+        { type: 2, style: 1, custom_id: `casting_votes_${currentApp.channelId}_${appIndex}_${configId}`, label: avgVotesLabel, emoji: { name: '⭐' } },
         { type: 2, style: 5, label: 'View App', emoji: { name: '📄' }, url: `https://discord.com/channels/${guildId}/${currentApp.channelId}` },
         new ButtonBuilder()
           .setCustomId(`edit_player_notes_${currentApp.channelId}_${appIndex}_${configId}`)
@@ -460,7 +434,8 @@ export async function generateSeasonAppRankingUI({
           .toJSON()
       ]
     },
-    { type: 10, content: castingStatusBlock }, // "Casting Status" header + chevron (+ DNC summary)
+    ...(dncSummaryText ? [{ type: 10, content: dncSummaryText }] : []), // DNC summary keeps the old top slot
+    { type: 10, content: `> **✏️ Player Notes**\n${notesText}` }, // Player Notes — moved to directly above the avatar
     {
       type: 12, // Media Gallery — full-size applicant avatar
       items: [{ media: { url: applicantAvatarURL }, description: `Avatar of ${currentApp.displayName || currentApp.username}` }]
@@ -474,20 +449,20 @@ export async function generateSeasonAppRankingUI({
     containerComponents.push({ type: 10, content: dncWarningText });
   }
 
-  // Applicant display name + notes text (used by the sections below).
-  // "Still Deciding" (value 'undecided') is the casting default when no status is set, and selecting
-  // it CLEARS any existing castingStatus (see handleCastingStatus) — undecided is never stored, it's
-  // simply the absence of castingStatus, so this stays backwards compatible with existing data.
-  const applicantDisplayName = applicantMember?.displayName || currentApp.displayName || currentApp.username || 'Applicant';
+  // "Still Deciding" (value 'undecided') is the casting default when no status is set, and selecting it CLEARS
+  // any existing castingStatus (see handleCastingStatus) — undecided is never stored, it's simply the absence
+  // of castingStatus. (applicantDisplayName + notesText are computed up top, near the chevron.)
   const isUndecided = !['cast', 'tentative', 'reject', 'alternative'].includes(castingStatus);
-  // (Player Notes moved up into the identity block — see the `> -# ✏️Player Notes:` line above.)
 
-  // ---- Casting: header + status (string select) ----
+  // ---- Casting: header + chevron + status (string select) ----
   containerComponents.push(
     {
       type: 10,
       content: `### \`\`\`🎭 Casting Status\`\`\`${placementResponse ? `\n-# 📣 Applicant response: ${placementResponse === 'accepted' ? '🎉 Accepted placement' : placementResponse === 'accepted_alternative' ? '✅ Accepted alternate' : '🚫 Declined placement'}` : ''}`
     },
+    // Casting Lifecycle Chevron (RaP 0902) — directly under the 🎭 Casting Status heading, ABOVE the select.
+    // The redundant `> Casting Status` sub-header was dropped (this section's 🎭 heading already labels it).
+    ...(chevron ? [{ type: 10, content: chevron }] : []),
     {
       type: 1, // Casting status — string select
       components: [{
@@ -507,19 +482,7 @@ export async function generateSeasonAppRankingUI({
     }
   );
 
-  // ---- Votes: header (with applicant name) + tally (the 1-5 buttons live under the gallery) ----
-  containerComponents.push(
-    { type: 10, content: `### \`\`\`🗳️ Votes for ${applicantDisplayName}\`\`\`` }
-  );
-  if (votingBreakdown) {
-    containerComponents.push(votingBreakdown);
-  } else {
-    containerComponents.push({ type: 10, content: `-# No scores yet — click 1–5 above to rate this applicant.` });
-  }
-
-  // ---- Player Notes — old-style heading + plain text, moved down to the bottom (user request) ----
-  const notesText = appRecord.playerNotes || 'Record casting notes, connections or potential issues...';
-  containerComponents.push({ type: 10, content: `### ✏️ Player Notes\n${notesText}` });
+  // (Votes tally moved off the card into the ⭐ Avg Votes button popup; Player Notes moved above the avatar.)
 
   // ---- Utility actions (divider above) ----
   containerComponents.push({ type: 14 }); // divider above Shared Ranker / utility row
@@ -859,6 +822,29 @@ export async function sendCastingInvites({ client, guildId, configId, mode, appI
   if (stampedAny) await savePlayerData(playerData);
   console.log(`📨 sendCastingInvites [${mode}] guild ${guildId}: sent ${result.sent}, failed ${result.failed}, skippedEmpty ${result.skippedEmpty}`);
   return result;
+}
+
+/**
+ * Build the "🗳️ Votes for X" tally text — header + average + per-voter star lines, formatting IDENTICAL to the
+ * old inline Casting-card block. Now shown as an ephemeral popup behind the ⭐ Avg Votes button (keeps scores
+ * private). Kept as a standalone fn so the tally is trivial to re-add to the card if wanted. Async — fetches
+ * voter display names from the guild.
+ * @returns {Promise<string>} the full text-display content
+ */
+export async function buildCastingVotesDisplay({ guildId, channelId, applicantDisplayName, playerData, guild }) {
+  const allRankings = playerData?.[guildId]?.applications?.[channelId]?.rankings || {};
+  const entries = Object.entries(allRankings).filter(([, s]) => s !== undefined).sort(([, a], [, b]) => b - a);
+  const header = `### \`\`\`🗳️ Votes for ${applicantDisplayName}\`\`\``;
+  if (entries.length === 0) return `${header}\n-# No scores yet — click 1–5 on the Casting card to rate this applicant.`;
+  const scores = entries.map(([, s]) => s);
+  const avg = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
+  let text = `${header}\n> **Average:** ${avg}/5.0 (${scores.length} vote${scores.length !== 1 ? 's' : ''})\n`;
+  for (const [uid, score] of entries) {
+    let name = 'Unknown Member';
+    try { const m = await guild.members.fetch(uid); name = m.displayName || m.user.username; } catch { /* left server */ }
+    text += `• ${name}: ${'⭐'.repeat(score)} (${score}/5)\n`;
+  }
+  return text;
 }
 
 /**

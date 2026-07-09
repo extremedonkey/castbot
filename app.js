@@ -5638,6 +5638,30 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           return result;
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('casting_votes_')) {
+      // ⭐ Avg Votes button → show the vote tally as a private/ephemeral popup (keeps scores secret).
+      // custom_id: casting_votes_{channelId}_{appIndex}_{configId}
+      return ButtonHandlerFactory.create({
+        id: 'casting_votes',
+        ephemeral: true, // NEW ephemeral message, don't replace the Casting card
+        handler: async (context) => {
+          const { guildId, userId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
+          const member = await guild.members.fetch(userId);
+          if (!hasCastRankingPermissions(member, guildId)) {
+            return { content: '❌ You need Manage Roles or Manage Channels permissions for this.', ephemeral: true };
+          }
+          const m = context.customId.match(/^casting_votes_(\d+)_(\d+)_(.+)$/);
+          const channelId = m ? m[1] : null;
+          const playerData = await loadPlayerData();
+          const app = channelId ? playerData[guildId]?.applications?.[channelId] : null;
+          const applicantMember = app?.userId ? await guild.members.fetch(app.userId).catch(() => null) : null;
+          const applicantDisplayName = applicantMember?.displayName || app?.displayName || app?.username || 'Applicant';
+          const { buildCastingVotesDisplay } = await import('./castRankingManager.js');
+          const content = await buildCastingVotesDisplay({ guildId, channelId, applicantDisplayName, playerData, guild });
+          return { ephemeral: true, components: [{ type: 17, components: [{ type: 10, content }] }] };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('casting_messages_') && !custom_id.startsWith('casting_messages_save:')) {
       // Invites button → open the Casting Invites modal. custom_id: casting_messages_{appIndex}_{configId}
       return ButtonHandlerFactory.create({
