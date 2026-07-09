@@ -483,7 +483,8 @@ export async function generateSeasonAppRankingUI({
 
   // (Votes tally moved off the card into the ⭐ Avg Votes button popup; Player Notes moved above the avatar.)
 
-  // ---- Utility actions ---- (separator dropped here to keep the card ≤ 39/40 after the +2 decision buttons)
+  // ---- Utility actions (divider above, between the Casting Decision buttons and this VC Ranker row) ----
+  containerComponents.push({ type: 14 });
   containerComponents.push({
     type: 1,
     components: [
