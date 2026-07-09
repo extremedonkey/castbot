@@ -415,10 +415,9 @@ export async function generateSeasonAppRankingUI({
   if (applicantAge) overviewBits.push(`${applicantAge}`);
   if (_pronounName) overviewBits.push(`@${_pronounName}`);
   if (_timezoneName) overviewBits.push(`@${_timezoneName}`);
-  let playerOverview = `> **👤 Overview**`;
+  const _username = applicantMember?.user?.username || currentApp.username || 'unknown';
+  let playerOverview = `> **👤 Overview**\n* ${headerName} (${_username})`; // display name (username)
   if (overviewBits.length) playerOverview += `\n* ${overviewBits.join(' | ')}`;
-  // Casting Lifecycle Chevron as a bullet (strip its leading "-# " — a subtext marker only works at line start).
-  if (chevron) playerOverview += `\n* ${chevron.replace(/^-# /, '')}`;
   if (dncSummaryText) playerOverview += `\n* ${dncSummaryText}`;
 
   containerComponents.push(
@@ -426,7 +425,7 @@ export async function generateSeasonAppRankingUI({
     ...(jumpSelectRow ? [jumpSelectRow] : []), // jump-select ("Applicant N of M") — above the 📃 Application header
     { type: 10, content: appHeaderContent },
     {
-      type: 1, // Applicant actions — ⭐ Avg Votes (blue) + View App (link) + Edit Notes + Delete
+      type: 1, // Applicant actions — ⭐ Avg Votes (blue) + App (link) + Notes. Delete moved to the utility row.
       components: [
         // ⭐ Avg Votes (blue) — opens the vote tally as a private/ephemeral popup (keeps scores secret).
         { type: 2, style: 1, custom_id: `casting_votes_${currentApp.channelId}_${appIndex}_${configId}`, label: avgVotesLabel, emoji: { name: '⭐' } },
@@ -436,12 +435,6 @@ export async function generateSeasonAppRankingUI({
           .setLabel('Notes')
           .setEmoji('✏️')
           .setStyle(ButtonStyle.Secondary)
-          .toJSON(),
-        new ButtonBuilder()
-          .setCustomId(`delete_application_mode_${currentApp.channelId}_${appIndex}_${configId}`)
-          .setLabel('Delete')
-          .setStyle(ButtonStyle.Danger)
-          .setEmoji('🗑️')
           .toJSON()
       ]
     },
@@ -487,7 +480,9 @@ export async function generateSeasonAppRankingUI({
           { label: `Alternative — ${applicantDisplayName}`, value: 'alternative', emoji: { name: '🔄' }, default: castingStatus === 'alternative' }
         ]
       }]
-    }
+    },
+    // Casting Lifecycle Chevron (RaP 0902) — BELOW the Casting Decision select (subtext `-#` line).
+    ...(chevron ? [{ type: 10, content: chevron }] : [])
   );
 
   // (Votes tally moved off the card into the ⭐ Avg Votes button popup; Player Notes moved above the avatar.)
@@ -507,6 +502,13 @@ export async function generateSeasonAppRankingUI({
         .setLabel('DNC')
         .setStyle(ButtonStyle.Secondary)
         .setEmoji('🚷')
+        .toJSON(),
+      // 🗑️ Delete — moved here from the top action row, to the right of DNC.
+      new ButtonBuilder()
+        .setCustomId(`delete_application_mode_${currentApp.channelId}_${appIndex}_${configId}`)
+        .setLabel('Delete')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('🗑️')
         .toJSON()
       // ✒️ Invites moved to the Marooning tab (season-level bulk sends) — see buildMarooningView.
     ]
