@@ -246,8 +246,7 @@ export async function generateSeasonAppRankingUI({
 
   // Casting status — drives the coloured casting buttons + select icons (no longer a text line).
   const castingStatus = playerData[guildId]?.applications?.[currentApp.channelId]?.castingStatus;
-  // Applicant's response to a sent invite (Accept/Decline), if any.
-  const placementResponse = playerData[guildId]?.applications?.[currentApp.channelId]?.placementResponse;
+  // (placementResponse is no longer shown on the card as a line — the chevron surfaces it via getCastingChevron.)
 
   // ⭐ Avg Votes button label — the full tally moved off the card into an ephemeral popup (buildCastingVotesDisplay,
   // opened by the casting_votes_* button). Only the average is shown on the card, in the button label.
@@ -420,10 +419,11 @@ export async function generateSeasonAppRankingUI({
       components: [
         // ⭐ Avg Votes (blue) — opens the vote tally as a private/ephemeral popup (keeps scores secret).
         { type: 2, style: 1, custom_id: `casting_votes_${currentApp.channelId}_${appIndex}_${configId}`, label: avgVotesLabel, emoji: { name: '⭐' } },
-        { type: 2, style: 5, label: 'View App', emoji: { name: '📄' }, url: `https://discord.com/channels/${guildId}/${currentApp.channelId}` },
+        { type: 2, style: 5, label: 'App', emoji: { name: '📄' }, url: `https://discord.com/channels/${guildId}/${currentApp.channelId}` },
         new ButtonBuilder()
           .setCustomId(`edit_player_notes_${currentApp.channelId}_${appIndex}_${configId}`)
-          .setLabel('✏️ Edit Notes')
+          .setLabel('Notes')
+          .setEmoji('✏️')
           .setStyle(ButtonStyle.Secondary)
           .toJSON(),
         new ButtonBuilder()
@@ -435,7 +435,7 @@ export async function generateSeasonAppRankingUI({
       ]
     },
     ...(dncSummaryText ? [{ type: 10, content: dncSummaryText }] : []), // DNC summary keeps the old top slot
-    { type: 10, content: `> **✏️ Player Notes**\n${notesText}` }, // Player Notes — moved to directly above the avatar
+    { type: 10, content: `> **✏️ Production notes on ${applicantDisplayName}**\n${notesText}` }, // moved to directly above the avatar
     {
       type: 12, // Media Gallery — full-size applicant avatar
       items: [{ media: { url: applicantAvatarURL }, description: `Avatar of ${currentApp.displayName || currentApp.username}` }]
@@ -458,7 +458,7 @@ export async function generateSeasonAppRankingUI({
   containerComponents.push(
     {
       type: 10,
-      content: `### \`\`\`🎭 Casting Status\`\`\`${placementResponse ? `\n-# 📣 Applicant response: ${placementResponse === 'accepted' ? '🎉 Accepted placement' : placementResponse === 'accepted_alternative' ? '✅ Accepted alternate' : '🚫 Declined placement'}` : ''}`
+      content: `> **🎭 Casting Status**`
     },
     // Casting Lifecycle Chevron (RaP 0902) — directly under the 🎭 Casting Status heading, ABOVE the select.
     // The redundant `> Casting Status` sub-header was dropped (this section's 🎭 heading already labels it).
