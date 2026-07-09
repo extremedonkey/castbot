@@ -15,10 +15,12 @@ function toggleValue(current, clicked) {
   return current === clicked ? 'undecided' : clicked;
 }
 
-// castRankingManager render: Primary (blue, style 2) when this button's value is the active status, else Secondary (grey).
-const STYLE = { Primary: 1, Secondary: 2 }; // discord.js ButtonStyle
+// castRankingManager render: active style is per-decision (Cast=Success/green, Don't Cast=Danger/red,
+// Alternate=Primary/blue); inactive = Secondary (grey).
+const STYLE = { Primary: 1, Secondary: 2, Success: 3, Danger: 4 }; // discord.js ButtonStyle
+const ACTIVE_STYLE = { cast: STYLE.Success, reject: STYLE.Danger, alternative: STYLE.Primary };
 function buttonStyle(castingStatus, value) {
-  return castingStatus === value ? STYLE.Primary : STYLE.Secondary;
+  return castingStatus === value ? ACTIVE_STYLE[value] : STYLE.Secondary;
 }
 
 // castRankingManager render: the button custom_id.
@@ -51,9 +53,11 @@ describe('Casting Decision — toggle rule', () => {
   });
 });
 
-describe('Casting Decision — grey/blue style', () => {
-  it('the active status button is Primary (blue); the rest Secondary (grey)', () => {
-    assert.equal(buttonStyle('cast', 'cast'), STYLE.Primary);
+describe('Casting Decision — per-decision active colours', () => {
+  it('the active button is coloured by decision; the rest Secondary (grey)', () => {
+    assert.equal(buttonStyle('cast', 'cast'), STYLE.Success);          // Cast → green
+    assert.equal(buttonStyle('reject', 'reject'), STYLE.Danger);       // Don't Cast → red
+    assert.equal(buttonStyle('alternative', 'alternative'), STYLE.Primary); // Alternate → blue
     assert.equal(buttonStyle('cast', 'reject'), STYLE.Secondary);
     assert.equal(buttonStyle('cast', 'alternative'), STYLE.Secondary);
   });

@@ -456,11 +456,13 @@ export async function generateSeasonAppRankingUI({
   // (Secondary) — mirrors the 1-5 rating-button style pattern (isSelected → style). NOT disabled: clicking the
   // active (blue) button toggles it OFF (handler clears castingStatus → undecided). custom_id status is a single
   // char (c/n/a) to keep it short (worst-case ~73 chars). "Still Deciding" is now simply no button active.
-  const decisionButton = (value, char, emoji, label) => new ButtonBuilder()
+  // Active (selected) style is per-decision: Cast=green (Success), Don't Cast=red (Danger), Alternate=blue
+  // (Primary). Inactive = grey (Secondary) for all. Not disabled — clicking the active one toggles it off.
+  const decisionButton = (value, char, emoji, label, activeStyle) => new ButtonBuilder()
     .setCustomId(`castdec_${char}_${currentApp.channelId}_${appIndex}_${configId}`)
     .setLabel(label)
     .setEmoji(emoji)
-    .setStyle(castingStatus === value ? ButtonStyle.Primary : ButtonStyle.Secondary)
+    .setStyle(castingStatus === value ? activeStyle : ButtonStyle.Secondary)
     .toJSON();
   containerComponents.push(
     {
@@ -470,9 +472,9 @@ export async function generateSeasonAppRankingUI({
     {
       type: 1, // Casting decision — toggle buttons
       components: [
-        decisionButton('cast', 'c', '🎬', 'Cast'),
-        decisionButton('reject', 'n', '🙅', "Don't Cast"),
-        decisionButton('alternative', 'a', '🔄', 'Alternate')
+        decisionButton('cast', 'c', '🎬', 'Cast', ButtonStyle.Success),
+        decisionButton('reject', 'n', '🙅', "Don't Cast", ButtonStyle.Danger),
+        decisionButton('alternative', 'a', '🔄', 'Alternate', ButtonStyle.Primary)
       ]
     }
     // Casting Lifecycle Chevron (RaP 0902) — HIDDEN from the UI for now (Reece's call); the logic is kept
