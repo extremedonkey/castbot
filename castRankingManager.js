@@ -540,8 +540,8 @@ export async function generateSeasonAppRankingUI({
         .setLabel('DNC')
         .setStyle(ButtonStyle.Secondary)
         .setEmoji('🚷')
-        .toJSON(),
-      { type: 2, custom_id: `casting_messages_${appIndex}_${configId}`, label: 'Invites', style: 2, emoji: { name: '✒️' } }
+        .toJSON()
+      // ✒️ Invites moved to the Marooning tab (season-level bulk sends) — see buildMarooningView.
     ]
   });
 
@@ -1073,7 +1073,11 @@ export async function buildMarooningView({ configId, guildId, playerData, season
         // New Tribe reuses the Castlist Hub button, but carries a 'marooning_{configId}' origin so the modal
         // SUBMIT refreshes THIS Marooning message (not the Castlist Hub). Still adds to the default castlist.
         { type: 2, custom_id: `tribe_add_button|default|marooning_${configId}`, label: 'New Tribe', style: 2, emoji: { name: '🏕️' } },
-        { type: 2, custom_id: `marooning_draft_tribes_${configId}`, label: 'Draft Tribes', style: 2, emoji: { name: '💭' }, disabled: !canDraft }
+        { type: 2, custom_id: `marooning_draft_tribes_${configId}`, label: 'Draft Tribes', style: 2, emoji: { name: '💭' }, disabled: !canDraft },
+        // ✒️ Invites — moved here from the Casting card. Season-level bulk sends (Cast/Alternate/Reject
+        // templates → applicant channels). appIndex is baked as 0: it's only read by the modal's "selected
+        // applicant" mode, which is N/A from this season-level view (guarded by a name-showing confirm card).
+        { type: 2, custom_id: `casting_messages_0_${configId}`, label: 'Invites', style: 2, emoji: { name: '✒️' } }
       ]},
       { type: 10, content: tribesLine },
       { type: 14 },
