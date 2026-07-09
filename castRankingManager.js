@@ -310,8 +310,8 @@ export async function generateSeasonAppRankingUI({
 
   // Applicant jump-select — ALWAYS rendered (state-aware placeholder). Discord requires ≥1 option,
   // so it's only ever absent on the 0-applicant empty state (a separate screen). It also replaces
-  // the old ◀/▶ prev/next row for navigation. Built here but PUSHED later (directly below the
-  // Delete button) — the placeholder already shows "Applicant N of M", so the info block drops it.
+  // the old ◀/▶ prev/next row for navigation. Built here but PUSHED later (directly ABOVE the
+  // 📃 Application header) — the placeholder already shows "Applicant N of M", so the info block drops it.
   let jumpSelectRow = null;
   {
     // Display order = Marooning order (status groups → score desc) via computeCastingOrder.
@@ -445,6 +445,7 @@ export async function generateSeasonAppRankingUI({
 
   containerComponents.push(
     { type: 14 }, // divider after the nav / select cluster
+    ...(jumpSelectRow ? [jumpSelectRow] : []), // jump-select ("Applicant N of M") — above the 📃 Application header
     { type: 10, content: `### \`\`\`📃 Application\`\`\`` },
     {
       type: 1, // Applicant actions — View App (link) + Edit Notes + Delete — directly under the header
@@ -463,7 +464,6 @@ export async function generateSeasonAppRankingUI({
           .toJSON()
       ]
     },
-    ...(jumpSelectRow ? [jumpSelectRow] : []), // jump-select — directly below the Delete button
     { type: 10, content: oldInfoBlock }, // restored old info block + Status line
     {
       type: 12, // Media Gallery — full-size applicant avatar
