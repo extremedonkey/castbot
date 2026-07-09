@@ -424,7 +424,7 @@ export function buildPlannerSetupPrompt(missing) {
   return [
     '## 📅 Set up Season Planner',
     '',
-    'Season Planner lets you plan out your rounds, swaps and challenges and view a season schedule / calendar showing key dates. To use Season Planner, click the `✏️ Edit` button above and input the following details:',
+    'Season Planner lets you plan out your rounds, swaps and challenges and view a season schedule / calendar showing key dates. To use Season Planner, click the `✏️ Edit` button below and input the following details:',
     bullets,
     '',
     "Once these details are populated, you'll be able to use Season Planner!",
