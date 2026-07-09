@@ -47,51 +47,56 @@ A Discord String Select caps at 25 options (24 seasons + "Create New"). **Search
 
 ## 🏆 Casting (the former "Ranking" tab)
 
-> Merged & code-validated from the archived `CastRanking.md` + `CastRankingNavigation.md` (2026-06-21). All facts below verified against `castRankingManager.js`.
+> **Heavily iterated 2026-07-08/09 — code is authoritative** (`castRankingManager.js`, `app.js`, `playerStatus.js`). Design/history in RaP [0902](../01-RaP/0902_20260709_CastingLifecycleChevron_Analysis.md) (status/offer/chevron), [0905](../01-RaP/0905_20260625_PlayerStatus_Analysis.md) (status engine), [0906](../01-RaP/0906_20260622_CastingInvites_Analysis.md) (invites). Several of those RaPs predate the 07-09 changes and carry a "SUPERSEDED" note pointing back here.
 
-**Casting** is the applicant-evaluation view: admins score applicants 1–5, record a casting decision, keep private notes, and (via **✒️ Invites**) send outcome messages to applicants who can then Accept/Decline. It is **not a separate data store** — it is an **overlay on Season Applications**. Every applicant already has an `applications[channelId]` object (created when they apply); Casting reads/writes a few fields on it.
+**Casting** is the applicant-evaluation view: admins score applicants 1–5, record a **casting decision**, keep private notes, and send outcome messages (a **single** ✒️ Send Invite from the card, or a **✒️ Bulk Invites** send from the Marooning tab). It is **not a separate data store** — it's an **overlay on Season Applications** (`applications[channelId]`, joined by the app channel id).
 
 ### Data model (overlay on `applications[channelId]`, except templates)
 | Field | Shape | Meaning |
 |---|---|---|
-| `rankings` | `{ [adminUserId]: 1-5 }` | Per-admin score. Average is computed live. |
-| `castingStatus` | `'cast'` / `'alternative'` / `'tentative'` / `'reject'` / *(absent)* | Host decision. Absent renders ⚪ Undecided. 🔄 **Alternative** = backup-spot offer. Set via the casting string select (`casting_status_*` → `handleCastingStatus`); "Still Deciding" *clears* the field. |
-| `placementResponse` | `'accepted'` / `'declined'` / *(absent)* | The **applicant's** reply to a sent invite (Accept/Decline buttons). Separate from `castingStatus` so a declined Cast is still visible as "Cast → 🚫 Declined" (re-cast needed). |
-| `playerNotes` | string (≤2000) | Free-text host notes (modal-edited). |
-| `castingMessages` *(on `playerData[guildId]`, not the application)* | `{ successful, alternative, unsuccessful, updatedAt, updatedBy }` | The three invite templates. Stored at **guild level** for now; helpers (`getCastingMessages`/`saveCastingMessages`) already take `configId` for a future per-season move. |
-
-The **application channel ID is the join key** between Season Applications and Casting — there is no separate Casting record.
+| `rankings` | `{ [adminUserId]: 1-5 }` | Per-admin score. Average computed live. |
+| `castingStatus` | `'cast'` / `'alternative'` / `'reject'` / *(absent = Undecided)* | Host's private draft decision. **Tentative was removed (2026-07-09)** — no longer a valid value; any legacy `'tentative'` degrades to Undecided. Set via the **three toggle buttons** (`castdec_*`, see below), not a select. |
+| `offerStatus` | `'offer'` / `'offer_alternative'` / `'offer_rejected'` / *(absent)* | **Stage 2 (RaP 0902).** Set when an invite is SENT (or via "Update Status Only"). Maps from the decision: cast→offer, alternative→offer_alternative, reject→offer_rejected. `offerSentAt` (ISO) stamped alongside. |
+| `placementResponse` | `'accepted'` / `'accepted_alternative'` / `'declined'` / *(absent)* | The **applicant's** reply to a sent invite (Accept/Decline). `accepted_alternative` = accepted an *alternate* offer. Separate from `castingStatus` so a declined Cast still reads Cast → 🚫 Declined. |
+| `playerNotes` | string | Free-text host notes (modal-edited). |
+| `castingMessages` *(on `playerData[guildId]`, not the application)* | `{ successful, alternative, unsuccessful, updatedAt, updatedBy }` | The three invite templates. Guild-level for now (`getCastingMessages`/`saveCastingMessages` take `configId` for a future per-season move). |
 
 ### Entry & rendering
-- Tab `season_app_ranking_${configId}` → `buildSeasonRankingResponse({guildId,userId,configId,client})` (castRankingManager.js:57).
-- **0 applicants** → `buildRankingEmptyState()` (:25): header + nav row + "📭 No applications yet" + ← Seasons.
-- **≥1 applicant** → `generateSeasonAppRankingUI()` (:108) renders the first applicant card (or a specific index on navigation).
+- Tab `season_app_ranking_${configId}` → `buildSeasonRankingResponse(...)`.
+- **0 applicants** → empty state (header + nav + "no applications" + ← Seasons).
+- **≥1 applicant** → `generateSeasonAppRankingUI()` renders one applicant card. `handleCastingStatus`, `handleRankingSelect`, and the various button handlers all re-render via this same function.
+- The card runs `countComponents([container])` each render — it sits near Discord's **40-component hard cap** (currently 40/40 worst-case, i.e. when a DNC-conflict banner is present). **Adding any component requires removing one.**
 
-### The applicant card (current render order — the layout has been iterated heavily; code is authoritative)
-1. **Header** `## 🏆 Casting | {season}` + the shared `buildSeasonNavRow(configId,'ranking')` (Apps · Planner · Casting · Marooning; Casting tab blue). Edit is no longer a nav tab — it lives in the shared bottom row.
-2. **Jump select** (`ranking_select_*`) — **always shown**; placeholder doubles as the position indicator: `Applicant N of X - {applicant per-server name}` (+ `· page X/Y` when paginated, 23/page). Replaces the old ◀/▶ prev-next row.
-3. `### 📃 Application` + **identity text** (reuses the player-card builder: name mention · pronouns • age • timezone · 🕛 local time), plus a DNC summary line **only when the applicant has DNC entries**.
-4. **Score buttons 1–5** (`rank_{n}_*`) — your current score is green + disabled.
-5. **Avatar** — Media Gallery (type 12), 512px.
-6. **Actions row**: ✏️ Edit Notes (`edit_player_notes_*` → modal) · 📄 View App (Link button → the app channel) · 🗑️ Delete (`delete_application_mode_*`).
-7. **DNC warning** (red) if this applicant cross-lists anyone.
-8. `### ✏️ Player Notes` (plain text).
-9. `### 🎭 Casting Status` + the **status string select** (`casting_status_*`): ❔ Still Deciding (default when unset) · 🎬 Cast · 🗑️ Don't Cast · ❓ Tentatively Cast · 🔄 Alternative. If the applicant has responded, a `📣 Applicant response: 🎉 Accepted / 🚫 Declined` line shows here.
-10. `### 🗳️ Votes for {name}` + tally (or "No scores yet").
-11. **Divider**, then utility row: 📢 Shared Ranker (`ranking_public_warn_*`) · 🚷 DNC (`dnc_overview_*`) · ✒️ Invites (`casting_messages_{appIndex}_{configId}`). (The old ⭐ Casting Summary button is gone — it's now the 🚣 Marooning nav tab.)
-12. **Bottom row** (shared `buildSeasonBottomRow(configId,'ranking')`): ← Seasons (`season_manager`) · ✏️ Edit (`season_edit_info_ranking_{configId}`).
+### The applicant card (current render order — code is authoritative, `generateSeasonAppRankingUI`)
+1. **Header** `## 🏆 Casting | {season}` + `buildSeasonNavRow(configId,'ranking')` (Apps · Planner · Casting · Marooning). Divider.
+2. **Jump-select** (`ranking_select_*`) — placeholder is the position indicator `Applicant N of M - {name}` (+ `· page X/Y`, 23/page). There are **no ◀/▶ prev-next buttons** (proposed, then pulled).
+3. **📃 header** — one line: `` # ```📃 {DisplayName}'s App``` `` (name only; demographics moved to the Overview).
+4. **Action row**: **⭐ {avg}/5** (`casting_votes_*` — blue; opens the vote tally as a **private ephemeral popup**, `buildCastingVotesDisplay`, so scores stay secret — the on-card tally was removed) · **📄 App** (link) · **✏️ Notes** (`edit_player_notes_*` → modal).
+5. **👤 Overview** text block — bullets: `{DisplayName} ({username})` · `{age} \| @{pronounRoleName} \| @{timezoneRoleName}` (role **names** as plain text — a code-block header can't render pills) · then the **DNC list** as `* DNC #N: {name} ({userPart}): {issue}` bullets (`buildDncSummary`, `dncManager.js`). `userPart` = `<@id> - {handle}` when a Discord user was linked via the select, else the typed handle, else omitted.
+6. **✏️ Applicant Notes** (`> **✏️ Applicant Notes**` + text).
+7. **Avatar** — Media Gallery (type 12).
+8. **Score buttons 1–5** (`rank_{n}_*`) — your current score is green + disabled. (The "Vote on this applicant" header was removed to reclaim a component.)
+9. **DNC conflict warning** (red text) — only when this applicant cross-lists someone (conditional; this is the +1 that makes the worst case 40/40).
+10. **🎭 Casting Decision** (`> **🎭 Casting Decision**`) + **three toggle buttons** (`castdec_{c|n|a}_{channelId}_{appIndex}_{configId}`): 🎬 **Cast** · 🙅 **Don't Cast** · 🔄 **Alternate**. The **active** decision is coloured (Cast=**green**, Don't Cast=**red**, Alternate=**blue**); the others are grey. Not disabled — **clicking the active button toggles it off** (clears `castingStatus` → Undecided). There is no "Still Deciding" option. Handler `castdec_*` in app.js computes the toggle then calls `handleCastingStatus`.
+11. **Divider**, then utility row: **✒️ Send Invite** (`casting_send_*`, see Invites) · **🚷 DNC** (`dnc_overview_*`) · **🗑️ Delete** (`delete_application_mode_*`).
+12. **Divider**, then bottom row `buildSeasonBottomRow(configId,'ranking', [VC Rank])`: **← Seasons** · **✏️ Edit** · **📢 VC Rank** (`ranking_public_warn_*` — the former "Shared Ranker", passed as an `extraButton`).
 
-The jump-select option **icon** reflects the most-decisive state: 🎉 accepted → 🚫 declined → ✅ cast → 🔄 alternative → ❌ reject → ☑️ (≥2 votes) → 🗳️.
+**Hidden but kept:** the **Casting Lifecycle Chevron** (`getCastingChevron` in playerStatus.js — a `New App ▶ App Submission ▶ Casting Review ▶ Casting Offer ▶ Casting Accepted` progress line) is fully implemented but **commented out of the card** (Reece's call, revivable by re-adding one line). The old **🌈 ÜberStatus** line and the derived **`Status:`** line are also gone from the card. `getApplicationStatus`/`STATUS_REGISTRY` (playerStatus.js) remain for `getPlayerSeasonStatus` + future consumers.
+
+Jump-select option **icon** precedence (`deriveApplicationStatus`): 🎉 accepted → 🚫 declined → ✅ cast → 🔄 alternate → ❌ reject → ☑️ (≥2 votes) → 🗳️ (≥1) → 📝.
 
 ### 🚣 Marooning tab (`season_marooning_*`) — formerly the ⭐ Casting Summary screen
-Now a **first-class Season Manager tab** (peer of Apps · Planner · Casting), rendered by `buildMarooningView` in castRankingManager.js on the shared chrome (`seasonManagerHeader('marooning')` + `buildSeasonNavRow(…,'marooning')` + `buildSeasonBottomRow(…,'marooning')`). Builds a roster grouped by status — ✅ Cast / 🔄 Alternate / ❓ Tentative / 🗑️ Don't Cast / ⚪ Undecided — each sorted by average score (🥇🥈🥉 then `N.`), with a `· 🎉 Accepted` / `· 🚫 Declined` annotation per applicant who has responded, plus a 📊 summary (per-status totals incl. Alternate + scored count). The bespoke Back/Refresh buttons are gone (the shared nav row + ← Seasons replace them). The legacy `ranking_view_all_scores_*` id still routes here via `handleRankingNavigation` (compat shim → `buildMarooningView`).
+A first-class Season Manager tab, rendered by `buildMarooningView`. Roster grouped by status — **✅ Cast / 🔄 Alternate / 🙅 Don't Cast / ⚪ Undecided** (Tentative group removed 2026-07-09) — each sorted by average score, with `· 🎉 Accepted` / `· ✅ Accepted (Alt)` / `· 🚫 Declined` annotations, plus a 📊 per-status summary. Grouping/sort is the shared `computeCastingOrder` (normalizes any unknown status → Undecided). Also hosts the 🏕️ Tribes section, 💭 Draft Tribes, and the **✒️ Bulk Invites** button.
 
-### 📨 Casting Invites (outcome messages) — RaP 0906
-The **✒️ Invites** button opens a modal (`buildCastingInvitesModal`, all Label-wrapped per ComponentsV2): three paragraph templates (**Successful** / **Alternative** / **Unsuccessful**, pre-filled from saved guild templates or defaults; `@Player` → applicant mention) + a required select **"What to do when you submit this?"** with `draft / all / successful / unsuccessful / alternative / selected`.
+### 📨 Casting Invites — bulk + single + status-only (RaP 0906, extended 2026-07-09)
+Two entry points, **one shared modal** (`buildCastingInvitesModal`) and **one shared send path** (`sendCastingInvites`):
+- **✒️ Bulk Invites** (Marooning, `casting_messages_0_{configId}`) → modal with the 6-option "what to do" select (`draft / all / successful / unsuccessful / alternative / selected`).
+- **✒️ Send Invite** (Casting card utility row, `casting_send_{appIndex}_{configId}`) → the **single variant** (`opts.single`): identical template fields, but the select shows just **💾 Save as draft** · **📨 "Send {name} {Casting Offer\|Unsuccessful\|Alternate Message}"** (value `selected`) · **🕵️ Update Status Only** (value `status_only`). The card button is **context-aware**: grey + disabled when no decision, else blue with the label **Send Offer** (cast) / **Send Decline** (reject) / **Send Alternate** (alternative).
 
-- **Submit** (`casting_messages_save:{appIndex}:{configId}`) always saves the templates (`@everyone`/`@here` neutralized). *draft* → "💾 saved". A *send* mode → an ephemeral **confirmation card** (counts per type) with Confirm/Cancel.
-- **Confirm** (`casting_invites_confirm:{mode}:{appIndex}:{configId}`, deferred) → `sendCastingInvites()` posts a **Components V2 card** into each targeted applicant's channel (raw REST — `discord.js` `channel.send()` rejects raw V2 objects), throttled ~700ms, per-channel try/catch. **Status → message:** 🎬 Cast → Successful · 🔄 Alternative → Alternative · 🗑️ Don't Cast → Unsuccessful. ❓ Tentative & ❔ Still Deciding → **nothing**.
-- **Accept / Decline** — Successful & Alternative cards carry ✅ Accept Placement / ❌ Decline Placement buttons (`placement_accept:{type}` / `placement_decline:{type}`). Only the applicant may click. On click: set `placementResponse`, post a public "✅ accepted / ❌ declined" message (pinging the production role), set the **channel emoji** (✅ accepted / ❌ declined), and edit the invite card to drop the buttons + confirm the choice.
+Flow:
+- **Submit** (`casting_messages_save:{appIndex}:{configId}`) always saves the templates (`@everyone`/`@here` neutralized). `draft` → "💾 saved". `status_only` → stamps `offerStatus` from the decision (`OFFER_FOR_STATUS`) **without sending** + returns a summary (for "I messaged them manually"). Any send mode → an ephemeral **confirmation card** (counts per type) with Confirm/Cancel.
+- **Confirm** (`casting_invites_confirm:{mode}:{appIndex}:{configId}`, deferred) → `sendCastingInvites()` posts a Components V2 card into each targeted applicant's channel (raw REST, throttled ~700ms, per-channel try/catch), and **stamps `offerStatus` + `offerSentAt`** on each successful send. **Decision → message:** Cast → Successful · Alternative → Alternative · Don't Cast → Unsuccessful. Undecided → **nothing**.
+- **Accept / Decline** — Successful & Alternative cards carry ✅ Accept / ❌ Decline buttons (`placement_accept:{type}` / `placement_decline:{type}`). Only the applicant may click. On click: set `placementResponse` (`accepted_alternative` when accepting an *alternative* offer), post a public accepted/declined message (pinging the production role), set the channel emoji, and edit the card to confirm.
 
 ### 📛 Application channel emoji legend
 `📝` in-progress · `☑️` submitted · `✖️` withdrawn (was `❌`; changed so it's distinct from declined) · `✅` placement accepted · `❌` placement declined. Strip regex (app.js withdraw/reapply handlers): `/^[📝☑️✖️✅❌]+/`.
