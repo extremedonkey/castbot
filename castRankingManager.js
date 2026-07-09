@@ -435,7 +435,7 @@ export async function generateSeasonAppRankingUI({
       ]
     },
     ...(dncSummaryText ? [{ type: 10, content: dncSummaryText }] : []), // DNC summary keeps the old top slot
-    { type: 10, content: `> **✏️ Production notes on ${applicantDisplayName}**\n${notesText}` }, // moved to directly above the avatar
+    { type: 10, content: `> **✏️ Player Notes**\n${notesText}` }, // moved to directly above the avatar
     {
       type: 12, // Media Gallery — full-size applicant avatar
       items: [{ media: { url: applicantAvatarURL }, description: `Avatar of ${currentApp.displayName || currentApp.username}` }]
