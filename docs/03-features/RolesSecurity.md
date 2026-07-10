@@ -18,24 +18,25 @@ Whitelisted roles receive **channel permission overwrites at channel-creation ti
 
 ## Enforcement Points
 
-| System | Channels affected | Bits granted | Bits constant |
-|---|---|---|---|
-| Season Applications (`applicationManager.js`) | Application channel (on "Apply") | ViewChannel, SendMessages, ReadMessageHistory | `APPLICATION_CHANNEL_ACCESS` |
-| Safari Map (`mapExplorer.js`) | Map location channels (`#📍a1`…), 🗺️ Map Explorer categories incl. overflow "Group N" categories, hidden 🗺️map-storage channel | ViewChannel, ManageChannels | `SAFARI_CHANNEL_ACCESS` |
+| System | Channels affected | When | Bits granted | Bits constant |
+|---|---|---|---|---|
+| Season Applications (`applicationManager.js`) | Application channel | On "Apply" (creation) | ViewChannel, SendMessages, ReadMessageHistory | `APPLICATION_CHANNEL_ACCESS` |
+| Safari Map create (`mapExplorer.js`) | Map location channels (`#📍a1`…), 🗺️ Map Explorer categories incl. overflow "Group N" categories | At channel creation (overwrites ride `channels.create()`) | ViewChannel, ManageChannels | `SAFARI_CHANNEL_ACCESS` |
+| Safari Map **update** (`updateMapImage`) | All existing location channels + their categories | Merged onto existing channels via per-role `permissionOverwrites.edit()` (`🔐 [MAP_UPDATE]` logs) | ViewChannel, ManageChannels | `SAFARI_CHANNEL_ACCESS` |
+| 🗺️map-storage (`findOrCreateMapStorageChannel`) | Hidden image-storage channel | At creation **and ensured on find** — the channel survives map deletion, so creation-only could never reach existing guilds (`🔐 [MAP_STORAGE]` logs) | ViewChannel, ManageChannels | `SAFARI_CHANNEL_ACCESS` |
 
 Location channels do **not** sync permissions from their category — every channel carries explicit overwrites, so the grant is applied at each creation site individually.
 
 Whispers need no special handling: they post into existing location channels and inherit their permissions.
 
-## Creation-Only Semantics
+## When Grants Are (and Aren't) Applied
 
-Overwrites are applied **only when a channel is created**. Changing the whitelist afterward does *not* sweep existing channels (explicit design decision, 2026-07-10):
+Grants are applied **during CastBot channel operations** — create a map, update a map, apply to a season. Changing the whitelist by itself does *not* sweep existing channels (explicit design decision, 2026-07-10):
 
-- No surprise mass-mutation of live game channels
-- No rate-limit burst (a sweep is O(channels × roles) API calls)
-- Tiny current user base doesn't justify the complexity
+- No surprise mass-mutation of live game channels on a Settings click
+- No rate-limit burst outside an operation the admin explicitly triggered
 
-To apply a new whitelist to a Safari map, recreate the map (Map Explorer → Update Map). Player-level permission changes (movement, pause, deinit) use per-member `permissionOverwrites.edit()` merges and **never disturb** role overwrites.
+To push a new whitelist onto an existing Safari map, run **Map Explorer → Update Map** (it merges grants onto all existing location channels, categories, and map-storage before regenerating images). The ensure path (`ensureRoleAccessOnChannels`) uses per-role `permissionOverwrites.edit()` merges with a cache pre-check — already-granted roles cost zero API calls, and player/member overwrites are never disturbed. Player-level permission changes (movement, pause, deinit) likewise use per-member `.edit()` merges and **never disturb** role overwrites.
 
 ## System Flow
 
@@ -77,7 +78,9 @@ permissionOverwrites: [
 ```
 
 - `buildRoleAccessEntries({ roleIds, validRoleIds, everyoneRoleId, allow })` — the pure, I/O-free core (unit-tested)
-- **Rule for new features**: any new CastBot function that creates access-restricted channels should call this helper with an appropriate bits constant. Spread entries **after** your `@everyone` deny.
+- `ensureRoleAccessOnChannels(guild, channels, allow, { playerData, logPrefix })` — MERGE grants onto **existing** channels (per-role `.edit()`, never `.set()`); dedupes channels, skips roles already fully granted (cache check, no API call), per-channel errors are logged but non-fatal. Returns the number of overwrites actually edited. Used by Map Update and the map-storage find path.
+- `hasAllRequiredBits(existingAllow, requiredBits)` — pure skip-check used by the ensure path (unit-tested)
+- **Rule for new features**: any new CastBot function that creates access-restricted channels should call `getRoleAccessOverwrites` with an appropriate bits constant and spread entries **after** your `@everyone` deny. If your feature *reuses* long-lived channels, also call `ensureRoleAccessOnChannels` on them.
 
 ## Edge Cases & Failure Modes
 

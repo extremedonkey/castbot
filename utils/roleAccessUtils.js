@@ -7,7 +7,7 @@
  * whitelist never retroactively edits existing channels (deliberate design —
  * see docs/03-features/RolesSecurity.md).
  */
-import { PermissionFlagsBits } from 'discord.js';
+import { PermissionFlagsBits, PermissionsBitField } from 'discord.js';
 import { loadPlayerData } from '../storage.js';
 
 /** Bits granted on Safari channels (map locations, categories, 🗺️map-storage). */
@@ -88,4 +88,74 @@ export async function getRoleAccessOverwrites(guild, allow, { playerData = null,
     console.warn(`🔐 [${logPrefix}] Skipping invalid globalRoleAccess role: ${roleId}`);
   }
   return entries;
+}
+
+/**
+ * Pure core — true when an existing overwrite's allow bitfield already contains
+ * every required bit (replicated inline in tests).
+ * @param {bigint} existingAllow - the overwrite's current allow bitfield
+ * @param {bigint[]} requiredBits - bits that must all be present
+ * @returns {boolean}
+ */
+export function hasAllRequiredBits(existingAllow, requiredBits) {
+  return requiredBits.every(bit => (existingAllow & bit) === bit);
+}
+
+/**
+ * MERGE the whitelist's grants onto EXISTING channels via per-role
+ * permissionOverwrites.edit() (never .set() — player/member overwrites are
+ * untouched). Complements creation-time grants for channels that outlive
+ * creation: the 🗺️map-storage channel survives map deletion, and Map Update
+ * refreshes maps whose channels may predate the whitelist.
+ *
+ * Skips roles whose overwrite already carries all required bits (cache check,
+ * no API call), so repeat invocations are cheap no-ops.
+ *
+ * @param {import('discord.js').Guild} guild
+ * @param {Array<import('discord.js').GuildChannel|null>} channels - deduped by id; falsy entries ignored
+ * @param {bigint[]} allow - SAFARI_CHANNEL_ACCESS or APPLICATION_CHANNEL_ACCESS
+ * @param {Object} [options]
+ * @param {Object} [options.playerData] - as in getRoleAccessOverwrites
+ * @param {string} [options.logPrefix='ROLE_ACCESS']
+ * @returns {Promise<number>} count of overwrites actually edited
+ */
+export async function ensureRoleAccessOnChannels(guild, channels, allow, { playerData = null, logPrefix = 'ROLE_ACCESS' } = {}) {
+  const guildData = playerData ? playerData[guild.id] : await loadPlayerData(guild.id);
+  const roleIds = guildData?.permissions?.globalRoleAccess || [];
+  if (roleIds.length === 0) return 0;
+
+  await guild.roles.fetch();
+  const { entries, skipped } = buildRoleAccessEntries({
+    roleIds,
+    validRoleIds: new Set(guild.roles.cache.keys()),
+    everyoneRoleId: guild.roles.everyone?.id ?? guild.id,
+    allow
+  });
+  for (const roleId of skipped) {
+    console.warn(`🔐 [${logPrefix}] Skipping invalid globalRoleAccess role: ${roleId}`);
+  }
+  if (entries.length === 0) return 0;
+
+  // .edit() takes named boolean flags, not bitfields
+  const editOptions = Object.fromEntries(new PermissionsBitField(allow).toArray().map(name => [name, true]));
+
+  const seen = new Set();
+  let applied = 0;
+  for (const channel of channels) {
+    if (!channel || seen.has(channel.id)) continue;
+    seen.add(channel.id);
+    for (const entry of entries) {
+      const existing = channel.permissionOverwrites?.cache?.get(entry.id);
+      if (existing && hasAllRequiredBits(existing.allow.bitfield, allow)) continue;
+      try {
+        await channel.permissionOverwrites.edit(entry.id, editOptions, { reason: 'CastBot Roles & Security' });
+        applied++;
+        console.log(`🔐 [${logPrefix}] Ensured globalRoleAccess role ${guild.roles.cache.get(entry.id)?.name} (${entry.id}) on #${channel.name}`);
+      } catch (error) {
+        // Missing bot permission on one channel must not abort the caller's operation
+        console.warn(`🔐 [${logPrefix}] Could not grant role ${entry.id} on #${channel.name}: ${error.message}`);
+      }
+    }
+  }
+  return applied;
 }

@@ -25,6 +25,11 @@ function buildRoleAccessEntries({ roleIds, validRoleIds, everyoneRoleId, allow }
   return { entries, skipped };
 }
 
+// Replicated from utils/roleAccessUtils.js — keep in sync
+function hasAllRequiredBits(existingAllow, requiredBits) {
+  return requiredBits.every(bit => (existingAllow & bit) === bit);
+}
+
 const SAFARI_BITS = ['ViewChannel', 'ManageChannels'];
 const APPLICATION_BITS = ['ViewChannel', 'SendMessages', 'ReadMessageHistory'];
 const EVERYONE = '1000000000000000000';
@@ -131,5 +136,34 @@ describe('Roles & Security — buildRoleAccessEntries', () => {
     });
     assert.deepEqual(result.entries.map(e => e.id), ['111']);
     assert.deepEqual(result.skipped, []);
+  });
+});
+
+describe('Roles & Security — hasAllRequiredBits (ensure-on-existing skip check)', () => {
+  // Real Discord permission bit values
+  const VIEW_CHANNEL = 1n << 10n;
+  const MANAGE_CHANNELS = 1n << 4n;
+  const SEND_MESSAGES = 1n << 11n;
+
+  it('true when the overwrite already carries every required bit', () => {
+    const existing = VIEW_CHANNEL | MANAGE_CHANNELS | SEND_MESSAGES;
+    assert.equal(hasAllRequiredBits(existing, [VIEW_CHANNEL, MANAGE_CHANNELS]), true);
+  });
+
+  it('false when any required bit is missing (partial grant must be re-applied)', () => {
+    const viewOnly = VIEW_CHANNEL;
+    assert.equal(hasAllRequiredBits(viewOnly, [VIEW_CHANNEL, MANAGE_CHANNELS]), false);
+  });
+
+  it('false for an empty allow bitfield', () => {
+    assert.equal(hasAllRequiredBits(0n, [VIEW_CHANNEL]), false);
+  });
+
+  it('true for an empty requirements list (vacuous)', () => {
+    assert.equal(hasAllRequiredBits(0n, []), true);
+  });
+
+  it('unrelated bits do not satisfy requirements', () => {
+    assert.equal(hasAllRequiredBits(SEND_MESSAGES, [VIEW_CHANNEL]), false);
   });
 });

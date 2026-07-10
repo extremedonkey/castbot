@@ -157,7 +157,7 @@ const roleAccessEntries = await getRoleAccessOverwrites(guild, SAFARI_CHANNEL_AC
 permissionOverwrites: [{ id: guild.roles.everyone.id, deny: [ViewChannel] }, ...roleAccessEntries]
 ```
 
-**Creation-only semantics**: overwrites are applied only when channels are created. Editing the whitelist never retroactively sweeps existing channels (deliberate — see feature doc).
+**Semantics**: grants are applied during CastBot channel *operations* — channel creation (overwrites ride `channels.create()`), Map Update (merged onto existing location channels/categories via `ensureRoleAccessOnChannels` per-role `.edit()`), and on find of the long-lived 🗺️map-storage channel. Editing the whitelist by itself never sweeps existing channels (deliberate — see feature doc).
 
 Application channels also display an access disclosure:
 > Additional roles configured in CastBot Settings: @Co-Host, @Producer

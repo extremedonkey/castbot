@@ -17,7 +17,7 @@ import MapGridSystem from './scripts/map-tests/mapGridSystem.js';
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
 
 // Roles & Security: creation-time access grants for whitelisted roles (docs/03-features/RolesSecurity.md)
-import { getRoleAccessOverwrites, SAFARI_CHANNEL_ACCESS } from './utils/roleAccessUtils.js';
+import { getRoleAccessOverwrites, ensureRoleAccessOnChannels, SAFARI_CHANNEL_ACCESS } from './utils/roleAccessUtils.js';
 
 /**
  * Convert column index to Excel-style column label (0=A, 25=Z, 26=AA, etc.)
@@ -111,6 +111,11 @@ async function findOrCreateMapStorageChannel(guild) {
         ...roleAccessEntries
       ]
     });
+  } else {
+    // Storage channel survives map deletion, so creation-time grants can never
+    // reach guilds where it already exists — merge whitelist grants in on find.
+    // No-op (cache check only) when grants are already present.
+    await ensureRoleAccessOnChannels(guild, [storageChannel], SAFARI_CHANNEL_ACCESS, { logPrefix: 'MAP_STORAGE' });
   }
   return storageChannel;
 }
@@ -1018,7 +1023,29 @@ async function updateMapImage(guild, userId, mapUrl) {
     
     let progressMessages = [];
     progressMessages.push('🔄 Starting map update process...');
-    
+
+    // Roles & Security: an updated map keeps its existing channels (created
+    // before the whitelist, or under the pre-whitelist regime), so merge the
+    // grants onto every location channel + its category now. Non-fatal.
+    try {
+      const locationChannels = [];
+      for (const coordData of Object.values(mapData.coordinates || {})) {
+        if (!coordData.channelId) continue;
+        const ch = guild.channels.cache.get(coordData.channelId)
+          ?? await guild.channels.fetch(coordData.channelId).catch(() => null);
+        if (ch) {
+          locationChannels.push(ch);
+          if (ch.parent) locationChannels.push(ch.parent); // category (deduped in helper)
+        }
+      }
+      const applied = await ensureRoleAccessOnChannels(guild, locationChannels, SAFARI_CHANNEL_ACCESS, { logPrefix: 'MAP_UPDATE' });
+      if (applied > 0) {
+        progressMessages.push(`🔐 Applied Roles & Security access to existing map channels (${applied} grants)`);
+      }
+    } catch (e) {
+      console.warn(`🔐 [MAP_UPDATE] Could not apply Roles & Security grants: ${e.message}`);
+    }
+
     // Download the new map image
     progressMessages.push('📥 Downloading new map image...');
     const response = await fetch(mapUrl);
@@ -1058,7 +1085,7 @@ async function updateMapImage(guild, userId, mapUrl) {
     // Post original pre-grid image to map-storage for reference/fallback
     try {
       const { AttachmentBuilder } = await import('discord.js');
-      let storageChannel = guild.channels.cache.find(ch => (ch.name === '🗺️map-storage' || ch.name === 'map-storage') && ch.type === 0);
+      const storageChannel = await findOrCreateMapStorageChannel(guild);
       if (storageChannel) {
         // Upload as JPEG to avoid PNG size explosion
         const origJpeg = megapixels > 8 ? processedBuffer : await sharp(imageBuffer).jpeg({ quality: 90 }).toBuffer();
