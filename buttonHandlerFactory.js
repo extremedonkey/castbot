@@ -791,6 +791,15 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
+  'reece_uptime': {
+    label: 'Uptime',
+    description: 'Show bot process uptime, memory usage, Node version and PID',
+    emoji: '🕰️',
+    style: 'Secondary',
+    parent: 'reeces_stuff',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
   'test_role_hierarchy': {
     label: 'Check Roles',
     description: 'Test and display role hierarchy information',

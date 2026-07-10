@@ -8421,6 +8421,36 @@ To fix this:
           return { components: [container] };
         }
       })(req, res, client);
+    } else if (custom_id === 'reece_uptime') {
+      // Reece's Stuff → Uptime — ephemeral process stats (uptime, memory, Node, PID)
+      return ButtonHandlerFactory.create({
+        id: 'reece_uptime',
+        ephemeral: true,
+        handler: async (context) => {
+          if (!['391415444084490240', '1086246253819613274'].includes(context.userId)) {
+            return { content: '❌ Access denied.', ephemeral: true };
+          }
+          const s = Math.floor(process.uptime());
+          const parts = [];
+          const days = Math.floor(s / 86400), hours = Math.floor(s / 3600) % 24, mins = Math.floor(s / 60) % 60;
+          if (days) parts.push(`${days}d`);
+          if (days || hours) parts.push(`${hours}h`);
+          if (days || hours || mins) parts.push(`${mins}m`);
+          parts.push(`${s % 60}s`);
+          const mem = process.memoryUsage();
+          const mb = (n) => `${(n / 1024 / 1024).toFixed(1)} MB`;
+          return {
+            content: [
+              '## 🕰️ Uptime',
+              `**Uptime:** ${parts.join(' ')}`,
+              `**Memory:** RSS ${mb(mem.rss)} | Heap ${mb(mem.heapUsed)}`,
+              `**Node:** ${process.version}`,
+              `**PID:** ${process.pid}`
+            ].join('\n'),
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'restart_prod') {
       // TEST-instance-only: confirm screen for restarting PROD via forced-command SSH.
       if (!['391415444084490240'].includes(req.body.member?.user?.id)) {
