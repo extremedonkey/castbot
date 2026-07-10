@@ -102,7 +102,25 @@ export async function DiscordRequest(endpoint, options, context = null) {
     }
 
     const ctxStr = context ? ` [Context: ${context}]` : '';
-    throw new Error(`${error}${ctxStr}`);
+
+    // Self-identify: when the caller passed no context, the raw Discord message alone
+    // (e.g. "Invalid Form Body" 50035) can't tell us WHICH handler/message triggered it.
+    // Attach the HTTP method + endpoint (names the target message/webhook) and, for form-body
+    // errors, Discord's field-path detail (names the exact bad component/flag) so the #error
+    // post is actionable without guessing. A short stack snippet points at the calling module.
+    let selfId = ` [${options.method || 'GET'} ${endpoint}]`;
+    try {
+      const parsed = JSON.parse(error);
+      if (parsed.code === 50035 && parsed.errors) {
+        selfId += ` [fields: ${JSON.stringify(parsed.errors)}]`;
+      }
+    } catch { /* error body not JSON — nothing to enrich */ }
+    const callerLine = (new Error().stack || '')
+      .split('\n')
+      .find(l => l.includes('/') && !l.includes('utils.js') && !l.includes('node_modules'));
+    if (callerLine) selfId += ` [caller:${callerLine.trim().replace(/^at\s+/, '')}]`;
+
+    throw new Error(`${error}${ctxStr}${selfId}`);
   }
   
   // Handle empty responses
