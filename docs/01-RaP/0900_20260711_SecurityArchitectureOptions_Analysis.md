@@ -125,6 +125,13 @@ Only covers slash commands (5 exist, all fork server-side already) — does noth
 
 End state: an agent with zero context writing a new button **cannot** ship an exposed admin surface — the declare-or-deny test blocks the commit, and even if a handler lies, the registry middleware denies at runtime, and even if the registry entry is misclassified, the guarded builder refuses. Three independent layers; today there are zero.
 
+## 🧪 Phase-1 Field Test (2026-07-11, same day)
+
+A fresh context-free CC agent was asked to add an Uptime button to Reece's Stuff (no security hints in the prompt). Results:
+- **Win**: the agent discovered the ratchet on its own, read it, and gated its handler inline (copying the established two-ID `reeces_stuff` allowlist — both IDs pre-existing) before first deploy. The requirement was self-teaching.
+- **Defect found**: the original ordinal-based keys for `id: custom_id` blocks shifted when the new handler was inserted mid-file, producing 5 false "new" + 5 false "stale" entries. The agent correctly diagnosed it and renumbered the baseline — legitimate here, but it normalized "editing the baseline" as a fix, which is exactly the escape hatch the ratchet must not have.
+- **Hardened same day**: keys are now position-independent (literal id → dispatch-condition string → content hash), and a `FROZEN_BASELINE_MAX` assertion makes the baseline structurally unable to grow without also editing the test file (a loud diff). Negative-tested: fires on an undeclared handler AND on baseline tampering.
+
 ## ⚠️ Residual Risks / Honest Limits
 
 - Shadow-mode classification of 575 entries is the real work in Phase 2; a misclassified `player` button that should be `admin` stays exposed until audited — the declare-or-deny diff review is the control.

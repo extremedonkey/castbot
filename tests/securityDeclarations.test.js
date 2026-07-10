@@ -27,12 +27,18 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.join(__dirname, '..');
 const SCANNED_FILES = ['app.js', 'castlistHandlers.js'];
 const BASELINE_PATH = path.join(__dirname, 'securityDeclarationsBaseline.json');
+
+// The baseline is a GRANDFATHER LIST and must never grow. This constant is the
+// ceiling; additions require editing this test file too — a loud, reviewable diff.
+// Lower it freely as the baseline shrinks.
+const FROZEN_BASELINE_MAX = 265;
 
 const CREATE_MARKER = 'ButtonHandlerFactory.create({';
 const BLOCK_END = '})(req, res, client)';
@@ -46,13 +52,30 @@ const GATE_PATTERN = new RegExp([
   '391415444084490240' // owner-ID hard gate
 ].join('|'));
 
-/** Stable key for a handler block: file :: id (template params normalized to *). */
-function blockKey(file, block, ordinal) {
+/**
+ * Stable key for a handler block. Position-independent by design — the original
+ * ordinal-based keys for `id: custom_id` blocks shifted whenever ANY handler was
+ * inserted earlier in the file, forcing baseline renumber edits on unrelated
+ * commits (observed 2026-07-11, first field use). Precedence:
+ *   1. literal id                          → file::id (template params → *)
+ *   2. id is a variable (`id: custom_id`)  → file::cond:<first quoted string of the
+ *      nearest PRECEDING custom_id comparison> — the dispatch condition names it
+ *   3. fallback                            → file::hash:<sha1 of normalized block>
+ */
+function blockKey(file, block, src, blockStart) {
   const idMatch = block.match(/id:\s*['`]([^'`]+)['`]/);
   if (idMatch) {
     return `${file}::${idMatch[1].replace(/\$\{[^}]*\}/g, '*')}`;
   }
-  return `${file}::UNIDENTIFIED#${ordinal}`;
+  const windowText = src.slice(Math.max(0, blockStart - 1500), blockStart);
+  const condRe = /custom_id(?:\s*===\s*|\.startsWith\(\s*|\.includes\(\s*)['"`]([^'"`]+)['"`]/g;
+  let cond = null;
+  for (const m of windowText.matchAll(condRe)) cond = m[1]; // keep the LAST (nearest) match
+  if (cond) {
+    return `${file}::cond:${cond}`;
+  }
+  const normalized = block.replace(/\s+/g, ' ').slice(0, 600);
+  return `${file}::hash:${createHash('sha1').update(normalized).digest('hex').slice(0, 10)}`;
 }
 
 function scanUndeclared() {
@@ -61,14 +84,12 @@ function scanUndeclared() {
   for (const file of SCANNED_FILES) {
     const src = readFileSync(path.join(REPO, file), 'utf8');
     let idx = 0;
-    let ordinal = 0;
     while ((idx = src.indexOf(CREATE_MARKER, idx)) !== -1) {
       const end = src.indexOf(BLOCK_END, idx);
       const block = src.slice(idx, end === -1 ? idx + 4000 : end);
       totalBlocks++;
-      ordinal++;
       if (!GATE_PATTERN.test(block)) {
-        undeclared.push(blockKey(file, block, ordinal));
+        undeclared.push(blockKey(file, block, src, idx));
       }
       idx += CREATE_MARKER.length;
     }
@@ -83,6 +104,13 @@ describe('Security — declare-or-deny ratchet (RaP 0900 Phase 1)', () => {
   it('parser is live (finds a plausible number of factory blocks)', () => {
     assert.ok(totalBlocks >= 500,
       `expected >=500 ButtonHandlerFactory.create blocks, found ${totalBlocks} — parser may be broken`);
+  });
+
+  it('baseline has not grown (grandfather list is frozen — additions are forbidden)', () => {
+    assert.ok(baseline.size <= FROZEN_BASELINE_MAX,
+      `baseline has ${baseline.size} entries, ceiling is ${FROZEN_BASELINE_MAX}. ` +
+      `The baseline may only SHRINK. If you are trying to add a new handler to it: don't — ` +
+      `declare the handler instead (requiresPermission / inline gate / security: 'public').`);
   });
 
   it('no NEW handler ships without a security declaration', () => {

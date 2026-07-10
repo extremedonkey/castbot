@@ -73,18 +73,18 @@ Buttons in `customActionUI.js` → `createCustomActionSelectionUI()`, shown only
 - `buildQuickEnemyModal(coordinate, enemies)` — builds 5-field modal with enemy StringSelect (max 25, alphabetical)
 - `buildQuickCommandModal(coordinate, prefixes)` — builds 3–5 field modal; prefix select only shown when guild has prefixes
 - `buildQuickCraftingModal(coordinate, items, craftingName)` — builds 5-field modal with 3 item StringSelects (max 25, newest first)
-- `handleQuickTextSubmit(guildId, userId, coordinate, components)` — creates action + display_text outcome
-- `handleQuickCurrencySubmit(guildId, userId, coordinate, components)` — creates action + give_currency outcome
-- `handleQuickItemSubmit(guildId, userId, coordinate, components)` — creates action + give_item outcome
-- `handleQuickEnemySubmit(guildId, userId, coordinate, components)` — creates action + fight_enemy outcome
-- `handleQuickCommandSubmit(guildId, userId, coordinate, components, hasPrefixes)` — creates Command-trigger action + display_text outcome
-- `handleQuickCraftingSubmit(guildId, userId, coordinate, components)` — creates action with 2 item conditions + 3 give_item outcomes (remove×2, give×1), Grey, menuVisibility=`crafting_menu`
+- `handleQuickTextSubmit(guildId, userId, coordinate, components)` — creates action + display\_text outcome
+- `handleQuickCurrencySubmit(guildId, userId, coordinate, components)` — creates action + give\_currency outcome
+- `handleQuickItemSubmit(guildId, userId, coordinate, components)` — creates action + give\_item outcome
+- `handleQuickEnemySubmit(guildId, userId, coordinate, components)` — creates action + fight\_enemy outcome
+- `handleQuickCommandSubmit(guildId, userId, coordinate, components, hasPrefixes)` — creates Command-trigger action + display\_text outcome
+- `handleQuickCraftingSubmit(guildId, userId, coordinate, components)` — creates action with 2 item conditions + 3 give\_item outcomes (remove×2, give×1), Grey, menuVisibility=`crafting_menu`
 - `buildCraftingLogic(item1Id, item2Id, itemToGiveId)` — **pure function** returning `{ conditions, outcomes }`; collapses duplicate inputs into a single qty:2 condition + qty:2 remove outcome. Exported for test coverage.
 
 **Shared constants:**
 - `LIMIT_OPTIONS` — built from `buildLimitOptions()`, pre-selects `once_per_player`
 - `COLOR_OPTIONS` — Blue (Primary), Grey (Secondary), Green (Success), Red (Danger)
-- `STYLE_TO_ACCENT_COLOR` — maps button style to hex accent color for display_text
+- `STYLE_TO_ACCENT_COLOR` — maps button style to hex accent color for display\_text
 
 **Shared utility:**
 - `getModalValue(comp)` — extracts value from Label (type 18) component, handles both TextInput (`.value`) and StringSelect (`.values[0]`)
@@ -92,7 +92,7 @@ Buttons in `customActionUI.js` → `createCustomActionSelectionUI()`, shown only
 ### Handler Flow
 
 1. **Button click** → `app.js` handler imports `buildQuick*Modal()`, returns modal
-2. **Modal submit** → `app.js` MODAL_SUBMIT handler imports `handleQuick*Submit()`, delegates
+2. **Modal submit** → `app.js` MODAL\_SUBMIT handler imports `handleQuick*Submit()`, delegates
 3. **Submit handler**:
    - Extracts 5 field values via `getModalValue()`
    - Validates required fields
@@ -106,7 +106,7 @@ Buttons in `customActionUI.js` → `createCustomActionSelectionUI()`, shown only
 
 ### Quick Text Special Behavior
 
-- `title` is set to the Button Name (so display_text shows a heading)
+- `title` is set to the Button Name (so display\_text shows a heading)
 - `color` is mapped from Button Color via `STYLE_TO_ACCENT_COLOR` (Primary→blue, Success→green, etc.)
 - `executeOn: 'true'`
 
@@ -155,7 +155,7 @@ Quick Crafting compresses the multi-step work of building a recipe Action (condi
 ### Global Actions (`coordinate === 'global'`)
 
 When Quick Actions are triggered from the global Actions screen:
-- `coordinate` is the string `'global'` (from the button custom_id)
+- `coordinate` is the string `'global'` (from the button custom\_id)
 - Coordinate assignment is skipped (`if (coordinate && coordinate !== 'global')`)
 - Anchor updates are skipped
 - Editor receives `coordinate: null` (not `'global'`)
@@ -190,7 +190,7 @@ All Quick-created actions have `metadata.createdVia`:
 |---------|---------|------|
 | Button clicks (show modal) | `quick_text_*`, `quick_currency_*`, `quick_item_*` | Legacy (inline `res.send()`) |
 | Button click (enemy) | `quick_enemy_*` | Yes — `ButtonHandlerFactory` with `requiresModal: true` |
-| Modal submits | `quick_text_modal_*`, `quick_currency_modal_*`, `quick_item_modal_*`, `quick_enemy_modal_*` | Legacy (MODAL_SUBMIT section — correct) |
+| Modal submits | `quick_text_modal_*`, `quick_currency_modal_*`, `quick_item_modal_*`, `quick_enemy_modal_*` | Legacy (MODAL\_SUBMIT section — correct) |
 
 ---
 
