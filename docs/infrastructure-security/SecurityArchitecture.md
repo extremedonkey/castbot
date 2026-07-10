@@ -124,6 +124,8 @@ All permission denials are **ephemeral** (only visible to the requesting user). 
 
 ## Roles & Security Settings (`globalRoleAccess`)
 
+> **Feature doc**: [docs/03-features/RolesSecurity.md](../03-features/RolesSecurity.md) — canonical reference (UI, enforcement points, helper API, edge cases).
+
 ### Purpose
 
 Lets server admins designate Discord roles as CastBot admins — for users who don't have Discord-level admin permissions but should be treated as CastBot admins (e.g. a "Co-Host" role).
@@ -141,20 +143,21 @@ Lets server admins designate Discord roles as CastBot admins — for users who d
 
 ### Current Scope
 
-`globalRoleAccess` is **only enforced in Season Applications** today. When `applicationManager.js` creates a new application channel, it adds channel permission overwrites for each `globalRoleAccess` role:
+`globalRoleAccess` grants **creation-time channel permission overwrites** in two systems, via the shared helper `utils/roleAccessUtils.js` (`getRoleAccessOverwrites(guild, allowBits)` — validates roles, dedupes, filters `@everyone`):
+
+| System | Channels | Bits granted |
+|---|---|---|
+| Season Applications (`applicationManager.js`) | application channel | ViewChannel, SendMessages, ReadMessageHistory |
+| Safari Map (`mapExplorer.js`) | location channels, Map Explorer categories (incl. overflow), 🗺️map-storage | ViewChannel, ManageChannels |
 
 ```javascript
-const globalRoleAccess = data[guild.id]?.permissions?.globalRoleAccess || [];
-for (const roleId of globalRoleAccess) {
-  const role = guild.roles.cache.get(roleId);
-  if (role) {
-    permissionOverwrites.push({
-      id: roleId,
-      allow: [ViewChannel, SendMessages, ReadMessageHistory]
-    });
-  }
-}
+import { getRoleAccessOverwrites, SAFARI_CHANNEL_ACCESS } from './utils/roleAccessUtils.js';
+const roleAccessEntries = await getRoleAccessOverwrites(guild, SAFARI_CHANNEL_ACCESS, { logPrefix: 'MAP_CREATE' });
+// spread AFTER the @everyone deny entry:
+permissionOverwrites: [{ id: guild.roles.everyone.id, deny: [ViewChannel] }, ...roleAccessEntries]
 ```
+
+**Creation-only semantics**: overwrites are applied only when channels are created. Editing the whitelist never retroactively sweeps existing channels (deliberate — see feature doc).
 
 Application channels also display an access disclosure:
 > Additional roles configured in CastBot Settings: @Co-Host, @Producer

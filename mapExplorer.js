@@ -16,6 +16,9 @@ import MapGridSystem from './scripts/map-tests/mapGridSystem.js';
 // Import loadSafariContent and saveSafariContent from safariManager to benefit from caching
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
 
+// Roles & Security: creation-time access grants for whitelisted roles (docs/03-features/RolesSecurity.md)
+import { getRoleAccessOverwrites, SAFARI_CHANNEL_ACCESS } from './utils/roleAccessUtils.js';
+
 /**
  * Convert column index to Excel-style column label (0=A, 25=Z, 26=AA, etc.)
  * @param {number} index - Zero-based column index
@@ -83,6 +86,36 @@ function getGridDimensions(mapData) {
 }
 
 /**
+ * Find (or create) the hidden 🗺️map-storage channel. Backwards compatible —
+ * renames a legacy "map-storage" channel if found. On CREATE, whitelisted
+ * Roles & Security roles are granted ViewChannel + ManageChannels.
+ * @param {Guild} guild - Discord guild object
+ * @returns {Promise<TextChannel>} The storage channel
+ */
+async function findOrCreateMapStorageChannel(guild) {
+  let storageChannel = guild.channels.cache.find(ch => (ch.name === '🗺️map-storage' || ch.name === 'map-storage') && ch.type === 0);
+  if (storageChannel && storageChannel.name === 'map-storage') {
+    try { await storageChannel.setName('🗺️map-storage'); } catch (e) { /* rate limited or no perms */ }
+  }
+  if (!storageChannel) {
+    const roleAccessEntries = await getRoleAccessOverwrites(guild, SAFARI_CHANNEL_ACCESS, { logPrefix: 'MAP_STORAGE' });
+    storageChannel = await guild.channels.create({
+      name: '🗺️map-storage',
+      type: 0, // Text channel
+      topic: 'Storage for map images - do not delete',
+      permissionOverwrites: [
+        {
+          id: guild.roles.everyone.id,
+          deny: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages]
+        },
+        ...roleAccessEntries
+      ]
+    });
+  }
+  return storageChannel;
+}
+
+/**
  * Upload image to Discord and get CDN URL by sending it to a channel
  * @param {Guild} guild - Discord guild object
  * @param {string} imagePath - Path to image file
@@ -92,27 +125,9 @@ function getGridDimensions(mapData) {
 export async function uploadImageToDiscord(guild, imagePath, filename) {
   try {
     const { AttachmentBuilder } = await import('discord.js');
-    
-    // Find or create storage channel (backwards compatible - renames old channel if found)
-    let storageChannel = guild.channels.cache.find(ch => (ch.name === '🗺️map-storage' || ch.name === 'map-storage') && ch.type === 0);
-    if (storageChannel && storageChannel.name === 'map-storage') {
-      try { await storageChannel.setName('🗺️map-storage'); } catch (e) { /* rate limited or no perms */ }
-    }
 
-    if (!storageChannel) {
-      storageChannel = await guild.channels.create({
-        name: '🗺️map-storage',
-        type: 0, // Text channel
-        topic: 'Storage for map images - do not delete',
-        permissionOverwrites: [
-          {
-            id: guild.roles.everyone.id,
-            deny: ['ViewChannel', 'SendMessages']
-          }
-        ]
-      });
-    }
-    
+    const storageChannel = await findOrCreateMapStorageChannel(guild);
+
     // Check file size before uploading — Discord limit is 8MB (non-boosted) / 25MB (level 2)
     const { stat } = await import('fs/promises');
     const fileStats = await stat(imagePath);
@@ -217,22 +232,8 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
         });
         
         // Upload fog of war map to storage channel to get URL without redundant message in coordinate channel
-        let storageChannel = guild.channels.cache.find(ch => (ch.name === '🗺️map-storage' || ch.name === 'map-storage') && ch.type === 0);
-        if (storageChannel && storageChannel.name === 'map-storage') {
-          try { await storageChannel.setName('🗺️map-storage'); } catch (e) { /* rate limited or no perms */ }
-        }
-        if (!storageChannel) {
-          storageChannel = await guild.channels.create({
-            name: '🗺️map-storage',
-            type: 0,
-            topic: 'Storage for map images - do not delete',
-            permissionOverwrites: [{
-              id: guild.roles.everyone.id,
-              deny: ['ViewChannel', 'SendMessages']
-            }]
-          });
-        }
-        
+        const storageChannel = await findOrCreateMapStorageChannel(guild);
+
         const storageMessage = await storageChannel.send({
           content: `Fog map for ${coord}`,
           files: [attachment]
@@ -480,7 +481,11 @@ async function createMapGrid(guild, userId) {
     const discordImageUrl = uploadResult.url || uploadResult; // Backwards compatibility
     console.log(`📤 Map image uploaded to Discord CDN: ${discordImageUrl}`);
     progressMessages.push('✅ Map image uploaded to Discord CDN');
-    
+
+    // Roles & Security: whitelisted roles get ViewChannel + ManageChannels on every
+    // map channel/category. Computed once, spread into each creation below.
+    const roleAccessEntries = await getRoleAccessOverwrites(guild, SAFARI_CHANNEL_ACCESS, { logPrefix: 'MAP_CREATE' });
+
     const category = await guild.channels.create({
       name: '🗺️ Map Explorer',
       type: ChannelType.GuildCategory,
@@ -488,7 +493,8 @@ async function createMapGrid(guild, userId) {
         {
           id: guild.roles.everyone.id,
           deny: [PermissionFlagsBits.ViewChannel]
-        }
+        },
+        ...roleAccessEntries
       ]
     });
     
@@ -526,7 +532,8 @@ async function createMapGrid(guild, userId) {
             {
               id: guild.roles.everyone.id,
               deny: [PermissionFlagsBits.ViewChannel]
-            }
+            },
+            ...roleAccessEntries
           ]
         });
         
@@ -1161,22 +1168,8 @@ async function updateMapImage(guild, userId, mapUrl) {
         const fogOfWarBuffer = await createFogOfWarMap(outputPath, gridSystem, coord, coordinates);
         
         // Upload fog map to storage channel
-        let storageChannel = guild.channels.cache.find(ch => (ch.name === '🗺️map-storage' || ch.name === 'map-storage') && ch.type === 0);
-        if (storageChannel && storageChannel.name === 'map-storage') {
-          try { await storageChannel.setName('🗺️map-storage'); } catch (e) { /* rate limited or no perms */ }
-        }
-        if (!storageChannel) {
-          storageChannel = await guild.channels.create({
-            name: '🗺️map-storage',
-            type: 0,
-            topic: 'Storage for map images - do not delete',
-            permissionOverwrites: [{
-              id: guild.roles.everyone.id,
-              deny: ['ViewChannel', 'SendMessages']
-            }]
-          });
-        }
-        
+        const storageChannel = await findOrCreateMapStorageChannel(guild);
+
         const { AttachmentBuilder } = await import('discord.js');
         const attachment = new AttachmentBuilder(fogOfWarBuffer, { 
           name: `${coord.toLowerCase()}_fogmap_updated.png` 
@@ -1462,19 +1455,7 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
     progressMessages.push('📤 Uploading images to Discord...');
     try {
       const { AttachmentBuilder } = await import('discord.js');
-      // Find or create storage channel (same logic as uploadImageToDiscord)
-      let storageChannel = guild.channels.cache.find(ch => (ch.name === '🗺️map-storage' || ch.name === 'map-storage') && ch.type === 0);
-      if (storageChannel && storageChannel.name === 'map-storage') {
-        try { await storageChannel.setName('🗺️map-storage'); } catch (e) { /* rate limited */ }
-      }
-      if (!storageChannel) {
-        storageChannel = await guild.channels.create({
-          name: '🗺️map-storage',
-          type: 0,
-          topic: 'Storage for map images - do not delete',
-          permissionOverwrites: [{ id: guild.roles.everyone.id, deny: ['ViewChannel', 'SendMessages'] }]
-        });
-      }
+      const storageChannel = await findOrCreateMapStorageChannel(guild);
       // Upload as JPEG to avoid PNG size explosion
       const origJpeg = megapixels > 8 ? processedBuffer : await sharp(imageBuffer).jpeg({ quality: 90 }).toBuffer();
       const origAttachment = new AttachmentBuilder(origJpeg, { name: `original_${Date.now()}.jpg` });
@@ -1494,6 +1475,11 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
     console.log(`📤 Map image uploaded to Discord CDN: ${discordImageUrl}`);
     progressMessages.push('✅ Grid map image uploaded to Discord CDN');
 
+    // Roles & Security: whitelisted roles get ViewChannel + ManageChannels on every
+    // map channel/category. Safe to grant ManageChannels — the pre-flight above
+    // guarantees the bot holds it. Computed once, spread into each creation below.
+    const roleAccessEntries = await getRoleAccessOverwrites(guild, SAFARI_CHANNEL_ACCESS, { logPrefix: 'MAP_CREATE' });
+
     const category = await guild.channels.create({
       name: '🗺️ Map Explorer',
       type: ChannelType.GuildCategory,
@@ -1501,7 +1487,8 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
         {
           id: guild.roles.everyone.id,
           deny: [PermissionFlagsBits.ViewChannel]
-        }
+        },
+        ...roleAccessEntries
       ]
     });
 
@@ -1540,7 +1527,8 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
             {
               id: guild.roles.everyone.id,
               deny: [PermissionFlagsBits.ViewChannel]
-            }
+            },
+            ...roleAccessEntries
           ]
         });
         
@@ -1565,7 +1553,8 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
             {
               id: guild.roles.everyone.id,
               deny: [PermissionFlagsBits.ViewChannel]
-            }
+            },
+            ...roleAccessEntries
           ]
         });
         

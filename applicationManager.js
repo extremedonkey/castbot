@@ -11,6 +11,7 @@ import {
 } from 'discord.js';
 import { InteractionResponseFlags } from 'discord-interactions';
 import { loadPlayerData, savePlayerData } from './storage.js';
+import { getRoleAccessOverwrites, APPLICATION_CHANNEL_ACCESS } from './utils/roleAccessUtils.js';
 import fetch from 'node-fetch';
 
 /**
@@ -372,28 +373,12 @@ async function createApplicationChannel(guild, user, config, configId = 'unknown
             }
         ];
 
-        // Add globalRoleAccess roles from CastBot permissions config
-        const globalRoleAccess = data[guild.id]?.permissions?.globalRoleAccess || [];
-        if (globalRoleAccess.length > 0) {
-            await guild.roles.fetch(); // Ensure roles cache is populated
-        }
-        for (const roleId of globalRoleAccess) {
-            // Validate role still exists in guild
-            const role = guild.roles.cache.get(roleId);
-            if (role) {
-                permissionOverwrites.push({
-                    id: roleId,
-                    allow: [
-                        PermissionFlagsBits.ViewChannel,
-                        PermissionFlagsBits.SendMessages,
-                        PermissionFlagsBits.ReadMessageHistory
-                    ]
-                });
-                console.log(`🔐 [APPLICATION] Added globalRoleAccess role: ${role.name} (${roleId})`);
-            } else {
-                console.warn(`🔐 [APPLICATION] Skipping invalid globalRoleAccess role: ${roleId}`);
-            }
-        }
+        // Add globalRoleAccess roles from CastBot permissions config (Roles & Security)
+        const roleAccessEntries = await getRoleAccessOverwrites(guild, APPLICATION_CHANNEL_ACCESS, {
+            playerData: data, // already loaded in this scope — no re-read
+            logPrefix: 'APPLICATION'
+        });
+        permissionOverwrites.push(...roleAccessEntries);
 
         const channel = await guild.channels.create({
             name: channelName,

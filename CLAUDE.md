@@ -501,6 +501,7 @@ When a feature is **deployed to production and working**, move/rename its doc in
 
 **Infrastructure, Deployment & Security:**
 - **🔐 SECURITY ARCHITECTURE** → [docs/infrastructure-security/SecurityArchitecture.md](docs/infrastructure-security/SecurityArchitecture.md) - Permission tiers, enforcement mechanisms, channel permissions, globalRoleAccess
+- **🔐 ROLES & SECURITY** → [docs/03-features/RolesSecurity.md](docs/03-features/RolesSecurity.md) - `globalRoleAccess` whitelist: Settings UI + creation-time channel grants (Season Apps: View/Send/ReadHistory; Safari map locations/categories/map-storage: View/ManageChannels). Helper: [utils/roleAccessUtils.js](utils/roleAccessUtils.js)
 - **🌍 INFRASTRUCTURE ARCHITECTURE** → [docs/infrastructure-security/InfrastructureArchitecture.md](docs/infrastructure-security/InfrastructureArchitecture.md)
 - **🧪 TEST INSTANCE (BLUE/GREEN)** → [docs/03-features/TestInstanceBlueGreen.md](docs/03-features/TestInstanceBlueGreen.md) - castbot-blue always-on staging box, `npm run deploy-test`, Restart Prod button + ProdWatchdog, future flip
 - **🎯 PRODUCTION MONITORING** → [docs/infrastructure-security/ProductionMonitoring.md](docs/infrastructure-security/ProductionMonitoring.md)

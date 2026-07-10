@@ -26,7 +26,7 @@ export async function createRolesSecurityUI(guildId) {
         components: [
             {
                 type: 10,
-                content: `## 🔐 Roles & Security\n\nConfigure which roles have access to CastBot features beyond server admins.\n\n**Current roles with full CastBot access:**\n${roleListText}\n\n-# Note: currently only applies to Applications.`
+                content: `## 🔐 Roles & Security\n\nConfigure which roles have access to CastBot features beyond server admins.\n\n**Current roles with full CastBot access:**\n${roleListText}\n\n-# **Note**: Currently only gives access to Cast Applications and all Safari channel locations.`
             },
             { type: 14 },
             {
