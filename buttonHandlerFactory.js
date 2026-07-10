@@ -576,7 +576,7 @@ export const BUTTON_REGISTRY = {
   },
   'anchor_open_menu': {
     label: 'Menu',
-    description: 'Open main menu from anchor message (creates new ephemeral)',
+    description: 'Open menu from anchor message (creates new ephemeral) — admin/player fork like /menu',
     emoji: '🤖',
     style: 'Secondary',
     category: 'navigation'

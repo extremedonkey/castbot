@@ -33541,13 +33541,34 @@ Your server is now ready for Tycoons gameplay!`;
 
     } else if (custom_id === 'anchor_open_menu') {
       // Menu button on anchor messages — creates NEW ephemeral message (never updateMessage on anchors!)
+      // SECURITY: identical admin/player fork to /menu — players must NEVER see the Production Menu.
       return ButtonHandlerFactory.create({
         id: 'anchor_open_menu',
         ephemeral: true,
         deferred: true,
         handler: async (context) => {
           const playerData = await loadPlayerData();
-          return await createProductionMenuInterface(context.guild, playerData, context.guildId, context.userId);
+          const isAdmin = hasAdminPermissions(context.member);
+          console.log(`[MENU] anchor_open_menu access: Admin=${isAdmin}, User=${context.userId}`);
+
+          if (isAdmin) {
+            return await createProductionMenuInterface(context.guild, playerData, context.guildId, context.userId);
+          }
+
+          // Regular user — same Player Menu as /menu
+          const targetMember = await context.guild.members.fetch(context.userId);
+          return await createPlayerManagementUI({
+            mode: PlayerManagementMode.PLAYER,
+            targetMember,
+            playerData,
+            guildId: context.guildId,
+            userId: context.userId,
+            channelId: context.channelId,
+            showUserSelect: false,
+            showVanityRoles: false,
+            title: 'CastBot | Player Menu',
+            client: context.client
+          });
         }
       })(req, res, client);
 
