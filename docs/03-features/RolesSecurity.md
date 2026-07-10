@@ -21,9 +21,9 @@ Whitelisted roles receive **channel permission overwrites at channel-creation ti
 | System | Channels affected | When | Bits granted | Bits constant |
 |---|---|---|---|---|
 | Season Applications (`applicationManager.js`) | Application channel | On "Apply" (creation) | ViewChannel, SendMessages, ReadMessageHistory | `APPLICATION_CHANNEL_ACCESS` |
-| Safari Map create (`mapExplorer.js`) | Map location channels (`#📍a1`…), 🗺️ Map Explorer categories incl. overflow "Group N" categories | At channel creation (overwrites ride `channels.create()`) | ViewChannel, ManageChannels | `SAFARI_CHANNEL_ACCESS` |
-| Safari Map **update** (`updateMapImage`) | All existing location channels + their categories | Merged onto existing channels via per-role `permissionOverwrites.edit()` (`🔐 [MAP_UPDATE]` logs) | ViewChannel, ManageChannels | `SAFARI_CHANNEL_ACCESS` |
-| 🗺️map-storage (`findOrCreateMapStorageChannel`) | Hidden image-storage channel | At creation **and ensured on find** — the channel survives map deletion, so creation-only could never reach existing guilds (`🔐 [MAP_STORAGE]` logs) | ViewChannel, ManageChannels | `SAFARI_CHANNEL_ACCESS` |
+| Safari Map create (`mapExplorer.js`) | Map location channels (`#📍a1`…), 🗺️ Map Explorer categories incl. overflow "Group N" categories | At channel creation (overwrites ride `channels.create()`) | ViewChannel, SendMessages, ManageChannels | `SAFARI_CHANNEL_ACCESS` |
+| Safari Map **update** (`updateMapImage`) | All existing location channels + their categories | Merged onto existing channels via per-role `permissionOverwrites.edit()` (`🔐 [MAP_UPDATE]` logs) | ViewChannel, SendMessages, ManageChannels | `SAFARI_CHANNEL_ACCESS` |
+| 🗺️map-storage (`findOrCreateMapStorageChannel`) | Hidden image-storage channel | At creation **and ensured on find** — the channel survives map deletion, so creation-only could never reach existing guilds (`🔐 [MAP_STORAGE]` logs) | ViewChannel, SendMessages, ManageChannels | `SAFARI_CHANNEL_ACCESS` |
 
 Location channels do **not** sync permissions from their category — every channel carries explicit overwrites, so the grant is applied at each creation site individually.
 
@@ -96,4 +96,4 @@ permissionOverwrites: [
 
 ## Testing
 
-`tests/roleAccessUtils.test.js` — 9 cases over the pure core (replicated inline per [TestingStandards](../standards/TestingStandards.md)): empty/null whitelist, happy path, deleted-role skip, `@everyone` filter, dedupe, bit-set pass-through (guards ManageChannels leaking into application channels), composition invariant, falsy-ID safety.
+`tests/roleAccessUtils.test.js` — 14 cases over the pure core (replicated inline per [TestingStandards](../standards/TestingStandards.md)): empty/null whitelist, happy path, deleted-role skip, `@everyone` filter, dedupe, bit-set pass-through (guards ManageChannels leaking into application channels), composition invariant, falsy-ID safety.

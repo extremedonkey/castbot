@@ -30,7 +30,7 @@ function hasAllRequiredBits(existingAllow, requiredBits) {
   return requiredBits.every(bit => (existingAllow & bit) === bit);
 }
 
-const SAFARI_BITS = ['ViewChannel', 'ManageChannels'];
+const SAFARI_BITS = ['ViewChannel', 'SendMessages', 'ManageChannels'];
 const APPLICATION_BITS = ['ViewChannel', 'SendMessages', 'ReadMessageHistory'];
 const EVERYONE = '1000000000000000000';
 
@@ -105,7 +105,7 @@ describe('Roles & Security — buildRoleAccessEntries', () => {
     const application = buildRoleAccessEntries({
       roleIds: ['111'], validRoleIds: new Set(['111']), everyoneRoleId: EVERYONE, allow: APPLICATION_BITS
     });
-    assert.deepEqual(safari.entries[0].allow, ['ViewChannel', 'ManageChannels']);
+    assert.deepEqual(safari.entries[0].allow, ['ViewChannel', 'SendMessages', 'ManageChannels']);
     assert.deepEqual(application.entries[0].allow, ['ViewChannel', 'SendMessages', 'ReadMessageHistory']);
     // Applications must never gain ManageChannels
     assert.ok(!application.entries[0].allow.includes('ManageChannels'));

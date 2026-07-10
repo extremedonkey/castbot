@@ -148,7 +148,7 @@ Lets server admins designate Discord roles as CastBot admins — for users who d
 | System | Channels | Bits granted |
 |---|---|---|
 | Season Applications (`applicationManager.js`) | application channel | ViewChannel, SendMessages, ReadMessageHistory |
-| Safari Map (`mapExplorer.js`) | location channels, Map Explorer categories (incl. overflow), 🗺️map-storage | ViewChannel, ManageChannels |
+| Safari Map (`mapExplorer.js`) | location channels, Map Explorer categories (incl. overflow), 🗺️map-storage | ViewChannel, SendMessages, ManageChannels |
 
 ```javascript
 import { getRoleAccessOverwrites, SAFARI_CHANNEL_ACCESS } from './utils/roleAccessUtils.js';

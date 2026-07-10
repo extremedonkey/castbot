@@ -10,9 +10,13 @@
 import { PermissionFlagsBits, PermissionsBitField } from 'discord.js';
 import { loadPlayerData } from '../storage.js';
 
-/** Bits granted on Safari channels (map locations, categories, 🗺️map-storage). */
+/** Bits granted on Safari channels (map locations, categories, 🗺️map-storage).
+ * SendMessages is explicit because 🗺️map-storage denies it at @everyone level —
+ * without it, whitelisted roles could see the channel but not post (locations
+ * only deny ViewChannel, so Send falls through to base perms there). */
 export const SAFARI_CHANNEL_ACCESS = [
   PermissionFlagsBits.ViewChannel,
+  PermissionFlagsBits.SendMessages,
   PermissionFlagsBits.ManageChannels
 ];
 
