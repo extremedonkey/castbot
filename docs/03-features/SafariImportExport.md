@@ -1,9 +1,11 @@
 # Safari Import/Export System
 
 **Status:** ✅ PRODUCTION READY
-**Deployed:** 2025-10-19
-**Version:** 2.0
-**File:** `safariImportExport.js`
+**Deployed:** 2025-10-19 (v2.0) · Crafting & custom-limit fidelity 2026-07-11 (v2.1)
+**Version:** 2.1
+**File:** `safariImportExport.js` · **Tests:** `tests/safariImportExport.test.js` (whitelist ratchet + limit round-trip)
+
+> **⚠️ Allowlist maintenance rule:** every export filter is a hard whitelist. Any new Action/item/config field ships INVISIBLE to export until added here — that's how crafting recipes silently lost `menuVisibility` for 6 months. When you add a designer-configurable field anywhere in Safari, add it to the matching filter AND to the ratchet test.
 
 ---
 
@@ -161,25 +163,33 @@ Safari Import/Export enables full Safari template portability between servers. U
 - Excludes: channelId, anchorMessageId, navigation, fogMapUrl
 
 **`filterConfigForExport(config)`**
-- Exports all 15 config fields (currency, inventory, events, probabilities, stamina, player menu)
+- Exports currency, inventory, events, probabilities, stamina settings
+- **v2.1:** `craftingName` / `craftingEmoji` (crafting theme) and `enableGlobalCommands` (replaces a defunct field name that was never read anywhere)
 - Excludes: currentRound, lastRoundTimestamp, safariLogChannelId
+- ⚠️ Known remaining gaps: commandPrefixes, inventoryVisibilityMode, globalStoresVisibilityMode, startingStamina, staminaRegenerationAmount, defaultStartingCoordinate, totalRounds, event messages (see gap analysis RaP)
 
 **`filterActionForExport(action)`**
-- Preserves: type, order, config (without claimedBy), executeOn
-- Removes: limit.claimedBy (runtime tracking)
+- Preserves: type, order, config (without claim tracking), executeOn
+- Limits: preset types keep `type` (+`periodMs` for once_per_period); **`custom` limits keep the full gate config** (maxClaims, scope, unique, reset, periodMs, anchorMs) — v2.1
+- Removes: limit.claimedBy / limit.claims (runtime tracking), limit.templateId (usageTemplates don't transfer)
 
 **`filterCustomActionsForExport(buttons)`**
 - Maps over all actions to filter each one
 - Preserves: id, name, label, emoji, style, trigger, conditions, coordinates, tags
-- Excludes: createdBy, createdAt, lastModified, usageCount, claimedBy
+- **v2.1 menu-surface fields:** `menuVisibility` (legacy `showInInventory` resolved at export time), `inventoryConfig`, `linkedItems`, `displayMode` — without these, crafting/player-menu recipes imported as hidden
+- Excludes: createdBy, createdAt, lastModified, usageCount, claimedBy, postedChannels
 
 ### Import Helper Functions
 
 **`initializeActionLimitTracking(action)`**
-- Initializes fresh claimedBy based on limit type:
+- Initializes fresh claim tracking based on limit type:
   - `once_globally`: Sets `claimedBy: null`
   - `once_per_player`: Sets `claimedBy: []`
-  - `unlimited`: No claimedBy field
+  - `once_per_period`: Sets `claimedBy: {}`
+  - `custom`: Sets `claims: []` (v2.1)
+  - `unlimited`: No claim tracking field
+
+**Import update path (v2.1):** when re-importing an **old-format export** (no `menuVisibility`), the existing action's menu-surface fields (`menuVisibility`, `inventoryConfig`, `linkedItems`, `displayMode`) are preserved instead of being wiped by the merge.
 
 **`storeRawImport(guildId, importJson, importData, context)`**
 - Uploads JSON to #map-storage channel
@@ -256,7 +266,9 @@ Safari Import/Export enables full Safari template portability between servers. U
     "round3GoodProbability": 0.25,
     "staminaRegenerationMinutes": 720,
     "maxStamina": 3,
-    "showGlobalCommandsButton": true
+    "craftingName": "Potion Lab",
+    "craftingEmoji": "🧪",
+    "enableGlobalCommands": true
   },
   "maps": {
     "active": "map_7x7_1758651530323",
@@ -314,6 +326,8 @@ Safari Import/Export enables full Safari template portability between servers. U
         "items": []
       },
       "coordinates": ["E4"],
+      "menuVisibility": "crafting_menu",
+      "inventoryConfig": { "sortOrder": 1, "buttonLabel": "Craft Potion" },
       "metadata": {
         "tags": ["starter", "pokemon"]
       }

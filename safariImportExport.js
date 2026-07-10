@@ -325,6 +325,16 @@ export async function importSafariData(guildId, importJson, context = {}) {
                     currentData[guildId].buttons[buttonId] = {
                         ...buttonData,
                         actions: actionsWithLimits,  // Use initialized actions
+                        // Preserve menu-surface fields when the import (e.g. an older export format) lacks them —
+                        // otherwise re-importing would silently strip actions out of the Crafting/Player menus
+                        ...(buttonData.menuVisibility === undefined && buttonData.showInInventory === undefined &&
+                            { menuVisibility: existing.menuVisibility || (existing.showInInventory ? 'player_menu' : 'none') }),
+                        ...(buttonData.inventoryConfig === undefined && existing.inventoryConfig !== undefined &&
+                            { inventoryConfig: existing.inventoryConfig }),
+                        ...(buttonData.linkedItems === undefined && existing.linkedItems !== undefined &&
+                            { linkedItems: existing.linkedItems }),
+                        ...(buttonData.displayMode === undefined && existing.displayMode !== undefined &&
+                            { displayMode: existing.displayMode }),
                         metadata: {
                             // Preserve runtime fields
                             createdBy: existing.metadata?.createdBy,
@@ -510,8 +520,12 @@ function filterConfigForExport(config) {
         ...(config.staminaRegenerationMinutes !== undefined && { staminaRegenerationMinutes: config.staminaRegenerationMinutes }),
         ...(config.maxStamina !== undefined && { maxStamina: config.maxStamina }),
 
-        // Player Menu Settings
-        ...(config.showGlobalCommandsButton !== undefined && { showGlobalCommandsButton: config.showGlobalCommandsButton })
+        // Crafting (custom theme, e.g. "🌱 Gardening")
+        ...(config.craftingName !== undefined && { craftingName: config.craftingName }),
+        ...(config.craftingEmoji !== undefined && { craftingEmoji: config.craftingEmoji }),
+
+        // Player Menu Settings (enableGlobalCommands is the live field — an earlier defunct name was exported here until 2026-07)
+        ...(config.enableGlobalCommands !== undefined && { enableGlobalCommands: config.enableGlobalCommands })
 
         // Exclude: currentRound, lastRoundTimestamp, safariLogChannelId (runtime/server-specific fields)
     };
@@ -531,11 +545,23 @@ function filterActionForExport(action) {
         executeOn: action.executeOn
     };
 
-    // If action has limit tracking, preserve limit TYPE (and periodMs for once_per_period) but remove claimedBy (runtime tracking)
+    // If action has limit tracking, preserve the limit CONFIG but remove claim tracking (claimedBy/claims — runtime)
     if (filtered.config.limit) {
-        const exportLimit = { type: filtered.config.limit.type };
-        if (filtered.config.limit.type === 'once_per_period' && filtered.config.limit.periodMs) {
-            exportLimit.periodMs = filtered.config.limit.periodMs;
+        const limit = filtered.config.limit;
+        const exportLimit = { type: limit.type };
+        if (limit.type === 'once_per_period' && limit.periodMs) {
+            exportLimit.periodMs = limit.periodMs;
+        }
+        if (limit.type === 'custom') {
+            // Full custom gate config (maxClaims × scope × unique × reset) — without it the
+            // limit imports as unlimited (maxClaims=null → Infinity in checkCustomGate)
+            if (limit.maxClaims !== undefined) exportLimit.maxClaims = limit.maxClaims;
+            if (limit.scope !== undefined) exportLimit.scope = limit.scope;
+            if (limit.unique !== undefined) exportLimit.unique = limit.unique;
+            if (limit.reset !== undefined) exportLimit.reset = limit.reset;
+            if (limit.periodMs !== undefined) exportLimit.periodMs = limit.periodMs;
+            if (limit.anchorMs !== undefined) exportLimit.anchorMs = limit.anchorMs;
+            // Exclude: claims (runtime), templateId (usageTemplates don't transfer between servers)
         }
         filtered.config.limit = exportLimit;
     }
@@ -564,6 +590,9 @@ function initializeActionLimitTracking(action) {
         } else if (limitType === 'once_per_period') {
             // Object map of userId → timestamp - initialize as empty object
             initialized.config.limit.claimedBy = {};
+        } else if (limitType === 'custom') {
+            // Custom limits track claims as [{u, t}] - initialize as empty array (fresh server)
+            initialized.config.limit.claims = [];
         }
         // For 'unlimited', no claimedBy field needed
     }
@@ -599,6 +628,12 @@ function filterCustomActionsForExport(buttons) {
 
             // Map Integration (CRITICAL - preserve for Phase 2 import)
             coordinates: button.coordinates || [],
+
+            // Menu Surface (Crafting Menu / Player Menu) — resolve legacy showInInventory at export time
+            menuVisibility: button.menuVisibility || (button.showInInventory ? 'player_menu' : 'none'),
+            ...(button.inventoryConfig && { inventoryConfig: button.inventoryConfig }),
+            ...(Array.isArray(button.linkedItems) && button.linkedItems.length > 0 && { linkedItems: button.linkedItems }),
+            ...(button.displayMode && { displayMode: button.displayMode }),
 
             // Optional Fields
             ...(button.description && { description: button.description }),
