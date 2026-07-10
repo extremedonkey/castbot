@@ -1,7 +1,8 @@
 /**
  * SECURITY TRIPWIRE — every createProductionMenuInterface() call site must be gated.
  *
- * Born from RaP 0901 (2026-07-11): the Safari anchor "Menu" button (anchor_open_menu)
+ * Born from incident docs/incidents/04-AnchorMenuAdminExposure.md (2026-07-11):
+ * the Safari anchor "Menu" button (anchor_open_menu)
  * served the full admin Production Menu to EVERY user for 3+ months because its
  * handler called createProductionMenuInterface() with no permission check. The
  * builder itself is unguarded — security is opt-in at each call site — so this
@@ -59,6 +60,6 @@ describe('Security — admin Production Menu gating', () => {
     assert.deepEqual(ungated, [],
       `UNGATED admin-menu call site(s) found — players could open the Production Menu!\n` +
       ungated.map(u => `  app.js:${u.line}: ${u.code}`).join('\n') +
-      `\nAdd a hasAdminPermissions() fork or factory requiresPermission gate (see RaP 0901).`);
+      `\nAdd a hasAdminPermissions() fork or factory requiresPermission gate (see docs/incidents/04-AnchorMenuAdminExposure.md).`);
   });
 });

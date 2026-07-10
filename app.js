@@ -5575,9 +5575,19 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const channelId = parts[2];
           const appIndex = parseInt(parts[3]);
           const configId = parts.slice(4).join('_');
-          
+
           const { guildId, userId, client } = context;
           const guild = await client.guilds.fetch(guildId);
+
+          // SECURITY: same casting gate as every sibling handler — this UI exposes
+          // applicant scores, notes, and casting decisions.
+          const rankerMember = await guild.members.fetch(userId);
+          if (!hasCastRankingPermissions(rankerMember, guildId)) {
+            return {
+              content: '❌ You need Manage Roles or Manage Channels permissions to view casting rankings.',
+              ephemeral: true
+            };
+          }
           
           // Get applications and current app
           const { getAllApplicationsFromData, getApplicationsForSeason } = await import('./storage.js');
@@ -8504,6 +8514,8 @@ To fix this:
       // Season Manager entry — show the season selector. ('reeces_season_planner_mockup' = legacy id, kept for cached messages.)
       return ButtonHandlerFactory.create({
         id: 'season_manager',
+        requiresPermission: PermissionFlagsBits.ManageRoles | PermissionFlagsBits.ManageChannels | PermissionFlagsBits.ManageGuild,
+        permissionName: 'Manage Roles, Manage Channels, or Manage Server',
         updateMessage: true,
         deferred: true,
         handler: async (context) => {
@@ -8516,6 +8528,8 @@ To fix this:
       // castlist_hub_main_new), so it doesn't replace/overwrite the wizard message.
       return ButtonHandlerFactory.create({
         id: 'season_manager_new',
+        requiresPermission: PermissionFlagsBits.ManageRoles | PermissionFlagsBits.ManageChannels | PermissionFlagsBits.ManageGuild,
+        permissionName: 'Manage Roles, Manage Channels, or Manage Server',
         deferred: true,
         ephemeral: true, // NEW ephemeral message (no updateMessage)
         handler: async (context) => {
@@ -8970,6 +8984,8 @@ To fix this:
       // challenge_screen_new: ephemeral from restart notification; challenge_screen: update from prod menu
       return ButtonHandlerFactory.create({
         id: 'challenge_screen',
+        requiresPermission: PermissionFlagsBits.ManageRoles | PermissionFlagsBits.ManageChannels | PermissionFlagsBits.ManageGuild,
+        permissionName: 'Manage Roles, Manage Channels, or Manage Server',
         updateMessage: custom_id === 'challenge_screen',
         deferred: true,
         ephemeral: custom_id === 'challenge_screen_new',
@@ -12126,6 +12142,8 @@ To fix this:
       // Setup Wizard - ephemeral channel response (shares UI with msg_test DM delivery)
       return ButtonHandlerFactory.create({
         id: 'prod_setup_wizard',
+        requiresPermission: PermissionFlagsBits.ManageRoles | PermissionFlagsBits.ManageChannels | PermissionFlagsBits.ManageGuild,
+        permissionName: 'Manage Roles, Manage Channels, or Manage Server',
         handler: async (context) => {
           console.log(`🧙 Setup Wizard requested by user ${context.userId}`);
 
@@ -13507,6 +13525,8 @@ To fix this:
 
       return ButtonHandlerFactory.create({
         id: 'edit_placement',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
         handler: async (context) => {
           // Load current placement from correct namespace
           const { loadPlayerData } = await import('./storage.js');
@@ -41651,6 +41671,8 @@ Your server is now ready for Tycoons gameplay!`;
 
     } else if (custom_id.startsWith('save_placement_')) {
       // Handle placement save from modal submission
+      // SECURITY: writes competition placement results — must match the edit_placement gate
+      if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit placements.')) return;
       try {
         // 🔧 FIX: Parse full navigation context from modal custom_id
         // Format: save_placement_{userId}_{seasonContext}_{castlistId}_{tribeIndex}_{tribePage}_{displayMode}

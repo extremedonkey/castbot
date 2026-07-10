@@ -4,6 +4,8 @@
 
 **Related**: [DiscordPermissions.md](../standards/DiscordPermissions.md) (Discord API permission reference) | [ButtonHandlerFactory.md](../enablers/ButtonHandlerFactory.md) (factory `requiresPermission` option)
 
+> ⚠️ **Known architectural weakness**: enforcement is opt-in per handler (~49% coverage); BUTTON_REGISTRY security metadata is inert; privileged UI builders never self-gate. Full assessment, live-incident history, and the default-secure roadmap: [RaP 0900 — Security Architecture Options](../01-RaP/0900_20260711_SecurityArchitectureOptions_Analysis.md) + [Incident 04 — Anchor Menu Admin Exposure](../incidents/04-AnchorMenuAdminExposure.md).
+
 ---
 
 ## Permission Tiers
