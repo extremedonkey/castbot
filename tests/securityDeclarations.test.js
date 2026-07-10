@@ -1,0 +1,108 @@
+/**
+ * SECURITY RATCHET — declare-or-deny for ButtonHandlerFactory handlers (RaP 0900 Phase 1).
+ *
+ * STATIC test: parses app.js / castlistHandlers.js as text. Ships ZERO runtime code —
+ * bot behavior is untouched. It only fails the suite (and therefore dev-restart deploys)
+ * when a NEW handler block carries no security declaration at all.
+ *
+ * A handler block is "declared" when the create({...})(req, res, client) span contains ANY of:
+ *   - requiresPermission:            (declarative factory gate — preferred)
+ *   - an inline gate primitive       (hasAdminPermissions / hasCastRankingPermissions /
+ *                                     hasPermission / requirePermission / the owner user-ID)
+ *   - security: 'public'             (explicit, reviewable "this is deliberately ungated";
+ *                                     the factory ignores unknown config keys, so it is inert)
+ *
+ * All handlers that were undeclared when this ratchet landed (2026-07-11) are grandfathered
+ * in tests/securityDeclarationsBaseline.json. The baseline may ONLY SHRINK:
+ *   - new undeclared handler        → test fails; declare it (see above) — do NOT add to baseline
+ *   - you gated a baseline handler  → test fails with a "stale entries" list; DELETE those
+ *     keys from the baseline JSON (keeps the ratchet honest, Moai-hook style)
+ *
+ * Origin: docs/01-RaP/0900_20260711_SecurityArchitectureOptions_Analysis.md and
+ * docs/incidents/04-AnchorMenuAdminExposure.md (anchor_open_menu served the admin
+ * Production Menu to every player for 3.5 months — an omitted gate is invisible;
+ * this makes the omission loud at commit time).
+ */
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const REPO = path.join(__dirname, '..');
+const SCANNED_FILES = ['app.js', 'castlistHandlers.js'];
+const BASELINE_PATH = path.join(__dirname, 'securityDeclarationsBaseline.json');
+
+const CREATE_MARKER = 'ButtonHandlerFactory.create({';
+const BLOCK_END = '})(req, res, client)';
+const GATE_PATTERN = new RegExp([
+  'requiresPermission\\s*:',
+  "security\\s*:\\s*'public'",
+  'hasAdminPermissions\\s*\\(',
+  'hasCastRankingPermissions\\s*\\(',
+  'hasPermission\\s*\\(',
+  'requirePermission\\s*\\(',
+  '391415444084490240' // owner-ID hard gate
+].join('|'));
+
+/** Stable key for a handler block: file :: id (template params normalized to *). */
+function blockKey(file, block, ordinal) {
+  const idMatch = block.match(/id:\s*['`]([^'`]+)['`]/);
+  if (idMatch) {
+    return `${file}::${idMatch[1].replace(/\$\{[^}]*\}/g, '*')}`;
+  }
+  return `${file}::UNIDENTIFIED#${ordinal}`;
+}
+
+function scanUndeclared() {
+  const undeclared = [];
+  let totalBlocks = 0;
+  for (const file of SCANNED_FILES) {
+    const src = readFileSync(path.join(REPO, file), 'utf8');
+    let idx = 0;
+    let ordinal = 0;
+    while ((idx = src.indexOf(CREATE_MARKER, idx)) !== -1) {
+      const end = src.indexOf(BLOCK_END, idx);
+      const block = src.slice(idx, end === -1 ? idx + 4000 : end);
+      totalBlocks++;
+      ordinal++;
+      if (!GATE_PATTERN.test(block)) {
+        undeclared.push(blockKey(file, block, ordinal));
+      }
+      idx += CREATE_MARKER.length;
+    }
+  }
+  return { undeclared, totalBlocks };
+}
+
+describe('Security — declare-or-deny ratchet (RaP 0900 Phase 1)', () => {
+  const { undeclared, totalBlocks } = scanUndeclared();
+  const baseline = new Set(JSON.parse(readFileSync(BASELINE_PATH, 'utf8')));
+
+  it('parser is live (finds a plausible number of factory blocks)', () => {
+    assert.ok(totalBlocks >= 500,
+      `expected >=500 ButtonHandlerFactory.create blocks, found ${totalBlocks} — parser may be broken`);
+  });
+
+  it('no NEW handler ships without a security declaration', () => {
+    const fresh = undeclared.filter(k => !baseline.has(k));
+    assert.deepEqual(fresh, [],
+      `\nNEW handler(s) with NO security declaration:\n` +
+      fresh.map(k => `  ${k}`).join('\n') +
+      `\n\nFix (pick one — do NOT add to the baseline):\n` +
+      `  1. requiresPermission: PermissionFlagsBits.<...> in the create() config (preferred), or\n` +
+      `  2. an inline gate (hasAdminPermissions / hasCastRankingPermissions / requirePermission), or\n` +
+      `  3. security: 'public' in the config — an explicit, reviewed statement that ANY user may run this.\n` +
+      `See docs/01-RaP/0900_20260711_SecurityArchitectureOptions_Analysis.md`);
+  });
+
+  it('baseline only shrinks (stale grandfathered entries must be removed)', () => {
+    const current = new Set(undeclared);
+    const stale = [...baseline].filter(k => !current.has(k));
+    assert.deepEqual(stale, [],
+      `\nBaseline entries that are no longer undeclared (handler was gated, renamed, or removed).\n` +
+      `DELETE these keys from tests/securityDeclarationsBaseline.json:\n` +
+      stale.map(k => `  ${k}`).join('\n'));
+  });
+});
