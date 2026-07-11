@@ -54,6 +54,29 @@ describe('Safari Import/Export — crafting fields survive export (whitelist rat
   });
 });
 
+describe('Safari Import/Export — item game-mechanics fields survive export (whitelist ratchet)', () => {
+  const block = functionBlock('filterItemsForExport');
+
+  for (const field of ['staminaBoost', 'reverseBlacklist', 'attributeModifiers']) {
+    it(`filterItemsForExport whitelists ${field}`, () => {
+      assert.ok(block.includes(field),
+        `${field} missing from filterItemsForExport — stamina consumables / blacklist-bypass / stat items break on import`);
+    });
+  }
+});
+
+describe('Safari Import/Export — map grid safety on import (ratchet)', () => {
+  it('import never overwrites an existing map gridSize (drives movement bounds on old maps)', () => {
+    assert.ok(/if \(!existingMap\.gridSize\)/.test(SOURCE),
+      'gridSize overwrite guard missing — importing a bigger template would let players move into channel-less coordinates');
+  });
+
+  it('import validates coordinates and blacklist against the active map grid', () => {
+    assert.ok(/isCoordInGrid\(coord, targetDims\)/.test(SOURCE) && /out_of_grid_blacklist/.test(SOURCE),
+      'out-of-grid filtering missing — orphan coordinates/blacklist entries would import silently');
+  });
+});
+
 describe('Safari Import/Export — safariConfig crafting terms (whitelist ratchet)', () => {
   const block = functionBlock('filterConfigForExport');
 
@@ -120,6 +143,62 @@ function initializeLimitTracking(limit) {
   else if (l.type === 'custom') l.claims = [];
   return l;
 }
+
+// Replicated from safariImportExport.js resolveGridDimensions/isCoordInGrid (pure)
+function resolveGridDimensions(map) {
+  if (!map) return null;
+  if (map.gridWidth > 0 && map.gridHeight > 0) return { width: map.gridWidth, height: map.gridHeight };
+  if (typeof map.gridSize === 'number' && map.gridSize > 0) return { width: map.gridSize, height: map.gridSize };
+  if (typeof map.gridSize === 'string') {
+    const match = map.gridSize.match(/^(\d+)x(\d+)$/i);
+    if (match) return { width: parseInt(match[1]), height: parseInt(match[2]) };
+  }
+  return null;
+}
+
+function isCoordInGrid(coord, dims) {
+  const match = /^([A-Z])(\d+)$/.exec(String(coord).trim().toUpperCase());
+  if (!match) return false;
+  const col = match[1].charCodeAt(0) - 65;
+  const row = parseInt(match[2]);
+  return col >= 0 && col < dims.width && row >= 1 && row <= dims.height;
+}
+
+describe('Safari Import/Export — grid dimension resolution and coordinate bounds', () => {
+  it('prefers gridWidth/gridHeight (modern maps, incl. non-square 7x8)', () => {
+    assert.deepEqual(resolveGridDimensions({ gridWidth: 7, gridHeight: 8, gridSize: 8 }), { width: 7, height: 8 });
+  });
+
+  it('falls back to numeric gridSize (old maps — the movement-bounds case)', () => {
+    assert.deepEqual(resolveGridDimensions({ gridSize: 3 }), { width: 3, height: 3 });
+  });
+
+  it('tolerates legacy "7x7" string gridSize', () => {
+    assert.deepEqual(resolveGridDimensions({ gridSize: '7x7' }), { width: 7, height: 7 });
+  });
+
+  it('returns null for unknown shapes (validation is skipped, never guessed)', () => {
+    assert.equal(resolveGridDimensions({}), null);
+    assert.equal(resolveGridDimensions(null), null);
+    assert.equal(resolveGridDimensions({ gridSize: 'weird' }), null);
+  });
+
+  it("the user's scenario: D5 is out of grid on a 3x3 map, C3 is in", () => {
+    const dims = resolveGridDimensions({ gridSize: 3 });
+    assert.equal(isCoordInGrid('D5', dims), false);
+    assert.equal(isCoordInGrid('C3', dims), true);
+    assert.equal(isCoordInGrid('A1', dims), true);
+    assert.equal(isCoordInGrid('C4', dims), false);  // column in, row out
+    assert.equal(isCoordInGrid('D3', dims), false);  // row in, column out
+  });
+
+  it('rejects malformed coordinates rather than crashing', () => {
+    const dims = { width: 7, height: 7 };
+    assert.equal(isCoordInGrid('', dims), false);
+    assert.equal(isCoordInGrid('5D', dims), false);
+    assert.equal(isCoordInGrid('global', dims), false);
+  });
+});
 
 describe('Safari Import/Export — custom limit round trip behavior', () => {
   it('a "3 per player, rolling 1d" custom limit survives export→import with claims reset', () => {

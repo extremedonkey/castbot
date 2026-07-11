@@ -116,6 +116,42 @@ async function storeRawImport(guildId, importJson, importData, context) {
 }
 
 /**
+ * Resolve a map's grid dimensions for import validation.
+ * Mirrors mapExplorer getGridDimensions: gridWidth/gridHeight preferred,
+ * numeric gridSize fallback (old maps), legacy "7x7" string tolerated.
+ * @param {Object} map - Map data object
+ * @returns {{width: number, height: number}|null} Dimensions, or null if unknown
+ */
+export function resolveGridDimensions(map) {
+    if (!map) return null;
+    if (map.gridWidth > 0 && map.gridHeight > 0) {
+        return { width: map.gridWidth, height: map.gridHeight };
+    }
+    if (typeof map.gridSize === 'number' && map.gridSize > 0) {
+        return { width: map.gridSize, height: map.gridSize };
+    }
+    if (typeof map.gridSize === 'string') {
+        const match = map.gridSize.match(/^(\d+)x(\d+)$/i);
+        if (match) return { width: parseInt(match[1]), height: parseInt(match[2]) };
+    }
+    return null;
+}
+
+/**
+ * Check whether a coordinate (e.g. "C3") fits within grid dimensions.
+ * @param {string} coord - Coordinate string
+ * @param {{width: number, height: number}} dims - Grid dimensions
+ * @returns {boolean}
+ */
+export function isCoordInGrid(coord, dims) {
+    const match = /^([A-Z])(\d+)$/.exec(String(coord).trim().toUpperCase());
+    if (!match) return false;
+    const col = match[1].charCodeAt(0) - 65;
+    const row = parseInt(match[2]);
+    return col >= 0 && col < dims.width && row >= 1 && row <= dims.height;
+}
+
+/**
  * Import Safari data with smart merge logic
  * @param {string} guildId - Discord guild ID
  * @param {string} importJson - JSON string to import
@@ -228,6 +264,10 @@ export async function importSafariData(guildId, importJson, context = {}) {
                 const activeMapId = currentData[guildId].maps?.active;
                 const targetMapId = activeMapId || mapId;
 
+                // Grid dimensions of the PRE-EXISTING target map (null if map is new —
+                // a fresh map takes the import's own grid, so validation is vacuous)
+                const targetDims = resolveGridDimensions(currentData[guildId].maps[targetMapId]);
+
                 // Initialize target map if it doesn't exist
                 if (!currentData[guildId].maps[targetMapId]) {
                     currentData[guildId].maps[targetMapId] = {
@@ -246,13 +286,41 @@ export async function importSafariData(guildId, importJson, context = {}) {
 
                 // Update map-level fields
                 existingMap.name = mapData.name || existingMap.name;
-                existingMap.gridSize = mapData.gridSize || existingMap.gridSize;
+                // NEVER overwrite an existing map's gridSize — on old maps (no gridWidth/gridHeight)
+                // it drives movement bounds, and importing a bigger template's gridSize would let
+                // players move into coordinates that have no channels
+                if (!existingMap.gridSize) {
+                    existingMap.gridSize = mapData.gridSize;
+                } else if (mapData.gridSize && targetDims && resolveGridDimensions(mapData) &&
+                           (resolveGridDimensions(mapData).width !== targetDims.width ||
+                            resolveGridDimensions(mapData).height !== targetDims.height)) {
+                    summary.warnings.push({
+                        type: 'grid_size_mismatch',
+                        message: `Imported map grid (${resolveGridDimensions(mapData).width}x${resolveGridDimensions(mapData).height}) differs from active map (${targetDims.width}x${targetDims.height}) — out-of-grid data was skipped`
+                    });
+                }
                 if (mapData.blacklistedCoordinates) {
-                    existingMap.blacklistedCoordinates = mapData.blacklistedCoordinates;
+                    let blacklist = mapData.blacklistedCoordinates;
+                    if (targetDims) {
+                        const dropped = blacklist.filter(c => !isCoordInGrid(c, targetDims));
+                        if (dropped.length > 0) {
+                            summary.warnings.push({
+                                type: 'out_of_grid_blacklist',
+                                message: `Skipped ${dropped.length} blacklisted coordinate(s) outside the active map grid: ${dropped.join(', ')}`
+                            });
+                            blacklist = blacklist.filter(c => isCoordInGrid(c, targetDims));
+                        }
+                    }
+                    existingMap.blacklistedCoordinates = blacklist;
                 }
 
-                // Merge coordinates into target map
+                // Merge coordinates into target map (skipping any outside the active map's grid)
+                const skippedCoords = [];
                 for (const [coord, coordData] of Object.entries(mapData.coordinates || {})) {
+                    if (targetDims && !isCoordInGrid(coord, targetDims)) {
+                        skippedCoords.push(coord);
+                        continue;
+                    }
                     if (existingMap.coordinates[coord]) {
                         // Update existing coordinate - PRESERVE runtime fields (channelId, anchorMessageId, navigation, fogMapUrl)
                         existingMap.coordinates[coord] = {
@@ -282,6 +350,13 @@ export async function importSafariData(guildId, importJson, context = {}) {
                             }
                         };
                     }
+                }
+
+                if (skippedCoords.length > 0) {
+                    summary.warnings.push({
+                        type: 'out_of_grid_coordinates',
+                        message: `Skipped ${skippedCoords.length} coordinate(s) outside the active map grid: ${skippedCoords.join(', ')}`
+                    });
                 }
 
                 // Set as active if not already set
@@ -440,7 +515,12 @@ function filterItemsForExport(items) {
             ...(item.defenseValue !== undefined && { defenseValue: item.defenseValue }),
             ...(item.consumable !== undefined && { consumable: item.consumable }),
             ...(item.goodYieldEmoji !== undefined && { goodYieldEmoji: item.goodYieldEmoji }),
-            ...(item.badYieldEmoji !== undefined && { badYieldEmoji: item.badYieldEmoji })
+            ...(item.badYieldEmoji !== undefined && { badYieldEmoji: item.badYieldEmoji }),
+            // Movement & stats fields (v2.1) — all consumed via guarded reads, so out-of-grid
+            // reverseBlacklist coords or not-yet-defined attributeIds are inert, never errors
+            ...(item.staminaBoost !== undefined && { staminaBoost: item.staminaBoost }),
+            ...(Array.isArray(item.reverseBlacklist) && item.reverseBlacklist.length > 0 && { reverseBlacklist: item.reverseBlacklist }),
+            ...(Array.isArray(item.attributeModifiers) && item.attributeModifiers.length > 0 && { attributeModifiers: item.attributeModifiers })
         };
     }
     return filtered;
@@ -736,6 +816,8 @@ export function formatImportSummary(summary) {
             if (warning.type === 'map_id_mismatch') {
                 parts.push(`   • Map ID mismatch: Import merged into active map`);
                 parts.push(`     (Imported: \`${warning.imported}\`, Active: \`${warning.target}\`)`);
+            } else if (warning.message) {
+                parts.push(`   • ${warning.message}`);
             }
         });
     }

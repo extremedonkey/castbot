@@ -156,6 +156,7 @@ Safari Import/Export enables full Safari template portability between servers. U
 
 **`filterItemsForExport(items)`**
 - Preserves: id, name, description, emoji, category, prices, game mechanics
+- **v2.1:** `staminaBoost`, `reverseBlacklist`, `attributeModifiers` — all consumed via guarded reads on the destination server: out-of-grid reverseBlacklist coords are inert for movement (containment checks only) and attributeModifiers with not-yet-defined attributeIds simply don't apply until a matching attribute exists
 - Excludes: metadata, totalSold
 
 **`filterMapsForExport(maps)`**
@@ -204,6 +205,8 @@ Safari Import/Export enables full Safari template portability between servers. U
 - Preserves runtime fields: channelId, anchorMessageId, navigation, fogMapUrl
 - Updates config fields: baseContent, buttons, stores, cellType, etc.
 - Tracks ID mismatch in warnings array
+- **v2.1 grid safety:** never overwrites an existing map's `gridSize` (on old maps without gridWidth/gridHeight it drives movement bounds — overwriting would let players move into channel-less coordinates). Coordinates and `blacklistedCoordinates` outside the active map's grid are skipped with warnings (e.g. importing a 7x7 template into a 3x3 map). Fresh maps (no active map) import unfiltered. Helpers: `resolveGridDimensions()`, `isCoordInGrid()` (exported)
+- **Deliberately NOT exported — coordinate `itemDrops`/`currencyDrops`:** the legacy Map Drops system (RaP 0966), superseded by Quick Item / Quick Currency which create Custom Actions (those DO export). Servers still using legacy drops should recreate them as Quick Item/Currency actions before templating
 
 **Stores & Items:**
 - Updates if ID exists (preserves totalSales/totalSold)
