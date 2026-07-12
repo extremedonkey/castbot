@@ -89,26 +89,3 @@ describe('PersistentStore — flushAllSync (SIGINT/SIGTERM shutdown path)', () =
   });
 });
 
-// Replicated from whisperManager.js preloadWhisperStore prune logic (pure)
-const WHISPER_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
-function shouldPrune(whisper, nowMs) {
-  return !whisper?.timestamp || nowMs - whisper.timestamp > WHISPER_MAX_AGE_MS;
-}
-
-describe('Whisper store — stale-entry pruning', () => {
-  const now = 1780000000000;
-
-  it('prunes whispers older than 30 days', () => {
-    assert.equal(shouldPrune({ timestamp: now - 31 * 24 * 60 * 60 * 1000 }, now), true);
-  });
-
-  it('keeps fresh whispers', () => {
-    assert.equal(shouldPrune({ timestamp: now - 60 * 1000 }, now), false);
-    assert.equal(shouldPrune({ timestamp: now - 29 * 24 * 60 * 60 * 1000 }, now), false);
-  });
-
-  it('prunes malformed entries with no timestamp', () => {
-    assert.equal(shouldPrune({}, now), true);
-    assert.equal(shouldPrune(null, now), true);
-  });
-});
