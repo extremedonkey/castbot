@@ -66,14 +66,14 @@ function buildStartInfoText(config) {
     ``,
     `Bulk initialize multiple players onto the Safari map at the same time.`,
     ``,
-    `The following starting settings can be changed in \`/menu\` > Settings. You can set individual starting locations for each player from \`/menu\` > Player Admin.`,
+    `The following starting settings can be changed in \`/menu\` > Settings. You can set individual starting locations for each player from \`/menu\` > Players > *(select player)* > Safari Map > Starting Location.`,
     `> * **Starting Location:** ${coordinate}`,
     `> * **Starting ${customTerms.currencyName}:** ${customTerms.defaultStartingCurrencyValue} ${customTerms.currencyEmoji}`,
     ``,
     `Items can be set as starting items from \`/menu\` > Items:`,
     `> * **Starting Items:** ${defaultItemCount} default item${defaultItemCount !== 1 ? 's' : ''}.`,
     ``,
-    `-# Players can be individually initialized at any time from \`/menu\` > Player Admin.`
+    `-# Players can be individually initialized at any time from \`/menu\` > Players > *(select player)* > Safari Map > Initialize Safari.`
   ].join('\n');
 }
 
@@ -201,7 +201,7 @@ De-initialize selected players from Safari. This removes their currency, invento
 
 ⚠️ **This action cannot be undone.** Per-player starting locations are preserved.
 
--# Players can be individually removed at any time from \`/menu\` > Player Admin.`;
+-# Players can be individually removed at any time from \`/menu\` > Players > *(select player)* > Safari Map > De-initialize from Safari.`;
 
 function buildRemovePanel(players, selectedIds) {
   const hasPlayers = players.length > 0;

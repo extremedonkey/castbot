@@ -14,11 +14,11 @@ const PAGES = [
     content: [
       `Welcome! Safari is a grid-based exploration game. Each location on the map is its own Discord channel — you occupy one at a time, exploring what's there before moving on.`,
       `### \`\`\`🗺️ The Map & Navigation\`\`\``,
-      `The map is a grid of locations you can move through horizontally, vertically, and diagonally. Click **🗺️ Navigate** in your location channel to see compass directions and move.\n\nWhen you arrive somewhere, other players in that channel will see you. To hide your arrival message, click 🗺️ Navigate — the announcement disappears and you'll see your movement controls privately.`,
+      `The map is a grid of locations you can move through horizontally, vertically, and diagonally. To move, click **🗺️ Explore** in your location channel, then **Navigate** — you'll see a private compass with buttons for each direction.\n\nWhen you arrive somewhere, other players in that channel will see your arrival message. Click **Navigate** on it — the announcement disappears and you'll see your movement controls privately.`,
       `### \`\`\`📍 Location Actions\`\`\``,
-      `Each channel has an **⚓ Anchor Message** at the top showing your location, a description, and buttons for things you can do there. All interactions are **private** — other players won't see what you clicked or what happened.`,
+      `Each location channel has a pinned message at the top showing where you are, a description, and buttons for things you can do there. All interactions are **private** — other players won't see what you clicked or what happened.`,
       `### \`\`\`📋 Player Menu\`\`\``,
-      `Type **\`/menu\`** anywhere to access:\n• **🗺️ Navigate** — Movement controls (also available in location channels)\n• **⚓ Location** — View the anchor message privately\n• **⛵ Inventory** — See your items (usable items show a button)\n• **📜 Logs** — Your activity history\n• **🦁 Guide** — You're reading it!`
+      `Type **\`/menu\`** anywhere to access your menu. The buttons you see depend on what your host has enabled:\n• **🗺️ Safari Map** — Movement controls and map options\n• **🧰 Inventory** — See your items (usable items show a button — your host may rename this)\n• **🪙 Currency** — Check your balance\n• **📜 Logs** — Your activity history\n• **🦁 Guide** — You're reading it!\n\n-# You might also see **🏪 Stores**, **🛠️ Crafting**, or **🏃 Challenges** if your host uses those features.`
     ]
   },
   // Page 1: Stamina & Movement
@@ -73,13 +73,15 @@ const PROD_PAGES = [
     content: [
       `This guide covers everything you need to run a Safari game — from setting up players to managing stamina and tracking activity.`,
       `### \`\`\`🚀 Starting the Game\`\`\``,
-      `**For all players at once (recommended):**\n\`/menu\` → **🗺️ Map Explorer** → **🦁 Start Safari** → Select players → Start\n\n**For a single player:**\n\`/menu\` → **🧭 Player Admin** → Select player → **Initialize Player**\n\n-# Make sure you've set starting locations first (see below).`,
+      `**For all players at once (recommended):**\n\`/menu\` → **🗺️ Map** → **🦁 Start Safari** → Select players → **▶️ Start Safari**\n\n**For a single player:**\n\`/menu\` → **🧑‍🤝‍🧑 Players** → Select player → **🗺️ Safari Map** → **🚀 Initialize Safari**\n\n-# Make sure you've set starting locations first (see below).`,
+      `### \`\`\`🛬 Removing Players from Safari\`\`\``,
+      `**Single player:** \`/menu\` → **🧑‍🤝‍🧑 Players** → Select player → **🗺️ Safari Map** → **🛬 De-initialize from Safari**\n\n**Multiple players:** \`/menu\` → **🗺️ Map** → **🚪 Remove Players**\n\n-# ⚠️ This wipes the player's currency, inventory, stamina, and map location — it cannot be undone. Per-player starting locations are preserved.`,
       `### \`\`\`🪙 Setting Starting Currency\`\`\``,
-      `New players start with a default amount of currency. Set this in **Settings → 🪙 Currency & Inventory** → **Default Starting Currency**.`,
+      `New players start with a default amount of currency. Set this in **⚙️ Settings → 🪙 Currency & Inventory** → **Default Starting Currency**.`,
       `### \`\`\`🚩 Setting Starting Locations\`\`\``,
-      `**Server default:** Set in **Settings → 🎲 Rounds & Location** — all new players spawn here.\n\n**Per-player override:** \`/menu\` → **🧭 Player Admin** → Select player → **🚩 Starting Info** → Type in the coordinate.\n\nWhen the game starts, each player lands at their assigned square (or the server default if none is set).`,
+      `**Server default:** Set in **⚙️ Settings → 📍 Location** → **Starting Coordinate** — all new players spawn here.\n\n**Per-player override:** \`/menu\` → **🧑‍🤝‍🧑 Players** → Select player → **🗺️ Safari Map** → **🚩 Starting Location** → Type in the coordinate.\n\nWhen the game starts, each player lands at their assigned square (or the server default if none is set).`,
       `### \`\`\`📍 Moving a Player Manually\`\`\``,
-      `If something goes wrong and a player ends up in the wrong location:\n\`/menu\` → **🧭 Player Admin** → Select player → **📍 Location**`
+      `If something goes wrong and a player ends up in the wrong location:\n\`/menu\` → **🧑‍🤝‍🧑 Players** → Select player → **🗺️ Safari Map** → **📍 Move Player**`
     ]
   },
   // Page 1: Managing Players
@@ -87,15 +89,17 @@ const PROD_PAGES = [
     title: '👥 Managing Players',
     subtitle: '-# Page 2: Items, currency, and transfers',
     content: [
-      `Use **🧭 Player Admin** (not 🧑‍🤝‍🧑 Players) for all player management tasks.`,
+      `Use **🧑‍🤝‍🧑 Players** (the Player Manager) for all player management tasks. Select the player at the top, then click a category button (🪙 Currency, 🧰 Inventory, 🗺️ Safari Map, ⚡ Stamina) — the select menu at the bottom swaps to show that category's options.`,
       `### \`\`\`🪙 Giving Currency\`\`\``,
-      `\`/menu\` → **🧭 Player Admin** → Select player → **🪙 Edit Currency**\n\nThis shows their current balance. Type a new amount to set it.\n\n-# We recommend Player Admin over the \`/menu\` → Currency option — Player Admin is more reliable and shows the full picture.`,
+      `\`/menu\` → **🧑‍🤝‍🧑 Players** → Select player → **🪙 Currency** → **Edit Currency**\n\nThis shows their current balance. Type a new amount to set it.\n\n-# If you've renamed your currency, the buttons use your custom name.`,
       `### \`\`\`📦 Giving Items\`\`\``,
-      `\`/menu\` → **🧭 Player Admin** → Select player → **📦 Edit Item**\n\n1. Search for the item\n2. Set the quantity to give them\n3. Let them know — they can check via \`/menu\` → Inventory`,
+      `\`/menu\` → **🧑‍🤝‍🧑 Players** → Select player → **🧰 Inventory** → **✏️ Edit Inventory**\n\n1. Search for the item\n2. Set the quantity to give them\n3. Let them know — they can check via \`/menu\` → Inventory`,
       `### \`\`\`💱 Transferring Currency Between Players\`\`\``,
-      `There's no direct transfer button — adjust both players manually:\n\n**Sending player:** \`/menu\` → **🧭 Player Admin** → Select → **🪙 Edit Currency** → Subtract the amount\n**Receiving player:** Same steps → Add the amount`,
+      `There's no direct transfer button — adjust both players manually:\n\n**Sending player:** \`/menu\` → **🧑‍🤝‍🧑 Players** → Select → **🪙 Currency** → **Edit Currency** → Subtract the amount\n**Receiving player:** Same steps → Add the amount`,
       `### \`\`\`⚡ Setting a Player's Stamina\`\`\``,
-      `\`/menu\` → **🧭 Player Admin** → Select player → **⚡ Stamina**\n\nYou'll see their current stamina and regen timer. Type a new value to override it.\n\n-# This is useful if something went wrong or you want to give a player bonus moves.`
+      `\`/menu\` → **🧑‍🤝‍🧑 Players** → Select player → **⚡ Stamina** → **⚡ Modify Stamina**\n\nYou'll see their current stamina and regen timer. Type a new value to override it.\n\n-# This is useful if something went wrong or you want to give a player bonus moves.`,
+      `### \`\`\`🗺️ Other Map Tools\`\`\``,
+      `The **🗺️ Safari Map** category also has per-player tools:\n• **⏸️ Pause Player** — Temporarily block a player from moving\n• **🔄 Reset Explored Locations** — Clear their fog-of-war progress\n• **🗺️ Show Navigate Pane** — See their movement view`
     ]
   },
   // Page 2: Stamina Settings
@@ -103,9 +107,9 @@ const PROD_PAGES = [
     title: '⚡ Stamina Settings',
     subtitle: '-# Page 3: How stamina and regeneration work',
     content: [
-      `Stamina controls how many map moves a player can make before waiting. Configure it via **Settings → ⚡ Stamina Settings**.`,
+      `Stamina controls how many map moves a player can make before waiting. Configure it via **⚙️ Settings → ⚡ Settings**.`,
       `### \`\`\`⚙️ The Settings\`\`\``,
-      `• **Starting Stamina** — What new players begin with\n• **Max Stamina** — How many moves a player can store up (before items)\n• **Regen Time** — How long until stamina regenerates\n• **Regen Amount** — How much comes back each cycle. Leave blank for "full reset to max". Set a number to give a specific amount (can exceed max!)`,
+      `• **Starting Stamina** — What new players begin with\n• **Max Stamina** — How many moves a player can store up (before items)\n• **Regeneration Time (minutes)** — How long until stamina regenerates\n• **Regen Amount (optional)** — How much comes back each cycle. Leave blank for "full reset to max". Set a number to give a specific amount (can exceed max!)`,
       `### \`\`\`♻️ How Regeneration Works\`\`\``,
       `When a player moves, they spend 1 stamina. Once they're below max, a cooldown starts. After the regen time elapses, they get stamina back.\n\n**Full Reset** (default): All stamina restores to max at once.\n**Custom Amount**: e.g. "5 per cycle" — the player gets +5 each cooldown, even if max is 1. This lets you give players multiple moves per cycle.\n\nThe regen timer shows everywhere stamina appears: \`♻️MAX\` means fully charged, \`♻️2h 15m\` shows time until next regen.`
     ]
@@ -131,9 +135,9 @@ const PROD_PAGES = [
     content: [
       `The **Safari Log** is a per-server activity feed that posts game events to a Discord channel in real time. It's the best way to monitor what your players are doing without watching every channel.`,
       `### \`\`\`🔧 Setting It Up\`\`\``,
-      `1. Go to **Settings → 📊 Logs**\n2. Click **🟢 Enable Safari Log**\n3. Click **📝 Set Log Channel** and choose the channel\n4. Click **⚙️ Configure Log Types** to choose what gets logged\n\n-# We recommend a private channel only hosts can see — players don't need to see the log.`,
+      `1. Go to **⚙️ Settings → 📊 Logs**\n2. Click **🟢 Enable Safari Log**\n3. Click **📝 Set Log Channel** and choose the channel\n4. Click **⚙️ Configure Log Types** to choose what gets logged\n5. Click **🧪 Send Test Message** to confirm it's working\n\n-# We recommend a private channel only hosts can see — players don't need to see the log.`,
       `### \`\`\`📋 What Gets Logged\`\`\``,
-      `Toggle each event type on or off:\n• **🗺️ Map Movement** — who moved where, with stamina cost\n• **📦 Item Pickups** — items found and consumables used\n• **🪙 Currency Changes** — gold earned/spent\n• **🏪 Store Transactions** — store purchases\n• **⚔️ Attacks** — combat results\n• **⚡ Actions** — custom action triggers and outcomes\n• **🤫 Whispers** — whisper messages sent\n• **🔘 Button Actions** — button clicks in location channels`,
+      `Toggle each event type on or off:\n• **🗺️ Map Movement** — who moved where, with stamina cost\n• **🧰 Item Pickups** — items found and consumables used\n• **🪙 Currency Changes** — currency earned/spent\n• **🛒 Store Purchases** — store transactions\n• **⚔️ Attack Queue** — combat results\n• **🎯 Safari Actions** — button clicks in location channels\n• **⌨️ Custom Actions** — custom action triggers and outcomes\n• **🤫 Whispers** — whisper messages sent\n• **⚡ Stamina Changes** — stamina adjustments and regeneration`,
       `### \`\`\`🏷️ Reading the Stamina Tag\`\`\``,
       `Movement and item logs include a stamina tag:\n\`(⚡1/1 → 0/1 ♻️12h 0m)\`\n\n**⚡1/1** = stamina before the action\n**→ 0/1** = stamina after\n**♻️12h 0m** = time until next regen (\`♻️MAX\` = fully charged)\n\nThis tells you at a glance how much stamina a player had and when they'll be able to move again.`,
       `### \`\`\`📜 Player Activity Log\`\`\``,

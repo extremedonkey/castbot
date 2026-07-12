@@ -6797,7 +6797,7 @@ To fix this:
             },
             {
               name: '3️⃣ Set Player Ages',
-              value: 'Use `/menu` → Manage Players to set player ages individually through the admin interface, or have players set their own age using `/menu` → Age.'
+              value: 'Use `/menu` → Players to set player ages individually through the admin interface, or have players set their own age using `/menu` → Age.'
             },
             {
               name: '4️⃣ Add Tribes to Castlist',
@@ -10030,7 +10030,7 @@ To fix this:
             searchTerm: '',
             selectedItemId: null,
             itemSelectPrefix: 'spm_item_select_',
-            backButton: { label: '← Player Admin', custom_id: `admin_set_inventory_${targetUserId}`, emoji: { name: '🧑‍🤝‍🧑' } }
+            backButton: { label: '← Player Manager', custom_id: `admin_set_inventory_${targetUserId}`, emoji: { name: '🧑‍🤝‍🧑' } }
           });
           delete ui.ephemeral; // updateMessage inherits parent ephemerality
           return ui;
@@ -10153,7 +10153,7 @@ To fix this:
           const pane = await getMovementDisplay(context.guildId, targetUserId, coordinate, true);
           const backId = isAdminMode ? `admin_set_map_${targetUserId}` : 'player_set_map';
           pane.components[0].components.push({ type: 14 });
-          pane.components[0].components.push({ type: 1, components: [{ type: 2, style: 2, label: '← Player Admin', custom_id: backId, emoji: { name: '🧑‍🤝‍🧑' } }] });
+          pane.components[0].components.push({ type: 1, components: [{ type: 2, style: 2, label: isAdminMode ? '← Player Manager' : '← Menu', custom_id: backId, emoji: { name: '🧑‍🤝‍🧑' } }] });
           return pane;
         }
 
@@ -15747,7 +15747,7 @@ Your server is now ready for Tycoons gameplay!`;
           const containerComponents = [
             {
               type: 10, // Text Display component
-              content: `## 💰 Manage Currency\n\nUse the currency feature in Challenges, Idol Hunts or Safari. You can use it combination with the Stores and Items feature for an economy system.\n\nYou can manually assign players currency, or use the Actions system to automate currency collection. You can also update currency from the 🧭 \`Player Admin\` menu, and configure currency in the ⚙️ \`Customize\` menu.`
+              content: `## 💰 Manage Currency\n\nUse the currency feature in Challenges, Idol Hunts or Safari. You can use it combination with the Stores and Items feature for an economy system.\n\nYou can manually assign players currency, or use the Actions system to automate currency collection. You can also update currency from the 🧑‍🤝‍🧑 \`Players\` menu, and configure currency in the ⚙️ \`Settings\` menu.`
             },
             {
               type: 10, // Text Display component
@@ -16649,7 +16649,7 @@ Your server is now ready for Tycoons gameplay!`;
           // Create back button
           const backButton = new ButtonBuilder()
             .setCustomId('castbot_settings')
-            .setLabel('← Safari Settings')
+            .setLabel('← Settings')
             .setStyle(2) // Secondary
             .setEmoji('⚙️');
           
@@ -17179,7 +17179,7 @@ Your server is now ready for Tycoons gameplay!`;
           // Create back button
           const backButton = new ButtonBuilder()
             .setCustomId('castbot_settings')
-            .setLabel('← Safari Settings')
+            .setLabel('← Settings')
             .setStyle(2) // Secondary
             .setEmoji('⚙️');
           
@@ -17504,7 +17504,7 @@ Your server is now ready for Tycoons gameplay!`;
           // Create back button
           const backButton = new ButtonBuilder()
             .setCustomId('castbot_settings')
-            .setLabel('← Safari Settings')
+            .setLabel('← Settings')
             .setStyle(2) // Secondary
             .setEmoji('⚙️');
           
@@ -17650,7 +17650,7 @@ Your server is now ready for Tycoons gameplay!`;
           // Create back button
           const backButton = new ButtonBuilder()
             .setCustomId('castbot_settings')
-            .setLabel('← Safari Settings')
+            .setLabel('← Settings')
             .setStyle(2) // Secondary
             .setEmoji('⚙️');
           
@@ -38231,7 +38231,7 @@ Your server is now ready for Tycoons gameplay!`;
                     components: [{
                       type: 2, // Button
                       style: 2, // Secondary
-                      label: '← Player Admin',
+                      label: '← Back',
                       custom_id: `map_admin_edit_items_${targetUserId}`,
                       emoji: { name: '👤' }
                     }]
@@ -46067,7 +46067,7 @@ Your server is now ready for Tycoons gameplay!`;
         const ui = await createPlayerItemSelectorUI({
           guildId, targetUserId, searchTerm, selectedItemId: null,
           itemSelectPrefix: 'spm_item_select_',
-          backButton: { label: '← Player Admin', custom_id: `admin_set_inventory_${targetUserId}`, emoji: { name: '🧑‍🤝‍🧑' } }
+          backButton: { label: '← Player Manager', custom_id: `admin_set_inventory_${targetUserId}`, emoji: { name: '🧑‍🤝‍🧑' } }
         });
         delete ui.ephemeral;
         await updateDeferredResponse(req.body.token, ui);

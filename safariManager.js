@@ -6018,7 +6018,7 @@ async function processRoundResults(guildId, token, client, options = {}) {
                         components: [
                             {
                                 type: 10, // Text Display
-                                content: `# No Safari Players Initialized\n\nNo eligible players found. Use the **Player Admin > Initialize Safari** button to initialize.`
+                                content: `# No Safari Players Initialized\n\nNo eligible players found. Initialize players via \`/menu\` > **Players** > *(select player)* > **Safari Map** > **Initialize Safari**, or \`/menu\` > **Map** > **Start Safari** for multiple players at once.`
                             }
                         ]
                     }]
