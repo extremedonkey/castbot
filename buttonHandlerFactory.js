@@ -5042,7 +5042,7 @@ export function sendPermissionDenied(res, permissionName) {
  * @param {Object} data - Response data
  * @param {boolean} updateMessage - Whether to update existing message
  */
-export function sendResponse(res, data, updateMessage = false) {
+export function sendResponse(res, data, updateMessage = false, parentMessage = null) {
   // Proactive emoji safety for IMMEDIATE responses: res.send goes straight to Discord and
   // (unlike DiscordRequest) can't reactively retry, so scrub invalid/inaccessible/known-bad
   // emoji here. Covers the data.components tree for UPDATE_MESSAGE and CHANNEL_MESSAGE alike.
@@ -5088,12 +5088,28 @@ export function sendResponse(res, data, updateMessage = false) {
     // CRITICAL: UPDATE_MESSAGE cannot have flags - Discord will reject the interaction
     // Always strip flags and ephemeral for UPDATE_MESSAGE responses
     const { flags, ephemeral, ...cleanData } = data;
-    
+
+    // 🛡️ SHAPE-GUARD: a content-only update onto a Components V2 message is rejected
+    // by Discord with NO feedback (interaction responses are HTTP replies — Discord
+    // never tells us). ~170 handlers return { content } error strings this way (see
+    // scripts/scan-interaction-shapes.js). When the parent message is V2, auto-wrap
+    // the content into a container so the user sees the message instead of
+    // "This interaction failed". Non-V2 parents are left untouched (content works).
+    const parentIsV2 = !!((parentMessage?.flags ?? 0) & (1 << 15));
+    if (parentIsV2 && cleanData.content && !cleanData.components?.length && !cleanData.embeds?.length) {
+      console.warn(`🛡️ [SHAPE-GUARD] content-only UPDATE_MESSAGE onto V2 message — auto-wrapped into container. Fix the handler to return a V2 container.`);
+      cleanData.components = [{
+        type: 17, // Container
+        components: [{ type: 10, content: cleanData.content }]
+      }];
+      delete cleanData.content;
+    }
+
     // Validate the response
     if (!validateResponse(cleanData)) {
       console.error('❌ VALIDATION FAILED: Response may be rejected by Discord');
     }
-    
+
     return res.send({
       type: InteractionResponseType.UPDATE_MESSAGE,
       data: cleanData
@@ -5334,7 +5350,7 @@ export class ButtonHandlerFactory {
           }
 
           console.log(`🔍 ButtonHandlerFactory sending response for ${config.id}, updateMessage: ${shouldUpdateMessage}, isModal: false`);
-          return sendResponse(res, result, shouldUpdateMessage);
+          return sendResponse(res, result, shouldUpdateMessage, context.message);
         }
 
         // 7. Handle deferred response update
@@ -5343,10 +5359,14 @@ export class ButtonHandlerFactory {
           if (result.type === InteractionResponseType.MODAL || result.type === 9) {
             console.error(`🚨 ButtonHandlerFactory: Handler returned modal from deferred context for ${config.id}`);
             console.error(`🚨 Solution: Add requiresModal: true to handler config, or remove deferred: true`);
-            // Send error message instead
+            // Send error message instead. NOTE: content is illegal alongside
+            // IS_COMPONENTS_V2 — must ride in a container Text Display.
             return updateDeferredResponse(context.token, {
-              content: '❌ Unable to display modal. Please try again.',
-              flags: (1 << 15) | (1 << 6) // IS_COMPONENTS_V2 + EPHEMERAL
+              flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 + EPHEMERAL
+              components: [{
+                type: 17, // Container
+                components: [{ type: 10, content: '❌ Unable to display modal. Please try again.' }]
+              }]
             });
           }
 
