@@ -20,6 +20,12 @@ const __dirname = path.dirname(__filename);
 // Registry of all created stores (singleton per name)
 const stores = new Map();
 
+// Node 18's test runner intermittently dies with "Unable to deserialize cloned
+// data" when a module writes to stdout mid-test (see feedback_node_test_stdout)
+const QUIET = !!process.env.NODE_TEST_CONTEXT;
+const log = (...args) => { if (!QUIET) console.log(...args); };
+const logError = (...args) => { if (!QUIET) console.error(...args); };
+
 export class PersistentStore {
   constructor(name) {
     this._name = name;
@@ -51,12 +57,12 @@ export class PersistentStore {
       for (const [k, v] of Object.entries(parsed)) {
         this._data.set(k, v);
       }
-      console.log(`✅ [STORE:${this._name}] Loaded ${this._data.size} entries from disk`);
+      log(`✅ [STORE:${this._name}] Loaded ${this._data.size} entries from disk`);
     } catch (err) {
       if (err.code === 'ENOENT') {
-        console.log(`📦 [STORE:${this._name}] No existing file — starting empty`);
+        log(`📦 [STORE:${this._name}] No existing file — starting empty`);
       } else {
-        console.error(`❌ [STORE:${this._name}] Failed to load:`, err.message);
+        logError(`❌ [STORE:${this._name}] Failed to load:`, err.message);
       }
     }
     return this;
@@ -114,9 +120,9 @@ export class PersistentStore {
       await fs.writeFile(tmpPath, json);
       await fs.rename(tmpPath, this._filePath);
       this._dirty = false;
-      console.log(`💾 [STORE:${this._name}] Saved ${this._data.size} entries`);
+      log(`💾 [STORE:${this._name}] Saved ${this._data.size} entries`);
     } catch (err) {
-      console.error(`❌ [STORE:${this._name}] Save failed:`, err.message);
+      logError(`❌ [STORE:${this._name}] Save failed:`, err.message);
     } finally {
       this._saving = false;
     }
@@ -143,9 +149,9 @@ export class PersistentStore {
       fsSync.writeFileSync(tmpPath, json);
       fsSync.renameSync(tmpPath, this._filePath);
       this._dirty = false;
-      console.log(`💾 [STORE:${this._name}] Sync-saved ${this._data.size} entries (shutdown flush)`);
+      log(`💾 [STORE:${this._name}] Sync-saved ${this._data.size} entries (shutdown flush)`);
     } catch (err) {
-      console.error(`❌ [STORE:${this._name}] Sync save failed:`, err.message);
+      logError(`❌ [STORE:${this._name}] Sync save failed:`, err.message);
     }
   }
 
@@ -184,12 +190,12 @@ export function installShutdownFlush(extraSyncFlushers = []) {
     try {
       PersistentStore.flushAllSync();
       for (const fn of extraSyncFlushers) {
-        try { fn(); } catch (err) { console.error('❌ [SHUTDOWN] Extra flusher failed:', err.message); }
+        try { fn(); } catch (err) { logError('❌ [SHUTDOWN] Extra flusher failed:', err.message); }
       }
-      console.log(`🛬 [SHUTDOWN] Flushed persistent state on ${signal}`);
+      log(`🛬 [SHUTDOWN] Flushed persistent state on ${signal}`);
     } catch (err) {
       // A durability hook must never become a new crash path
-      console.error('❌ [SHUTDOWN] Flush failed:', err.message);
+      logError('❌ [SHUTDOWN] Flush failed:', err.message);
     }
     process.kill(process.pid, signal);  // re-raise for default termination
   };
