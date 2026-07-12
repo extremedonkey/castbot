@@ -167,7 +167,7 @@ export async function buildEmojiDetailView(guild, emojiId, guildId) {
     { type: 10, content: `## ${emojiCode} ${emoji.name}` },
     { type: 10, content: `${emoji.animated ? 'Animated' : 'Static'} custom emoji` },
     { type: 14 },
-    { type: 10, content: `🔗 **CDN:** [View Image](${cdnUrl})\n\n📋 Emoji Code (copy to use in CastBot items, buttons, etc):\n${emojiCode}` },
+    { type: 10, content: `🔗 **CDN:** [View Image](${cdnUrl})\n\n📋 Emoji Code (copy to use in CastBot items, buttons, etc):\n\`${emojiCode}\`` },
     { type: 14 },
   ];
 
@@ -279,7 +279,7 @@ export async function handleEmojiUpload(guild, guildId, name, attachmentUrl, fil
     const emojiCode = emoji.animated ? `<a:${emoji.name}:${emoji.id}>` : `<:${emoji.name}:${emoji.id}>`;
     return {
       success: true,
-      message: `✅ Created emoji ${emojiCode} **${emoji.name}**\n\n📋 Emoji Code (copy to use in CastBot items, buttons, etc):\n${emojiCode}`,
+      message: `✅ Created emoji ${emojiCode} **${emoji.name}**\n\n📋 Emoji Code (copy to use in CastBot items, buttons, etc):\n\`${emojiCode}\``,
       emoji
     };
   } catch (error) {
@@ -511,7 +511,7 @@ export async function handleEmojiSteal(guild, emojiId, emojiName, animated) {
     const emojiCode = emoji.animated ? `<a:${emoji.name}:${emoji.id}>` : `<:${emoji.name}:${emoji.id}>`;
     return {
       success: true,
-      message: `✅ Imported! ${emojiCode} **${emoji.name}** is now available in this server.\n\n📋 Emoji Code (copy to use in CastBot items, buttons, etc):\n${emojiCode}`,
+      message: `✅ Imported! ${emojiCode} **${emoji.name}** is now available in this server.\n\n📋 Emoji Code (copy to use in CastBot items, buttons, etc):\n\`${emojiCode}\``,
       emoji
     };
   } catch (error) {
