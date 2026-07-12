@@ -698,6 +698,13 @@ async function getCustomButton(guildId, buttonId) {
         const button = safariData[guildId]?.buttons?.[buttonId] || null;
         if (!button) {
             console.log(`❌ Button not found. Available buttons:`, Object.keys(safariData[guildId]?.buttons || {}));
+        } else if (!button.id) {
+            // Self-heal: actions created via the modern creation flow (app.js
+            // global_create_modal) are stored WITHOUT an id property, unlike legacy
+            // createCustomButton. Consumers like executeFollowUpButton build custom_ids
+            // from button.id — missing id produced safari_{guild}_undefined_{ts}.
+            // The storage key is the authoritative id.
+            button.id = buttonId;
         }
         return button;
     } catch (error) {
@@ -1519,10 +1526,11 @@ async function executeFollowUpButton(config, guildId, interaction) {
         ? `modal_launcher_${guildId}_${followUpButton.id}_${Date.now()}`
         : generateCustomId(guildId, followUpButton.id);
 
-    // Create the follow-up button
+    // Create the follow-up button (label falls back to name — modern creation flow sets both,
+    // but clones/imports may only have one)
     const button = new ButtonBuilder()
         .setCustomId(customId)
-        .setLabel(followUpButton.label)
+        .setLabel(followUpButton.label || followUpButton.name || 'Continue')
         .setStyle(BUTTON_STYLES[followUpButton.style] || ButtonStyle.Secondary);
 
     if (followUpButton.emoji) {
