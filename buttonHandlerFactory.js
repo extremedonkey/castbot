@@ -3534,24 +3534,70 @@ export const BUTTON_REGISTRY = {
     category: 'safari_management',
     type: 'select_menu'
   },
+  'scheduled_jobs_dashboard': {
+    label: 'Scheduled Jobs',
+    description: 'Guild-wide dashboard of all scheduler jobs (round results, custom actions, archive relocks)',
+    emoji: '⏰',
+    style: 'Secondary',
+    category: 'admin_tools',
+    parent: 'castbot_tools'
+  },
+  'sched_dash_cancel_sel': {
+    label: 'Cancel Scheduled Jobs',
+    description: 'Select scheduled jobs to cancel from the dashboard',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'admin_tools',
+    type: 'select_menu',
+    parent: 'scheduled_jobs_dashboard'
+  },
   'ca_schedule_channel_*': {
     label: 'Schedule Channel',
-    description: 'Select channel for scheduled action execution',
+    description: 'Select results channel for a scheduled action',
     emoji: '📺',
     style: 'Secondary',
     category: 'safari_management',
     type: 'select_menu'
   },
-  'ca_schedule_task_*': {
-    label: 'Schedule Task',
-    description: 'Open scheduling modal for action',
+  'ca_schedule_delay_*': {
+    label: 'Set Delay',
+    description: 'Open modal to set schedule-trigger delay (saved as config, does not arm)',
+    emoji: '⏱️',
+    style: 'Secondary',
+    category: 'safari_management',
+    requiresModal: true
+  },
+  'ca_schedule_delay_modal_*': {
+    label: 'Set Delay Modal',
+    description: 'Modal submit — saves schedule-trigger delayMs',
+    emoji: '⏱️',
+    category: 'safari_management'
+  },
+  'ca_schedule_retrigger_*': {
+    label: 'Retrigger Policy',
+    description: 'Select block/replace/stack behavior when triggered while armed',
+    emoji: '🔁',
+    style: 'Secondary',
+    category: 'safari_management',
+    type: 'select_menu'
+  },
+  'ca_schedule_arm_*': {
+    label: 'Arm Now',
+    description: 'Admin test-arm a scheduled action using its stored delay',
     emoji: '⏰',
     style: 'Success',
     category: 'safari_management'
   },
+  'ca_arm_cancel_*': {
+    label: 'Cancel Timer',
+    description: 'Player cancels their own armed scheduled-action timer',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari_management'
+  },
   'ca_schedule_cancel_*': {
     label: 'Cancel Schedule',
-    description: 'Cancel a scheduled action execution',
+    description: 'Cancel a scheduled action execution (admin, trigger editor)',
     emoji: '🗑️',
     style: 'Danger',
     category: 'safari_management'

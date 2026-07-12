@@ -7805,6 +7805,37 @@ To fix this:
           };
         }
       })(req, res, client);
+    } else if (custom_id === 'scheduled_jobs_dashboard') {
+      // Guild-wide scheduled jobs dashboard (Tools → Utilities)
+      return ButtonHandlerFactory.create({
+        id: 'scheduled_jobs_dashboard',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const { buildScheduledJobsDashboardUI } = await import('./scheduledActionManager.js');
+          return buildScheduledJobsDashboardUI(context.guildId);
+        }
+      })(req, res, client);
+    } else if (custom_id === 'sched_dash_cancel_sel') {
+      // Dashboard cancel select — cancel chosen jobs (guild-verified)
+      return ButtonHandlerFactory.create({
+        id: 'sched_dash_cancel_sel',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const selected = context.values || [];
+          let cancelled = 0;
+          for (const jobId of selected) {
+            const job = scheduler.getJobs({ guildId: context.guildId }).find(j => j.id === jobId);
+            if (job && scheduler.cancel(jobId)) cancelled++;
+          }
+          console.log(`🗑️ [SCHEDULED-JOBS] ${context.userId} cancelled ${cancelled}/${selected.length} job(s) in guild ${context.guildId}`);
+          const { buildScheduledJobsDashboardUI } = await import('./scheduledActionManager.js');
+          return buildScheduledJobsDashboardUI(context.guildId);
+        }
+      })(req, res, client);
     // ═══════════════ SNOWFLAKE TIMER ═══════════════
 
     } else if (custom_id === 'snowflake_calculator') {
@@ -18151,8 +18182,8 @@ Your server is now ready for Tycoons gameplay!`;
 
         console.log(`📅 DEBUG: Opening Safari scheduling modal for guild ${guildId}, channel ${channelId}`);
 
-        // Get current scheduled tasks for display
-        const scheduledTasks = scheduler.getJobs({ action: 'process_round_results' });
+        // Get current scheduled tasks for display (guild-scoped — never surface other guilds' jobs)
+        const scheduledTasks = scheduler.getJobs({ guildId, action: 'process_round_results' });
 
         // Build modal components using Label (type 18) + Text Display (type 10)
         const modalComponents = [];
@@ -25473,97 +25504,117 @@ Your server is now ready for Tycoons gameplay!`;
           return await createTriggerConfigUI({ guildId: context.guildId, actionId });
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('ca_schedule_task_')) {
-      // Handle "Schedule Task" button — opens time-input modal
-      // Uses legacy pattern because ButtonHandlerFactory can't send MODAL responses
-      try {
-        const guildId = req.body.guild_id;
-        const member = req.body.member;
-        const actionId = custom_id.replace('ca_schedule_task_', '');
-
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to schedule actions.')) return;
-
-        const { loadSafariContent } = await import('./safariManager.js');
-        const allSafariContent = await loadSafariContent();
-        const button = allSafariContent[guildId]?.buttons?.[actionId];
-
-        if (!button) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: { content: '❌ Action not found.', flags: InteractionResponseFlags.EPHEMERAL }
+    } else if (custom_id.startsWith('ca_schedule_delay_')) {
+      // "Set Delay" — opens D/H/M modal that SAVES trigger.schedule.delayMs (does NOT arm)
+      return ButtonHandlerFactory.create({
+        id: 'ca_schedule_delay',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        requiresModal: true,
+        handler: async (context) => {
+          const actionId = context.customId.replace('ca_schedule_delay_', '');
+          const { loadSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const button = allSafariContent[context.guildId]?.buttons?.[actionId];
+          if (!button) {
+            return { content: '❌ Action not found.', ephemeral: true };
+          }
+          const { buildPeriodModalComponents } = await import('./utils/periodUtils.js');
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: `ca_schedule_delay_modal_${actionId}`,
+              title: `Delay: ${(button.name || 'Action').substring(0, 36)}`,
+              components: [
+                { type: 10, content: '### Execute after delay\nWhen this action is triggered, it fires after this delay.' },
+                ...buildPeriodModalComponents({ fieldPrefix: 'schedule', currentPeriodMs: button.trigger?.schedule?.delayMs || 0 })
+              ]
+            }
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('ca_schedule_retrigger_')) {
+      // Retrigger policy select — block / replace / stack
+      return ButtonHandlerFactory.create({
+        id: 'ca_schedule_retrigger',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const actionId = context.customId.replace('ca_schedule_retrigger_', '');
+          const selectedPolicy = context.values?.[0];
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const button = allSafariContent[context.guildId]?.buttons?.[actionId];
+          if (!button) {
+            return { content: '❌ Action not found.', ephemeral: true };
+          }
+          button.trigger.schedule = button.trigger.schedule || { channelId: null, delayMs: null };
+          button.trigger.schedule.onRetrigger = selectedPolicy;
+          await saveSafariContent(allSafariContent);
+          console.log(`🔁 Schedule retrigger policy for ${actionId} set to ${selectedPolicy}`);
+          const { createTriggerConfigUI } = await import('./customActionUI.js');
+          return await createTriggerConfigUI({ guildId: context.guildId, actionId });
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('ca_schedule_arm_')) {
+      // "Arm Now" — admin test-arm using the stored schedule config
+      return ButtonHandlerFactory.create({
+        id: 'ca_schedule_arm',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        ephemeral: true,
+        handler: async (context) => {
+          const actionId = context.customId.replace('ca_schedule_arm_', '');
+          const { loadSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const button = allSafariContent[context.guildId]?.buttons?.[actionId];
+          if (!button) {
+            return { content: '❌ Action not found.', ephemeral: true };
+          }
+          const { armScheduledAction } = await import('./scheduledActionManager.js');
+          return await armScheduledAction({
+            guildId: context.guildId,
+            actionId,
+            userId: context.userId,
+            action: button,
+            interaction: req.body,
+            client
           });
         }
+      })(req, res, client);
+    } else if (custom_id.startsWith('ca_arm_cancel_')) {
+      // Player cancels their OWN armed timer (from the "already armed" ephemeral)
+      return ButtonHandlerFactory.create({
+        id: 'ca_arm_cancel',
+        updateMessage: true,
+        handler: async (context) => {
+          const jobId = context.customId.replace('ca_arm_cancel_', '');
+          const job = scheduler.getJobs({ guildId: context.guildId, action: 'execute_custom_action' })
+            .find(j => j.id === jobId);
 
-        const channelId = button.trigger?.schedule?.channelId;
-        if (!channelId) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: { content: '❌ Please select a channel first.', flags: InteractionResponseFlags.EPHEMERAL }
-          });
+          if (!job) {
+            return {
+              components: [{ type: 17, components: [{ type: 10, content: '⏰ This timer already fired or was cancelled.' }] }]
+            };
+          }
+
+          // Only the owner (or an admin) may cancel
+          const isOwner = job.payload?.userId === context.userId;
+          const isAdmin = context.member?.permissions && (BigInt(context.member.permissions) & PermissionFlagsBits.ManageRoles) !== 0n;
+          if (!isOwner && !isAdmin) {
+            return {
+              components: [{ type: 17, components: [{ type: 10, content: '❌ You can only cancel your own timer.' }] }]
+            };
+          }
+
+          scheduler.cancel(jobId);
+          console.log(`🗑️ [SCHEDULED-ACTION] User ${context.userId} cancelled armed job ${jobId}`);
+          return {
+            components: [{ type: 17, components: [{ type: 10, content: '✅ Timer cancelled.' }] }]
+          };
         }
-
-        // Open modal with days + hours + minutes inputs
-        const modalComponents = [
-          {
-            type: 10, // Text Display
-            content: `### Schedule: ${button.name || 'Custom Action'}\nChannel: <#${channelId}>`
-          },
-          {
-            type: 18, // Label
-            label: 'Days from now',
-            description: '0-30 days (leave empty to skip)',
-            component: {
-              type: 4, // Text Input
-              custom_id: 'schedule_days',
-              style: 1,
-              placeholder: '0',
-              max_length: 2,
-              required: false
-            }
-          },
-          {
-            type: 18, // Label
-            label: 'Hours from now',
-            description: '0-23 hours (leave empty to skip)',
-            component: {
-              type: 4, // Text Input
-              custom_id: 'schedule_hours',
-              style: 1,
-              placeholder: '4',
-              max_length: 2,
-              required: false
-            }
-          },
-          {
-            type: 18, // Label
-            label: 'Minutes from now',
-            description: '0-59 minutes (leave empty to skip)',
-            component: {
-              type: 4, // Text Input
-              custom_id: 'schedule_minutes',
-              style: 1,
-              placeholder: '30',
-              max_length: 2,
-              required: false
-            }
-          }
-        ];
-
-        return res.send({
-          type: InteractionResponseType.MODAL,
-          data: {
-            custom_id: `ca_schedule_modal_${actionId}_${channelId}`,
-            title: `Schedule ${(button.name || 'Action').substring(0, 30)}`,
-            components: modalComponents
-          }
-        });
-      } catch (error) {
-        console.error('Error opening schedule modal:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: { content: '❌ Error opening schedule modal.', flags: InteractionResponseFlags.EPHEMERAL }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id.startsWith('ca_schedule_cancel_')) {
       // Handle cancel of a scheduled custom action task
       return ButtonHandlerFactory.create({
@@ -25574,8 +25625,9 @@ Your server is now ready for Tycoons gameplay!`;
         handler: async (context) => {
           const jobId = context.customId.replace('ca_schedule_cancel_', '');
 
-          // Get the job's actionId before cancelling so we can re-render the right UI
-          const allJobs = scheduler.getJobs({ action: 'execute_custom_action' });
+          // Get the job's actionId before cancelling so we can re-render the right UI.
+          // Guild-scoped: a job belonging to another guild is invisible here (tamper guard).
+          const allJobs = scheduler.getJobs({ guildId: context.guildId, action: 'execute_custom_action' });
           const job = allJobs.find(j => j.id === jobId);
           const actionId = job?.payload?.actionId;
 
@@ -49887,10 +49939,11 @@ Your server is now ready for Tycoons gameplay!`;
           if (child.custom_id === 'cancel_tasks' && child.values) tasksToCancel = child.values;
         }
 
-        // Cancel selected tasks
+        // Cancel selected tasks (guild-verified — never cancel another guild's job)
         let deletedCount = 0;
         for (const taskId of tasksToCancel) {
-          if (scheduler.cancel(taskId)) {
+          const job = scheduler.getJobs({ guildId }).find(j => j.id === taskId);
+          if (job && scheduler.cancel(taskId)) {
             deletedCount++;
           }
         }
@@ -50204,96 +50257,47 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
 
-    } else if (custom_id.startsWith('ca_schedule_modal_')) {
-      // Handle Custom Action scheduling modal submission
-      try {
-        const guildId = req.body.guild_id;
-        const userId = req.body.member?.user?.id || req.body.user?.id;
-        const member = req.body.member;
+    } else if (custom_id.startsWith('ca_schedule_delay_modal_')) {
+      // "Set Delay" modal submit — SAVES trigger.schedule.delayMs (arming happens on trigger)
+      return ButtonHandlerFactory.create({
+        id: 'ca_schedule_delay_modal',
+        updateMessage: true,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const actionId = context.customId.replace('ca_schedule_delay_modal_', '');
 
-        // Security check
-        if (!member?.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to schedule actions.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
+          const { parsePeriodFromModal } = await import('./utils/periodUtils.js');
+          const { days, hours, minutes, totalMs } = parsePeriodFromModal(req.body.data.components, {
+            days: 'schedule_days',
+            hours: 'schedule_hours',
+            minutes: 'schedule_minutes'
           });
-        }
 
-        // Extract actionId and channelId from custom_id: ca_schedule_modal_ACTIONID_CHANNELID
-        const modalSuffix = custom_id.replace('ca_schedule_modal_', '');
-        const lastUnderscore = modalSuffix.lastIndexOf('_');
-        const actionId = modalSuffix.substring(0, lastUnderscore);
-        const channelId = modalSuffix.substring(lastUnderscore + 1);
-
-        console.log(`⏰ Processing Custom Action schedule for action ${actionId}, channel ${channelId}`);
-
-        // Extract form data using shared utility
-        const { parsePeriodFromModal, formatPeriod } = await import('./utils/periodUtils.js');
-        const { days, hours, minutes, totalMs } = parsePeriodFromModal(data.components, {
-          days: 'schedule_days',
-          hours: 'schedule_hours',
-          minutes: 'schedule_minutes'
-        });
-
-        if (totalMs === 0) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Schedule time must be at least 1 minute.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        if (days < 0 || hours < 0 || minutes < 0 || days > 30 || hours > 23 || minutes > 59) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Invalid time values. Days: 0-30, Hours: 0-23, Minutes: 0-59.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        // Get action name for description
-        const { loadSafariContent } = await import('./safariManager.js');
-        const allSafariContent = await loadSafariContent();
-        const action = allSafariContent[guildId]?.buttons?.[actionId];
-        const actionName = action?.name || 'Custom Action';
-
-        await scheduler.schedule('execute_custom_action',
-          { channelId, guildId, actionId, userId, actionName },
-          {
-            delayMs: totalMs,
-            guildId,
-            channelId,
-            description: actionName
+          if (totalMs < 60000) {
+            return { content: '❌ Delay must be at least 1 minute.', ephemeral: true };
           }
-        );
-
-        const executeAt = new Date(Date.now() + totalMs);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `✅ **Scheduled Action**: "${actionName}" will execute in <#${channelId}> in **${formatPeriod(totalMs)}**\n*Executing at: ${executeAt.toLocaleString()}*`,
-            flags: InteractionResponseFlags.EPHEMERAL
+          if (days < 0 || hours < 0 || minutes < 0 || days > 30 || hours > 23 || minutes > 59) {
+            return { content: '❌ Invalid time values. Days: 0-30, Hours: 0-23, Minutes: 0-59.', ephemeral: true };
           }
-        });
 
-      } catch (error) {
-        console.error('Error in Custom Action scheduling modal handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `❌ Scheduling failed: ${error.message}`,
-            flags: InteractionResponseFlags.EPHEMERAL
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const button = allSafariContent[context.guildId]?.buttons?.[actionId];
+          if (!button) {
+            return { content: '❌ Action not found.', ephemeral: true };
           }
-        });
-      }
 
+          button.trigger = button.trigger || { type: 'schedule' };
+          button.trigger.schedule = button.trigger.schedule || { channelId: null, onRetrigger: 'block' };
+          button.trigger.schedule.delayMs = totalMs;
+          await saveSafariContent(allSafariContent);
+          console.log(`⏱️ Schedule delay for ${actionId} set to ${totalMs}ms`);
+
+          const { createTriggerConfigUI } = await import('./customActionUI.js');
+          return await createTriggerConfigUI({ guildId: context.guildId, actionId });
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_player_state_coord_submit_')) {
       // Handle coordinate modal submission for manage_player_state outcome
       return ButtonHandlerFactory.create({

@@ -1,8 +1,24 @@
 # RaP 0952 — Player Self-Service Scheduling via Posted Buttons
 
 **Date**: 2026-03-09
-**Status**: Analysis complete, awaiting decision
+**Status**: ✅ IMPLEMENTED 2026-07-12 (Option A, extended) — on dev+test, pending prod
 **Related**: [SafariCustomActions.md](../03-features/SafariCustomActions.md), [ActionTerminology](0956_20260308_ActionTerminology_Analysis.md)
+
+---
+
+## Implementation Notes (2026-07-12)
+
+Built as designed (Option A) with these deltas from §4:
+
+- **Config field is `delayMs`** (not `defaultDelayMs`), stored in `trigger.schedule = { channelId, delayMs, onRetrigger }`. `channelId: null` now means "post where triggered" (channel resolution: configured → invoking channel).
+- **No `allowPlayerSchedule` toggle** — exposure IS the permission: a schedule action arms for whoever can reach it (posted button, linked action, player menu, map anchor). Non-posted actions are unreachable by players.
+- **`maxActivePerPlayer` became the `onRetrigger` policy** (admin select): `block` (default — status + Cancel Timer button on re-click, RaP §4.6 Option 1), `replace` (re-trigger resets timer), `stack` (up to `SAFARI_LIMITS.MAX_STACKED_SCHEDULES` = 5).
+- **Interception lives in `executeButtonActions`** (safariManager.js, after condition evaluation, before usageCount++), NOT in the safari_ button handler — so ALL invocation paths inherit arming. The scheduler's `execute_custom_action` handler passes `{ scheduledExecution: true }` (6th param, polymorphic options object) to bypass — this is the anti-infinite-loop guard.
+- **Dedup via first-class scheduler job keys**: `key = ca:{guildId}:{actionId}:{userId}`; scheduler.js gained `key` option, `getJobs({key})`, `cancelByKey()`.
+- The old admin "Schedule Task" arm-immediately modal was retired; "Set Delay" (saves config) + "Arm Now" (admin test-arm) replace it. Editor lists armed timers per action; a new guild-wide dashboard lives at Tools → Utilities → ⏰ Scheduled Jobs.
+- **Ride-along fixes**: cross-guild `getJobs` leak in round-results scheduling UI (app.js) fixed; fire-time webhook now mentions the triggering player via leading Text Display + `allowed_mentions`.
+
+Module: `scheduledActionManager.js`. Tests: `tests/scheduledActionTrigger.test.js`. Promote this doc to `docs/03-features/` after prod deploy.
 
 ---
 
