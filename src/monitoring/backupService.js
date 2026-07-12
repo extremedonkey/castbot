@@ -20,6 +20,7 @@ const BACKUP_FILES = [
   { name: 'safariContent.json', emoji: '🦁', critical: true },
   { name: 'scheduledJobs.json', emoji: '⏰', critical: false },
   { name: 'dstState.json', emoji: '🕐', critical: false },
+  { name: 'data_whispers.json', emoji: '💬', critical: false },  // unread Safari whispers (Tier 2)
 ];
 
 // Default config

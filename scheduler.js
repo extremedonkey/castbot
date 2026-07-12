@@ -23,6 +23,7 @@
  */
 
 import fs from 'fs/promises';
+import fsSync from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -70,7 +71,29 @@ async function saveJobs() {
 
 function scheduleSave() {
   if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => saveJobs(), 500);
+  saveTimer = setTimeout(() => { saveTimer = null; saveJobs(); }, 500);
+}
+
+/**
+ * Synchronous save for process signal handlers (cannot await).
+ * Only writes when a debounced save is pending — otherwise disk is current.
+ */
+function saveJobsSync() {
+  if (!saveTimer) return;
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  const persistable = Array.from(jobs.values()).map(job => {
+    const { _timeoutId, _reminderTimeoutIds, ...rest } = job;
+    return rest;
+  });
+  try {
+    const tmpPath = JOBS_FILE + '.tmp';
+    fsSync.writeFileSync(tmpPath, JSON.stringify(persistable, null, 2));
+    fsSync.renameSync(tmpPath, JOBS_FILE);
+    console.log(`💾 [SCHEDULER] Sync-saved ${persistable.length} job(s) (shutdown flush)`);
+  } catch (err) {
+    console.error('❌ [SCHEDULER] Sync save failed:', err.message);
+  }
 }
 
 // ---- Timer Setup ----
@@ -221,6 +244,11 @@ export const scheduler = {
     const hours = Math.floor(diff / 3600000);
     const minutes = Math.floor((diff % 3600000) / 60000);
     return `${hours}h ${minutes}m`;
+  },
+
+  /** Flush any pending debounced save synchronously (graceful shutdown). */
+  flushSync() {
+    saveJobsSync();
   },
 
   async restore() {

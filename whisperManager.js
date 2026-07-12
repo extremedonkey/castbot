@@ -20,18 +20,40 @@ import { getPlayersAtLocation, arePlayersAtSameLocation } from './playerLocation
 import { loadPlayerData } from './storage.js';
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
 import { logger } from './logger.js';
-import { DiscordRequest } from './utils.js';
 import { InteractionResponseType, InteractionResponseFlags } from 'discord-interactions';
 import { PersistentStore } from './persistentStore.js';
 
-// Persistent whisper store — survives restarts
-let whisperStore = null;
-async function getWhisperStore() {
-  if (!whisperStore) {
-    whisperStore = PersistentStore.create('whispers');
-    await whisperStore.load();
+// Persistent whisper store — survives restarts.
+// Cache the LOAD PROMISE (not the instance) so concurrent first callers all
+// await the same disk load — caching the instance let a second caller query
+// the store before load() finished and get a false "already been read".
+let whisperStorePromise = null;
+function getWhisperStore() {
+  if (!whisperStorePromise) {
+    whisperStorePromise = PersistentStore.create('whispers').load();
   }
-  return whisperStore;
+  return whisperStorePromise;
+}
+
+// Unread whispers only shrink on read — prune anything this old at startup
+const WHISPER_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * Eagerly load the whisper store (call from the ready handler) and prune
+ * stale unread whispers.
+ */
+export async function preloadWhisperStore() {
+  const store = await getWhisperStore();
+  let pruned = 0;
+  for (const [id, whisper] of store.entries()) {
+    if (!whisper?.timestamp || Date.now() - whisper.timestamp > WHISPER_MAX_AGE_MS) {
+      store.delete(id);
+      pruned++;
+    }
+  }
+  if (pruned > 0) await store.flush();
+  logger.info('WHISPER', 'Store preloaded', { entries: store.size, pruned });
+  return store;
 }
 
 /**
@@ -232,7 +254,10 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
       coordinate,
       timestamp: Date.now()
     });
-    
+    // Write-through: whispers are low-volume and must survive a restart landing
+    // inside the store's 1s save debounce (e.g. a deploy right after send)
+    await store.flush();
+
     // Get the channel for this coordinate
     logger.info('WHISPER', 'Step 3: Loading safari data');
     const safariData = await loadSafariContent();
@@ -271,7 +296,8 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
     whisperData.messageId = notificationMessage.id;
     whisperData.channelId = channelId;
     store.set(whisperId, whisperData);
-    
+    await store.flush();
+
     logger.info('WHISPER', 'Whisper notification posted', { 
       senderId: context.userId, 
       targetUserId,
@@ -362,52 +388,6 @@ async function postWhisperDetection(guildId, coordinate, client) {
 }
 
 /**
- * Post full whisper log for production/spectators
- */
-async function postWhisperLog(guildId, senderName, recipientName, coordinate, message) {
-  try {
-    const safariData = await loadSafariContent();
-    const whisperSettings = safariData[guildId]?.whisperSettings;
-    
-    if (!whisperSettings?.logEnabled || !whisperSettings?.logChannelId) {
-      return;
-    }
-    
-    // Post to log channel via REST API
-    const timestamp = Math.floor(Date.now() / 1000);
-    
-    await DiscordRequest(`channels/${whisperSettings.logChannelId}/messages`, {
-      method: 'POST',
-      body: {
-        components: [{
-          type: 17, // Container
-          accent_color: 0x9B59B6, // Purple for whispers
-          components: [
-            {
-              type: 10, // Text Display
-              content: `## 📝 Whisper Log\n\n**From:** ${senderName}\n**To:** ${recipientName}\n**Location:** ${coordinate}\n**Time:** <t:${timestamp}:t>`
-            },
-            { type: 14 }, // Separator
-            {
-              type: 9, // Section
-              components: [{
-                type: 10,
-                content: `> ${message}`
-              }]
-            }
-          ]
-        }],
-        flags: (1 << 15) // IS_COMPONENTS_V2
-      }
-    });
-    
-    logger.info('WHISPER', 'Log posted', { guildId, senderName, recipientName });
-  } catch (error) {
-    logger.error('WHISPER', 'Failed to post log', { error: error.message });
-  }
-}
-
-/**
  * Show reply modal with previous message preview
  */
 export async function showReplyModal(context, originalSenderId, coordinate, client) {
@@ -487,6 +467,7 @@ export async function handleReadWhisper(context, whisperId, targetUserId, client
     // Get whisper data from persistent store
     const store = await getWhisperStore();
     if (!store.has(whisperId)) {
+      logger.warn('WHISPER', 'Read clicked for unknown whisperId (read already, pruned, or lost)', { whisperId, targetUserId });
       return {
         content: '❌ This whisper has expired or already been read.',
         flags: InteractionResponseFlags.EPHEMERAL
@@ -531,9 +512,10 @@ export async function handleReadWhisper(context, whisperId, targetUserId, client
       logger.error('WHISPER', 'Failed to delete notification', { error: error.message });
     }
     
-    // Clean up whisper data (also persists the deletion to disk)
+    // Clean up whisper data — write-through so a restart can't resurrect a read whisper
     store.delete(whisperId);
-    
+    await store.flush();
+
     // Deliver the whisper content
     logger.info('WHISPER', 'Delivering whisper content', { 
       recipientId: context.userId, 
@@ -550,12 +532,3 @@ export async function handleReadWhisper(context, whisperId, targetUserId, client
   }
 }
 
-/**
- * Check and deliver pending whispers for a user (deprecated - keeping for backwards compatibility)
- * Should be called early in interaction handling
- */
-export async function checkAndDeliverWhispers(userId, interactionToken) {
-  // This function is now deprecated as we use the notification pattern
-  // Keeping it to prevent errors during transition
-  return null;
-}

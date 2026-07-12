@@ -10,6 +10,7 @@
  */
 
 import fs from 'fs/promises';
+import fsSync from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -122,11 +123,77 @@ export class PersistentStore {
   }
 
   /**
-   * Force immediate save (for graceful shutdown).
+   * Force immediate save (write-through / graceful shutdown).
    */
   async flush() {
     if (this._saveTimer) clearTimeout(this._saveTimer);
     this._dirty = true;
     await this._save();
   }
+
+  /**
+   * Synchronous save — for process signal handlers, which cannot await.
+   * Same atomic tmp+rename as _save().
+   */
+  _saveSync() {
+    if (!this._dirty) return;
+    try {
+      const json = JSON.stringify(Object.fromEntries(this._data), null, 2);
+      const tmpPath = this._filePath + '.tmp';
+      fsSync.writeFileSync(tmpPath, json);
+      fsSync.renameSync(tmpPath, this._filePath);
+      this._dirty = false;
+      console.log(`💾 [STORE:${this._name}] Sync-saved ${this._data.size} entries (shutdown flush)`);
+    } catch (err) {
+      console.error(`❌ [STORE:${this._name}] Sync save failed:`, err.message);
+    }
+  }
+
+  /**
+   * Synchronously flush every dirty store. Safe to call from signal handlers.
+   */
+  static flushAllSync() {
+    for (const store of stores.values()) {
+      if (store._saveTimer) clearTimeout(store._saveTimer);
+      store._saveSync();
+    }
+  }
+}
+
+// ---- Graceful-shutdown flush ------------------------------------------------
+// Debounced saves (1s here, 500ms in scheduler.js) mean state mutated just
+// before a deploy/restart is lost unless flushed on the way out. PM2 sends
+// SIGINT on restart; dev scripts send SIGTERM.
+
+let shutdownInstalled = false;
+
+/**
+ * Install SIGINT/SIGTERM handlers that synchronously flush all PersistentStores
+ * plus any extra sync flushers (e.g. the scheduler's job file), then re-raise
+ * the signal so default termination proceeds. Idempotent.
+ * @param {Array<() => void>} extraSyncFlushers - additional synchronous flush fns
+ */
+export function installShutdownFlush(extraSyncFlushers = []) {
+  if (shutdownInstalled) return;
+  shutdownInstalled = true;
+
+  let flushed = false;
+  const flushOnce = (signal) => {
+    if (flushed) return;
+    flushed = true;
+    try {
+      PersistentStore.flushAllSync();
+      for (const fn of extraSyncFlushers) {
+        try { fn(); } catch (err) { console.error('❌ [SHUTDOWN] Extra flusher failed:', err.message); }
+      }
+      console.log(`🛬 [SHUTDOWN] Flushed persistent state on ${signal}`);
+    } catch (err) {
+      // A durability hook must never become a new crash path
+      console.error('❌ [SHUTDOWN] Flush failed:', err.message);
+    }
+    process.kill(process.pid, signal);  // re-raise for default termination
+  };
+
+  process.once('SIGINT', () => flushOnce('SIGINT'));
+  process.once('SIGTERM', () => flushOnce('SIGTERM'));
 }

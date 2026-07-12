@@ -1,247 +1,69 @@
-# Whisper System Documentation
+# Whisper System
+
+**Status**: Active (Production)
+**Modules**: `whisperManager.js` (core), `persistentStore.js` (durability), `app.js` handlers, `playerLocationManager.js` (location validation), `safariLogger.js` (Safari Log)
+**Data file**: `data_whispers.json` (gitignored, Tier 2 — in `BACKUP_FILES`)
+**Rewritten**: 2026-07-12 — the previous version of this doc described a dead architecture (`global.pendingWhispers` delivered on the recipient's next interaction). That code no longer exists; this doc describes what actually runs.
+
+---
 
 ## Overview
 
-The Whisper System allows players at the same Safari Map location to send private messages to each other. It includes whisper detection for nearby players and full transcript logging for production/spectators.
+Players at the same Safari Map coordinate can send each other private messages. A whisper posts a **public notification** in the location channel (`💬 @sender whispers to @target` — no message body) with a **Read Message** button; only the target can open it, and the content arrives as an ephemeral message with a Reply button. Whispers are **one-time reads**: opening one deletes both the notification message and the stored record.
 
 ## Architecture
 
-### Core Components
-
-1. **whisperManager.js** - Main whisper functionality module
-2. **app.js handlers** - Button and modal interaction handlers
-3. **playerLocationManager.js** - Location validation
-4. **Pending whisper storage** - Global in-memory queue
-
-### Data Flow
-
 ```
-Player A → Whisper Button → Player Select → Modal → Send Whisper → Store in Queue
-                                                                         ↓
-Player B → Any Interaction → Check Queue → Deliver Whisper → Reply Option
-```
+Send:  safari_whisper_{coord} → player select → modal → sendWhisper()
+         1. store.set(whisperId, {senderId, senderName, targetUserId,
+            recipientName, message, coordinate, timestamp})  + flush (write-through)
+         2. channel.send(notification + Read Message button
+            custom_id: whisper_read_{whisperId}_{targetUserId})
+         3. store patch {messageId, channelId} + flush
+         4. logWhisper() → Safari Log channel (full body, if whisper logging on)
+         5. ephemeral confirmation to sender
 
-## Implementation Status
-
-### ✅ Completed Features
-
-1. **Whisper Button** (safari_whisper_{coordinate})
-   - Added to Player Location Actions
-   - Grey secondary button with 💬 emoji
-   - Position: far right of action row
-
-2. **Player Selection** (whisper_player_select_{coordinate})
-   - String select menu showing players at same location
-   - Filters out the sender
-   - Shows player display names with descriptions
-
-3. **Whisper Modal** (whisper_send_modal_{targetUserId}_{coordinate})
-   - Paragraph text input (1-1000 chars)
-   - Title shows recipient name
-   - Validates on submission
-
-4. **Whisper Delivery System**
-   - Location verification before sending
-   - Stores whispers in global.pendingWhispers Map
-   - Delivers on recipient's next interaction
-   - Shows remaining whisper count
-
-5. **Reply Functionality** (whisper_reply_{senderId}_{coordinate})
-   - Reply button on received whispers
-   - Reuses same modal system
-   - Maintains conversation context
-
-### ⏳ Pending Features
-
-6. **Whisper Detection** (30s auto-delete)
-   - Posts "👀 Players are whispering at {coordinate}"
-   - In map channel (coordinate's channel)
-   - Auto-deletes after configurable time
-
-7. **Whisper Log Channel**
-   - Full transcript for production/spectators
-   - Dedicated channel configuration
-   - Purple accent color for whisper posts
-
-8. **Configuration Management**
-   - Guild-specific settings in safariContent.json
-   - Toggle detection on/off
-   - Set log channel ID
-   - Configure auto-delete duration
-
-## User Experience
-
-### Sending a Whisper
-
-1. Player clicks "Player Location Actions" at their location
-2. Clicks "Whisper" button (💬)
-3. Selects target player from dropdown
-4. Types message in modal (up to 1000 chars)
-5. Receives ephemeral confirmation
-
-### Receiving a Whisper
-
-1. Player performs ANY interaction (button click, command, etc.)
-2. Whisper appears as ephemeral message:
-   ```
-   ## 💬 {SenderName} whispers to you
-   
-   > **@{SenderName} is whispering to you**
-   {Message}
-   
-   [Separator]
-   [Reply Button]
-   ```
-3. Can click Reply to respond
-
-### Reply Flow
-
-1. Click Reply button
-2. Modal appears with "Reply to {SenderName}"
-3. Type reply message
-4. Same delivery mechanism
-
-## Technical Details
-
-### Handler IDs
-
-- `safari_whisper_{coordinate}` - Initial whisper button
-- `whisper_player_select_{coordinate}` - Player selection dropdown
-- `whisper_send_modal_{targetUserId}_{coordinate}` - Send/reply modal
-- `whisper_reply_{senderId}_{coordinate}` - Reply button
-
-### Validation Checks
-
-1. **Player Eligibility**
-   - Must be initialized in Safari (have mapProgress)
-   - Must be at valid coordinate
-
-2. **Location Verification**
-   - On player selection (initial check)
-   - On modal submission (re-check)
-   - Uses arePlayersAtSameLocation()
-
-3. **Error Handling**
-   - No players at location
-   - Player moved away
-   - Player not in game
-   - Modal/delivery failures
-
-### Ephemeral Responses
-
-All whisper-related UI is ephemeral:
-- Player selection
-- Whisper modals
-- Confirmation messages
-- Error messages
-- Received whispers
-
-## Configuration Structure
-
-```javascript
-// In safariContent.json
-{
-  "guildId": {
-    "whisperSettings": {
-      "detectionEnabled": true,           // Show activity in channels
-      "detectionDuration": 30000,         // 30 seconds
-      "logEnabled": true,                 // Full transcripts
-      "logChannelId": "1234567890",      // Log channel
-      "productionRoleId": "0987654321"   // Who can view logs
-    }
-  }
-}
+Read:  whisper_read_* → handleReadWhisper()
+         recipient guard → store.has(whisperId)
+           miss → "❌ This whisper has expired or already been read." (+ warn log)
+           hit  → ephemeral content + Reply button
+                  → delete channel notification → store.delete + flush
 ```
 
-## Known Limitations
+- `whisperId = "{Date.now()}_{rand}"` — fully encoded in the Read button's custom_id, so the lookup key lives on the Discord message itself.
+- Reply (`whisper_reply_{senderId}_{coordinate}`) reuses the send modal → `sendWhisper()`.
+- Location is re-validated on modal submit (`arePlayersAtSameLocation`) — if the target moved, the send fails cleanly.
 
-1. **Asynchronous Delivery**
-   - Whispers only deliver on interaction
-   - Not real-time like DMs
-   - Multiple whispers queue up
+## Restart durability (added 2026-07-12)
 
-2. **In-Memory Storage**
-   - Whispers lost on server restart
-   - No persistence currently
-   - Consider Redis for production
+Whispers are stored in `PersistentStore('whispers')` → `data_whispers.json` (atomic tmp+rename writes). Four mechanisms guarantee unread whispers survive restarts/outages:
 
-3. **No Whisper History**
-   - Only latest whisper shown
-   - No conversation threading
-   - Log channel provides history
+1. **Write-through**: `sendWhisper`/`handleReadWhisper` call `store.flush()` after every mutation — the 1s save debounce no longer creates a loss window for whispers.
+2. **Shutdown flush**: `installShutdownFlush()` (`persistentStore.js`) registers SIGINT/SIGTERM handlers that synchronously flush **all** PersistentStores plus the scheduler's pending `scheduledJobs.json` save (`scheduler.flushSync()`), then re-raise the signal. Wired in the ready handler in app.js. This closes the same gap for every current and future store consumer.
+3. **Eager load**: `preloadWhisperStore()` runs in the ready handler, so the store is loaded before any Read click. `getWhisperStore()` caches the *load promise* (not the instance) — concurrent first callers can no longer race an unfinished disk load into a false "already been read".
+4. **Discord backup**: `data_whispers.json` is in `BACKUP_FILES` (`src/monitoring/backupService.js`).
 
-## Security Considerations
+**Pruning**: unread whispers older than 30 days are deleted at startup (`WHISPER_MAX_AGE_MS` in `whisperManager.js`) — the store otherwise only shrinks on read.
 
-1. **Location-Based**
-   - Must be at same coordinate
-   - Prevents cross-map whispers
-   - Adds realism to game
+A missing `whisperId` on Read now genuinely means "already read or >30 days old"; the miss is logged with the whisperId (`logger.warn`) for diagnosability.
 
-2. **Player-Only**
-   - Must be initialized player
-   - Not available to spectators
-   - Maintains game integrity
+## Handler IDs
 
-3. **Ephemeral Nature**
-   - All UI is private
-   - No channel spam
-   - Maintains secrecy
+| custom_id | Purpose |
+|---|---|
+| `safari_whisper_{coordinate}` | Whisper button on Location Actions |
+| `whisper_player_select_{coordinate}` | Co-located player select (ephemeral) |
+| `whisper_send_modal_{targetUserId}_{coordinate}` | Send/reply modal (1–1000 chars) |
+| `whisper_read_{whisperId}_{targetUserId}` | Read Message button on the public notification |
+| `whisper_reply_{senderId}_{coordinate}` | Reply button on the ephemeral whisper content |
 
-## Testing Checklist
+## Logging
 
-- [ ] Whisper button appears in location actions
-- [ ] Can select other players at location
-- [ ] Modal appears and accepts text
-- [ ] Confirmation is ephemeral
-- [ ] Recipient receives on next interaction
-- [ ] Reply button works
-- [ ] Location checks prevent invalid whispers
-- [ ] Error messages are helpful and ephemeral
+`logWhisper()` (`safariLogger.js`) posts the **full message body** to the Safari Log channel when the guild has whisper logging enabled (`safariLogSettings.logTypes.whispers`), and writes a content-free activity breadcrumb ("Whispered to X" + location) into the sender's `playerData` history. The Safari Log post is the only recoverable copy of a whisper's content after it's been read.
 
-## Future Enhancements
+## Known limitations / notes
 
-1. **Persistence Layer**
-   - Redis or database storage
-   - Survive server restarts
-   - Message history
-
-2. **Real-Time Delivery**
-   - WebSocket notifications
-   - Push to active players
-   - Instant messaging feel
-
-3. **Rich Features**
-   - Whisper cooldowns
-   - Block/ignore lists
-   - Whisper statistics
-   - Admin monitoring
-
-4. **UI Improvements**
-   - Conversation threading
-   - Message preview in list
-   - Typing indicators
-   - Read receipts
-
-## Implementation Notes
-
-### Why Pending Whispers?
-
-Discord doesn't allow sending ephemeral messages to other users directly. We can only send ephemeral responses to the user who triggered an interaction. The pending whisper system works around this limitation by:
-
-1. Storing whispers when sent
-2. Checking for whispers on every interaction
-3. Delivering as follow-up ephemeral messages
-
-### Performance Considerations
-
-- Check whispers early in interaction flow
-- Use Map for O(1) lookups
-- Clean up delivered whispers
-- Consider max queue size
-
-### Error Recovery
-
-- Re-queue failed deliveries
-- Log delivery failures
-- Notify sender of issues
-- Graceful degradation
+- **One-time read, no history** — content is deleted on read; the Safari Log channel is the transcript.
+- **Whisper detection** ("👀 Players are whispering…", auto-deleting notice) exists in code (`postWhisperDetection`) but is **disabled** (call commented out in `sendWhisper`). Its auto-delete uses a raw `setTimeout`; if re-enabled, schedule the deletion through `scheduler.js` so it survives restarts.
+- The `whisperSettings` config block (`detectionEnabled`, `logEnabled`, …) is only read by the disabled detection path; live logging is governed by `safariLogSettings`.
+- Anyone at the location can *see* that a whisper happened (public notification); only the target can read it.

@@ -1776,6 +1776,18 @@ client.once('ready', async () => {
   scheduler.init(client);
   await scheduler.restore();
 
+  // Eagerly load the whisper store (kills the lazy-load race on first read after
+  // restart) and flush all persistent state on SIGINT/SIGTERM so debounced saves
+  // aren't lost to a deploy/restart
+  try {
+    const { preloadWhisperStore } = await import('./whisperManager.js');
+    await preloadWhisperStore();
+    const { installShutdownFlush } = await import('./persistentStore.js');
+    installShutdownFlush([() => scheduler.flushSync()]);
+  } catch (err) {
+    console.error('⚠️ Failed to preload whisper store / install shutdown flush:', err.message);
+  }
+
   const isTestInstance = process.env.INSTANCE_ROLE === 'test';
 
   // TEST instance announces its OWN restart, independently of the laptop/dev notifier.
@@ -2554,18 +2566,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
    */
   if (type === InteractionType.PING) {
     return res.send({ type: InteractionResponseType.PONG });
-  }
-  
-  // Check for pending whispers (skip for PING interactions)
-  if (type !== InteractionType.PING && req.body.member?.user?.id) {
-    const userId = req.body.member.user.id;
-    const token = req.body.token;
-    
-    // Deliver pending whispers as a follow-up message
-    const { checkAndDeliverWhispers } = await import('./whisperManager.js');
-    checkAndDeliverWhispers(userId, token).catch(error => {
-      console.error('Failed to deliver pending whispers:', error);
-    });
   }
   
 
