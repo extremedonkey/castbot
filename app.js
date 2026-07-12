@@ -20679,22 +20679,46 @@ Your server is now ready for Tycoons gameplay!`;
           if (!button) {
             console.error(`Button not found: ${buttonId} in guild ${context.guildId}`);
             console.log('Available buttons:', Object.keys(buttons).slice(0, 10));
+            // updateMessage:true targets a Components V2 message — a content-only return
+            // gets rejected by Discord ("This interaction failed"), so respond in V2.
             return {
-              content: '❌ Custom action not found.',
-              ephemeral: true
+              flags: (1 << 15), // IS_COMPONENTS_V2
+              components: [{
+                type: 17, // Container
+                components: [{ type: 10, content: '❌ Custom action not found.' }]
+              }]
             };
           }
-          
+
           // Handle give_item and give_currency differently - show select interface instead of modal
           if (actionType === 'give_item') {
             // Load items
             const items = safariData[context.guildId]?.items || {};
             const itemCount = Object.keys(items).length;
-            
+
             if (itemCount === 0) {
+              console.log(`⚠️ safari_action_type_select: no items in guild ${context.guildId} — cannot add give_item outcome`);
+              // Must be a V2 container (see not-found return above) — the old content-only
+              // return made this error invisible ("This interaction failed") on fresh guilds.
               return {
-                content: '❌ No items available. Create items first using Safari menu.',
-                ephemeral: true
+                flags: (1 << 15), // IS_COMPONENTS_V2
+                components: [{
+                  type: 17, // Container
+                  components: [
+                    { type: 10, content: '## Item\n❌ No items exist in this server yet.\n-# Create one first via Production Menu → Safari → Manage Items, then add this outcome.' },
+                    { type: 14 }, // Separator
+                    {
+                      type: 1, // Action Row
+                      components: [{
+                        type: 2, // Button
+                        custom_id: `custom_action_editor_${buttonId}`,
+                        label: '⬅ Back',
+                        style: 2,
+                        emoji: { name: '⚡' }
+                      }]
+                    }
+                  ]
+                }]
               };
             }
             
