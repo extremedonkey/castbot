@@ -1,6 +1,6 @@
 # 🪨→✨ Legacy Button Handler Migration — Full Inventory & Risk/Effort Stratification
 
-**Status:** Analysis complete — migration backlog
+**Status:** Analysis complete — migration backlog. **T0 sweep DONE 2026-07-12** (commit `bb15671f`): all 22 false positives reshaped, Moai BASELINE 125 → 103. Next: T1 unregistered modals.
 **Date:** 2026-07-12
 **Related:** [ButtonHandlerFactory.md](../enablers/ButtonHandlerFactory.md), the 🗿 Moai pre-commit hook (`scripts/hooks/pre-commit`, BASELINE=125)
 
