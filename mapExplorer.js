@@ -2547,6 +2547,21 @@ export function deriveChannelName(coord, title, emoji) {
   return cleanTitle ? `${prefix}-${cleanTitle}` : prefix;
 }
 
+/**
+ * Is this channel inside the active map's categories?
+ * Used by map_delete_confirm to decide deferred vs immediate response
+ * (can't defer when deleting the channel the interaction came from).
+ */
+export async function isChannelInActiveMapCategory(guildId, channelId, client) {
+  const safariData = await loadSafariContent();
+  const activeMapId = safariData[guildId]?.maps?.active;
+  const mapData = safariData[guildId]?.maps?.[activeMapId];
+  if (!mapData) return false;
+  const allCategoryIds = mapData.categories?.length > 0 ? mapData.categories : (mapData.category ? [mapData.category] : []);
+  const channel = await client.channels.fetch(channelId).catch(() => null);
+  return !!(channel && allCategoryIds.includes(channel.parentId));
+}
+
 // Export functions
 // createMapGrid removed - legacy hardcoded map functionality replaced by createMapGridWithCustomImage
 // buildMapExplorerResponse is exported directly with the function declaration above

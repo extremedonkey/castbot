@@ -5515,15 +5515,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     } else if (custom_id.startsWith('show_castlist2') || (req.body.data && req.body.data.custom_id && req.body.data.custom_id.startsWith('show_castlist2'))) {
       // Castlist display — migrated to factory (Phase 2, RaP 0935)
       const currentCustomId = req.body.data?.custom_id?.startsWith('show_castlist2') ? req.body.data.custom_id : custom_id;
-      const { parseShowCastlist } = await import('./castlistDisplay.js');
-      const { castlistId, displayMode } = await parseShowCastlist(currentCustomId);
-
       return ButtonHandlerFactory.create({
         id: 'show_castlist2',
         deferred: true,
         ephemeral: false, // Castlist is public — visible to all users in the channel
         handler: async (context) => {
-          const { displayCastlist } = await import('./castlistDisplay.js');
+          const { parseShowCastlist, displayCastlist } = await import('./castlistDisplay.js');
+          const { castlistId, displayMode } = await parseShowCastlist(currentCustomId);
           return displayCastlist(context, castlistId, displayMode, buildNoTribesContainer, canSendMessagesInChannel);
         }
       })(req, res, client);
@@ -7630,15 +7628,15 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'setup_castbot') {
-      // Run Setup (from the Setup Wizard). Setup takes 15+ seconds (creates many roles),
-      // so instead of a silent deferred ack we give INSTANT feedback then finish in the background:
-      //  1. IMMEDIATE UPDATE_MESSAGE — re-render the wizard with Run Setup → green "⏳ Setting up..."
-      //  2. (background, via setTimeout) Run full setup (roles + consolidation)
-      //  3. PATCH @original → replace the wizard in place with the "✅ Setup Complete" results
-      //  4. Post a FRESH Setup Wizard as a NEW ephemeral message (now setup-complete:
-      //     Castlist Manager enabled, Run Setup → ✅ Setup Complete) so the user isn't
-      //     left scrolling up to a stale, half-disabled wizard.
+      // Run Setup (from the Setup Wizard). Setup takes 15+ seconds (creates many roles).
       return ButtonHandlerFactory.create({
+        // Instead of a silent deferred ack we give INSTANT feedback then finish in the background:
+        //  1. IMMEDIATE UPDATE_MESSAGE — re-render the wizard with Run Setup → green "⏳ Setting up..."
+        //  2. (background, via setTimeout) Run full setup (roles + consolidation)
+        //  3. PATCH @original → replace the wizard in place with the "✅ Setup Complete" results
+        //  4. Post a FRESH Setup Wizard as a NEW ephemeral message (now setup-complete:
+        //     Castlist Manager enabled, Run Setup → ✅ Setup Complete) so the user isn't
+        //     left scrolling up to a stale, half-disabled wizard.
         id: 'setup_castbot',
         updateMessage: true, // immediate UPDATE_MESSAGE (in-progress wizard), NOT deferred
         ephemeral: true,
@@ -8401,14 +8399,8 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'reeces_stuff') {
-      // Reece's Stuff - secret admin tools menu (Reece + test user)
-      // Access check BEFORE factory — prevents Components V2 flag mismatch crash on public messages
-      if (!['391415444084490240', '1086246253819613274'].includes(req.body.member?.user?.id)) {
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: { content: '❌ Access denied.', flags: InteractionResponseFlags.EPHEMERAL }
-        });
-      }
+      // Reece's Stuff (Reece + test user) — access check BEFORE factory: prevents V2 flag mismatch crash on public messages
+      if (!['391415444084490240', '1086246253819613274'].includes(req.body.member?.user?.id)) return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Access denied.', flags: InteractionResponseFlags.EPHEMERAL } });
       return ButtonHandlerFactory.create({
         id: 'reeces_stuff',
         updateMessage: true,
@@ -8453,12 +8445,7 @@ To fix this:
       })(req, res, client);
     } else if (custom_id === 'restart_prod') {
       // TEST-instance-only: confirm screen for restarting PROD via forced-command SSH.
-      if (!['391415444084490240'].includes(req.body.member?.user?.id)) {
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: { content: '❌ Access denied.', flags: InteractionResponseFlags.EPHEMERAL }
-        });
-      }
+      if (!['391415444084490240'].includes(req.body.member?.user?.id)) return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Access denied.', flags: InteractionResponseFlags.EPHEMERAL } });
       return ButtonHandlerFactory.create({
         id: 'restart_prod',
         updateMessage: true,
@@ -8480,14 +8467,8 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'restart_prod_confirm') {
-      // TEST-instance-only: execute prod remediation. The key on this box can ONLY run
-      // /home/bitnami/remediate-castbot.sh on prod (authorized_keys forced-command).
-      if (!['391415444084490240'].includes(req.body.member?.user?.id)) {
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: { content: '❌ Access denied.', flags: InteractionResponseFlags.EPHEMERAL }
-        });
-      }
+      // TEST-instance-only: execute prod remediation. The key on this box can ONLY run /home/bitnami/remediate-castbot.sh on prod (authorized_keys forced-command).
+      if (!['391415444084490240'].includes(req.body.member?.user?.id)) return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Access denied.', flags: InteractionResponseFlags.EPHEMERAL } });
       return ButtonHandlerFactory.create({
         id: 'restart_prod_confirm',
         deferred: true,
@@ -8722,11 +8703,8 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_page_')) {
-      // Season Planner — page navigation
-      // Format: planner_page_{pageNum}_{configId}
-      const parts = custom_id.replace('planner_page_', '').split('_');
-      const page = parseInt(parts[0]);
-      const configId = parts.slice(1).join('_');
+      const parts = custom_id.replace('planner_page_', '').split('_'); // Season Planner page navigation — format: planner_page_{pageNum}_{configId}
+      const page = parseInt(parts[0]), configId = parts.slice(1).join('_');
       return ButtonHandlerFactory.create({
         id: 'planner_page',
         updateMessage: true,
@@ -9397,9 +9375,7 @@ To fix this:
       })(req, res, client);
     // ── Challenge Action Categories (Phase 1B) ──────────────────────────
     } else if (custom_id.startsWith('challenge_action_cat_select_')) {
-      const challengeId = custom_id.replace('challenge_action_cat_select_', '');
-      const selectedValue = req.body.data.values?.[0];
-
+      const challengeId = custom_id.replace('challenge_action_cat_select_', ''), selectedValue = req.body.data.values?.[0];
       if (selectedValue === 'create_new') {
         return ButtonHandlerFactory.create({
           id: 'challenge_action_create',
@@ -12973,7 +12949,6 @@ To fix this:
     } else if (custom_id.startsWith('castlist_create_')) {
       // Handle castlist creation options
       const createType = custom_id.replace('castlist_create_', '');
-      
       return ButtonHandlerFactory.create({
         id: custom_id,
         updateMessage: true,
@@ -13398,17 +13373,8 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id.startsWith('tribe_add_button|')) {
-      // Handle Add Tribe button - creates a new Discord role and links as tribe
-      // Button ID format: tribe_add_button|{castlistId}[|{origin}]
-      // Optional {origin} (e.g. 'marooning_{configId}') is threaded through to the modal so the SUBMIT
-      // knows which view to refresh. Absent (the normal Castlist Manager flow) = refresh the Castlist Hub.
-      const castlistId = custom_id.split('|')[1];
-      const origin = custom_id.split('|')[2]; // optional; undefined for the Castlist Manager flow
-
-      if (!castlistId) {
-        return res.send({ type: 4, data: { content: '❌ Error: Missing castlist ID', flags: 64 } });
-      }
-
+      const [, castlistId, origin] = custom_id.split('|'); // Add Tribe (creates role + links as tribe): tribe_add_button|{castlistId}[|{origin}] — optional origin (e.g. 'marooning_{configId}') tells the modal SUBMIT which view to refresh; absent (Castlist Manager flow) = refresh the Castlist Hub
+      if (!castlistId) return res.send({ type: 4, data: { content: '❌ Error: Missing castlist ID', flags: 64 } });
       return ButtonHandlerFactory.create({
         id: custom_id,
         updateMessage: false, // Returns modal
@@ -13501,63 +13467,63 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id.startsWith('edit_placement_')) {
-      // Handle placement edit button - show modal (MIGRATED TO FACTORY)
-      // 🔧 FIX: Parse full navigation context from button ID
-      // Format: edit_placement_{userId}_{seasonContext}_{castlistId}_{tribeIndex}_{tribePage}_{displayMode}
-      // CRITICAL: Both seasonContext AND castlistId can contain underscores!
-      // Example: edit_placement_123_season_abc_castlist_456_system_0_0_edit
-
-      // Work backwards from the end (these are always single parts)
-      const parts = custom_id.split('_');
-      const displayMode = parts[parts.length - 1]; // 'edit' or 'view'
-      const tribePage = parts[parts.length - 2];
-      const tribeIndex = parts[parts.length - 3];
-
-      // The castlistId starts at a known position and extends backward
-      // Find the castlist by looking for "castlist_" pattern OR "default"
-      let castlistIdStartIdx = -1;
-      let castlistId;
-      let seasonContext;
-
-      // Special handling for default castlist which doesn't have "castlist_" prefix
-      for (let i = parts.length - 4; i >= 3; i--) {
-        if (parts[i] === 'castlist') {
-          castlistIdStartIdx = i;
-          break;
-        } else if (parts[i] === 'default' && i === parts.length - 4) {
-          // Default castlist special case
-          castlistIdStartIdx = i;
-          break;
-        }
-      }
-
-      if (castlistIdStartIdx === -1) {
-        console.error(`❌ Could not find 'castlist' or 'default' in button ID: ${custom_id}`);
-        throw new Error('Invalid button ID format - missing castlist identifier');
-      }
-
-      const playerId = parts[2];
-
-      // Handle both formats
-      let castlistIdShort;  // For modal custom_id (short version to stay under 100 chars)
-      if (parts[castlistIdStartIdx] === 'default') {
-        castlistId = 'default';
-        castlistIdShort = 'default';
-        seasonContext = parts.slice(3, castlistIdStartIdx).join('_') || 'global';
-      } else {
-        seasonContext = parts.slice(3, castlistIdStartIdx).join('_') || 'global';
-        castlistIdShort = parts.slice(castlistIdStartIdx, parts.length - 3).join('_');
-
-        // 🔧 FIX: Use parsed castlistId as-is (includes type suffix like _system, _legacy)
-        // DO NOT append guildId - entity IDs are castlist_{timestamp}_{type}, not castlist_{timestamp}_{guildId}
-        castlistId = castlistIdShort;
-      }
-
+      // Placement edit button — shows modal. Full navigation context is parsed from the button ID inside the handler.
       return ButtonHandlerFactory.create({
         id: 'edit_placement',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
+          // 🔧 Parse full navigation context from button ID
+          // Format: edit_placement_{userId}_{seasonContext}_{castlistId}_{tribeIndex}_{tribePage}_{displayMode}
+          // CRITICAL: Both seasonContext AND castlistId can contain underscores!
+          // Example: edit_placement_123_season_abc_castlist_456_system_0_0_edit
+
+          // Work backwards from the end (these are always single parts)
+          const parts = custom_id.split('_');
+          const displayMode = parts[parts.length - 1]; // 'edit' or 'view'
+          const tribePage = parts[parts.length - 2];
+          const tribeIndex = parts[parts.length - 3];
+
+          // The castlistId starts at a known position and extends backward
+          // Find the castlist by looking for "castlist_" pattern OR "default"
+          let castlistIdStartIdx = -1;
+          let castlistId;
+          let seasonContext;
+
+          // Special handling for default castlist which doesn't have "castlist_" prefix
+          for (let i = parts.length - 4; i >= 3; i--) {
+            if (parts[i] === 'castlist') {
+              castlistIdStartIdx = i;
+              break;
+            } else if (parts[i] === 'default' && i === parts.length - 4) {
+              // Default castlist special case
+              castlistIdStartIdx = i;
+              break;
+            }
+          }
+
+          if (castlistIdStartIdx === -1) {
+            console.error(`❌ Could not find 'castlist' or 'default' in button ID: ${custom_id}`);
+            throw new Error('Invalid button ID format - missing castlist identifier');
+          }
+
+          const playerId = parts[2];
+
+          // Handle both formats
+          let castlistIdShort;  // For modal custom_id (short version to stay under 100 chars)
+          if (parts[castlistIdStartIdx] === 'default') {
+            castlistId = 'default';
+            castlistIdShort = 'default';
+            seasonContext = parts.slice(3, castlistIdStartIdx).join('_') || 'global';
+          } else {
+            seasonContext = parts.slice(3, castlistIdStartIdx).join('_') || 'global';
+            castlistIdShort = parts.slice(castlistIdStartIdx, parts.length - 3).join('_');
+
+            // 🔧 Use parsed castlistId as-is (includes type suffix like _system, _legacy)
+            // DO NOT append guildId - entity IDs are castlist_{timestamp}_{type}, not castlist_{timestamp}_{guildId}
+            castlistId = castlistIdShort;
+          }
+
           // Load current placement from correct namespace
           const { loadPlayerData } = await import('./storage.js');
           const playerData = await loadPlayerData();
@@ -13646,15 +13612,8 @@ To fix this:
     //     }
     //   })(req, res, client);
     } else if (custom_id === 'data_admin') {
-      // Handle Data admin menu - special admin features (MIGRATED TO FACTORY)
-      // Access check BEFORE factory — prevents Components V2 flag mismatch crash on public messages (e.g. restart notification)
-      if (req.body.member?.user?.id !== '391415444084490240') {
-        console.log(`❌ ACCESS DENIED: data_admin - user ${req.body.member?.user?.id} not authorized`);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: { content: '❌ Access denied. This feature is restricted.', flags: InteractionResponseFlags.EPHEMERAL }
-        });
-      }
+      // Data admin menu — access check BEFORE factory: prevents V2 flag mismatch crash on public messages (e.g. restart notification)
+      if (req.body.member?.user?.id !== '391415444084490240') { console.log(`❌ ACCESS DENIED: data_admin - user ${req.body.member?.user?.id} not authorized`); return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Access denied. This feature is restricted.', flags: InteractionResponseFlags.EPHEMERAL } }); }
       return ButtonHandlerFactory.create({
         id: 'data_admin',
         updateMessage: true,  // Button clicks always update (per CLAUDE.md)
@@ -13899,9 +13858,8 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id.startsWith('season_marooning_')) {
-      // 🚣 Marooning tab — the season-wide casting-decision summary (formerly the ⭐ Casting Summary
-      // button, id ranking_view_all_scores_*). Now a first-class Season Manager tab, rendered via the
-      // shared buildMarooningView (same header/nav/[← Seasons][Edit] chrome as the other tabs).
+      // 🚣 Marooning tab — season-wide casting-decision summary (formerly ⭐ Casting Summary, id
+      // ranking_view_all_scores_*). Season Manager tab rendered via shared buildMarooningView.
       return ButtonHandlerFactory.create({
         id: 'season_marooning',
         deferred: true,
@@ -13931,8 +13889,7 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id.startsWith('marooning_draft_tribes_')) {
-      // 💭 Draft Tribes — opens a PRIVATE modal (up to 5 user selects) to provisionally assign players to the
-      // default castlist's tribes. Host-only; submitting assigns NO roles and reveals nothing to players.
+      // 💭 Draft Tribes — PRIVATE modal (up to 5 user selects) provisionally assigning players to the default castlist's tribes. Host-only; submit assigns NO roles, reveals nothing to players.
       const configId = custom_id.replace('marooning_draft_tribes_', '');
       return ButtonHandlerFactory.create({
         id: 'marooning_draft_tribes',
@@ -18124,9 +18081,8 @@ Your server is now ready for Tycoons gameplay!`;
         }
       }
     } else if (custom_id === 'safari_import_data') {
-      // Settings → Advanced → Import — shows prep-warning screen, then offers
-      // the modal File Upload (file_import_safari). Replaces legacy createMessageCollector
-      // pattern. See RaP 0917.
+      // Settings → Advanced → Import — prep-warning screen, then the modal File Upload
+      // (file_import_safari). Replaces legacy createMessageCollector pattern. See RaP 0917.
       return ButtonHandlerFactory.create({
         id: 'safari_import_data',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -27464,9 +27420,8 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id === 'app_withdraw') {
-      // Applicant withdraws — the Withdraw button is on the welcome message, so updateMessage swaps it for
-      // Re-apply in place (replaces the old raw fetch PATCH). Channel rename fired NON-BLOCKING (renames are
-      // rate-limited ~2/10min; the old await-before-ack was the "interaction failed" bug). [✨ FACTORY]
+      // Applicant withdraws — updateMessage swaps Withdraw for Re-apply in place. Channel rename fired
+      // NON-BLOCKING (renames rate-limited ~2/10min; the old await-before-ack was the "interaction failed" bug).
       return ButtonHandlerFactory.create({
         id: 'app_withdraw',
         updateMessage: true,
@@ -27485,9 +27440,8 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id === 'app_reapply') {
-      // Applicant un-withdraws — RESUMES prior state (☑️ if completed else 📝) and updateMessage swaps the
-      // Re-apply button back to Start + re-enables Withdraw, in place. Rename NON-BLOCKING (rate-limit safe —
-      // this exact handler was throwing "interaction failed" on the rate-limited await). [✨ FACTORY]
+      // Applicant un-withdraws — RESUMES prior state (☑️ if completed else 📝), swaps Re-apply back to Start
+      // + re-enables Withdraw in place. Rename NON-BLOCKING (this handler threw "interaction failed" on the rate-limited await).
       return ButtonHandlerFactory.create({
         id: 'app_reapply',
         updateMessage: true,
@@ -31632,33 +31586,8 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
 
     } else if (custom_id.startsWith('ca_link_item_select_')) {
-      // Handle item selection from the Item Link sub-UI — links item to action
-      // Check for search request first (needs modal response, can't use factory)
-      const actionIdForSelect = custom_id.replace('ca_link_item_select_', '');
-      const selectedItemId = req.body.data?.values?.[0];
-
-      if (selectedItemId === 'search_entities') {
-        return res.send({
-          type: InteractionResponseType.MODAL,
-          data: {
-            custom_id: `ca_link_item_search_${actionIdForSelect}`,
-            title: 'Search Items',
-            components: [{
-              type: 1,
-              components: [{
-                type: 4,
-                custom_id: 'search_term',
-                label: 'Search Term',
-                style: 1,
-                placeholder: 'Enter item name to search...',
-                required: true,
-                max_length: 50
-              }]
-            }]
-          }
-        });
-      }
-
+      // Item selection from the Item Link sub-UI — links item to action.
+      // 'search_entities' returns a modal instead (factory detects modal returns and sends them directly).
       return ButtonHandlerFactory.create({
         id: 'ca_link_item_select',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -31667,6 +31596,28 @@ Your server is now ready for Tycoons gameplay!`;
         handler: async (context) => {
           const actionId = context.customId.replace('ca_link_item_select_', '');
           const itemId = context.values?.[0];
+
+          if (itemId === 'search_entities') {
+            return {
+              type: InteractionResponseType.MODAL,
+              data: {
+                custom_id: `ca_link_item_search_${actionId}`,
+                title: 'Search Items',
+                components: [{
+                  type: 18, // Label (Components V2 modal wrapper)
+                  label: 'Search Term',
+                  component: {
+                    type: 4, // Text Input
+                    custom_id: 'search_term',
+                    style: 1,
+                    placeholder: 'Enter item name to search...',
+                    required: true,
+                    max_length: 50
+                  }
+                }]
+              }
+            };
+          }
 
           if (!itemId) return { content: '❌ No item selected.' };
 
@@ -33016,7 +32967,6 @@ Your server is now ready for Tycoons gameplay!`;
     } else if (custom_id === 'safari_map_explorer') {
       // Handle Map Explorer menu display - using Components V2 with Container (MIGRATED TO FACTORY)
       const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(req.body.channel_id);
-
       return ButtonHandlerFactory.create({
         id: 'safari_map_explorer',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -33266,23 +33216,8 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
       
     } else if (custom_id === 'map_delete_confirm') {
-      // Check if we're deleting from within a map channel BEFORE creating handler
-      const { loadSafariContent } = await import('./safariManager.js');
-      const safariData = await loadSafariContent();
-      const guildId = req.body.guild_id;
-      const channelId = req.body.channel_id;
-      const activeMapId = safariData[guildId]?.maps?.active;
-      const mapData = safariData[guildId]?.maps?.[activeMapId];
-      
-      let isInMapChannel = false;
-      if (mapData) {
-        // Check if current channel is in any map category
-        const allCategoryIds = mapData.categories?.length > 0 ? mapData.categories : (mapData.category ? [mapData.category] : []);
-        const channel = await client.channels.fetch(channelId).catch(() => null);
-        isInMapChannel = channel && allCategoryIds.includes(channel.parentId);
-      }
-      
-      // Handle confirmed map deletion - updates the confirmation message (removes delete button)
+      // Confirmed map deletion. Checked BEFORE creating handler: deleting from within a map channel decides the deferred config below.
+      const isInMapChannel = await (await import('./mapExplorer.js')).isChannelInActiveMapCategory(req.body.guild_id, req.body.channel_id, client);
       return ButtonHandlerFactory.create({
         id: 'map_delete_confirm',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -34887,13 +34822,7 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
       
-    } else if (custom_id.startsWith('map_currency_drop_') && 
-                !custom_id.includes('_modal_') && 
-                !custom_id.startsWith('map_currency_drop_config_') &&
-                !custom_id.startsWith('map_currency_drop_style_') &&
-                !custom_id.startsWith('map_currency_drop_type_') &&
-                !custom_id.startsWith('map_currency_drop_save_') &&
-                !custom_id.startsWith('map_currency_drop_remove_')) {
+    } else if (custom_id.startsWith('map_currency_drop_') && !custom_id.includes('_modal_') && !['config_', 'style_', 'type_', 'save_', 'remove_'].some(s => custom_id.startsWith('map_currency_drop_' + s))) {
       // Handle currency drop button click from players
       return ButtonHandlerFactory.create({
         id: 'map_currency_drop_player',
@@ -37543,9 +37472,8 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
 
     } else if (custom_id.startsWith('archive_refresh_')) {
-      // Refresh Link: the View Online link wraps a signed Discord CDN URL that expires (~24h).
-      // Re-GET the archive's file message (Discord re-signs the URL on fetch) and rewrite the
-      // link button's URL in place. Edits this (public) button message via UPDATE_MESSAGE.
+      // Refresh Link: the View Online link wraps a signed Discord CDN URL that expires (~24h). Re-GET the
+      // archive's file message (Discord re-signs on fetch) and rewrite the link button's URL in place (UPDATE_MESSAGE).
       return ButtonHandlerFactory.create({
         id: 'archive_refresh',
         updateMessage: true,
@@ -39790,15 +39718,8 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id.startsWith('castlist2_nav_')) {
-      // Castlist navigation — migrated to factory (Phase 1, RaP 0935)
-      const { parseCastlistNavigation } = await import('./castlistDisplay.js');
-      const navContext = parseCastlistNavigation(custom_id);
-
-      // Disabled buttons — acknowledge silently without deferring
-      if (navContext.action.startsWith('disabled_')) {
-        return res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
-      }
-
+      const navContext = (await import('./castlistDisplay.js')).parseCastlistNavigation(custom_id); // Castlist navigation — factory (Phase 1, RaP 0935)
+      if (navContext.action.startsWith('disabled_')) return res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE }); // disabled buttons: silent ack without deferring
       return ButtonHandlerFactory.create({
         id: 'castlist2_nav',
         deferred: true,
