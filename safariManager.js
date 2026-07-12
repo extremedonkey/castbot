@@ -1740,6 +1740,17 @@ async function sendFollowUpMessages(token, responses) {
  * Execute all outcomes for an action (legacy name: "button" = action entity, "actions" = outcomes)
  */
 async function executeButtonActions(guildId, buttonId, userId, interaction, client, forceConditionsFail = false, triggerInput = null) {
+    // 6th param is polymorphic: boolean (legacy) or options object
+    // { forceConditionsFail, triggerInput, scheduledExecution }. scheduledExecution
+    // marks a call from the scheduler's execute_custom_action handler — it MUST
+    // bypass the schedule-trigger interception below or fired jobs re-arm forever.
+    let isScheduledExecution = false;
+    if (forceConditionsFail && typeof forceConditionsFail === 'object') {
+        const opts = forceConditionsFail;
+        isScheduledExecution = !!opts.scheduledExecution;
+        triggerInput = opts.triggerInput ?? triggerInput;
+        forceConditionsFail = !!opts.forceConditionsFail;
+    }
     try {
         console.log(`🚀 DEBUG: Executing outcomes for action ${buttonId} by user ${userId}`);
 
@@ -1785,7 +1796,16 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, clie
 
             console.log(`📊 Conditions evaluated to: ${conditionsResult} for action ${buttonId}`);
         }
-        
+
+        // Schedule-trigger interception: invoking a schedule action ARMS a timer
+        // instead of executing outcomes. Conditions gate arming (fail → fall through
+        // so fail outcomes run immediately). Fire-time calls carry scheduledExecution
+        // and skip this. Sits BEFORE usageCount++ so usage counts only at fire time.
+        if (button.trigger?.type === 'schedule' && !isScheduledExecution && conditionsResult && !forceConditionsFail) {
+            const { armScheduledAction } = await import('./scheduledActionManager.js');
+            return await armScheduledAction({ guildId, actionId: buttonId, userId, action: button, interaction, client });
+        }
+
         // Update usage count
         const safariData = await loadSafariContent();
         if (safariData[guildId]?.buttons?.[buttonId]) {

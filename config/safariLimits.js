@@ -44,7 +44,10 @@ export const SAFARI_LIMITS = {
 
   // Command system
   MAX_COMMAND_PREFIXES: 8,  // 8 × 3 components per prefix + 9 fixed = 33/40 (7 spare for expansion)
-  MAX_PHRASES_PER_ACTION: 8 // 8 × 3 components per phrase + 12 fixed = 36/40 (4 spare for expansion)
+  MAX_PHRASES_PER_ACTION: 8, // 8 × 3 components per phrase + 12 fixed = 36/40 (4 spare for expansion)
+
+  // Scheduled Action trigger — max concurrent armed timers per player per action ('stack' retrigger policy)
+  MAX_STACKED_SCHEDULES: 5
 };
 
 // Semantic aliases — use these in new code

@@ -5,7 +5,7 @@ import { SAFARI_LIMITS } from './config/safariLimits.js';
 import { loadEntity, updateEntity } from './entityManager.js';
 import { loadSafariContent, getCustomTerms } from './safariManager.js';
 import { scheduler } from './scheduler.js';
-import { formatPeriod, buildLimitOptions } from './utils/periodUtils.js';
+import { formatPeriod, formatCountdown, buildLimitOptions } from './utils/periodUtils.js';
 import { parseTextEmoji, resolveEmoji } from './utils/emojiUtils.js';
 
 /**
@@ -579,7 +579,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
               label: "Post to Channel",
               style: 2,
               emoji: { name: "#️⃣" },
-              disabled: triggerType === 'modal' || triggerType === 'schedule'
+              disabled: triggerType === 'modal' // schedule triggers ARE postable — clicking arms a timer
             },
             {
               type: 2,
@@ -1234,8 +1234,11 @@ function getTriggerDescription(trigger) {
       return `Input Label: *${inputLabel}*\nUse **{triggerInput}** in Display Text outcomes`;
     }
     case 'schedule': {
-      const channelId = trigger.schedule?.channelId;
-      return channelId ? `Channel: <#${channelId}>` : 'No channel selected';
+      const sched = trigger.schedule || {};
+      const delay = sched.delayMs ? formatPeriod(sched.delayMs) : '**Not set**';
+      const policy = sched.onRetrigger || 'block';
+      const channel = sched.channelId ? `<#${sched.channelId}>` : 'where triggered';
+      return `Delay: ${delay} • On retrigger: ${policy} • Results: ${channel}`;
     }
     default:
       return 'Unknown trigger type';
@@ -1683,27 +1686,96 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
   } else if (action.trigger?.type === 'schedule') {
     components.push({ type: 14 }); // Separator
 
-    // Get scheduled tasks for this specific action
-    const allScheduleJobs = scheduler.getJobs({ action: 'execute_custom_action' });
+    const sched = action.trigger.schedule || {};
+    const delayText = sched.delayMs ? `**${formatPeriod(sched.delayMs)}**` : '**Not set** — arming blocked until a delay is configured';
+    const policy = sched.onRetrigger || 'block';
+    const channelText = sched.channelId ? `<#${sched.channelId}>` : '*where triggered*';
+
+    // Config summary: "when this action is TRIGGERED, execute it in X"
+    components.push({
+      type: 10,
+      content: `### \`\`\`⏰ Schedule Configuration\`\`\`\n-# When this action is triggered, it executes after the delay — for the player who triggered it.\n⏱️ Delay: ${delayText}\n🔁 On retrigger: **${policy}**\n#️⃣ Results: ${channelText}`
+    });
+
+    // Results Channel Select
+    components.push({
+      type: 1, // Action Row
+      components: [{
+        type: 8, // Channel Select
+        custom_id: `ca_schedule_channel_${actionId}`,
+        placeholder: 'Results channel (default: where triggered)',
+        channel_types: [0, 5], // Text and Announcement channels
+        min_values: 1,
+        max_values: 1
+      }]
+    });
+
+    // Retrigger policy select
+    components.push({
+      type: 1, // Action Row
+      components: [{
+        type: 3, // String Select
+        custom_id: `ca_schedule_retrigger_${actionId}`,
+        placeholder: 'What happens if triggered while already armed?',
+        min_values: 1,
+        max_values: 1,
+        options: [
+          { label: 'Block', value: 'block', description: 'Show time remaining — one timer at a time', emoji: { name: '🚫' }, default: policy === 'block' },
+          { label: 'Replace', value: 'replace', description: 'Cancel the existing timer and start fresh', emoji: { name: '🔄' }, default: policy === 'replace' },
+          { label: 'Stack', value: 'stack', description: `Allow up to ${SAFARI_LIMITS.MAX_STACKED_SCHEDULES} concurrent timers`, emoji: { name: '📚' }, default: policy === 'stack' }
+        ]
+      }]
+    });
+
+    // Set Delay + Arm Now buttons
+    components.push({
+      type: 1, // Action Row
+      components: [
+        {
+          type: 2,
+          custom_id: `ca_schedule_delay_${actionId}`,
+          label: 'Set Delay',
+          style: 2,
+          emoji: { name: '⏱️' }
+        },
+        {
+          type: 2,
+          custom_id: `ca_schedule_arm_${actionId}`,
+          label: 'Arm Now',
+          style: 3, // Success
+          emoji: { name: '⏰' },
+          disabled: !sched.delayMs
+        }
+      ]
+    });
+
+    components.push({ type: 14 }); // Separator
+
+    // Armed timers for this action (guild-scoped)
+    const allScheduleJobs = scheduler.getJobs({ guildId, action: 'execute_custom_action' });
     const actionJobs = allScheduleJobs.filter(j => j.payload?.actionId === actionId);
 
-    // Display existing scheduled tasks
     if (actionJobs.length > 0) {
-      const taskLines = actionJobs.map((job, i) => {
-        const remaining = scheduler.calculateRemainingTime(job.executeAt);
-        const channelMention = job.channelId ? `<#${job.channelId}>` : 'Unknown channel';
-        return `**${i + 1}.** ${channelMention} — ${remaining} remaining`;
-      }).join('\n');
+      const shown = actionJobs.slice(0, 5);
+      const taskLines = shown.map((job, i) => {
+        const remaining = formatCountdown(job.executeAt - Date.now());
+        const channelMention = job.channelId ? `<#${job.channelId}>` : '*where triggered*';
+        const who = job.payload?.userId ? `<@${job.payload.userId}> — ` : '';
+        return `**${i + 1}.** ${who}${channelMention} — ${remaining} remaining`;
+      });
+      if (actionJobs.length > shown.length) {
+        taskLines.push(`-# +${actionJobs.length - shown.length} more — manage in Tools → Scheduled Jobs`);
+      }
       components.push({
         type: 10,
-        content: `### Scheduled Tasks\n${taskLines}`
+        content: `### Armed Timers (${actionJobs.length})\n${taskLines.join('\n')}`
       });
 
-      // Add cancel buttons for each task (max 5 per ActionRow)
-      const cancelButtons = actionJobs.slice(0, 5).map((job, i) => ({
+      // Cancel buttons (max 5 per ActionRow)
+      const cancelButtons = shown.map((job, i) => ({
         type: 2, // Button
         custom_id: `ca_schedule_cancel_${job.id}`,
-        label: `Cancel Task ${i + 1}`,
+        label: `Cancel ${i + 1}`,
         style: 4, // Danger
         emoji: { name: '🗑️' }
       }));
@@ -1714,49 +1786,9 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
     } else {
       components.push({
         type: 10,
-        content: `### Scheduled Tasks\n*No scheduled tasks for this action*`
+        content: `### Armed Timers\n*None — timers arm when the action is triggered (or via Arm Now)*`
       });
     }
-
-    components.push({ type: 14 }); // Separator
-
-    // "Create a New Scheduled Run" section
-    const savedChannelId = action.trigger.schedule?.channelId;
-    let createHeading = '### Create a New Scheduled Run';
-    if (savedChannelId) {
-      createHeading += `\nChannel: <#${savedChannelId}>`;
-    }
-    components.push({
-      type: 10,
-      content: createHeading
-    });
-
-    // Channel Select
-    components.push({
-      type: 1, // Action Row
-      components: [{
-        type: 8, // Channel Select
-        custom_id: `ca_schedule_channel_${actionId}`,
-        placeholder: 'Select channel to post scheduled task in...',
-        channel_types: [0, 5], // Text and Announcement channels
-        min_values: 1,
-        max_values: 1
-      }]
-    });
-
-    // "Schedule Task" green button
-    const scheduleDisabled = !savedChannelId;
-    components.push({
-      type: 1, // Action Row
-      components: [{
-        type: 2, // Button
-        custom_id: `ca_schedule_task_${actionId}`,
-        label: 'Schedule Task',
-        style: 3, // Success (Green)
-        emoji: { name: '⏰' },
-        disabled: scheduleDisabled
-      }]
-    });
   }
 
   // Add back button for all trigger types (except modal and button_modal which already have one)
@@ -1971,8 +2003,8 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
   const items = guildData.items || {};
   const isTriggerButton = action.trigger?.type === 'button' || action.trigger?.type === 'button_modal' || action.trigger?.type === 'button_input';
   const isTextCommand = action.trigger?.type === 'modal';
-  const isScheduled = action.trigger?.type === 'schedule';
-  const isNonPostable = isTextCommand || isScheduled;
+  // schedule triggers are postable/menu-visible — invoking one arms a timer
+  const isNonPostable = isTextCommand;
 
   // Migrate legacy showInInventory to menuVisibility if needed
   let menuVisibility = action.menuVisibility;

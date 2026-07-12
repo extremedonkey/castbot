@@ -1581,10 +1581,13 @@ scheduler.registerAction('execute_custom_action', async (payload, schedulerClien
       client: schedulerClient,
       member,
       user: { id: userId },
-      channel: { name: channel.name }
+      channel: { name: channel.name },
+      channelName: channel.name // safariManager location logging reads interaction.channelName
     };
 
-    const result = await executeButtonActions(guildId, actionId, userId, interactionData, schedulerClient);
+    // scheduledExecution bypasses the schedule-trigger interception in
+    // executeButtonActions — without it a fired job would re-arm itself forever.
+    const result = await executeButtonActions(guildId, actionId, userId, interactionData, schedulerClient, { scheduledExecution: true });
 
     // Check if result is an error/failure — don't post errors to the channel.
     // executeButtonActions sets EPHEMERAL on EVERY return path (success included,
@@ -1609,19 +1612,28 @@ scheduler.registerAction('execute_custom_action', async (payload, schedulerClien
     if (result?.components) {
       // Strip ephemeral flags from components — scheduled results are public
       const flags = result.flags ? (result.flags & ~InteractionResponseFlags.EPHEMERAL) : (1 << 15);
+      // IS_COMPONENTS_V2 forbids `content`, so the player attribution rides as a
+      // leading Text Display; allowed_mentions is required for webhook pings to fire.
       await fetch(webhook.url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           flags: flags | (1 << 15), // Ensure IS_COMPONENTS_V2
-          components: result.components
+          components: [
+            { type: 10, content: `-# ⏰ <@${userId}>'s scheduled **${actionName || 'action'}**` },
+            ...result.components
+          ],
+          allowed_mentions: { users: [userId] }
         })
       });
     } else if (result?.content) {
       await fetch(webhook.url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: result.content })
+        body: JSON.stringify({
+          content: `<@${userId}> ${result.content}`,
+          allowed_mentions: { users: [userId] }
+        })
       });
     }
 
@@ -25342,18 +25354,14 @@ Your server is now ready for Tycoons gameplay!`;
               }
               break;
             case 'schedule':
-              button.trigger.schedule = {
-                channelId: null
+              // Preserve existing schedule config on reselect (delay/policy/channel).
+              // Schedule actions ARE postable/menu-visible: invoking one arms a timer
+              // rather than executing (see executeButtonActions interception).
+              button.trigger.schedule = button.trigger.schedule || {
+                channelId: null,
+                delayMs: null,
+                onRetrigger: 'block'
               };
-              // Scheduled actions can't be posted as buttons or shown in menus — reset these
-              if (button.menuVisibility && button.menuVisibility !== 'none') {
-                console.log(`🔄 Resetting menuVisibility from '${button.menuVisibility}' to 'none' (incompatible with Schedule trigger)`);
-                button.menuVisibility = 'none';
-              }
-              if (button.postedChannels?.length > 0) {
-                console.log(`🔄 Clearing ${button.postedChannels.length} posted channels (incompatible with Schedule trigger)`);
-                button.postedChannels = [];
-              }
               break;
           }
 
@@ -41723,104 +41731,29 @@ Your server is now ready for Tycoons gameplay!`;
 
         console.log(`🔄 Refreshing castlist with updated placement`);
 
-        // 🔧 FIX: Rebuild castlist using FULL navigation context (Safari pattern)
-        const { buildCastlist2ResponseData, createNavigationState } = await import('./castlistV2.js');
+        // 🔧 FIX (pagination bug): rebuild tribes via the SAME path the display + navigation use.
+        // The previous hand-rolled rebuild iterated raw playerData.tribes (insertion order, no
+        // reorderTribes, castlistSettings undefined for virtual castlists), so the tribeIndex/
+        // tribePage encoded in the edit button mapped onto a DIFFERENTLY ORDERED tribe array —
+        // after paginating, saving a placement bounced the user to the wrong tribe/page.
+        const { getTribesForCastlist } = await import('./castlistDataAccess.js');
+        const { buildCastlist2ResponseData, createNavigationState, reorderTribes, determineDisplayScenario } = await import('./castlistV2.js');
 
-        // Fetch guild and rebuild tribes list (same as show_castlist2 handler)
         const guild = await client.guilds.fetch(guildId);
 
-        // 🔧 SMART CACHING: Only fetch if cache is incomplete (CastlistArchitecture.md pattern)
-        // Check if member cache is sufficiently populated (80% threshold)
-        const cacheRatio = guild.members.cache.size / guild.memberCount;
-        if (cacheRatio < 0.8) {
-          console.log(`[PLACEMENT] Cache incomplete (${guild.members.cache.size}/${guild.memberCount}), fetching members...`);
-          try {
-            const fetchStart = Date.now();
-            await guild.members.fetch({ timeout: 10000 }); // 10 second timeout
-            const fetchTime = Date.now() - fetchStart;
-            console.log(`[PLACEMENT] ✅ Fetched ${guild.members.cache.size} members in ${fetchTime}ms`);
-          } catch (fetchError) {
-            console.warn(`[PLACEMENT] ⚠️ Member fetch failed after 10s: ${fetchError.message}`);
-            console.warn(`[PLACEMENT] Continuing with partial cache (${guild.members.cache.size} members)`);
-          }
-        } else {
-          console.log(`[PLACEMENT] Cache sufficiently populated (${guild.members.cache.size}/${guild.memberCount}), skipping fetch`);
-        }
-
-        // Load castlist configuration
-        // NOTE: castlistEntity may be undefined for virtual castlists (like default before materialization)
-        const castlistEntity = playerData[guildId]?.castlistConfigs?.[castlistId];
-        const castlistName = castlistEntity?.name || (castlistId === 'default' ? 'Active Castlist' : castlistId);
-
-        // Build tribes array matching the original display
-        const allTribes = [];
-        const tribes = playerData[guildId]?.tribes || {};
-
-        // Validate tribes object for invalid keys
-        const invalidKeys = Object.keys(tribes).filter(key => !/^\d{17,19}$/.test(key));
-        if (invalidKeys.length > 0) {
-          console.error(`❌ [EDIT PLACEMENT] Found ${invalidKeys.length} invalid keys in tribes object:`, invalidKeys);
-        }
-
-        for (const [roleId, tribe] of Object.entries(tribes)) {
-          // Validate role ID is a Discord snowflake
-          if (!/^\d{17,19}$/.test(roleId)) {
-            console.warn(`⚠️ [EDIT PLACEMENT] Skipping invalid role ID: ${roleId}`);
-            continue;
-          }
-
-          // Check legacy 'castlist', transitional 'castlistId', and current 'castlistIds' array
-          const matchesCastlist = (
-            tribe.castlist === castlistEntity?.name ||              // Legacy name matching
-            tribe.castlistId === castlistId ||                      // Transitional ID matching
-            (tribe.castlistIds && Array.isArray(tribe.castlistIds) &&
-             tribe.castlistIds.includes(castlistId))                // CURRENT: Multi-castlist array
-            // REMOVED: Default fallback that included ALL tribes with no castlist fields
-          );
-
-          if (matchesCastlist) {
-            try {
-              const role = await guild.roles.fetch(roleId);
-              if (!role) {
-                console.log(`⚠️ Role ${roleId} not found, skipping tribe`);
-                continue;
-              }
-
-              const tribeMembers = Array.from(role.members.values());
-
-              allTribes.push({
-                ...tribe,
-                roleId,
-                name: role.name,
-                members: tribeMembers,
-                memberCount: tribeMembers.length,
-                castlistSettings: {
-                  ...castlistEntity?.settings,
-                  seasonId: castlistEntity?.seasonId  // FIX: seasonId is at TOP LEVEL of entity, not in settings
-                },
-                castlistId: castlistId,  // FIX: Use castlistId not castlistName
-                guildId: guildId
-              });
-            } catch (error) {
-              console.error(`❌ Error fetching role ${roleId}:`, error.message);
-              // Skip this tribe and continue with others
-              continue;
-            }
-          }
-        }
-
-        // Safety check: ensure we have tribes
-        if (allTribes.length === 0) {
+        // Same source + ordering as displayCastlist/handleCastlistNavigation.
+        // getTribesForCastlist handles member-cache population + resolved castlistSettings
+        // (sortStrategy/seasonId) internally; reorderTribes only reorders the 'default' castlist.
+        const validTribes = await getTribesForCastlist(guildId, castlistId, client);
+        if (validTribes.length === 0) {
           throw new Error('No valid tribes found for this castlist');
         }
+        const allTribes = reorderTribes(validTribes, userId, 'user-first', castlistId);
+        const scenario = determineDisplayScenario(allTribes);
 
-        // Determine scenario (same logic as show_castlist2)
-        const totalMembers = allTribes.reduce((sum, t) => sum + t.memberCount, 0);
-        const maxTribeSize = Math.max(...allTribes.map(t => t.memberCount));
-        let scenario = 'ideal';
-        if (maxTribeSize >= 9) {
-          scenario = 'multi-page';
-        }
+        // Castlist display name (castlistEntity may be undefined for virtual castlists like default)
+        const castlistEntity = playerData[guildId]?.castlistConfigs?.[castlistId];
+        const castlistName = castlistEntity?.name || (castlistId === 'default' ? 'Active Castlist' : castlistId);
 
         // Safety check: tribe index might be out of bounds if tribes were deleted
         const safeTribeIndex = Math.min(tribeIndex, allTribes.length - 1);

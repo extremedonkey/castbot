@@ -180,7 +180,8 @@ export const scheduler = {
       channelId = null,
       reminders = [],
       reminderAction = null,
-      description = ''
+      description = '',
+      key = null
     } = options;
 
     if (!actions.has(actionName)) {
@@ -199,6 +200,7 @@ export const scheduler = {
       reminders,
       reminderAction,
       description,
+      key,
       createdAt: Date.now()
     };
 
@@ -235,7 +237,20 @@ export const scheduler = {
     if (filter.action) {
       result = result.filter(j => j.action === filter.action);
     }
+    if (filter.key) {
+      result = result.filter(j => j.key === filter.key);
+    }
     return result.sort((a, b) => a.executeAt - b.executeAt);
+  },
+
+  /** Cancel every job carrying the given logical key. Returns count cancelled. */
+  cancelByKey(key) {
+    if (!key) return 0;
+    let cancelled = 0;
+    for (const job of Array.from(jobs.values())) {
+      if (job.key === key && this.cancel(job.id)) cancelled++;
+    }
+    return cancelled;
   },
 
   calculateRemainingTime(executeAt) {
