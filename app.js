@@ -25584,9 +25584,11 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id.startsWith('ca_arm_cancel_')) {
-      // Player cancels their OWN armed timer (from the "already armed" ephemeral)
+      // Player cancels their OWN armed timer (from the "already armed" ephemeral).
+      // Public by design: the handler enforces job ownership (or ManageRoles) inline.
       return ButtonHandlerFactory.create({
         id: 'ca_arm_cancel',
+        security: 'public',
         updateMessage: true,
         handler: async (context) => {
           const jobId = context.customId.replace('ca_arm_cancel_', '');
