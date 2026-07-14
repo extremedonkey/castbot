@@ -182,7 +182,8 @@
       "Bash(dangerously_skip)",
       "Read(//home/reece/.vscode-server/extensions/**)",
       "WebFetch(domain:marketplace.visualstudio.com)",
-      "PowerShell(git -C \"C:\\\\Users\\\\extre\\\\castbot\" add diceRoll.js)"
+      "PowerShell(git -C \"C:\\\\Users\\\\extre\\\\castbot\" add diceRoll.js)",
+      "Read(//mnt/c/Users/extre/**)"
     ],
     "deny": []
   },
