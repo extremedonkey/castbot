@@ -185,7 +185,8 @@
       "PowerShell(git -C \"C:\\\\Users\\\\extre\\\\castbot\" add diceRoll.js)",
       "Read(//mnt/c/Users/extre/**)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   },
   "hooks": {
     "PreToolUse": [
