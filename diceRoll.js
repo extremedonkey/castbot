@@ -10,6 +10,11 @@
 
 import { buildRichCardContainer, parseAccentColor } from './richCardUI.js';
 
+// ─── Utilities ───
+function pickRandomItem(array) {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
 // ─── D20 Constants ───
 const CRIT_SUCCESS = 20;  // Natural 20
 const CRIT_FAIL = 1;      // Natural 1
@@ -110,16 +115,16 @@ export function buildD20ResultDisplay(result, config = {}) {
   // Pick flavor text
   let flavorText, accent;
   if (isCritSuccess) {
-    flavorText = CRIT_DESCRIPTIONS[Math.floor(Math.random() * CRIT_DESCRIPTIONS.length)];
+    flavorText = pickRandomItem(CRIT_DESCRIPTIONS);
     accent = D20_ACCENT_CRIT;
   } else if (isCritFail) {
-    flavorText = FUMBLE_DESCRIPTIONS[Math.floor(Math.random() * FUMBLE_DESCRIPTIONS.length)];
+    flavorText = pickRandomItem(FUMBLE_DESCRIPTIONS);
     accent = D20_ACCENT_FUMBLE;
   } else if (passed) {
-    flavorText = PASS_DESCRIPTIONS[Math.floor(Math.random() * PASS_DESCRIPTIONS.length)];
+    flavorText = pickRandomItem(PASS_DESCRIPTIONS);
     accent = D20_ACCENT_PASS;
   } else {
-    flavorText = FAIL_DESCRIPTIONS[Math.floor(Math.random() * FAIL_DESCRIPTIONS.length)];
+    flavorText = pickRandomItem(FAIL_DESCRIPTIONS);
     accent = D20_ACCENT_FAIL;
   }
 
