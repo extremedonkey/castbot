@@ -1,0 +1,32 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# EOL policy — added for the Windows-native working tree (see
+# docs/02-implementation-wip/WindowsNativeDevWorkflow.md).
+#
+# The repo is historically MIXED-EOL in the index (~359 CRLF, ~224 LF files).
+# Deliberately NOT normalizing: that would rewrite hundreds of files across
+# three working trees (WSL laptop, castbot-blue box, Windows clone).
+#
+# Default: no EOL translation, ever. Checkouts are byte-identical to the
+# index on every platform, even if a clone has core.autocrlf=true.
+* -text
+
+# Anything that EXECUTES on Linux (WSL laptop, castbot-blue, prod Lightsail)
+# MUST stay LF — a CRLF shebang breaks bash. These pins make it impossible
+# to commit CRLF into these files from any machine.
+*.sh             text eol=lf
+scripts/hooks/*  text eol=lf
+.claude/hooks/*  text eol=lf
+# Cross-platform dev scripts embed remote-ssh heredoc-style blocks — keep LF
+# so the lines sent to the box never gain \r.
+scripts/dev/*.js text eol=lf
+.gitattributes   text eol=lf
+
+# Binaries (defensive; `* -text` already covers them)
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.pdf  binary
+*.pptx binary
+*.pem  binary

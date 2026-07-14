@@ -237,20 +237,36 @@ const dynamicPatterns = [
 ./scripts/dev/dev-restart.sh -skip-tests "emergency hotfix"
 ```
 
+**🪟 Windows-native session?** If you're in the Windows tree (`C:\Users\extre\castbot`), the restart command is `node scripts/dev/win-restart.js "msg"` instead — see the Windows-Native Mode section below.
+
 **🎯 The deploy targets — know exactly where your change goes:**
 | Target | When | How |
 |---|---|---|
-| **DEV** (local + ngrok) | Every `dev-restart.sh` (if tunnel up) | Automatic |
-| **TEST** (castbot-blue, always-on) | Every `dev-restart.sh` (default) | SSH pull + `pm2 restart castbot-pm` — skip only with `-dev-only` |
+| **DEV** (local + ngrok) | Every `dev-restart.sh` (if tunnel up) | Automatic. **WSL only — Windows mode has NO local bot** |
+| **TEST** (castbot-blue, always-on) | Every `dev-restart.sh` / `win-restart.js` (default) | SSH pull + `pm2 restart castbot-pm` — skip only with `-dev-only` (WSL) |
 | **PROD** (live users) | 🔴 NEVER here — separate, explicit, permissioned | `npm run deploy-remote-wsl` — **only on Reece's explicit word** |
 
 > **⚠️ Restart notification caveat:** the Discord `#💎deploy` notification is sent by `notify-restart.js` running **on the laptop (dev)**, so it always shows the **"DEVELOPMENT Server Restart!"** header even when test was restarted — the test deploy only appears in the "Deployed To: dev + test" line. The test box (`INSTANCE_ROLE=test`) does **not** yet announce its own restarts, so any test restart NOT triggered from the laptop (PM2 auto-restart, ProdWatchdog, crash) is silent. Known gap — fix is a test-side startup self-announce gated to `INSTANCE_ROLE==='test'`.
 
-**🛰️ Two working trees — sync ONLY through GitHub `main`:** the repo now lives in **two** places that both push to `main`: the **dev laptop** (`/home/reece/castbot`, WSL) and the **test box** (`/home/ubuntu/castbot` on castbot-blue, which is *also* the deploy target `dev-restart.sh` pulls into). GitHub is the only sync layer — see [RemoteDevTestBox RaP 0913](docs/01-RaP/0913_20260614_RemoteDevTestBox_Analysis.md).
-- **On the laptop** (your usual session) → `dev-restart.sh` as above. Unchanged.
+**🛰️ Three working trees — sync ONLY through GitHub `main`:** the repo now lives in **three** places that all push to `main`: the **dev laptop WSL tree** (`/home/reece/castbot`), the **Windows tree** (`C:\Users\extre\castbot`), and the **test box** (`/home/ubuntu/castbot` on castbot-blue, which is *also* the deploy target the restart scripts pull into). GitHub is the only sync layer — see [RemoteDevTestBox RaP 0913](docs/01-RaP/0913_20260614_RemoteDevTestBox_Analysis.md) and [WindowsNativeDevWorkflow](docs/02-implementation-wip/WindowsNativeDevWorkflow.md).
+- **On the laptop in WSL** (your usual session) → `dev-restart.sh` as above. Unchanged.
+- **On the laptop in Windows** (repo at `C:\Users\extre\castbot`) → `node scripts/dev/win-restart.js "msg"` — see Windows-Native Mode below.
 - **ON the test box** (you'll know: user `ubuntu`, repo at `/home/ubuntu/castbot`, `INSTANCE_ROLE=test`) → **YOU run `./scripts/dev/box-restart.sh "msg"` yourself** to finish — do NOT tell the user to deploy; deploying is your job, exactly like `dev-restart.sh` is on the laptop. It commits → `pull --rebase` → pushes → tests → `pm2 restart castbot-pm` (which IS the TEST deploy). **Never run `dev-restart.sh` on the box.**
-- **Iron rule:** never end a task with uncommitted changes in the test-box tree — always finish by running `box-restart.sh` *yourself*. The **Stop hook** (`.claude/hooks/check-box-clean.sh`) enforces this; `dev-restart.sh` auto-stashes a dirty box tree as a further backstop.
+- **Iron rule:** never end a task with uncommitted changes in ANY tree — always finish by running that tree's restart script *yourself*. The **Stop hook** (`.claude/hooks/check-box-clean.sh`) enforces this on the box; `dev-restart.sh`/`win-restart.js` auto-stash a dirty box tree as a further backstop.
 - **Box sessions must root in the repo:** the box's `~/.bashrc` auto-`cd`s into `/home/ubuntu/castbot` so `claude` loads this CLAUDE.md + the hooks. If you ever find yourself rooted at `/home/ubuntu` (no project context, hooks silent), `cd ~/castbot` and relaunch.
+
+### 🪟 Windows-Native Mode
+
+**You are in Windows mode when:** the repo path is `C:\Users\extre\castbot` (Git Bash shows `/c/Users/extre/castbot`), or `uname -s` returns `MINGW*`/`MSYS*`.
+
+**Iron rules for Windows mode:**
+1. **There is NO local bot here.** NEVER run `node app.js`, `nodemon`, or any `./scripts/dev/*.sh` script — those are WSL-only. Your dev bot is the always-on **CastBot Test** app on castbot-blue (`https://castbotblue.reecewagner.com`). Test your changes in Discord via CastBot Test.
+2. **Finish EVERY code change with** `node scripts/dev/win-restart.js "descriptive commit message"` — it commits → rebases → pushes → runs tests → deploys to TEST → notifies Discord. Same pipeline as `dev-restart.sh` minus the local-bot stages.
+3. **Logs:** `npm run logs-test` (there is no `/tmp/castbot-dev.log` here). **Status:** `node scripts/dev/win-status.js`.
+4. **Screenshots** live at `C:\Users\extre\OneDrive\Pictures\Screenshots 1` (not `/mnt/c/...`).
+5. PROD rules are identical: never deploy without Reece's explicit word.
+
+Setup, verification, and rollback: [docs/02-implementation-wip/WindowsNativeDevWorkflow.md](docs/02-implementation-wip/WindowsNativeDevWorkflow.md)
 
 **⚠️ This is NOT optional — run it after EVERY code change** (button/modal/UI handlers, config, data-structure changes, new features, bug fixes, refactors, ANY `.js` change).
 
@@ -602,6 +618,7 @@ git log --follow --format="%ai %s" -- "filename.md" | tail -1
 ### Image Access (WSL)
 - Screenshots: `/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1`
 - External: `curl -s "URL" -o /tmp/img.png && Read /tmp/img.png`
+- 🪟 Windows-native sessions: same screenshots at `C:\Users\extre\OneDrive\Pictures\Screenshots 1`
 
 ### Workflow Requirements
 - **Definition of Done**: [docs/workflow/DefinitionOfDone.md](docs/workflow/DefinitionOfDone.md)

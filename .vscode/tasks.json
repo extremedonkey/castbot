@@ -2,30 +2,14 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Start Ngrok",
+            "label": "Win Restart (commit+push+deploy TEST)",
             "type": "shell",
-            "command": "ngrok http 3000",
+            "command": "node scripts/dev/win-restart.js \"${input:commitMessage}\"",
             "problemMatcher": [],
-            "presentation": {
-                "reveal": "always",
-                "panel": "dedicated",
-                "clear": true,
-                "showReuseMessage": false,
-                "focus": true,
-                "group": "CastBot",
-                "echo": true,
-                "close": false
+            "group": {
+                "kind": "build",
+                "isDefault": true
             },
-            "icon": {
-                "id": "globe",
-                "color": "terminal.ansiRed"
-            }
-        },
-        {
-            "label": "Run Start Script",
-            "type": "shell",
-            "command": ".\\start-and-push.ps1",
-            "problemMatcher": [],
             "presentation": {
                 "reveal": "always",
                 "panel": "dedicated",
@@ -42,42 +26,46 @@
             }
         },
         {
-            "label": "Open All Terminals",
-            "dependsOrder": "sequence",
-            "dependsOn": [
-                "Open General Terminal",
-                "Start Ngrok", 
-                "Run Start Script"
-            ],
+            "label": "Win Status",
+            "type": "shell",
+            "command": "node scripts/dev/win-status.js",
             "problemMatcher": [],
-            "group": {
-                "kind": "build",
-                "isDefault": true
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared",
+                "showReuseMessage": false,
+                "group": "CastBot",
+                "echo": true
             },
             "icon": {
-                "id": "tools",
+                "id": "pulse",
                 "color": "terminal.ansiBlue"
             }
         },
         {
-            "label": "Open General Terminal",
+            "label": "Test Box Logs",
             "type": "shell",
-            "command": "echo 'General Terminal Ready'",
+            "command": "npm run logs-test",
             "problemMatcher": [],
             "presentation": {
                 "reveal": "always",
                 "panel": "dedicated",
-                "clear": true,
                 "showReuseMessage": false,
-                "focus": true,
                 "group": "CastBot",
-                "echo": true,
-                "close": false
+                "echo": true
             },
             "icon": {
-                "id": "terminal-powershell",
+                "id": "output",
                 "color": "terminal.ansiYellow"
             }
+        }
+    ],
+    "inputs": [
+        {
+            "id": "commitMessage",
+            "type": "promptString",
+            "description": "Commit message (descriptive — what changed?)",
+            "default": "Dev checkpoint"
         }
     ]
 }

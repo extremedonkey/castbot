@@ -34,6 +34,8 @@
     "monitor-prod-alerts": "node scripts/monitoring/prod-health-monitor.js --alerts",
     "monitor-prod-cache": "node scripts/monitoring/prod-health-monitor.js --cache",
     "ssh-test": "node scripts/deployment/ssh-test-wsl.js",
+    "win:restart": "node scripts/dev/win-restart.js",
+    "win:status": "node scripts/dev/win-status.js",
     "analytics": "node src/analytics/analytics.js",
     "live-analytics": "node src/analytics/liveAnalytics.js"
   },

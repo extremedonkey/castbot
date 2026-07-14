@@ -1,0 +1,268 @@
+{
+  "_readme": {
+    "what": "Faithful export of CastBot's Discord menus for recreating them in a React Discord-prototyping webapp. Payloads below are the EXACT JSON structures CastBot sends to Discord's interaction API (Components V2), captured from the real builder functions (app.js createProductionMenuInterface, playerManagement.js createPlayerManagementUI).",
+    "format": "Discord Components V2. Every menu is a message with flags including 1<<15 (IS_COMPONENTS_V2) and usually 1<<6 (EPHEMERAL). The message body is a single 'Container' component (type 17) holding everything.",
+    "howToRender": [
+      "Render each menu as a Discord message card: dark chat background, with the Container drawn as a rounded box with a 4px left accent bar colored `accent_color` (integer RGB, e.g. 3447003 = #3498DB).",
+      "Walk `components` in order, top to bottom. Each entry is one block.",
+      "type 10 (Text Display): render `content` as Discord markdown. '## ' = large heading, '### ' = small heading, '-# ' = tiny grey caption text, '> ' = blockquote, **bold**, and triple-backtick spans render as inline code blocks (CastBot uses '### ```📍 Section Name```' as its standard section-heading style — visually a small heading containing a code-block pill).",
+      "type 14 (Separator): thin horizontal divider line with vertical padding.",
+      "type 1 (Action Row): horizontal flex row of up to 5 buttons OR exactly 1 select menu.",
+      "type 2 (Button): styles → 1 Primary (blurple #5865F2), 2 Secondary (grey #4E5058), 3 Success (green #248046), 4 Danger (red #DA373C), 5 Link. `emoji.name` is a unicode emoji rendered left of `label`. `disabled: true` = 50% opacity, not clickable.",
+      "type 3 (String Select): full-width dropdown with `placeholder`; options have label/value/description/emoji.",
+      "type 5 (User Select): full-width dropdown that picks a server member; render like a string select with a placeholder.",
+      "type 9 (Section): a row with `components` (1-3 Text Displays) on the LEFT and a single `accessory` on the RIGHT. Accessory is either a Button (type 2) or a Thumbnail (type 11, renders `media.url` as a ~80px rounded-corner image).",
+      "Custom Discord emoji like '<:castbot_logo:123...>' can't render outside Discord — substitute the provided `fallback` emoji.",
+      "Active-tab pattern: in nav rows, the currently-active button is style 1 (Primary/blurple) and the rest are style 2 (grey). Active buttons stay clickable, never disabled."
+    ],
+    "discordDarkThemeColors": {
+      "chatBackground": "#313338",
+      "containerBackground": "#2B2D31",
+      "containerBorder": "#1E1F22",
+      "textPrimary": "#DBDEE1",
+      "textMuted": "#949BA4",
+      "blurple": "#5865F2",
+      "buttonSecondary": "#4E5058",
+      "buttonDanger": "#DA373C",
+      "buttonSuccess": "#248046",
+      "codeBlockBackground": "#1E1F22"
+    },
+    "componentTypeLegend": {
+      "1": "Action Row", "2": "Button", "3": "String Select", "5": "User Select",
+      "9": "Section (text + right-side accessory)", "10": "Text Display (markdown)",
+      "11": "Thumbnail (Section accessory image)", "14": "Separator", "17": "Container (top-level wrapper)"
+    }
+  },
+
+  "menus": {
+
+    "production_menu": {
+      "priority": "MVP",
+      "name": "Production Menu",
+      "trigger": "/menu slash command (admin users)",
+      "ephemeral": true,
+      "notes": "The main admin hub. The 'Post Castlists' row is dynamic per-server: always starts with Post Castlist + Compact Castlist, then up to 3 custom castlist buttons (grey, custom emoji). Sample custom castlists included below. The Setup button is RED (style 4) until server onboarding is complete, then grey (style 2).",
+      "payload": {
+        "flags": 33792,
+        "components": [
+          {
+            "type": 17,
+            "accent_color": 3447003,
+            "components": [
+              {
+                "type": 9,
+                "components": [
+                  { "type": 10, "content": "## <:castbot_logo:fallback🤖> CastBot | Production Menu" }
+                ],
+                "accessory": { "type": 2, "custom_id": "prod_player_menu", "label": "Player Menu", "style": 2, "emoji": { "name": "🪪" } }
+              },
+              { "type": 14 },
+              {
+                "type": 9,
+                "components": [
+                  { "type": 10, "content": "> **📅 Season Apps** has been moved to Season Manager below" }
+                ],
+                "accessory": { "type": 2, "custom_id": "dm_view_tips", "label": "New Features", "style": 2, "emoji": { "name": "✨" } }
+              },
+              { "type": 10, "content": "### ```📍 Post Castlists```" },
+              {
+                "type": 1,
+                "components": [
+                  { "type": 2, "custom_id": "show_castlist2_default", "label": "Post Castlist", "style": 1, "emoji": { "name": "📃" } },
+                  { "type": 2, "custom_id": "compact_castlist_default", "label": "Compact Castlist", "style": 2, "emoji": { "name": "🍒" } },
+                  { "type": 2, "custom_id": "show_castlist2_example1", "label": "Winners", "style": 2, "emoji": { "name": "🏆" } },
+                  { "type": 2, "custom_id": "show_castlist2_example2", "label": "Jury", "style": 2, "emoji": { "name": "⚖️" } },
+                  { "type": 2, "custom_id": "show_castlist2_example3", "label": "S2 Applicants", "style": 2, "emoji": { "name": "📝" } }
+                ]
+              },
+              { "type": 14 },
+              { "type": 10, "content": "### ```✏️ Castlists, Applications and Season Management```" },
+              {
+                "type": 1,
+                "components": [
+                  { "type": 2, "custom_id": "castlist_hub_main", "label": "Castlist Manager", "style": 1, "emoji": { "name": "📋" } },
+                  { "type": 2, "custom_id": "season_manager", "label": "Season Manager", "style": 2, "emoji": { "name": "📅" } },
+                  { "type": 2, "custom_id": "admin_manage_player", "label": "Players", "style": 2, "emoji": { "name": "🧑‍🤝‍🧑" } },
+                  { "type": 2, "custom_id": "challenge_screen", "label": "Challenges", "style": 2, "emoji": { "name": "🏃‍♀️" } }
+                ]
+              },
+              { "type": 14 },
+              { "type": 10, "content": "### ```🦁 Idol Hunts, Challenges and Safari```" },
+              {
+                "type": 1,
+                "components": [
+                  { "type": 2, "custom_id": "safari_store_manage_items", "label": "Stores", "style": 1, "emoji": { "name": "🏪" } },
+                  { "type": 2, "custom_id": "safari_manage_items", "label": "Items", "style": 2, "emoji": { "name": "📦" } },
+                  { "type": 2, "custom_id": "safari_manage_currency", "label": "Currency", "style": 2, "emoji": { "name": "💰" } },
+                  { "type": 2, "custom_id": "safari_action_editor", "label": "Actions", "style": 2, "emoji": { "name": "⚡" } },
+                  { "type": 2, "custom_id": "safari_map_explorer", "label": "Map", "style": 2, "emoji": { "name": "🗺️" } }
+                ]
+              },
+              { "type": 14 },
+              { "type": 10, "content": "### ```💎 Advanced```" },
+              {
+                "type": 1,
+                "components": [
+                  { "type": 2, "custom_id": "prod_donate", "label": "Donate", "style": 2, "emoji": { "name": "☕" } },
+                  { "type": 2, "custom_id": "castbot_settings", "label": "Settings", "style": 2, "emoji": { "name": "⚙️" } },
+                  { "type": 2, "custom_id": "castbot_tools", "label": "Tools", "style": 2, "emoji": { "name": "🪛" } },
+                  { "type": 2, "custom_id": "prod_setup_wizard", "label": "Setup", "style": 2, "emoji": { "name": "🧙" }, "_note": "style 4 (red) until server setup complete, then style 2 (grey)" }
+                ]
+              },
+              { "type": 14 },
+              { "type": 10, "content": "-# Made by Reece (@extremedonkey)" }
+            ]
+          }
+        ]
+      }
+    },
+
+    "player_menu": {
+      "priority": "MVP",
+      "name": "Player Menu",
+      "trigger": "/menu slash command (non-admin users), or 'Player Menu' accessory button on Production Menu",
+      "ephemeral": true,
+      "notes": "Player-facing self-service menu. Buttons in the section rows are conditional: Safari row (currency/inventory/map/etc.) only shows once the player has Safari activity; this payload shows a fully-unlocked player. Clicking a category button turns it blurple (style 1 = active) and swaps the select menu at the bottom ('hot-swap select') to that category's options — the select shown here is the Pronouns select as an example. The player card is a Section with the user's avatar as a Thumbnail accessory.",
+      "payload": {
+        "flags": 33792,
+        "components": [
+          {
+            "type": 17,
+            "accent_color": 3447003,
+            "components": [
+              { "type": 10, "content": "## CastBot | Player Menu" },
+              { "type": 14 },
+              {
+                "type": 9,
+                "components": [
+                  { "type": 10, "content": "**ExamplePlayer**\n💜 She/Her\n🌍 PST (04:20 PM)\n🎂 24\n🪙 150 • 🧰 3 • 📍 C3 • ⚡ 8/10\n<@&role:Heroes Tribe>" }
+                ],
+                "accessory": { "type": 11, "media": { "url": "https://cdn.discordapp.com/embed/avatars/1.png" } }
+              },
+              { "type": 14 },
+              { "type": 10, "content": "### ```✏️ Castlists & Profile```" },
+              {
+                "type": 1,
+                "components": [
+                  { "type": 2, "custom_id": "player_set_castlists", "label": "Castlists", "style": 2, "emoji": { "name": "📋" } },
+                  { "type": 2, "custom_id": "player_set_pronouns", "label": "Pronouns", "style": 1, "emoji": { "name": "💜" }, "_note": "style 1 because 'pronouns' is the active category in this example" },
+                  { "type": 2, "custom_id": "player_set_timezone", "label": "Timezone", "style": 2, "emoji": { "name": "🌍" } },
+                  { "type": 2, "custom_id": "player_set_age", "label": "Age", "style": 2, "emoji": { "name": "🎂" } }
+                ]
+              },
+              { "type": 10, "content": "### ```🦁 Idol Hunts, Challenges and Safari```" },
+              {
+                "type": 1,
+                "components": [
+                  { "type": 2, "custom_id": "player_set_currency", "label": "Coins", "style": 2, "emoji": { "name": "🪙" }, "_note": "label/emoji are per-server custom terms; defaults: Currency 🪙" },
+                  { "type": 2, "custom_id": "player_set_inventory", "label": "Inventory", "style": 2, "emoji": { "name": "🧰" } },
+                  { "type": 2, "custom_id": "player_set_map", "label": "Safari Map", "style": 2, "emoji": { "name": "🗺️" } },
+                  { "type": 2, "custom_id": "player_set_challenges", "label": "Challenges", "style": 2, "emoji": { "name": "🏃" } },
+                  { "type": 2, "custom_id": "player_set_crafting", "label": "Crafting", "style": 2, "emoji": { "name": "🛠️" } }
+                ]
+              },
+              {
+                "type": 1,
+                "components": [
+                  { "type": 2, "custom_id": "player_set_actions", "label": "Actions", "style": 2, "emoji": { "name": "⚡" } },
+                  { "type": 2, "custom_id": "player_set_stores", "label": "Stores", "style": 2, "emoji": { "name": "🏪" } }
+                ]
+              },
+              { "type": 10, "content": "### ```💎 Advanced```" },
+              {
+                "type": 1,
+                "components": [
+                  { "type": 2, "custom_id": "player_set_attributes", "label": "Stats", "style": 2, "emoji": { "name": "📊" } },
+                  { "type": 2, "custom_id": "player_enter_command_global", "label": "Commands", "style": 2, "emoji": { "name": "🕹️" } }
+                ]
+              },
+              { "type": 14 },
+              {
+                "type": 1,
+                "components": [
+                  {
+                    "type": 3,
+                    "custom_id": "player_select_pronouns",
+                    "placeholder": "Select your pronouns",
+                    "min_values": 0,
+                    "max_values": 3,
+                    "options": [
+                      { "label": "She/Her", "value": "role_1", "emoji": { "name": "💜" } },
+                      { "label": "He/Him", "value": "role_2", "emoji": { "name": "💜" } },
+                      { "label": "They/Them", "value": "role_3", "emoji": { "name": "💜" } }
+                    ],
+                    "_note": "This is the hot-swap select — its options change based on which category button is active (pronouns shown here). For Timezone it lists timezone roles, for Castlists it lists castlists, etc."
+                  }
+                ]
+              },
+              { "type": 14 },
+              {
+                "type": 1,
+                "components": [
+                  { "type": 2, "custom_id": "player_view_logs", "label": "Logs", "style": 2, "emoji": { "name": "📜" } },
+                  { "type": 2, "custom_id": "safari_guide_0", "label": "Guide", "style": 2, "emoji": { "name": "🦁" } }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+
+    "player_manager_admin": {
+      "priority": "nice-to-have",
+      "name": "Player Manager (admin variant of Player Menu)",
+      "trigger": "Production Menu → 'Players' button (custom_id admin_manage_player)",
+      "ephemeral": true,
+      "notes": "Same layout engine as player_menu with three differences: (1) a User Select at the top to pick which player to manage, (2) buttons use admin_set_* custom_ids and are DISABLED until a player is selected, (3) extra buttons: 'Vanity Roles' 🎭 in the profile row, 'Stamina' ⚡ in the Safari row, and a '⬅ Menu' back button in the footer next to Logs.",
+      "payloadDelta": {
+        "titleTextDisplay": "## CastBot | Player Manager",
+        "userSelectRow": {
+          "type": 1,
+          "components": [
+            { "type": 5, "custom_id": "admin_player_select_update", "placeholder": "Select a player to manage", "min_values": 0, "max_values": 1 }
+          ],
+          "_position": "directly under the title, after a separator"
+        },
+        "extraButtons": [
+          { "row": "✏️ Castlists & Profile (5th button)", "button": { "type": 2, "custom_id": "admin_manage_vanity_123456789", "label": "Vanity Roles", "style": 2, "emoji": { "name": "🎭" } } },
+          { "row": "🦁 Safari (4th button, between Safari Map and Challenges)", "button": { "type": 2, "custom_id": "admin_set_stamina_123456789", "label": "Stamina", "style": 2, "emoji": { "name": "⚡" } } }
+        ],
+        "footerRow": {
+          "type": 1,
+          "components": [
+            { "type": 2, "custom_id": "prod_menu_back", "label": "⬅ Menu", "style": 2 },
+            { "type": 2, "custom_id": "admin_view_logs_123456789", "label": "Logs", "style": 2, "emoji": { "name": "📜" } }
+          ]
+        }
+      }
+    },
+
+    "setup_wizard": {
+      "priority": "nice-to-have",
+      "name": "Setup Wizard (first-run replacement of Production Menu)",
+      "trigger": "Shown INSTEAD of production_menu when a server hasn't completed setup",
+      "notes": "Onboarding checklist card: welcome text plus step buttons that turn into green done-ticks as steps complete (setup → create castlist → post castlist → create season). Not exported in full — ask for a follow-up dump if needed."
+    }
+  },
+
+  "navigation": {
+    "_note": "What each Production Menu button opens, so the prototype can wire click-through navigation.",
+    "prod_player_menu": "player_menu (as the admin's own profile)",
+    "show_castlist2_default": "Posts the castlist display (public message with player cards) — separate screen",
+    "compact_castlist_default": "Generates a PNG image castlist",
+    "castlist_hub_main": "Castlist Manager submenu (create/edit castlists, sort strategy, placements)",
+    "season_manager": "Season Manager submenu — active-tab nav row: 📝 Season Apps | 🗓️ Planner | 🏆 Casting | ✏️ Edit",
+    "admin_manage_player": "player_manager_admin",
+    "challenge_screen": "Challenges submenu (rounds/challenge config)",
+    "safari_store_manage_items": "Store management submenu",
+    "safari_manage_items": "Item management submenu (Entity Edit framework)",
+    "safari_manage_currency": "Currency management submenu",
+    "safari_action_editor": "Action Editor (triggers/outcomes/conditions)",
+    "safari_map_explorer": "Map Explorer (grid map admin)",
+    "prod_donate": "Donate info card",
+    "castbot_settings": "Settings submenu",
+    "castbot_tools": "Tools submenu",
+    "prod_setup_wizard": "setup_wizard"
+  }
+}
