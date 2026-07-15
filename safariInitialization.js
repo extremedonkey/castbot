@@ -6,6 +6,7 @@
 
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
+import { DEFAULT_LOG_TYPES } from './safariLogger.js';
 
 /**
  * Default Safari configuration template
@@ -42,17 +43,8 @@ const DEFAULT_SAFARI_STRUCTURE = {
         enabled: false,
         logChannelId: null,
         productionRoleId: null,
-        logTypes: {
-            whispers: true,
-            itemPickups: true,
-            currencyChanges: true,
-            storeTransactions: true,
-            buttonActions: true,
-            mapMovement: true,
-            attacks: true,
-            customActions: true,
-            testMessages: true
-        },
+        // Canonical defaults — was an inline copy that had drifted (missing staminaChanges)
+        logTypes: { ...DEFAULT_LOG_TYPES },
         formatting: {
             accentColor: 0x9B59B6,
             useEmbeds: false,

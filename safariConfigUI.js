@@ -136,7 +136,7 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
             type: 1,
             components: [
                 { type: 2, custom_id: 'castbot_roles_security', label: 'Roles & Security', style: 2, emoji: { name: '🔐' } },
-                { type: 2, custom_id: 'safari_configure_log', label: 'Logs', style: 2, emoji: { name: '📊' } },
+                { type: 2, custom_id: 'safari_configure_log', label: 'Logs', style: 2, emoji: { name: '🪵' } },
                 { type: 2, custom_id: 'safari_export_data', label: 'Export', style: 2, emoji: { name: '📤' } },
                 { type: 2, custom_id: 'safari_import_data', label: 'Import', style: 2, emoji: { name: '📥' } },
                 { type: 2, custom_id: 'safari_config_reset_defaults', label: 'Reset', style: 4, emoji: { name: '🔄' } }
@@ -462,5 +462,158 @@ export function createResetConfirmationUI() {
     return {
         flags: (1 << 15), // IS_COMPONENTS_V2 flag
         components: [resetContainer]
+    };
+}
+
+/**
+ * Build the CastBot Logs (Safari Log) configuration screen.
+ * SINGLE source for this screen — used by safari_configure_log, safari_log_toggle,
+ * safari_log_channel_set and safari_log_types_set (previously four drifting copies
+ * in app.js; the re-render copies had lost the accent color).
+ *
+ * @param {Object} logSettings - safariLogSettings for the guild (may be {}/null)
+ * @param {Object} opts
+ * @param {boolean} opts.whispersEnabled - safariConfig.whispersEnabled !== false
+ * @returns {Object} Components V2 response ({ flags, components })
+ */
+export function buildSafariLogConfigUI(logSettings, { whispersEnabled = true } = {}) {
+    const settings = logSettings || {};
+    const enabled = !!settings.enabled;
+
+    // Status display
+    let statusText = `## 🪵 CastBot Logs\n\n`;
+    statusText += `-# Logs activity from Idol Hunts, Challenges and Safari features — currency, items, stores, movement and more.\n\n`;
+    statusText += `**Status:** ${enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
+    statusText += `**Log Channel:** ${settings.logChannelId ? `<#${settings.logChannelId}>` : 'Not Set'}\n`;
+    statusText += `**Whispers:** ${whispersEnabled ? '🟢 On' : '🔴 Off'}`;
+    statusText += ` · **Whisper Log:** ${settings.whisperLogChannelId ? `<#${settings.whisperLogChannelId}>` : 'Not Set'}\n\n`;
+
+    if (enabled && settings.logChannelId) {
+        // Only the 9 visible/selectable types — hidden types (testMessages) never listed
+        const logTypeNames = {
+            whispers: '🤫 Whispers',
+            itemPickups: '🧰 Item Pickups',
+            currencyChanges: '🪙 Currency Changes',
+            storeTransactions: '🛒 Store Purchases',
+            buttonActions: '🎯 Safari Actions',
+            mapMovement: '🗺️ Map Movement',
+            attacks: '⚔️ Attack Queue',
+            customActions: '⌨️ Custom Actions',
+            staminaChanges: '⚡ Stamina Changes'
+        };
+        // Missing keys default to enabled (mergeLogTypes semantics, inlined to keep this pure/sync)
+        const logTypes = settings.logTypes || {};
+        const activeLines = Object.keys(logTypeNames)
+            .filter(type => logTypes[type] !== false)
+            .map(type => `• ${logTypeNames[type]}`);
+        if (activeLines.length > 0) {
+            statusText += `**Active Log Types:**\n${activeLines.join('\n')}\n`;
+        }
+    }
+
+    const container = {
+        type: 17, // Container
+        accent_color: 0x9B59B6, // Purple accent — always (re-renders used to drop it)
+        components: [
+            { type: 10, content: statusText },
+            { type: 14 }, // Separator
+            {
+                type: 1, // Action Row — toggle
+                components: [{
+                    type: 2,
+                    custom_id: 'safari_log_toggle',
+                    label: enabled ? 'Disable Safari Log' : 'Enable Safari Log',
+                    style: enabled ? 4 : 3,
+                    emoji: { name: enabled ? '🔴' : '🟢' }
+                }]
+            },
+            { type: 14 }, // Separator
+            {
+                type: 1, // Action Row — config buttons
+                components: [
+                    { type: 2, custom_id: 'safari_log_channel_select', label: 'Set Log Channel', style: 2, emoji: { name: '📝' }, disabled: !enabled },
+                    { type: 2, custom_id: 'safari_log_types_config', label: 'Configure Log Types', style: 2, emoji: { name: '⚙️' }, disabled: !enabled },
+                    { type: 2, custom_id: 'safari_log_test', label: 'Send Test Message', style: 2, emoji: { name: '🧪' }, disabled: !enabled || !settings.logChannelId }
+                ]
+            },
+            { type: 14 }, // Separator
+            {
+                type: 1, // Action Row — back (far-left) + Whispers (bottom-right)
+                components: [
+                    { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2, emoji: { name: '⚙️' } },
+                    { type: 2, custom_id: 'safari_whisper_log_config', label: 'Whispers', style: 2, emoji: { name: '🤫' } }
+                ]
+            }
+        ]
+    };
+
+    return {
+        flags: (1 << 15), // IS_COMPONENTS_V2
+        components: [container]
+    };
+}
+
+/**
+ * Build the Whisper Settings screen (opened from CastBot Logs → Whispers).
+ * Whisper-only strip-down of the Logs screen: feature toggle + dedicated
+ * spectator-safe whisper log channel (receives ONLY whispers, works even when
+ * the main log is disabled — dual delivery when both are configured).
+ *
+ * @param {Object} opts
+ * @param {boolean} opts.whispersEnabled - whisper FEATURE on/off (default ON)
+ * @param {string|null} opts.whisperLogChannelId - dedicated whisper log channel
+ * @param {boolean} opts.mainLogWhispersActive - main log currently also posts whispers
+ * @returns {Object} Components V2 response ({ flags, components })
+ */
+export function buildWhisperLogConfigUI({ whispersEnabled = true, whisperLogChannelId = null, mainLogWhispersActive = false } = {}) {
+    let statusText = `## 🤫 Whisper Settings\n\n`;
+    statusText += `-# Player-to-player whispers. The dedicated Whisper Log only ever receives whispers — safe to show spectators.\n\n`;
+    statusText += `**Whispers:** ${whispersEnabled ? '🟢 On' : '🔴 Off'}\n`;
+    statusText += `**Whisper Log Channel:** ${whisperLogChannelId ? `<#${whisperLogChannelId}>` : 'Not Set'}\n`;
+    statusText += `-# Main CastBot Log is ${mainLogWhispersActive ? 'also posting whispers — whispers deliver to both channels' : 'not posting whispers'}.`;
+
+    const container = {
+        type: 17, // Container
+        accent_color: 0x9B59B6, // Purple — matches the Logs screen family
+        components: [
+            { type: 10, content: statusText },
+            { type: 14 }, // Separator
+            {
+                type: 1, // Action Row — whisper FEATURE toggle (default ON)
+                components: [{
+                    type: 2,
+                    custom_id: 'safari_whispers_toggle',
+                    label: whispersEnabled ? 'Turn Whispers Off' : 'Turn Whispers On',
+                    style: whispersEnabled ? 4 : 3,
+                    emoji: { name: whispersEnabled ? '🔴' : '🟢' }
+                }]
+            },
+            { type: 14 }, // Separator
+            {
+                type: 1, // Action Row — inline channel select (submit empty to clear/disable)
+                components: [{
+                    type: 8, // Channel Select
+                    custom_id: 'whisper_log_channel_set',
+                    channel_types: [0], // text channels
+                    min_values: 0,
+                    max_values: 1,
+                    placeholder: 'Select whisper log channel (clear to disable)...',
+                    default_values: whisperLogChannelId ? [{ id: whisperLogChannelId, type: 'channel' }] : []
+                }]
+            },
+            { type: 14 }, // Separator
+            {
+                type: 1, // Action Row — back + test
+                components: [
+                    { type: 2, custom_id: 'safari_configure_log', label: '← Logs', style: 2, emoji: { name: '🪵' } },
+                    { type: 2, custom_id: 'safari_whisper_log_test', label: 'Test', style: 2, emoji: { name: '🧪' }, disabled: !whisperLogChannelId }
+                ]
+            }
+        ]
+    };
+
+    return {
+        flags: (1 << 15), // IS_COMPONENTS_V2
+        components: [container]
     };
 }

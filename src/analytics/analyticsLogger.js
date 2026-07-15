@@ -965,12 +965,7 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
     // Check if Safari logging is enabled for this guild
     const logSettings = safariData[guildId]?.safariLogSettings;
     console.log(`🔍 Safari Log Debug: Log settings:`, JSON.stringify(logSettings, null, 2));
-    
-    if (!logSettings?.enabled || !logSettings?.logChannelId) {
-      console.log(`🔍 Safari Log Debug: Safari logging disabled or no channel set for guild ${guildId}`);
-      return;
-    }
-    
+
     // Check if this specific log type is enabled
     const logTypeMap = {
       'SAFARI_WHISPER': 'whispers',
@@ -984,33 +979,47 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
       'SAFARI_ITEM_USE': 'itemPickups',
       'SAFARI_TEST': 'testMessages'
     };
-    
+
     const logType = logTypeMap[action];
-    console.log(`🔍 Safari Log Debug: Action ${action} maps to logType ${logType}, enabled: ${logSettings.logTypes?.[logType]}`);
-    
-    if (!logType || !logSettings.logTypes?.[logType]) {
-      console.log(`🔍 Safari Log Debug: Log type ${logType} not enabled for guild ${guildId}`);
+
+    // Resolve target channels: main log (enabled + channel + type on) and/or the
+    // dedicated whisper log (SAFARI_WHISPER only, independent of the main gates).
+    // Dynamic import — safariLogger.js statically imports this module.
+    const { getSafariLogTargets } = await import('../../safariLogger.js');
+    const targetChannelIds = getSafariLogTargets(logSettings, action, logType);
+    console.log(`🔍 Safari Log Debug: Action ${action} maps to logType ${logType}, targets: [${targetChannelIds.join(', ')}]`);
+
+    if (targetChannelIds.length === 0) {
+      console.log(`🔍 Safari Log Debug: No eligible log channels for ${action} in guild ${guildId}`);
       return;
     }
-    
-    // Get the Safari log channel
-    console.log(`🔍 Safari Log Debug: Attempting to fetch channel ${logSettings.logChannelId} for guild ${guildId}`);
-    
-    let safariLogChannel;
+
+    // Fetch each target; a failed fetch skips that target only — a deleted whisper
+    // channel must never suppress the main log, and vice versa.
+    const targetChannels = [];
     try {
       const guild = await discordClient.guilds.fetch(guildId);
       console.log(`🔍 Safari Log Debug: Guild fetched successfully: ${guild.name}`);
-      
-      safariLogChannel = await guild.channels.fetch(logSettings.logChannelId);
 
-      if (!safariLogChannel) {
-        console.error(`Safari Log: Channel ${logSettings.logChannelId} not found for guild ${guildId}`);
-        return;
+      for (const channelId of targetChannelIds) {
+        try {
+          const channel = await guild.channels.fetch(channelId);
+          if (channel) {
+            targetChannels.push(channel);
+          } else {
+            console.error(`Safari Log: Channel ${channelId} not found for guild ${guildId}`);
+          }
+        } catch (channelError) {
+          console.error(`Safari Log: Error fetching channel ${channelId} for guild ${guildId}:`, channelError);
+        }
       }
-
-      console.log(`🔍 Safari Log Debug: Channel fetched successfully: ${safariLogChannel.name}`);
     } catch (error) {
-      console.error(`Safari Log: Error fetching channel for guild ${guildId}:`, error);
+      console.error(`Safari Log: Error fetching guild ${guildId}:`, error);
+      return;
+    }
+
+    if (targetChannels.length === 0) {
+      console.log(`🔍 Safari Log Debug: No target channels could be fetched for guild ${guildId}`);
       return;
     }
 
@@ -1167,18 +1176,23 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
         logMessage = `📝 **${action}** | [${timestamp}] | **${userDisplayName}** - ${details}`;
     }
     
-    // Send to Safari log channel
-    console.log(`🔍 Safari Log Debug: Sending log message to channel ${safariLogChannel.name}:`, logMessage);
-    
     // Truncate message if it exceeds Discord's 2000 character limit
     if (logMessage.length > 1900) {
       logMessage = logMessage.substring(0, 1900) + '\n... [Message truncated due to length]';
       console.log('⚠️ Safari Log: Message truncated from', logMessage.length, 'to 1900 characters');
     }
-    
-    await safariLogChannel.send(logMessage);
-    
-    console.log(`🔍 Safari Log Debug: Message sent successfully to Safari Log channel`);
+
+    // Send to each eligible log channel (main and/or dedicated whisper log);
+    // per-channel try/catch so one failure never blocks the other delivery.
+    for (const channel of targetChannels) {
+      try {
+        console.log(`🔍 Safari Log Debug: Sending log message to channel ${channel.name}:`, logMessage);
+        await channel.send(logMessage);
+        console.log(`🔍 Safari Log Debug: Message sent successfully to #${channel.name}`);
+      } catch (sendError) {
+        console.error(`Safari Log: Error sending to channel ${channel.id}:`, sendError);
+      }
+    }
     
   } catch (error) {
     console.error('Safari Log Error (non-critical):', error);

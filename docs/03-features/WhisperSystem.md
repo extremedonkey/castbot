@@ -5,6 +5,10 @@
 **Data file**: `data_whispers.json` (gitignored, Tier 2 — in `BACKUP_FILES`)
 **Rewritten**: 2026-07-12 — the previous version of this doc described a dead architecture (`global.pendingWhispers` delivered on the recipient's next interaction). That code no longer exists; this doc describes what actually runs.
 
+**Updated 2026-07-15** — Whisper feature toggle + dedicated spectator Whisper Log:
+- **Feature toggle**: `safariConfig.whispersEnabled` — **absent = ON** (always read `!== false`). Toggled via `/menu` → Settings → 🪵 Logs → 🤫 Whispers. When off, the Whisper button is hidden from the player Location Actions screen (`app.js` `map_location_actions_`) and the admin map-cell UI (`entityManagementUI.js`), and `showWhisperPlayerSelect` refuses with "Whispers are currently disabled" (covers stale buttons). Accepted gap: Reply buttons on already-delivered whispers still work.
+- **Dedicated Whisper Log**: `safariLogSettings.whisperLogChannelId` — a second, spectator-safe log channel that receives **only** whispers, independent of the main log's `enabled`/`logTypes.whispers` gates (dual delivery when both are on; deduped if both point at one channel). Target resolution: `getSafariLogTargets()` in `safariLogger.js`; delivery in `postToSafariLog()` (`src/analytics/analyticsLogger.js`). UI builders: `buildWhisperLogConfigUI` / `buildSafariLogConfigUI` in `safariConfigUI.js`.
+
 ---
 
 ## Overview

@@ -614,3 +614,64 @@ export async function getSafariLogSettings(guildId) {
     return null;
   }
 }
+
+/**
+ * Canonical default log types — SINGLE source of truth (was duplicated inline in
+ * app.js ×5 and safariInitialization.js, which drifted: the init copy was missing
+ * staminaChanges, the app.js copies were missing testMessages).
+ * The 9 visible keys appear in the Configure Log Types select; testMessages is a
+ * hidden type gating only the "Send Test Message" button (SAFARI_TEST).
+ */
+export const DEFAULT_LOG_TYPES = {
+  whispers: true,
+  itemPickups: true,
+  currencyChanges: true,
+  storeTransactions: true,
+  buttonActions: true,
+  mapMovement: true,
+  attacks: true,
+  customActions: true,
+  staminaChanges: true,
+  testMessages: true
+};
+
+/**
+ * Merge stored logTypes over the defaults. A MISSING key means "enabled" (guilds
+ * whose stored settings predate a key get it on by default); an explicit false
+ * (admin deselected it) is preserved. Computed at read time — never persist the
+ * merged object implicitly.
+ * @param {Object|null|undefined} storedLogTypes
+ * @returns {Object} full logTypes map
+ */
+export function mergeLogTypes(storedLogTypes) {
+  return { ...DEFAULT_LOG_TYPES, ...(storedLogTypes || {}) };
+}
+
+/**
+ * Resolve which channel(s) a Safari Log post should go to. Pure — unit-tested.
+ *
+ * Main log channel: requires enabled + logChannelId + the action's logType enabled.
+ * Dedicated whisper log channel (spectator-safe): receives ONLY SAFARI_WHISPER,
+ * requires just whisperLogChannelId — deliberately independent of `enabled` and
+ * logTypes.whispers, so hosts can run a public whisper feed with the main
+ * (privileged) log disabled. Both set + both eligible = dual delivery (deduped
+ * if they point at the same channel).
+ *
+ * @param {Object|null} logSettings - safariLogSettings for the guild
+ * @param {string} action - e.g. 'SAFARI_WHISPER', 'SAFARI_MOVEMENT'
+ * @param {string|undefined} logType - mapped log type key for the action
+ * @returns {string[]} channel IDs to post to (possibly empty)
+ */
+export function getSafariLogTargets(logSettings, action, logType) {
+  const logTypes = mergeLogTypes(logSettings?.logTypes);
+  const mainEligible = !!(logSettings?.enabled && logSettings?.logChannelId
+    && logType && logTypes[logType]);
+  const whisperEligible = action === 'SAFARI_WHISPER' && !!logSettings?.whisperLogChannelId;
+
+  const targets = [];
+  if (mainEligible) targets.push(logSettings.logChannelId);
+  if (whisperEligible && !targets.includes(logSettings.whisperLogChannelId)) {
+    targets.push(logSettings.whisperLogChannelId);
+  }
+  return targets;
+}

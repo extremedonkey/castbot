@@ -563,10 +563,12 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
 
     // Check for modal trigger actions if this is a map cell
     let hasModalTriggers = false;
+    let whispersEnabled = true; // default ON; fails open if the check below errors
     if (entityType === 'map_cell' && guildId) {
         try {
             const { loadSafariContent } = await import('./safariManager.js');
             const safariData = await loadSafariContent();
+            whispersEnabled = safariData[guildId]?.safariConfig?.whispersEnabled !== false;
             const activeMapId = safariData[guildId]?.maps?.active;
             const coordData = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[entityId];
             const buttonIds = coordData?.buttons || [];
@@ -605,14 +607,16 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
             emoji: { name: '🕹️' }
         });
 
-        // Add whisper button for admins
-        actionRowComponents.push({
-            type: 2, // Button
-            style: 2, // Secondary (grey)
-            label: 'Whisper',
-            custom_id: `safari_whisper_${entityId}`,
-            emoji: { name: '💬' }
-        });
+        // Add whisper button for admins (hidden when whispers disabled for the guild)
+        if (whispersEnabled) {
+            actionRowComponents.push({
+                type: 2, // Button
+                style: 2, // Secondary (grey)
+                label: 'Whisper',
+                custom_id: `safari_whisper_${entityId}`,
+                emoji: { name: '💬' }
+            });
+        }
     }
     
     // Add Player Qty button only for items

@@ -67,7 +67,15 @@ export async function showWhisperPlayerSelect(context, coordinate, client) {
     const playerData = await loadPlayerData();
     const safariData = await loadSafariContent();
     const activeMapId = safariData[context.guildId]?.maps?.active;
-    
+
+    // Feature gate (covers stale whisper buttons on old messages) — ABSENT means ON
+    if (safariData[context.guildId]?.safariConfig?.whispersEnabled === false) {
+      return {
+        content: '❌ Whispers are currently disabled in this server.',
+        ephemeral: true
+      };
+    }
+
     if (!playerData[context.guildId]?.players?.[context.userId]?.safari?.mapProgress?.[activeMapId]) {
       return {
         content: '❌ You must be initialized in the Safari game to use whispers.',

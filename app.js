@@ -16591,123 +16591,14 @@ Your server is now ready for Tycoons gameplay!`;
         updateMessage: true,
         handler: async (context) => {
           console.log(`📊 DEBUG: User ${context.userId} opening Safari Log configuration for guild ${context.guildId}`);
-          
-          // Load current Safari log settings
-          const { loadSafariContent } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
-          const logSettings = safariData[context.guildId]?.safariLogSettings || {
-            enabled: false,
-            logChannelId: null,
-            productionRoleId: null,
-            logTypes: {
-              whispers: true,
-              itemPickups: true,
-              currencyChanges: true,
-              storeTransactions: true,
-              buttonActions: true,
-              mapMovement: true,
-              attacks: true,
-              customActions: true,
-              staminaChanges: true
-            }
-          };
-          
-          // Create UI components
-          const { ButtonBuilder, ActionRowBuilder, StringSelectMenuBuilder } = await import('discord.js');
-          
-          // Create enable/disable button
-          const toggleButton = new ButtonBuilder()
-            .setCustomId('safari_log_toggle')
-            .setLabel(logSettings.enabled ? 'Disable Safari Log' : 'Enable Safari Log')
-            .setStyle(logSettings.enabled ? 4 : 3) // Danger if enabled, Success if disabled
-            .setEmoji(logSettings.enabled ? '🔴' : '🟢');
-          
-          // Create channel select button
-          const channelButton = new ButtonBuilder()
-            .setCustomId('safari_log_channel_select')
-            .setLabel('Set Log Channel')
-            .setStyle(2) // Secondary
-            .setEmoji('📝')
-            .setDisabled(!logSettings.enabled);
-          
-          // Create log types configuration button
-          const logTypesButton = new ButtonBuilder()
-            .setCustomId('safari_log_types_config')
-            .setLabel('Configure Log Types')
-            .setStyle(2) // Secondary
-            .setEmoji('⚙️')
-            .setDisabled(!logSettings.enabled);
-          
-          // Create test message button
-          const testButton = new ButtonBuilder()
-            .setCustomId('safari_log_test')
-            .setLabel('Send Test Message')
-            .setStyle(2) // Secondary
-            .setEmoji('🧪')
-            .setDisabled(!logSettings.enabled || !logSettings.logChannelId);
 
-          // Create back button
-          const backButton = new ButtonBuilder()
-            .setCustomId('castbot_settings')
-            .setLabel('← Settings')
-            .setStyle(2) // Secondary
-            .setEmoji('⚙️');
-          
-          const toggleRow = new ActionRowBuilder().addComponents(toggleButton);
-          const configRow = new ActionRowBuilder().addComponents(channelButton, logTypesButton, testButton);
-          const backRow = new ActionRowBuilder().addComponents(backButton);
-          
-          // Create status display
-          let statusText = `## 🪵 CastBot Logs\n\n`;
-          statusText += `-# Logs activity from Idol Hunts, Challenges and Safari features — currency, items, stores, movement and more.\n\n`;
-          statusText += `**Status:** ${logSettings.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
-          statusText += `**Log Channel:** ${logSettings.logChannelId ? `<#${logSettings.logChannelId}>` : 'Not Set'}\n\n`;
-          
-          if (logSettings.enabled && logSettings.logChannelId) {
-            statusText += `**Active Log Types:**\n`;
-            const logTypeNames = {
-              whispers: '🤫 Whispers',
-              itemPickups: '🧰 Item Pickups',
-              currencyChanges: '🪙 Currency Changes',
-              storeTransactions: '🛒 Store Purchases',
-              buttonActions: '🎯 Safari Actions',
-              mapMovement: '🗺️ Map Movement',
-              attacks: '⚔️ Attack Queue',
-              customActions: '⌨️ Custom Actions',
-              staminaChanges: '⚡ Stamina Changes'
-            };
-            
-            for (const [type, enabled] of Object.entries(logSettings.logTypes || {})) {
-              if (enabled) {
-                statusText += `• ${logTypeNames[type] || type}\n`;
-              }
-            }
-          }
-          
-          // Create Components V2 container
-          const containerComponents = [
-            {
-              type: 10, // Text Display
-              content: statusText
-            },
-            { type: 14 }, // Separator
-            toggleRow.toJSON(),
-            { type: 14 }, // Separator
-            configRow.toJSON(),
-            { type: 14 }, // Separator
-            backRow.toJSON()
-          ];
-          
-          const container = {
-            type: 17, // Container
-            accent_color: 0x9B59B6, // Purple accent
-            components: containerComponents
-          };
-          
-          return {
-            flags: (1 << 15), // IS_COMPONENTS_V2
-            components: [container]
-          };
+          const { loadSafariContent } = await import('./safariManager.js');
+          const { buildSafariLogConfigUI } = await import('./safariConfigUI.js');
+          const safariData = await loadSafariContent();
+          const logSettings = safariData[context.guildId]?.safariLogSettings || {};
+          const whispersEnabled = safariData[context.guildId]?.safariConfig?.whispersEnabled !== false;
+
+          return buildSafariLogConfigUI(logSettings, { whispersEnabled });
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_config_group_')) {
@@ -17101,13 +16992,15 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'safari_log_toggle',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true,
         handler: async (context) => {
           console.log(`🔧 DEBUG: User ${context.userId} toggling Safari Log for guild ${context.guildId}`);
-          
-          // Load and toggle Safari log settings
+
           const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const { buildSafariLogConfigUI } = await import('./safariConfigUI.js');
+          const { DEFAULT_LOG_TYPES } = await import('./safariLogger.js');
           const safariData = await loadSafariContent();
-          
+
           // Initialize if missing
           if (!safariData[context.guildId]) {
             safariData[context.guildId] = {};
@@ -17117,125 +17010,20 @@ Your server is now ready for Tycoons gameplay!`;
               enabled: false,
               logChannelId: null,
               productionRoleId: null,
-              logTypes: {
-                whispers: true,
-                itemPickups: true,
-                currencyChanges: true,
-                storeTransactions: true,
-                buttonActions: true,
-                mapMovement: true,
-                attacks: true,
-                customActions: true,
-                staminaChanges: true
-              }
+              logTypes: { ...DEFAULT_LOG_TYPES }
             };
           }
 
           // Toggle the enabled state
           const wasEnabled = safariData[context.guildId].safariLogSettings.enabled;
           safariData[context.guildId].safariLogSettings.enabled = !wasEnabled;
-          
-          // Save the updated settings
+
           await saveSafariContent(safariData);
-          
+
           console.log(`📊 DEBUG: Safari Log ${!wasEnabled ? 'enabled' : 'disabled'} for guild ${context.guildId}`);
-          
-          // Return to Safari Log configuration with updated state
-          // Re-execute the safari_configure_log handler logic inline
-          const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
-          const updatedLogSettings = safariData[context.guildId].safariLogSettings;
-          
-          // Create enable/disable button
-          const toggleButton = new ButtonBuilder()
-            .setCustomId('safari_log_toggle')
-            .setLabel(updatedLogSettings.enabled ? 'Disable Safari Log' : 'Enable Safari Log')
-            .setStyle(updatedLogSettings.enabled ? 4 : 3) // Danger if enabled, Success if disabled
-            .setEmoji(updatedLogSettings.enabled ? '🔴' : '🟢');
-          
-          // Create channel select button
-          const channelButton = new ButtonBuilder()
-            .setCustomId('safari_log_channel_select')
-            .setLabel('Set Log Channel')
-            .setStyle(2) // Secondary
-            .setEmoji('📝')
-            .setDisabled(!updatedLogSettings.enabled);
-          
-          // Create log types configuration button
-          const logTypesButton = new ButtonBuilder()
-            .setCustomId('safari_log_types_config')
-            .setLabel('Configure Log Types')
-            .setStyle(2) // Secondary
-            .setEmoji('⚙️')
-            .setDisabled(!updatedLogSettings.enabled);
-          
-          // Create test message button
-          const testButton = new ButtonBuilder()
-            .setCustomId('safari_log_test')
-            .setLabel('Send Test Message')
-            .setStyle(2) // Secondary
-            .setEmoji('🧪')
-            .setDisabled(!updatedLogSettings.enabled || !updatedLogSettings.logChannelId);
-          
-          // Create back button
-          const backButton = new ButtonBuilder()
-            .setCustomId('castbot_settings')
-            .setLabel('← Settings')
-            .setStyle(2) // Secondary
-            .setEmoji('⚙️');
-          
-          const toggleRow = new ActionRowBuilder().addComponents(toggleButton);
-          const configRow = new ActionRowBuilder().addComponents(channelButton, logTypesButton, testButton);
-          const backRow = new ActionRowBuilder().addComponents(backButton);
-          
-          // Create status display
-          let statusText = `## 🪵 CastBot Logs\n\n`;
-          statusText += `-# Logs activity from Idol Hunts, Challenges and Safari features — currency, items, stores, movement and more.\n\n`;
-          statusText += `**Status:** ${updatedLogSettings.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
-          statusText += `**Log Channel:** ${updatedLogSettings.logChannelId ? `<#${updatedLogSettings.logChannelId}>` : 'Not Set'}\n\n`;
-          
-          if (updatedLogSettings.enabled && updatedLogSettings.logChannelId) {
-            statusText += `**Active Log Types:**\n`;
-            const logTypeNames = {
-              whispers: '🤫 Whispers',
-              itemPickups: '🧰 Item Pickups',
-              currencyChanges: '🪙 Currency Changes',
-              storeTransactions: '🛒 Store Purchases',
-              buttonActions: '🎯 Safari Actions',
-              mapMovement: '🗺️ Map Movement',
-              attacks: '⚔️ Attack Queue',
-              customActions: '⌨️ Custom Actions',
-              staminaChanges: '⚡ Stamina Changes'
-            };
-            
-            for (const [type, enabled] of Object.entries(updatedLogSettings.logTypes || {})) {
-              if (enabled) {
-                statusText += `• ${logTypeNames[type] || type}\n`;
-              }
-            }
-          }
-          
-          // Create Components V2 container
-          const containerComponents = [
-            {
-              type: 10, // Text Display
-              content: statusText
-            },
-            { type: 14 }, // Separator
-            toggleRow.toJSON(),
-            configRow.toJSON(),
-            { type: 14 }, // Separator
-            backRow.toJSON()
-          ];
-          
-          const container = {
-            type: 17, // Container
-            components: containerComponents
-          };
-          
-          return {
-            components: [container],
-            flags: (1 << 15) // IS_COMPONENTS_V2
-          };
+
+          const whispersEnabled = safariData[context.guildId]?.safariConfig?.whispersEnabled !== false;
+          return buildSafariLogConfigUI(safariData[context.guildId].safariLogSettings, { whispersEnabled });
         }
       })(req, res, client);
     } else if (custom_id === 'safari_log_channel_select') {
@@ -17287,21 +17075,13 @@ Your server is now ready for Tycoons gameplay!`;
         handler: async (context) => {
           console.log(`⚙️ DEBUG: User ${context.userId} configuring Safari Log types for guild ${context.guildId}`);
           
-          // Load current Safari log settings
+          // Load current Safari log settings — missing keys default to enabled
           const { loadSafariContent } = await import('./safariManager.js');
+          const { mergeLogTypes } = await import('./safariLogger.js');
           const safariData = await loadSafariContent();
           const logSettings = safariData[context.guildId]?.safariLogSettings || {};
-          const logTypes = logSettings.logTypes || {
-            whispers: true,
-            itemPickups: true,
-            currencyChanges: true,
-            storeTransactions: true,
-            buttonActions: true,
-            mapMovement: true,
-            attacks: true,
-            staminaChanges: true
-          };
-          
+          const logTypes = mergeLogTypes(logSettings.logTypes);
+
           const { StringSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
           
           // Create multi-select menu for log types
@@ -17429,11 +17209,12 @@ Your server is now ready for Tycoons gameplay!`;
         handler: async (context) => {
           const selectedChannelId = context.values[0];
           console.log(`📝 DEBUG: User ${context.userId} setting Safari Log channel to ${selectedChannelId} for guild ${context.guildId}`);
-          
-          // Load and update Safari log settings
+
           const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const { buildSafariLogConfigUI } = await import('./safariConfigUI.js');
+          const { DEFAULT_LOG_TYPES } = await import('./safariLogger.js');
           const safariData = await loadSafariContent();
-          
+
           // Initialize if missing
           if (!safariData[context.guildId]) {
             safariData[context.guildId] = {};
@@ -17443,124 +17224,19 @@ Your server is now ready for Tycoons gameplay!`;
               enabled: false,
               logChannelId: null,
               productionRoleId: null,
-              logTypes: {
-                whispers: true,
-                itemPickups: true,
-                currencyChanges: true,
-                storeTransactions: true,
-                buttonActions: true,
-                mapMovement: true,
-                attacks: true,
-                customActions: true,
-                staminaChanges: true
-              }
+              logTypes: { ...DEFAULT_LOG_TYPES }
             };
           }
 
           // Update the log channel
           safariData[context.guildId].safariLogSettings.logChannelId = selectedChannelId;
-          
-          // Save the updated settings
+
           await saveSafariContent(safariData);
-          
+
           console.log(`📊 DEBUG: Safari Log channel set to ${selectedChannelId} for guild ${context.guildId}`);
-          
-          // Return to Safari Log configuration with updated state
-          // Re-execute the safari_configure_log handler logic inline
-          const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
-          const updatedLogSettings = safariData[context.guildId].safariLogSettings;
-          
-          // Create enable/disable button
-          const toggleButton = new ButtonBuilder()
-            .setCustomId('safari_log_toggle')
-            .setLabel(updatedLogSettings.enabled ? 'Disable Safari Log' : 'Enable Safari Log')
-            .setStyle(updatedLogSettings.enabled ? 4 : 3) // Danger if enabled, Success if disabled
-            .setEmoji(updatedLogSettings.enabled ? '🔴' : '🟢');
-          
-          // Create channel select button
-          const channelButton = new ButtonBuilder()
-            .setCustomId('safari_log_channel_select')
-            .setLabel('Set Log Channel')
-            .setStyle(2) // Secondary
-            .setEmoji('📝')
-            .setDisabled(!updatedLogSettings.enabled);
-          
-          // Create log types configuration button
-          const logTypesButton = new ButtonBuilder()
-            .setCustomId('safari_log_types_config')
-            .setLabel('Configure Log Types')
-            .setStyle(2) // Secondary
-            .setEmoji('⚙️')
-            .setDisabled(!updatedLogSettings.enabled);
-          
-          // Create test message button
-          const testButton = new ButtonBuilder()
-            .setCustomId('safari_log_test')
-            .setLabel('Send Test Message')
-            .setStyle(2) // Secondary
-            .setEmoji('🧪')
-            .setDisabled(!updatedLogSettings.enabled || !updatedLogSettings.logChannelId);
-          
-          // Create back button
-          const backButton = new ButtonBuilder()
-            .setCustomId('castbot_settings')
-            .setLabel('← Settings')
-            .setStyle(2) // Secondary
-            .setEmoji('⚙️');
-          
-          const toggleRow = new ActionRowBuilder().addComponents(toggleButton);
-          const configRow = new ActionRowBuilder().addComponents(channelButton, logTypesButton, testButton);
-          const backRow = new ActionRowBuilder().addComponents(backButton);
-          
-          // Create status display
-          let statusText = `## 🪵 CastBot Logs\n\n`;
-          statusText += `-# Logs activity from Idol Hunts, Challenges and Safari features — currency, items, stores, movement and more.\n\n`;
-          statusText += `**Status:** ${updatedLogSettings.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
-          statusText += `**Log Channel:** ${updatedLogSettings.logChannelId ? `<#${updatedLogSettings.logChannelId}>` : 'Not Set'}\n\n`;
-          
-          if (updatedLogSettings.enabled && updatedLogSettings.logChannelId) {
-            statusText += `**Active Log Types:**\n`;
-            const logTypeNames = {
-              whispers: '🤫 Whispers',
-              itemPickups: '🧰 Item Pickups',
-              currencyChanges: '🪙 Currency Changes',
-              storeTransactions: '🛒 Store Purchases',
-              buttonActions: '🎯 Safari Actions',
-              mapMovement: '🗺️ Map Movement',
-              attacks: '⚔️ Attack Queue',
-              customActions: '⌨️ Custom Actions',
-              staminaChanges: '⚡ Stamina Changes'
-            };
-            
-            for (const [type, enabled] of Object.entries(updatedLogSettings.logTypes || {})) {
-              if (enabled) {
-                statusText += `• ${logTypeNames[type] || type}\n`;
-              }
-            }
-          }
-          
-          // Create Components V2 container
-          const containerComponents = [
-            {
-              type: 10, // Text Display
-              content: statusText
-            },
-            { type: 14 }, // Separator
-            toggleRow.toJSON(),
-            configRow.toJSON(),
-            { type: 14 }, // Separator
-            backRow.toJSON()
-          ];
-          
-          const container = {
-            type: 17, // Container
-            components: containerComponents
-          };
-          
-          return {
-            components: [container],
-            flags: (1 << 15) // IS_COMPONENTS_V2
-          };
+
+          const whispersEnabled = safariData[context.guildId]?.safariConfig?.whispersEnabled !== false;
+          return buildSafariLogConfigUI(safariData[context.guildId].safariLogSettings, { whispersEnabled });
         }
       })(req, res, client);
     } else if (custom_id === 'safari_log_types_set') {
@@ -17569,14 +17245,16 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'safari_log_types_set',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true,
         handler: async (context) => {
           const selectedTypes = context.values || [];
           console.log(`⚙️ DEBUG: User ${context.userId} setting Safari Log types for guild ${context.guildId}`, selectedTypes);
-          
-          // Load and update Safari log settings
+
           const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const { buildSafariLogConfigUI } = await import('./safariConfigUI.js');
+          const { DEFAULT_LOG_TYPES } = await import('./safariLogger.js');
           const safariData = await loadSafariContent();
-          
+
           // Initialize if missing
           if (!safariData[context.guildId]) {
             safariData[context.guildId] = {};
@@ -17586,127 +17264,158 @@ Your server is now ready for Tycoons gameplay!`;
               enabled: false,
               logChannelId: null,
               productionRoleId: null,
-              logTypes: {
-                whispers: true,
-                itemPickups: true,
-                currencyChanges: true,
-                storeTransactions: true,
-                buttonActions: true,
-                mapMovement: true,
-                attacks: true,
-                customActions: true,
-                staminaChanges: true
-              }
+              logTypes: { ...DEFAULT_LOG_TYPES }
             };
           }
 
-          // Update log types based on selection
+          // Update log types based on selection (writes all 9 visible keys —
+          // self-heals legacy records that were missing some)
           const allTypes = ['whispers', 'itemPickups', 'currencyChanges', 'storeTransactions', 'buttonActions', 'mapMovement', 'attacks', 'customActions', 'staminaChanges'];
           for (const type of allTypes) {
             safariData[context.guildId].safariLogSettings.logTypes[type] = selectedTypes.includes(type);
           }
-          
-          // Save the updated settings
+
           await saveSafariContent(safariData);
-          
+
           console.log(`📊 DEBUG: Safari Log types updated for guild ${context.guildId}`);
-          
-          // Return to Safari Log configuration with updated state
-          // Re-execute the safari_configure_log handler logic inline
-          const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
-          const updatedLogSettings = safariData[context.guildId].safariLogSettings;
-          
-          // Create enable/disable button
-          const toggleButton = new ButtonBuilder()
-            .setCustomId('safari_log_toggle')
-            .setLabel(updatedLogSettings.enabled ? 'Disable Safari Log' : 'Enable Safari Log')
-            .setStyle(updatedLogSettings.enabled ? 4 : 3) // Danger if enabled, Success if disabled
-            .setEmoji(updatedLogSettings.enabled ? '🔴' : '🟢');
-          
-          // Create channel select button
-          const channelButton = new ButtonBuilder()
-            .setCustomId('safari_log_channel_select')
-            .setLabel('Set Log Channel')
-            .setStyle(2) // Secondary
-            .setEmoji('📝')
-            .setDisabled(!updatedLogSettings.enabled);
-          
-          // Create log types configuration button
-          const logTypesButton = new ButtonBuilder()
-            .setCustomId('safari_log_types_config')
-            .setLabel('Configure Log Types')
-            .setStyle(2) // Secondary
-            .setEmoji('⚙️')
-            .setDisabled(!updatedLogSettings.enabled);
-          
-          // Create test message button
-          const testButton = new ButtonBuilder()
-            .setCustomId('safari_log_test')
-            .setLabel('Send Test Message')
-            .setStyle(2) // Secondary
-            .setEmoji('🧪')
-            .setDisabled(!updatedLogSettings.enabled || !updatedLogSettings.logChannelId);
-          
-          // Create back button
-          const backButton = new ButtonBuilder()
-            .setCustomId('castbot_settings')
-            .setLabel('← Settings')
-            .setStyle(2) // Secondary
-            .setEmoji('⚙️');
-          
-          const toggleRow = new ActionRowBuilder().addComponents(toggleButton);
-          const configRow = new ActionRowBuilder().addComponents(channelButton, logTypesButton, testButton);
-          const backRow = new ActionRowBuilder().addComponents(backButton);
-          
-          // Create status display
-          let statusText = `## 🪵 CastBot Logs\n\n`;
-          statusText += `-# Logs activity from Idol Hunts, Challenges and Safari features — currency, items, stores, movement and more.\n\n`;
-          statusText += `**Status:** ${updatedLogSettings.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
-          statusText += `**Log Channel:** ${updatedLogSettings.logChannelId ? `<#${updatedLogSettings.logChannelId}>` : 'Not Set'}\n\n`;
-          
-          if (updatedLogSettings.enabled && updatedLogSettings.logChannelId) {
-            statusText += `**Active Log Types:**\n`;
-            const logTypeNames = {
-              whispers: '🤫 Whispers',
-              itemPickups: '🧰 Item Pickups',
-              currencyChanges: '🪙 Currency Changes',
-              storeTransactions: '🛒 Store Purchases',
-              buttonActions: '🎯 Safari Actions',
-              mapMovement: '🗺️ Map Movement',
-              attacks: '⚔️ Attack Queue',
-              customActions: '⌨️ Custom Actions',
-              staminaChanges: '⚡ Stamina Changes'
-            };
-            
-            for (const [type, enabled] of Object.entries(updatedLogSettings.logTypes || {})) {
-              if (enabled) {
-                statusText += `• ${logTypeNames[type] || type}\n`;
-              }
-            }
+
+          const whispersEnabled = safariData[context.guildId]?.safariConfig?.whispersEnabled !== false;
+          return buildSafariLogConfigUI(safariData[context.guildId].safariLogSettings, { whispersEnabled });
+        }
+      })(req, res, client);
+    } else if (custom_id === 'safari_whisper_log_config') {
+      // Whisper Settings screen (opened from CastBot Logs → Whispers)
+      return ButtonHandlerFactory.create({
+        id: 'safari_whisper_log_config',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🤫 DEBUG: User ${context.userId} opening Whisper Settings for guild ${context.guildId}`);
+
+          const { loadSafariContent } = await import('./safariManager.js');
+          const { buildWhisperLogConfigUI } = await import('./safariConfigUI.js');
+          const { mergeLogTypes } = await import('./safariLogger.js');
+          const safariData = await loadSafariContent();
+
+          const logSettings = safariData[context.guildId]?.safariLogSettings || {};
+          return buildWhisperLogConfigUI({
+            whispersEnabled: safariData[context.guildId]?.safariConfig?.whispersEnabled !== false,
+            whisperLogChannelId: logSettings.whisperLogChannelId || null,
+            mainLogWhispersActive: !!(logSettings.enabled && logSettings.logChannelId && mergeLogTypes(logSettings.logTypes).whispers)
+          });
+        }
+      })(req, res, client);
+    } else if (custom_id === 'safari_whispers_toggle') {
+      // Toggle the whisper FEATURE on/off (default ON — absence of flag means ON)
+      return ButtonHandlerFactory.create({
+        id: 'safari_whispers_toggle',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const { buildWhisperLogConfigUI } = await import('./safariConfigUI.js');
+          const { mergeLogTypes } = await import('./safariLogger.js');
+          const safariData = await loadSafariContent();
+
+          if (!safariData[context.guildId]) {
+            safariData[context.guildId] = {};
           }
-          
-          // Create Components V2 container
-          const containerComponents = [
-            {
-              type: 10, // Text Display
-              content: statusText
-            },
-            { type: 14 }, // Separator
-            toggleRow.toJSON(),
-            configRow.toJSON(),
-            { type: 14 }, // Separator
-            backRow.toJSON()
-          ];
-          
-          const container = {
-            type: 17, // Container
-            components: containerComponents
-          };
-          
-          return {
-            components: [container],
-            flags: (1 << 15) // IS_COMPONENTS_V2
-          };
+          if (!safariData[context.guildId].safariConfig) {
+            safariData[context.guildId].safariConfig = {};
+          }
+
+          const currentlyOn = safariData[context.guildId].safariConfig.whispersEnabled !== false;
+          safariData[context.guildId].safariConfig.whispersEnabled = !currentlyOn;
+
+          await saveSafariContent(safariData);
+          console.log(`🤫 DEBUG: Whispers ${!currentlyOn ? 'enabled' : 'DISABLED'} for guild ${context.guildId} by user ${context.userId}`);
+
+          const logSettings = safariData[context.guildId]?.safariLogSettings || {};
+          return buildWhisperLogConfigUI({
+            whispersEnabled: !currentlyOn,
+            whisperLogChannelId: logSettings.whisperLogChannelId || null,
+            mainLogWhispersActive: !!(logSettings.enabled && logSettings.logChannelId && mergeLogTypes(logSettings.logTypes).whispers)
+          });
+        }
+      })(req, res, client);
+    } else if (custom_id === 'whisper_log_channel_set') {
+      // Whisper log channel select (submit empty selection to clear/disable)
+      return ButtonHandlerFactory.create({
+        id: 'whisper_log_channel_set',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const selectedChannelId = context.values?.[0] ?? null;
+          console.log(`🤫 DEBUG: User ${context.userId} setting Whisper Log channel to ${selectedChannelId} for guild ${context.guildId}`);
+
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const { buildWhisperLogConfigUI } = await import('./safariConfigUI.js');
+          const { mergeLogTypes, DEFAULT_LOG_TYPES } = await import('./safariLogger.js');
+          const safariData = await loadSafariContent();
+
+          if (!safariData[context.guildId]) {
+            safariData[context.guildId] = {};
+          }
+          if (!safariData[context.guildId].safariLogSettings) {
+            safariData[context.guildId].safariLogSettings = {
+              enabled: false,
+              logChannelId: null,
+              productionRoleId: null,
+              logTypes: { ...DEFAULT_LOG_TYPES }
+            };
+          }
+
+          safariData[context.guildId].safariLogSettings.whisperLogChannelId = selectedChannelId;
+
+          await saveSafariContent(safariData);
+          console.log(`🤫 DEBUG: Whisper Log channel ${selectedChannelId ? `set to ${selectedChannelId}` : 'cleared'} for guild ${context.guildId}`);
+
+          const logSettings = safariData[context.guildId].safariLogSettings;
+          return buildWhisperLogConfigUI({
+            whispersEnabled: safariData[context.guildId]?.safariConfig?.whispersEnabled !== false,
+            whisperLogChannelId: selectedChannelId,
+            mainLogWhispersActive: !!(logSettings.enabled && logSettings.logChannelId && mergeLogTypes(logSettings.logTypes).whispers)
+          });
+        }
+      })(req, res, client);
+    } else if (custom_id === 'safari_whisper_log_test') {
+      // Send a sample whisper line to the dedicated whisper log channel.
+      // Direct channel.send — NOT via logWhisper (would create fake analytics/activity entries).
+      return ButtonHandlerFactory.create({
+        id: 'safari_whisper_log_test',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          console.log(`🧪 DEBUG: User ${context.userId} sending Whisper Log test for guild ${context.guildId}`);
+
+          try {
+            const { loadSafariContent } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+            const whisperLogChannelId = safariData[context.guildId]?.safariLogSettings?.whisperLogChannelId;
+
+            if (!whisperLogChannelId) {
+              return { content: '❌ No Whisper Log channel is set.', ephemeral: true };
+            }
+
+            const guild = await context.client.guilds.fetch(context.guildId);
+            const channel = await guild.channels.fetch(whisperLogChannelId);
+            if (!channel) {
+              return { content: `❌ Whisper Log channel <#${whisperLogChannelId}> could not be found.`, ephemeral: true };
+            }
+
+            const configuredBy = context.member?.nick || context.member?.user?.username || context.userId;
+            await channel.send(`🤫 **WHISPER** | [test] | **Whisper Log Test** → **Test Recipient** at **A1**\n> This is a test whisper — configured by ${configuredBy}. Real whispers will appear here.`);
+
+            return { content: `✅ Test message sent to <#${whisperLogChannelId}>!`, ephemeral: true };
+          } catch (error) {
+            console.error('🧪 ERROR: Whisper Log test failed:', error);
+            return { content: `❌ Whisper Log test failed: ${error.message}`, ephemeral: true };
+          }
         }
       })(req, res, client);
     } else if (custom_id === 'safari_config_reset_defaults') {
@@ -33681,14 +33390,20 @@ Your server is now ready for Tycoons gameplay!`;
               .setEmoji('🗺️')
               .setStyle(2); // Secondary
             
-            // Create Whisper button
-            const whisperButton = new ButtonBuilder()
-              .setCustomId(`safari_whisper_${coord}`)
-              .setLabel('Whisper')
-              .setEmoji('💬')
-              .setStyle(2); // Secondary
-            
-            const buttonRow = new ActionRowBuilder().addComponents([navigateButton, enterCommandButton, whisperButton]);
+            // Create Whisper button — hidden when whispers are disabled for the guild
+            // (safariConfig.whispersEnabled: ABSENT means ON — always compare !== false)
+            const whispersOn = safariData[context.guildId]?.safariConfig?.whispersEnabled !== false;
+            const rowButtons = [navigateButton, enterCommandButton];
+            if (whispersOn) {
+              const whisperButton = new ButtonBuilder()
+                .setCustomId(`safari_whisper_${coord}`)
+                .setLabel('Whisper')
+                .setEmoji('💬')
+                .setStyle(2); // Secondary
+              rowButtons.push(whisperButton);
+            }
+
+            const buttonRow = new ActionRowBuilder().addComponents(rowButtons);
             
             return {
               components: [{

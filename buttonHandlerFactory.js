@@ -2161,6 +2161,38 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari'
   },
+  'safari_whisper_log_config': {
+    label: 'Whispers',
+    description: 'Configure whisper feature and the spectator-safe whisper log channel',
+    emoji: '🤫',
+    style: 'Secondary',
+    parent: 'safari_configure_log',
+    category: 'safari'
+  },
+  'safari_whispers_toggle': {
+    label: 'Toggle Whispers',
+    description: 'Turn the whisper feature on or off (default on)',
+    emoji: '🤫',
+    style: 'Dynamic',
+    parent: 'safari_whisper_log_config',
+    category: 'safari'
+  },
+  'whisper_log_channel_set': {
+    label: 'Whisper Channel Selected',
+    description: 'Handle whisper log channel selection (submit empty to clear)',
+    emoji: '📝',
+    style: 'Hidden',
+    parent: 'safari_whisper_log_config',
+    category: 'safari'
+  },
+  'safari_whisper_log_test': {
+    label: 'Test',
+    description: 'Send a test message to the whisper log channel',
+    emoji: '🧪',
+    style: 'Secondary',
+    parent: 'safari_whisper_log_config',
+    category: 'safari'
+  },
   'stamina_location_config': {
     label: 'Stamina Settings',
     description: 'Per-server stamina configuration (location in Rounds)',

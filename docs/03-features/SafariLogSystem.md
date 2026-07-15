@@ -4,6 +4,11 @@
 
 The Safari Log System provides comprehensive logging and monitoring of player interactions within the Safari game environment. It captures detailed information about player actions, movements, commands, and other interactions, posting formatted messages to dedicated Discord channels for administrators to monitor gameplay.
 
+> **Updated 2026-07-15**:
+> - **Dedicated Whisper Log** — `safariLogSettings.whisperLogChannelId`: a second, spectator-safe channel receiving ONLY `SAFARI_WHISPER` posts, independent of `enabled`/`logTypes` (dual delivery with the main channel when both eligible). Configured via Logs screen → 🤫 Whispers button. Targets resolved by `getSafariLogTargets()` (`safariLogger.js`), delivered per-channel with isolated error handling in `postToSafariLog()`.
+> - **Canonical log-type defaults** — `DEFAULT_LOG_TYPES` + `mergeLogTypes()` in `safariLogger.js` replaced six drifted inline copies. Missing keys in stored `logTypes` now read as **enabled** (fixes `staminaChanges` not defaulting on and the silent `testMessages` gate that stopped "Send Test Message" from posting); explicit `false` is preserved.
+> - **Config screen** — single `buildSafariLogConfigUI()` (`safariConfigUI.js`) used by all handlers; `safari_log_toggle` and `safari_log_types_set` now `updateMessage: true` (they used to spawn new public messages).
+
 ## Table of Contents
 
 1. [System Architecture](#system-architecture)
