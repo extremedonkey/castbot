@@ -485,6 +485,7 @@ export function buildSafariLogConfigUI(logSettings, { whispersEnabled = true } =
     statusText += `-# Logs activity from Idol Hunts, Challenges and Safari features — currency, items, stores, movement and more.\n\n`;
     statusText += `**Status:** ${enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
     statusText += `**Log Channel:** ${settings.logChannelId ? `<#${settings.logChannelId}>` : 'Not Set'}\n`;
+    statusText += `**Log Format:** ${settings.logFormat === 'enhanced' ? '✨ Enhanced' : '📜 Classic'}\n`;
     statusText += `**Whispers:** ${whispersEnabled ? '🟢 On' : '🔴 Off'}`;
     statusText += ` · **Whisper Log:** ${settings.whisperLogChannelId ? `<#${settings.whisperLogChannelId}>` : 'Not Set'}\n\n`;
 
@@ -525,6 +526,33 @@ export function buildSafariLogConfigUI(logSettings, { whispersEnabled = true } =
                     label: enabled ? 'Disable Safari Log' : 'Enable Safari Log',
                     style: enabled ? 4 : 3,
                     emoji: { name: enabled ? '🔴' : '🟢' }
+                }]
+            },
+            { type: 14 }, // Separator
+            {
+                type: 1, // Action Row — log format (Classic/Enhanced), applies immediately on select
+                components: [{
+                    type: 3, // String Select
+                    custom_id: 'safari_log_format_select',
+                    placeholder: 'Set Log Type',
+                    min_values: 1,
+                    max_values: 1,
+                    options: [
+                        {
+                            label: 'Classic',
+                            value: 'classic',
+                            emoji: { name: '📜' },
+                            description: 'Most detail but difficult to read',
+                            default: settings.logFormat !== 'enhanced'
+                        },
+                        {
+                            label: 'Enhanced',
+                            value: 'enhanced',
+                            emoji: { name: '✨' },
+                            description: 'Formats logs nicer, less detail',
+                            default: settings.logFormat === 'enhanced'
+                        }
+                    ]
                 }]
             },
             { type: 14 }, // Separator

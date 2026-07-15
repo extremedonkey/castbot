@@ -733,12 +733,13 @@ export const BUTTON_REGISTRY = {
 
   // Legacy (in Reece's Stuff)
   'prod_toggle_live_analytics': {
-    label: 'Toggle Logs',
-    description: 'Toggle live analytics logging for current channel',
-    emoji: '🔃',
+    label: 'CastBot Logs',
+    description: 'Configure environment-level Discord log posting (enable, channel, ignore list, format, cache refresh)',
+    emoji: '🪵',
     style: 'Secondary',
     parent: 'reeces_stuff',
     restrictedUser: '391415444084490240',
+    requiresModal: true,
     category: 'analytics'
   },
   'prod_nuke_category': {
@@ -2191,6 +2192,14 @@ export const BUTTON_REGISTRY = {
     emoji: '🧪',
     style: 'Secondary',
     parent: 'whisper_log_config',
+    category: 'safari'
+  },
+  'safari_log_format_select': {
+    label: 'Set Log Type',
+    description: 'Choose Classic or Enhanced Safari Log format',
+    emoji: '🎨',
+    style: 'Hidden',
+    parent: 'safari_configure_log',
     category: 'safari'
   },
   'stamina_location_config': {

@@ -343,6 +343,14 @@ function setDiscordClient(client) {
 }
 
 /**
+ * Invalidate the cached log channel — call after the log channel id changes in
+ * environmentConfig so the next post fetches the new channel (no restart needed).
+ */
+function resetTargetChannelCache() {
+  targetChannel = null;
+}
+
+/**
  * Format analytics line with Markdown (reused from app.js Live Analytics)
  * @param {string} line - Raw log line
  * @returns {string} Formatted line with Discord Markdown
@@ -534,7 +542,13 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
     if (shouldLog('VERBOSE')) {
       console.log(`📊 DEBUG: postToDiscordLogs - Formatting log entry`);
     }
-    const formattedMessage = `* ${formatAnalyticsLine(logEntry)}`;
+    let formattedMessage;
+    if (loggingConfig.format === 'enhanced') {
+      const { formatEnhancedAnalyticsLine } = await import('../../logFormatter.js');
+      formattedMessage = formatEnhancedAnalyticsLine(logEntry);
+    } else {
+      formattedMessage = `* ${formatAnalyticsLine(logEntry)}`;
+    }
     if (shouldLog('VERBOSE')) {
       console.log(`📊 DEBUG: postToDiscordLogs - Formatted message: ${formattedMessage.substring(0, 100)}...`);
     }
@@ -1076,8 +1090,23 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
     const ampm = hours >= 12 ? 'PM' : 'AM';
     const displayHours = hours % 12 || 12;
     const timestamp = `${displayHours}:${minutes}${ampm}`;
-    
-    switch (action) {
+
+    if (logSettings?.logFormat === 'enhanced') {
+      // Enhanced (player-log style) format — opt-in per guild via safari_log_format_select.
+      // Item resolver reuses the safariData already loaded above (no extra I/O).
+      const { formatEnhancedSafariLog } = await import('../../logFormatter.js');
+      const resolveItem = (itemId) => {
+        const item = safariData[guildId]?.items?.[itemId];
+        return item ? { name: item.name || itemId, emoji: item.emoji || '📦' } : null;
+      };
+      logMessage = formatEnhancedSafariLog(
+        action,
+        userDisplayName,
+        { ...safariContent, _buttonLabel: buttonLabel, _buttonEmoji: buttonEmoji },
+        details,
+        { resolveItem }
+      );
+    } else switch (action) {
       case 'SAFARI_WHISPER':
         logMessage = `🤫 **WHISPER** | [${timestamp}] | **${userDisplayName}** → **${safariContent.recipientName}** at **${safariContent.location}**${channelDisplay}\n> ${safariContent.message}`;
         break;
@@ -1201,4 +1230,4 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
   }
 }
 
-export { logInteraction, getLogFilePath, setDiscordClient, logNewServerInstall, logSetupRun };
+export { logInteraction, getLogFilePath, setDiscordClient, resetTargetChannelCache, logNewServerInstall, logSetupRun };

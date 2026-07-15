@@ -14216,12 +14216,11 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id === 'prod_toggle_live_analytics') {
-      // Toggle live analytics logging (MIGRATED TO FACTORY)
+      // CastBot Logs — environment log config modal (Reece only)
       return ButtonHandlerFactory.create({
         id: 'prod_toggle_live_analytics',
+        requiresModal: true,
         handler: async (context) => {
-          console.log(`🔍 START: prod_toggle_live_analytics - user ${context.userId}`);
-          
           // Security check - only allow specific Discord ID
           if (context.userId !== '391415444084490240') {
             console.log(`❌ ACCESS DENIED: prod_toggle_live_analytics - user ${context.userId} not authorized`);
@@ -14231,38 +14230,12 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
 
-          console.log('🪵 DEBUG: Starting live analytics toggle for user:', context.userId);
-          
-          // Load current configuration
-          const config = await loadEnvironmentConfig();
-          const currentStatus = config.liveDiscordLogging.enabled;
-          
-          console.log('🪵 DEBUG: Current live logging status:', currentStatus);
-          
-          // Toggle the status
-          const newStatus = !currentStatus;
-          const updatedConfig = await updateLiveLoggingStatus(newStatus);
-          
-          console.log('🪵 DEBUG: New live logging status:', newStatus);
-          
-          // Prepare response message
-          let responseMessage;
-          if (newStatus) {
-            // Get the correct channel ID for current environment
-            const targetChannelId = await getLoggingChannelId();
-            responseMessage = `✅ **Live Analytics Logging ENABLED**\n\n` +
-                            `📤 Analytics events will now be posted to <#${targetChannelId}>\n` +
-                            `🚫 Excluded users: ${updatedConfig.excludedUserIds.length}`;
-          } else {
-            responseMessage = `🔴 **Live Analytics Logging DISABLED**\n\n` +
-                            `📄 Only file logging will continue\n` +
-                            `🚫 Discord channel logging has been paused`;
-          }
-          
-          console.log(`✅ SUCCESS: prod_toggle_live_analytics - toggled to ${newStatus}`);
+          const envConfig = await loadEnvironmentConfig();
+          const { buildCastBotLogsModal } = await import('./src/analytics/logsConfigUI.js');
+
           return {
-            content: responseMessage,
-            ephemeral: true
+            type: 9, // MODAL
+            data: buildCastBotLogsModal(envConfig, process.env.PRODUCTION === 'TRUE')
           };
         }
       })(req, res, client);
@@ -17021,6 +16994,41 @@ Your server is now ready for Tycoons gameplay!`;
           await saveSafariContent(safariData);
 
           console.log(`📊 DEBUG: Safari Log ${!wasEnabled ? 'enabled' : 'disabled'} for guild ${context.guildId}`);
+
+          const whispersEnabled = safariData[context.guildId]?.safariConfig?.whispersEnabled !== false;
+          return buildSafariLogConfigUI(safariData[context.guildId].safariLogSettings, { whispersEnabled });
+        }
+      })(req, res, client);
+    } else if (custom_id === 'safari_log_format_select') {
+      // Safari Log format select — Classic/Enhanced, applies immediately
+      return ButtonHandlerFactory.create({
+        id: 'safari_log_format_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const { buildSafariLogConfigUI } = await import('./safariConfigUI.js');
+          const { DEFAULT_LOG_TYPES } = await import('./safariLogger.js');
+          const safariData = await loadSafariContent();
+
+          if (!safariData[context.guildId]) {
+            safariData[context.guildId] = {};
+          }
+          if (!safariData[context.guildId].safariLogSettings) {
+            safariData[context.guildId].safariLogSettings = {
+              enabled: false,
+              logChannelId: null,
+              productionRoleId: null,
+              logTypes: { ...DEFAULT_LOG_TYPES }
+            };
+          }
+
+          const newFormat = context.values?.[0] === 'enhanced' ? 'enhanced' : 'classic';
+          safariData[context.guildId].safariLogSettings.logFormat = newFormat;
+
+          await saveSafariContent(safariData);
+          console.log(`🎨 DEBUG: Safari Log format set to ${newFormat} for guild ${context.guildId} by user ${context.userId}`);
 
           const whispersEnabled = safariData[context.guildId]?.safariConfig?.whispersEnabled !== false;
           return buildSafariLogConfigUI(safariData[context.guildId].safariLogSettings, { whispersEnabled });
@@ -40319,6 +40327,84 @@ Your server is now ready for Tycoons gameplay!`;
             client,
             configId
           });
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'castbot_logs_modal') {
+      // CastBot Logs config modal submit (Reece only) — deferred: cache refresh can exceed 3s
+      return ButtonHandlerFactory.create({
+        id: 'castbot_logs_modal',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          if (context.userId !== '391415444084490240') {
+            return { content: 'Access denied. This feature is restricted.', ephemeral: true };
+          }
+
+          // Parse Label-wrapped fields — selects deliver values[]
+          const fields = {};
+          for (const row of (components || [])) {
+            if (row?.type === 18 && row.component?.custom_id) {
+              const c = row.component;
+              fields[c.custom_id] = Array.isArray(c.values) ? c.values : (c.value != null ? [c.value] : []);
+            }
+          }
+          const enabled = fields.logs_enabled?.[0] === 'enabled';
+          const channelId = fields.logs_channel?.[0] ?? null;
+          const ignored = fields.logs_ignore || [];
+          const format = fields.logs_format?.[0] === 'enhanced' ? 'enhanced' : 'classic';
+          const doRefresh = (fields.logs_cache_refresh || []).includes('refresh');
+          const isProduction = process.env.PRODUCTION === 'TRUE'; // TEST instance → development branch (existing behavior)
+          const envKey = isProduction ? 'production' : 'development';
+
+          // environmentConfig lives in playerData.json — read-modify-write under the storage
+          // lock (CLAUDE.md rule). Nothing slow inside: Discord work happens after.
+          const { withStorageLock, loadEnvironmentConfig, saveEnvironmentConfig } = await import('./storage.js');
+          let channelChanged = false;
+          await withStorageLock(async () => {
+            const config = await loadEnvironmentConfig();
+            const lg = config.liveDiscordLogging;
+            lg.enabled = enabled;
+            if (channelId) {
+              const key = isProduction ? 'productionChannelId' : 'developmentChannelId';
+              channelChanged = lg[key] !== channelId;
+              lg[key] = channelId;
+            }
+            if (!lg.excludedUserIds || Array.isArray(lg.excludedUserIds)) {
+              lg.excludedUserIds = { production: [], development: [] };
+            }
+            lg.excludedUserIds[envKey] = ignored; // overwrite — supports un-ignoring
+            lg.format = format;
+            await saveEnvironmentConfig(config);
+          });
+
+          if (channelChanged) {
+            const { resetTargetChannelCache } = await import('./src/analytics/analyticsLogger.js');
+            resetTargetChannelCache();
+          }
+
+          // Optional guild cache refresh — OUTSIDE the lock (Discord API calls)
+          let refreshLine = '';
+          if (doRefresh) {
+            try {
+              const guild = await context.client.guilds.fetch(context.guildId, { force: true });
+              await guild.roles.fetch();
+              const members = await guild.members.fetch({ time: 30_000 });
+              refreshLine = `\n♻️ Cache refreshed: ${members.size} members, ${guild.roles.cache.size} roles`;
+            } catch (e) {
+              refreshLine = `\n⚠️ Cache refresh failed: ${e.message}`;
+            }
+          }
+
+          console.log(`🪵 CastBot Logs config saved (${envKey}): enabled=${enabled}, channel=${channelId}, ignored=${ignored.length}, format=${format}, refresh=${doRefresh}`);
+          return {
+            content: `${enabled ? '✅ Logging **enabled**' : '🔴 Logging **disabled**'} (${envKey})\n` +
+              `📤 Channel: ${channelId ? `<#${channelId}>` : 'unchanged'}\n` +
+              `🚫 Ignored: ${ignored.length ? ignored.map(id => `<@${id}>`).join(' ') : 'none'}\n` +
+              `🎨 Format: ${format}${refreshLine}`,
+            allowed_mentions: { parse: [] },
+            ephemeral: true
+          };
         }
       })(req, res, client);
 

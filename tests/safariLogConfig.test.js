@@ -154,6 +154,27 @@ describe('buildSafariLogConfigUI — structure', () => {
     assert.equal(off.style, 3);  // Success = "Enable"
   });
 
+  it('log format select: Classic default when logFormat absent, Enhanced when set', () => {
+    const absent = flatten(buildSafariLogConfigUI(settings, { whispersEnabled: true }).components)
+      .find(c => c.custom_id === 'safari_log_format_select');
+    assert.equal(absent.placeholder, 'Set Log Type');
+    assert.equal(absent.options.find(o => o.value === 'classic').default, true);
+    assert.equal(absent.options.find(o => o.value === 'enhanced').default, false);
+
+    const enhanced = flatten(buildSafariLogConfigUI({ ...settings, logFormat: 'enhanced' }, { whispersEnabled: true }).components)
+      .find(c => c.custom_id === 'safari_log_format_select');
+    assert.equal(enhanced.options.find(o => o.value === 'enhanced').default, true);
+    assert.equal(enhanced.options.find(o => o.value === 'classic').default, false);
+  });
+
+  it('status text shows the log format', () => {
+    const classic = JSON.stringify(buildSafariLogConfigUI(settings, { whispersEnabled: true }));
+    assert.ok(classic.includes('Log Format:'));
+    assert.ok(classic.includes('Classic'));
+    const enhanced = JSON.stringify(buildSafariLogConfigUI({ ...settings, logFormat: 'enhanced' }, { whispersEnabled: true }));
+    assert.ok(enhanced.includes('Enhanced'));
+  });
+
   it('never renders a raw testMessages bullet in Active Log Types', () => {
     const ui = buildSafariLogConfigUI({ enabled: true, logChannelId: 'C1', logTypes: { testMessages: true } }, { whispersEnabled: true });
     assert.ok(!JSON.stringify(ui).includes('testMessages'));
