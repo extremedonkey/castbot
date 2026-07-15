@@ -1,6 +1,6 @@
 # Incident 05: Lost Movement Race — playerData.json Concurrent Load-Modify-Save Clobber
 
-**Status**: 🟡 Root cause CONFIRMED with prod log evidence — tactical fix (Option A, `withStorageLock` on the four incident writers) implemented 2026-07-15, on dev + test, **awaiting prod deploy permission**
+**Status**: 🟢 Tactical fix (Option A, `withStorageLock` on the four incident writers) **LIVE ON PROD 2026-07-15** (commit `95429121`, deployed on Reece's explicit permission). Validated on TEST under real concurrency first (two users moving in the same second — both writes survived, save sizes monotonically increasing). Residual: other playerData writers still unserialized (wrap as touched); end-state = RaP 0915 in-memory store.
 **Date**: 2026-07-15
 **Moved**: from `docs/01-RaP/0896_...` to incidents (Reece, 2026-07-15)
 **Severity**: Production data loss (player state), silent, intermittent
