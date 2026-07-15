@@ -58,7 +58,7 @@ const TYPE_LABEL = {
  * @param {string} userId
  * @param {string} type - One of ACTIVITY_TYPES
  * @param {string} desc - Human-readable description
- * @param {Object} [opts] - Optional { stamina, cd, loc }
+ * @param {Object} [opts] - Optional { stamina, cd, loc, src, via }
  */
 export function addActivityEntry(playerData, guildId, userId, type, desc, opts = {}) {
   const player = playerData[guildId]?.players?.[userId];
@@ -76,6 +76,8 @@ export function addActivityEntry(playerData, guildId, userId, type, desc, opts =
   if (opts.loc) entry.loc = opts.loc;
   if (opts.stamina) entry.stamina = opts.stamina;
   if (opts.cd) entry.cd = opts.cd;
+  if (opts.src) entry.src = opts.src;   // 'admin' | 'teleport' — who initiated a movement
+  if (opts.via) entry.via = opts.via;   // Navigate pane coordinate, when it differs from origin
 
   player.safari.history.push(entry);
 
@@ -150,9 +152,11 @@ export function getActivityPage(playerData, guildId, userId, page = 1, perPage =
 export function formatActivityEntry(entry) {
   const emoji = TYPE_EMOJI[entry.type] || '📝';
   const label = TYPE_LABEL[entry.type] || entry.type;
+  const srcPrefix = entry.src === 'admin' ? 'ADMIN ' : entry.src === 'teleport' ? 'TELEPORT ' : '';
   const ts = Math.floor(entry.t / 1000); // Discord epoch is seconds
   const locTag = entry.loc ? ` (${entry.loc})` : '';
-  let line = `<t:${ts}:R> ${emoji} **${label}**${locTag} — ${entry.desc}`;
+  let line = `<t:${ts}:R> ${emoji} **${srcPrefix}${label}**${locTag} — ${entry.desc}`;
+  if (entry.via) line += ` \`via ${entry.via} pane\``;
   if (entry.stamina) line += ` \`⚡${entry.stamina}\``;
   if (entry.cd) line += ` \`cd: ${entry.cd}\``;
   return line;

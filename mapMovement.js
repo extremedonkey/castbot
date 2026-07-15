@@ -170,10 +170,23 @@ export async function canPlayerMove(guildId, userId) {
 
 // Execute player movement
 export async function movePlayer(guildId, userId, newCoordinate, client, options = {}) {
-    const { bypassStamina = false, adminMove = false, member = null } = options;
+    const { bypassStamina = false, adminMove = false, member = null, moveSource = null, viaChannelId = null } = options;
     const entityId = `player_${userId}`;
     const safariData = await loadSafariContent();
     const movementCost = safariData[guildId]?.pointsConfig?.movementCost?.stamina || 1;
+
+    // Source of the move for logging: 'admin' (Player Admin move), 'teleport' (action outcome),
+    // or null for a normal player Navigate move. adminMove alone can't distinguish these —
+    // teleport outcomes also pass adminMove:true to bypass adjacency validation.
+    const resolvedMoveSource = moveSource || (adminMove ? 'admin' : null);
+
+    // Resolve which Navigate pane (channel) the move was clicked from, if provided
+    let viaPane = null;
+    if (viaChannelId) {
+        const activeMapId = safariData[guildId]?.maps?.active;
+        const coords = safariData[guildId]?.maps?.[activeMapId]?.coordinates || {};
+        viaPane = Object.keys(coords).find(c => coords[c]?.channelId === viaChannelId) || null;
+    }
     
     // Check stamina (unless bypassed for admin moves)
     if (!bypassStamina) {
@@ -273,7 +286,10 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
             displayName: freshDisplayName,
             fromLocation: oldCoordinate,
             toLocation: newCoordinate,
-            staminaSnapshot
+            staminaSnapshot,
+            moveSource: resolvedMoveSource,
+            // Only worth logging when the pane differs from the origin cell (stale-pane diagnostic)
+            viaPane: viaPane && viaPane !== oldCoordinate ? viaPane : null
         });
     } catch (logError) {
         console.error('Failed to log player movement:', logError);

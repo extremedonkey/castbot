@@ -4692,7 +4692,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             }
             
             // Execute movement
-            const result = await movePlayer(context.guildId, context.userId, targetCoordinate, context.client, { member: context.member });
+            const result = await movePlayer(context.guildId, context.userId, targetCoordinate, context.client, { member: context.member, viaChannelId: context.channelId });
             
             if (result.success) {
               // Post movement interface to new channel (if different from current)

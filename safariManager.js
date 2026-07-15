@@ -3928,7 +3928,8 @@ async function executeManagePlayerState(config, guildId, userId, interaction) {
                 }
                 const teleportResult = await movePlayer(guildId, userId, coordinate, client, {
                     bypassStamina: true,
-                    adminMove: true
+                    adminMove: true,
+                    moveSource: 'teleport'
                 });
                 if (!teleportResult.success) return { content: teleportResult.message };
                 const channelLink = await getChannelLink(coordinate);
@@ -3972,7 +3973,8 @@ async function executeManagePlayerState(config, guildId, userId, interaction) {
                     }
                     const iotResult = await movePlayer(guildId, userId, coordinate, client, {
                         bypassStamina: true,
-                        adminMove: true
+                        adminMove: true,
+                        moveSource: 'teleport'
                     });
                     if (!iotResult.success) return { content: iotResult.message };
                     const iotLink = await getChannelLink(coordinate);

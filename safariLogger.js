@@ -295,8 +295,10 @@ export async function logSafariButton({ guildId, userId, username, displayName, 
  * @param {string} params.toLocation - Destination location
  * @param {string} params.channelName - Channel name
  * @param {Object} [params.staminaSnapshot] - Stamina change snapshot { before, after, max, regenTime }
+ * @param {string} [params.moveSource] - 'admin' (Player Admin move), 'teleport' (action outcome), or null (player Navigate)
+ * @param {string} [params.viaPane] - Coordinate of the Navigate pane the move was clicked from, when it differs from fromLocation
  */
-export async function logPlayerMovement({ guildId, userId, username, displayName, fromLocation, toLocation, channelName, staminaSnapshot }) {
+export async function logPlayerMovement({ guildId, userId, username, displayName, fromLocation, toLocation, channelName, staminaSnapshot, moveSource = null, viaPane = null }) {
   const { formatStaminaTag } = await import('./pointsManager.js');
   const staminaTag = formatStaminaTag(staminaSnapshot);
 
@@ -304,14 +306,18 @@ export async function logPlayerMovement({ guildId, userId, username, displayName
     fromLocation,
     toLocation,
     channelName,
-    staminaSnapshot
+    staminaSnapshot,
+    moveSource,
+    viaPane
   };
+
+  const sourceTag = moveSource === 'admin' ? '[ADMIN] ' : moveSource === 'teleport' ? '[TELEPORT] ' : '';
 
   await logInteraction(
     userId,
     guildId,
     'SAFARI_MOVEMENT',
-    `Moved from ${fromLocation} to ${toLocation}${staminaTag ? ' ' + staminaTag : ''}`,
+    `${sourceTag}Moved from ${fromLocation} to ${toLocation}${staminaTag ? ' ' + staminaTag : ''}`,
     username,
     null,
     null,
@@ -326,6 +332,8 @@ export async function logPlayerMovement({ guildId, userId, username, displayName
     activityOpts.cd = (staminaSnapshot.regenTime === 'Full' || staminaSnapshot.regenTime === 'Ready!')
       ? 'MAX' : staminaSnapshot.regenTime;
   }
+  if (moveSource) activityOpts.src = moveSource;
+  if (viaPane) activityOpts.via = viaPane;
   addActivityEntryAndSave(guildId, userId, ACTIVITY_TYPES.movement, `Moved from ${fromLocation} to ${toLocation}${staminaTag ? ' ' + staminaTag : ''}`, activityOpts);
 }
 

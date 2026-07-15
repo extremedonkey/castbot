@@ -1110,7 +1110,12 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
           const regen = (s.regenTime === 'Full' || s.regenTime === 'Ready!') ? '' : ` ♻️${s.regenTime}`;
           movementStaminaTag = ` (⚡${s.before}/${s.max} → ${s.after}/${s.max}${regen})`;
         }
-        logMessage = `🗺️ **MOVEMENT** | [${timestamp}] | **${userDisplayName}** moved from **${safariContent.fromLocation}**${fromChannelDisplay} to **${safariContent.toLocation}**${toChannelDisplay}${movementStaminaTag}`;
+        // Header keeps "MOVEMENT" as the last word and the "moved from X to Y" phrasing intact —
+        // activityLogger's Safari-Log-channel backfill parser matches on both.
+        const movementHeader = safariContent.moveSource === 'admin' ? 'ADMIN MOVEMENT'
+          : safariContent.moveSource === 'teleport' ? 'TELEPORT MOVEMENT' : 'MOVEMENT';
+        const viaPaneTag = safariContent.viaPane ? ` [via ${safariContent.viaPane} pane]` : '';
+        logMessage = `🗺️ **${movementHeader}** | [${timestamp}] | **${userDisplayName}** moved from **${safariContent.fromLocation}**${fromChannelDisplay} to **${safariContent.toLocation}**${toChannelDisplay}${movementStaminaTag}${viaPaneTag}`;
         break;
       }
         

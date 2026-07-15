@@ -554,7 +554,8 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate, client
     
     result = await movePlayer(guildId, userId, coordinate, client, {
       bypassStamina: true,
-      adminMove: true
+      adminMove: true,
+      moveSource: 'admin'
     });
     
     if (!result.success) {
