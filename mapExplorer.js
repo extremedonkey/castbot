@@ -2473,7 +2473,14 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
     .setEmoji('🗺️')
     .setDisabled(!hasActiveMap);
 
-  const mapButtonRow3 = new ActionRowBuilder().addComponents([sharedMapButton, safariProgressButton]);
+  // Whisper Settings entry (right of Safari Progress): feature toggle + spectator whisper log
+  const whispersButton = new ButtonBuilder()
+    .setCustomId('whisper_log_config')
+    .setLabel('Whispers')
+    .setStyle(ButtonStyle.Secondary)
+    .setEmoji('🤫');
+
+  const mapButtonRow3 = new ActionRowBuilder().addComponents([sharedMapButton, safariProgressButton, whispersButton]);
 
   // Create back button (only for ephemeral messages)
   if (isEphemeral) {
@@ -2482,14 +2489,7 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
       .setLabel('← Menu')
       .setStyle(ButtonStyle.Secondary);
 
-    // Whisper Settings entry (bottom-right): whisper feature toggle + spectator whisper log
-    const whispersButton = new ButtonBuilder()
-      .setCustomId('whisper_log_config')
-      .setLabel('Whispers')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🤫');
-
-    const backRow = new ActionRowBuilder().addComponents([backButton, whispersButton]);
+    const backRow = new ActionRowBuilder().addComponents([backButton]);
 
     // Add action row components to container
     containerComponents.push(mapButtonRow2.toJSON());
