@@ -1,7 +1,8 @@
-# Lost Movement Race — playerData.json Concurrent Load-Modify-Save Clobber
+# Incident 05: Lost Movement Race — playerData.json Concurrent Load-Modify-Save Clobber
 
-**Status**: 🔴 Root cause CONFIRMED with prod log evidence — fix pending decision
+**Status**: 🟡 Root cause CONFIRMED with prod log evidence — tactical fix (Option A, `withStorageLock` on the four incident writers) implemented 2026-07-15, on dev + test, **awaiting prod deploy permission**
 **Date**: 2026-07-15
+**Moved**: from `docs/01-RaP/0896_...` to incidents (Reece, 2026-07-15)
 **Severity**: Production data loss (player state), silent, intermittent
 **Related**: [0915 Memory Footprint / playerData cache](0915_20260628_MemoryLeak_Analysis.md) *(root-fix vehicle)*, the unresolved DNC/completion persistence bug (suspect list included `storage.js:11` global requestCache — this incident confirms the bug class)
 
@@ -154,6 +155,24 @@ sequenceDiagram
 | **D. Do nothing, admin re-moves players** | Status quo | Silent state loss keeps happening; hosts lose trust | 🔴 |
 
 **Recommendation**: A now (start with the highest-traffic writers: movement, give_item, currency), B as the destination per RaP 0915. **Not deployed to prod without explicit permission — active games running.**
+
+### Option A — IMPLEMENTED 2026-07-15 (dev + test)
+
+The four incident-class writers now run their load→mutate→save cycles under `withStorageLock`:
+
+| Writer | File | Notes |
+|---|---|---|
+| `setPlayerLocation` | `mapMovement.js` | whole body wrapped (the write that was erased) |
+| `updateCurrency` | `safariManager.js` | lock covers load→save only; Safari Log posting stays outside |
+| `addItemToInventory` | `safariManager.js` | locked only when it owns the cycle (skips lock when caller passes `existingPlayerData` — caller owns the cycle); the writer that did the erasing |
+| `removeItemFromInventory` | `safariManager.js` | same pattern (the `take` half of give_item) |
+
+Guardrails so the lock stays safe as the codebase grows:
+- **`withStorageLock` JSDoc** (storage.js) — full when/when-not decision guide: load inside the lock, nothing slow (no Discord calls/image renders) inside, not re-entrant (never call another lock-taker from inside).
+- **CLAUDE.md** — new "🔴 CRITICAL: playerData Writes — Use the Storage Lock" section with the wrap pattern.
+- **`tests/storageLock.test.js`** — reproduces the unlocked lost-update, proves both writes survive under the lock, proves an error inside the lock can't jam the queue.
+
+**Known remaining gap (why status is 🟡 not 🟢):** the lock only protects lock-users from each other. Other playerData writers (stores, claims, admin edits, etc.) are still unserialized and can clobber/be clobbered. Migrate writers incrementally as touched; the real end-state is the RaP 0915 in-memory store.
 
 ## ⚠️ The Stamina 999 Fear — Cleared
 

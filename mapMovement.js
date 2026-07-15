@@ -1,5 +1,5 @@
 import { PermissionFlagsBits } from 'discord.js';
-import { loadPlayerData, savePlayerData } from './storage.js';
+import { loadPlayerData, savePlayerData, withStorageLock } from './storage.js';
 import { loadSafariContent } from './safariManager.js';
 import { hasEnoughPoints, usePoints, getTimeUntilRegeneration, initializeEntityPoints, getEntityPoints } from './pointsManager.js';
 
@@ -39,11 +39,16 @@ export async function getPlayerLocation(guildId, userId) {
 }
 
 // Set player location (for initialization or admin commands)
+// The whole load→mutate→save cycle runs under withStorageLock: a concurrent playerData save
+// (e.g. another player's give_item) could otherwise land after ours from a pre-move snapshot
+// and silently erase the move (docs/incidents/05-LostMovementRace). No Discord/network calls
+// in here — keep it that way, everything queued behind the lock waits for this to finish.
 export async function setPlayerLocation(guildId, userId, coordinate, mapId = null) {
+  return withStorageLock(async () => {
     const playerData = await loadPlayerData();
     const safariData = await loadSafariContent();
     const player = playerData[guildId]?.players?.[userId];
-    
+
     if (!player?.safari) {
         throw new Error("Player not found in safari system");
     }
@@ -93,6 +98,7 @@ export async function setPlayerLocation(guildId, userId, coordinate, mapId = nul
     
     await savePlayerData(playerData);
     return player.safari.mapProgress[activeMapId];
+  });
 }
 
 // SINGLE SOURCE OF TRUTH for movement-button labels (emoji + short text).

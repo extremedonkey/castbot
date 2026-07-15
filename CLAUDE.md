@@ -435,6 +435,25 @@ Bot not responding?
 - Apache auto-start enabled: `sudo systemctl enable bitnami`
 - nginx auto-start disabled: `sudo systemctl disable nginx`
 
+## 🔴 CRITICAL: playerData Writes — Use the Storage Lock
+
+Concurrent `loadPlayerData → mutate → savePlayerData` cycles silently erase each other (last save wins — a real player's map move was destroyed this way: [incident 05](docs/incidents/05-LostMovementRace.md)). `atomicSave` only serializes the writes, not the cycles.
+
+**USE `withStorageLock` (from storage.js) whenever your function does load + mutate + save of playerData in one flow:**
+```javascript
+import { withStorageLock, loadPlayerData, savePlayerData } from './storage.js';
+await withStorageLock(async () => {
+  const playerData = await loadPlayerData();   // load INSIDE the lock, never before it
+  playerData[guildId].players[userId].safari.foo = bar;
+  await savePlayerData(playerData);
+});
+// Discord replies / follow-up messages / logging go HERE, after the lock
+```
+
+**Three rules inside the lock:** (1) `loadPlayerData()` inside `fn`, not before; (2) nothing slow inside — no Discord API calls, image renders, or network (everything else queues behind you); (3) never call another lock-taking function from inside (not re-entrant → deadlock).
+
+**Skip the lock for:** pure reads; helpers handed `existingPlayerData` (the caller owns the cycle and the lock). Full decision guide: `withStorageLock` JSDoc in storage.js. Wrapped examples: `setPlayerLocation`, `updateCurrency`, `addItemToInventory`.
+
 ## 💾 Data File Standards
 
 **When creating a new `.json` data file:**

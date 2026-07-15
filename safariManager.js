@@ -14,7 +14,7 @@ import {
     InteractionResponseFlags
 } from 'discord-interactions';
 import { DiscordRequest, countComponents, validateComponentLimit } from './utils.js';
-import { loadPlayerData, savePlayerData } from './storage.js';
+import { loadPlayerData, savePlayerData, withStorageLock } from './storage.js';
 import { initializeGuildSafariData } from './safariInitialization.js';
 import { detectBundles, formatActionsWithBundleIndicators } from './safariActionBundler.js';
 import { parseTextEmoji, parseAndValidateEmoji } from './utils/emojiUtils.js';
@@ -895,19 +895,25 @@ async function grantDefaultItems(playerData, guildId, userId) {
  */
 async function updateCurrency(guildId, userId, amount, context = {}) {
     try {
-        const playerData = await loadPlayerData();
-        
-        // Use universal safari initialization
-        initializePlayerSafari(playerData, guildId, userId);
-        
-        const currentCurrency = playerData[guildId].players[userId].safari.currency;
-        const newCurrency = Math.max(0, currentCurrency + amount); // Don't go below 0
-        
-        playerData[guildId].players[userId].safari.currency = newCurrency;
-        playerData[guildId].players[userId].safari.lastInteraction = Date.now();
-        
-        await savePlayerData(playerData);
-        
+        // Load→mutate→save runs under withStorageLock so a concurrent whole-file save can't
+        // erase this write (docs/incidents/05-LostMovementRace). Lock section stays I/O-only:
+        // Safari Log posting happens AFTER, outside the lock.
+        let currentCurrency, newCurrency, playerData;
+        await withStorageLock(async () => {
+            playerData = await loadPlayerData();
+
+            // Use universal safari initialization
+            initializePlayerSafari(playerData, guildId, userId);
+
+            currentCurrency = playerData[guildId].players[userId].safari.currency;
+            newCurrency = Math.max(0, currentCurrency + amount); // Don't go below 0
+
+            playerData[guildId].players[userId].safari.currency = newCurrency;
+            playerData[guildId].players[userId].safari.lastInteraction = Date.now();
+
+            await savePlayerData(playerData);
+        });
+
         console.log(`🪙 DEBUG: Currency updated for user ${userId}: ${currentCurrency} → ${newCurrency} (${amount >= 0 ? '+' : ''}${amount})`);
         
         // Log currency change to Safari Log
@@ -2691,58 +2697,71 @@ async function getPlayerInventory(guildId, userId) {
  */
 async function addItemToInventory(guildId, userId, itemId, quantity = 1, existingPlayerData = null, logContext = null) {
     try {
-        const playerData = existingPlayerData || await loadPlayerData();
-        const safariData = await loadSafariContent();
-        
-        // Use universal safari initialization
-        initializePlayerSafari(playerData, guildId, userId);
-        
-        // DEFENSIVE: Additional check to ensure inventory exists before access
-        if (!playerData[guildId].players[userId].safari.inventory) {
-            console.error(`🚨 CRITICAL: Inventory still missing after initialization for user ${userId}`);
-            playerData[guildId].players[userId].safari.inventory = {};
-        }
-        
-        // Get item definition to check if it's an attack item
-        const itemDefinition = safariData[guildId]?.items?.[itemId];
-        const isAttackItem = itemDefinition && (itemDefinition.attackValue !== null && itemDefinition.attackValue !== undefined);
-        
-        const currentItem = playerData[guildId].players[userId].safari.inventory[itemId];
-        let currentQuantity = 0;
-        
-        console.log(`🔍 DEBUG: addItemToInventory - BEFORE: ${itemId} = `, currentItem);
-        console.log(`🔍 DEBUG: Item is attack item: ${isAttackItem}, attackValue: ${itemDefinition?.attackValue}`);
-        
-        // Get current quantity using universal accessor
-        currentQuantity = getItemQuantity(currentItem);
-        const currentAttacks = getItemAttackAvailability(currentItem);
-        
-        console.log(`🔍 DEBUG: Current - quantity: ${currentQuantity}, attacks: ${currentAttacks}, adding: ${quantity}`);
-        
-        // Calculate new values
-        const newQuantity = currentQuantity + quantity;
-        const newAttacks = isAttackItem ? (currentAttacks + quantity) : 0; // Attack items add attack availability
-        
-        // Always set in object format using universal setter
-        setItemQuantity(
-            playerData[guildId].players[userId].safari.inventory,
-            itemId,
-            newQuantity,
-            newAttacks
-        );
-        
-        console.log(`⚔️ DEBUG: Updated to object format - quantity: ${newQuantity}, attacks: ${newAttacks}`);
-        
-        console.log(`🔍 DEBUG: addItemToInventory - AFTER: ${itemId} = `, playerData[guildId].players[userId].safari.inventory[itemId]);
-        
-        // Only save if we're not using existing player data (to avoid race conditions)
-        if (!existingPlayerData) {
-            await savePlayerData(playerData);
-            console.log(`✅ DEBUG: PlayerData saved to disk`);
+        let playerData, safariData;
+
+        // The load→mutate→save cycle. When this function owns BOTH the load and the save,
+        // it runs under withStorageLock so a concurrent whole-file save can't erase it
+        // (docs/incidents/05-LostMovementRace). With existingPlayerData the caller owns the
+        // cycle (and any locking) — we only mutate.
+        const applyItemChange = async () => {
+            playerData = existingPlayerData || await loadPlayerData();
+            safariData = await loadSafariContent();
+
+            // Use universal safari initialization
+            initializePlayerSafari(playerData, guildId, userId);
+
+            // DEFENSIVE: Additional check to ensure inventory exists before access
+            if (!playerData[guildId].players[userId].safari.inventory) {
+                console.error(`🚨 CRITICAL: Inventory still missing after initialization for user ${userId}`);
+                playerData[guildId].players[userId].safari.inventory = {};
+            }
+
+            // Get item definition to check if it's an attack item
+            const itemDefinition = safariData[guildId]?.items?.[itemId];
+            const isAttackItem = itemDefinition && (itemDefinition.attackValue !== null && itemDefinition.attackValue !== undefined);
+
+            const currentItem = playerData[guildId].players[userId].safari.inventory[itemId];
+
+            console.log(`🔍 DEBUG: addItemToInventory - BEFORE: ${itemId} = `, currentItem);
+            console.log(`🔍 DEBUG: Item is attack item: ${isAttackItem}, attackValue: ${itemDefinition?.attackValue}`);
+
+            // Get current quantity using universal accessor
+            const currentQuantity = getItemQuantity(currentItem);
+            const currentAttacks = getItemAttackAvailability(currentItem);
+
+            console.log(`🔍 DEBUG: Current - quantity: ${currentQuantity}, attacks: ${currentAttacks}, adding: ${quantity}`);
+
+            // Calculate new values
+            const newQuantity = currentQuantity + quantity;
+            const newAttacks = isAttackItem ? (currentAttacks + quantity) : 0; // Attack items add attack availability
+
+            // Always set in object format using universal setter
+            setItemQuantity(
+                playerData[guildId].players[userId].safari.inventory,
+                itemId,
+                newQuantity,
+                newAttacks
+            );
+
+            console.log(`⚔️ DEBUG: Updated to object format - quantity: ${newQuantity}, attacks: ${newAttacks}`);
+
+            console.log(`🔍 DEBUG: addItemToInventory - AFTER: ${itemId} = `, playerData[guildId].players[userId].safari.inventory[itemId]);
+
+            // Only save if we're not using existing player data (to avoid race conditions)
+            if (!existingPlayerData) {
+                await savePlayerData(playerData);
+                console.log(`✅ DEBUG: PlayerData saved to disk`);
+            } else {
+                console.log(`🔄 DEBUG: Using existing playerData - caller will handle saving`);
+            }
+        };
+
+        if (existingPlayerData) {
+            await applyItemChange();
         } else {
-            console.log(`🔄 DEBUG: Using existing playerData - caller will handle saving`);
+            await withStorageLock(applyItemChange);
         }
-        
+
         console.log(`📦 DEBUG: Added ${quantity}x ${itemId} to user ${userId} inventory`);
         
         // Resolve logging context: an explicit logContext takes priority, otherwise
@@ -2826,45 +2845,58 @@ async function addItemToInventory(guildId, userId, itemId, quantity = 1, existin
  */
 async function removeItemFromInventory(guildId, userId, itemId, quantity = 1, existingPlayerData = null) {
     try {
-        const playerData = existingPlayerData || await loadPlayerData();
+        let playerData, currentQuantity, actualRemoved, finalQuantity;
 
-        // Use universal safari initialization
-        initializePlayerSafari(playerData, guildId, userId);
+        // Load→mutate→save under withStorageLock when we own the cycle — same rationale as
+        // addItemToInventory (docs/incidents/05-LostMovementRace). With existingPlayerData the
+        // caller owns the cycle (and any locking).
+        const applyItemRemoval = async () => {
+            playerData = existingPlayerData || await loadPlayerData();
 
-        // DEFENSIVE: Ensure inventory exists
-        if (!playerData[guildId].players[userId].safari.inventory) {
-            playerData[guildId].players[userId].safari.inventory = {};
-        }
+            // Use universal safari initialization
+            initializePlayerSafari(playerData, guildId, userId);
 
-        const inventory = playerData[guildId].players[userId].safari.inventory;
-        const currentItem = inventory[itemId];
+            // DEFENSIVE: Ensure inventory exists
+            if (!playerData[guildId].players[userId].safari.inventory) {
+                playerData[guildId].players[userId].safari.inventory = {};
+            }
 
-        // Get current quantity using universal accessor
-        const currentQuantity = getItemQuantity(currentItem);
+            const inventory = playerData[guildId].players[userId].safari.inventory;
+            const currentItem = inventory[itemId];
 
-        console.log(`🧨 DEBUG: removeItemFromInventory - item: ${itemId}, current: ${currentQuantity}, requested: ${quantity}`);
+            // Get current quantity using universal accessor
+            currentQuantity = getItemQuantity(currentItem);
 
-        // Calculate how much we can actually remove
-        const actualRemoved = Math.min(quantity, currentQuantity);
-        const finalQuantity = Math.max(0, currentQuantity - quantity);
+            console.log(`🧨 DEBUG: removeItemFromInventory - item: ${itemId}, current: ${currentQuantity}, requested: ${quantity}`);
 
-        // Update or delete inventory item
-        if (finalQuantity === 0) {
-            // Remove item entirely when quantity reaches 0
-            delete inventory[itemId];
-            console.log(`🧨 DEBUG: Removed ${itemId} from inventory entirely (had ${currentQuantity})`);
+            // Calculate how much we can actually remove
+            actualRemoved = Math.min(quantity, currentQuantity);
+            finalQuantity = Math.max(0, currentQuantity - quantity);
+
+            // Update or delete inventory item
+            if (finalQuantity === 0) {
+                // Remove item entirely when quantity reaches 0
+                delete inventory[itemId];
+                console.log(`🧨 DEBUG: Removed ${itemId} from inventory entirely (had ${currentQuantity})`);
+            } else {
+                // Update to new quantity (preserve attack availability if present)
+                const currentAttacks = getItemAttackAvailability(currentItem);
+                const newAttacks = Math.max(0, currentAttacks - actualRemoved);
+                setItemQuantity(inventory, itemId, finalQuantity, newAttacks);
+                console.log(`🧨 DEBUG: Updated ${itemId} quantity from ${currentQuantity} to ${finalQuantity}`);
+            }
+
+            // Save if not using existing player data
+            if (!existingPlayerData) {
+                await savePlayerData(playerData);
+                console.log(`✅ DEBUG: PlayerData saved after item removal`);
+            }
+        };
+
+        if (existingPlayerData) {
+            await applyItemRemoval();
         } else {
-            // Update to new quantity (preserve attack availability if present)
-            const currentAttacks = getItemAttackAvailability(currentItem);
-            const newAttacks = Math.max(0, currentAttacks - actualRemoved);
-            setItemQuantity(inventory, itemId, finalQuantity, newAttacks);
-            console.log(`🧨 DEBUG: Updated ${itemId} quantity from ${currentQuantity} to ${finalQuantity}`);
-        }
-
-        // Save if not using existing player data
-        if (!existingPlayerData) {
-            await savePlayerData(playerData);
-            console.log(`✅ DEBUG: PlayerData saved after item removal`);
+            await withStorageLock(applyItemRemoval);
         }
 
         // Log item removal to Safari Log

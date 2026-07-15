@@ -13,8 +13,37 @@ let cacheHits = 0;
 let cacheMisses = 0;
 
 /**
- * Wrap a load-modify-save cycle so only one runs at a time.
- * Uses atomicSave's built-in mutex for write serialization.
+ * Wrap a playerData load-modify-save cycle so only one runs at a time.
+ *
+ * WHY: atomicSave's mutex serializes WRITES only. Two handlers that each do
+ * loadPlayerData → mutate → savePlayerData concurrently will both write cleanly — and the
+ * later save (built from a pre-change snapshot) silently erases the earlier one. This is
+ * not theoretical: see docs/incidents/05-LostMovementRace.md (a player's map move was
+ * erased by another player's concurrent give_item save).
+ *
+ * WHEN TO USE (all three must hold):
+ *   1. You call loadPlayerData(), mutate the result, AND call savePlayerData() in one flow.
+ *   2. The load and the save are both owned by your function (if a caller passes you
+ *      already-loaded playerData and saves it later, the CALLER owns the cycle and the lock).
+ *   3. Everything between load and save is CPU/file work only.
+ *
+ * RULES INSIDE THE LOCK:
+ *   - loadPlayerData() must happen INSIDE fn (a snapshot taken before the lock defeats it).
+ *   - NEVER await Discord API calls, image rendering, or anything slow/network in fn —
+ *     every other playerData write queues behind you (bot-wide sluggishness).
+ *   - NEVER call another withStorageLock-taking function from inside fn — the queue is not
+ *     re-entrant; the inner call waits for the outer forever (deadlock).
+ *
+ * WHEN NOT TO USE:
+ *   - Pure reads (loadPlayerData with no save) — never need the lock.
+ *   - Mutate-only helpers given existingPlayerData — the caller owns the cycle.
+ *   - safariContent.json writes — this lock only serializes vs other lock users, and current
+ *     users are playerData cycles; a separate lock would be needed per file if extended.
+ *
+ * Errors inside fn release the lock (.finally) — a throw cannot jam the queue.
+ * Wrapped examples: setPlayerLocation (mapMovement.js), updateCurrency /
+ * addItemToInventory / removeItemFromInventory (safariManager.js).
+ *
  * @param {Function} fn - async function receiving no args, expected to load/save internally
  */
 export function withStorageLock(fn) {
