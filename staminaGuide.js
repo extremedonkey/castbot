@@ -97,9 +97,9 @@ const PROD_PAGES = [
       `### \`\`\`💱 Transferring Currency Between Players\`\`\``,
       `There's no direct transfer button — adjust both players manually:\n\n**Sending player:** \`/menu\` → **🧑‍🤝‍🧑 Players** → Select → **🪙 Currency** → **Edit Currency** → Subtract the amount\n**Receiving player:** Same steps → Add the amount`,
       `### \`\`\`⚡ Setting a Player's Stamina\`\`\``,
-      `\`/menu\` → **🧑‍🤝‍🧑 Players** → Select player → **⚡ Stamina** → **⚡ Modify Stamina**\n\nYou'll see their current stamina and regen timer. Type a new value to override it.\n\n-# This is useful if something went wrong or you want to give a player bonus moves.`,
+      `\`/menu\` → **🧑‍🤝‍🧑 Players** → Select player → **⚡ Stamina** → **⚡ Modify Stamina**\n\nYou'll see their current stamina and regen timer. Type a new value to override it.\n\nThe same menu also has **♻️ Manually Set Refresh** — set exactly when their next stamina refresh lands (days/hours/minutes/seconds; blank = refresh immediately). One-shot: only the current cycle shifts — the next cycle runs on your server's regen time as normal.\n\n-# This is useful if something went wrong or you want to give a player bonus moves.`,
       `### \`\`\`🗺️ Other Map Tools\`\`\``,
-      `The **🗺️ Safari Map** category also has per-player tools:\n• **⏸️ Pause Player** — Temporarily block a player from moving\n• **🔄 Reset Explored Locations** — Clear their fog-of-war progress\n• **🗺️ Show Navigate Pane** — See their movement view\n• **♻️ Manually Set Refresh** — Set exactly when their next stamina refresh lands (days/hours/minutes/seconds; blank = refresh immediately). One-shot: only the current cycle shifts — the next cycle runs on your server's regen time as normal.`
+      `The **🗺️ Safari Map** category also has per-player tools:\n• **⏸️ Pause Player** — Temporarily block a player from moving\n• **🔄 Reset Explored Locations** — Clear their fog-of-war progress\n• **🗺️ Show Navigate Pane** — See their movement view`
     ]
   },
   // Page 2: Stamina Settings

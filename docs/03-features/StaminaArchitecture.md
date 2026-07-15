@@ -409,7 +409,7 @@ The modal (`createStaminaModal`) deliberately shows the admin the **base max** (
 
 ## Admin Set Refresh — overriding the cooldown itself
 
-Host path: `/menu` → 🧑‍🤝‍🧑 Players → select player → 🗺️ Safari Map → **♻️ Manually Set Refresh** (initialized players only) → `createRefreshModal` (`safariMapAdmin.js`, D/H/M/S fields cloned from the Schedule Action delay modal via `buildPeriodModalComponents({ includeSeconds: true })`) → `spm_refresh_modal_*` submit → `setRegenCountdown` (`pointsManager.js`).
+Host path: `/menu` → 🧑‍🤝‍🧑 Players → select player → ⚡ Stamina → **♻️ Manually Set Refresh** (initialized players only) → `createRefreshModal` (`safariMapAdmin.js`, D/H/M/S fields cloned from the Schedule Action delay modal via `buildPeriodModalComponents({ includeSeconds: true })`) → `spm_refresh_modal_*` submit → `setRegenCountdown` (`pointsManager.js`).
 
 **Time-shift semantics** (the design decision): the outcome must match *what would have happened had the player simply waited*. The whole pending timeline shifts by `delta = D − currentRemaining`:
 

@@ -17,7 +17,7 @@ import { getPlayer, updatePlayer, getGuildPronouns, getGuildTimezones, loadPlaye
 import { hasStoresInGuild, getEligiblePlayersFixed, getCustomTerms, getPlayerAttributes, getAttributeDefinitions, loadSafariContent, MAX_GLOBAL_STORES, getCoordinateFromChannelId } from './safariManager.js';
 import { countComponents } from './utils.js';
 import { parseAndValidateEmoji, parseTextEmoji, resolveEmoji } from './utils/emojiUtils.js';
-import { createBackButton } from './src/ui/backButtonFactory.js';
+import { createBackButtonV2 } from './src/ui/backButtonFactory.js';
 import { getTimeUntilRegeneration } from './pointsManager.js';
 import { getChallengeActions, normalizeLinks, extractActionIds } from './challengeActionCreate.js';
 
@@ -837,7 +837,6 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
         if (isInit) {
           options.push({ label: 'Move Player', value: 'move', description: 'Move this player to a coordinate', emoji: { name: '📍' } });
           options.push({ label: 'Reset Explored locations', value: 'reset_explored', description: 'Clear explored coordinates (keeps current)', emoji: { name: '🔄' } });
-          options.push({ label: 'Manually Set Refresh', value: 'set_refresh', description: "Edit the player's refresh for this turn only (resets to server default next turn)", emoji: { name: '♻️' } });
         }
       }
 
@@ -870,9 +869,12 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
       const stMapActive = safariData[guildId]?.maps?.active;
       const { getPlayerSafariState, PLAYER_SAFARI_STATE } = await import('./safariPlayerUtils.js');
       const stInitialized = getPlayerSafariState(playerData[guildId]?.players?.[targetMember.id], stMapActive) !== PLAYER_SAFARI_STATE.UNINITIALIZED;
-      const stOption = stInitialized
-        ? { label: 'Modify Stamina', value: 'modify_stamina', description: 'Modify current and max stamina', emoji: { name: '⚡' } }
-        : { label: 'Initialize player on the map first', value: 'stamina_noop', description: 'Set up the player on the map before editing stamina', emoji: { name: '🚀' }, default: true };
+      const stOptions = stInitialized
+        ? [
+            { label: 'Modify Stamina', value: 'modify_stamina', description: 'Modify current and max stamina', emoji: { name: '⚡' } },
+            { label: 'Manually Set Refresh', value: 'set_refresh', description: "Edit the player's refresh for this turn only (resets to server default next turn)", emoji: { name: '♻️' } }
+          ]
+        : [{ label: 'Initialize player on the map first', value: 'stamina_noop', description: 'Set up the player on the map before editing stamina', emoji: { name: '🚀' }, default: true }];
       return {
         type: 1,
         components: [{
@@ -881,7 +883,7 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
           placeholder: 'Stamina Options',
           min_values: 1,
           max_values: 1,
-          options: [stOption]
+          options: stOptions
         }]
       };
     }
@@ -1638,9 +1640,10 @@ export async function createPlayerManagementUI(options) {
   if (!hideBottomButtons) {
     const footerButtons = [];
 
-    // ← Menu button (admin mode only)
+    // ← Menu button (admin mode only) — V2 helper: this is a raw-JSON components array,
+    // a ButtonBuilder instance here has no .type and logs as Unknown(undefined)
     if (isAdmin) {
-      footerButtons.push(createBackButton('prod_menu_back'));
+      footerButtons.push(createBackButtonV2('prod_menu_back'));
     }
 
     // Logs button

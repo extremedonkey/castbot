@@ -160,8 +160,11 @@ if [ -n "$NEW_JS_FILES" ]; then
 fi
 
 # ── Check 4: updateDeferredResponse wrong arg count (common agent mistake) ──
+# Only the 3-arg mistake passes application_id first — the CORRECT form is
+# updateDeferredResponse(req.body.token, data), so don't match on req.body alone
+# (that fired false positives on every valid call, e.g. the 2026-07-15 sweep commit).
 WRONG_DEFERRED_ARGS=$(git diff --cached -- '*.js' | grep '^+' | grep -v '^+++' | \
-  grep -c 'updateDeferredResponse(req\.body') || WRONG_DEFERRED_ARGS=0
+  grep -c 'updateDeferredResponse(req\.body\.application_id') || WRONG_DEFERRED_ARGS=0
 if [ "$WRONG_DEFERRED_ARGS" -gt 0 ]; then
   echo ""
   echo "🗿 THE MOAI NOTICES A COMMON MISTAKE..."

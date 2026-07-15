@@ -45645,7 +45645,7 @@ Your server is now ready for Tycoons gameplay!`;
 
     } else if (custom_id.startsWith('spm_refresh_modal_')) {
       // Manually Set Refresh from the Player Manager → time-shift the regen timeline so the next
-      // refresh lands in the entered duration, then WEBHOOK-PATCH the menu (Map category active).
+      // refresh lands in the entered duration, then WEBHOOK-PATCH the menu (Stamina category active).
       const targetUserId = custom_id.replace('spm_refresh_modal_', '');
       const guildId = req.body.guild_id;
       const { parsePeriodFromModal } = await import('./utils/periodUtils.js');
@@ -45676,7 +45676,7 @@ Your server is now ready for Tycoons gameplay!`;
         }
         // Rebuild either way — on the rare not-pending race the menu simply shows ♻️ MAX.
         const { buildAdminPlayerMenu } = await import('./playerManagement.js');
-        await updateDeferredResponse(req.body.token, await buildAdminPlayerMenu(client, guildId, targetUserId, req.body.member?.user?.id, 'map'));
+        await updateDeferredResponse(req.body.token, await buildAdminPlayerMenu(client, guildId, targetUserId, req.body.member?.user?.id, 'stamina'));
       } catch (error) {
         console.error('Error in spm_refresh_modal:', error);
         await updateDeferredResponse(req.body.token, { components: [{ type: 17, accent_color: 0xe74c3c, components: [{ type: 10, content: `❌ Error: ${error.message}` }] }] });
