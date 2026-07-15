@@ -584,7 +584,7 @@ export function buildWhisperLogConfigUI({ whispersEnabled = true, whisperLogChan
                     custom_id: 'safari_whispers_toggle',
                     label: whispersEnabled ? 'Turn Whispers Off' : 'Turn Whispers On',
                     style: whispersEnabled ? 4 : 3,
-                    emoji: { name: whispersEnabled ? '🔴' : '🟢' }
+                    emoji: { name: whispersEnabled ? '🔇' : '🔊' }
                 }]
             },
             { type: 14 }, // Separator
