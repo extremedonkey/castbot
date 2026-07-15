@@ -9981,6 +9981,17 @@ To fix this:
           return { type: 9, data: modal };
         }})(req, res, client);
       }
+      if (staminaSelectedValue === 'set_refresh') { // → open Manually Set Refresh modal (retagged spm_ to return here)
+        return ButtonHandlerFactory.create({ id: 'player_menu_sel_stamina_refresh_modal', requiresPermission: PermissionFlagsBits.ManageRoles, permissionName: 'Manage Roles', handler: async (context) => {
+          const targetUserId = context.customId.startsWith('player_menu_sel_stamina_')
+            ? context.customId.replace('player_menu_sel_stamina_', '')
+            : context.userId;
+          const { createRefreshModal } = await import('./safariMapAdmin.js');
+          const modal = await createRefreshModal(targetUserId, context.guildId);
+          modal.custom_id = `spm_refresh_modal_${targetUserId}`; // plain object (Label modal), routes submit back to this menu
+          return { type: 9, data: modal };
+        }})(req, res, client);
+      }
       // Guard option ('stamina_noop' — "Initialize player on the map first"): re-render in place, no modal, no change.
       return ButtonHandlerFactory.create({ id: 'player_menu_sel_stamina_noop', deferred: true, updateMessage: true, requiresPermission: PermissionFlagsBits.ManageRoles, permissionName: 'Manage Roles', handler: async (context) => {
         const targetUserId = context.customId.startsWith('player_menu_sel_stamina_')
@@ -9992,16 +10003,10 @@ To fix this:
 
     } else if (custom_id === 'player_menu_sel_map' || custom_id.startsWith('player_menu_sel_map_')) {
       const selectedValue = req.body.data.values?.[0];
-      if (selectedValue === 'move' || selectedValue === 'starting_location' || selectedValue === 'set_refresh') {
+      if (selectedValue === 'move' || selectedValue === 'starting_location') {
         return ButtonHandlerFactory.create({ id: 'player_menu_sel_map_modal', requiresPermission: PermissionFlagsBits.ManageRoles, permissionName: 'Manage Roles', handler: async (context) => {
           // Reuse the existing Safari modals, retagged spm_ so their submit returns to THIS menu.
           const targetUserId = context.customId.replace('player_menu_sel_map_', '');
-          if (selectedValue === 'set_refresh') {
-            const { createRefreshModal } = await import('./safariMapAdmin.js');
-            const modal = await createRefreshModal(targetUserId, context.guildId);
-            modal.custom_id = `spm_refresh_modal_${targetUserId}`; // plain object (Label modal), routes submit back to this menu
-            return { type: 9, data: modal };
-          }
           const { loadSafariContent } = await import('./safariManager.js');
           const playerData = await loadPlayerData();
           const safariData = await loadSafariContent();
