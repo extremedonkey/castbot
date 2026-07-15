@@ -67,9 +67,7 @@ function getTestedModules() {
 function getSourceModules() {
   const exclude = new Set([
     'commands',           // Just command registration
-    'config',             // Configuration constants
     'deploy-remote-wsl',  // Deployment script
-    'selectStressTest',   // Test utility
     'test-restock',       // Test utility
   ]);
 

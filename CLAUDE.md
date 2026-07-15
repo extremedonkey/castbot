@@ -146,7 +146,7 @@ const count = countComponents([container], { enableLogging: false });
 
 **❌ WRONG - Legacy Pattern (DO NOT COPY):**
 ```javascript
-// DON'T COPY THIS - 125 legacy handlers still exist but are being migrated
+// DON'T COPY THIS - ~100 legacy handlers still exist but are being migrated
 } else if (custom_id === 'bad_example') {
   try {
     const guildId = req.body.guild_id;
@@ -191,17 +191,9 @@ If your button uses a wildcard pattern (e.g., `my_button_*`) and shows `[🪨 LE
 
 **This is a FALSE POSITIVE** - your button IS using factory pattern correctly!
 
-**Fix:** Add the base pattern to the `dynamicPatterns` array in `app.js` (search for "dynamicPatterns" around line 3771):
-```javascript
-const dynamicPatterns = [
-  // ... existing patterns ...
-  'my_button',  // Add your pattern here
-];
-```
+**Fix:** Wildcard patterns auto-discover from BUTTON_REGISTRY — make sure your button has a `_*` key registered (e.g. `'my_button_*'`). The matcher (app.js ~4046) matches `my_button_*` against `my_button_123`, `my_button|123`, AND `my_button:123` (underscore, pipe, and colon separators). The old `dynamicPatterns` array is GONE — do not recreate it.
 
-**Why this happens:** The debug system uses a hardcoded pattern list for wildcard matching. When you add a new wildcard button to BUTTON_REGISTRY, you must ALSO add the base pattern to this list.
-
-**See:** [docs/troubleshooting/ButtonFactoryDebugSystem.md](docs/troubleshooting/ButtonFactoryDebugSystem.md) for full explanation and proposed auto-discovery solution.
+**See:** [docs/troubleshooting/ButtonFactoryDebugSystem.md](docs/troubleshooting/ButtonFactoryDebugSystem.md) for the debug system internals.
 
 **Why Factory is Mandatory:**
 - **80% code reduction** (50 lines → 10 lines per handler)
@@ -761,7 +753,7 @@ import { ButtonHandlerFactory } from './buttonHandlerFactory.js';  // Button man
 **Size Targets:**
 - Functions: Max 30 lines
 - Handler blocks: Max 10 lines
-- Total file: <5,000 lines (currently 21,000+)
+- Total file: <5,000 lines (currently ~52,800 — the pre-commit hook enforces a line-count ratchet: app.js may only shrink)
 
 ## ⚠️ Troubleshooting
 

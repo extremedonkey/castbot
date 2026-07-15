@@ -6,7 +6,8 @@
 # See: docs/enablers/ButtonHandlerFactory.md
 # See: CLAUDE.md "Button Handler Factory" section
 
-BASELINE=103  # Legacy handler count as of 2026-07-12 (22 false positives reshaped into the 3-line window — RaP 0899). Includes completion_edit modal exception. Only goes DOWN.
+BASELINE=102  # Legacy handler count as of 2026-07-15 (bouncer sweep). Includes completion_edit modal exception. Only goes DOWN.
+APP_JS_LINES_MAX=52900  # app.js line-count ratchet as of 2026-07-15 (actual: 52786). Only goes DOWN. Extract more than you add.
 
 # ── Auto-sync: keep installed hook in sync with source ──
 SOURCE_HOOK="scripts/hooks/pre-commit"
@@ -79,6 +80,27 @@ if [ "$LEGACY_COUNT" -gt "$BASELINE" ]; then
   echo ""
   echo "  DO NOT change the BASELINE to bypass this hook."
   echo "  The baseline only goes DOWN when legacy handlers are migrated."
+  echo ""
+  BLOCKED=1
+fi
+
+# ── Check 1b: app.js line-count ratchet (must not go UP) ──
+# The factory war is won; the file-size war is the next one. Handlers with
+# 500-line bodies pass the legacy check — this catches them at the door.
+APP_JS_LINES=$(git show :app.js | wc -l)
+if [ "$APP_JS_LINES" -gt "$APP_JS_LINES_MAX" ]; then
+  echo ""
+  echo "🗿 THE MOAI COUNTS HEADS."
+  echo ""
+  echo "  app.js is $APP_JS_LINES lines (max: $APP_JS_LINES_MAX)."
+  echo "  The club is over capacity. Extract more than you add:"
+  echo ""
+  echo "  - Handler logic >20 lines belongs in a module (CLAUDE.md golden rule)"
+  echo "  - Move UI builders, data processing, business logic OUT of app.js"
+  echo "  - Then lower APP_JS_LINES_MAX in scripts/hooks/pre-commit to lock it in"
+  echo ""
+  echo "  DO NOT raise APP_JS_LINES_MAX to bypass this hook."
+  echo "  The ratchet only goes DOWN."
   echo ""
   BLOCKED=1
 fi
@@ -157,6 +179,12 @@ if [ "$LEGACY_COUNT" -lt "$BASELINE" ]; then
   MIGRATED=$((BASELINE - LEGACY_COUNT))
   echo "🗿 The Moai approves. $MIGRATED legacy handler(s) migrated. (${LEGACY_COUNT} remain)"
   echo "   Update BASELINE to $LEGACY_COUNT in scripts/hooks/pre-commit to lock in progress."
+fi
+
+# Celebrate if app.js shrank meaningfully
+if [ "$APP_JS_LINES" -lt "$((APP_JS_LINES_MAX - 100))" ]; then
+  echo "🗿 The Moai approves. app.js is $APP_JS_LINES lines ($((APP_JS_LINES_MAX - APP_JS_LINES)) under max)."
+  echo "   Lower APP_JS_LINES_MAX to $APP_JS_LINES in scripts/hooks/pre-commit to lock in progress."
 fi
 
 exit 0
