@@ -539,14 +539,14 @@ export function buildSafariLogConfigUI(logSettings, { whispersEnabled = true } =
                     max_values: 1,
                     options: [
                         {
-                            label: 'Classic',
+                            label: 'Log Format: Classic',
                             value: 'classic',
                             emoji: { name: '📜' },
                             description: 'Most detail but difficult to read',
                             default: settings.logFormat !== 'enhanced'
                         },
                         {
-                            label: 'Enhanced',
+                            label: 'Log Format: Enhanced',
                             value: 'enhanced',
                             emoji: { name: '✨' },
                             description: 'Formats logs nicer, less detail',

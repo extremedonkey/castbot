@@ -374,6 +374,7 @@ const options = items.map(item => ({
 - **Requirements**: MUST be wrapped in Label component
 - **Features**: `required` field support (defaults to true)
 - **Restrictions**: `disabled` field not allowed in modals
+- **🚨 GOTCHA — option `default: true` is NOT honored in modals** (verified 2026-07-15, CastBot Logs modal): the select renders with nothing pre-selected, so an untouched submit silently sends whatever the user happens to pick — or forces a pick via `required`. In messages the same `default` works fine. **For single-choice modal fields that must pre-load current state, use Radio Group (type 21) instead** — its option `default` DOES pre-select in modals. See `src/analytics/logsConfigUI.js` for the pattern.
 
 ```javascript
 {

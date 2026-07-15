@@ -479,7 +479,7 @@ export async function loadEnvironmentConfig() {
   if (!data.environmentConfig) {
     data.environmentConfig = {
       liveDiscordLogging: {
-        enabled: false,
+        enabled: true, // default ON for fresh/uninitialised environments (Reece 2026-07-15)
         targetGuildId: "1331657596087566398",
         // Environment-specific channel IDs
         productionChannelId: "1385059476243218552",  // #🪵logs (original production channel)
