@@ -30,10 +30,13 @@ const FROZEN_A_BASELINE = [
   'app.js::action_phrase_remove::A',
   'app.js::action_post_channel::A',
   'app.js::activity_log_back::A',
-  'app.js::anonymous@L12325::A',
-  'app.js::anonymous@L12526::A',
-  'app.js::anonymous@L4842::A',
-  'app.js::anonymous@L6693::A',
+  // Re-anchored 2026-07-15: dead-code sweep in app.js shifted these four line-keyed
+  // handlers (safari_navigate_refresh, restart_status_*, tips_next/prev, tips_shared_*).
+  // Same four grandfathered handlers, new lines — baseline count unchanged.
+  'app.js::anonymous@L12214::A',
+  'app.js::anonymous@L12415::A',
+  'app.js::anonymous@L4725::A',
+  'app.js::anonymous@L6576::A',
   'app.js::app_config_selection::A',
   'app.js::app_dnc_edit::A',
   'app.js::apps_planner::A',
