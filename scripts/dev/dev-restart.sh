@@ -78,8 +78,12 @@ TEST_SUMMARY=""
 if [ "$RUN_TESTS" = true ]; then
     echo ""
     echo "🧪 Running unit tests..."
+    # set -e would kill the script inside this assignment on test failure — before the
+    # failure-reporting branch below ever runs (script died silently at "Running unit tests...").
+    set +e
     TEST_OUTPUT=$(node --test tests/*.test.js 2>&1)
     TEST_EXIT=$?
+    set -e
 
     # Extract counts + duration from TAP summary footer
     TEST_PASS=$(echo "$TEST_OUTPUT" | grep "^# pass" | awk '{print $3}')

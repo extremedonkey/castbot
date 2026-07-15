@@ -435,8 +435,12 @@ export function getDSTOffset(timezoneId) {
   return dstStateCache[timezoneId].currentOffset;
 }
 
-// Initialize DST state cache on module load
-loadDSTState().catch(console.error);
+// Initialize DST state cache on module load.
+// Skipped under the node:test runner — module-load stdout intermittently corrupts the
+// TAP stream ("Unable to deserialize cloned data"), failing unrelated test files.
+if (!process.env.NODE_TEST_CONTEXT) {
+  loadDSTState().catch(console.error);
+}
 
 // Environment configuration functions
 export async function loadEnvironmentConfig() {
