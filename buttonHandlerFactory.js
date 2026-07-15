@@ -1546,6 +1546,27 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'testing'
   },
+  'restart_status_toggle': {
+    label: 'Restart Pass/Fail Toggle',
+    description: 'Shared handler label for restart_status_passed/failed (stable id for the shape-ratchet baseline)',
+    emoji: '✅',
+    style: 'Hidden',
+    category: 'monitoring'
+  },
+  'tips_nav': {
+    label: 'Tips Navigation',
+    description: 'Shared handler label for tips_next_*/tips_prev_* (stable id for the shape-ratchet baseline)',
+    emoji: '💡',
+    style: 'Hidden',
+    category: 'tips'
+  },
+  'tips_shared_nav': {
+    label: 'Shared Tips Navigation',
+    description: 'Shared handler label for tips_shared_next_*/tips_shared_prev_* (stable id for the shape-ratchet baseline)',
+    emoji: '💡',
+    style: 'Hidden',
+    category: 'tips'
+  },
   'restart_status_passed': {
     label: '✅ Pass',
     description: 'Toggle deployment test status to passed',

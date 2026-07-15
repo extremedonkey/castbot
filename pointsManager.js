@@ -288,6 +288,21 @@ export async function getEntityPoints(guildId, entityId, pointType) {
     return regenerated.data;
 }
 
+// Regen anchor: the LATER of last spend (lastUse) and last applied regen (lastRegeneration).
+// Both halves matter:
+// - lastUse alone re-grants on every check in amount mode (+N/period): lastUse never advances
+//   after a regen, so periods stays >0 and each check mints more — turning "1 per 12h" into
+//   "full refill at 12h".
+// - lastRegeneration alone goes stale while a player idles at MAX, so their first spend after
+//   idling regenerates instantly (the 618737f7 bug).
+// Returns undefined when neither is set (corrupt/uninitialized data) — NaN math downstream
+// means no regen fires, matching prior behaviour.
+export function latestRegenAnchor(pointData) {
+    const { lastUse, lastRegeneration } = pointData;
+    if (lastUse != null && lastRegeneration != null) return Math.max(lastUse, lastRegeneration);
+    return lastUse ?? lastRegeneration;
+}
+
 // New regeneration with individual charge tracking (Phase 2) and permanent boosts
 async function calculateRegenerationWithCharges(pointData, config, guildId, entityId, pointType = null) {
     const now = Date.now();
@@ -392,10 +407,8 @@ async function calculateRegenerationWithCharges(pointData, config, guildId, enti
                 ? effectiveMax
                 : config.regeneration.amount;
 
-            // For full_reset: anchor regen to lastUse (when player last spent stamina)
-            // NOT lastRegeneration — that goes stale when player sits at MAX
-            // (lastRegeneration is only needed for continuous ticking in Phase 2 charges)
-            const regenTimestamp = newData.lastUse || newData.lastRegeneration;
+            // Later of last spend / last applied regen — see latestRegenAnchor for why both matter.
+            const regenTimestamp = latestRegenAnchor(newData);
             const timeSinceRegen = now - regenTimestamp;
             const periods = Math.floor(timeSinceRegen / config.regeneration.interval);
 
@@ -565,7 +578,9 @@ export async function getTimeUntilRegeneration(guildId, entityId, pointType) {
             return "Ready!";
         }
     } else if (config.regeneration.type === 'full_reset') {
-        nextRegenTime = pointData.lastUse + config.regeneration.interval;
+        // Same anchor as Phase 1 regen, so in amount mode the countdown targets the NEXT +1,
+        // not the already-applied one.
+        nextRegenTime = latestRegenAnchor(pointData) + config.regeneration.interval;
     } else {
         nextRegenTime = pointData.lastRegeneration + config.regeneration.interval;
     }
@@ -613,7 +628,8 @@ export async function getRegenRemainingMs(guildId, entityId, pointType) {
         nextRegenTime = Math.min(...pending) + interval;
     } else {
         if (pointData.current >= pointData.max) return null;
-        nextRegenTime = (pointData.lastUse || pointData.lastRegeneration) + interval;
+        // Same anchor as Phase 1 regen (later of last spend / last applied regen).
+        nextRegenTime = latestRegenAnchor(pointData) + interval;
     }
     return Math.max(0, nextRegenTime - now);
 }
@@ -662,7 +678,8 @@ export async function setRegenCountdown(guildId, entityId, pointType, durationMs
         }
         console.log(`♻️ Shifted ${points.charges.filter(c => c).length} pending charge(s) by ${delta}ms for ${entityId}`);
     } else {
-        const anchor = (points.lastUse || points.lastRegeneration) + delta;
+        // Same anchor as Phase 1 regen (later of last spend / last applied regen).
+        const anchor = latestRegenAnchor(points) + delta;
         points.lastUse = anchor;
         points.lastRegeneration = anchor;
     }

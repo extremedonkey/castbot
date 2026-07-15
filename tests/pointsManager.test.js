@@ -18,6 +18,15 @@ function formatStaminaTag(snapshot) {
     return `(${beforePart} → ${snapshot.after}/${snapshot.max} ${regenAfter})`;
 }
 
+// Replicates pointsManager.latestRegenAnchor: later of last spend / last applied regen.
+// lastUse-only re-grants every check in amount mode; lastRegeneration-only regenerates
+// instantly after idling at MAX.
+function latestRegenAnchor(pointData) {
+    const { lastUse, lastRegeneration } = pointData;
+    if (lastUse != null && lastRegeneration != null) return Math.max(lastUse, lastRegeneration);
+    return lastUse ?? lastRegeneration;
+}
+
 // Replicate Phase 1 regen logic inline for testing
 function calculatePhase1Regen(pointData, config, now, pointType = 'stamina') {
     let hasChanged = false;
@@ -35,7 +44,8 @@ function calculatePhase1Regen(pointData, config, now, pointType = 'stamina') {
         ? effectiveMax
         : config.regeneration.amount;
 
-    const regenTimestamp = newData.lastRegeneration || newData.lastUse;
+    // MUST match pointsManager.js Phase 1 anchor (see latestRegenAnchor above).
+    const regenTimestamp = latestRegenAnchor(newData);
     const timeSinceRegen = now - regenTimestamp;
     const periods = Math.floor(timeSinceRegen / config.regeneration.interval);
 
@@ -290,6 +300,63 @@ describe('Phase 1 Regen — immediate effect on config change', () => {
     });
 });
 
+describe('Phase 1 Regen — anchor advances, no re-grant on repeated checks (Hudson repeat-grant bug)', () => {
+    const TWELVE_H = 720 * 60000;
+
+    it('amount mode: repeated checks after one interval grant only ONE +1', () => {
+        // Kris's exact scenario: max 3, +1 per 12h. Spent last stamina at T0; 12h01m later the
+        // map/player-card is opened three times a minute apart. Before the fix this minted
+        // 0→1→2→3; each check after the first must be a no-op until T0+24h.
+        const T0 = 1000000;
+        let now = T0 + TWELVE_H + 60000;
+        let data = { current: 0, max: 3, lastUse: T0, lastRegeneration: T0 - 1 };
+        const config = makeConfig(3, 1, TWELVE_H);
+
+        let r = calculatePhase1Regen(data, config, now);
+        assert.equal(r.data.current, 1, 'first check applies the one elapsed period');
+
+        r = calculatePhase1Regen(r.data, config, now + 60000);
+        assert.equal(r.data.current, 1, 'second check must NOT re-grant');
+        assert.equal(r.hasChanged, false);
+
+        r = calculatePhase1Regen(r.data, config, now + 120000);
+        assert.equal(r.data.current, 1, 'third check must NOT re-grant');
+    });
+
+    it('amount mode: next +1 arrives one interval after the previous grant, not after lastUse', () => {
+        const T0 = 1000000;
+        const config = makeConfig(3, 1, TWELVE_H);
+        let data = { current: 0, max: 3, lastUse: T0, lastRegeneration: T0 - 1 };
+
+        let r = calculatePhase1Regen(data, config, T0 + TWELVE_H + 1000); // → 1/3
+        r = calculatePhase1Regen(r.data, config, T0 + 2 * TWELVE_H - 1000);
+        assert.equal(r.data.current, 1, 'still 1/3 just before T0+24h');
+        r = calculatePhase1Regen(r.data, config, T0 + 2 * TWELVE_H + 1000);
+        assert.equal(r.data.current, 2, '2/3 just after T0+24h');
+    });
+
+    it('idle at MAX then spend does not insta-regen (618737f7 guard)', () => {
+        // Player sat at max for 5 days (lastRegeneration ancient), then spent one.
+        // usePoints stamps lastUse=now; the next read must see periods=0.
+        const now = 1000000;
+        const FIVE_DAYS = 5 * 24 * 3600000;
+        const data = { current: 2, max: 3, lastUse: now - 1000, lastRegeneration: now - FIVE_DAYS };
+        const r = calculatePhase1Regen(data, makeConfig(3, 1, TWELVE_H), now);
+        assert.equal(r.data.current, 2, 'no instant regen from the stale lastRegeneration anchor');
+        assert.equal(r.hasChanged, false);
+    });
+
+    it('offline catchup still applies multiple periods once, then holds', () => {
+        const T0 = 1000000;
+        const config = makeConfig(3, 1, TWELVE_H);
+        const now = T0 + 2 * TWELVE_H + 60000; // 24h01m offline
+        let r = calculatePhase1Regen({ current: 0, max: 3, lastUse: T0, lastRegeneration: T0 - 1 }, config, now);
+        assert.equal(r.data.current, 2, 'two elapsed periods apply on first check');
+        r = calculatePhase1Regen(r.data, config, now + 60000);
+        assert.equal(r.data.current, 2, 'no re-grant on the following check');
+    });
+});
+
 describe('Phase 1 — stored max reconciles to configured max (init settings respected)', () => {
     it('heals a player stuck at max=1 to the configured max even when no regen fires', () => {
         // Repro of the prod bug: player initialized at 1/1 when maxStamina defaulted to 1,
@@ -350,7 +417,7 @@ function computeRemainingMs(pointData, interval, now) {
         return Math.max(0, Math.min(...pending) + interval - now);
     }
     if (pointData.current >= pointData.max) return null;
-    return Math.max(0, (pointData.lastUse || pointData.lastRegeneration) + interval - now);
+    return Math.max(0, latestRegenAnchor(pointData) + interval - now);
 }
 
 function applyRegenCountdown(pointData, interval, durationMs, now) {
@@ -363,7 +430,7 @@ function applyRegenCountdown(pointData, interval, durationMs, now) {
             if (points.charges[i]) points.charges[i] += delta;
         }
     } else {
-        const anchor = (points.lastUse || points.lastRegeneration) + delta;
+        const anchor = latestRegenAnchor(points) + delta;
         points.lastUse = anchor;
         points.lastRegeneration = anchor;
     }

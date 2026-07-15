@@ -4723,7 +4723,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const coordinate = afterPrefix.substring(lastUnderscoreIndex + 1);
       
       return ButtonHandlerFactory.create({
-        id: custom_id,
+        id: 'safari_navigate_refresh',
         ephemeral: true,
         updateMessage: true, // Update existing message instead of creating new one
         handler: async (context) => {
@@ -6574,7 +6574,7 @@ To fix this:
     } else if (custom_id === 'restart_status_passed' || custom_id === 'restart_status_failed') {
       // Handle Pass/Fail toggle buttons from restart notifications
       return ButtonHandlerFactory.create({
-        id: custom_id,
+        id: 'restart_status_toggle',
         updateMessage: true,
         handler: async (context) => {
           try {
@@ -12212,7 +12212,7 @@ To fix this:
 
     } else if (custom_id.startsWith('tips_next_') || custom_id.startsWith('tips_prev_')) {
       return ButtonHandlerFactory.create({
-        id: custom_id,
+        id: 'tips_nav',
         updateMessage: true, // UPDATE_MESSAGE (button response pattern)
         handler: async (context) => {
           const { userId } = context;
@@ -12413,7 +12413,7 @@ To fix this:
     // 🔁 Shared Tips Navigation - For non-ephemeral shared tips
     } else if (custom_id.startsWith('tips_shared_next_') || custom_id.startsWith('tips_shared_prev_')) {
       return ButtonHandlerFactory.create({
-        id: custom_id,
+        id: 'tips_shared_nav',
         updateMessage: true, // UPDATE_MESSAGE (edits the shared message)
         handler: async (context) => {
           // Parse index from button ID: tips_shared_next_5 or tips_shared_prev_5
