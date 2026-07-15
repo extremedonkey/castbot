@@ -17283,10 +17283,10 @@ Your server is now ready for Tycoons gameplay!`;
           return buildSafariLogConfigUI(safariData[context.guildId].safariLogSettings, { whispersEnabled });
         }
       })(req, res, client);
-    } else if (custom_id === 'safari_whisper_log_config') {
-      // Whisper Settings screen (opened from CastBot Logs → Whispers)
+    } else if (custom_id === 'whisper_log_config') {
+      // Whisper Settings (Map Explorer → Whispers). Id must NOT start with 'safari_whisper_' (player whisper route).
       return ButtonHandlerFactory.create({
-        id: 'safari_whisper_log_config',
+        id: 'whisper_log_config',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         updateMessage: true,
@@ -17381,11 +17381,10 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
       })(req, res, client);
-    } else if (custom_id === 'safari_whisper_log_test') {
-      // Send a sample whisper line to the dedicated whisper log channel.
-      // Direct channel.send — NOT via logWhisper (would create fake analytics/activity entries).
+    } else if (custom_id === 'whisper_log_test') {
+      // Test post to the whisper log channel — direct channel.send, NOT logWhisper (no fake analytics/activity entries). Id must not start with 'safari_whisper_'.
       return ButtonHandlerFactory.create({
-        id: 'safari_whisper_log_test',
+        id: 'whisper_log_test',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         deferred: true,

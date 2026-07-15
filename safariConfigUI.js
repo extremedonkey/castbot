@@ -538,10 +538,9 @@ export function buildSafariLogConfigUI(logSettings, { whispersEnabled = true } =
             },
             { type: 14 }, // Separator
             {
-                type: 1, // Action Row — back (far-left) + Whispers (bottom-right)
+                type: 1, // Action Row — back
                 components: [
-                    { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2, emoji: { name: '⚙️' } },
-                    { type: 2, custom_id: 'safari_whisper_log_config', label: 'Whispers', style: 2, emoji: { name: '🤫' } }
+                    { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2, emoji: { name: '⚙️' } }
                 ]
             }
         ]
@@ -603,10 +602,10 @@ export function buildWhisperLogConfigUI({ whispersEnabled = true, whisperLogChan
             },
             { type: 14 }, // Separator
             {
-                type: 1, // Action Row — back + test
+                type: 1, // Action Row — back (to Map Explorer, the entry point) + test
                 components: [
-                    { type: 2, custom_id: 'safari_configure_log', label: '← Logs', style: 2, emoji: { name: '🪵' } },
-                    { type: 2, custom_id: 'safari_whisper_log_test', label: 'Test', style: 2, emoji: { name: '🧪' }, disabled: !whisperLogChannelId }
+                    { type: 2, custom_id: 'safari_map_explorer', label: '← Map Explorer', style: 2, emoji: { name: '🗺️' } },
+                    { type: 2, custom_id: 'whisper_log_test', label: 'Test', style: 2, emoji: { name: '🧪' }, disabled: !whisperLogChannelId }
                 ]
             }
         ]

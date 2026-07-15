@@ -2482,7 +2482,14 @@ export async function buildMapExplorerResponse(guildId, userId, client, isEpheme
       .setLabel('← Menu')
       .setStyle(ButtonStyle.Secondary);
 
-    const backRow = new ActionRowBuilder().addComponents([backButton]);
+    // Whisper Settings entry (bottom-right): whisper feature toggle + spectator whisper log
+    const whispersButton = new ButtonBuilder()
+      .setCustomId('whisper_log_config')
+      .setLabel('Whispers')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🤫');
+
+    const backRow = new ActionRowBuilder().addComponents([backButton, whispersButton]);
 
     // Add action row components to container
     containerComponents.push(mapButtonRow2.toJSON());

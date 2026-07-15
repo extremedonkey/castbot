@@ -136,13 +136,13 @@ describe('buildSafariLogConfigUI — structure', () => {
     assert.equal(ui.components[0].accent_color, 0x9B59B6);
   });
 
-  it('includes the Whispers button (bottom-right, after ← Settings)', () => {
+  it('back row has ← Settings; no safari_whisper_-prefixed ids anywhere (route collision guard)', () => {
     const ui = buildSafariLogConfigUI(settings, { whispersEnabled: true });
     const all = flatten(ui.components);
     const ids = all.filter(c => c.type === 2).map(c => c.custom_id);
-    assert.ok(ids.includes('safari_whisper_log_config'));
-    assert.ok(ids.indexOf('castbot_settings') < ids.indexOf('safari_whisper_log_config'),
-      'Whispers button sits to the right of the back button');
+    assert.ok(ids.includes('castbot_settings'));
+    // custom_ids starting with 'safari_whisper_' get swallowed by the player-whisper route
+    assert.ok(ids.every(id => !id.startsWith('safari_whisper_')), `collision-prone id found: ${ids}`);
   });
 
   it('toggle label/style flips with enabled state', () => {
@@ -184,11 +184,17 @@ describe('buildWhisperLogConfigUI — structure', () => {
     assert.deepEqual(select.default_values, [{ id: 'W1', type: 'channel' }]);
   });
 
-  it('test button disabled without a channel, enabled with one; back button targets Logs screen', () => {
+  it('test button disabled without a channel, enabled with one; back button targets Map Explorer', () => {
     const without = flatten(buildWhisperLogConfigUI({ whispersEnabled: true, whisperLogChannelId: null, mainLogWhispersActive: false }).components);
     const withCh = flatten(buildWhisperLogConfigUI({ whispersEnabled: true, whisperLogChannelId: 'W1', mainLogWhispersActive: false }).components);
-    assert.equal(without.find(c => c.custom_id === 'safari_whisper_log_test').disabled, true);
-    assert.ok(!withCh.find(c => c.custom_id === 'safari_whisper_log_test').disabled);
-    assert.ok(withCh.some(c => c.custom_id === 'safari_configure_log'));
+    assert.equal(without.find(c => c.custom_id === 'whisper_log_test').disabled, true);
+    assert.ok(!withCh.find(c => c.custom_id === 'whisper_log_test').disabled);
+    assert.ok(withCh.some(c => c.custom_id === 'safari_map_explorer'));
+  });
+
+  it('no custom_id on the whisper screen starts with safari_whisper_ (route collision guard)', () => {
+    const all = flatten(buildWhisperLogConfigUI({ whispersEnabled: true, whisperLogChannelId: 'W1', mainLogWhispersActive: false }).components);
+    const ids = all.map(c => c.custom_id).filter(Boolean);
+    assert.ok(ids.every(id => !id.startsWith('safari_whisper_')), `collision-prone id found: ${ids}`);
   });
 });

@@ -2161,12 +2161,12 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari'
   },
-  'safari_whisper_log_config': {
+  'whisper_log_config': {
     label: 'Whispers',
     description: 'Configure whisper feature and the spectator-safe whisper log channel',
     emoji: '🤫',
     style: 'Secondary',
-    parent: 'safari_configure_log',
+    parent: 'safari_map_explorer',
     category: 'safari'
   },
   'safari_whispers_toggle': {
@@ -2174,7 +2174,7 @@ export const BUTTON_REGISTRY = {
     description: 'Turn the whisper feature on or off (default on)',
     emoji: '🤫',
     style: 'Dynamic',
-    parent: 'safari_whisper_log_config',
+    parent: 'whisper_log_config',
     category: 'safari'
   },
   'whisper_log_channel_set': {
@@ -2182,15 +2182,15 @@ export const BUTTON_REGISTRY = {
     description: 'Handle whisper log channel selection (submit empty to clear)',
     emoji: '📝',
     style: 'Hidden',
-    parent: 'safari_whisper_log_config',
+    parent: 'whisper_log_config',
     category: 'safari'
   },
-  'safari_whisper_log_test': {
+  'whisper_log_test': {
     label: 'Test',
     description: 'Send a test message to the whisper log channel',
     emoji: '🧪',
     style: 'Secondary',
-    parent: 'safari_whisper_log_config',
+    parent: 'whisper_log_config',
     category: 'safari'
   },
   'stamina_location_config': {
