@@ -336,3 +336,111 @@ describe('Phase 1 — stored max reconciles to configured max (init settings res
         assert.equal(result.hasChanged, false, 'no spurious save/clobber for attributes');
     });
 });
+
+
+// ─── setRegenCountdown (Manually Set Refresh) — time-shift semantics ─────────
+// Replicates the pure shift math from pointsManager.setRegenCountdown: the whole pending
+// timeline moves by delta = (now + D) − currentNextFire, so the outcome matches what would
+// have happened had the player simply waited.
+
+function computeRemainingMs(pointData, interval, now) {
+    if (pointData.charges) {
+        const pending = pointData.charges.filter(c => c);
+        if (pending.length === 0) return null;
+        return Math.max(0, Math.min(...pending) + interval - now);
+    }
+    if (pointData.current >= pointData.max) return null;
+    return Math.max(0, (pointData.lastUse || pointData.lastRegeneration) + interval - now);
+}
+
+function applyRegenCountdown(pointData, interval, durationMs, now) {
+    const remaining = computeRemainingMs(pointData, interval, now);
+    if (remaining === null) return { success: false };
+    const delta = durationMs - remaining;
+    const points = JSON.parse(JSON.stringify(pointData));
+    if (points.charges) {
+        for (let i = 0; i < points.charges.length; i++) {
+            if (points.charges[i]) points.charges[i] += delta;
+        }
+    } else {
+        const anchor = (points.lastUse || points.lastRegeneration) + delta;
+        points.lastUse = anchor;
+        points.lastRegeneration = anchor;
+    }
+    return { success: true, points };
+}
+
+describe('setRegenCountdown — Phase 1 (full-reset & drip share the lastUse anchor)', () => {
+    const HOUR = 3600000;
+    const INTERVAL = 12 * HOUR;
+
+    it('sets next fire to exactly now + D', () => {
+        const now = 1000000000;
+        const data = { current: 0, max: 3, lastUse: now - 4 * HOUR, lastRegeneration: now - 4 * HOUR };
+        const { points } = applyRegenCountdown(data, INTERVAL, 2 * HOUR, now);
+        assert.equal(points.lastUse + INTERVAL, now + 2 * HOUR, 'next regen lands at now + D');
+        assert.equal(points.lastRegeneration, points.lastUse, 'dual-anchor rule');
+    });
+
+    it('D = 0 → next fire is now (instant refresh on next read)', () => {
+        const now = 1000000000;
+        const data = { current: 0, max: 3, lastUse: now - 4 * HOUR, lastRegeneration: now - 4 * HOUR };
+        const { points } = applyRegenCountdown(data, INTERVAL, 0, now);
+        assert.equal(points.lastUse + INTERVAL, now);
+        // The regen loop fires when floor((now − lastUse)/interval) >= 1
+        assert.ok(Math.floor((now - points.lastUse) / INTERVAL) >= 1, 'regen fires immediately');
+    });
+
+    it('D > interval → anchor in the future, no premature regen (periods <= 0)', () => {
+        const now = 1000000000;
+        const data = { current: 1, max: 3, lastUse: now - HOUR, lastRegeneration: now - HOUR };
+        const { points } = applyRegenCountdown(data, INTERVAL, 20 * HOUR, now);
+        assert.equal(points.lastUse + INTERVAL, now + 20 * HOUR);
+        const periods = Math.floor((now - points.lastUse) / INTERVAL);
+        assert.ok(periods <= 0, 'no regen until now + D');
+    });
+
+    it('player at max → success:false (nothing to refresh)', () => {
+        const now = 1000000000;
+        const data = { current: 3, max: 3, lastUse: now - HOUR, lastRegeneration: now - HOUR };
+        assert.equal(applyRegenCountdown(data, INTERVAL, HOUR, now).success, false);
+    });
+});
+
+describe('setRegenCountdown — Phase 2 (charges) delta-shift preserves stagger', () => {
+    const HOUR = 3600000;
+    const INTERVAL = 12 * HOUR;
+
+    it('shifts every pending charge by the same delta; null slots untouched', () => {
+        const now = 1000000000;
+        // Charges due in 8h / 10h / 12h  (ts = due − interval)
+        const data = { current: 1, max: 4, charges: [null, now + 8*HOUR - INTERVAL, now + 10*HOUR - INTERVAL, now + 12*HOUR - INTERVAL] };
+        const { points } = applyRegenCountdown(data, INTERVAL, 2 * HOUR, now);
+        assert.equal(points.charges[0], null, 'available charge untouched');
+        assert.equal(points.charges[1] + INTERVAL, now + 2 * HOUR, 'earliest now due in 2h');
+        assert.equal(points.charges[2] + INTERVAL, now + 4 * HOUR, 'stagger preserved: 4h');
+        assert.equal(points.charges[3] + INTERVAL, now + 6 * HOUR, 'stagger preserved: 6h');
+    });
+
+    it('extending works too (refresh pushed later)', () => {
+        const now = 1000000000;
+        const data = { current: 0, max: 2, charges: [now + 1*HOUR - INTERVAL, now + 3*HOUR - INTERVAL] };
+        const { points } = applyRegenCountdown(data, INTERVAL, 20 * HOUR, now);
+        assert.equal(points.charges[0] + INTERVAL, now + 20 * HOUR);
+        assert.equal(points.charges[1] + INTERVAL, now + 22 * HOUR);
+    });
+
+    it('D = 0 → earliest charge fires on next read, later charges keep shifted spacing', () => {
+        const now = 1000000000;
+        const data = { current: 0, max: 2, charges: [now + 8*HOUR - INTERVAL, now + 10*HOUR - INTERVAL] };
+        const { points } = applyRegenCountdown(data, INTERVAL, 0, now);
+        assert.ok(now - points.charges[0] >= INTERVAL, 'earliest charge regenerates immediately');
+        assert.equal(points.charges[1] + INTERVAL, now + 2 * HOUR, 'second follows 2h later');
+    });
+
+    it('no pending charges → success:false', () => {
+        const now = 1000000000;
+        const data = { current: 2, max: 2, charges: [null, null] };
+        assert.equal(applyRegenCountdown(data, INTERVAL, HOUR, now).success, false);
+    });
+});

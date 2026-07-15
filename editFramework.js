@@ -568,53 +568,6 @@ export class DeleteConfirmation {
   }
 }
 
-/**
- * Validation utilities
- */
-export const validateContent = (contentType, data) => {
-  const config = EDIT_CONFIGS[contentType];
-  if (!config) throw new Error(`Unknown content type: ${contentType}`);
-  
-  const errors = [];
-  
-  // Validate properties
-  Object.entries(config.properties).forEach(([key, propConfig]) => {
-    const value = data[key];
-    
-    if (propConfig.required && (!value || value.toString().trim() === '')) {
-      errors.push(`${propConfig.label} is required`);
-    }
-    
-    if (value && propConfig.maxLength && value.toString().length > propConfig.maxLength) {
-      errors.push(`${propConfig.label} is too long (max ${propConfig.maxLength} characters)`);
-    }
-    
-    if (propConfig.type === 'number' && value !== undefined) {
-      const num = Number(value);
-      if (isNaN(num)) {
-        errors.push(`${propConfig.label} must be a number`);
-      } else if (propConfig.min !== undefined && num < propConfig.min) {
-        errors.push(`${propConfig.label} must be at least ${propConfig.min}`);
-      } else if (propConfig.max !== undefined && num > propConfig.max) {
-        errors.push(`${propConfig.label} must be at most ${propConfig.max}`);
-      }
-    }
-  });
-  
-  // Validate content count
-  if (data[config.content.type]) {
-    const contentCount = Array.isArray(data[config.content.type]) ? 
-      data[config.content.type].length : 
-      Object.keys(data[config.content.type]).length;
-    
-    if (contentCount > config.content.maxItems) {
-      errors.push(`Too many ${config.content.itemLabelPlural} (max ${config.content.maxItems})`);
-    }
-  }
-  
-  return errors;
-};
-
 // Export all necessary components
 export { EDIT_TYPES };
 export default EditInterfaceBuilder;

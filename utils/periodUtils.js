@@ -49,24 +49,27 @@ export function formatCountdown(ms) {
  * @param {string} [fieldIds.days='period_days']
  * @param {string} [fieldIds.hours='period_hours']
  * @param {string} [fieldIds.minutes='period_minutes']
- * @returns {{ days: number, hours: number, minutes: number, totalMs: number }}
+ * @param {string} [fieldIds.seconds] - Optional; only parsed when provided (modals without a Seconds field are unaffected)
+ * @returns {{ days: number, hours: number, minutes: number, seconds: number, totalMs: number }}
  */
 export function parsePeriodFromModal(components, fieldIds = {}) {
   const ids = {
     days: fieldIds.days || 'period_days',
     hours: fieldIds.hours || 'period_hours',
-    minutes: fieldIds.minutes || 'period_minutes'
+    minutes: fieldIds.minutes || 'period_minutes',
+    seconds: fieldIds.seconds || null
   };
-  let days = 0, hours = 0, minutes = 0;
+  let days = 0, hours = 0, minutes = 0, seconds = 0;
   for (const comp of components) {
     const child = comp.component || comp.components?.[0];
     if (!child) continue;
     if (child.custom_id === ids.days) days = parseInt(child.value?.trim()) || 0;
     if (child.custom_id === ids.hours) hours = parseInt(child.value?.trim()) || 0;
     if (child.custom_id === ids.minutes) minutes = parseInt(child.value?.trim()) || 0;
+    if (ids.seconds && child.custom_id === ids.seconds) seconds = parseInt(child.value?.trim()) || 0;
   }
-  const totalMs = (days * 86400000) + (hours * 3600000) + (minutes * 60000);
-  return { days, hours, minutes, totalMs };
+  const totalMs = (days * 86400000) + (hours * 3600000) + (minutes * 60000) + (seconds * 1000);
+  return { days, hours, minutes, seconds, totalMs };
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -367,19 +370,21 @@ export function buildResetTimeModalComponents(opts = {}) {
 }
 
 /**
- * Build modal components for period input (Days, Hours, Minutes).
+ * Build modal components for period input (Days, Hours, Minutes[, Seconds]).
  * @param {Object} [options]
  * @param {string} [options.fieldPrefix='period'] - Prefix for field custom_ids
  * @param {number} [options.currentPeriodMs=0] - Current period for pre-fill
+ * @param {boolean} [options.includeSeconds=false] - Append a Seconds field (used by stamina refresh)
  * @returns {Array} Array of Label+TextInput components for modal
  */
 export function buildPeriodModalComponents(options = {}) {
-  const { fieldPrefix = 'period', currentPeriodMs = 0 } = options;
+  const { fieldPrefix = 'period', currentPeriodMs = 0, includeSeconds = false } = options;
   const currentDays = Math.floor(currentPeriodMs / 86400000);
   const currentHours = Math.floor((currentPeriodMs % 86400000) / 3600000);
   const currentMinutes = Math.floor((currentPeriodMs % 3600000) / 60000);
+  const currentSeconds = Math.floor((currentPeriodMs % 60000) / 1000);
 
-  return [
+  const components = [
     {
       type: 18, // Label
       label: 'Days',
@@ -423,4 +428,23 @@ export function buildPeriodModalComponents(options = {}) {
       }
     }
   ];
+
+  if (includeSeconds) {
+    components.push({
+      type: 18,
+      label: 'Seconds',
+      description: '0-59 seconds (leave empty for 0)',
+      component: {
+        type: 4,
+        custom_id: `${fieldPrefix}_seconds`,
+        style: 1,
+        placeholder: '0',
+        max_length: 2,
+        required: false,
+        ...(currentSeconds > 0 ? { value: String(currentSeconds) } : {})
+      }
+    });
+  }
+
+  return components;
 }

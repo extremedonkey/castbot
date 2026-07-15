@@ -99,7 +99,7 @@ const PROD_PAGES = [
       `### \`\`\`⚡ Setting a Player's Stamina\`\`\``,
       `\`/menu\` → **🧑‍🤝‍🧑 Players** → Select player → **⚡ Stamina** → **⚡ Modify Stamina**\n\nYou'll see their current stamina and regen timer. Type a new value to override it.\n\n-# This is useful if something went wrong or you want to give a player bonus moves.`,
       `### \`\`\`🗺️ Other Map Tools\`\`\``,
-      `The **🗺️ Safari Map** category also has per-player tools:\n• **⏸️ Pause Player** — Temporarily block a player from moving\n• **🔄 Reset Explored Locations** — Clear their fog-of-war progress\n• **🗺️ Show Navigate Pane** — See their movement view`
+      `The **🗺️ Safari Map** category also has per-player tools:\n• **⏸️ Pause Player** — Temporarily block a player from moving\n• **🔄 Reset Explored Locations** — Clear their fog-of-war progress\n• **🗺️ Show Navigate Pane** — See their movement view\n• **♻️ Manually Set Refresh** — Set exactly when their next stamina refresh lands (days/hours/minutes/seconds; blank = refresh immediately). One-shot: only the current cycle shifts — the next cycle runs on your server's regen time as normal.`
     ]
   },
   // Page 2: Stamina Settings

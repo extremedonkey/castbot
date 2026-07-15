@@ -386,52 +386,6 @@ async function removeOldChannelPermissions(guildId, userId, oldCoordinate, clien
     }
 }
 
-// Update Discord channel permissions based on movement
-export async function updateChannelPermissions(guildId, userId, oldCoordinate, newCoordinate, client) {
-    try {
-        const guild = await client.guilds.fetch(guildId);
-        const safariData = await loadSafariContent();
-        const activeMap = safariData[guildId]?.maps?.active;
-        
-        if (!activeMap) {
-            console.error('No active map found for permission update');
-            return;
-        }
-        
-        const mapData = safariData[guildId].maps[activeMap];
-        
-        // Get Discord member object for permission operations
-        const member = await guild.members.fetch(userId);
-        
-        // FIRST: Add permissions to new channel (before removing old)
-        if (newCoordinate && mapData.coordinates[newCoordinate]?.channelId) {
-            const newChannel = await guild.channels.fetch(mapData.coordinates[newCoordinate].channelId);
-            if (newChannel) {
-                await newChannel.permissionOverwrites.edit(member, {
-                    [PermissionFlagsBits.ViewChannel]: true,
-                    [PermissionFlagsBits.SendMessages]: true
-                });
-                console.log(`🔓 Granted permissions for ${member.displayName} to ${newCoordinate} channel`);
-            }
-        }
-        
-        // THEN: Remove permissions from old channel (after granting new)
-        if (oldCoordinate && mapData.coordinates[oldCoordinate]?.channelId) {
-            const oldChannel = await guild.channels.fetch(mapData.coordinates[oldCoordinate].channelId);
-            if (oldChannel) {
-                await oldChannel.permissionOverwrites.edit(member, {
-                    [PermissionFlagsBits.ViewChannel]: false,
-                    [PermissionFlagsBits.SendMessages]: false
-                });
-                console.log(`🚪 Removed permissions for ${member.displayName} from ${oldCoordinate} channel`);
-            }
-        }
-    } catch (error) {
-        console.error('Error updating channel permissions:', error);
-        // Don't throw - movement should still succeed even if permissions fail
-    }
-}
-
 // Get movement display for a coordinate channel (Components V2 format)
 export async function getMovementDisplay(guildId, userId, coordinate, isDeferred = false) {
     // For non-deferred calls, return deferred response immediately
@@ -676,12 +630,6 @@ export async function getMapGridDimensions(guildId) {
     const height = activeMap?.gridHeight || activeMap?.gridSize || 7;
     
     return { width, height };
-}
-
-// Legacy function for backward compatibility
-export async function getMapGridSize(guildId) {
-    const dimensions = await getMapGridDimensions(guildId);
-    return Math.max(dimensions.width, dimensions.height); // Return the larger dimension
 }
 
 // Get player's reverse blacklist coverage based on inventory items

@@ -2056,81 +2056,28 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridWi
 
     console.log(`🎨 Created ${overlays.length} overlay rectangles`);
 
-    // Step 5b: Player location overlays
+    // Step 5b: Player location overlays (avatar bubbles + status-dot text rows —
+    // shared renderer with the Player Locations image)
     if (playerLocations && playerLocations.size > 0) {
-      const cellPlayers = {};
-      for (const [, loc] of playerLocations) {
-        const coord = loc.coordinate;
-        if (!coord) continue;
-        // Skip Unknown Players (left server) from map image
-        if (loc.displayName === 'Unknown Player') continue;
-        if (!cellPlayers[coord]) cellPlayers[coord] = [];
-        // Strip emoji from display names for SVG
-        const name = String(loc.displayName || 'Unknown')
-          .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
-          .replace(/[\u{2600}-\u{27BF}]/gu, '')
-          .replace(/[\u{FE00}-\u{FE0F}]/gu, '')
-          .replace(/[\u{200D}]/gu, '')
-          .trim();
-        cellPlayers[coord].push(name);
-      }
+      const { groupPlayersByCell, buildPlayerCellOverlays } = await import('./playerLocationImageGenerator.js');
+      const cellPlayers = groupPlayersByCell(playerLocations);
 
-      const escXml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-      for (const [coord, players] of Object.entries(cellPlayers)) {
-        const pos = coordToPosition(coord);
-        const w = Math.floor(cellWidth);
-        const h = Math.floor(cellHeight);
-        const hasColor = blacklistedCoords.includes(coord) || coordToItemMap.has(coord);
-
-        // Dark background only on cells without existing color overlay
-        if (!hasColor) {
-          overlays.push({
-            input: await sharp({
-              create: { width: w, height: h, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0.55 } }
-            }).png().toBuffer(),
+      const cellOverlayArrays = await Promise.all(
+        Object.entries(cellPlayers).map(([coord, players]) => {
+          const pos = coordToPosition(coord);
+          // Dark backdrop only on cells without an existing color overlay
+          const hasColor = blacklistedCoords.includes(coord) || coordToItemMap.has(coord);
+          return buildPlayerCellOverlays({
+            players,
+            left: pos.left,
             top: pos.top,
-            left: pos.left
+            cellW: Math.floor(cellWidth),
+            cellH: Math.floor(cellHeight),
+            drawBackdrop: !hasColor
           });
-        }
-
-        // Player names SVG
-        const fontSize = Math.min(22, Math.floor(cellWidth / 7));
-        const lineHeight = fontSize + 6;
-        const maxLines = Math.floor((h - 10) / lineHeight);
-        const visible = players.slice(0, maxLines);
-        const overflow = players.length - visible.length;
-        if (overflow > 0 && visible.length > 1) visible.pop();
-        const actualOverflow = players.length - visible.length;
-        const totalLines = visible.length + (actualOverflow > 0 ? 1 : 0);
-        const blockHeight = totalLines * lineHeight;
-        const startY = Math.floor((h - blockHeight) / 2) + fontSize;
-
-        const textLines = [];
-        visible.forEach((name, i) => {
-          let displayName = escXml(name);
-          const availableWidth = w - 24; // 16px left padding (dot+gap) + 8px right margin
-          const maxChars = Math.floor(availableWidth / (fontSize * 0.62));
-          if (displayName.length > maxChars) displayName = displayName.substring(0, maxChars - 1) + '…';
-          const y = startY + i * lineHeight;
-          textLines.push(
-            `<circle cx="8" cy="${y - fontSize * 0.3}" r="3" fill="#4ade80"/>` +
-            `<text x="16" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="${fontSize}" font-weight="bold" fill="#ffffff">${displayName}</text>`
-          );
-        });
-        if (actualOverflow > 0) {
-          const y = startY + visible.length * lineHeight;
-          textLines.push(
-            `<text x="16" y="${y}" font-family="Arial, Helvetica, sans-serif" font-size="${Math.max(10, fontSize - 2)}" fill="#a0a0b0">+${actualOverflow} more</text>`
-          );
-        }
-
-        overlays.push({
-          input: Buffer.from(`<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">${textLines.join('')}</svg>`),
-          top: pos.top,
-          left: pos.left
-        });
-      }
+        })
+      );
+      for (const arr of cellOverlayArrays) overlays.push(...arr);
 
       console.log(`👥 Added player overlays for ${Object.keys(cellPlayers).length} occupied cells`);
     }

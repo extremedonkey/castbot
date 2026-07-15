@@ -8,6 +8,7 @@
 import { loadPlayerData } from './storage.js';
 import { loadSafariContent } from './safariManager.js';
 import { getEntityPoints } from './pointsManager.js';
+import { getPlayerSafariState } from './safariPlayerUtils.js';
 import { logger } from './logger.js';
 
 /**
@@ -15,7 +16,9 @@ import { logger } from './logger.js';
  * @param {string} guildId - The guild ID
  * @param {boolean} includeOffline - Whether to include offline players
  * @param {Object} client - Discord client instance for fetching member data
- * @returns {Map<string, Object>} Map of userId -> location data
+ * @returns {Map<string, Object>} Map of userId -> location data:
+ *   { userId, coordinate, lastMovement, exploredCount, stamina, displayName,
+ *     avatar (static PNG URL or null), status ('initialized'|'paused') }
  */
 export async function getAllPlayerLocations(guildId, includeOffline = true, client = null) {
     const playerData = await loadPlayerData();
@@ -73,9 +76,10 @@ export async function getAllPlayerLocations(guildId, includeOffline = true, clie
         const member = members.get(userId);
         if (member) {
             displayName = member.displayName || member.user.username || 'Unknown Player';
-            avatar = member.user.displayAvatarURL({ size: 128 });
+            // Static PNG so sharp never sees an animated GIF (map avatar bubbles)
+            avatar = member.user.displayAvatarURL({ size: 128, extension: 'png', forceStatic: true });
         }
-        
+
         const locationData = {
             userId,
             coordinate: mapProgress.currentLocation,
@@ -83,7 +87,8 @@ export async function getAllPlayerLocations(guildId, includeOffline = true, clie
             exploredCount: mapProgress.exploredCoordinates?.length || 0,
             stamina: await getPlayerStamina(guildId, userId),
             displayName: displayName,
-            avatar: avatar
+            avatar: avatar,
+            status: getPlayerSafariState(player, activeMapId) // 'initialized' | 'paused' (on-map only)
         };
         
         playerLocations.set(userId, locationData);

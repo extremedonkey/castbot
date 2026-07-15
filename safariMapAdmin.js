@@ -830,6 +830,33 @@ export async function createStaminaModal(userId, guildId) {
 }
 
 /**
+ * Create "Manually Set Refresh" modal — sets the time until the player's next stamina regen.
+ * Look/feel cloned from the Schedule Action delay modal (ca_schedule_delay_*), plus a Seconds field.
+ * @param {string} userId - Target player's user ID
+ * @param {string} guildId - Guild ID (for pre-filling the current remaining time)
+ */
+export async function createRefreshModal(userId, guildId) {
+  // Pre-fill with the player's current time-until-refresh (0 if full / uninitialized)
+  let currentRemainingMs = 0;
+  try {
+    const { getRegenRemainingMs } = await import('./pointsManager.js');
+    currentRemainingMs = (await getRegenRemainingMs(guildId, `player_${userId}`, 'stamina')) || 0;
+  } catch (e) {
+    console.error('Refresh modal lookup error:', e.message);
+  }
+
+  const { buildPeriodModalComponents } = await import('./utils/periodUtils.js');
+  return {
+    custom_id: `map_admin_refresh_modal_${userId}`,
+    title: 'Set Refresh',
+    components: [
+      { type: 10, content: '### Set stamina refresh\nTime until this player\'s next stamina refresh. Applies to the current cycle only — leave everything blank to refresh immediately.' },
+      ...buildPeriodModalComponents({ fieldPrefix: 'refresh', currentPeriodMs: currentRemainingMs, includeSeconds: true })
+    ]
+  };
+}
+
+/**
  * Create currency edit modal
  */
 export async function createCurrencyModal(userId, currentAmount, currencyName) {

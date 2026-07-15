@@ -148,7 +148,7 @@ const otherPlayers = details.otherPlayersHere;
 
 ## 📊 Data Structure
 
-Each player location object contains:
+Each `getAllPlayerLocations` entry contains:
 ```javascript
 {
     userId: "391415444084490240",
@@ -157,13 +157,27 @@ Each player location object contains:
     exploredCount: 12,
     stamina: { current: 8, max: 10 },
     displayName: "PlayerName", // Live from Discord
-    avatar: "https://cdn.discordapp.com/avatars/...", // Live from Discord
-    channelId: "1234567890", // Associated Discord channel
-    currency: 150,
-    items: 5, // Item count
-    otherPlayersHere: [...] // Other players at same location
+    avatar: "https://cdn.discordapp.com/avatars/....png", // Static PNG URL (forceStatic, 128px) or null if member fetch failed
+    status: "initialized" // 'initialized' | 'paused' — via getPlayerSafariState (on-map players only)
 }
 ```
+`getPlayerLocationDetails` additionally provides `channelId`, `currency`, `items`, and `otherPlayersHere`.
+
+### Map Image Overlays (avatar bubbles)
+
+Both map images — Map Explorer (`generateBlacklistOverlay` in mapExplorer.js) and
+Player Locations (`generatePlayerLocationImage`) — render occupied cells via the
+shared builders `groupPlayersByCell` / `buildPlayerCellOverlays` exported from
+`playerLocationImageGenerator.js`:
+
+- Up to **3 "bubble head" rows** per cell: circular avatar with a 2px status ring
+  (🟢 `#4ade80` initialized / 🟠 `#f59e0b` paused), name beside it. Avatar fetch
+  failures fall back to an initial-letter placeholder with the same ring.
+- Remaining players render in the compact dot+name format (dot colored by status),
+  then a `+N more` overflow line.
+- Cells under 110px (large grids / small maps) skip bubbles entirely — pure
+  legacy text render (locked by tests/playerCellLayout.test.js).
+- Pure layout math lives in `playerCellLayout.js` (sharp-free, unit-tested).
 
 ## 🚨 Best Practices
 

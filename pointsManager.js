@@ -587,6 +587,95 @@ export async function getTimeUntilRegeneration(guildId, entityId, pointType) {
     return `${seconds}s`;
 }
 
+// Milliseconds until the next regeneration fires (raw form of getTimeUntilRegeneration).
+// Returns null when nothing is pending (not initialized, no regen config, or already full).
+export async function getRegenRemainingMs(guildId, entityId, pointType) {
+    const safariData = await loadSafariContent();
+    const pointData = safariData[guildId]?.entityPoints?.[entityId]?.[pointType];
+    if (!pointData) return null;
+
+    let interval;
+    if (pointType === 'stamina') {
+        const { getStaminaConfig } = await import('./safariManager.js');
+        const staminaConfig = await getStaminaConfig(guildId);
+        interval = staminaConfig.regenerationMinutes * 60000;
+    } else {
+        const config = safariData[guildId]?.pointsConfig?.definitions?.[pointType] || getDefaultPointsConfig()[pointType];
+        if (!config?.regeneration?.interval) return null;
+        interval = config.regeneration.interval;
+    }
+
+    const now = Date.now();
+    let nextRegenTime;
+    if (pointData.charges) {
+        const pending = pointData.charges.filter(c => c);
+        if (pending.length === 0) return null;
+        nextRegenTime = Math.min(...pending) + interval;
+    } else {
+        if (pointData.current >= pointData.max) return null;
+        nextRegenTime = (pointData.lastUse || pointData.lastRegeneration) + interval;
+    }
+    return Math.max(0, nextRegenTime - now);
+}
+
+/**
+ * Admin: set the time until the entity's next regeneration fires ("Manually Set Refresh").
+ *
+ * TIME-SHIFT semantics: the outcome matches what would have happened had the player simply
+ * waited — the current next-fire time moves to now + durationMs and everything else keeps its
+ * relative spacing. Concretely:
+ * - Charges (Phase 2): every pending (non-null) charge timestamp shifts by the same delta, so
+ *   the stagger is preserved (charges due in 8h/10h/12h set to 2h become due in 2h/4h/6h).
+ * - Phase 1 (full-reset & drip): single anchor — lastUse AND lastRegeneration both move so the
+ *   next period boundary lands at now + durationMs (dual-anchor rule, same as setEntityPoints).
+ *
+ * One-shot: only the current cycle shifts; later cycles run on the server interval, and (in
+ * full-reset mode) any later spend restamps lastUse as normal.
+ *
+ * @param {number} durationMs - Time until next refresh. 0 = refresh on next read.
+ * @returns {{success: boolean, message?: string, regenTimeBefore?: string, regenTimeAfter?: string}}
+ */
+export async function setRegenCountdown(guildId, entityId, pointType, durationMs) {
+    // Apply any lazily-pending regeneration first so we shift CURRENT state, not stale state
+    // (e.g. a charge whose cooldown already elapsed must regen, not get pushed into the future).
+    await getEntityPoints(guildId, entityId, pointType);
+
+    const safariData = await loadSafariContent();
+    const points = safariData[guildId]?.entityPoints?.[entityId]?.[pointType];
+    if (!points) {
+        return { success: false, message: 'Player has no stamina record — initialize them on the map first.' };
+    }
+
+    const regenTimeBefore = await getTimeUntilRegeneration(guildId, entityId, pointType);
+    const remainingMs = await getRegenRemainingMs(guildId, entityId, pointType);
+    if (remainingMs === null) {
+        return { success: false, message: 'Nothing is regenerating (♻️ MAX) — there is no refresh to set.' };
+    }
+
+    const now = Date.now();
+    // Shift the whole timeline so the next fire lands at now + durationMs.
+    const delta = (now + durationMs) - (now + remainingMs);
+
+    if (points.charges) {
+        for (let i = 0; i < points.charges.length; i++) {
+            if (points.charges[i]) points.charges[i] += delta;
+        }
+        console.log(`♻️ Shifted ${points.charges.filter(c => c).length} pending charge(s) by ${delta}ms for ${entityId}`);
+    } else {
+        const anchor = (points.lastUse || points.lastRegeneration) + delta;
+        points.lastUse = anchor;
+        points.lastRegeneration = anchor;
+    }
+
+    safariData[guildId].entityPoints[entityId][pointType] = points;
+    await saveSafariContent(safariData);
+
+    const regenTimeAfter = await getTimeUntilRegeneration(guildId, entityId, pointType);
+    console.log(`♻️ Regen countdown for ${entityId} ${pointType} set to ${durationMs}ms (was ${regenTimeBefore}, now ${regenTimeAfter})`);
+
+    return { success: true, regenTimeBefore, regenTimeAfter };
+}
+
 // Admin function to set points directly
 export async function setEntityPoints(guildId, entityId, pointType, current, max = null, allowOverMax = false) {
     const safariData = await loadSafariContent();

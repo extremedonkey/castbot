@@ -407,6 +407,21 @@ The modal (`createStaminaModal`) deliberately shows the admin the **base max** (
 
 ---
 
+## Admin Set Refresh — overriding the cooldown itself
+
+Host path: `/menu` → 🧑‍🤝‍🧑 Players → select player → 🗺️ Safari Map → **♻️ Manually Set Refresh** (initialized players only) → `createRefreshModal` (`safariMapAdmin.js`, D/H/M/S fields cloned from the Schedule Action delay modal via `buildPeriodModalComponents({ includeSeconds: true })`) → `spm_refresh_modal_*` submit → `setRegenCountdown` (`pointsManager.js`).
+
+**Time-shift semantics** (the design decision): the outcome must match *what would have happened had the player simply waited*. The whole pending timeline shifts by `delta = D − currentRemaining`:
+
+- **Phase 1 (full-reset & drip)**: both `lastUse` and `lastRegeneration` move so the next period boundary lands at `now + D` (dual-anchor rule, same as Admin Set). Anchors may sit in the future — the regen loop's `floor((now − anchor)/interval)` stays ≤ 0 until then, so nothing regens early and nothing clobbers the value.
+- **Phase 2 (charges)**: every pending (non-null) charge timestamp shifts by the same `delta`, preserving the stagger — charges due in 8h/10h/12h set to 2h become due in 2h/4h/6h. Available (`null`) slots are untouched.
+- **`D = 0` is valid** — "refresh now": the next-due charge / the full refill fires on the player's next interaction.
+- **Guard**: if nothing is pending (`getRegenRemainingMs` → null, i.e. ♻️ MAX), the submit is rejected with an informational message instead of silently doing nothing.
+- **One-shot by design**: only the current cycle shifts. Later cycles run on the server interval, and (full-reset mode) any later spend restamps `lastUse` as normal — the same "timer restarts from your last move" rule players already have.
+- `setRegenCountdown` first runs `getEntityPoints` so any lazily-pending regen applies **before** the shift (an already-elapsed charge must regenerate, not get pushed into the future).
+
+---
+
 ## The Input Ceiling — `MAX_STAMINA`
 
 `config/safariLimits.js:38`. **One constant, `MAX_STAMINA = 999`**, is the single source of truth for the highest stamina value an admin may *type* — for both current and max, in **both** the server Stamina config modal **and** the per-player Set Stamina modal. `MAX_STAMINA_DIGITS` derives the modal `max_length` from it. This replaced scattered magic `99`s. It bounds only what can be typed; over-max above the denominator is still reachable via consumables/admin (commit history: "magic-99 removal").
@@ -525,6 +540,7 @@ graph LR
 | Legacy regen | `pointsManager.js:439` `calculateRegeneration` |
 | Spend | `pointsManager.js:471` `usePoints` |
 | Admin set (over-max, anchor reset) | `pointsManager.js:591` `setEntityPoints` |
+| Admin set refresh (time-shift cooldown) | `pointsManager.js` `setRegenCountdown` + `getRegenRemainingMs`; modal `safariMapAdmin.js` `createRefreshModal`; submit `spm_refresh_modal_*` in app.js |
 | Consumable over-max add | `pointsManager.js:790` `addBonusPoints` |
 | Permanent boost sum | `pointsManager.js:15` `calculatePermanentStaminaBoost` |
 | Generic item modifiers (Phase 5) | `pointsManager.js:50` `calculateAttributeModifiers` |

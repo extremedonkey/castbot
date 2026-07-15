@@ -1248,123 +1248,6 @@ async function createReeceStuffMenu(guildId, channelId = null) {
   };
 }
 
-/**
- * Create Safari submenu interface for dynamic content management
- */
-// TODO: MARKED FOR DELETION - createSafariMenu function removed (2025-02-11)
-// Safari features distributed to Production Menu and Map Explorer
-// async function createSafariMenu(guildId, userId, member) {
-//   // Get the inventory name and current round for this guild
-//   let inventoryName = 'Inventory'; // Default
-//   let inventoryEmoji = '🧰'; // Default emoji
-//   let currentRound = 1; // Default round
-//   let totalRounds = 3; // Default total rounds
-//
-//   try {
-//     const { loadSafariContent } = await import('./safariManager.js');
-//     const safariContent = await loadSafariContent();
-//     const guildConfig = safariContent[guildId]?.safariConfig;
-//     if (guildConfig?.inventoryName) {
-//       inventoryName = guildConfig.inventoryName;
-//     }
-//     if (guildConfig?.inventoryEmoji) {
-//       inventoryEmoji = guildConfig.inventoryEmoji;
-//     }
-//     // Get current round for dynamic button label
-//     if (guildConfig?.currentRound) {
-//       currentRound = guildConfig.currentRound;
-//     }
-//     // Get total rounds
-//     if (guildConfig?.totalRounds) {
-//       totalRounds = guildConfig.totalRounds;
-//     }
-//   } catch (error) {
-//     console.error('Error loading safari config:', error);
-//   }
-//
-//   // Use custom inventory name for everyone
-//   const inventoryLabel = `My ${inventoryName}`;
-//
-//   // Create dynamic round results button labels
-//   let roundResultsLabel;
-//   if (currentRound >= 1 && currentRound <= totalRounds) {
-//     roundResultsLabel = `Round ${currentRound} Results`;
-//   } else if (currentRound > totalRounds) {
-//     roundResultsLabel = 'Reset Game';
-//   } else {
-//     roundResultsLabel = 'Results'; // Fallback
-//   }
-//
-//   // Advanced Safari Configuration section buttons (Map-related features)
-//   const mapAdminButtons = [
-//     new ButtonBuilder()
-//       .setCustomId('safari_map_explorer')
-//       .setLabel('🗺️ Map Admin')
-//       .setStyle(ButtonStyle.Secondary),
-//     new ButtonBuilder()
-//       .setCustomId('safari_location_editor')
-//       .setLabel('Location Editor')
-//       .setStyle(ButtonStyle.Secondary)
-//       .setEmoji('📍'),
-//     new ButtonBuilder()
-//       .setCustomId('safari_action_editor')
-//       .setLabel('Action Editor')
-//       .setStyle(ButtonStyle.Secondary)
-//       .setEmoji('⚡'),
-//     new ButtonBuilder()
-//       .setCustomId('safari_progress')
-//       .setLabel('Safari Progress')
-//       .setStyle(ButtonStyle.Secondary)
-//       .setEmoji('🚀')
-//   ];
-//
-//   // TODO: Flag for deletion - Check if safari_manage_safari_buttons handler is still needed
-//   // TODO: Flag for deletion - Check if safari_navigate handlers and dependencies can be removed
-//
-//   const mapAdminRow = new ActionRowBuilder().addComponents(mapAdminButtons);
-//
-//   // Create back button
-//   const backButton = [
-//     new ButtonBuilder()
-//       .setCustomId('prod_menu_back')
-//       .setLabel('⬅ Menu')
-//       .setStyle(ButtonStyle.Secondary)
-//   ];
-//
-//   const backRow = new ActionRowBuilder().addComponents(backButton);
-//
-//   // Build container components with section headers
-//   const containerComponents = [
-//     {
-//       type: 10, // Text Display component
-//       content: `## 🦁 Safari | Idol Hunts, Challenges & More\n\nAdvanced map configuration, custom actions, and location management.`
-//     },
-//     {
-//       type: 14 // Separator
-//     },
-//     {
-//       type: 10, // Text Display component
-//       content: `> **\`🦁 Advanced Safari Configuration\`**`
-//     },
-//     mapAdminRow.toJSON(),
-//     {
-//       type: 14 // Separator
-//     },
-//     backRow.toJSON() // Back navigation
-//   ];
-//
-//   // Create Components V2 Container
-//   const safariMenuContainer = {
-//     type: 17, // Container component
-//     accent_color: 0xf39c12, // Orange accent color for safari theme
-//     components: containerComponents
-//   };
-//
-//   return {
-//     flags: (1 << 15), // IS_COMPONENTS_V2 flag
-//     components: [safariMenuContainer]
-//   };
-// }
 
 
 // Viral growth buttons are now integrated into navigation buttons in castlistV2.js
@@ -10109,10 +9992,16 @@ To fix this:
 
     } else if (custom_id === 'player_menu_sel_map' || custom_id.startsWith('player_menu_sel_map_')) {
       const selectedValue = req.body.data.values?.[0];
-      if (selectedValue === 'move' || selectedValue === 'starting_location') {
+      if (selectedValue === 'move' || selectedValue === 'starting_location' || selectedValue === 'set_refresh') {
         return ButtonHandlerFactory.create({ id: 'player_menu_sel_map_modal', requiresPermission: PermissionFlagsBits.ManageRoles, permissionName: 'Manage Roles', handler: async (context) => {
           // Reuse the existing Safari modals, retagged spm_ so their submit returns to THIS menu.
           const targetUserId = context.customId.replace('player_menu_sel_map_', '');
+          if (selectedValue === 'set_refresh') {
+            const { createRefreshModal } = await import('./safariMapAdmin.js');
+            const modal = await createRefreshModal(targetUserId, context.guildId);
+            modal.custom_id = `spm_refresh_modal_${targetUserId}`; // plain object (Label modal), routes submit back to this menu
+            return { type: 9, data: modal };
+          }
           const { loadSafariContent } = await import('./safariManager.js');
           const playerData = await loadPlayerData();
           const safariData = await loadSafariContent();
@@ -13608,52 +13497,6 @@ To fix this:
           };
         }
       })(req, res, client);
-    // TODO: MARKED FOR DELETION - prod_safari_menu removed (2025-02-11)
-    // Safari features distributed to Production Menu (Map Admin, Actions) and Map Explorer (Location Editor, Safari Progress)
-    // } else if (custom_id === 'prod_safari_menu') {
-    //   // Handle Safari submenu - dynamic content management (MIGRATED TO FACTORY)
-    //   const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(req.body.channel_id);
-    //
-    //   return ButtonHandlerFactory.create({
-    //     id: 'prod_safari_menu',
-    //     requiresPermission: PermissionFlagsBits.ManageRoles,
-    //     permissionName: 'Manage Roles',
-    //     updateMessage: shouldUpdateMessage,
-    //     handler: async (context) => {
-    //       console.log('🦁 DEBUG: Creating Safari submenu');
-    //       MenuBuilder.trackLegacyMenu('prod_safari_menu', 'Safari game management menu');
-    //
-    //       // Create Safari submenu
-    //       const safariMenuData = await createSafariMenu(context.guildId, context.userId, context.member);
-    //
-    //       return {
-    //         ...safariMenuData,
-    //         ephemeral: true
-    //       };
-    //     }
-    //   })(req, res, client);
-
-    // TODO: MARKED FOR DELETION - safari_menu back button removed (2025-02-11)
-    // Safari submenus now use prod_menu_back to return to Production Menu
-    // } else if (custom_id === 'safari_menu') {
-    //   // Handle Safari menu button (back button from various Safari submenus)
-    //   return ButtonHandlerFactory.create({
-    //     id: 'safari_menu',
-    //     requiresPermission: PermissionFlagsBits.ManageRoles,
-    //     permissionName: 'Manage Roles',
-    //     updateMessage: true,
-    //     handler: async (context) => {
-    //       console.log('🦁 DEBUG: Returning to Safari menu');
-    //
-    //       // Create Safari submenu
-    //       const safariMenuData = await createSafariMenu(context.guildId, context.userId, context.member);
-    //
-    //       return {
-    //         ...safariMenuData,
-    //         ephemeral: true
-    //       };
-    //     }
-    //   })(req, res, client);
     } else if (custom_id === 'data_admin') {
       // Data admin menu — access check BEFORE factory: prevents V2 flag mismatch crash on public messages (e.g. restart notification)
       if (req.body.member?.user?.id !== '391415444084490240') { console.log(`❌ ACCESS DENIED: data_admin - user ${req.body.member?.user?.id} not authorized`); return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Access denied. This feature is restricted.', flags: InteractionResponseFlags.EPHEMERAL } }); }
@@ -32803,67 +32646,6 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
 
-    // MAP_CREATE HANDLER REMOVED - Use map_update instead which supports both create and update
-    // } else if (custom_id === 'map_create') {
-    //   // Handle Map Creation
-    //   try {
-    //     const guildId = req.body.guild_id;
-    //     const userId = req.body.member?.user?.id || req.body.user?.id;
-    //     const member = req.body.member;
-    //     
-    //     // Check admin permissions
-    //     if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to create maps.')) return;
-    //     
-    //     console.log(`🏗️ DEBUG: Creating map for guild ${guildId}`);
-    //     
-    //     // Defer response for long operation
-    //     await res.send({
-    //       type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-    //       data: {
-    //         flags: InteractionResponseFlags.EPHEMERAL
-    //       }
-    //     });
-    //     
-    //     // Get guild and create map
-    //     const guild = await client.guilds.fetch(guildId);
-    //     const { createMapGrid } = await import('./mapExplorer.js');
-    //     const result = await createMapGrid(guild, userId);
-    //     
-    //     // Send followup with result
-    //     const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-    //     
-    //     await fetch(followupUrl, {
-    //       method: 'PATCH',
-    //       headers: {
-    //         'Content-Type': 'application/json',
-    //       },
-    //       body: JSON.stringify({
-    //         content: result.message,
-    //         flags: InteractionResponseFlags.EPHEMERAL
-    //       })
-    //     });
-    //     
-    //   } catch (error) {
-    //     console.error('Error in map_create handler:', error);
-    //     
-    //     // Try to send error as followup
-    //     try {
-    //       const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-    //       await fetch(followupUrl, {
-    //         method: 'PATCH',
-    //         headers: {
-    //           'Content-Type': 'application/json',
-    //         },
-    //         body: JSON.stringify({
-    //           content: `❌ Error creating map: ${error.message}`,
-    //           flags: InteractionResponseFlags.EPHEMERAL
-    //         })
-    //       });
-    //     } catch (followupError) {
-    //       console.error('Error sending followup:', followupError);
-    //     }
-    //   }
-    // 
     } else if (custom_id === 'map_update') {
       console.log('🎯 DEBUG: map_update button clicked!');
       // Handle Map Update - Show modal for Discord image URL
@@ -45853,6 +45635,45 @@ Your server is now ready for Tycoons gameplay!`;
         await updateDeferredResponse(req.body.token, await buildAdminPlayerMenu(client, guildId, targetUserId, req.body.member?.user?.id, 'stamina'));
       } catch (error) {
         console.error('Error in spm_stamina_modal:', error);
+        await updateDeferredResponse(req.body.token, { components: [{ type: 17, accent_color: 0xe74c3c, components: [{ type: 10, content: `❌ Error: ${error.message}` }] }] });
+      }
+
+    } else if (custom_id.startsWith('spm_refresh_modal_')) {
+      // Manually Set Refresh from the Player Manager → time-shift the regen timeline so the next
+      // refresh lands in the entered duration, then WEBHOOK-PATCH the menu (Map category active).
+      const targetUserId = custom_id.replace('spm_refresh_modal_', '');
+      const guildId = req.body.guild_id;
+      const { parsePeriodFromModal } = await import('./utils/periodUtils.js');
+      const { days, hours, minutes, seconds, totalMs } = parsePeriodFromModal(req.body.data.components, {
+        days: 'refresh_days', hours: 'refresh_hours', minutes: 'refresh_minutes', seconds: 'refresh_seconds'
+      });
+
+      if (days < 0 || hours < 0 || minutes < 0 || seconds < 0 || days > 30 || hours > 23 || minutes > 59 || seconds > 59) {
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Invalid time values. Days: 0-30, Hours: 0-23, Minutes: 0-59, Seconds: 0-59.', flags: InteractionResponseFlags.EPHEMERAL } });
+      }
+      // Nothing pending (full / uninitialized) → informational error, leave the parent menu untouched.
+      // NOTE: totalMs = 0 is valid ("refresh now") — no minimum floor.
+      const { getRegenRemainingMs, setRegenCountdown } = await import('./pointsManager.js');
+      if (await getRegenRemainingMs(guildId, `player_${targetUserId}`, 'stamina') === null) {
+        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: `⚡ Player's stamina is already full (♻️ MAX) — there is no refresh to set.`, flags: InteractionResponseFlags.EPHEMERAL } });
+      }
+
+      await res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+      try {
+        const result = await setRegenCountdown(guildId, `player_${targetUserId}`, 'stamina', totalMs);
+        if (result.success) {
+          const { formatPeriod } = await import('./utils/periodUtils.js');
+          const refreshDesc = totalMs === 0 ? 'instant (next interaction)' : formatPeriod(totalMs);
+          try {
+            const { addActivityEntryAndSave, ACTIVITY_TYPES } = await import('./activityLogger.js');
+            addActivityEntryAndSave(guildId, targetUserId, ACTIVITY_TYPES.admin, `[ADMIN] Stamina refresh set to ${refreshDesc} (was ♻️${result.regenTimeBefore})`);
+          } catch (e) { console.error('Activity log error:', e); }
+        }
+        // Rebuild either way — on the rare not-pending race the menu simply shows ♻️ MAX.
+        const { buildAdminPlayerMenu } = await import('./playerManagement.js');
+        await updateDeferredResponse(req.body.token, await buildAdminPlayerMenu(client, guildId, targetUserId, req.body.member?.user?.id, 'map'));
+      } catch (error) {
+        console.error('Error in spm_refresh_modal:', error);
         await updateDeferredResponse(req.body.token, { components: [{ type: 17, accent_color: 0xe74c3c, components: [{ type: 10, content: `❌ Error: ${error.message}` }] }] });
       }
 

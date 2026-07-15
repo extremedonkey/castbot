@@ -2,7 +2,7 @@
 
 **Version**: sharp ^0.33.5 (installed)
 **Import**: `import sharp from 'sharp';`
-**Used by**: castlistImageGenerator.js, mapExplorer.js, activityLogger.js, emojiUtils.js
+**Used by**: castlistImageGenerator.js, mapExplorer.js, playerLocationImageGenerator.js, scheduleImageGenerator.js, channelExportFetcher.js, activityLogger.js, utils/emojiUtils.js
 
 ## How Sharp Works in This Project
 
@@ -112,6 +112,41 @@ async function roundImage(buffer, width, height, radius = 8) {
     .toBuffer();
 }
 ```
+
+### Circular Avatar with Status Ring ("bubble head")
+
+Circle-crop an avatar and surround it with a colored ring — no SVG `stroke`
+(stroke antialiasing leaves seams). Instead: solid ring-color disc, circle-mask
+the avatar smaller, composite it centered. Production example:
+`createStatusBubble()` in `playerLocationImageGenerator.js`.
+
+```javascript
+const inner = outer - ringWidth * 2;
+
+// 1. Ring = a solid disc in the status color
+const disc = Buffer.from(`<svg width="${outer}" height="${outer}" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="${outer / 2}" cy="${outer / 2}" r="${outer / 2}" fill="${ringColor}"/>
+</svg>`);
+
+// 2. Circle-mask the avatar at the inner diameter
+const circleMask = await sharp(Buffer.from(`<svg width="${inner}" height="${inner}" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="${inner / 2}" cy="${inner / 2}" r="${inner / 2}" fill="white"/>
+</svg>`)).png().toBuffer();
+
+const roundedAvatar = await sharp(avatarBuffer)
+  .resize(inner, inner, { fit: 'cover' })
+  .composite([{ input: circleMask, blend: 'dest-in' }])
+  .png().toBuffer();
+
+// 3. Avatar centered on the disc → ringWidth of disc shows as the ring
+const bubble = await sharp(disc)
+  .composite([{ input: roundedAvatar, top: ringWidth, left: ringWidth }])
+  .png().toBuffer();
+```
+
+Fetch avatars with a timeout and always have a fallback (e.g. initial-letter
+placeholder) — a slow CDN must degrade one bubble, not stall the whole image:
+`await fetch(url, { signal: AbortSignal.timeout(4000) })`.
 
 ## Semi-Transparent Color Overlays
 

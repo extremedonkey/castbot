@@ -563,3 +563,59 @@ describe('buildLimitOptions — custom option reflects current config', () => {
     assert.match(custom.description, /global caps/);
   });
 });
+
+
+// ─── Seconds support (Manually Set Refresh) — real module functions ─────────
+import { parsePeriodFromModal as realParse, buildPeriodModalComponents as realBuild } from '../utils/periodUtils.js';
+
+describe('parsePeriodFromModal — optional seconds field', () => {
+  const modal = (vals) => Object.entries(vals).map(([id, value]) => ({ component: { custom_id: id, value } }));
+
+  it('folds seconds into totalMs when a seconds fieldId is provided', () => {
+    const r = realParse(modal({ refresh_days: '1', refresh_hours: '2', refresh_minutes: '3', refresh_seconds: '4' }),
+      { days: 'refresh_days', hours: 'refresh_hours', minutes: 'refresh_minutes', seconds: 'refresh_seconds' });
+    assert.equal(r.seconds, 4);
+    assert.equal(r.totalMs, 86400000 + 2*3600000 + 3*60000 + 4000);
+  });
+
+  it('without a seconds fieldId, behavior is unchanged (seconds = 0, not parsed)', () => {
+    const r = realParse(modal({ schedule_days: '0', schedule_hours: '1', schedule_minutes: '30', schedule_seconds: '59' }),
+      { days: 'schedule_days', hours: 'schedule_hours', minutes: 'schedule_minutes' });
+    assert.equal(r.seconds, 0, 'stray seconds input ignored when not requested');
+    assert.equal(r.totalMs, 3600000 + 30*60000);
+  });
+
+  it('all blank → totalMs 0 (valid: instant refresh)', () => {
+    const r = realParse(modal({ refresh_days: '', refresh_hours: '', refresh_minutes: '', refresh_seconds: '' }),
+      { days: 'refresh_days', hours: 'refresh_hours', minutes: 'refresh_minutes', seconds: 'refresh_seconds' });
+    assert.equal(r.totalMs, 0);
+  });
+});
+
+describe('buildPeriodModalComponents — includeSeconds', () => {
+  it('default stays 3 fields (existing callers unaffected)', () => {
+    const comps = realBuild({ fieldPrefix: 'schedule' });
+    assert.equal(comps.length, 3);
+    assert.deepEqual(comps.map(c => c.component.custom_id), ['schedule_days', 'schedule_hours', 'schedule_minutes']);
+  });
+
+  it('includeSeconds appends a Seconds Label with matching copy and pre-fill', () => {
+    const ms = 2*86400000 + 5*3600000 + 7*60000 + 9000;
+    const comps = realBuild({ fieldPrefix: 'refresh', currentPeriodMs: ms, includeSeconds: true });
+    assert.equal(comps.length, 4);
+    const secs = comps[3];
+    assert.equal(secs.type, 18, 'Label (type 18), never ActionRow+TextInput');
+    assert.equal(secs.label, 'Seconds');
+    assert.equal(secs.description, '0-59 seconds (leave empty for 0)');
+    assert.equal(secs.component.custom_id, 'refresh_seconds');
+    assert.equal(secs.component.value, '9', 'pre-filled from currentPeriodMs');
+    assert.equal(comps[0].component.value, '2');
+    assert.equal(comps[1].component.value, '5');
+    assert.equal(comps[2].component.value, '7');
+  });
+
+  it('zero seconds → no pre-fill value on the Seconds input', () => {
+    const comps = realBuild({ fieldPrefix: 'refresh', currentPeriodMs: 60000, includeSeconds: true });
+    assert.equal(comps[3].component.value, undefined);
+  });
+});

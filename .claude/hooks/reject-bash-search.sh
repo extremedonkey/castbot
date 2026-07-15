@@ -21,15 +21,15 @@ FIRST_CMD=$(echo "$COMMAND" | sed 's/[|;&].*//' | awk '{print $1}')
 
 case "$FIRST_CMD" in
   grep|rg)
-    echo "Use the Grep tool instead of bash $FIRST_CMD — it's built-in and optimized." >&2
+    echo "Use the Grep tool instead of bash $FIRST_CMD — it's built-in and optimized. No Grep tool in this session (check ToolSearch)? Approved fallbacks: 'git grep' or the node -e escape hatch above — say which one you're using and why." >&2
     exit 2
     ;;
   find)
-    echo "Use the Glob tool instead of bash find — it's built-in pattern matching." >&2
+    echo "Use the Glob tool instead of bash find — it's built-in pattern matching. No Glob tool in this session? Approved fallback: 'git ls-files | ...' for tracked files." >&2
     exit 2
     ;;
   cat|head)
-    echo "Use the Read tool instead of bash $FIRST_CMD — it's built-in file reading." >&2
+    echo "Use the Read tool instead of bash $FIRST_CMD — it's built-in file reading. (Read exists in every session — there is no fallback case for this one.)" >&2
     exit 2
     ;;
   tail)

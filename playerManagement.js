@@ -189,6 +189,10 @@ export async function createPlayerDisplaySection(player, playerData, guildId) {
     const currentLocation = activeMapId ? sp.mapProgress?.[activeMapId]?.currentLocation : null;
     if (currentLocation && state !== PLAYER_SAFARI_STATE.UNINITIALIZED) {
       parts.push(`📍 ${currentLocation}${state === PLAYER_SAFARI_STATE.PAUSED ? ' (⏸️)' : ''}`);
+    } else if (state === PLAYER_SAFARI_STATE.UNINITIALIZED) {
+      // 🚩 Where they'll spawn — uninitialized players with a custom starting location only.
+      const startingLocation = activeMapId ? sp.mapProgress?.[activeMapId]?.startingLocation : null;
+      if (startingLocation) parts.push(`🚩 ${startingLocation}`);
     }
 
     // ⚡ Stamina — decoupled: show whatever value is recorded for the player, irrespective of state.
@@ -833,16 +837,22 @@ async function buildSuperSelect(activeCategory, targetMember, playerData, safari
         if (isInit) {
           options.push({ label: 'Move Player', value: 'move', description: 'Move this player to a coordinate', emoji: { name: '📍' } });
           options.push({ label: 'Reset Explored locations', value: 'reset_explored', description: 'Clear explored coordinates (keeps current)', emoji: { name: '🔄' } });
+          options.push({ label: 'Manually Set Refresh', value: 'set_refresh', description: "Edit the player's refresh for this turn only (resets to server default next turn)", emoji: { name: '♻️' } });
         }
       }
 
+      // Uninitialized + custom starting location → surface where they'll spawn in the placeholder.
+      const startingLocation = pMap?.startingLocation;
+      const uninitText = startingLocation ? `Uninitialized, Starting Location 🚩 ${startingLocation}` : 'Uninitialized';
       const selectCustomId = isAdminMode && targetMember ? `player_menu_sel_map_${targetMember.id}` : 'player_menu_sel_map';
       return {
         type: 1,
         components: [{
           type: 3, // String Select
           custom_id: selectCustomId,
-          placeholder: `Map Options (${currentLocation ? '📍Current Location: ' + currentLocation + (isPaused ? ' ⏸️' : '') : 'Uninitialized'})`.slice(0, 150),
+          placeholder: (currentLocation
+            ? `Map Options (📍Current Location: ${currentLocation}${isPaused ? ' ⏸️' : ''})`
+            : `Map Options: ${uninitText}`).slice(0, 150),
           min_values: 1,
           max_values: 1,
           options
