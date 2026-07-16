@@ -33,14 +33,18 @@ describe('buildCastBotLogsModal', () => {
     assert.equal(field(modal, 'logs_format').type, 21);
   });
 
-  it('pre-selects current enabled state and format', () => {
+  it('pre-selects current enabled state and format — default:true on exactly ONE option, key ABSENT on siblings', () => {
+    // An explicit default:false on a sibling suppresses pre-selection for the whole
+    // group (ComponentsV2.md Radio Group gotcha, observed 2026-07-16).
     const on = buildCastBotLogsModal(envConfig, true);
     assert.equal(field(on, 'logs_enabled').options.find(o => o.value === 'enabled').default, true);
+    assert.ok(!('default' in field(on, 'logs_enabled').options.find(o => o.value === 'disabled')));
     assert.equal(field(on, 'logs_format').options.find(o => o.value === 'enhanced').default, true);
-    assert.equal(field(on, 'logs_format').options.find(o => o.value === 'classic').default, false);
+    assert.ok(!('default' in field(on, 'logs_format').options.find(o => o.value === 'classic')));
 
     const off = buildCastBotLogsModal({ liveDiscordLogging: { enabled: false } }, true);
     assert.equal(field(off, 'logs_enabled').options.find(o => o.value === 'disabled').default, true);
+    assert.ok(!('default' in field(off, 'logs_enabled').options.find(o => o.value === 'enabled')));
     assert.equal(field(off, 'logs_format').options.find(o => o.value === 'classic').default, true);
   });
 
