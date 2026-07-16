@@ -30,6 +30,11 @@ img/*/map_*.jpg
 img/*/temp_*.png
 img/*/*.png
 img/*/*.jpg
+# Guide infographics ARE committed assets (embedded via guideAssets.js) — carve them out
+# of the img/*/*.png sweep above. Their CDN-URL cache and emoji cache stay untracked.
+!img/guides/*.png
+img/guides/guides.json
+img/guides/.emoji-cache/
 data_*.json
 
 # System files
