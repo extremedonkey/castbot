@@ -536,3 +536,42 @@ describe('Legacy charge arrays — lazy one-way migration', () => {
         assert.deepEqual(data, before);
     });
 });
+
+// ─── getStaminaRegenSummary — display surfaces (navigate pane / player card) ──
+// Replicates the pure decision logic: when a summary exists and how it renders.
+
+function summarize(points, timeText, regenerationAmount) {
+    if (!points || points.current >= points.max) return null;
+    if (!timeText || timeText === 'Full' || timeText === 'Not initialized' || timeText === 'N/A') return null;
+    if (timeText === 'Ready!') timeText = 'now';
+    const amountLabel = regenerationAmount != null ? `+${regenerationAmount}` : 'to full';
+    return { amountLabel, timeText };
+}
+const cardFormat = (r) => !r ? 'MAX' : r.amountLabel === 'to full' ? r.timeText : `${r.amountLabel} in ${r.timeText}`;
+
+describe('Stamina regen display summary (navigate pane + player card)', () => {
+    it('below max in drip mode → "+N in T"', () => {
+        const r = summarize({ current: 2, max: 3 }, '5h 12m', 1);
+        assert.deepEqual(r, { amountLabel: '+1', timeText: '5h 12m' });
+        assert.equal(cardFormat(r), '+1 in 5h 12m');
+    });
+
+    it('below max in full-refill mode → "to full" / bare countdown on the card', () => {
+        const r = summarize({ current: 1, max: 3 }, '42m', null);
+        assert.equal(r.amountLabel, 'to full');
+        assert.equal(cardFormat(r), '42m');
+    });
+
+    it('at max → null → card shows MAX', () => {
+        assert.equal(summarize({ current: 3, max: 3 }, '5h', 1), null);
+        assert.equal(cardFormat(null), 'MAX');
+    });
+
+    it('over max (consumables) → null, no regen line', () => {
+        assert.equal(summarize({ current: 4, max: 3 }, '5h', null), null);
+    });
+
+    it('Ready! razor edge renders as "now"', () => {
+        assert.equal(summarize({ current: 0, max: 3 }, 'Ready!', 2).timeText, 'now');
+    });
+});

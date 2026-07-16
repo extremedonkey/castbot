@@ -520,6 +520,29 @@ export async function getTimeUntilRegeneration(guildId, entityId, pointType) {
     return `${seconds}s`;
 }
 
+/**
+ * Human summary of the pending stamina regen, for display surfaces (navigate pane,
+ * player card). Applies lazy regen first (via getEntityPoints), so the summary always
+ * reflects post-regen state.
+ * @returns {Promise<{amountLabel: string, timeText: string, current: number, max: number}|null>}
+ *   amountLabel: '+N' (drip) or 'to full' (full refill); timeText: e.g. '5h 12m' or 'now'.
+ *   null when nothing is pending (at/over max, or uninitialized).
+ */
+export async function getStaminaRegenSummary(guildId, entityId) {
+    const points = await getEntityPoints(guildId, entityId, 'stamina');
+    if (!points || points.current >= points.max) return null;
+
+    let timeText = await getTimeUntilRegeneration(guildId, entityId, 'stamina');
+    if (!timeText || timeText === 'Full' || timeText === 'Not initialized' || timeText === 'N/A') return null;
+    if (timeText === 'Ready!') timeText = 'now'; // razor edge: elapsed between the two reads
+
+    const { getStaminaConfig } = await import('./safariManager.js');
+    const cfg = await getStaminaConfig(guildId);
+    const amountLabel = cfg.regenerationAmount != null ? `+${cfg.regenerationAmount}` : 'to full';
+
+    return { amountLabel, timeText, current: points.current, max: points.max };
+}
+
 // Milliseconds until the next regeneration fires (raw form of getTimeUntilRegeneration).
 // Returns null when nothing is pending (not initialized, no regen config, or already full).
 export async function getRegenRemainingMs(guildId, entityId, pointType) {

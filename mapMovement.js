@@ -1,7 +1,7 @@
 import { PermissionFlagsBits } from 'discord.js';
 import { loadPlayerData, savePlayerData, withStorageLock } from './storage.js';
 import { loadSafariContent } from './safariManager.js';
-import { hasEnoughPoints, usePoints, getTimeUntilRegeneration, initializeEntityPoints, getEntityPoints } from './pointsManager.js';
+import { hasEnoughPoints, usePoints, getTimeUntilRegeneration, initializeEntityPoints, getEntityPoints, getStaminaRegenSummary } from './pointsManager.js';
 
 /**
  * Map Movement System for Safari
@@ -519,12 +519,20 @@ export async function getMovementDisplay(guildId, userId, coordinate, isDeferred
     
     // Get stamina data for both can move and can't move cases
     const stamina = await getEntityPoints(guildId, entityId, 'stamina');
-    
+
+    // Below max → show what comes back and when, right under the stamina count
+    // (previously the timer only appeared once the player was fully exhausted).
+    const regen = await getStaminaRegenSummary(guildId, entityId);
+    let staminaContent = `⚡ **Stamina:** ${stamina.current}/${stamina.max}`;
+    if (regen) {
+        staminaContent += `\n> ♻️ Regen ${regen.amountLabel} in ${regen.timeText}`;
+    }
+
     if (canMove) {
         description = `Choose a direction to move:`;
     } else {
-        const timeUntil = await getTimeUntilRegeneration(guildId, entityId, 'stamina');
-        description = `*You're too tired to move! Rest for ${timeUntil} before moving again.*`;
+        // Timing now lives on the ♻️ line above — keep this to the state itself.
+        description = `*You're too tired to move! Rest until your stamina regenerates.*`;
     }
     
     // Always use Components V2 format since ButtonHandlerFactory automatically adds the flag
@@ -551,7 +559,7 @@ export async function getMovementDisplay(guildId, userId, coordinate, isDeferred
                 components: [
                     {
                         type: 10, // Text Display
-                        content: `⚡ **Stamina:** ${stamina.current}/${stamina.max}`
+                        content: staminaContent
                     }
                 ],
                 accessory: {

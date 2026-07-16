@@ -198,13 +198,17 @@ export async function createPlayerDisplaySection(player, playerData, guildId) {
     // ⚡ Stamina — decoupled: show whatever value is recorded for the player, irrespective of state.
     if (sp.points?.stamina !== undefined) {
       try {
-        const { getEntityPoints, getTimeUntilRegeneration } = await import('./pointsManager.js');
+        const { getEntityPoints, getStaminaRegenSummary } = await import('./pointsManager.js');
         const entityStamina = await getEntityPoints(guildId, `player_${player.id}`, 'stamina');
         const stamina = entityStamina
           ? { current: entityStamina.current, maximum: entityStamina.max }
           : sp.points.stamina;
-        const regenTime = await getTimeUntilRegeneration(guildId, `player_${player.id}`, 'stamina');
-        const regenDisplay = (regenTime === 'Full' || regenTime === 'Ready!') ? 'MAX' : regenTime;
+        // Same summary the navigate pane uses. Compact: drip shows the amount ("+1 in 1m"),
+        // full refill just the countdown ("1m"), at/over max shows MAX.
+        const regen = await getStaminaRegenSummary(guildId, `player_${player.id}`);
+        const regenDisplay = !regen ? 'MAX'
+          : regen.amountLabel === 'to full' ? regen.timeText
+          : `${regen.amountLabel} in ${regen.timeText}`;
         parts.push(`⚡ ${stamina.current}/${stamina.maximum} (♻️ ${regenDisplay})`);
       } catch (e) {
         console.warn(`⚠️ createPlayerDisplaySection: stamina lookup failed for ${player.id}: ${e.message}`);
