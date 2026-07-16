@@ -133,8 +133,21 @@ export async function updateEntityFields(guildId, entityType, entityId, fieldUpd
         throw new Error(`Entity ${entityId} not found`);
     }
     
+    // Schema-driven coercion: fields declared type 'number' in EDIT_CONFIGS must be stored
+    // numeric. Raw modal strings previously leaked in here and string-concatenated
+    // downstream (staminaBoost "9901" max corruption).
+    const propSchema = EDIT_CONFIGS[entityType]?.properties;
+    const coerceValue = (field, value) => {
+        if (propSchema?.[field]?.type === 'number' && value !== null && value !== undefined && value !== '') {
+            const n = parseInt(value, 10);
+            return Number.isNaN(n) ? 0 : n;
+        }
+        return value;
+    };
+
     // Apply field updates
-    for (const [field, value] of Object.entries(fieldUpdates)) {
+    for (const [field, rawValue] of Object.entries(fieldUpdates)) {
+        const value = coerceValue(field, rawValue);
         // Special handling for map_cell fields
         if (entityType === 'map_cell') {
             if (field === 'title' || field === 'description' || field === 'image') {

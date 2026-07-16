@@ -169,25 +169,19 @@ function getDefaultPointsConfig() {
 - Allows partial recovery
 - Good for HP systems
 
-### 3. Individual Charge System (Phase 2 - LIVE)
+### 3. Permanent Boosts (Bigger Tank)
 
-Activated automatically when a player has permanent stamina items (e.g. Horse). Each stamina point has its own independent cooldown timer.
+Items with `consumable: 'No'` and `staminaBoost > 0` raise the holder's stamina **effective max only**:
 
-```javascript
-// Data structure
-"stamina": {
-  "current": 1,
-  "max": 2,
-  "charges": [null, 1770491700356]  // null = available, timestamp = on cooldown
-}
+```
+effectiveMax = min(config.defaultMax + permanentBoost, MAX_STAMINA = 999)
 ```
 
-- Each charge regenerates independently: `Date.now() - chargeTimestamp >= interval`
-- Timer display shows time until the **earliest** charge regenerates
-- Charges only increase `current`, never decrease it (preserves consumable bonus stamina)
-- `usePoints()` marks individual charges with timestamps when consumed
+- The extra capacity refills under the server's normal regeneration mode (full reset or drip) on the single anchor-based timer — no per-point timers
+- Losing the item drops the max back on the next read (current clamps if over)
+- Consumable items (`addBonusPoints()`) still add to `current` without touching the timer, so bonus stamina never disrupts natural regeneration
 
-**Key behaviour**: Only actual charge consumption resets that charge's timer. Consumable items (`addBonusPoints()`) add to `current` without touching charge timers or `lastUse`, so bonus stamina never disrupts natural regeneration.
+**History**: the per-charge system ("Phase 2", a `charges[]` array with an independent cooldown per stamina point) was **removed 2026-07-16**; leftover `charges` arrays are migrated away lazily on read. See [StaminaArchitecture.md](StaminaArchitecture.md).
 
 ### 4. Future Regeneration Types
 - **Percentage-based**: Recover % of max

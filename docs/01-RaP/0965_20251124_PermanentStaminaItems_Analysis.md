@@ -1,5 +1,7 @@
 # RaP 0965: Permanent Stamina Items - Design & Implementation Analysis
 
+> **⚠️ SUPERSEDED (2026-07-16):** The Phase-2 per-charge system this document describes was removed — permanent stamina items are now "+max only" (Bigger Tank). Current reference: [StaminaArchitecture.md](../03-features/StaminaArchitecture.md).
+
 **📝 NOTE: After implementation, merge this documentation into docs/03-features/StaminaItems.md**
 
 ## Original Context

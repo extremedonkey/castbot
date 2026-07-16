@@ -1,14 +1,15 @@
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
 import { loadPlayerData } from './storage.js';
+import { MAX_STAMINA } from './config/safariLimits.js';
 
 /**
  * Points Manager for Safari System
  * Handles all point types (stamina, HP, mana, etc.) with timezone-safe regeneration
  * Uses on-demand calculation for efficient, maintenance-free operation
  *
- * SUPER HORSE UPDATE: Supports permanent stamina boosts via non-consumable items
- * - Phase 1: Simple boost on regeneration
- * - Phase 2: Individual charge tracking for better UX
+ * Permanent stamina boosts (non-consumable items with staminaBoost) raise the holder's
+ * effective max only — a "bigger tank". The former per-charge tracking ("Phase 2") was
+ * removed 2026-07-16; legacy `charges` arrays are migrated away lazily on read.
  */
 
 // Calculate permanent stamina boost from non-consumable items
@@ -25,9 +26,12 @@ export async function calculatePermanentStaminaBoost(guildId, entityId) {
     let totalBoost = 0;
     for (const [itemId, qty] of Object.entries(inventory)) {
         const item = items[itemId];
-        if (item?.consumable === 'No' && item?.staminaBoost > 0) {
-            totalBoost += item.staminaBoost;
-            console.log(`🐎 Found permanent stamina item: ${item.name} (+${item.staminaBoost})`);
+        // Coerce — item editors have historically stored staminaBoost as a string, and
+        // `0 + "1"` concatenates ("9901" max corruption). Number() makes it arithmetic.
+        const boost = Number(item?.staminaBoost) || 0;
+        if (item?.consumable === 'No' && boost > 0) {
+            totalBoost += boost;
+            console.log(`🐎 Found permanent stamina item: ${item.name} (+${boost})`);
         }
     }
 
@@ -303,144 +307,85 @@ export function latestRegenAnchor(pointData) {
     return lastUse ?? lastRegeneration;
 }
 
-// New regeneration with individual charge tracking (Phase 2) and permanent boosts
+// Regeneration: a single anchor-based timer per player (full-reset or drip). Permanent
+// items (Consumable: No + Stamina Boost) only raise the effective max — a "bigger tank".
+// The former per-charge system ("Phase 2") was removed 2026-07-16; legacy `charges`
+// arrays are migrated away lazily below. See docs/03-features/StaminaArchitecture.md.
 async function calculateRegenerationWithCharges(pointData, config, guildId, entityId, pointType = null) {
     const now = Date.now();
     let hasChanged = false;
     let newData = { ...pointData };
 
-    // Initialize charges array if needed (Phase 2)
-    const effectiveMax = config.defaultMax + (config.permanentBoost || 0);
+    // Boost raises capacity only. Stamina is additionally capped at MAX_STAMINA as a
+    // belt-and-braces guard against corrupt stored data (string boosts once concatenated:
+    // 99 + "01" = "9901"). Non-stamina attributes keep their uncapped item-modified max.
+    const rawMax = config.defaultMax + (config.permanentBoost || 0);
+    const effectiveMax = pointType === 'stamina' ? Math.min(rawMax, MAX_STAMINA) : rawMax;
 
-    if (config.permanentBoost > 0 && !newData.charges) {
-        console.log(`🐎 Initializing charge system for ${entityId} with ${effectiveMax} total charges`);
-        newData.charges = new Array(effectiveMax).fill(null);
-
-        // Migrate existing state to charges
-        const chargesInUse = effectiveMax - newData.current;
-        for (let i = 0; i < chargesInUse; i++) {
-            newData.charges[i] = newData.lastUse || now;
-        }
+    // Lazy one-way migration: strip legacy Phase-2 charge arrays and repair the corruption
+    // some carried (string-typed max, oversized null arrays, current > max). Regen then
+    // continues below on the single timer as normal.
+    if (newData.charges) {
+        delete newData.charges;
+        newData.current = Math.min(Number(newData.current) || 0, effectiveMax);
+        newData.max = effectiveMax;
         hasChanged = true;
+        console.log(`🧹 Removed legacy charge array for ${entityId}: now ${newData.current}/${effectiveMax}`);
     }
 
-    // Phase 2: Individual charge regeneration
-    if (newData.charges) {
-        // Safety: Ensure charges array matches effectiveMax (fixes migration bugs and config changes)
-        if (newData.charges.length < effectiveMax) {
-            console.log(`🐎 Extending charges array from ${newData.charges.length} to ${effectiveMax}`);
-            while (newData.charges.length < effectiveMax) {
-                newData.charges.push(null);  // Add missing charges as available
-            }
-            hasChanged = true;
-        } else if (newData.charges.length > effectiveMax) {
-            console.log(`🐎 Trimming charges array from ${newData.charges.length} to ${effectiveMax} (max stamina decreased)`);
-            newData.charges = newData.charges.slice(0, effectiveMax);
-            hasChanged = true;
-        }
+    // Reconcile stored max to the server's effective max — STAMINA ONLY.
+    // Stamina max is purely config-derived (staminaConfig.maxStamina + item boosts), so snapping
+    // it to effectiveMax is always correct and fixes players stuck at a stale max (e.g. 1, set
+    // before the admin configured maxStamina) that no regen period would otherwise correct.
+    // NOT applied to attributes (hp/mana/stats): those support an admin-set custom per-player max
+    // (setPlayerAttribute), which this would clobber. Their prior behaviour is preserved.
+    if (pointType === 'stamina' && newData.max !== effectiveMax) {
+        console.log(`⚠️ STAMINA CONFIG MISMATCH: stored max=${newData.max} → ${effectiveMax} (config.defaultMax=${config.defaultMax}, permanentBoost=${config.permanentBoost || 0}), current=${newData.current} — reconciling`);
+        newData.max = effectiveMax;
+        hasChanged = true;
+    } else if (newData.max !== effectiveMax) {
+        // Non-stamina: log-only (unchanged from original behaviour)
+        console.log(`⚠️ POINTS CONFIG MISMATCH (${pointType}): stored max=${newData.max}, effectiveMax=${effectiveMax} — leaving as-is (may be an admin-set custom max)`);
+    }
 
-        let availableCharges = 0;
-        let newlyRegenerated = 0;
-
-        for (let i = 0; i < newData.charges.length; i++) {
-            if (!newData.charges[i]) {
-                // Charge is available
-                availableCharges++;
-            } else if ((now - newData.charges[i]) >= config.regeneration.interval) {
-                // Charge has regenerated
-                newData.charges[i] = null;
-                availableCharges++;
-                newlyRegenerated++;
-                console.log(`🐎⚡ Charge ${i + 1} regenerated for ${entityId}`);
-            }
-        }
-
-        // Apply regenAmount per newly regenerated charge (default: +1 per charge)
+    if (config.regeneration.type === 'full_reset') {
         const regenAmount = (config.regeneration.amount === 'max' || !config.regeneration.amount)
-            ? 1 : config.regeneration.amount;
+            ? effectiveMax
+            : config.regeneration.amount;
 
-        if (newlyRegenerated > 0) {
+        // Later of last spend / last applied regen — see latestRegenAnchor for why both matter.
+        const regenTimestamp = latestRegenAnchor(newData);
+        const timeSinceRegen = now - regenTimestamp;
+        const periods = Math.floor(timeSinceRegen / config.regeneration.interval);
+
+        if (periods > 0 && newData.current < effectiveMax) {
             const beforeCurrent = newData.current;
-            newData.current += newlyRegenerated * regenAmount;
+
+            // Apply regen period by period, stopping when current >= max
+            // Each period adds the FULL regen amount (never capped/partial)
+            let appliedPeriods = 0;
+            for (let p = 0; p < periods && newData.current < effectiveMax; p++) {
+                newData.current += regenAmount;
+                appliedPeriods++;
+            }
+
+            // "max" mode is a FULL RESET — fill TO max, never overshoot. Without this, a
+            // partially-full player regenerating in max mode mints over-max (e.g. 98 + 99 = 197).
+            // "amount" mode (numeric per-tick) intentionally adds the flat amount and MAY exceed
+            // max (see tests "does NOT cap at max") — so only clamp the max-mode/full-reset case.
+            if (config.regeneration.amount === 'max' || !config.regeneration.amount) {
+                newData.current = Math.min(newData.current, effectiveMax);
+            }
+
             newData.max = effectiveMax;
-            newData.lastRegeneration = now;
+            // Preserve fractional period for accuracy
+            newData.lastRegeneration = regenTimestamp + (appliedPeriods * config.regeneration.interval);
             hasChanged = true;
-            console.log(`🐎⚡ Charges regenerated: ${newlyRegenerated} charge(s) x${regenAmount} = +${newlyRegenerated * regenAmount} stamina (${beforeCurrent} → ${newData.current})`);
-        } else if (availableCharges > newData.current) {
-            // Edge case: charges available but current is lower (e.g. data inconsistency)
-            newData.current = availableCharges;
-            newData.max = effectiveMax;
-            newData.lastRegeneration = now;
-            hasChanged = true;
-            console.log(`🐎⚡ Charges sync: ${newData.current} available`);
-        } else if (newData.max !== effectiveMax) {
-            // Still update max if it changed (e.g., player got new permanent item)
-            console.log(`⚠️ STAMINA CONFIG MISMATCH (charges): stored max=${newData.max} → ${effectiveMax}, current=${newData.current}`);
-            newData.max = effectiveMax;
-            hasChanged = true;
-        }
 
-        // Diagnostic: warn if current exceeds effective max (e.g., config changed mid-round)
-        if (newData.current > effectiveMax) {
-            console.log(`⚠️ STAMINA OVER-MAX: current=${newData.current} > effectiveMax=${effectiveMax} for ${entityId} — will display as ${newData.current}/${effectiveMax}`);
-        }
-    } else {
-        // Phase 1: Amount-aware regeneration with continuous ticking
+            console.log(`⚡ Stamina regenerated for ${entityId}: ${beforeCurrent}/${effectiveMax} → ${newData.current}/${effectiveMax} (+${regenAmount} x${appliedPeriods} periods)`);
 
-        // Reconcile stored max to the server's effective max — STAMINA ONLY.
-        // Stamina max is purely config-derived (staminaConfig.maxStamina + item boosts), so snapping
-        // it to effectiveMax is always correct and fixes players stuck at a stale max (e.g. 1, set
-        // before the admin configured maxStamina) that no regen period would otherwise correct.
-        // NOT applied to attributes (hp/mana/stats): those support an admin-set custom per-player max
-        // (setPlayerAttribute), which this would clobber. Their prior Phase-1 behaviour is preserved.
-        if (pointType === 'stamina' && newData.max !== effectiveMax) {
-            console.log(`⚠️ STAMINA CONFIG MISMATCH: stored max=${newData.max} → ${effectiveMax} (config.defaultMax=${config.defaultMax}, permanentBoost=${config.permanentBoost || 0}), current=${newData.current} — reconciling`);
-            newData.max = effectiveMax;
-            hasChanged = true;
-        } else if (newData.max !== effectiveMax) {
-            // Non-stamina: log-only (unchanged from original behaviour)
-            console.log(`⚠️ POINTS CONFIG MISMATCH (${pointType}): stored max=${newData.max}, effectiveMax=${effectiveMax} — leaving as-is (may be an admin-set custom max)`);
-        }
-
-        if (config.regeneration.type === 'full_reset') {
-            const regenAmount = (config.regeneration.amount === 'max' || !config.regeneration.amount)
-                ? effectiveMax
-                : config.regeneration.amount;
-
-            // Later of last spend / last applied regen — see latestRegenAnchor for why both matter.
-            const regenTimestamp = latestRegenAnchor(newData);
-            const timeSinceRegen = now - regenTimestamp;
-            const periods = Math.floor(timeSinceRegen / config.regeneration.interval);
-
-            if (periods > 0 && newData.current < effectiveMax) {
-                const beforeCurrent = newData.current;
-
-                // Apply regen period by period, stopping when current >= max
-                // Each period adds the FULL regen amount (never capped/partial)
-                let appliedPeriods = 0;
-                for (let p = 0; p < periods && newData.current < effectiveMax; p++) {
-                    newData.current += regenAmount;
-                    appliedPeriods++;
-                }
-
-                // "max" mode is a FULL RESET — fill TO max, never overshoot. Without this, a
-                // partially-full player regenerating in max mode mints over-max (e.g. 98 + 99 = 197).
-                // "amount" mode (numeric per-tick) intentionally adds the flat amount and MAY exceed
-                // max (see tests "does NOT cap at max") — so only clamp the max-mode/full-reset case.
-                if (config.regeneration.amount === 'max' || !config.regeneration.amount) {
-                    newData.current = Math.min(newData.current, effectiveMax);
-                }
-
-                newData.max = effectiveMax;
-                // Preserve fractional period for accuracy
-                newData.lastRegeneration = regenTimestamp + (appliedPeriods * config.regeneration.interval);
-                hasChanged = true;
-
-                console.log(`⚡ Stamina regenerated for ${entityId}: ${beforeCurrent}/${effectiveMax} → ${newData.current}/${effectiveMax} (+${regenAmount} x${appliedPeriods} periods)`);
-
-                if (config.permanentBoost > 0) {
-                    console.log(`🐎⚡ Includes +${config.permanentBoost} permanent boost to max`);
-                }
+            if (config.permanentBoost > 0) {
+                console.log(`🐎⚡ Includes +${config.permanentBoost} permanent boost to max`);
             }
         }
     }
@@ -495,24 +440,10 @@ export async function usePoints(guildId, entityId, pointType, amount) {
 
     const now = Date.now();
 
-    // Phase 2: Track individual charges if available
-    let chargesUsed = 0;
-    if (points.charges) {
-        for (let i = 0; i < points.charges.length && chargesUsed < amount; i++) {
-            if (!points.charges[i]) {  // Charge is available
-                points.charges[i] = now;  // Mark charge as used with timestamp
-                chargesUsed++;
-                console.log(`🐎⚡ Used charge ${i + 1} for ${entityId}`);
-            }
-        }
-    }
-
-    // Deduct points and update last use time
+    // Deduct points and update last use time (restarts the regen countdown — anchor
+    // semantics in latestRegenAnchor)
     points.current -= amount;
-    // Only update lastUse if an actual charge was consumed (not bonus stamina from consumables)
-    if (!points.charges || chargesUsed > 0) {
-        points.lastUse = now;
-    }
+    points.lastUse = now;
 
     safariData[guildId].entityPoints[entityId][pointType] = points;
     await saveSafariContent(safariData);
@@ -564,22 +495,9 @@ export async function getTimeUntilRegeneration(guildId, entityId, pointType) {
     const now = Date.now();
     let nextRegenTime;
 
-    // Phase 2: Use earliest charge timestamp (most accurate for individual cooldowns)
-    if (pointData.charges) {
-        let earliestChargeTime = Infinity;
-        for (const charge of pointData.charges) {
-            if (charge && charge < earliestChargeTime) {
-                earliestChargeTime = charge;
-            }
-        }
-        if (earliestChargeTime !== Infinity) {
-            nextRegenTime = earliestChargeTime + config.regeneration.interval;
-        } else {
-            return "Ready!";
-        }
-    } else if (config.regeneration.type === 'full_reset') {
-        // Same anchor as Phase 1 regen, so in amount mode the countdown targets the NEXT +1,
-        // not the already-applied one.
+    if (config.regeneration.type === 'full_reset') {
+        // Same anchor as the regen engine, so in amount mode the countdown targets the
+        // NEXT +1, not the already-applied one.
         nextRegenTime = latestRegenAnchor(pointData) + config.regeneration.interval;
     } else {
         nextRegenTime = pointData.lastRegeneration + config.regeneration.interval;
@@ -621,16 +539,9 @@ export async function getRegenRemainingMs(guildId, entityId, pointType) {
     }
 
     const now = Date.now();
-    let nextRegenTime;
-    if (pointData.charges) {
-        const pending = pointData.charges.filter(c => c);
-        if (pending.length === 0) return null;
-        nextRegenTime = Math.min(...pending) + interval;
-    } else {
-        if (pointData.current >= pointData.max) return null;
-        // Same anchor as Phase 1 regen (later of last spend / last applied regen).
-        nextRegenTime = latestRegenAnchor(pointData) + interval;
-    }
+    if (pointData.current >= pointData.max) return null;
+    // Same anchor as the regen engine (later of last spend / last applied regen).
+    const nextRegenTime = latestRegenAnchor(pointData) + interval;
     return Math.max(0, nextRegenTime - now);
 }
 
@@ -638,12 +549,9 @@ export async function getRegenRemainingMs(guildId, entityId, pointType) {
  * Admin: set the time until the entity's next regeneration fires ("Manually Set Refresh").
  *
  * TIME-SHIFT semantics: the outcome matches what would have happened had the player simply
- * waited — the current next-fire time moves to now + durationMs and everything else keeps its
- * relative spacing. Concretely:
- * - Charges (Phase 2): every pending (non-null) charge timestamp shifts by the same delta, so
- *   the stagger is preserved (charges due in 8h/10h/12h set to 2h become due in 2h/4h/6h).
- * - Phase 1 (full-reset & drip): single anchor — lastUse AND lastRegeneration both move so the
- *   next period boundary lands at now + durationMs (dual-anchor rule, same as setEntityPoints).
+ * waited — the current next-fire time moves to now + durationMs. Single anchor: lastUse AND
+ * lastRegeneration both move so the next period boundary lands at now + durationMs
+ * (dual-anchor rule, same as setEntityPoints).
  *
  * One-shot: only the current cycle shifts; later cycles run on the server interval, and (in
  * full-reset mode) any later spend restamps lastUse as normal.
@@ -653,7 +561,7 @@ export async function getRegenRemainingMs(guildId, entityId, pointType) {
  */
 export async function setRegenCountdown(guildId, entityId, pointType, durationMs) {
     // Apply any lazily-pending regeneration first so we shift CURRENT state, not stale state
-    // (e.g. a charge whose cooldown already elapsed must regen, not get pushed into the future).
+    // (an already-elapsed cooldown must regen, not get pushed into the future).
     await getEntityPoints(guildId, entityId, pointType);
 
     const safariData = await loadSafariContent();
@@ -672,17 +580,10 @@ export async function setRegenCountdown(guildId, entityId, pointType, durationMs
     // Shift the whole timeline so the next fire lands at now + durationMs.
     const delta = (now + durationMs) - (now + remainingMs);
 
-    if (points.charges) {
-        for (let i = 0; i < points.charges.length; i++) {
-            if (points.charges[i]) points.charges[i] += delta;
-        }
-        console.log(`♻️ Shifted ${points.charges.filter(c => c).length} pending charge(s) by ${delta}ms for ${entityId}`);
-    } else {
-        // Same anchor as Phase 1 regen (later of last spend / last applied regen).
-        const anchor = latestRegenAnchor(points) + delta;
-        points.lastUse = anchor;
-        points.lastRegeneration = anchor;
-    }
+    // Same anchor as the regen engine (later of last spend / last applied regen).
+    const anchor = latestRegenAnchor(points) + delta;
+    points.lastUse = anchor;
+    points.lastRegeneration = anchor;
 
     safariData[guildId].entityPoints[entityId][pointType] = points;
     await saveSafariContent(safariData);
@@ -726,17 +627,11 @@ export async function setEntityPoints(guildId, entityId, pointType, current, max
     points.lastRegeneration = Date.now();
     points.lastUse = Date.now();
 
-    // Sync charges array with new current value (prevents Phase 2 from overriding admin-set values)
+    // Legacy Phase-2 charge arrays are dropped on sight (regen's lazy migration does the
+    // same) — an admin set must never leave a stale charges array behind.
     if (points.charges) {
-        const now = Date.now();
-        for (let i = 0; i < points.charges.length; i++) {
-            if (i < points.current) {
-                points.charges[i] = null;  // Available (matches current)
-            } else {
-                points.charges[i] = points.charges[i] || now;  // Used (preserve existing timestamp, or set to now)
-            }
-        }
-        console.log(`🐎 Synced charges array: ${points.current} available, ${points.charges.length - points.current} used`);
+        delete points.charges;
+        console.log(`🧹 Removed legacy charge array for ${entityId} during admin set`);
     }
 
     safariData[guildId].entityPoints[entityId][pointType] = points;

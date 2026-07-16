@@ -113,29 +113,24 @@ consumable: {
 **Critical design decision** (February 2026): Using a consumable stamina item does **not** restart the regeneration cooldown. This means:
 
 - Consumable items are purely additive — they give bonus stamina without any penalty
-- The regen timer continues counting from the last time the player actually **moved** (used a natural charge)
-- Moving on bonus stamina (when all charges are on cooldown) also does not reset the regen timer
+- The regen timer continues counting from its existing anchor
 
 **Why this matters with long cooldowns (e.g. 24 hours):**
 If a player's regen is 5 minutes away and they use a consumable, they still get their natural regen in 5 minutes. Without this design, using a consumable would restart the 24-hour timer — severely punishing the player.
 
 **Implementation details** (`pointsManager.js`):
-- `addBonusPoints()` modifies `current` only — does not touch `lastUse`, `lastRegeneration`, or `charges`
-- `usePoints()` only updates `lastUse` when an actual charge is consumed (`chargesUsed > 0`), not when spending bonus stamina
-- `getTimeUntilRegeneration()` uses individual charge timestamps for Phase 2 players, not `lastUse`
+- `addBonusPoints()` modifies `current` only — does not touch `lastUse` or `lastRegeneration`
+- `usePoints()` **always** stamps `lastUse = now` on any spend — every move restarts the countdown (whether the point was natural or consumable-granted)
+- The regen engine and timer display share one anchor: `latestRegenAnchor = max(lastUse, lastRegeneration)` — the later of last spend and last applied regen
 
-### Phase 1 vs Phase 2 Regeneration
+### One Regeneration System
 
-**Phase 1** (players without permanent stamina items):
-- Uses a single `lastUse` timestamp
-- Regen check: `Date.now() - lastUse >= interval` AND `current < max`
-- When timer fires: stamina resets to `effectiveMax` (full reset)
+There is a **single anchor-based regen timer per player** — no per-item or per-point timers (the old "Phase 2" per-charge system was removed 2026-07-16):
 
-**Phase 2** (players with permanent stamina items like Horse):
-- Each stamina charge has its own independent cooldown timer
-- Data: `charges: [null, 1770491700356]` — `null` = available, timestamp = on cooldown
-- Each charge regenerates when `Date.now() - chargeTimestamp >= interval`
-- Timer display shows time until the **earliest** charge regenerates
+- Regen check: `Date.now() - latestRegenAnchor >= interval` AND `current < max`
+- **Full-reset mode** (regen amount blank): stamina refills to `effectiveMax` after one interval, clamped
+- **Drip mode** (regen amount = N): `+N` per elapsed period (may overshoot max)
+- Permanent items only make the tank **bigger** (`effectiveMax`) — the extra capacity refills under the same timer as everything else
 
 ### Example Scenarios
 
@@ -158,12 +153,10 @@ If a player's regen is 5 minutes away and they use a consumable, they still get 
 - After configured time, regenerates to 1/1
 - Does NOT regenerate back to 2/1
 
-**Scenario 4: Consumable + Regen Timer (Phase 2 with Horse)**
-- Player has 0/2 stamina, both charges on cooldown, charge 1 regens in 5 min
-- Uses Energy Potion (+1) → 1/2 stamina, regen timer **still shows 5 min**
-- Moves using bonus stamina → 0/2, regen timer **still ~5 min** (no charge consumed)
-- 5 min later: charge 1 regenerates → 1/2 stamina
-- Later: charge 2 regenerates independently → 2/2 stamina
+**Scenario 4: Consumable + Permanent Item**
+- Player holds a Horse (+3 max) → 2/4 stamina, regen due in 5 min
+- Eats a Fish (consumable +1) → 3/4 stamina, regen timer **still shows 5 min** (unaffected)
+- 5 min later (full-reset mode): stamina refills to 4/4
 
 ## Configuration
 
@@ -220,24 +213,24 @@ interval: (parseInt(process.env.STAMINA_REGEN_MINUTES || '3')) * 60000,
 - [ ] Test with multiple stamina items
 - [ ] Verify error handling for invalid items
 
-### Permanent Items (As-Built: November 2024)
+### Permanent Items (As-Built: "Bigger Tank", 2026-07-16)
 - [ ] Create non-consumable item with stamina boost
 - [ ] Verify NO "Use" button appears (stays in inventory)
-- [ ] Test charge regeneration after cooldown
-- [ ] Verify each charge regenerates independently
+- [ ] Verify max rises while the item is held (e.g. 3/3 → 3/5 with +2)
+- [ ] Verify removing the item drops max back (current clamps if over)
+- [ ] Verify the extra capacity refills under the server's normal regen mode
 - [ ] Test with multiple permanent items stacking
 
 ---
 
-## 🐎 Permanent Stamina Items (AS-BUILT: November 2024)
+## 🐎 Permanent Stamina Items (AS-BUILT: "Bigger Tank", 2026-07-16)
 
 ### Overview
 Permanent stamina items (like horses) provide lasting stamina capacity increases that are not consumed on use. Players can build a collection of permanent equipment to increase their exploration capabilities.
 
 ### Implementation Status: ✅ LIVE IN PRODUCTION
-- **Merged from**: RaP 0965_20251124_PermanentStaminaItems_Analysis.md
-- **Implementation Date**: November 24, 2024
-- **Status**: Fully implemented with Phase 2 (individual charge tracking)
+- **Originally designed in**: RaP 0965_20251124_PermanentStaminaItems_Analysis.md (Phase-2 per-charge system, November 2025)
+- **Reworked**: 2026-07-16 — the per-charge system was **removed**; permanent items are now **+max only** ("Bigger Tank")
 
 ### How Permanent Items Work
 
@@ -255,65 +248,45 @@ Permanent stamina items (like horses) provide lasting stamina capacity increases
 }
 ```
 
+#### The Model: +max Only
+
+While the item is held, the player's effective max rises:
+
+```
+effectiveMax = min(config.defaultMax + permanentBoost, MAX_STAMINA = 999)
+```
+
+- **Max rises while held**: base 1 + Horse (+1) → `⚡ 1/2` on the next read
+- **Stacks additively** across items: Horse (+1) + Boots (+1) = +2 total
+- **Removal drops max**: lose the item and max snaps back on the next read (current clamps if over)
+- **Refills under the normal regen mode**: the extra capacity uses the server's single regen timer (full reset or drip) — no per-charge timers, no separate engine
+- **Numeric coercion**: `staminaBoost` is coerced at read (`Number(item.staminaBoost) || 0` in `calculatePermanentStaminaBoost`) and at write (`entityManager.updateEntityFields` coerces schema `type: 'number'` fields), fixing the historical string-concat corruption
+
 #### Player Experience
 
-**Without permanent items**: Standard regeneration
-- 1 stamina regenerates after 720 minutes (12 hours)
+**Without permanent items**: base capacity
+- e.g. 1 stamina, refills 12 hours after your last move
 
-**With Horse (+1)**: Enhanced capacity
+**With Horse (+1)**: bigger tank
 - 2 total stamina (1 base + 1 from horse)
-- Each stamina charge regenerates independently
-- Use 1 stamina → only that charge enters 12-hour cooldown
-- Other charge remains available
+- Spend both, wait one cooldown → refill to 2/2 (full-reset mode)
 
-**With Super Horse (+3)**: Major progression
+**With Super Horse (+3)**: major progression
 - 4 total stamina (1 base + 3 from super horse)
-- Each of 4 charges has independent cooldown
-- Strategic value: Can use stamina throughout the day
+- Four moves per cooldown cycle instead of one
 
-### The Super Horse Example
+### Key Functions (pointsManager.js)
+- `calculatePermanentStaminaBoost()`: sums all non-consumable stamina items (numerically coerced)
+- `calculateRegenerationWithCharges()`: single anchor-based regen; caps `effectiveMax` at `MAX_STAMINA`; strips legacy charge arrays (the name is historical)
+- `usePoints()`: deducts and always stamps `lastUse = now`
 
-Illustrating why individual charge tracking matters:
-
+### Legacy Migration (charges[])
+Records created under the old Phase-2 system may still carry a `charges` array. It is migrated away **lazily and one-way**: any regen read or admin set deletes the array, clamps `current` to `effectiveMax`, and snaps `max` to the numeric `effectiveMax`. Look for:
 ```
-Player has Super Horse (+3) = 4 total stamina
-
-Hour 0:   4/4 stamina (all charges ready)
-Hour 1:   Uses 1 → 3/4 (only charge #1 on cooldown)
-Hour 6:   Uses 1 → 2/4 (only charge #2 on cooldown)
-Hour 13:  Charge #1 regenerates → 3/4 ✨
-Hour 18:  Charge #2 regenerates → 4/4 ✨
-
-Total stamina over 24 hours: 7+ moves (vs 4 with old system)
+🧹 Removed legacy charge array for player_X: now 2/4
 ```
-
-### Technical Implementation
-
-#### Phase 2: Individual Charge System (IMPLEMENTED)
-```javascript
-// Data structure with charges array
-"stamina": {
-  "current": 2,
-  "max": 2,
-  "charges": [null, null]  // null = available, timestamp = on cooldown
-}
-```
-
-#### Key Functions (pointsManager.js)
-- `calculatePermanentStaminaBoost()`: Sums all non-consumable stamina items
-- `calculateRegenerationWithCharges()`: Handles individual charge regeneration
-- `usePoints()`: Marks specific charges as used with timestamps
-
-### Backward Compatibility
-- Players WITHOUT permanent items use unchanged legacy code
-- Charges array only created when permanent items detected
-- Zero regression risk for existing players
 
 ### Configuration Considerations
-
-#### Stacking
-- Multiple permanent items stack additively
-- Horse (+1) + Boots (+1) = +2 total boost
 
 #### Categories (Future Enhancement)
 - Could limit to one "mount" type item
@@ -329,18 +302,13 @@ Total stamina over 24 hours: 7+ moves (vs 4 with old system)
 # Look for these log entries:
 🐎 Found permanent stamina item: Horse (+1)
 🐎 Total permanent stamina boost for player_X: +1
-🐎 Initializing charge system with 2 total charges
-🐎⚡ Charge 1 regenerated for player_X
-🐎⚡ Charge 2 regenerated for player_X
+🐎⚡ Includes +1 permanent boost to max
+🧹 Removed legacy charge array for player_X: now 1/2   # legacy records only
 ```
-
-### Production Deployment
-- **Soft launched**: November 24, 2024
-- **Safe deployment**: Players without items unaffected
-- **Full release**: After 48-hour testing period
 
 ## Related Documentation
 
+- [Stamina Architecture](StaminaArchitecture.md) - Authoritative stamina reference (regen anchor, Bigger Tank, over-max rules)
 - [Safari Points System](Attributes.md) - Core stamina mechanics
 - [Safari Map Movement](SafariMapMovement.md) - Stamina consumption for movement
 - [Entity Edit Framework](../architecture/EntityEditFramework.md) - Item editing system

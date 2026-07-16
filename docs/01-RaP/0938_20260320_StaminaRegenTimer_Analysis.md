@@ -1,5 +1,7 @@
 # Stamina Regen Timer Bug — Display vs Actual Regen Mismatch
 
+> **⚠️ SUPERSEDED (2026-07-16):** The Phase-2 per-charge system this document describes was removed — permanent stamina items are now "+max only" (Bigger Tank). Current reference: [StaminaArchitecture.md](../03-features/StaminaArchitecture.md).
+
 > **RaP #0938** | 2026-03-20
 > **Status**: Fix deployed to prod (2026-03-20). Unit tests and guide updates pending.
 > **Severity**: Medium — stamina regens earlier than displayed timer shows

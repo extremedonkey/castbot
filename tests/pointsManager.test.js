@@ -411,11 +411,6 @@ describe('Phase 1 — stored max reconciles to configured max (init settings res
 // have happened had the player simply waited.
 
 function computeRemainingMs(pointData, interval, now) {
-    if (pointData.charges) {
-        const pending = pointData.charges.filter(c => c);
-        if (pending.length === 0) return null;
-        return Math.max(0, Math.min(...pending) + interval - now);
-    }
     if (pointData.current >= pointData.max) return null;
     return Math.max(0, latestRegenAnchor(pointData) + interval - now);
 }
@@ -425,15 +420,9 @@ function applyRegenCountdown(pointData, interval, durationMs, now) {
     if (remaining === null) return { success: false };
     const delta = durationMs - remaining;
     const points = JSON.parse(JSON.stringify(pointData));
-    if (points.charges) {
-        for (let i = 0; i < points.charges.length; i++) {
-            if (points.charges[i]) points.charges[i] += delta;
-        }
-    } else {
-        const anchor = latestRegenAnchor(points) + delta;
-        points.lastUse = anchor;
-        points.lastRegeneration = anchor;
-    }
+    const anchor = latestRegenAnchor(points) + delta;
+    points.lastUse = anchor;
+    points.lastRegeneration = anchor;
     return { success: true, points };
 }
 
@@ -474,40 +463,76 @@ describe('setRegenCountdown — Phase 1 (full-reset & drip share the lastUse anc
     });
 });
 
-describe('setRegenCountdown — Phase 2 (charges) delta-shift preserves stagger', () => {
-    const HOUR = 3600000;
-    const INTERVAL = 12 * HOUR;
+// ─── Bigger Tank (2026-07-16) — permanent boosts are +max only ────────────────
+// Replicates calculatePermanentStaminaBoost's numeric coercion and the lazy
+// charge-array migration in calculateRegenerationWithCharges.
 
-    it('shifts every pending charge by the same delta; null slots untouched', () => {
-        const now = 1000000000;
-        // Charges due in 8h / 10h / 12h  (ts = due − interval)
-        const data = { current: 1, max: 4, charges: [null, now + 8*HOUR - INTERVAL, now + 10*HOUR - INTERVAL, now + 12*HOUR - INTERVAL] };
-        const { points } = applyRegenCountdown(data, INTERVAL, 2 * HOUR, now);
-        assert.equal(points.charges[0], null, 'available charge untouched');
-        assert.equal(points.charges[1] + INTERVAL, now + 2 * HOUR, 'earliest now due in 2h');
-        assert.equal(points.charges[2] + INTERVAL, now + 4 * HOUR, 'stagger preserved: 4h');
-        assert.equal(points.charges[3] + INTERVAL, now + 6 * HOUR, 'stagger preserved: 6h');
+function sumPermanentBoost(inventory, items) {
+    let totalBoost = 0;
+    for (const itemId of Object.keys(inventory)) {
+        const item = items[itemId];
+        const boost = Number(item?.staminaBoost) || 0;
+        if (item?.consumable === 'No' && boost > 0) totalBoost += boost;
+    }
+    return totalBoost;
+}
+
+function migrateLegacyCharges(pointData, effectiveMax) {
+    const newData = { ...pointData };
+    let hasChanged = false;
+    if (newData.charges) {
+        delete newData.charges;
+        newData.current = Math.min(Number(newData.current) || 0, effectiveMax);
+        newData.max = effectiveMax;
+        hasChanged = true;
+    }
+    return { data: newData, hasChanged };
+}
+
+describe('Permanent boost — numeric coercion (the "9901" string-concat bug)', () => {
+    const items = {
+        horse: { name: 'Horse', consumable: 'No', staminaBoost: 1 },
+        ship2: { name: 'Spaceship (Level 2)', consumable: 'No', staminaBoost: '1' },   // string (real prod data)
+        ship3: { name: 'Spaceship (Level 3)', consumable: 'No', staminaBoost: '3' },   // string (real prod data)
+        fish: { name: 'Fish', consumable: 'Yes', staminaBoost: 1 },                    // consumable — excluded
+        junk: { name: 'Junk', consumable: 'No', staminaBoost: 'abc' }                  // garbage — excluded
+    };
+
+    it('string boosts add arithmetically, never concatenate', () => {
+        assert.equal(sumPermanentBoost({ ship2: 1, ship3: 1 }, items), 4);
     });
 
-    it('extending works too (refresh pushed later)', () => {
-        const now = 1000000000;
-        const data = { current: 0, max: 2, charges: [now + 1*HOUR - INTERVAL, now + 3*HOUR - INTERVAL] };
-        const { points } = applyRegenCountdown(data, INTERVAL, 20 * HOUR, now);
-        assert.equal(points.charges[0] + INTERVAL, now + 20 * HOUR);
-        assert.equal(points.charges[1] + INTERVAL, now + 22 * HOUR);
+    it('mixed numeric + string + consumable + garbage', () => {
+        assert.equal(sumPermanentBoost({ horse: 1, ship2: 1, fish: 1, junk: 1 }, items), 2);
     });
 
-    it('D = 0 → earliest charge fires on next read, later charges keep shifted spacing', () => {
-        const now = 1000000000;
-        const data = { current: 0, max: 2, charges: [now + 8*HOUR - INTERVAL, now + 10*HOUR - INTERVAL] };
-        const { points } = applyRegenCountdown(data, INTERVAL, 0, now);
-        assert.ok(now - points.charges[0] >= INTERVAL, 'earliest charge regenerates immediately');
-        assert.equal(points.charges[1] + INTERVAL, now + 2 * HOUR, 'second follows 2h later');
+    it('no permanent items → 0', () => {
+        assert.equal(sumPermanentBoost({ fish: 1 }, items), 0);
+    });
+});
+
+describe('Legacy charge arrays — lazy one-way migration', () => {
+    it('drops the charges array and reconciles max', () => {
+        const { data, hasChanged } = migrateLegacyCharges(
+            { current: 2, max: 4, charges: [null, null, 1718900000000, null], lastUse: 1, lastRegeneration: 1 }, 4);
+        assert.equal(hasChanged, true);
+        assert.equal(data.charges, undefined);
+        assert.equal(data.current, 2);
+        assert.equal(data.max, 4);
     });
 
-    it('no pending charges → success:false', () => {
-        const now = 1000000000;
-        const data = { current: 2, max: 2, charges: [null, null] };
-        assert.equal(applyRegenCountdown(data, INTERVAL, HOUR, now).success, false);
+    it('repairs the corrupt 9901 record (string max, oversized array, huge current)', () => {
+        const { data } = migrateLegacyCharges(
+            { current: 9901, max: '9901', charges: new Array(9901).fill(null), lastUse: 1, lastRegeneration: 1 }, 3);
+        assert.equal(data.charges, undefined);
+        assert.equal(data.current, 3, 'clamped to effectiveMax');
+        assert.equal(data.max, 3, 'numeric, config-derived');
+    });
+
+    it('non-charge records untouched', () => {
+        const before = { current: 1, max: 3, lastUse: 5, lastRegeneration: 5 };
+        const { data, hasChanged } = migrateLegacyCharges(before, 3);
+        assert.equal(hasChanged, false);
+        assert.deepEqual(data, before);
     });
 });

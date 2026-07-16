@@ -1,5 +1,7 @@
 # 0946 — Configurable Regeneration Amount
 
+> **⚠️ SUPERSEDED (2026-07-16):** The Phase-2 per-charge system this document describes was removed — permanent stamina items are now "+max only" (Bigger Tank). Current reference: [StaminaArchitecture.md](../03-features/StaminaArchitecture.md).
+
 **Date:** 2026-03-15
 **Status:** 🔨 In Progress
 **Related:** [Stamina Logging (0950)](0950_20260314_StaminaLogging_Analysis.md) | [Attributes](../03-features/Attributes.md) | [Permanent Stamina Items (0965)](0965_20251124_PermanentStaminaItems_Analysis.md)
