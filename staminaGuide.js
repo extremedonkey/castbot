@@ -128,7 +128,7 @@ const PROD_PAGES = [
     image: 'host-stamina-options.png',
     imageAlt: 'The stamina settings and both regeneration styles at a glance',
     content: [
-      `Stamina controls how many map moves a player can make before waiting. Configure it via **⚙️ Settings → ⚡ Settings**.`,
+      `Stamina controls how many map moves a player can make before waiting. Configure it via **⚙️ Settings → ⚡ Stamina**.`,
       `### \`\`\`⚙️ The Settings\`\`\``,
       `• **Starting Stamina** — What new players begin with\n• **Max Stamina** — The tank size: how many moves a player can store up (before item boosts)\n• **Regeneration Time (minutes)** — The length of one cooldown\n• **Regeneration Style** — The mode switch: **Full refill** (recommended) or **Drip**\n• **Drip Amount** — Points granted per cooldown (Drip style only — can exceed max)`,
       `### \`\`\`♻️ How Regeneration Works\`\`\``,

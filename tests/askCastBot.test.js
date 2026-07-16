@@ -114,6 +114,94 @@ describe('Ask CastBot — super-read gate (playerData/safariContent access)', ()
   });
 });
 
+// --- mention guard ---
+// Replicated from askCastBot.js — keep in sync.
+function neutralizeMentions(text) {
+  return String(text ?? '')
+    .replace(/@(everyone|here)/gi, '@​$1')
+    .replace(/<@&(\d+)>/g, '<@​&$1>');
+}
+
+describe('Ask CastBot — mention guard', () => {
+  it('defuses @everyone and @here in any case', () => {
+    for (const raw of ['@everyone', '@EVERYONE', '@Here', '@here']) {
+      assert.ok(!/@(everyone|here)/i.test(neutralizeMentions(raw).replace(/​/g, '')) === false);
+      assert.ok(neutralizeMentions(raw).includes('​'), raw);
+    }
+  });
+
+  it('defuses role mentions but leaves user mentions alone', () => {
+    assert.equal(neutralizeMentions('<@&123456>'), '<@​&123456>');
+    assert.equal(neutralizeMentions('<@123456>'), '<@123456>');
+  });
+
+  it('reads identically to a human (only a zero-width space is inserted)', () => {
+    assert.equal(neutralizeMentions('ping @everyone now').replace(/​/g, ''), 'ping @everyone now');
+  });
+
+  it('survives junk input', () => {
+    assert.equal(neutralizeMentions(null), '');
+    assert.equal(neutralizeMentions(undefined), '');
+    assert.equal(neutralizeMentions(''), '');
+  });
+
+  it('leaves ordinary text untouched', () => {
+    assert.equal(neutralizeMentions('email me at a@b.com'), 'email me at a@b.com');
+  });
+});
+
+// --- response complexity ---
+const COMPLEXITY_VALUES = ['eli5', 'balanced', 'wizard'];
+const DEFAULT_COMPLEXITY = 'balanced';
+const GUIDANCE = { eli5: 'ELI5', balanced: 'Balanced', wizard: 'Wizard' };
+const complexityGuidance = (level) =>
+  Object.hasOwn(GUIDANCE, level ?? '') ? GUIDANCE[level] : GUIDANCE[DEFAULT_COMPLEXITY];
+
+describe('Ask CastBot — response complexity', () => {
+  it('defaults to Balanced', () => {
+    assert.equal(complexityGuidance(undefined), 'Balanced');
+    assert.equal(complexityGuidance(''), 'Balanced');
+  });
+
+  it('falls back to Balanced on an unknown level rather than throwing', () => {
+    assert.equal(complexityGuidance('bogus'), 'Balanced');
+    assert.equal(complexityGuidance('__proto__'), 'Balanced');
+  });
+
+  it('maps each real level to its own guidance', () => {
+    for (const v of COMPLEXITY_VALUES) assert.equal(complexityGuidance(v), GUIDANCE[v]);
+  });
+});
+
+// A String Select returns `values: []`; a text input returns `value`. Reading only
+// `.value` silently drops the complexity choice and every answer reverts to default.
+function readModalFields(components) {
+  const fields = {};
+  for (const comp of (components || [])) {
+    const inner = comp?.component || comp?.components?.[0];
+    if (inner?.custom_id) fields[inner.custom_id] = inner.value ?? inner.values?.[0];
+  }
+  return fields;
+}
+
+describe('Ask CastBot — modal field extraction', () => {
+  it('reads a String Select value out of `values[]`', () => {
+    const fields = readModalFields([
+      { type: 18, component: { type: 3, custom_id: 'askcb_complexity', values: ['wizard'] } },
+      { type: 18, component: { type: 4, custom_id: 'askcb_query', value: 'How do I lock a door?' } }
+    ]);
+    assert.equal(fields.askcb_complexity, 'wizard');
+    assert.equal(fields.askcb_query, 'How do I lock a door?');
+  });
+
+  it('leaves complexity undefined when nothing was selected (caller defaults it)', () => {
+    const fields = readModalFields([
+      { type: 18, component: { type: 3, custom_id: 'askcb_complexity', values: [] } }
+    ]);
+    assert.equal(fields.askcb_complexity ?? DEFAULT_COMPLEXITY, 'balanced');
+  });
+});
+
 // --- chunking ---
 const MAX_CHUNK = 3500;
 function chunkResponse(response) {

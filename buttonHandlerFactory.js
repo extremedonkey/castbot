@@ -4796,7 +4796,7 @@ export const BUTTON_REGISTRY = {
   // === ASK CASTBOT (trusted super-user Q&A — DEV/TEST only) ===
   'askcb_ask': {
     label: 'Ask CastBot',
-    description: 'Ask a question about how CastBot and Safari work',
+    description: 'Ask a question about how CastBot and Safari work (also the New Question button — a blank modal)',
     emoji: '👾',
     style: 'Primary',
     requiresModal: true,
@@ -4804,7 +4804,7 @@ export const BUTTON_REGISTRY = {
     parent: 'castbot_tools'
   },
   'askcb_ask_ctx_*': {
-    label: 'Ask Another',
+    label: 'Follow Up',
     description: 'Ask CastBot a follow-up question with the previous answer as context',
     emoji: '👾',
     style: 'Primary',
@@ -4822,7 +4822,7 @@ export const BUTTON_REGISTRY = {
   },
   'askcb_public_ask': {
     label: 'Ask CastBot',
-    description: 'Ask CastBot a question (posted button — usable by anyone in the channel)',
+    description: 'Ask CastBot a question (posted button — usable by anyone in the channel; also New Question)',
     emoji: '👾',
     style: 'Primary',
     requiresModal: true,
@@ -4830,7 +4830,7 @@ export const BUTTON_REGISTRY = {
     parent: 'askcb_post'
   },
   'askcb_pub_ctx_*': {
-    label: 'Ask Another',
+    label: 'Follow Up',
     description: 'Follow-up question from a posted Ask CastBot button, with prior context',
     emoji: '👾',
     style: 'Primary',
@@ -5390,16 +5390,20 @@ export async function sendDeferredResponse(res, ephemeral = true, updateMessage 
 }
 
 /**
- * Update deferred response via webhook
+ * Edit ANY message owned by this interaction token (the deferred @original, or a
+ * follow-up by id). Generalised 2026-07-17 so a long-running job can keep a dedicated
+ * progress message alive while the original message holds something else.
  * @param {string} token - Interaction token
+ * @param {string} messageId - '@original' or a follow-up message id
  * @param {Object} data - Response data
+ * @returns {Promise<Object|null>} the message, or null if the token expired/target is gone
  */
-export async function updateDeferredResponse(token, data) {
-  const endpoint = `webhooks/${process.env.APP_ID}/${token}/messages/@original`;
+export async function editWebhookMessage(token, messageId, data) {
+  const endpoint = `webhooks/${process.env.APP_ID}/${token}/messages/${messageId}`;
 
   // Simplified logging - just show key info
   const isComponentsV2 = data.components?.[0]?.type === 17;
-  console.log(`📝 [🔗 WEBHOOK-PATCH] — updating @original${isComponentsV2 ? ' (Components V2)' : ''}`);
+  console.log(`📝 [🔗 WEBHOOK-PATCH] — updating ${messageId}${isComponentsV2 ? ' (Components V2)' : ''}`);
 
   // Transform Components V2 container structure for webhook PATCH
   const webhookData = {
@@ -5444,6 +5448,15 @@ export async function updateDeferredResponse(token, data) {
     method: 'PATCH',
     body: webhookData
   });
+}
+
+/**
+ * Update the deferred response (@original). Thin wrapper over editWebhookMessage.
+ * @param {string} token - Interaction token
+ * @param {Object} data - Response data
+ */
+export async function updateDeferredResponse(token, data) {
+  return editWebhookMessage(token, '@original', data);
 }
 
 /**

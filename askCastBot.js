@@ -102,6 +102,68 @@ const MAX_CHUNK = 3500;      // leave room for the action row in the last chunk
 export const ACCENT = 0x3498db;
 
 /**
+ * Response Complexity — how much CastBot fluency to assume in the answer.
+ *
+ * Ordered as a ramp (novice → expert) rather than default-first: it's a spectrum, and a
+ * scale reads better in a select than an arbitrary order. Balanced is the default.
+ * `value` is what reaches the prompt; keep these stable — they're persisted with a
+ * remembered response so a Follow Up re-defaults to the same level.
+ */
+export const COMPLEXITY_LEVELS = [
+  {
+    value: 'eli5',
+    label: 'ELI5',
+    description: "I got no idea what I'm doing here",
+    emoji: { name: '🐣' }
+  },
+  {
+    value: 'balanced',
+    label: 'Balanced',
+    description: 'I know enough about CastBot to be dangerous',
+    emoji: { name: '⚖️' },
+    default: true
+  },
+  {
+    value: 'wizard',
+    label: 'Wizard',
+    description: "I'm a CastBot legend",
+    emoji: { name: '🧙' }
+  }
+];
+
+export const DEFAULT_COMPLEXITY = 'balanced';
+
+/** Prompt guidance per complexity level. */
+const COMPLEXITY_GUIDANCE = {
+  wizard: `RESPONSE COMPLEXITY: **Wizard** — the asker is a CastBot expert. Treat them as a peer.
+- Use CastBot's own vocabulary heavily and precisely: Actions, triggers, outcomes, conditions, blacklist/reverse blacklist, flag items, usage limits and claims, stamina, drops, crafting recipes.
+- Be direct and information-dense. Get to the mechanism immediately.
+- No analogies, no teaching fundamentals, no "as you may know" scaffolding, no encouragement padding.
+- The valuable part is the subtlety: gotchas, ordering constraints, interactions between systems, the thing that silently doesn't work. Lead with that, not the happy path they already know.`,
+
+  balanced: `RESPONSE COMPLEXITY: **Balanced** — the asker knows CastBot reasonably well but isn't an expert.
+- Use CastBot's terminology, but gloss anything niche in a few words the first time it appears.
+- Assume they can find their way around the menus without hand-holding.
+- Name the buttons and settings that matter; don't narrate every click.`,
+
+  eli5: `RESPONSE COMPLEXITY: **ELI5** — the asker is new and may be overwhelmed. Two rules that pull in opposite directions; honour both.
+- BE MORE PRECISE ABOUT THE UI, NOT LESS. Exact button, menu and setting names matter *more* for a beginner, because they can't fill gaps themselves. Never wave at "the item settings" — say what to click.
+- BE MUCH LIGHTER ON JARGON. Do not stack CastBot terms like "Outcomes", "Conditions", "Actions", "reverse blacklist" as if they explain themselves. Say what the thing *does* in plain words. When a term is genuinely unavoidable, introduce it once, in passing, with a short plain-English gloss — then use plain words again.
+- Short sentences. One idea at a time. Assume no prior knowledge — but never talk down to them.`
+};
+
+/**
+ * @param {string} [level] @returns {string} guidance block for the prompt
+ * Uses hasOwn, not `[level] || default`: a bare lookup for '__proto__' returns
+ * Object.prototype, which is truthy, and would splice "[object Object]" into the prompt.
+ */
+export function complexityGuidance(level) {
+  return Object.hasOwn(COMPLEXITY_GUIDANCE, level ?? '')
+    ? COMPLEXITY_GUIDANCE[level]
+    : COMPLEXITY_GUIDANCE[DEFAULT_COMPLEXITY];
+}
+
+/**
  * Concurrent CLI jobs allowed. Each one is a full Claude Code process — real memory on a
  * small Lightsail box (prod already OOMs on its own; see RaP 0915). The posted Ask button
  * is clickable by anyone who can see the channel, so without a cap a handful of curious
@@ -158,6 +220,44 @@ export function truncate(text, max) {
 }
 
 /**
+ * Defuse mass mentions before the bot echoes user- or model-authored text.
+ *
+ * The posted Ask button is clickable by anyone who can see the channel, and whatever they
+ * type is republished by the BOT — which usually out-ranks them on permissions. Without
+ * this, "@everyone" in a question turns the feature into an @everyone cannon for any
+ * player who finds it. Answers get the same treatment: "repeat after me: @everyone" is a
+ * one-line jailbreak of a persona-doc rule.
+ *
+ * A zero-width space after the "@" kills the ping while reading identically. Real user
+ * mentions (<@id>) are left alone — those are bounded and usually intentional.
+ * @param {string} text
+ * @returns {string}
+ */
+export function neutralizeMentions(text) {
+  return String(text ?? '')
+    .replace(/@(everyone|here)/gi, '@​$1')
+    .replace(/<@&(\d+)>/g, '<@​&$1>');
+}
+
+/**
+ * Message 1: the question, on its own card, in full.
+ *
+ * Split out from the answer card because a truncated snippet hid the actual question from
+ * everyone reading along — the point of a public answer is that the thread is legible.
+ * @param {{askerName: string, query: string}} opts
+ */
+export function buildQuestionContainer({ askerName, query }) {
+  return {
+    type: 17,
+    accent_color: ACCENT,
+    components: [
+      { type: 10, content: `### 👾 *${neutralizeMentions(askerName)}* asked` },
+      { type: 10, content: neutralizeMentions(query) }
+    ]
+  };
+}
+
+/**
  * Build the Ask CastBot modal.
  * @param {{query: string, response: string}} [prevContext] - prior Q&A for follow-ups
  * @param {string|null} [prevResponseId]
@@ -168,10 +268,26 @@ export function buildAskModal(prevContext = null, prevResponseId = null, isPubli
   // "Source" input would be both ugly and no more trustworthy. Forging `pub` grants
   // nothing anyway: it only selects the same gate a posted button already offers.
   const stem = isPublic ? 'askcb_pub_modal' : 'askcb_ask_modal';
+  // A Follow Up re-defaults to the level the asker picked last time — re-choosing it on
+  // every turn would be busywork. Falls back to Balanced for a fresh question.
+  const chosen = prevContext?.complexity || DEFAULT_COMPLEXITY;
   return {
     custom_id: prevResponseId ? `${stem}_${prevResponseId}` : stem,
     title: '👾 Ask CastBot',
     components: [
+      {
+        type: 18,
+        label: 'Response Complexity',
+        description: 'How much CastBot jargon should the answer assume?',
+        component: {
+          type: 3,
+          custom_id: 'askcb_complexity',
+          required: false,
+          options: COMPLEXITY_LEVELS.map(({ value, label, description, emoji }) => ({
+            value, label, description, emoji, default: value === chosen
+          }))
+        }
+      },
       ...(prevContext ? [{
         type: 18,
         label: 'Previous conversation (context)',
@@ -209,9 +325,10 @@ export function buildAskModal(prevContext = null, prevResponseId = null, isPubli
  * @param {string} query
  * @param {string} [prevContextText]
  * @param {boolean} [superRead] - true when playerData.json/safariContent.json are readable
+ * @param {string} [complexity] - one of COMPLEXITY_LEVELS' values
  * @returns {string}
  */
-export function buildPrompt(query, prevContextText = '', superRead = false) {
+export function buildPrompt(query, prevContextText = '', superRead = false, complexity = DEFAULT_COMPLEXITY) {
   const essence = fs.readFileSync('./docs/askcastbot.md', 'utf8');
   const prevSection = prevContextText?.trim()
     ? `\n\nPREVIOUS CONVERSATION (context from the last exchange — use it to inform your answer):\n${prevContextText}\n\n---\n`
@@ -240,6 +357,8 @@ OPERATING CONTEXT:
 - NEVER invent a mechanic CastBot does not have. If the request does not map onto a real building block, say so in your first sentence and propose the closest real substitute.${superReadSection}
 - You are a one-shot assistant with no memory between questions${prevSection ? ', BUT you have the previous exchange below' : ''}.${prevSection}
 
+${complexityGuidance(complexity)}
+
 The question:
 ${query}`;
 }
@@ -262,10 +381,14 @@ export function runAskCastBot(prompt, deny, onHeartbeat) {
  */
 export function buildActionRow(responseId, isPublic = false) {
   const stem = isPublic ? 'askcb_pub_ctx' : 'askcb_ask_ctx';
+  // "New Question" needs no new handler: askcb_ask / askcb_public_ask already open a
+  // blank modal when there's no context id to recall. Same gate, same route, zero plumbing.
+  const blankStem = isPublic ? 'askcb_public_ask' : 'askcb_ask';
   return {
     type: 1,
     components: [
-      { type: 2, custom_id: `${stem}_${responseId}`, label: 'Ask Another', style: 1, emoji: { name: '👾' } }
+      { type: 2, custom_id: `${stem}_${responseId}`, label: 'Follow Up', style: 1, emoji: { name: '👾' } },
+      { type: 2, custom_id: blankStem, label: 'New Question', style: 1, emoji: { name: '💭' } }
     ]
   };
 }
@@ -277,11 +400,11 @@ export function buildFirstContainer({ query, chunk, elapsed, chunkCount, respons
     accent_color: ACCENT,
     components: [
       { type: 10, content: `## 👾 Ask CastBot` },
-      { type: 10, content: `-# "${truncate(query, 120)}"` },
+      { type: 10, content: `-# "${neutralizeMentions(truncate(query, 120))}"` },
       { type: 14 },
-      { type: 10, content: chunk },
+      { type: 10, content: neutralizeMentions(chunk) },
       { type: 14 },
-      { type: 10, content: `-# 👾 ${elapsed}s${chunkCount > 1 ? ` · ${chunkCount} parts` : ''}` },
+      { type: 10, content: `-# 👾 ${elapsed}${chunkCount > 1 ? ` · ${chunkCount} parts` : ''}` },
       ...(chunkCount === 1 ? [buildActionRow(responseId, isPublic)] : [])
     ]
   };
@@ -293,7 +416,7 @@ export function buildChunkContainer({ chunk, isLast, responseId, isPublic = fals
     type: 17,
     accent_color: ACCENT,
     components: [
-      { type: 10, content: chunk },
+      { type: 10, content: neutralizeMentions(chunk) },
       ...(isLast ? [
         { type: 14 },
         { type: 10, content: `-# continued` },
@@ -321,7 +444,7 @@ export function buildProgressContainer(query, progress = null) {
   } else {
     lines.push({ type: 10, content: `🚀 Starting up` }, { type: 14 });
   }
-  lines.push({ type: 10, content: `-# "${truncate(query, 80)}"` });
+  lines.push({ type: 10, content: `-# "${neutralizeMentions(truncate(query, 80))}"` });
   return { type: 17, accent_color: ACCENT, components: lines };
 }
 
@@ -385,8 +508,9 @@ function denyModal(res, message) {
 }
 
 /**
- * Handle the Ask CastBot modal submit end-to-end: gate, defer publicly, run the CLI,
- * post the (possibly chunked) answer back into the channel it was asked in.
+ * Handle the Ask CastBot modal submit end-to-end: gate, post the question card, run the
+ * CLI with live progress, then turn the progress message into the (possibly chunked)
+ * answer — all public, in the channel it was asked from.
  * Lives here rather than app.js so the router stays a router.
  * @param {Object} req - Express request (Discord interaction)
  * @param {Object} res - Express response
@@ -395,9 +519,11 @@ export async function handleAskModalSubmit(req, res) {
   const fields = {};
   for (const comp of (req.body.data.components || [])) {
     const inner = comp?.component || comp?.components?.[0];
-    if (inner?.custom_id) fields[inner.custom_id] = inner.value;
+    // Text inputs carry `value`; String Selects carry `values: [...]`.
+    if (inner?.custom_id) fields[inner.custom_id] = inner.value ?? inner.values?.[0];
   }
   const query = fields.askcb_query;
+  const complexity = fields.askcb_complexity || DEFAULT_COMPLEXITY;
   const userId = req.body.member?.user?.id || req.body.user?.id;
   // A modal opened from a POSTED Ask button is deliberately open to anyone who can see
   // that channel (Reece places them in limited areas). The whitelist only guards the
@@ -417,28 +543,46 @@ export async function handleAskModalSubmit(req, res) {
     return denyModal(res, `👾 Ask CastBot is busy with ${inFlight} question${inFlight === 1 ? '' : 's'} right now. Give it a minute and ask again.`);
   }
 
-  // Deferred PUBLIC — the answer lands in the channel it was asked in.
-  res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE, data: {} });
+  // TWO MESSAGES, NOT ONE:
+  //   1. the question, in full, as the immediate response — so everyone reading the
+  //      channel can see what was actually asked (a truncated snippet hid it);
+  //   2. a follow-up that carries live progress and then becomes the answer.
+  // The question card is the INITIAL response rather than a channel post because Discord
+  // renders the interaction's own message first — a channel post would land underneath
+  // the answer and read backwards.
+  const askerName = req.body.member?.nick
+    || req.body.member?.user?.global_name
+    || req.body.member?.user?.username
+    || 'Someone';
+  res.send({
+    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+    data: { components: [buildQuestionContainer({ askerName, query })], flags: (1 << 15) }
+  });
 
   const token = req.body.token;
   const channelId = req.body.channel_id;
   const { createFollowupMessage } = await import('./buttonHandlerFactory.js');
-  const deliver = (data) => safeDeliver({ token, channelId, data, userId });
 
   inFlight++;
-  try {
-    console.log(`👾 Ask CastBot query from ${req.body.member?.user?.username} (${inFlight}/${MAX_CONCURRENT} in flight): "${truncate(query, 80)}"`);
+  let progressMsgId = null;
+  // Heartbeats never fall back to a channel post — that would spam a new progress message
+  // every 20s. Only the final answer is worth a fallback message.
+  const beat = (data) => safeDeliver({ token, channelId, data, messageId: progressMsgId, userId, fallback: false });
+  const deliver = (data) => safeDeliver({ token, channelId, data, messageId: progressMsgId, userId });
 
-    // Paint the "starting up" state immediately — the deferred spinner is otherwise blank
-    // until the first heartbeat, which is the exact silence this redesign removes.
-    await deliver({ components: [buildProgressContainer(query)] });
+  try {
+    console.log(`👾 Ask CastBot query from ${req.body.member?.user?.username} (${inFlight}/${MAX_CONCURRENT} in flight, ${complexity}): "${truncate(query, 80)}"`);
+
+    // Message 2 starts as "starting up" so there's never a silent gap.
+    const progressMsg = await createFollowupMessage(token, { components: [buildProgressContainer(query)] });
+    progressMsgId = progressMsg?.id || null;
 
     const guildId = req.body.guild_id;
     const superRead = !isPublicRoute && SUPER_READ_GUILD_IDS.includes(guildId);
     const { text: answer, durationMs, denials } = await runAskCastBot(
-      buildPrompt(query, fields.askcb_prev_context, superRead),
+      buildPrompt(query, fields.askcb_prev_context, superRead, complexity),
       resolveDenyRules(guildId, isPublicRoute),
-      (progress) => deliver({ components: [buildProgressContainer(query, progress)] })
+      (progress) => beat({ components: [buildProgressContainer(query, progress)] })
     );
 
     const elapsed = formatElapsed(durationMs);
@@ -446,7 +590,7 @@ export async function handleAskModalSubmit(req, res) {
     if (denials?.length) console.warn(`👾 Ask CastBot deny rules fired ${denials.length}x — someone probed a blocked path`);
 
     const responseId = Date.now().toString(36);
-    rememberResponse(responseId, { response: answer, query, elapsed });
+    rememberResponse(responseId, { response: answer, query, elapsed, complexity });
 
     const chunks = chunkResponse(answer);
     await deliver({

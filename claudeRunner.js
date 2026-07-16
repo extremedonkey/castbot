@@ -219,42 +219,53 @@ export function runClaudeJob({
 }
 
 /**
- * Deliver a final payload, surviving a dead interaction token.
+ * Deliver a payload to a token-owned message, surviving a dead interaction token.
  *
  * The token edit is the nice path (the answer replaces the "working on it" message in
- * place). If it fails — expired token, transient Discord error — fall back to posting
- * straight into the channel with the bot's own credentials, which needs no token at all.
- * Losing a 13-minute answer to a webhook hiccup is not acceptable.
+ * place). If it fails, fall back to posting straight into the channel with the bot's own
+ * credentials, which needs no token. Losing a 13-minute answer to a webhook hiccup is not
+ * acceptable.
+ *
+ * ⚠️ DiscordRequest RETURNS null ON TOKEN EXPIRY — it does not throw (utils.js handles
+ * "Unknown Webhook"/"Invalid Webhook Token"/10015/50027 gracefully and returns null). A
+ * try/catch alone therefore never sees the 15-minute expiry it exists to catch, which is
+ * exactly the case the fallback is for. Treat a null result as failure.
  *
  * @param {Object} opts
  * @param {string} opts.token
  * @param {string} opts.channelId
- * @param {Object} opts.data      - message payload (components etc.)
- * @param {string} [opts.userId]  - mentioned on the fallback path so they see the answer
+ * @param {Object} opts.data          - message payload (components etc.)
+ * @param {string} [opts.messageId]   - follow-up message id; omit to edit @original
+ * @param {string} [opts.userId]      - mentioned on the fallback path so they see the answer
+ * @param {boolean} [opts.fallback]   - post to the channel if the token edit fails.
+ *   MUST be false for heartbeats: a per-heartbeat fallback would spam the channel with a
+ *   new progress message every 20s. Only final delivery is worth a fallback message.
  * @returns {Promise<'token'|'channel'|'failed'>} which path delivered
  */
-export async function safeDeliver({ token, channelId, data, userId }) {
-  const { updateDeferredResponse } = await import('./buttonHandlerFactory.js');
+export async function safeDeliver({ token, channelId, data, messageId, userId, fallback = true }) {
+  const { editWebhookMessage } = await import('./buttonHandlerFactory.js');
   try {
-    await updateDeferredResponse(token, data);
-    return 'token';
+    const result = await editWebhookMessage(token, messageId || '@original', data);
+    if (result) return 'token';
+    console.warn('⏰ Webhook edit returned null (token expired or message gone)');
   } catch (tokenError) {
-    console.error('⚠️ Deferred edit failed, falling back to channel post:', tokenError?.message);
-    if (!channelId) return 'failed';
-    try {
-      const { DiscordRequest } = await import('./utils.js');
-      await DiscordRequest(`channels/${channelId}/messages`, {
-        method: 'POST',
-        body: {
-          ...data,
-          ...(userId ? { content: `<@${userId}>`, allowed_mentions: { users: [userId] } } : {}),
-          flags: (1 << 15)  // IS_COMPONENTS_V2
-        }
-      });
-      return 'channel';
-    } catch (channelError) {
-      console.error('❌ Channel fallback also failed:', channelError?.message);
-      return 'failed';
-    }
+    console.error('⚠️ Webhook edit failed:', tokenError?.message);
+  }
+
+  if (!fallback || !channelId) return 'failed';
+  try {
+    const { DiscordRequest } = await import('./utils.js');
+    const posted = await DiscordRequest(`channels/${channelId}/messages`, {
+      method: 'POST',
+      body: {
+        ...data,
+        ...(userId ? { content: `<@${userId}>`, allowed_mentions: { users: [userId] } } : {}),
+        flags: (1 << 15)  // IS_COMPONENTS_V2
+      }
+    });
+    return posted ? 'channel' : 'failed';
+  } catch (channelError) {
+    console.error('❌ Channel fallback also failed:', channelError?.message);
+    return 'failed';
   }
 }
