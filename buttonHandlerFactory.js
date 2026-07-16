@@ -3285,6 +3285,85 @@ export const BUTTON_REGISTRY = {
     category: 'application_management',
     requiresModal: true
   },
+  // ── 🔐 Channel Administration (hidden tab — CHANNEL_ADMIN_USER_IDS only) ──
+  // Gating is an inline user-ID check in each handler; `restrictedUser` here enforces NOTHING
+  // (RaP 0900) and is recorded for documentation only.
+  'season_channels_*': {
+    label: 'Channels',
+    description: 'Channel Administration tab — confessionals, subs, 1on1s, player roles, trusted spectator',
+    emoji: '🔐',
+    style: 'Secondary',
+    parent: 'season_marooning',
+    category: 'channel_admin',
+    restrictedUser: true
+  },
+  'channels_roles_*': {
+    label: 'Roles',
+    description: 'Set the server\'s Trusted Spectator role (read + react access to confessionals)',
+    emoji: '🔐',
+    style: 'Secondary',
+    parent: 'season_channels',
+    category: 'channel_admin',
+    restrictedUser: true,
+    requiresModal: true
+  },
+  'channels_playerroles_*': {
+    label: 'Player Roles',
+    description: 'Create one personal Discord role per player (used to strip a voted-out player from every channel at once)',
+    emoji: '🎭',
+    style: 'Secondary',
+    parent: 'season_channels',
+    category: 'channel_admin',
+    restrictedUser: true,
+    requiresModal: true
+  },
+  'channels_confessionals_*': {
+    label: 'Confessionals',
+    description: 'Bulk create/update/delete per-player confessional channels',
+    emoji: '🎙️',
+    style: 'Secondary',
+    parent: 'season_channels',
+    category: 'channel_admin',
+    restrictedUser: true,
+    requiresModal: true
+  },
+  'channels_subs_*': {
+    label: 'Subs',
+    description: 'Bulk create/update/delete per-player subs channels, or convert application channels into subs',
+    emoji: '🗳️',
+    style: 'Secondary',
+    parent: 'season_channels',
+    category: 'channel_admin',
+    restrictedUser: true,
+    requiresModal: true
+  },
+  'channels_1on1s_*': {
+    label: '1 on 1s',
+    description: 'Bulk create/delete a private channel for every pair of players in a tribe',
+    emoji: '🤝',
+    style: 'Secondary',
+    parent: 'season_channels',
+    category: 'channel_admin',
+    restrictedUser: true,
+    requiresModal: true
+  },
+  'channels_exec_*': {
+    label: 'Confirm',
+    description: 'Execute a planned Channel Administration job (the only step that mutates Discord)',
+    emoji: '▶️',
+    style: 'Primary',
+    parent: 'season_channels',
+    category: 'channel_admin',
+    restrictedUser: true
+  },
+  'channels_cancel_*': {
+    label: 'Cancel',
+    description: 'Discard a planned Channel Administration job and return to the Channels tab',
+    style: 'Secondary',
+    parent: 'season_channels',
+    category: 'channel_admin',
+    restrictedUser: true
+  },
   'cast_player_*': {
     label: 'Cast Player',
     description: 'Mark applicant as cast',

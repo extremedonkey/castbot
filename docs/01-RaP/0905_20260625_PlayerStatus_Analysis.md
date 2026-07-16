@@ -14,7 +14,7 @@
 - **Sources:** Reece (mental model) + 4 parallel code-mapping subagents (Apps lifecycle / Player record + rankings / In-game state + exile / Data model + global rules)
 - **Scope:** "Player status" spans Apps, Casting, Castlists/Placements, Safari, and future game-state — **not** just Applications.
 
-Related: [SeasonManager /](../03-features/SeasonManager.md) [`deriveApplicationStatus`](../03-features/SeasonManager.md) · [Season lifecycle](../concepts/SeasonLifecycle.md) · [RaP 0906 Casting Invites](0906_20260622_CastingInvites_Analysis.md)
+Related: [SeasonManager /](../03-features/SeasonManager.md) [`deriveApplicationStatus`](../03-features/SeasonManager.md) · [Season lifecycle](../concepts/SurvivorContext.md) · [RaP 0906 Casting Invites](0906_20260622_CastingInvites_Analysis.md)
 
 ---
 
@@ -196,7 +196,7 @@ This RaP draws the existing map first (§4), so a unified model can be designed 
 > 3. Casting decision has been tentatively or affirmatively made (a prod team member has clicked Cast / Don't Case / etc), but at this stage no offers or notices have been sent.
 > 4. Offers / Declines / Tentatives have been sent
 > 5. The player has Accepted or Declined their ability to play in a season
-> 6. Marooning happens (ref @docs/concepts/SeasonLifecycle.md), this is a live event where cast is revealed; we no longer need to be secretive about tribe names / tribes compositions and who's actually playing - at this stage a prod team member will generally add a player to the default / active castlist. At this stage a player{} will also be assigned to a tribe (we still use their discord user ID iirc, not any sort of our own internally generated player ID}
+> 6. Marooning happens (ref @docs/concepts/SurvivorContext.md), this is a live event where cast is revealed; we no longer need to be secretive about tribe names / tribes compositions and who's actually playing - at this stage a prod team member will generally add a player to the default / active castlist. At this stage a player{} will also be assigned to a tribe (we still use their discord user ID iirc, not any sort of our own internally generated player ID}
 > 7. At any stage the player may be voted out, we don't track this (hosts aren't used to it, there isn't enough 'candy' for this). Ways we can determine this (not MVP But you can document), a player is removed from a castlist; a discord "player role" (e.g., @Reece, best practice for security etc) is removed - we dont' track this currently, but will want to in the future); or a @docs/03-features/Placements.md is assigned (this is very seldom used unfortunately, but it's almost a certain indication the player has been voted out as it is their "place in the game")
 > 8. In some twists, a player may "appear" to be voted out, but the hosts plan to put them back in the game. So for all intents and purposes we need to keep them super secret, this would be a status we'd perhaps create for future features but in the short term not really needed (and dangerous to track it without having a use).
 >

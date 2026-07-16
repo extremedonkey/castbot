@@ -5,7 +5,7 @@
 **Status**: 🟢 PRODUCTION READY (with known issues)
 **Created**: November 2024
 **Category**: Season Management
-**Related Systems**: [Season Lifecycle](../concepts/SeasonLifecycle.md), [Castlist V3](CastlistV3.md), [Tribe Manager](../02-implementation-wip/TribeManager.md)
+**Related Systems**: [Season Lifecycle](../concepts/SurvivorContext.md), [Castlist V3](CastlistV3.md), [Tribe Manager](../02-implementation-wip/TribeManager.md)
 
 The Tribe Swap/Merge system enables dramatic tribe reorganizations during active seasons, automatically reassigning players to new tribes with optional dramatic reveal ceremonies and maintaining historical records through castlist archival.
 
@@ -60,7 +60,7 @@ Episode 14:   Winner declared from MergedTribe
 - Manage Roles OR Manage Channels
 
 **Required Setup**:
-1. Active Season configured (see [Season Lifecycle](../concepts/SeasonLifecycle.md))
+1. Active Season configured (see [Season Lifecycle](../concepts/SurvivorContext.md))
 2. Default castlist with 2+ tribes
 3. Players assigned to tribe Discord roles
 4. New Discord roles created for post-swap tribes
@@ -641,7 +641,7 @@ tail -f /tmp/castbot-dev.log | grep "🔀 \[TRIBE SWAP\]"
 
 ## Related Documentation
 
-- **[Season Lifecycle](../concepts/SeasonLifecycle.md)** - Season management concepts
+- **[Season Lifecycle](../concepts/SurvivorContext.md)** - Season management concepts
 - **[Castlist V3](CastlistV3.md)** - Castlist system architecture
 - **[Tribe Manager](../02-implementation-wip/TribeManager.md)** - Original tribe management design
 - **[Components V2](../standards/ComponentsV2.md)** - Modal and component structure

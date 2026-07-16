@@ -1,10 +1,92 @@
-# Season Lifecycle Management
+# Survivor / ORG Context
 
-## Overview
+**What this doc is for**: the domain knowledge you need to understand *why* CastBot is shaped the way it is. If you're implementing a feature and something seems arbitrary ("why does a channel get renamed when someone withdraws?"), the answer is probably a genre convention documented here.
+
+Two halves:
+1. **[The ORG Domain](#the-org-domain)** — how online reality games actually run: confessionals, subs, 1on1s, alliances, player roles, trusted spectators.
+2. **[Season Lifecycle](#season-lifecycle)** — how CastBot models a season in data.
+
+---
+
+## The ORG Domain
+
+CastBot serves **ORGs** (Online Reality Games) — fan-run Survivor-style games played in Discord servers. A **host** (a.k.a. admin / production member) runs the game; **players** compete; **spectators** watch.
+
+The genre has strong channel conventions. Hosts currently create most of these **by hand**, one channel at a time — a 16-player season is ~150 channels, redone at every tribe swap. Automating this is what [Channel Administration](../03-features/ChannelAdministration.md) exists for.
+
+### 🎙️ Confessionals
+A private channel where a player records their thoughts, strategy, and commentary on other players — the Discord equivalent of the Survivor confessional booth. Read by hosts and (usually) trusted spectators; it's the main way an audience follows a player's reasoning.
+
+- **Naming**: `#reece-confessional`, sometimes `#reece-conf`
+- **Access**: the player (write) + hosts + trusted spectators (read)
+
+### 🗳️ Subs (submissions)
+A private, **player↔host-only** channel for sensitive communication and challenge submissions. Spectators must NOT see these.
+
+- **Naming**: `#reece-subs`, `#reece-submissions`, sometimes emoji-prefixed (`#🗳️reece-subs`)
+- **Convention**: a cast player's **application channel is converted into their subs channel** — the channel already exists and already has the right two parties in it.
+- ⚠️ **This conversion is destructive to CastBot's status signals** — see [Withdrawal](#-withdrawal-lives-in-the-channel-name) below.
+
+### 👀 Trusted Spectator
+A role marking spectators whom known users have vouched for. It generally grants access to player confessionals. There is exactly **one** such role per server.
+
+- **Stored**: `playerData[guildId].permissions.trustedSpectatorRoleId` (beside `globalRoleAccess`)
+
+### 🤝 1on1s
+Private player-to-player conversation. Some servers let players use Discord DMs; many instead create **1on1 channels** so hosts can monitor player-to-player chat (usually to watch for rule-breaking — sometimes just curiosity).
+
+- **Rule**: for each pair of players on the same tribe, one channel containing exactly those two.
+- **Naming**: `#reece-bob`, `#reece-sarah`, `#sarah-bob`
+- ⚠️ **Combinatorial**: n players → n(n−1)/2 channels. A 12-player tribe is 66 channels; 20 players is 190 — against Discord's hard ceiling of **500 channels / 50 categories per guild**.
+
+### 🤐 Alliances
+A group of players on the same tribe who have agreed to work together. **The existence of an alliance is extremely sensitive game information** — leaking it can decide a season. Any alliance feature must be very closely guarded. CastBot deliberately does **not** model alliances yet.
+
+### 🎭 Player Roles
+A Discord role assigned to exactly one player. Its purpose is *removal*: un-assigning one role instantly strips a voted-out player from every alliance channel, 1on1, and confessional at once — no per-channel cleanup.
+
+- **Stored**: `playerData[guildId].players[userId].playerRoleId`
+- Players and hosts like to **customise the role colour** (it colours their name in chat).
+- Prefer granting channel access to the *player role* over the user directly — that's what makes the one-click removal work.
+
+### ✖️ Withdrawal lives in the channel name
+A player who quits during applications is marked by renaming their application channel with a `✖️` prefix. **There is no `withdrawn` data field** — the emoji prefix on the *live* channel name IS the signal (`playerStatus.js` → `buildStatusSignals`).
+
+Channel-name emoji vocabulary:
+
+| Emoji | Meaning |
+|---|---|
+| 📝 | Application in progress |
+| ☑️ | Application submitted / complete |
+| ✖️ | Withdrawn |
+| ✅ | Accepted |
+| ❌ | Declined |
+
+⚠️ **Consequence**: anything that renames an application channel destroys these signals. This is why converting an app channel to subs must first persist `completedAt` as data — see [ChannelAdministration.md](../03-features/ChannelAdministration.md).
+
+### Admin / Host / Production Member
+Used interchangeably for users with elevated permissions. **Required**: `MANAGE_CHANNELS` **OR** `MANAGE_ROLES`.
+
+They can access the Production Menu (`/menu`), manage seasons and castlists, configure tribes/roles, and use administrative features.
+
+---
+
+## Season Lifecycle
 
 Seasons are the core organizing principle in CastBot. They represent discrete casting periods with distinct phases, players, and outcomes. The active season concept allows the entire server to operate within a shared context.
 
 **Note**: Seasons are stored as `applicationConfigs` in `playerData.json` - this is a legacy naming convention that will eventually be refactored.
+
+### 🚨 `configId` vs `seasonId` — the single most confusing thing here
+
+There are **two** ID systems and they are not interchangeable:
+
+| ID | What it is | Keys off it |
+|---|---|---|
+| **`configId`** | the KEY into `applicationConfigs` (e.g. `config_1751549410029_391415444084490240`) | `applications[].configId`, every Season Manager `custom_id` |
+| **`seasonId`** | a FIELD on the config (e.g. `season_03859e4abc554bb5`) | `castlistConfigs.seasonId`, `seasonRounds` |
+
+Multiple configs can share one `seasonId`. `activeSeason.id` is a **configId**, despite the name. `seasonExists(seasonId)` (`seasonSelector.js`) actually expects a configId. The only place that bridges the two is `getPlayerSeasonStatus` (`playerStatus.js`).
 
 ## Active Season Concept
 
@@ -21,7 +103,7 @@ The active season serves as the **default context** for all season-related featu
     "applicationConfigs": {  // These ARE the seasons
       "config_1751549410029_391415444084490240": {
         "seasonName": "Season 47: Redemption Island",
-        "currentStage": "applications",
+        "stage": "applications",   // NOTE: the field is `stage`, not `currentStage`
         // ... other season data
       }
     },
@@ -132,11 +214,11 @@ Historical context: Originally designed for application management, but evolved 
 
 ### Code Example
 ```javascript
-// In castlistMenu.js - Setting active season
+// Setting active season (written by the Change Szn flow)
 playerData[guildId].activeSeason = {
   id: selectedValue,  // References applicationConfigs key
   name: season.seasonName,
-  stage: season.currentStage || 'planning'
+  stage: season.stage || 'planning'
 };
 await savePlayerData(playerData);
 
@@ -208,7 +290,9 @@ Users with either of these Discord permissions can:
 4. **Manage tribes** through Production Menu for active season
 
 ## Related Documentation
-- [Season Applications](../features/SeasonAppBuilder.md) - Creating seasons in applicationConfigs
-- [Components V2](../architecture/ComponentsV2.md) - UI component structure
-- [Menu System Architecture](../architecture/MenuSystemArchitecture.md) - Menu patterns
-- [Castlist V3 Integration](../features/CastlistV3-SeasonIntegration.md) - Season-based castlists
+- [Season Applications](../03-features/SeasonAppBuilder.md) - Creating seasons in applicationConfigs
+- [Season Manager](../03-features/SeasonManager.md) - The Apps/Planner/Casting/Marooning tabs + casting status fields
+- [Channel Administration](../03-features/ChannelAdministration.md) - Automating the ORG channel conventions above
+- [Components V2](../standards/ComponentsV2.md) - UI component structure
+- [Menu System Architecture](../enablers/MenuSystemArchitecture.md) - Menu patterns
+- [Castlist Architecture](../03-features/CastlistArchitecture.md) - Tribes, castlists, and how members are resolved

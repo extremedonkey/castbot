@@ -20,6 +20,7 @@ function deriveApplicationStatus(app = {}, liveChannelName = '') {
   const voteCount = Object.keys(app.rankings || {}).length;
   if (/^✖️/.test(liveChannelName)) return { icon: '✖️', name: 'Withdrawn' };
   if (placementResponse === 'accepted') return { icon: '🎉', name: 'Accepted Placement' };
+  if (placementResponse === 'accepted_alternative') return { icon: '🎉', name: 'Accepted Placement (Alt)' };
   if (placementResponse === 'declined') return { icon: '🚫', name: 'Declined Placement' };
   if (castingStatus === 'cast')        return { icon: '✅', name: 'Cast' };
   if (castingStatus === 'alternative') return { icon: '🔄', name: 'Alternate' };
@@ -32,7 +33,7 @@ function deriveApplicationStatus(app = {}, liveChannelName = '') {
 describe('Status Engine — registry shape', () => {
   it('lists the committed rows in precedence order (withdrawn ▸ placement ▸ casting ▸ lifecycle)', () => {
     assert.deepEqual(STATUS_REGISTRY.map(r => r.id),
-      ['withdrawn', 'accepted', 'declined', 'cast', 'alternate', 'reject', 'complete', 'new']);
+      ['withdrawn', 'accepted', 'accepted_alt', 'declined', 'cast', 'alternate', 'reject', 'complete', 'new']);
   });
   it('does NOT include the deferred vote rows, nor an Undecided row (Reece: Undecided = Application Complete)', () => {
     const ids = STATUS_REGISTRY.map(r => r.id);
@@ -159,6 +160,9 @@ describe('Status Engine — parity with legacy deriveApplicationStatus', () => {
   const committed = [
     { app: {},                                                              chan: '✖️c' },  // Withdrawn
     { app: { placementResponse: 'accepted', castingStatus: 'cast', completedAt: 'x' }, chan: '✅c' }, // Accepted
+    // An alternate who ACCEPTED: placementResponse must outrank castingStatus:'alternative' in BOTH
+    // derivers, else it reads '🔄 Alternate' (the latent bug this row fixes).
+    { app: { placementResponse: 'accepted_alternative', castingStatus: 'alternative', completedAt: 'x' }, chan: '✅c' },
     { app: { placementResponse: 'declined' },                               chan: '❌c' },  // Declined
     { app: { castingStatus: 'cast', completedAt: 'x' },                     chan: '☑️c' },  // Cast
     { app: { castingStatus: 'alternative' },                                chan: '📝c' },  // Alternate

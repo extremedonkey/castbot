@@ -36,8 +36,12 @@ export const STATUS_REGISTRY = [
   { id: 'withdrawn', stage: 0, emoji: '✖️', label: 'Withdrawn',            test: (s) => s.withdrawn },
 
   // Stage 2 placement response (the PLAYER committed) — outranks the admin's casting decision.
-  { id: 'accepted',  stage: 2, emoji: '🎉', label: 'Accepted Placement',  test: (s) => s.placementResponse === 'accepted' },
-  { id: 'declined',  stage: 2, emoji: '🚫', label: 'Declined Placement',  test: (s) => s.placementResponse === 'declined' },
+  { id: 'accepted',     stage: 2, emoji: '🎉', label: 'Accepted Placement',       test: (s) => s.placementResponse === 'accepted' },
+  // Accepting an ALTERNATE offer is a distinct commitment from a main-cast accept (RaP 0902,
+  // written at app.js:5673). Without this row it fell through to castingStatus and an alternate
+  // who ACCEPTED read as '🔄 Alternate'. Mirrored in deriveApplicationStatus (castRankingManager.js).
+  { id: 'accepted_alt', stage: 2, emoji: '🎉', label: 'Accepted Placement (Alt)', test: (s) => s.placementResponse === 'accepted_alternative' },
+  { id: 'declined',     stage: 2, emoji: '🚫', label: 'Declined Placement',       test: (s) => s.placementResponse === 'declined' },
 
   // Stage 1 casting decision (the ADMIN committed). Mutually exclusive — one `castingStatus` field, so the
   // order among these is cosmetic; it only matters relative to the other stages. (Tentative removed — RaP 0902:

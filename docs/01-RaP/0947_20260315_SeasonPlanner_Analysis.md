@@ -2,7 +2,7 @@
 
 > **RaP #0947** | 2026-03-15
 > **Status**: Specification — ready to build
-> **Related**: [SeasonPlannerUIPrototype.md](../ui/SeasonPlannerUIPrototype.md) (working mockup), [SeasonLifecycle.md](../concepts/SeasonLifecycle.md), [SeasonAppBuilder.md](../03-features/SeasonAppBuilder.md)
+> **Related**: [SeasonPlannerUIPrototype.md](../ui/SeasonPlannerUIPrototype.md) (working mockup), [SurvivorContext.md](../concepts/SurvivorContext.md), [SeasonAppBuilder.md](../03-features/SeasonAppBuilder.md)
 > **Mockup**: `selectStressTest.js` | Button: `reeces_season_planner_mockup` in Reece's Stuff
 
 ---

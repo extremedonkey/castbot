@@ -213,7 +213,9 @@ async function ensureCompletionQuestion(config) {
   return true;
 }
 
-async function buildQuestionManagementUI(config, configId, currentPage = 0) {
+// `userId` (optional) only gates the hidden Channels tab in the shared nav row — omitting it
+// simply renders the classic 4 tabs.
+async function buildQuestionManagementUI(config, configId, currentPage = 0, userId = null) {
   console.log(`🔧 DEBUG: buildQuestionManagementUI called with configId: ${configId}, currentPage: ${currentPage}`);
 
   // Validate required parameters
@@ -254,7 +256,7 @@ async function buildQuestionManagementUI(config, configId, currentPage = 0) {
   // Shared Season Manager header + active-tab nav row (current view = Apps, shaded blue)
   const { buildSeasonNavRow, seasonManagerHeader } = await import('./seasonSelector.js');
   refreshedComponents.push(seasonManagerHeader('apps', config.seasonName));
-  refreshedComponents.push(buildSeasonNavRow(configId, 'apps'));
+  refreshedComponents.push(buildSeasonNavRow(configId, 'apps', userId));
 
   refreshedComponents.push({
     type: 10,
@@ -518,8 +520,8 @@ async function showDncQuestion(config, channelId, questionIndex) {
   return { flags: (1 << 15), components: [container] };
 }
 
-async function refreshQuestionManagementUI(res, config, configId, currentPage = 0) {
-  const responseData = await buildQuestionManagementUI(config, configId, currentPage);
+async function refreshQuestionManagementUI(res, config, configId, currentPage = 0, userId = null) {
+  const responseData = await buildQuestionManagementUI(config, configId, currentPage, userId);
 
   return res.send({
     type: InteractionResponseType.UPDATE_MESSAGE,
@@ -8611,7 +8613,7 @@ To fix this:
 
           // Default to the Apps (question management) view — more popular and works without planner data.
           // The planner is one click away via the 📅 Planner cross-link in that view.
-          return { type: IRT.UPDATE_MESSAGE, data: await buildQuestionManagementUI(config, selectedValue, 0) };
+          return { type: IRT.UPDATE_MESSAGE, data: await buildQuestionManagementUI(config, selectedValue, 0, context.userId) };
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_force_setup_')) {
@@ -8647,7 +8649,7 @@ To fix this:
           const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId];
           if (!seasonRounds) return { content: '❌ No planner data found' };
           const startDate = new Date(config.estimatedStartDate);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges, null, context.userId);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_edit_')) {
@@ -8803,7 +8805,7 @@ To fix this:
           const playerData = await loadPlayerData();
           const config = playerData[context.guildId]?.applicationConfigs?.[configId];
           if (!config) return { content: '❌ Season not found' };
-          return await buildQuestionManagementUI(config, configId, 0);
+          return await buildQuestionManagementUI(config, configId, 0, context.userId);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('apps_planner_')) {
@@ -8824,7 +8826,7 @@ To fix this:
           // so pass an empty rounds object and the config for per-field missing-estimate detection.
           const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId] || {};
           const startDate = new Date(config.estimatedStartDate);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, config);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, config, context.userId);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_ranking_')) {
@@ -8870,7 +8872,7 @@ To fix this:
           console.log(`📋 Season Planner: Posted schedule for "${seasonName}"`);
 
           const { buildPlannerView } = await import('./seasonPlanner.js');
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, null, context.userId);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_calendar_')) {
@@ -8904,7 +8906,7 @@ To fix this:
           console.log(`📅 Season Planner: Posted calendar for "${seasonName}"`);
 
           const { buildPlannerView } = await import('./seasonPlanner.js');
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, null, context.userId);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('planner_tribes_')) {
@@ -11105,7 +11107,7 @@ To fix this:
           const playerData = await loadPlayerData();
           const config = playerData[context.guildId]?.applicationConfigs?.[qConfigId];
           if (!config) return { content: '❌ Season not found' };
-          return await buildQuestionManagementUI(config, qConfigId, 0);
+          return await buildQuestionManagementUI(config, qConfigId, 0, context.userId);
         }
       })(req, res, client);
 
@@ -11192,7 +11194,7 @@ To fix this:
           const playerData = await loadPlayerData();
           const config = playerData[context.guildId]?.applicationConfigs?.[qConfigId];
           if (!config) return { content: '❌ Season not found' };
-          return await buildQuestionManagementUI(config, qConfigId, 0);
+          return await buildQuestionManagementUI(config, qConfigId, 0, context.userId);
         }
       })(req, res, client);
 
@@ -11266,7 +11268,7 @@ To fix this:
             const regularCount = config.questions.filter(q => q.questionType !== 'completion').length;
             const regularIdx = config.questions.filter((q, idx) => idx <= (selectedValue === 'move_down' ? swapIndex : questionIndex) && q.questionType !== 'completion').length - 1;
             const currentPage = Math.floor(Math.max(0, regularIdx) / QUESTIONS_PER_PAGE);
-            return await buildQuestionManagementUI(config, qConfigId, currentPage);
+            return await buildQuestionManagementUI(config, qConfigId, currentPage, context.userId);
           }
 
           if (selectedValue === 'delete') {
@@ -11275,7 +11277,7 @@ To fix this:
             console.log(`🗑️ Deleted question ${questionIndex} from ${qConfigId}: "${deleted[0]?.questionTitle}"`);
             const regularCount = config.questions.filter(q => q.questionType !== 'completion').length;
             const currentPage = Math.min(Math.floor(questionIndex / QUESTIONS_PER_PAGE), Math.max(0, Math.ceil(regularCount / QUESTIONS_PER_PAGE) - 1));
-            return await buildQuestionManagementUI(config, qConfigId, currentPage);
+            return await buildQuestionManagementUI(config, qConfigId, currentPage, context.userId);
           }
 
           if (selectedValue === 'duplicate') {
@@ -11293,13 +11295,13 @@ To fix this:
             await savePlayerData(playerData);
             console.log(`📋 Duplicated question ${questionIndex} in ${qConfigId}: "${original.questionTitle}"`);
             const currentPage = Math.floor((questionIndex + 1) / QUESTIONS_PER_PAGE);
-            return await buildQuestionManagementUI(config, qConfigId, currentPage);
+            return await buildQuestionManagementUI(config, qConfigId, currentPage, context.userId);
           }
 
           // summary, divider, or unknown — re-render same page
           const regularIdx = config.questions.filter((q, idx) => idx <= questionIndex && q.questionType !== 'completion').length - 1;
           const currentPage = Math.floor(Math.max(0, regularIdx) / QUESTIONS_PER_PAGE);
-          return await buildQuestionManagementUI(config, qConfigId, currentPage);
+          return await buildQuestionManagementUI(config, qConfigId, currentPage, context.userId);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('question_add_') && req.body.data.values?.[0] === 'dnc') {
@@ -11343,7 +11345,7 @@ To fix this:
           // on the last page. Hardcoding 0 made it invisible until a later action (the "lag").
           const dncRegularCount = config.questions.filter(q => q.questionType !== 'completion').length;
           const dncPage = Math.floor(Math.max(0, dncRegularCount - 1) / QUESTIONS_PER_PAGE);
-          return await buildQuestionManagementUI(config, qConfigId, dncPage);
+          return await buildQuestionManagementUI(config, qConfigId, dncPage, context.userId);
         }
       })(req, res, client);
 
@@ -11423,7 +11425,7 @@ To fix this:
           
           console.log(`✅ SUCCESS: season_question_up - question reordered`);
           // Refresh the UI
-          return refreshQuestionManagementUI(res, config, configId, currentPage);
+          return refreshQuestionManagementUI(res, config, configId, currentPage, context.userId);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('season_question_down_')) {
@@ -11470,7 +11472,7 @@ To fix this:
           
           console.log(`✅ SUCCESS: season_question_down - question reordered`);
           // Refresh the UI
-          return refreshQuestionManagementUI(res, config, configId, currentPage);
+          return refreshQuestionManagementUI(res, config, configId, currentPage, context.userId);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('season_question_edit_')) {
@@ -11604,7 +11606,7 @@ To fix this:
           
           console.log(`✅ SUCCESS: season_question_delete - question deleted, navigating to page ${validPage}`);
           // Refresh the UI with the correct page
-          return refreshQuestionManagementUI(res, config, configId, validPage);
+          return refreshQuestionManagementUI(res, config, configId, validPage, context.userId);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('season_delete_confirm_')) {
@@ -11722,7 +11724,7 @@ To fix this:
           
           console.log(`✅ SUCCESS: season_delete_cancel - returning to manage questions for ${config.seasonName}`);
           // Return to the manage questions interface (use helper for ButtonHandlerFactory)
-          return await buildQuestionManagementUI(config, configId, 1);
+          return await buildQuestionManagementUI(config, configId, 1, context.userId);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('season_edit_info_')) {
@@ -11734,11 +11736,12 @@ To fix this:
         handler: async (context, req, res) => {
           console.log(`✏️ START: season_edit_info - user ${context.userId}`);
 
-          // Extract origin view + configId: season_edit_info_{mode}_{configId} (mode ∈ apps|planner|ranking|marooning).
+          // Extract origin view + configId: season_edit_info_{mode}_{configId}
+          // (mode ∈ apps|planner|ranking|marooning|channels).
           // Legacy buttons without a mode prefix fall back to 'apps'. A configId always starts with
           // "config_", so it can never be mistaken for a mode token.
           const rawEdit = context.customId.replace('season_edit_info_', '');
-          const editModeMatch = rawEdit.match(/^(apps|planner|ranking|marooning)_(.+)$/);
+          const editModeMatch = rawEdit.match(/^(apps|planner|ranking|marooning|channels)_(.+)$/);
           const originMode = editModeMatch ? editModeMatch[1] : 'apps';
           const configId = editModeMatch ? editModeMatch[2] : rawEdit;
 
@@ -11874,7 +11877,7 @@ To fix this:
           
           const newPage = Math.max(0, currentPage - 1);
           console.log(`✅ SUCCESS: season_nav_prev - navigated to page ${newPage}`);
-          return refreshQuestionManagementUI(res, config, configId, newPage);
+          return refreshQuestionManagementUI(res, config, configId, newPage, context.userId);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('season_nav_next_')) {
@@ -11910,7 +11913,7 @@ To fix this:
           const totalPages = Math.ceil(regularCount / questionsPerPage);
           const newPage = Math.min(totalPages - 1, currentPage + 1);
           console.log(`✅ SUCCESS: season_nav_next - navigated to page ${newPage}`);
-          return refreshQuestionManagementUI(res, config, configId, newPage);
+          return refreshQuestionManagementUI(res, config, configId, newPage, context.userId);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('season_new_question_')) {
@@ -13796,10 +13799,26 @@ To fix this:
           const playerData = await loadPlayerData();
           const seasonName = playerData[guildId]?.applicationConfigs?.[configId]?.seasonName || `Season ${configId}`;
           const { buildMarooningView } = await import('./castRankingManager.js');
-          const uiResponse = await buildMarooningView({ configId, guildId, playerData, seasonName, guild });
+          const uiResponse = await buildMarooningView({ configId, guildId, playerData, seasonName, guild, userId });
 
           console.log(`✅ SUCCESS: season_marooning - rendered via buildMarooningView`);
           return uiResponse;
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('season_channels_') || custom_id.startsWith('channels_')) {
+      // 🔐 Channel Administration — hidden Channels tab. Bodies live in src/channels/channelsRouter.js.
+      return ButtonHandlerFactory.create({
+        id: 'channels_route',
+        // Action buttons open a modal (a deferred ACK can't be followed by a MODAL); tab/cancel/exec
+        // update the message and may run for minutes.
+        ...(/^channels_(roles|playerroles|confessionals|subs|1on1s)_/.test(custom_id)
+          ? { requiresModal: true, ephemeral: true }
+          : { deferred: true, updateMessage: true }),
+        handler: async (context) => {
+          // The real gate — the nav row only HIDES the tab; `restrictedUser` enforces nothing (RaP 0900).
+          const CH = await import('./src/channels/channelsRouter.js');
+          if (context.userId !== '391415444084490240' && context.userId !== '1086246253819613274') return CH.channelsDenied();
+          return await CH.routeChannelsButton({ context, req });
         }
       })(req, res, client);
     } else if (custom_id.startsWith('marooning_draft_tribes_')) {
@@ -28656,7 +28675,7 @@ Your server is now ready for Tycoons gameplay!`;
               
               // Use the updated question management UI function (start at page 0)
               // Call the function but don't return its result since it sends the response directly
-              await refreshQuestionManagementUI(res, config, configId, 0);
+              await refreshQuestionManagementUI(res, config, configId, 0, context.userId);
               // Return undefined to indicate the response was already sent
               return;
             }
@@ -40170,6 +40189,20 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
 
+    } else if (custom_id.startsWith('channels_') && custom_id.includes('_modal_')) {
+      // 🔐 Channel Administration modal submits — PLAN only (each returns a confirm screen; nothing
+      // touches Discord until channels_exec_*). Deferred: the preflight snapshots the whole guild.
+      return ButtonHandlerFactory.create({
+        id: 'channels_modal_submit',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          const CH = await import('./src/channels/channelsRouter.js');
+          if (context.userId !== '391415444084490240' && context.userId !== '1086246253819613274') return CH.channelsDenied();
+          return await CH.routeChannelsModalSubmit({ context, components, data });
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'castbot_logs_modal') {
       // CastBot Logs config modal submit (Reece only) — deferred: cache refresh can exceed 3s
       return ButtonHandlerFactory.create({
@@ -40526,7 +40559,7 @@ Your server is now ready for Tycoons gameplay!`;
           const startDate = new Date(config.estimatedStartDate);
           const roundNo = round.seasonRoundNo;
           const page = Math.floor((roundNo - 1) / 10);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges, null, context.userId);
         }
       })(req, res, client);
 
@@ -40639,7 +40672,7 @@ Your server is now ready for Tycoons gameplay!`;
 
           const seasonRounds = playerData[context.guildId]?.seasonRounds?.[config.seasonId];
           const startDate = new Date(config.estimatedStartDate);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[context.guildId]?.challenges, null, context.userId);
         }
       })(req, res, client);
 
@@ -40689,7 +40722,7 @@ Your server is now ready for Tycoons gameplay!`;
             // both the name-only edit and the full edit through it (config drives per-field display).
             const seasonRounds = playerData[guildId]?.seasonRounds?.[config.seasonId] || {};
             const startDate = new Date(config.estimatedStartDate);
-            return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[guildId]?.challenges, config);
+            return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, 0, config.seasonIdeas, playerData[guildId]?.challenges, config, userId);
           }
 
           // CREATE — unified season creation (name-only allowed; rounds only if estimates supplied)
@@ -40700,7 +40733,7 @@ Your server is now ready for Tycoons gameplay!`;
           // Default to the Apps (question management) view for ALL new seasons — name-only or full.
           // Apps is the more widely-used feature and works without planner data; the Planner is one
           // click away via its cross-link and shows its own setup prompt when estimates are missing.
-          return await buildQuestionManagementUI(config, result.configId, 0);
+          return await buildQuestionManagementUI(config, result.configId, 0, context.userId);
         }
       })(req, res, client);
 
@@ -40741,7 +40774,7 @@ Your server is now ready for Tycoons gameplay!`;
           // Navigate to the page containing the edited round
           const roundNo = seasonRounds[roundId]?.seasonRoundNo || 1;
           const page = Math.floor((roundNo - 1) / 12);
-          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges);
+          return buildPlannerView(config.seasonName, seasonRounds, startDate, configId, page, config.seasonIdeas, playerData[context.guildId]?.challenges, null, context.userId);
         }
       })(req, res, client);
 
@@ -43337,7 +43370,7 @@ Your server is now ready for Tycoons gameplay!`;
         const seasonName = cfg.seasonName || `Season ${configId}`;
         const guild = await client.guilds.fetch(guildId).catch(() => null);
         const { buildMarooningView } = await import('./castRankingManager.js');
-        const view = await buildMarooningView({ configId, guildId, playerData, seasonName, guild });
+        const view = await buildMarooningView({ configId, guildId, playerData, seasonName, guild, userId: req.body.member.user.id });
         return updateDeferredResponse(token, { components: view.components });
       } catch (error) {
         console.error('[DRAFT TRIBES] Error saving draft:', error);
@@ -43454,7 +43487,9 @@ Your server is now ready for Tycoons gameplay!`;
           const fresh = await loadPlayerData();
           const seasonName = fresh[guildId]?.applicationConfigs?.[marooningConfigId]?.seasonName || `Season ${marooningConfigId}`;
           const { buildMarooningView } = await import('./castRankingManager.js');
-          const view = await buildMarooningView({ configId: marooningConfigId, guildId, playerData: fresh, seasonName, guild });
+          // NOTE: `userId` here must be the INVOKING admin — not the loop variable of the same
+          // name used above when assigning selected members to draft tribes.
+          const view = await buildMarooningView({ configId: marooningConfigId, guildId, playerData: fresh, seasonName, guild, userId: req.body.member.user.id });
           await updateDeferredResponse(token, { components: view.components });
           return null;
         }
@@ -43870,28 +43905,39 @@ Your server is now ready for Tycoons gameplay!`;
 
           // Context-aware refresh: webhook-update the SAME view the modal was launched from, so the
           // user watches that view repopulate (e.g. the Planner gains its round string selects).
+          // All non-apps tabs build a Components V2 view and send it through ONE exit below —
+          // previously each tab had its own near-identical res.send (4 copies of the same shape).
+          const editUserId = req.body.member.user.id;
+          let originView = null;
+
           if (originMode === 'planner') {
             const { buildPlannerView } = await import('./seasonPlanner.js');
             const seasonRounds = fresh[guildId]?.seasonRounds?.[freshConfig.seasonId] || {};
             const startDate = new Date(freshConfig.estimatedStartDate);
-            const plannerView = buildPlannerView(freshConfig.seasonName, seasonRounds, startDate, configId, 0, freshConfig.seasonIdeas, fresh[guildId]?.challenges, freshConfig);
-            return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { flags: (1 << 15), ...plannerView } });
-          }
-          if (originMode === 'ranking') {
+            originView = buildPlannerView(freshConfig.seasonName, seasonRounds, startDate, configId, 0, freshConfig.seasonIdeas, fresh[guildId]?.challenges, freshConfig, editUserId);
+          } else if (originMode === 'ranking') {
             const { buildSeasonRankingResponse } = await import('./castRankingManager.js');
-            const rankingView = await buildSeasonRankingResponse({ guildId, userId: req.body.member.user.id, configId, client, playerData: fresh });
-            // Keep IS_COMPONENTS_V2; never carry EPHEMERAL into UPDATE_MESSAGE (inherits the source).
-            return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...rankingView, flags: (1 << 15) } });
-          }
-          if (originMode === 'marooning') {
+            originView = await buildSeasonRankingResponse({ guildId, userId: editUserId, configId, client, playerData: fresh });
+          } else if (originMode === 'marooning') {
             const { buildMarooningView } = await import('./castRankingManager.js');
             const guild = await client.guilds.fetch(guildId).catch(() => null);
-            const marooningView = await buildMarooningView({ configId, guildId, playerData: fresh, seasonName: freshConfig.seasonName, guild });
+            originView = await buildMarooningView({ configId, guildId, playerData: fresh, seasonName: freshConfig.seasonName, guild, userId: editUserId });
+          } else if (originMode === 'channels') {
+            // Hidden tab — re-check the whitelist here; the nav row only HIDES it (RaP 0900).
+            const { isChannelAdmin } = await import('./seasonSelector.js');
+            if (isChannelAdmin(editUserId)) {
+              const { buildChannelsView } = await import('./src/channels/channelsView.js');
+              const guild = await client.guilds.fetch(guildId).catch(() => null);
+              originView = await buildChannelsView({ configId, guildId, playerData: fresh, seasonName: freshConfig.seasonName, guild, userId: editUserId });
+            }
+          }
+
+          if (originView) {
             // Keep IS_COMPONENTS_V2; never carry EPHEMERAL into UPDATE_MESSAGE (inherits the source).
-            return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...marooningView, flags: (1 << 15) } });
+            return res.send({ type: InteractionResponseType.UPDATE_MESSAGE, data: { ...originView, flags: (1 << 15) } });
           }
           // apps (default) → question management UI
-          return refreshQuestionManagementUI(res, freshConfig, configId, 0);
+          return refreshQuestionManagementUI(res, freshConfig, configId, 0, editUserId);
 
         } else {
           // CREATE MODE: unified season creation (Name required + optional planner estimates).
@@ -43912,7 +43958,7 @@ Your server is now ready for Tycoons gameplay!`;
           const fresh = await loadPlayerData();
 
           // Land on the question management UI (Apps origin)
-          return refreshQuestionManagementUI(res, fresh[guildId].applicationConfigs[result.configId], result.configId, 0);
+          return refreshQuestionManagementUI(res, fresh[guildId].applicationConfigs[result.configId], result.configId, 0, req.body.member.user.id);
         }
 
       } catch (error) {
@@ -43995,7 +44041,7 @@ Your server is now ready for Tycoons gameplay!`;
         const newQuestionPage = Math.floor(Math.max(0, regularCount - 1) / questionsPerPage);
 
         // Refresh the UI on the page containing the new question
-        return refreshQuestionManagementUI(res, config, configId, newQuestionPage);
+        return refreshQuestionManagementUI(res, config, configId, newQuestionPage, req.body.member.user.id);
         
       } catch (error) {
         console.error('Error creating new question:', error);
@@ -44111,7 +44157,7 @@ Your server is now ready for Tycoons gameplay!`;
         const currentPage = Math.floor(questionIndex / questionsPerPage);
         
         // Refresh the UI
-        return refreshQuestionManagementUI(res, config, configId, currentPage);
+        return refreshQuestionManagementUI(res, config, configId, currentPage, req.body.member.user.id);
         
       } catch (error) {
         console.error('Error editing question:', error);

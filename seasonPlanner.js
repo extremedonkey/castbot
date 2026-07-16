@@ -439,9 +439,10 @@ export function buildPlannerSetupPrompt(missing) {
  * @param {string} configId - applicationConfigs key (for back navigation)
  * @param {number} page - 0-indexed page
  * @param {Object} [config] - applicationConfigs entry; enables per-field "set up planner" detection
+ * @param {string} [userId] - viewer; gates the hidden Channels tab in the shared nav row
  * @returns {Object} Components V2 response
  */
-export function buildPlannerView(seasonName, rounds, startDate, configId, page = 0, ideas = '', challenges = {}, config = null) {
+export function buildPlannerView(seasonName, rounds, startDate, configId, page = 0, ideas = '', challenges = {}, config = null, userId = null) {
   // Guard a missing/invalid start date so round dates never render as "undefined NaN undefined"
   if (!(startDate instanceof Date) || isNaN(startDate.getTime())) startDate = new Date();
   const roundIds = Object.keys(rounds).sort((a, b) => rounds[a].seasonRoundNo - rounds[b].seasonRoundNo);
@@ -505,7 +506,7 @@ export function buildPlannerView(seasonName, rounds, startDate, configId, page =
     components: [
       seasonManagerHeader('planner', seasonName),
       // Active-tab nav row — Apps · Planner · Casting · Marooning (current view = Planner, shaded blue)
-      buildSeasonNavRow(configId, 'planner'),
+      buildSeasonNavRow(configId, 'planner', userId),
       { type: 14 },
       { type: 10, content: `### \`\`\`📅 Manage Season Schedule${pageInfo}\`\`\`` },
       ...scheduleBody,

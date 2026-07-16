@@ -1419,5 +1419,5 @@ function sortByPlacements(members, tribeData, guildId) {
 - [CastlistArchitecture.md](CastlistArchitecture.md) - All 5 access methods
 - [CastlistV3-AddCastlistAnalysis.md](CastlistV3-AddCastlistAnalysis.md) - Legacy pattern analysis
 - [RaP/1000](../../01-RaP/1000_20250926_Castlist_Architecture_Refactor.md) - buildCastlist2ResponseData migration
-- [SeasonLifecycle.md](../concepts/SeasonLifecycle.md) - Active season concept & Admin/Host/Production terminology
+- [SurvivorContext.md](../concepts/SurvivorContext.md) - Active season concept & Admin/Host/Production terminology
 - [RaP/0997](../../01-RaP/0997_20250129_CastlistPlacementEditor_Analysis.md) - Placement Editor initial analysis

@@ -1148,7 +1148,7 @@ if (updates.seasonId !== undefined) {
 - **[seasonSelector.js](seasonSelector.js)** - Reusable season selection components
 - **[000-editCastlistSeason.md](000-editCastlistSeason.md)** - Season/castlist/placement architecture
 - **[CastlistV3.md](docs/03-features/CastlistV3.md)** - Complete castlist system architecture
-- **[SeasonLifecycle.md](docs/concepts/SeasonLifecycle.md)** - Season stages and management
+- **[SurvivorContext.md](docs/concepts/SurvivorContext.md)** - Season stages and management
 
 ---
 

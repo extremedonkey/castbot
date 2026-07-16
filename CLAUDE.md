@@ -499,13 +499,15 @@ When a feature is **deployed to production and working**, move/rename its doc in
 - **🦁 SAFARI** → [docs/03-features/Safari.md](docs/03-features/Safari.md) - Safari system overview
 - **📅 SEASON MANAGER** → [docs/03-features/SeasonManager.md](docs/03-features/SeasonManager.md) - Unified season admin (`season_manager`): Apps/Planner/Casting/Edit active-tab nav, search, Delete Mode. Old `season_management_menu` / `entity_select_seasons` / `reeces_season_planner_mockup` are DEPRECATED
 - **📝 SEASON APPLICATIONS** → [docs/03-features/SeasonAppBuilder.md](docs/03-features/SeasonAppBuilder.md)
+- **🔐 CHANNEL ADMINISTRATION** → [docs/03-features/ChannelAdministration.md](docs/03-features/ChannelAdministration.md) - Hidden Season Manager **Channels** tab (whitelisted user IDs only): confessionals, subs (incl. app→subs conversion), 1on1s, player roles, Trusted Spectator. The reusable bulk channel/role primitives live in [src/channels/](src/channels/) — `channelPlan.js` (pure: slugs, BigInt pair keys, overwrite merging, 500/50/250 ceiling preflight), `channelOps.js` (upsert/adopt-by-name), `channelJob.js` (pacing + streamed progress). **Use these for any new bulk channel work.**
+- **🏝️ SURVIVOR / ORG CONTEXT** → [docs/concepts/SurvivorContext.md](docs/concepts/SurvivorContext.md) - Domain glossary (confessionals · subs · 1on1s · alliances · player roles · trusted spectators) + season lifecycle + the `configId` vs `seasonId` distinction. Read this when a CastBot behaviour seems arbitrary. (Was `SeasonLifecycle.md`)
 - **🏆 CASTING** (formerly "Cast Ranking") → [docs/03-features/SeasonManager.md#-casting-the-former-ranking-tab](docs/03-features/SeasonManager.md#-casting-the-former-ranking-tab) - 1-5 scoring, Cast/Tentative/Don't Cast decisions, notes, applicant jump-select. Old `CastRanking.md` / `CastRankingNavigation.md` archived
 - **🚷 DNC OVERVIEW** → [docs/03-features/DNCOverview.md](docs/03-features/DNCOverview.md) - Global DNC conflict detection, mutual/one-way classification, season-wide view
 - **🐙 ENEMIES** → [docs/03-features/EnemySystem.md](docs/03-features/EnemySystem.md) - Enemy entities, fight_enemy outcome, combat resolution
 - **🧑‍🤝‍🧑 PLAYER MANAGEMENT** → [playerManagement.js](playerManagement.js) - Pronouns, timezones, age, vanity roles, attributes display
 - **🥇 CASTLIST V3** → [docs/03-features/CastlistV3.md](docs/03-features/CastlistV3.md) - Castlist system overhaul
 - **🏷️ VANITY ROLE SORT/DISPLAY** → [docs/03-features/VanityRoleSortDisplay.md](docs/03-features/VanityRoleSortDisplay.md) - Vanity role tier sorting (Season→Alpha→Numeric→Emoji→Other) for member ordering + in-card display
-- **📅 SEASONS** → [docs/concepts/SeasonLifecycle.md](docs/concepts/SeasonLifecycle.md) - Season lifecycle and integration
+- **📅 SEASONS** → [docs/concepts/SurvivorContext.md](docs/concepts/SurvivorContext.md) - Season lifecycle and integration
 
 - **❄️ SNOWFLAKE TIMER** → [docs/03-features/SnowflakeTimer.md](docs/03-features/SnowflakeTimer.md) - Snowflake timing, context menus, calculator. Core: [timerUtils.js](timerUtils.js). Design: [RaP 0925](docs/01-RaP/0925_20260403_SnowflakeTimer_Analysis.md)
 

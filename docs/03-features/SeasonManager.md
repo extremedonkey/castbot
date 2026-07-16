@@ -2,7 +2,7 @@
 
 **Status:** Active (shipped 2026-06-15/16)
 **Entry button:** `season_manager` (app.js:8488)
-**Related:** [SeasonAppBuilder](SeasonAppBuilder.md) · [SeasonLifecycle](../concepts/SeasonLifecycle.md) · [DNCOverview](DNCOverview.md) · RaP [0910 Unification](../01-RaP/0910_20260615_SeasonHubUnification_Analysis.md) · [0909 Search](../01-RaP/0909_20260615_SeasonSelectorSearch_Analysis.md) · [0908 Deletion](../01-RaP/0908_20260615_SeasonDeletion_Analysis.md)
+**Related:** [SeasonAppBuilder](SeasonAppBuilder.md) · [SeasonLifecycle](../concepts/SurvivorContext.md) · [DNCOverview](DNCOverview.md) · RaP [0910 Unification](../01-RaP/0910_20260615_SeasonHubUnification_Analysis.md) · [0909 Search](../01-RaP/0909_20260615_SeasonSelectorSearch_Analysis.md) · [0908 Deletion](../01-RaP/0908_20260615_SeasonDeletion_Analysis.md)
 
 > **Note (2026-06-21):** **Casting** is the current name for what used to be called "Cast Ranking" / the "Ranking" tab. The old standalone docs `CastRanking.md` + `CastRankingNavigation.md` were stale (Jan-2025 line numbers, a `createApplicantSelectOptions()` helper that no longer exists) and have been **archived** into `docs/archive/`; their accurate, code-validated content now lives in the [🏆 Casting](#-casting-the-former-ranking-tab) section below.
 

@@ -871,7 +871,7 @@ Tribes can theoretically belong to multiple castlists:
 - [Placements.md](Placements.md) - Placement editing system (modal submission patterns, virtual entity handling)
 
 **Season Documentation:**
-- [SeasonLifecycle.md](../concepts/SeasonLifecycle.md) - Active season system and lifecycle
+- [SurvivorContext.md](../concepts/SurvivorContext.md) - Active season system and lifecycle
 - [SeasonAppBuilder.md](SeasonAppBuilder.md) - Season application configuration
 
 **Timezone Documentation:**

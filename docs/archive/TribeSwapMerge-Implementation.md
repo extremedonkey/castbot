@@ -718,7 +718,7 @@ async function postCompletionMessage(channel, playerCount, tribeCount) {
 
 ## Related Documentation
 
-- [Season Lifecycle](../concepts/SeasonLifecycle.md) - Season and tribe management concepts
+- [Season Lifecycle](../concepts/SurvivorContext.md) - Season and tribe management concepts
 - [TribeManager](TribeManager.md) - Original tribe management design (not implemented yet)
 - [Components V2](../standards/ComponentsV2.md) - Modal and component structure
 - [Castlist V3](../features/CastlistV3.md) - Castlist system architecture

@@ -44,7 +44,7 @@ await savePlayerData(playerData); // savePlayerData → atomicSave internally
 | 7 | Application **category** (`config.categoryId`) | Discord | Resource | ❌ | Orphaned empty category |
 | 8 | **Production role** (`config.productionRole`) | Discord | Resource | ❌ | Orphaned role (may be shared/reused) |
 | 9 | Posted **"Apply" button message** (`config.targetChannelId` + msg id) | Discord | Resource | ❌ | **Live button to a dead season** → player-facing breakage. Note: msg id may not be stored today |
-| 10 | `activeSeason` pointer (if implemented) | playerData | Data (pointer) | ❌ | Dangling pointer. *Code search found none — likely doc-only in SeasonLifecycle.md; verify* |
+| 10 | `activeSeason` pointer (if implemented) | playerData | Data (pointer) | ❌ | Dangling pointer. *Code search found none — likely doc-only in SurvivorContext.md; verify* |
 | 11 | `placements` keyed by seasonId (feeds castlist #5) | playerData | Data | ❓ | Verify structure/existence |
 | — | safariContent (items/stores/etc.) | safariContent.json | — | n/a | **No season references — safari is independent** ✓ |
 

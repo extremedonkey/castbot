@@ -22,8 +22,9 @@ import { loadPlayerData } from './storage.js';
  * the active-tab nav row so it's identical chrome to the populated view (Ranking tab shaded blue).
  * @param {string} seasonName
  * @param {string} configId
+ * @param {string} [userId] - viewer; gates the hidden Channels tab in the nav row
  */
-export async function buildRankingEmptyState(seasonName, configId) {
+export async function buildRankingEmptyState(seasonName, configId, userId = null) {
   const { buildSeasonNavRow, seasonManagerHeader, buildSeasonBottomRow } = await import('./seasonSelector.js');
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2 (factory adds ephemeral / strips for updateMessage)
@@ -31,7 +32,7 @@ export async function buildRankingEmptyState(seasonName, configId) {
       type: 17,
       components: [
         seasonManagerHeader('ranking', seasonName),
-        buildSeasonNavRow(configId, 'ranking'),
+        buildSeasonNavRow(configId, 'ranking', userId),
         { type: 14 },
         { type: 10, content: `📭 **No applications yet** for this season.\n-# Applicants appear here once they apply via this season's application button.` },
         { type: 14 },
@@ -65,7 +66,7 @@ export async function buildSeasonRankingResponse({ guildId, userId, configId, cl
   const allApplications = await getApplicationsForSeason(guildId, configId);
 
   if (allApplications.length === 0) {
-    return await buildRankingEmptyState(seasonName, configId);
+    return await buildRankingEmptyState(seasonName, configId, userId);
   }
 
   const currentApp = allApplications[0];
@@ -128,6 +129,8 @@ export function deriveApplicationStatus(app = {}, liveChannelName = '') {
   if (/^✖️/.test(liveChannelName)) return { icon: '✖️', name: 'Withdrawn' };
 
   if (placementResponse === 'accepted') return { icon: '🎉', name: 'Accepted Placement' };
+  // Kept byte-identical to STATUS_REGISTRY's accepted_alt row (playerStatus.js) — the two must agree.
+  if (placementResponse === 'accepted_alternative') return { icon: '🎉', name: 'Accepted Placement (Alt)' };
   if (placementResponse === 'declined') return { icon: '🚫', name: 'Declined Placement' };
   if (castingStatus === 'cast')        return { icon: '✅', name: 'Cast' };
   if (castingStatus === 'alternative') return { icon: '🔄', name: 'Alternate' };
@@ -278,7 +281,7 @@ export async function generateSeasonAppRankingUI({
   const containerComponents = [
     seasonManagerHeader('ranking', seasonName),
     // Active-tab nav row — Apps · Planner · Casting · Marooning (current view = Casting, shaded blue)
-    buildSeasonNavRow(configId, 'ranking'),
+    buildSeasonNavRow(configId, 'ranking', userId),
   ];
 
   // Applicant jump-select — ALWAYS rendered (state-aware placeholder). Discord requires ≥1 option,
@@ -995,10 +998,11 @@ export async function generateDncOverviewUI({ guildId, configId, guild }) {
  * 'marooning') + the casting-status breakdown + the shared [← Seasons][Edit] bottom row. LEAN chrome,
  * consistent with the Apps/Planner/Casting tabs. Reached via season_marooning_{configId} (and the legacy
  * ranking_view_all_scores_* which now delegates here). Pure render — caller supplies playerData + seasonName.
- * @param {Object} p - { configId, guildId, playerData, seasonName }
+ * @param {Object} p - { configId, guildId, playerData, seasonName, guild, userId }
+ * @param {string} [p.userId] - viewer; gates the hidden Channels tab in the nav row
  * @returns {Object} { components: [container] } (updateMessage pattern; caller adds ephemeral flags if needed)
  */
-export async function buildMarooningView({ configId, guildId, playerData, seasonName, guild }) {
+export async function buildMarooningView({ configId, guildId, playerData, seasonName, guild, userId = null }) {
   const { getApplicationsForSeason, getAllApplicationsFromData } = await import('./storage.js');
   const { buildSeasonNavRow, seasonManagerHeader, buildSeasonBottomRow } = await import('./seasonSelector.js');
 
@@ -1104,7 +1108,7 @@ export async function buildMarooningView({ configId, guildId, playerData, season
     accent_color: 0x9B59B6, // Purple — matches the casting interface
     components: [
       seasonManagerHeader('marooning', seasonName),
-      buildSeasonNavRow(configId, 'marooning'),
+      buildSeasonNavRow(configId, 'marooning', userId),
       { type: 14 },
       { type: 10, content: '### ```🏕️ Tribes```' },
       { type: 1, components: [
@@ -1223,7 +1227,7 @@ export async function handleRankingNavigation({
     const seasonName = extractedConfigId
       ? (playerData[guildId]?.applicationConfigs?.[extractedConfigId]?.seasonName || `Season ${extractedConfigId}`)
       : 'Current Season';
-    const view = await buildMarooningView({ configId: extractedConfigId, guildId, playerData, seasonName, guild });
+    const view = await buildMarooningView({ configId: extractedConfigId, guildId, playerData, seasonName, guild, userId });
     return ephemeral
       ? { flags: (1 << 15) | (1 << 6), components: view.components } // IS_COMPONENTS_V2 + EPHEMERAL
       : { components: view.components }; // updateMessage pattern

@@ -8,6 +8,17 @@
 
 import { StringSelectMenuBuilder } from 'discord.js';
 import { loadPlayerData } from './storage.js';
+import { CHANNEL_ADMIN_USER_IDS } from './src/channels/channelAdminConfig.js';
+
+/**
+ * Whether a viewer may see/use the hidden Channels tab.
+ * Shared by the display gate here and the handler guards in app.js so the two cannot drift.
+ * @param {string} [userId]
+ * @returns {boolean}
+ */
+export function isChannelAdmin(userId) {
+  return !!userId && CHANNEL_ADMIN_USER_IDS.includes(String(userId));
+}
 
 /**
  * Get emoji for season stage
@@ -82,25 +93,34 @@ export function seasonConfigIndicators(configId, season, guildData) {
  * Primary (blue, still clickable — reloads), the rest Secondary (grey). All four are peer TABS (views).
  * Edit is NOT here — it's an action, living in the shared bottom row (buildSeasonBottomRow) next to
  * ← Seasons. Adopts the Player Manager active-button convention. Single source of truth so it can't drift.
+ * A FIFTH tab — 🔐 Channels — appears only for CHANNEL_ADMIN_USER_IDS while Channel Administration
+ * is being built out. That makes the row exactly 5 buttons, Discord's HARD per-ActionRow limit:
+ * there is no room for a sixth tab (Channels is expected to absorb Marooning later). `userId` is
+ * optional and omitting it yields the classic 4 tabs, so every existing caller/test is unaffected.
+ * This is DISPLAY only — the handlers re-check (menuBuilder.js:76 convention), because
+ * BUTTON_REGISTRY's `restrictedUser` enforces nothing (RaP 0900).
+ *
  * @param {string} configId
- * @param {'apps'|'planner'|'ranking'|'marooning'} active
+ * @param {'apps'|'planner'|'ranking'|'marooning'|'channels'} active
+ * @param {string} [userId] - viewer; gates the hidden Channels tab
  * @returns {Object} a type-1 ActionRow
  */
-export function buildSeasonNavRow(configId, active) {
+export function buildSeasonNavRow(configId, active, userId = null) {
   const tab = (key, customId, label, emoji) => ({
     type: 2, custom_id: customId, label,
     style: active === key ? 1 : 2, // Primary (blue) when this is the current view, else Secondary (grey)
     emoji: { name: emoji }
   });
-  return {
-    type: 1,
-    components: [
-      tab('apps', `planner_apps_${configId}`, 'Apps', '📝'),
-      tab('planner', `apps_planner_${configId}`, 'Planner', '📅'),
-      tab('ranking', `season_app_ranking_${configId}`, 'Casting', '🏆'),
-      tab('marooning', `season_marooning_${configId}`, 'Marooning', '🚣')
-    ]
-  };
+  const tabs = [
+    tab('apps', `planner_apps_${configId}`, 'Apps', '📝'),
+    tab('planner', `apps_planner_${configId}`, 'Planner', '📅'),
+    tab('ranking', `season_app_ranking_${configId}`, 'Casting', '🏆'),
+    tab('marooning', `season_marooning_${configId}`, 'Marooning', '🚣')
+  ];
+  if (isChannelAdmin(userId)) {
+    tabs.push(tab('channels', `season_channels_${configId}`, 'Channels', '🔐'));
+  }
+  return { type: 1, components: tabs };
 }
 
 /**
@@ -110,7 +130,7 @@ export function buildSeasonNavRow(configId, active) {
  * CURRENT view as its origin (`season_edit_info_${active}_${configId}`) so the modal submit refreshes THIS
  * tab. `extraButtons` is for per-tab pagination (◀ ▶) which follows Edit. Both actions are Secondary (grey).
  * @param {string} configId
- * @param {'apps'|'planner'|'ranking'|'marooning'} active - the current tab (Edit returns here after submit)
+ * @param {'apps'|'planner'|'ranking'|'marooning'|'channels'} active - the current tab (Edit returns here after submit)
  * @param {Array} [extraButtons=[]] - optional trailing buttons (e.g. pagination), max 3 to stay ≤5/row
  * @returns {Object} a type-1 ActionRow
  */
@@ -131,7 +151,7 @@ export function buildSeasonBottomRow(configId, active, extraButtons = []) {
  *   • Line 1 = the per-tab title (the ONLY part that differs between tabs; emoji matches the tab's nav button)
  *   • Line 2 = the season name, ALWAYS the same format everywhere (`> ### ${seasonName}`)
  * Mirrors how buildSeasonNavRow centralizes the nav row.
- * @param {'apps'|'planner'|'ranking'|'marooning'} active
+ * @param {'apps'|'planner'|'ranking'|'marooning'|'channels'} active
  * @param {string} seasonName - applicationConfigs[configId].seasonName (carries any "S14:" prefix itself)
  * @returns {Object} a type-10 Text Display
  */
@@ -140,7 +160,8 @@ export function seasonManagerHeader(active, seasonName) {
     apps: '📝 Season Applications',
     planner: '📅 Season Planner',
     ranking: '🏆 Casting',
-    marooning: '🚣 Marooning'
+    marooning: '🚣 Marooning',
+    channels: '🔐 Channels'
   };
   const title = titles[active] || '📋 Season Manager';
   return { type: 10, content: `## ${title}\n> ### ${seasonName}` };

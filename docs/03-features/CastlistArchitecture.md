@@ -274,7 +274,7 @@ export function sortCastlistMembers(members, tribeData, options = {}) {
 The active season provides default context for all castlist operations:
 
 ```javascript
-// From SeasonLifecycle.md
+// From SurvivorContext.md
 {
   "activeSeason": {
     "id": "config_1751549410029_391415444084490240",
@@ -286,7 +286,7 @@ The active season provides default context for all castlist operations:
 
 **Impact**: Default castlist automatically tied to active season
 **Display**: Production Menu header shows active season name
-**Documentation**: [SeasonLifecycle.md](../concepts/SeasonLifecycle.md)
+**Documentation**: [SurvivorContext.md](../concepts/SurvivorContext.md)
 
 ### Tribe Swap/Merge Operations
 
@@ -418,7 +418,7 @@ gate = isAdmin && castlistIdentifier === 'default' && !hasCompletedSetup(playerD
 - [CompactCastlist.md](CompactCastlist.md) - Sharp-based PNG renderer (single-image castlist)
 - [Placements.md](Placements.md) - Placement editor system
 - [CastlistNavigationParsing.md](CastlistNavigationParsing.md) - Button parsing details
-- [SeasonLifecycle.md](../concepts/SeasonLifecycle.md) - Active season context
+- [SurvivorContext.md](../concepts/SurvivorContext.md) - Active season context
 - [TribeSwapMerge.md](TribeSwapMerge.md) - Tribe reorganization
 
 ### Technical Infrastructure

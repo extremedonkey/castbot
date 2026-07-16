@@ -3,7 +3,7 @@
 **Status:** SHIPPED (2026-06-15/16) — all three layers. Layer A (unified selector) + Layer B (unified create/edit modal) + Layer C (the Season Hub: one `season_manager` entry, the four-view active-tab nav via `buildSeasonNavRow`, search, and Delete Mode). Documented as a feature in [SeasonManager](../03-features/SeasonManager.md).
 **Date:** 2026-06-15
 **Author:** Reece + Claude
-**Related:** [Season Manager feature](../03-features/SeasonManager.md) · [Season Planner RaP 0947](0947_20260315_SeasonPlanner_Analysis.md) · [Season Apps String Select RaP 0939](0939_20260320_SeasonAppsStringSelect_Analysis.md) · [SeasonAppBuilder](../03-features/SeasonAppBuilder.md) · [SeasonLifecycle](../concepts/SeasonLifecycle.md)
+**Related:** [Season Manager feature](../03-features/SeasonManager.md) · [Season Planner RaP 0947](0947_20260315_SeasonPlanner_Analysis.md) · [Season Apps String Select RaP 0939](0939_20260320_SeasonAppsStringSelect_Analysis.md) · [SeasonAppBuilder](../03-features/SeasonAppBuilder.md) · [SeasonLifecycle](../concepts/SurvivorContext.md)
 
 ---
 
@@ -33,7 +33,7 @@ The goal: **one selector → one lean create modal → one "Season Hub"** that p
 
 ## 🏛️ Historical Context (the organic-growth story)
 
-`seasonSelector.js` (`createSeasonSelector()`) was deliberately built as *the* reusable season picker (documented in SeasonLifecycle.md). When the Planner was prototyped (RaP 0947, "parallel build — don't touch the Apps flow"), it **forked** the selector into `buildPlannerSelector()` and added a *second* create modal rather than extend the existing one. That was the right call for an isolated prototype — but it left two of everything. This RaP is the "merge back" step RaP 0947 anticipated (its Phase 3 "Production Menu merge").
+`seasonSelector.js` (`createSeasonSelector()`) was deliberately built as *the* reusable season picker (documented in SurvivorContext.md). When the Planner was prototyped (RaP 0947, "parallel build — don't touch the Apps flow"), it **forked** the selector into `buildPlannerSelector()` and added a *second* create modal rather than extend the existing one. That was the right call for an isolated prototype — but it left two of everything. This RaP is the "merge back" step RaP 0947 anticipated (its Phase 3 "Production Menu merge").
 
 ## 📊 Current State (RED = duplicated/divergent)
 

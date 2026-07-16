@@ -307,7 +307,7 @@ Production Menu → Tools → Pronouns & Timezones Menu
 ```
 
 ### 2025-01-19: Safari Feature Reorganization
-**Rationale**: Safari features (Stores, Items, Rounds, Currency) can be used independently for Challenges and Idol Hunts without full Safari implementation (see [SeasonLifecycle.md](../concepts/SeasonLifecycle.md)).
+**Rationale**: Safari features (Stores, Items, Rounds, Currency) can be used independently for Challenges and Idol Hunts without full Safari implementation (see [SurvivorContext.md](../concepts/SurvivorContext.md)).
 
 **Changes**:
 1. Created new section in Production Menu: "🦁 Idol Hunts, Challenges and Safari"
@@ -361,7 +361,7 @@ const backButton = createBackButton('prod_menu_back');
 - **[ButtonHandlerFactory.md](../enablers/ButtonHandlerFactory.md)** - Button patterns and BUTTON_REGISTRY
 - **[ButtonHandlerRegistry.md](../enablers/ButtonHandlerRegistry.md)** - Complete button inventory
 - **[LeanUserInterfaceDesign.md](LeanUserInterfaceDesign.md)** - Visual design standards
-- **[SeasonLifecycle.md](../concepts/SeasonLifecycle.md)** - Context for Safari feature independence
+- **[SurvivorContext.md](../concepts/SurvivorContext.md)** - Context for Safari feature independence
 
 ---
 

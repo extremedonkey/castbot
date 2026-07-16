@@ -490,7 +490,7 @@ sequenceDiagram
 
 - [CastlistV3.md](/home/reece/castbot/docs/03-features/CastlistV3.md) - Complete architecture
 - [CastlistV3-FeatureStatus.md](/home/reece/castbot/docs/03-features/CastlistV3-FeatureStatus.md) - Implementation status
-- [SeasonLifecycle.md](/home/reece/castbot/docs/concepts/SeasonLifecycle.md) - Season management
+- [SurvivorContext.md](/home/reece/castbot/docs/concepts/SurvivorContext.md) - Season management
 - [RaP/0997](/home/reece/castbot/RaP/0997_20250129_CastlistPlacementEditor_Analysis.md) - Placement editor
 - [RaP/0995](/home/reece/castbot/RaP/0995_20251002_CastlistRolesFetchOptimization_Analysis.md) - Performance optimization
 
