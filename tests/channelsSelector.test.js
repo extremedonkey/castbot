@@ -169,6 +169,84 @@ describe('Channels roster — ACCEPTED via the real status engine', () => {
   });
 });
 
+describe('Channels roster — one entry per PLAYER, not per application', () => {
+  // A user can hold several application records in one season (observed on the test box:
+  // 3 records, all the same userId). Channels are per-player, so the roster must collapse them —
+  // otherwise one person reads as several and "Create 2 confessionals" yields 1 channel.
+  // Inline replica of channelRoster.outranks() + the collapse loop.
+  function outranks(status, app, prevStatus, prevApp) {
+    if (status.statusId === 'withdrawn') return true;
+    if (prevStatus.statusId === 'withdrawn') return false;
+    const stage = status.stage ?? -1;
+    const prevStage = prevStatus.stage ?? -1;
+    if (stage !== prevStage) return stage > prevStage;
+    return String(app.createdAt || '') > String(prevApp.createdAt || '');
+  }
+  const collapse = (apps, chan = '☑️x-app') => {
+    const byUser = new Map();
+    for (const app of apps) {
+      const status = deriveStatus(buildStatusSignals({ app, liveChannelName: app._chan || chan }));
+      const prev = byUser.get(app.userId);
+      if (!prev || outranks(status, app, prev.status, prev.app)) byUser.set(app.userId, { app, status });
+    }
+    return byUser;
+  };
+  const acceptedCount = (m) => [...m.values()].filter(v => ACCEPTED_STATUS_IDS.has(v.status.statusId)).length;
+
+  it('collapses the real test-box case: 3 records, one user → 1 player', () => {
+    const m = collapse([
+      { userId: 'R', channelId: 'a', createdAt: '2026-06-01', castingStatus: 'alternative', placementResponse: 'accepted' },
+      { userId: 'R', channelId: 'b', createdAt: '2026-06-27', castingStatus: 'alternative', completedAt: 'x' },
+      { userId: 'R', channelId: 'c', createdAt: '2026-06-27', completedAt: 'x' }
+    ]);
+    assert.equal(m.size, 1);
+    assert.equal(acceptedCount(m), 1);
+    assert.equal(m.get('R').app.channelId, 'a', 'the most committed record (stage 2) must win');
+  });
+
+  it('never double-counts one player with two accepted records', () => {
+    const m = collapse([
+      { userId: 'R', channelId: 'a', createdAt: '2026-06-01', castingStatus: 'cast' },
+      { userId: 'R', channelId: 'b', createdAt: '2026-06-27', castingStatus: 'cast' }
+    ]);
+    assert.equal(acceptedCount(m), 1, 'one person is one confessional');
+  });
+
+  it('the player response (stage 2) outranks the admin draft (stage 1)', () => {
+    const m = collapse([
+      { userId: 'R', channelId: 'a', createdAt: '2026-06-01', castingStatus: 'cast' },
+      { userId: 'R', channelId: 'b', createdAt: '2026-06-02', placementResponse: 'accepted' }
+    ]);
+    assert.equal(m.get('R').app.channelId, 'b');
+  });
+
+  it('a withdrawal wins even against a newer cast record, and drops the player', () => {
+    const m = collapse([
+      { userId: 'R', channelId: 'a', createdAt: '2026-06-01', _chan: '✖️r-app' },
+      { userId: 'R', channelId: 'b', createdAt: '2026-06-27', castingStatus: 'cast' }
+    ]);
+    assert.equal(m.get('R').status.statusId, 'withdrawn');
+    assert.equal(acceptedCount(m), 0);
+  });
+
+  it('breaks a same-stage tie with the newest record', () => {
+    const m = collapse([
+      { userId: 'R', channelId: 'old', createdAt: '2026-06-01', castingStatus: 'cast' },
+      { userId: 'R', channelId: 'new', createdAt: '2026-06-27', castingStatus: 'reject' }
+    ]);
+    assert.equal(m.get('R').app.channelId, 'new');
+    assert.equal(acceptedCount(m), 0);
+  });
+
+  it('keeps distinct users separate', () => {
+    const m = collapse([
+      { userId: 'A', channelId: 'a', castingStatus: 'cast' },
+      { userId: 'B', channelId: 'b', castingStatus: 'cast' }
+    ]);
+    assert.equal(acceptedCount(m), 2);
+  });
+});
+
 describe('Channels modals — Discord structural limits', () => {
   // These are the constraints that SILENTLY reject a modal at runtime — Discord just says
   // "This interaction failed" with no server-side log, so they're pinned here instead.

@@ -31,9 +31,12 @@ export async function getAcceptedCast(guildId, configId, guild) {
   const apps = await getApplicationsForSeason(guildId, configId);
   const players = playerData[guildId]?.players || {};
 
-  const roster = [];
-  const skipped = [];
-
+  // ── Collapse APPLICATIONS to PLAYERS first ──
+  // One user can hold SEVERAL application records in a single season (verified on the test box:
+  // 3 records, all the same userId). Channels are per-PLAYER, so counting per application would
+  // report one person as several — "Create 2 confessionals" that yields 1 channel. The most
+  // committed record wins (highest status stage; newest breaks a tie).
+  const byUser = new Map();
   for (const app of apps || []) {
     // ALWAYS read app.channelId — some map keys are legacy composite forms.
     const channelId = app?.channelId;
@@ -45,30 +48,58 @@ export async function getAcceptedCast(guildId, configId, guild) {
       || '';
 
     const status = deriveStatus(buildStatusSignals({ app, liveChannelName }));
+    const prev = byUser.get(app.userId);
+    if (!prev || outranks(status, app, prev.status, prev.app)) {
+      byUser.set(app.userId, { app, status, channelId, liveChannelName });
+    }
+  }
+
+  const roster = [];
+  const skipped = [];
+
+  for (const [userId, { app, status, channelId, liveChannelName }] of byUser) {
     if (!ACCEPTED_STATUS_IDS.has(status.statusId)) {
-      skipped.push({ userId: app.userId, reason: status.label });
+      skipped.push({ userId, reason: status.label });
       continue;
     }
 
-    const member = guild.members.cache.get(app.userId) || (await guild.members.fetch(app.userId).catch(() => null));
+    const member = guild.members.cache.get(userId) || (await guild.members.fetch(userId).catch(() => null));
     if (!member) {
-      skipped.push({ userId: app.userId, reason: 'Left the server' });
+      skipped.push({ userId, reason: 'Left the server' });
       continue;
     }
 
     roster.push({
-      userId: app.userId,
-      displayName: member.displayName || app.displayName || app.username || app.userId,
+      userId,
+      displayName: member.displayName || app.displayName || app.username || userId,
       member,
       app,
       appChannelId: channelId,
       liveChannelName,
-      playerRoleId: players[app.userId]?.playerRoleId || null,
+      playerRoleId: players[userId]?.playerRoleId || null,
       status
     });
   }
 
   return { roster, skipped };
+}
+
+/**
+ * Which of a player's application records represents them? The most committed one.
+ *
+ * STATUS_REGISTRY `stage` is the commitment gradient (0 lifecycle ▸ 1 admin decision ▸ 2 player
+ * response), so a higher stage wins. Withdrawn is stage 0 but must NOT lose to a stale stage-1
+ * record — it's the latest lifecycle action — so it short-circuits. Ties go to the newest record.
+ *
+ * @returns {boolean} true when (status, app) should replace (prevStatus, prevApp)
+ */
+function outranks(status, app, prevStatus, prevApp) {
+  if (status.statusId === 'withdrawn') return true;
+  if (prevStatus.statusId === 'withdrawn') return false;
+  const stage = status.stage ?? -1;
+  const prevStage = prevStatus.stage ?? -1;
+  if (stage !== prevStage) return stage > prevStage;
+  return String(app.createdAt || '') > String(prevApp.createdAt || '');
 }
 
 /**
