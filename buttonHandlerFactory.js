@@ -3347,6 +3347,42 @@ export const BUTTON_REGISTRY = {
     restrictedUser: true,
     requiresModal: true
   },
+  'channels_msg_*': {
+    label: 'Msg Category',
+    description: 'Compose a rich card and bulk-post it to selected channels/categories (categories expand to their text channels)',
+    emoji: '📨',
+    style: 'Secondary',
+    parent: 'season_channels',
+    category: 'channel_admin',
+    restrictedUser: true
+  },
+  'channels_msg_edit_*': {
+    label: 'Edit Message',
+    description: 'Open the rich card modal to compose the broadcast message',
+    emoji: '✏️',
+    style: 'Primary',
+    parent: 'channels_msg',
+    category: 'channel_admin',
+    restrictedUser: true,
+    requiresModal: true
+  },
+  'channels_msg_targets_*': {
+    label: 'Broadcast Targets',
+    description: 'Channel Select for the broadcast — text channels and/or categories (a Mentionable Select cannot list channels)',
+    style: 'Secondary',
+    parent: 'channels_msg',
+    category: 'channel_admin',
+    restrictedUser: true
+  },
+  'channels_msg_send_*': {
+    label: 'Send',
+    description: 'Preflight the broadcast (expands categories, counts channels) and show the confirm screen',
+    emoji: '📨',
+    style: 'Danger',
+    parent: 'channels_msg',
+    category: 'channel_admin',
+    restrictedUser: true
+  },
   'channels_exec_*': {
     label: 'Confirm',
     description: 'Execute a planned Channel Administration job (the only step that mutates Discord)',

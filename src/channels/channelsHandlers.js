@@ -13,7 +13,7 @@ import { loadPlayerData } from '../../storage.js';
 import { getRoleAccessOverwrites } from '../../utils/roleAccessUtils.js';
 import {
   CHANNEL_ADMIN_USER_IDS, PLAYER_ACCESS, SPECTATOR_ACCESS, HOST_ACCESS,
-  CATEGORY_NAMES, ACTIONS, PLAN_TTL_MS, MAX_JOB_SECONDS, PACE_DELETE
+  CATEGORY_NAMES, ACTIONS, PLAN_TTL_MS, MAX_JOB_SECONDS, PACE_DELETE, PACE_SEND
 } from './channelAdminConfig.js';
 import {
   channelName, assignChannelNames, buildOverwrites, preflightBudget, planCategoryBuckets, pairKey
@@ -84,6 +84,108 @@ export async function setTrustedSpectator({ guildId, roleId }) {
       }]
     }]
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 📨 Msg Category — broadcast composer
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Read the persisted draft for this season. */
+async function getDraft(guildId, configId) {
+  const playerData = await loadPlayerData();
+  return playerData[guildId]?.channelAdmin?.[configId]?.broadcast || {};
+}
+
+/**
+ * Expand the picked channels/categories into the real post list.
+ * Reuses channelArchiver's pure expander: it dedupes (a category AND a child inside it won't post
+ * twice) and tags each channel with its category name.
+ */
+async function expandTargets(guild, targets) {
+  const { expandArchiveSelection } = await import('../../channelArchiver.js');
+  const all = await guild.channels.fetch(); // cache holds only ~50 — must fetch
+  const normalized = [...all.values()].filter(Boolean).map((c) => ({
+    id: c.id, name: c.name, type: c.type, parent_id: c.parentId, position: c.position
+  }));
+  return expandArchiveSelection(targets || [], normalized);
+}
+
+/** Render the composer (the tab's 📨 Msg Category button, and every refresh after an edit). */
+export async function handleMsgComposer({ configId, guildId, client }) {
+  const { buildMsgComposer } = await import('./channelsView.js');
+  const draft = await getDraft(guildId, configId);
+
+  let targetSummary = null;
+  if (draft.targets?.length) {
+    const guild = await client.guilds.fetch(guildId);
+    const { channels, categoryCount } = await expandTargets(guild, draft.targets);
+    const parts = [`**${channels.length}** channel${channels.length === 1 ? '' : 's'} selected`];
+    if (categoryCount) parts.push(`from **${categoryCount}** categor${categoryCount === 1 ? 'y' : 'ies'}`);
+    targetSummary = channels.length ? parts.join(' ') : '⚠️ Selection expands to **0** channels.';
+  }
+
+  return buildMsgComposer({ configId, draft, targetSummary });
+}
+
+/** The Channel Select — persist the picked targets, then re-render. */
+export async function saveMsgTargets({ configId, guildId, client, values }) {
+  await flushDeltas(guildId, [{ kind: 'broadcast', configId, patch: { targets: values || [] } }]);
+  return await handleMsgComposer({ configId, guildId, client });
+}
+
+/** The compose modal submit — persist the card fields, then re-render. */
+export async function saveMsgDraft({ configId, guildId, client, data }) {
+  const { extractRichCardValues } = await import('../../richCardUI.js');
+  const { title, content, color, image } = extractRichCardValues(data);
+  // `targets` is deliberately absent from the patch so the channel selection survives an edit.
+  await flushDeltas(guildId, [{ kind: 'broadcast', configId, patch: { title, content, color, image } }]);
+  return await handleMsgComposer({ configId, guildId, client });
+}
+
+/** Plan the broadcast — expands categories and shows the real blast radius before anything posts. */
+export async function planBroadcast({ configId, guildId, userId, client }) {
+  const guild = await client.guilds.fetch(guildId);
+  const draft = await getDraft(guildId, configId);
+
+  if (!draft.content && !draft.title && !draft.image) return err('Write a message first.');
+  if (!draft.targets?.length) return err('Pick at least one channel or category first.');
+
+  const { channels, categoryCount } = await expandTargets(guild, draft.targets);
+  if (!channels.length) return err('That selection expands to no text channels.');
+
+  // Fail fast rather than posting half the list and 403ing on the rest.
+  const me = guild.members?.me ?? (await guild.members.fetchMe().catch(() => null));
+  const blocked = channels.filter((c) => {
+    const ch = guild.channels.cache.get(c.id);
+    return ch && me && !ch.permissionsFor(me)?.has(PermissionFlagsBits.SendMessages);
+  });
+  const sendable = channels.filter((c) => !blocked.some((b) => b.id === c.id));
+  if (!sendable.length) return err('CastBot cannot post in any of the selected channels.');
+
+  const etaSeconds = Math.ceil((sendable.length / PACE_SEND.n) * (PACE_SEND.ms / 1000));
+  const token = stashPlan(userId, {
+    type: 'broadcast', configId, guildId,
+    channels: sendable.map((c) => ({ id: c.id, name: c.name })),
+    card: { title: draft.title, content: draft.content, color: draft.color, image: draft.image }
+  });
+
+  return buildConfirmScreen({
+    token,
+    configId,
+    title: `⚠️ Post this message to ${sendable.length} channel${sendable.length === 1 ? '' : 's'}?`,
+    lines: [
+      `> **${sendable.length}** channel${sendable.length === 1 ? '' : 's'}${categoryCount ? ` · **${categoryCount}** categor${categoryCount === 1 ? 'y' : 'ies'} expanded` : ''}`,
+      `> Estimated time: **~${formatEta(etaSeconds)}**`,
+      '',
+      ...sendable.slice(0, 15).map((c) => `> • #${c.name}`),
+      ...(sendable.length > 15 ? [`> -# …and ${sendable.length - 15} more`] : []),
+      ...(blocked.length ? ['', `> ⚠️ **${blocked.length}** skipped — CastBot can't post there: ${blocked.slice(0, 5).map((c) => `#${c.name}`).join(', ')}`] : []),
+      '',
+      '-# **This cannot be undone** — players see it immediately. Re-sending posts a SECOND copy.'
+    ],
+    confirmLabel: `Post to ${sendable.length} channel${sendable.length === 1 ? '' : 's'}`,
+    destructive: true
+  });
 }
 
 /** Shared: resolve the member list an action targets. */
@@ -436,7 +538,8 @@ export async function executePlan({ plan, guildId, userId, client, interactionTo
     const progress = { interactionToken, applicationId, title: planTitle(plan) };
 
     let summary;
-    if (plan.type === 'delete') summary = await execDelete({ plan, guild, buffer, flush, progress, invokedChannelId });
+    if (plan.type === 'broadcast') summary = await execBroadcast({ plan, progress });
+    else if (plan.type === 'delete') summary = await execDelete({ plan, guild, buffer, flush, progress, invokedChannelId });
     else if (plan.type === 'player_roles') summary = await execPlayerRoles({ plan, guild, snapshot, buffer, flush, progress });
     else if (plan.type === 'convert') summary = await execConvert({ plan, guild, snapshot, playerData, buffer, flush, progress });
     else if (plan.type === 'oneonone') summary = await execOneOnOnes({ plan, guild, snapshot, playerData, buffer, flush, progress });
@@ -453,6 +556,36 @@ export async function executePlan({ plan, guildId, userId, client, interactionTo
   } finally {
     releaseJobLock(guildId, action);
   }
+}
+
+/**
+ * Post the card to every planned channel, paced and streamed.
+ *
+ * Uses the raw REST endpoint rather than channel.send(): posting a Components V2 container needs
+ * the IS_COMPONENTS_V2 flag, which is the established pattern (app.js:31476). DiscordRequest
+ * throws on 429, so each channel is caught individually — one bad channel can't abort the run.
+ */
+async function execBroadcast({ plan, progress }) {
+  const { DiscordRequest } = await import('../../utils.js');
+  const { buildRichCardContainer } = await import('../../richCardUI.js');
+  const container = buildRichCardContainer(plan.card);
+
+  return await runPacedJob({
+    items: plan.channels,
+    pace: PACE_SEND,
+    progress,
+    step: async (ch) => {
+      try {
+        await DiscordRequest(`channels/${ch.id}/messages`, {
+          method: 'POST',
+          body: { flags: (1 << 15), components: [container] } // IS_COMPONENTS_V2
+        });
+        return { ok: true, label: ch.name };
+      } catch (e) {
+        return { ok: false, error: `#${ch.name}: ${e.message}` };
+      }
+    }
+  });
 }
 
 async function execDelete({ plan, guild, progress, invokedChannelId }) {
@@ -707,6 +840,7 @@ function keyForChannel(plan, channelId) {
 }
 
 function planAction(plan) {
+  if (plan.type === 'broadcast') return ACTIONS.BROADCAST;
   if (plan.type === 'player_roles') return ACTIONS.PLAYER_ROLES;
   if (plan.type === 'oneonone' || plan.kind === 'oneonone') return ACTIONS.ONE_ON_ONES;
   if (plan.kind === 'subs') return ACTIONS.SUBS;
@@ -714,6 +848,7 @@ function planAction(plan) {
 }
 
 function planTitle(plan) {
+  if (plan.type === 'broadcast') return '📨 Posting message';
   if (plan.type === 'delete') return '🗑️ Deleting channels';
   if (plan.type === 'player_roles') return '🎭 Creating player roles';
   if (plan.type === 'convert') return '🗳️ Converting applications to subs';
@@ -759,16 +894,21 @@ function etaRefusal(budget, configId) {
 }
 
 function renderSummary(plan, s) {
-  const verb = s.deleted ? 'deleted' : 'created/updated';
+  const isBroadcast = plan.type === 'broadcast';
+  const verb = isBroadcast ? 'posted' : (s.deleted ? 'deleted' : 'created/updated');
   const lines = [
     `> ✅ **${s.created}** ${verb}`,
-    `> ⏭️ **${s.skipped}** ${s.deleted ? 'protected (skipped)' : 'already correct'}`,
+    ...(isBroadcast ? [] : [`> ⏭️ **${s.skipped}** ${s.deleted ? 'protected (skipped)' : 'already correct'}`]),
     ...(s.failed ? [`> ❌ **${s.failed}** failed`] : []),
     ...(s.aborted ? ['> ⚠️ Aborted early'] : []),
     ...(s.protectedIds?.length ? ['', '-# The channel you ran this from was skipped — delete it manually or re-run from elsewhere.'] : []),
     ...(s.errors?.length ? ['', ...s.errors.slice(0, 5).map((e) => `-# ❌ ${e}`)] : []),
     '',
-    '-# Safe to re-run: existing channels are reused, not duplicated.'
+    // A broadcast is NOT idempotent — unlike every other action here, re-running posts a second
+    // copy. Never tell the host it's safe to re-run.
+    isBroadcast
+      ? '-# ⚠️ Already sent — running this again posts **another** copy to every channel.'
+      : '-# Safe to re-run: existing channels are reused, not duplicated.'
   ];
   return {
     components: [{

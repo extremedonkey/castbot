@@ -152,6 +152,16 @@ export function applyDeltas(playerData, guildId, deltas) {
         break;
       }
 
+      case 'broadcast': {
+        // The 📨 Msg Category draft. Persisted (not held in memory) so the card survives a
+        // restart and the Edit-modal round trip. `patch` merges: the modal writes the card
+        // fields, the channel select writes `targets`, and neither clobbers the other.
+        const season = ensureSeason(node, d.configId);
+        season.broadcast = { ...(season.broadcast || {}), ...d.patch, updatedAt: d.at || new Date().toISOString() };
+        applied++;
+        break;
+      }
+
       default:
         break;
     }
@@ -211,6 +221,7 @@ export async function readRegistry(guildId, configId) {
     subs: season.subs || {},
     categories: season.categories || {},
     lastRun: season.lastRun || {},
+    broadcast: season.broadcast || {},
     oneOnOnes: node.oneOnOnes || {},
     oneOnOneCategories: node.oneOnOneCategories || [],
     trustedSpectatorRoleId: playerData[guildId]?.permissions?.trustedSpectatorRoleId || null,

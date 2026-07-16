@@ -107,6 +107,12 @@ function applyDeltas(playerData, guildId, deltas) {
         applied++;
         break;
       }
+      case 'broadcast': {
+        const season = ensureSeason(node, d.configId);
+        season.broadcast = { ...(season.broadcast || {}), ...d.patch, updatedAt: d.at || 'T0' };
+        applied++;
+        break;
+      }
       default: break;
     }
   }
@@ -303,6 +309,47 @@ describe('channelRegistry — makeDeltaBuffer', () => {
     b.push(...drained);          // simulate flush failure → re-push
     b.push({ kind: 'c' });
     assert.deepEqual(b.drain().map(d => d.kind), ['a', 'b', 'c']);
+  });
+});
+
+describe('channelRegistry — 📨 broadcast draft', () => {
+  it('the draft is season-scoped and survives a restart (it is persisted, not in memory)', () => {
+    const pd = {};
+    applyDeltas(pd, G, [{ kind: 'broadcast', configId: C, patch: { title: 'Tribal', content: 'Vote' } }]);
+    assert.equal(pd[G].channelAdmin[C].broadcast.title, 'Tribal');
+  });
+
+  it('editing the message MERGES — it must not wipe the selected targets', () => {
+    const pd = {};
+    applyDeltas(pd, G, [{ kind: 'broadcast', configId: C, patch: { targets: ['c1', 'c2'] } }]);
+    applyDeltas(pd, G, [{ kind: 'broadcast', configId: C, patch: { title: 'T', content: 'Body' } }]);
+    const b = pd[G].channelAdmin[C].broadcast;
+    assert.deepEqual(b.targets, ['c1', 'c2'], 'an edit must preserve the channel selection');
+    assert.equal(b.content, 'Body');
+  });
+
+  it('re-picking targets MERGES — it must not wipe the composed message', () => {
+    const pd = {};
+    applyDeltas(pd, G, [{ kind: 'broadcast', configId: C, patch: { title: 'T', content: 'Body' } }]);
+    applyDeltas(pd, G, [{ kind: 'broadcast', configId: C, patch: { targets: ['c3'] } }]);
+    const b = pd[G].channelAdmin[C].broadcast;
+    assert.equal(b.content, 'Body');
+    assert.deepEqual(b.targets, ['c3']);
+  });
+
+  it('clearing the select stores an empty target list', () => {
+    const pd = {};
+    applyDeltas(pd, G, [{ kind: 'broadcast', configId: C, patch: { targets: ['c1'] } }]);
+    applyDeltas(pd, G, [{ kind: 'broadcast', configId: C, patch: { targets: [] } }]);
+    assert.deepEqual(pd[G].channelAdmin[C].broadcast.targets, []);
+  });
+
+  it('two seasons keep separate drafts', () => {
+    const pd = {};
+    applyDeltas(pd, G, [{ kind: 'broadcast', configId: 'config_A', patch: { content: 'A' } }]);
+    applyDeltas(pd, G, [{ kind: 'broadcast', configId: 'config_B', patch: { content: 'B' } }]);
+    assert.equal(pd[G].channelAdmin.config_A.broadcast.content, 'A');
+    assert.equal(pd[G].channelAdmin.config_B.broadcast.content, 'B');
   });
 });
 

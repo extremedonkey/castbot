@@ -26,6 +26,9 @@ export const GUILD_ROLE_LIMIT = 250;
 /** Pacing — mirrors mapExplorer.js:1568 (5 creates / 5s) and mapExplorer.js:721 (5 deletes / 2s). */
 export const PACE_CREATE = { n: 5, ms: 5000 };
 export const PACE_DELETE = { n: 5, ms: 2000 };
+/** Broadcast posting. One message per channel, so the per-channel bucket (5/5s) never bites;
+ *  this paces well under Discord's global ~50/s to stay polite on a big send. */
+export const PACE_SEND = { n: 5, ms: 2000 };
 /** Renames are limited to 2 per 10 min PER CHANNEL — see app.js:49440. Best-effort only. */
 export const RENAME_DELAY_MS = 5500;
 
@@ -88,5 +91,13 @@ export const ACTIONS = {
   PLAYER_ROLES: 'player_roles',
   CONFESSIONALS: 'confessionals',
   SUBS: 'subs',
-  ONE_ON_ONES: 'one_on_ones'
+  ONE_ON_ONES: 'one_on_ones',
+  BROADCAST: 'broadcast'
 };
+
+/** Channel types the broadcast target select offers: text, category, announcement.
+ *  A Mentionable Select (type 7) CANNOT list channels — only a Channel Select (type 8) can.
+ *  Mirrors channelArchiver.js:79. Categories expand to their text/announcement children. */
+export const BROADCAST_CHANNEL_TYPES = [0, 4, 5];
+/** Discord's per-select cap. */
+export const MAX_SELECT_TARGETS = 25;

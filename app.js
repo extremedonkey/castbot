@@ -13856,7 +13856,7 @@ To fix this:
         id: 'channels_route',
         // Action buttons open a modal (a deferred ACK can't be followed by a MODAL); tab/cancel/exec
         // update the message and may run for minutes.
-        ...(/^channels_(roles|playerroles|confessionals|subs|1on1s)_/.test(custom_id)
+        ...(/^channels_(roles|playerroles|confessionals|subs|1on1s|msg_edit)_/.test(custom_id)
           ? { requiresModal: true, ephemeral: true }
           : { deferred: true, updateMessage: true }),
         handler: async (context) => {

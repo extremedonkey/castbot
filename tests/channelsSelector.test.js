@@ -247,6 +247,125 @@ describe('Channels roster — one entry per PLAYER, not per application', () => 
   });
 });
 
+describe('📨 Msg Category — composer', () => {
+  const CID = 'config_1751549410029_391415444084490240';
+  const composer = async (draft) => {
+    const V = await import('../src/channels/channelsView.js');
+    return V.buildMsgComposer({ configId: CID, draft });
+  };
+  const flatten = (c) => c.components.flatMap(x => x.type === 1 ? x.components : [x]);
+
+  it('targets with a Channel Select (type 8) — a Mentionable Select CANNOT list channels', async () => {
+    const { components: [card] } = await composer({});
+    const sel = flatten(card).find(c => c.type === 8 || c.type === 7);
+    assert.equal(sel.type, 8, 'must be a Channel Select; type 7 cannot target channels/categories');
+    assert.equal(sel.custom_id, `channels_msg_targets_${CID}`);
+  });
+
+  it('offers categories as well as text channels, capped at Discord\'s 25', async () => {
+    const { components: [card] } = await composer({});
+    const sel = flatten(card).find(c => c.type === 8);
+    assert.deepEqual(sel.channel_types, [0, 4, 5], 'text · category · announcement');
+    assert.ok(sel.channel_types.includes(4), 'categories must be selectable — the button is "Msg Category"');
+    assert.equal(sel.max_values, 25);
+  });
+
+  it('disables Send until there is BOTH a message and at least one target', async () => {
+    const send = async (draft) => flatten((await composer(draft)).components[0]).find(c => c.custom_id?.startsWith('channels_msg_send_'));
+    assert.equal((await send({})).disabled, true, 'nothing at all');
+    assert.equal((await send({ content: 'hi' })).disabled, true, 'message but no targets');
+    assert.equal((await send({ targets: ['c1'] })).disabled, true, 'targets but no message');
+    assert.ok(!(await send({ content: 'hi', targets: ['c1'] })).disabled, 'both → enabled');
+    assert.ok(!(await send({ image: 'http://x/y.png', targets: ['c1'] })).disabled, 'image-only counts as a message');
+  });
+
+  it('Send is Danger-styled — it is irreversible and player-facing', async () => {
+    const { components: [card] } = await composer({ content: 'hi', targets: ['c1'] });
+    assert.equal(flatten(card).find(c => c.custom_id?.startsWith('channels_msg_send_')).style, 4);
+  });
+
+  it('warns that categories expand and that sending cannot be undone', async () => {
+    const { components: [card] } = await composer({});
+    const text = card.components.filter(c => c.type === 10).map(c => c.content).join('\n');
+    assert.match(text, /categor/i, 'must explain category expansion');
+    assert.match(text, /undone|cannot/i, 'must warn it is irreversible');
+  });
+
+  it('re-renders the saved targets (default_values DOES work in messages, unlike modals)', async () => {
+    const { components: [card] } = await composer({ content: 'hi', targets: ['c1', 'c2'] });
+    const sel = flatten(card).find(c => c.type === 8);
+    assert.deepEqual(sel.default_values, [{ id: 'c1', type: 'channel' }, { id: 'c2', type: 'channel' }]);
+  });
+
+  it('renders the card itself, so the preview IS what gets posted', async () => {
+    const { components: [card] } = await composer({ title: 'Tribal', content: 'Vote now', color: '#e74c3c' });
+    assert.equal(card.type, 17);
+    assert.equal(card.accent_color, 0xe74c3c);
+    const text = card.components.filter(c => c.type === 10).map(c => c.content).join('\n');
+    assert.match(text, /# Tribal/);
+    assert.match(text, /Vote now/);
+  });
+
+  it('every custom_id stays within the 100-char limit', async () => {
+    const { components: [card] } = await composer({ content: 'hi', targets: ['c1'] });
+    for (const c of flatten(card)) {
+      if (c.custom_id) assert.ok(c.custom_id.length <= 100, `${c.custom_id} is ${c.custom_id.length}`);
+    }
+  });
+});
+
+describe('📨 Msg Category — routing (prefix overlap is the risk here)', () => {
+  const CID = 'config_1';
+  // Replica of routeChannelsButton's dispatch order — the specific ids MUST be tested before
+  // the bare `channels_msg_` composer prefix they all share.
+  const dest = (id) => {
+    if (id.startsWith('season_channels_')) return 'tab';
+    if (id.startsWith('channels_cancel_')) return 'tab';
+    if (id.startsWith('channels_exec_')) return 'exec';
+    if (id.startsWith('channels_msg_')) {
+      if (id.startsWith('channels_msg_edit_')) return 'editModal';
+      if (id.startsWith('channels_msg_send_')) return 'planBroadcast';
+      if (id.startsWith('channels_msg_targets_')) return 'saveTargets';
+      return 'composer';
+    }
+    return 'actionModal';
+  };
+
+  it('routes each msg id to its own handler, never swallowing one into the composer', () => {
+    assert.equal(dest(`channels_msg_${CID}`), 'composer');
+    assert.equal(dest(`channels_msg_edit_${CID}`), 'editModal');
+    assert.equal(dest(`channels_msg_send_${CID}`), 'planBroadcast');
+    assert.equal(dest(`channels_msg_targets_${CID}`), 'saveTargets');
+  });
+
+  it('does not hijack the pre-existing action buttons', () => {
+    for (const k of ['roles', 'playerroles', 'confessionals', 'subs', '1on1s']) {
+      assert.equal(dest(`channels_${k}_${CID}`), 'actionModal');
+    }
+    assert.equal(dest(`season_channels_${CID}`), 'tab');
+    assert.equal(dest(`channels_exec_tok`), 'exec');
+  });
+
+  it('only msg_edit opens a modal — the rest defer and update', () => {
+    const MODAL_RE = /^channels_(roles|playerroles|confessionals|subs|1on1s|msg_edit)_/;
+    assert.ok(MODAL_RE.test(`channels_msg_edit_${CID}`), 'edit must open a modal');
+    for (const id of [`channels_msg_${CID}`, `channels_msg_send_${CID}`, `channels_msg_targets_${CID}`]) {
+      assert.ok(!MODAL_RE.test(id), `${id} must NOT be requiresModal`);
+    }
+  });
+
+  it('the modal submit id parses back to kind=msg', () => {
+    const m = `channels_msg_modal_${CID}`.match(/^channels_(roles|playerroles|confessionals|subs|1on1s|msg)_modal_(.+)$/);
+    assert.equal(m[1], 'msg');
+    assert.equal(m[2], CID);
+  });
+
+  it('msg_edit is a button, not a modal submit (it has no _modal_ segment)', () => {
+    assert.ok(!`channels_msg_edit_${CID}`.includes('_modal_'));
+    assert.ok(`channels_msg_modal_${CID}`.includes('_modal_'));
+  });
+});
+
 describe('Channels modals — Discord structural limits', () => {
   // These are the constraints that SILENTLY reject a modal at runtime — Discord just says
   // "This interaction failed" with no server-side log, so they're pinned here instead.

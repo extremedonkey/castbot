@@ -62,6 +62,31 @@ export async function routeChannelsButton({ context, req }) {
     });
   }
 
+  // 📨 Msg Category. Order matters: the more specific ids must be tested BEFORE the bare
+  // `channels_msg_` composer prefix, which all three share.
+  if (customId.startsWith('channels_msg_')) {
+    const H = await import('./channelsHandlers.js');
+
+    if (customId.startsWith('channels_msg_edit_')) {
+      const { buildMsgModal } = await import('./channelsView.js');
+      const configId = customId.replace('channels_msg_edit_', '');
+      const { loadPlayerData } = await import('../../storage.js');
+      const draft = (await loadPlayerData())[guildId]?.channelAdmin?.[configId]?.broadcast || {};
+      return buildMsgModal({ configId, draft });
+    }
+    if (customId.startsWith('channels_msg_send_')) {
+      return await H.planBroadcast({ configId: customId.replace('channels_msg_send_', ''), guildId, userId, client });
+    }
+    if (customId.startsWith('channels_msg_targets_')) {
+      // Channel Select — its picks arrive in data.values, not the custom_id.
+      return await H.saveMsgTargets({
+        configId: customId.replace('channels_msg_targets_', ''),
+        guildId, client, values: req.body.data?.values || []
+      });
+    }
+    return await H.handleMsgComposer({ configId: customId.replace('channels_msg_', ''), guildId, client });
+  }
+
   // One of the 5 action buttons → its modal.
   const { buildChannelsModal } = await import('./channelsModalRouter.js');
   return await buildChannelsModal({ customId, guildId, client });
@@ -88,12 +113,15 @@ export async function routeChannelsModalSubmit({ context, components, data }) {
     }
   }
 
-  const m = customId.match(/^channels_(roles|playerroles|confessionals|subs|1on1s)_modal_(.+)$/);
+  const m = customId.match(/^channels_(roles|playerroles|confessionals|subs|1on1s|msg)_modal_(.+)$/);
   const kind = m?.[1];
   const configId = m?.[2];
   const mode = fields.mode?.[0];
   const H = await import('./channelsHandlers.js');
 
+  // 📨 Msg Category composes via the shared rich card modal, so it parses its own fields
+  // (extractRichCardValues) rather than the Label loop above.
+  if (kind === 'msg') return await H.saveMsgDraft({ configId, guildId, client, data });
   if (kind === 'roles') return await H.setTrustedSpectator({ guildId, roleId: fields.trusted_spectator_role?.[0] || null });
   if (kind === 'playerroles') return await H.planPlayerRoles({ mode, configId, guildId, userId, client, values: fields.players || [] });
   if (kind === '1on1s') return await H.planOneOnOnes({ mode, configId, guildId, userId, client, values: fields.tribes || [] });

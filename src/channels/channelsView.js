@@ -13,7 +13,8 @@
  *  - user/role/channel select `default_values` is unreliable in modals → ALSO state the current
  *    value in the Label `description` (the logsConfigUI.js pattern).
  */
-import { ACTIONS, CATEGORY_NAMES } from './channelAdminConfig.js';
+import { ACTIONS, CATEGORY_NAMES, BROADCAST_CHANNEL_TYPES, MAX_SELECT_TARGETS } from './channelAdminConfig.js';
+import { buildRichCardContainer, buildRichCardModal } from '../../richCardUI.js';
 
 /**
  * The Channels tab.
@@ -72,7 +73,8 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
       { type: 1, components: [
         { type: 2, custom_id: `channels_confessionals_${configId}`, label: 'Confessionals', style: 2, emoji: { name: '🎙️' } },
         { type: 2, custom_id: `channels_subs_${configId}`, label: 'Subs', style: 2, emoji: { name: '🗳️' } },
-        { type: 2, custom_id: `channels_1on1s_${configId}`, label: '1 on 1s', style: 2, emoji: { name: '🤝' } }
+        { type: 2, custom_id: `channels_1on1s_${configId}`, label: '1 on 1s', style: 2, emoji: { name: '🤝' } },
+        { type: 2, custom_id: `channels_msg_${configId}`, label: 'Msg Category', style: 2, emoji: { name: '📨' } }
       ]},
       { type: 14 },
       { type: 10, content: body + (lastRunLine ? `\n\n${lastRunLine}` : '') },
@@ -85,6 +87,79 @@ export async function buildChannelsView({ configId, guildId, playerData, seasonN
   countComponents([container], { verbosity: 'summary', label: `Channels - ${seasonName}` });
 
   return { components: [container] };
+}
+
+/**
+ * 📨 Msg Category — the broadcast composer.
+ *
+ * The standard buildRichCardContainer() (richCardUI.js) previewing exactly what will be posted,
+ * with the target picker + actions appended via `extraComponents`.
+ *
+ * The picker is a Channel Select (type 8), NOT a Mentionable Select (type 7): a mentionable can
+ * only list users and roles, so it physically cannot target channels or categories. Types
+ * [0, 4, 5] = text · category · announcement, mirroring channelArchiver.js:79.
+ *
+ * Select `default_values` works reliably in MESSAGES (unlike modals), so the saved targets
+ * re-render on every refresh.
+ *
+ * @param {Object} p - { configId, draft, targetSummary }
+ * @returns {Object} { components: [container] }
+ */
+export function buildMsgComposer({ configId, draft = {}, targetSummary = null }) {
+  const hasMessage = !!(draft.title || draft.content || draft.image);
+  const targets = draft.targets || [];
+
+  // Discord renders no label/description on a select in a MESSAGE (those are modal-only Labels),
+  // so the "what will happen" warning is a Text Display directly above it.
+  const warning = [
+    '### ```📨 Send to```',
+    '-# Posts the card above **once to every channel you pick**. A category expands to all its text channels —',
+    '-# picking one category can mean dozens of messages. Sending is paced and cannot be undone.',
+    ...(targetSummary ? ['', `> ${targetSummary}`] : [])
+  ].join('\n');
+
+  const extraComponents = [
+    { type: 14 },
+    { type: 10, content: warning },
+    { type: 1, components: [{
+      type: 8, // Channel Select — the only component that can list channels/categories
+      custom_id: `channels_msg_targets_${configId}`,
+      placeholder: 'Select channels and/or categories...',
+      channel_types: BROADCAST_CHANNEL_TYPES,
+      min_values: 0,
+      max_values: MAX_SELECT_TARGETS,
+      ...(targets.length ? { default_values: targets.slice(0, MAX_SELECT_TARGETS).map((id) => ({ id, type: 'channel' })) } : {})
+    }]},
+    { type: 14 },
+    { type: 1, components: [
+      { type: 2, custom_id: `season_channels_${configId}`, label: '← Channels', style: 2 },
+      { type: 2, custom_id: `channels_msg_edit_${configId}`, label: hasMessage ? 'Edit Message' : 'Write Message', style: 1, emoji: { name: '✏️' } },
+      // Nothing to send until there's both a message and somewhere to put it.
+      { type: 2, custom_id: `channels_msg_send_${configId}`, label: 'Send', style: 4, emoji: { name: '📨' }, disabled: !hasMessage || targets.length === 0 }
+    ]}
+  ];
+
+  const container = buildRichCardContainer({
+    title: draft.title,
+    content: draft.content || '-# *No message yet — hit **Write Message** to compose one. This card is exactly what gets posted.*',
+    color: draft.color || '#9B59B6',
+    image: draft.image,
+    extraComponents
+  });
+
+  return { components: [container] };
+}
+
+/** The 📨 Msg Category edit modal — reuses the shared rich card modal, pre-filled with the draft. */
+export function buildMsgModal({ configId, draft = {} }) {
+  return buildRichCardModal({
+    customId: `channels_msg_modal_${configId}`,
+    modalTitle: '📨 Compose Message',
+    values: { title: draft.title, content: draft.content, color: draft.color, image: draft.image },
+    fields: {
+      content: { label: 'Message', placeholder: 'What every selected channel will receive...', required: true }
+    }
+  });
 }
 
 /** Roles modal — sets the guild's single Trusted Spectator role. */
