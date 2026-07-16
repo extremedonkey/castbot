@@ -46,6 +46,26 @@ export const ALLOWED_USER_IDS = [
 /** Hard allowlist of built-in tools handed to the CLI. Read-only by construction. */
 const CLI_TOOLS = 'Read,Glob,Grep';
 
+/**
+ * Deny rules for the files a read-only agent still must never open. The answer is posted
+ * PUBLICLY in the asking channel, so a leak here goes straight to every member of that
+ * server — the bot token would be a full takeover, and playerData/safariData are other
+ * people's data across every guild, which is not ours to risk.
+ *
+ * These are enforced by the CLI's permission layer, not by the persona doc. Verified
+ * 2026-07-16 with a control (agent reads a decoy secret) vs treatment (agent refused:
+ * "denied by your permission settings"). `Read(...)` rules cover Glob and Grep too.
+ */
+const CLI_DENY = [
+  'Read(./.env)',
+  'Read(./.env.*)',
+  'Read(./*.pem)',
+  'Read(./playerData.json)',
+  'Read(./safariContent.json)',
+  'Read(./.git/**)',
+  'Read(./backups/**)'
+];
+
 const PROGRESS_MS = 120000;  // "still thinking" nudge
 const TIMEOUT_MS = 240000;   // hard kill
 const MAX_CHUNK = 3500;      // leave room for the action row in the last chunk
@@ -178,7 +198,7 @@ ${query}`;
  */
 export function runAskCastBot(prompt, onProgress) {
   return new Promise((resolve, reject) => {
-    const child = spawn('claude', ['--print', '--tools', CLI_TOOLS, '-p', prompt], {
+    const child = spawn('claude', ['--print', '--tools', CLI_TOOLS, '--disallowed-tools', ...CLI_DENY, '-p', prompt], {
       cwd: process.cwd(),
       env: { ...process.env, HOME: process.env.HOME || '/home/reece' },
       stdio: ['pipe', 'pipe', 'pipe']
