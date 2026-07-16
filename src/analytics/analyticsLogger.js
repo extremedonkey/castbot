@@ -360,8 +360,10 @@ function formatAnalyticsLine(line) {
   // [8:33AM] Thu 19 Jun 25 | User (username) in Server Name (1234567890) | #channel | ACTION_TYPE | details
   // [8:33AM] Thu 19 Jun 25 | User (username) in Server Name (1234567890) | ACTION_TYPE | details
   
-  // First try the new format with channel
-  let match = line.match(/^(\[[\d:APM]+\]\s+\w{3}\s+\d{1,2}\s+\w{3}\s+\d{2})\s+\|\s+(.+?)\s+in\s+(.+?)\s+\((\d+)\)\s+\|\s+(#[\w\-⁠]+)\s+\|\s+([\w_]+)\s+\|\s+(.+)$/);
+  // First try the new format with channel. Channel = `#` + anything up to the next pipe —
+  // emoji-prefixed channel names (#🍺f4-...) never matched `[\w-]`, silently dropping the
+  // markdown formatting for virtually every safari channel line (fixed 2026-07-16).
+  let match = line.match(/^(\[[\d:APM]+\]\s+\w{3}\s+\d{1,2}\s+\w{3}\s+\d{2})\s+\|\s+(.+?)\s+in\s+(.+?)\s+\((\d+)\)\s+\|\s+(#[^|]+?)\s+\|\s+([\w_]+)\s+\|\s+(.+)$/);
   
   if (match) {
     // New format with channel

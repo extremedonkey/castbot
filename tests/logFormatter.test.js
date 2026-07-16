@@ -189,4 +189,15 @@ describe('logFormatter — enhanced analytics line', () => {
   it('unparseable input falls back to classic passthrough', () => {
     assert.equal(formatEnhancedAnalyticsLine('total garbage', NOW), '* total garbage');
   });
+
+  it('EMOJI-prefixed channel names parse (prod regression 2026-07-16)', () => {
+    // Safari channels are emoji-named (#🍺f4-fraunces-tavern) — the old channel regex
+    // ([\w-]) never matched them, so every such line fell through to the raw fallback
+    // and "Enhanced" appeared to do nothing on prod.
+    const line = `${base} | #🍺f4-fraunces-tavern | SAFARI_CUSTOM_ACTION | Safari button: buy_soulless_a_drink_1783636810969`;
+    const out = formatEnhancedAnalyticsLine(line, NOW);
+    assert.ok(out.startsWith(`* ${TS} ⚡`), `not enhanced: ${out}`);
+    assert.ok(out.includes('**#🍺f4-fraunces-tavern**'));
+    assert.ok(!out.includes('1331657596087566398'), 'serverId should be dropped');
+  });
 });

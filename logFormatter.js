@@ -262,8 +262,10 @@ function boldDetails(actionType, details) {
 export function formatEnhancedAnalyticsLine(line, nowMs = Date.now()) {
   const ts = discordRelativeTs(nowMs);
 
-  // With channel segment
-  let match = line.match(/^(\[[\d:APM]+\]\s+\w{3}\s+\d{1,2}\s+\w{3}\s+\d{2})\s+\|\s+(.+?)\s+in\s+(.+?)\s+\((\d+)\)\s+\|\s+(#[\w\-⁠]+)\s+\|\s+([\w_]+)\s+\|\s+(.+)$/);
+  // With channel segment. Channel = `#` + anything up to the next pipe — safari channel
+  // names start with EMOJI (#🍺f4-fraunces-tavern), which `[\w-]` never matched, so every
+  // emoji-channel line used to fall through to the raw fallback (prod bug 2026-07-16).
+  let match = line.match(/^(\[[\d:APM]+\]\s+\w{3}\s+\d{1,2}\s+\w{3}\s+\d{2})\s+\|\s+(.+?)\s+in\s+(.+?)\s+\((\d+)\)\s+\|\s+(#[^|]+?)\s+\|\s+([\w_]+)\s+\|\s+(.+)$/);
   if (match) {
     const [, , user, serverName, , channel, actionType, details] = match;
     const emoji = ANALYTICS_EMOJI[actionType] || ACTION_STYLE[actionType]?.emoji || '📊';
