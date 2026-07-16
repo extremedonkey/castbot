@@ -3,6 +3,7 @@
  * Provides centralized menu creation and legacy tracking
  */
 import { getBotEmoji } from './botEmojis.js';
+import { hasAskCastBotAccess } from './askCastBot.js';
 
 /**
  * Menu Registry - Central source of truth for all menus
@@ -75,6 +76,18 @@ export class MenuBuilder {
     const isReece = ['391415444084490240', '1086246253819613274'].includes(context?.userId);
     const isTest = process.env.INSTANCE_ROLE === 'test';
 
+    // 🔵 Ask CastBot — trusted super-users only, DEV/TEST only (prod has no Claude CLI).
+    // Everyone here already passed the Tools menu's Manage Roles gate; this narrows to
+    // whitelisted guilds + users. The handlers re-check — this is display, not security.
+    const specialFeatures = [
+      { type: 2, custom_id: 'attribute_management', label: 'Attributes', style: 2, emoji: { name: '📊' } },
+      { type: 2, custom_id: 'safari_manage_enemies', label: 'Enemies', style: 2, emoji: { name: '🐙' } },
+      { type: 2, custom_id: 'tycoons_legacy', label: 'Tycoons', style: 2, emoji: { name: '💼' } }
+    ];
+    if (hasAskCastBotAccess({ userId: context?.userId, guildId: context?.guildId })) {
+      specialFeatures.push({ type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 1, emoji: getBotEmoji('cb_blue') });
+    }
+
     // Cleanup section — admin maintenance tools. Archive Channels is TEST-only for now.
     const cleanupButtons = [];
     if (isTest) cleanupButtons.push({ type: 2, custom_id: 'archive_channel', label: 'Archive Channels', style: 2, emoji: { name: '🧹' } });
@@ -87,14 +100,7 @@ export class MenuBuilder {
       { type: 10, content: `## ${menuConfig.title}` },
       { type: 14 },
       { type: 10, content: `### \`\`\`🐙 Special Features\`\`\`` },
-      {
-        type: 1,
-        components: [
-          { type: 2, custom_id: 'attribute_management', label: 'Attributes', style: 2, emoji: { name: '📊' } },
-          { type: 2, custom_id: 'safari_manage_enemies', label: 'Enemies', style: 2, emoji: { name: '🐙' } },
-          { type: 2, custom_id: 'tycoons_legacy', label: 'Tycoons', style: 2, emoji: { name: '💼' } }
-        ]
-      },
+      { type: 1, components: specialFeatures },
       { type: 10, content: `### \`\`\`🧹 Cleanup\`\`\`` },
       { type: 1, components: cleanupButtons },
       { type: 10, content: `### \`\`\`❄️ Timers (Snowflake)\`\`\`` },

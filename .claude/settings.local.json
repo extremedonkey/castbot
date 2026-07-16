@@ -183,7 +183,8 @@
       "Read(//home/reece/.vscode-server/extensions/**)",
       "WebFetch(domain:marketplace.visualstudio.com)",
       "PowerShell(git -C \"C:\\\\Users\\\\extre\\\\castbot\" add diceRoll.js)",
-      "Read(//mnt/c/Users/extre/**)"
+      "Read(//mnt/c/Users/extre/**)",
+      "Skill(claude-api)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

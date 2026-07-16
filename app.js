@@ -8426,14 +8426,16 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id.startsWith('stamina_guide_') || custom_id.startsWith('safari_guide_')) {
-      // Safari Guide — paginated player-friendly guide
+      // Safari Guide — paginated player-friendly guide (deferred: first render per env
+      // uploads the guide infographics to mint CDN URLs — see guideAssets.js)
       return ButtonHandlerFactory.create({
         id: 'safari_guide',
         updateMessage: true,
+        deferred: true,
         handler: async (context) => {
           const { buildSafariGuidePage } = await import('./staminaGuide.js');
           const page = parseInt(context.customId.split('_')[2]) || 0;
-          return buildSafariGuidePage(page);
+          return await buildSafariGuidePage(page, { guildId: context.guildId, client: context.client });
         }
       })(req, res, client);
     } else if (custom_id.startsWith('prod_guide_')) {
@@ -8441,10 +8443,11 @@ To fix this:
       return ButtonHandlerFactory.create({
         id: 'prod_guide',
         updateMessage: true,
+        deferred: true,
         handler: async (context) => {
           const { buildProdGuidePage } = await import('./staminaGuide.js');
           const page = parseInt(context.customId.split('_')[2]) || 0;
-          return buildProdGuidePage(page);
+          return await buildProdGuidePage(page, { guildId: context.guildId, client: context.client });
         }
       })(req, res, client);
     } else if (custom_id === 'season_manager' || custom_id === 'reeces_season_planner_mockup') {
@@ -10712,6 +10715,26 @@ To fix this:
         handler: async () => {
           const { buildCheckboxModal } = await import('./poc/checkboxGroupPoc.js');
           return buildCheckboxModal();
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'askcb_ask' || custom_id.startsWith('askcb_ask_ctx_')) {
+      // 🔵 Ask CastBot — trusted super-user Q&A (DEV/TEST only). Logic: askCastBot.js
+      return ButtonHandlerFactory.create({
+        id: 'askcb_ask',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        requiresModal: true,
+        handler: async (context) => {
+          const { hasAskCastBotAccess, buildAskModal, recallResponse } = await import('./askCastBot.js');
+          if (!hasAskCastBotAccess(context)) {
+            return { content: '🔵 Ask CastBot is not available here.', ephemeral: true };
+          }
+          const prevId = custom_id.startsWith('askcb_ask_ctx_') ? custom_id.replace('askcb_ask_ctx_', '') : null;
+          return {
+            type: InteractionResponseType.MODAL,
+            data: buildAskModal(recallResponse(prevId), prevId)
+          };
         }
       })(req, res, client);
 
@@ -16458,20 +16481,16 @@ Your server is now ready for Tycoons gameplay!`;
           const { getStaminaConfig } = await import('./safariManager.js');
           const currentConfig = await getStaminaConfig(context.guildId);
 
-          // Create modern Components V2 modal with Label components (4 components - under 5 limit)
+          // Components V2 modal — exactly 5 top-level components (Discord's max).
+          // Regeneration Style is a Radio Group (type 21): its option `default` pre-selects
+          // in modals (String Select's does NOT — see ComponentsV2.md), so the current
+          // config is always reflected. Submit handler reads components[0..4] by index.
+          const isDrip = currentConfig.regenerationAmount != null;
           const modal = {
             custom_id: 'stamina_location_config_modal',
             title: 'Stamina Settings',
             components: [
-              // Instructions
-              {
-                type: 10, // Text Display
-                content: '### Configure Stamina Settings\n\n' +
-                         'These settings control stamina for this server.\n' +
-                         'Configure starting location in 📍 Location.'
-              },
-
-              // Label 1: Starting Stamina
+              // [0] Starting Stamina
               {
                 type: 18, // Label
                 label: 'Starting Stamina',
@@ -16488,11 +16507,11 @@ Your server is now ready for Tycoons gameplay!`;
                 }
               },
 
-              // Label 2: Max Stamina
+              // [1] Max Stamina
               {
                 type: 18, // Label
                 label: 'Max Stamina',
-                description: `Maximum stamina capacity (1-${MAX_STAMINA})`,
+                description: `The tank size — most stamina a player can store (1-${MAX_STAMINA}, before item boosts)`,
                 component: {
                   type: 4, // Text Input
                   custom_id: 'max_stamina',
@@ -16505,11 +16524,11 @@ Your server is now ready for Tycoons gameplay!`;
                 }
               },
 
-              // Label 3: Regeneration Minutes
+              // [2] Regeneration Minutes
               {
                 type: 18, // Label
                 label: 'Regeneration Time (minutes)',
-                description: 'Minutes between regen (e.g. 60=1hr, 720=12hr, 1440=24hr)',
+                description: 'Length of one cooldown (e.g. 60=1hr, 720=12hr, 1440=24hr)',
                 component: {
                   type: 4, // Text Input
                   custom_id: 'regen_minutes',
@@ -16522,18 +16541,44 @@ Your server is now ready for Tycoons gameplay!`;
                 }
               },
 
-              // Label 4: Regeneration Amount
+              // [3] Regeneration Style (the mode switch)
               {
                 type: 18, // Label
-                label: 'Regen Amount (optional)',
-                description: 'Recommended: leave blank = full refill to max each cooldown. Or enter a number for partial regen.',
+                label: 'Regeneration Style',
+                description: 'How stamina comes back after each cooldown',
+                component: {
+                  type: 21, // Radio Group (modal-only)
+                  custom_id: 'regen_style',
+                  required: true,
+                  options: [
+                    {
+                      label: 'Full refill (recommended)',
+                      value: 'full',
+                      description: 'Everything returns one cooldown after the last move',
+                      default: !isDrip
+                    },
+                    {
+                      label: 'Drip',
+                      value: 'drip',
+                      description: 'A fixed amount per cooldown — one shared timer, moves restart it',
+                      default: isDrip
+                    }
+                  ]
+                }
+              },
+
+              // [4] Drip Amount (only used with Drip style)
+              {
+                type: 18, // Label
+                label: 'Drip Amount',
+                description: 'Points granted per cooldown (1-99). Only used with Drip style — ignored for Full refill.',
                 component: {
                   type: 4, // Text Input
                   custom_id: 'regen_amount',
                   style: 1, // Short
                   min_length: 0,
                   max_length: 2,
-                  placeholder: 'Recommended: leave blank for full reset',
+                  placeholder: 'e.g. 1',
                   value: currentConfig.regenerationAmount?.toString() || '',
                   required: false
                 }
@@ -39772,6 +39817,11 @@ Your server is now ready for Tycoons gameplay!`;
           return buildInvitesConfirm({ mode, appIndex, configId, targets });
         }
       })(req, res, client);
+    } else if (custom_id === 'askcb_ask_modal' || custom_id.startsWith('askcb_ask_modal_')) {
+      // 🔵 Ask CastBot — gate, defer, run, reply. All logic lives in askCastBot.js.
+      const { handleAskModalSubmit } = await import('./askCastBot.js');
+      return handleAskModalSubmit(req, res);
+
     } else if (custom_id === 'moai_ask_modal' || custom_id.startsWith('moai_ask_modal_')) {
       // 🗿 The Moai — execute Claude CLI with the user's query
       // Extract previous context from modal fields (if "Ask Another" with context)
@@ -47449,21 +47499,24 @@ Your server is now ready for Tycoons gameplay!`;
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to configure stamina settings.')) return;
 
-        // Extract modal values from Label components (Components V2 format)
+        // Extract modal values from Label components (Components V2 format).
+        // Index-coupled to the 5-component builder layout at 'stamina_location_config':
+        // [0] starting_stamina, [1] max_stamina, [2] regen_minutes,
+        // [3] regen_style Radio Group (type 21 — value read the same way), [4] regen_amount.
         const components = req.body.data.components;
 
-        // Skip Text Display (index 0), extract from Label components
-        const startingStaminaValue = components[1]?.component?.value;
-        const maxStaminaValue = components[2]?.component?.value;
-        const regenMinutesValue = components[3]?.component?.value;
+        const startingStaminaValue = components[0]?.component?.value;
+        const maxStaminaValue = components[1]?.component?.value;
+        const regenMinutesValue = components[2]?.component?.value;
+        const regenStyle = components[3]?.component?.value; // 'full' | 'drip' | null
         const regenAmountValue = components[4]?.component?.value?.trim();
 
         // Parse values
         const startingStamina = parseInt(startingStaminaValue);
         const maxStamina = parseInt(maxStaminaValue);
         const regenMinutes = parseInt(regenMinutesValue);
-        // Empty or 0 = null (full reset to max), otherwise specific amount
-        const regenAmount = (!regenAmountValue || regenAmountValue === '0') ? null : parseInt(regenAmountValue);
+        // Style decides the mode: 'full' → null amount (full refill); 'drip' → required 1-99.
+        const regenAmount = regenStyle === 'drip' ? parseInt(regenAmountValue) : null;
 
         // Validation Chain
         const errors = [];
@@ -47485,9 +47538,16 @@ Your server is now ready for Tycoons gameplay!`;
           errors.push(`Regen Time must be 1-99999 minutes (got "${regenMinutesValue}")`);
         }
 
-        // 4. Regen Amount (null = max, or 1-99)
-        if (regenAmount !== null && (isNaN(regenAmount) || regenAmount < 1 || regenAmount > 99)) {
-          errors.push(`Regen Amount must be 1-99 or blank for full reset (got "${regenAmountValue}")`);
+        // 4. Regeneration Style — never default silently: a guessed 'full' would wipe a
+        // live drip config (the radio is required, so this is a defensive backstop).
+        if (regenStyle !== 'full' && regenStyle !== 'drip') {
+          errors.push('Regeneration Style is required — pick Full refill or Drip');
+        }
+
+        // 5. Drip Amount — required 1-99 when style is Drip; ignored entirely for Full
+        // refill (a leftover value must not nag hosts switching styles).
+        if (regenStyle === 'drip' && (isNaN(regenAmount) || regenAmount < 1 || regenAmount > 99)) {
+          errors.push(`Drip Amount must be 1-99 when Regeneration Style is Drip (got "${regenAmountValue || 'blank'}")`);
         }
 
         // If errors, show ephemeral error message

@@ -4678,6 +4678,26 @@ export const BUTTON_REGISTRY = {
     parent: 'reeces_stuff'
   },
 
+  // === ASK CASTBOT (trusted super-user Q&A — DEV/TEST only) ===
+  'askcb_ask': {
+    label: 'Ask CastBot',
+    description: 'Ask a question about how CastBot and Safari work',
+    emoji: '🔵',
+    style: 'Primary',
+    requiresModal: true,
+    category: 'askcastbot',
+    parent: 'castbot_tools'
+  },
+  'askcb_ask_ctx_*': {
+    label: 'Ask Another',
+    description: 'Ask CastBot a follow-up question with the previous answer as context',
+    emoji: '🔵',
+    style: 'Primary',
+    requiresModal: true,
+    category: 'askcastbot',
+    parent: 'askcb_ask'
+  },
+
   // === MOAI (Claude Code Integration) ===
   'moai_ask': {
     label: 'Ask Moai',

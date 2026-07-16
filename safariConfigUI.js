@@ -343,14 +343,14 @@ async function createCurrentSettingsDisplay(guildId, config) {
             : `${regenMinutes} minutes (${hours} hours)`;
     }
 
-    const regenAmountDisplay = staminaConfig.regenerationAmount != null
-        ? `${staminaConfig.regenerationAmount} per cycle`
-        : 'Full reset (to max)';
+    const regenStyleDisplay = staminaConfig.regenerationAmount != null
+        ? `Drip (+${staminaConfig.regenerationAmount} per cooldown)`
+        : 'Full refill';
     display += `**⚡ Stamina Settings**\n`;
     display += `• Starting Stamina: ${staminaConfig.startingStamina}\n`;
     display += `• Max Stamina: ${staminaConfig.maxStamina}\n`;
     display += `• ♻️ Regeneration Time: ${regenTimeDisplay}\n`;
-    display += `• Regeneration Amount: ${regenAmountDisplay}\n\n`;
+    display += `• Regeneration Style: ${regenStyleDisplay}\n\n`;
 
     // --- Events ---
     if (config.goodEventName || config.badEventName || config.goodEventEmoji || config.badEventEmoji) {
