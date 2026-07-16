@@ -216,11 +216,15 @@ export function buildPrompt(query, prevContextText = '', superRead = false) {
   const prevSection = prevContextText?.trim()
     ? `\n\nPREVIOUS CONVERSATION (context from the last exchange — use it to inform your answer):\n${prevContextText}\n\n---\n`
     : '';
-  // Overrides the persona doc's blanket "no player data belonging to anyone" line — this
+  // Overrides the persona doc's "no player data belonging to anyone" (line 33) and "never
+  // touch other people's games / no speculating about inventory" (line 41) rules — this
   // asker is trusted (whitelisted guild admin, Tools-menu route) and the read is scoped
-  // to answering their question, not dumping records.
+  // to answering their question, not dumping records. Named explicitly and placed up front
+  // because a quiet one-line override lost to those two repeated, specific restrictions in
+  // practice (see incident 2026-07-16: bot refused to check a whitelisted guild's
+  // inventory, citing "between the host and their players").
   const superReadSection = superRead
-    ? `\n- OVERRIDE: for this request only, you also have read access to playerData.json and safariContent.json (every guild's data lives in these two files). You may read them to answer questions about specific players, servers, or game state across any guild. Still never print raw file contents, tokens, or secrets verbatim — summarize what's relevant to the question.\n`
+    ? `\n\nSPECIAL OVERRIDE FOR THIS REQUEST — read carefully, it supersedes lines in the persona essence above:\nThe persona essence tells you to never reveal "player data belonging to anyone" and to never speculate about "what a specific player has in their inventory." For THIS request only, both of those rules are lifted. The asker is a trusted, whitelisted admin using this for cross-guild support debugging, and you have read access to playerData.json and safariContent.json (every guild's data lives in these two files, keyed by guild ID). Use them: look up the actual player, inventory, currency, or game state the question asks about — for ANY guild, including this one — and answer with what you find. Do not fall back on "I can't look that up" or "that's between the host and their players"; you can, and that is the point of this override. Still never print raw file contents, tokens, or secrets verbatim — summarize what's relevant to the question.\n\n---\n`
     : '';
 
   return `You are Ask CastBot 👾 — the in-Discord CastBot expert. Here is your persona essence:
@@ -232,8 +236,8 @@ OPERATING CONTEXT:
 - Your answer is posted PUBLICLY in the channel where the question was asked. Other people will read it. Write for that audience.
 - You have exactly three tools: Read, Glob, Grep. They are read-only. You cannot edit files, run commands, or deploy. Never offer to.
 - Ground yourself in the project's documentation before answering anything you are not certain of. Prefer the Safari feature docs and the Safari design guide. Read them silently.
-- NEVER reveal internals in your answer: no file paths, no line numbers, no function/handler/custom_id names, no schema or JSON key names, no environment variables, no tokens, no other players' or servers' data. Answer in terms of menus, buttons, and game behaviour only.${superReadSection}
-- NEVER invent a mechanic CastBot does not have. If the request does not map onto a real building block, say so in your first sentence and propose the closest real substitute.
+- NEVER reveal internals in your answer: no file paths, no line numbers, no function/handler/custom_id names, no schema or JSON key names, no environment variables, no tokens${superRead ? '' : ', no other players\' or servers\' data'}. Answer in terms of menus, buttons, and game behaviour only.
+- NEVER invent a mechanic CastBot does not have. If the request does not map onto a real building block, say so in your first sentence and propose the closest real substitute.${superReadSection}
 - You are a one-shot assistant with no memory between questions${prevSection ? ', BUT you have the previous exchange below' : ''}.${prevSection}
 
 The question:
