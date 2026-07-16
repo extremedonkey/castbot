@@ -1,5 +1,5 @@
 /**
- * 🔵 Ask CastBot — trusted super-user Q&A via Claude CLI (MVP)
+ * 👾 Ask CastBot — trusted super-user Q&A via Claude CLI (MVP)
  *
  * The Moai's brother. Same plumbing (modal → deferred public reply → chunked response),
  * different audience and a hard read-only toolset.
@@ -142,7 +142,7 @@ export function buildAskModal(prevContext = null, prevResponseId = null, isPubli
   const stem = isPublic ? 'askcb_pub_modal' : 'askcb_ask_modal';
   return {
     custom_id: prevResponseId ? `${stem}_${prevResponseId}` : stem,
-    title: '🔵 Ask CastBot',
+    title: '👾 Ask CastBot',
     components: [
       ...(prevContext ? [{
         type: 18,
@@ -188,7 +188,7 @@ export function buildPrompt(query, prevContextText = '') {
     ? `\n\nPREVIOUS CONVERSATION (context from the last exchange — use it to inform your answer):\n${prevContextText}\n\n---\n`
     : '';
 
-  return `You are Ask CastBot 🔵 — the in-Discord CastBot expert. Here is your persona essence:
+  return `You are Ask CastBot 👾 — the in-Discord CastBot expert. Here is your persona essence:
 
 ${essence}
 
@@ -225,7 +225,7 @@ export function buildActionRow(responseId, isPublic = false) {
   return {
     type: 1,
     components: [
-      { type: 2, custom_id: `${stem}_${responseId}`, label: 'Ask Another', style: 1, emoji: { name: '🔵' } }
+      { type: 2, custom_id: `${stem}_${responseId}`, label: 'Ask Another', style: 1, emoji: { name: '👾' } }
     ]
   };
 }
@@ -236,12 +236,12 @@ export function buildFirstContainer({ query, chunk, elapsed, chunkCount, respons
     type: 17,
     accent_color: ACCENT,
     components: [
-      { type: 10, content: `## 🔵 Ask CastBot` },
+      { type: 10, content: `## 👾 Ask CastBot` },
       { type: 10, content: `-# "${truncate(query, 120)}"` },
       { type: 14 },
       { type: 10, content: chunk },
       { type: 14 },
-      { type: 10, content: `-# 🔵 ${elapsed}s${chunkCount > 1 ? ` · ${chunkCount} parts` : ''}` },
+      { type: 10, content: `-# 👾 ${elapsed}s${chunkCount > 1 ? ` · ${chunkCount} parts` : ''}` },
       ...(chunkCount === 1 ? [buildActionRow(responseId, isPublic)] : [])
     ]
   };
@@ -270,7 +270,7 @@ export function buildChunkContainer({ chunk, isLast, responseId, isPublic = fals
  * @param {{elapsedMs: number, activity: string, toolCount: number}} [progress]
  */
 export function buildProgressContainer(query, progress = null) {
-  const lines = [{ type: 10, content: `## 🔵 Ask CastBot is thinking...` }];
+  const lines = [{ type: 10, content: `## 👾 Ask CastBot is thinking...` }];
   if (progress) {
     const budget = formatElapsed(HARD_KILL_MS);
     lines.push(
@@ -291,11 +291,11 @@ export function buildErrorContainer(message, isPublic = false) {
     type: 17,
     accent_color: 0xe74c3c,
     components: [
-      { type: 10, content: `## 🔵 Ask CastBot couldn't answer\n\n${(message || 'Unknown error').substring(0, 400)}` },
+      { type: 10, content: `## 👾 Ask CastBot couldn't answer\n\n${(message || 'Unknown error').substring(0, 400)}` },
       { type: 14 },
       { type: 10, content: `-# Nothing was changed. Try rephrasing, or ask again in a moment.` },
       { type: 1, components: [
-        { type: 2, custom_id: isPublic ? 'askcb_public_ask' : 'askcb_ask', label: 'Try Again', style: 1, emoji: { name: '🔵' } }
+        { type: 2, custom_id: isPublic ? 'askcb_public_ask' : 'askcb_ask', label: 'Try Again', style: 1, emoji: { name: '👾' } }
       ]}
     ]
   };
@@ -311,11 +311,11 @@ export function buildPostedAskContainer(note) {
     type: 17,
     accent_color: ACCENT,
     components: [
-      { type: 10, content: `## 🔵 Ask CastBot` },
+      { type: 10, content: `## 👾 Ask CastBot` },
       { type: 10, content: note || `Got a question about how CastBot works — Safari maps, items, actions, castlists, applications? Ask away.\n\nAnswers post publicly here so everyone can learn from them.` },
       { type: 14 },
       { type: 1, components: [
-        { type: 2, custom_id: 'askcb_public_ask', label: 'Ask CastBot', style: 1, emoji: { name: '🔵' } }
+        { type: 2, custom_id: 'askcb_public_ask', label: 'Ask CastBot', style: 1, emoji: { name: '👾' } }
       ]}
     ]
   };
@@ -365,16 +365,16 @@ export async function handleAskModalSubmit(req, res) {
   const isPublicRoute = String(req.body.data.custom_id || '').startsWith('askcb_pub_modal');
 
   if (!isAskCastBotEnvironment()) {
-    return denyModal(res, '🔵 Ask CastBot is not available here.');
+    return denyModal(res, '👾 Ask CastBot is not available here.');
   }
   if (!isPublicRoute && !hasAskCastBotAccess({ userId, guildId: req.body.guild_id })) {
-    return denyModal(res, '🔵 Ask CastBot is not available here.');
+    return denyModal(res, '👾 Ask CastBot is not available here.');
   }
   if (!query?.trim()) {
-    return denyModal(res, '🔵 Ask CastBot needs a question.');
+    return denyModal(res, '👾 Ask CastBot needs a question.');
   }
   if (inFlight >= MAX_CONCURRENT) {
-    return denyModal(res, `🔵 Ask CastBot is busy with ${inFlight} question${inFlight === 1 ? '' : 's'} right now. Give it a minute and ask again.`);
+    return denyModal(res, `👾 Ask CastBot is busy with ${inFlight} question${inFlight === 1 ? '' : 's'} right now. Give it a minute and ask again.`);
   }
 
   // Deferred PUBLIC — the answer lands in the channel it was asked in.
@@ -387,7 +387,7 @@ export async function handleAskModalSubmit(req, res) {
 
   inFlight++;
   try {
-    console.log(`🔵 Ask CastBot query from ${req.body.member?.user?.username} (${inFlight}/${MAX_CONCURRENT} in flight): "${truncate(query, 80)}"`);
+    console.log(`👾 Ask CastBot query from ${req.body.member?.user?.username} (${inFlight}/${MAX_CONCURRENT} in flight): "${truncate(query, 80)}"`);
 
     // Paint the "starting up" state immediately — the deferred spinner is otherwise blank
     // until the first heartbeat, which is the exact silence this redesign removes.
@@ -399,8 +399,8 @@ export async function handleAskModalSubmit(req, res) {
     );
 
     const elapsed = formatElapsed(durationMs);
-    console.log(`🔵 Ask CastBot answered (${answer.length} chars, ${elapsed})`);
-    if (denials?.length) console.warn(`🔵 Ask CastBot deny rules fired ${denials.length}x — someone probed a blocked path`);
+    console.log(`👾 Ask CastBot answered (${answer.length} chars, ${elapsed})`);
+    if (denials?.length) console.warn(`👾 Ask CastBot deny rules fired ${denials.length}x — someone probed a blocked path`);
 
     const responseId = Date.now().toString(36);
     rememberResponse(responseId, { response: answer, query, elapsed });
@@ -415,7 +415,7 @@ export async function handleAskModalSubmit(req, res) {
       });
     }
   } catch (error) {
-    console.error('🔵 Ask CastBot error:', error.message);
+    console.error('👾 Ask CastBot error:', error.message);
     await deliver({ components: [buildErrorContainer(error.message, isPublicRoute)] });
   } finally {
     inFlight--;

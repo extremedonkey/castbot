@@ -4761,7 +4761,7 @@ export const BUTTON_REGISTRY = {
   'askcb_ask': {
     label: 'Ask CastBot',
     description: 'Ask a question about how CastBot and Safari work',
-    emoji: '🔵',
+    emoji: '👾',
     style: 'Primary',
     requiresModal: true,
     category: 'askcastbot',
@@ -4770,7 +4770,7 @@ export const BUTTON_REGISTRY = {
   'askcb_ask_ctx_*': {
     label: 'Ask Another',
     description: 'Ask CastBot a follow-up question with the previous answer as context',
-    emoji: '🔵',
+    emoji: '👾',
     style: 'Primary',
     requiresModal: true,
     category: 'askcastbot',
@@ -4779,7 +4779,7 @@ export const BUTTON_REGISTRY = {
   'askcb_post': {
     label: 'Post Ask',
     description: 'Post a standing Ask CastBot button into this channel for anyone to use',
-    emoji: '🔵',
+    emoji: '👾',
     style: 'Primary',
     category: 'askcastbot',
     parent: 'reeces_stuff'
@@ -4787,7 +4787,7 @@ export const BUTTON_REGISTRY = {
   'askcb_public_ask': {
     label: 'Ask CastBot',
     description: 'Ask CastBot a question (posted button — usable by anyone in the channel)',
-    emoji: '🔵',
+    emoji: '👾',
     style: 'Primary',
     requiresModal: true,
     category: 'askcastbot',
@@ -4796,7 +4796,7 @@ export const BUTTON_REGISTRY = {
   'askcb_pub_ctx_*': {
     label: 'Ask Another',
     description: 'Follow-up question from a posted Ask CastBot button, with prior context',
-    emoji: '🔵',
+    emoji: '👾',
     style: 'Primary',
     requiresModal: true,
     category: 'askcastbot',

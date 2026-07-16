@@ -10721,7 +10721,7 @@ To fix this:
       })(req, res, client);
 
     } else if (custom_id === 'askcb_ask' || custom_id.startsWith('askcb_ask_ctx_')) {
-      // 🔵 Ask CastBot — Tools-menu route: admins in whitelisted guilds/users. Logic: askCastBot.js
+      // 👾 Ask CastBot — Tools-menu route: admins in whitelisted guilds/users. Logic: askCastBot.js
       return ButtonHandlerFactory.create({
         id: 'askcb_ask',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -10730,7 +10730,7 @@ To fix this:
         handler: async (context) => {
           const { hasAskCastBotAccess, buildAskModal, recallResponse } = await import('./askCastBot.js');
           if (!hasAskCastBotAccess(context)) {
-            return { content: '🔵 Ask CastBot is not available here.', ephemeral: true };
+            return { content: '👾 Ask CastBot is not available here.', ephemeral: true };
           }
           const prevId = custom_id.startsWith('askcb_ask_ctx_') ? custom_id.replace('askcb_ask_ctx_', '') : null;
           return {
@@ -10741,7 +10741,7 @@ To fix this:
       })(req, res, client);
 
     } else if (custom_id === 'askcb_public_ask' || custom_id.startsWith('askcb_pub_ctx_')) {
-      // 🔵 Ask CastBot — POSTED-button route. Deliberately open to anyone who can see the
+      // 👾 Ask CastBot — POSTED-button route. Deliberately open to anyone who can see the
       // channel; Reece posts these in limited areas and lets channel perms be the gate.
       return ButtonHandlerFactory.create({
         id: 'askcb_public_ask',
@@ -10750,7 +10750,7 @@ To fix this:
         handler: async (context) => {
           const { isAskCastBotEnvironment, buildAskModal, recallResponse } = await import('./askCastBot.js');
           if (!isAskCastBotEnvironment()) {
-            return { content: '🔵 Ask CastBot is not available here.', ephemeral: true };
+            return { content: '👾 Ask CastBot is not available here.', ephemeral: true };
           }
           const prevId = custom_id.startsWith('askcb_pub_ctx_') ? custom_id.replace('askcb_pub_ctx_', '') : null;
           return {
@@ -10761,7 +10761,7 @@ To fix this:
       })(req, res, client);
 
     } else if (custom_id === 'askcb_post') {
-      // 🔵 Post Ask — drop a standing Ask CastBot button into this channel (Reece's Stuff)
+      // 👾 Post Ask — drop a standing Ask CastBot button into this channel (Reece's Stuff)
       return ButtonHandlerFactory.create({
         id: 'askcb_post',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -10769,7 +10769,7 @@ To fix this:
         handler: async (context) => {
           const { hasAskCastBotAccess, buildPostedAskContainer } = await import('./askCastBot.js');
           if (!hasAskCastBotAccess(context)) {
-            return { content: '🔵 Ask CastBot is not available here.', ephemeral: true };
+            return { content: '👾 Ask CastBot is not available here.', ephemeral: true };
           }
           await DiscordRequest(`channels/${context.channelId}/messages`, {
             method: 'POST',
@@ -39885,7 +39885,7 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id.startsWith('askcb_ask_modal') || custom_id.startsWith('askcb_pub_modal')) {
-      // 🔵 Ask CastBot — gate, defer, run, reply. All logic lives in askCastBot.js.
+      // 👾 Ask CastBot — gate, defer, run, reply. All logic lives in askCastBot.js.
       const { handleAskModalSubmit } = await import('./askCastBot.js');
       return handleAskModalSubmit(req, res);
 

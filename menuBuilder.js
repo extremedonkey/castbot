@@ -85,7 +85,7 @@ export class MenuBuilder {
       { type: 2, custom_id: 'tycoons_legacy', label: 'Tycoons', style: 2, emoji: { name: '💼' } }
     ];
     if (hasAskCastBotAccess({ userId: context?.userId, guildId: context?.guildId })) {
-      specialFeatures.push({ type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 1, emoji: getBotEmoji('cb_blue') });
+      specialFeatures.push({ type: 2, custom_id: 'askcb_ask', label: 'Ask CastBot', style: 1, emoji: { name: '👾' } });
     }
 
     // Cleanup section — admin maintenance tools. Archive Channels is TEST-only for now.
@@ -172,7 +172,7 @@ export class MenuBuilder {
         components: [
           { type: 2, custom_id: 'poc_menu_button', label: 'Menu', style: 1, emoji: getBotEmoji('cb_transparent') },
           { type: 2, custom_id: 'moai_ask', label: 'Moai', style: 2, emoji: { name: '🗿' } },
-          { type: 2, custom_id: 'askcb_post', label: 'Post Ask', style: 1, emoji: getBotEmoji('cb_blue') },
+          { type: 2, custom_id: 'askcb_post', label: 'Post Ask', style: 1, emoji: { name: '👾' } },
           { type: 2, custom_id: 'pcard_open', label: 'Player Card', style: 2, emoji: { name: '🪪' } },
           { type: 2, custom_id: 'richcard_demo', label: 'Rich Card', style: 2, emoji: { name: '🎴' } }
         ]
