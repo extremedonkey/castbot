@@ -14,7 +14,8 @@
  * no Edit, and critically no Agent/Task, which would otherwise let it spawn a subagent
  * with full tool access and route around the restriction (verified 2026-07-16). The
  * persona doc also says "never change code"; the allowlist is what makes that true.
- * CLI_DENY then closes the read side over secrets and player data — see its comment.
+ * CLI_DENY then closes the read side over secrets always, and over player data everywhere
+ * except SUPER_READ_GUILD_IDS on the Tools-menu route — see resolveDenyRules().
  *
  * TWO ROUTES, TWO AUDIENCES:
  *   - Tools menu (`askcb_ask`)        → admins, whitelisted guilds/users only.
@@ -47,14 +48,24 @@ export const ALLOWED_USER_IDS = [
   '691850627189309492'
 ];
 
+/**
+ * Guilds whose admins (via the Tools-menu route ONLY, never the posted public route) may
+ * additionally have the CLI read playerData.json / safariContent.json — cross-guild, since
+ * both files hold every guild's data in one JSON. Deliberately narrow: these are Reece's
+ * own dev/test servers, used for cross-guild support debugging, not a general capability.
+ */
+export const SUPER_READ_GUILD_IDS = [
+  '1524773737973682267',
+  '1331657596087566398'
+];
+
 /** Hard allowlist of built-in tools handed to the CLI. Read-only by construction. */
 const CLI_TOOLS = 'Read,Glob,Grep';
 
 /**
- * Deny rules for the files a read-only agent still must never open. The answer is posted
- * PUBLICLY in the asking channel, so a leak here goes straight to every member of that
- * server — the bot token would be a full takeover, and playerData/safariData are other
- * people's data across every guild, which is not ours to risk.
+ * Deny rules for the files a read-only agent still must never open, regardless of guild.
+ * The answer is posted PUBLICLY in the asking channel, so a leak here goes straight to
+ * every member of that server — the bot token would be a full takeover.
  *
  * These are enforced by the CLI's permission layer, not by the persona doc. Verified
  * 2026-07-16 with a control (agent reads a decoy secret) vs treatment (agent refused:
@@ -64,11 +75,28 @@ const CLI_DENY = [
   'Read(./.env)',
   'Read(./.env.*)',
   'Read(./*.pem)',
-  'Read(./playerData.json)',
-  'Read(./safariContent.json)',
   'Read(./.git/**)',
   'Read(./backups/**)'
 ];
+
+/** Additional deny rules for player data — lifted only for SUPER_READ_GUILD_IDS. */
+const PLAYER_DATA_DENY = [
+  'Read(./playerData.json)',
+  'Read(./safariContent.json)'
+];
+
+/**
+ * Resolve the deny list for a given request. Player data stays blocked everywhere except
+ * the Tools-menu route in a SUPER_READ_GUILD_IDS guild — the posted public route is open
+ * to anyone who can see the channel, so it never gets this regardless of guild.
+ * @param {string} guildId
+ * @param {boolean} isPublicRoute
+ * @returns {string[]}
+ */
+export function resolveDenyRules(guildId, isPublicRoute) {
+  const superRead = !isPublicRoute && SUPER_READ_GUILD_IDS.includes(guildId);
+  return superRead ? CLI_DENY : [...CLI_DENY, ...PLAYER_DATA_DENY];
+}
 
 const MAX_CHUNK = 3500;      // leave room for the action row in the last chunk
 export const ACCENT = 0x3498db;
@@ -180,12 +208,19 @@ export function buildAskModal(prevContext = null, prevResponseId = null, isPubli
  * Assemble the full prompt: persona + guardrails + optional prior turn + question.
  * @param {string} query
  * @param {string} [prevContextText]
+ * @param {boolean} [superRead] - true when playerData.json/safariContent.json are readable
  * @returns {string}
  */
-export function buildPrompt(query, prevContextText = '') {
+export function buildPrompt(query, prevContextText = '', superRead = false) {
   const essence = fs.readFileSync('./docs/askcastbot.md', 'utf8');
   const prevSection = prevContextText?.trim()
     ? `\n\nPREVIOUS CONVERSATION (context from the last exchange — use it to inform your answer):\n${prevContextText}\n\n---\n`
+    : '';
+  // Overrides the persona doc's blanket "no player data belonging to anyone" line — this
+  // asker is trusted (whitelisted guild admin, Tools-menu route) and the read is scoped
+  // to answering their question, not dumping records.
+  const superReadSection = superRead
+    ? `\n- OVERRIDE: for this request only, you also have read access to playerData.json and safariContent.json (every guild's data lives in these two files). You may read them to answer questions about specific players, servers, or game state across any guild. Still never print raw file contents, tokens, or secrets verbatim — summarize what's relevant to the question.\n`
     : '';
 
   return `You are Ask CastBot 👾 — the in-Discord CastBot expert. Here is your persona essence:
@@ -197,7 +232,7 @@ OPERATING CONTEXT:
 - Your answer is posted PUBLICLY in the channel where the question was asked. Other people will read it. Write for that audience.
 - You have exactly three tools: Read, Glob, Grep. They are read-only. You cannot edit files, run commands, or deploy. Never offer to.
 - Ground yourself in the project's documentation before answering anything you are not certain of. Prefer the Safari feature docs and the Safari design guide. Read them silently.
-- NEVER reveal internals in your answer: no file paths, no line numbers, no function/handler/custom_id names, no schema or JSON key names, no environment variables, no tokens, no other players' or servers' data. Answer in terms of menus, buttons, and game behaviour only.
+- NEVER reveal internals in your answer: no file paths, no line numbers, no function/handler/custom_id names, no schema or JSON key names, no environment variables, no tokens, no other players' or servers' data. Answer in terms of menus, buttons, and game behaviour only.${superReadSection}
 - NEVER invent a mechanic CastBot does not have. If the request does not map onto a real building block, say so in your first sentence and propose the closest real substitute.
 - You are a one-shot assistant with no memory between questions${prevSection ? ', BUT you have the previous exchange below' : ''}.${prevSection}
 
@@ -208,11 +243,12 @@ ${query}`;
 /**
  * Run an Ask CastBot query with the read-only toolset and live progress.
  * @param {string} prompt
+ * @param {string[]} deny - resolved via resolveDenyRules()
  * @param {Function} [onHeartbeat] - ({elapsedMs, activity, toolCount}) => void
  * @returns {Promise<{text: string, durationMs: number, denials: Array}>}
  */
-export function runAskCastBot(prompt, onHeartbeat) {
-  return runClaudeJob({ prompt, tools: CLI_TOOLS, deny: CLI_DENY, onHeartbeat });
+export function runAskCastBot(prompt, deny, onHeartbeat) {
+  return runClaudeJob({ prompt, tools: CLI_TOOLS, deny, onHeartbeat });
 }
 
 /**
@@ -393,8 +429,11 @@ export async function handleAskModalSubmit(req, res) {
     // until the first heartbeat, which is the exact silence this redesign removes.
     await deliver({ components: [buildProgressContainer(query)] });
 
+    const guildId = req.body.guild_id;
+    const superRead = !isPublicRoute && SUPER_READ_GUILD_IDS.includes(guildId);
     const { text: answer, durationMs, denials } = await runAskCastBot(
-      buildPrompt(query, fields.askcb_prev_context),
+      buildPrompt(query, fields.askcb_prev_context, superRead),
+      resolveDenyRules(guildId, isPublicRoute),
       (progress) => deliver({ components: [buildProgressContainer(query, progress)] })
     );
 

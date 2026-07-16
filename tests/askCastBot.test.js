@@ -74,6 +74,46 @@ describe('Ask CastBot — access gate', () => {
   });
 });
 
+// --- super-read gate (playerData.json / safariContent.json access) ---
+const SUPER_READ_GUILD_IDS = ['1524773737973682267', '1331657596087566398'];
+const BASE_DENY = ['Read(./.env)', 'Read(./.env.*)', 'Read(./*.pem)', 'Read(./.git/**)', 'Read(./backups/**)'];
+const PLAYER_DATA_DENY = ['Read(./playerData.json)', 'Read(./safariContent.json)'];
+function resolveDenyRules(guildId, isPublicRoute) {
+  const superRead = !isPublicRoute && SUPER_READ_GUILD_IDS.includes(guildId);
+  return superRead ? BASE_DENY : [...BASE_DENY, ...PLAYER_DATA_DENY];
+}
+
+describe('Ask CastBot — super-read gate (playerData/safariContent access)', () => {
+  it('lifts the player-data deny for a super-read guild on the Tools-menu route', () => {
+    for (const guildId of SUPER_READ_GUILD_IDS) {
+      const deny = resolveDenyRules(guildId, false);
+      assert.ok(!deny.includes('Read(./playerData.json)'), `guild ${guildId}`);
+      assert.ok(!deny.includes('Read(./safariContent.json)'), `guild ${guildId}`);
+    }
+  });
+
+  it('keeps the player-data deny for a super-read guild on the public route', () => {
+    for (const guildId of SUPER_READ_GUILD_IDS) {
+      const deny = resolveDenyRules(guildId, true);
+      assert.ok(deny.includes('Read(./playerData.json)'), `guild ${guildId}`);
+      assert.ok(deny.includes('Read(./safariContent.json)'), `guild ${guildId}`);
+    }
+  });
+
+  it('keeps the player-data deny for a non-super-read guild, even on the Tools-menu route', () => {
+    const deny = resolveDenyRules(RANDOM_GUILD, false);
+    assert.ok(deny.includes('Read(./playerData.json)'));
+    assert.ok(deny.includes('Read(./safariContent.json)'));
+  });
+
+  it('never drops the secrets deny, super-read or not', () => {
+    for (const isPublicRoute of [true, false]) {
+      const deny = resolveDenyRules(SUPER_READ_GUILD_IDS[0], isPublicRoute);
+      for (const rule of BASE_DENY) assert.ok(deny.includes(rule), rule);
+    }
+  });
+});
+
 // --- chunking ---
 const MAX_CHUNK = 3500;
 function chunkResponse(response) {
