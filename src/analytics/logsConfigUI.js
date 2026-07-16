@@ -38,9 +38,11 @@ export function buildCastBotLogsModal(envConfig, isProduction) {
           type: 21, // Radio Group — option `default` pre-selects in modals (String Select's doesn't)
           custom_id: 'logs_enabled',
           required: true,
+          // Exactly ONE option may carry `default` — an explicit default:false on the
+          // sibling suppresses pre-selection for the whole group (observed 2026-07-16).
           options: [
-            { label: 'Enabled', value: 'enabled', description: 'Post activity to the log channel', default: !!lg.enabled },
-            { label: 'Disabled', value: 'disabled', description: 'File logging only', default: !lg.enabled }
+            { label: 'Enabled', value: 'enabled', description: 'Post activity to the log channel', ...(lg.enabled ? { default: true } : {}) },
+            { label: 'Disabled', value: 'disabled', description: 'File logging only', ...(lg.enabled ? {} : { default: true }) }
           ]
         }
       },
@@ -80,8 +82,8 @@ export function buildCastBotLogsModal(envConfig, isProduction) {
           custom_id: 'logs_format',
           required: true,
           options: [
-            { label: 'Log Format: Classic', value: 'classic', description: 'Most detail but difficult to read', default: lg.format !== 'enhanced' },
-            { label: 'Log Format: Enhanced', value: 'enhanced', description: 'Formats logs nicer, less detail', default: lg.format === 'enhanced' }
+            { label: 'Log Format: Classic', value: 'classic', description: 'Most detail but difficult to read', ...(lg.format !== 'enhanced' ? { default: true } : {}) },
+            { label: 'Log Format: Enhanced', value: 'enhanced', description: 'Formats logs nicer, less detail', ...(lg.format === 'enhanced' ? { default: true } : {}) }
           ]
         }
       },

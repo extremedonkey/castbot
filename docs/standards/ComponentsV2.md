@@ -438,6 +438,7 @@ All select menus MUST be wrapped in Label component when used in modals:
 - **Availability**: Modals only, MUST be wrapped in Label component
 - **Limits**: 2-10 options
 - **Features**: `required` field (defaults to true), `default` on options
+- **🚨 GOTCHA — put `default: true` on exactly ONE option and OMIT the key from the others** (observed 2026-07-16, Stamina Settings modal): an explicit `default: false` on a sibling option suppresses pre-selection for the WHOLE group — nothing renders selected. Use `...(cond ? { default: true } : {})` spreads, never `default: someBool` on every option.
 
 ```javascript
 {

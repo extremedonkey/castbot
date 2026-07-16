@@ -16485,7 +16485,8 @@ Your server is now ready for Tycoons gameplay!`;
           // Regeneration Style is a Radio Group (type 21): its option `default` pre-selects
           // in modals (String Select's does NOT — see ComponentsV2.md), so the current
           // config is always reflected. Submit handler reads components[0..4] by index.
-          const isDrip = currentConfig.regenerationAmount != null;
+          // Robust mode detection: anything that isn't a positive number means Full refill.
+          const isDrip = Number(currentConfig.regenerationAmount) > 0;
           const modal = {
             custom_id: 'stamina_location_config_modal',
             title: 'Stamina Settings',
@@ -16550,18 +16551,20 @@ Your server is now ready for Tycoons gameplay!`;
                   type: 21, // Radio Group (modal-only)
                   custom_id: 'regen_style',
                   required: true,
+                  // Exactly ONE option may carry `default` — an explicit default:false on the
+                  // sibling suppresses pre-selection for the whole group (observed 2026-07-16).
                   options: [
                     {
                       label: 'Full refill (recommended)',
                       value: 'full',
                       description: 'Everything returns one cooldown after the last move',
-                      default: !isDrip
+                      ...(isDrip ? {} : { default: true })
                     },
                     {
                       label: 'Drip',
                       value: 'drip',
                       description: 'A fixed amount per cooldown — one shared timer, moves restart it',
-                      default: isDrip
+                      ...(isDrip ? { default: true } : {})
                     }
                   ]
                 }
