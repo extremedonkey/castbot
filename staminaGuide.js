@@ -4,6 +4,15 @@
  *
  * Prod Guide — Host-facing guide (configuration, logging, admin tools).
  * Accessible from Settings menu (🦁 Guide button next to ← Back).
+ *
+ * Pages support:
+ *  - content entries that are strings (static) OR functions (cfg) => string, resolved
+ *    against getStaminaConfig(guildId) so copy can quote the server's real settings.
+ *  - an optional `image` (basename in img/guides/, or (cfg) => basename for dynamic
+ *    selection) rendered as a Media Gallery via guideAssets.getGuideImageUrl — omitted
+ *    entirely when the URL can't be resolved (never breaks the page).
+ * Builders are async and take { guildId, client }; with neither, output degrades to
+ * static text only (backward compatible with legacy callers).
  */
 
 const PAGES = [
@@ -28,19 +37,29 @@ const PAGES = [
     content: [
       `Every move costs **1 stamina**. When you run out, you'll need to wait for it to regenerate before you can move again. Your host sets the regen time — it could be hours or minutes.`,
       `### \`\`\`⚡ Reading Your Stamina\`\`\``,
-      `Your stamina is shown as \`⚡ 3/5\` — meaning **3 available** out of **5 maximum**.\n\n**Over Max** — Some items can push you *above* your max. \`⚡ 3/1\` means 3 moves available even though your max is 1. This is normal!\n\nThe regen timer starts from your **last** move. If you moved at 9:00 PM and regen is 12 hours, you can move again at 9:00 AM.`,
-      `### \`\`\`📊 Activity Log\`\`\``,
-      `-# Tap **📜 Logs** in your player menu to see your activity history.\n\nWhen you move or use items, your log shows a stamina tag:\n\`(⚡1/1 → 0/1 ♻️12hr)\`\n\n**⚡1/1** = before (1 of 1) **→ 0/1** = after **♻️12hr** = time until regen\n\nWhen you're at or above max, you'll see \`♻️MAX\`.`
+      `Your stamina is shown as \`⚡ 3/5\` — meaning **3 available** out of **5 maximum**.\n\n**Over Max** — Some items can push you *above* your max. \`⚡ 3/1\` means 3 moves available even though your max is 1. This is normal!\n\nThe regen countdown restarts from your **last** move. If you moved at 9:00 PM and regen is 12 hours, your next refill lands at 9:00 AM.\n\n-# In **📜 Logs**, your moves show a stamina tag: \`(⚡1/1 → 0/1 ♻️12hr)\` — stamina before → after, then time until your next regen (\`♻️MAX\` = full).`
     ]
   },
   // Page 2: Regeneration
   {
     title: '♻️ Regeneration',
     subtitle: '-# How stamina comes back',
+    image: (cfg) => (cfg.regenerationAmount != null ? 'player-stamina-drip.png' : 'player-stamina-fullreset.png'),
+    imageAlt: 'How stamina regeneration works on this server',
     content: [
-      `Stamina regenerates automatically — there's no button to press. It's calculated every time the game checks your stamina (when you try to move, use an item, etc.).`,
-      `### \`\`\`⏰ Full Reset (Default)\`\`\``,
-      `When you use your last stamina, a cooldown timer starts. After it expires, **all** your stamina resets to max at once.\n\n**Example** (max: 1, regen: 12hr):\n\`\`\`\n⚡ 1/1  →  move  →  ⚡ 0/1  →  wait 12hr  →  ⚡ 1/1\n\`\`\`\n\n**Example** (max: 3, regen: 4hr):\n\`\`\`\n⚡ 3/3 → move → ⚡ 2/3 → move → ⚡ 1/3 → move → ⚡ 0/3\n                                                    ↓\n                                              wait 4hr\n                                                    ↓\n                                               ⚡ 3/3\n\`\`\`\n-# The timer starts from your **last** stamina use, not your first.`,
+      `Stamina regenerates automatically — there's no button to press. It's calculated every time the game checks your stamina (when you try to move, use an item, etc.). Servers run one of two styles: **Full refill** or **Drip**.`,
+      (cfg) => {
+        const mins = cfg.regenerationMinutes;
+        const time = mins % 60 === 0 && mins >= 60 ? `${mins / 60} hour${mins === 60 ? '' : 's'}` : `${mins} minutes`;
+        const style = cfg.regenerationAmount != null
+          ? `**Drip** — +${cfg.regenerationAmount} per cooldown`
+          : '**Full refill** — everything back at once';
+        return `-# **This server:** max ⚡ ${cfg.maxStamina} · cooldown ${time} · style: ${style}`;
+      },
+      `### \`\`\`⏰ Full Refill\`\`\``,
+      `One cooldown after your **last** move, ALL your stamina resets to max at once.\n\n**Example** (max: 3, regen: 4hr):\n\`\`\`\n⚡ 3/3 → move → ⚡ 2/3 → move → ⚡ 1/3 → move → ⚡ 0/3\n                                                    ↓\n                                              wait 4hr\n                                                    ↓\n                                               ⚡ 3/3\n\`\`\`\n-# The timer runs from your **last** stamina use, not your first — spreading moves out pushes the refill later.`,
+      `### \`\`\`💧 Drip\`\`\``,
+      `You have **ONE personal timer** (not one per point!). Each completed cooldown hands you a fixed amount, and **every move restarts the countdown**.\n\n**Example** (max: 3, +1 per 12hr):\n\`\`\`\n⚡ 0/3 → wait 12hr → ⚡ 1/3 → move → ⚡ 0/3 → wait 12hr → ⚡ 1/3\n\`\`\`\n-# You do NOT get each point back separately 12hr after you spent it — filling an empty tank takes one full cooldown **per point**. Make your moves in bursts and the timer works for you, not against you.`,
       `### \`\`\`📈 Incremental (Attributes)\`\`\``,
       `Some hosts set up attributes (like HP or Mana) that regenerate gradually — gaining a fixed amount every interval instead of resetting to max.\n\n**Example** (HP, +10 every 30min):\n\`\`\`\n❤️ 60/100  →  30min  →  ❤️ 70/100  →  30min  →  ❤️ 80/100\n\`\`\``
     ]
@@ -50,13 +69,13 @@ const PAGES = [
     title: '🧪 Items & Strategy',
     subtitle: '-# Consumables, permanent items, and smart stamina usage',
     content: [
-      `Items can affect your stamina in two ways: **consumable boosts** (temporary) and **permanent boosts** (as long as you own the item).`,
+      `Items can affect your stamina in two ways: **consumable boosts** (instant, used up) and **permanent boosts** (a bigger tank while you own the item).`,
       `### \`\`\`🍎 Consumable Items\`\`\``,
-      `Using a consumable stamina item **adds** to your current stamina and **consumes** the item. It can push you above your max.\n\n**Example** — Energy Drink (+2 stamina):\n\`\`\`\n⚡ 0/1  →  use Energy Drink  →  ⚡ 2/1\n\`\`\`\n-# Consumables do NOT reset your regen timer. If you were 5 minutes from a natural regen, it still happens.\n\n-# Over-max stamina works normally — each move costs 1, so \`2/1\` means 2 moves available.`,
+      `Using a consumable stamina item **adds** to your current stamina instantly and **consumes** the item. It always counts — even at full — and can push you above your max.\n\n**Example** — Energy Drink (+2 stamina):\n\`\`\`\n⚡ 0/1  →  use Energy Drink  →  ⚡ 2/1\n\`\`\`\n-# Consumables do NOT touch your regen timer. If you were 5 minutes from a natural regen, it still happens.\n\n-# Over-max stamina works normally — each move costs 1, so \`2/1\` means 2 moves available. But stamina above max won't regenerate until you spend back below max.`,
       `### \`\`\`🐎 Permanent Items\`\`\``,
-      `Some non-consumable items (like a Horse) increase your **maximum** stamina permanently while you own them. Each bonus point regenerates on its own independent timer.\n\n**Example** — Horse (+3 max stamina):\n\`\`\`\nBase:  ⚡ 1/1\nWith Horse: ⚡ 1/4  (max went from 1 → 4)\n\`\`\`\n-# If you lose the item, your max goes back down. Charges regen individually — you might see \`⚡ 2/4\` while some charges are still on cooldown.`,
+      `Some non-consumable items (like a Horse) make your tank **bigger** while you own them — your maximum rises by the item's boost.\n\n**Example** — Horse (+3 max stamina):\n\`\`\`\nBase:  ⚡ 1/1\nWith Horse: ⚡ 1/4  (max went from 1 → 4)\n\`\`\`\n-# The extra capacity refills through the **normal cooldown** — same single timer as the rest of your stamina, no separate per-point timers. Lose the item and your max drops back; points above the new max stay spendable but won't regenerate until you're below max again.`,
       `### \`\`\`💡 Optimal Stamina Usage\`\`\``,
-      `If you have a consumable stamina item, **don't use it immediately**. Wait for your natural regen to fire first, use that stamina, *then* pop the consumable. This minimises wasted cooldown time.\n\n**Example** (regen: 12hr):\n\`\`\`\n⚡ 0/1 → wait 12hr → ⚡ 1/1 → move → ⚡ 0/1\n  → use consumable → ⚡ 1/1 → move → ⚡ 0/1\n\`\`\`\n-# If you use the consumable *before* your natural regen, you waste whatever time was left on the timer.`
+      `Two habits save you hours of cooldown:\n\n**1. Make your moves in bursts.** The regen countdown restarts from your last move, so spreading moves out delays your refills.\n\n**2. Natural stamina first, consumables second.** Wait for your regen to fire, spend it, *then* pop the consumable.\n\n**Example** (regen: 12hr):\n\`\`\`\n⚡ 0/1 → wait 12hr → ⚡ 1/1 → move → ⚡ 0/1\n  → use consumable → ⚡ 1/1 → move → ⚡ 0/1\n\`\`\`\n-# If you use the consumable *before* your natural regen, you waste whatever time was left on the timer.`
     ]
   },
 ];
@@ -97,7 +116,7 @@ const PROD_PAGES = [
       `### \`\`\`💱 Transferring Currency Between Players\`\`\``,
       `There's no direct transfer button — adjust both players manually:\n\n**Sending player:** \`/menu\` → **🧑‍🤝‍🧑 Players** → Select → **🪙 Currency** → **Edit Currency** → Subtract the amount\n**Receiving player:** Same steps → Add the amount`,
       `### \`\`\`⚡ Setting a Player's Stamina\`\`\``,
-      `\`/menu\` → **🧑‍🤝‍🧑 Players** → Select player → **⚡ Stamina** → **⚡ Modify Stamina**\n\nYou'll see their current stamina and regen timer. Type a new value to override it.\n\nThe same menu also has **♻️ Manually Set Refresh** — set exactly when their next stamina refresh lands (days/hours/minutes/seconds; blank = refresh immediately). One-shot: only the current cycle shifts — the next cycle runs on your server's regen time as normal.\n\n-# This is useful if something went wrong or you want to give a player bonus moves.`,
+      `\`/menu\` → **🧑‍🤝‍🧑 Players** → Select player → **⚡ Stamina** → **⚡ Modify Stamina**\n\nYou'll see their current stamina and regen timer. Type a new value to override it.\n\n-# ⚠️ Setting stamina also restarts the player's regen countdown from that moment. If you don't want that side effect, follow up with **♻️ Manually Set Refresh** (below) to put their next refill back where it should be.\n\nThe same menu also has **♻️ Manually Set Refresh** — set exactly when their next stamina refresh lands (days/hours/minutes/seconds; blank = refresh immediately). One-shot: only the current cycle shifts — the next cycle runs on your server's regen time as normal.`,
       `### \`\`\`🗺️ Other Map Tools\`\`\``,
       `The **🗺️ Safari Map** category also has per-player tools:\n• **⏸️ Pause Player** — Temporarily block a player from moving\n• **🔄 Reset Explored Locations** — Clear their fog-of-war progress\n• **🗺️ Show Navigate Pane** — See their movement view`
     ]
@@ -106,26 +125,28 @@ const PROD_PAGES = [
   {
     title: '⚡ Stamina Settings',
     subtitle: '-# Page 3: How stamina and regeneration work',
+    image: 'host-stamina-options.png',
+    imageAlt: 'The stamina settings and both regeneration styles at a glance',
     content: [
       `Stamina controls how many map moves a player can make before waiting. Configure it via **⚙️ Settings → ⚡ Settings**.`,
       `### \`\`\`⚙️ The Settings\`\`\``,
-      `• **Starting Stamina** — What new players begin with\n• **Max Stamina** — How many moves a player can store up (before items)\n• **Regeneration Time (minutes)** — How long until stamina regenerates\n• **Regen Amount (optional)** — How much comes back each cycle. Leave blank for "full reset to max". Set a number to give a specific amount (can exceed max!)`,
+      `• **Starting Stamina** — What new players begin with\n• **Max Stamina** — The tank size: how many moves a player can store up (before item boosts)\n• **Regeneration Time (minutes)** — The length of one cooldown\n• **Regeneration Style** — The mode switch: **Full refill** (recommended) or **Drip**\n• **Drip Amount** — Points granted per cooldown (Drip style only — can exceed max)`,
       `### \`\`\`♻️ How Regeneration Works\`\`\``,
-      `When a player moves, they spend 1 stamina. Once they're below max, a cooldown starts. After the regen time elapses, they get stamina back.\n\n**Full Reset** (default): All stamina restores to max at once.\n**Custom Amount**: e.g. "5 per cycle" — the player gets +5 each cooldown, even if max is 1. This lets you give players multiple moves per cycle.\n\nThe regen timer shows everywhere stamina appears: \`♻️MAX\` means fully charged, \`♻️2h 15m\` shows time until next regen.`
+      `Every player has **one** regen timer, anchored to their most recent move — moving restarts the countdown.\n\n**Full refill** (default): one cooldown after the player's LAST move, the whole tank snaps back to max. Easy to explain: *"you get everything back one cooldown after your last move."*\n\n**Drip**: each completed cooldown grants +Drip Amount. Filling an empty tank takes one cooldown per missing point.\n\n-# ⚠️ Players usually assume each point refills on its OWN timer — it doesn't. If you run Drip, tell them up front it's one shared timer, or expect "stamina is broken" reports.\n\nThe regen timer shows everywhere stamina appears: \`♻️MAX\` means fully charged, \`♻️2h 15m\` shows time until next regen.`
     ]
   },
-  // Page 3: Items & Advanced Stamina
+  // Page 3: Items & Permanent Boosts
   {
     title: '🧪 Items & Permanent Boosts',
     subtitle: '-# Page 4: How items interact with stamina',
     content: [
       `Items can boost stamina in two ways. Understanding the difference helps with game balance.`,
       `### \`\`\`🍎 Consumable Items\`\`\``,
-      `Items marked as **Consumable: Yes** with a **Stamina Boost** value will add stamina when a player uses them. The item is removed from their inventory.\n\n• Stamina can go **above max** (e.g. \`5/1\` = 5 moves with max 1)\n• Using a consumable does **NOT** restart the regen timer\n• Moving on bonus stamina also doesn't trigger a cooldown\n\n-# This matters with long regen times. A player 5 minutes from regen who pops a consumable still gets their natural regen on time.`,
+      `Items marked as **Consumable: Yes** with a **Stamina Boost** value will add stamina when a player uses them. The item is removed from their inventory.\n\n• Works even at full — stamina can go **above max** (e.g. \`5/1\` = 5 moves with max 1)\n• Using a consumable does **NOT** restart the regen timer\n• Moving on bonus stamina also doesn't trigger a cooldown\n\n-# This matters with long regen times. A player 5 minutes from regen who pops a consumable still gets their natural regen on time.`,
       `### \`\`\`🐎 Permanent Items\`\`\``,
-      `Items marked as **Consumable: No** with a **Stamina Boost** value permanently increase the player's max stamina while they own the item.\n\n**Example** — Horse (Stamina Boost: 1):\nPlayer's max goes from 1 → 2. Each stamina charge regenerates **independently** — so using one charge only puts *that* charge on cooldown.\n\n**Stacking**: Horse (+1) + Boots (+1) = max 3 (1 base + 2 from items)\n\n-# If the item is removed, max decreases automatically. Multiple permanent items stack.`,
+      `Items marked as **Consumable: No** with a **Stamina Boost** value give the holder a **bigger tank** — their max rises by the boost while they own the item.\n\n**Example** — Horse (Stamina Boost: 1): player's max goes from 1 → 2. The extra capacity refills through your normal regeneration style — there are **no separate per-item timers**.\n\n**Stacking**: Horse (+1) + Boots (+1) = max 3 (1 base + 2 from items)\n\n-# If the item is removed, max decreases automatically; points above the new max stay spendable but won't regenerate until the player is below max again.`,
       `### \`\`\`⚠️ Over-Max Stamina\`\`\``,
-      `Players can go above max via consumables, custom regen amounts, or admin overrides. Over-max stamina does **not** regenerate — the player must spend down below max before natural regen kicks in.`
+      `Players can go above max via consumables, drip overshoot, or admin overrides. Over-max stamina does **not** regenerate — the player must spend down below max before natural regen kicks in.`
     ]
   },
   // Page 4: Logging & Monitoring
@@ -147,20 +168,66 @@ const PROD_PAGES = [
 ];
 
 /**
- * Build a single page of the Safari guide.
- * @param {number} page - Page index (0-based)
- * @returns {Object} Components V2 response
+ * Resolve a page's dynamic pieces: config-driven content entries and the Media Gallery.
+ * Never throws — dynamic entries are skipped and the gallery omitted on any failure.
  */
-export function buildSafariGuidePage(page = 0) {
+async function resolvePage(current, { guildId = null, client = null } = {}) {
+  let cfg = null;
+  const needsCfg = current.content.some(c => typeof c === 'function') || typeof current.image === 'function';
+  if (needsCfg && guildId) {
+    try {
+      const { getStaminaConfig } = await import('./safariManager.js');
+      cfg = await getStaminaConfig(guildId);
+    } catch (e) {
+      console.warn(`⚠️ staminaGuide: getStaminaConfig failed for ${guildId}: ${e.message}`);
+    }
+  }
+
+  const contentBlocks = [];
+  for (const entry of current.content) {
+    if (typeof entry === 'function') {
+      if (cfg) {
+        try { contentBlocks.push({ type: 10, content: entry(cfg) }); } catch { /* skip broken dynamic entry */ }
+      }
+    } else {
+      contentBlocks.push({ type: 10, content: entry });
+    }
+  }
+
+  let gallery = [];
+  const imageName = typeof current.image === 'function' ? (cfg ? current.image(cfg) : null) : current.image;
+  if (imageName && client) {
+    try {
+      const { getGuideImageUrl } = await import('./guideAssets.js');
+      const url = await getGuideImageUrl(client, imageName);
+      if (url) gallery = [{ type: 12, items: [{ media: { url }, description: current.imageAlt || current.title }] }];
+    } catch (e) {
+      console.warn(`⚠️ staminaGuide: image resolve failed for ${imageName}: ${e.message}`);
+    }
+  }
+
+  return { contentBlocks, gallery };
+}
+
+/**
+ * Build a single page of the Safari guide (player-facing).
+ * @param {number} page - Page index (0-based)
+ * @param {{guildId?: string, client?: import('discord.js').Client}} [options] - enables
+ *   config-aware copy and the infographic gallery; omit for static text only.
+ * @returns {Promise<Object>} Components V2 response
+ */
+export async function buildSafariGuidePage(page = 0, options = {}) {
   if (page < 0 || page >= PAGES.length) page = 0;
 
   const current = PAGES[page];
+  const { contentBlocks, gallery } = await resolvePage(current, options);
 
   const components = [
     { type: 10, content: `## ${current.title}` },
     { type: 10, content: current.subtitle },
     { type: 14 },
-    ...current.content.map(text => ({ type: 10, content: text })),
+    ...contentBlocks,
+    ...gallery,
     { type: 14 },
     {
       type: 1,
@@ -185,12 +252,14 @@ export function buildSafariGuidePage(page = 0) {
 /**
  * Build a single page of the Prod Guide (host-facing).
  * @param {number} page - Page index (0-based)
- * @returns {Object} Components V2 response
+ * @param {{guildId?: string, client?: import('discord.js').Client}} [options]
+ * @returns {Promise<Object>} Components V2 response
  */
-export function buildProdGuidePage(page = 0) {
+export async function buildProdGuidePage(page = 0, options = {}) {
   if (page < 0 || page >= PROD_PAGES.length) page = 0;
 
   const current = PROD_PAGES[page];
+  const { contentBlocks, gallery } = await resolvePage(current, options);
 
   const navButtons = [
     { type: 2, custom_id: 'castbot_settings', label: '← Settings', style: 2 },
@@ -203,7 +272,8 @@ export function buildProdGuidePage(page = 0) {
     { type: 10, content: `## ${current.title}` },
     { type: 10, content: current.subtitle },
     { type: 14 },
-    ...current.content.map(text => ({ type: 10, content: text })),
+    ...contentBlocks,
+    ...gallery,
     { type: 14 },
     { type: 1, components: navButtons }
   ];
