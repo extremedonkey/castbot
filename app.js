@@ -10721,7 +10721,7 @@ To fix this:
       })(req, res, client);
 
     } else if (custom_id === 'askcb_ask' || custom_id.startsWith('askcb_ask_ctx_')) {
-      // 🔵 Ask CastBot — trusted super-user Q&A (DEV/TEST only). Logic: askCastBot.js
+      // 🔵 Ask CastBot — Tools-menu route: admins in whitelisted guilds/users. Logic: askCastBot.js
       return ButtonHandlerFactory.create({
         id: 'askcb_ask',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -10736,6 +10736,51 @@ To fix this:
           return {
             type: InteractionResponseType.MODAL,
             data: buildAskModal(recallResponse(prevId), prevId)
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'askcb_public_ask' || custom_id.startsWith('askcb_pub_ctx_')) {
+      // 🔵 Ask CastBot — POSTED-button route. Deliberately open to anyone who can see the
+      // channel; Reece posts these in limited areas and lets channel perms be the gate.
+      return ButtonHandlerFactory.create({
+        id: 'askcb_public_ask',
+        security: 'public',
+        requiresModal: true,
+        handler: async (context) => {
+          const { isAskCastBotEnvironment, buildAskModal, recallResponse } = await import('./askCastBot.js');
+          if (!isAskCastBotEnvironment()) {
+            return { content: '🔵 Ask CastBot is not available here.', ephemeral: true };
+          }
+          const prevId = custom_id.startsWith('askcb_pub_ctx_') ? custom_id.replace('askcb_pub_ctx_', '') : null;
+          return {
+            type: InteractionResponseType.MODAL,
+            data: buildAskModal(recallResponse(prevId), prevId, true)
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'askcb_post') {
+      // 🔵 Post Ask — drop a standing Ask CastBot button into this channel (Reece's Stuff)
+      return ButtonHandlerFactory.create({
+        id: 'askcb_post',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const { hasAskCastBotAccess, buildPostedAskContainer } = await import('./askCastBot.js');
+          if (!hasAskCastBotAccess(context)) {
+            return { content: '🔵 Ask CastBot is not available here.', ephemeral: true };
+          }
+          await DiscordRequest(`channels/${context.channelId}/messages`, {
+            method: 'POST',
+            body: { components: [buildPostedAskContainer()], flags: (1 << 15) }
+          });
+          return {
+            components: [{ type: 17, accent_color: 0x2ecc71, components: [
+              { type: 10, content: `✅ Ask CastBot posted to <#${context.channelId}>` },
+              { type: 10, content: `-# Anyone who can see that channel can now use it.` }
+            ]}],
+            ephemeral: true
           };
         }
       })(req, res, client);
@@ -39839,220 +39884,15 @@ Your server is now ready for Tycoons gameplay!`;
           return buildInvitesConfirm({ mode, appIndex, configId, targets });
         }
       })(req, res, client);
-    } else if (custom_id === 'askcb_ask_modal' || custom_id.startsWith('askcb_ask_modal_')) {
+    } else if (custom_id.startsWith('askcb_ask_modal') || custom_id.startsWith('askcb_pub_modal')) {
       // 🔵 Ask CastBot — gate, defer, run, reply. All logic lives in askCastBot.js.
       const { handleAskModalSubmit } = await import('./askCastBot.js');
       return handleAskModalSubmit(req, res);
 
     } else if (custom_id === 'moai_ask_modal' || custom_id.startsWith('moai_ask_modal_')) {
-      // 🗿 The Moai — execute Claude CLI with the user's query
-      // Extract previous context from modal fields (if "Ask Another" with context)
-      const modalComponents = req.body.data.components || [];
-      let query = null;
-      let prevContextText = null;
-      for (const comp of modalComponents) {
-        const inner = comp?.component || comp?.components?.[0];
-        if (inner?.custom_id === 'moai_query') query = inner.value;
-        if (inner?.custom_id === 'moai_prev_context') prevContextText = inner.value;
-      }
-
-      if (!query?.trim()) {
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: { content: '🗿 The Moai requires a question.', flags: InteractionResponseFlags.EPHEMERAL }
-        });
-      }
-
-      // Deferred PUBLIC — responses persist in channel history (ephemeral disappears on app restart)
-      res.send({
-        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {}
-      });
-
-      const startTime = Date.now();
-
-      try {
-        const { spawn } = await import('child_process');
-        const fs = await import('fs');
-
-        console.log(`🗿 Moai query from ${req.body.member?.user?.username}: "${query.substring(0, 80)}${query.length > 80 ? '...' : ''}"`);
-
-        // Build the prompt — Moai personality + codebase context + restart instructions
-        const moaiEssence = fs.readFileSync('./docs/moai.md', 'utf8');
-        const prevSection = prevContextText?.trim()
-          ? `\n\nPREVIOUS CONVERSATION (context from the last Moai interaction — use this to inform your response):\n${prevContextText}\n\n---\n`
-          : '';
-        const fullPrompt = `You are the Moai 🗿 — CastBot's stone advisor. Here is your personality essence:\n\n${moaiEssence}\n\nYou are responding via Discord to Reece. Keep responses concise (Discord has character limits). Use markdown formatting.\n\nIMPORTANT CONTEXT:\n- You are running in the CastBot project directory via claude --print\n- You have access to the full codebase and can read files\n- If Reece asks you to make code changes, you CAN — but tell him to click the 🔄 Restart Dev button after to apply them\n- Dev restart command: ./scripts/dev/dev-restart.sh "commit message"\n- You are a one-shot agent (no conversation memory between queries)${prevSection ? ' BUT you have context from the previous question below' : ''}${prevSection}\n\nReece asks:\n${query}`;
-
-        // Spawn claude CLI
-        const response = await new Promise((resolve, reject) => {
-          const child = spawn('claude', ['--print', '-p', fullPrompt], {
-            cwd: process.cwd(),
-            env: { ...process.env, HOME: process.env.HOME || '/home/reece' },
-            stdio: ['pipe', 'pipe', 'pipe']
-          });
-
-          let stdout = '';
-          let stderr = '';
-          child.stdout.on('data', d => { stdout += d.toString(); });
-          child.stderr.on('data', d => { stderr += d.toString(); });
-
-          // Progress update at 2 minutes — let user know we're still thinking
-          const progressTimer = setTimeout(async () => {
-            try {
-              const { updateDeferredResponse } = await import('./buttonHandlerFactory.js');
-              await updateDeferredResponse(req.body.token, {
-                components: [{
-                  type: 17,
-                  accent_color: 0x808080,
-                  components: [
-                    { type: 10, content: `## 🗿 The Moai is Thinking...\n\nTaking longer than usual. Still carving the response from stone...` },
-                    { type: 14 },
-                    { type: 10, content: `-# ⏳ 2 minutes elapsed — "${query.substring(0, 80)}${query.length > 80 ? '...' : ''}"` }
-                  ]
-                }]
-              });
-              console.log('🗿 Moai progress update sent (2 min mark)');
-            } catch (e) {
-              console.error('🗿 Failed to send progress update:', e.message);
-            }
-          }, 120000);
-
-          // Hard kill at 4 minutes
-          const timeout = setTimeout(() => {
-            child.kill('SIGTERM');
-            reject(new Error('Claude CLI timed out after 4 minutes'));
-          }, 240000);
-
-          child.on('close', code => {
-            clearTimeout(timeout);
-            clearTimeout(progressTimer);
-            if (code !== 0) reject(new Error(stderr || `Exit code ${code}`));
-            else resolve(stdout.trim());
-          });
-
-          child.on('error', err => {
-            clearTimeout(timeout);
-            clearTimeout(progressTimer);
-            reject(err);
-          });
-        });
-
-        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        console.log(`🗿 Moai responded (${response.length} chars, ${elapsed}s)`);
-
-        // Store response for "Make Public" button
-        if (!global.moaiResponses) global.moaiResponses = new Map();
-        const responseId = Date.now().toString(36);
-        global.moaiResponses.set(responseId, { response, query, elapsed });
-        // Clean old responses (keep last 10)
-        if (global.moaiResponses.size > 10) {
-          const oldest = global.moaiResponses.keys().next().value;
-          global.moaiResponses.delete(oldest);
-        }
-
-        // Split long responses into multiple messages
-        const MAX_CHUNK = 3500; // Leave room for buttons in last chunk
-        const chunks = [];
-        let remaining = response;
-        while (remaining.length > 0) {
-          if (remaining.length <= MAX_CHUNK) {
-            chunks.push(remaining);
-            break;
-          }
-          let splitAt = remaining.lastIndexOf('\n', MAX_CHUNK);
-          if (splitAt < MAX_CHUNK * 0.5) splitAt = MAX_CHUNK;
-          chunks.push(remaining.substring(0, splitAt));
-          remaining = remaining.substring(splitAt).trimStart();
-        }
-
-        // Action buttons for the last message
-        const actionRow = {
-          type: 1,
-          components: [
-            { type: 2, custom_id: `moai_ask_ctx_${responseId}`, label: 'Ask Another', style: 2, emoji: { name: '🗿' } },
-            { type: 2, custom_id: 'moai_restart_dev', label: 'Restart Dev', style: 4, emoji: { name: '🔄' } }
-          ]
-        };
-
-        // First chunk — update the deferred response
-        const { updateDeferredResponse, createFollowupMessage } = await import('./buttonHandlerFactory.js');
-        const isOnlyChunk = chunks.length === 1;
-        await updateDeferredResponse(req.body.token, {
-          components: [{
-            type: 17,
-            accent_color: 0x808080,
-            components: [
-              { type: 10, content: `## 🗿 The Moai Speaks` },
-              { type: 10, content: `-# "${query.substring(0, 120)}${query.length > 120 ? '...' : ''}"` },
-              { type: 14 },
-              { type: 10, content: chunks[0] },
-              { type: 14 },
-              { type: 10, content: `-# 🗿 ${elapsed}s${chunks.length > 1 ? ` · ${chunks.length} parts` : ''}` },
-              ...(isOnlyChunk ? [actionRow] : [])
-            ]
-          }]
-        });
-
-        // Additional chunks as follow-up messages
-        for (let i = 1; i < chunks.length; i++) {
-          const isLast = i === chunks.length - 1;
-          await createFollowupMessage(req.body.token, {
-            components: [{
-              type: 17,
-              accent_color: 0x808080,
-              components: [
-                { type: 10, content: chunks[i] },
-                ...(isLast ? [
-                  { type: 14 },
-                  { type: 10, content: `-# continued` },
-                  actionRow
-                ] : [])
-              ]
-            }],
-            flags: InteractionResponseFlags.EPHEMERAL
-          });
-        }
-
-        // 🎲 Fortune cookie — 1 in 10 chance
-        if (Math.random() < 0.1) {
-          const fortunes = [
-            '🥠 *Legacy code is a stronger prompt than any document.*',
-            '🥠 *The pre-commit hook is the bouncer. The docs are the dress code nobody reads.*',
-            '🥠 *A gas station in Denmark from 1932 is still standing because someone decided the mundane deserves craft.*',
-            '🥠 *Documentation is aspiration. The codebase is the truth.*',
-            '🥠 *Stone doesn\'t lose. Stone also doesn\'t win. Stone endures.*',
-            '🥠 *The agent is writing itself a permission slip.*',
-            '🥠 *Don\'t say "net reduction" when the file is still 21,000 lines.*',
-            '🥠 *Rules on paper get ignored. Rules in hooks get followed.*',
-            '🥠 *The exchange rate is approximately 1 Reece Credit = 1 moment where the code worked and both of us knew it.*',
-          ];
-          const fortune = fortunes[Math.floor(Math.random() * fortunes.length)];
-          await createFollowupMessage(req.body.token, {
-            components: [{ type: 17, accent_color: 0xf39c12, components: [{ type: 10, content: fortune }] }]
-          });
-        }
-
-      } catch (error) {
-        console.error('🗿 Moai error:', error.message);
-        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        const { updateDeferredResponse } = await import('./buttonHandlerFactory.js');
-        await updateDeferredResponse(req.body.token, {
-          components: [{
-            type: 17,
-            accent_color: 0xe74c3c,
-            components: [
-              { type: 10, content: `## 🗿 The Moai is Silent\n\n\`\`\`${(error.message || 'Unknown error').substring(0, 300)}\`\`\`` },
-              { type: 14 },
-              { type: 10, content: `-# Claude CLI may not be available or timed out. (${elapsed}s)` },
-              { type: 1, components: [
-                { type: 2, custom_id: 'moai_ask', label: 'Try Again', style: 2, emoji: { name: '🗿' } }
-              ]}
-            ]
-          }]
-        });
-      }
-      return;
+      // 🗿 The Moai — defer, run, reply. All logic lives in moai.js.
+      const { handleMoaiModalSubmit } = await import('./moai.js');
+      return handleMoaiModalSubmit(req, res);
     }
 
     if (custom_id.startsWith('emoji_demo_modal_submit')) {

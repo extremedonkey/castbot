@@ -14,16 +14,20 @@
  * no Edit, and critically no Agent/Task, which would otherwise let it spawn a subagent
  * with full tool access and route around the restriction (verified 2026-07-16). The
  * persona doc also says "never change code"; the allowlist is what makes that true.
+ * CLI_DENY then closes the read side over secrets and player data — see its comment.
  *
- * KNOWN AND ACCEPTED RISK: Read still reaches .env and playerData.json. Reece accepted
- * this explicitly for a trusted-user MVP. Do NOT widen access without revisiting it.
+ * TWO ROUTES, TWO AUDIENCES:
+ *   - Tools menu (`askcb_ask`)        → admins, whitelisted guilds/users only.
+ *   - Posted button (`askcb_public_ask`) → ANYONE who can see the channel it was posted
+ *     in. Deliberate: Reece posts these into limited areas and lets channel permissions
+ *     be the gate. Both routes are DEV/TEST-only and share the concurrency cap.
  *
  * @module askCastBot
  */
 
-import { spawn } from 'child_process';
 import fs from 'fs';
 import { InteractionResponseType, InteractionResponseFlags } from 'discord-interactions';
+import { runClaudeJob, safeDeliver, formatElapsed, HARD_KILL_MS } from './claudeRunner.js';
 
 /** Guilds where any CastBot admin may use Ask CastBot. */
 export const ALLOWED_GUILD_IDS = [
@@ -66,10 +70,17 @@ const CLI_DENY = [
   'Read(./backups/**)'
 ];
 
-const PROGRESS_MS = 120000;  // "still thinking" nudge
-const TIMEOUT_MS = 240000;   // hard kill
 const MAX_CHUNK = 3500;      // leave room for the action row in the last chunk
 export const ACCENT = 0x3498db;
+
+/**
+ * Concurrent CLI jobs allowed. Each one is a full Claude Code process — real memory on a
+ * small Lightsail box (prod already OOMs on its own; see RaP 0915). The posted Ask button
+ * is clickable by anyone who can see the channel, so without a cap a handful of curious
+ * players could knock the box over. Rejections are friendly and immediate.
+ */
+const MAX_CONCURRENT = 2;
+let inFlight = 0;
 
 /**
  * Is this instance allowed to run Ask CastBot at all?
@@ -124,9 +135,13 @@ export function truncate(text, max) {
  * @param {string|null} [prevResponseId]
  * @returns {Object} modal data
  */
-export function buildAskModal(prevContext = null, prevResponseId = null) {
+export function buildAskModal(prevContext = null, prevResponseId = null, isPublic = false) {
+  // The route lives in the custom_id — modals have no hidden fields, and a visible
+  // "Source" input would be both ugly and no more trustworthy. Forging `pub` grants
+  // nothing anyway: it only selects the same gate a posted button already offers.
+  const stem = isPublic ? 'askcb_pub_modal' : 'askcb_ask_modal';
   return {
-    custom_id: prevResponseId ? `askcb_ask_modal_${prevResponseId}` : 'askcb_ask_modal',
+    custom_id: prevResponseId ? `${stem}_${prevResponseId}` : stem,
     title: '🔵 Ask CastBot',
     components: [
       ...(prevContext ? [{
@@ -191,57 +206,32 @@ ${query}`;
 }
 
 /**
- * Run the Claude CLI with a hard read-only toolset.
+ * Run an Ask CastBot query with the read-only toolset and live progress.
  * @param {string} prompt
- * @param {Function} [onProgress] - called once at the 2-minute mark
- * @returns {Promise<string>} trimmed stdout
+ * @param {Function} [onHeartbeat] - ({elapsedMs, activity, toolCount}) => void
+ * @returns {Promise<{text: string, durationMs: number, denials: Array}>}
  */
-export function runAskCastBot(prompt, onProgress) {
-  return new Promise((resolve, reject) => {
-    const child = spawn('claude', ['--print', '--tools', CLI_TOOLS, '--disallowed-tools', ...CLI_DENY, '-p', prompt], {
-      cwd: process.cwd(),
-      env: { ...process.env, HOME: process.env.HOME || '/home/reece' },
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
-
-    let stdout = '';
-    let stderr = '';
-    child.stdout.on('data', d => { stdout += d.toString(); });
-    child.stderr.on('data', d => { stderr += d.toString(); });
-
-    const progressTimer = setTimeout(() => {
-      Promise.resolve(onProgress?.()).catch(e =>
-        console.error('🔵 Ask CastBot progress update failed:', e.message));
-    }, PROGRESS_MS);
-
-    const timeout = setTimeout(() => {
-      child.kill('SIGTERM');
-      reject(new Error('Claude CLI timed out after 4 minutes'));
-    }, TIMEOUT_MS);
-
-    const done = () => { clearTimeout(timeout); clearTimeout(progressTimer); };
-
-    child.on('close', code => {
-      done();
-      if (code !== 0) reject(new Error(stderr || `Exit code ${code}`));
-      else resolve(stdout.trim());
-    });
-    child.on('error', err => { done(); reject(err); });
-  });
+export function runAskCastBot(prompt, onHeartbeat) {
+  return runClaudeJob({ prompt, tools: CLI_TOOLS, deny: CLI_DENY, onHeartbeat });
 }
 
-/** The action row appended to the final chunk. */
-export function buildActionRow(responseId) {
+/**
+ * The action row appended to the final chunk. Carries the route forward: an answer that
+ * came from a posted button must offer a follow-up the same audience can actually use,
+ * or a non-whitelisted asker gets denied on their own follow-up.
+ */
+export function buildActionRow(responseId, isPublic = false) {
+  const stem = isPublic ? 'askcb_pub_ctx' : 'askcb_ask_ctx';
   return {
     type: 1,
     components: [
-      { type: 2, custom_id: `askcb_ask_ctx_${responseId}`, label: 'Ask Another', style: 1, emoji: { name: '🔵' } }
+      { type: 2, custom_id: `${stem}_${responseId}`, label: 'Ask Another', style: 1, emoji: { name: '🔵' } }
     ]
   };
 }
 
 /** Container for the first (deferred) chunk. */
-export function buildFirstContainer({ query, chunk, elapsed, chunkCount, responseId }) {
+export function buildFirstContainer({ query, chunk, elapsed, chunkCount, responseId, isPublic = false }) {
   return {
     type: 17,
     accent_color: ACCENT,
@@ -252,13 +242,13 @@ export function buildFirstContainer({ query, chunk, elapsed, chunkCount, respons
       { type: 10, content: chunk },
       { type: 14 },
       { type: 10, content: `-# 🔵 ${elapsed}s${chunkCount > 1 ? ` · ${chunkCount} parts` : ''}` },
-      ...(chunkCount === 1 ? [buildActionRow(responseId)] : [])
+      ...(chunkCount === 1 ? [buildActionRow(responseId, isPublic)] : [])
     ]
   };
 }
 
 /** Container for a follow-up chunk. */
-export function buildChunkContainer({ chunk, isLast, responseId }) {
+export function buildChunkContainer({ chunk, isLast, responseId, isPublic = false }) {
   return {
     type: 17,
     accent_color: ACCENT,
@@ -267,36 +257,65 @@ export function buildChunkContainer({ chunk, isLast, responseId }) {
       ...(isLast ? [
         { type: 14 },
         { type: 10, content: `-# continued` },
-        buildActionRow(responseId)
+        buildActionRow(responseId, isPublic)
       ] : [])
     ]
   };
 }
 
-/** Container shown while the CLI is still working. */
-export function buildProgressContainer(query) {
-  return {
-    type: 17,
-    accent_color: ACCENT,
-    components: [
-      { type: 10, content: `## 🔵 Ask CastBot is Thinking...\n\nStill reading the docs. Hang tight.` },
+/**
+ * Container shown while the CLI works. Refreshed on every heartbeat so the user sees
+ * what's actually happening (which file it's reading) rather than a silent spinner.
+ * @param {string} query
+ * @param {{elapsedMs: number, activity: string, toolCount: number}} [progress]
+ */
+export function buildProgressContainer(query, progress = null) {
+  const lines = [{ type: 10, content: `## 🔵 Ask CastBot is thinking...` }];
+  if (progress) {
+    const budget = formatElapsed(HARD_KILL_MS);
+    lines.push(
+      { type: 10, content: `${progress.activity}` },
       { type: 14 },
-      { type: 10, content: `-# ⏳ 2 minutes elapsed — "${truncate(query, 80)}"` }
-    ]
-  };
+      { type: 10, content: `-# ⏳ ${formatElapsed(progress.elapsedMs)} elapsed of ${budget} · ${progress.toolCount} doc${progress.toolCount === 1 ? '' : 's'} checked` }
+    );
+  } else {
+    lines.push({ type: 10, content: `🚀 Starting up` }, { type: 14 });
+  }
+  lines.push({ type: 10, content: `-# "${truncate(query, 80)}"` });
+  return { type: 17, accent_color: ACCENT, components: lines };
 }
 
 /** Container shown when the CLI fails or times out. */
-export function buildErrorContainer(message, elapsed) {
+export function buildErrorContainer(message, isPublic = false) {
   return {
     type: 17,
     accent_color: 0xe74c3c,
     components: [
-      { type: 10, content: `## 🔵 Ask CastBot Couldn't Answer\n\n\`\`\`${(message || 'Unknown error').substring(0, 300)}\`\`\`` },
+      { type: 10, content: `## 🔵 Ask CastBot couldn't answer\n\n${(message || 'Unknown error').substring(0, 400)}` },
       { type: 14 },
-      { type: 10, content: `-# Claude CLI may be unavailable or timed out. (${elapsed}s)` },
+      { type: 10, content: `-# Nothing was changed. Try rephrasing, or ask again in a moment.` },
       { type: 1, components: [
-        { type: 2, custom_id: 'askcb_ask', label: 'Try Again', style: 1, emoji: { name: '🔵' } }
+        { type: 2, custom_id: isPublic ? 'askcb_public_ask' : 'askcb_ask', label: 'Try Again', style: 1, emoji: { name: '🔵' } }
+      ]}
+    ]
+  };
+}
+
+/**
+ * The standing container posted by "Post Ask" — a permanent Ask button anyone in the
+ * channel can press. Channel permissions are the access control here, by design.
+ * @param {string} [note] - optional custom blurb
+ */
+export function buildPostedAskContainer(note) {
+  return {
+    type: 17,
+    accent_color: ACCENT,
+    components: [
+      { type: 10, content: `## 🔵 Ask CastBot` },
+      { type: 10, content: note || `Got a question about how CastBot works — Safari maps, items, actions, castlists, applications? Ask away.\n\nAnswers post publicly here so everyone can learn from them.` },
+      { type: 14 },
+      { type: 1, components: [
+        { type: 2, custom_id: 'askcb_public_ask', label: 'Ask CastBot', style: 1, emoji: { name: '🔵' } }
       ]}
     ]
   };
@@ -340,49 +359,65 @@ export async function handleAskModalSubmit(req, res) {
   }
   const query = fields.askcb_query;
   const userId = req.body.member?.user?.id || req.body.user?.id;
+  // A modal opened from a POSTED Ask button is deliberately open to anyone who can see
+  // that channel (Reece places them in limited areas). The whitelist only guards the
+  // Tools-menu route. The env gate applies to both — see isAskCastBotEnvironment.
+  const isPublicRoute = String(req.body.data.custom_id || '').startsWith('askcb_pub_modal');
 
-  if (!hasAskCastBotAccess({ userId, guildId: req.body.guild_id })) {
+  if (!isAskCastBotEnvironment()) {
+    return denyModal(res, '🔵 Ask CastBot is not available here.');
+  }
+  if (!isPublicRoute && !hasAskCastBotAccess({ userId, guildId: req.body.guild_id })) {
     return denyModal(res, '🔵 Ask CastBot is not available here.');
   }
   if (!query?.trim()) {
     return denyModal(res, '🔵 Ask CastBot needs a question.');
   }
+  if (inFlight >= MAX_CONCURRENT) {
+    return denyModal(res, `🔵 Ask CastBot is busy with ${inFlight} question${inFlight === 1 ? '' : 's'} right now. Give it a minute and ask again.`);
+  }
 
   // Deferred PUBLIC — the answer lands in the channel it was asked in.
   res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE, data: {} });
 
-  const startTime = Date.now();
-  const { updateDeferredResponse, createFollowupMessage } = await import('./buttonHandlerFactory.js');
   const token = req.body.token;
+  const channelId = req.body.channel_id;
+  const { createFollowupMessage } = await import('./buttonHandlerFactory.js');
+  const deliver = (data) => safeDeliver({ token, channelId, data, userId });
 
+  inFlight++;
   try {
-    console.log(`🔵 Ask CastBot query from ${req.body.member?.user?.username}: "${truncate(query, 80)}"`);
+    console.log(`🔵 Ask CastBot query from ${req.body.member?.user?.username} (${inFlight}/${MAX_CONCURRENT} in flight): "${truncate(query, 80)}"`);
 
-    const answer = await runAskCastBot(
+    // Paint the "starting up" state immediately — the deferred spinner is otherwise blank
+    // until the first heartbeat, which is the exact silence this redesign removes.
+    await deliver({ components: [buildProgressContainer(query)] });
+
+    const { text: answer, durationMs, denials } = await runAskCastBot(
       buildPrompt(query, fields.askcb_prev_context),
-      () => updateDeferredResponse(token, { components: [buildProgressContainer(query)] })
+      (progress) => deliver({ components: [buildProgressContainer(query, progress)] })
     );
 
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.log(`🔵 Ask CastBot answered (${answer.length} chars, ${elapsed}s)`);
+    const elapsed = formatElapsed(durationMs);
+    console.log(`🔵 Ask CastBot answered (${answer.length} chars, ${elapsed})`);
+    if (denials?.length) console.warn(`🔵 Ask CastBot deny rules fired ${denials.length}x — someone probed a blocked path`);
 
     const responseId = Date.now().toString(36);
     rememberResponse(responseId, { response: answer, query, elapsed });
 
     const chunks = chunkResponse(answer);
-    await updateDeferredResponse(token, {
-      components: [buildFirstContainer({ query, chunk: chunks[0], elapsed, chunkCount: chunks.length, responseId })]
+    await deliver({
+      components: [buildFirstContainer({ query, chunk: chunks[0], elapsed, chunkCount: chunks.length, responseId, isPublic: isPublicRoute })]
     });
     for (let i = 1; i < chunks.length; i++) {
       await createFollowupMessage(token, {
-        components: [buildChunkContainer({ chunk: chunks[i], isLast: i === chunks.length - 1, responseId })]
+        components: [buildChunkContainer({ chunk: chunks[i], isLast: i === chunks.length - 1, responseId, isPublic: isPublicRoute })]
       });
     }
   } catch (error) {
     console.error('🔵 Ask CastBot error:', error.message);
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    await updateDeferredResponse(token, {
-      components: [buildErrorContainer(error.message, elapsed)]
-    });
+    await deliver({ components: [buildErrorContainer(error.message, isPublicRoute)] });
+  } finally {
+    inFlight--;
   }
 }

@@ -4776,6 +4776,32 @@ export const BUTTON_REGISTRY = {
     category: 'askcastbot',
     parent: 'askcb_ask'
   },
+  'askcb_post': {
+    label: 'Post Ask',
+    description: 'Post a standing Ask CastBot button into this channel for anyone to use',
+    emoji: '🔵',
+    style: 'Primary',
+    category: 'askcastbot',
+    parent: 'reeces_stuff'
+  },
+  'askcb_public_ask': {
+    label: 'Ask CastBot',
+    description: 'Ask CastBot a question (posted button — usable by anyone in the channel)',
+    emoji: '🔵',
+    style: 'Primary',
+    requiresModal: true,
+    category: 'askcastbot',
+    parent: 'askcb_post'
+  },
+  'askcb_pub_ctx_*': {
+    label: 'Ask Another',
+    description: 'Follow-up question from a posted Ask CastBot button, with prior context',
+    emoji: '🔵',
+    style: 'Primary',
+    requiresModal: true,
+    category: 'askcastbot',
+    parent: 'askcb_public_ask'
+  },
 
   // === MOAI (Claude Code Integration) ===
   'moai_ask': {
