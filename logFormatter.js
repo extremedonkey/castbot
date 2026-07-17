@@ -15,6 +15,7 @@
 const ACTION_STYLE = {
   SAFARI_MOVEMENT: { emoji: '🗺️', label: 'Movement' },
   SAFARI_WHISPER: { emoji: '🤫', label: 'Whisper' },
+  SAFARI_WHISPER_READ: { emoji: '🤫', label: 'Whisper Read' },
   SAFARI_ITEM_PICKUP: { emoji: '🧰', label: 'Item' },
   SAFARI_ITEM_USE: { emoji: '⚡', label: 'Item' },
   SAFARI_CURRENCY: { emoji: '🪙', label: 'Currency' },
@@ -168,6 +169,9 @@ export function formatEnhancedSafariLog(action, userDisplayName, safariContent =
 
     case 'SAFARI_WHISPER':
       return `${ts} 🤫 **Whisper**${loc} — ${name} → **${safariContent.recipientName}**${quoteBlock(safariContent.message)}`;
+
+    case 'SAFARI_WHISPER_READ':
+      return `${ts} 🤫 **Whisper Read**${loc} — ${name} read a whisper from **${safariContent.senderName}**`;
 
     case 'SAFARI_ITEM_PICKUP':
       return `${ts} 🧰 **Item**${loc} — ${name} collected ${safariContent.itemEmoji || '📦'} **${safariContent.itemName}** x${safariContent.quantity}`;

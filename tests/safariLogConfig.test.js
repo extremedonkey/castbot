@@ -109,6 +109,13 @@ describe('getSafariLogTargets — whisper log channel', () => {
     }
   });
 
+  it('whisper READ events reach the whisper channel (spectator content) with same independence', () => {
+    const s = { enabled: false, logChannelId: 'A', whisperLogChannelId: 'B', logTypes: {} };
+    assert.deepEqual(getSafariLogTargets(s, 'SAFARI_WHISPER_READ', 'whispers'), ['B']);
+    const both = { enabled: true, logChannelId: 'A', whisperLogChannelId: 'B', logTypes: { whispers: true } };
+    assert.deepEqual(getSafariLogTargets(both, 'SAFARI_WHISPER_READ', 'whispers'), ['A', 'B']);
+  });
+
   it('no whisper channel set → whisper behaves exactly as before', () => {
     const on = { enabled: true, logChannelId: 'A', logTypes: { whispers: true } };
     const off = { enabled: true, logChannelId: 'A', logTypes: { whispers: false } };

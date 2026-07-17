@@ -976,6 +976,7 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
     // Check if this specific log type is enabled
     const logTypeMap = {
       'SAFARI_WHISPER': 'whispers',
+      'SAFARI_WHISPER_READ': 'whispers',
       'SAFARI_ITEM_PICKUP': 'itemPickups',
       'SAFARI_CURRENCY': 'currencyChanges',
       'SAFARI_PURCHASE': 'storeTransactions',
@@ -1102,6 +1103,10 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
     } else switch (action) {
       case 'SAFARI_WHISPER':
         logMessage = `🤫 **WHISPER** | [${timestamp}] | **${userDisplayName}** → **${safariContent.recipientName}** at **${safariContent.location}**${channelDisplay}\n> ${safariContent.message}`;
+        break;
+
+      case 'SAFARI_WHISPER_READ':
+        logMessage = `🤫 **WHISPER READ** | [${timestamp}] | **${userDisplayName}** read a whisper from **${safariContent.senderName}**${safariContent.location ? ` at **${safariContent.location}**` : ''}${channelDisplay}`;
         break;
         
       case 'SAFARI_ITEM_PICKUP':

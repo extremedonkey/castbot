@@ -524,12 +524,29 @@ export async function handleReadWhisper(context, whisperId, targetUserId, client
     store.delete(whisperId);
     await store.flush();
 
+    // Log the read to the env analytics log + guild Safari Log / whisper log channel
+    try {
+      const { logWhisperRead } = await import('./safariLogger.js');
+      await logWhisperRead({
+        guildId: context.guildId,
+        readerId: context.userId,
+        readerName: context.username,
+        readerDisplayName: context.displayName || context.username,
+        senderId: whisperData.senderId,
+        senderName: whisperData.senderName,
+        location: whisperData.coordinate,
+        channelName: context.channelName
+      });
+    } catch (logError) {
+      logger.error('WHISPER', 'Failed to log whisper read', { error: logError.message });
+    }
+
     // Deliver the whisper content
-    logger.info('WHISPER', 'Delivering whisper content', { 
-      recipientId: context.userId, 
-      senderId: whisperData.senderId 
+    logger.info('WHISPER', 'Delivering whisper content', {
+      recipientId: context.userId,
+      senderId: whisperData.senderId
     });
-    
+
     return whisperContent;
   } catch (error) {
     logger.error('WHISPER', 'Failed to handle read whisper', { error: error.message });

@@ -58,7 +58,47 @@ export async function logWhisper({ guildId, senderId, senderName, senderDisplayN
     safariContent
   );
 
-  addActivityEntryAndSave(guildId, senderId, ACTIVITY_TYPES.whisper, `Whispered to ${recipientName}`, { loc: location });
+  // Include the message in the sender's activity log (guild-Safari-Log style),
+  // quoted per line and capped so playerData entries stay bounded
+  const preview = message && message.length > 150 ? message.slice(0, 147) + '...' : (message || '');
+  const quoted = preview ? '\n' + preview.split('\n').map(l => `> ${l}`).join('\n') : '';
+  addActivityEntryAndSave(guildId, senderId, ACTIVITY_TYPES.whisper, `Whispered to ${recipientName}${quoted}`, { loc: location });
+}
+
+/**
+ * Log a whisper being READ (recipient opened the Read Message button).
+ * Posts to the env analytics log + guild Safari Log (incl. the dedicated whisper
+ * log channel — reads are whisper-domain spectator content). No activity entry.
+ * @param {Object} params
+ * @param {string} params.guildId
+ * @param {string} params.readerId - User who opened the whisper
+ * @param {string} params.readerName - Reader username
+ * @param {string} params.readerDisplayName - Reader display name
+ * @param {string} params.senderId - Original whisper sender
+ * @param {string} params.senderName - Original sender display name
+ * @param {string} params.location - Coordinate the whisper was sent at
+ * @param {string} params.channelName - Channel the read happened in
+ */
+export async function logWhisperRead({ guildId, readerId, readerName, readerDisplayName, senderId, senderName, location, channelName }) {
+  const safariContent = {
+    senderId,
+    senderName,
+    location,
+    channelName
+  };
+
+  await logInteraction(
+    readerId,
+    guildId,
+    'SAFARI_WHISPER_READ',
+    `Read a whisper from ${senderName}`,
+    readerName,
+    null,
+    null,
+    channelName,
+    readerDisplayName,
+    safariContent
+  );
 }
 
 /**
@@ -651,11 +691,11 @@ export function mergeLogTypes(storedLogTypes) {
  * Resolve which channel(s) a Safari Log post should go to. Pure — unit-tested.
  *
  * Main log channel: requires enabled + logChannelId + the action's logType enabled.
- * Dedicated whisper log channel (spectator-safe): receives ONLY SAFARI_WHISPER,
- * requires just whisperLogChannelId — deliberately independent of `enabled` and
- * logTypes.whispers, so hosts can run a public whisper feed with the main
- * (privileged) log disabled. Both set + both eligible = dual delivery (deduped
- * if they point at the same channel).
+ * Dedicated whisper log channel (spectator-safe): receives ONLY whisper-domain
+ * actions (SAFARI_WHISPER + SAFARI_WHISPER_READ), requires just whisperLogChannelId —
+ * deliberately independent of `enabled` and logTypes.whispers, so hosts can run a
+ * public whisper feed with the main (privileged) log disabled. Both set + both
+ * eligible = dual delivery (deduped if they point at the same channel).
  *
  * @param {Object|null} logSettings - safariLogSettings for the guild
  * @param {string} action - e.g. 'SAFARI_WHISPER', 'SAFARI_MOVEMENT'
@@ -666,7 +706,8 @@ export function getSafariLogTargets(logSettings, action, logType) {
   const logTypes = mergeLogTypes(logSettings?.logTypes);
   const mainEligible = !!(logSettings?.enabled && logSettings?.logChannelId
     && logType && logTypes[logType]);
-  const whisperEligible = action === 'SAFARI_WHISPER' && !!logSettings?.whisperLogChannelId;
+  const whisperEligible = (action === 'SAFARI_WHISPER' || action === 'SAFARI_WHISPER_READ')
+    && !!logSettings?.whisperLogChannelId;
 
   const targets = [];
   if (mainEligible) targets.push(logSettings.logChannelId);

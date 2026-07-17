@@ -70,6 +70,11 @@ describe('logFormatter — Safari other actions', () => {
     assert.equal(line, `${TS} 🤫 **Whisper** (C3) — **gabi!** → **Bob**\n> line one\n> line two`);
   });
 
+  it('whisper read event names reader and sender', () => {
+    const line = fmt('SAFARI_WHISPER_READ', { location: 'E4', senderName: 'Jun' });
+    assert.equal(line, `${TS} 🤫 **Whisper Read** (E4) — **gabi!** read a whisper from **Jun**`);
+  });
+
   it('item pickup', () => {
     const line = fmt('SAFARI_ITEM_PICKUP', { location: 'B2', itemEmoji: '🪓', itemName: 'Axe', quantity: 2 });
     assert.equal(line, `${TS} 🧰 **Item** (B2) — **gabi!** collected 🪓 **Axe** x2`);
