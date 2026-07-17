@@ -4,7 +4,7 @@
  * Provides add, query, format, backfill, and UI display functions.
  */
 
-import { loadPlayerData, savePlayerData } from './storage.js';
+import { loadPlayerData, savePlayerData, withStorageLock } from './storage.js';
 
 // --- Constants ---
 
@@ -102,13 +102,16 @@ async function _flushActivityEntries() {
   _pendingEntries = [];
 
   try {
-    // savePlayerData already uses the storage write mutex internally,
-    // so no need for withStorageLock here — just load fresh data and save.
-    const playerData = await loadPlayerData();
-    for (const { guildId, userId, type, desc, opts } of batch) {
-      addActivityEntry(playerData, guildId, userId, type, desc, opts);
-    }
-    await savePlayerData(playerData);
+    // The whole load→append→save cycle runs under withStorageLock. The save mutex alone
+    // is NOT enough — it serializes writes, not cycles: an unlocked cycle here can clobber
+    // (or be clobbered by) a concurrent writer's stale snapshot (incidents/05).
+    await withStorageLock(async () => {
+      const playerData = await loadPlayerData();
+      for (const { guildId, userId, type, desc, opts } of batch) {
+        addActivityEntry(playerData, guildId, userId, type, desc, opts);
+      }
+      await savePlayerData(playerData);
+    });
     console.log(`📝 Activity log: flushed ${batch.length} entries`);
   } catch (error) {
     console.error(`Activity log flush error (${batch.length} entries): ${error.message}`);

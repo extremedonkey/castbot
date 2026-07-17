@@ -1289,76 +1289,8 @@ async function sendCastlist2Response(req, guild, tribes, castlistId, navigationS
 
 // Role constants moved to roleManager.js module
 
-// Update ensureServerData function
-async function ensureServerData(guild) {
-  const playerData = await loadPlayerData();
-
-  // Try to get owner information safely
-  let ownerInfo = null;
-  try {
-    const owner = await guild.members.fetch(guild.ownerId);
-    ownerInfo = {
-      username: owner.user.username,
-      globalName: owner.user.globalName || owner.user.username,
-      discriminator: owner.user.discriminator,
-      tag: owner.user.tag
-    };
-  } catch (error) {
-    // Silently fail - owner might not be in cache or accessible
-    console.debug(`Could not fetch owner info for guild ${guild.id}`);
-  }
-
-  // Prepare server metadata with enhanced analytics
-  const serverMetadata = {
-    serverName: guild.name,
-    icon: guild.iconURL(),
-    ownerId: guild.ownerId,
-    memberCount: guild.memberCount,
-    description: guild.description || null,
-    vanityURLCode: guild.vanityURLCode || null,
-    preferredLocale: guild.preferredLocale,
-    partnered: guild.partnered || false,
-    verified: guild.verified || false,
-    createdTimestamp: guild.createdTimestamp,
-    lastUpdated: Date.now(),
-    // Analytics metadata (safe to log)
-    ...(ownerInfo && { ownerInfo }),
-    analyticsVersion: '1.0' // For future analytics upgrades
-  };
-
-  if (!playerData[guild.id]) {
-    // New server initialization
-    playerData[guild.id] = {
-      ...serverMetadata,
-      players: {},
-      tribes: {},           // Now empty object (no fixed keys)
-      timezones: {},
-      pronounRoleIDs: [],
-      // Analytics for new installations
-      firstInstalled: Date.now(),
-      installationMethod: 'command' // Could be 'invite', 'command', etc.
-    };
-    // PRIORITY 3: Return indicator to batch write later (don't write per-guild)
-    return { updated: true, isNew: true };
-  } else {
-    // Check if metadata actually changed before marking for update
-    const existing = playerData[guild.id];
-    const hasChanges = existing.memberCount !== serverMetadata.memberCount ||
-                      existing.serverName !== serverMetadata.serverName ||
-                      existing.icon !== serverMetadata.icon;
-
-    if (hasChanges) {
-      // Update existing server metadata
-      playerData[guild.id] = {
-        ...existing,
-        ...serverMetadata
-      };
-      return { updated: true, isNew: false };
-    }
-
-    return { updated: false, isNew: false };
-  }
-}
+// Server metadata analytics moved to src/analytics/serverMetadata.js (gather outside
+// the storage lock, apply+save inside it — see incidents/05-LostMovementRace).
 
 // Create an express app
 const app = express();
@@ -1582,56 +1514,32 @@ client.once('ready', async () => {
   // Set Discord client reference for analytics logging
   setDiscordClient(client);
 
-  // PRIORITY 3: Batch all analytics updates, then write ONCE
+  // Server metadata analytics: gather (Discord fetches) runs lock-free; apply+save runs
+  // inside withStorageLock so a player write landing mid-startup can't be clobbered.
   console.log('📊 Updating server analytics metadata...');
-  const playerData = await loadPlayerData();
-  let analyticsUpdated = false;
-  let newServersCount = 0;
-  let updatedServersCount = 0;
-  const newServers = [];
-  const updatedServers = [];
-  const unchangedServers = [];
-
-  // Collect all metadata updates in memory
-  for (const guild of client.guilds.cache.values()) {
-    const result = await ensureServerData(guild);
-
-    if (result.updated) {
-      analyticsUpdated = true;
-      if (result.isNew) {
-        newServersCount++;
-        newServers.push(guild.name);
-        console.log(`🎉 NEW SERVER INSTALLED: ${guild.name} (${guild.id})`);
-
-        // Post new server install announcement to Discord analytics channel
-        try {
-          const { logNewServerInstall } = await import('./src/analytics/analyticsLogger.js');
-          const pdGuild = playerData[guild.id];
-          await logNewServerInstall(guild, pdGuild?.ownerInfo || null);
-        } catch (error) {
-          console.error('Error posting server install announcement:', error);
-          // Don't break server initialization if announcement fails
-        }
-      } else {
-        updatedServersCount++;
-        updatedServers.push(guild.name);
+  try {
+    const { syncAllServerMetadata } = await import('./src/analytics/serverMetadata.js');
+    const meta = await syncAllServerMetadata(client);
+    for (const { guild, ownerInfo } of meta.newGuilds) {
+      console.log(`🎉 NEW SERVER INSTALLED: ${guild.name} (${guild.id})`);
+      try {
+        const { logNewServerInstall } = await import('./src/analytics/analyticsLogger.js');
+        await logNewServerInstall(guild, ownerInfo);
+      } catch (error) {
+        console.error('Error posting server install announcement:', error);
       }
-    } else {
-      unchangedServers.push(guild.name);
     }
-  }
-
-  // SINGLE WRITE after all updates
-  if (analyticsUpdated) {
-    await savePlayerData(playerData);
-    if (newServersCount > 0) {
-      console.log(`✅ Analytics: ${newServersCount} new server(s) installed: ${newServers.join(', ')}`);
+    if (meta.newServers.length > 0) {
+      console.log(`✅ Analytics: ${meta.newServers.length} new server(s) installed: ${meta.newServers.join(', ')}`);
     }
-    if (updatedServersCount > 0) {
-      console.log(`✅ Analytics: ${updatedServersCount} updated: ${updatedServers.join(', ')}`);
+    if (meta.updatedServers.length > 0) {
+      console.log(`✅ Analytics: ${meta.updatedServers.length} updated: ${meta.updatedServers.join(', ')}`);
     }
-  } else {
-    console.log(`✅ Analytics: No metadata changes needed (${unchangedServers.length} servers checked: ${unchangedServers.slice(0, 3).join(', ')}${unchangedServers.length > 3 ? ` +${unchangedServers.length - 3} more` : ''})`);
+    if (meta.newServers.length === 0 && meta.updatedServers.length === 0) {
+      console.log(`✅ Analytics: No metadata changes needed (${meta.unchangedServers.length} servers checked: ${meta.unchangedServers.slice(0, 3).join(', ')}${meta.unchangedServers.length > 3 ? ` +${meta.unchangedServers.length - 3} more` : ''})`);
+    }
+  } catch (error) {
+    console.error('❌ Server metadata analytics failed:', error.message);
   }
 
   // Initialize reaction mappings from persistent storage
@@ -1772,19 +1680,22 @@ client.once('ready', async () => {
 });
 
 client.on('guildCreate', async (guild) => {
-  // PRIORITY 3: Handle new guild, then write once
-  const playerData = await loadPlayerData();
-  const result = await ensureServerData(guild);
-
-  if (result.updated) {
-    await savePlayerData(playerData);
-    console.log(`✅ New server data saved: ${guild.name} (${guild.id})`);
+  // Gather outside the storage lock, apply+save inside it (src/analytics/serverMetadata.js)
+  let result = { updated: false, isNew: false, ownerInfo: null };
+  try {
+    const { syncGuildMetadata } = await import('./src/analytics/serverMetadata.js');
+    result = await syncGuildMetadata(guild);
+    if (result.updated) {
+      console.log(`✅ New server data saved: ${guild.name} (${guild.id})`);
+    }
+  } catch (error) {
+    console.error(`❌ Failed to save server data for ${guild.name}:`, error);
   }
 
   // Log new server install to analytics
   try {
     const { logNewServerInstall } = await import('./src/analytics/analyticsLogger.js');
-    await logNewServerInstall(guild, playerData[guild.id]?.ownerInfo || null);
+    await logNewServerInstall(guild, result.ownerInfo);
   } catch (error) {
     console.error(`❌ Failed to log server install for ${guild.name}:`, error);
   }
