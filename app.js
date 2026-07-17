@@ -4310,8 +4310,18 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         
         // Get player data and check currency
         const playerData = await loadPlayerData();
-        // Access player data directly from the loaded structure
-        const player = playerData[guildId]?.players?.[userId];
+        // Materialize guild/player records if missing — a buyer with no record yet
+        // (fresh server, e.g. right after a Safari import) must not crash the handler
+        if (!playerData[guildId]) {
+          playerData[guildId] = { players: {}, tribes: {}, timezones: {}, pronounRoleIDs: [] };
+        }
+        if (!playerData[guildId].players) {
+          playerData[guildId].players = {};
+        }
+        if (!playerData[guildId].players[userId]) {
+          playerData[guildId].players[userId] = {};
+        }
+        const player = playerData[guildId].players[userId];
         const currentCurrency = player?.safari?.currency || 0;
         
         if (currentCurrency < price) {
