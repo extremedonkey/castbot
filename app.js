@@ -17080,7 +17080,7 @@ Your server is now ready for Tycoons gameplay!`;
             const testContent = {
               testMessage: true,
               timestamp: Date.now(),
-              configuredBy: context.member?.displayName || context.username
+              configuredBy: context.displayName || context.username
             };
             console.log(`🧪 DEBUG: Test content created:`, testContent);
             
@@ -17094,7 +17094,7 @@ Your server is now ready for Tycoons gameplay!`;
               null,
               null,
               'safari-config',
-              context.member?.displayName || context.username,
+              context.displayName || context.username,
               testContent
             );
             console.log(`🧪 DEBUG: logInteraction completed successfully`);

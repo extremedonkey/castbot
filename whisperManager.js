@@ -319,7 +319,7 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
       guildId: context.guildId,
       senderId: context.userId,
       senderName: context.username,
-      senderDisplayName: context.member?.displayName || context.username,
+      senderDisplayName: context.displayName || context.username,
       recipientId: targetUserId,
       recipientName,
       location: coordinate,

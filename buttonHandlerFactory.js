@@ -5266,9 +5266,16 @@ export const MenuFactory = {
  * @returns {Object} Extracted context object
  */
 export function extractButtonContext(req) {
+  const user = req.body.member?.user || req.body.user;
   return {
     guildId: req.body.guild_id,
-    userId: req.body.member?.user?.id || req.body.user?.id,
+    userId: user?.id,
+    // Resolved identity — raw payload members have .nick/.user.username, NOT .displayName
+    // (that's a discord.js class getter). Handlers passing context.username or
+    // context.member?.displayName to loggers used to bake literal "undefined" into
+    // log lines (e.g. env-log whisper lines, fixed 2026-07-18).
+    username: user?.username,
+    displayName: req.body.member?.nick || user?.global_name || user?.username,
     member: req.body.member,
     channelId: req.body.channel_id,
     channelName: req.body.channel?.name || 'Unknown',
