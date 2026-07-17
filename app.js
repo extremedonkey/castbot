@@ -15884,26 +15884,27 @@ Your server is now ready for Tycoons gameplay!`;
           const entityId = `player_${context.userId}`;
           const currentStamina = await getEntityPoints(context.guildId, entityId, 'stamina');
           
-          // Apply stamina boost
+          // Apply stamina boost (takes the safari lock internally)
           const newStamina = await addBonusPoints(context.guildId, entityId, 'stamina', item.staminaBoost);
-          
-          // Consume the item (reduce quantity by 1)
-          const inventoryItem = player.safari.inventory[itemId];
-          if (typeof inventoryItem === 'number') {
-            if (inventoryItem <= 1) {
-              delete player.safari.inventory[itemId];
-            } else {
-              player.safari.inventory[itemId] = inventoryItem - 1;
+
+          // Consume the item under the storage lock, against a FRESH load — the snapshot
+          // from the top of this handler predates the boost and could clobber concurrent
+          // playerData writes (lost-update class, incidents/05).
+          const { withStorageLock } = await import('./storage.js');
+          await withStorageLock(async () => {
+            const freshData = await loadPlayerData();
+            const freshInv = freshData[context.guildId]?.players?.[context.userId]?.safari?.inventory;
+            const inventoryItem = freshInv?.[itemId];
+            if (inventoryItem === undefined) return; // already consumed elsewhere — don't double-charge
+            if (typeof inventoryItem === 'number') {
+              if (inventoryItem <= 1) delete freshInv[itemId];
+              else freshInv[itemId] = inventoryItem - 1;
+            } else if (typeof inventoryItem === 'object') {
+              if (inventoryItem.quantity <= 1) delete freshInv[itemId];
+              else inventoryItem.quantity -= 1;
             }
-          } else if (typeof inventoryItem === 'object') {
-            if (inventoryItem.quantity <= 1) {
-              delete player.safari.inventory[itemId];
-            } else {
-              inventoryItem.quantity -= 1;
-            }
-          }
-          
-          await savePlayerData(playerData);
+            await savePlayerData(freshData);
+          });
 
           console.log(`✅ SUCCESS: safari_use_item - stamina boosted from ${currentStamina.current}/${currentStamina.max} to ${newStamina.current}/${newStamina.max}`);
 

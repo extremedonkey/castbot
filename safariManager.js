@@ -14,7 +14,7 @@ import {
     InteractionResponseFlags
 } from 'discord-interactions';
 import { DiscordRequest, countComponents, validateComponentLimit } from './utils.js';
-import { loadPlayerData, savePlayerData, withStorageLock } from './storage.js';
+import { loadPlayerData, savePlayerData, withStorageLock, withSafariLock } from './storage.js';
 import { initializeGuildSafariData } from './safariInitialization.js';
 import { detectBundles, formatActionsWithBundleIndicators } from './safariActionBundler.js';
 import { parseTextEmoji, parseAndValidateEmoji } from './utils/emojiUtils.js';
@@ -111,13 +111,15 @@ async function persistCustomClaim(guildId, buttonId, actionIndex, userId, expect
         console.warn(`⚠️ custom limit but no buttonId/actionIndex — claim NOT recorded for ${expectedType}`);
         return;
     }
-    const safariData = await loadSafariContent();
-    const action = safariData[guildId]?.buttons?.[buttonId]?.actions?.[actionIndex];
-    if (action && (!expectedType || action.type === expectedType) && action.config?.limit?.type === 'custom') {
-        recordLimitClaim(action.config.limit, userId);
-        await saveSafariContent(safariData);
-        console.log(`✅ Recorded custom claim for ${expectedType} ${buttonId}[${actionIndex}] (${action.config.limit.claims?.length} total)`);
-    }
+    await withSafariLock(async () => {
+        const safariData = await loadSafariContent();
+        const action = safariData[guildId]?.buttons?.[buttonId]?.actions?.[actionIndex];
+        if (action && (!expectedType || action.type === expectedType) && action.config?.limit?.type === 'custom') {
+            recordLimitClaim(action.config.limit, userId);
+            await saveSafariContent(safariData);
+            console.log(`✅ Recorded custom claim for ${expectedType} ${buttonId}[${actionIndex}] (${action.config.limit.claims?.length} total)`);
+        }
+    });
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -9526,29 +9528,32 @@ async function hasStock(guildId, storeId, itemId) {
  * @returns {Promise<boolean>} True if stock was successfully decremented
  */
 async function decrementStock(guildId, storeId, itemId, quantity = 1) {
-    const safariData = await loadSafariContent();
-    const store = safariData[guildId]?.stores?.[storeId];
-    if (!store) return false;
-    
-    const storeItem = store.items.find(si => si.itemId === itemId);
-    if (!storeItem) return false;
-    
-    // Don't decrement unlimited items
-    if (storeItem.stock === undefined || storeItem.stock === null || storeItem.stock === -1) {
-        return true; // Success, no decrement needed
-    }
-    
-    // Check sufficient stock
-    if (storeItem.stock < quantity) {
-        return false;
-    }
-    
-    // Decrement stock
-    storeItem.stock -= quantity;
-    await saveSafariContent(safariData);
-    
-    console.log(`📦 Stock updated: ${itemId} in store ${storeId} - new stock: ${storeItem.stock}`);
-    return true;
+    // Locked cycle: two concurrent buyers otherwise both read stock=1 and both "succeed".
+    return withSafariLock(async () => {
+        const safariData = await loadSafariContent();
+        const store = safariData[guildId]?.stores?.[storeId];
+        if (!store) return false;
+
+        const storeItem = store.items.find(si => si.itemId === itemId);
+        if (!storeItem) return false;
+
+        // Don't decrement unlimited items
+        if (storeItem.stock === undefined || storeItem.stock === null || storeItem.stock === -1) {
+            return true; // Success, no decrement needed
+        }
+
+        // Check sufficient stock
+        if (storeItem.stock < quantity) {
+            return false;
+        }
+
+        // Decrement stock
+        storeItem.stock -= quantity;
+        await saveSafariContent(safariData);
+
+        console.log(`📦 Stock updated: ${itemId} in store ${storeId} - new stock: ${storeItem.stock}`);
+        return true;
+    });
 }
 
 /**

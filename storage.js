@@ -60,6 +60,23 @@ export function withStorageLock(fn) {
 // Local mutex for withStorageLock (atomicSave has its own for writes)
 let _saveQueue = Promise.resolve();
 
+/**
+ * Serialize a whole loadSafariContent → mutate → saveSafariContent cycle.
+ * Companion to withStorageLock (same semantics, same three rules — load INSIDE fn,
+ * nothing slow/Discord inside, never nest another withSafariLock call) but for
+ * safariContent.json, which previously had NO cycle lock at all: concurrent stamina
+ * spends / regen saves / stock decrements clobbered each other (the Gabi incident class,
+ * docs/incidents/05). Separate queue — safari and playerData cycles don't block each other.
+ */
+export function withSafariLock(fn) {
+    let resolve;
+    const next = new Promise(r => { resolve = r; });
+    const prev = _safariQueue;
+    _safariQueue = next;
+    return prev.then(fn).finally(resolve);
+}
+let _safariQueue = Promise.resolve();
+
 // Clear the request cache (called at start of each Discord interaction)
 export function clearRequestCache() {
     if (requestCache.size > 0) {

@@ -1,5 +1,5 @@
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
-import { loadPlayerData } from './storage.js';
+import { loadPlayerData, withSafariLock } from './storage.js';
 import { MAX_STAMINA } from './config/safariLimits.js';
 
 /**
@@ -208,16 +208,21 @@ export function getDefaultPointsConfig() {
     };
 }
 
-// Get current points for an entity with automatic regeneration
-export async function getEntityPoints(guildId, entityId, pointType) {
-    const safariData = await loadSafariContent();
-
-    // Ensure entity points exist
+// Ensure the entity's record exists, (re)loading so the returned safariData contains it.
+// Must run inside a withSafariLock cycle.
+async function ensurePointsRecord(guildId, entityId, pointType) {
+    let safariData = await loadSafariContent();
     if (!safariData[guildId]?.entityPoints?.[entityId]?.[pointType]) {
         await initializeEntityPoints(guildId, entityId, [pointType]);
-        return await getEntityPoints(guildId, entityId, pointType);
+        safariData = await loadSafariContent(); // cached: same object; uncached: fresh incl. init
     }
+    return safariData;
+}
 
+// Core: resolve current points (applying lazy regen) against a PROVIDED safariData —
+// mutates it in place, performs NO file writes. The caller owns the load/save cycle and
+// the withSafariLock serializing it. Returns { points, changed }.
+async function resolveEntityPointsCore(safariData, guildId, entityId, pointType) {
     const pointData = safariData[guildId].entityPoints[entityId][pointType];
 
     // Get config - use per-server stamina config for stamina, default for others
@@ -286,10 +291,21 @@ export async function getEntityPoints(guildId, entityId, pointType) {
 
     if (regenerated.hasChanged) {
         safariData[guildId].entityPoints[entityId][pointType] = regenerated.data;
-        await saveSafariContent(safariData);
     }
 
-    return regenerated.data;
+    return { points: regenerated.data, changed: regenerated.hasChanged };
+}
+
+// Get current points for an entity with automatic regeneration.
+// The whole read→regen→write cycle runs under withSafariLock — an unlocked cycle here
+// raced every other safariContent writer (lost-update class, incidents/05).
+export async function getEntityPoints(guildId, entityId, pointType) {
+    return withSafariLock(async () => {
+        const safariData = await ensurePointsRecord(guildId, entityId, pointType);
+        const { points, changed } = await resolveEntityPointsCore(safariData, guildId, entityId, pointType);
+        if (changed) await saveSafariContent(safariData);
+        return points;
+    });
 }
 
 // Regen anchor: the LATER of last spend (lastUse) and last applied regen (lastRegeneration).
@@ -425,34 +441,37 @@ function calculateRegeneration(pointData, config) {
     return { data: newData, hasChanged };
 }
 
-// Use points (deduct from current) - Updated for charge system
+// Use points (deduct from current). One locked cycle: regen + check + deduct + save —
+// previously this was two unlocked cycles (getEntityPoints saved regen, then a stale
+// outer snapshot saved the deduction), so two concurrent spends could merge into one.
 export async function usePoints(guildId, entityId, pointType, amount) {
-    const safariData = await loadSafariContent();
-    const points = await getEntityPoints(guildId, entityId, pointType);
+    return withSafariLock(async () => {
+        const safariData = await ensurePointsRecord(guildId, entityId, pointType);
+        const { points, changed } = await resolveEntityPointsCore(safariData, guildId, entityId, pointType);
 
-    if (points.current < amount) {
-        return { success: false, message: "Insufficient points", points };
-    }
+        if (points.current < amount) {
+            if (changed) await saveSafariContent(safariData); // keep applied regen even when refusing
+            return { success: false, message: "Insufficient points", points };
+        }
 
-    // Capture before state for snapshot
-    const beforeCurrent = points.current;
-    const regenTimeBefore = await getTimeUntilRegeneration(guildId, entityId, pointType);
+        // Capture before state for snapshot (read-only helper — takes no lock)
+        const beforeCurrent = points.current;
+        const regenTimeBefore = await getTimeUntilRegeneration(guildId, entityId, pointType);
 
-    const now = Date.now();
+        // Deduct points and update last use time (restarts the regen countdown — anchor
+        // semantics in latestRegenAnchor)
+        points.current -= amount;
+        points.lastUse = Date.now();
 
-    // Deduct points and update last use time (restarts the regen countdown — anchor
-    // semantics in latestRegenAnchor)
-    points.current -= amount;
-    points.lastUse = now;
+        safariData[guildId].entityPoints[entityId][pointType] = points;
+        await saveSafariContent(safariData);
 
-    safariData[guildId].entityPoints[entityId][pointType] = points;
-    await saveSafariContent(safariData);
+        // Build snapshot for logging
+        const regenTime = await getTimeUntilRegeneration(guildId, entityId, pointType);
+        const snapshot = createStaminaSnapshot(beforeCurrent, points.current, points.max, regenTime, regenTimeBefore);
 
-    // Build snapshot for logging
-    const regenTime = await getTimeUntilRegeneration(guildId, entityId, pointType);
-    const snapshot = createStaminaSnapshot(beforeCurrent, points.current, points.max, regenTime, regenTimeBefore);
-
-    return { success: true, points, snapshot };
+        return { success: true, points, snapshot };
+    });
 }
 
 // Check if entity has enough points
@@ -585,8 +604,10 @@ export async function getRegenRemainingMs(guildId, entityId, pointType) {
 export async function setRegenCountdown(guildId, entityId, pointType, durationMs) {
     // Apply any lazily-pending regeneration first so we shift CURRENT state, not stale state
     // (an already-elapsed cooldown must regen, not get pushed into the future).
+    // NOTE: getEntityPoints takes the safari lock itself — keep it OUTSIDE the lock below.
     await getEntityPoints(guildId, entityId, pointType);
 
+    return withSafariLock(async () => {
     const safariData = await loadSafariContent();
     const points = safariData[guildId]?.entityPoints?.[entityId]?.[pointType];
     if (!points) {
@@ -615,16 +636,14 @@ export async function setRegenCountdown(guildId, entityId, pointType, durationMs
     console.log(`♻️ Regen countdown for ${entityId} ${pointType} set to ${durationMs}ms (was ${regenTimeBefore}, now ${regenTimeAfter})`);
 
     return { success: true, regenTimeBefore, regenTimeAfter };
+    });
 }
 
-// Admin function to set points directly
+// Admin function to set points directly. Locked cycle — an unlocked admin set raced
+// concurrent moves/regen saves (Thomas's "added two back" class of confusion).
 export async function setEntityPoints(guildId, entityId, pointType, current, max = null, allowOverMax = false) {
-    const safariData = await loadSafariContent();
-
-    // Ensure structure exists
-    if (!safariData[guildId]?.entityPoints?.[entityId]?.[pointType]) {
-        await initializeEntityPoints(guildId, entityId, [pointType]);
-    }
+    return withSafariLock(async () => {
+    const safariData = await ensurePointsRecord(guildId, entityId, pointType);
 
     const points = safariData[guildId].entityPoints[entityId][pointType];
 
@@ -670,6 +689,7 @@ export async function setEntityPoints(guildId, entityId, pointType, current, max
     points.snapshot = createStaminaSnapshot(previousCurrent, points.current, points.max, regenTime, regenTimeBefore);
 
     return points;
+    });
 }
 
 /**
@@ -810,15 +830,11 @@ async function executeAttributeTrigger(guildId, entityId, trigger, context) {
     }
 }
 
-// Add bonus points that can exceed max (for consumable items)
+// Add bonus points that can exceed max (for consumable items). Locked cycle — raced
+// concurrent moves/regen before (a fish eaten mid-move could lose either write).
 export async function addBonusPoints(guildId, entityId, pointType, amount) {
-    const safariData = await loadSafariContent();
-
-    // Ensure entity points exist
-    if (!safariData[guildId]?.entityPoints?.[entityId]?.[pointType]) {
-        await initializeEntityPoints(guildId, entityId, [pointType]);
-        return await getEntityPoints(guildId, entityId, pointType);
-    }
+    return withSafariLock(async () => {
+    const safariData = await ensurePointsRecord(guildId, entityId, pointType);
 
     const points = safariData[guildId].entityPoints[entityId][pointType];
 
@@ -838,6 +854,7 @@ export async function addBonusPoints(guildId, entityId, pointType, amount) {
     points.snapshot = createStaminaSnapshot(beforeCurrent, points.current, points.max, regenTime, regenTimeBefore);
 
     return points;
+    });
 }
 
 // Initialize points configuration for a guild
