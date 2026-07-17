@@ -19,7 +19,7 @@ export const SAFARI_EXPORT_VERSION = 2;
 export const COMPONENT_MAP = {
     stores:   { dataKey: 'stores',        label: 'Stores',         emoji: '🏪' },
     items:    { dataKey: 'items',         label: 'Items',          emoji: '📦' },
-    actions:  { dataKey: 'customActions', label: 'Custom Actions', emoji: '🔘' },
+    actions:  { dataKey: 'customActions', label: 'Actions', emoji: '⚡' },
     settings: { dataKey: 'safariConfig',  label: 'Settings',       emoji: '⚙️' },
     mapData:  { dataKey: 'maps',          label: 'Map Data',       emoji: '🗺️' },
     mapImage: { dataKey: null,            label: 'Map Image',      emoji: '🖼️' }
@@ -908,7 +908,7 @@ export function formatImportSummary(summary) {
         const actionText = [];
         if (summary.customActions.created > 0) actionText.push(`${summary.customActions.created} created`);
         if (summary.customActions.updated > 0) actionText.push(`${summary.customActions.updated} updated`);
-        parts.push(`🔘 **Custom Actions:** ${actionText.join(', ')}`);
+        parts.push(`⚡ **Actions:** ${actionText.join(', ')}`);
     }
 
     if (summary.config) {
@@ -920,7 +920,7 @@ export function formatImportSummary(summary) {
         const clearedParts = [];
         if (rc.stores) clearedParts.push(`${rc.stores} store${rc.stores === 1 ? '' : 's'}`);
         if (rc.items) clearedParts.push(`${rc.items} item${rc.items === 1 ? '' : 's'}`);
-        if (rc.customActions) clearedParts.push(`${rc.customActions} custom action${rc.customActions === 1 ? '' : 's'}`);
+        if (rc.customActions) clearedParts.push(`${rc.customActions} action${rc.customActions === 1 ? '' : 's'}`);
         if (rc.mapCells) clearedParts.push(`${rc.mapCells} map cell${rc.mapCells === 1 ? '' : 's'}`);
         parts.push('');
         parts.push(`♻️ **Replace mode:** cleared ${clearedParts.length ? clearedParts.join(', ') : 'no existing entries'} before importing${rc.customActions ? ' (attack queue reset)' : ''}`);

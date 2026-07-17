@@ -283,7 +283,7 @@ export function buildImportPreview(pending) {
   };
   secLine('🏪', 'Stores', plan.stores);
   secLine('📦', 'Items', plan.items);
-  secLine('🔘', 'Custom Actions', plan.actions);
+  secLine('⚡', 'Actions', plan.actions);
   if (plan.configFields.length) {
     lines.push(`⚙️ **Settings:** ${plan.configFields.length} field${plan.configFields.length === 1 ? '' : 's'} will be applied`);
   }
@@ -351,7 +351,7 @@ export function buildReplaceConfirmScreen(pending) {
   const clearing = [];
   if (data.stores) clearing.push(`• All **${plan.destTotals?.stores ?? '?'}** existing stores`);
   if (data.items) clearing.push(`• All **${plan.destTotals?.items ?? '?'}** existing items`);
-  if (data.customActions) clearing.push(`• All **${plan.destTotals?.actions ?? '?'}** existing custom actions (attack queue reset)`);
+  if (data.customActions) clearing.push(`• All **${plan.destTotals?.actions ?? '?'}** existing actions (attack queue reset)`);
   if (data.safariConfig) clearing.push('• Safari settings (round state is kept)');
   if (data.maps && plan.hasActiveMap) clearing.push('• Map cell content (channels, anchors and the map image itself are kept)');
 

@@ -672,7 +672,7 @@ export function buildExportSelectionUI() {
                         options: [
                             { label: 'Stores', value: 'stores', description: 'Store definitions and their item listings', emoji: { name: '🏪' }, default: true },
                             { label: 'Items', value: 'items', description: 'Item definitions incl. combat/stamina/attribute fields', emoji: { name: '📦' }, default: true },
-                            { label: 'Custom Actions', value: 'actions', description: 'Actions, triggers, outcomes, conditions, usage limits', emoji: { name: '🔘' }, default: true },
+                            { label: 'Actions', value: 'actions', description: 'Actions, triggers, outcomes, conditions, usage limits', emoji: { name: '⚡' }, default: true },
                             { label: 'Settings', value: 'settings', description: 'Safari config — currency, events, rounds, stamina, crafting', emoji: { name: '⚙️' }, default: true },
                             { label: 'Map Data', value: 'mapData', description: 'Grid layout, cell content, blacklist (no channels)', emoji: { name: '🗺️' }, default: true },
                             { label: 'Map Image', value: 'mapImage', description: 'Bundle the map image → downloads as a .zip package', emoji: { name: '🖼️' }, default: true }
