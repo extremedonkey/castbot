@@ -4999,6 +4999,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_start') &&
         !custom_id.startsWith('safari_remove_') &&
         !custom_id.startsWith('safari_map_admin') &&
+        !custom_id.startsWith('safari_import_') &&  // Exclude import preview/confirm flow (mode/confirm/replace_confirm/back/abort)
+        !custom_id.startsWith('safari_export_') &&  // Exclude export selection flow
         !custom_id.startsWith('safari_post_channel_'))) {
       // Check if this Custom Action contains calculate_results actions that need deferred handling
       const parts = custom_id.split('_');

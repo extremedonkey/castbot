@@ -395,6 +395,23 @@ function replaceClearCell(coord, coordData) {
   };
 }
 
+describe('Safari Import/Export v2 — dynamic-handler routing exclusions (ratchet)', () => {
+  // app.js ~4899: the dynamic Custom Action handler catches ANY safari_* custom_id with
+  // ≥4 underscore-separated parts unless excluded — every static safari_* id with ≥4
+  // parts MUST be in its exclusion list or clicks die with "Button not found"
+  // (RaP 0992 organic-growth parsing debt; this bit us on 2026-07-17 with the
+  // import preview buttons). These assertions pin the exclusions.
+  const APP_SOURCE = readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+
+  for (const prefix of ['safari_import_', 'safari_export_']) {
+    it(`dynamic safari handler excludes ${prefix}* ids`, () => {
+      assert.ok(APP_SOURCE.includes(`!custom_id.startsWith('${prefix}')`),
+        `${prefix}* exclusion missing from the dynamic Custom Action handler — ` +
+        `import/export preview buttons would be swallowed and report "Button not found"`);
+    });
+  }
+});
+
 describe('Safari Import/Export v2 — replace-mode cell reset preserves runtime plumbing', () => {
   it('clears content, keeps channelId/anchorMessageId/navigation/fogMapUrl/emoji', () => {
     const live = {
