@@ -725,7 +725,12 @@ async function deleteMapGrid(guild) {
               await new Promise(resolve => setTimeout(resolve, 2000));
             }
           } catch (error) {
-            console.error(`Failed to delete channel ${channel.name}:`, error);
+            if (error?.code === 10003) {
+              // Unknown Channel — already gone (concurrent delete / manual cleanup); not an error
+              console.log(`⏭️ Channel ${channel.name} already deleted`);
+            } else {
+              console.error(`Failed to delete channel ${channel.name}:`, error);
+            }
           }
         }
 
@@ -735,8 +740,13 @@ async function deleteMapGrid(guild) {
         await category.delete('Map deletion');
         progressMessages.push(`✅ Deleted category: ${category.name}`);
       } catch (error) {
-        console.error(`Error deleting category ${categoryId}:`, error);
-        progressMessages.push(`⚠️ Error deleting category: ${error.message}`);
+        if (error?.code === 10003) {
+          console.log(`⏭️ Category ${categoryId} already deleted`);
+          progressMessages.push(`⚠️ Category already deleted`);
+        } else {
+          console.error(`Error deleting category ${categoryId}:`, error);
+          progressMessages.push(`⚠️ Error deleting category: ${error.message}`);
+        }
       }
     }
 

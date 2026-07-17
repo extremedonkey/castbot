@@ -123,7 +123,10 @@ export class ProdWatchdog {
 
     if (this.client) {
       try {
-        const channel = await this.client.channels.fetch(BUGS_CHANNEL_ID);
+        // Raw REST, not channel.send(): discord.js message builders can't normalize raw
+        // Components V2 JSON (throws "ActionRowBuilder is not a constructor" /
+        // "component.toJSON is not a function"), which silently downgraded every alert to
+        // the buttonless webhook fallback. Same pattern as the fog anchor posts.
         const inner = [{ type: 10, content: `<@${REECE_USER_ID}>\n## ${title}\n${detail}` }];
         if (!isRecovery) {
           inner.push(
@@ -133,10 +136,14 @@ export class ProdWatchdog {
             ] }
           );
         }
-        await channel.send({
-          flags: 1 << 15, // IS_COMPONENTS_V2
-          components: [{ type: 17, accent_color: isRecovery ? 0x27ae60 : 0xe74c3c, components: inner }],
-          allowedMentions: { users: [REECE_USER_ID] }
+        const { DiscordRequest } = await import('../../utils.js');
+        await DiscordRequest(`channels/${BUGS_CHANNEL_ID}/messages`, {
+          method: 'POST',
+          body: {
+            flags: 1 << 15, // IS_COMPONENTS_V2
+            components: [{ type: 17, accent_color: isRecovery ? 0x27ae60 : 0xe74c3c, components: inner }],
+            allowed_mentions: { users: [REECE_USER_ID] }
+          }
         });
         return;
       } catch (e) {
